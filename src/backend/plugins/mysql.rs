@@ -52,9 +52,12 @@ impl crate::runtime::executors::handle::DispatchFactory for MysqlPlugin {
         let pool = runtime
             .mysql_pool_for_instance(instance_name)
             .ok_or_else(|| {
-                tonic::Status::failed_precondition(format!(
-                    "MySQL instance '{instance_name}' is not configured (set UDB_MYSQL_DSN)"
-                ))
+                super::dispatch_instance_not_configured_status(
+                    "mysql",
+                    format!(
+                        "MySQL instance '{instance_name}' is not configured (set UDB_MYSQL_DSN)"
+                    ),
+                )
             })?
             .clone();
         // Thread the request context so generic-dispatch `query`/`mutate` set the

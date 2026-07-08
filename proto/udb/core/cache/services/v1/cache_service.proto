@@ -1,0 +1,624 @@
+syntax = "proto3";
+
+package udb.core.cache.services.v1;
+
+import "google/api/annotations.proto";
+import "udb/core/common/v1/dto.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Cache.Services.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/cache/services/v1;cacheservicev1";
+option java_package = "com.udb.core.cache.services.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Cache\\Services\\V1";
+option php_namespace = "Udb\\Core\\Cache\\Services\\V1";
+
+// CacheService (master-plan 9.6) — a cache that invalidates itself.
+//
+// This PROMOTES the four typed DataBroker cache RPCs (CacheGet/CacheSet/
+// CacheDelete/CacheScan, which remain as additive aliases) into a first-class
+// native service with bounded, namespaced, claim-scoped keys. Every entry lives
+// under `udb:cache:<tenant>:<ns>:<key>` where `<tenant>` is derived from the
+// VERIFIED bearer/claim tenant — never a body-supplied value — so two tenants
+// can use the same namespace and key without colliding and a caller can never
+// read or sweep another tenant's namespace. Each namespace carries a per-tenant
+// memory budget (`max_bytes`); a Set that would exceed it fails closed with
+// `resource_exhausted`. Prefix sweeps use Redis `SCAN`, never `KEYS`. A
+// leader-elected CDC invalidation worker maps source-table changes to a
+// namespace sweep and emits `udb.cache.invalidated.v1`.
+service CacheService {
+  option (udb.core.common.v1.native_service) = {
+    service_id: "cache"
+    logical_service_id: "cache"
+    proto_service_id: "cache"
+    display_name: "Cache"
+    category: "cache"
+    default_enabled: true
+    requires_postgres: true
+    requires_redis: true
+    control_plane_listener_allowed: true
+    sdk_facade_name: "cache"
+    cli_scaffold_group: "cache"
+    health_check_ref: "cache"
+    capability_ref: "native.cache"
+  };
+  option (udb.core.common.v1.service_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "cache"
+    generate_minimal_example: true
+  };
+  option (udb.core.common.v1.service_cli_scaffold) = {
+    scaffold_package: "cache"
+    import_path: "udb/native/cache"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+    generated_files: "udb.native.cache.config"
+    required_native_services: "cache"
+    secret_placeholders: "UDB_API_KEY"
+    smoke_test_command: "udb native lint"
+  };
+  option (udb.core.common.v1.service_dependency_contract) = {
+    required_native_services: "cache"
+    required_backends: "postgres"
+    required_backends: "redis"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+  };
+
+  // Read a value from a namespaced cache key. Tenant-scoped: the key is derived
+  // from the verified claim tenant, so a caller can never read another tenant's
+  // entry by spoofing the body tenant_id.
+  rpc Get(GetRequest) returns (GetResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:cache:get"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "cache.Get"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "cache_get" rest_operation_id: "cacheNamespaceGet"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "cache"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "cache"
+      required_backends: "redis"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/cache/{namespace}/{key}"};
+  }
+
+  // Write a value with an optional TTL. Bounded: a write that would push the
+  // namespace over its per-tenant `max_bytes` budget fails closed with
+  // `resource_exhausted`.
+  rpc Set(SetRequest) returns (SetResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:cache:set"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "cache.Set"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "cache_set" rest_operation_id: "cacheNamespaceSet"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "cache"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "cache"
+      required_backends: "redis"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "cache.Set"
+      outbox_topic: "udb.cache.entry.set.v1"
+      partition_key_field: "namespace"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      put: "/v1/cache/{namespace}/{key}"
+      body: "*"
+    };
+  }
+
+  // Delete a single namespaced key. Idempotent.
+  rpc Delete(DeleteRequest) returns (DeleteResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:cache:delete"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "cache.Delete"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "cache_delete" rest_operation_id: "cacheNamespaceDelete"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "cache"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "cache"
+      required_backends: "redis"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "cache.Delete"
+      outbox_topic: "udb.cache.entry.deleted.v1"
+      partition_key_field: "namespace"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {delete: "/v1/cache/{namespace}/{key}"};
+  }
+
+  // Cursor-paged scan over a namespace key prefix. Implemented with Redis SCAN
+  // (never KEYS), so it never blocks the server on a large keyspace.
+  rpc Scan(ScanRequest) returns (ScanResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:cache:scan"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "cache.Scan"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "cache_scan" rest_operation_id: "cacheNamespaceScan"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "cache"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "cache"
+      required_backends: "redis"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/cache/{namespace}:scan"};
+  }
+
+  // Declare (or update) a namespace and its per-tenant byte budget + default TTL.
+  rpc CreateNamespace(CreateNamespaceRequest) returns (CreateNamespaceResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:cache:create-namespace"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "cache.CreateNamespace"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "create_cache_namespace" rest_operation_id: "createCacheNamespace"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "cache"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "cache"
+      required_backends: "redis"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "cache.CreateNamespace"
+      outbox_topic: "udb.cache.namespace.created.v1"
+      partition_key_field: "namespace"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/cache/namespaces"
+      body: "*"
+    };
+  }
+
+  // Flush an entire namespace for the caller's tenant (SCAN+DEL sweep) and emit
+  // an invalidation event. DESTRUCTIVE — gated by a confirmation token.
+  rpc DeleteNamespace(DeleteNamespaceRequest) returns (DeleteNamespaceResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:cache:delete-namespace"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "cache.DeleteNamespace"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "delete_cache_namespace" rest_operation_id: "deleteCacheNamespace"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "cache"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "cache"
+      required_backends: "redis"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "cache.DeleteNamespace"
+      outbox_topic: "udb.cache.invalidated.v1"
+      partition_key_field: "namespace"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {post: "/v1/cache/namespaces/{namespace}:flush" body: "*"};
+  }
+
+  // Report a namespace's current used-bytes counter, configured budget, and item
+  // count for the caller's tenant.
+  rpc GetNamespaceStats(GetNamespaceStatsRequest) returns (GetNamespaceStatsResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:cache:get-namespace-stats"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "cache.GetNamespaceStats"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "get_cache_namespace_stats" rest_operation_id: "getCacheNamespaceStats"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "cache"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "cache"
+      required_backends: "redis"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/cache/namespaces/{namespace}/stats"};
+  }
+}
+
+message GetRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "cache"
+    generate_minimal_example: true
+  };
+  // Verified against the bearer/claim tenant; cross-tenant values are rejected.
+  string tenant_id = 1;
+  string namespace = 2;
+  string key = 3;
+}
+
+message GetResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "cache"
+    generate_minimal_example: true
+  };
+  bool found = 1;
+  bytes value = 2;
+  int64 ttl_remaining_seconds = 3;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 4;
+}
+
+message SetRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "cache"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string namespace = 2;
+  string key = 3;
+  bytes value = 4;
+  // 0 = use the namespace default TTL (or no expiry if none configured).
+  int64 ttl_seconds = 5;
+}
+
+message SetResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "cache"
+    generate_minimal_example: true
+  };
+  bool stored = 1;
+  int64 used_bytes = 2;
+  int64 max_bytes = 3;
+  string message = 4;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 5;
+}
+
+message DeleteRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "cache"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string namespace = 2;
+  string key = 3;
+}
+
+message DeleteResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "cache"
+    generate_minimal_example: true
+  };
+  bool deleted = 1;
+  int64 used_bytes = 2;
+  string message = 3;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 4;
+}
+
+message ScanRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "cache"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string namespace = 2;
+  // Key prefix WITHIN the namespace (the tenant/namespace prefix is added
+  // server-side from the verified claim, never supplied by the caller).
+  string key_prefix = 3;
+  int32 limit = 4;
+  // Opaque Redis SCAN cursor from a prior page ("" / "0" starts a fresh scan).
+  string page_token = 5;
+}
+
+message ScanResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "cache"
+    generate_minimal_example: true
+  };
+  repeated CacheItem items = 1;
+  string next_page_token = 2;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 3;
+}
+
+// One scanned namespace entry. `key` is the namespace-local key (the
+// `udb:cache:<tenant>:<ns>:` prefix is stripped before it leaves the server).
+message CacheItem {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "cache"
+    generate_minimal_example: true
+  };
+  string key = 1;
+  bytes value = 2;
+  int64 ttl_remaining_seconds = 3;
+}
+
+message CreateNamespaceRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "cache"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string namespace = 2;
+  // Per-tenant memory budget for this namespace; a Set that would exceed it
+  // fails closed with resource_exhausted. 0 = the service default budget.
+  int64 max_bytes = 3;
+  // Default TTL applied to a Set that does not specify one. 0 = no default.
+  int64 default_ttl_seconds = 4;
+}
+
+message CreateNamespaceResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "cache"
+    generate_minimal_example: true
+  };
+  string namespace = 1;
+  int64 max_bytes = 2;
+  int64 default_ttl_seconds = 3;
+  string message = 4;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 5;
+}
+
+message DeleteNamespaceRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "cache"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string namespace = 2;
+  // Required explicit confirmation token; an empty token fails closed
+  // (DESTRUCTIVE namespace flush).
+  string confirmation_token = 3;
+}
+
+message DeleteNamespaceResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "cache"
+    generate_minimal_example: true
+  };
+  string namespace = 1;
+  uint64 keys_deleted = 2;
+  string message = 3;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 4;
+}
+
+message GetNamespaceStatsRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "cache"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string namespace = 2;
+}
+
+message GetNamespaceStatsResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "cache"
+    generate_minimal_example: true
+  };
+  string namespace = 1;
+  int64 used_bytes = 2;
+  int64 max_bytes = 3;
+  uint64 item_count = 4;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 5;
+}

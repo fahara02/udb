@@ -3,6 +3,7 @@ syntax = "proto3";
 package udb.core.apikey.services.v1;
 
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/field_mask.proto";
 import "udb/core/apikey/entity/v1/api_key.proto";
 import "udb/core/apikey/entity/v1/enums.proto";
 import "udb/core/common/v1/dto.proto";
@@ -162,6 +163,9 @@ message UpdateApiKeyRequest {
   int64 rate_limit_per_day = 7;
   google.protobuf.Timestamp expires_at = 8;
   udb.core.common.v1.RequestContext context = 9;
+  // Optional PATCH mask relative to the API key resource. When omitted, legacy
+  // clients keep the historical non-empty-field patch behavior.
+  google.protobuf.FieldMask update_mask = 10;
 }
 
 message UpdateApiKeyResponse {

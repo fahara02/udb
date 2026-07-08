@@ -102,7 +102,7 @@ pub fn api_key_prefix(raw_key: &str) -> String {
 }
 
 /// Session / API-key authn configuration, read from the environment.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct AuthnConfig {
     /// `UDB_SESSION_ENABLED` — server-side sessions on/off (default off).
     pub session_enabled: bool,
@@ -133,6 +133,27 @@ pub struct AuthnConfig {
     pub otp_ttl_secs: u64,
     /// `UDB_OTP_COOLDOWN_SECONDS` — resend cooldown hint (default 60).
     pub otp_cooldown_secs: u64,
+}
+
+// Manual `Debug` redacting the four keyed-HMAC secrets. Session/OTP timing and
+// backend selection are non-secret operational settings and print normally.
+impl std::fmt::Debug for AuthnConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AuthnConfig")
+            .field("session_enabled", &self.session_enabled)
+            .field("session_backend", &self.session_backend)
+            .field("session_ttl_secs", &self.session_ttl_secs)
+            .field("session_idle_ttl_secs", &self.session_idle_ttl_secs)
+            .field("session_header", &self.session_header)
+            .field("session_cookie", &self.session_cookie)
+            .field("session_hash_secret", &"[redacted]")
+            .field("api_key_hash_secret", &"[redacted]")
+            .field("password_hash_secret", &"[redacted]")
+            .field("otp_hash_secret", &"[redacted]")
+            .field("otp_ttl_secs", &self.otp_ttl_secs)
+            .field("otp_cooldown_secs", &self.otp_cooldown_secs)
+            .finish()
+    }
 }
 
 impl Default for AuthnConfig {
@@ -578,7 +599,7 @@ impl ApiKeyStatus {
 }
 
 /// Native user account record stored by Stage-1 authn.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Clone, Default, PartialEq, Eq)]
 pub struct UserRecord {
     pub user_id: String,
     pub username: String,
@@ -609,8 +630,43 @@ pub struct UserRecord {
     pub profile_attributes_json: String,
 }
 
+// Manual `Debug` redacting the password verifier (`password_hash`) and the
+// encrypted/hashed TOTP secret (`totp_secret_hash`). These are the same
+// credential fields the outbound `user_record_to_pb` mapper blanks; here the
+// guard extends to internal `{:?}` logging. Identity/audit fields print
+// normally for debuggability.
+impl std::fmt::Debug for UserRecord {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("UserRecord")
+            .field("user_id", &self.user_id)
+            .field("username", &self.username)
+            .field("email", &self.email)
+            .field("password_hash", &"[redacted]")
+            .field("account_kind", &self.account_kind)
+            .field("status", &self.status)
+            .field("tenant_id", &self.tenant_id)
+            .field("full_name", &self.full_name)
+            .field("totp_secret_hash", &"[redacted]")
+            .field("mfa_enabled", &self.mfa_enabled)
+            .field("failed_login_count", &self.failed_login_count)
+            .field("locked_until_unix", &self.locked_until_unix)
+            .field("email_verified_at_unix", &self.email_verified_at_unix)
+            .field("last_login_at_unix", &self.last_login_at_unix)
+            .field("created_by", &self.created_by)
+            .field("created_at_unix", &self.created_at_unix)
+            .field("updated_at_unix", &self.updated_at_unix)
+            .field("deleted_at_unix", &self.deleted_at_unix)
+            .field("deleted_by", &self.deleted_by)
+            .field("project_id", &self.project_id)
+            .field("external_provider_id", &self.external_provider_id)
+            .field("external_subject", &self.external_subject)
+            .field("profile_attributes_json", &self.profile_attributes_json)
+            .finish()
+    }
+}
+
 /// One-time password / step-up challenge record.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Clone, Default, PartialEq, Eq)]
 pub struct OtpRecord {
     pub otp_id: String,
     pub user_id: String,
@@ -628,6 +684,29 @@ pub struct OtpRecord {
     /// Tenant boundary, denormalized from the owning user. Empty when unknown
     /// (column is nullable; read tolerates NULL).
     pub tenant_id: String,
+}
+
+// Manual `Debug` redacting the one-time-code verifier (`code_hash`). The
+// delivery channel/address and timing fields remain visible for debugging.
+impl std::fmt::Debug for OtpRecord {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("OtpRecord")
+            .field("otp_id", &self.otp_id)
+            .field("user_id", &self.user_id)
+            .field("otp_type", &self.otp_type)
+            .field("code_hash", &"[redacted]")
+            .field("delivery_channel", &self.delivery_channel)
+            .field("delivery_address", &self.delivery_address)
+            .field("status", &self.status)
+            .field("attempt_count", &self.attempt_count)
+            .field("superseded_by_id", &self.superseded_by_id)
+            .field("expires_at_unix", &self.expires_at_unix)
+            .field("used_at_unix", &self.used_at_unix)
+            .field("created_at_unix", &self.created_at_unix)
+            .field("correlation_id", &self.correlation_id)
+            .field("tenant_id", &self.tenant_id)
+            .finish()
+    }
 }
 
 // ── Authn interfaces (Postgres/Redis impls are a thin async layer) ──────────

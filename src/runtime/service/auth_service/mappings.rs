@@ -79,7 +79,10 @@ pub(super) fn entity_effect_to_runtime(effect: i32) -> Result<Effect, Status> {
         authz_entity_pb::PolicyEffect::Allow => Ok(Effect::Allow),
         authz_entity_pb::PolicyEffect::Deny => Ok(Effect::Deny),
         authz_entity_pb::PolicyEffect::Unspecified => {
-            Err(Status::invalid_argument("policy effect is required"))
+            Err(crate::runtime::executor_utils::invalid_argument_fields(
+                "policy effect is required",
+                [("effect", "must be either ALLOW or DENY")],
+            ))
         }
     }
 }
@@ -328,7 +331,7 @@ mod tests {
 
     fn storage_only_field_names(message_full_name: &str) -> BTreeSet<String> {
         const OUTPUT_VIEW_STORAGE_ONLY: i32 = 1;
-        let manifest = crate::runtime::descriptor_manifest::descriptor_contract_manifest();
+        let manifest = crate::runtime::descriptor_manifest::descriptor_contract_manifest_static();
         let message = manifest
             .messages
             .iter()

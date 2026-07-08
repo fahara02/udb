@@ -285,21 +285,26 @@ pub async fn ensure_system_catalog(pool: &PgPool) -> Result<SystemCatalogReport,
     let config = SystemCatalogConfig::current();
     let statements = system_catalog_statements(&config);
     let mut tx = pool.begin().await.map_err(|err| {
-        tonic::Status::internal(format!(
-            "failed to start UDB system catalog bootstrap: {err}"
-        ))
+        system_catalog_internal_status(
+            "bootstrap_begin",
+            format!("failed to start UDB system catalog bootstrap: {err}"),
+        )
     })?;
 
     for statement in &statements {
         tx.execute(statement.as_str()).await.map_err(|err| {
-            tonic::Status::internal(format!("failed to bootstrap UDB system catalog: {err}"))
+            system_catalog_internal_status(
+                "bootstrap_statement",
+                format!("failed to bootstrap UDB system catalog: {err}"),
+            )
         })?;
     }
 
     tx.commit().await.map_err(|err| {
-        tonic::Status::internal(format!(
-            "failed to commit UDB system catalog bootstrap: {err}"
-        ))
+        system_catalog_internal_status(
+            "bootstrap_commit",
+            format!("failed to commit UDB system catalog bootstrap: {err}"),
+        )
     })?;
 
     Ok(SystemCatalogReport {
@@ -328,10 +333,13 @@ pub async fn inspect_system_catalog_with_config(
             .fetch_one(pool)
             .await
             .map_err(|err| {
-                tonic::Status::internal(format!(
-                    "failed to inspect UDB system catalog relation {}: {err}",
-                    relation.display_relation
-                ))
+                system_catalog_internal_status(
+                    "inspect_relation",
+                    format!(
+                        "failed to inspect UDB system catalog relation {}: {err}",
+                        relation.display_relation
+                    ),
+                )
             })?;
         let exists = exists.is_some();
         if !exists {
@@ -1197,10 +1205,11 @@ fn system_catalog_statements(config: &SystemCatalogConfig) -> Vec<String> {
         ),
         // KEYSTONE (lane 05) — durable, tenant+project-scoped dedup for keyed
         // data-plane mutations. `dedup_key` is the salted SHA-256 of
-        // (tenant_id, project_id, message_type, idempotency_key) so the PRIMARY KEY
-        // itself enforces per-tenant+project+type uniqueness; `response_json` carries
-        // the first writer's MutationResponse summary so a replay returns the
-        // original body (not an empty one) without re-running the write.
+        // (tenant_id, project_id, message_type, operation, idempotency_key) so the
+        // PRIMARY KEY itself enforces per-tenant+project+type+operation uniqueness;
+        // `response_json` carries the first writer's MutationResponse summary so a
+        // replay returns the original body (not an empty one) without re-running the
+        // write.
         format!(
             "CREATE TABLE IF NOT EXISTS {} (
                 dedup_key TEXT PRIMARY KEY,
@@ -1244,12 +1253,53 @@ fn non_empty(value: &str, fallback: &str) -> String {
     }
 }
 
+fn system_catalog_internal_status(
+    operation: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    crate::runtime::executor_utils::internal_status("system_catalog", operation, message)
+}
+
 // `qi`, `env_identifier`, and `is_identifier` are imported from
 // `runtime::executor_utils` (single-sourced).
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
+
+    fn decode_detail(status: &tonic::Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_internal_detail(status: &tonic::Status, operation: &str, message: &str) {
+        assert_eq!(status.code(), tonic::Code::Internal);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "system_catalog");
+        assert_eq!(detail.operation, operation);
+        assert!(!detail.retryable);
+    }
+
+    #[test]
+    fn system_catalog_internal_status_carries_typed_detail() {
+        let status = system_catalog_internal_status(
+            "bootstrap_begin",
+            "failed to start UDB system catalog bootstrap",
+        );
+        assert_internal_detail(
+            &status,
+            "bootstrap_begin",
+            "failed to start UDB system catalog bootstrap",
+        );
+    }
 
     #[test]
     fn system_catalog_bootstraps_stage1_auth_schemas_not_tables() {
@@ -1355,6 +1405,17 @@ mod tests {
                 || relation.display_relation.starts_with("udb_asset.")
                 || relation.display_relation.starts_with("udb_webrtc.")
                 || relation.display_relation.starts_with("udb_control.")
+                // Phase 9 native services (cache/livequery hold no canonical entity).
+                || relation.display_relation.starts_with("udb_lock.")
+                || relation.display_relation.starts_with("udb_scheduler.")
+                || relation.display_relation.starts_with("udb_vault.")
+                || relation.display_relation.starts_with("udb_webhook.")
+                || relation.display_relation.starts_with("udb_backup.")
+                || relation.display_relation.starts_with("udb_search.")
+                || relation.display_relation.starts_with("udb_config.")
+                || relation.display_relation.starts_with("udb_metering.")
+                || relation.display_relation.starts_with("udb_workflow.")
+                || relation.display_relation.starts_with("udb_embedding.")
         }));
     }
 }

@@ -26,13 +26,29 @@ const KV_TABLE: &str = "udb_native_kv";
 #[cfg(feature = "neo4j")]
 const KV_LABEL: &str = "UdbNativeKv";
 
+fn native_store_internal_status(
+    backend: &str,
+    operation: impl Into<String>,
+    message: impl Into<String>,
+) -> Status {
+    crate::runtime::executor_utils::internal_status(backend, operation, message)
+}
+
 fn store_err(op: &str, backend: &str, err: sqlx::Error) -> Status {
-    Status::internal(format!("native store {op} on '{backend}' failed: {err}"))
+    native_store_internal_status(
+        backend,
+        op,
+        format!("native store {op} on '{backend}' failed: {err}"),
+    )
 }
 
 #[cfg(any(feature = "neo4j", feature = "mongodb"))]
 fn store_err_str(op: &str, backend: &str, err: String) -> Status {
-    Status::internal(format!("native store {op} on '{backend}' failed: {err}"))
+    native_store_internal_status(
+        backend,
+        op,
+        format!("native store {op} on '{backend}' failed: {err}"),
+    )
 }
 
 /// Backend-neutral persistence handle for a native control-plane service.
@@ -73,10 +89,14 @@ pub(crate) async fn kv_roundtrip_probe(
     store.kv_put(key, value).await?;
     let got = store.kv_get(key).await?;
     if got.as_deref() != Some(value) {
-        return Err(Status::internal(format!(
-            "native store '{}' kv round-trip mismatch: wrote {value:?}, read {got:?}",
-            store.backend()
-        )));
+        return Err(native_store_internal_status(
+            store.backend(),
+            "kv_roundtrip_probe",
+            format!(
+                "native store '{}' kv round-trip mismatch: wrote {value:?}, read {got:?}",
+                store.backend()
+            ),
+        ));
     }
     store.kv_delete(key).await?;
     Ok(())
@@ -421,3 +441,40 @@ impl NativeEntityStore for MongoDbNativeEntityStore {
 // Live round-trip tests live in `native_entity_store_tests.rs` (a `_tests.rs` file):
 // they read `UDB_PG_DSN`/`UDB_MYSQL_DSN` to gate the live backends, which the
 // runtime env-confinement guard excludes for test files only.
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
+
+    fn decode_detail(status: &Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    #[test]
+    fn native_store_internal_status_carries_typed_detail() {
+        let status = native_store_internal_status(
+            "postgres",
+            "kv_get",
+            "native store kv_get on 'postgres' failed: unavailable",
+        );
+        assert_eq!(status.code(), tonic::Code::Internal);
+        assert_eq!(
+            status.message(),
+            "native store kv_get on 'postgres' failed: unavailable"
+        );
+        let detail = decode_detail(&status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "postgres");
+        assert_eq!(detail.operation, "kv_get");
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+}

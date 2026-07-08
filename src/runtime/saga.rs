@@ -48,6 +48,113 @@ pub const SAGA_STATUS_COMPENSATED: &str = "compensated";
 pub const SAGA_STATUS_FAILED_COMPENSATION: &str = "failed_compensation";
 pub const SAGA_STATUS_MANUAL_REVIEW: &str = "manual_review";
 
+fn saga_recompensation_not_retryable_status(saga_id: &str) -> tonic::Status {
+    crate::runtime::executor_utils::policy_status(
+        "retry_saga_compensation",
+        "saga_not_retryable",
+        format!(
+            "saga {saga_id} is not in a retryable state (failed_compensation or manual_review)"
+        ),
+    )
+}
+
+fn saga_not_found_status(operation: &'static str, saga_id: &str) -> tonic::Status {
+    crate::runtime::executor_utils::schema_status(
+        tonic::Code::NotFound,
+        "saga",
+        operation,
+        "saga_not_found",
+        format!("saga {saga_id} not found"),
+    )
+}
+
+fn saga_internal_status(operation: impl Into<String>, message: impl Into<String>) -> tonic::Status {
+    crate::runtime::executor_utils::internal_status("saga", operation, message)
+}
+
+/// 9.12 (WorkflowService) — discriminates a durable *workflow* saga from a plain
+/// data-plane saga. This is the minimal ADDITIVE seam the native `WorkflowService`
+/// uses to hand a workflow to the existing saga engine; it adds NO second
+/// orchestration loop. The DEFAULT kind reproduces the pre-9.12 behaviour exactly:
+/// [`SagaKind::tag_operation`] returns the operation string verbatim and
+/// [`SagaKind::from_operation`] classifies an untagged operation as `Default`, so
+/// every existing saga path (which only ever records `Default` sagas) is unchanged
+/// byte-for-byte. Because `udb_sagas` has no dedicated discriminator column, the
+/// kind is carried in the existing `operation` field via an unambiguous prefix.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum SagaKind {
+    /// A plain data-plane saga (XA write fan-out). Pre-9.12 behaviour, unchanged.
+    #[default]
+    Default,
+    /// A durable workflow instance orchestrated by the native `WorkflowService`.
+    Workflow,
+}
+
+impl SagaKind {
+    /// Prefix marking a saga `operation` as workflow-orchestrated. Data-plane
+    /// operations are bare verbs (`upsert`/`delete`/…), so this namespaced prefix
+    /// can never collide with an existing operation token.
+    const WORKFLOW_OPERATION_PREFIX: &'static str = "workflow:";
+
+    /// Tag an operation string with this kind. `Default` is the identity function
+    /// (verbatim), so existing data-plane sagas are recorded exactly as before.
+    pub fn tag_operation(self, operation: &str) -> String {
+        match self {
+            SagaKind::Default => operation.to_string(),
+            SagaKind::Workflow => format!("{}{operation}", Self::WORKFLOW_OPERATION_PREFIX),
+        }
+    }
+
+    /// Recover the kind from a stored operation string. An untagged operation is
+    /// `Default` (every pre-9.12 saga), preserving existing classification.
+    pub fn from_operation(operation: &str) -> Self {
+        if operation.starts_with(Self::WORKFLOW_OPERATION_PREFIX) {
+            SagaKind::Workflow
+        } else {
+            SagaKind::Default
+        }
+    }
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            SagaKind::Default => "default",
+            SagaKind::Workflow => "workflow",
+        }
+    }
+}
+
+/// 9.12 seam — record a durable saga for a workflow instance, REUSING the existing
+/// [`SagaStore::record_saga`] persistence and the [`SagaRecoveryWorker`]
+/// reverse-order compensation machinery. This adds no new orchestration loop:
+/// forward step dispatch stays in the WorkflowService tick (event-fire only, like
+/// the scheduler), and compensation is the established recovery path. The saga is
+/// recorded `Pending` (NOT recoverable — see [`SagaStatus::is_recoverable`]) so it
+/// sits untouched until the workflow either completes (marked `Committed`) or is
+/// cancelled (flipped to `Indeterminate`, which the recovery worker then
+/// compensates). Returns the assigned `saga_id`.
+pub async fn start_workflow_saga(
+    store: &dyn SystemStores,
+    kind: SagaKind,
+    tenant_id: &str,
+    correlation_id: &str,
+    operation: &str,
+    compensations: serde_json::Value,
+) -> Result<Uuid, String> {
+    let insert = crate::runtime::canonical_store::system_store::SagaInsert {
+        tx_id: Uuid::new_v4().to_string(),
+        tenant_id: tenant_id.to_string(),
+        correlation_id: correlation_id.to_string(),
+        backend_instance: "workflow".to_string(),
+        operation: kind.tag_operation(operation),
+        status: SagaStatus::Pending,
+        steps: serde_json::json!([]),
+        compensations,
+    };
+    SagaStore::record_saga(store, &insert)
+        .await
+        .map_err(|err| err.to_string())
+}
+
 /// A saga record as returned by admin / recovery queries.
 #[derive(Debug, Clone, Serialize)]
 pub struct SagaAdminRecord {
@@ -530,6 +637,55 @@ impl SagaRecoveryWorker {
 /// `QueryBuilder` path is gone; arg validation (status enum membership +
 /// tx_id UUID format) is now done up-front before constructing the
 /// trait filter.
+fn saga_field_violation(
+    field: &'static str,
+    description: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    crate::runtime::executor_utils::invalid_argument_fields(
+        message,
+        [(field.to_string(), description.into())],
+    )
+}
+
+fn parse_saga_uuid_field(
+    field: &'static str,
+    value: &str,
+    message: &'static str,
+) -> Result<Uuid, tonic::Status> {
+    value
+        .parse()
+        .map_err(|_| saga_field_violation(field, "must be a valid UUID", message))
+}
+
+fn validate_tx_id_filter(tx_id_filter: &str) -> Result<(), tonic::Status> {
+    if !tx_id_filter.is_empty() {
+        parse_saga_uuid_field(
+            "tx_id_filter",
+            tx_id_filter,
+            "tx_id_filter must be a valid UUID",
+        )?;
+    }
+    Ok(())
+}
+
+fn parse_saga_status_filter(status_filter: &str) -> Result<Option<SagaStatus>, tonic::Status> {
+    if status_filter.is_empty() {
+        return Ok(None);
+    }
+    SagaStatus::parse(status_filter).map(Some).ok_or_else(|| {
+        let allowed = SagaStatus::all()
+            .iter()
+            .map(|s| s.as_str())
+            .collect::<Vec<_>>();
+        saga_field_violation(
+            "status_filter",
+            format!("must be one of {}", allowed.join(", ")),
+            format!("invalid status_filter '{status_filter}'; must be one of {allowed:?}"),
+        )
+    })
+}
+
 #[allow(clippy::too_many_arguments)]
 pub async fn list_sagas(
     store: &dyn SystemStores,
@@ -543,28 +699,13 @@ pub async fn list_sagas(
 ) -> Result<Vec<SagaAdminRecord>, tonic::Status> {
     // Validate status filter against the canonical enum tokens. This
     // is the same set the PG CHECK constraint enforces.
-    let status_enum = if status_filter.is_empty() {
-        None
-    } else {
-        Some(SagaStatus::parse(status_filter).ok_or_else(|| {
-            tonic::Status::invalid_argument(format!(
-                "invalid status_filter '{status_filter}'; must be one of {:?}",
-                SagaStatus::all()
-                    .iter()
-                    .map(|s| s.as_str())
-                    .collect::<Vec<_>>()
-            ))
-        })?)
-    };
+    let status_enum = parse_saga_status_filter(status_filter)?;
 
     // UUID-validate tx_id_filter (defensive — keeps PG behaviour
     // identical for callers that pass UUIDs; non-UUID tx_ids are
     // technically allowed by the schema but the admin RPC rejected
     // them historically).
-    if !tx_id_filter.is_empty() {
-        Uuid::parse_str(tx_id_filter)
-            .map_err(|_| tonic::Status::invalid_argument("tx_id_filter must be a valid UUID"))?;
-    }
+    validate_tx_id_filter(tx_id_filter)?;
 
     let filter = SagaListFilter {
         tenant_id: (!tenant_id_filter.is_empty()).then(|| tenant_id_filter.to_string()),
@@ -575,9 +716,9 @@ pub async fn list_sagas(
         limit,
         offset,
     };
-    let rows = SagaStore::list_sagas(store, &filter)
-        .await
-        .map_err(|err| tonic::Status::internal(format!("list_sagas query failed: {err}")))?;
+    let rows = SagaStore::list_sagas(store, &filter).await.map_err(|err| {
+        saga_internal_status("list_sagas", format!("list_sagas query failed: {err}"))
+    })?;
     Ok(rows.into_iter().map(SagaAdminRecord::from).collect())
 }
 
@@ -590,13 +731,11 @@ pub async fn get_saga(
     _config: &SystemCatalogConfig,
     saga_id: &str,
 ) -> Result<SagaAdminRecord, tonic::Status> {
-    let id: Uuid = saga_id
-        .parse()
-        .map_err(|_| tonic::Status::invalid_argument("saga_id must be a UUID"))?;
+    let id = parse_saga_uuid_field("saga_id", saga_id, "saga_id must be a UUID")?;
     let row = SagaStore::get_saga(store, id)
         .await
-        .map_err(|err| tonic::Status::internal(format!("get_saga failed: {err}")))?
-        .ok_or_else(|| tonic::Status::not_found(format!("saga {saga_id} not found")))?;
+        .map_err(|err| saga_internal_status("get_saga", format!("get_saga failed: {err}")))?
+        .ok_or_else(|| saga_not_found_status("get_saga", saga_id))?;
     Ok(SagaAdminRecord::from(row))
 }
 
@@ -611,17 +750,18 @@ pub async fn mark_saga_reviewed(
     _config: &SystemCatalogConfig,
     saga_id: &str,
 ) -> Result<(), tonic::Status> {
-    let id: Uuid = saga_id
-        .parse()
-        .map_err(|_| tonic::Status::invalid_argument("saga_id must be a UUID"))?;
+    let id = parse_saga_uuid_field("saga_id", saga_id, "saga_id must be a UUID")?;
     SagaStore::mark_saga_manual_review(store, id)
         .await
         .map_err(|err| {
             let msg = err.to_string();
             if msg.contains("not found") {
-                tonic::Status::not_found(format!("saga {saga_id} not found"))
+                saga_not_found_status("mark_saga_reviewed", saga_id)
             } else {
-                tonic::Status::internal(format!("mark_saga_reviewed failed: {msg}"))
+                saga_internal_status(
+                    "mark_saga_reviewed",
+                    format!("mark_saga_reviewed failed: {msg}"),
+                )
             }
         })
 }
@@ -639,19 +779,18 @@ pub async fn retry_saga_compensation(
     _config: &SystemCatalogConfig,
     saga_id: &str,
 ) -> Result<(), tonic::Status> {
-    let id: Uuid = saga_id
-        .parse()
-        .map_err(|_| tonic::Status::invalid_argument("saga_id must be a UUID"))?;
+    let id = parse_saga_uuid_field("saga_id", saga_id, "saga_id must be a UUID")?;
     SagaStore::request_saga_recompensation(store, id)
         .await
         .map_err(|err| {
             let msg = err.to_string();
             if msg.contains("retryable state") {
-                tonic::Status::failed_precondition(format!(
-                    "saga {saga_id} is not in a retryable state (failed_compensation or manual_review)"
-                ))
+                saga_recompensation_not_retryable_status(saga_id)
             } else {
-                tonic::Status::internal(format!("retry_saga_compensation failed: {msg}"))
+                saga_internal_status(
+                    "retry_saga_compensation",
+                    format!("retry_saga_compensation failed: {msg}"),
+                )
             }
         })
 }
@@ -660,12 +799,81 @@ pub async fn retry_saga_compensation(
 #[allow(clippy::items_after_test_module)]
 mod tests {
     use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
     #[cfg(feature = "sqlite")]
     use crate::runtime::canonical_store::sqlite::SqliteCanonicalStore;
     #[cfg(feature = "sqlite")]
     use crate::runtime::canonical_store::system_store::SagaInsert;
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
     #[cfg(feature = "sqlite")]
     use sqlx::sqlite::SqlitePoolOptions;
+
+    fn decode_detail(status: &tonic::Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("error-detail trailer present")
+            .to_bytes()
+            .expect("trailer decodes to bytes");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_single_field_violation(status: &tonic::Status, field: &str, description: &str) {
+        assert_eq!(status.code(), tonic::Code::InvalidArgument);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, field);
+        assert_eq!(detail.field_violations[0].description, description);
+    }
+
+    fn assert_policy_detail(
+        status: &tonic::Status,
+        operation: &str,
+        policy_decision_id: &str,
+        message: &str,
+    ) {
+        assert_eq!(status.code(), tonic::Code::FailedPrecondition);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Policy as i32);
+        assert_eq!(detail.operation, operation);
+        assert_eq!(detail.policy_decision_id, policy_decision_id);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    fn assert_schema_detail(
+        status: &tonic::Status,
+        operation: &str,
+        schema_code: &str,
+        message: &str,
+    ) {
+        assert_eq!(status.code(), tonic::Code::NotFound);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Schema as i32);
+        assert_eq!(detail.backend, "saga");
+        assert_eq!(detail.operation, operation);
+        assert_eq!(detail.capability_required, schema_code);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    fn assert_internal_detail(status: &tonic::Status, operation: &str, message: &str) {
+        assert_eq!(status.code(), tonic::Code::Internal);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "saga");
+        assert_eq!(detail.operation, operation);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
 
     #[test]
     fn recovery_worker_uses_env_interval() {
@@ -684,6 +892,84 @@ mod tests {
         // Any other value keeps recovery enabled.
         assert!(!matches!("true", "0" | "false" | "FALSE" | "no"));
         assert!(!matches!("1", "0" | "false" | "FALSE" | "no"));
+    }
+
+    #[test]
+    fn saga_admin_status_filter_carries_field_violation() {
+        let err = parse_saga_status_filter("bogus")
+            .expect_err("unknown status_filter must fail before store access");
+        assert_eq!(
+            err.message(),
+            "invalid status_filter 'bogus'; must be one of [\"indeterminate\", \"in_progress\", \"pending\", \"committed\", \"compensated\", \"failed\", \"in_doubt\", \"failed_compensation\", \"manual_review\"]"
+        );
+        assert_single_field_violation(
+            &err,
+            "status_filter",
+            "must be one of indeterminate, in_progress, pending, committed, compensated, failed, in_doubt, failed_compensation, manual_review",
+        );
+    }
+
+    #[test]
+    fn saga_admin_uuid_validation_carries_field_violations() {
+        let tx_id = validate_tx_id_filter("not-a-uuid")
+            .expect_err("invalid tx_id_filter must fail before store access");
+        assert_eq!(tx_id.message(), "tx_id_filter must be a valid UUID");
+        assert_single_field_violation(&tx_id, "tx_id_filter", "must be a valid UUID");
+
+        let saga_id = parse_saga_uuid_field("saga_id", "not-a-uuid", "saga_id must be a UUID")
+            .expect_err("invalid saga_id must fail before store access");
+        assert_eq!(saga_id.message(), "saga_id must be a UUID");
+        assert_single_field_violation(&saga_id, "saga_id", "must be a valid UUID");
+    }
+
+    #[test]
+    fn saga_recompensation_not_retryable_carries_policy_detail() {
+        let saga_id = "11111111-1111-4111-8111-111111111111";
+        let err = saga_recompensation_not_retryable_status(saga_id);
+        assert_policy_detail(
+            &err,
+            "retry_saga_compensation",
+            "saga_not_retryable",
+            "saga 11111111-1111-4111-8111-111111111111 is not in a retryable state (failed_compensation or manual_review)",
+        );
+    }
+
+    #[test]
+    fn saga_not_found_statuses_carry_schema_detail() {
+        let saga_id = "11111111-1111-4111-8111-111111111111";
+        for operation in ["get_saga", "mark_saga_reviewed"] {
+            assert_schema_detail(
+                &saga_not_found_status(operation, saga_id),
+                operation,
+                "saga_not_found",
+                "saga 11111111-1111-4111-8111-111111111111 not found",
+            );
+        }
+    }
+
+    #[test]
+    fn saga_internal_status_carries_typed_detail() {
+        let status = saga_internal_status("list_sagas", "list_sagas query failed");
+
+        assert_internal_detail(&status, "list_sagas", "list_sagas query failed");
+    }
+
+    /// 9.12 seam — the DEFAULT kind reproduces existing saga behaviour: the
+    /// operation string is recorded verbatim and classifies back to `Default`, so
+    /// no pre-9.12 saga path changes. The `Workflow` kind round-trips through the
+    /// `operation` field without colliding with bare data-plane verbs.
+    #[test]
+    fn saga_kind_default_preserves_operation_and_round_trips() {
+        // Default is the identity function — every existing saga is unchanged.
+        assert_eq!(SagaKind::Default.tag_operation("upsert"), "upsert");
+        assert_eq!(SagaKind::from_operation("upsert"), SagaKind::Default);
+        assert_eq!(SagaKind::default(), SagaKind::Default);
+
+        // Workflow tags + recovers without colliding with a bare verb.
+        let tagged = SagaKind::Workflow.tag_operation("order_fulfillment");
+        assert_ne!(tagged, "order_fulfillment");
+        assert_eq!(SagaKind::from_operation(&tagged), SagaKind::Workflow);
+        assert_eq!(SagaKind::Workflow.as_str(), "workflow");
     }
 
     /// Helper: build an in-memory SQLite SystemStores with the saga
@@ -782,6 +1068,12 @@ mod tests {
             .await
             .expect_err("must error");
         assert_eq!(err.code(), tonic::Code::NotFound);
+        assert_schema_detail(
+            &err,
+            "get_saga",
+            "saga_not_found",
+            &format!("saga {phantom} not found"),
+        );
 
         // retry_saga_compensation succeeds from failed_compensation,
         // refuses from indeterminate.
@@ -791,7 +1083,14 @@ mod tests {
         let err = retry_saga_compensation(store.as_ref(), &cfg, &beta.to_string())
             .await
             .expect_err("now indeterminate, retry refused");
-        assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+        assert_policy_detail(
+            &err,
+            "retry_saga_compensation",
+            "saga_not_retryable",
+            &format!(
+                "saga {beta} is not in a retryable state (failed_compensation or manual_review)"
+            ),
+        );
 
         // mark_saga_reviewed flips status.
         mark_saga_reviewed(store.as_ref(), &cfg, &beta.to_string())
@@ -807,6 +1106,12 @@ mod tests {
             .await
             .expect_err("must error");
         assert_eq!(err.code(), tonic::Code::NotFound);
+        assert_schema_detail(
+            &err,
+            "mark_saga_reviewed",
+            "saga_not_found",
+            &format!("saga {phantom} not found"),
+        );
 
         // Bad saga_id format → InvalidArgument.
         let err = get_saga(store.as_ref(), &cfg, "not-a-uuid")

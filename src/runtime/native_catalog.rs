@@ -648,6 +648,7 @@ mod tests {
             "CREATE TABLE IF NOT EXISTS \"udb_authn\".\"webauthn_challenges\"",
             "CREATE TABLE IF NOT EXISTS \"udb_authn\".\"api_keys\"",
             "CREATE TABLE IF NOT EXISTS \"udb_authz\".\"policy_rules\"",
+            "CREATE TABLE IF NOT EXISTS \"udb_vault\".\"vault_db_credential_leases\"",
         ] {
             assert!(
                 joined.contains(fragment),

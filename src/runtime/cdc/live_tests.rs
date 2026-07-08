@@ -175,6 +175,7 @@ async fn live_indoubt_reset_returns_publishing_row_to_pending() {
         &outbox_relation,
         current_epoch,
         300,
+        None,
     )
     .await
     .expect("epoch sweep");

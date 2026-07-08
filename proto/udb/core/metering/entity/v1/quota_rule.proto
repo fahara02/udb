@@ -1,0 +1,92 @@
+syntax = "proto3";
+
+package udb.core.metering.entity.v1;
+
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Metering.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/metering/entity/v1;meteringv1";
+option java_package = "com.udb.core.metering.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Metering\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Metering\\Entity\\V1";
+
+// ---------------------------------------------------------------------------
+// QuotaRule — a tenant/project-scoped usage ceiling (master-plan 9.9). A rule
+// caps `metric` (matched against `UsageEvent.method`) at `limit_value` over a
+// rolling `window_seconds` window. CheckQuota sums the durable usage rows in the
+// window and compares against this limit. `revision` is a monotone per-row
+// counter bumped on every change so clients can detect staleness; mutations emit
+// `udb.metering.quota.changed.v1`. RLS scopes rows to the current tenant.
+// ---------------------------------------------------------------------------
+message QuotaRule {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "quota_rules"
+    schema_name: "udb_metering"
+    migration_order: 2
+    is_table: true
+    comment: "Per-tenant/project usage quota rules (master-plan 9.9)"
+    soft_delete: false
+    audit_fields: true
+    enable_rls: true
+    rls_policies: {
+      policy_name: "tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text)"
+      permissive: true
+    }
+    indexes: {
+      index_name: "idx_quota_rules_scope_metric_unique"
+      index_type: "BTREE"
+      unique: true
+      columns: "tenant_id"
+      columns: "project_id"
+      columns: "metric"
+    }
+    indexes: {
+      index_name: "idx_quota_rules_tenant_metric"
+      index_type: "BTREE"
+      columns: "tenant_id"
+      columns: "metric"
+    }
+    cdc_topic: "udb.metering.quota_rules.cdc"
+    required_scope: "metering:read"
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "none"
+    retention_class: "metering.operational"
+    retention_days: 365
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
+
+  string quota_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "quota_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(64)" not_null: true index: { index_name: "idx_quota_rules_tenant" index_type: "BTREE" } }];
+
+  // Project scope; empty means the rule applies to every project of the tenant.
+  string project_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "project_id" sql_type: "VARCHAR(255)" not_null: true default_value: "''" }];
+
+  // The metered dimension this rule caps — matched against `UsageEvent.method`.
+  string metric = 4 [(udb.core.common.v1.pg_column) = { column_name: "metric" sql_type: "VARCHAR(255)" not_null: true }];
+
+  // Maximum total quantity allowed in the window. 0 = deny all; a negative input
+  // is rejected at PutQuota. (Named `limit_value`: `limit` is a SQL keyword.)
+  int64 limit_value = 5 [(udb.core.common.v1.pg_column) = { column_name: "limit_value" sql_type: "BIGINT" not_null: true default_value: "0" }];
+
+  // Rolling window length in seconds over which usage is summed.
+  int64 window_seconds = 6 [(udb.core.common.v1.pg_column) = { column_name: "window_seconds" sql_type: "BIGINT" not_null: true default_value: "86400" }];
+
+  // Master switch; a disabled rule is not enforced by CheckQuota.
+  bool enabled = 7 [(udb.core.common.v1.pg_column) = { column_name: "enabled" sql_type: "BOOLEAN" not_null: true default_value: "true" }];
+
+  // Monotone per-row revision, bumped on every change.
+  int64 revision = 8 [(udb.core.common.v1.pg_column) = { column_name: "revision" sql_type: "BIGINT" not_null: true default_value: "0" }];
+
+  string metadata_json = 9 [(udb.core.common.v1.pg_column) = { column_name: "metadata_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'{}'::jsonb" comment: "Non-secret quota metadata for audit and routing" }];
+}

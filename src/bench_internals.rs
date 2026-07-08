@@ -19,6 +19,8 @@ pub use prost_types::{Struct, Value as ProstValue};
 
 use crate::runtime::executor_utils as eu;
 
+pub use crate::runtime::security::{AbacPolicy, PolicyEffect};
+
 // ── Struct / prost <-> JSON (read/write row conversion) ───────────────────────
 
 pub fn struct_to_json(value: &Struct) -> JsonValue {
@@ -50,6 +52,45 @@ pub fn merge_context(
     metadata_context: RequestContext,
 ) -> RequestContext {
     eu::merge_context(proto_context, metadata_context)
+}
+
+// ── Authz / method-security hot maps (D.2 allocation coverage) ───────────────
+
+pub fn rebuild_authz_snapshot_from_abac(
+    version: &str,
+    policies: &[AbacPolicy],
+) -> crate::runtime::authz::AuthzSnapshot {
+    crate::runtime::authz::AuthzSnapshot::from_abac_policies(version, policies)
+}
+
+pub fn rebuild_method_security_scope_registry() -> usize {
+    crate::runtime::service::method_security::build_registry()
+        .values()
+        .map(|security| {
+            security.scopes.len()
+                + security.roles.len()
+                + security.tenant_required as usize
+                + security.request_context_required as usize
+                + security.internal_grpc_only as usize
+        })
+        .sum()
+}
+
+pub fn method_security_scope_paths() -> Vec<String> {
+    let mut paths: Vec<String> =
+        crate::runtime::service::method_security::method_security_registry()
+            .iter()
+            .filter(|(_, security)| !security.scopes.is_empty())
+            .map(|(path, _)| path.clone())
+            .collect();
+    paths.sort();
+    paths
+}
+
+pub fn method_security_scope_count(path: &str) -> usize {
+    crate::runtime::service::method_security::method_security(path)
+        .map(|security| security.scopes.len())
+        .unwrap_or_default()
 }
 
 // ── Generic-dispatch request parsing ──────────────────────────────────────────

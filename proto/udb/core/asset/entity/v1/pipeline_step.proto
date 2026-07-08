@@ -81,6 +81,14 @@ message PipelineStep {
   string result = 6 [(udb.core.common.v1.pg_column) = { column_name: "result" sql_type: "JSONB" is_json: true comment: "Step result payload" }];
   // @inject_tag: gorm:"column:result"
 
+  // Transform parameters applied to a byte/image step, as a JSON object, e.g.
+  // {"width":800,"height":600,"format":"jpeg"}. RESIZE reads width/height;
+  // CONVERT (format-only RESIZE) reads format. Empty `{}` for steps that take no
+  // parameters. Additive: lets RESIZE/CONVERT be parameterized instead of a
+  // hardcoded 256x256/png, and surfaces the applied params on read.
+  string params = 13 [(udb.core.common.v1.pg_column) = { column_name: "params" sql_type: "JSONB" is_json: true not_null: true default_value: "'{}'::jsonb" comment: "Step transform parameters as JSON" }];
+  // @inject_tag: gorm:"column:params;not null"
+
   string error = 7 [(udb.core.common.v1.pg_column) = { column_name: "error" sql_type: "TEXT" }];
   // @inject_tag: gorm:"column:error"
 

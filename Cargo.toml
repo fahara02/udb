@@ -89,6 +89,13 @@ azureblob = ["dep:azure_storage", "dep:azure_storage_blobs", "dep:azure_core"]
 # Google Cloud Storage object backend.
 gcs = ["dep:google-cloud-storage"]
 s3 = ["dep:aws-config", "dep:aws-sdk-s3"]
+# Master-plan 3.4 KMS extension point: the `KeyProvider` trait + selector ship now
+# (env path is the default), but the concrete `AwsKmsProvider` and its `aws-sdk-kms`
+# dependency are deferred (see the KMS note in `authn/key_provider.rs`). To activate
+# on a networked build: add `aws-sdk-kms = { version = "1", optional = true }` below,
+# re-add `kms = ["dep:aws-sdk-kms", "dep:aws-config"]` here, restore the
+# `AwsKmsProvider` impl, and commit the updated `Cargo.lock`. The dep is omitted now
+# because it cannot be vendored offline (it would break every offline `cargo` resolve).
 redis = ["dep:redis"]
 # CDC (kafka) uses Redis for publish idempotency and the HTTP client for
 # optional schema-registry validation, so it pulls both features. It also
@@ -118,8 +125,10 @@ oidc = ["dep:openidconnect", "openidconnect/reqwest-blocking", "openidconnect/ru
 # WebAuthn / FIDO2 second-factor registration + assertion.
 webauthn = [
     "dep:webauthn-rs",
+    "dep:openssl",
     "dep:openssl-sys",
     "dep:p256",
+    "webauthn-rs/attestation",
     "webauthn-rs/danger-allow-state-serialisation",
 ]
 # Embedded WebRTC SFU media-plane scaffolding. Off by default: Layer A
@@ -272,6 +281,7 @@ webauthn-rs = { version = "0.5", optional = true }
 # webauthn-rs 0.5 uses openssl internally. Vendoring keeps the feature build
 # portable on Windows/MSVC, matching the repo's general "no system OpenSSL"
 # stance for optional integrations.
+openssl = { version = "0.10", features = ["vendored"], optional = true }
 openssl-sys = { version = "0.9", features = ["vendored"], optional = true }
 # Q#9-11 dev-only WebAuthn software authenticator (UDB_WEBAUTHN_TEST_MODE): a real
 # P-256 keypair produces a genuine "none"-attestation credential + ES256 assertion

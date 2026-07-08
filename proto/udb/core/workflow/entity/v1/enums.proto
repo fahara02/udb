@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package udb.core.workflow.entity.v1;
+
+option csharp_namespace = "udb.core.Workflow.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/workflow/entity/v1;workflowv1";
+option java_package = "com.udb.core.workflow.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Workflow\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Workflow\\Entity\\V1";
+
+// Lifecycle status of a durable workflow instance (master-plan 9.12). Only RUNNING
+// instances whose next_run_at is due are claimed by the leader-elected workflow
+// tick; terminal states (COMPLETED / COMPENSATED / CANCELLED / FAILED) are never
+// re-advanced. COMPENSATING is the transitional state while the EXISTING saga
+// recovery worker reverses the recorded compensations (reverse-order).
+enum WorkflowStatus {
+  WORKFLOW_STATUS_UNSPECIFIED = 0;
+  // Recorded but not yet eligible to advance.
+  WORKFLOW_STATUS_PENDING = 1;
+  // Eligible to advance when next_run_at is due.
+  WORKFLOW_STATUS_RUNNING = 2;
+  // Blocked on an external signal (SignalWorkflow resumes it).
+  WORKFLOW_STATUS_WAITING_SIGNAL = 3;
+  // All steps advanced; terminal success.
+  WORKFLOW_STATUS_COMPLETED = 4;
+  // Cancellation requested; the saga compensation path is undoing side effects.
+  WORKFLOW_STATUS_COMPENSATING = 5;
+  // Compensation completed; terminal.
+  WORKFLOW_STATUS_COMPENSATED = 6;
+  // Cancelled by an operator; terminal.
+  WORKFLOW_STATUS_CANCELLED = 7;
+  // Forward execution failed; terminal.
+  WORKFLOW_STATUS_FAILED = 8;
+}

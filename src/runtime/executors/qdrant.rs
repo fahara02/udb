@@ -14,9 +14,9 @@ use crate::proto::{
 };
 
 use crate::runtime::executor_utils::{
-    build_probe, json_bool, json_i32, json_into_struct, json_required_f32_vec, json_required_str,
-    json_scalar_to_string, json_to_struct, qdrant_status, store_option, store_option_i32,
-    struct_to_json,
+    backend_transport_status, build_probe, capability_status, invalid_argument_fields, json_bool,
+    json_i32, json_into_struct, json_required_f32_vec, json_required_str, json_scalar_to_string,
+    json_to_struct, qdrant_status, store_option, store_option_i32, struct_to_json,
 };
 
 /// Build a `VectorPoint` from an OWNED qdrant result point (D.3). The point JSON
@@ -75,6 +75,63 @@ const QDRANT_DEFAULT_SEARCH_LIMIT: i32 = 10;
 
 // ── Collection name validation (GAP 27) ────────────────────────────────
 
+fn qdrant_invalid_field_status(
+    field: impl Into<String>,
+    description: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    invalid_argument_fields(message, [(field.into(), description.into())])
+}
+
+fn invalid_qdrant_request_json_status(err: serde_json::Error) -> tonic::Status {
+    qdrant_invalid_field_status(
+        "request_json",
+        "must be valid JSON for Qdrant generic dispatch",
+        format!("invalid request json: {err}"),
+    )
+}
+
+fn invalid_qdrant_ensure_resource_spec_status(err: serde_json::Error) -> tonic::Status {
+    qdrant_invalid_field_status(
+        "spec_json",
+        "must be valid JSON for Qdrant ensure_resource",
+        format!("invalid qdrant ensure_resource spec: {err}"),
+    )
+}
+
+fn qdrant_required_field_status(field: &'static str, message: &'static str) -> tonic::Status {
+    qdrant_invalid_field_status(
+        field,
+        format!("{field} is required for this Qdrant operation"),
+        message,
+    )
+}
+
+fn unsupported_qdrant_operation_status(operation: &str) -> tonic::Status {
+    qdrant_invalid_field_status(
+        "operation",
+        "unsupported Qdrant mutation operation",
+        format!("unsupported Qdrant mutation operation '{operation}'"),
+    )
+}
+
+fn qdrant_collection_not_found_status(collection: &str) -> tonic::Status {
+    crate::runtime::executor_utils::schema_status(
+        tonic::Code::NotFound,
+        "qdrant",
+        "collection_check",
+        "qdrant_collection_not_found",
+        format!("Qdrant collection {collection} is missing"),
+    )
+}
+
+fn qdrant_internal_status(
+    operation: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    crate::runtime::executor_utils::internal_status("qdrant", operation, message)
+}
+
 /// Validate a Qdrant collection name received from a gRPC caller.
 ///
 /// Rejects names that could escape the collections path via path traversal
@@ -83,7 +140,9 @@ const QDRANT_DEFAULT_SEARCH_LIMIT: i32 = 10;
 #[allow(clippy::result_large_err)]
 fn validate_collection_name(name: &str) -> Result<(), tonic::Status> {
     if name.is_empty() || name.len() > 255 {
-        return Err(tonic::Status::invalid_argument(
+        return Err(qdrant_invalid_field_status(
+            "collection",
+            "must be 1-255 characters",
             "Qdrant collection name must be 1–255 characters",
         ));
     }
@@ -91,12 +150,16 @@ fn validate_collection_name(name: &str) -> Result<(), tonic::Status> {
         .chars()
         .all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '-'))
     {
-        return Err(tonic::Status::invalid_argument(
+        return Err(qdrant_invalid_field_status(
+            "collection",
+            "may only contain ASCII letters, digits, hyphens, and underscores",
             "Qdrant collection name may only contain ASCII letters, digits, hyphens, and underscores",
         ));
     }
     if name.starts_with('.') || name.starts_with('-') {
-        return Err(tonic::Status::invalid_argument(
+        return Err(qdrant_invalid_field_status(
+            "collection",
+            "may not start with '.' or '-'",
             "Qdrant collection name may not start with '.' or '-'",
         ));
     }
@@ -159,13 +222,13 @@ impl QdrantHttpClient {
             self.base_url,
             encode_collection(collection)
         );
-        let response = self.auth(self.http.get(url)).send().await.map_err(|err| {
-            tonic::Status::unavailable(format!("Qdrant collection check failed: {err}"))
-        })?;
+        let response = self
+            .auth(self.http.get(url))
+            .send()
+            .await
+            .map_err(|err| backend_transport_status("Qdrant", "collection check", err))?;
         if response.status() == reqwest::StatusCode::NOT_FOUND {
-            return Err(tonic::Status::not_found(format!(
-                "Qdrant collection {collection} is missing"
-            )));
+            return Err(qdrant_collection_not_found_status(collection));
         }
         qdrant_status(response.status())
     }
@@ -192,18 +255,29 @@ impl QdrantHttpClient {
             }))
             .send()
             .await
-            .map_err(|err| {
-                tonic::Status::unavailable(format!("Qdrant collection create failed: {err}"))
-            })?;
+            .map_err(|err| backend_transport_status("Qdrant", "collection create", err))?;
         let status = response.status();
         if status == reqwest::StatusCode::CONFLICT {
             return Ok(());
         }
         if !status.is_success() {
             let body = response.text().await.unwrap_or_default();
-            return Err(tonic::Status::unavailable(format!(
-                "Qdrant collection create failed: HTTP {status}: {body}"
-            )));
+            let message = format!("Qdrant collection create failed: HTTP {status}: {body}");
+            if status.is_server_error() {
+                return Err(crate::runtime::executor_utils::retryable_status(
+                    "Qdrant",
+                    "collection create",
+                    crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
+                    message,
+                ));
+            }
+            return Err(crate::runtime::executor_utils::schema_status(
+                tonic::Code::FailedPrecondition,
+                "Qdrant",
+                "collection create",
+                "qdrant_collection_create_rejected",
+                message,
+            ));
         }
         Ok(())
     }
@@ -239,11 +313,12 @@ impl QdrantHttpClient {
             .json(&body)
             .send()
             .await
-            .map_err(|err| tonic::Status::unavailable(format!("Qdrant search failed: {err}")))?;
+            .map_err(|err| backend_transport_status("Qdrant", "search", err))?;
         qdrant_status(response.status())?;
-        let mut payload: JsonValue = response.json().await.map_err(|err| {
-            tonic::Status::unavailable(format!("Qdrant response decode failed: {err}"))
-        })?;
+        let mut payload: JsonValue = response
+            .json()
+            .await
+            .map_err(|err| backend_transport_status("Qdrant", "response decode", err))?;
         let points = payload
             .get_mut("result")
             .and_then(JsonValue::as_array_mut)
@@ -278,7 +353,7 @@ impl QdrantHttpClient {
             .json(&json!({ "points": points }))
             .send()
             .await
-            .map_err(|err| tonic::Status::unavailable(format!("Qdrant upsert failed: {err}")))?;
+            .map_err(|err| backend_transport_status("Qdrant", "upsert", err))?;
         qdrant_status(response.status())?;
         Ok(())
     }
@@ -304,7 +379,7 @@ impl QdrantHttpClient {
             }))
             .send()
             .await
-            .map_err(|err| tonic::Status::unavailable(format!("Qdrant delete failed: {err}")))?;
+            .map_err(|err| backend_transport_status("Qdrant", "delete", err))?;
         qdrant_status(response.status())?;
         Ok(())
     }
@@ -325,9 +400,7 @@ impl QdrantHttpClient {
             .json(&json!({ "filter": filter }))
             .send()
             .await
-            .map_err(|err| {
-                tonic::Status::unavailable(format!("Qdrant filtered delete failed: {err}"))
-            })?;
+            .map_err(|err| backend_transport_status("Qdrant", "filtered delete", err))?;
         qdrant_status(response.status())?;
         Ok(())
     }
@@ -357,9 +430,7 @@ impl QdrantHttpClient {
             .json(&body)
             .send()
             .await
-            .map_err(|err| {
-                tonic::Status::unavailable(format!("Qdrant payload patch failed: {err}"))
-            })?;
+            .map_err(|err| backend_transport_status("Qdrant", "payload patch", err))?;
         qdrant_status(response.status())?;
         Ok(())
     }
@@ -634,7 +705,10 @@ impl BackendHealth for QdrantExecutor {
 
 impl QueryExecutor for QdrantExecutor {
     async fn query(&self, _request_json: &str) -> Result<String, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "qdrant",
+            "query",
+            "generic_query",
             "qdrant does not support generic query; use search",
         ))
     }
@@ -643,8 +717,8 @@ impl QueryExecutor for QdrantExecutor {
 impl SearchExecutor for QdrantExecutor {
     /// `{"collection","vector","filter?","limit?","score_threshold?","with_payload?","text_query?","fusion_weights?"}`.
     async fn search(&self, request_json: &str) -> Result<String, tonic::Status> {
-        let spec: JsonValue = serde_json::from_str(request_json)
-            .map_err(|e| tonic::Status::invalid_argument(format!("invalid request json: {e}")))?;
+        let spec: JsonValue =
+            serde_json::from_str(request_json).map_err(invalid_qdrant_request_json_status)?;
         let collection = json_required_str(&spec, "collection")?;
         let vector = json_required_f32_vec(&spec, "vector")?;
         let filter = spec.get("filter").cloned().unwrap_or(JsonValue::Null);
@@ -702,15 +776,16 @@ impl SearchExecutor for QdrantExecutor {
                 })
             })
             .collect::<Vec<_>>();
-        serde_json::to_string(&points).map_err(|e| tonic::Status::internal(e.to_string()))
+        serde_json::to_string(&points)
+            .map_err(|e| qdrant_internal_status("search_result_encode", e.to_string()))
     }
 }
 
 impl MutationExecutor for QdrantExecutor {
     /// `{"operation":"upsert"|"delete", "collection", ...}`.
     async fn mutate(&self, request_json: &str) -> Result<String, tonic::Status> {
-        let mut spec: JsonValue = serde_json::from_str(request_json)
-            .map_err(|e| tonic::Status::invalid_argument(format!("invalid request json: {e}")))?;
+        let mut spec: JsonValue =
+            serde_json::from_str(request_json).map_err(invalid_qdrant_request_json_status)?;
         // Owned op string so the match doesn't hold a borrow of `spec` (the upsert
         // arm needs `get_mut` to move the points array out).
         let operation = spec
@@ -732,7 +807,9 @@ impl MutationExecutor for QdrantExecutor {
                     .get_mut("points")
                     .and_then(JsonValue::as_array_mut)
                     .map(std::mem::take)
-                    .ok_or_else(|| tonic::Status::invalid_argument("points must be an array"))?;
+                    .ok_or_else(|| {
+                        qdrant_required_field_status("points", "points must be an array")
+                    })?;
                 let mut points = Vec::with_capacity(point_specs.len());
                 for mut point in point_specs {
                     points.push(VectorPointMutation {
@@ -773,7 +850,8 @@ impl MutationExecutor for QdrantExecutor {
                     .or_else(|| spec.get("ids"))
                     .and_then(JsonValue::as_array)
                     .ok_or_else(|| {
-                        tonic::Status::invalid_argument(
+                        qdrant_required_field_status(
+                            "point_ids",
                             "point_ids must be an array when filter is absent",
                         )
                     })?
@@ -789,10 +867,9 @@ impl MutationExecutor for QdrantExecutor {
             }
             "set_payload" | "patch_payload" | "upsert_payload" => {
                 let collection = json_required_str(&spec, "collection")?;
-                let payload = spec
-                    .get("payload")
-                    .cloned()
-                    .ok_or_else(|| tonic::Status::invalid_argument("payload is required"))?;
+                let payload = spec.get("payload").cloned().ok_or_else(|| {
+                    qdrant_required_field_status("payload", "payload is required")
+                })?;
                 let point_ids = spec
                     .get("point_ids")
                     .or_else(|| spec.get("ids"))
@@ -803,7 +880,8 @@ impl MutationExecutor for QdrantExecutor {
                     });
                 let filter = spec.get("filter").cloned();
                 if point_ids.is_none() && filter.is_none() {
-                    return Err(tonic::Status::invalid_argument(
+                    return Err(qdrant_required_field_status(
+                        "point_ids",
                         "set_payload requires point_ids or filter",
                     ));
                 }
@@ -816,16 +894,17 @@ impl MutationExecutor for QdrantExecutor {
                 })
                 .to_string())
             }
-            other => Err(tonic::Status::invalid_argument(format!(
-                "unsupported Qdrant mutation operation '{other}'"
-            ))),
+            other => Err(unsupported_qdrant_operation_status(other)),
         }
     }
 }
 
 impl ObjectExecutor for QdrantExecutor {
     async fn get_object(&self, _request_json: &str) -> Result<Vec<u8>, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "qdrant",
+            "get_object",
+            "object_store",
             "qdrant is not an object store",
         ))
     }
@@ -834,7 +913,10 @@ impl ObjectExecutor for QdrantExecutor {
         _request_json: &str,
         _bytes: Vec<u8>,
     ) -> Result<String, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "qdrant",
+            "put_object",
+            "object_store",
             "qdrant is not an object store",
         ))
     }
@@ -846,19 +928,23 @@ impl ResourceAdminExecutor for QdrantExecutor {
         resource_name: &str,
         spec_json: &str,
     ) -> Result<(), tonic::Status> {
-        let spec: JsonValue = serde_json::from_str(spec_json).map_err(|e| {
-            tonic::Status::invalid_argument(format!("invalid qdrant ensure_resource spec: {e}"))
-        })?;
+        let spec: JsonValue =
+            serde_json::from_str(spec_json).map_err(invalid_qdrant_ensure_resource_spec_status)?;
         let dimension = spec
             .get("dimension")
             .or_else(|| spec.get("vector_size"))
             .or_else(|| spec.get("size"))
+            .or_else(|| spec.get("vectors").and_then(|vectors| vectors.get("size")))
             .and_then(JsonValue::as_i64)
             .unwrap_or(4)
             .max(1)
             .to_string();
         let distance = spec
             .get("distance")
+            .or_else(|| {
+                spec.get("vectors")
+                    .and_then(|vectors| vectors.get("distance"))
+            })
             .and_then(JsonValue::as_str)
             .unwrap_or("cosine")
             .to_string();
@@ -889,14 +975,14 @@ impl ResourceAdminExecutor for QdrantExecutor {
             .delete(url)
             .send()
             .await
-            .map_err(|e| tonic::Status::unavailable(format!("qdrant delete failed: {e}")))?;
+            .map_err(|e| backend_transport_status("qdrant", "delete", e))?;
         if resp.status().is_success() || resp.status() == reqwest::StatusCode::NOT_FOUND {
             Ok(())
         } else {
-            Err(tonic::Status::internal(format!(
-                "qdrant drop_resource status: {}",
-                resp.status()
-            )))
+            Err(qdrant_internal_status(
+                "drop_resource",
+                format!("qdrant drop_resource status: {}", resp.status()),
+            ))
         }
     }
     async fn list_resources(&self) -> Result<Vec<String>, tonic::Status> {
@@ -907,11 +993,11 @@ impl ResourceAdminExecutor for QdrantExecutor {
             .get(url)
             .send()
             .await
-            .map_err(|e| tonic::Status::unavailable(format!("qdrant list failed: {e}")))?;
+            .map_err(|e| backend_transport_status("qdrant", "list", e))?;
         let body: JsonValue = resp
             .json()
             .await
-            .map_err(|e| tonic::Status::internal(format!("qdrant list parse failed: {e}")))?;
+            .map_err(|e| backend_transport_status("qdrant", "list parse", e))?;
         let names = body
             .get("result")
             .and_then(|r| r.get("collections"))
@@ -929,7 +1015,10 @@ impl ResourceAdminExecutor for QdrantExecutor {
 
 impl BackendExecutor for QdrantExecutor {
     async fn transaction(&self, _request_json: &str) -> Result<String, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "qdrant",
+            "transaction",
+            "transactions",
             "qdrant does not support transactions",
         ))
     }
@@ -944,6 +1033,9 @@ impl BackendExecutor for QdrantExecutor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
 
     fn exec() -> QdrantExecutor {
         QdrantExecutor(QdrantHttpClient {
@@ -951,6 +1043,170 @@ mod tests {
             api_key: None,
             http: reqwest::Client::new(),
         })
+    }
+
+    fn decode_detail(status: &tonic::Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_single_field(status: &tonic::Status, field: &str) {
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, field);
+    }
+
+    fn assert_schema_detail(
+        status: &tonic::Status,
+        backend: &str,
+        operation: &str,
+        schema_code: &str,
+        message: &str,
+    ) {
+        assert_eq!(status.code(), tonic::Code::NotFound);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Schema as i32);
+        assert_eq!(detail.backend, backend);
+        assert_eq!(detail.operation, operation);
+        assert_eq!(detail.capability_required, schema_code);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    fn assert_internal_detail(status: &tonic::Status, operation: &str, message: &str) {
+        assert_eq!(status.code(), tonic::Code::Internal);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "qdrant");
+        assert_eq!(detail.operation, operation);
+        assert!(!detail.retryable);
+    }
+
+    #[test]
+    fn qdrant_internal_status_carries_typed_detail() {
+        let status = qdrant_internal_status("drop_resource", "qdrant drop_resource status: 500");
+        assert_internal_detail(&status, "drop_resource", "qdrant drop_resource status: 500");
+    }
+
+    #[test]
+    fn qdrant_collection_not_found_carries_schema_detail() {
+        assert_schema_detail(
+            &qdrant_collection_not_found_status("items"),
+            "qdrant",
+            "collection_check",
+            "qdrant_collection_not_found",
+            "Qdrant collection items is missing",
+        );
+    }
+
+    #[test]
+    fn qdrant_collection_validation_carries_field_violations() {
+        for (name, message) in [
+            ("", "Qdrant collection name must be 1–255 characters"),
+            (
+                "bad/name",
+                "Qdrant collection name may only contain ASCII letters, digits, hyphens, and underscores",
+            ),
+            (
+                "-bad",
+                "Qdrant collection name may not start with '.' or '-'",
+            ),
+        ] {
+            let err = validate_collection_name(name).unwrap_err();
+            assert_eq!(err.message(), message);
+            assert_single_field(&err, "collection");
+        }
+    }
+
+    #[tokio::test]
+    async fn qdrant_search_validation_carries_field_violations() {
+        let e = exec();
+
+        let invalid_json = SearchExecutor::search(&e, "not json").await.unwrap_err();
+        assert_eq!(invalid_json.code(), tonic::Code::InvalidArgument);
+        assert!(invalid_json.message().starts_with("invalid request json:"));
+        assert_single_field(&invalid_json, "request_json");
+
+        let missing_collection = SearchExecutor::search(&e, r#"{"vector":[1,2,3]}"#)
+            .await
+            .unwrap_err();
+        assert_eq!(missing_collection.message(), "collection is required");
+        assert_single_field(&missing_collection, "collection");
+    }
+
+    #[tokio::test]
+    async fn qdrant_mutation_validation_carries_field_violations() {
+        let e = exec();
+
+        let invalid_json = MutationExecutor::mutate(&e, "not json").await.unwrap_err();
+        assert_eq!(invalid_json.code(), tonic::Code::InvalidArgument);
+        assert!(invalid_json.message().starts_with("invalid request json:"));
+        assert_single_field(&invalid_json, "request_json");
+
+        let missing_points =
+            MutationExecutor::mutate(&e, r#"{"operation":"upsert","collection":"items"}"#)
+                .await
+                .unwrap_err();
+        assert_eq!(missing_points.message(), "points must be an array");
+        assert_single_field(&missing_points, "points");
+
+        let missing_point_ids =
+            MutationExecutor::mutate(&e, r#"{"operation":"delete","collection":"items"}"#)
+                .await
+                .unwrap_err();
+        assert_eq!(
+            missing_point_ids.message(),
+            "point_ids must be an array when filter is absent"
+        );
+        assert_single_field(&missing_point_ids, "point_ids");
+
+        let missing_payload =
+            MutationExecutor::mutate(&e, r#"{"operation":"set_payload","collection":"items"}"#)
+                .await
+                .unwrap_err();
+        assert_eq!(missing_payload.message(), "payload is required");
+        assert_single_field(&missing_payload, "payload");
+
+        let missing_selector = MutationExecutor::mutate(
+            &e,
+            r#"{"operation":"set_payload","collection":"items","payload":{"a":1}}"#,
+        )
+        .await
+        .unwrap_err();
+        assert_eq!(
+            missing_selector.message(),
+            "set_payload requires point_ids or filter"
+        );
+        assert_single_field(&missing_selector, "point_ids");
+
+        let unsupported = MutationExecutor::mutate(&e, r#"{"operation":"bogus"}"#)
+            .await
+            .unwrap_err();
+        assert_eq!(
+            unsupported.message(),
+            "unsupported Qdrant mutation operation 'bogus'"
+        );
+        assert_single_field(&unsupported, "operation");
+    }
+
+    #[tokio::test]
+    async fn qdrant_resource_spec_validation_carries_field_violation() {
+        let e = exec();
+        let err = ResourceAdminExecutor::ensure_resource(&e, "items", "{")
+            .await
+            .unwrap_err();
+        assert!(
+            err.message()
+                .starts_with("invalid qdrant ensure_resource spec:")
+        );
+        assert_single_field(&err, "spec_json");
     }
 
     #[tokio::test]

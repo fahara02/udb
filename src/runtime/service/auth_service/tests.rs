@@ -25,6 +25,7 @@ mod authz_rebac_live;
 mod cdc_live;
 #[cfg(feature = "kafka")]
 mod events_live;
+mod fault_injection_live;
 mod ha_convergence_live;
 mod ha_jwks_rotation_live;
 mod ha_multinode_live;

@@ -24,8 +24,10 @@ use udb::{
 
 mod args;
 mod auth;
+mod authz_cli;
 mod doctor;
 mod env_setup;
+mod evidence;
 mod help;
 mod init;
 mod init_prompt;
@@ -38,8 +40,10 @@ mod scaffold;
 mod sdk_gen;
 pub(crate) use args::*;
 pub(crate) use auth::*;
+pub(crate) use authz_cli::*;
 pub(crate) use doctor::*;
 pub(crate) use env_setup::*;
+pub(crate) use evidence::*;
 pub(crate) use output::*;
 pub(crate) use scaffold::*;
 
@@ -289,13 +293,19 @@ pub fn run() {
             output_mode,
             with_probes,
             enterprise,
+            fix,
         } => {
             let runtime = tokio::runtime::Runtime::new().unwrap_or_else(|err| {
                 eprintln!("failed to create tokio runtime: {err}");
                 process::exit(1);
             });
-            let report =
-                runtime.block_on(run_doctor(with_probes, enterprise, &proto_root, &namespace));
+            let report = runtime.block_on(run_doctor(
+                with_probes,
+                enterprise,
+                fix,
+                &proto_root,
+                &namespace,
+            ));
             let exit_code = doctor_status(&report).exit_code();
             match output_mode {
                 DoctorOutputMode::Json => output_json(&report, "doctor report"),
@@ -363,6 +373,26 @@ pub fn run() {
                 &selector,
             ));
         }
+        Command::Orm {
+            action,
+            lang,
+            entity,
+            templates_dir,
+            out_dir,
+        } => {
+            // master-plan 10.5: ORM scaffold reuses the SDK generation machinery
+            // (`sdk_gen::run_orm_scaffold` → the same FSM/template pipeline), so
+            // there is no parallel generator. Matched exhaustively so new
+            // `OrmAction` verbs must be wired here as the grammar grows.
+            match action {
+                OrmAction::Scaffold => process::exit(sdk_gen::run_orm_scaffold(
+                    &lang,
+                    &templates_dir,
+                    &out_dir,
+                    entity.as_deref(),
+                )),
+            }
+        }
         Command::Native {
             action,
             services,
@@ -416,6 +446,12 @@ pub fn run() {
         }
         Command::Auth(auth_command) => {
             process::exit(run_auth_command(auth_command));
+        }
+        Command::Authz(authz_command) => {
+            process::exit(run_authz_command(authz_command));
+        }
+        Command::Compliance(compliance_command) => {
+            process::exit(run_compliance_command(compliance_command));
         }
         Command::AdminReleaseLock => {
             let runtime = tokio::runtime::Runtime::new().unwrap_or_else(|err| {
@@ -932,6 +968,8 @@ pub fn run() {
         | Command::Init(_)
         | Command::Dev { .. }
         | Command::Auth(_)
+        | Command::Authz(_)
+        | Command::Compliance(_)
         | Command::AdminReleaseLock
         | Command::AdminVerifyAudit { .. }
         | Command::AdminResetDb { .. }
@@ -940,6 +978,7 @@ pub fn run() {
         | Command::ProtoExport { .. }
         | Command::ProtoFmt { .. }
         | Command::Sdk { .. }
+        | Command::Orm { .. }
         | Command::Native { .. }
         | Command::AppInit { .. }
         | Command::CompatMatrix => {

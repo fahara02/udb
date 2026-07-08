@@ -32,9 +32,12 @@ impl crate::runtime::executors::handle::DispatchFactory for WeaviatePlugin {
         let client = runtime
             .weaviate_for_instance(instance_name)
             .ok_or_else(|| {
-                tonic::Status::failed_precondition(format!(
-                    "Weaviate instance '{instance_name}' not configured (set UDB_WEAVIATE_DSN)"
-                ))
+                super::dispatch_instance_not_configured_status(
+                    "weaviate",
+                    format!(
+                        "Weaviate instance '{instance_name}' not configured (set UDB_WEAVIATE_DSN)"
+                    ),
+                )
             })?
             .clone();
         Ok(

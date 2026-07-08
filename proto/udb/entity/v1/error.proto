@@ -19,6 +19,14 @@ option php_namespace = "Udb\\Entity\\V1";
 // All fields are optional in the proto3 sense: a field left at its default
 // (empty string / 0 / false) simply means "not applicable for this error".
 
+// A single invalid input field. `field` is the protobuf field path relative to
+// the request message (for example "tenant_id" or "policy.rules[0].action");
+// `description` is stable enough for operators but is not a machine enum.
+message ErrorFieldViolation {
+  string field = 1;
+  string description = 2;
+}
+
 // Coarse classification of why a request failed. SDKs branch on `kind` to pick
 // retry / surface-to-user / escalate behavior without parsing messages.
 enum ErrorKind {
@@ -39,6 +47,9 @@ enum ErrorKind {
   ERROR_KIND_RETRYABLE = 5;
   // An unexpected internal error. Generally not retryable without investigation.
   ERROR_KIND_INTERNAL = 6;
+  // Malformed or semantically invalid request fields. Maps to gRPC
+  // InvalidArgument and carries `field_violations`.
+  ERROR_KIND_VALIDATION = 7;
 }
 
 message ErrorDetail {
@@ -64,4 +75,7 @@ message ErrorDetail {
   string correlation_id = 7;
   // Coarse classification of the failure.
   ErrorKind kind = 8;
+  // Structured invalid-field details for INVALID_ARGUMENT responses. Empty for
+  // non-validation errors.
+  repeated ErrorFieldViolation field_violations = 9;
 }

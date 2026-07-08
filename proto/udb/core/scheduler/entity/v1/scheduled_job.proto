@@ -1,0 +1,121 @@
+syntax = "proto3";
+
+package udb.core.scheduler.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+import "udb/core/common/v1/types.proto";
+import "udb/core/scheduler/entity/v1/enums.proto";
+
+option csharp_namespace = "udb.core.Scheduler.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/scheduler/entity/v1;schedulerv1";
+option java_package = "com.udb.core.scheduler.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Scheduler\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Scheduler\\Entity\\V1";
+
+// ScheduledJob — a durable cron or one-shot job. The leader-elected scheduler
+// tick claims DUE rows with `FOR UPDATE SKIP LOCKED` and FIRES an outbox event
+// (`udb.scheduler.job.fired.v1`); it never executes the payload in-process —
+// consumers do the work (at-least-once). After `max_attempts` failures a job is
+// routed to the dead-letter topic (`udb.scheduler.job.dead.v1`) and marked DEAD.
+message ScheduledJob {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "scheduled_jobs"
+    schema_name: "udb_scheduler"
+    migration_order: 1
+    is_table: true
+    soft_delete: true
+    audit_fields: true
+    enable_rls: true
+    force_rls: true
+    rls_policies: {
+      policy_name: "scheduler_tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true) OR current_setting('app.platform_admin', true) = 'true')"
+      permissive: true
+    }
+    indexes: {
+      index_name: "idx_scheduled_jobs_tenant"
+      index_type: "BTREE"
+      columns: "tenant_id"
+    }
+    indexes: {
+      index_name: "idx_scheduled_jobs_due"
+      index_type: "BTREE"
+      columns: "status"
+      columns: "next_fire_at"
+    }
+    cdc_topic: "udb.scheduler.scheduled_jobs.cdc"
+    required_scope: "scheduler:read"
+    comment: "Durable cron and one-shot jobs fired by the leader-elected scheduler tick"
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "soft_delete"
+    retention_class: "scheduler.operational"
+    retention_days: 2555
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
+
+  string job_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "job_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+  // @inject_tag: gorm:"primaryKey;column:job_id;not null"
+
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "UUID" not_null: true }];
+  // @inject_tag: gorm:"column:tenant_id;not null"
+
+  string project_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "project_id" sql_type: "UUID" }];
+  // @inject_tag: gorm:"column:project_id"
+
+  string name = 4 [(udb.core.common.v1.pg_column) = { column_name: "name" sql_type: "VARCHAR(255)" not_null: true }];
+  // @inject_tag: gorm:"column:name;not null"
+
+  ScheduleType schedule_type = 5 [(udb.core.common.v1.pg_column) = { column_name: "schedule_type" sql_type: "VARCHAR(20)" not_null: true }];
+  // @inject_tag: gorm:"column:schedule_type;not null;serializer:proto_enum"
+
+  // Cron expression for SCHEDULE_TYPE_CRON jobs (ignored for one-shot).
+  string cron_expression = 6 [(udb.core.common.v1.pg_column) = { column_name: "cron_expression" sql_type: "VARCHAR(160)" }];
+  // @inject_tag: gorm:"column:cron_expression"
+
+  // Opaque JSON payload delivered verbatim with the fired event; the consumer
+  // interprets it. The scheduler never executes it in-process.
+  string payload = 7 [(udb.core.common.v1.pg_column) = { column_name: "payload" sql_type: "JSONB" is_json: true comment: "Opaque payload delivered with the fired event" }];
+  // @inject_tag: gorm:"column:payload"
+
+  // Informational topic the firing consumer is expected to listen on.
+  string target_topic = 8 [(udb.core.common.v1.pg_column) = { column_name: "target_topic" sql_type: "VARCHAR(255)" }];
+  // @inject_tag: gorm:"column:target_topic"
+
+  JobStatus status = 9 [(udb.core.common.v1.pg_column) = { column_name: "status" sql_type: "VARCHAR(20)" not_null: true default_value: "'ACTIVE'" index: { index_name: "idx_scheduled_jobs_status" index_type: "BTREE" } }];
+  // @inject_tag: gorm:"column:status;not null;serializer:proto_enum"
+
+  // When the job is next eligible to fire. NULL once a one-shot job COMPLETED.
+  google.protobuf.Timestamp next_fire_at = 10 [(udb.core.common.v1.pg_column) = { column_name: "next_fire_at" sql_type: "TIMESTAMPTZ" comment: "When the job is next due to fire" }];
+  // @inject_tag: gorm:"column:next_fire_at"
+
+  google.protobuf.Timestamp last_fired_at = 11 [(udb.core.common.v1.pg_column) = { column_name: "last_fired_at" sql_type: "TIMESTAMPTZ" comment: "When the job last fired" }];
+  // @inject_tag: gorm:"column:last_fired_at"
+
+  // Maximum delivery attempts before the job is dead-lettered.
+  int32 max_attempts = 12 [(udb.core.common.v1.pg_column) = { column_name: "max_attempts" sql_type: "INTEGER" not_null: true default_value: "5" }];
+  // @inject_tag: gorm:"column:max_attempts;not null"
+
+  // Failed attempts since the last successful fire; reset to 0 on success.
+  int32 attempt_count = 13 [(udb.core.common.v1.pg_column) = { column_name: "attempt_count" sql_type: "INTEGER" not_null: true default_value: "0" }];
+  // @inject_tag: gorm:"column:attempt_count;not null"
+
+  // Base backoff (seconds) used to defer next_fire_at after a failed attempt.
+  int32 backoff_seconds = 14 [(udb.core.common.v1.pg_column) = { column_name: "backoff_seconds" sql_type: "INTEGER" not_null: true default_value: "60" }];
+  // @inject_tag: gorm:"column:backoff_seconds;not null"
+
+  udb.core.common.v1.AuditInfo audit_info = 15 [(udb.core.common.v1.pg_column) = { column_name: "audit_info" sql_type: "JSONB" not_null: true default_value: "'{}'::jsonb" is_json: true comment: "Audit trail stored as JSON" }];
+  // @inject_tag: gorm:"column:audit_info;not null"
+
+  google.protobuf.Timestamp deleted_at = 16 [(udb.core.common.v1.pg_column) = { column_name: "deleted_at" sql_type: "TIMESTAMPTZ" comment: "Soft delete timestamp" }];
+  string deleted_by = 17 [(udb.core.common.v1.pg_column) = { column_name: "deleted_by" sql_type: "UUID" comment: "Soft delete actor" }];
+}

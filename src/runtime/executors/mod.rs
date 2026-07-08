@@ -42,7 +42,7 @@ pub mod azureblob;
 #[cfg(feature = "gcs")]
 pub mod gcs;
 #[cfg(all(test, feature = "s3"))]
-mod object_stream_live_tests;
+pub(crate) mod object_stream_live_tests;
 #[cfg(feature = "redis")]
 pub(crate) mod redis;
 #[cfg(feature = "s3")]
@@ -119,10 +119,13 @@ pub trait ObjectExecutor: Send + Sync {
         self.put_object(request_json, body).await
     }
     /// Remove an object by `{"bucket","object_key"|"key"}`. Only real object
-    /// stores (S3/MinIO, GCS, Azure Blob) override this; other backends report
-    /// `unimplemented` so callers never silently no-op a delete.
+    /// stores (S3/MinIO, GCS, Azure Blob) override this; other backends report a
+    /// typed capability refusal so callers never silently no-op a delete.
     async fn delete_object(&self, _request_json: &str) -> Result<(), tonic::Status> {
-        Err(tonic::Status::unimplemented(
+        Err(crate::runtime::executor_utils::capability_status(
+            "object",
+            "delete_object",
+            "object_delete",
             "delete_object is not supported by this backend",
         ))
     }

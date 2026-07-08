@@ -3,8 +3,25 @@ use crate::proto::udb::core::authz::entity::v1 as authz_entity_pb;
 use crate::proto::udb::core::authz::services::v1 as authz_pb;
 use crate::proto::udb::core::authz::services::v1::authz_service_server::AuthzService;
 use crate::proto::udb::core::common::v1 as common_pb;
+use std::time::{SystemTime, UNIX_EPOCH};
 use tonic::Request;
 use uuid::Uuid;
+
+fn live_governance_actor(subject: &str) -> authz_pb::GovernanceActor {
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("system clock before unix epoch")
+        .as_secs() as i64;
+    authz_pb::GovernanceActor {
+        subject: subject.to_string(),
+        tenant_id: "acme".to_string(),
+        project_id: "billing".to_string(),
+        break_glass: true,
+        break_glass_reason: "live governance read-after-write proof".to_string(),
+        break_glass_expires_at_unix: now + 900,
+        ..Default::default()
+    }
+}
 
 #[tokio::test]
 #[ignore = "requires live Postgres; run with UDB_LIVE_AUTH_TESTS=1 cargo test --lib live_postgres_authz_admin_crud_and_audit_lifecycle -- --ignored --nocapture"]
@@ -88,6 +105,7 @@ async fn live_postgres_authz_admin_crud_and_audit_lifecycle() {
             description: "Updated by live admin test".to_string(),
             is_active: Some(true),
             updated_by: user.user_id.clone(),
+            ..Default::default()
         }))
         .await
         .expect("update role")
@@ -185,6 +203,7 @@ async fn live_postgres_authz_admin_crud_and_audit_lifecycle() {
         .list_user_permissions(Request::new(authz_pb::ListUserPermissionsRequest {
             user_id: user.user_id.clone(),
             domain: "acme".to_string(),
+            ..Default::default()
         }))
         .await
         .expect("list effective user permissions")
@@ -273,20 +292,8 @@ async fn live_postgres_authz_admin_crud_and_audit_lifecycle() {
 
 /// §1 read-after-write served-path contract (13.7.1.1): the `policy_id`
 /// `CreatePolicyRule` returns is IMMEDIATELY readable by `GetPolicyRule` on the SAME
-/// served path with the SAME tenant metadata a client uses — i.e. create does NOT
-/// mint a random id that get cannot resolve. Reverting that broker guarantee (a
-/// create that returns an id not gettable) fails this test.
-///
-/// The governance draft→`ActivatePolicyVersion`→`GetPolicyRule` id-stability half
-/// (lane 02's guarantee that activation preserves each policy's own id rather than
-/// re-minting via `gen_random_uuid()`) requires the full multi-RPC governance
-/// lifecycle (CreatePolicyDraft → SubmitPolicyDraft → approval → ActivatePolicyVersion
-/// with SoD reviewers + a frozen policy document) for which no existing live module
-/// provides a harness. That half is DEFERRED to a dedicated governance-lifecycle live
-/// test rather than shipped as a fragile partial setup; the create→get half below
-/// pins the §1 read-after-write contract this lane owns. (The id-preservation code
-/// path itself — `apply_document_and_activate` binding each policy's own id via
-/// `COALESCE(NULLIF($1,'')::uuid, gen_random_uuid())` — landed in lane 02.)
+/// served path with the SAME tenant metadata a client uses. Reverting that broker
+/// guarantee (a create that returns an id not gettable) fails this test.
 #[tokio::test]
 #[ignore = "requires live Postgres; run with UDB_LIVE_AUTH_TESTS=1 cargo test --lib live_postgres_authz_create_policy_rule_read_after_write -- --ignored --nocapture"]
 async fn live_postgres_authz_create_policy_rule_read_after_write() {
@@ -337,6 +344,109 @@ async fn live_postgres_authz_create_policy_rule_read_after_write() {
     );
     assert_eq!(got.subject, user.user_id);
     assert_eq!(got.object, "ledger");
+
+    cleanup_native_auth_db(&pool).await;
+}
+
+/// §1 read-after-write served-path contract (13.7.1.1), governed path: a frozen
+/// governance policy document must preserve each policy's own id through
+/// CreatePolicyDraft → SubmitPolicyDraft → ApprovePolicyDraft → ActivatePolicyVersion
+/// and make that SAME id immediately readable by GetPolicyRule. Reverting activation
+/// to re-mint ids with `gen_random_uuid()` fails this test.
+#[tokio::test]
+#[ignore = "requires live Postgres; run with UDB_LIVE_AUTH_TESTS=1 cargo test --lib live_postgres_authz_governance_activate_policy_read_after_write -- --ignored --nocapture"]
+async fn live_postgres_authz_governance_activate_policy_read_after_write() {
+    let _guard = live_auth_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_auth_db(&pool).await;
+    let authn = authn_service(pool.clone());
+    let authz = authz_service(pool.clone()).await;
+    let author = create_verified_user(&authn, "gov_author", "CorrectHorse1!").await;
+    let reviewer = create_verified_user(&authn, "gov_reviewer", "CorrectHorse1!").await;
+    let suffix = Uuid::new_v4().simple().to_string();
+    let policy_id = Uuid::new_v4().to_string();
+    let governed_resource = format!("governed-ledger-{suffix}");
+
+    let draft = authz
+        .create_policy_draft(Request::new(authz_pb::CreatePolicyDraftRequest {
+            actor: Some(live_governance_actor(&author.user_id)),
+            tenant_id: "acme".to_string(),
+            project_id: "billing".to_string(),
+            policy_set_name: format!("ryw-governance-{suffix}"),
+            title: "Governed RYW live permission".to_string(),
+            change_reason: "prove activation preserves policy id".to_string(),
+            high_risk: true,
+            document: Some(authz_pb::PolicyDocument {
+                policies: vec![authz_pb::AuthzPolicyRecord {
+                    id: policy_id.clone(),
+                    enabled: true,
+                    effect: "allow".to_string(),
+                    tenant: "acme".to_string(),
+                    project: "billing".to_string(),
+                    subject: reviewer.user_id.clone(),
+                    action: "data.read".to_string(),
+                    resource: governed_resource.clone(),
+                    required_scopes: vec!["ledger:read".to_string()],
+                    ..Default::default()
+                }],
+                ..Default::default()
+            }),
+            branch_from_active: false,
+        }))
+        .await
+        .expect("CreatePolicyDraft must accept the frozen policy document")
+        .into_inner()
+        .draft
+        .expect("created policy draft");
+
+    authz
+        .submit_policy_draft(Request::new(authz_pb::SubmitPolicyDraftRequest {
+            actor: Some(live_governance_actor(&author.user_id)),
+            draft_id: draft.draft_id.clone(),
+            expected_updated_at_unix: draft.updated_at.as_ref().map(|ts| ts.seconds).unwrap_or(0),
+        }))
+        .await
+        .expect("SubmitPolicyDraft must move the draft into review");
+
+    let version = authz
+        .approve_policy_draft(Request::new(authz_pb::ApprovePolicyDraftRequest {
+            actor: Some(live_governance_actor(&reviewer.user_id)),
+            draft_id: draft.draft_id,
+            reviewer: reviewer.user_id.clone(),
+            reason: "distinct reviewer approves governed RYW proof".to_string(),
+        }))
+        .await
+        .expect("ApprovePolicyDraft must promote the approved draft")
+        .into_inner()
+        .version
+        .expect("approved draft must produce a policy version");
+
+    authz
+        .activate_policy_version(Request::new(authz_pb::ActivatePolicyVersionRequest {
+            actor: Some(live_governance_actor(&reviewer.user_id)),
+            policy_version_id: version.policy_version_id.clone(),
+            expected_revision: version.revision,
+            ..Default::default()
+        }))
+        .await
+        .expect("ActivatePolicyVersion must apply the frozen document");
+
+    let got = authz
+        .get_policy_rule(Request::new(authz_pb::GetPolicyRuleRequest {
+            policy_id: policy_id.clone(),
+        }))
+        .await
+        .expect("ActivatePolicyVersion→GetPolicyRule must resolve the original document id")
+        .into_inner()
+        .policy
+        .expect("activated policy must be readable by id");
+    assert_eq!(
+        got.policy_id, policy_id,
+        "activated governance policy must be readable by its original id"
+    );
+    assert_eq!(got.subject, reviewer.user_id);
+    assert_eq!(got.object, governed_resource);
+    assert_eq!(got.action, "data.read");
 
     cleanup_native_auth_db(&pool).await;
 }

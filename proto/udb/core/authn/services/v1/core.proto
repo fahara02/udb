@@ -3,6 +3,7 @@ syntax = "proto3";
 package udb.core.authn.services.v1;
 
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/field_mask.proto";
 import "udb/core/authn/entity/v1/enums.proto";
 import "udb/core/authn/entity/v1/session.proto";
 import "udb/core/authn/entity/v1/user.proto";
@@ -39,6 +40,8 @@ message CreateUserRequest {
   udb.core.common.v1.RequestContext context = 6;
   udb.core.authn.entity.v1.AccountKind account_kind = 7;
   string project_id = 8;
+  // Stable public IdP provider id. Caller-chosen format is provider-specific,
+  // bounded to 120 characters by the user store, and scoped by tenant.
   string external_provider_id = 9;
   string external_subject = 10;
   map<string, string> profile_attributes = 11;
@@ -136,6 +139,9 @@ message UpdateUserRequest {
   map<string, string> profile_attributes = 8;
   string external_provider_id = 9;
   string external_subject = 10;
+  // Optional PATCH mask relative to the user resource. When omitted, legacy
+  // clients keep the historical non-empty-field patch behavior.
+  google.protobuf.FieldMask update_mask = 11;
 }
 
 message UpdateUserResponse {
@@ -1331,6 +1337,7 @@ message VerifyMfaChallengeResponse {
 
 message MfaFactorSummary {
   option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
+  // Canonical public identity of this MFA factor within the owning user.
   udb.core.authn.entity.v1.AuthFactorKind factor_kind = 1;
   bool enabled = 2;
   string label = 3;
@@ -1340,11 +1347,17 @@ message ListMfaFactorsRequest {
   option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
   string user_id = 1;
   udb.core.common.v1.RequestContext context = 2;
+  // Requested page size. Defaults to 50 and is capped at the native list maximum.
+  int32 page_size = 3;
+  // Opaque pagination token returned by ListMfaFactorsResponse.next_page_token.
+  string page_token = 4;
 }
 
 message ListMfaFactorsResponse {
   option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
   repeated MfaFactorSummary factors = 1;
+  // Opaque token for the next page; empty when no more factors are available.
+  string next_page_token = 2;
 }
 
 message DisableMfaFactorRequest {
@@ -1411,11 +1424,17 @@ message ListWebAuthnCredentialsRequest {
   option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
   string user_id = 1;
   udb.core.common.v1.RequestContext context = 2;
+  // Requested page size. Defaults to 50 and is capped at the native list maximum.
+  int32 page_size = 3;
+  // Opaque pagination token returned by ListWebAuthnCredentialsResponse.next_page_token.
+  string page_token = 4;
 }
 
 message ListWebAuthnCredentialsResponse {
   option (udb.core.common.v1.message_sdk_surface) = { include_in_facade: true required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "authn" generate_minimal_example: true };
   repeated WebAuthnCredentialSummary credentials = 1;
+  // Opaque token for the next page; empty when no more credentials are available.
+  string next_page_token = 2;
 }
 
 message DeleteWebAuthnCredentialRequest {

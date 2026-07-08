@@ -809,19 +809,62 @@ async fn clickhouse_canonical_store_satisfies_all_contracts_live() {
         .await;
 }
 
-/// B.11 — env-gated LIVE Qdrant conformance. Qdrant is a vector store with no
-/// transactions; the canonical store (`qdrant.rs`) models every system row as a
-/// point in a per-instance `udb_system_<instance>` collection (deterministic
-/// point IDs + an in-process op-lock for the audit chain / claim CAS). Runs ALL
-/// FIVE contracts. A unique instance name per run → a fresh, isolated system
-/// collection, so freshness/count assertions hold and runs never collide.
-#[cfg(feature = "qdrant")]
+/// P3.2 — env-gated LIVE Elasticsearch vector-canonical conformance.
+///
+/// Elasticsearch is the vector/search backend with a wired multi-process CAS
+/// primitive: `_seq_no` + `_primary_term`. Run the same five canonical contracts
+/// here so the vector `SystemStores` promotion is pinned against a real cluster,
+/// while Qdrant/Pinecone/Weaviate stay fail-closed until native CAS exists.
+#[cfg(feature = "elasticsearch")]
 #[tokio::test]
-async fn qdrant_canonical_store_satisfies_all_contracts_live() {
-    let Ok(url) = std::env::var("UDB_QDRANT_URL") else {
-        eprintln!("UDB_QDRANT_URL unset — skipping live Qdrant conformance");
+async fn elasticsearch_vector_canonical_store_satisfies_all_contracts_live() {
+    let Ok(raw_dsn) = std::env::var("UDB_ELASTIC_DSN") else {
+        eprintln!("UDB_ELASTIC_DSN unset — skipping live Elasticsearch canonical conformance");
         return;
     };
+    use super::vector_system::VectorSystemCanonicalStore;
+    use crate::runtime::core::setup_data::parse_elasticsearch_dsn;
+    use crate::runtime::executors::elasticsearch::ElasticsearchHttpClient;
+
+    let (base_url, auth) = parse_elasticsearch_dsn(&raw_dsn);
+    let client = ElasticsearchHttpClient::new(base_url, auth);
+    let instance = format!("conf_{}", uuid::Uuid::new_v4().simple());
+    let index = format!("udb-system-{instance}");
+    let store = Arc::new(VectorSystemCanonicalStore::new_elasticsearch(
+        client.clone(),
+        instance,
+    ));
+
+    run_contract(store.clone()).await;
+    run_projection_task_contract(store.clone()).await;
+    run_saga_store_contract(store.clone()).await;
+    run_admin_audit_store_contract(store.clone()).await;
+    run_migration_audit_store_contract(store.clone()).await;
+
+    drop(store);
+    let _ = client
+        .request_json(
+            reqwest::Method::DELETE,
+            &format!("/{index}"),
+            &serde_json::Value::Null,
+        )
+        .await;
+}
+
+/// B.11 / P3.2 — env-gated LIVE Qdrant canonical-store honesty check.
+///
+/// Qdrant's vector executor remains available, but Qdrant-native conditional
+/// writes are not wired yet. A configured Qdrant backend must therefore refuse
+/// canonical `SystemStores` registration instead of running the shared five
+/// contract suite behind an in-process lock that would not be multi-process CAS.
+#[cfg(feature = "qdrant")]
+#[tokio::test]
+async fn qdrant_canonical_store_fails_closed_until_native_cas_live() {
+    let Ok(url) = std::env::var("UDB_QDRANT_URL") else {
+        eprintln!("UDB_QDRANT_URL unset — skipping live Qdrant fail-closed oracle");
+        return;
+    };
+    use super::CanonicalStore;
     use super::qdrant::QdrantCanonicalStore;
     use crate::runtime::executors::qdrant::QdrantHttpClient;
 
@@ -836,12 +879,11 @@ async fn qdrant_canonical_store_satisfies_all_contracts_live() {
     let instance = format!("conf_{}", uuid::Uuid::new_v4().simple());
     let store = Arc::new(QdrantCanonicalStore::new(client, instance.clone()));
 
-    run_contract(store.clone()).await;
-    run_projection_task_contract(store.clone()).await;
-    run_saga_store_contract(store.clone()).await;
-    run_admin_audit_store_contract(store.clone()).await;
-    run_migration_audit_store_contract(store.clone()).await;
-    // The per-run `udb_system_<instance>` collection is left in the dev Qdrant
-    // (unique name → no cross-run interference); cleanup is best-effort and not
-    // required for the contract.
+    let err = CanonicalStore::ensure_system_tables(store.as_ref())
+        .await
+        .expect_err("Qdrant canonical SystemStores must fail closed until native CAS is wired");
+    assert!(
+        err.contains("real multi-process CAS") && err.contains("Qdrant-native conditional write"),
+        "Qdrant fail-closed error must name the missing CAS primitive; got: {err}"
+    );
 }

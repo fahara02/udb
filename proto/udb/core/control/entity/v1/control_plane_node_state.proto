@@ -101,4 +101,12 @@ message ControlPlaneNodeState {
   google.protobuf.Timestamp created_at = 10 [(udb.core.common.v1.pg_column) = { column_name: "created_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true exclude_from_update: true }];
 
   google.protobuf.Timestamp updated_at = 11 [(udb.core.common.v1.pg_column) = { column_name: "updated_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" }];
+
+  // Bounded ring (newest LAST) of the most recently SERVED snapshots for this
+  // (node, resource_type), capped at the control-plane retention depth. Each
+  // entry is {version, served_at_unix, resources:[{name, tenant_id, project_id,
+  // payload_json}]} — exactly what the push path served — so RollbackResources
+  // has a durable, known-good target to re-publish. Append-and-trim only; NOT
+  // part of the ACK/NACK state machine (a rollback re-serves a retained set).
+  string served_snapshots = 12 [(udb.core.common.v1.pg_column) = { column_name: "served_snapshots" sql_type: "JSONB" is_json: true not_null: true default_value: "'[]'::jsonb" comment: "Bounded ring of recently-served snapshots (rollback targets)" }];
 }

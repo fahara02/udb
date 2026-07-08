@@ -28,18 +28,22 @@ service DataBroker {
   // ── Relational ─────────────────────────────────────────────────────────────
   rpc Select(udb.entity.v1.SelectRequest) returns (udb.entity.v1.RecordSet) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "select" rest_operation_id: "select" };
   }
   rpc BatchSelect(stream udb.entity.v1.SelectRequest) returns (stream udb.entity.v1.RecordSet) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "batch_select" rest_operation_id: "batchSelect" };
   }
   // Additive typed columnar read. Reuses SelectRequest; streams RecordBatchV2.
   // Clients use this only when ProtocolSupport.encodings advertises
   // "record_batch_v2" and otherwise fall back to Select/RecordSet.
   rpc SelectV2(udb.entity.v1.SelectRequest) returns (stream udb.entity.v1.RecordBatchV2) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "select_v2" rest_operation_id: "selectV2" };
   }
   rpc Upsert(udb.entity.v1.UpsertRequest) returns (udb.entity.v1.MutationResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "upsert" rest_operation_id: "upsert" };
     // KEYSTONE (lane 05): Upsert is durably replay-safe — a retried keyed Upsert
     // is deduped in the write tx (fail-closed, tenant+project-scoped) and returns
     // was_duplicate=true with the original body. SDKs may auto-retry ONLY when
@@ -52,10 +56,12 @@ service DataBroker {
   }
   rpc BatchUpsert(stream udb.entity.v1.UpsertRequest) returns (stream udb.entity.v1.MutationResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "batch_upsert" rest_operation_id: "batchUpsert" };
   }
   // Delete rows without raw SQL.
   rpc Delete(udb.entity.v1.DeleteRequest) returns (udb.entity.v1.MutationResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "delete" rest_operation_id: "delete" };
     // KEYSTONE (lane 05): Delete is durably replay-safe — a retried keyed Delete
     // is deduped in the write tx (fail-closed, tenant+project-scoped) and returns
     // was_duplicate=true with the original body. SDKs may auto-retry ONLY when
@@ -70,88 +76,113 @@ service DataBroker {
   // ── Vector ──────────────────────────────────────────────────────────────────
   rpc VectorSearch(udb.entity.v1.VectorSearchRequest) returns (udb.entity.v1.VectorSet) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "vector_search" rest_operation_id: "vectorSearch" };
   }
   rpc VectorHybridSearch(udb.entity.v1.VectorHybridSearchRequest) returns (udb.entity.v1.VectorSet) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "vector_hybrid_search" rest_operation_id: "vectorHybridSearch" };
   }
   rpc VectorUpsert(udb.entity.v1.VectorUpsertRequest) returns (udb.entity.v1.MutationResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "vector_upsert" rest_operation_id: "vectorUpsert" };
   }
   rpc VectorBatchUpsert(stream udb.entity.v1.VectorUpsertRequest) returns (stream udb.entity.v1.MutationResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "vector_batch_upsert" rest_operation_id: "vectorBatchUpsert" };
   }
 
   // ── Blob ───────────────────────────────────────────────────────────────────
   rpc PutObject(stream udb.entity.v1.Chunk) returns (udb.entity.v1.MutationResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "put_object" rest_operation_id: "putObject" };
   }
   rpc GetObject(udb.entity.v1.ObjectRequest) returns (stream udb.entity.v1.Chunk) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "get_object" rest_operation_id: "getObject" };
   }
   rpc GeneratePresignedUrl(udb.entity.v1.UrlRequest) returns (udb.entity.v1.UrlResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "generate_presigned_url" rest_operation_id: "generatePresignedUrl" };
   }
   rpc InitiateMultipartUpload(udb.entity.v1.MultipartUploadRequest) returns (udb.entity.v1.MultipartUploadResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "initiate_multipart_upload" rest_operation_id: "initiateMultipartUpload" };
   }
 
   // ── Cache / KV ─────────────────────────────────────────────────────────────
   rpc CacheGet(udb.entity.v1.CacheGetRequest) returns (udb.entity.v1.CacheGetResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "cache_get" rest_operation_id: "cacheGet" };
   }
   rpc CacheSet(udb.entity.v1.CacheSetRequest) returns (udb.entity.v1.MutationResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "cache_set" rest_operation_id: "cacheSet" };
   }
   rpc CacheDelete(udb.entity.v1.CacheDeleteRequest) returns (udb.entity.v1.MutationResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "cache_delete" rest_operation_id: "cacheDelete" };
   }
   rpc CacheScan(udb.entity.v1.CacheScanRequest) returns (udb.entity.v1.CacheScanResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "cache_scan" rest_operation_id: "cacheScan" };
   }
 
   // ── Document / Graph / Time-Series / Analytical Stores ────────────────────
   rpc DocumentGet(udb.entity.v1.DocumentGetRequest) returns (udb.entity.v1.DocumentSet) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "document_get" rest_operation_id: "documentGet" };
   }
   rpc DocumentFind(udb.entity.v1.DocumentFindRequest) returns (udb.entity.v1.DocumentSet) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "document_find" rest_operation_id: "documentFind" };
   }
   rpc DocumentUpsert(udb.entity.v1.DocumentUpsertRequest) returns (udb.entity.v1.MutationResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "document_upsert" rest_operation_id: "documentUpsert" };
   }
   rpc DocumentDelete(udb.entity.v1.DocumentDeleteRequest) returns (udb.entity.v1.MutationResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "document_delete" rest_operation_id: "documentDelete" };
   }
   rpc GraphQuery(udb.entity.v1.GraphQueryRequest) returns (udb.entity.v1.GraphResultSet) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "graph_query" rest_operation_id: "graphQuery" };
   }
   rpc GraphMutate(udb.entity.v1.GraphMutationRequest) returns (udb.entity.v1.MutationResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "graph_mutate" rest_operation_id: "graphMutate" };
   }
   rpc TimeSeriesWrite(udb.entity.v1.TimeSeriesWriteRequest) returns (udb.entity.v1.MutationResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "time_series_write" rest_operation_id: "timeSeriesWrite" };
   }
   rpc TimeSeriesQuery(udb.entity.v1.TimeSeriesQueryRequest) returns (udb.entity.v1.TimeSeriesQueryResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "time_series_query" rest_operation_id: "timeSeriesQuery" };
   }
   rpc AnalyticalQuery(udb.entity.v1.AnalyticalQueryRequest) returns (udb.entity.v1.AnalyticalQueryResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "analytical_query" rest_operation_id: "analyticalQuery" };
   }
 
   // ── Tx / CDC ───────────────────────────────────────────────────────────────
   rpc BeginTx(stream udb.entity.v1.Mutation) returns (stream udb.entity.v1.TxStatus) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "begin_tx" rest_operation_id: "beginTx" };
   }
   rpc PublishCDC(udb.entity.v1.CDCSubscriptionRequest) returns (stream udb.events.v1.CDCEnvelope) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "publish_cdc" rest_operation_id: "publishCdc" };
   }
   rpc CreateMaterializedView(udb.entity.v1.ViewDefinition) returns (udb.entity.v1.MutationResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "create_materialized_view" rest_operation_id: "createMaterializedView" };
   }
 
   // ── First-Class Event API ─────────────────────────────────────────────────
   rpc EnqueueOutboxEvent(udb.entity.v1.EnqueueOutboxEventRequest) returns (udb.entity.v1.EnqueueOutboxEventResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "enqueue_outbox_event" rest_operation_id: "enqueueOutboxEvent" };
   }
 
   // Generic resource administration.
@@ -159,21 +190,25 @@ service DataBroker {
   // Requires scope: udb:dispatch
   rpc GenericDispatch(udb.entity.v1.GenericDispatchRequest) returns (udb.entity.v1.GenericDispatchResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "generic_dispatch" rest_operation_id: "genericDispatch" };
   }
   // Ensure a named resource exists on the target backend.
   // Requires scope: udb:admin
   rpc EnsureResource(udb.entity.v1.ResourceAdminRequest) returns (udb.entity.v1.MutationResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "ensure_resource" rest_operation_id: "ensureResource" };
   }
   // Drop a named resource on the target backend.
   // Requires scope: udb:admin
   rpc DropResource(udb.entity.v1.ResourceAdminRequest) returns (udb.entity.v1.MutationResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "drop_resource" rest_operation_id: "dropResource" };
   }
   // List all resources managed by the target backend.
   // Requires scope: udb:admin
   rpc ListResources(udb.entity.v1.ResourceAdminRequest) returns (udb.entity.v1.ResourceListResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "list_resources" rest_operation_id: "listResources" };
   }
 
   // Catalog administration.
@@ -181,31 +216,37 @@ service DataBroker {
   // Requires scope: udb:admin
   rpc StageCatalog(udb.entity.v1.StageCatalogRequest) returns (udb.entity.v1.CatalogVersionResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "stage_catalog" rest_operation_id: "stageCatalog" };
   }
   // Activate a STAGED catalog version.
   // Requires scope: udb:admin
   rpc ActivateCatalog(udb.entity.v1.CatalogVersionRequest) returns (udb.entity.v1.CatalogVersionResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "activate_catalog" rest_operation_id: "activateCatalog" };
   }
   // Roll back to the previous ACTIVE catalog version.
   // Requires scope: udb:admin
   rpc RollbackCatalog(udb.entity.v1.CatalogVersionRequest) returns (udb.entity.v1.CatalogVersionResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "rollback_catalog" rest_operation_id: "rollbackCatalog" };
   }
   // Validate a catalog manifest JSON without storing it.
   // Requires scope: udb:admin
   rpc ValidateCatalog(udb.entity.v1.StageCatalogRequest) returns (udb.entity.v1.CatalogValidationResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "validate_catalog" rest_operation_id: "validateCatalog" };
   }
   // Return the list of known catalog versions.
   // Requires scope: udb:admin
   rpc GetCatalogVersions(udb.entity.v1.CatalogManifestRequest) returns (udb.entity.v1.CatalogVersionListResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "get_catalog_versions" rest_operation_id: "getCatalogVersions" };
   }
   // Return one catalog version by catalog_id/version, or active version when empty.
   // Requires scope: udb:admin
   rpc GetCatalogVersion(udb.entity.v1.CatalogVersionRequest) returns (udb.entity.v1.CatalogVersionResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "get_catalog_version" rest_operation_id: "getCatalogVersion" };
   }
 
   // Migration planning and apply.
@@ -213,6 +254,7 @@ service DataBroker {
   // Requires scope: udb:admin
   rpc PlanMigration(udb.entity.v1.MigrationPlanRequest) returns (udb.entity.v1.MigrationPlanResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "plan_migration" rest_operation_id: "planMigration" };
     option (udb.core.common.v1.method_lifecycle_contract) = {
       entity: "MigrationRun"
       target_state: "DRY_RUN"
@@ -225,6 +267,7 @@ service DataBroker {
   // Requires scope: udb:admin
   rpc ApplyMigration(udb.entity.v1.MigrationApplyRequest) returns (udb.entity.v1.MigrationStatusResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "apply_migration" rest_operation_id: "applyMigration" };
     option (udb.core.common.v1.method_lifecycle_contract) = {
       entity: "MigrationRun"
       legal_source_states: "DRY_RUN"
@@ -241,16 +284,19 @@ service DataBroker {
   // Requires scope: udb:admin
   rpc GetMigrationStatus(udb.entity.v1.MigrationRunRequest) returns (udb.entity.v1.MigrationStatusResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "get_migration_status" rest_operation_id: "getMigrationStatus" };
   }
   // Return migration runs for an admin console page.
   // Requires scope: udb:admin, udb:admin:viewer, or legacy udb:portal:viewer.
   rpc ListMigrationRuns(udb.entity.v1.MigrationRunListRequest) returns (udb.entity.v1.MigrationRunListResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "list_migration_runs" rest_operation_id: "listMigrationRuns" };
   }
   // Approve a migration plan that requires review.
   // Requires scope: udb:admin
   rpc ApproveMigrationPlan(udb.entity.v1.MigrationRunRequest) returns (udb.entity.v1.MigrationStatusResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "approve_migration_plan" rest_operation_id: "approveMigrationPlan" };
     option (udb.core.common.v1.method_lifecycle_contract) = {
       entity: "MigrationRun"
       legal_source_states: "DRY_RUN"
@@ -264,93 +310,119 @@ service DataBroker {
   // DLQ management.
   rpc ListDlqEvents(udb.entity.v1.DlqListRequest) returns (udb.entity.v1.DlqListResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "list_dlq_events" rest_operation_id: "listDlqEvents" };
   }
   rpc GetDlqEvent(udb.entity.v1.DlqEventRequest) returns (udb.entity.v1.DlqEventResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "get_dlq_event" rest_operation_id: "getDlqEvent" };
   }
   rpc ReplayDlqEvent(udb.entity.v1.DlqActionRequest) returns (udb.entity.v1.MutationResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "replay_dlq_event" rest_operation_id: "replayDlqEvent" };
   }
   rpc DismissDlqEvent(udb.entity.v1.DlqActionRequest) returns (udb.entity.v1.MutationResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "dismiss_dlq_event" rest_operation_id: "dismissDlqEvent" };
   }
   rpc QuarantineDlqEvent(udb.entity.v1.DlqActionRequest) returns (udb.entity.v1.MutationResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "quarantine_dlq_event" rest_operation_id: "quarantineDlqEvent" };
   }
 
   // CDC control plane.
   rpc GetCdcStatus(udb.entity.v1.CdcControlRequest) returns (udb.entity.v1.CdcStatusResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "get_cdc_status" rest_operation_id: "getCdcStatus" };
   }
   rpc PauseCdc(udb.entity.v1.CdcControlRequest) returns (udb.entity.v1.CdcStatusResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "pause_cdc" rest_operation_id: "pauseCdc" };
   }
   rpc ResumeCdc(udb.entity.v1.CdcControlRequest) returns (udb.entity.v1.CdcStatusResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "resume_cdc" rest_operation_id: "resumeCdc" };
   }
   rpc StepDownCdcLeader(udb.entity.v1.CdcControlRequest) returns (udb.entity.v1.CdcStatusResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "step_down_cdc_leader" rest_operation_id: "stepDownCdcLeader" };
   }
   rpc PreviewCdcRedaction(udb.entity.v1.CdcRedactionPreviewRequest) returns (udb.entity.v1.CdcRedactionPreviewResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "preview_cdc_redaction" rest_operation_id: "previewCdcRedaction" };
   }
   rpc ScanProjectionDrift(udb.entity.v1.ProjectionDriftScanRequest) returns (udb.entity.v1.ProjectionDriftScanResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "scan_projection_drift" rest_operation_id: "scanProjectionDrift" };
   }
 
   // Saga administration.
   rpc ListSagas(udb.entity.v1.SagaListRequest) returns (udb.entity.v1.SagaListResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "list_sagas" rest_operation_id: "listSagas" };
   }
   rpc GetSaga(udb.entity.v1.SagaRequest) returns (udb.entity.v1.SagaResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "get_saga" rest_operation_id: "getSaga" };
   }
   rpc RetrySagaCompensation(udb.entity.v1.SagaRequest) returns (udb.entity.v1.SagaResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "retry_saga_compensation" rest_operation_id: "retrySagaCompensation" };
   }
   rpc MarkSagaReviewed(udb.entity.v1.SagaRequest) returns (udb.entity.v1.SagaResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "mark_saga_reviewed" rest_operation_id: "markSagaReviewed" };
   }
   // Idempotently seed a baseline manual-review saga row and a retryable DLQ row
   // for the VERIFIED principal's tenant/project. Privilege-creating: fail-closed,
   // env-gated (UDB_ENABLE_ADMIN_SEED) and requires scope: udb:admin.
   rpc EnsureBaseline(EnsureBaselineRequest) returns (EnsureBaselineResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "ensure_baseline" rest_operation_id: "ensureBaseline" };
   }
 
   // Policy administration.
   rpc ListPolicies(udb.entity.v1.PolicyListRequest) returns (udb.entity.v1.PolicyListResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "list_policies" rest_operation_id: "listPolicies" };
   }
   rpc PutPolicy(udb.entity.v1.PutPolicyRequest) returns (udb.entity.v1.MutationResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "put_policy" rest_operation_id: "putPolicy" };
   }
   rpc DeletePolicy(udb.entity.v1.PolicyRequest) returns (udb.entity.v1.MutationResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "delete_policy" rest_operation_id: "deletePolicy" };
   }
   rpc ReloadPolicies(udb.entity.v1.CapabilitiesRequest) returns (udb.entity.v1.MutationResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "reload_policies" rest_operation_id: "reloadPolicies" };
   }
   rpc LintPolicies(udb.entity.v1.CapabilitiesRequest) returns (udb.entity.v1.PolicyLintResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "lint_policies" rest_operation_id: "lintPolicies" };
   }
 
   // ── Admin API ─────────────────────────────────────────────────────────────
   rpc GetCapabilities(udb.entity.v1.CapabilitiesRequest) returns (udb.entity.v1.CapabilitiesResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "get_capabilities" rest_operation_id: "getCapabilities" };
   }
   rpc GetCatalogManifest(udb.entity.v1.CatalogManifestRequest) returns (udb.entity.v1.CatalogManifestResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "get_catalog_manifest" rest_operation_id: "getCatalogManifest" };
   }
   // Runtime schema lookup for SDK/data operation compatibility negotiation.
   rpc LookupMessageSchema(udb.entity.v1.MessageSchemaLookupRequest) returns (udb.entity.v1.MessageSchemaLookupResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "lookup_message_schema" rest_operation_id: "lookupMessageSchema" };
   }
   rpc ListMessageSchemas(udb.entity.v1.MessageSchemaListRequest) returns (udb.entity.v1.MessageSchemaListResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "list_message_schemas" rest_operation_id: "listMessageSchemas" };
   }
   rpc GetHealthReport(udb.entity.v1.HealthReportRequest) returns (udb.entity.v1.HealthReportResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "get_health_report" rest_operation_id: "getHealthReport" };
   }
 
   // Multi-project registry.
@@ -358,11 +430,13 @@ service DataBroker {
   // Requires scope: udb:admin
   rpc EnsureProject(udb.entity.v1.EnsureProjectRequest) returns (udb.entity.v1.MutationResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "ensure_project" rest_operation_id: "ensureProject" };
   }
   // List all registered project namespaces.
   // Requires scope: udb:admin
   rpc ListProjects(udb.entity.v1.ProjectListRequest) returns (udb.entity.v1.ProjectListResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "list_projects" rest_operation_id: "listProjects" };
   }
 
   // ── Unified Admin Surface ────────────────────────────────────────────────
@@ -370,16 +444,19 @@ service DataBroker {
   // state for the admin console. Requires scope: udb:admin.
   rpc GetAdminSummary(udb.entity.v1.AdminSummaryRequest) returns (udb.entity.v1.AdminSummaryResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "get_admin_summary" rest_operation_id: "getAdminSummary" };
   }
   // Paginated admin audit log view for the admin console.
   // Requires scope: udb:admin, udb:admin:viewer, or legacy udb:portal:viewer.
   rpc ListAdminAuditLogs(udb.entity.v1.AdminAuditLogRequest) returns (udb.entity.v1.AdminAuditLogResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "list_admin_audit_logs" rest_operation_id: "listAdminAuditLogs" };
   }
   // Verifies the admin audit log hash chain and reports the first broken link.
   // Requires scope: udb:admin, udb:admin:viewer, or legacy udb:portal:viewer.
   rpc VerifyAdminAuditLog(udb.entity.v1.AdminAuditVerifyRequest) returns (udb.entity.v1.AdminAuditVerifyResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "verify_admin_audit_log" rest_operation_id: "verifyAdminAuditLog" };
   }
 }
 

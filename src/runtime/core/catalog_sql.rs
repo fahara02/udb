@@ -2,6 +2,31 @@
 use super::*;
 use crate::control::tracker::DEFAULT_LEDGER_SCHEMA;
 
+fn qdrant_feature_disabled_status(operation: &'static str) -> tonic::Status {
+    crate::runtime::executor_utils::capability_status(
+        "qdrant",
+        operation,
+        "qdrant_feature",
+        "qdrant/vector feature is not enabled",
+    )
+}
+
+fn s3_feature_disabled_status(operation: &'static str) -> tonic::Status {
+    crate::runtime::executor_utils::capability_status(
+        "s3",
+        operation,
+        "s3_feature",
+        "s3/object-store feature is not enabled",
+    )
+}
+
+fn catalog_sql_internal_status(
+    operation: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    crate::runtime::executor_utils::internal_status("catalog_sql", operation, message)
+}
+
 /// Structured DB-vs-proto drift finding produced by the pg_catalog verifier.
 ///
 /// `kind` uses the same snake_case identifiers the repair planner consumes
@@ -329,10 +354,10 @@ impl DataBrokerRuntime {
                         error = %err,
                         "SQL artifact apply failed"
                     );
-                    tonic::Status::internal(format!(
-                        "failed to apply SQL artifact {}: {err}",
-                        artifact.rel_path
-                    ))
+                    catalog_sql_internal_status(
+                        "apply_sql_artifact",
+                        format!("failed to apply SQL artifact {}: {err}", artifact.rel_path),
+                    )
                 });
         }
 
@@ -578,10 +603,13 @@ impl DataBrokerRuntime {
                                             error = %row_err,
                                             "SQL artifact apply failed (row insert)"
                                         );
-                                        return Err(tonic::Status::internal(format!(
-                                            "failed to apply SQL artifact {} (stmt {} row {}): {row_err}",
-                                            artifact.rel_path, idx, row_idx
-                                        )));
+                                        return Err(catalog_sql_internal_status(
+                                            "apply_sql_artifact_row",
+                                            format!(
+                                                "failed to apply SQL artifact {} (stmt {} row {}): {row_err}",
+                                                artifact.rel_path, idx, row_idx
+                                            ),
+                                        ));
                                     }
                                 }
                             } else {
@@ -629,10 +657,13 @@ impl DataBrokerRuntime {
                                 error = %err,
                                 "SQL artifact apply failed (chunked)"
                             );
-                            return Err(tonic::Status::internal(format!(
-                                "failed to apply SQL artifact {} (stmt {}): {err}",
-                                artifact.rel_path, idx
-                            )));
+                            return Err(catalog_sql_internal_status(
+                                "apply_sql_artifact_chunk",
+                                format!(
+                                    "failed to apply SQL artifact {} (stmt {}): {err}",
+                                    artifact.rel_path, idx
+                                ),
+                            ));
                         }
                     }
                 } // end 'stmt retry loop
@@ -653,10 +684,10 @@ impl DataBrokerRuntime {
                         error    = %err,
                         "SQL artifact apply failed"
                     );
-                    tonic::Status::internal(format!(
-                        "failed to apply SQL artifact {}: {err}",
-                        artifact.rel_path
-                    ))
+                    catalog_sql_internal_status(
+                        "apply_sql_artifact",
+                        format!("failed to apply SQL artifact {}: {err}", artifact.rel_path),
+                    )
                 })?;
         }
 
@@ -1069,10 +1100,12 @@ impl DataBrokerRuntime {
     }
 
     pub async fn execute_raw_sql(&self, sql: &str, label: &str) -> Result<(), tonic::Status> {
-        self.pg_pool()?
-            .execute(sql)
-            .await
-            .map_err(|err| tonic::Status::internal(format!("failed to execute {label}: {err}")))?;
+        self.pg_pool()?.execute(sql).await.map_err(|err| {
+            catalog_sql_internal_status(
+                "execute_raw_sql",
+                format!("failed to execute {label}: {err}"),
+            )
+        })?;
         Ok(())
     }
 
@@ -1095,7 +1128,10 @@ impl DataBrokerRuntime {
         //  b) Phase 2 re-uses the already-warm backend — avoids the 5-9 s cold-start
         //     that produced the "slow statement" warning on `manifest_json::TEXT`.
         let mut conn = pool.acquire().await.map_err(|err| {
-            tonic::Status::internal(format!("load_last_manifest: acquire failed: {err}"))
+            catalog_sql_internal_status(
+                "load_last_manifest_acquire",
+                format!("load_last_manifest: acquire failed: {err}"),
+            )
         })?;
         // Phase 1: fetch only the checksum — covered by the composite index on
         // (applied_at DESC NULLS LAST, id DESC), returning just a TEXT column.
@@ -1109,9 +1145,10 @@ impl DataBrokerRuntime {
             .fetch_optional(&mut *conn)
             .await
             .map_err(|err| {
-                tonic::Status::internal(format!(
-                    "proto_schema_versions checksum query failed: {err}"
-                ))
+                catalog_sql_internal_status(
+                    "load_last_manifest_checksum_query",
+                    format!("proto_schema_versions checksum query failed: {err}"),
+                )
             })?;
         let checksum = match checksum_row {
             None => return Ok(None),
@@ -1129,7 +1166,10 @@ impl DataBrokerRuntime {
             .fetch_optional(&mut *conn)
             .await
             .map_err(|err| {
-                tonic::Status::internal(format!("proto_schema_versions json query failed: {err}"))
+                catalog_sql_internal_status(
+                    "load_last_manifest_json_query",
+                    format!("proto_schema_versions json query failed: {err}"),
+                )
             })?;
         decode_catalog_manifest_row(json_row)
     }
@@ -1155,9 +1195,10 @@ impl DataBrokerRuntime {
             .fetch_one(pool)
             .await
             .map_err(|err| {
-                tonic::Status::internal(format!(
-                    "proto_schema_versions existence query failed: {err}"
-                ))
+                catalog_sql_internal_status(
+                    "load_last_manifest_checksum_existence_query",
+                    format!("proto_schema_versions existence query failed: {err}"),
+                )
             })?;
         if !exists {
             return Ok(None);
@@ -1173,9 +1214,10 @@ impl DataBrokerRuntime {
             .fetch_optional(pool)
             .await
             .map_err(|err| {
-                tonic::Status::internal(format!(
-                    "proto_schema_versions checksum query failed: {err}"
-                ))
+                catalog_sql_internal_status(
+                    "load_last_manifest_checksum_query",
+                    format!("proto_schema_versions checksum query failed: {err}"),
+                )
             })
     }
 
@@ -1199,7 +1241,10 @@ impl DataBrokerRuntime {
             .fetch_optional(pool)
             .await
             .map_err(|err| {
-                tonic::Status::internal(format!("proto_schema_versions json query failed: {err}"))
+                catalog_sql_internal_status(
+                    "load_manifest_by_checksum_json_query",
+                    format!("proto_schema_versions json query failed: {err}"),
+                )
             })?;
         decode_catalog_manifest_row(json_row)
     }
@@ -1219,9 +1264,10 @@ impl DataBrokerRuntime {
             "proto_schema_versions",
         );
         let mut tx = pool.begin().await.map_err(|err| {
-            tonic::Status::internal(format!(
-                "proto_schema_versions json transaction failed: {err}"
-            ))
+            catalog_sql_internal_status(
+                "load_manifest_by_checksum_json_transaction_begin",
+                format!("proto_schema_versions json transaction failed: {err}"),
+            )
         })?;
         let timeout_ms = timeout.as_millis().max(1);
         let timeout_value = format!("{timeout_ms}ms");
@@ -1230,9 +1276,10 @@ impl DataBrokerRuntime {
             .execute(&mut *tx)
             .await
             .map_err(|err| {
-                tonic::Status::internal(format!(
-                    "proto_schema_versions statement_timeout setup failed: {err}"
-                ))
+                catalog_sql_internal_status(
+                    "load_manifest_by_checksum_statement_timeout_setup",
+                    format!("proto_schema_versions statement_timeout setup failed: {err}"),
+                )
             })?;
 
         let json_sql = format!(
@@ -1245,13 +1292,17 @@ impl DataBrokerRuntime {
             .fetch_optional(&mut *tx)
             .await
             .map_err(|err| {
-                tonic::Status::internal(format!("proto_schema_versions json query failed: {err}"))
+                catalog_sql_internal_status(
+                    "load_manifest_by_checksum_timeout_json_query",
+                    format!("proto_schema_versions json query failed: {err}"),
+                )
             })?;
 
         tx.commit().await.map_err(|err| {
-            tonic::Status::internal(format!(
-                "proto_schema_versions json transaction commit failed: {err}"
-            ))
+            catalog_sql_internal_status(
+                "load_manifest_by_checksum_json_transaction_commit",
+                format!("proto_schema_versions json transaction commit failed: {err}"),
+            )
         })?;
         decode_catalog_manifest_row(json_row)
     }
@@ -1296,7 +1347,10 @@ impl DataBrokerRuntime {
         // prevents sqlx from giving us a different, potentially dead
         // connection from the pool for the heavy write after the ping.
         let mut tx = pool.begin().await.map_err(|err| {
-            tonic::Status::internal(format!("save_manifest: transaction begin failed: {err}"))
+            catalog_sql_internal_status(
+                "save_manifest_transaction_begin",
+                format!("save_manifest: transaction begin failed: {err}"),
+            )
         })?;
 
         // Serialize the latest-check and save against other lifecycle writers.
@@ -1305,7 +1359,10 @@ impl DataBrokerRuntime {
             .execute(&mut *tx)
             .await
             .map_err(|err| {
-                tonic::Status::internal(format!("proto_schema_versions lock failed: {err}"))
+                catalog_sql_internal_status(
+                    "save_manifest_lock",
+                    format!("proto_schema_versions lock failed: {err}"),
+                )
             })?;
 
         let latest_sql = format!(
@@ -1318,17 +1375,23 @@ impl DataBrokerRuntime {
             .fetch_optional(&mut *tx)
             .await
             .map_err(|err| {
-                tonic::Status::internal(format!(
-                    "proto_schema_versions latest checksum query failed: {err}"
-                ))
+                catalog_sql_internal_status(
+                    "save_manifest_latest_checksum_query",
+                    format!("proto_schema_versions latest checksum query failed: {err}"),
+                )
             })?;
         if let Some(expected_latest_checksum) = expected_latest_checksum
             && latest_checksum.as_deref() != expected_latest_checksum
         {
-            return Err(tonic::Status::aborted(format!(
-                "manifest ledger advanced during migration lifecycle: expected latest checksum {:?}, found {:?}",
-                expected_latest_checksum, latest_checksum
-            )));
+            return Err(crate::runtime::executor_utils::retryable_aborted_status(
+                "catalog",
+                "manifest ledger lifecycle",
+                0,
+                format!(
+                    "manifest ledger advanced during migration lifecycle: expected latest checksum {:?}, found {:?}",
+                    expected_latest_checksum, latest_checksum
+                ),
+            ));
         }
 
         // If the manifest checksum is already recorded, only touch `applied_at`.
@@ -1355,16 +1418,26 @@ impl DataBrokerRuntime {
                 .execute(&mut *tx)
                 .await
                 .map_err(|err| {
-                    tonic::Status::internal(format!("proto_schema_versions touch failed: {err}"))
+                    catalog_sql_internal_status(
+                        "save_manifest_touch",
+                        format!("proto_schema_versions touch failed: {err}"),
+                    )
                 })?;
             tx.commit().await.map_err(|err| {
-                tonic::Status::internal(format!("proto_schema_versions touch commit failed: {err}"))
+                catalog_sql_internal_status(
+                    "save_manifest_touch_commit",
+                    format!("proto_schema_versions touch commit failed: {err}"),
+                )
             })?;
             return Ok(());
         }
 
-        let json = serde_json::to_string(manifest)
-            .map_err(|err| tonic::Status::internal(format!("manifest serialise failed: {err}")))?;
+        let json = serde_json::to_string(manifest).map_err(|err| {
+            catalog_sql_internal_status(
+                "save_manifest_serialise",
+                format!("manifest serialise failed: {err}"),
+            )
+        })?;
         let insert_sql = format!(
             "INSERT INTO {proto_schema_versions}
                  (manifest_checksum, manifest_json, generator_version, applied_at)
@@ -1379,10 +1452,16 @@ impl DataBrokerRuntime {
             .execute(&mut *tx)
             .await
             .map_err(|err| {
-                tonic::Status::internal(format!("proto_schema_versions upsert failed: {err}"))
+                catalog_sql_internal_status(
+                    "save_manifest_upsert",
+                    format!("proto_schema_versions upsert failed: {err}"),
+                )
             })?;
         tx.commit().await.map_err(|err| {
-            tonic::Status::internal(format!("proto_schema_versions upsert commit failed: {err}"))
+            catalog_sql_internal_status(
+                "save_manifest_upsert_commit",
+                format!("proto_schema_versions upsert commit failed: {err}"),
+            )
         })?;
         Ok(())
     }
@@ -1455,9 +1534,10 @@ impl DataBrokerRuntime {
         // next pool borrower, because the reset may land on a different
         // connection than the one that ran the query.
         let mut introspection_tx = pool.begin().await.map_err(|err| {
-            tonic::Status::internal(format!(
-                "pg_catalog introspection: failed to begin transaction: {err}"
-            ))
+            catalog_sql_internal_status(
+                "pg_catalog_introspection_transaction_begin",
+                format!("pg_catalog introspection: failed to begin transaction: {err}"),
+            )
         })?;
         if let Err(err) = sqlx::query("SET LOCAL statement_timeout = '60s'")
             .execute(&mut *introspection_tx)
@@ -1536,12 +1616,16 @@ SELECT kind, schema_name, table_name, extra FROM (
             .fetch_all(&mut *introspection_tx)
             .await
             .map_err(|err| {
-                tonic::Status::internal(format!("pg_catalog schema introspection failed: {err}"))
+                catalog_sql_internal_status(
+                    "pg_catalog_schema_introspection",
+                    format!("pg_catalog schema introspection failed: {err}"),
+                )
             })?;
         introspection_tx.commit().await.map_err(|err| {
-            tonic::Status::internal(format!(
-                "pg_catalog introspection: failed to commit transaction: {err}"
-            ))
+            catalog_sql_internal_status(
+                "pg_catalog_introspection_transaction_commit",
+                format!("pg_catalog introspection: failed to commit transaction: {err}"),
+            )
         })?;
 
         let mut existing_tables: std::collections::HashSet<(String, String)> =
@@ -1695,7 +1779,10 @@ SELECT kind, schema_name, table_name, extra FROM (
             cdc_config.outbox_relation()
         );
         let row = sqlx::query(&sql).fetch_one(pool).await.map_err(|err| {
-            tonic::Status::internal(format!("CDC outbox metrics query failed: {err}"))
+            catalog_sql_internal_status(
+                "cdc_outbox_metrics_query",
+                format!("CDC outbox metrics query failed: {err}"),
+            )
         })?;
         Ok((
             row.try_get::<f64, _>("lag_seconds").unwrap_or_default(),
@@ -1715,9 +1802,7 @@ SELECT kind, schema_name, table_name, extra FROM (
         #[cfg(not(feature = "qdrant"))]
         {
             let _ = store;
-            return Err(tonic::Status::failed_precondition(
-                "qdrant/vector feature is not enabled",
-            ));
+            return Err(qdrant_feature_disabled_status("ensure_qdrant_store"));
         }
         #[cfg(feature = "qdrant")]
         {
@@ -1730,9 +1815,7 @@ SELECT kind, schema_name, table_name, extra FROM (
         #[cfg(not(feature = "qdrant"))]
         {
             let _ = store;
-            return Err(tonic::Status::failed_precondition(
-                "qdrant/vector feature is not enabled",
-            ));
+            return Err(qdrant_feature_disabled_status("verify_qdrant_store"));
         }
         #[cfg(feature = "qdrant")]
         {
@@ -1745,9 +1828,7 @@ SELECT kind, schema_name, table_name, extra FROM (
         #[cfg(not(feature = "s3"))]
         {
             let _ = store;
-            return Err(tonic::Status::failed_precondition(
-                "s3/object-store feature is not enabled",
-            ));
+            return Err(s3_feature_disabled_status("ensure_s3_bucket"));
         }
         #[cfg(feature = "s3")]
         {
@@ -1764,10 +1845,11 @@ SELECT kind, schema_name, table_name, extra FROM (
                     .send()
                     .await
                     .map_err(|err| {
-                        tonic::Status::unavailable(format!(
-                            "failed to create S3/MinIO bucket {}: {err}",
-                            store.resource_name
-                        ))
+                        crate::runtime::executor_utils::backend_transport_status(
+                            "S3/MinIO",
+                            "create bucket",
+                            err,
+                        )
                     })?;
             }
             Ok(())
@@ -1778,9 +1860,7 @@ SELECT kind, schema_name, table_name, extra FROM (
         #[cfg(not(feature = "s3"))]
         {
             let _ = store;
-            return Err(tonic::Status::failed_precondition(
-                "s3/object-store feature is not enabled",
-            ));
+            return Err(s3_feature_disabled_status("verify_s3_bucket"));
         }
         #[cfg(feature = "s3")]
         {
@@ -1790,10 +1870,11 @@ SELECT kind, schema_name, table_name, extra FROM (
                 .send()
                 .await
                 .map_err(|err| {
-                    tonic::Status::unavailable(format!(
-                        "S3/MinIO bucket {} verification failed: {err}",
-                        store.resource_name
-                    ))
+                    crate::runtime::executor_utils::backend_transport_status(
+                        "S3/MinIO",
+                        "verify bucket",
+                        err,
+                    )
                 })?;
             Ok(())
         }
@@ -1949,4 +2030,103 @@ fn normalize_ledger_schema(schema: &str) -> &str {
 
 fn pg_ident(value: &str) -> String {
     format!("\"{}\"", value.replace('"', "\"\""))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
+
+    fn decode_detail(status: &tonic::Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed error detail trailer");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_capability_detail(
+        status: &tonic::Status,
+        backend: &str,
+        operation: &str,
+        capability_required: &str,
+        message: &str,
+    ) {
+        assert_eq!(status.code(), tonic::Code::FailedPrecondition);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Capability as i32);
+        assert_eq!(detail.backend, backend);
+        assert_eq!(detail.operation, operation);
+        assert_eq!(detail.capability_required, capability_required);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    fn assert_internal_detail(status: &tonic::Status, operation: &str, message: &str) {
+        assert_eq!(status.code(), tonic::Code::Internal);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "catalog_sql");
+        assert_eq!(detail.operation, operation);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    #[test]
+    fn catalog_feature_disabled_statuses_carry_capability_detail() {
+        assert_capability_detail(
+            &qdrant_feature_disabled_status("ensure_qdrant_store"),
+            "qdrant",
+            "ensure_qdrant_store",
+            "qdrant_feature",
+            "qdrant/vector feature is not enabled",
+        );
+        assert_capability_detail(
+            &qdrant_feature_disabled_status("verify_qdrant_store"),
+            "qdrant",
+            "verify_qdrant_store",
+            "qdrant_feature",
+            "qdrant/vector feature is not enabled",
+        );
+        assert_capability_detail(
+            &s3_feature_disabled_status("ensure_s3_bucket"),
+            "s3",
+            "ensure_s3_bucket",
+            "s3_feature",
+            "s3/object-store feature is not enabled",
+        );
+        assert_capability_detail(
+            &s3_feature_disabled_status("verify_s3_bucket"),
+            "s3",
+            "verify_s3_bucket",
+            "s3_feature",
+            "s3/object-store feature is not enabled",
+        );
+    }
+
+    #[test]
+    fn catalog_sql_internal_status_carries_typed_detail() {
+        assert_internal_detail(
+            &catalog_sql_internal_status(
+                "load_last_manifest_json_query",
+                "proto_schema_versions json query failed: broken",
+            ),
+            "load_last_manifest_json_query",
+            "proto_schema_versions json query failed: broken",
+        );
+        assert_internal_detail(
+            &catalog_sql_internal_status(
+                "pg_catalog_schema_introspection",
+                "pg_catalog schema introspection failed: broken",
+            ),
+            "pg_catalog_schema_introspection",
+            "pg_catalog schema introspection failed: broken",
+        );
+    }
 }

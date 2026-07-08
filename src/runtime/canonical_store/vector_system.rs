@@ -1,10 +1,12 @@
-//! Shared canonical `SystemStores` adapter for vector/search REST backends.
+//! Shared gated canonical `SystemStores` adapter for vector/search REST backends.
 //!
 //! Pinecone, Weaviate, and Elasticsearch already have native HTTP clients in
-//! the runtime. This module gives them a real canonical system-state plane
-//! instead of keeping them as projection-only islands. The adapter stores UDB
-//! system records in a dedicated backend namespace/index/class per instance,
-//! using deterministic IDs derived from logical record keys.
+//! the runtime. This module stores UDB system records in a dedicated backend
+//! namespace/index/class per instance, using deterministic IDs derived from
+//! logical record keys. Only Elasticsearch currently has a backend-native
+//! conditional-write path (`_seq_no`/`_primary_term`) for the HA-sensitive
+//! SystemStores operations; Pinecone and Weaviate fail closed from SystemStores
+//! registration until their own conditional-write CAS path exists.
 
 use std::time::{Duration, Instant};
 
@@ -24,28 +26,31 @@ use crate::runtime::executors::weaviate::WeaviateHttpClient;
 
 use super::system_store::{
     AdminAuditChainReport, AdminAuditInsert, AdminAuditListFilter, AdminAuditRow, AdvisoryLeaseRow,
-    CompensationStatus, DeadLetterGroup, JsonProjectionTaskAdapter, JsonSystemRecordAdapter,
-    MigrationAuditStore, MigrationOpInsert, MigrationOpRow, MigrationRunInsert, MigrationRunRow,
-    MigrationRunState, MigrationRunsFilter, PendingTaskMetric, ProjectionClaimFilter,
-    ProjectionTaskFailurePolicy, ProjectionTaskInsert, ProjectionTaskRow, ProjectionTaskStatus,
-    ProjectionTaskStore, ProjectionTaskSummary, SagaInsert, SagaListFilter, SagaRow, SagaStatus,
-    SagaStore, SagaSummary, SystemStoreError, SystemStoreResult, advisory_lease_can_acquire,
-    advisory_lease_is_owned_by, append_json_admin_audit, claim_json_projection_tasks,
-    claim_json_recoverable_sagas, enqueue_json_projection_task, get_json_migration_run,
-    get_json_saga, increment_json_saga_recovery_attempts, latest_json_admin_audit_hash,
-    list_json_admin_audit, list_json_migration_ops, list_json_migration_runs, list_json_sagas,
+    CompensationStatus, DeadLetterGroup, JSON_ADMIN_AUDIT_LOCK, JsonProjectionTaskAdapter,
+    JsonSystemRecordAdapter, MigrationAuditStore, MigrationOpInsert, MigrationOpRow,
+    MigrationRunInsert, MigrationRunRow, MigrationRunState, MigrationRunsFilter, OpLedgerStatus,
+    PendingTaskMetric, ProjectionClaimFilter, ProjectionTaskFailurePolicy, ProjectionTaskInsert,
+    ProjectionTaskRow, ProjectionTaskStatus, ProjectionTaskStore, ProjectionTaskSummary,
+    SagaInsert, SagaListFilter, SagaRow, SagaStatus, SagaStore, SagaSummary, SystemStoreError,
+    SystemStoreResult, advisory_lease_can_acquire, advisory_lease_is_owned_by,
+    append_json_admin_audit, claim_json_projection_tasks, claim_json_recoverable_sagas,
+    compute_admin_audit_hash, enqueue_json_projection_task, get_json_migration_run, get_json_saga,
+    increment_json_saga_recovery_attempts, latest_json_admin_audit_hash, list_json_admin_audit,
+    list_json_migration_ops, list_json_migration_runs, list_json_sagas,
     mark_json_projection_task_completed, mark_json_projection_task_failed,
-    mark_json_stale_sagas_indeterminate, new_advisory_lease_row,
+    mark_json_stale_sagas_indeterminate, mark_projection_task_claimed, new_advisory_lease_row,
     pending_json_projection_task_count, pending_projection_task_metrics,
-    projection_dead_letter_groups, record_json_saga, requeue_json_dead_letter_by_source,
+    projection_dead_letter_groups, projection_task_matches_claim, record_json_saga,
+    request_json_saga_recompensation, requeue_json_dead_letter_by_source,
     requeue_json_dead_letter_tasks, reset_stale_json_in_progress_tasks, start_json_migration_run,
     summarize_json_sagas, summarize_projection_tasks, update_json_saga_status,
-    verify_json_admin_audit_chain,
+    verify_admin_audit_chain_step, verify_json_admin_audit_chain,
 };
 use super::{CanonicalStore, DurabilityToken};
 
 const VECTOR_SYSTEM_DURABILITY_POLL_MS: u64 = 10;
 const KV_MEMBERSHIP_MAX_ITEMS: usize = 10_000;
+const VECTOR_CAS_MAX_RETRIES: usize = 8;
 
 #[derive(Debug, Clone)]
 enum VectorSystemClient {
@@ -55,6 +60,14 @@ enum VectorSystemClient {
     Weaviate(WeaviateHttpClient),
     #[cfg(feature = "elasticsearch")]
     Elasticsearch(ElasticsearchHttpClient),
+}
+
+#[cfg(feature = "elasticsearch")]
+#[derive(Debug, Clone)]
+struct ElasticsearchSystemDoc {
+    value: Option<JsonValue>,
+    seq_no: i64,
+    primary_term: i64,
 }
 
 impl VectorSystemClient {
@@ -247,6 +260,24 @@ impl VectorSystemCanonicalStore {
         }
     }
 
+    fn cas_unsupported(&self, op: &str) -> String {
+        format!(
+            "{} canonical SystemStores require real multi-process CAS for {op}; \
+             this backend path is not HA-canonical until a backend-native conditional write is wired",
+            self.backend_label_static()
+        )
+    }
+
+    async fn ensure_cas_capable(&self) -> Result<(), String> {
+        self.ensure_resource().await?;
+        match &self.client {
+            #[cfg(feature = "elasticsearch")]
+            VectorSystemClient::Elasticsearch(_) => Ok(()),
+            #[allow(unreachable_patterns)]
+            _ => Err(self.cas_unsupported("system state")),
+        }
+    }
+
     async fn get_json<T>(&self, key: &str) -> SystemStoreResult<Option<T>>
     where
         T: for<'de> Deserialize<'de>,
@@ -329,6 +360,17 @@ impl VectorSystemCanonicalStore {
 
     #[cfg(feature = "elasticsearch")]
     async fn get_elasticsearch_value(&self, key: &str) -> SystemStoreResult<Option<JsonValue>> {
+        Ok(self
+            .get_elasticsearch_doc(key)
+            .await?
+            .and_then(|doc| doc.value))
+    }
+
+    #[cfg(feature = "elasticsearch")]
+    async fn get_elasticsearch_doc(
+        &self,
+        key: &str,
+    ) -> SystemStoreResult<Option<ElasticsearchSystemDoc>> {
         let path = format!("/{}/_doc/{}", self.resource_name, Self::record_id(key));
         let response = match self
             .client
@@ -345,10 +387,28 @@ impl VectorSystemCanonicalStore {
                 ));
             }
         };
-        Ok(response
-            .get("_source")
-            .and_then(|source| source.get("value"))
-            .cloned())
+        Ok(Some(ElasticsearchSystemDoc {
+            value: response
+                .get("_source")
+                .and_then(|source| source.get("value"))
+                .cloned(),
+            seq_no: response
+                .get("_seq_no")
+                .and_then(JsonValue::as_i64)
+                .ok_or_else(|| {
+                    SystemStoreError::InvalidInput(format!(
+                        "elasticsearch system document {key} missing _seq_no for CAS"
+                    ))
+                })?,
+            primary_term: response
+                .get("_primary_term")
+                .and_then(JsonValue::as_i64)
+                .ok_or_else(|| {
+                    SystemStoreError::InvalidInput(format!(
+                        "elasticsearch system document {key} missing _primary_term for CAS"
+                    ))
+                })?,
+        }))
     }
 
     async fn set_json<T>(&self, key: &str, value: &T) -> SystemStoreResult<()>
@@ -432,25 +492,100 @@ impl VectorSystemCanonicalStore {
 
     #[cfg(feature = "elasticsearch")]
     async fn set_elasticsearch_value(&self, key: &str, value: JsonValue) -> SystemStoreResult<()> {
-        let path = format!(
-            "/{}/_doc/{}?refresh=wait_for",
-            self.resource_name,
-            Self::record_id(key)
-        );
-        self.client
+        self.put_elasticsearch_value(key, value, None)
+            .await
+            .map(|_| ())
+    }
+
+    #[cfg(feature = "elasticsearch")]
+    fn elasticsearch_system_doc_body(&self, key: &str, value: JsonValue) -> JsonValue {
+        json!({
+            "record_key": key,
+            "record_kind": Self::kind_for_key(key),
+            "value": value,
+            "updated_at_ms": Utc::now().timestamp_millis()
+        })
+    }
+
+    #[cfg(feature = "elasticsearch")]
+    async fn put_elasticsearch_value(
+        &self,
+        key: &str,
+        value: JsonValue,
+        cas: Option<(i64, i64)>,
+    ) -> SystemStoreResult<bool> {
+        let record_id = Self::record_id(key);
+        let path = if let Some((seq_no, primary_term)) = cas {
+            format!(
+                "/{}/_doc/{}?if_seq_no={seq_no}&if_primary_term={primary_term}&refresh=wait_for",
+                self.resource_name, record_id
+            )
+        } else {
+            format!(
+                "/{}/_doc/{}?refresh=wait_for",
+                self.resource_name, record_id
+            )
+        };
+        match self
+            .client
             .request_json(
                 reqwest::Method::PUT,
                 &path,
-                &json!({
-                    "record_key": key,
-                    "record_kind": Self::kind_for_key(key),
-                    "value": value,
-                    "updated_at_ms": Utc::now().timestamp_millis()
-                }),
+                &self.elasticsearch_system_doc_body(key, value),
             )
             .await
-            .map(|_| ())
-            .map_err(|err| SystemStoreError::query("elasticsearch", "index document", err))
+        {
+            Ok(_) => Ok(true),
+            Err(status) if status.code() == tonic::Code::AlreadyExists => Ok(false),
+            Err(status) => Err(SystemStoreError::query(
+                "elasticsearch",
+                "index document with CAS",
+                status,
+            )),
+        }
+    }
+
+    #[cfg(feature = "elasticsearch")]
+    async fn create_elasticsearch_value(
+        &self,
+        key: &str,
+        value: JsonValue,
+    ) -> SystemStoreResult<bool> {
+        let path = format!(
+            "/{}/_create/{}?refresh=wait_for",
+            self.resource_name,
+            Self::record_id(key)
+        );
+        match self
+            .client
+            .request_json(
+                reqwest::Method::PUT,
+                &path,
+                &self.elasticsearch_system_doc_body(key, value),
+            )
+            .await
+        {
+            Ok(_) => Ok(true),
+            Err(status) if status.code() == tonic::Code::AlreadyExists => Ok(false),
+            Err(status) => Err(SystemStoreError::query(
+                "elasticsearch",
+                "create document",
+                status,
+            )),
+        }
+    }
+
+    #[cfg(feature = "elasticsearch")]
+    async fn compare_and_set_elasticsearch_value(
+        &self,
+        key: &str,
+        expected: Option<(i64, i64)>,
+        value: JsonValue,
+    ) -> SystemStoreResult<bool> {
+        match expected {
+            Some(cas) => self.put_elasticsearch_value(key, value, Some(cas)).await,
+            None => self.create_elasticsearch_value(key, value).await,
+        }
     }
 
     async fn delete_key(&self, key: &str) -> SystemStoreResult<()> {
@@ -522,6 +657,15 @@ impl VectorSystemCanonicalStore {
     }
 
     async fn add_to_set(&self, set_key: &str, item: String) -> SystemStoreResult<()> {
+        match &self.client {
+            #[cfg(feature = "elasticsearch")]
+            VectorSystemClient::Elasticsearch(_) => {
+                return self.add_to_elasticsearch_set(set_key, item).await;
+            }
+            #[allow(unreachable_patterns)]
+            _ => {}
+        }
+
         let mut items = self.list_set(set_key).await?;
         if !items.iter().any(|existing| existing == &item) {
             items.push(item);
@@ -536,6 +680,17 @@ impl VectorSystemCanonicalStore {
         item: String,
         max_items: usize,
     ) -> SystemStoreResult<Vec<String>> {
+        match &self.client {
+            #[cfg(feature = "elasticsearch")]
+            VectorSystemClient::Elasticsearch(_) => {
+                return self
+                    .add_to_elasticsearch_capped_set(set_key, item, max_items)
+                    .await;
+            }
+            #[allow(unreachable_patterns)]
+            _ => {}
+        }
+
         let mut items = self.list_set(set_key).await?;
         if items.iter().any(|existing| existing == &item) {
             return Ok(Vec::new());
@@ -558,6 +713,15 @@ impl VectorSystemCanonicalStore {
     }
 
     async fn remove_from_set(&self, set_key: &str, item: &str) -> SystemStoreResult<bool> {
+        match &self.client {
+            #[cfg(feature = "elasticsearch")]
+            VectorSystemClient::Elasticsearch(_) => {
+                return self.remove_from_elasticsearch_set(set_key, item).await;
+            }
+            #[allow(unreachable_patterns)]
+            _ => {}
+        }
+
         let mut items = self.list_set(set_key).await?;
         let before = items.len();
         items.retain(|existing| existing != item);
@@ -567,6 +731,692 @@ impl VectorSystemCanonicalStore {
         } else {
             Ok(false)
         }
+    }
+
+    #[cfg(feature = "elasticsearch")]
+    fn decode_elasticsearch_set(
+        &self,
+        set_key: &str,
+        doc: Option<&ElasticsearchSystemDoc>,
+    ) -> SystemStoreResult<Vec<String>> {
+        doc.and_then(|doc| doc.value.as_ref())
+            .cloned()
+            .map(serde_json::from_value::<Vec<String>>)
+            .transpose()
+            .map_err(|err| {
+                SystemStoreError::InvalidInput(format!(
+                    "decode elasticsearch membership set {set_key}: {err}"
+                ))
+            })
+            .map(|items| items.unwrap_or_default())
+    }
+
+    #[cfg(feature = "elasticsearch")]
+    async fn compare_and_set_elasticsearch_set(
+        &self,
+        set_key: &str,
+        current: Option<&ElasticsearchSystemDoc>,
+        items: Vec<String>,
+    ) -> SystemStoreResult<bool> {
+        let expected = current.map(|doc| (doc.seq_no, doc.primary_term));
+        let value = serde_json::to_value(items).map_err(|err| {
+            SystemStoreError::InvalidInput(format!(
+                "encode elasticsearch membership set {set_key}: {err}"
+            ))
+        })?;
+        self.compare_and_set_elasticsearch_value(set_key, expected, value)
+            .await
+    }
+
+    #[cfg(feature = "elasticsearch")]
+    fn elasticsearch_membership_cas_lost(&self, set_key: &str) -> SystemStoreError {
+        SystemStoreError::io(
+            "elasticsearch",
+            format!("membership set {set_key} CAS lost after {VECTOR_CAS_MAX_RETRIES} retries"),
+        )
+    }
+
+    #[cfg(feature = "elasticsearch")]
+    async fn add_to_elasticsearch_set(&self, set_key: &str, item: String) -> SystemStoreResult<()> {
+        for _ in 0..VECTOR_CAS_MAX_RETRIES {
+            let current = self.get_elasticsearch_doc(set_key).await?;
+            let mut items = self.decode_elasticsearch_set(set_key, current.as_ref())?;
+            if items.iter().any(|existing| existing == &item) {
+                return Ok(());
+            }
+            items.push(item.clone());
+            if self
+                .compare_and_set_elasticsearch_set(set_key, current.as_ref(), items)
+                .await?
+            {
+                return Ok(());
+            }
+        }
+        Err(self.elasticsearch_membership_cas_lost(set_key))
+    }
+
+    #[cfg(feature = "elasticsearch")]
+    async fn add_to_elasticsearch_capped_set(
+        &self,
+        set_key: &str,
+        item: String,
+        max_items: usize,
+    ) -> SystemStoreResult<Vec<String>> {
+        for _ in 0..VECTOR_CAS_MAX_RETRIES {
+            let current = self.get_elasticsearch_doc(set_key).await?;
+            let mut items = self.decode_elasticsearch_set(set_key, current.as_ref())?;
+            if items.iter().any(|existing| existing == &item) {
+                return Ok(Vec::new());
+            }
+            items.push(item.clone());
+            let mut trimmed = Vec::new();
+            if items.len() > max_items {
+                let trim_count = items.len() - max_items;
+                trimmed.extend(items.drain(0..trim_count));
+            }
+            if self
+                .compare_and_set_elasticsearch_set(set_key, current.as_ref(), items)
+                .await?
+            {
+                if !trimmed.is_empty() {
+                    tracing::warn!(
+                        backend = self.backend_label_static(),
+                        set_key = %set_key,
+                        trimmed = trimmed.len(),
+                        max_items,
+                        "trimmed canonical KV membership set"
+                    );
+                }
+                return Ok(trimmed);
+            }
+        }
+        Err(self.elasticsearch_membership_cas_lost(set_key))
+    }
+
+    #[cfg(feature = "elasticsearch")]
+    async fn remove_from_elasticsearch_set(
+        &self,
+        set_key: &str,
+        item: &str,
+    ) -> SystemStoreResult<bool> {
+        for _ in 0..VECTOR_CAS_MAX_RETRIES {
+            let current = self.get_elasticsearch_doc(set_key).await?;
+            let mut items = self.decode_elasticsearch_set(set_key, current.as_ref())?;
+            let before = items.len();
+            items.retain(|existing| existing != item);
+            if items.len() == before {
+                return Ok(false);
+            }
+            if self
+                .compare_and_set_elasticsearch_set(set_key, current.as_ref(), items)
+                .await?
+            {
+                return Ok(true);
+            }
+        }
+        Err(self.elasticsearch_membership_cas_lost(set_key))
+    }
+
+    #[cfg(feature = "elasticsearch")]
+    async fn get_elasticsearch_typed_record<T>(
+        &self,
+        key: &str,
+        label: &str,
+    ) -> SystemStoreResult<Option<(T, ElasticsearchSystemDoc)>>
+    where
+        T: for<'de> Deserialize<'de>,
+    {
+        let Some(doc) = self.get_elasticsearch_doc(key).await? else {
+            return Ok(None);
+        };
+        let Some(value) = doc.value.clone() else {
+            return Err(SystemStoreError::InvalidInput(format!(
+                "elasticsearch {label} record {key} missing value"
+            )));
+        };
+        let row = serde_json::from_value(value).map_err(|err| {
+            SystemStoreError::InvalidInput(format!(
+                "decode elasticsearch {label} record {key}: {err}"
+            ))
+        })?;
+        Ok(Some((row, doc)))
+    }
+
+    #[cfg(feature = "elasticsearch")]
+    async fn compare_and_set_elasticsearch_record<T>(
+        &self,
+        key: &str,
+        current: &ElasticsearchSystemDoc,
+        row: &T,
+        label: &str,
+    ) -> SystemStoreResult<bool>
+    where
+        T: Serialize,
+    {
+        let value = serde_json::to_value(row).map_err(|err| {
+            SystemStoreError::InvalidInput(format!(
+                "encode elasticsearch {label} record {key}: {err}"
+            ))
+        })?;
+        self.compare_and_set_elasticsearch_value(
+            key,
+            Some((current.seq_no, current.primary_term)),
+            value,
+        )
+        .await
+    }
+
+    #[cfg(feature = "elasticsearch")]
+    fn elasticsearch_record_cas_lost(&self, label: &str, key: &str) -> SystemStoreError {
+        SystemStoreError::io(
+            "elasticsearch",
+            format!("{label} record {key} CAS lost after {VECTOR_CAS_MAX_RETRIES} retries"),
+        )
+    }
+
+    #[cfg(feature = "elasticsearch")]
+    async fn update_elasticsearch_saga_row<R, F>(
+        &self,
+        saga_id: Uuid,
+        label: &str,
+        mut mutate: F,
+    ) -> SystemStoreResult<Option<R>>
+    where
+        F: FnMut(&mut SagaRow) -> SystemStoreResult<R>,
+    {
+        let key = self.saga_key(saga_id);
+        for _ in 0..VECTOR_CAS_MAX_RETRIES {
+            let Some((mut row, current)) = self
+                .get_elasticsearch_typed_record::<SagaRow>(&key, label)
+                .await?
+            else {
+                return Ok(None);
+            };
+            let outcome = mutate(&mut row)?;
+            if self
+                .compare_and_set_elasticsearch_record(&key, &current, &row, label)
+                .await?
+            {
+                return Ok(Some(outcome));
+            }
+        }
+        Err(self.elasticsearch_record_cas_lost(label, &key))
+    }
+
+    #[cfg(feature = "elasticsearch")]
+    async fn update_elasticsearch_saga_status(
+        &self,
+        saga_id: Uuid,
+        status: SagaStatus,
+        compensation_status: CompensationStatus,
+    ) -> SystemStoreResult<()> {
+        let _ = self
+            .update_elasticsearch_saga_row(saga_id, "saga", |row| {
+                row.status = status;
+                row.compensation_status = compensation_status;
+                row.updated_at = Utc::now();
+                Ok(())
+            })
+            .await?;
+        Ok(())
+    }
+
+    #[cfg(feature = "elasticsearch")]
+    async fn request_elasticsearch_saga_recompensation(
+        &self,
+        saga_id: Uuid,
+    ) -> SystemStoreResult<()> {
+        let _ = self
+            .update_elasticsearch_saga_row(saga_id, "saga recompensation", |row| {
+                if !matches!(
+                    row.status,
+                    SagaStatus::FailedCompensation | SagaStatus::ManualReview
+                ) {
+                    return Err(SystemStoreError::InvalidInput(format!(
+                        "saga {saga_id} is not in a retryable state (must be failed_compensation or manual_review)"
+                    )));
+                }
+                row.status = SagaStatus::Indeterminate;
+                row.last_error = String::new();
+                row.compensation_status = CompensationStatus::RetryRequested;
+                row.updated_at = Utc::now();
+                Ok(())
+            })
+            .await?;
+        Ok(())
+    }
+
+    #[cfg(feature = "elasticsearch")]
+    async fn increment_elasticsearch_saga_recovery_attempts(
+        &self,
+        saga_id: Uuid,
+        error: &str,
+    ) -> SystemStoreResult<i64> {
+        Ok(self
+            .update_elasticsearch_saga_row(saga_id, "saga recovery attempts", |row| {
+                row.recovery_attempts += 1;
+                row.last_error = error.to_string();
+                row.updated_at = Utc::now();
+                Ok(i64::from(row.recovery_attempts))
+            })
+            .await?
+            .unwrap_or(0))
+    }
+
+    #[cfg(feature = "elasticsearch")]
+    async fn mark_stale_elasticsearch_sagas_indeterminate(
+        &self,
+        stale_after: Duration,
+    ) -> SystemStoreResult<i64> {
+        let cutoff = Utc::now() - chrono::Duration::from_std(stale_after).unwrap_or_default();
+        let rows: Vec<SagaRow> = self.load_all(&self.point_key("saga_all")).await?;
+        let mut count = 0_i64;
+        for row in rows {
+            if row.status != SagaStatus::InProgress || row.updated_at > cutoff {
+                continue;
+            }
+            count += self
+                .update_elasticsearch_saga_row(row.saga_id, "stale saga", |current| {
+                    if current.status == SagaStatus::InProgress && current.updated_at <= cutoff {
+                        current.status = SagaStatus::Indeterminate;
+                        current.updated_at = Utc::now();
+                        Ok(1_i64)
+                    } else {
+                        Ok(0_i64)
+                    }
+                })
+                .await?
+                .unwrap_or(0);
+        }
+        Ok(count)
+    }
+
+    #[cfg(feature = "elasticsearch")]
+    async fn update_elasticsearch_projection_row<R, F>(
+        &self,
+        task_id: Uuid,
+        label: &str,
+        mut mutate: F,
+    ) -> SystemStoreResult<Option<R>>
+    where
+        F: FnMut(&mut ProjectionTaskRow) -> SystemStoreResult<R>,
+    {
+        let key = self.projection_task_key(task_id);
+        for _ in 0..VECTOR_CAS_MAX_RETRIES {
+            let Some((mut row, current)) = self
+                .get_elasticsearch_typed_record::<ProjectionTaskRow>(&key, label)
+                .await?
+            else {
+                return Ok(None);
+            };
+            let outcome = mutate(&mut row)?;
+            if self
+                .compare_and_set_elasticsearch_record(&key, &current, &row, label)
+                .await?
+            {
+                return Ok(Some(outcome));
+            }
+        }
+        Err(self.elasticsearch_record_cas_lost(label, &key))
+    }
+
+    #[cfg(feature = "elasticsearch")]
+    async fn claim_elasticsearch_projection_tasks(
+        &self,
+        filter: &ProjectionClaimFilter,
+    ) -> SystemStoreResult<Vec<ProjectionTaskRow>> {
+        let mut rows: Vec<ProjectionTaskRow> =
+            self.load_all(&self.point_key("projection_all")).await?;
+        rows.sort_by(|a, b| a.created_at.cmp(&b.created_at));
+        let mut claimed = Vec::new();
+        for row in rows {
+            if claimed.len() >= filter.batch_size.max(1) as usize {
+                break;
+            }
+            if !projection_task_matches_claim(&row, filter, Utc::now()) {
+                continue;
+            }
+            if let Some(Some(claimed_row)) = self
+                .update_elasticsearch_projection_row(row.task_id, "projection claim", |current| {
+                    if !projection_task_matches_claim(current, filter, Utc::now()) {
+                        return Ok(None);
+                    }
+                    mark_projection_task_claimed(current, Utc::now());
+                    Ok(Some(current.clone()))
+                })
+                .await?
+            {
+                claimed.push(claimed_row);
+            }
+        }
+        Ok(claimed)
+    }
+
+    #[cfg(feature = "elasticsearch")]
+    async fn mark_elasticsearch_projection_task_completed(
+        &self,
+        task_id: Uuid,
+    ) -> SystemStoreResult<()> {
+        // Unlike the SQL/Mongo stores — whose `projection_task_summary` aggregates
+        // the full backing table/collection — the vector store's summary counts
+        // over the `projection_all` membership set (the ES `value` payload is a
+        // non-indexed object, so status can't be server-side aggregated). The
+        // completed row must therefore STAY in `projection_all` so the summary can
+        // count it; the claim path already skips terminal rows via
+        // `projection_task_matches_claim`, and the set is capped/trimmed. Removing
+        // it here (as the shared JSON path does for query-backed stores) would keep
+        // `summary.completed` stuck at 0 on this backend.
+        self.update_elasticsearch_projection_row(task_id, "projection complete", |row| {
+            row.status = ProjectionTaskStatus::Completed;
+            row.updated_at = Utc::now();
+            row.completed_at = Some(row.updated_at);
+            row.next_retry_at = None;
+            Ok(())
+        })
+        .await?;
+        Ok(())
+    }
+
+    #[cfg(feature = "elasticsearch")]
+    async fn mark_elasticsearch_projection_task_failed(
+        &self,
+        task_id: Uuid,
+        new_retry_count: i32,
+        new_status: ProjectionTaskStatus,
+        error: &str,
+    ) -> SystemStoreResult<()> {
+        // Same strict target-status guard the shared JSON path enforces: a
+        // failure transition may only land in FAILED or DEAD_LETTER (never back
+        // to Pending/InProgress/Completed), so an invalid caller status is
+        // rejected before any write.
+        if !matches!(
+            new_status,
+            ProjectionTaskStatus::Failed | ProjectionTaskStatus::DeadLetter
+        ) {
+            return Err(SystemStoreError::InvalidInput(format!(
+                "mark_projection_task_failed: status must be FAILED or DEAD_LETTER, got {new_status:?}"
+            )));
+        }
+        let updated = self
+            .update_elasticsearch_projection_row(task_id, "projection failure", |row| {
+                row.status = new_status;
+                row.retry_count = new_retry_count;
+                row.last_error = error.to_string();
+                row.updated_at = Utc::now();
+                row.next_retry_at =
+                    (new_status == ProjectionTaskStatus::Failed).then_some(row.updated_at);
+                Ok(())
+            })
+            .await?
+            .is_some();
+        if updated && new_status == ProjectionTaskStatus::Completed {
+            let row_key = self.projection_task_key(task_id);
+            let _ = self
+                .remove_from_elasticsearch_set(&self.projection_all_key(), &row_key)
+                .await?;
+        }
+        Ok(())
+    }
+
+    #[cfg(feature = "elasticsearch")]
+    async fn requeue_elasticsearch_dead_letter_tasks(
+        &self,
+        target_backend: Option<&str>,
+    ) -> SystemStoreResult<i64> {
+        let rows: Vec<ProjectionTaskRow> = self.load_all(&self.point_key("projection_all")).await?;
+        let mut count = 0_i64;
+        for row in rows {
+            if row.status != ProjectionTaskStatus::DeadLetter
+                || target_backend.is_some_and(|backend| row.target_backend != backend)
+            {
+                continue;
+            }
+            count += self
+                .update_elasticsearch_projection_row(row.task_id, "projection requeue", |current| {
+                    if current.status != ProjectionTaskStatus::DeadLetter
+                        || target_backend.is_some_and(|backend| current.target_backend != backend)
+                    {
+                        return Ok(0_i64);
+                    }
+                    current.status = ProjectionTaskStatus::Pending;
+                    current.retry_count = 0;
+                    current.last_error = "operator requeue".to_string();
+                    current.updated_at = Utc::now();
+                    current.next_retry_at = None;
+                    Ok(1_i64)
+                })
+                .await?
+                .unwrap_or(0);
+        }
+        Ok(count)
+    }
+
+    #[cfg(feature = "elasticsearch")]
+    async fn reset_stale_elasticsearch_projection_tasks(
+        &self,
+        stale_after: Duration,
+    ) -> SystemStoreResult<i64> {
+        let cutoff = Utc::now() - chrono::Duration::from_std(stale_after).unwrap_or_default();
+        let rows: Vec<ProjectionTaskRow> = self.load_all(&self.point_key("projection_all")).await?;
+        let mut count = 0_i64;
+        for row in rows {
+            if row.status != ProjectionTaskStatus::InProgress || row.updated_at > cutoff {
+                continue;
+            }
+            count += self
+                .update_elasticsearch_projection_row(
+                    row.task_id,
+                    "projection stale reset",
+                    |current| {
+                        if current.status != ProjectionTaskStatus::InProgress
+                            || current.updated_at > cutoff
+                        {
+                            return Ok(0_i64);
+                        }
+                        current.status = ProjectionTaskStatus::Pending;
+                        current.last_error = "stale in-progress reconciliation".to_string();
+                        current.updated_at = Utc::now();
+                        current.next_retry_at = None;
+                        Ok(1_i64)
+                    },
+                )
+                .await?
+                .unwrap_or(0);
+        }
+        Ok(count)
+    }
+
+    #[cfg(feature = "elasticsearch")]
+    async fn requeue_elasticsearch_dead_letter_by_source(
+        &self,
+        source_table: &str,
+        target_backend: &str,
+        target_instance: &str,
+    ) -> SystemStoreResult<i64> {
+        let rows: Vec<ProjectionTaskRow> = self.load_all(&self.point_key("projection_all")).await?;
+        let mut count = 0_i64;
+        for row in rows {
+            if row.status != ProjectionTaskStatus::DeadLetter
+                || row.resource_name != source_table
+                || row.target_backend != target_backend
+                || row.target_instance != target_instance
+            {
+                continue;
+            }
+            count += self
+                .update_elasticsearch_projection_row(
+                    row.task_id,
+                    "projection source requeue",
+                    |current| {
+                        if current.status != ProjectionTaskStatus::DeadLetter
+                            || current.resource_name != source_table
+                            || current.target_backend != target_backend
+                            || current.target_instance != target_instance
+                        {
+                            return Ok(0_i64);
+                        }
+                        current.status = ProjectionTaskStatus::Pending;
+                        current.retry_count = 0;
+                        current.last_error = "reconciliation repair".to_string();
+                        current.updated_at = Utc::now();
+                        current.next_retry_at = None;
+                        Ok(1_i64)
+                    },
+                )
+                .await?
+                .unwrap_or(0);
+        }
+        Ok(count)
+    }
+
+    #[cfg(feature = "elasticsearch")]
+    async fn update_elasticsearch_migration_run_row<R, F>(
+        &self,
+        run_id: Uuid,
+        label: &str,
+        mut mutate: F,
+    ) -> SystemStoreResult<Option<R>>
+    where
+        F: FnMut(&mut MigrationRunRow) -> SystemStoreResult<R>,
+    {
+        let key = self.migration_run_key(run_id);
+        for _ in 0..VECTOR_CAS_MAX_RETRIES {
+            let Some((mut row, current)) = self
+                .get_elasticsearch_typed_record::<MigrationRunRow>(&key, label)
+                .await?
+            else {
+                return Ok(None);
+            };
+            let outcome = mutate(&mut row)?;
+            if self
+                .compare_and_set_elasticsearch_record(&key, &current, &row, label)
+                .await?
+            {
+                return Ok(Some(outcome));
+            }
+        }
+        Err(self.elasticsearch_record_cas_lost(label, &key))
+    }
+
+    #[cfg(feature = "elasticsearch")]
+    async fn finish_elasticsearch_migration_run(
+        &self,
+        run_id: Uuid,
+        new_state: MigrationRunState,
+        error: &str,
+    ) -> SystemStoreResult<()> {
+        let error = error.to_string();
+        // Finishing a non-existent run is an error (mirrors PG's rows_affected==0
+        // and the Qdrant store) — `update_elasticsearch_migration_run_row` returns
+        // None when the run key is absent, which must NOT be silently swallowed.
+        let updated = self
+            .update_elasticsearch_migration_run_row(run_id, "migration run finish", |row| {
+                row.state = new_state;
+                row.error = error.clone();
+                if new_state.is_terminal() {
+                    row.finished_at = Some(Utc::now());
+                }
+                Ok(())
+            })
+            .await?;
+        if updated.is_none() {
+            return Err(SystemStoreError::InvalidInput(format!(
+                "migration run {run_id} not found"
+            )));
+        }
+        Ok(())
+    }
+
+    #[cfg(feature = "elasticsearch")]
+    async fn latest_elasticsearch_admin_audit_hash_from_order(&self) -> SystemStoreResult<String> {
+        let keys = self.list_set(&self.point_key("admin_audit_order")).await?;
+        let mut checked = 0_i64;
+        let mut previous = String::new();
+        for key in keys {
+            let Some(row) = self.get_json::<AdminAuditRow>(&key).await? else {
+                continue;
+            };
+            match verify_admin_audit_chain_step(&row, &previous, checked) {
+                Ok(next) => {
+                    previous = next;
+                    checked += 1;
+                }
+                Err(report) => {
+                    return Err(SystemStoreError::InvalidInput(format!(
+                        "admin audit chain is broken before append: {report:?}"
+                    )));
+                }
+            }
+        }
+        Ok(previous)
+    }
+
+    #[cfg(feature = "elasticsearch")]
+    async fn append_elasticsearch_admin_audit(
+        &self,
+        entry: &AdminAuditInsert,
+    ) -> SystemStoreResult<Uuid> {
+        let backend = self.backend_label_static();
+        let owner = Uuid::new_v4().to_string();
+        let started = Instant::now();
+        while !self
+            .try_acquire_advisory_lease(JSON_ADMIN_AUDIT_LOCK, &owner, Duration::from_secs(10))
+            .await
+            .map_err(|err| SystemStoreError::io(backend, err))?
+        {
+            if started.elapsed() > Duration::from_secs(10) {
+                return Err(SystemStoreError::io(backend, "admin audit lock timeout"));
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+
+        let result = async {
+            let audit_id = Uuid::new_v4();
+            let previous_hash = self
+                .latest_elasticsearch_admin_audit_hash_from_order()
+                .await?;
+            let current_hash = compute_admin_audit_hash(
+                &previous_hash,
+                &entry.actor,
+                &entry.operation,
+                &entry.target,
+                &entry.request_json,
+                &entry.result,
+                &entry.tenant_id,
+                &entry.project_id,
+                &entry.correlation_id,
+                &entry.signer_key_id,
+                &entry.external_anchor,
+            );
+            let row = AdminAuditRow {
+                audit_id,
+                actor: entry.actor.clone(),
+                operation: entry.operation.clone(),
+                target: entry.target.clone(),
+                request_json: entry.request_json.clone(),
+                result: entry.result.clone(),
+                tenant_id: entry.tenant_id.clone(),
+                project_id: entry.project_id.clone(),
+                correlation_id: entry.correlation_id.clone(),
+                previous_hash,
+                current_hash: current_hash.clone(),
+                signer_key_id: entry.signer_key_id.clone(),
+                external_anchor: entry.external_anchor.clone(),
+                created_at: Utc::now(),
+            };
+            let key = self.audit_key(audit_id);
+            self.set_json(&key, &row).await?;
+            self.add_to_set(&self.point_key("admin_audit_order"), key)
+                .await?;
+            self.set_json(&self.point_key("admin_audit_latest_hash"), &current_hash)
+                .await?;
+            Ok(audit_id)
+        }
+        .await;
+        let _ = self
+            .release_advisory_lease(JSON_ADMIN_AUDIT_LOCK, &owner)
+            .await;
+        result
     }
 
     async fn load_all<T>(&self, set_key: &str) -> SystemStoreResult<Vec<T>>
@@ -588,6 +1438,188 @@ impl VectorSystemCanonicalStore {
             .await
             .map_err(|err| err.to_string())
             .map(|seq| seq.unwrap_or(0))
+    }
+
+    async fn next_seq_value(&self) -> Result<i64, String> {
+        match &self.client {
+            #[cfg(feature = "elasticsearch")]
+            VectorSystemClient::Elasticsearch(_) => self.next_elasticsearch_seq_value().await,
+            #[allow(unreachable_patterns)]
+            _ => Err(self.cas_unsupported("outbox sequence allocation")),
+        }
+    }
+
+    #[cfg(feature = "elasticsearch")]
+    async fn next_elasticsearch_seq_value(&self) -> Result<i64, String> {
+        self.next_elasticsearch_cas_sequence_value(&self.point_key("outbox_seq"), "outbox sequence")
+            .await
+    }
+
+    #[cfg(feature = "elasticsearch")]
+    async fn next_elasticsearch_cas_sequence_value(
+        &self,
+        key: &str,
+        label: &str,
+    ) -> Result<i64, String> {
+        for _ in 0..VECTOR_CAS_MAX_RETRIES {
+            let current = self
+                .get_elasticsearch_doc(key)
+                .await
+                .map_err(|err| err.to_string())?;
+            let current_value = current
+                .as_ref()
+                .and_then(|doc| doc.value.as_ref())
+                .cloned()
+                .map(serde_json::from_value::<i64>)
+                .transpose()
+                .map_err(|err| format!("decode elasticsearch {label}: {err}"))?
+                .unwrap_or(0);
+            let next = current_value.saturating_add(1);
+            let expected = current.as_ref().map(|doc| (doc.seq_no, doc.primary_term));
+            if self
+                .compare_and_set_elasticsearch_value(key, expected, json!(next))
+                .await
+                .map_err(|err| err.to_string())?
+            {
+                return Ok(next);
+            }
+        }
+        Err(format!(
+            "elasticsearch {label} CAS lost after {VECTOR_CAS_MAX_RETRIES} retries"
+        ))
+    }
+
+    async fn next_migration_op_id(&self) -> Result<i64, String> {
+        match &self.client {
+            #[cfg(feature = "elasticsearch")]
+            VectorSystemClient::Elasticsearch(_) => {
+                self.next_elasticsearch_cas_sequence_value(
+                    &self.point_key("migration_op_seq"),
+                    "migration audit sequence",
+                )
+                .await
+            }
+            #[allow(unreachable_patterns)]
+            _ => Err(self.cas_unsupported("migration audit sequence allocation")),
+        }
+    }
+
+    async fn try_acquire_cas_advisory_lease(
+        &self,
+        lease_name: &str,
+        owner_id: &str,
+        ttl: Duration,
+    ) -> Result<bool, String> {
+        match &self.client {
+            #[cfg(feature = "elasticsearch")]
+            VectorSystemClient::Elasticsearch(_) => {
+                self.try_acquire_elasticsearch_advisory_lease(lease_name, owner_id, ttl)
+                    .await
+            }
+            #[allow(unreachable_patterns)]
+            _ => Err(self.cas_unsupported("advisory leases")),
+        }
+    }
+
+    #[cfg(feature = "elasticsearch")]
+    async fn try_acquire_elasticsearch_advisory_lease(
+        &self,
+        lease_name: &str,
+        owner_id: &str,
+        ttl: Duration,
+    ) -> Result<bool, String> {
+        let key = self.point_key(&format!("lease:{lease_name}"));
+        for _ in 0..VECTOR_CAS_MAX_RETRIES {
+            let now = Utc::now().timestamp_millis();
+            let current = self
+                .get_elasticsearch_doc(&key)
+                .await
+                .map_err(|err| err.to_string())?;
+            let current_lease: Option<AdvisoryLeaseRow> = current
+                .as_ref()
+                .and_then(|doc| doc.value.as_ref())
+                .cloned()
+                .map(serde_json::from_value)
+                .transpose()
+                .map_err(|err| format!("decode elasticsearch advisory lease: {err}"))?;
+            if !advisory_lease_can_acquire(current_lease.as_ref(), owner_id, now) {
+                return Ok(false);
+            }
+            let expected = current.as_ref().map(|doc| (doc.seq_no, doc.primary_term));
+            let next = serde_json::to_value(new_advisory_lease_row(owner_id, now, ttl))
+                .map_err(|err| format!("encode elasticsearch advisory lease: {err}"))?;
+            if self
+                .compare_and_set_elasticsearch_value(&key, expected, next)
+                .await
+                .map_err(|err| err.to_string())?
+            {
+                return Ok(true);
+            }
+        }
+        Ok(false)
+    }
+
+    async fn release_cas_advisory_lease(
+        &self,
+        lease_name: &str,
+        owner_id: &str,
+    ) -> Result<(), String> {
+        match &self.client {
+            #[cfg(feature = "elasticsearch")]
+            VectorSystemClient::Elasticsearch(_) => {
+                self.release_elasticsearch_advisory_lease(lease_name, owner_id)
+                    .await
+            }
+            #[allow(unreachable_patterns)]
+            _ => Err(self.cas_unsupported("advisory lease release")),
+        }
+    }
+
+    #[cfg(feature = "elasticsearch")]
+    async fn release_elasticsearch_advisory_lease(
+        &self,
+        lease_name: &str,
+        owner_id: &str,
+    ) -> Result<(), String> {
+        let key = self.point_key(&format!("lease:{lease_name}"));
+        for _ in 0..VECTOR_CAS_MAX_RETRIES {
+            let current = self
+                .get_elasticsearch_doc(&key)
+                .await
+                .map_err(|err| err.to_string())?;
+            let Some(doc) = current.as_ref() else {
+                return Ok(());
+            };
+            let current_lease: Option<AdvisoryLeaseRow> = doc
+                .value
+                .as_ref()
+                .cloned()
+                .map(serde_json::from_value)
+                .transpose()
+                .map_err(|err| format!("decode elasticsearch advisory lease: {err}"))?;
+            if !advisory_lease_is_owned_by(current_lease.as_ref(), owner_id) {
+                return Ok(());
+            }
+            let tombstone = serde_json::to_value(AdvisoryLeaseRow {
+                owner_id: String::new(),
+                expires_at_ms: 0,
+            })
+            .map_err(|err| format!("encode elasticsearch lease tombstone: {err}"))?;
+            if self
+                .compare_and_set_elasticsearch_value(
+                    &key,
+                    Some((doc.seq_no, doc.primary_term)),
+                    tombstone,
+                )
+                .await
+                .map_err(|err| err.to_string())?
+            {
+                return Ok(());
+            }
+        }
+        Err(format!(
+            "elasticsearch advisory lease release CAS lost after {VECTOR_CAS_MAX_RETRIES} retries"
+        ))
     }
 }
 
@@ -700,11 +1732,7 @@ impl CanonicalStore for VectorSystemCanonicalStore {
         partition_key: &str,
         payload: &serde_json::Value,
     ) -> Result<i64, String> {
-        let _guard = self.op_lock.lock().await;
-        let seq = self.current_seq_value().await?.saturating_add(1);
-        self.set_json(&self.point_key("outbox_seq"), &seq)
-            .await
-            .map_err(|err| err.to_string())?;
+        let seq = self.next_seq_value().await?;
         let event = super::OutboxEvent {
             event_seq: seq,
             event_id: event_id.to_string(),
@@ -738,7 +1766,7 @@ impl CanonicalStore for VectorSystemCanonicalStore {
     }
 
     async fn ensure_system_tables(&self) -> Result<(), String> {
-        self.ensure_resource().await
+        self.ensure_cas_capable().await
     }
 
     async fn ensure_advisory_lease_table(&self) -> Result<(), String> {
@@ -751,29 +1779,12 @@ impl CanonicalStore for VectorSystemCanonicalStore {
         owner_id: &str,
         ttl: Duration,
     ) -> Result<bool, String> {
-        let _guard = self.op_lock.lock().await;
-        let key = self.point_key(&format!("lease:{lease_name}"));
-        let now = Utc::now().timestamp_millis();
-        let current: Option<AdvisoryLeaseRow> =
-            self.get_json(&key).await.map_err(|err| err.to_string())?;
-        if !advisory_lease_can_acquire(current.as_ref(), owner_id, now) {
-            return Ok(false);
-        }
-        self.set_json(&key, &new_advisory_lease_row(owner_id, now, ttl))
+        self.try_acquire_cas_advisory_lease(lease_name, owner_id, ttl)
             .await
-            .map_err(|err| err.to_string())?;
-        Ok(true)
     }
 
     async fn release_advisory_lease(&self, lease_name: &str, owner_id: &str) -> Result<(), String> {
-        let _guard = self.op_lock.lock().await;
-        let key = self.point_key(&format!("lease:{lease_name}"));
-        let current: Option<AdvisoryLeaseRow> =
-            self.get_json(&key).await.map_err(|err| err.to_string())?;
-        if advisory_lease_is_owned_by(current.as_ref(), owner_id) {
-            self.delete_key(&key).await.map_err(|err| err.to_string())?;
-        }
-        Ok(())
+        self.release_cas_advisory_lease(lease_name, owner_id).await
     }
 }
 
@@ -951,11 +1962,31 @@ impl ProjectionTaskStore for VectorSystemCanonicalStore {
         &self,
         filter: &ProjectionClaimFilter,
     ) -> SystemStoreResult<Vec<ProjectionTaskRow>> {
+        match &self.client {
+            #[cfg(feature = "elasticsearch")]
+            VectorSystemClient::Elasticsearch(_) => {
+                return self.claim_elasticsearch_projection_tasks(filter).await;
+            }
+            #[allow(unreachable_patterns)]
+            _ => {}
+        }
+
         let _guard = self.op_lock.lock().await;
         claim_json_projection_tasks(self, filter).await
     }
 
     async fn mark_projection_task_completed(&self, task_id: Uuid) -> SystemStoreResult<()> {
+        match &self.client {
+            #[cfg(feature = "elasticsearch")]
+            VectorSystemClient::Elasticsearch(_) => {
+                return self
+                    .mark_elasticsearch_projection_task_completed(task_id)
+                    .await;
+            }
+            #[allow(unreachable_patterns)]
+            _ => {}
+        }
+
         let _guard = self.op_lock.lock().await;
         mark_json_projection_task_completed(self, task_id).await
     }
@@ -967,6 +1998,22 @@ impl ProjectionTaskStore for VectorSystemCanonicalStore {
         new_status: ProjectionTaskStatus,
         error: &str,
     ) -> SystemStoreResult<()> {
+        match &self.client {
+            #[cfg(feature = "elasticsearch")]
+            VectorSystemClient::Elasticsearch(_) => {
+                return self
+                    .mark_elasticsearch_projection_task_failed(
+                        task_id,
+                        new_retry_count,
+                        new_status,
+                        error,
+                    )
+                    .await;
+            }
+            #[allow(unreachable_patterns)]
+            _ => {}
+        }
+
         let _guard = self.op_lock.lock().await;
         mark_json_projection_task_failed(
             self,
@@ -983,11 +2030,33 @@ impl ProjectionTaskStore for VectorSystemCanonicalStore {
         &self,
         target_backend: Option<&str>,
     ) -> SystemStoreResult<i64> {
+        match &self.client {
+            #[cfg(feature = "elasticsearch")]
+            VectorSystemClient::Elasticsearch(_) => {
+                return self
+                    .requeue_elasticsearch_dead_letter_tasks(target_backend)
+                    .await;
+            }
+            #[allow(unreachable_patterns)]
+            _ => {}
+        }
+
         let _guard = self.op_lock.lock().await;
         requeue_json_dead_letter_tasks(self, target_backend).await
     }
 
     async fn reset_stale_in_progress_tasks(&self, stale_after: Duration) -> SystemStoreResult<i64> {
+        match &self.client {
+            #[cfg(feature = "elasticsearch")]
+            VectorSystemClient::Elasticsearch(_) => {
+                return self
+                    .reset_stale_elasticsearch_projection_tasks(stale_after)
+                    .await;
+            }
+            #[allow(unreachable_patterns)]
+            _ => {}
+        }
+
         let _guard = self.op_lock.lock().await;
         reset_stale_json_in_progress_tasks(self, stale_after).await
     }
@@ -1013,6 +2082,21 @@ impl ProjectionTaskStore for VectorSystemCanonicalStore {
         target_backend: &str,
         target_instance: &str,
     ) -> SystemStoreResult<i64> {
+        match &self.client {
+            #[cfg(feature = "elasticsearch")]
+            VectorSystemClient::Elasticsearch(_) => {
+                return self
+                    .requeue_elasticsearch_dead_letter_by_source(
+                        source_table,
+                        target_backend,
+                        target_instance,
+                    )
+                    .await;
+            }
+            #[allow(unreachable_patterns)]
+            _ => {}
+        }
+
         let _guard = self.op_lock.lock().await;
         requeue_json_dead_letter_by_source(self, source_table, target_backend, target_instance)
             .await
@@ -1057,6 +2141,17 @@ impl SagaStore for VectorSystemCanonicalStore {
         status: SagaStatus,
         compensation_status: CompensationStatus,
     ) -> SystemStoreResult<()> {
+        match &self.client {
+            #[cfg(feature = "elasticsearch")]
+            VectorSystemClient::Elasticsearch(_) => {
+                return self
+                    .update_elasticsearch_saga_status(saga_id, status, compensation_status)
+                    .await;
+            }
+            #[allow(unreachable_patterns)]
+            _ => {}
+        }
+
         let _guard = self.op_lock.lock().await;
         update_json_saga_status(self, saga_id, status, compensation_status).await
     }
@@ -1071,22 +2166,19 @@ impl SagaStore for VectorSystemCanonicalStore {
     }
 
     async fn request_saga_recompensation(&self, saga_id: Uuid) -> SystemStoreResult<()> {
-        let _guard = self.op_lock.lock().await;
-        let key = self.saga_key(saga_id);
-        let Some(mut row) = self.get_json::<SagaRow>(&key).await? else {
-            return Ok(());
-        };
-        if !matches!(
-            row.status,
-            SagaStatus::FailedCompensation | SagaStatus::ManualReview
-        ) {
-            return Err(SystemStoreError::InvalidInput(format!(
-                "saga {saga_id} is not eligible for recompensation"
-            )));
+        match &self.client {
+            #[cfg(feature = "elasticsearch")]
+            VectorSystemClient::Elasticsearch(_) => {
+                return self
+                    .request_elasticsearch_saga_recompensation(saga_id)
+                    .await;
+            }
+            #[allow(unreachable_patterns)]
+            _ => {}
         }
-        row.compensation_status = CompensationStatus::RetryRequested;
-        row.updated_at = Utc::now();
-        self.set_json(&key, &row).await
+
+        let _guard = self.op_lock.lock().await;
+        request_json_saga_recompensation(self, saga_id).await
     }
 
     async fn increment_recovery_attempts(
@@ -1094,6 +2186,17 @@ impl SagaStore for VectorSystemCanonicalStore {
         saga_id: Uuid,
         error: &str,
     ) -> SystemStoreResult<i64> {
+        match &self.client {
+            #[cfg(feature = "elasticsearch")]
+            VectorSystemClient::Elasticsearch(_) => {
+                return self
+                    .increment_elasticsearch_saga_recovery_attempts(saga_id, error)
+                    .await;
+            }
+            #[allow(unreachable_patterns)]
+            _ => {}
+        }
+
         let _guard = self.op_lock.lock().await;
         increment_json_saga_recovery_attempts(self, saga_id, error).await
     }
@@ -1110,6 +2213,17 @@ impl SagaStore for VectorSystemCanonicalStore {
         &self,
         stale_after: Duration,
     ) -> SystemStoreResult<i64> {
+        match &self.client {
+            #[cfg(feature = "elasticsearch")]
+            VectorSystemClient::Elasticsearch(_) => {
+                return self
+                    .mark_stale_elasticsearch_sagas_indeterminate(stale_after)
+                    .await;
+            }
+            #[allow(unreachable_patterns)]
+            _ => {}
+        }
+
         let _guard = self.op_lock.lock().await;
         mark_json_stale_sagas_indeterminate(self, stale_after).await
     }
@@ -1132,10 +2246,30 @@ impl super::system_store::AdminAuditStore for VectorSystemCanonicalStore {
     }
 
     async fn latest_admin_audit_hash(&self) -> SystemStoreResult<String> {
+        match &self.client {
+            #[cfg(feature = "elasticsearch")]
+            VectorSystemClient::Elasticsearch(_) => {
+                return self
+                    .latest_elasticsearch_admin_audit_hash_from_order()
+                    .await;
+            }
+            #[allow(unreachable_patterns)]
+            _ => {}
+        }
+
         latest_json_admin_audit_hash(self).await
     }
 
     async fn append_admin_audit(&self, entry: &AdminAuditInsert) -> SystemStoreResult<Uuid> {
+        match &self.client {
+            #[cfg(feature = "elasticsearch")]
+            VectorSystemClient::Elasticsearch(_) => {
+                return self.append_elasticsearch_admin_audit(entry).await;
+            }
+            #[allow(unreachable_patterns)]
+            _ => {}
+        }
+
         append_json_admin_audit(self, entry).await
     }
 
@@ -1173,9 +2307,10 @@ impl MigrationAuditStore for VectorSystemCanonicalStore {
 
     async fn record_migration_op(&self, op: &MigrationOpInsert) -> SystemStoreResult<i64> {
         let _guard = self.op_lock.lock().await;
-        let seq_key = self.point_key("migration_op_seq");
-        let id: i64 = self.get_json(&seq_key).await?.unwrap_or(0_i64) + 1;
-        self.set_json(&seq_key, &id).await?;
+        let id = self
+            .next_migration_op_id()
+            .await
+            .map_err(|err| SystemStoreError::io(self.backend_label_static(), err))?;
         let row = MigrationOpRow {
             id,
             run_id: op.run_id,
@@ -1186,7 +2321,9 @@ impl MigrationAuditStore for VectorSystemCanonicalStore {
             status: op.status,
             payload_json: op.payload_json.clone(),
             error: op.error.clone(),
-            applied_at: Some(Utc::now()),
+            // Only an APPLIED op records an applied_at timestamp (mirrors PG +
+            // the Qdrant store); Skipped/Failed/Pending/etc. leave it None.
+            applied_at: (op.status == OpLedgerStatus::Applied).then(Utc::now),
         };
         let key = self.migration_op_key(id);
         self.set_json(&key, &row).await?;
@@ -1206,6 +2343,17 @@ impl MigrationAuditStore for VectorSystemCanonicalStore {
         new_state: MigrationRunState,
         error: &str,
     ) -> SystemStoreResult<()> {
+        match &self.client {
+            #[cfg(feature = "elasticsearch")]
+            VectorSystemClient::Elasticsearch(_) => {
+                return self
+                    .finish_elasticsearch_migration_run(run_id, new_state, error)
+                    .await;
+            }
+            #[allow(unreachable_patterns)]
+            _ => {}
+        }
+
         let _guard = self.op_lock.lock().await;
         let key = self.migration_run_key(run_id);
         let Some(mut row) = self.get_json::<MigrationRunRow>(&key).await? else {
@@ -1232,5 +2380,243 @@ impl MigrationAuditStore for VectorSystemCanonicalStore {
         filter: &MigrationRunsFilter,
     ) -> SystemStoreResult<Vec<MigrationRunRow>> {
         list_json_migration_runs(self, filter).await
+    }
+}
+
+#[cfg(test)]
+mod recompensation_tests {
+    //! Proves the recompensation semantics the vector-system store now
+    //! delegates to. `VectorSystemCanonicalStore` itself wraps a live
+    //! Pinecone/Weaviate/Elasticsearch HTTP client (no in-memory backend
+    //! exists), so we drive the exact shared helper
+    //! (`request_json_saga_recompensation`) that
+    //! `SagaStore::request_saga_recompensation` calls, through a small
+    //! map-backed [`JsonSystemRecordAdapter`]. Before this fix the
+    //! vector-system path only set `compensation_status` and left `status`
+    //! untouched, so a second recompensation was silently accepted; this
+    //! test pins both halves of the fix.
+
+    use std::collections::HashMap;
+    use std::sync::Mutex;
+
+    // `super::*` re-exports every name this test needs: the row/insert types,
+    // SystemStoreError, the SagaStatus/CompensationStatus enums, the
+    // JsonSystemRecordAdapter trait + its row types, record_json_saga, and the
+    // request_json_saga_recompensation helper under test.
+    use super::*;
+
+    #[derive(Default)]
+    struct MapAdapter {
+        sagas: Mutex<HashMap<String, SagaRow>>,
+        sets: Mutex<HashMap<String, Vec<String>>>,
+    }
+
+    #[async_trait]
+    impl JsonSystemRecordAdapter for MapAdapter {
+        fn record_backend_label(&self) -> &'static str {
+            "test"
+        }
+        fn record_point_key(&self, suffix: &str) -> String {
+            format!("test:{suffix}")
+        }
+        fn saga_record_key(&self, saga_id: Uuid) -> String {
+            format!("test:saga:{saga_id}")
+        }
+        fn admin_audit_record_key(&self, audit_id: Uuid) -> String {
+            format!("test:admin_audit:{audit_id}")
+        }
+        fn migration_run_record_key(&self, run_id: Uuid) -> String {
+            format!("test:migration_run:{run_id}")
+        }
+
+        async fn get_saga_row(&self, key: &str) -> SystemStoreResult<Option<SagaRow>> {
+            Ok(self.sagas.lock().unwrap().get(key).cloned())
+        }
+        async fn set_saga_row(&self, key: &str, row: &SagaRow) -> SystemStoreResult<()> {
+            self.sagas
+                .lock()
+                .unwrap()
+                .insert(key.to_string(), row.clone());
+            Ok(())
+        }
+        async fn load_saga_rows(&self, _set_key: &str) -> SystemStoreResult<Vec<SagaRow>> {
+            Ok(self.sagas.lock().unwrap().values().cloned().collect())
+        }
+
+        async fn get_admin_audit_row(
+            &self,
+            _key: &str,
+        ) -> SystemStoreResult<Option<AdminAuditRow>> {
+            Ok(None)
+        }
+        async fn set_admin_audit_row(
+            &self,
+            _key: &str,
+            _row: &AdminAuditRow,
+        ) -> SystemStoreResult<()> {
+            Ok(())
+        }
+        async fn get_string_record(&self, _key: &str) -> SystemStoreResult<Option<String>> {
+            Ok(None)
+        }
+        async fn set_string_record(&self, _key: &str, _value: &String) -> SystemStoreResult<()> {
+            Ok(())
+        }
+
+        async fn get_migration_run_row(
+            &self,
+            _key: &str,
+        ) -> SystemStoreResult<Option<MigrationRunRow>> {
+            Ok(None)
+        }
+        async fn set_migration_run_row(
+            &self,
+            _key: &str,
+            _row: &MigrationRunRow,
+        ) -> SystemStoreResult<()> {
+            Ok(())
+        }
+        async fn load_migration_run_rows(
+            &self,
+            _set_key: &str,
+        ) -> SystemStoreResult<Vec<MigrationRunRow>> {
+            Ok(Vec::new())
+        }
+        async fn load_migration_op_rows(
+            &self,
+            _set_key: &str,
+        ) -> SystemStoreResult<Vec<MigrationOpRow>> {
+            Ok(Vec::new())
+        }
+
+        async fn list_record_set(&self, set_key: &str) -> SystemStoreResult<Vec<String>> {
+            Ok(self
+                .sets
+                .lock()
+                .unwrap()
+                .get(set_key)
+                .cloned()
+                .unwrap_or_default())
+        }
+        async fn add_record_to_set(&self, set_key: &str, item: String) -> SystemStoreResult<()> {
+            self.sets
+                .lock()
+                .unwrap()
+                .entry(set_key.to_string())
+                .or_default()
+                .push(item);
+            Ok(())
+        }
+    }
+
+    fn failed_compensation_saga() -> SagaInsert {
+        SagaInsert {
+            tx_id: "tx-1".to_string(),
+            tenant_id: "tenant-1".to_string(),
+            correlation_id: "corr-1".to_string(),
+            backend_instance: "inst-1".to_string(),
+            operation: "op".to_string(),
+            status: SagaStatus::FailedCompensation,
+            steps: json!([]),
+            compensations: json!([]),
+        }
+    }
+
+    #[tokio::test]
+    async fn recompensation_sets_indeterminate_then_refuses_second() {
+        let adapter = MapAdapter::default();
+
+        // Seed a saga in the only-eligible failed_compensation state, with a
+        // non-empty last_error to prove it gets cleared.
+        let saga_id = record_json_saga(&adapter, &failed_compensation_saga())
+            .await
+            .expect("record saga");
+        {
+            let key = adapter.saga_record_key(saga_id);
+            let mut sagas = adapter.sagas.lock().unwrap();
+            sagas.get_mut(&key).unwrap().last_error = "boom".to_string();
+        }
+
+        // First recompensation: must move to indeterminate, clear last_error,
+        // and flag compensation_status = retry_requested.
+        request_json_saga_recompensation(&adapter, saga_id)
+            .await
+            .expect("first recompensation succeeds");
+        let row = adapter
+            .get_saga_row(&adapter.saga_record_key(saga_id))
+            .await
+            .unwrap()
+            .expect("saga present");
+        assert_eq!(row.status, SagaStatus::Indeterminate);
+        assert_eq!(row.compensation_status, CompensationStatus::RetryRequested);
+        assert_eq!(row.last_error, "");
+
+        // Second recompensation: the saga is now indeterminate (not an
+        // eligible source state), so it MUST be refused. This is the bug the
+        // old vector-system impl silently allowed.
+        let err = request_json_saga_recompensation(&adapter, saga_id)
+            .await
+            .expect_err("second recompensation must be refused");
+        assert!(matches!(err, SystemStoreError::InvalidInput(_)));
+
+        // State unchanged after the refused second attempt.
+        let row = adapter
+            .get_saga_row(&adapter.saga_record_key(saga_id))
+            .await
+            .unwrap()
+            .expect("saga present");
+        assert_eq!(row.status, SagaStatus::Indeterminate);
+    }
+}
+
+#[cfg(any(feature = "pinecone", feature = "weaviate"))]
+#[cfg(test)]
+mod vector_native_cas_fail_closed_tests {
+    use std::time::Duration;
+
+    use super::*;
+
+    async fn assert_advisory_lease_fails_closed(store: VectorSystemCanonicalStore) {
+        let backend = store.backend_label_static();
+        let err = CanonicalStore::try_acquire_advisory_lease(
+            &store,
+            "worker",
+            "owner",
+            Duration::from_secs(1),
+        )
+        .await
+        .expect_err("non-ES vector canonical leases must fail closed without native CAS");
+        assert!(
+            err.contains(backend),
+            "error should name backend {backend}; got: {err}"
+        );
+        assert!(err.contains("real multi-process CAS"));
+        assert!(err.contains("backend-native conditional write"));
+    }
+
+    #[cfg(feature = "pinecone")]
+    #[tokio::test]
+    async fn pinecone_advisory_lease_fails_closed_until_native_cas_exists() {
+        let store = VectorSystemCanonicalStore::new_pinecone(
+            crate::runtime::executors::pinecone::PineconeHttpClient::new(
+                "https://example.invalid",
+                "test-key",
+            ),
+            "unit",
+        );
+        assert_advisory_lease_fails_closed(store).await;
+    }
+
+    #[cfg(feature = "weaviate")]
+    #[tokio::test]
+    async fn weaviate_advisory_lease_fails_closed_until_native_cas_exists() {
+        let store = VectorSystemCanonicalStore::new_weaviate(
+            crate::runtime::executors::weaviate::WeaviateHttpClient::new(
+                "http://127.0.0.1:8080",
+                None,
+            ),
+            "unit",
+        );
+        assert_advisory_lease_fails_closed(store).await;
     }
 }

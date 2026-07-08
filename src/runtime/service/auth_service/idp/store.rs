@@ -19,6 +19,10 @@ use crate::ir::{
 use crate::runtime::core::DataBrokerRuntime;
 use crate::runtime::native_catalog::native_model;
 
+fn idp_store_internal_status(operation: impl Into<String>, message: impl Into<String>) -> Status {
+    crate::runtime::executor_utils::internal_status("identity_provider", operation, message)
+}
+
 /// Phase 5 (encryption-at-rest): seal an IdP secret before it is bound to a SQL
 /// parameter. An empty string is the "leave unchanged / store NULL" sentinel for
 /// the `NULLIF($n,'')` / `COALESCE(NULLIF(...))` clauses, so it is passed through
@@ -29,9 +33,12 @@ fn seal_idp_secret(runtime: &DataBrokerRuntime, plaintext: &str) -> Result<Strin
     if plaintext.is_empty() {
         return Ok(String::new());
     }
-    runtime
-        .encrypt_secret_at_rest(plaintext)
-        .map_err(|err| Status::internal(format!("idp secret encryption-at-rest failed: {err}")))
+    runtime.encrypt_secret_at_rest(plaintext).map_err(|err| {
+        idp_store_internal_status(
+            "idp_secret_encrypt",
+            format!("idp secret encryption-at-rest failed: {err}"),
+        )
+    })
 }
 
 pub const PROVIDER_MSG: &str = "udb.core.idp.entity.v1.IdentityProvider";
@@ -40,6 +47,51 @@ pub const SCIM_STATE_MSG: &str = "udb.core.idp.entity.v1.ScimDirectoryState";
 pub const SAML_REPLAY_MSG: &str = "udb.core.idp.entity.v1.SamlReplayEntry";
 pub const USER_MSG: &str = "udb.core.authn.entity.v1.User";
 pub const SESSION_MSG: &str = "udb.core.authn.entity.v1.Session";
+pub const TOKEN_FAMILY_MSG: &str = "udb.core.authn.entity.v1.TokenFamily";
+pub const DEVICE_MSG: &str = "udb.core.authn.entity.v1.Device";
+pub const MFA_CHALLENGE_MSG: &str = "udb.core.authn.entity.v1.MfaChallenge";
+pub const OTP_MSG: &str = "udb.core.authn.entity.v1.OTP";
+pub const RECOVERY_CODE_MSG: &str = "udb.core.authn.entity.v1.RecoveryCode";
+pub const WEBAUTHN_CREDENTIAL_MSG: &str = "udb.core.authn.entity.v1.WebAuthnCredential";
+pub const WEBAUTHN_CHALLENGE_MSG: &str = "udb.core.authn.entity.v1.WebAuthnChallenge";
+pub const API_KEY_MSG: &str = "udb.core.apikey.entity.v1.ApiKey";
+
+/// Per-principal hard-delete counts for SCIM deprovisioning. The operation is
+/// scoped to one `(tenant_id, user_id)` and intentionally does not delete
+/// tenant-wide rows such as provider config or tenant policy.
+#[derive(Debug, Clone, Default)]
+pub struct PrincipalHardDeleteReport {
+    pub user_id: String,
+    pub tenant_id: String,
+    pub deleted_external_identities: u64,
+    pub deleted_api_keys: u64,
+    pub deleted_token_families: u64,
+    pub deleted_sessions: u64,
+    pub deleted_devices: u64,
+    pub deleted_mfa_challenges: u64,
+    pub deleted_otps: u64,
+    pub deleted_recovery_codes: u64,
+    pub deleted_webauthn_credentials: u64,
+    pub deleted_webauthn_challenges: u64,
+    pub deleted_users: u64,
+    pub principal_denylisted: bool,
+}
+
+impl PrincipalHardDeleteReport {
+    pub fn total_deleted(&self) -> u64 {
+        self.deleted_external_identities
+            + self.deleted_api_keys
+            + self.deleted_token_families
+            + self.deleted_sessions
+            + self.deleted_devices
+            + self.deleted_mfa_challenges
+            + self.deleted_otps
+            + self.deleted_recovery_codes
+            + self.deleted_webauthn_credentials
+            + self.deleted_webauthn_challenges
+            + self.deleted_users
+    }
+}
 
 /// A fully-resolved provider row (runtime view; secrets stay server-side).
 #[derive(Debug, Clone, Default)]
@@ -94,9 +146,55 @@ fn native_compile_context() -> CompileContext<'static> {
     CompileContext::new(crate::runtime::native_catalog::native_manifest())
 }
 
+fn store_invalid_fields<I, F, D>(message: impl Into<String>, fields: I) -> Status
+where
+    I: IntoIterator<Item = (F, D)>,
+    F: Into<String>,
+    D: Into<String>,
+{
+    crate::runtime::executor_utils::invalid_argument_fields(message, fields)
+}
+
+fn uuid_field_status(field: &str) -> Status {
+    store_invalid_fields(
+        format!("{field} must be a UUID"),
+        [(field.to_string(), "must be a valid UUID".to_string())],
+    )
+}
+
+fn invalid_json_field_value_status(err: impl std::fmt::Display) -> Status {
+    store_invalid_fields(
+        format!("invalid JSON field value: {err}"),
+        [("value", "must decode as valid JSON")],
+    )
+}
+
+fn named_json_field_status(field: &str, err: impl std::fmt::Display) -> Status {
+    store_invalid_fields(
+        format!("{field} must be valid JSON: {err}"),
+        [(field.to_string(), "must decode as valid JSON".to_string())],
+    )
+}
+
+fn required_store_field_status(field: &str) -> Status {
+    store_invalid_fields(
+        format!("{field} is required"),
+        [(field.to_string(), "must be non-empty".to_string())],
+    )
+}
+
+fn not_on_or_after_out_of_range_status() -> Status {
+    store_invalid_fields(
+        "not_on_or_after_unix is out of range",
+        [(
+            "not_on_or_after_unix",
+            "must be a valid Unix timestamp representable by chrono",
+        )],
+    )
+}
+
 fn uuid_value(value: &str, field: &str) -> Result<LogicalValue, Status> {
-    let uuid = Uuid::parse_str(value.trim())
-        .map_err(|_| Status::invalid_argument(format!("{field} must be a UUID")))?;
+    let uuid = Uuid::parse_str(value.trim()).map_err(|_| uuid_field_status(field))?;
     Ok(LogicalValue::String(uuid.to_string()))
 }
 
@@ -114,13 +212,13 @@ fn json_or_null(value: &str) -> Result<LogicalValue, Status> {
     }
     serde_json::from_str(value)
         .map(LogicalValue::Json)
-        .map_err(|err| Status::invalid_argument(format!("invalid JSON field value: {err}")))
+        .map_err(invalid_json_field_value_status)
 }
 
 fn json_value(value: &str, field: &str) -> Result<LogicalValue, Status> {
     serde_json::from_str(value)
         .map(LogicalValue::Json)
-        .map_err(|err| Status::invalid_argument(format!("{field} must be valid JSON: {err}")))
+        .map_err(|err| named_json_field_status(field, err))
 }
 
 fn eq(field: &str, value: LogicalValue) -> LogicalFilter {
@@ -169,12 +267,21 @@ async fn execute_compiled_mutation(
     pool: &PgPool,
     spec_json: &str,
 ) -> Result<(u64, Vec<serde_json::Value>), Status> {
-    let spec: serde_json::Value = serde_json::from_str(spec_json)
-        .map_err(|err| Status::internal(format!("typed native mutation JSON failed: {err}")))?;
+    let spec: serde_json::Value = serde_json::from_str(spec_json).map_err(|err| {
+        idp_store_internal_status(
+            "typed_native_mutation_json",
+            format!("typed native mutation JSON failed: {err}"),
+        )
+    })?;
     let sql = spec
         .get("sql")
         .and_then(serde_json::Value::as_str)
-        .ok_or_else(|| Status::internal("typed native mutation did not compile to SQL"))?;
+        .ok_or_else(|| {
+            idp_store_internal_status(
+                "typed_native_mutation_compile",
+                "typed native mutation did not compile to SQL",
+            )
+        })?;
     crate::runtime::core::validate_pg_mutation_sql(sql)?;
     let params = crate::runtime::core::dispatch_params(&spec)?;
     let param_types = crate::runtime::core::dispatch_param_types(&spec)?;
@@ -453,8 +560,7 @@ pub async fn get_provider(
         tenant = m.q("tenant_id"),
         del = m.q("deleted_at"),
     );
-    let pid = Uuid::parse_str(provider_id.trim())
-        .map_err(|_| Status::invalid_argument("provider_id must be a UUID"))?;
+    let pid = Uuid::parse_str(provider_id.trim()).map_err(|_| uuid_field_status("provider_id"))?;
     let row = sqlx::query(&sql)
         .bind(pid)
         .bind(tenant_id)
@@ -714,8 +820,7 @@ pub async fn record_scim_sync(
         fc = m.q("failure_count"),
         err = m.q("last_error"),
     );
-    let pid = Uuid::parse_str(provider_id.trim())
-        .map_err(|_| Status::invalid_argument("provider_id must be a UUID"))?;
+    let pid = Uuid::parse_str(provider_id.trim()).map_err(|_| uuid_field_status("provider_id"))?;
     sqlx::query(&sql)
         .bind(tenant_id)
         .bind(pid)
@@ -846,8 +951,7 @@ pub async fn get_external_identity(
         sub = m.q("subject"),
         del = m.q("deleted_at"),
     );
-    let pid = Uuid::parse_str(provider_id.trim())
-        .map_err(|_| Status::invalid_argument("provider_id must be a UUID"))?;
+    let pid = Uuid::parse_str(provider_id.trim()).map_err(|_| uuid_field_status("provider_id"))?;
     let row = sqlx::query(&sql)
         .bind(tenant_id)
         .bind(pid)
@@ -885,10 +989,9 @@ pub async fn get_external_identity_by_id(
         eid = m.q("external_identity_id"),
         del = m.q("deleted_at"),
     );
-    let pid = Uuid::parse_str(provider_id.trim())
-        .map_err(|_| Status::invalid_argument("provider_id must be a UUID"))?;
+    let pid = Uuid::parse_str(provider_id.trim()).map_err(|_| uuid_field_status("provider_id"))?;
     let eid = Uuid::parse_str(external_identity_id.trim())
-        .map_err(|_| Status::invalid_argument("external_identity_id must be a UUID"))?;
+        .map_err(|_| uuid_field_status("external_identity_id"))?;
     let row = sqlx::query(&sql)
         .bind(tenant_id)
         .bind(pid)
@@ -940,10 +1043,8 @@ pub async fn upsert_external_identity(
         ev = m.q("email_verified"),
         lla = m.q("last_login_at"),
     );
-    let pid = Uuid::parse_str(provider_id.trim())
-        .map_err(|_| Status::invalid_argument("provider_id must be a UUID"))?;
-    let uid = Uuid::parse_str(user_id.trim())
-        .map_err(|_| Status::invalid_argument("user_id must be a UUID"))?;
+    let pid = Uuid::parse_str(provider_id.trim()).map_err(|_| uuid_field_status("provider_id"))?;
+    let uid = Uuid::parse_str(user_id.trim()).map_err(|_| uuid_field_status("user_id"))?;
     sqlx::query(&sql)
         .bind(tenant_id)
         .bind(pid)
@@ -956,7 +1057,12 @@ pub async fn upsert_external_identity(
         .map_err(map_err("external identity upsert failed"))?;
     get_external_identity(pool, tenant_id, provider_id, subject)
         .await?
-        .ok_or_else(|| Status::internal("external identity vanished after upsert"))
+        .ok_or_else(|| {
+            idp_store_internal_status(
+                "external_identity_upsert_verify",
+                "external identity vanished after upsert",
+            )
+        })
 }
 
 /// List external identities for a tenant with optional provider/user filters.
@@ -1052,6 +1158,226 @@ pub async fn unlink_external_identity(
     Ok(affected > 0)
 }
 
+async fn hard_delete_user_rows_tx(
+    conn: &mut sqlx::PgConnection,
+    message_type: &str,
+    required_columns: &[&str],
+    tenant_field: &str,
+    user_fields: &[&str],
+    tenant_id: &str,
+    user_id: &str,
+) -> Result<u64, Status> {
+    if user_fields.is_empty() {
+        return Ok(0);
+    }
+    let m = native_model(message_type, required_columns);
+    let user_predicate = user_fields
+        .iter()
+        .map(|field| format!("{}::text = $2", m.q(field)))
+        .collect::<Vec<_>>()
+        .join(" OR ");
+    let sql = format!(
+        "DELETE FROM {rel} WHERE {tenant}::text = $1 AND ({user_predicate})",
+        rel = m.relation,
+        tenant = m.q(tenant_field),
+    );
+    sqlx::query(&sql)
+        .bind(tenant_id)
+        .bind(user_id)
+        .execute(&mut *conn)
+        .await
+        .map(|result| result.rows_affected())
+        .map_err(map_err("principal hard delete failed"))
+}
+
+/// HARD-delete one SCIM-resolved principal and its credential/session rows.
+///
+/// This is intentionally principal-scoped, not tenant-wide. It removes rows that
+/// are owned by the resolved user id, then deletes the user row last. All
+/// identifiers come from proto metadata through `native_model`; no table name or
+/// column name is copied by hand.
+pub async fn hard_delete_scim_principal(
+    pool: &PgPool,
+    tenant_id: &str,
+    user_id: &str,
+    #[cfg(feature = "redis")] denylist: Option<&crate::runtime::authn::revocation::JtiDenylist>,
+    now_unix: u64,
+) -> Result<PrincipalHardDeleteReport, Status> {
+    let tenant_id = tenant_id.trim();
+    let user_id = user_id.trim();
+    if tenant_id.is_empty() {
+        return Err(required_store_field_status("tenant_id"));
+    }
+    if user_id.is_empty() {
+        return Err(required_store_field_status("user_id"));
+    }
+
+    let mut tx = pool.begin().await.map_err(|err| {
+        idp_store_internal_status(
+            "principal_hard_delete_tx_begin",
+            format!("principal hard delete tx begin failed: {err}"),
+        )
+    })?;
+
+    let deleted_external_identities = hard_delete_user_rows_tx(
+        &mut *tx,
+        EXTERNAL_IDENTITY_MSG,
+        &["tenant_id", "user_id"],
+        "tenant_id",
+        &["user_id"],
+        tenant_id,
+        user_id,
+    )
+    .await?;
+    let deleted_api_keys = hard_delete_user_rows_tx(
+        &mut *tx,
+        API_KEY_MSG,
+        &["tenant_id", "owner_id"],
+        "tenant_id",
+        &["owner_id"],
+        tenant_id,
+        user_id,
+    )
+    .await?;
+    let deleted_token_families = hard_delete_user_rows_tx(
+        &mut *tx,
+        TOKEN_FAMILY_MSG,
+        &["tenant_id", "user_id", "principal_id"],
+        "tenant_id",
+        &["user_id", "principal_id"],
+        tenant_id,
+        user_id,
+    )
+    .await?;
+    let deleted_sessions = hard_delete_user_rows_tx(
+        &mut *tx,
+        SESSION_MSG,
+        &["tenant_id", "user_id", "principal_id"],
+        "tenant_id",
+        &["user_id", "principal_id"],
+        tenant_id,
+        user_id,
+    )
+    .await?;
+    let deleted_devices = hard_delete_user_rows_tx(
+        &mut *tx,
+        DEVICE_MSG,
+        &["tenant_id", "user_id"],
+        "tenant_id",
+        &["user_id"],
+        tenant_id,
+        user_id,
+    )
+    .await?;
+    let deleted_webauthn_challenges = hard_delete_user_rows_tx(
+        &mut *tx,
+        WEBAUTHN_CHALLENGE_MSG,
+        &["tenant_id", "user_id"],
+        "tenant_id",
+        &["user_id"],
+        tenant_id,
+        user_id,
+    )
+    .await?;
+    let deleted_webauthn_credentials = hard_delete_user_rows_tx(
+        &mut *tx,
+        WEBAUTHN_CREDENTIAL_MSG,
+        &["tenant_id", "user_id"],
+        "tenant_id",
+        &["user_id"],
+        tenant_id,
+        user_id,
+    )
+    .await?;
+    let deleted_mfa_challenges = hard_delete_user_rows_tx(
+        &mut *tx,
+        MFA_CHALLENGE_MSG,
+        &["tenant_id", "user_id"],
+        "tenant_id",
+        &["user_id"],
+        tenant_id,
+        user_id,
+    )
+    .await?;
+    let deleted_otps = hard_delete_user_rows_tx(
+        &mut *tx,
+        OTP_MSG,
+        &["tenant_id", "user_id"],
+        "tenant_id",
+        &["user_id"],
+        tenant_id,
+        user_id,
+    )
+    .await?;
+    let deleted_recovery_codes = hard_delete_user_rows_tx(
+        &mut *tx,
+        RECOVERY_CODE_MSG,
+        &["tenant_id", "user_id"],
+        "tenant_id",
+        &["user_id"],
+        tenant_id,
+        user_id,
+    )
+    .await?;
+    let deleted_users = hard_delete_user_rows_tx(
+        &mut *tx,
+        USER_MSG,
+        &["tenant_id", "user_id"],
+        "tenant_id",
+        &["user_id"],
+        tenant_id,
+        user_id,
+    )
+    .await?;
+
+    tx.commit().await.map_err(|err| {
+        idp_store_internal_status(
+            "principal_hard_delete_tx_commit",
+            format!("principal hard delete tx commit failed: {err}"),
+        )
+    })?;
+
+    #[cfg(feature = "redis")]
+    let principal_denylisted = if let Some(denylist) = denylist {
+        match denylist.deny_principal_after(user_id, now_unix).await {
+            Ok(()) => true,
+            Err(err) => {
+                tracing::warn!(
+                    tenant_id = %tenant_id,
+                    principal_id = %user_id,
+                    error = %err,
+                    "SCIM hard delete committed but principal denylist cutoff was not recorded"
+                );
+                false
+            }
+        }
+    } else {
+        false
+    };
+    #[cfg(not(feature = "redis"))]
+    let principal_denylisted = {
+        let _ = now_unix;
+        false
+    };
+
+    Ok(PrincipalHardDeleteReport {
+        user_id: user_id.to_string(),
+        tenant_id: tenant_id.to_string(),
+        deleted_external_identities,
+        deleted_api_keys,
+        deleted_token_families,
+        deleted_sessions,
+        deleted_devices,
+        deleted_mfa_challenges,
+        deleted_otps,
+        deleted_recovery_codes,
+        deleted_webauthn_credentials,
+        deleted_webauthn_challenges,
+        deleted_users,
+        principal_denylisted,
+    })
+}
+
 // ── SAML replay cache ────────────────────────────────────────────────────────
 
 /// Atomically record a consumed SAML assertion id. Returns `Ok(true)` when this
@@ -1065,7 +1391,7 @@ pub async fn record_saml_assertion(
     not_on_or_after_unix: i64,
 ) -> Result<bool, Status> {
     let not_on_or_after = chrono::DateTime::from_timestamp(not_on_or_after_unix, 0)
-        .ok_or_else(|| Status::invalid_argument("not_on_or_after_unix is out of range"))?;
+        .ok_or_else(not_on_or_after_out_of_range_status)?;
     let mut record = LogicalRecord::new();
     record.insert(
         "saml_replay_entry_id".to_string(),
@@ -1310,4 +1636,94 @@ fn external_username(provider_id: &str, subject: &str) -> String {
     let digest = hasher.finalize();
     let hex: String = digest.iter().take(20).map(|b| format!("{b:02x}")).collect();
     format!("ext-{hex}")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
+
+    fn decode_detail(status: &Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_single_field(status: &Status, field: &str, description: &str) {
+        assert_eq!(status.code(), tonic::Code::InvalidArgument);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, field);
+        assert_eq!(detail.field_violations[0].description, description);
+    }
+
+    fn assert_internal_detail(status: &Status, operation: &str, message: &str) {
+        assert_eq!(status.code(), tonic::Code::Internal);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "identity_provider");
+        assert_eq!(detail.operation, operation);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    #[test]
+    fn idp_store_internal_status_carries_typed_detail() {
+        let status = idp_store_internal_status(
+            "typed_native_mutation_compile",
+            "typed native mutation did not compile to SQL",
+        );
+
+        assert_internal_detail(
+            &status,
+            "typed_native_mutation_compile",
+            "typed native mutation did not compile to SQL",
+        );
+    }
+
+    #[test]
+    fn idp_store_uuid_and_required_validation_carries_field_violations() {
+        let uuid =
+            uuid_value("not-a-uuid", "provider_id").expect_err("malformed provider_id must fail");
+        assert_eq!(uuid.message(), "provider_id must be a UUID");
+        assert_single_field(&uuid, "provider_id", "must be a valid UUID");
+
+        let missing_tenant = required_store_field_status("tenant_id");
+        assert_eq!(missing_tenant.message(), "tenant_id is required");
+        assert_single_field(&missing_tenant, "tenant_id", "must be non-empty");
+
+        let out_of_range = not_on_or_after_out_of_range_status();
+        assert_eq!(
+            out_of_range.message(),
+            "not_on_or_after_unix is out of range"
+        );
+        assert_single_field(
+            &out_of_range,
+            "not_on_or_after_unix",
+            "must be a valid Unix timestamp representable by chrono",
+        );
+    }
+
+    #[test]
+    fn idp_store_json_validation_carries_field_violations() {
+        let anonymous = json_or_null("{not-json").expect_err("invalid JSON must fail");
+        assert!(anonymous.message().starts_with("invalid JSON field value:"));
+        assert_single_field(&anonymous, "value", "must decode as valid JSON");
+
+        let named =
+            json_value("{not-json", "saml_idp_certs_json").expect_err("invalid JSON must fail");
+        assert!(
+            named
+                .message()
+                .starts_with("saml_idp_certs_json must be valid JSON:")
+        );
+        assert_single_field(&named, "saml_idp_certs_json", "must decode as valid JSON");
+    }
 }

@@ -2,7 +2,7 @@
 //!
 //! Memcached is a pure KV cache: the wire surface is `get` / `set` /
 //! `delete` against a string key. Same shape as the Redis compiler
-//! (`udb:{project}:{tenant}:{message_type}:{pk}` key template),
+//! (`udb:<project>:<tenant>:<message_type>:<pk>` concrete key),
 //! emitted as `CompiledRendering::KeyValue` so the Memcached executor
 //! and the Redis executor share the dispatch contract.
 //!
@@ -19,7 +19,7 @@
 //! Key-length constraint: Memcached caps keys at **250 bytes ASCII**
 //! and disallows control characters / whitespace. The compiler doesn't
 //! enforce this — the executor does, surfacing
-//! `Status::invalid_argument` for keys that exceed the limit.
+//! typed invalid-argument field violations for keys that exceed the limit.
 
 use crate::backend::BackendKind;
 use crate::generation::ManifestTable;
@@ -65,15 +65,10 @@ impl MemcachedCompiler {
         }
     }
 
-    /// Build the deterministic Memcached key template + concrete key
-    /// string. Format identical to Redis so cache invalidation can be
-    /// driven by the same key generator regardless of which cache
-    /// tier is wired.
-    fn build_key_template(
-        ctx: &CompileContext<'_>,
-        message_type: &str,
-        pk_value: &LogicalValue,
-    ) -> (String, String) {
+    /// Build the deterministic Memcached key string. Format identical
+    /// to Redis so cache invalidation can be driven by the same key
+    /// generator regardless of which cache tier is wired.
+    fn build_key(ctx: &CompileContext<'_>, message_type: &str, pk_value: &LogicalValue) -> String {
         let tenant = ctx.tenant_id.unwrap_or("default");
         let project = ctx.project_id.unwrap_or("default");
         let pk_token = match pk_value {
@@ -81,9 +76,7 @@ impl MemcachedCompiler {
             LogicalValue::Int(i) => i.to_string(),
             other => format!("{}", super::util::value_to_json(other)),
         };
-        let template = format!("udb:{{project}}:{{tenant}}:{message_type}:{{pk}}");
-        let key = format!("udb:{project}:{tenant}:{message_type}:{pk_token}");
-        (template, key)
+        format!("udb:{project}:{tenant}:{message_type}:{pk_token}")
     }
 }
 
@@ -116,11 +109,11 @@ impl Compiler for MemcachedCompiler {
                 op: "non_pk_predicate",
             }
         })?;
-        let (template, _key) = Self::build_key_template(ctx, &op.message_type, pk_value);
+        let key = Self::build_key(ctx, &op.message_type, pk_value);
         Ok(CompiledRendering::KeyValue {
             backend: BackendKind::Memcached,
             op: KeyValueOp::Get,
-            key_template: template,
+            key_template: key,
             value: None,
             ttl_seconds: None,
         })
@@ -172,11 +165,11 @@ impl Compiler for MemcachedCompiler {
             message: format!("failed to serialise record: {err}"),
         })?;
 
-        let (template, _) = Self::build_key_template(ctx, &op.message_type, pk_value);
+        let key = Self::build_key(ctx, &op.message_type, pk_value);
         Ok(CompiledRendering::KeyValue {
             backend: BackendKind::Memcached,
             op: KeyValueOp::Set,
-            key_template: template,
+            key_template: key,
             value: Some(json_value),
             // TTL = 0 → no expiration (Memcached's "persist forever").
             // The executor overrides from per-request cache policy.
@@ -205,11 +198,11 @@ impl Compiler for MemcachedCompiler {
                 op: "non_pk_predicate",
             }
         })?;
-        let (template, _) = Self::build_key_template(ctx, &op.message_type, pk_value);
+        let key = Self::build_key(ctx, &op.message_type, pk_value);
         Ok(CompiledRendering::KeyValue {
             backend: BackendKind::Memcached,
             op: KeyValueOp::Delete,
-            key_template: template,
+            key_template: key,
             value: None,
             ttl_seconds: None,
         })
@@ -270,7 +263,9 @@ mod tests {
     #[test]
     fn read_with_pk_filter_emits_get() {
         let m = fixture();
-        let ctx = CompileContext::new(&m).with_tenant("acme");
+        let ctx = CompileContext::new(&m)
+            .with_project("proj")
+            .with_tenant("acme");
         let read =
             LogicalRead::message("acme.cache.v1.Session").with_filter(LogicalFilter::Comparison {
                 field: "id".into(),
@@ -279,10 +274,7 @@ mod tests {
             });
         let (op, template, _) = kv(MemcachedCompiler.compile_read(&read, &ctx).unwrap());
         assert_eq!(op, KeyValueOp::Get);
-        assert_eq!(
-            template,
-            "udb:{project}:{tenant}:acme.cache.v1.Session:{pk}"
-        );
+        assert_eq!(template, "udb:proj:acme:acme.cache.v1.Session:s1");
     }
 
     #[test]

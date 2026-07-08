@@ -98,7 +98,7 @@ fn opt_non_empty(value: &str) -> Option<String> {
     }
 }
 
-fn build_registry() -> HashMap<String, MethodSecurity> {
+pub(crate) fn build_registry() -> HashMap<String, MethodSecurity> {
     let mut map = HashMap::new();
     let manifest = descriptor_contract_manifest_static();
     for service in &manifest.services {
@@ -244,10 +244,13 @@ fn enforce_direct_credential_type(
         && !declared_allows_credential(security, credential)
     {
         return Err((
-            Status::permission_denied(format!(
-                "{} credential is not allowed for this method",
-                credential.label()
-            )),
+            method_security_policy_denied(
+                deny_reason::CREDENTIAL_TYPE,
+                format!(
+                    "{} credential is not allowed for this method",
+                    credential.label()
+                ),
+            ),
             deny_reason::CREDENTIAL_TYPE,
         ));
     }
@@ -275,10 +278,13 @@ fn enforce_bearer_credential_type(
         return Ok(());
     }
     Err((
-        Status::permission_denied(format!(
-            "{} credential is not allowed for this method",
-            credential.label()
-        )),
+        method_security_policy_denied(
+            deny_reason::CREDENTIAL_TYPE,
+            format!(
+                "{} credential is not allowed for this method",
+                credential.label()
+            ),
+        ),
         deny_reason::CREDENTIAL_TYPE,
     ))
 }
@@ -301,6 +307,15 @@ mod deny_reason {
     pub const PROJECT_MISMATCH: &str = "project_mismatch";
     pub const PROJECT_REQUIRED: &str = "project_required";
     pub const PUBLIC_RATE_LIMIT: &str = "public_rate_limit";
+}
+
+fn method_security_policy_denied(reason: &'static str, message: impl Into<String>) -> Status {
+    crate::runtime::executor_utils::policy_status_with_code(
+        tonic::Code::PermissionDenied,
+        "method_security",
+        reason,
+        message,
+    )
 }
 
 /// Default per-caller-per-minute ceiling for AUTH_MODE_PUBLIC bootstrap RPCs.
@@ -393,6 +408,36 @@ fn internal_peer_allowed(peer: &TransportPeer) -> bool {
             .unwrap_or(false)
 }
 
+/// Fail-closed `internal_grpc_only` gate. An RPC whose descriptor sets
+/// `internal_grpc_only` (e.g. the control-plane xDS push streams that only a
+/// data-plane node should open) is reachable solely by an internal peer — a
+/// loopback caller or one carrying a verified mTLS client identity. Any other
+/// caller is rejected. A method that does not set the flag (or an absent
+/// declaration) is not gated here; the rest of `enforce` still applies its
+/// bearer/scope/role checks.
+///
+/// This is the single enforcement point, factored out of [`enforce`] (its only
+/// production caller) so the gate is unit-testable directly against a declared
+/// [`MethodSecurity`] without depending on a regenerated descriptor.
+fn enforce_internal_grpc_only(
+    declared: Option<&MethodSecurity>,
+    peer: &TransportPeer,
+) -> Result<(), (Status, &'static str)> {
+    if let Some(s) = declared
+        && s.internal_grpc_only
+        && !internal_peer_allowed(peer)
+    {
+        return Err((
+            method_security_policy_denied(
+                deny_reason::INTERNAL_ONLY,
+                "method is restricted to internal callers (loopback peer or verified mTLS client identity required)",
+            ),
+            deny_reason::INTERNAL_ONLY,
+        ));
+    }
+    Ok(())
+}
+
 /// The identity a public-bootstrap request is rate-limited under: forwarded
 /// headers count only when a trusted gateway is declared
 /// ([`trust_proxy_ip_headers`]); otherwise the transport peer IP. Requests with
@@ -430,6 +475,15 @@ fn public_rate_limit_key(
     (path.to_string(), caller, minute)
 }
 
+fn public_bootstrap_retry_after_ms() -> i64 {
+    let seconds = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|duration| duration.as_secs())
+        .unwrap_or_default();
+    let seconds_until_next_window = 60 - (seconds % 60);
+    (seconds_until_next_window.max(1) as i64) * 1_000
+}
+
 fn check_public_bootstrap_rate_limit(
     path: &str,
     headers: &http::HeaderMap,
@@ -440,7 +494,12 @@ fn check_public_bootstrap_rate_limit(
     let buckets = BUCKETS.get_or_init(|| Mutex::new(HashMap::new()));
     let mut guard = buckets.lock().map_err(|_| {
         (
-            Status::resource_exhausted("public bootstrap rate limiter unavailable"),
+            crate::runtime::executor_utils::quota_status(
+                "method_security",
+                "public bootstrap rate limiter",
+                1_000,
+                "public bootstrap rate limiter unavailable",
+            ),
             deny_reason::PUBLIC_RATE_LIMIT,
         )
     })?;
@@ -450,11 +509,26 @@ fn check_public_bootstrap_rate_limit(
     *count = count.saturating_add(1);
     if *count > public_bootstrap_rate_limit_per_minute() {
         return Err((
-            Status::resource_exhausted("public bootstrap rate limit exceeded"),
+            crate::runtime::executor_utils::quota_status(
+                "method_security",
+                "public_bootstrap_rate_limit",
+                public_bootstrap_retry_after_ms(),
+                "public bootstrap rate limit exceeded",
+            ),
             deny_reason::PUBLIC_RATE_LIMIT,
         ));
     }
     Ok(())
+}
+
+fn request_context_required_status() -> Status {
+    crate::runtime::executor_utils::invalid_argument_fields(
+        "request context required: send x-correlation-id, x-request-id, or traceparent",
+        [(
+            "request_context",
+            "must include x-correlation-id, x-request-id, or traceparent",
+        )],
+    )
 }
 
 /// The verified, claim-derived identity for the current request, captured at the
@@ -641,7 +715,8 @@ pub fn enforce_body_tenant_matches_claim(
             body_tenant = %body_tenant,
             "DENY: request body tenant does not match the validated bearer tenant"
         );
-        return Err(Status::permission_denied(
+        return Err(method_security_policy_denied(
+            deny_reason::TENANT_MISMATCH,
             "request tenant must match the bearer token tenant",
         ));
     }
@@ -655,7 +730,8 @@ pub fn enforce_body_tenant_matches_claim(
             subject = %ctx.subject,
             "DENY: tenant-scoped operation requires a tenant-bound bearer or cross-tenant admin"
         );
-        return Err(Status::permission_denied(
+        return Err(method_security_policy_denied(
+            deny_reason::TENANT_REQUIRED,
             "operation requires a tenant-scoped bearer token or a cross-tenant admin role",
         ));
     }
@@ -669,7 +745,8 @@ pub fn enforce_body_tenant_matches_claim(
             body_project = %body_project,
             "DENY: request body project does not match the validated bearer project"
         );
-        return Err(Status::permission_denied(
+        return Err(method_security_policy_denied(
+            deny_reason::PROJECT_MISMATCH,
             "request project must match the bearer token project",
         ));
     }
@@ -757,9 +834,12 @@ pub fn authorize_action(
         action = %action,
         "DENY: principal lacks the action-specific scope for this admin mutation"
     );
-    Err(Status::permission_denied(format!(
-        "action '{action}' requires one of the scopes {required_scopes:?} (or a control-plane admin scope)"
-    )))
+    Err(method_security_policy_denied(
+        deny_reason::SCOPE,
+        format!(
+            "action '{action}' requires one of the scopes {required_scopes:?} (or a control-plane admin scope)"
+        ),
+    ))
 }
 
 /// The `policy_ref` declared on `path`'s `endpoint_security`, if any. Lets a
@@ -852,7 +932,12 @@ fn enforce(
         && !crate::runtime::service::native_registry::native_service_enabled(&service_id)
     {
         return Err((
-            Status::unimplemented(format!("native service '{service_id}' is disabled")),
+            crate::runtime::executor_utils::capability_status(
+                "native_service",
+                format!("{service_id}/dispatch"),
+                "native_service_enabled",
+                format!("native service '{service_id}' is disabled"),
+            ),
             deny_reason::DISABLED,
         ));
     }
@@ -868,7 +953,8 @@ fn enforce(
                     .contains(&(CredentialType::BearerJwt as i32))
             {
                 return Err((
-                    Status::permission_denied(
+                    method_security_policy_denied(
+                        deny_reason::PUBLIC_CRED,
                         "public method credential contract does not allow bearerless access",
                     ),
                     deny_reason::PUBLIC_CRED,
@@ -888,7 +974,8 @@ fn enforce(
     if let Some(credential) = direct_credential_type(headers) {
         if token.is_some() {
             return Err((
-                Status::permission_denied(
+                method_security_policy_denied(
+                    deny_reason::CREDENTIAL_TYPE,
                     "request carries multiple credential types; send exactly one credential",
                 ),
                 deny_reason::CREDENTIAL_TYPE,
@@ -921,7 +1008,10 @@ fn enforce(
         .any(|scope| method_scopes.iter().any(|declared| declared == scope));
     if !has_admin && !has_declared_scope {
         return Err((
-            Status::permission_denied("scope udb:admin or udb:auth:admin is required"),
+            method_security_policy_denied(
+                deny_reason::SCOPE,
+                "scope udb:admin or udb:auth:admin is required",
+            ),
             deny_reason::SCOPE,
         ));
     }
@@ -935,27 +1025,26 @@ fn enforce(
         let roles = claims.roles.clone().unwrap_or_default();
         if !roles.iter().any(|role| s.roles.iter().any(|d| d == role)) {
             return Err((
-                Status::permission_denied("required role missing for this control-plane method"),
+                method_security_policy_denied(
+                    deny_reason::ROLE,
+                    "required role missing for this control-plane method",
+                ),
                 deny_reason::ROLE,
             ));
         }
     }
 
     if let Some(s) = declared {
-        if s.internal_grpc_only && !internal_peer_allowed(peer) {
-            return Err((
-                Status::permission_denied(
-                    "method is restricted to internal callers (loopback peer or verified mTLS client identity required)",
-                ),
-                deny_reason::INTERNAL_ONLY,
-            ));
-        }
+        enforce_internal_grpc_only(Some(s), peer)?;
         if s.csrf_required
             && non_empty_header(headers, "x-csrf-token").is_none()
             && !header_truthy(headers, "x-udb-csrf-validated")
         {
             return Err((
-                Status::permission_denied("csrf token or validated csrf marker is required"),
+                method_security_policy_denied(
+                    deny_reason::CSRF,
+                    "csrf token or validated csrf marker is required",
+                ),
                 deny_reason::CSRF,
             ));
         }
@@ -965,9 +1054,7 @@ fn enforce(
             && non_empty_header(headers, "x-request-id").is_none()
         {
             return Err((
-                Status::invalid_argument(
-                    "request context required: send x-correlation-id, x-request-id, or traceparent",
-                ),
+                request_context_required_status(),
                 deny_reason::REQUEST_CONTEXT,
             ));
         }
@@ -980,7 +1067,10 @@ fn enforce(
                 .is_empty()
         {
             return Err((
-                Status::permission_denied("method requires a tenant-scoped bearer token"),
+                method_security_policy_denied(
+                    deny_reason::TENANT_REQUIRED,
+                    "method requires a tenant-scoped bearer token",
+                ),
                 deny_reason::TENANT_REQUIRED,
             ));
         }
@@ -994,7 +1084,10 @@ fn enforce(
                 .is_empty()
         {
             return Err((
-                Status::permission_denied("method requires a tenant-scoped request context"),
+                method_security_policy_denied(
+                    deny_reason::TENANT_REQUIRED,
+                    "method requires a tenant-scoped request context",
+                ),
                 deny_reason::TENANT_REQUIRED,
             ));
         }
@@ -1005,7 +1098,10 @@ fn enforce(
         && claims.tenant_id.as_deref().unwrap_or_default() != header_tenant
     {
         return Err((
-            Status::permission_denied("x-tenant-id must match the bearer token tenant"),
+            method_security_policy_denied(
+                deny_reason::TENANT_MISMATCH,
+                "x-tenant-id must match the bearer token tenant",
+            ),
             deny_reason::TENANT_MISMATCH,
         ));
     }
@@ -1015,7 +1111,10 @@ fn enforce(
         && claims.tenant_id.as_deref().unwrap_or_default() != header_tenant
     {
         return Err((
-            Status::permission_denied("request tenant metadata must match the bearer token tenant"),
+            method_security_policy_denied(
+                deny_reason::TENANT_MISMATCH,
+                "request tenant metadata must match the bearer token tenant",
+            ),
             deny_reason::TENANT_MISMATCH,
         ));
     }
@@ -1023,7 +1122,10 @@ fn enforce(
         let claim_project = claims.project_id.as_deref().unwrap_or_default();
         if !claim_project.is_empty() && claim_project != header_project {
             return Err((
-                Status::permission_denied("project metadata must match the bearer token project"),
+                method_security_policy_denied(
+                    deny_reason::PROJECT_MISMATCH,
+                    "project metadata must match the bearer token project",
+                ),
                 deny_reason::PROJECT_MISMATCH,
             ));
         }
@@ -1039,7 +1141,10 @@ fn enforce(
             .is_empty()
     {
         return Err((
-            Status::permission_denied("method requires a project-scoped request context"),
+            method_security_policy_denied(
+                deny_reason::PROJECT_REQUIRED,
+                "method requires a project-scoped request context",
+            ),
             deny_reason::PROJECT_REQUIRED,
         ));
     }
@@ -1256,8 +1361,21 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
 
     const AUTHN: &str = "/udb.core.authn.services.v1.AuthnService";
+
+    fn decode_detail(status: &Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("error-detail trailer present")
+            .to_bytes()
+            .expect("trailer decodes to bytes");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
 
     /// A transport peer at `ip` (no mTLS), as the TCP acceptor would report it.
     /// Each test uses a distinct IP so the process-global rate-limit buckets
@@ -1406,6 +1524,53 @@ mod tests {
             .expect_err("public bootstrap limit exceeded");
         assert_eq!(err.code(), tonic::Code::ResourceExhausted);
         assert_eq!(reason, deny_reason::PUBLIC_RATE_LIMIT);
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::Quota as i32);
+        assert!(detail.retryable);
+        assert!(detail.retry_after_ms >= 1_000);
+        assert!(detail.retry_after_ms <= 60_000);
+        assert_eq!(detail.backend, "method_security");
+        assert_eq!(detail.operation, "public_bootstrap_rate_limit");
+    }
+
+    #[test]
+    fn request_context_required_status_carries_field_violation() {
+        let err = request_context_required_status();
+
+        assert_eq!(err.code(), tonic::Code::InvalidArgument);
+        assert_eq!(
+            err.message(),
+            "request context required: send x-correlation-id, x-request-id, or traceparent"
+        );
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, "request_context");
+        assert_eq!(
+            detail.field_violations[0].description,
+            "must include x-correlation-id, x-request-id, or traceparent"
+        );
+    }
+
+    #[test]
+    fn method_security_policy_denial_carries_policy_detail() {
+        let err = method_security_policy_denied(
+            deny_reason::SCOPE,
+            "scope udb:admin or udb:auth:admin is required",
+        );
+
+        assert_eq!(err.code(), tonic::Code::PermissionDenied);
+        assert_eq!(
+            err.message(),
+            "scope udb:admin or udb:auth:admin is required"
+        );
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::Policy as i32);
+        assert_eq!(detail.operation, "method_security");
+        assert_eq!(detail.policy_decision_id, deny_reason::SCOPE);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
     }
 
     #[test]
@@ -1474,6 +1639,58 @@ mod tests {
     }
 
     #[test]
+    fn internal_grpc_only_gate_denies_external_callers() {
+        // Mirror an RPC whose descriptor sets `internal_grpc_only` — e.g. the
+        // control-plane xDS push streams (StreamResources / DeltaResources). Once
+        // Gate-C (buf) regenerates the embedded descriptor, `method_security`
+        // returns a MethodSecurity with this flag set for those paths and the
+        // production `enforce` path runs exactly this gate; this test exercises the
+        // single enforcement point directly so it does not depend on regen order.
+        let mut internal_only =
+            synthetic_method_security(&[CredentialType::BearerJwt, CredentialType::ServiceAccount]);
+        internal_only.internal_grpc_only = true;
+
+        // A plain remote caller is rejected, fail closed.
+        let (err, reason) =
+            enforce_internal_grpc_only(Some(&internal_only), &peer_from("203.0.113.50"))
+                .expect_err("internal-only RPC must reject a non-internal peer");
+        assert_eq!(err.code(), tonic::Code::PermissionDenied);
+        assert_eq!(reason, deny_reason::INTERNAL_ONLY);
+
+        // No resolvable peer (non-transport invocation) also fails closed.
+        assert!(
+            enforce_internal_grpc_only(Some(&internal_only), &TransportPeer::default()).is_err(),
+            "internal-only RPC must fail closed with no resolvable peer"
+        );
+
+        // A loopback data-plane node is internal and allowed.
+        enforce_internal_grpc_only(Some(&internal_only), &peer_from("127.0.0.1"))
+            .expect("loopback node is an internal caller");
+        // An mTLS-verified node is internal regardless of its address.
+        enforce_internal_grpc_only(
+            Some(&internal_only),
+            &TransportPeer {
+                remote_addr: Some("203.0.113.50:443".parse().expect("addr")),
+                mtls_client_identity: true,
+            },
+        )
+        .expect("mTLS-verified node is an internal caller");
+    }
+
+    #[test]
+    fn non_internal_methods_are_not_gated_by_internal_grpc_only() {
+        // An RPC that does NOT set the flag is reachable by any peer through this
+        // gate (the rest of `enforce` still applies bearer/scope checks). This is
+        // the guard that keeps every SDK-reachable RPC working — only RPCs that
+        // explicitly annotate internal_grpc_only are restricted.
+        let open = synthetic_method_security(&[CredentialType::BearerJwt]);
+        enforce_internal_grpc_only(Some(&open), &peer_from("203.0.113.50"))
+            .expect("a non-internal RPC must not be gated");
+        enforce_internal_grpc_only(None, &TransportPeer::default())
+            .expect("an absent declaration must not be gated here");
+    }
+
+    #[test]
     fn non_public_method_requires_bearer() {
         let security = SecurityConfig::current();
         let headers = http::HeaderMap::new();
@@ -1536,6 +1753,7 @@ mod tests {
             },
             project_id: Some("project-1".to_string()),
             exp: None,
+            iat: None,
             sub: Some("subject-1".to_string()),
             iss: None,
             jti: Some("token-1".to_string()),
@@ -1773,6 +1991,10 @@ mod tests {
             let err = enforce_body_tenant_matches_claim(&ctx, "tenant-b", "")
                 .expect_err("cross-tenant body must be denied");
             assert_eq!(err.code(), tonic::Code::PermissionDenied);
+            let detail = decode_detail(&err);
+            assert_eq!(detail.kind, ErrorKind::Policy as i32);
+            assert_eq!(detail.operation, "method_security");
+            assert_eq!(detail.policy_decision_id, deny_reason::TENANT_MISMATCH);
         });
     }
 
@@ -1810,6 +2032,37 @@ mod tests {
         with_ctx(&ctx, || {
             let err = enforce_body_tenant_matches_claim(&ctx, "", "")
                 .expect_err("tenantless non-admin must be denied");
+            assert_eq!(err.code(), tonic::Code::PermissionDenied);
+        });
+    }
+
+    #[test]
+    fn resolve_body_tenant_scope_inherits_claim_when_body_omits_tenant() {
+        let ctx = claim_ctx("u-1", "tenant-a", "proj-1", &["udb:authn:write"], &[]);
+        with_ctx(&ctx, || {
+            let (tenant, project) = resolve_body_tenant_scope(&ctx, "", "")
+                .expect("empty body tenant/project must inherit the verified claim");
+            assert_eq!(tenant, "tenant-a");
+            assert_eq!(project, "proj-1");
+        });
+    }
+
+    #[test]
+    fn resolve_body_tenant_scope_rejects_body_claim_mismatch() {
+        let ctx = claim_ctx("u-1", "tenant-a", "proj-1", &["udb:authn:write"], &[]);
+        with_ctx(&ctx, || {
+            let err = resolve_body_tenant_scope(&ctx, "tenant-b", "proj-1")
+                .expect_err("foreign body tenant must be rejected");
+            assert_eq!(err.code(), tonic::Code::PermissionDenied);
+        });
+    }
+
+    #[test]
+    fn resolve_body_tenant_scope_rejects_tenantless_non_admin() {
+        let ctx = claim_ctx("u-1", "", "", &["udb:authn:write"], &[]);
+        with_ctx(&ctx, || {
+            let err = resolve_body_tenant_scope(&ctx, "", "")
+                .expect_err("tenantless non-admin requests must fail closed");
             assert_eq!(err.code(), tonic::Code::PermissionDenied);
         });
     }
@@ -1877,6 +2130,10 @@ mod tests {
             let err = authorize_action(&ctx, "authn.user.create", &["authn.user.create"])
                 .expect_err("non-admin without the action scope must be denied");
             assert_eq!(err.code(), tonic::Code::PermissionDenied);
+            let detail = decode_detail(&err);
+            assert_eq!(detail.kind, ErrorKind::Policy as i32);
+            assert_eq!(detail.operation, "method_security");
+            assert_eq!(detail.policy_decision_id, deny_reason::SCOPE);
         });
     }
 

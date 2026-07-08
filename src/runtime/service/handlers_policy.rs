@@ -12,6 +12,34 @@ type BackendSummaryRow = (
     String,
 );
 
+fn policy_required_field(
+    field: &'static str,
+    description: &'static str,
+    message: &'static str,
+) -> Status {
+    crate::runtime::executor_utils::invalid_argument_fields(message, [(field, description)])
+}
+
+fn admin_summary_project_scope_status() -> Status {
+    crate::runtime::executor_utils::policy_status_with_code(
+        tonic::Code::PermissionDenied,
+        "GetAdminSummary",
+        "project_scope_mismatch",
+        "requested project_id does not match authenticated project",
+    )
+}
+
+fn validate_ensure_project_id(project_id: &str) -> Result<(), Status> {
+    if project_id.trim().is_empty() {
+        return Err(policy_required_field(
+            "project_id",
+            "must be a non-empty project id",
+            "project_id is required",
+        ));
+    }
+    Ok(())
+}
+
 impl DataBrokerService {
     pub(crate) async fn list_policies_inner(
         &self,
@@ -220,12 +248,8 @@ impl DataBrokerService {
             return self.record_grpc("EnsureProject", started, Err(err));
         }
         let req = request.into_inner();
-        if req.project_id.trim().is_empty() {
-            return self.record_grpc(
-                "EnsureProject",
-                started,
-                Err(Status::invalid_argument("project_id is required")),
-            );
+        if let Err(err) = validate_ensure_project_id(&req.project_id) {
+            return self.record_grpc("EnsureProject", started, Err(err));
         }
         match self
             .runtime_snapshot()
@@ -324,9 +348,7 @@ impl DataBrokerService {
                 return self.record_grpc(
                     "GetAdminSummary",
                     started,
-                    Err(Status::permission_denied(
-                        "requested project_id does not match authenticated project",
-                    )),
+                    Err(admin_summary_project_scope_status()),
                 );
             }
         }
@@ -841,5 +863,55 @@ fn admin_audit_request_json_for_response(
             crate::runtime::cdc::encryption::DecryptScope::Audit,
         ),
         None => value,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
+    use tonic::{Code, Status};
+
+    fn decode_detail(status: &Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    #[test]
+    fn ensure_project_missing_project_id_carries_field_violation() {
+        let err = validate_ensure_project_id(" ")
+            .expect_err("missing project_id must fail before project persistence");
+
+        assert_eq!(err.code(), Code::InvalidArgument);
+        assert_eq!(err.message(), "project_id is required");
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, "project_id");
+        assert_eq!(
+            detail.field_violations[0].description,
+            "must be a non-empty project id"
+        );
+    }
+
+    #[test]
+    fn admin_summary_project_scope_mismatch_carries_policy_detail() {
+        let err = admin_summary_project_scope_status();
+        assert_eq!(err.code(), Code::PermissionDenied);
+        assert_eq!(
+            err.message(),
+            "requested project_id does not match authenticated project"
+        );
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::Policy as i32);
+        assert_eq!(detail.operation, "GetAdminSummary");
+        assert_eq!(detail.policy_decision_id, "project_scope_mismatch");
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
     }
 }

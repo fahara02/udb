@@ -1,0 +1,732 @@
+syntax = "proto3";
+
+package udb.core.backup.services.v1;
+
+import "google/api/annotations.proto";
+import "udb/core/common/v1/dto.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Backup.Services.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/backup/services/v1;backupservicev1";
+option java_package = "com.udb.core.backup.services.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Backup\\Services\\V1";
+option php_namespace = "Udb\\Core\\Backup\\Services\\V1";
+
+// BackupService (master-plan 9.10) — tenant-level logical backup and restore.
+// A backup enumerates the tenant's owned tables via the SAME shared resolver the
+// purge ripple uses, streams each table's tenant rows as JSONL, encrypts them at
+// rest, and writes them plus a checksummed manifest to object storage. Tables
+// without a resolvable tenant column are REPORTED as excluded, never silently
+// skipped. A restore validates the cross-tenant movement scope, refuses to write
+// over a live (non-empty) target tenant, and rewrites the tenant column to the
+// target on insert.
+service BackupService {
+  option (udb.core.common.v1.native_service) = {
+    service_id: "backup"
+    logical_service_id: "backup"
+    proto_service_id: "backup"
+    display_name: "Backup"
+    category: "backup"
+    default_enabled: true
+    requires_postgres: true
+    control_plane_listener_allowed: true
+    sdk_facade_name: "backup"
+    cli_scaffold_group: "backup"
+    health_check_ref: "backup"
+    capability_ref: "native.backup"
+  };
+  option (udb.core.common.v1.service_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "backup"
+    generate_minimal_example: true
+  };
+  option (udb.core.common.v1.service_cli_scaffold) = {
+    scaffold_package: "backup"
+    import_path: "udb/native/backup"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+    generated_files: "udb.native.backup.config"
+    required_native_services: "backup"
+    secret_placeholders: "UDB_API_KEY"
+    smoke_test_command: "udb native lint"
+  };
+  option (udb.core.common.v1.service_dependency_contract) = {
+    required_native_services: "backup"
+    required_backends: "postgres"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+  };
+
+  // Start a logical backup of the calling tenant. Enumerates tenant-owned tables
+  // via the shared resolver, encrypts each table's rows to object storage, and
+  // journals the run. Tenant-less tables are reported as excluded.
+  rpc StartTenantBackup(StartTenantBackupRequest) returns (StartTenantBackupResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:backup:start-tenant-backup"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "backup.StartTenantBackup"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "start_tenant_backup" rest_operation_id: "startTenantBackup"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "backup"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "backup"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "backup.StartTenantBackup"
+      outbox_topic: "udb.backup.run.completed.v1"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/backups:start"
+      body: "*"
+    };
+  }
+
+  // Restore a tenant's backup into a FRESH target tenant. DESTRUCTIVE: requires
+  // an explicit confirmation token, the cross-tenant movement scope check, and a
+  // target tenant that holds no rows (restoring over a live tenant is refused).
+  rpc RestoreTenant(RestoreTenantRequest) returns (RestoreTenantResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:backup:restore-tenant"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "backup.RestoreTenant"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "restore_tenant" rest_operation_id: "restoreTenant"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "backup"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "backup"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "backup.RestoreTenant"
+      outbox_topic: "udb.backup.run.restored.v1"
+      partition_key_field: "target_tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/backups:restore"
+      body: "*"
+    };
+  }
+
+  // List the calling tenant's backup/restore journal runs (most recent first).
+  rpc ListBackups(ListBackupsRequest) returns (ListBackupsResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:backup:list-backups"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "backup.ListBackups"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "list_backups" rest_operation_id: "listBackups"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "backup"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "backup"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      get: "/v1/backups"
+    };
+  }
+
+  // Fetch one backup run plus its per-table manifest detail.
+  rpc GetBackup(GetBackupRequest) returns (GetBackupResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:backup:get-backup"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "backup.GetBackup"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "get_backup" rest_operation_id: "getBackup"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "backup"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "backup"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      get: "/v1/backups/{backup_id}"
+    };
+  }
+
+  // Create or update the calling tenant's backup retention/schedule policy.
+  rpc PutBackupPolicy(PutBackupPolicyRequest) returns (PutBackupPolicyResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:backup:put-backup-policy"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "backup.PutBackupPolicy"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "put_backup_policy" rest_operation_id: "putBackupPolicy"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "backup"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "backup"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "backup.PutBackupPolicy"
+      outbox_topic: "udb.backup.policy.upserted.v1"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/backups/policies"
+      body: "*"
+    };
+  }
+
+  // Fetch a tenant's backup retention/schedule policy by name.
+  rpc GetBackupPolicy(GetBackupPolicyRequest) returns (GetBackupPolicyResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:backup:get-backup-policy"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "backup.GetBackupPolicy"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "get_backup_policy" rest_operation_id: "getBackupPolicy"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "backup"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "backup"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      get: "/v1/backups/policies/{policy_name}"
+    };
+  }
+
+  // List the calling tenant's backup retention policies.
+  rpc ListBackupPolicies(ListBackupPoliciesRequest) returns (ListBackupPoliciesResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:backup:list-backup-policies"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "backup.ListBackupPolicies"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "list_backup_policies" rest_operation_id: "listBackupPolicies"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "backup"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "backup"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      get: "/v1/backups/policies"
+    };
+  }
+
+  // Delete a tenant's backup retention policy by name.
+  rpc DeleteBackupPolicy(DeleteBackupPolicyRequest) returns (DeleteBackupPolicyResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:backup:delete-backup-policy"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "backup.DeleteBackupPolicy"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "delete_backup_policy" rest_operation_id: "deleteBackupPolicy"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "backup"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "backup"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "backup.DeleteBackupPolicy"
+      outbox_topic: "udb.backup.policy.deleted.v1"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      delete: "/v1/backups/policies/{policy_name}"
+    };
+  }
+}
+
+// ── Shared detail messages ───────────────────────────────────────────────────
+
+// One backed-up tenant table: where its encrypted JSONL artifact lives and its
+// integrity anchor.
+message BackupTableEntry {
+  string schema = 1;
+  string table = 2;
+  string tenant_column = 3;
+  string object_key = 4;
+  int64 row_count = 5;
+  string checksum_sha256 = 6;
+}
+
+// A table excluded from the backup because it has no resolvable tenant column.
+// Reported, never silently skipped.
+message BackupExcludedTable {
+  string schema = 1;
+  string table = 2;
+  string reason = 3;
+}
+
+// A backup/restore journal row.
+message BackupRunSummary {
+  string backup_id = 1;
+  string tenant_id = 2;
+  string kind = 3;
+  string status = 4;
+  string object_prefix = 5;
+  string manifest_checksum = 6;
+  int32 table_count = 7;
+  int64 total_rows = 8;
+  int32 excluded_count = 9;
+  string source_tenant_id = 10;
+  string target_tenant_id = 11;
+  int64 created_at_unix = 12;
+  int64 completed_at_unix = 13;
+}
+
+// A backup retention/schedule policy.
+message BackupPolicyView {
+  string policy_id = 1;
+  string tenant_id = 2;
+  string policy_name = 3;
+  string schedule_cron = 4;
+  int32 retention_days = 5;
+  int32 max_retained_backups = 6;
+  bool enabled = 7;
+  string object_backend = 8;
+  string object_bucket = 9;
+  int64 created_at_unix = 10;
+  int64 updated_at_unix = 11;
+}
+
+// ── Request / response envelopes ─────────────────────────────────────────────
+
+message StartTenantBackupRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "backup"
+    generate_minimal_example: true
+  };
+  // Verified against the bearer/claim tenant; cross-tenant values are rejected.
+  string tenant_id = 1;
+  // Optional policy name whose object backend/bucket are used when set.
+  string policy_name = 2;
+  // Optional object-store overrides; fall back to the policy or service default.
+  string object_backend = 3;
+  string object_bucket = 4;
+  string metadata_json = 5;
+}
+
+message StartTenantBackupResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "backup"
+    generate_minimal_example: true
+  };
+  string backup_id = 1;
+  string object_prefix = 2;
+  string manifest_checksum = 3;
+  int32 table_count = 4;
+  int64 total_rows = 5;
+  int32 excluded_count = 6;
+  repeated BackupTableEntry tables = 7;
+  repeated BackupExcludedTable excluded = 8;
+  string message = 9;
+  udb.core.common.v1.ApiError error = 10;
+}
+
+message RestoreTenantRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "backup"
+    generate_minimal_example: true
+  };
+  // The tenant whose backup is the source.
+  string source_tenant_id = 1;
+  // The FRESH tenant the rows are restored INTO. Verified against the claim; an
+  // existing (non-empty) tenant is refused.
+  string target_tenant_id = 2;
+  // The backup run id to restore (resolved to its object prefix).
+  string backup_id = 3;
+  // Required explicit confirmation token (DESTRUCTIVE).
+  string confirmation_token = 4;
+  // When the target differs from the source this must be set: a cross-tenant
+  // restore needs explicit privileged approval (fail closed otherwise).
+  bool allow_cross_tenant = 5;
+  string metadata_json = 6;
+}
+
+message RestoreTenantResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "backup"
+    generate_minimal_example: true
+  };
+  // The restore journal row id.
+  string backup_id = 1;
+  string source_object_prefix = 2;
+  int32 restored_table_count = 3;
+  int64 restored_rows = 4;
+  string message = 5;
+  udb.core.common.v1.ApiError error = 6;
+}
+
+message ListBackupsRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "backup"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  // Optional kind filter: BACKUP | RESTORE. Empty returns both.
+  string kind = 4;
+}
+
+message ListBackupsResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "backup"
+    generate_minimal_example: true
+  };
+  repeated BackupRunSummary backups = 1;
+  string next_page_token = 2;
+  udb.core.common.v1.ApiError error = 3;
+}
+
+message GetBackupRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "backup"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string backup_id = 2;
+}
+
+message GetBackupResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "backup"
+    generate_minimal_example: true
+  };
+  BackupRunSummary backup = 1;
+  repeated BackupTableEntry tables = 2;
+  repeated BackupExcludedTable excluded = 3;
+  udb.core.common.v1.ApiError error = 4;
+}
+
+message PutBackupPolicyRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "backup"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string policy_name = 2;
+  string schedule_cron = 3;
+  int32 retention_days = 4;
+  int32 max_retained_backups = 5;
+  bool enabled = 6;
+  string object_backend = 7;
+  string object_bucket = 8;
+  string metadata_json = 9;
+}
+
+message PutBackupPolicyResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "backup"
+    generate_minimal_example: true
+  };
+  string policy_id = 1;
+  string message = 2;
+  udb.core.common.v1.ApiError error = 3;
+}
+
+message GetBackupPolicyRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "backup"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string policy_name = 2;
+}
+
+message GetBackupPolicyResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "backup"
+    generate_minimal_example: true
+  };
+  BackupPolicyView policy = 1;
+  udb.core.common.v1.ApiError error = 2;
+}
+
+message ListBackupPoliciesRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "backup"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+}
+
+message ListBackupPoliciesResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "backup"
+    generate_minimal_example: true
+  };
+  repeated BackupPolicyView policies = 1;
+  string next_page_token = 2;
+  udb.core.common.v1.ApiError error = 3;
+}
+
+message DeleteBackupPolicyRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "backup"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string policy_name = 2;
+}
+
+message DeleteBackupPolicyResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "backup"
+    generate_minimal_example: true
+  };
+  bool deleted = 1;
+  string message = 2;
+  udb.core.common.v1.ApiError error = 3;
+}

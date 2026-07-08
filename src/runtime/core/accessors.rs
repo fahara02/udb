@@ -1,6 +1,155 @@
 //! Continuation `impl DataBrokerRuntime` block (Phase F split of core.rs).
 use super::*;
 
+fn invalid_backend_selector_status(selector: &str) -> tonic::Status {
+    crate::runtime::executor_utils::invalid_argument_fields(
+        format!("unknown backend '{selector}'"),
+        [("backend", "must name a supported backend")],
+    )
+}
+
+fn invalid_read_fence_json_status(err: impl std::fmt::Display) -> tonic::Status {
+    crate::runtime::executor_utils::invalid_argument_fields(
+        format!("invalid read_fence_json: {err}"),
+        [("read_fence_json", "must decode as a ReadFence JSON payload")],
+    )
+}
+
+fn bounded_read_refused_status(
+    refused: crate::runtime::consistency::BoundedReadRefused,
+) -> tonic::Status {
+    crate::runtime::executor_utils::policy_status(
+        "read_consistency",
+        "bounded_staleness_requires_real_position",
+        refused.to_string(),
+    )
+}
+
+fn backend_selector_not_found_status(
+    backend: impl Into<String>,
+    operation: &'static str,
+    schema_code: &'static str,
+    message: impl Into<String>,
+) -> tonic::Status {
+    crate::runtime::executor_utils::schema_status(
+        tonic::Code::NotFound,
+        backend,
+        operation,
+        schema_code,
+        message,
+    )
+}
+
+fn backend_instance_not_configured_status(backend: &str, instance: &str) -> tonic::Status {
+    backend_selector_not_found_status(
+        backend,
+        "resolve_backend_selector",
+        "backend_instance_not_configured",
+        format!("backend instance '{backend}:{instance}' is not configured"),
+    )
+}
+
+fn backend_targets_not_found_status(backend: &str, selector: &str) -> tonic::Status {
+    backend_selector_not_found_status(
+        backend,
+        "resolve_backend_targets",
+        "backend_targets_not_found",
+        format!("no connected backend instances matched '{selector}'"),
+    )
+}
+
+fn backend_instance_project_not_configured_status(
+    backend: &str,
+    instance: &str,
+    project_id: &str,
+    reason: impl std::fmt::Display,
+) -> tonic::Status {
+    backend_selector_not_found_status(
+        backend,
+        "project_backend_routing",
+        "backend_instance_project_not_configured",
+        format!(
+            "backend instance '{}:{}' is not configured for project '{}': {}",
+            backend,
+            instance,
+            normalized_project_id(project_id)
+                .unwrap_or(crate::runtime::catalog::DEFAULT_PROJECT_ID),
+            reason
+        ),
+    )
+}
+
+fn postgres_backend_not_configured_status(operation: &'static str) -> tonic::Status {
+    crate::runtime::executor_utils::capability_status(
+        "postgres",
+        operation,
+        "postgres_backend",
+        "PostgreSQL backend is not configured",
+    )
+}
+
+fn backend_not_configured_status(
+    backend: &'static str,
+    operation: &'static str,
+    capability_required: &'static str,
+    message: &'static str,
+) -> tonic::Status {
+    crate::runtime::executor_utils::capability_status(
+        backend,
+        operation,
+        capability_required,
+        message,
+    )
+}
+
+fn backend_instance_not_connected_status(
+    backend: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    crate::runtime::executor_utils::capability_status(
+        backend,
+        "instance_resolver",
+        "backend_instance_connected",
+        message,
+    )
+}
+
+fn backend_instance_disabled_status(
+    backend: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    crate::runtime::executor_utils::capability_status(
+        backend,
+        "instance_resolver",
+        "backend_instance_enabled",
+        message,
+    )
+}
+
+fn backend_executor_not_registered_status(
+    backend: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    crate::runtime::executor_utils::capability_status(
+        backend,
+        "executor_registry",
+        "backend_executor_registered",
+        message,
+    )
+}
+
+fn backend_executor_not_connected_status(
+    backend: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    crate::runtime::executor_utils::capability_status(
+        backend,
+        "executor_registry",
+        "backend_executor_connected",
+        message,
+    )
+}
+
 /// Generate the `<backend>_for_instance` / `<backend>_for_instance_for_project`
 /// resolver pair for a labelled-instance backend (MongoDB/Neo4j/ClickHouse/
 /// Qdrant/S3). Every resolver shares the exact same control flow:
@@ -14,9 +163,7 @@ use super::*;
 ///
 /// Per-backend variation is expressed as macro arguments: the struct fields, the
 /// allow-list / circuit-breaker / choose names (S3 spans `minio`+`s3`), the
-/// display labels, and the final not-configured `Status` constructor + message
-/// (Qdrant uses `unavailable`, the rest `failed_precondition`). Behavior is
-/// byte-for-byte identical to the previous hand-written methods.
+/// display labels, and the final not-configured `Status`.
 macro_rules! impl_instance_resolver {
     (
         feature = $feature:literal,
@@ -31,7 +178,7 @@ macro_rules! impl_instance_resolver {
         choose = [$($choose:literal),+ $(,)?],
         cb_label = $cb_label:literal,
         not_connected_label = $nc_label:literal,
-        not_configured = $not_configured:ident($not_configured_msg:literal) $(,)?
+        not_configured = $not_configured:expr $(,)?
     ) => {
         #[cfg(feature = $feature)]
         pub(crate) fn $simple(
@@ -54,11 +201,12 @@ macro_rules! impl_instance_resolver {
                     project_id,
                 )?;
                 if $(!self.circuit_breaker_allows($breaker, Some(instance)))||+ {
-                    return Err(tonic::Status::unavailable(format!(
-                        "{} instance '{}' circuit breaker is open",
+                    return Err(crate::runtime::executor_utils::retryable_status(
                         $cb_label,
-                        instance
-                    )));
+                        "circuit_breaker_open",
+                        crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
+                        format!("{} instance '{}' circuit breaker is open", $cb_label, instance),
+                    ));
                 }
                 return self
                     .$instances
@@ -71,11 +219,10 @@ macro_rules! impl_instance_resolver {
                         }
                     })
                     .ok_or_else(|| {
-                        tonic::Status::failed_precondition(format!(
-                            "{} instance '{}' is not connected",
-                            $nc_label,
-                            instance
-                        ))
+                        backend_instance_not_connected_status(
+                            $cb_label,
+                            format!("{} instance '{}' is not connected", $nc_label, instance),
+                        )
                     });
             }
             self.ensure_unlabeled_default_allowed_for_project($unlabeled, project_id)?;
@@ -84,7 +231,7 @@ macro_rules! impl_instance_resolver {
                 .and_then(|name| self.$instances.get(name))
                 .or(self.$single.as_ref())
                 .or_else(|| self.$instances.values().next())
-                .ok_or_else(|| tonic::Status::$not_configured($not_configured_msg))
+                .ok_or_else(|| $not_configured)
         }
     };
 }
@@ -196,24 +343,30 @@ impl DataBrokerRuntime {
                 })
             })
             .ok_or_else(|| {
-                tonic::Status::failed_precondition(format!(
-                    "backend executor '{}:{}' is not registered",
-                    resolved.backend,
-                    resolved
+                backend_executor_not_registered_status(
+                    resolved.backend.clone(),
+                    format!(
+                        "backend executor '{}:{}' is not registered",
+                        resolved.backend,
+                        resolved
+                            .instance
+                            .as_deref()
+                            .unwrap_or(crate::runtime::catalog::DEFAULT_PROJECT_ID)
+                    ),
+                )
+            })?;
+        if !registration.connected {
+            return Err(backend_executor_not_connected_status(
+                registration.backend.clone(),
+                format!(
+                    "backend executor '{}:{}' is registered but not connected",
+                    registration.backend,
+                    registration
                         .instance
                         .as_deref()
                         .unwrap_or(crate::runtime::catalog::DEFAULT_PROJECT_ID)
-                ))
-            })?;
-        if !registration.connected {
-            return Err(tonic::Status::failed_precondition(format!(
-                "backend executor '{}:{}' is registered but not connected",
-                registration.backend,
-                registration
-                    .instance
-                    .as_deref()
-                    .unwrap_or(crate::runtime::catalog::DEFAULT_PROJECT_ID)
-            )));
+                ),
+            ));
         }
         let target_instance = registration.instance.clone().or(resolved.instance);
         Ok(ResolvedExecutorTarget {
@@ -257,16 +410,24 @@ impl DataBrokerRuntime {
                     }
                 })
                 .ok_or_else(|| {
-                    tonic::Status::failed_precondition(format!(
-                        "postgres instance '{instance}' is not connected"
-                    ))
+                    backend_instance_not_connected_status(
+                        "postgres",
+                        format!("postgres instance '{instance}' is not connected"),
+                    )
                 });
         }
         self.pg_pool
             .as_ref()
             .or_else(|| self.pg_instances.get("primary"))
             .or_else(|| self.pg_instances.values().next())
-            .ok_or_else(|| tonic::Status::failed_precondition("PostgreSQL is not configured"))
+            .ok_or_else(|| {
+                backend_not_configured_status(
+                    "postgres",
+                    "pool_lookup",
+                    "postgres_backend",
+                    "PostgreSQL is not configured",
+                )
+            })
     }
 
     /// NW3-1: MySQL pool resolver. Mirrors `pg_pool_for_instance`.
@@ -431,9 +592,7 @@ impl DataBrokerRuntime {
         let (backend_raw, instance_raw) = split_backend_selector(selector);
         let backend = crate::planning::backend::BackendKind::from_store_kind("", backend_raw)
             .map(|kind| kind.as_str().to_string())
-            .ok_or_else(|| {
-                tonic::Status::invalid_argument(format!("unknown backend '{selector}'"))
-            })?;
+            .ok_or_else(|| invalid_backend_selector_status(selector))?;
         let instance = instance_raw.map(str::to_string);
         if let Some(instance_name) = &instance {
             let Some(runtime_instance) = self
@@ -449,29 +608,40 @@ impl DataBrokerRuntime {
                     )?;
                     return Ok(ResolvedBackendSelector { backend, instance });
                 }
-                return Err(tonic::Status::not_found(format!(
-                    "backend instance '{}:{}' is not configured",
-                    backend, instance_name
-                )));
+                return Err(backend_instance_not_configured_status(
+                    &backend,
+                    instance_name,
+                ));
             };
             self.ensure_instance_matches_project(runtime_instance, project_id)?;
             if !runtime_instance.enabled {
-                return Err(tonic::Status::failed_precondition(format!(
-                    "backend instance '{}:{}' is disabled",
-                    backend, instance_name
-                )));
+                return Err(backend_instance_disabled_status(
+                    backend.clone(),
+                    format!(
+                        "backend instance '{}:{}' is disabled",
+                        backend, instance_name
+                    ),
+                ));
             }
             if !runtime_instance.connected {
-                return Err(tonic::Status::failed_precondition(format!(
-                    "backend instance '{}:{}' is configured but not connected",
-                    backend, instance_name
-                )));
+                return Err(backend_instance_not_connected_status(
+                    backend.clone(),
+                    format!(
+                        "backend instance '{}:{}' is configured but not connected",
+                        backend, instance_name
+                    ),
+                ));
             }
             if !self.circuit_breaker_allows(&backend, Some(instance_name)) {
-                return Err(tonic::Status::unavailable(format!(
-                    "backend instance '{}:{}' circuit breaker is open",
-                    backend, instance_name
-                )));
+                return Err(crate::runtime::executor_utils::retryable_status(
+                    backend.clone(),
+                    "circuit_breaker_open",
+                    crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
+                    format!(
+                        "backend instance '{}:{}' circuit breaker is open",
+                        backend, instance_name
+                    ),
+                ));
             }
         }
         Ok(ResolvedBackendSelector { backend, instance })
@@ -494,9 +664,7 @@ impl DataBrokerRuntime {
         let (backend_raw, instance_raw) = split_backend_selector(selector);
         let backend = crate::planning::backend::BackendKind::from_store_kind("", backend_raw)
             .map(|kind| kind.as_str().to_string())
-            .ok_or_else(|| {
-                tonic::Status::invalid_argument(format!("unknown backend '{selector}'"))
-            })?;
+            .ok_or_else(|| invalid_backend_selector_status(selector))?;
         let labels_filter = parse_dispatch_json(spec_json)
             .ok()
             .and_then(|spec| spec.get("target_labels").cloned())
@@ -535,9 +703,7 @@ impl DataBrokerRuntime {
             }
         }
         if targets.is_empty() {
-            return Err(tonic::Status::not_found(format!(
-                "no connected backend instances matched '{selector}'"
-            )));
+            return Err(backend_targets_not_found_status(&backend, selector));
         }
         Ok(targets)
     }
@@ -838,7 +1004,7 @@ impl DataBrokerRuntime {
                 .pg_pool
                 .clone()
                 .or_else(|| self.pg_instances.get("primary").cloned())
-                .ok_or_else(|| tonic::Status::unavailable("PostgreSQL backend is not configured"));
+                .ok_or_else(|| postgres_backend_not_configured_status("read_fence_primary"));
         }
         if target_is_postgres {
             let target_instance = context.target_instance.trim();
@@ -857,7 +1023,7 @@ impl DataBrokerRuntime {
             return self
                 .pg_pool
                 .clone()
-                .ok_or_else(|| tonic::Status::unavailable("PostgreSQL backend is not configured"));
+                .ok_or_else(|| postgres_backend_not_configured_status("primary_read"));
         }
         if matches!(
             context.routing_policy.to_ascii_lowercase().as_str(),
@@ -866,12 +1032,197 @@ impl DataBrokerRuntime {
             return self
                 .pg_pool
                 .clone()
-                .ok_or_else(|| tonic::Status::unavailable("PostgreSQL backend is not configured"));
+                .ok_or_else(|| postgres_backend_not_configured_status("routed_read"));
+        }
+        // 6.4: consult the typed consistency routing decision for the one case
+        // the legacy replica fallback gets WRONG — an explicit bounded-staleness
+        // read against a backend that mints no real replication-position token.
+        // Such a read cannot be fenced honestly (the fence would be a vacuous
+        // wall-clock fence), so it is REFUSED with a typed `FailedPrecondition`
+        // rather than silently served a stale replica. `Strong` / primary-forced
+        // / `ReadYourWrites` reads already returned the primary above; an empty
+        // consistency hint and the eventual/projection/cache modes stay
+        // replica-eligible exactly as before. The full `ReplicaBounded` LSN
+        // fence (which needs an `await` on the replica position) is honoured by
+        // the async `pg_read_pool_routed` selector below.
+        if !context.consistency.trim().is_empty() {
+            let backend_label = if context.target_backend.trim().is_empty() {
+                "postgres"
+            } else {
+                context.target_backend.trim()
+            };
+            let policy = crate::runtime::consistency::ConsistencyPolicy::from_request_context(
+                &context.consistency,
+                context.max_replica_lag_ms,
+                context.primary_read,
+                context.eventual_consistency_allowed,
+            );
+            if let crate::runtime::consistency::ReadRouting::RefusedBounded(refused) =
+                policy.route_read(false, backend_label)
+            {
+                return Err(bounded_read_refused_status(refused));
+            }
         }
         self.pg_replicas
             .choose_pool_with_max_lag(context.replica_lag_override())
             .or_else(|| self.pg_pool.clone())
-            .ok_or_else(|| tonic::Status::unavailable("PostgreSQL backend is not configured"))
+            .ok_or_else(|| postgres_backend_not_configured_status("replica_or_primary_read"))
+    }
+
+    /// Async, fully-enforced read-pool selector — the budget- and
+    /// bounded-staleness-aware counterpart of
+    /// [`Self::pg_read_pool_for_context_checked`].
+    ///
+    /// The synchronous selector runs inside sync pool-resolution call sites and
+    /// can therefore only honour the parts of the routing decision that need no
+    /// `await`: it surfaces the typed refusal for a bounded read against a
+    /// wall-clock backend but otherwise falls back to lag-bounded replica
+    /// selection. This async selector honours the WHOLE
+    /// [`crate::runtime::consistency::ConsistencyPolicy::route_read`] decision
+    /// plus the per-tenant connection budget:
+    ///
+    /// - **6.3 per-tenant connection budget** — enforced via
+    ///   [`crate::runtime::connection_manager::ConnectionManager::lease_postgres_for_tenant`]
+    ///   / `acquire_tenant_connection` BEFORE a pooled connection is handed out;
+    ///   the permit (and, for a registered instance pool, the lease accounting)
+    ///   is held inside [`RoutedReadPool`] for the borrowed connection's
+    ///   lifetime. An unbudgeted tenant is unlimited (pre-tiering behavior).
+    /// - **6.4 REPLICA_BOUNDED fence** — a `ReplicaBounded` decision WAITS on
+    ///   the chosen replica's real WAL replay position past the caller's write
+    ///   LSN ([`crate::runtime::replica::PgReplicaManager::choose_bounded_replica`]),
+    ///   failing over to the primary on timeout; `RefusedBounded` returns the
+    ///   typed error; and writes (`is_write`) always route to the primary.
+    pub async fn pg_read_pool_routed(
+        &self,
+        context: &RequestContext,
+        is_write: bool,
+    ) -> Result<RoutedReadPool, tonic::Status> {
+        use crate::runtime::consistency::{ConsistencyPolicy, ReadFence, ReadRouting};
+        use crate::runtime::replica::BoundedReplicaRead;
+
+        let tenant = {
+            let tenant = context.tenant_id.trim();
+            (!tenant.is_empty()).then_some(tenant)
+        };
+        let backend_label = if context.target_backend.trim().is_empty() {
+            "postgres"
+        } else {
+            context.target_backend.trim()
+        };
+        let target_is_postgres = matches!(
+            backend_label.to_ascii_lowercase().as_str(),
+            "postgres" | "pg" | "postgresql"
+        );
+        if target_is_postgres && !context.target_instance.trim().is_empty() {
+            self.ensure_backend_instance_name_allowed_for_project(
+                &["postgres"],
+                context.target_instance.trim(),
+                &context.project_id,
+            )?;
+        }
+        let mut policy = ConsistencyPolicy::from_request_context(
+            &context.consistency,
+            context.max_replica_lag_ms,
+            context.primary_read,
+            context.eventual_consistency_allowed,
+        );
+        if !context.read_fence_json.trim().is_empty()
+            && let Ok(fence) = serde_json::from_str::<ReadFence>(&context.read_fence_json)
+        {
+            policy = policy.with_fence(fence);
+        }
+
+        match policy.route_read(is_write, backend_label) {
+            ReadRouting::RefusedBounded(refused) => Err(bounded_read_refused_status(refused)),
+            ReadRouting::Primary => self.routed_primary_pool(context, tenant).await,
+            ReadRouting::ReplicaUnfenced => match self.pg_replicas.choose_pool() {
+                Some(pool) => self.routed_replica_pool(pool, tenant).await,
+                None => self.routed_primary_pool(context, tenant).await,
+            },
+            ReadRouting::ReplicaBounded {
+                max_staleness_ms,
+                min_lsn,
+            } => {
+                let budget = std::time::Duration::from_millis(max_staleness_ms);
+                match self
+                    .pg_replicas
+                    .choose_bounded_replica(min_lsn.as_deref(), budget)
+                    .await
+                {
+                    BoundedReplicaRead::Replica(pool) => {
+                        self.routed_replica_pool(pool, tenant).await
+                    }
+                    // 6.4: the chosen replica couldn't be proven fresh within
+                    // the staleness budget (no eligible replica, or its real
+                    // WAL replay position didn't reach the fence LSN in time).
+                    // Serve from the primary, but ATTACH the carried
+                    // `StaleReadWarning` so the failed-over read is never
+                    // returned silently.
+                    BoundedReplicaRead::FailoverToPrimary(warning) => {
+                        let mut routed = self.routed_primary_pool(context, tenant).await?;
+                        routed.warning = Some(warning);
+                        Ok(routed)
+                    }
+                }
+            }
+        }
+    }
+
+    /// Primary-pool branch of [`Self::pg_read_pool_routed`]: prefer the
+    /// budget-enforced lease against the registered primary instance (so both
+    /// the per-tenant budget AND the lease accounting apply); fall back to the
+    /// canonical primary handle under a bare budget permit when that instance is
+    /// not registered with the `ConnectionManager`.
+    async fn routed_primary_pool(
+        &self,
+        context: &RequestContext,
+        tenant: Option<&str>,
+    ) -> Result<RoutedReadPool, tonic::Status> {
+        let instance = {
+            let target = context.target_instance.trim();
+            if target.is_empty() { "primary" } else { target }
+        };
+        if let Some(lease) = self
+            .connections
+            .lease_postgres_for_tenant(instance, tenant)
+            .await?
+        {
+            return Ok(RoutedReadPool {
+                pool: lease.pool(),
+                _lease: Some(lease),
+                _permit: None,
+                warning: None,
+            });
+        }
+        let permit = self.connections.acquire_tenant_connection(tenant).await?;
+        let pool = self
+            .pg_pool
+            .clone()
+            .ok_or_else(|| postgres_backend_not_configured_status("routed_primary_pool"))?;
+        Ok(RoutedReadPool {
+            pool,
+            _lease: None,
+            _permit: permit,
+            warning: None,
+        })
+    }
+
+    /// Replica-pool branch of [`Self::pg_read_pool_routed`]: replica pools live
+    /// in the `PgReplicaManager`, not the `ConnectionManager`, so the per-tenant
+    /// budget is enforced with a bare permit held for the borrowed connection's
+    /// lifetime.
+    async fn routed_replica_pool(
+        &self,
+        pool: PgPool,
+        tenant: Option<&str>,
+    ) -> Result<RoutedReadPool, tonic::Status> {
+        let permit = self.connections.acquire_tenant_connection(tenant).await?;
+        Ok(RoutedReadPool {
+            pool,
+            _lease: None,
+            _permit: permit,
+            warning: None,
+        })
     }
 
     pub async fn enforce_read_fence(
@@ -893,9 +1244,7 @@ impl DataBrokerRuntime {
         let fence = serde_json::from_str::<crate::runtime::consistency::ReadFence>(
             &context.read_fence_json,
         )
-        .map_err(|err| {
-            tonic::Status::invalid_argument(format!("invalid read_fence_json: {err}"))
-        })?;
+        .map_err(invalid_read_fence_json_status)?;
         consistency = consistency.with_fence(fence);
         if consistency.fence.is_empty() || !consistency.mode.honours_fence() {
             return Ok(None);
@@ -933,10 +1282,12 @@ impl DataBrokerRuntime {
                         warning = ?warning,
                         "read fence did not clear before max_wait_ms"
                     );
-                    tonic::Status::deadline_exceeded(format!(
-                        "read fence did not clear: {}",
-                        warning.kind_token()
-                    ))
+                    crate::runtime::executor_utils::deadline_exceeded_status(
+                        backend_label,
+                        format!("read_fence_{}", warning.kind_token()),
+                        crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
+                        format!("read fence did not clear: {}", warning.kind_token()),
+                    )
                 };
                 match consistency.mode {
                     ConsistencyMode::Strong | ConsistencyMode::ReadYourWrites => {
@@ -949,9 +1300,9 @@ impl DataBrokerRuntime {
                             Ok(Some(warning))
                         }
                     }
-                    ConsistencyMode::Eventual | ConsistencyMode::BoundedStaleness => {
-                        Ok(Some(warning))
-                    }
+                    ConsistencyMode::Eventual
+                    | ConsistencyMode::BoundedStaleness
+                    | ConsistencyMode::ReplicaBounded => Ok(Some(warning)),
                     // Unreachable: CacheOk was already filtered by
                     // `!honours_fence()` above. Returned as cleared defensively.
                     ConsistencyMode::CacheOk => Ok(None),
@@ -1056,9 +1407,12 @@ impl DataBrokerRuntime {
     ) -> Result<&redis::Client, tonic::Status> {
         if let Some(instance) = instance.filter(|value| !value.trim().is_empty()) {
             if !self.circuit_breaker_allows("redis", Some(instance)) {
-                return Err(tonic::Status::unavailable(format!(
-                    "redis instance '{instance}' circuit breaker is open"
-                )));
+                return Err(crate::runtime::executor_utils::retryable_status(
+                    "redis",
+                    "circuit_breaker_open",
+                    crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
+                    format!("redis instance '{instance}' circuit breaker is open"),
+                ));
             }
             return self
                 .redis_instances
@@ -1071,16 +1425,24 @@ impl DataBrokerRuntime {
                     }
                 })
                 .ok_or_else(|| {
-                    tonic::Status::failed_precondition(format!(
-                        "redis instance '{instance}' is not connected"
-                    ))
+                    backend_instance_not_connected_status(
+                        "redis",
+                        format!("redis instance '{instance}' is not connected"),
+                    )
                 });
         }
         self.choose_instance_name("redis", false)
             .and_then(|name| self.redis_instances.get(name))
             .or(self.redis.as_ref())
             .or_else(|| self.redis_instances.values().next())
-            .ok_or_else(|| tonic::Status::failed_precondition("redis not configured"))
+            .ok_or_else(|| {
+                backend_not_configured_status(
+                    "redis",
+                    "instance_resolver",
+                    "redis_backend",
+                    "redis not configured",
+                )
+            })
     }
 
     impl_instance_resolver! {
@@ -1096,7 +1458,12 @@ impl DataBrokerRuntime {
         choose = ["qdrant"],
         cb_label = "qdrant",
         not_connected_label = "qdrant",
-        not_configured = unavailable("Qdrant backend is not configured"),
+        not_configured = backend_not_configured_status(
+            "qdrant",
+            "instance_resolver",
+            "qdrant_backend",
+            "Qdrant backend is not configured",
+        ),
     }
 
     impl_instance_resolver! {
@@ -1112,7 +1479,12 @@ impl DataBrokerRuntime {
         choose = ["minio", "s3"],
         cb_label = "s3/minio",
         not_connected_label = "s3/minio",
-        not_configured = failed_precondition("s3/minio not configured"),
+        not_configured = backend_not_configured_status(
+            "s3",
+            "instance_resolver",
+            "s3_backend",
+            "s3/minio not configured"
+        ),
     }
 
     impl_instance_resolver! {
@@ -1128,7 +1500,12 @@ impl DataBrokerRuntime {
         choose = ["mongodb"],
         cb_label = "mongodb",
         not_connected_label = "mongodb",
-        not_configured = failed_precondition("mongodb not configured"),
+        not_configured = backend_not_configured_status(
+            "mongodb",
+            "instance_resolver",
+            "mongodb_backend",
+            "mongodb not configured"
+        ),
     }
 
     impl_instance_resolver! {
@@ -1144,7 +1521,12 @@ impl DataBrokerRuntime {
         choose = ["neo4j"],
         cb_label = "neo4j",
         not_connected_label = "neo4j",
-        not_configured = failed_precondition("neo4j not configured"),
+        not_configured = backend_not_configured_status(
+            "neo4j",
+            "instance_resolver",
+            "neo4j_backend",
+            "neo4j not configured"
+        ),
     }
 
     impl_instance_resolver! {
@@ -1160,7 +1542,12 @@ impl DataBrokerRuntime {
         choose = ["clickhouse"],
         cb_label = "clickhouse",
         not_connected_label = "clickhouse",
-        not_configured = failed_precondition("clickhouse not configured"),
+        not_configured = backend_not_configured_status(
+            "clickhouse",
+            "instance_resolver",
+            "clickhouse_backend",
+            "clickhouse not configured"
+        ),
     }
 
     #[cfg(feature = "redis")]
@@ -1230,14 +1617,12 @@ impl DataBrokerRuntime {
             crate::runtime::project_backend_router::ProjectAccessDecision::Allowed => Ok(()),
             crate::runtime::project_backend_router::ProjectAccessDecision::NotProvisioned {
                 reason,
-            } => Err(tonic::Status::not_found(format!(
-                "backend instance '{}:{}' is not configured for project '{}': {}",
-                instance.backend,
-                instance.name,
-                normalized_project_id(project_id)
-                    .unwrap_or(crate::runtime::catalog::DEFAULT_PROJECT_ID),
-                reason
-            ))),
+            } => Err(backend_instance_project_not_configured_status(
+                &instance.backend,
+                &instance.name,
+                project_id,
+                reason,
+            )),
         }
     }
 
@@ -1265,14 +1650,9 @@ impl DataBrokerRuntime {
             crate::runtime::project_backend_router::ProjectAccessDecision::Allowed => Ok(()),
             crate::runtime::project_backend_router::ProjectAccessDecision::NotProvisioned {
                 reason,
-            } => Err(tonic::Status::not_found(format!(
-                "backend instance '{}:{}' is not configured for project '{}': {}",
-                backend,
-                instance,
-                normalized_project_id(project_id)
-                    .unwrap_or(crate::runtime::catalog::DEFAULT_PROJECT_ID),
-                reason
-            ))),
+            } => Err(backend_instance_project_not_configured_status(
+                backend, instance, project_id, reason,
+            )),
         }
     }
 
@@ -1314,12 +1694,45 @@ impl DataBrokerRuntime {
     }
 }
 
+/// RAII guard returned by [`DataBrokerRuntime::pg_read_pool_routed`]: the
+/// selected read pool plus the drop guards that must outlive the borrowed
+/// connection — the per-tenant DB-connection budget permit (when the tenant is
+/// budgeted) and, for a read served from a `ConnectionManager`-registered
+/// instance pool, the lease-accounting handle. Dropping the guard releases the
+/// tenant's budget slot (and the lease count).
+#[derive(Debug)]
+pub struct RoutedReadPool {
+    pool: PgPool,
+    _lease: Option<crate::runtime::connection_manager::TenantPgLease>,
+    _permit: Option<crate::runtime::connection_manager::TenantConnectionPermit>,
+    /// 6.4 REPLICA_BOUNDED: set when a bounded replica read FAILED OVER to the
+    /// primary because the replica couldn't be proven fresh within the
+    /// staleness budget (no eligible replica, or its real WAL replay position
+    /// didn't reach the fence LSN in time). The caller attaches it to the
+    /// response so a failed-over read is never returned silently.
+    warning: Option<crate::runtime::consistency::StaleReadWarning>,
+}
+
+impl RoutedReadPool {
+    /// The pool to run the read against.
+    pub fn pool(&self) -> PgPool {
+        self.pool.clone()
+    }
+
+    /// The stale/failover warning to attach to the response, if the bounded
+    /// read failed over to the primary. `None` for a normal (replica or
+    /// primary) routing decision.
+    pub fn warning(&self) -> Option<&crate::runtime::consistency::StaleReadWarning> {
+        self.warning.as_ref()
+    }
+}
+
 fn normalized_project_id(project_id: &str) -> Option<&str> {
     let project_id = project_id.trim();
     (!project_id.is_empty()).then_some(project_id)
 }
 
-fn read_fence_requires_primary(context: &RequestContext) -> bool {
+pub(crate) fn read_fence_requires_primary(context: &RequestContext) -> bool {
     if context.read_fence_json.trim().is_empty() {
         return false;
     }
@@ -1331,4 +1744,287 @@ fn read_fence_requires_primary(context: &RequestContext) -> bool {
             .as_str(),
         "cache_ok"
     )
+}
+
+#[cfg(test)]
+mod read_fence_tests {
+    use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::consistency::ReadFence;
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
+
+    fn decode_detail(status: &tonic::Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed error detail trailer");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_single_field_violation(status: &tonic::Status, field: &str, description: &str) {
+        assert_eq!(status.code(), tonic::Code::InvalidArgument);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert!(!detail.retryable);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, field);
+        assert_eq!(detail.field_violations[0].description, description);
+    }
+
+    fn assert_capability_detail(
+        status: &tonic::Status,
+        backend: &str,
+        operation: &str,
+        capability_required: &str,
+        message: &str,
+    ) {
+        assert_eq!(status.code(), tonic::Code::FailedPrecondition);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Capability as i32);
+        assert_eq!(detail.backend, backend);
+        assert_eq!(detail.operation, operation);
+        assert_eq!(detail.capability_required, capability_required);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+    }
+
+    fn assert_policy_detail(
+        status: &tonic::Status,
+        operation: &str,
+        policy_decision_id: &str,
+        message: &str,
+    ) {
+        assert_eq!(status.code(), tonic::Code::FailedPrecondition);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Policy as i32);
+        assert_eq!(detail.operation, operation);
+        assert_eq!(detail.policy_decision_id, policy_decision_id);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+    }
+
+    #[test]
+    fn backend_selector_validation_carries_field_violations() {
+        let runtime = DataBrokerRuntime::planning_only();
+
+        let selector_status = runtime
+            .resolve_backend_selector("bogus:primary")
+            .expect_err("unknown backend must fail");
+        assert_eq!(selector_status.message(), "unknown backend 'bogus:primary'");
+        assert_single_field_violation(&selector_status, "backend", "must name a supported backend");
+
+        let targets_status = runtime
+            .resolve_backend_targets("bogus:*", "{}")
+            .expect_err("unknown target backend must fail");
+        assert_eq!(targets_status.message(), "unknown backend 'bogus:*'");
+        assert_single_field_violation(&targets_status, "backend", "must name a supported backend");
+    }
+
+    #[test]
+    fn backend_resolver_missing_setup_carries_capability_detail() {
+        let runtime = DataBrokerRuntime::planning_only();
+
+        let pg_status = match runtime.pg_pool_for_instance(None) {
+            Err(status) => status,
+            Ok(_) => panic!("storeless runtime must report missing Postgres setup"),
+        };
+        assert_capability_detail(
+            &pg_status,
+            "postgres",
+            "pool_lookup",
+            "postgres_backend",
+            "PostgreSQL is not configured",
+        );
+
+        let routed_pg_status = postgres_backend_not_configured_status("primary_read");
+        assert_capability_detail(
+            &routed_pg_status,
+            "postgres",
+            "primary_read",
+            "postgres_backend",
+            "PostgreSQL backend is not configured",
+        );
+
+        let redis_status = backend_not_configured_status(
+            "redis",
+            "instance_resolver",
+            "redis_backend",
+            "redis not configured",
+        );
+        assert_capability_detail(
+            &redis_status,
+            "redis",
+            "instance_resolver",
+            "redis_backend",
+            "redis not configured",
+        );
+    }
+
+    #[test]
+    fn backend_resolver_connectivity_denials_carry_capability_detail() {
+        let runtime = DataBrokerRuntime::planning_only();
+
+        let pg_instance_status = runtime
+            .pg_pool_for_instance(Some("replica-a"))
+            .expect_err("missing named Postgres instance must fail");
+        assert_capability_detail(
+            &pg_instance_status,
+            "postgres",
+            "instance_resolver",
+            "backend_instance_connected",
+            "postgres instance 'replica-a' is not connected",
+        );
+
+        let disabled_status = backend_instance_disabled_status(
+            "postgres",
+            "backend instance 'postgres:replica-a' is disabled",
+        );
+        assert_capability_detail(
+            &disabled_status,
+            "postgres",
+            "instance_resolver",
+            "backend_instance_enabled",
+            "backend instance 'postgres:replica-a' is disabled",
+        );
+
+        let unregistered_status = backend_executor_not_registered_status(
+            "qdrant",
+            "backend executor 'qdrant:default' is not registered",
+        );
+        assert_capability_detail(
+            &unregistered_status,
+            "qdrant",
+            "executor_registry",
+            "backend_executor_registered",
+            "backend executor 'qdrant:default' is not registered",
+        );
+
+        let disconnected_status = backend_executor_not_connected_status(
+            "qdrant",
+            "backend executor 'qdrant:default' is registered but not connected",
+        );
+        assert_capability_detail(
+            &disconnected_status,
+            "qdrant",
+            "executor_registry",
+            "backend_executor_connected",
+            "backend executor 'qdrant:default' is registered but not connected",
+        );
+    }
+
+    #[test]
+    fn bounded_read_refusal_carries_policy_detail_in_sync_selector() {
+        let runtime = DataBrokerRuntime::planning_only();
+        let context = RequestContext {
+            target_backend: "s3".to_string(),
+            consistency: "bounded_staleness".to_string(),
+            max_replica_lag_ms: 50,
+            ..RequestContext::default()
+        };
+
+        let status = runtime
+            .pg_read_pool_for_context_checked(&context)
+            .expect_err("wall-clock backend must refuse bounded-staleness reads");
+
+        assert_policy_detail(
+            &status,
+            "read_consistency",
+            "bounded_staleness_requires_real_position",
+            "bounded-staleness read refused for backend 's3': backend mints no real replication-position token; a bounded-staleness fence on it would be a vacuous wall-clock fence",
+        );
+    }
+
+    #[tokio::test]
+    async fn bounded_read_refusal_carries_policy_detail_in_async_selector() {
+        let runtime = DataBrokerRuntime::planning_only();
+        let context = RequestContext {
+            target_backend: "s3".to_string(),
+            consistency: "bounded-staleness".to_string(),
+            max_replica_lag_ms: 50,
+            ..RequestContext::default()
+        };
+
+        let status = runtime
+            .pg_read_pool_routed(&context, false)
+            .await
+            .expect_err("wall-clock backend must refuse bounded-staleness reads");
+
+        assert_policy_detail(
+            &status,
+            "read_consistency",
+            "bounded_staleness_requires_real_position",
+            "bounded-staleness read refused for backend 's3': backend mints no real replication-position token; a bounded-staleness fence on it would be a vacuous wall-clock fence",
+        );
+    }
+
+    #[cfg(feature = "s3")]
+    #[test]
+    fn s3_resolver_missing_backend_carries_capability_detail() {
+        let runtime = DataBrokerRuntime::planning_only();
+        let status = match runtime.s3_for_instance_for_project(None, "") {
+            Err(status) => status,
+            Ok(_) => panic!("storeless runtime must report missing S3 setup"),
+        };
+
+        assert_capability_detail(
+            &status,
+            "s3",
+            "instance_resolver",
+            "s3_backend",
+            "s3/minio not configured",
+        );
+    }
+
+    #[tokio::test]
+    async fn storeless_runtime_treats_non_empty_read_fence_as_cleared() {
+        let runtime = DataBrokerRuntime::planning_only();
+        let fence = ReadFence {
+            min_outbox_lsn: "0/16B6C50".to_string(),
+            projection_task_ids: vec!["projection-task-1".to_string()],
+            max_wait_ms: 1,
+        };
+        let context = RequestContext {
+            read_fence_json: serde_json::to_string(&fence).expect("serialize fence"),
+            consistency: "read_your_writes".to_string(),
+            ..RequestContext::default()
+        };
+
+        let warning = runtime
+            .enforce_read_fence(&context, "postgres", "default")
+            .await
+            .expect("storeless runtime must not hard-fail a read fence");
+
+        assert!(
+            warning.is_none(),
+            "without a registered system store, a non-empty fence is deliberately treated as cleared"
+        );
+    }
+
+    #[tokio::test]
+    async fn malformed_read_fence_json_carries_field_violation() {
+        let runtime = DataBrokerRuntime::planning_only();
+        let context = RequestContext {
+            read_fence_json: "{".to_string(),
+            ..RequestContext::default()
+        };
+
+        let status = runtime
+            .enforce_read_fence(&context, "postgres", "default")
+            .await
+            .expect_err("malformed fence json must fail before store access");
+
+        assert!(
+            status.message().starts_with("invalid read_fence_json:"),
+            "unexpected message: {}",
+            status.message()
+        );
+        assert_single_field_violation(
+            &status,
+            "read_fence_json",
+            "must decode as a ReadFence JSON payload",
+        );
+    }
 }

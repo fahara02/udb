@@ -22,7 +22,7 @@ use std::process::Command as ProcessCommand;
 use serde::{Deserialize, Serialize};
 
 use udb::runtime::descriptor_manifest::{
-    DescriptorContractManifest, NativeServiceContract, descriptor_contract_manifest,
+    DescriptorContractManifest, NativeServiceContract, descriptor_contract_manifest_static,
 };
 use udb::runtime::service::native_registry::native_service_registry;
 
@@ -696,9 +696,9 @@ pub(crate) fn run_generate(out_dir: &str, lang: Option<&str>, framework: &str) -
         framework.to_string()
     };
 
-    let manifest = descriptor_contract_manifest();
+    let manifest = descriptor_contract_manifest_static();
     let files = build_generated_files(
-        &manifest,
+        manifest,
         &existing.services,
         &effective_lang,
         &effective_framework,
@@ -796,8 +796,8 @@ pub(crate) fn run_doctor(out_dir: &str) -> i32 {
     }
 
     // Expected env vars present.
-    let manifest = descriptor_contract_manifest();
-    let env_vars = env_vars_for(&manifest, &existing.services);
+    let manifest = descriptor_contract_manifest_static();
+    let env_vars = env_vars_for(manifest, &existing.services);
     let mut missing = Vec::new();
     for (key, _) in &env_vars {
         if std::env::var(key).map(|v| v.is_empty()).unwrap_or(true) {
@@ -1043,8 +1043,8 @@ pub(crate) fn run_app_init(args: AppInitArgs) -> i32 {
     );
 
     // 2. Emit config/env/client-factory/smoke via the shared generator.
-    let manifest = descriptor_contract_manifest();
-    let files = build_generated_files(&manifest, &expanded, &args.lang, &args.framework);
+    let manifest = descriptor_contract_manifest_static();
+    let files = build_generated_files(manifest, &expanded, &args.lang, &args.framework);
     if let Err(err) = write_generated(&args.out_dir, &files) {
         eprintln!("app init: {err}");
         return 1;
@@ -1172,17 +1172,17 @@ mod tests {
 
     #[test]
     fn surface_classification_prefers_peer_then_control_plane() {
-        let manifest = descriptor_contract_manifest();
+        let manifest = descriptor_contract_manifest_static();
         // storage is a control-plane native service in the shipped descriptors.
-        if let Some(storage) = native_for_id(&manifest, "storage") {
+        if let Some(storage) = native_for_id(manifest, "storage") {
             assert_eq!(surface_of(storage), Surface::ControlPlane);
         }
     }
 
     #[test]
     fn env_vars_include_endpoint_and_native_enablement() {
-        let manifest = descriptor_contract_manifest();
-        let vars = env_vars_for(&manifest, &["authn".to_string()]);
+        let manifest = descriptor_contract_manifest_static();
+        let vars = env_vars_for(manifest, &["authn".to_string()]);
         assert!(vars.iter().any(|(k, _)| k == "UDB_ENDPOINT"));
         assert!(vars.iter().any(|(k, _)| k == "UDB_NATIVE_SERVICES_ENABLED"));
         assert!(vars.iter().any(|(k, _)| k == "UDB_NATIVE_AUTHN_ENABLED"));
@@ -1190,8 +1190,8 @@ mod tests {
 
     #[test]
     fn generated_files_carry_config_env_factory_and_smoke() {
-        let manifest = descriptor_contract_manifest();
-        let files = build_generated_files(&manifest, &["authn".to_string()], "typescript", "");
+        let manifest = descriptor_contract_manifest_static();
+        let files = build_generated_files(manifest, &["authn".to_string()], "typescript", "");
         let rels: Vec<&str> = files.iter().map(|f| f.rel).collect();
         assert!(rels.contains(&"udb.config.json"));
         assert!(rels.contains(&".env.example"));

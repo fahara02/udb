@@ -1,0 +1,102 @@
+syntax = "proto3";
+
+package udb.core.webhook.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+import "udb/core/common/v1/types.proto";
+
+option csharp_namespace = "udb.core.Webhook.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/webhook/entity/v1;webhookv1";
+option java_package = "com.udb.core.webhook.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Webhook\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Webhook\\Entity\\V1";
+
+// ---------------------------------------------------------------------------
+// WebhookDelivery — the durable, tenant-scoped delivery journal (master-plan
+// 9.4). One row per delivery attempt-run of one event to one endpoint: it
+// records the outcome (PENDING | DELIVERED | FAILED | DEAD), the attempt count,
+// the last HTTP response status / error, and the `X-Udb-Signature` that was
+// sent, so an operator can audit exactly what was delivered where and why a
+// delivery dead-lettered. RLS scopes rows to the current tenant.
+// ---------------------------------------------------------------------------
+message WebhookDelivery {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "webhook_deliveries"
+    schema_name: "udb_webhook"
+    migration_order: 2
+    is_table: true
+    comment: "Durable webhook delivery journal (master-plan 9.4)"
+    soft_delete: false
+    audit_fields: true
+    enable_rls: true
+    force_rls: true
+    rls_policies: {
+      policy_name: "webhook_delivery_tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true) OR current_setting('app.platform_admin', true) = 'true')"
+      permissive: true
+    }
+    indexes: {
+      index_name: "idx_webhook_deliveries_tenant"
+      index_type: "BTREE"
+      columns: "tenant_id"
+    }
+    indexes: {
+      index_name: "idx_webhook_deliveries_endpoint"
+      index_type: "BTREE"
+      columns: "tenant_id"
+      columns: "endpoint_id"
+    }
+    cdc_topic: "udb.webhook.webhook_deliveries.cdc"
+    required_scope: "webhook:read"
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "none"
+    retention_class: "webhook.audit"
+    retention_days: 2555
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
+
+  string delivery_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "delivery_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "UUID" not_null: true }];
+
+  string endpoint_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "endpoint_id" sql_type: "UUID" not_null: true }];
+
+  // The source event id (outbox event_id) this delivery carried; lets a consumer
+  // de-duplicate at-least-once redeliveries.
+  string event_id = 4 [(udb.core.common.v1.pg_column) = { column_name: "event_id" sql_type: "VARCHAR(128)" not_null: true }];
+
+  // The topic the delivered event arrived on.
+  string topic = 5 [(udb.core.common.v1.pg_column) = { column_name: "topic" sql_type: "VARCHAR(255)" not_null: true }];
+
+  // PENDING | DELIVERED | FAILED | DEAD.
+  string status = 6 [(udb.core.common.v1.pg_column) = { column_name: "status" sql_type: "VARCHAR(20)" not_null: true default_value: "'PENDING'" index: { index_name: "idx_webhook_deliveries_status" index_type: "BTREE" } }];
+
+  int32 attempt_count = 7 [(udb.core.common.v1.pg_column) = { column_name: "attempt_count" sql_type: "INTEGER" not_null: true default_value: "0" }];
+
+  // The last HTTP response status code observed (0 when the request never
+  // completed, e.g. a connection/SSRF-guard failure).
+  int32 response_status = 8 [(udb.core.common.v1.pg_column) = { column_name: "response_status" sql_type: "INTEGER" not_null: true default_value: "0" }];
+
+  // The `X-Udb-Signature` header value sent with the (last) attempt.
+  string signature = 9 [(udb.core.common.v1.pg_column) = { column_name: "signature" sql_type: "VARCHAR(160)" }];
+
+  // The last failure reason (empty on success).
+  string last_error = 10 [(udb.core.common.v1.pg_column) = { column_name: "last_error" sql_type: "TEXT" }];
+
+  // The delivered event body (the exact bytes the signature was computed over).
+  string payload_json = 11 [(udb.core.common.v1.pg_column) = { column_name: "payload_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'{}'::jsonb" comment: "Delivered event body" }];
+
+  google.protobuf.Timestamp delivered_at = 12 [(udb.core.common.v1.pg_column) = { column_name: "delivered_at" sql_type: "TIMESTAMPTZ" comment: "When the delivery reached a terminal outcome" }];
+
+  udb.core.common.v1.AuditInfo audit_info = 13 [(udb.core.common.v1.pg_column) = { column_name: "audit_info" sql_type: "JSONB" not_null: true default_value: "'{}'::jsonb" is_json: true comment: "Audit trail stored as JSON" }];
+}

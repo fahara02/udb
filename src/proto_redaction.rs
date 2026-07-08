@@ -8,8 +8,8 @@
 //! STRUCTURALLY — generated from the contract, not hand-maintained in each mapper
 //! and not merely test-enforced.
 //!
-//! The generated set is the same `OUTPUT_VIEW_STORAGE_ONLY` set the descriptor
-//! no-leak gate (`descriptor_manifest::tests::storage_only_fields_match_no_leak_coverage_set`)
-//! verifies, so codegen and gate cannot disagree.
+//! The generated coverage map is checked against the descriptor-derived
+//! `OUTPUT_VIEW_STORAGE_ONLY` set, so codegen and the no-leak gate cannot
+//! disagree.
 
 include!(concat!(env!("OUT_DIR"), "/dto_redaction.rs"));

@@ -7,7 +7,44 @@
 
 use super::*;
 use crate::runtime::native_catalog::{NativeModel, native_model};
+use crate::runtime::service::native_helpers::{
+    native_next_page_token_for_total, native_offset_page_window,
+};
 use sqlx::Row;
+
+fn lifecycle_invalid_fields<I, F, D>(message: impl Into<String>, fields: I) -> Status
+where
+    I: IntoIterator<Item = (F, D)>,
+    F: Into<String>,
+    D: Into<String>,
+{
+    crate::runtime::executor_utils::invalid_argument_fields(message, fields)
+}
+
+fn lifecycle_policy_status_with_code(
+    operation: impl Into<String>,
+    policy_decision_id: impl Into<String>,
+    message: impl Into<String>,
+) -> Status {
+    crate::runtime::executor_utils::policy_status_with_code(
+        tonic::Code::PermissionDenied,
+        operation,
+        policy_decision_id,
+        message,
+    )
+}
+
+fn lifecycle_internal_status(operation: impl Into<String>, message: impl Into<String>) -> Status {
+    crate::runtime::executor_utils::internal_status("authn", operation, message)
+}
+
+fn revoke_device_tenant_scope_required_status() -> Status {
+    lifecycle_policy_status_with_code(
+        "revoke_device",
+        "tenant_scoped_bearer_required",
+        "device revoke requires a tenant-scoped bearer token or a cross-tenant admin role",
+    )
+}
 
 fn device_model() -> NativeModel {
     native_model(
@@ -107,7 +144,11 @@ pub(super) fn mask_ip(raw: &str) -> String {
 impl AuthnServiceImpl {
     pub(super) fn require_pool(&self) -> Result<&PgPool, Status> {
         self.pg_pool.as_ref().ok_or_else(|| {
-            Status::failed_precondition("this operation requires the native Postgres auth store")
+            authn_capability_status(
+                "postgres_auth_store",
+                "native_postgres_auth_store",
+                "this operation requires the native Postgres auth store",
+            )
         })
     }
 
@@ -143,8 +184,10 @@ impl AuthnServiceImpl {
             .users
             .get_user_by_id(user_id)
             .await
-            .map_err(Status::internal)?
-            .ok_or_else(|| Status::not_found("user not found"))?;
+            .map_err(|err| {
+                lifecycle_internal_status("authorize_target_user_load", err.to_string())
+            })?
+            .ok_or_else(super::authn_user_not_found_status)?;
         crate::runtime::service::method_security::enforce_body_tenant_matches_claim(
             &ctx,
             &target.tenant_id,
@@ -240,10 +283,12 @@ impl AuthnServiceImpl {
         // Atomicity (§7): the revocation insert and its audit/outbox event land in
         // ONE transaction — either both commit or neither does. A failed audit
         // write aborts the revocation rather than leaving it without its event.
-        let mut tx = pool
-            .begin()
-            .await
-            .map_err(|err| Status::internal(format!("token revocation tx begin failed: {err}")))?;
+        let mut tx = pool.begin().await.map_err(|err| {
+            lifecycle_internal_status(
+                "token_revocation_tx_begin",
+                format!("token revocation tx begin failed: {err}"),
+            )
+        })?;
         sqlx::query(&sql)
             .bind(&jti_hash)
             .bind(token_type)
@@ -253,11 +298,19 @@ impl AuthnServiceImpl {
             .bind(reason)
             .execute(&mut *tx)
             .await
-            .map_err(|err| Status::internal(format!("token revocation insert failed: {err}")))?;
+            .map_err(|err| {
+                lifecycle_internal_status(
+                    "token_revocation_insert",
+                    format!("token revocation insert failed: {err}"),
+                )
+            })?;
         self.emit_event_in_tx(&mut *tx, event).await?;
-        tx.commit()
-            .await
-            .map_err(|err| Status::internal(format!("token revocation commit failed: {err}")))?;
+        tx.commit().await.map_err(|err| {
+            lifecycle_internal_status(
+                "token_revocation_commit",
+                format!("token revocation commit failed: {err}"),
+            )
+        })?;
         // Populate the fast cluster denylist AFTER the durable row commits, so
         // every node can reject this jti immediately (before its DB read). Best-
         // effort: a Redis failure never fails the revoke (the DB row stands).
@@ -284,7 +337,25 @@ impl AuthnServiceImpl {
     /// fail-open+warn behavior is kept (a denylist error falls through to the DB
     /// read). The happy path (found revoked / not revoked) is unchanged. A
     /// missing pool (no deny list wired at all) still returns `(false, _)`.
-    pub(super) async fn is_token_revoked(&self, jti: &str) -> (bool, String) {
+    ///
+    /// Cluster-wide token kill 3.3 — TENANT-level half: alongside the per-jti
+    /// denylist this also consults the tenant denylist (`tenant_denied_after`).
+    /// When the token's `tenant_id` has a recorded kill cutoff and the token's
+    /// `iat` is at/before that cutoff, the token is revoked. `tenant_id` and `iat`
+    /// MUST come from the VALIDATED claim, never a request body. `iat == 0` (issue
+    /// time unknown) or an empty `tenant_id` skips the tenant comparison so a
+    /// tenant kill never spuriously denies a token whose age we can't establish —
+    /// the per-jti and durable layers still apply. Both fast-path consultations
+    /// (jti, then tenant) run BEFORE the durable `token_revocations` read; a miss
+    /// or (in dev) a Redis outage falls through to that durable PG read
+    /// (availability-first — Postgres stays authoritative).
+    pub(super) async fn is_token_revoked(
+        &self,
+        jti: &str,
+        tenant_id: &str,
+        principal_id: &str,
+        iat: u64,
+    ) -> (bool, String) {
         if jti.trim().is_empty() {
             return (false, String::new());
         }
@@ -293,8 +364,9 @@ impl AuthnServiceImpl {
         // ── Fast path: consult the cluster denylist first ──────────────────
         #[cfg(feature = "redis")]
         if let Some(denylist) = self.jti_denylist.as_ref() {
-            let decision = denylist.check(&jti_hash).await;
             let fail_closed = crate::runtime::security::fail_closed_mode();
+            // (a) Per-jti denylist.
+            let decision = denylist.check(&jti_hash).await;
             if matches!(
                 decision,
                 crate::runtime::authn::revocation::DenylistDecision::Error
@@ -314,10 +386,75 @@ impl AuthnServiceImpl {
                 crate::runtime::authn::revocation::denylist_check_outcome(decision, fail_closed)
             {
                 // Denylist alone decided: a hit (revoked), or an error under
-                // fail-closed. A miss / dev-mode error returns None → DB read.
+                // fail-closed. A miss / dev-mode error returns None → fall through.
                 return outcome;
             }
+            // (b) Tenant-level denylist. Skipped when the tenant or issue time is
+            // unknown (iat == 0) so a tenant kill only acts on a token whose age
+            // can actually be compared to the cutoff.
+            if !tenant_id.trim().is_empty() && iat > 0 {
+                let tenant_decision = denylist.tenant_denied_after(tenant_id).await;
+                if matches!(
+                    tenant_decision,
+                    crate::runtime::authn::revocation::TenantDenylistDecision::Error
+                ) {
+                    self.metrics.inc_revocation_lookup_failure();
+                    if fail_closed {
+                        tracing::error!(
+                            "tenant denylist lookup failed; failing closed (treating token as revoked)"
+                        );
+                    } else {
+                        tracing::warn!(
+                            "tenant denylist lookup failed; falling through to durable DB read"
+                        );
+                    }
+                }
+                if let Some(outcome) =
+                    crate::runtime::authn::revocation::tenant_denylist_check_outcome(
+                        tenant_decision,
+                        iat,
+                        fail_closed,
+                    )
+                {
+                    // Tenant denylist alone decided: a cutoff >= iat (revoked), or
+                    // an error under fail-closed. A miss, a strictly-newer token,
+                    // or a dev-mode error returns None → durable DB read.
+                    return outcome;
+                }
+            }
+            // (c) Principal-level denylist (account hard-delete). Same cutoff-vs-iat
+            // semantics as the tenant kill — reuses `tenant_denylist_check_outcome`.
+            // Skipped when the principal or issue time is unknown.
+            if !principal_id.trim().is_empty() && iat > 0 {
+                let principal_decision = denylist.principal_denied_after(principal_id).await;
+                if matches!(
+                    principal_decision,
+                    crate::runtime::authn::revocation::TenantDenylistDecision::Error
+                ) {
+                    self.metrics.inc_revocation_lookup_failure();
+                    if fail_closed {
+                        tracing::error!(
+                            "principal denylist lookup failed; failing closed (treating token as revoked)"
+                        );
+                    } else {
+                        tracing::warn!(
+                            "principal denylist lookup failed; falling through to durable DB read"
+                        );
+                    }
+                }
+                if let Some(outcome) =
+                    crate::runtime::authn::revocation::tenant_denylist_check_outcome(
+                        principal_decision,
+                        iat,
+                        fail_closed,
+                    )
+                {
+                    return outcome;
+                }
+            }
         }
+        #[cfg(not(feature = "redis"))]
+        let _ = (tenant_id, principal_id, iat);
         // ── Source of truth: durable `token_revocations` read ──────────────
         let Some(pool) = self.pg_pool.as_ref() else {
             return (false, String::new());
@@ -441,7 +578,10 @@ impl AuthnServiceImpl {
     ) -> Result<Response<authn_pb::ListDevicesResponse>, Status> {
         let req = request.into_inner();
         if req.user_id.trim().is_empty() {
-            return Err(Status::invalid_argument("user_id is required"));
+            return Err(lifecycle_invalid_fields(
+                "user_id is required",
+                [("user_id", "must be a non-empty user id")],
+            ));
         }
         // D3: bind the target user to the validated bearer claim — a tenant-A token
         // cannot enumerate a tenant-B user's devices by passing that user's id.
@@ -479,7 +619,12 @@ impl AuthnServiceImpl {
             .bind(limit as i64)
             .fetch_all(pool)
             .await
-            .map_err(|err| Status::internal(format!("list devices failed: {err}")))?;
+            .map_err(|err| {
+                lifecycle_internal_status(
+                    "list_devices_query",
+                    format!("list devices failed: {err}"),
+                )
+            })?;
         let devices = rows
             .iter()
             .map(|row| authn_entity_pb::Device {
@@ -535,9 +680,7 @@ impl AuthnServiceImpl {
         let cross_tenant_admin = !context_present || claim_ctx.is_cross_tenant_admin();
         let claim_tenant = claim_ctx.tenant_id.trim().to_string();
         if context_present && !cross_tenant_admin && claim_tenant.is_empty() {
-            return Err(Status::permission_denied(
-                "device revoke requires a tenant-scoped bearer token or a cross-tenant admin role",
-            ));
+            return Err(revoke_device_tenant_scope_required_status());
         }
         let pool = self.require_pool()?;
         let m = device_model();
@@ -582,10 +725,12 @@ impl AuthnServiceImpl {
             id = m.q("device_id"),
             tenant = m.q("tenant_id"),
         );
-        let mut tx = pool
-            .begin()
-            .await
-            .map_err(|err| Status::internal(format!("revoke device tx begin failed: {err}")))?;
+        let mut tx = pool.begin().await.map_err(|err| {
+            lifecycle_internal_status(
+                "revoke_device_tx_begin",
+                format!("revoke device tx begin failed: {err}"),
+            )
+        })?;
         let row = sqlx::query(&sql)
             .bind(&req.device_id)
             .bind(&actor)
@@ -593,9 +738,14 @@ impl AuthnServiceImpl {
             .bind(cross_tenant_admin)
             .fetch_optional(&mut *tx)
             .await
-            .map_err(|err| Status::internal(format!("revoke device failed: {err}")))?;
+            .map_err(|err| {
+                lifecycle_internal_status(
+                    "revoke_device_update",
+                    format!("revoke device failed: {err}"),
+                )
+            })?;
         let Some(row) = row else {
-            return Err(Status::not_found("device not found or already revoked"));
+            return Err(super::authn_device_not_found_status());
         };
         let tenant_id: String = row.try_get("tenant_id").unwrap_or_default();
         let families = self
@@ -641,9 +791,12 @@ impl AuthnServiceImpl {
             }),
         )
         .await?;
-        tx.commit()
-            .await
-            .map_err(|err| Status::internal(format!("revoke device commit failed: {err}")))?;
+        tx.commit().await.map_err(|err| {
+            lifecycle_internal_status(
+                "revoke_device_commit",
+                format!("revoke device commit failed: {err}"),
+            )
+        })?;
         self.metrics
             .observe_revocation_propagation_seconds(propagation_started.elapsed().as_secs_f64());
         Ok(Response::new(authn_pb::RevokeDeviceResponse {
@@ -675,7 +828,12 @@ impl AuthnServiceImpl {
             .bind(reason)
             .execute(executor)
             .await
-            .map_err(|err| Status::internal(format!("revoke device families failed: {err}")))?;
+            .map_err(|err| {
+                lifecycle_internal_status(
+                    "revoke_device_families",
+                    format!("revoke device families failed: {err}"),
+                )
+            })?;
         Ok(res.rows_affected())
     }
 
@@ -687,7 +845,10 @@ impl AuthnServiceImpl {
     ) -> Result<Response<authn_pb::AdminRevokeSessionResponse>, Status> {
         let req = request.into_inner();
         if req.user_id.trim().is_empty() {
-            return Err(Status::invalid_argument("user_id is required"));
+            return Err(lifecycle_invalid_fields(
+                "user_id is required",
+                [("user_id", "must be a non-empty user id")],
+            ));
         }
         let propagation_started = std::time::Instant::now();
         // Revoking by user id revokes the user's sessions (the public session
@@ -701,21 +862,28 @@ impl AuthnServiceImpl {
         );
         // Atomicity (§7): session revoke + family revoke + audit event commit together.
         let pool = self.require_pool()?;
-        let mut tx = pool
-            .begin()
-            .await
-            .map_err(|err| Status::internal(format!("admin revoke tx begin failed: {err}")))?;
+        let mut tx = pool.begin().await.map_err(|err| {
+            lifecycle_internal_status(
+                "admin_revoke_session_tx_begin",
+                format!("admin revoke tx begin failed: {err}"),
+            )
+        })?;
         let count = self
             .sessions
             .revoke_all_for_principal_in_tx(&mut *tx, &req.user_id, now)
             .await
-            .map_err(Status::internal)?;
+            .map_err(|err| {
+                lifecycle_internal_status("admin_revoke_session_store", err.to_string())
+            })?;
         self.revoke_all_user_families_on(&mut *tx, &req.user_id, "admin_revoke")
             .await?;
         self.emit_event_in_tx(&mut *tx, event).await?;
-        tx.commit()
-            .await
-            .map_err(|err| Status::internal(format!("admin revoke commit failed: {err}")))?;
+        tx.commit().await.map_err(|err| {
+            lifecycle_internal_status(
+                "admin_revoke_session_commit",
+                format!("admin revoke commit failed: {err}"),
+            )
+        })?;
         self.metrics
             .observe_revocation_propagation_seconds(propagation_started.elapsed().as_secs_f64());
         Ok(Response::new(authn_pb::AdminRevokeSessionResponse {
@@ -730,7 +898,10 @@ impl AuthnServiceImpl {
     ) -> Result<Response<authn_pb::AdminRevokeAllUserSessionsResponse>, Status> {
         let req = request.into_inner();
         if req.user_id.trim().is_empty() {
-            return Err(Status::invalid_argument("user_id is required"));
+            return Err(lifecycle_invalid_fields(
+                "user_id is required",
+                [("user_id", "must be a non-empty user id")],
+            ));
         }
         let propagation_started = std::time::Instant::now();
         let now = now_unix();
@@ -742,21 +913,28 @@ impl AuthnServiceImpl {
         );
         // Atomicity (§7): session revoke + family revoke + audit event commit together.
         let pool = self.require_pool()?;
-        let mut tx = pool
-            .begin()
-            .await
-            .map_err(|err| Status::internal(format!("admin revoke-all tx begin failed: {err}")))?;
+        let mut tx = pool.begin().await.map_err(|err| {
+            lifecycle_internal_status(
+                "admin_revoke_all_sessions_tx_begin",
+                format!("admin revoke-all tx begin failed: {err}"),
+            )
+        })?;
         let count = self
             .sessions
             .revoke_all_for_principal_in_tx(&mut *tx, &req.user_id, now)
             .await
-            .map_err(Status::internal)?;
+            .map_err(|err| {
+                lifecycle_internal_status("admin_revoke_all_sessions_store", err.to_string())
+            })?;
         self.revoke_all_user_families_on(&mut *tx, &req.user_id, "admin_revoke_all")
             .await?;
         self.emit_event_in_tx(&mut *tx, event).await?;
-        tx.commit()
-            .await
-            .map_err(|err| Status::internal(format!("admin revoke-all commit failed: {err}")))?;
+        tx.commit().await.map_err(|err| {
+            lifecycle_internal_status(
+                "admin_revoke_all_sessions_commit",
+                format!("admin revoke-all commit failed: {err}"),
+            )
+        })?;
         self.metrics
             .observe_revocation_propagation_seconds(propagation_started.elapsed().as_secs_f64());
         Ok(Response::new(
@@ -772,7 +950,10 @@ impl AuthnServiceImpl {
     ) -> Result<Response<authn_pb::AdminRevokeAllTenantSessionsResponse>, Status> {
         let req = request.into_inner();
         if req.tenant_id.trim().is_empty() {
-            return Err(Status::invalid_argument("tenant_id is required"));
+            return Err(lifecycle_invalid_fields(
+                "tenant_id is required",
+                [("tenant_id", "must be a non-empty tenant id")],
+            ));
         }
         let propagation_started = std::time::Instant::now();
         // D3: the bulk tenant revoke targets `req.tenant_id`. Without this guard a
@@ -818,25 +999,57 @@ impl AuthnServiceImpl {
         );
         // Atomicity (§7): both bulk revokes and the audit event commit together —
         // either all land or the transaction rolls back.
-        let mut tx = pool
-            .begin()
-            .await
-            .map_err(|err| Status::internal(format!("revoke tenant tx begin failed: {err}")))?;
+        let mut tx = pool.begin().await.map_err(|err| {
+            lifecycle_internal_status(
+                "revoke_tenant_tx_begin",
+                format!("revoke tenant tx begin failed: {err}"),
+            )
+        })?;
         let sessions = sqlx::query(&session_sql)
             .bind(&req.tenant_id)
             .execute(&mut *tx)
             .await
-            .map_err(|err| Status::internal(format!("revoke tenant sessions failed: {err}")))?
+            .map_err(|err| {
+                lifecycle_internal_status(
+                    "revoke_tenant_sessions",
+                    format!("revoke tenant sessions failed: {err}"),
+                )
+            })?
             .rows_affected();
         sqlx::query(&fam_sql)
             .bind(&req.tenant_id)
             .execute(&mut *tx)
             .await
-            .map_err(|err| Status::internal(format!("revoke tenant families failed: {err}")))?;
+            .map_err(|err| {
+                lifecycle_internal_status(
+                    "revoke_tenant_families",
+                    format!("revoke tenant families failed: {err}"),
+                )
+            })?;
         self.emit_event_in_tx(&mut *tx, event).await?;
-        tx.commit()
-            .await
-            .map_err(|err| Status::internal(format!("revoke tenant commit failed: {err}")))?;
+        tx.commit().await.map_err(|err| {
+            lifecycle_internal_status(
+                "revoke_tenant_commit",
+                format!("revoke tenant commit failed: {err}"),
+            )
+        })?;
+        // Cluster-wide fast-path kill: the durable bulk-revoke above is the source
+        // of truth; publishing the tenant cutoff to the denylist propagates the
+        // kill to every replica's hot-path token check immediately (a token with
+        // `iat <= now` is denied, mirroring the `tenant_denied_after` check in
+        // `is_token_revoked`). Best-effort / availability-first — a denylist error
+        // must NEVER fail the revoke that already durably committed.
+        #[cfg(feature = "redis")]
+        if let Some(denylist) = self.jti_denylist.as_ref() {
+            if let Err(err) = denylist.deny_tenant_after(&req.tenant_id, now_unix()).await {
+                tracing::warn!(
+                    tenant_id = %req.tenant_id,
+                    error = %err,
+                    "tenant denylist cutoff publish failed after durable tenant revoke \
+                     (availability-first; durable revoke already committed)"
+                );
+            }
+        }
         self.metrics
             .observe_revocation_propagation_seconds(propagation_started.elapsed().as_secs_f64());
         Ok(Response::new(
@@ -872,7 +1085,12 @@ impl AuthnServiceImpl {
             .bind(reason)
             .execute(executor)
             .await
-            .map_err(|err| Status::internal(format!("revoke user families failed: {err}")))?;
+            .map_err(|err| {
+                lifecycle_internal_status(
+                    "revoke_user_families",
+                    format!("revoke user families failed: {err}"),
+                )
+            })?;
         Ok(res.rows_affected())
     }
 
@@ -886,8 +1104,12 @@ impl AuthnServiceImpl {
             || !req.tenant_id.trim().is_empty()
             || !req.principal_id.trim().is_empty();
         if !has_selector {
-            return Err(Status::invalid_argument(
+            return Err(lifecycle_invalid_fields(
                 "at least one selector is required (signing_key_id/token_family_id/tenant_id/principal_id)",
+                [(
+                    "selectors",
+                    "must include at least one of signing_key_id, token_family_id, tenant_id, or principal_id",
+                )],
             ));
         }
         let propagation_started = std::time::Instant::now();
@@ -930,10 +1152,12 @@ impl AuthnServiceImpl {
         // audit event cannot be written, rolls the whole operation back rather than
         // leaving the system in a half-revoked state without its event.
         let pool = self.require_pool()?;
-        let mut tx = pool
-            .begin()
-            .await
-            .map_err(|err| Status::internal(format!("emergency revoke tx begin failed: {err}")))?;
+        let mut tx = pool.begin().await.map_err(|err| {
+            lifecycle_internal_status(
+                "emergency_revoke_tx_begin",
+                format!("emergency revoke tx begin failed: {err}"),
+            )
+        })?;
 
         if !req.signing_key_id.trim().is_empty() {
             keys_compromised = self
@@ -953,7 +1177,12 @@ impl AuthnServiceImpl {
                 .sessions
                 .revoke_all_for_principal_in_tx(&mut *tx, req.principal_id.trim(), now)
                 .await
-                .map_err(Status::internal)? as u64;
+                .map_err(|err| {
+                    lifecycle_internal_status(
+                        "emergency_revoke_principal_sessions",
+                        err.to_string(),
+                    )
+                })? as u64;
         }
         if !req.tenant_id.trim().is_empty() {
             // Inline the tenant-wide bulk revoke (mirrors
@@ -986,7 +1215,10 @@ impl AuthnServiceImpl {
                 .execute(&mut *tx)
                 .await
                 .map_err(|err| {
-                    Status::internal(format!("emergency revoke tenant sessions failed: {err}"))
+                    lifecycle_internal_status(
+                        "emergency_revoke_tenant_sessions",
+                        format!("emergency revoke tenant sessions failed: {err}"),
+                    )
                 })?
                 .rows_affected();
             let tenant_families = sqlx::query(&fam_sql)
@@ -994,7 +1226,10 @@ impl AuthnServiceImpl {
                 .execute(&mut *tx)
                 .await
                 .map_err(|err| {
-                    Status::internal(format!("emergency revoke tenant families failed: {err}"))
+                    lifecycle_internal_status(
+                        "emergency_revoke_tenant_families",
+                        format!("emergency revoke tenant families failed: {err}"),
+                    )
                 })?
                 .rows_affected();
             sessions_revoked += tenant_sessions;
@@ -1164,9 +1399,12 @@ impl AuthnServiceImpl {
             &reason_code,
         ));
         self.emit_event_in_tx(&mut *tx, event).await?;
-        tx.commit()
-            .await
-            .map_err(|err| Status::internal(format!("emergency revoke commit failed: {err}")))?;
+        tx.commit().await.map_err(|err| {
+            lifecycle_internal_status(
+                "emergency_revoke_commit",
+                format!("emergency revoke commit failed: {err}"),
+            )
+        })?;
         self.metrics
             .observe_revocation_propagation_seconds(propagation_started.elapsed().as_secs_f64());
 
@@ -1203,7 +1441,9 @@ impl AuthnServiceImpl {
             .bind(reason)
             .execute(executor)
             .await
-            .map_err(|err| Status::internal(format!("revoke family failed: {err}")))?;
+            .map_err(|err| {
+                lifecycle_internal_status("revoke_family", format!("revoke family failed: {err}"))
+            })?;
         Ok(res.rows_affected())
     }
 
@@ -1218,8 +1458,10 @@ impl AuthnServiceImpl {
             .users
             .get_user_by_id(&req.user_id)
             .await
-            .map_err(Status::internal)?
-            .ok_or_else(|| Status::not_found("user not found"))?;
+            .map_err(|err| {
+                lifecycle_internal_status("issue_mfa_challenge_user_load", err.to_string())
+            })?
+            .ok_or_else(super::authn_user_not_found_status)?;
         let pool = self.require_pool()?;
         let m = mfa_challenge_model();
         let factor = if req.factor_kind == 0 {
@@ -1246,8 +1488,12 @@ impl AuthnServiceImpl {
             self.device_fingerprint_hash(&req.device_fingerprint)
         };
         if let Ok(runtime) = self.authn_runtime() {
-            let expires_at = unix_to_utc(expires)
-                .ok_or_else(|| Status::internal("invalid MFA challenge expiry"))?;
+            let expires_at = unix_to_utc(expires).ok_or_else(|| {
+                lifecycle_internal_status(
+                    "issue_mfa_challenge_expiry",
+                    "invalid MFA challenge expiry",
+                )
+            })?;
             let context = self.authn_context(&user.tenant_id, &user.project_id);
             let record = authn_record([
                 ("challenge_id", LogicalValue::String(challenge_id.clone())),
@@ -1275,7 +1521,12 @@ impl AuthnServiceImpl {
                     crate::ir::ConflictStrategy::Error,
                 )
                 .await
-                .map_err(|err| Status::internal(format!("issue MFA challenge failed: {err}")))?;
+                .map_err(|err| {
+                    lifecycle_internal_status(
+                        "issue_mfa_challenge_runtime_write",
+                        format!("issue MFA challenge failed: {err}"),
+                    )
+                })?;
             return Ok(Response::new(authn_pb::IssueMfaChallengeResponse {
                 challenge_id,
                 expires_at_unix: expires as i64,
@@ -1308,7 +1559,12 @@ impl AuthnServiceImpl {
             .bind(expires as f64)
             .execute(pool)
             .await
-            .map_err(|err| Status::internal(format!("issue MFA challenge failed: {err}")))?;
+            .map_err(|err| {
+                lifecycle_internal_status(
+                    "issue_mfa_challenge_pg_insert",
+                    format!("issue MFA challenge failed: {err}"),
+                )
+            })?;
         Ok(Response::new(authn_pb::IssueMfaChallengeResponse {
             challenge_id,
             expires_at_unix: expires as i64,
@@ -1327,8 +1583,12 @@ impl AuthnServiceImpl {
         // re-wrapped as Internal).
         Self::require_uuid_arg(&req.challenge_id, "challenge_id")?;
         if let Ok(runtime) = self.authn_runtime() {
-            let now = unix_to_utc(now_unix())
-                .ok_or_else(|| Status::internal("invalid MFA verification time"))?;
+            let now = unix_to_utc(now_unix()).ok_or_else(|| {
+                lifecycle_internal_status(
+                    "verify_mfa_challenge_time",
+                    "invalid MFA verification time",
+                )
+            })?;
             let context = self.authn_context("", "");
             let mut assignments = std::collections::BTreeMap::new();
             assignments.insert("consumed_at".to_string(), LogicalAssignment::ServerNow);
@@ -1486,8 +1746,10 @@ impl AuthnServiceImpl {
             .users
             .get_user_by_id(user_id)
             .await
-            .map_err(Status::internal)?
-            .ok_or_else(|| Status::not_found("user not found"))?;
+            .map_err(|err| {
+                lifecycle_internal_status("verify_mfa_proof_user_load", err.to_string())
+            })?
+            .ok_or_else(super::authn_user_not_found_status)?;
         let upper = factor_db.to_ascii_uppercase();
         if upper.contains("TOTP") {
             let ok = authn::totp::decrypt_secret(&user.totp_secret_hash, &self.otp_hash_key())
@@ -1501,7 +1763,9 @@ impl AuthnServiceImpl {
                 .users
                 .consume_recovery_code(user_id, &hash, now)
                 .await
-                .map_err(Status::internal);
+                .map_err(|err| {
+                    lifecycle_internal_status("verify_mfa_recovery_code", err.to_string())
+                });
         }
         // For OTP-style factors the `code` is treated as a previously-issued OTP
         // id+code is out of band; without that we cannot verify here.
@@ -1519,8 +1783,10 @@ impl AuthnServiceImpl {
             .users
             .get_user_by_id(&req.user_id)
             .await
-            .map_err(Status::internal)?
-            .ok_or_else(|| Status::not_found("user not found"))?;
+            .map_err(|err| {
+                lifecycle_internal_status("list_mfa_factors_user_load", err.to_string())
+            })?
+            .ok_or_else(super::authn_user_not_found_status)?;
         let mut factors = Vec::new();
         factors.push(authn_pb::MfaFactorSummary {
             factor_kind: authn_entity_pb::AuthFactorKind::Totp as i32,
@@ -1534,7 +1800,21 @@ impl AuthnServiceImpl {
             enabled: passkeys > 0,
             label: format!("{passkeys} passkey(s)"),
         });
-        Ok(Response::new(authn_pb::ListMfaFactorsResponse { factors }))
+        let page_window = native_offset_page_window(1, req.page_size, &req.page_token, 50);
+        let total = factors.len() as i64;
+        let factors = factors
+            .into_iter()
+            .skip(page_window.offset)
+            .take(page_window.limit)
+            .collect();
+        Ok(Response::new(authn_pb::ListMfaFactorsResponse {
+            factors,
+            next_page_token: native_next_page_token_for_total(
+                page_window.offset,
+                page_window.limit,
+                total,
+            ),
+        }))
     }
 
     pub(super) async fn disable_mfa_factor_impl(
@@ -1546,17 +1826,18 @@ impl AuthnServiceImpl {
             .users
             .get_user_by_id(&req.user_id)
             .await
-            .map_err(Status::internal)?
-            .ok_or_else(|| Status::not_found("user not found"))?;
+            .map_err(|err| {
+                lifecycle_internal_status("disable_mfa_factor_user_load", err.to_string())
+            })?
+            .ok_or_else(super::authn_user_not_found_status)?;
         let now = now_unix();
         if req.factor_kind == authn_entity_pb::AuthFactorKind::Totp as i32 {
             user.totp_secret_hash = String::new();
             user.mfa_enabled = false;
             user.updated_at_unix = now;
-            self.users
-                .put_user(user.clone())
-                .await
-                .map_err(Status::internal)?;
+            self.users.put_user(user.clone()).await.map_err(|err| {
+                lifecycle_internal_status("disable_mfa_factor_store", err.to_string())
+            })?;
         } else if req.factor_kind == authn_entity_pb::AuthFactorKind::Webauthn as i32 {
             self.delete_all_webauthn_credentials(&req.user_id).await?;
         }
@@ -1593,13 +1874,17 @@ impl AuthnServiceImpl {
             .users
             .get_user_by_id(&req.user_id)
             .await
-            .map_err(Status::internal)?
-            .ok_or_else(|| Status::not_found("user not found"))?;
+            .map_err(|err| {
+                lifecycle_internal_status("revoke_recovery_codes_user_load", err.to_string())
+            })?
+            .ok_or_else(super::authn_user_not_found_status)?;
         // Replace with an empty set → all prior codes invalidated.
         self.users
             .replace_recovery_codes(&req.user_id, &user.tenant_id, &[])
             .await
-            .map_err(Status::internal)?;
+            .map_err(|err| {
+                lifecycle_internal_status("revoke_recovery_codes_replace", err.to_string())
+            })?;
         Ok(Response::new(authn_pb::RevokeRecoveryCodesResponse {
             revoked_count: 0,
         }))
@@ -1614,15 +1899,18 @@ impl AuthnServiceImpl {
             .users
             .get_user_by_id(&req.user_id)
             .await
-            .map_err(Status::internal)?
-            .ok_or_else(|| Status::not_found("user not found"))?;
+            .map_err(|err| lifecycle_internal_status("admin_reset_mfa_user_load", err.to_string()))?
+            .ok_or_else(super::authn_user_not_found_status)?;
         let now = now_unix();
         // Clear all factors: TOTP secret, recovery codes, WebAuthn credentials.
         user.totp_secret_hash = String::new();
         user.mfa_enabled = false;
         user.updated_at_unix = now;
         let tenant = user.tenant_id.clone();
-        self.users.put_user(user).await.map_err(Status::internal)?;
+        self.users
+            .put_user(user)
+            .await
+            .map_err(|err| lifecycle_internal_status("admin_reset_mfa_store", err.to_string()))?;
         let _ = self
             .users
             .replace_recovery_codes(&req.user_id, &tenant, &[])
@@ -1702,7 +1990,10 @@ impl AuthnServiceImpl {
                 .native_entity_delete_rows_for_service("authn", &context, op)
                 .await
                 .map_err(|err| {
-                    Status::internal(format!("delete WebAuthn credentials failed: {err}"))
+                    lifecycle_internal_status(
+                        "delete_webauthn_credentials_runtime",
+                        format!("delete WebAuthn credentials failed: {err}"),
+                    )
                 })?;
             return Ok(rows.len() as u64);
         }
@@ -1719,7 +2010,12 @@ impl AuthnServiceImpl {
         .bind(user_id)
         .execute(pool)
         .await
-        .map_err(|err| Status::internal(format!("delete WebAuthn credentials failed: {err}")))?;
+        .map_err(|err| {
+            lifecycle_internal_status(
+                "delete_webauthn_credentials_pg",
+                format!("delete WebAuthn credentials failed: {err}"),
+            )
+        })?;
         Ok(res.rows_affected())
     }
 
@@ -1729,7 +2025,10 @@ impl AuthnServiceImpl {
     ) -> Result<Response<authn_pb::ListWebAuthnCredentialsResponse>, Status> {
         let req = request.into_inner();
         if req.user_id.trim().is_empty() {
-            return Err(Status::invalid_argument("user_id is required"));
+            return Err(lifecycle_invalid_fields(
+                "user_id is required",
+                [("user_id", "must be a non-empty user id")],
+            ));
         }
         let pool = self.require_pool()?;
         let m = native_model(
@@ -1758,9 +2057,18 @@ impl AuthnServiceImpl {
             .bind(&req.user_id)
             .fetch_all(pool)
             .await
-            .map_err(|err| Status::internal(format!("list WebAuthn credentials failed: {err}")))?;
+            .map_err(|err| {
+                lifecycle_internal_status(
+                    "list_webauthn_credentials",
+                    format!("list WebAuthn credentials failed: {err}"),
+                )
+            })?;
+        let page_window = native_offset_page_window(1, req.page_size, &req.page_token, 50);
+        let total = rows.len() as i64;
         let credentials = rows
             .iter()
+            .skip(page_window.offset)
+            .take(page_window.limit)
             .map(|row| authn_pb::WebAuthnCredentialSummary {
                 credential_id: row.try_get("credential_id").unwrap_or_default(),
                 label: row.try_get("label").unwrap_or_default(),
@@ -1770,6 +2078,11 @@ impl AuthnServiceImpl {
             .collect();
         Ok(Response::new(authn_pb::ListWebAuthnCredentialsResponse {
             credentials,
+            next_page_token: native_next_page_token_for_total(
+                page_window.offset,
+                page_window.limit,
+                total,
+            ),
         }))
     }
 
@@ -1779,8 +2092,15 @@ impl AuthnServiceImpl {
     ) -> Result<Response<authn_pb::DeleteWebAuthnCredentialResponse>, Status> {
         let req = request.into_inner();
         if req.user_id.trim().is_empty() || req.credential_id.trim().is_empty() {
-            return Err(Status::invalid_argument(
+            return Err(lifecycle_invalid_fields(
                 "user_id and credential_id are required",
+                [
+                    ("user_id", "must be a non-empty user id"),
+                    (
+                        "credential_id",
+                        "must be a non-empty WebAuthn credential id",
+                    ),
+                ],
             ));
         }
         if let Ok(runtime) = self.authn_runtime() {
@@ -1800,7 +2120,10 @@ impl AuthnServiceImpl {
                 .native_entity_delete_rows_for_service("authn", &context, op)
                 .await
                 .map_err(|err| {
-                    Status::internal(format!("delete WebAuthn credential failed: {err}"))
+                    lifecycle_internal_status(
+                        "delete_webauthn_credential_runtime",
+                        format!("delete WebAuthn credential failed: {err}"),
+                    )
                 })?;
             return Ok(Response::new(authn_pb::DeleteWebAuthnCredentialResponse {
                 deleted: !rows.is_empty(),
@@ -1821,7 +2144,12 @@ impl AuthnServiceImpl {
         .bind(&req.user_id)
         .execute(pool)
         .await
-        .map_err(|err| Status::internal(format!("delete WebAuthn credential failed: {err}")))?;
+        .map_err(|err| {
+            lifecycle_internal_status(
+                "delete_webauthn_credential_pg",
+                format!("delete WebAuthn credential failed: {err}"),
+            )
+        })?;
         Ok(Response::new(authn_pb::DeleteWebAuthnCredentialResponse {
             deleted: res.rows_affected() > 0,
         }))
@@ -1833,8 +2161,15 @@ impl AuthnServiceImpl {
     ) -> Result<Response<authn_pb::RenamePasskeyResponse>, Status> {
         let req = request.into_inner();
         if req.user_id.trim().is_empty() || req.credential_id.trim().is_empty() {
-            return Err(Status::invalid_argument(
+            return Err(lifecycle_invalid_fields(
                 "user_id and credential_id are required",
+                [
+                    ("user_id", "must be a non-empty user id"),
+                    (
+                        "credential_id",
+                        "must be a non-empty WebAuthn credential id",
+                    ),
+                ],
             ));
         }
         if let Ok(runtime) = self.authn_runtime() {
@@ -1861,7 +2196,12 @@ impl AuthnServiceImpl {
             let (_, rows) = runtime
                 .native_entity_update_for_service("authn", &context, op)
                 .await
-                .map_err(|err| Status::internal(format!("rename passkey failed: {err}")))?;
+                .map_err(|err| {
+                    lifecycle_internal_status(
+                        "rename_passkey_runtime",
+                        format!("rename passkey failed: {err}"),
+                    )
+                })?;
             return Ok(Response::new(authn_pb::RenamePasskeyResponse {
                 renamed: !rows.is_empty(),
             }));
@@ -1884,7 +2224,7 @@ impl AuthnServiceImpl {
         .bind(&req.new_label)
         .execute(pool)
         .await
-        .map_err(|err| Status::internal(format!("rename passkey failed: {err}")))?;
+        .map_err(|err| lifecycle_internal_status("rename_passkey_pg", format!("rename passkey failed: {err}")))?;
         Ok(Response::new(authn_pb::RenamePasskeyResponse {
             renamed: res.rows_affected() > 0,
         }))
@@ -1922,6 +2262,10 @@ fn parse_device_type(value: &str) -> i32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::proto::udb::core::authn::services::v1::authn_service_server::AuthnService;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
 
     #[test]
     fn mask_ip_truncates_v4_to_24() {
@@ -1972,6 +2316,248 @@ mod tests {
             ..crate::runtime::authn::AuthnConfig::default()
         };
         AuthnServiceImpl::new(config, crate::runtime::security::SecurityConfig::default())
+    }
+
+    fn decode_detail(status: &Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present")
+            .to_bytes()
+            .expect("typed detail trailer decodes to bytes");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_validation_fields(status: &Status, expected: &[(&str, &str)]) {
+        assert_eq!(status.code(), tonic::Code::InvalidArgument);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert_eq!(detail.field_violations.len(), expected.len());
+        for (actual, (field, description)) in detail.field_violations.iter().zip(expected) {
+            assert_eq!(actual.field, *field);
+            assert_eq!(actual.description, *description);
+        }
+    }
+
+    fn assert_capability_detail(
+        status: &Status,
+        operation: &str,
+        capability_required: &str,
+        message: &str,
+    ) {
+        assert_eq!(status.code(), tonic::Code::FailedPrecondition);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Capability as i32);
+        assert_eq!(detail.backend, "authn");
+        assert_eq!(detail.operation, operation);
+        assert_eq!(detail.capability_required, capability_required);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+    }
+
+    fn assert_policy_detail(
+        status: &Status,
+        operation: &str,
+        policy_decision_id: &str,
+        message: &str,
+    ) {
+        assert_eq!(status.code(), tonic::Code::PermissionDenied);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Policy as i32);
+        assert_eq!(detail.operation, operation);
+        assert_eq!(detail.policy_decision_id, policy_decision_id);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    fn assert_internal_detail(status: &Status, operation: &str, message: &str) {
+        assert_eq!(status.code(), tonic::Code::Internal);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "authn");
+        assert_eq!(detail.operation, operation);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    #[test]
+    fn lifecycle_internal_status_carries_typed_detail() {
+        let status = lifecycle_internal_status("list_devices_query", "list devices failed");
+        assert_internal_detail(&status, "list_devices_query", "list devices failed");
+    }
+
+    #[test]
+    fn authn_missing_postgres_store_capability_carries_typed_detail() {
+        let svc = deny_test_service();
+        let err = match svc.require_pool() {
+            Err(status) => status,
+            Ok(_) => panic!("pool-less authn service must fail closed"),
+        };
+
+        assert_capability_detail(
+            &err,
+            "postgres_auth_store",
+            "native_postgres_auth_store",
+            "this operation requires the native Postgres auth store",
+        );
+    }
+
+    #[tokio::test]
+    async fn list_devices_missing_user_id_carries_field_violation() {
+        let err = deny_test_service()
+            .list_devices(Request::new(authn_pb::ListDevicesRequest::default()))
+            .await
+            .expect_err("missing user_id must fail before pool access");
+
+        assert_eq!(err.message(), "user_id is required");
+        assert_validation_fields(&err, &[("user_id", "must be a non-empty user id")]);
+    }
+
+    #[tokio::test]
+    async fn admin_revoke_session_missing_user_id_carries_field_violation() {
+        let err = deny_test_service()
+            .admin_revoke_session(Request::new(authn_pb::AdminRevokeSessionRequest::default()))
+            .await
+            .expect_err("missing user_id must fail before pool access");
+
+        assert_eq!(err.message(), "user_id is required");
+        assert_validation_fields(&err, &[("user_id", "must be a non-empty user id")]);
+    }
+
+    #[tokio::test]
+    async fn admin_revoke_all_user_sessions_missing_user_id_carries_field_violation() {
+        let err = deny_test_service()
+            .admin_revoke_all_user_sessions(Request::new(
+                authn_pb::AdminRevokeAllUserSessionsRequest::default(),
+            ))
+            .await
+            .expect_err("missing user_id must fail before pool access");
+
+        assert_eq!(err.message(), "user_id is required");
+        assert_validation_fields(&err, &[("user_id", "must be a non-empty user id")]);
+    }
+
+    #[tokio::test]
+    async fn admin_revoke_all_tenant_sessions_missing_tenant_id_carries_field_violation() {
+        let err = deny_test_service()
+            .admin_revoke_all_tenant_sessions(Request::new(
+                authn_pb::AdminRevokeAllTenantSessionsRequest::default(),
+            ))
+            .await
+            .expect_err("missing tenant_id must fail before claim or pool access");
+
+        assert_eq!(err.message(), "tenant_id is required");
+        assert_validation_fields(&err, &[("tenant_id", "must be a non-empty tenant id")]);
+    }
+
+    #[tokio::test]
+    async fn emergency_revoke_missing_selector_carries_field_violation() {
+        let err = deny_test_service()
+            .emergency_revoke(Request::new(authn_pb::EmergencyRevokeRequest::default()))
+            .await
+            .expect_err("missing selector must fail before pool access");
+
+        assert_eq!(
+            err.message(),
+            "at least one selector is required (signing_key_id/token_family_id/tenant_id/principal_id)"
+        );
+        assert_validation_fields(
+            &err,
+            &[(
+                "selectors",
+                "must include at least one of signing_key_id, token_family_id, tenant_id, or principal_id",
+            )],
+        );
+    }
+
+    #[tokio::test]
+    async fn list_webauthn_credentials_missing_user_id_carries_field_violation() {
+        let err = deny_test_service()
+            .list_web_authn_credentials(Request::new(
+                authn_pb::ListWebAuthnCredentialsRequest::default(),
+            ))
+            .await
+            .expect_err("missing user_id must fail before pool access");
+
+        assert_eq!(err.message(), "user_id is required");
+        assert_validation_fields(&err, &[("user_id", "must be a non-empty user id")]);
+    }
+
+    #[tokio::test]
+    async fn delete_webauthn_credential_missing_identity_carries_field_violations() {
+        let err = deny_test_service()
+            .delete_web_authn_credential(Request::new(
+                authn_pb::DeleteWebAuthnCredentialRequest::default(),
+            ))
+            .await
+            .expect_err("missing credential identity must fail before runtime/pool access");
+
+        assert_eq!(err.message(), "user_id and credential_id are required");
+        assert_validation_fields(
+            &err,
+            &[
+                ("user_id", "must be a non-empty user id"),
+                (
+                    "credential_id",
+                    "must be a non-empty WebAuthn credential id",
+                ),
+            ],
+        );
+    }
+
+    #[tokio::test]
+    async fn rename_passkey_missing_identity_carries_field_violations() {
+        let err = deny_test_service()
+            .rename_passkey(Request::new(authn_pb::RenamePasskeyRequest::default()))
+            .await
+            .expect_err("missing credential identity must fail before runtime/pool access");
+
+        assert_eq!(err.message(), "user_id and credential_id are required");
+        assert_validation_fields(
+            &err,
+            &[
+                ("user_id", "must be a non-empty user id"),
+                (
+                    "credential_id",
+                    "must be a non-empty WebAuthn credential id",
+                ),
+            ],
+        );
+    }
+
+    #[tokio::test]
+    async fn revoke_device_tenantless_non_admin_carries_policy_detail() {
+        let svc = deny_test_service();
+        let ctx = crate::runtime::service::method_security::test_claim_context(
+            "reader-a",
+            "",
+            "",
+            &["udb:authn:write"],
+            &[],
+        );
+        let req = Request::new(authn_pb::RevokeDeviceRequest {
+            device_id: "11111111-1111-4111-8111-111111111111".to_string(),
+            reason: "lost".to_string(),
+            ..Default::default()
+        });
+        let err = crate::runtime::service::method_security::scope_claim_context_for_test(
+            ctx,
+            svc.revoke_device_impl(req),
+        )
+        .await
+        .expect_err("tenantless non-admin device revoke must fail before pool access");
+
+        assert_policy_detail(
+            &err,
+            "revoke_device",
+            "tenant_scoped_bearer_required",
+            "device revoke requires a tenant-scoped bearer token or a cross-tenant admin role",
+        );
     }
 
     #[tokio::test]

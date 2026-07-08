@@ -90,7 +90,7 @@ fn is_sensitive_output_key(key: &str) -> bool {
 fn descriptor_sensitive_output_keys() -> &'static HashSet<String> {
     static KEYS: OnceLock<HashSet<String>> = OnceLock::new();
     KEYS.get_or_init(|| {
-        let manifest = udb::runtime::descriptor_manifest::descriptor_contract_manifest();
+        let manifest = udb::runtime::descriptor_manifest::descriptor_contract_manifest_static();
         manifest
             .messages
             .iter()

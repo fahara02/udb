@@ -1,0 +1,119 @@
+syntax = "proto3";
+
+package udb.core.embedding.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Embedding.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/embedding/entity/v1;embeddingv1";
+option java_package = "com.udb.core.embedding.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Embedding\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Embedding\\Entity\\V1";
+
+// ---------------------------------------------------------------------------
+// EmbeddingSource — durable, tenant-scoped registration of a source entity that
+// should be vector-indexed on change (master-plan 9.11 — the AI data plane).
+// THIS row is only the bookkeeping record: which source entity is watched, the
+// text field(s) to embed, the target vector collection, the model id the
+// SIDECAR must use, and the resolved tenant column of the SOURCE table.
+//
+// CRITICAL: inference NEVER runs in the broker. On a source row change (and on
+// Backfill) the broker emits a `udb.embedding.work.v1` event carrying ONLY the
+// row primary key + extracted text (NEVER any credential/API key — model creds
+// live only in the sidecar). A sidecar computes the embedding and returns it via
+// the internal-only `ReportEmbedding` callback, which upserts the vector through
+// the shared asset vector-upsert seam, tagged with the verified tenant.
+//
+// An EmbeddingSource is created ONLY when the source table resolves a tenant
+// column, so every reported vector and every Retrieve has a server-side tenant
+// predicate (fail closed). RLS scopes rows to the current tenant.
+// ---------------------------------------------------------------------------
+message EmbeddingSource {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "embedding_sources"
+    schema_name: "udb_embedding"
+    migration_order: 1
+    is_table: true
+    comment: "Tenant-scoped source registrations for change-driven vector indexing (master-plan 9.11)"
+    soft_delete: false
+    audit_fields: true
+    enable_rls: true
+    rls_policies: {
+      policy_name: "tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text)"
+      permissive: true
+    }
+    indexes: {
+      index_name: "idx_embedding_sources_tenant_name_unique"
+      index_type: "BTREE"
+      unique: true
+      columns: "tenant_id"
+      columns: "source_name"
+    }
+    indexes: {
+      index_name: "idx_embedding_sources_tenant_source"
+      index_type: "BTREE"
+      columns: "tenant_id"
+      columns: "source_message_type"
+    }
+    cdc_topic: "udb.embedding.embedding_sources.cdc"
+    required_scope: "embedding:read"
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "none"
+    retention_class: "embedding.operational"
+    retention_days: 365
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
+
+  string source_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "source_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(64)" not_null: true index: { index_name: "idx_embedding_sources_tenant" index_type: "BTREE" } }];
+
+  // Application-supplied logical source name, unique within a tenant.
+  string source_name = 3 [(udb.core.common.v1.pg_column) = { column_name: "source_name" sql_type: "VARCHAR(255)" not_null: true }];
+
+  // Fully-qualified proto message type of the source entity whose rows are
+  // embedded (e.g. "acme.crm.entity.v1.Contact"). Resolved against the embedded
+  // manifest at RegisterSource time so its tenant column can be recorded.
+  string source_message_type = 4 [(udb.core.common.v1.pg_column) = { column_name: "source_message_type" sql_type: "VARCHAR(512)" not_null: true }];
+
+  // JSON array of the source field name(s) whose text is concatenated and sent
+  // (as plaintext, never with credentials) to the sidecar to embed.
+  string text_fields_json = 5 [(udb.core.common.v1.pg_column) = { column_name: "text_fields_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'[]'::jsonb" comment: "Source field names to embed" }];
+
+  // Target vector collection the reported embedding is upserted into.
+  string target_collection = 6 [(udb.core.common.v1.pg_column) = { column_name: "target_collection" sql_type: "VARCHAR(255)" not_null: true }];
+
+  // Model identifier the SIDECAR must use to embed. Non-secret routing only; the
+  // model credentials/API keys live ONLY in the sidecar, never in the broker and
+  // never in a work-event payload.
+  string model_id = 7 [(udb.core.common.v1.pg_column) = { column_name: "model_id" sql_type: "VARCHAR(255)" not_null: true default_value: "''" }];
+
+  // The SOURCE table's resolved tenant column, captured at register time via the
+  // shared catalog resolver. An EmbeddingSource cannot exist without it, so every
+  // reported vector and Retrieve carries a server-side tenant predicate.
+  string tenant_column = 8 [(udb.core.common.v1.pg_column) = { column_name: "tenant_column" sql_type: "VARCHAR(255)" not_null: true }];
+
+  // The source entity's CDC topic; the per-source work emitter tails this
+  // tenant-scoped stream to enqueue embedding work on change.
+  string source_cdc_topic = 9 [(udb.core.common.v1.pg_column) = { column_name: "source_cdc_topic" sql_type: "VARCHAR(255)" not_null: true default_value: "''" }];
+
+  // ACTIVE | DELETED — operational state.
+  string status = 10 [(udb.core.common.v1.pg_column) = { column_name: "status" sql_type: "VARCHAR(20)" not_null: true default_value: "'ACTIVE'" index: { index_name: "idx_embedding_sources_status" index_type: "BTREE" } }];
+
+  google.protobuf.Timestamp created_at = 11 [(udb.core.common.v1.pg_column) = { column_name: "created_at" sql_type: "TIMESTAMPTZ" comment: "When the source was registered" }];
+
+  google.protobuf.Timestamp updated_at = 12 [(udb.core.common.v1.pg_column) = { column_name: "updated_at" sql_type: "TIMESTAMPTZ" comment: "Last status/registration change" }];
+
+  string metadata_json = 13 [(udb.core.common.v1.pg_column) = { column_name: "metadata_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'{}'::jsonb" comment: "Non-secret source configuration metadata" }];
+}

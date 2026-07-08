@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package udb.core.scheduler.entity.v1;
+
+option csharp_namespace = "udb.core.Scheduler.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/scheduler/entity/v1;schedulerv1";
+option java_package = "com.udb.core.scheduler.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Scheduler\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Scheduler\\Entity\\V1";
+
+// How a scheduled job's next fire time is derived.
+enum ScheduleType {
+  SCHEDULE_TYPE_UNSPECIFIED = 0;
+  // Recurring job; next_fire_at is advanced from the cron expression after each fire.
+  SCHEDULE_TYPE_CRON = 1;
+  // One-shot job; fires exactly once at next_fire_at, then transitions to COMPLETED.
+  SCHEDULE_TYPE_ONE_SHOT = 2;
+}
+
+// Lifecycle status of a scheduled job. Only ACTIVE jobs are claimed by the tick.
+enum JobStatus {
+  JOB_STATUS_UNSPECIFIED = 0;
+  // Eligible to fire when next_fire_at is due.
+  JOB_STATUS_ACTIVE = 1;
+  // Paused by an operator; never claimed by the tick until resumed.
+  JOB_STATUS_PAUSED = 2;
+  // One-shot job that already fired; terminal.
+  JOB_STATUS_COMPLETED = 3;
+  // Exceeded max_attempts; routed to the dead-letter topic and never re-fired.
+  JOB_STATUS_DEAD = 4;
+}

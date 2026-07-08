@@ -154,6 +154,40 @@ pub(crate) fn metric_max_distinct_labels() -> usize {
     )
 }
 
+/// Env-var prefix for the per-backend raw-dispatch opt-out
+/// (`UDB_DISPATCH_ALLOW_RAW_<BACKEND>`, e.g. `UDB_DISPATCH_ALLOW_RAW_POSTGRES`).
+pub(crate) const RAW_DISPATCH_OPT_OUT_PREFIX: &str = "UDB_DISPATCH_ALLOW_RAW_";
+
+/// True if the operator opted a specific mediated backend out of the raw-dispatch
+/// gate (master-plan item 2.1) via `UDB_DISPATCH_ALLOW_RAW_<BACKEND>` set truthy.
+/// Resolved ONCE into a static map (never re-read per request). It lives here, in
+/// the startup/config boundary, so the hot-path generic-dispatch handler file
+/// carries no env reads (the `connection_manager` hot-path/env guards forbid env
+/// access in `handlers_*.rs`). `backend` is the canonical lowercase token
+/// (e.g. `postgres`, `sqlserver`); the env suffix is its uppercase form.
+pub(crate) fn raw_dispatch_opt_out(backend: &str) -> bool {
+    use std::collections::HashMap;
+    use std::sync::OnceLock;
+    static MAP: OnceLock<HashMap<String, bool>> = OnceLock::new();
+    let map = MAP.get_or_init(|| {
+        let mut map = HashMap::new();
+        for (key, value) in std::env::vars() {
+            let Some(suffix) = key.strip_prefix(RAW_DISPATCH_OPT_OUT_PREFIX) else {
+                continue;
+            };
+            let truthy = matches!(
+                value.trim().to_ascii_lowercase().as_str(),
+                "1" | "true" | "yes" | "on"
+            );
+            map.insert(suffix.to_ascii_lowercase(), truthy);
+        }
+        map
+    });
+    map.get(&backend.to_ascii_lowercase())
+        .copied()
+        .unwrap_or(false)
+}
+
 /// Typed-object DoS ceiling in bytes: `UDB_MAX_OBJECT_BYTES` or
 /// [`DEFAULT_MAX_OBJECT_BYTES`].
 #[cfg(any(feature = "s3", feature = "gcs", feature = "azureblob"))]
@@ -232,7 +266,7 @@ fn pg_dsn_from_libpq_env() -> Option<String> {
     Some(dsn)
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct TlsSettings {
     pub cert_pem: Option<String>,
@@ -241,6 +275,22 @@ pub struct TlsSettings {
     pub key_path: Option<String>,
     pub client_ca_pem: Option<String>,
     pub client_ca_path: Option<String>,
+}
+
+// Manual `Debug` redacting the inline TLS private key (`key_pem`). Certificates
+// and CA bundles are public material and file paths are not secret, so those
+// print normally; only the private key is masked.
+impl std::fmt::Debug for TlsSettings {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TlsSettings")
+            .field("cert_pem", &self.cert_pem)
+            .field("cert_path", &self.cert_path)
+            .field("key_pem", &self.key_pem.as_ref().map(|_| "[redacted]"))
+            .field("key_path", &self.key_path)
+            .field("client_ca_pem", &self.client_ca_pem)
+            .field("client_ca_path", &self.client_ca_path)
+            .finish()
+    }
 }
 
 impl Default for TlsSettings {
@@ -634,7 +684,7 @@ fn sanitize_identifier_value(value: &str) -> String {
         .collect()
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct EncryptionSettings {
     /// Field-level encryption keys by numeric version.
@@ -655,6 +705,37 @@ pub struct EncryptionSettings {
     pub dev_mode: bool,
     /// Require at-rest encryption for UDB-owned object metadata/native state.
     pub object_native_state_required: bool,
+}
+
+// Manual `Debug` redacting the field-level encryption key material (`keys`
+// values) and the `vault_token`. Configured key *versions* and the Vault
+// address/mount remain visible for debuggability — mirrors the
+// `RedactedKeyVersions` pattern in `encryption.rs` (versions shown, material
+// masked).
+impl std::fmt::Debug for EncryptionSettings {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("EncryptionSettings")
+            .field(
+                "key_versions",
+                &self.keys.keys().copied().collect::<Vec<u8>>(),
+            )
+            .field("key_material", &"[redacted]")
+            .field("active_version", &self.active_version)
+            .field("vault_addr", &self.vault_addr)
+            .field(
+                "vault_token",
+                &self.vault_token.as_ref().map(|_| "[redacted]"),
+            )
+            .field("vault_transit_key_name", &self.vault_transit_key_name)
+            .field("vault_transit_mount", &self.vault_transit_mount)
+            .field("vault_timeout_secs", &self.vault_timeout_secs)
+            .field("dev_mode", &self.dev_mode)
+            .field(
+                "object_native_state_required",
+                &self.object_native_state_required,
+            )
+            .finish()
+    }
 }
 
 impl Default for EncryptionSettings {
@@ -950,7 +1031,7 @@ impl MigrationOptions {
 /// The `deploy` field captures the detected deployment mode for each backend
 /// (Docker / self-hosted vs. cloud-managed service).  It is derived from
 /// `UDB_<BACKEND>_DEPLOY_MODE` env-vars or DSN heuristics at startup.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(default)]
 pub struct UdbConfig {
     // ── Deployment profile ────────────────────────────────────────────────────
@@ -1068,6 +1149,118 @@ pub struct UdbConfig {
     /// Kafka brokers for CDC.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub kafka_brokers: Option<String>,
+}
+
+// Manual `Debug` for the top-level config. Every embedded backend config
+// (`primary`, `redis`, `qdrant`, `minio`, `security`, `encryption`, …) carries
+// its own redacting `Debug`, so they print safely here. The one secret held
+// *directly* on this struct is `pg_replica_dsns` (replica connection strings
+// that embed credentials); its count is shown but the strings are masked.
+impl std::fmt::Debug for UdbConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("UdbConfig")
+            .field("deploy", &self.deploy)
+            .field("primary", &self.primary)
+            .field("backup", &self.backup)
+            .field("signal", &self.signal)
+            .field("redis", &self.redis)
+            .field("qdrant", &self.qdrant)
+            .field("minio", &self.minio)
+            .field("failover", &self.failover)
+            .field("migration", &self.migration)
+            .field("audit_sink", &self.audit_sink)
+            .field("service", &self.service)
+            .field("native_services", &self.native_services)
+            .field("channels", &self.channels)
+            .field("cdc", &self.cdc)
+            .field("security", &self.security)
+            .field("encryption", &self.encryption)
+            .field("saga", &self.saga)
+            .field("circuit_breaker", &self.circuit_breaker)
+            .field("project_routing_mode", &self.project_routing_mode)
+            .field("system_catalog", &self.system_catalog)
+            .field("backend_instances", &self.backend_instances)
+            .field("app_name", &self.app_name)
+            .field("default_limit", &self.default_limit)
+            .field("max_limit", &self.max_limit)
+            .field("ddl_concurrency", &self.ddl_concurrency)
+            .field(
+                "pg_replica_dsns",
+                &format_args!("[{} redacted]", self.pg_replica_dsns.len()),
+            )
+            .field("pg_replica_strategy", &self.pg_replica_strategy)
+            .field("pg_replica_max_lag_secs", &self.pg_replica_max_lag_secs)
+            .field("pg_replica_fail_open", &self.pg_replica_fail_open)
+            .field(
+                "pg_replica_min_connections",
+                &self.pg_replica_min_connections,
+            )
+            .field(
+                "pg_replica_max_connections",
+                &self.pg_replica_max_connections,
+            )
+            .field(
+                "pg_replica_health_interval_secs",
+                &self.pg_replica_health_interval_secs,
+            )
+            .field(
+                "materialized_view_ttl_days",
+                &self.materialized_view_ttl_days,
+            )
+            .field("abac_policies_json", &self.abac_policies_json)
+            .field("abac_schema", &self.abac_schema)
+            .field("abac_table", &self.abac_table)
+            .field("kafka_brokers", &self.kafka_brokers)
+            .finish()
+    }
+}
+
+#[cfg(test)]
+mod secret_no_leak {
+    use super::*;
+
+    const CANARY: &str = "udb-canary-SECRET";
+
+    #[test]
+    fn tls_settings_debug_redacts_private_key() {
+        let cfg = TlsSettings {
+            key_pem: Some(CANARY.to_string()),
+            ..Default::default()
+        };
+        let dbg = format!("{cfg:?}");
+        assert!(!dbg.contains(CANARY), "TlsSettings leaked key_pem: {dbg}");
+    }
+
+    #[test]
+    fn encryption_settings_debug_redacts_keys_and_token() {
+        let mut keys = BTreeMap::new();
+        keys.insert(1u8, CANARY.to_string());
+        let cfg = EncryptionSettings {
+            keys,
+            vault_token: Some(CANARY.to_string()),
+            ..Default::default()
+        };
+        let dbg = format!("{cfg:?}");
+        assert!(
+            !dbg.contains(CANARY),
+            "EncryptionSettings leaked key/token: {dbg}"
+        );
+        // Key versions remain visible for debuggability.
+        assert!(dbg.contains("key_versions"));
+    }
+
+    #[test]
+    fn udb_config_debug_redacts_replica_dsns() {
+        let cfg = UdbConfig {
+            pg_replica_dsns: vec![format!("postgres://u:{CANARY}@h/db")],
+            ..Default::default()
+        };
+        let dbg = format!("{cfg:?}");
+        assert!(
+            !dbg.contains(CANARY),
+            "UdbConfig leaked pg_replica_dsns: {dbg}"
+        );
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]

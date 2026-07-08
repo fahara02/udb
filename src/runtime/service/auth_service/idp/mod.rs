@@ -18,11 +18,14 @@ mod events;
 mod mapping;
 mod oidc;
 mod saml;
+mod saml_http;
 mod scim;
 mod scim_http;
 mod store;
 
 pub(crate) use scim_http::spawn_from_env_with_shutdown as spawn_scim_http_from_env;
+// W9: leader wires spawn_saml_http_from_env into service/mod.rs serve()
+pub(crate) use saml_http::spawn_from_env_with_shutdown as spawn_saml_http_from_env;
 
 #[cfg(test)]
 mod tests;
@@ -42,6 +45,8 @@ pub use crate::proto::udb::core::idp::services::v1::identity_provider_service_se
 use super::DataBrokerService;
 use super::events::{AuthEventSink, noop_sink};
 use super::mappings::{bounded_page_response, bounded_page_window, timestamp_from_unix};
+#[cfg(any(feature = "oidc", test))]
+use crate::runtime::authz::Principal;
 use crate::runtime::core::DataBrokerRuntime;
 
 use mapping::{
@@ -49,6 +54,10 @@ use mapping::{
     evaluate_account_linking, evaluate_jit, map_groups_to_roles,
 };
 use store::{ExternalIdentityRow, ProviderRow};
+
+fn idp_internal_status(operation: impl Into<String>, message: impl Into<String>) -> Status {
+    crate::runtime::executor_utils::internal_status("identity_provider", operation, message)
+}
 
 /// Resolved OIDC provider config for the authn OIDC verify path (J2.1: move
 /// OIDC config out of process globals). Empty fields mean "fall back to the
@@ -63,6 +72,40 @@ pub struct ResolvedOidcProvider {
     pub enabled: bool,
     pub claim_mapping_json: String,
     pub group_mapping_json: String,
+}
+
+/// Build the Authn principal from already-verified OIDC claims using the same
+/// provider claim/group mapping rules as the rest of the IdP plane.
+#[cfg(any(feature = "oidc", test))]
+pub(super) fn oidc_principal_from_verified_claims(
+    provider_id: &str,
+    fallback_subject: &str,
+    tenant_id: &str,
+    project_id: &str,
+    scopes: Vec<String>,
+    claim_mapping_json: &str,
+    group_mapping_json: &str,
+    claims: &Value,
+) -> Principal {
+    let mapped = apply_claim_mapping(claim_mapping_json, claims);
+    let subject = if mapped.subject.trim().is_empty() {
+        fallback_subject.trim().to_string()
+    } else {
+        mapped.subject
+    };
+    let (roles, _) = map_groups_to_roles(group_mapping_json, &mapped.groups);
+    Principal {
+        principal_id: format!("{provider_id}:{subject}"),
+        subject: subject.clone(),
+        user_id: subject,
+        service_identity: String::new(),
+        tenant_id: tenant_id.to_string(),
+        project_id: project_id.to_string(),
+        scopes,
+        roles,
+        provider_id: provider_id.to_string(),
+        auth_method: "oidc".to_string(),
+    }
 }
 
 /// Resolve a tenant's OIDC provider by id from the registry. Returns `Ok(None)`
@@ -110,6 +153,252 @@ fn now_unix_i64() -> i64 {
     chrono::Utc::now().timestamp()
 }
 
+fn idp_invalid_fields<I, F, D>(message: impl Into<String>, fields: I) -> Status
+where
+    I: IntoIterator<Item = (F, D)>,
+    F: Into<String>,
+    D: Into<String>,
+{
+    crate::runtime::executor_utils::invalid_argument_fields(message, fields)
+}
+
+fn idp_capability_status(
+    operation: &'static str,
+    capability_required: &'static str,
+    message: impl Into<String>,
+) -> Status {
+    crate::runtime::executor_utils::capability_status(
+        "identity_provider",
+        operation,
+        capability_required,
+        message,
+    )
+}
+
+fn idp_policy_status(
+    operation: &'static str,
+    policy_decision_id: &'static str,
+    message: impl Into<String>,
+) -> Status {
+    crate::runtime::executor_utils::policy_status(operation, policy_decision_id, message)
+}
+
+fn idp_permission_policy_status(
+    operation: impl Into<String>,
+    policy_decision_id: impl Into<String>,
+    message: impl Into<String>,
+) -> Status {
+    crate::runtime::executor_utils::policy_status_with_code(
+        tonic::Code::PermissionDenied,
+        operation,
+        policy_decision_id,
+        message,
+    )
+}
+
+fn idp_schema_not_found_status(
+    operation: &'static str,
+    schema_code: &'static str,
+    message: impl Into<String>,
+) -> Status {
+    crate::runtime::executor_utils::schema_status(
+        tonic::Code::NotFound,
+        "identity_provider",
+        operation,
+        schema_code,
+        message,
+    )
+}
+
+fn idp_schema_already_exists_status(
+    operation: &'static str,
+    schema_code: &'static str,
+    message: impl Into<String>,
+) -> Status {
+    crate::runtime::executor_utils::schema_status(
+        tonic::Code::AlreadyExists,
+        "identity_provider",
+        operation,
+        schema_code,
+        message,
+    )
+}
+
+fn idp_provider_not_found_status() -> Status {
+    idp_schema_not_found_status(
+        "provider_lookup",
+        "identity_provider_not_found",
+        "identity provider not found for this tenant",
+    )
+}
+
+fn idp_scim_user_not_found_status() -> Status {
+    idp_schema_not_found_status(
+        "scim_user_lookup",
+        "scim_user_not_found",
+        "SCIM user not found",
+    )
+}
+
+fn idp_scim_group_not_found_status() -> Status {
+    idp_schema_not_found_status(
+        "scim_group_mapping_lookup",
+        "scim_group_not_found",
+        "SCIM group not found in group mapping",
+    )
+}
+
+fn idp_saml_replay_rejected_status() -> Status {
+    idp_permission_policy_status(
+        "saml_acs",
+        "saml_assertion_replay",
+        "SAML assertion has already been consumed (replay rejected)",
+    )
+}
+
+fn idp_jit_provisioning_rejected_status(reason: impl std::fmt::Display) -> Status {
+    idp_permission_policy_status(
+        "idp_jit_provisioning",
+        "jit_policy_rejected",
+        format!("JIT provisioning rejected: {reason}"),
+    )
+}
+
+fn idp_required_field_status(field: &'static str, description: &'static str) -> Status {
+    idp_invalid_fields(format!("{field} is required"), [(field, description)])
+}
+
+fn idp_tenant_id_required_status() -> Status {
+    idp_required_field_status("tenant_id", "must be a non-empty tenant id")
+}
+
+fn idp_display_name_required_status() -> Status {
+    idp_required_field_status("display_name", "must be a non-empty display name")
+}
+
+fn idp_claims_json_invalid_status(err: impl std::fmt::Display) -> Status {
+    idp_invalid_fields(
+        format!("claims_json is not valid JSON: {err}"),
+        [("claims_json", "must decode as a JSON object of IdP claims")],
+    )
+}
+
+fn idp_subject_user_required_status() -> Status {
+    idp_invalid_fields(
+        "subject and user_id are required",
+        [
+            ("subject", "must be a non-empty external subject"),
+            ("user_id", "must be a non-empty UDB user id"),
+        ],
+    )
+}
+
+fn idp_claims_subject_required_status() -> Status {
+    idp_invalid_fields(
+        "claims have no resolvable subject",
+        [(
+            "claims_json",
+            "must map to a non-empty external subject claim",
+        )],
+    )
+}
+
+fn idp_saml_metadata_required_status() -> Status {
+    idp_invalid_fields(
+        "metadata_xml is required (or set the provider's saml_metadata_url)",
+        [(
+            "metadata_xml",
+            "must contain SAML metadata XML when the provider has no metadata URL",
+        )],
+    )
+}
+
+fn idp_saml_metadata_invalid_status(err: impl std::fmt::Display) -> Status {
+    idp_invalid_fields(
+        format!("invalid SAML metadata: {err}"),
+        [("metadata_xml", "must decode as valid SAML metadata XML")],
+    )
+}
+
+fn idp_metadata_fetch_failed_status(err: impl std::fmt::Display) -> Status {
+    idp_capability_status(
+        "metadata_fetch",
+        "saml_metadata_url",
+        format!("metadata fetch failed: {err}"),
+    )
+}
+
+fn idp_saml_sso_url_missing_status() -> Status {
+    idp_capability_status(
+        "saml_login",
+        "saml_sso_url",
+        "provider has no SAML SSO URL; import metadata first",
+    )
+}
+
+fn idp_provider_disabled_status(display_name: &str) -> Status {
+    idp_capability_status(
+        "provider_login",
+        "provider_enabled",
+        format!("identity provider '{display_name}' is disabled"),
+    )
+}
+
+fn idp_provider_disabled_static_status() -> Status {
+    idp_capability_status(
+        "provider_login",
+        "provider_enabled",
+        "identity provider is disabled",
+    )
+}
+
+fn idp_scim_user_json_invalid_status(err: impl Into<String>) -> Status {
+    idp_invalid_fields(
+        err.into(),
+        [(
+            "scim_user_json",
+            "must decode as a valid SCIM User resource",
+        )],
+    )
+}
+
+fn idp_scim_patch_invalid_status(err: impl Into<String>) -> Status {
+    idp_invalid_fields(
+        err.into(),
+        [(
+            "operations",
+            "must contain supported SCIM PATCH operations for a User resource",
+        )],
+    )
+}
+
+fn idp_scim_group_json_invalid_status(err: impl Into<String>) -> Status {
+    idp_invalid_fields(
+        err.into(),
+        [(
+            "scim_group_json",
+            "must decode as a valid SCIM Group resource",
+        )],
+    )
+}
+
+fn idp_scim_group_mapping_required_status() -> Status {
+    idp_policy_status(
+        "scim_create_group",
+        "scim_group_mapping_required",
+        "group must match a configured group mapping key; \
+         groups are mapping-driven and not persisted",
+    )
+}
+
+fn idp_account_linking_explicit_required_status() -> Status {
+    idp_policy_status(
+        "idp_account_linking",
+        "explicit_link_required",
+        "an account with this email exists; explicit account linking is required",
+    )
+}
+
 /// Postgres-backed `IdentityProviderService` handler.
 pub struct IdentityProviderServiceImpl {
     pg_pool: Option<PgPool>,
@@ -119,6 +408,9 @@ pub struct IdentityProviderServiceImpl {
     /// Records IdP discovery/JWKS and SCIM failures (Phase L3 task6). Defaults to
     /// a no-op; production wires the broker's shared recorder.
     metrics: Arc<dyn crate::metrics::MetricsRecorder>,
+    /// Redis-backed principal cutoff denylist for fast post-SCIM-delete token rejection.
+    #[cfg(feature = "redis")]
+    jti_denylist: Option<crate::runtime::authn::revocation::JtiDenylist>,
 }
 
 impl IdentityProviderServiceImpl {
@@ -129,6 +421,8 @@ impl IdentityProviderServiceImpl {
             event_sink: noop_sink(),
             jwks_cache: oidc::OidcJwksCache::new(),
             metrics: Arc::new(crate::metrics::NoopMetrics),
+            #[cfg(feature = "redis")]
+            jti_denylist: None,
         }
     }
 
@@ -155,10 +449,22 @@ impl IdentityProviderServiceImpl {
         self
     }
 
+    #[cfg(feature = "redis")]
+    pub(crate) fn with_jti_denylist(
+        mut self,
+        denylist: Option<crate::runtime::authn::revocation::JtiDenylist>,
+    ) -> Self {
+        self.jti_denylist = denylist;
+        self
+    }
+
     /// IdP control plane is durable-only: fail closed when no pool exists.
     fn require_pool(&self) -> Result<&PgPool, Status> {
         self.pg_pool.as_ref().ok_or_else(|| {
-            Status::failed_precondition(
+            crate::runtime::executor_utils::capability_status(
+                "identity_provider",
+                "postgres_store",
+                "postgres_store",
                 "identity-provider service requires a Postgres-backed store (no PG pool configured)",
             )
         })
@@ -172,11 +478,11 @@ impl IdentityProviderServiceImpl {
         provider_id: &str,
     ) -> Result<ProviderRow, Status> {
         if tenant_id.trim().is_empty() {
-            return Err(Status::invalid_argument("tenant_id is required"));
+            return Err(idp_tenant_id_required_status());
         }
         store::get_provider(pool, tenant_id, provider_id)
             .await?
-            .ok_or_else(|| Status::not_found("identity provider not found for this tenant"))
+            .ok_or_else(idp_provider_not_found_status)
     }
 }
 
@@ -320,10 +626,7 @@ fn merge_default_roles(mut roles: Vec<String>, default_roles: Vec<String>) -> Ve
 /// A disabled provider must block new login but preserve audit history (J3).
 fn ensure_provider_active(row: &ProviderRow) -> Result<(), Status> {
     if !row.enabled {
-        return Err(Status::failed_precondition(format!(
-            "identity provider '{}' is disabled",
-            row.display_name
-        )));
+        return Err(idp_provider_disabled_status(&row.display_name));
     }
     Ok(())
 }
@@ -339,10 +642,10 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
         let pool = self.require_pool()?;
         let req = request.into_inner();
         if req.tenant_id.trim().is_empty() {
-            return Err(Status::invalid_argument("tenant_id is required"));
+            return Err(idp_tenant_id_required_status());
         }
         if req.display_name.trim().is_empty() {
-            return Err(Status::invalid_argument("display_name is required"));
+            return Err(idp_display_name_required_status());
         }
         let row = ProviderRow {
             tenant_id: req.tenant_id.clone(),
@@ -408,28 +711,126 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
         let _ = self
             .load_provider(pool, &req.tenant_id, &req.provider_id)
             .await?;
+        let update_mask = crate::runtime::service::native_helpers::update_mask_path_set(
+            req.update_mask.as_ref(),
+            &[
+                "display_name",
+                "issuer",
+                "entity_id",
+                "jwks_url",
+                "saml_metadata_url",
+                "client_ids",
+                "audiences",
+                "claim_mapping_json",
+                "group_mapping_json",
+                "jit_policy_json",
+                "account_linking_policy",
+                "client_secret",
+                "saml_signing_key_pem",
+                "updated_by",
+            ],
+        )?;
+        let update_field = |field: &str, legacy_present: bool| {
+            crate::runtime::service::native_helpers::update_mask_allows(
+                &update_mask,
+                field,
+                legacy_present,
+            )
+        };
         let fields = ProviderRow {
-            display_name: req.display_name.clone(),
-            issuer: req.issuer.clone(),
-            entity_id: req.entity_id.clone(),
-            jwks_url: req.jwks_url.clone(),
-            saml_metadata_url: req.saml_metadata_url.clone(),
-            client_ids_json: if req.client_ids.is_empty() {
+            display_name: if update_field("display_name", !req.display_name.trim().is_empty()) {
+                req.display_name.clone()
+            } else {
                 String::new()
+            },
+            issuer: if update_field("issuer", !req.issuer.trim().is_empty()) {
+                req.issuer.clone()
+            } else {
+                String::new()
+            },
+            entity_id: if update_field("entity_id", !req.entity_id.trim().is_empty()) {
+                req.entity_id.clone()
+            } else {
+                String::new()
+            },
+            jwks_url: if update_field("jwks_url", !req.jwks_url.trim().is_empty()) {
+                req.jwks_url.clone()
+            } else {
+                String::new()
+            },
+            saml_metadata_url: if update_field(
+                "saml_metadata_url",
+                !req.saml_metadata_url.trim().is_empty(),
+            ) {
+                req.saml_metadata_url.clone()
+            } else {
+                String::new()
+            },
+            client_ids_json: if !update_field("client_ids", !req.client_ids.is_empty()) {
+                String::new()
+            } else if req.client_ids.is_empty() {
+                "[]".to_string()
             } else {
                 vec_to_json_array(&req.client_ids)
             },
-            audiences_json: if req.audiences.is_empty() {
+            audiences_json: if !update_field("audiences", !req.audiences.is_empty()) {
                 String::new()
+            } else if req.audiences.is_empty() {
+                "[]".to_string()
             } else {
                 vec_to_json_array(&req.audiences)
             },
-            claim_mapping_json: req.claim_mapping_json.clone(),
-            group_mapping_json: req.group_mapping_json.clone(),
-            jit_policy_json: req.jit_policy_json.clone(),
-            account_linking_policy: req.account_linking_policy.clone(),
-            updated_by: req.updated_by.clone(),
+            claim_mapping_json: if update_field(
+                "claim_mapping_json",
+                !req.claim_mapping_json.trim().is_empty(),
+            ) {
+                req.claim_mapping_json.clone()
+            } else {
+                String::new()
+            },
+            group_mapping_json: if update_field(
+                "group_mapping_json",
+                !req.group_mapping_json.trim().is_empty(),
+            ) {
+                req.group_mapping_json.clone()
+            } else {
+                String::new()
+            },
+            jit_policy_json: if update_field(
+                "jit_policy_json",
+                !req.jit_policy_json.trim().is_empty(),
+            ) {
+                req.jit_policy_json.clone()
+            } else {
+                String::new()
+            },
+            account_linking_policy: if update_field(
+                "account_linking_policy",
+                !req.account_linking_policy.trim().is_empty(),
+            ) {
+                req.account_linking_policy.clone()
+            } else {
+                String::new()
+            },
+            updated_by: if update_field("updated_by", !req.updated_by.trim().is_empty()) {
+                req.updated_by.clone()
+            } else {
+                String::new()
+            },
             ..Default::default()
+        };
+        let client_secret = if update_field("client_secret", !req.client_secret.trim().is_empty()) {
+            req.client_secret.as_str()
+        } else {
+            ""
+        };
+        let saml_signing_key_pem = if update_field(
+            "saml_signing_key_pem",
+            !req.saml_signing_key_pem.trim().is_empty(),
+        ) {
+            req.saml_signing_key_pem.as_str()
+        } else {
+            ""
         };
         let updated = store::update_provider(
             self.runtime.as_ref(),
@@ -437,11 +838,11 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
             &req.tenant_id,
             &req.provider_id,
             &fields,
-            &req.client_secret,
-            &req.saml_signing_key_pem,
+            client_secret,
+            saml_signing_key_pem,
         )
         .await?
-        .ok_or_else(|| Status::not_found("identity provider not found for this tenant"))?;
+        .ok_or_else(idp_provider_not_found_status)?;
         // Invalidate the JWKS cache: issuer/jwks_url may have changed.
         self.jwks_cache.invalidate(&req.tenant_id, &req.provider_id);
         events::emit(
@@ -469,7 +870,7 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
         let disabled =
             store::disable_provider(pool, &req.tenant_id, &req.provider_id, &req.updated_by)
                 .await?
-                .ok_or_else(|| Status::not_found("identity provider not found for this tenant"))?;
+                .ok_or_else(idp_provider_not_found_status)?;
         events::emit(
             self.event_sink.as_ref(),
             events::PROVIDER_DISABLED,
@@ -504,7 +905,7 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
         let pool = self.require_pool()?;
         let req = request.into_inner();
         if req.tenant_id.trim().is_empty() {
-            return Err(Status::invalid_argument("tenant_id is required"));
+            return Err(idp_tenant_id_required_status());
         }
         let (limit, offset, _) = bounded_page_window(req.page.as_ref());
         let kind = if req.kind == idp_entity_pb::IdpKind::Unspecified as i32 {
@@ -663,8 +1064,8 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
         let provider = self
             .load_provider(pool, &req.tenant_id, &req.provider_id)
             .await?;
-        let claims: Value = serde_json::from_str(req.claims_json.trim())
-            .map_err(|e| Status::invalid_argument(format!("claims_json is not valid JSON: {e}")))?;
+        let claims: Value =
+            serde_json::from_str(req.claims_json.trim()).map_err(idp_claims_json_invalid_status)?;
         let mapping_json = if req.claim_mapping_json.trim().is_empty() {
             provider.claim_mapping_json.clone()
         } else {
@@ -718,7 +1119,7 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
         let pool = self.require_pool()?;
         let req = request.into_inner();
         if req.tenant_id.trim().is_empty() {
-            return Err(Status::invalid_argument("tenant_id is required"));
+            return Err(idp_tenant_id_required_status());
         }
         let (limit, offset, _) = bounded_page_window(req.page.as_ref());
         let (rows, total) = store::list_external_identities(
@@ -747,7 +1148,7 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
             .load_provider(pool, &req.tenant_id, &req.provider_id)
             .await?;
         if req.subject.trim().is_empty() || req.user_id.trim().is_empty() {
-            return Err(Status::invalid_argument("subject and user_id are required"));
+            return Err(idp_subject_user_required_status());
         }
         let row = store::upsert_external_identity(
             pool,
@@ -779,7 +1180,7 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
         let pool = self.require_pool()?;
         let req = request.into_inner();
         if req.tenant_id.trim().is_empty() {
-            return Err(Status::invalid_argument("tenant_id is required"));
+            return Err(idp_tenant_id_required_status());
         }
         let unlinked =
             store::unlink_external_identity(pool, &req.tenant_id, &req.external_identity_id)
@@ -812,14 +1213,11 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
         } else if !provider.saml_metadata_url.trim().is_empty() {
             oidc::fetch_text(&provider.saml_metadata_url)
                 .await
-                .map_err(|e| Status::failed_precondition(format!("metadata fetch failed: {e}")))?
+                .map_err(idp_metadata_fetch_failed_status)?
         } else {
-            return Err(Status::invalid_argument(
-                "metadata_xml is required (or set the provider's saml_metadata_url)",
-            ));
+            return Err(idp_saml_metadata_required_status());
         };
-        let meta = saml::parse_metadata(&xml)
-            .map_err(|e| Status::invalid_argument(format!("invalid SAML metadata: {e}")))?;
+        let meta = saml::parse_metadata(&xml).map_err(idp_saml_metadata_invalid_status)?;
         let certs_json = vec_to_json_array(&meta.signing_certs_b64);
         let updated = store::update_saml_metadata(
             pool,
@@ -831,7 +1229,7 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
             &req.updated_by,
         )
         .await?
-        .ok_or_else(|| Status::not_found("identity provider not found for this tenant"))?;
+        .ok_or_else(idp_provider_not_found_status)?;
         // Tier-7 #32: emit a SAML metadata-update event. Only non-secret descriptor
         // fields (entity_id, SSO URL, signing-cert COUNT) are recorded — never the
         // certificate bytes or any signing key.
@@ -869,9 +1267,7 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
             .await?;
         ensure_provider_active(&provider)?;
         if provider.saml_sso_url.trim().is_empty() {
-            return Err(Status::failed_precondition(
-                "provider has no SAML SSO URL; import metadata first",
-            ));
+            return Err(idp_saml_sso_url_missing_status());
         }
         let sp_entity_id = if provider.entity_id.trim().is_empty() {
             format!("urn:udb:sp:{}", req.tenant_id)
@@ -881,8 +1277,14 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
         let acs_url = std::env::var("UDB_SAML_ACS_URL")
             .unwrap_or_else(|_| format!("/v1/idp/providers/{}:saml-acs", req.provider_id));
         let (saml_request, request_id) =
-            saml::build_authn_request(&sp_entity_id, &provider.saml_sso_url, &acs_url)
-                .map_err(|e| Status::internal(format!("AuthnRequest build failed: {e}")))?;
+            saml::build_authn_request(&sp_entity_id, &provider.saml_sso_url, &acs_url).map_err(
+                |e| {
+                    idp_internal_status(
+                        "start_saml_login",
+                        format!("AuthnRequest build failed: {e}"),
+                    )
+                },
+            )?;
         // Request signing requires the SP private key + XML-DSig signature
         // construction (host-blocked: no XML C14N). We return the (unsigned)
         // request rather than claim it is signed. `signed=false` is honest.
@@ -922,7 +1324,7 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
                 json!({ "provider_id": req.provider_id, "result": "rejected", "reason": "provider_disabled" }),
             )
             .await;
-            return Err(Status::failed_precondition("identity provider is disabled"));
+            return Err(idp_provider_disabled_static_status());
         }
         let certs = json_array_to_vec(&provider.saml_idp_certs_json);
         let audience = provider.entity_id.clone();
@@ -951,7 +1353,12 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
                 &audience,
                 &std::collections::BTreeMap::new(),
             )
-            .map_err(|e| Status::internal(format!("dev SAML self-assert failed: {e}")))?;
+            .map_err(|e| {
+                idp_internal_status(
+                    "saml_acs_dev_self_assert",
+                    format!("dev SAML self-assert failed: {e}"),
+                )
+            })?;
             (resp_b64, vec![cert_b64])
         } else {
             (req.saml_response.clone(), certs)
@@ -1002,9 +1409,7 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
                 json!({ "provider_id": req.provider_id, "assertion_id": assertion.assertion_id }),
             )
             .await;
-            return Err(Status::permission_denied(
-                "SAML assertion has already been consumed (replay rejected)",
-            ));
+            return Err(idp_saml_replay_rejected_status());
         }
 
         // Map NameID + attributes → principal via the provider claim mapping.
@@ -1079,13 +1484,11 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
             .load_provider(pool, &req.tenant_id, &req.provider_id)
             .await?;
         ensure_provider_active(&provider)?;
-        let claims: Value = serde_json::from_str(req.claims_json.trim())
-            .map_err(|e| Status::invalid_argument(format!("claims_json is not valid JSON: {e}")))?;
+        let claims: Value =
+            serde_json::from_str(req.claims_json.trim()).map_err(idp_claims_json_invalid_status)?;
         let mapped = apply_claim_mapping(&provider.claim_mapping_json, &claims);
         let subject = if mapped.subject.is_empty() {
-            return Err(Status::invalid_argument(
-                "claims have no resolvable subject",
-            ));
+            return Err(idp_claims_subject_required_status());
         } else {
             mapped.subject.clone()
         };
@@ -1130,7 +1533,7 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
                 let _ =
                     store::record_scim_sync(pool, &req.tenant_id, &req.provider_id, false, "", &e)
                         .await;
-                return Err(Status::invalid_argument(e));
+                return Err(idp_scim_user_json_invalid_status(e));
             }
         };
         // Provision the user (no group→role binding here — only via mappings).
@@ -1191,7 +1594,7 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
         let row = self
             .find_scim_identity(pool, &req.tenant_id, &req.provider_id, &req.scim_user_id)
             .await?
-            .ok_or_else(|| Status::not_found("SCIM user not found"))?;
+            .ok_or_else(idp_scim_user_not_found_status)?;
         let view = scim::ScimUserView {
             user_name: row.subject.clone(),
             email: row.email.clone(),
@@ -1249,11 +1652,12 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
         let _ = self
             .load_provider(pool, &req.tenant_id, &req.provider_id)
             .await?;
-        let view = scim::parse_scim_user(&req.scim_user_json).map_err(Status::invalid_argument)?;
+        let view = scim::parse_scim_user(&req.scim_user_json)
+            .map_err(idp_scim_user_json_invalid_status)?;
         let row = self
             .find_scim_identity(pool, &req.tenant_id, &req.provider_id, &req.scim_user_id)
             .await?
-            .ok_or_else(|| Status::not_found("SCIM user not found"))?;
+            .ok_or_else(idp_scim_user_not_found_status)?;
         // Re-upsert the link with the replaced email; deactivate when inactive.
         store::upsert_external_identity(
             pool,
@@ -1311,7 +1715,7 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
         let row = self
             .find_scim_identity(pool, &req.tenant_id, &req.provider_id, &req.scim_user_id)
             .await?
-            .ok_or_else(|| Status::not_found("SCIM user not found"))?;
+            .ok_or_else(idp_scim_user_not_found_status)?;
         let base = scim::ScimUserView {
             user_name: row.subject.clone(),
             email: row.email.clone(),
@@ -1327,7 +1731,7 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
                 value: serde_json::from_str(&o.value_json).unwrap_or(Value::Null),
             })
             .collect();
-        let patched = scim::apply_user_patch(base, &ops).map_err(Status::invalid_argument)?;
+        let patched = scim::apply_user_patch(base, &ops).map_err(idp_scim_patch_invalid_status)?;
         // Map active=false → deactivate + session revoke (deprovision mapping).
         if !patched.active {
             let _ = store::deactivate_user(pool, &req.tenant_id, &row.user_id).await?;
@@ -1376,22 +1780,58 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
         let row = self
             .find_scim_identity(pool, &req.tenant_id, &req.provider_id, &req.scim_user_id)
             .await?
-            .ok_or_else(|| Status::not_found("SCIM user not found"))?;
-        // SCIM DELETE maps to deactivate + session revoke (deprovision), per the
-        // directory deprovision policy, then the link is unlinked.
-        let deactivated = store::deactivate_user(pool, &req.tenant_id, &row.user_id).await?;
-        let _ = store::unlink_external_identity(pool, &req.tenant_id, &row.external_identity_id)
-            .await?;
+            .ok_or_else(idp_scim_user_not_found_status)?;
+        // SCIM DELETE is the principal-scoped right-to-be-forgotten bridge: the
+        // resolved external identity selects exactly one UDB principal, then the
+        // store removes that principal's auth/session/credential rows in one
+        // transaction and records the principal cutoff when Redis is available.
+        let now_unix = chrono::Utc::now().timestamp().max(0) as u64;
+        let report = {
+            #[cfg(feature = "redis")]
+            {
+                store::hard_delete_scim_principal(
+                    pool,
+                    &req.tenant_id,
+                    &row.user_id,
+                    self.jti_denylist.as_ref(),
+                    now_unix,
+                )
+                .await?
+            }
+            #[cfg(not(feature = "redis"))]
+            {
+                store::hard_delete_scim_principal(pool, &req.tenant_id, &row.user_id, now_unix)
+                    .await?
+            }
+        };
         events::emit(
             self.event_sink.as_ref(),
             events::SCIM_USER_DEACTIVATED,
             row.external_identity_id.clone(),
             req.tenant_id.clone(),
-            json!({ "provider_id": req.provider_id, "user_id": row.user_id, "via": "scim_delete" }),
+            json!({
+                "provider_id": req.provider_id,
+                "tenant_id": &report.tenant_id,
+                "user_id": &report.user_id,
+                "via": "scim_delete_hard",
+                "deleted_external_identities": report.deleted_external_identities,
+                "deleted_api_keys": report.deleted_api_keys,
+                "deleted_token_families": report.deleted_token_families,
+                "deleted_sessions": report.deleted_sessions,
+                "deleted_devices": report.deleted_devices,
+                "deleted_mfa_challenges": report.deleted_mfa_challenges,
+                "deleted_otps": report.deleted_otps,
+                "deleted_recovery_codes": report.deleted_recovery_codes,
+                "deleted_webauthn_credentials": report.deleted_webauthn_credentials,
+                "deleted_webauthn_challenges": report.deleted_webauthn_challenges,
+                "deleted_users": report.deleted_users,
+                "total_deleted": report.total_deleted(),
+                "principal_denylisted": report.principal_denylisted,
+            }),
         )
         .await;
         Ok(Response::new(idp_pb::ScimDeleteUserResponse {
-            deactivated,
+            deactivated: report.total_deleted() > 0,
         }))
     }
 
@@ -1404,18 +1844,15 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
         let provider = self
             .load_provider(pool, &req.tenant_id, &req.provider_id)
             .await?;
-        let view =
-            scim::parse_scim_group(&req.scim_group_json).map_err(Status::invalid_argument)?;
+        let view = scim::parse_scim_group(&req.scim_group_json)
+            .map_err(idp_scim_group_json_invalid_status)?;
         // Groups are not persisted as separate rows; they drive role binding only
         // through the configured group mapping. The group id must therefore be a
         // configured mapping key (mapping-driven), not a random UUID, so the
         // resolver (`scim_get_group`) can find it. Fail closed otherwise.
         let keys = group_keys(&provider.group_mapping_json);
         if !keys.contains(&view.display_name) {
-            return Err(Status::failed_precondition(
-                "group must match a configured group mapping key; \
-                 groups are mapping-driven and not persisted",
-            ));
+            return Err(idp_scim_group_mapping_required_status());
         }
         let id = view.display_name.clone();
         Ok(Response::new(idp_pb::ScimCreateGroupResponse {
@@ -1439,7 +1876,7 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
             .await?;
         let groups = group_keys(&provider.group_mapping_json);
         if !groups.contains(&req.scim_group_id) {
-            return Err(Status::not_found("SCIM group not found in group mapping"));
+            return Err(idp_scim_group_not_found_status());
         }
         let view = scim::ScimGroupView {
             display_name: req.scim_group_id.clone(),
@@ -1488,7 +1925,7 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
             .load_provider(pool, &req.tenant_id, &req.provider_id)
             .await?;
         if !group_keys(&provider.group_mapping_json).contains(&req.scim_group_id) {
-            return Err(Status::not_found("SCIM group not found in group mapping"));
+            return Err(idp_scim_group_not_found_status());
         }
         // Group membership changes only ever grant roles through the configured
         // mapping. Compute the roles this group grants (if any) for the response;
@@ -1523,7 +1960,7 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
             .load_provider(pool, &req.tenant_id, &req.provider_id)
             .await?;
         if !group_keys(&provider.group_mapping_json).contains(&req.scim_group_id) {
-            return Err(Status::not_found("SCIM group not found in group mapping"));
+            return Err(idp_scim_group_not_found_status());
         }
         // Groups are mapping-driven; "deletion" is a no-op on stored data (the
         // operator removes the mapping entry to revoke the binding). Reported as
@@ -1578,7 +2015,9 @@ impl IdentityProviderServiceImpl {
                     mapped.email_verified,
                 ) {
                     AccountLinkDecision::Deny => {
-                        return Err(Status::already_exists(
+                        return Err(idp_schema_already_exists_status(
+                            "idp_account_linking",
+                            "idp_email_account_already_exists",
                             "an account with this email already exists and linking is denied",
                         ));
                     }
@@ -1604,9 +2043,7 @@ impl IdentityProviderServiceImpl {
                     // attempts do NOT silently link; require an explicit
                     // LinkIdentity call.
                     AccountLinkDecision::RequireExplicit => {
-                        return Err(Status::failed_precondition(
-                            "an account with this email exists; explicit account linking is required",
-                        ));
+                        return Err(idp_account_linking_explicit_required_status());
                     }
                 }
             }
@@ -1615,9 +2052,7 @@ impl IdentityProviderServiceImpl {
         // 3. JIT provisioning, gated by the provider policy (J2.4 / J3).
         let policy = JitPolicy::from_json(&provider.jit_policy_json);
         if let JitDecision::Reject(reason) = evaluate_jit(&policy, mapped) {
-            return Err(Status::permission_denied(format!(
-                "JIT provisioning rejected: {reason}"
-            )));
+            return Err(idp_jit_provisioning_rejected_status(reason));
         }
         let project = if policy.default_project.is_empty() {
             String::new()
@@ -1775,6 +2210,132 @@ fn scim_group_pb(id: &str, view: &scim::ScimGroupView) -> idp_pb::ScimGroup {
     }
 }
 
+#[cfg(test)]
+mod oidc_authn_mapping_tests {
+    use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
+
+    fn decode_detail(status: &Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present")
+            .to_bytes()
+            .expect("typed detail trailer decodes to bytes");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_internal_detail(status: &Status, operation: &str, message: &str) {
+        assert_eq!(status.code(), tonic::Code::Internal);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "identity_provider");
+        assert_eq!(detail.operation, operation);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    #[test]
+    fn idp_internal_status_carries_typed_detail() {
+        let status = idp_internal_status(
+            "start_saml_login",
+            "AuthnRequest build failed: invalid endpoint",
+        );
+        assert_internal_detail(
+            &status,
+            "start_saml_login",
+            "AuthnRequest build failed: invalid endpoint",
+        );
+    }
+
+    #[test]
+    fn oidc_principal_uses_provider_claim_and_group_mapping() {
+        let claims = json!({
+            "oid": "subject-42",
+            "roles": ["eng", "admins", "unknown"],
+        });
+        let claim_mapping = json!({
+            "subject": "oid",
+            "groups": "roles",
+        })
+        .to_string();
+        let group_mapping = json!({
+            "eng": "role:developer",
+            "admins": ["role:admin", "role:auditor"],
+        })
+        .to_string();
+
+        let principal = oidc_principal_from_verified_claims(
+            "provider-1",
+            "fallback-subject",
+            "tenant-a",
+            "project-a",
+            vec!["udb:read".to_string()],
+            &claim_mapping,
+            &group_mapping,
+            &claims,
+        );
+
+        assert_eq!(principal.principal_id, "provider-1:subject-42");
+        assert_eq!(principal.subject, "subject-42");
+        assert_eq!(principal.user_id, "subject-42");
+        assert_eq!(principal.tenant_id, "tenant-a");
+        assert_eq!(principal.project_id, "project-a");
+        assert_eq!(principal.scopes, vec!["udb:read"]);
+        assert_eq!(
+            principal.roles,
+            vec!["role:admin", "role:auditor", "role:developer"]
+        );
+        assert_eq!(principal.auth_method, "oidc");
+    }
+
+    #[test]
+    fn oidc_principal_falls_back_to_verified_subject_when_mapping_is_empty() {
+        let principal = oidc_principal_from_verified_claims(
+            "provider-1",
+            "verified-subject",
+            "tenant-a",
+            "",
+            Vec::new(),
+            r#"{"subject":"missing"}"#,
+            "{}",
+            &json!({}),
+        );
+
+        assert_eq!(principal.principal_id, "provider-1:verified-subject");
+        assert_eq!(principal.subject, "verified-subject");
+        assert!(principal.roles.is_empty());
+    }
+
+    #[test]
+    fn idp_email_conflict_carries_schema_detail() {
+        let err = idp_schema_already_exists_status(
+            "idp_account_linking",
+            "idp_email_account_already_exists",
+            "an account with this email already exists and linking is denied",
+        );
+        assert_eq!(err.code(), tonic::Code::AlreadyExists);
+        assert_eq!(
+            err.message(),
+            "an account with this email already exists and linking is denied"
+        );
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::Schema as i32);
+        assert_eq!(detail.backend, "identity_provider");
+        assert_eq!(detail.operation, "idp_account_linking");
+        assert_eq!(
+            detail.capability_required,
+            "idp_email_account_already_exists"
+        );
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+    }
+}
+
 // ── service wiring ────────────────────────────────────────────────────────────
 
 impl DataBrokerService {
@@ -1786,6 +2347,13 @@ impl DataBrokerService {
         // the backend is read from this service's proto `native_service` binding, then a
         // health/weight-routed instance is chosen — not the process-global pool.
         let pg_pool = runtime.native_store_pool_for_service("idp", true, "").ok();
+        #[cfg(feature = "redis")]
+        let jti_denylist = runtime.redis_clone().map(|redis| {
+            crate::runtime::authn::revocation::JtiDenylist::new(
+                redis,
+                crate::runtime::security::SecurityConfig::current().jwt_access_ttl_secs,
+            )
+        });
         let event_sink: Arc<dyn AuthEventSink> = match pg_pool.clone() {
             Some(pool) => Arc::new(
                 super::events::OutboxAuthEventSink::new(
@@ -1799,10 +2367,13 @@ impl DataBrokerService {
             ),
             None => noop_sink(),
         };
-        IdentityProviderServiceImpl::new()
+        let service = IdentityProviderServiceImpl::new()
             .with_runtime(runtime)
             .with_postgres(pg_pool)
             .with_event_sink(event_sink)
-            .with_metrics(self.metrics.clone())
+            .with_metrics(self.metrics.clone());
+        #[cfg(feature = "redis")]
+        let service = service.with_jti_denylist(jti_denylist);
+        service
     }
 }

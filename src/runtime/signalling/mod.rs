@@ -26,6 +26,7 @@
 mod json_relay;
 mod pixel_streaming;
 
+use std::fmt;
 use std::future::Future;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -55,7 +56,7 @@ pub trait SignalingProtocol: Send + Sync {
 /// ICE/TURN servers advertised to clients during a protocol handshake. Read from
 /// the same env as the native WebRTC service; when a TURN secret is present, each
 /// handshake mints a fresh short-lived coturn REST credential.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct IceConfig {
     /// `stun:`/`turn:` URLs (mixed; split by scheme when building the payload).
     urls: Vec<String>,
@@ -63,6 +64,19 @@ pub struct IceConfig {
     turn_secret: Option<Vec<u8>>,
     /// Credential lifetime in seconds.
     ttl: i64,
+}
+
+impl fmt::Debug for IceConfig {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("IceConfig")
+            .field("urls", &self.urls)
+            .field(
+                "turn_secret",
+                &self.turn_secret.as_ref().map(|_| "[redacted]"),
+            )
+            .field("ttl", &self.ttl)
+            .finish()
+    }
 }
 
 impl IceConfig {
@@ -297,6 +311,20 @@ mod it_tests {
             turn_secret: None,
             ttl: 60,
         }
+    }
+
+    #[test]
+    fn ice_config_debug_redacts_turn_secret() {
+        let config = IceConfig {
+            urls: vec!["turn:turn.example:3478".into()],
+            turn_secret: Some(b"super-secret-turn-material".to_vec()),
+            ttl: 60,
+        };
+
+        let rendered = format!("{config:?}");
+        assert!(rendered.contains("[redacted]"));
+        assert!(!rendered.contains("super-secret-turn-material"));
+        assert!(!rendered.contains("115, 117, 112"));
     }
 
     /// Read client frames until a Text frame parses to JSON, with a timeout so a

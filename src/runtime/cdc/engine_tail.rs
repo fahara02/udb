@@ -17,6 +17,18 @@ fn scope_text(value: Option<String>) -> String {
     value.unwrap_or_default().trim().to_string()
 }
 
+fn cdc_stream_policy_status(
+    policy_decision_id: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    crate::runtime::executor_utils::policy_status_with_code(
+        tonic::Code::PermissionDenied,
+        "cdc_stream",
+        policy_decision_id,
+        message,
+    )
+}
+
 /// Process-global rate gate for the CDC "failed to publish to kafka" log. The
 /// tailer is leader-elected (one active publisher), so a single shared gate
 /// correctly collapses the flood. Cooldown from
@@ -168,6 +180,61 @@ enum TailSourceStep {
     /// Abort the tail with this reason; the supervisor restarts from the
     /// last persisted offset and the source re-delivers the failed event.
     Abort(String),
+}
+
+/// #1.4 Kafka mid-message oracle: a broker-confirmed delivery may be
+/// finalized; every failed/canceled delivery returns the outbox row to
+/// `pending` and drops the pre-publish idempotency claim. There is no
+/// "ack anyway" branch here: ack/delete is only reachable from `Finish`.
+#[cfg(feature = "kafka")]
+#[derive(Debug, PartialEq, Eq)]
+enum OutboxDeliveryStep {
+    Finish { partition: i32, offset: i64 },
+    RetryPending(String),
+}
+
+#[cfg(feature = "kafka")]
+fn outbox_delivery_decision(delivery_result: Result<(i32, i64), String>) -> OutboxDeliveryStep {
+    match delivery_result {
+        Ok((partition, offset)) => OutboxDeliveryStep::Finish { partition, offset },
+        Err(reason) => OutboxDeliveryStep::RetryPending(reason),
+    }
+}
+
+/// #1.4 broker-store network-drop oracle: the tailer supervisor must restart
+/// the outbox tail on a DB/poll error with bounded exponential backoff. A clean
+/// tail exit resets the backoff. This keeps a transient store outage from
+/// becoming either a silent permanent stop or a hot retry loop.
+#[cfg(feature = "kafka")]
+#[derive(Debug, PartialEq, Eq)]
+enum TailerSupervisorStep {
+    Restart {
+        sleep_secs: u64,
+        next_backoff_secs: u64,
+    },
+    ResetBackoff {
+        next_backoff_secs: u64,
+    },
+}
+
+#[cfg(feature = "kafka")]
+fn tailer_supervisor_decision(
+    tail_failed: bool,
+    current_backoff_secs: u64,
+    max_backoff_secs: u64,
+) -> TailerSupervisorStep {
+    if tail_failed {
+        TailerSupervisorStep::Restart {
+            sleep_secs: current_backoff_secs,
+            next_backoff_secs: current_backoff_secs
+                .saturating_mul(2)
+                .min(max_backoff_secs.max(1)),
+        }
+    } else {
+        TailerSupervisorStep::ResetBackoff {
+            next_backoff_secs: 1,
+        }
+    }
 }
 
 /// #1: map one publish result to the loop's next step. This is the actual
@@ -330,7 +397,57 @@ fn journal_retention_sweep_sql(journal_relation: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
     use serde_json::json;
+
+    fn decode_detail(status: &tonic::Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present")
+            .to_bytes()
+            .expect("typed detail trailer decodes to bytes");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_cdc_stream_policy_detail(
+        status: &tonic::Status,
+        policy_decision_id: &str,
+        message: &str,
+    ) {
+        assert_eq!(status.code(), tonic::Code::PermissionDenied);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Policy as i32);
+        assert_eq!(detail.operation, "cdc_stream");
+        assert_eq!(detail.policy_decision_id, policy_decision_id);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    #[test]
+    fn cdc_stream_scope_denials_carry_policy_detail() {
+        let missing_scope =
+            cdc_stream_policy_status("cdc_read_scope_required", "Missing udb:cdc:read scope");
+        assert_cdc_stream_policy_detail(
+            &missing_scope,
+            "cdc_read_scope_required",
+            "Missing udb:cdc:read scope",
+        );
+
+        let missing_tenant = cdc_stream_policy_status(
+            "tenant_scope_required",
+            "tenant_id is required to stream tenant-scoped CDC topics",
+        );
+        assert_cdc_stream_policy_detail(
+            &missing_tenant,
+            "tenant_scope_required",
+            "tenant_id is required to stream tenant-scoped CDC topics",
+        );
+    }
 
     #[test]
     fn tenant_scoped_stream_filter_rejects_missing_tenant() {
@@ -514,6 +631,76 @@ mod tests {
             TailSourceStep::Publish {
                 partition: 3,
                 offset: 42
+            }
+        );
+    }
+
+    /// #1.4: outbox/Kafka mid-message failures must retry the same event
+    /// instead of acking/deleting it. `await_and_ack_delivery` routes the
+    /// broker result through this decision point: only `Finish` can call
+    /// `finish_published_event`; `RetryPending` calls `fail_pending`, which
+    /// marks the row back to `pending` and drops the idempotency claim.
+    #[cfg(feature = "kafka")]
+    #[test]
+    fn outbox_delivery_failure_retries_pending_not_ack() {
+        assert_eq!(
+            outbox_delivery_decision(Ok((2, 99))),
+            OutboxDeliveryStep::Finish {
+                partition: 2,
+                offset: 99
+            }
+        );
+
+        match outbox_delivery_decision(Err("broker disconnected mid-message".to_string())) {
+            OutboxDeliveryStep::RetryPending(reason) => {
+                assert!(reason.contains("broker disconnected"), "got: {reason}");
+            }
+            OutboxDeliveryStep::Finish { partition, offset } => {
+                panic!("failed Kafka delivery must retry, got Finish({partition}, {offset})")
+            }
+        }
+
+        match outbox_delivery_decision(Err("kafka delivery future canceled".to_string())) {
+            OutboxDeliveryStep::RetryPending(reason) => {
+                assert!(reason.contains("canceled"), "got: {reason}");
+            }
+            OutboxDeliveryStep::Finish { partition, offset } => {
+                panic!("canceled Kafka delivery must retry, got Finish({partition}, {offset})")
+            }
+        }
+    }
+
+    /// #1.4: a broker-store/network drop that makes `tail_outbox`
+    /// return `Err` must restart with bounded backoff. A clean return
+    /// resets the backoff for the next transient failure.
+    #[cfg(feature = "kafka")]
+    #[test]
+    fn tailer_supervisor_restarts_failed_tail_with_bounded_backoff() {
+        assert_eq!(
+            tailer_supervisor_decision(true, 1, 60),
+            TailerSupervisorStep::Restart {
+                sleep_secs: 1,
+                next_backoff_secs: 2,
+            }
+        );
+        assert_eq!(
+            tailer_supervisor_decision(true, 32, 60),
+            TailerSupervisorStep::Restart {
+                sleep_secs: 32,
+                next_backoff_secs: 60,
+            }
+        );
+        assert_eq!(
+            tailer_supervisor_decision(true, 60, 60),
+            TailerSupervisorStep::Restart {
+                sleep_secs: 60,
+                next_backoff_secs: 60,
+            }
+        );
+        assert_eq!(
+            tailer_supervisor_decision(false, 60, 60),
+            TailerSupervisorStep::ResetBackoff {
+                next_backoff_secs: 1,
             }
         );
     }
@@ -731,18 +918,25 @@ impl CdcEngine {
             .ok()
             .and_then(|v| v.parse::<i64>().ok())
             .unwrap_or(300);
+        // 6.5: fence by the shard-folded epoch and scope the sweep to THIS
+        // shard's epoch band so two shards never reset each other's in-flight
+        // publishes. `shard_epoch_band()` is `None` when unsharded, keeping the
+        // recovery SQL bit-identical to the pre-shard path.
         let reset = super::indoubt_recovery::reset_indoubt_publishing_rows(
             &self.pool,
             &outbox_relation,
-            self.config.producer_epoch,
+            self.config.fenced_producer_epoch(),
             grace_secs,
+            self.config.shard_epoch_band(),
         )
         .await?;
         if reset > 0 {
             info!(
                 "[cdc] in-doubt recovery: reset {} 'publishing' rows from prior epoch back to 'pending' \
                  (current producer_epoch={}, grace_secs={})",
-                reset, self.config.producer_epoch, grace_secs
+                reset,
+                self.config.fenced_producer_epoch(),
+                grace_secs
             );
         }
         Ok(reset)
@@ -767,7 +961,7 @@ impl CdcEngine {
             &self.pool,
             &self.config.outbox_relation(),
             event_id,
-            self.config.producer_epoch,
+            self.config.fenced_producer_epoch(),
         )
         .await
         {
@@ -840,7 +1034,8 @@ impl CdcEngine {
                 || scope == "*"
         });
         if !allowed {
-            return Err(tonic::Status::permission_denied(
+            return Err(cdc_stream_policy_status(
+                "cdc_read_scope_required",
                 "Missing udb:cdc:read scope",
             ));
         }
@@ -862,7 +1057,8 @@ impl CdcEngine {
             && (topic_pattern_may_match_tenant_scoped(&topic_pattern)
                 || policy_topics.iter().any(|topic| matcher.matches(topic)))
         {
-            return Err(tonic::Status::permission_denied(
+            return Err(cdc_stream_policy_status(
+                "tenant_scope_required",
                 "tenant_id is required to stream tenant-scoped CDC topics",
             ));
         }
@@ -1189,17 +1385,29 @@ impl CdcEngine {
                 }
                 res = &mut tail_loop => {
                     if let Err(e) = res {
-                        // GAP 9c: Exponential backoff — doubles each restart, caps at 60 s.
+                        // GAP 9c / 1.4: DB/store failures restart with bounded
+                        // backoff; the decision is unit-pinned by
+                        // `tailer_supervisor_restarts_failed_tail_with_bounded_backoff`.
+                        let TailerSupervisorStep::Restart { sleep_secs, next_backoff_secs } =
+                            tailer_supervisor_decision(true, backoff_secs, MAX_BACKOFF_SECS)
+                        else {
+                            unreachable!("failed tail must restart")
+                        };
                         error!(
                             "[cdc] replication tailer error: {}; restarting in {}s",
-                            e, backoff_secs
+                            e, sleep_secs
                         );
-                        tokio::time::sleep(Duration::from_secs(backoff_secs)).await;
-                        backoff_secs = (backoff_secs * 2).min(MAX_BACKOFF_SECS);
+                        tokio::time::sleep(Duration::from_secs(sleep_secs)).await;
+                        backoff_secs = next_backoff_secs;
                         tail_loop = Box::pin(self.tail_outbox());
                     } else {
-                        // Clean exit — reset backoff
-                        backoff_secs = 1;
+                        // Clean exit — reset backoff.
+                        let TailerSupervisorStep::ResetBackoff { next_backoff_secs } =
+                            tailer_supervisor_decision(false, backoff_secs, MAX_BACKOFF_SECS)
+                        else {
+                            unreachable!("clean tail must reset backoff")
+                        };
+                        backoff_secs = next_backoff_secs;
                     }
                 }
             }
@@ -1324,6 +1532,15 @@ impl CdcEngine {
             // per-partition order since `send()` is issued in event_seq order (#81).
             let mut pending = Vec::new();
             for (event_id, topic, partition_key, payload, created_at, event_seq) in rows {
+                // 6.5 CDC scale-out: in a multi-shard deployment each tailer
+                // claims ONLY the partition slice it owns; a row it does not own
+                // is left 'pending' for the owning shard to publish (disjoint
+                // ownership). No-op when unsharded — `owns_partition` is always
+                // true with `shard_count == 1`, so the single tailer still claims
+                // every row in exactly the same order as before.
+                if !self.config.owns_partition(&partition_key) {
+                    continue;
+                }
                 if let Some(prepared) = match tokio::time::timeout(
                     poll_timeout,
                     self.prepare_outbox_event(
@@ -1459,7 +1676,7 @@ impl CdcEngine {
         sqlx::query(&outbox_sql)
             .bind(event_id)
             .bind(state)
-            .bind(self.config.producer_epoch)
+            .bind(self.config.fenced_producer_epoch())
             .bind(self.config.transactional_id())
             .bind(kafka_partition)
             .bind(kafka_offset)
@@ -1483,7 +1700,7 @@ impl CdcEngine {
             if let Err(err) = sqlx::query(&journal_sql)
                 .bind(event_id)
                 .bind(state)
-                .bind(self.config.producer_epoch)
+                .bind(self.config.fenced_producer_epoch())
                 .bind(self.config.transactional_id())
                 .bind(kafka_partition)
                 .bind(kafka_offset)
@@ -1955,8 +2172,13 @@ impl CdcEngine {
         redis_conn: Option<&mut redis::aio::MultiplexedConnection>,
     ) {
         let PendingDelivery { prepared, future } = pending;
-        match future.await {
-            Ok(Ok((partition, offset))) => {
+        let decision = outbox_delivery_decision(match future.await {
+            Ok(Ok((partition, offset))) => Ok((partition, offset)),
+            Ok(Err((e, _))) => Err(e.to_string()),
+            Err(_canceled) => Err("kafka delivery future canceled".to_string()),
+        });
+        match decision {
+            OutboxDeliveryStep::Finish { partition, offset } => {
                 self.finish_published_event(
                     prepared.event_id,
                     &prepared.topic,
@@ -1969,13 +2191,8 @@ impl CdcEngine {
                 )
                 .await;
             }
-            Ok(Err((e, _))) => {
-                self.fail_pending(&prepared, &e.to_string(), redis_conn)
-                    .await
-            }
-            Err(_canceled) => {
-                self.fail_pending(&prepared, "kafka delivery future canceled", redis_conn)
-                    .await
+            OutboxDeliveryStep::RetryPending(reason) => {
+                self.fail_pending(&prepared, &reason, redis_conn).await
             }
         }
     }
@@ -2104,7 +2321,7 @@ impl CdcEngine {
             .bind(payload_string)
             .bind(partition)
             .bind(offset)
-            .bind(self.config.producer_epoch)
+            .bind(self.config.fenced_producer_epoch())
             .bind(self.config.transactional_id())
             .execute(&self.pool)
             .await
@@ -2372,7 +2589,7 @@ impl CdcEngine {
                 .bind(&payload_string)
                 .bind(partition)
                 .bind(kafka_offset)
-                .bind(self.config.producer_epoch)
+                .bind(self.config.fenced_producer_epoch())
                 .bind(self.config.transactional_id())
                 .execute(&self.pool)
                 .await

@@ -3,6 +3,7 @@ syntax = "proto3";
 package udb.core.storage.services.v1;
 
 import "google/api/annotations.proto";
+import "google/protobuf/field_mask.proto";
 import "google/protobuf/timestamp.proto";
 import "udb/core/common/v1/dto.proto";
 import "udb/core/common/v1/security.proto";
@@ -275,7 +276,7 @@ service StorageService {
       api_error: true
       explicit_nulls: true
     };
-    option (google.api.http) = {get: "/v1/storage/files/{file_id}/download-url"};
+    option (google.api.http) = {get: "/v1/storage/files/{file_id}:getDownloadUrl"};
   }
 
   // Stream a file's bytes directly through the broker. FALLBACK for clients
@@ -335,7 +336,7 @@ service StorageService {
       api_error: true
       explicit_nulls: true
     };
-    option (google.api.http) = {get: "/v1/storage/files/{file_id}/download"};
+    option (google.api.http) = {get: "/v1/storage/files/{file_id}:download"};
   }
 
   // Get file metadata
@@ -776,6 +777,9 @@ message UpdateFileRequest {
   // Proto3 explicit presence: absent leaves the stored visibility unchanged —
   // a partial update can never silently flip a file public/private.
   optional bool is_public = 8;
+  // Optional PATCH mask relative to the file resource. When omitted, legacy
+  // clients keep the historical non-empty-field patch behavior.
+  google.protobuf.FieldMask update_mask = 9;
 }
 
 message UpdateFileResponse {
@@ -839,6 +843,8 @@ message ListFilesRequest {
   string uploaded_by = 5;
   int32 page = 6;
   int32 page_size = 7;
+  // Opaque pagination token returned by ListFilesResponse.next_page_token.
+  string page_token = 8;
 }
 
 message ListFilesResponse {
@@ -855,4 +861,6 @@ message ListFilesResponse {
   int32 total_count = 2;
   // Error information if operation failed
   udb.core.common.v1.ApiError error = 3;
+  // Opaque token for the next page; empty when no more files are available.
+  string next_page_token = 4;
 }

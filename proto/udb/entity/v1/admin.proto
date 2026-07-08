@@ -46,6 +46,11 @@ message CapabilitiesResponse {
   // are available and which wire encodings that backend can emit.
   repeated BackendProtocolSupport backend_protocol_support = 10;
   repeated NativeServiceStatus native_services = 11;
+  // Operator-declared deployment tier (UDB_DEPLOYMENT_TIER), resolved once at
+  // startup (master-plan 3.5). One of "dev_single_node" / "system_store_capable"
+  // / "ha_canonical". Empty string means no tier was declared (the permissive
+  // dev default — the startup tier floor is not enforced). Additive (field 12).
+  string deployment_tier = 12;
 }
 
 // ── Protocol V2 negotiation ───────────────────────────────────────────────────

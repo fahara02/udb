@@ -35,6 +35,7 @@ pub(crate) enum NativeEntityTransactionOp {
 }
 
 #[allow(dead_code)]
+#[derive(Debug)]
 pub(crate) struct NativeEntityTransactionStepResult {
     pub(crate) affected_rows: u64,
     pub(crate) rows: Vec<serde_json::Value>,
@@ -101,6 +102,44 @@ fn parse_project_overrides(raw: Option<&str>) -> std::collections::HashMap<Strin
         .collect()
 }
 
+fn empty_native_entity_transaction_status() -> tonic::Status {
+    crate::runtime::executor_utils::invalid_argument_fields(
+        "native entity transaction requires at least one operation",
+        [("ops", "must contain at least one operation")],
+    )
+}
+
+fn native_store_capability_status(
+    backend: impl Into<String>,
+    operation: &'static str,
+    capability_required: &'static str,
+    message: impl Into<String>,
+) -> tonic::Status {
+    crate::runtime::executor_utils::capability_status(
+        backend,
+        operation,
+        capability_required,
+        message,
+    )
+}
+
+fn native_store_internal_status(
+    operation: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    crate::runtime::executor_utils::internal_status("native_store", operation, message)
+}
+
+fn native_entity_update_not_found_status() -> tonic::Status {
+    crate::runtime::executor_utils::schema_status(
+        tonic::Code::NotFound,
+        "native_entity",
+        "native_entity_update",
+        "native_entity_update_not_found",
+        "native entity update affected no rows",
+    )
+}
+
 /// P4 per-project placement: `project_id → backend` overrides, resolved ONCE from
 /// `UDB_NATIVE_STORE_PROJECTS`. Lets a deployment pin one tenant/project's native
 /// state to a different backend than the default (e.g. a regulated project on its own
@@ -146,10 +185,15 @@ impl DataBrokerRuntime {
         let selected_instance = self.choose_instance_name_for_project(backend, write, project_id);
         let target = self.backend_executor_for_project(backend, selected_instance, project_id)?;
         let kind = crate::backend::BackendKind::from_token(&target.backend).ok_or_else(|| {
-            tonic::Status::failed_precondition(format!(
-                "native entity backend '{}' has no neutral-IR compiler",
-                target.backend
-            ))
+            native_store_capability_status(
+                target.backend.clone(),
+                "compiler_lookup",
+                "neutral_ir_compiler",
+                format!(
+                    "native entity backend '{}' has no neutral-IR compiler",
+                    target.backend
+                ),
+            )
         })?;
         Ok((target, kind))
     }
@@ -192,9 +236,12 @@ impl DataBrokerRuntime {
         let result = match compiled.operation.as_str() {
             "query" => executor.query(&compiled.spec_json).await,
             "mutate" => executor.mutate(&compiled.spec_json).await,
-            other => Err(tonic::Status::failed_precondition(format!(
-                "native entity dispatch compiled unsupported operation '{other}'"
-            ))),
+            other => Err(native_store_capability_status(
+                target_backend.to_string(),
+                "compiled_dispatch",
+                "native_entity_dispatch_operation",
+                format!("native entity dispatch compiled unsupported operation '{other}'"),
+            )),
         };
         // Circuit-breaker feed (B11): only a genuine *unreachability* failure may
         // count against the backend's circuit breaker. A request-shape error — a
@@ -223,7 +270,10 @@ impl DataBrokerRuntime {
 
     fn native_entity_rows(result_json: &str) -> Result<Vec<serde_json::Value>, tonic::Status> {
         let value: serde_json::Value = serde_json::from_str(result_json).map_err(|err| {
-            tonic::Status::internal(format!("native entity JSON decode failed: {err}"))
+            native_store_internal_status(
+                "native_entity_rows_decode",
+                format!("native entity JSON decode failed: {err}"),
+            )
         })?;
         match value {
             serde_json::Value::Array(rows) => Ok(rows),
@@ -231,12 +281,14 @@ impl DataBrokerRuntime {
                 if let Some(serde_json::Value::Array(rows)) = obj.remove("rows") {
                     Ok(rows)
                 } else {
-                    Err(tonic::Status::internal(
+                    Err(native_store_internal_status(
+                        "native_entity_rows_shape",
                         "native entity query returned a non-row JSON object",
                     ))
                 }
             }
-            _ => Err(tonic::Status::internal(
+            _ => Err(native_store_internal_status(
+                "native_entity_rows_shape",
                 "native entity query returned non-array JSON",
             )),
         }
@@ -246,7 +298,10 @@ impl DataBrokerRuntime {
         result_json: &str,
     ) -> Result<(u64, Vec<serde_json::Value>), tonic::Status> {
         let value: serde_json::Value = serde_json::from_str(result_json).map_err(|err| {
-            tonic::Status::internal(format!("native entity JSON decode failed: {err}"))
+            native_store_internal_status(
+                "native_entity_mutation_decode",
+                format!("native entity JSON decode failed: {err}"),
+            )
         })?;
         match value {
             serde_json::Value::Array(rows) => Ok((rows.len() as u64, rows)),
@@ -258,7 +313,8 @@ impl DataBrokerRuntime {
                 let rows = match obj.remove("rows") {
                     Some(serde_json::Value::Array(rows)) => rows,
                     Some(_) => {
-                        return Err(tonic::Status::internal(
+                        return Err(native_store_internal_status(
+                            "native_entity_mutation_shape",
                             "native entity mutation returned non-array rows",
                         ));
                     }
@@ -266,7 +322,8 @@ impl DataBrokerRuntime {
                 };
                 Ok((affected_rows, rows))
             }
-            _ => Err(tonic::Status::internal(
+            _ => Err(native_store_internal_status(
+                "native_entity_mutation_shape",
                 "native entity mutation returned non-object JSON",
             )),
         }
@@ -437,9 +494,7 @@ impl DataBrokerRuntime {
             .await?;
         let parsed = Self::native_entity_mutation_result(&result)?;
         if require_affected && parsed.0 == 0 {
-            return Err(tonic::Status::not_found(
-                "native entity update affected no rows",
-            ));
+            return Err(native_entity_update_not_found_status());
         }
         Ok(parsed)
     }
@@ -456,18 +511,21 @@ impl DataBrokerRuntime {
         ops: Vec<NativeEntityTransactionOp>,
     ) -> Result<Vec<NativeEntityTransactionStepResult>, tonic::Status> {
         if ops.is_empty() {
-            return Err(tonic::Status::invalid_argument(
-                "native entity transaction requires at least one operation",
-            ));
+            return Err(empty_native_entity_transaction_status());
         }
 
         let (target, kind) =
             self.native_entity_dispatch_target(service_id, &context.project_id, true)?;
         if kind != crate::backend::BackendKind::Postgres || target.backend != "postgres" {
-            return Err(tonic::Status::failed_precondition(format!(
-                "native typed transactions are currently implemented only for postgres, got '{}'",
-                target.backend
-            )));
+            return Err(native_store_capability_status(
+                target.backend.clone(),
+                "typed_transaction",
+                "postgres_native_transaction",
+                format!(
+                    "native typed transactions are currently implemented only for postgres, got '{}'",
+                    target.backend
+                ),
+            ));
         }
         let compile_ctx = Self::native_entity_compile_context(context, target.instance.as_deref());
         let mut compiled_steps = Vec::with_capacity(ops.len());
@@ -496,10 +554,15 @@ impl DataBrokerRuntime {
                 }
             };
             if compiled.operation != "mutate" {
-                return Err(tonic::Status::failed_precondition(format!(
-                    "native entity transaction compiled unsupported operation '{}'",
-                    compiled.operation
-                )));
+                return Err(native_store_capability_status(
+                    target.backend.clone(),
+                    "typed_transaction_compile",
+                    "native_entity_mutation_dispatch",
+                    format!(
+                        "native entity transaction compiled unsupported operation '{}'",
+                        compiled.operation
+                    ),
+                ));
             }
             compiled_steps.push(compiled);
         }
@@ -508,7 +571,10 @@ impl DataBrokerRuntime {
             .pg_pool_for_instance(target.instance.as_deref())?
             .clone();
         let mut tx = pool.begin().await.map_err(|err| {
-            tonic::Status::internal(format!("native entity transaction start failed: {err}"))
+            native_store_internal_status(
+                "native_entity_transaction_start",
+                format!("native entity transaction start failed: {err}"),
+            )
         })?;
         crate::runtime::core::set_request_local_settings(&mut tx, context).await?;
 
@@ -516,13 +582,19 @@ impl DataBrokerRuntime {
         for compiled in compiled_steps {
             let spec: serde_json::Value =
                 serde_json::from_str(&compiled.spec_json).map_err(|err| {
-                    tonic::Status::internal(format!("compiled native mutation JSON failed: {err}"))
+                    native_store_internal_status(
+                        "compiled_native_mutation_json",
+                        format!("compiled native mutation JSON failed: {err}"),
+                    )
                 })?;
             let sql = spec
                 .get("sql")
                 .and_then(serde_json::Value::as_str)
                 .ok_or_else(|| {
-                    tonic::Status::failed_precondition(
+                    native_store_capability_status(
+                        target.backend.clone(),
+                        "typed_transaction_sql",
+                        "postgres_sql_mutation",
                         "native entity transaction compiled a non-SQL mutation",
                     )
                 })?;
@@ -543,9 +615,10 @@ impl DataBrokerRuntime {
                 .fetch_all(&mut *tx)
                 .await
                 .map_err(|err| {
-                    tonic::Status::internal(format!(
-                        "native entity transaction mutation failed: {err}"
-                    ))
+                    native_store_internal_status(
+                        "native_entity_transaction_mutation",
+                        format!("native entity transaction mutation failed: {err}"),
+                    )
                 })?;
                 let rows = crate::runtime::core::pg_rows_to_json(rows)?;
                 results.push(NativeEntityTransactionStepResult {
@@ -561,9 +634,10 @@ impl DataBrokerRuntime {
                 .execute(&mut *tx)
                 .await
                 .map_err(|err| {
-                    tonic::Status::internal(format!(
-                        "native entity transaction mutation failed: {err}"
-                    ))
+                    native_store_internal_status(
+                        "native_entity_transaction_mutation",
+                        format!("native entity transaction mutation failed: {err}"),
+                    )
                 })?;
                 results.push(NativeEntityTransactionStepResult {
                     affected_rows: result.rows_affected(),
@@ -573,7 +647,10 @@ impl DataBrokerRuntime {
         }
 
         tx.commit().await.map_err(|err| {
-            tonic::Status::internal(format!("native entity transaction commit failed: {err}"))
+            native_store_internal_status(
+                "native_entity_transaction_commit",
+                format!("native entity transaction commit failed: {err}"),
+            )
         })?;
         Ok(results)
     }
@@ -671,10 +748,21 @@ impl DataBrokerRuntime {
         let Some(store) = self.default_system_stores() else {
             return Ok(true);
         };
+        store.ensure_advisory_lease_table().await.map_err(|e| {
+            native_store_internal_status(
+                "native_advisory_lease",
+                format!("native advisory lease table ensure failed: {e}"),
+            )
+        })?;
         store
             .try_acquire_advisory_lease(lease_name, owner_id, ttl)
             .await
-            .map_err(|e| tonic::Status::internal(format!("native advisory lease failed: {e}")))
+            .map_err(|e| {
+                native_store_internal_status(
+                    "native_advisory_lease",
+                    format!("native advisory lease failed: {e}"),
+                )
+            })
     }
 
     /// Release a native advisory lease from [`Self::try_acquire_native_lease`].
@@ -747,11 +835,16 @@ impl DataBrokerRuntime {
     ) -> Result<PgPool, tonic::Status> {
         let store = self.native_entity_store_for_service(service_id, write, project_id)?;
         store.pg_pool().cloned().ok_or_else(|| {
-            tonic::Status::failed_precondition(format!(
-                "native store backend '{}' exposes no Postgres pool (neutral-operation \
+            native_store_capability_status(
+                store.backend().to_string(),
+                "pool_lookup",
+                "postgres_pool",
+                format!(
+                    "native store backend '{}' exposes no Postgres pool (neutral-operation \
                  migration pending); see extend_udb.md",
-                store.backend()
-            ))
+                    store.backend()
+                ),
+            )
         })
     }
 
@@ -781,7 +874,12 @@ impl DataBrokerRuntime {
                     .sqlite_pool_for_instance(instance)
                     .cloned()
                     .ok_or_else(|| {
-                        tonic::Status::failed_precondition("sqlite native store is not configured")
+                        native_store_capability_status(
+                            "sqlite",
+                            "store_lookup",
+                            "sqlite_native_store",
+                            "sqlite native store is not configured",
+                        )
                     })?;
                 Ok(nes::SqliteNativeEntityStore::new(pool))
             }
@@ -794,7 +892,12 @@ impl DataBrokerRuntime {
                     .mysql_pool_for_instance(instance)
                     .cloned()
                     .ok_or_else(|| {
-                        tonic::Status::failed_precondition("mysql native store is not configured")
+                        native_store_capability_status(
+                            "mysql",
+                            "store_lookup",
+                            "mysql_native_store",
+                            "mysql native store is not configured",
+                        )
                     })?;
                 Ok(nes::MySqlNativeEntityStore::new(pool))
             }
@@ -810,9 +913,14 @@ impl DataBrokerRuntime {
                 let executor = self.mongodb_for_instance(instance)?.clone();
                 Ok(nes::MongoDbNativeEntityStore::new(executor))
             }
-            other => Err(tonic::Status::failed_precondition(format!(
-                "native-service persistence backend '{other}' is not implemented; see extend_udb.md"
-            ))),
+            other => Err(native_store_capability_status(
+                other.to_string(),
+                "store_lookup",
+                "native_entity_store",
+                format!(
+                    "native-service persistence backend '{other}' is not implemented; see extend_udb.md"
+                ),
+            )),
         }
     }
 
@@ -840,12 +948,160 @@ impl DataBrokerRuntime {
 
 #[cfg(test)]
 mod tests {
-    use super::{normalize_store_override, parse_project_overrides};
+    use super::{
+        native_entity_update_not_found_status, native_store_capability_status,
+        native_store_internal_status, normalize_store_override, parse_project_overrides,
+    };
     use crate::backend::BackendKind;
     use crate::ir::{
         ComparisonOp, ConflictStrategy, LogicalDelete, LogicalFilter, LogicalPagination,
         LogicalProjection, LogicalRead, LogicalRecord, LogicalValue, LogicalWrite,
     };
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
+
+    fn decode_detail(status: &tonic::Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed error detail trailer");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_single_field_violation(status: &tonic::Status, field: &str, description: &str) {
+        assert_eq!(status.code(), tonic::Code::InvalidArgument);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert!(!detail.retryable);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, field);
+        assert_eq!(detail.field_violations[0].description, description);
+    }
+
+    fn assert_capability_detail(
+        status: &tonic::Status,
+        backend: &str,
+        operation: &str,
+        capability_required: &str,
+        message: &str,
+    ) {
+        assert_eq!(status.code(), tonic::Code::FailedPrecondition);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Capability as i32);
+        assert_eq!(detail.backend, backend);
+        assert_eq!(detail.operation, operation);
+        assert_eq!(detail.capability_required, capability_required);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    fn assert_schema_detail(
+        status: &tonic::Status,
+        backend: &str,
+        operation: &str,
+        schema_code: &str,
+        message: &str,
+    ) {
+        assert_eq!(status.code(), tonic::Code::NotFound);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Schema as i32);
+        assert_eq!(detail.backend, backend);
+        assert_eq!(detail.operation, operation);
+        assert_eq!(detail.capability_required, schema_code);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    fn assert_internal_detail(status: &tonic::Status, operation: &str, message: &str) {
+        assert_eq!(status.code(), tonic::Code::Internal);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "native_store");
+        assert_eq!(detail.operation, operation);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    #[test]
+    fn native_entity_update_miss_carries_schema_detail() {
+        assert_schema_detail(
+            &native_entity_update_not_found_status(),
+            "native_entity",
+            "native_entity_update",
+            "native_entity_update_not_found",
+            "native entity update affected no rows",
+        );
+    }
+
+    #[test]
+    fn native_store_internal_status_carries_typed_detail() {
+        let status = native_store_internal_status(
+            "native_entity_rows_decode",
+            "native entity JSON decode failed: expected value",
+        );
+        assert_internal_detail(
+            &status,
+            "native_entity_rows_decode",
+            "native entity JSON decode failed: expected value",
+        );
+
+        let status = native_store_internal_status(
+            "native_entity_transaction_commit",
+            "native entity transaction commit failed: closed",
+        );
+        assert_internal_detail(
+            &status,
+            "native_entity_transaction_commit",
+            "native entity transaction commit failed: closed",
+        );
+    }
+
+    #[test]
+    fn native_store_missing_capabilities_carry_typed_detail() {
+        for (backend, operation, capability_required, message) in [
+            (
+                "mysql",
+                "store_lookup",
+                "mysql_native_store",
+                "mysql native store is not configured",
+            ),
+            (
+                "sqlite",
+                "store_lookup",
+                "sqlite_native_store",
+                "sqlite native store is not configured",
+            ),
+            (
+                "neo4j",
+                "pool_lookup",
+                "postgres_pool",
+                "native store backend 'neo4j' exposes no Postgres pool (neutral-operation migration pending); see extend_udb.md",
+            ),
+            (
+                "vault",
+                "store_lookup",
+                "native_entity_store",
+                "native-service persistence backend 'vault' is not implemented; see extend_udb.md",
+            ),
+            (
+                "postgres",
+                "typed_transaction_sql",
+                "postgres_sql_mutation",
+                "native entity transaction compiled a non-SQL mutation",
+            ),
+        ] {
+            let status =
+                native_store_capability_status(backend, operation, capability_required, message);
+            assert_capability_detail(&status, backend, operation, capability_required, message);
+        }
+    }
 
     #[test]
     fn project_overrides_parse_trim_lowercase_and_drop_malformed() {
@@ -877,6 +1133,24 @@ mod tests {
         );
     }
 
+    #[tokio::test]
+    async fn empty_native_entity_transaction_carries_field_violation() {
+        let runtime = super::DataBrokerRuntime::planning_only();
+        let context = crate::RequestContext::default();
+        let ops: Vec<super::NativeEntityTransactionOp> = Vec::new();
+
+        let status = runtime
+            .native_entity_transaction_for_service("udb.core.test", &context, ops)
+            .await
+            .expect_err("empty transaction must fail before dispatch");
+
+        assert_eq!(
+            status.message(),
+            "native entity transaction requires at least one operation"
+        );
+        assert_single_field_violation(&status, "ops", "must contain at least one operation");
+    }
+
     #[test]
     fn tenant_config_native_entity_ir_compiles_to_dispatch() {
         const MSG: &str = "udb.core.tenant.entity.v1.TenantConfig";
@@ -904,6 +1178,7 @@ mod tests {
                 "description".to_string(),
             ])),
             sort: Vec::new(),
+            include: Vec::new(),
             pagination: Some(LogicalPagination::limit(10)),
         };
         let read_dispatch = crate::runtime::service::handlers_data::compile_logical_read_dispatch(

@@ -31,7 +31,8 @@ use reqwest::Client;
 use serde_json::{Value as Json, json};
 
 use crate::backend::BackendKind;
-use crate::runtime::executor_utils::build_probe;
+use crate::runtime::core::{validate_mutation_sql, validate_read_sql, validate_single_statement};
+use crate::runtime::executor_utils::{build_probe, capability_status, invalid_argument_fields};
 use crate::runtime::executors::{
     BackendExecutor, BackendHealth, BackendProbe, MutationExecutor, ObjectExecutor, QueryExecutor,
     ResourceAdminExecutor, SearchExecutor,
@@ -78,10 +79,75 @@ fn validate_ch_identifier(id: &str) -> Result<(), String> {
     Ok(())
 }
 
+fn validate_clickhouse_compiled_mutation_sql(sql: &str) -> Result<(), tonic::Status> {
+    validate_single_statement(sql)?;
+    let normalized = sql
+        .trim_start()
+        .trim_end_matches(';')
+        .trim_end()
+        .to_ascii_lowercase();
+    if normalized.starts_with("insert into ")
+        || normalized.starts_with("create table if not exists ")
+        || normalized.starts_with("drop table if exists ")
+        || (normalized.starts_with("alter table ") && normalized.contains(" delete where "))
+    {
+        Ok(())
+    } else {
+        Err(clickhouse_invalid_field_status(
+            "sql",
+            "compiler-mediated ClickHouse mutation must be INSERT, CREATE TABLE IF NOT EXISTS, DROP TABLE IF EXISTS, or ALTER TABLE ... DELETE WHERE",
+            "compiled ClickHouse mutate allows only INSERT, CREATE TABLE IF NOT EXISTS, \
+             DROP TABLE IF EXISTS, or ALTER TABLE ... DELETE WHERE",
+        ))
+    }
+}
+
+fn clickhouse_invalid_field_status(
+    field: impl Into<String>,
+    description: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    invalid_argument_fields(message, [(field.into(), description.into())])
+}
+
+fn invalid_clickhouse_request_json_status(err: serde_json::Error) -> tonic::Status {
+    clickhouse_invalid_field_status(
+        "request_json",
+        "must be valid JSON for ClickHouse generic dispatch",
+        format!("invalid request json: {err}"),
+    )
+}
+
+fn clickhouse_required_field_status(field: &'static str, message: &'static str) -> tonic::Status {
+    clickhouse_invalid_field_status(
+        field,
+        format!("{field} is required for this ClickHouse operation"),
+        message,
+    )
+}
+
+fn clickhouse_identifier_status(field: &'static str, message: String) -> tonic::Status {
+    clickhouse_invalid_field_status(field, "must be a valid ClickHouse identifier", message)
+}
+
+fn clickhouse_internal_status(
+    operation: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    crate::runtime::executor_utils::internal_status("clickhouse", operation, message)
+}
+
+fn encode_clickhouse_response(
+    operation: &'static str,
+    value: &Json,
+) -> Result<String, tonic::Status> {
+    serde_json::to_string(value).map_err(|e| clickhouse_internal_status(operation, e.to_string()))
+}
+
 // ── Configuration ─────────────────────────────────────────────────────────────
 
 /// Connection configuration for ClickHouse HTTP interface.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct ClickHouseConfig {
     /// HTTP base URL.  e.g. `http://localhost:8123`
     pub http_base: String,
@@ -97,6 +163,21 @@ pub struct ClickHouseConfig {
     pub connect_timeout_secs: u64,
     /// Per-query timeout in seconds.
     pub query_timeout_secs: u64,
+}
+
+// 4.6 secrets posture: redact `password` in Debug (host/user/db are non-secret).
+impl std::fmt::Debug for ClickHouseConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ClickHouseConfig")
+            .field("http_base", &self.http_base)
+            .field("username", &self.username)
+            .field("password", &"[redacted]")
+            .field("database", &self.database)
+            .field("is_cloud", &self.is_cloud)
+            .field("connect_timeout_secs", &self.connect_timeout_secs)
+            .field("query_timeout_secs", &self.query_timeout_secs)
+            .finish()
+    }
 }
 
 impl ClickHouseConfig {
@@ -316,6 +397,12 @@ impl ClickHouseExecutor {
         let resp = self
             .http
             .post(&self.config.http_base)
+            // ClickHouse quotes (U)Int64 values as JSON strings by default (a
+            // JavaScript-precision concession), which breaks every consumer
+            // that reads counts/sums as numbers — COUNT(*) came back as "2".
+            // Emit real JSON numbers; values beyond 2^53 are not produced by
+            // the mediated aggregate surface.
+            .query(&[("output_format_json_quote_64bit_integers", "0")])
             .header("X-ClickHouse-User", &self.config.username)
             .header("X-ClickHouse-Key", &self.config.password)
             .header("X-ClickHouse-Database", &self.config.database)
@@ -396,12 +483,11 @@ impl ClickHouseExecutor {
         Ok(())
     }
 
-    fn select_template_sql(&self, spec: &Json) -> Result<String, String> {
-        let table = spec
-            .get("table")
-            .and_then(Json::as_str)
-            .ok_or_else(|| "missing required field 'table'".to_string())?;
-        validate_ch_identifier(table)?;
+    fn select_template_sql(&self, spec: &Json) -> Result<String, tonic::Status> {
+        let table = spec.get("table").and_then(Json::as_str).ok_or_else(|| {
+            clickhouse_required_field_status("table", "missing required field 'table'")
+        })?;
+        validate_ch_identifier(table).map_err(|err| clickhouse_identifier_status("table", err))?;
         let columns = spec
             .get("columns")
             .and_then(Json::as_array)
@@ -410,10 +496,11 @@ impl ClickHouseExecutor {
                     .iter()
                     .filter_map(Json::as_str)
                     .map(|column| {
-                        validate_ch_identifier(column)?;
+                        validate_ch_identifier(column)
+                            .map_err(|err| clickhouse_identifier_status("columns", err))?;
                         Ok(format!("`{column}`"))
                     })
-                    .collect::<Result<Vec<_>, String>>()
+                    .collect::<Result<Vec<_>, tonic::Status>>()
             })
             .transpose()?
             .filter(|columns| !columns.is_empty())
@@ -428,7 +515,8 @@ impl ClickHouseExecutor {
         {
             let mut clauses = Vec::new();
             for (field, value) in filter {
-                validate_ch_identifier(field)?;
+                validate_ch_identifier(field)
+                    .map_err(|err| clickhouse_identifier_status("filter", err))?;
                 let literal = match value {
                     Json::String(s) => format!("'{}'", s.replace('\'', "''")),
                     Json::Number(n) => n.to_string(),
@@ -440,7 +528,13 @@ impl ClickHouseExecutor {
                         }
                     }
                     Json::Null => "NULL".to_string(),
-                    _ => return Err("ClickHouse filter values must be scalar".to_string()),
+                    _ => {
+                        return Err(clickhouse_invalid_field_status(
+                            "filter",
+                            "filter values must be scalar JSON values",
+                            "ClickHouse filter values must be scalar",
+                        ));
+                    }
                 };
                 clauses.push(format!("`{field}` = {literal}"));
             }
@@ -448,7 +542,8 @@ impl ClickHouseExecutor {
             sql.push_str(&clauses.join(" AND "));
         }
         if let Some(order_by) = spec.get("order_by").and_then(Json::as_str) {
-            validate_ch_identifier(order_by)?;
+            validate_ch_identifier(order_by)
+                .map_err(|err| clickhouse_identifier_status("order_by", err))?;
             sql.push_str(&format!(" ORDER BY `{order_by}`"));
         }
         let limit = spec.get("limit").and_then(Json::as_i64).unwrap_or(100);
@@ -565,56 +660,67 @@ impl BackendHealth for ClickHouseExecutor {
 impl QueryExecutor for ClickHouseExecutor {
     /// `{"sql":"SELECT ..."}` or `{"table":"t","columns":[...],"filter":{}}`.
     async fn query(&self, request_json: &str) -> Result<String, tonic::Status> {
-        let spec: Json = serde_json::from_str(request_json)
-            .map_err(|e| tonic::Status::invalid_argument(format!("invalid request json: {e}")))?;
+        let spec: Json =
+            serde_json::from_str(request_json).map_err(invalid_clickhouse_request_json_status)?;
         let sql = if let Some(sql) = spec.get("sql").and_then(Json::as_str) {
+            validate_read_sql(sql)?;
             sql.to_string()
         } else {
-            self.select_template_sql(&spec)
-                .map_err(tonic::Status::invalid_argument)?
+            self.select_template_sql(&spec)?
         };
         let rows = self
             .select_rows(&sql)
             .await
-            .map_err(tonic::Status::internal)?;
-        serde_json::to_string(&rows).map_err(|e| tonic::Status::internal(e.to_string()))
+            .map_err(|err| clickhouse_internal_status("query", err))?;
+        encode_clickhouse_response("query_response_encode", &Json::Array(rows))
     }
 }
 
 impl MutationExecutor for ClickHouseExecutor {
     /// `{"sql":"CREATE ..."}` → DDL, or `{"table":"t","rows":[...]}` → insert.
     async fn mutate(&self, request_json: &str) -> Result<String, tonic::Status> {
-        let spec: Json = serde_json::from_str(request_json)
-            .map_err(|e| tonic::Status::invalid_argument(format!("invalid request json: {e}")))?;
+        let spec: Json =
+            serde_json::from_str(request_json).map_err(invalid_clickhouse_request_json_status)?;
         if let Some(sql) = spec.get("sql").and_then(Json::as_str) {
+            if spec
+                .get("compiler_mediated")
+                .and_then(Json::as_bool)
+                .unwrap_or(false)
+            {
+                validate_clickhouse_compiled_mutation_sql(sql)?;
+            } else {
+                validate_mutation_sql(sql)?;
+            }
             self.execute_ddl(sql)
                 .await
-                .map_err(tonic::Status::internal)?;
+                .map_err(|err| clickhouse_internal_status("mutate_ddl", err))?;
             return Ok(r#"{"affected_rows":0}"#.to_string());
         }
-        let table = spec
-            .get("table")
-            .and_then(Json::as_str)
-            .ok_or_else(|| tonic::Status::invalid_argument("missing required field 'table'"))?;
+        let table = spec.get("table").and_then(Json::as_str).ok_or_else(|| {
+            clickhouse_required_field_status("table", "missing required field 'table'")
+        })?;
         // Validate the identifier as a client error BEFORE any I/O, mirroring the
         // read path (`select_template_sql` → `invalid_argument`). Without this an
         // empty/over-long table id escaped `insert_rows` as the catch-all `internal`
         // below, leaking a validation message as a server fault (bug B6).
-        validate_ch_identifier(table).map_err(tonic::Status::invalid_argument)?;
+        validate_ch_identifier(table).map_err(|err| clickhouse_identifier_status("table", err))?;
         let rows = spec
             .get("rows")
             .and_then(Json::as_array)
-            .ok_or_else(|| tonic::Status::invalid_argument("rows must be an array"))?;
+            .ok_or_else(|| clickhouse_required_field_status("rows", "rows must be an array"))?;
         self.insert_rows(table, rows)
             .await
-            .map_err(tonic::Status::internal)?;
+            .map_err(|err| clickhouse_internal_status("mutate_insert_rows", err))?;
         Ok(format!(r#"{{"affected_rows":{}}}"#, rows.len()))
     }
 }
 
 impl SearchExecutor for ClickHouseExecutor {
     async fn search(&self, _request_json: &str) -> Result<String, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "clickhouse",
+            "search",
+            "vector_search",
             "clickhouse does not support vector/document search",
         ))
     }
@@ -622,7 +728,10 @@ impl SearchExecutor for ClickHouseExecutor {
 
 impl ObjectExecutor for ClickHouseExecutor {
     async fn get_object(&self, _request_json: &str) -> Result<Vec<u8>, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "clickhouse",
+            "get_object",
+            "object_store",
             "clickhouse is not an object store",
         ))
     }
@@ -631,7 +740,10 @@ impl ObjectExecutor for ClickHouseExecutor {
         _request_json: &str,
         _bytes: Vec<u8>,
     ) -> Result<String, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "clickhouse",
+            "put_object",
+            "object_store",
             "clickhouse is not an object store",
         ))
     }
@@ -643,31 +755,37 @@ impl ResourceAdminExecutor for ClickHouseExecutor {
         resource_name: &str,
         spec_json: &str,
     ) -> Result<(), tonic::Status> {
-        validate_ch_identifier(resource_name).map_err(tonic::Status::internal)?;
+        validate_ch_identifier(resource_name)
+            .map_err(|err| clickhouse_identifier_status("resource_name", err))?;
         let spec: Json = serde_json::from_str(spec_json).unwrap_or(json!({}));
-        let ddl = self
-            .create_table_sql(resource_name, &spec)
-            .map_err(tonic::Status::internal)?;
+        let ddl = self.create_table_sql(resource_name, &spec).map_err(|err| {
+            clickhouse_invalid_field_status(
+                "spec_json",
+                "must be a valid ClickHouse resource spec",
+                err,
+            )
+        })?;
         self.execute_ddl(&ddl)
             .await
-            .map_err(tonic::Status::internal)
+            .map_err(|err| clickhouse_internal_status("ensure_resource", err))
     }
     async fn drop_resource(&self, resource_name: &str) -> Result<(), tonic::Status> {
-        validate_ch_identifier(resource_name).map_err(tonic::Status::internal)?;
+        validate_ch_identifier(resource_name)
+            .map_err(|err| clickhouse_identifier_status("resource_name", err))?;
         let ddl = format!(
             "DROP TABLE IF EXISTS `{db}`.`{resource_name}`",
             db = self.config.database
         );
         self.execute_ddl(&ddl)
             .await
-            .map_err(tonic::Status::internal)
+            .map_err(|err| clickhouse_internal_status("drop_resource", err))
     }
     async fn list_resources(&self) -> Result<Vec<String>, tonic::Status> {
         let sql = format!("SHOW TABLES FROM `{}`", self.config.database);
         let rows = self
             .select_rows(&sql)
             .await
-            .map_err(tonic::Status::internal)?;
+            .map_err(|err| clickhouse_internal_status("list_resources", err))?;
         let tables = rows
             .iter()
             .filter_map(|r| {
@@ -683,7 +801,10 @@ impl ResourceAdminExecutor for ClickHouseExecutor {
 
 impl BackendExecutor for ClickHouseExecutor {
     async fn transaction(&self, _request_json: &str) -> Result<String, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "clickhouse",
+            "transaction",
+            "transactions",
             "clickhouse does not support multi-statement transactions",
         ))
     }
@@ -700,7 +821,48 @@ impl BackendExecutor for ClickHouseExecutor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
     use crate::runtime::backend_context::{AppliedContext, BackendContextEnforcer, ContextEffect};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
+
+    fn decode_detail(status: &tonic::Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_single_field(status: &tonic::Status, field: &str) {
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, field);
+    }
+
+    fn assert_internal_detail(status: &tonic::Status, operation: &str, message: &str) {
+        assert_eq!(status.code(), tonic::Code::Internal);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "clickhouse");
+        assert_eq!(detail.operation, operation);
+        assert!(!detail.retryable);
+    }
+
+    #[test]
+    fn clickhouse_internal_status_carries_typed_detail() {
+        let status = clickhouse_internal_status(
+            "query_response_encode",
+            "ClickHouse response encode failed",
+        );
+        assert_internal_detail(
+            &status,
+            "query_response_encode",
+            "ClickHouse response encode failed",
+        );
+    }
 
     #[test]
     fn clickhouse_executor_kind_and_name() {
@@ -770,6 +932,72 @@ mod tests {
         assert!(MutationExecutor::mutate(&exec, "{}").await.is_err()); // missing table
     }
 
+    #[tokio::test]
+    async fn clickhouse_generic_dispatch_validation_carries_field_violations() {
+        let exec = ClickHouseExecutor::new(ClickHouseConfig {
+            http_base: "http://localhost:8123".to_string(),
+            username: "default".to_string(),
+            password: "".to_string(),
+            database: "default".to_string(),
+            is_cloud: false,
+            connect_timeout_secs: 10,
+            query_timeout_secs: 30,
+        });
+
+        let invalid_json = QueryExecutor::query(&exec, "not json").await.unwrap_err();
+        assert_eq!(invalid_json.code(), tonic::Code::InvalidArgument);
+        assert!(invalid_json.message().starts_with("invalid request json:"));
+        assert_single_field(&invalid_json, "request_json");
+
+        let missing_table = QueryExecutor::query(&exec, "{}").await.unwrap_err();
+        assert_eq!(missing_table.message(), "missing required field 'table'");
+        assert_single_field(&missing_table, "table");
+
+        let invalid_table = MutationExecutor::mutate(&exec, r#"{"table":"","rows":[]}"#)
+            .await
+            .unwrap_err();
+        assert!(invalid_table.message().contains("must be 1–64 characters"));
+        assert_single_field(&invalid_table, "table");
+
+        let missing_rows = MutationExecutor::mutate(&exec, r#"{"table":"events"}"#)
+            .await
+            .unwrap_err();
+        assert_eq!(missing_rows.message(), "rows must be an array");
+        assert_single_field(&missing_rows, "rows");
+    }
+
+    #[test]
+    fn clickhouse_template_validation_carries_field_violations() {
+        let exec = ClickHouseExecutor::new(ClickHouseConfig {
+            http_base: "http://localhost:8123".to_string(),
+            username: "default".to_string(),
+            password: "".to_string(),
+            database: "default".to_string(),
+            is_cloud: false,
+            connect_timeout_secs: 10,
+            query_timeout_secs: 30,
+        });
+
+        let invalid_column = exec
+            .select_template_sql(&json!({"table":"events","columns":["bad-name"]}))
+            .unwrap_err();
+        assert_single_field(&invalid_column, "columns");
+
+        let invalid_filter = exec
+            .select_template_sql(&json!({"table":"events","filter":{"tags":["a"]}}))
+            .unwrap_err();
+        assert_eq!(
+            invalid_filter.message(),
+            "ClickHouse filter values must be scalar"
+        );
+        assert_single_field(&invalid_filter, "filter");
+
+        let invalid_order = exec
+            .select_template_sql(&json!({"table":"events","order_by":"bad-name"}))
+            .unwrap_err();
+        assert_single_field(&invalid_order, "order_by");
+    }
+
     #[test]
     fn clickhouse_config_parses_dsn() {
         let base = ClickHouseConfig::http_base_from_dsn(
@@ -782,6 +1010,39 @@ mod tests {
     fn clickhouse_config_db_from_dsn() {
         let db = ClickHouseConfig::db_from_dsn("clickhouse://localhost:8123/analytics");
         assert_eq!(db.as_deref(), Some("analytics"));
+    }
+
+    #[test]
+    fn clickhouse_compiled_mutation_guard_allows_only_compiler_shapes() {
+        assert!(
+            validate_clickhouse_compiled_mutation_sql(
+                "INSERT INTO `analytics`.`events` (`id`) VALUES ('e1')"
+            )
+            .is_ok()
+        );
+        assert!(
+            validate_clickhouse_compiled_mutation_sql(
+                "ALTER TABLE `analytics`.`events` DELETE WHERE `tenant_id` = 'tenant-a'"
+            )
+            .is_ok()
+        );
+        assert!(
+            validate_clickhouse_compiled_mutation_sql(
+                "CREATE TABLE IF NOT EXISTS `analytics`.`events` (`id` String) ENGINE = MergeTree() ORDER BY (`id`)"
+            )
+            .is_ok()
+        );
+        assert!(
+            validate_clickhouse_compiled_mutation_sql("DROP TABLE IF EXISTS `analytics`.`events`")
+                .is_ok()
+        );
+        assert!(validate_clickhouse_compiled_mutation_sql("OPTIMIZE TABLE events FINAL").is_err());
+        assert!(
+            validate_clickhouse_compiled_mutation_sql(
+                "CREATE TABLE IF NOT EXISTS `analytics`.`events` (`id` String); DROP TABLE `analytics`.`events`"
+            )
+            .is_err()
+        );
     }
 
     #[test]

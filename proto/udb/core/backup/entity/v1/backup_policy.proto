@@ -1,0 +1,90 @@
+syntax = "proto3";
+
+package udb.core.backup.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Backup.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/backup/entity/v1;backupv1";
+option java_package = "com.udb.core.backup.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Backup\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Backup\\Entity\\V1";
+
+// ---------------------------------------------------------------------------
+// BackupPolicy — per-tenant logical-backup retention + schedule (master-plan
+// 9.10). The actual scheduling is driven by the native SchedulerService (9.3):
+// a leader-elected tick fires `udb.scheduler.job.fired.v1` for a due policy,
+// which a worker turns into a StartTenantBackup. THIS row is the durable,
+// tenant-scoped retention/schedule contract. RLS scopes rows to the tenant.
+// ---------------------------------------------------------------------------
+message BackupPolicy {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "backup_policies"
+    schema_name: "udb_backup"
+    migration_order: 1
+    is_table: true
+    comment: "Per-tenant logical-backup retention and schedule (master-plan 9.10)"
+    soft_delete: false
+    audit_fields: true
+    enable_rls: true
+    rls_policies: {
+      policy_name: "tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text)"
+      permissive: true
+    }
+    indexes: {
+      index_name: "idx_backup_policies_tenant_name_unique"
+      index_type: "BTREE"
+      unique: true
+      columns: "tenant_id"
+      columns: "policy_name"
+    }
+    cdc_topic: "udb.backup.backup_policies.cdc"
+    required_scope: "backup:read"
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "none"
+    retention_class: "backup.policy"
+    retention_days: 3650
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
+
+  string policy_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "policy_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(64)" not_null: true index: { index_name: "idx_backup_policies_tenant" index_type: "BTREE" } }];
+
+  // Caller-chosen logical policy name, unique per tenant.
+  string policy_name = 3 [(udb.core.common.v1.pg_column) = { column_name: "policy_name" sql_type: "VARCHAR(255)" not_null: true }];
+
+  // Cron expression evaluated by the SchedulerService (9.3). Empty disables
+  // scheduled runs (manual StartTenantBackup still works).
+  string schedule_cron = 4 [(udb.core.common.v1.pg_column) = { column_name: "schedule_cron" sql_type: "VARCHAR(255)" not_null: true default_value: "''" }];
+
+  // Backups older than this are eligible for retention pruning. 0 = keep forever.
+  int32 retention_days = 5 [(udb.core.common.v1.pg_column) = { column_name: "retention_days" sql_type: "INTEGER" not_null: true default_value: "30" }];
+
+  // Hard cap on retained backup runs for this tenant. 0 = unbounded.
+  int32 max_retained_backups = 6 [(udb.core.common.v1.pg_column) = { column_name: "max_retained_backups" sql_type: "INTEGER" not_null: true default_value: "0" }];
+
+  bool enabled = 7 [(udb.core.common.v1.pg_column) = { column_name: "enabled" sql_type: "BOOLEAN" not_null: true default_value: "true" }];
+
+  // Object-store backend + bucket the encrypted backup artifacts are written to.
+  string object_backend = 8 [(udb.core.common.v1.pg_column) = { column_name: "object_backend" sql_type: "VARCHAR(64)" not_null: true default_value: "''" }];
+
+  string object_bucket = 9 [(udb.core.common.v1.pg_column) = { column_name: "object_bucket" sql_type: "VARCHAR(255)" not_null: true default_value: "''" }];
+
+  google.protobuf.Timestamp created_at = 10 [(udb.core.common.v1.pg_column) = { column_name: "created_at" sql_type: "TIMESTAMPTZ" comment: "When the policy was first created" }];
+
+  google.protobuf.Timestamp updated_at = 11 [(udb.core.common.v1.pg_column) = { column_name: "updated_at" sql_type: "TIMESTAMPTZ" comment: "When the policy was last updated" }];
+
+  string metadata_json = 12 [(udb.core.common.v1.pg_column) = { column_name: "metadata_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'{}'::jsonb" comment: "Non-secret policy metadata" }];
+}

@@ -10,9 +10,11 @@
 //! outbox, advisory leases, and `ensure_system_tables`. The companion
 //! `clickhouse_*` modules implement the `SystemStores` traits
 //! (`ProjectionTaskStore` / `SagaStore` / `AdminAuditStore` /
-//! `MigrationAuditStore`). Runtime registration is still intentionally gated by
-//! `UDB_ALLOW_PROJECTION_SYSTEM_STORE=1` because the sequence and lease paths
-//! below rely on the single-writer assumption documented here.
+//! `MigrationAuditStore`). Runtime registration requires ClickHouse Keeper
+//! support: advisory leases are stored in a KeeperMap table, and the outbox
+//! sequence allocator runs under an internal Keeper-backed lease. Without
+//! KeeperMap the store fails closed during `ensure_system_tables` instead of
+//! advertising an HA-canonical posture.
 //!
 //! ## Why ClickHouse is the hardest canonical target
 //!
@@ -29,40 +31,50 @@
 //!
 //! - **Append-friendly data (the outbox)** → plain `INSERT` into a `MergeTree`
 //!   (`udb_outbox_events`, ordered by `event_seq`).
-//! - **Mutable state (the outbox sequence counter; advisory leases)** →
+//! - **Mutable state (the outbox sequence counter)** →
 //!   a `ReplacingMergeTree(version)` keyed by id with a monotonic `version`
 //!   column. We never UPDATE a row in place: to change state we INSERT a NEW
 //!   row carrying `version + 1`, and we always READ the latest with
 //!   `SELECT … FINAL` (which collapses superseded rows by the engine's
 //!   replacing key, keeping only the highest `version`). Equivalent reads can
 //!   use `argMax(col, version)`; this store uses `FINAL` for clarity.
+//! - **Advisory leases** → a `KeeperMap` table keyed by lease name. Acquires use
+//!   strict insert/update operations plus an owner token confirmation so racing
+//!   acquirers have one observable winner. Releases are owner-scoped updates to a
+//!   tombstone row; they never use async `ALTER DELETE` mutations.
 //! - **"Compare-and-set"** is *emulated* by read-current-version →
 //!   insert-version+1 → re-read-FINAL-to-confirm-we-won
 //!   (last-writer-by-version wins).
 //!
-//! ## CONCURRENCY CAVEAT (single-writer assumption) — read before reuse
+//! ## CONCURRENCY CAVEAT — read before reuse
 //!
 //! Because ClickHouse offers no atomic CAS, the read-insert-reread emulation
-//! below is **only correct under a single concurrent writer per (counter id /
-//! lease name)**. Two writers racing the same counter can both read seq `N`,
-//! both insert `N+1`, and `FINAL` then collapses the two `N+1` rows into one —
-//! losing one event's slot (a duplicate `event_seq`) — or two lease acquirers
-//! can each believe they won. The conformance run is single-threaded, so this
-//! is sufficient to satisfy the base contract; a hardened multi-writer phase-2
-//! path would need a `Keeper`-backed lock, an external sequencer, or a
-//! `VersionedCollapsingMergeTree` reconciliation pass. Every place this matters
-//! is commented inline.
+//! below would be unsafe if it were exposed directly to multiple writers. It is
+//! now executed only while holding the internal KeeperMap sequence lease, so the
+//! sequence path has a single writer per allocation. Every place this matters is
+//! commented inline.
 
 use std::time::{Duration, Instant};
 
 use async_trait::async_trait;
 use serde_json::Value as Json;
+use uuid::Uuid;
 
 use super::{CanonicalStore, DurabilityToken};
 use crate::runtime::executors::clickhouse::ClickHouseExecutor;
 
 /// Well-known id of the single outbox-sequence counter row in `udb_counters`.
 const OUTBOX_SEQ_ID: &str = "outbox_seq";
+const OUTBOX_SEQ_LOCK: &str = "__udb_clickhouse_outbox_seq";
+const CLICKHOUSE_COUNTER_LOCK_TTL: Duration = Duration::from_secs(30);
+const CLICKHOUSE_COUNTER_LOCK_WAIT: Duration = Duration::from_secs(30);
+const CLICKHOUSE_COUNTER_LOCK_POLL: Duration = Duration::from_millis(50);
+const CLICKHOUSE_SYSTEM_MUTATION_LOCK_TTL: Duration = Duration::from_secs(30);
+const CLICKHOUSE_SYSTEM_MUTATION_LOCK_WAIT: Duration = Duration::from_secs(30);
+const CLICKHOUSE_SYSTEM_MUTATION_LOCK_POLL: Duration = Duration::from_millis(50);
+const KEEPER_LEASE_TABLE: &str = "udb_keeper_advisory_leases";
+const KEEPER_LEASE_LIMIT: usize = 100_000;
+const KEEPER_STRICT_SETTING: &str = "SETTINGS keeper_map_strict_mode=1";
 
 /// Validate a ClickHouse identifier the store interpolates into SQL (the
 /// database name, since the table names are compile-time constants). Mirrors the
@@ -87,6 +99,22 @@ fn safe_ident(id: &str) -> Result<(), String> {
         ));
     }
     Ok(())
+}
+
+fn safe_keeper_path_component(raw: &str) -> String {
+    let mut out = String::with_capacity(raw.len().max(1));
+    for ch in raw.chars().take(64) {
+        if ch.is_ascii_alphanumeric() || matches!(ch, '_' | '-' | '.') {
+            out.push(ch);
+        } else {
+            out.push('_');
+        }
+    }
+    if out.is_empty() {
+        "default".to_string()
+    } else {
+        out
+    }
 }
 
 /// Escape a string literal for inline SQL (single quotes doubled). The store
@@ -140,6 +168,18 @@ impl ClickHouseCanonicalStore {
         Ok(format!("`{}`.`{}`", self.database, table))
     }
 
+    fn keeper_lease_table(&self) -> Result<String, String> {
+        self.qualified(KEEPER_LEASE_TABLE)
+    }
+
+    fn keeper_lease_path(&self) -> String {
+        format!(
+            "/udb/{}/{}/advisory_leases",
+            safe_keeper_path_component(&self.database),
+            safe_keeper_path_component(&self.instance_name)
+        )
+    }
+
     /// Unix milliseconds now. Used for advisory-lease `expires_at` so the lease
     /// math is identical to the SQL / Neo4j stores and unit-testable without a
     /// server (rather than relying on ClickHouse `now64()`).
@@ -169,6 +209,109 @@ impl ClickHouseCanonicalStore {
         );
         let rows = self.executor.select_rows(&sql).await?;
         Ok(cell_i64(rows.first(), "seq"))
+    }
+
+    async fn acquire_counter_sequence_lease(&self, owner_id: &str) -> Result<(), String> {
+        let started = Instant::now();
+        loop {
+            if self
+                .try_acquire_advisory_lease(OUTBOX_SEQ_LOCK, owner_id, CLICKHOUSE_COUNTER_LOCK_TTL)
+                .await?
+            {
+                return Ok(());
+            }
+            if started.elapsed() >= CLICKHOUSE_COUNTER_LOCK_WAIT {
+                return Err(format!(
+                    "clickhouse outbox sequence lock was not acquired within {:?}",
+                    CLICKHOUSE_COUNTER_LOCK_WAIT
+                ));
+            }
+            tokio::time::sleep(CLICKHOUSE_COUNTER_LOCK_POLL).await;
+        }
+    }
+
+    pub(super) async fn acquire_system_mutation_lease(
+        &self,
+        lease_name: &str,
+        owner_id: &str,
+        op: &str,
+    ) -> Result<(), String> {
+        let started = Instant::now();
+        loop {
+            if self
+                .try_acquire_advisory_lease(
+                    lease_name,
+                    owner_id,
+                    CLICKHOUSE_SYSTEM_MUTATION_LOCK_TTL,
+                )
+                .await?
+            {
+                return Ok(());
+            }
+            if started.elapsed() >= CLICKHOUSE_SYSTEM_MUTATION_LOCK_WAIT {
+                return Err(format!(
+                    "clickhouse {op} mutation lock '{lease_name}' was not acquired within {:?}",
+                    CLICKHOUSE_SYSTEM_MUTATION_LOCK_WAIT
+                ));
+            }
+            tokio::time::sleep(CLICKHOUSE_SYSTEM_MUTATION_LOCK_POLL).await;
+        }
+    }
+
+    pub(super) async fn release_system_mutation_lease(
+        &self,
+        lease_name: &str,
+        owner_id: &str,
+        op: &str,
+    ) -> Result<(), String> {
+        self.release_advisory_lease(lease_name, owner_id)
+            .await
+            .map_err(|err| {
+                format!("clickhouse {op} mutation lock '{lease_name}' release failed: {err}")
+            })
+    }
+
+    fn keeper_insert_lease_sql(
+        table: &str,
+        lease_name: &str,
+        owner_id: &str,
+        expires_at: i64,
+        token: &str,
+    ) -> String {
+        format!(
+            "INSERT INTO {table} (lease_name, owner_id, expires_at, token) \
+             {KEEPER_STRICT_SETTING} VALUES ({name}, {owner}, {expires}, {token})",
+            name = sql_lit(lease_name),
+            owner = sql_lit(owner_id),
+            expires = expires_at,
+            token = sql_lit(token),
+        )
+    }
+
+    fn keeper_update_lease_sql(
+        table: &str,
+        lease_name: &str,
+        owner_id: &str,
+        expires_at: i64,
+        token: &str,
+        previous_token: &str,
+    ) -> String {
+        format!(
+            "ALTER TABLE {table} UPDATE owner_id = {owner}, expires_at = {expires}, token = {token} \
+             WHERE lease_name = {name} AND token = {prev_token} {KEEPER_STRICT_SETTING}",
+            owner = sql_lit(owner_id),
+            expires = expires_at,
+            token = sql_lit(token),
+            name = sql_lit(lease_name),
+            prev_token = sql_lit(previous_token),
+        )
+    }
+
+    fn keeper_select_lease_sql(table: &str, lease_name: &str) -> String {
+        format!(
+            "SELECT owner_id, expires_at, token FROM {table} WHERE lease_name = {name}",
+            name = sql_lit(lease_name)
+        )
     }
 }
 
@@ -215,6 +358,7 @@ impl CanonicalStore for ClickHouseCanonicalStore {
             ))
             .await
             .map_err(|e| format!("ensure_system_tables (clickhouse counters) failed: {e}"))?;
+        self.ensure_advisory_lease_table().await?;
         Ok(())
     }
 
@@ -233,36 +377,49 @@ impl CanonicalStore for ClickHouseCanonicalStore {
         //   3. re-read with FINAL to CONFIRM we observe at least our new seq
         //      (last-writer-by-version wins).
         //
-        // SINGLE-WRITER CAVEAT (see module docs): two concurrent enqueues can
-        // both read `current`, both insert `current+1`, and FINAL then collapses
-        // the two `current+1` rows into one — yielding a duplicate event_seq.
-        // The conformance run is single-threaded so this holds; multi-writer
-        // hardening needs an external sequencer / Keeper lock.
-        let current = self.current_counter_seq().await?;
-        let next = current + 1;
+        // The read-insert-confirm sequence is safe only while the internal
+        // KeeperMap lease is held. If Keeper is unavailable, acquisition fails and
+        // the store refuses to allocate a sequence rather than duplicating one.
+        let sequence_owner = format!("outbox:{event_id}:{}", Uuid::new_v4());
+        self.acquire_counter_sequence_lease(&sequence_owner).await?;
+        let allocation = async {
+            let current = self.current_counter_seq().await?;
+            let next = current + 1;
 
-        let counters = self.qualified("udb_counters")?;
-        // version == seq: both are monotone and start at 1, so the highest seq is
-        // always the highest version — FINAL therefore always surfaces the newest
-        // allocation.
-        self.executor
-            .execute_ddl(&format!(
-                "INSERT INTO {counters} (id, seq, version) VALUES ({id}, {next}, {next})",
-                id = sql_lit(OUTBOX_SEQ_ID)
-            ))
-            .await
-            .map_err(|e| format!("outbox seq counter insert failed: {e}"))?;
+            let counters = self.qualified("udb_counters")?;
+            // version == seq: both are monotone and start at 1, so the highest seq is
+            // always the highest version — FINAL therefore always surfaces the newest
+            // allocation.
+            self.executor
+                .execute_ddl(&format!(
+                    "INSERT INTO {counters} (id, seq, version) VALUES ({id}, {next}, {next})",
+                    id = sql_lit(OUTBOX_SEQ_ID)
+                ))
+                .await
+                .map_err(|e| format!("outbox seq counter insert failed: {e}"))?;
 
-        // Re-read with FINAL to confirm our allocation is the live one. Under the
-        // single-writer assumption this must observe `>= next`; if it somehow
-        // reads back lower, surface it rather than handing out a colliding seq.
-        let confirmed = self.current_counter_seq().await?;
-        if confirmed < next {
+            // Re-read with FINAL to confirm our allocation is the live one. The
+            // Keeper lease should make this single-writer; if it reads lower,
+            // fail closed rather than handing out a colliding seq.
+            let confirmed = self.current_counter_seq().await?;
+            if confirmed < next {
+                return Err(format!(
+                    "outbox seq allocation lost a race: inserted {next}, re-read {confirmed} \
+                     (Keeper sequence lock invariant violated)"
+                ));
+            }
+            Ok(next)
+        }
+        .await;
+        let release = self
+            .release_advisory_lease(OUTBOX_SEQ_LOCK, &sequence_owner)
+            .await;
+        if let Err(err) = release {
             return Err(format!(
-                "outbox seq allocation lost a race: inserted {next}, re-read {confirmed} \
-                 (single-writer assumption violated — see ClickHouseCanonicalStore docs)"
+                "clickhouse outbox sequence lock release failed: {err}"
             ));
         }
+        let next = allocation?;
 
         // Insert the event row carrying the freshly-allocated seq. `now64(3)`
         // stamps the audit-only created_at server-side at millisecond precision.
@@ -328,23 +485,31 @@ impl CanonicalStore for ClickHouseCanonicalStore {
     }
 
     async fn ensure_advisory_lease_table(&self) -> Result<(), String> {
-        // Leases: ReplacingMergeTree keyed by lease_name, deduped by `version`.
-        // Every state change (acquire / refresh / release) is an INSERT of a new
-        // versioned row; reads use FINAL to see only the latest. A release writes
-        // a tombstone row with an empty owner_id and a bumped version, which
-        // supersedes the live row and frees the lease (no DELETE mutation needed).
-        let leases = self.qualified("udb_advisory_leases")?;
+        // Leases: KeeperMap is backed by ClickHouse Keeper, not MergeTree parts.
+        // Strict insert/update/delete semantics give the advisory-lease contract
+        // one observable winner across broker processes. If the deployment lacks
+        // KeeperMap configuration, this DDL fails and ClickHouse refuses to act as
+        // an HA-canonical system store.
+        let leases = self.keeper_lease_table()?;
+        let keeper_path = self.keeper_lease_path();
         self.executor
             .execute_ddl(&format!(
                 "CREATE TABLE IF NOT EXISTS {leases} (\
                  lease_name String, \
                  owner_id String, \
                  expires_at Int64, \
-                 version UInt64\
-                 ) ENGINE = ReplacingMergeTree(version) ORDER BY lease_name"
+                 token String\
+                 ) ENGINE = KeeperMap({path}, {limit}) PRIMARY KEY lease_name",
+                path = sql_lit(&keeper_path),
+                limit = KEEPER_LEASE_LIMIT,
             ))
             .await
-            .map_err(|e| format!("ensure_advisory_lease_table (clickhouse) failed: {e}"))?;
+            .map_err(|e| {
+                format!(
+                    "ensure_advisory_lease_table (clickhouse KeeperMap) failed: {e}; \
+                     configure ClickHouse Keeper/KeeperMap for HA-canonical ClickHouse"
+                )
+            })?;
         Ok(())
     }
 
@@ -354,108 +519,95 @@ impl CanonicalStore for ClickHouseCanonicalStore {
         owner_id: &str,
         ttl: std::time::Duration,
     ) -> Result<bool, String> {
-        // Versioned-CAS emulation of PG's
-        //   INSERT … ON CONFLICT DO UPDATE … WHERE expired OR same-owner.
-        //
-        // Steps (all over the ReplacingMergeTree, no transaction / lock):
-        //   1. read the current lease row via FINAL (latest version);
-        //   2. DECIDE per the 6-case contract whether we may take it;
-        //   3. to acquire, INSERT a new row with version+1 (our owner, new
-        //      expires_at), then re-read FINAL and confirm the live row is ours.
-        //
-        // The 6 contract cases (mirrors PG / Neo4j):
-        //   1. fresh (no row)              → acquire (insert version 1).
-        //   2. live, different owner       → DENY → Ok(false).
-        //   3. same owner, refresh         → acquire (bump expires_at).
-        //   4. wrong-owner release         → handled in release (owner-scoped).
-        //   5. owner release then reacquire→ release wrote an empty-owner
-        //                                     tombstone; a later acquire sees an
-        //                                     empty owner (treated as free) → acquire.
-        //   6. zero-ttl takeover           → ttl=0 ⇒ expires_at = now; a later
-        //                                     acquirer sees expires_at <= now → acquire.
-        //
-        // SINGLE-WRITER CAVEAT (see module docs): the read-decide-insert-reread is
-        // NOT atomic, so two acquirers racing the same fresh/expired lease can
-        // both insert version+1 and both believe they won. The conformance run is
-        // single-threaded so the contract holds; a hardened path needs Keeper.
-        let leases = self.qualified("udb_advisory_leases")?;
+        let leases = self.keeper_lease_table()?;
         let now = Self::now_unix_ms();
         let new_expires = now + (ttl.as_millis() as i64);
+        let token = format!("{}:{now}:{}", owner_id, Uuid::new_v4());
 
-        // 1. Current live row via FINAL.
-        let read_sql = format!(
-            "SELECT owner_id, expires_at, version FROM {leases} FINAL \
-             WHERE lease_name = {name}",
-            name = sql_lit(lease_name)
-        );
+        // Fast path for a fresh key. In strict KeeperMap mode this succeeds for
+        // exactly one first acquirer. Duplicate-key failures fall through to the
+        // refresh/expired-takeover path below.
+        let insert_sql =
+            Self::keeper_insert_lease_sql(&leases, lease_name, owner_id, new_expires, &token);
+        match self.executor.execute_ddl(&insert_sql).await {
+            Ok(()) => return Ok(true),
+            Err(insert_err) => {
+                let read_sql = Self::keeper_select_lease_sql(&leases, lease_name);
+                let rows = self
+                    .executor
+                    .select_rows(&read_sql)
+                    .await
+                    .map_err(|read_err| {
+                        format!(
+                            "try_acquire_advisory_lease fresh insert failed ({insert_err}); \
+                         current lease read also failed: {read_err}"
+                        )
+                    })?;
+                if rows.first().is_none() {
+                    return Err(format!(
+                        "try_acquire_advisory_lease fresh insert failed and no existing \
+                         KeeperMap row was visible: {insert_err}"
+                    ));
+                }
+            }
+        }
+
+        let read_sql = Self::keeper_select_lease_sql(&leases, lease_name);
         let rows = self.executor.select_rows(&read_sql).await?;
         let current = rows.first();
         let cur_owner = cell_str(current, "owner_id");
         let cur_expires = cell_i64(current, "expires_at");
-        let cur_version = cell_u64(current, "version");
+        let cur_token = cell_str(current, "token");
 
-        // 2. Decide. A row with an empty owner_id is a release tombstone → free.
-        // A row whose expires_at <= now is expired → free. Same owner always
+        // Decide. A row with an empty owner_id is a release tombstone → free. A
+        // row whose expires_at <= now is expired → free. Same owner always
         // refreshes. A live row owned by someone else denies.
         let is_free = current.is_none() || cur_owner.is_empty() || cur_expires <= now;
         let may_acquire = is_free || cur_owner == owner_id;
         if !may_acquire {
-            // Case 2: live lease held by a different owner.
             return Ok(false);
         }
 
-        // 3. Acquire by inserting a superseding version. version starts at 1 for a
-        // fresh lease; otherwise bump the latest version we read.
-        let next_version = cur_version.saturating_add(1).max(1);
-        self.executor
-            .execute_ddl(&format!(
-                "INSERT INTO {leases} (lease_name, owner_id, expires_at, version) \
-                 VALUES ({name}, {owner}, {exp}, {ver})",
-                name = sql_lit(lease_name),
-                owner = sql_lit(owner_id),
-                exp = new_expires,
-                ver = next_version,
-            ))
-            .await
-            .map_err(|e| format!("try_acquire_advisory_lease insert (clickhouse) failed: {e}"))?;
+        // Conditional update by the observed token. If another process refreshed
+        // or took over after our read, the token no longer matches and our final
+        // confirmation below returns false.
+        let update_sql = Self::keeper_update_lease_sql(
+            &leases,
+            lease_name,
+            owner_id,
+            new_expires,
+            &token,
+            &cur_token,
+        );
+        self.executor.execute_ddl(&update_sql).await.map_err(|e| {
+            format!("try_acquire_advisory_lease KeeperMap update (clickhouse) failed: {e}")
+        })?;
 
-        // Re-read FINAL and confirm the live row is ours (last-writer-by-version).
         let confirm = self.executor.select_rows(&read_sql).await?;
-        let won = cell_str(confirm.first(), "owner_id") == owner_id;
+        let won = cell_str(confirm.first(), "owner_id") == owner_id
+            && cell_str(confirm.first(), "token") == token;
         Ok(won)
     }
 
     async fn release_advisory_lease(&self, lease_name: &str, owner_id: &str) -> Result<(), String> {
-        // Owner-scoped release: read the live row via FINAL; only supersede it
-        // when WE are the current owner (contract case 4 — a wrong-owner release
-        // must be a no-op and must NOT free the lease). Releasing = INSERT a
-        // tombstone row (empty owner_id) with version+1, which FINAL surfaces as
-        // the new live row; `try_acquire_advisory_lease` treats an empty owner as
-        // free. We do NOT issue an `ALTER TABLE … DELETE` mutation (async + heavy);
-        // the tombstone is the cheap, immediately-visible release.
-        let leases = self.qualified("udb_advisory_leases")?;
-        let read_sql = format!(
-            "SELECT owner_id, version FROM {leases} FINAL WHERE lease_name = {name}",
-            name = sql_lit(lease_name)
-        );
+        // Owner-scoped release: only the current owner can convert the key into a
+        // free tombstone. Wrong-owner release is a no-op and must not free the
+        // lease for a competing process.
+        let leases = self.keeper_lease_table()?;
+        let read_sql = Self::keeper_select_lease_sql(&leases, lease_name);
         let rows = self.executor.select_rows(&read_sql).await?;
         let current = rows.first();
         let cur_owner = cell_str(current, "owner_id");
-        // Wrong-owner (or already-free) release is a no-op.
         if cur_owner != owner_id {
             return Ok(());
         }
-        let next_version = cell_u64(current, "version").saturating_add(1).max(1);
-        // Empty owner_id + expires_at 0 = free tombstone.
-        self.executor
-            .execute_ddl(&format!(
-                "INSERT INTO {leases} (lease_name, owner_id, expires_at, version) \
-                 VALUES ({name}, '', 0, {ver})",
-                name = sql_lit(lease_name),
-                ver = next_version,
-            ))
-            .await
-            .map_err(|e| format!("release_advisory_lease insert (clickhouse) failed: {e}"))?;
+        let cur_token = cell_str(current, "token");
+        let release_token = format!("released:{}:{}", Self::now_unix_ms(), Uuid::new_v4());
+        let release_sql =
+            Self::keeper_update_lease_sql(&leases, lease_name, "", 0, &release_token, &cur_token);
+        self.executor.execute_ddl(&release_sql).await.map_err(|e| {
+            format!("release_advisory_lease KeeperMap update (clickhouse) failed: {e}")
+        })?;
         Ok(())
     }
 }
@@ -481,6 +633,7 @@ fn cell_i64(row: Option<&Json>, key: &str) -> i64 {
 
 /// Read a `UInt64` cell (`version`). JSONCompact renders UInt64 as a string, so
 /// prefer the string form, falling back to a JSON number.
+#[cfg(test)]
 fn cell_u64(row: Option<&Json>, key: &str) -> u64 {
     let Some(cell) = row.and_then(|r| r.get(key)) else {
         return 0;
@@ -565,6 +718,55 @@ mod tests {
         });
         let store = ClickHouseCanonicalStore::new(exec, "primary", "evil`; DROP");
         assert!(store.qualified("udb_counters").is_err());
+    }
+
+    #[test]
+    fn keeper_lease_table_and_path_are_pinned() {
+        let store = dummy_store();
+        assert_eq!(
+            store.keeper_lease_table().unwrap(),
+            "`udb`.`udb_keeper_advisory_leases`"
+        );
+        assert_eq!(
+            store.keeper_lease_path(),
+            "/udb/udb/primary/advisory_leases"
+        );
+
+        let exec = ClickHouseExecutor::new(ClickHouseConfig {
+            http_base: "http://localhost:8123".to_string(),
+            username: "default".to_string(),
+            password: String::new(),
+            database: "udb".to_string(),
+            is_cloud: false,
+            connect_timeout_secs: 10,
+            query_timeout_secs: 30,
+        });
+        let weird = ClickHouseCanonicalStore::new(exec, "primary/blue:1", "udb");
+        assert_eq!(
+            weird.keeper_lease_path(),
+            "/udb/udb/primary_blue_1/advisory_leases"
+        );
+    }
+
+    #[test]
+    fn keeper_lease_sql_uses_strict_mode_and_token_cas() {
+        let table = "`udb`.`udb_keeper_advisory_leases`";
+        let insert = ClickHouseCanonicalStore::keeper_insert_lease_sql(
+            table, "lease-a", "owner-a", 10, "t1",
+        );
+        assert!(insert.contains("INSERT INTO `udb`.`udb_keeper_advisory_leases`"));
+        assert!(insert.contains("SETTINGS keeper_map_strict_mode=1 VALUES"));
+        assert!(insert.contains("'lease-a'"));
+        assert!(insert.contains("'owner-a'"));
+
+        let update = ClickHouseCanonicalStore::keeper_update_lease_sql(
+            table, "lease-a", "owner-b", 20, "t2", "t1",
+        );
+        assert!(update.starts_with("ALTER TABLE `udb`.`udb_keeper_advisory_leases` UPDATE"));
+        assert!(update.contains("owner_id = 'owner-b'"));
+        assert!(update.contains("token = 't2'"));
+        assert!(update.contains("WHERE lease_name = 'lease-a' AND token = 't1'"));
+        assert!(update.ends_with("SETTINGS keeper_map_strict_mode=1"));
     }
 
     /// Pin: JSONCompact UInt64-as-string and Int64-as-number both decode.

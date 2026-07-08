@@ -10,6 +10,17 @@ fn tuple_scope_tenant(tenant: &str, project: &str) -> String {
     }
 }
 
+fn authz_tuple_invalid_fields<const N: usize>(
+    message: &'static str,
+    fields: [(&'static str, &'static str); N],
+) -> Status {
+    crate::runtime::executor_utils::invalid_argument_fields(message, fields)
+}
+
+fn authz_tuple_internal_status(operation: impl Into<String>, message: impl Into<String>) -> Status {
+    crate::runtime::executor_utils::internal_status("authz", operation, message)
+}
+
 fn policy_tuple_record(
     tuple_kind: &str,
     subject: &str,
@@ -86,23 +97,40 @@ impl AuthzServiceImpl {
     ) -> Result<Response<authz_pb::AuthMutationResponse>, Status> {
         // K2.2: governed mode disables direct active mutation (use the draft flow).
         if super::governance::governed_mode_enabled() {
-            return Err(Status::failed_precondition(
-                "governed mode: direct PutRoleBinding is disabled; create a policy draft and activate it (or use break-glass governance)",
+            return Err(governed_direct_mutation_status(
+                "PutRoleBinding",
+                "put_role_binding_disabled",
             ));
         }
-        let binding = request
-            .into_inner()
-            .binding
-            .ok_or_else(|| Status::invalid_argument("binding is required"))?;
+        let binding = request.into_inner().binding.ok_or_else(|| {
+            authz_tuple_invalid_fields(
+                "binding is required",
+                [("binding", "must include a role binding")],
+            )
+        })?;
         if binding.subject.trim().is_empty() || binding.role.trim().is_empty() {
-            return Err(Status::invalid_argument(
+            return Err(authz_tuple_invalid_fields(
                 "binding subject and role are required",
+                [
+                    ("binding.subject", "must be a non-empty binding subject"),
+                    ("binding.role", "must be a non-empty role"),
+                ],
             ));
         }
         let scope_tenant = tuple_scope_tenant(&binding.tenant, &binding.project);
         if scope_tenant.trim().is_empty() {
-            return Err(Status::invalid_argument(
+            return Err(authz_tuple_invalid_fields(
                 "binding tenant or project is required",
+                [
+                    (
+                        "binding.tenant",
+                        "must include tenant or project scope for the binding",
+                    ),
+                    (
+                        "binding.project",
+                        "must include tenant or project scope for the binding",
+                    ),
+                ],
             ));
         }
         let condition = serde_json::json!({
@@ -111,7 +139,11 @@ impl AuthzServiceImpl {
         })
         .to_string();
         let runtime = self.runtime.as_ref().ok_or_else(|| {
-            Status::failed_precondition("native authz requires runtime-backed tuple persistence")
+            authz_capability_status(
+                "tuple_persistence",
+                "runtime_native_entity_dispatch",
+                "native authz requires runtime-backed tuple persistence",
+            )
         })?;
         let context = crate::RequestContext {
             tenant_id: scope_tenant.clone(),
@@ -137,7 +169,12 @@ impl AuthzServiceImpl {
                 policy_tuple_conflict(),
             )
             .await
-            .map_err(|err| Status::internal(format!("store role binding failed: {err}")))?;
+            .map_err(|err| {
+                authz_tuple_internal_status(
+                    "store_role_binding",
+                    format!("store role binding failed: {err}"),
+                )
+            })?;
         let _ = self
             .bump_authz_revision(
                 &scope_tenant,
@@ -160,26 +197,44 @@ impl AuthzServiceImpl {
     ) -> Result<Response<authz_pb::AuthMutationResponse>, Status> {
         // K2.2: governed mode disables direct active mutation (use the draft flow).
         if super::governance::governed_mode_enabled() {
-            return Err(Status::failed_precondition(
-                "governed mode: direct PutRelationship is disabled; create a policy draft and activate it (or use break-glass governance)",
+            return Err(governed_direct_mutation_status(
+                "PutRelationship",
+                "put_relationship_disabled",
             ));
         }
-        let tuple = request
-            .into_inner()
-            .tuple
-            .ok_or_else(|| Status::invalid_argument("tuple is required"))?;
+        let tuple = request.into_inner().tuple.ok_or_else(|| {
+            authz_tuple_invalid_fields(
+                "tuple is required",
+                [("tuple", "must include a relationship tuple")],
+            )
+        })?;
         if tuple.subject.trim().is_empty()
             || tuple.relation.trim().is_empty()
             || tuple.object.trim().is_empty()
         {
-            return Err(Status::invalid_argument(
+            return Err(authz_tuple_invalid_fields(
                 "tuple subject, relation, and object are required",
+                [
+                    ("tuple.subject", "must be a non-empty tuple subject"),
+                    ("tuple.relation", "must be a non-empty tuple relation"),
+                    ("tuple.object", "must be a non-empty tuple object"),
+                ],
             ));
         }
         let scope_tenant = tuple_scope_tenant(&tuple.tenant, &tuple.project);
         if scope_tenant.trim().is_empty() {
-            return Err(Status::invalid_argument(
+            return Err(authz_tuple_invalid_fields(
                 "tuple tenant or project is required",
+                [
+                    (
+                        "tuple.tenant",
+                        "must include tenant or project scope for the tuple",
+                    ),
+                    (
+                        "tuple.project",
+                        "must include tenant or project scope for the tuple",
+                    ),
+                ],
             ));
         }
         let condition = serde_json::json!({
@@ -189,7 +244,11 @@ impl AuthzServiceImpl {
         })
         .to_string();
         let runtime = self.runtime.as_ref().ok_or_else(|| {
-            Status::failed_precondition("native authz requires runtime-backed tuple persistence")
+            authz_capability_status(
+                "tuple_persistence",
+                "runtime_native_entity_dispatch",
+                "native authz requires runtime-backed tuple persistence",
+            )
         })?;
         let context = crate::RequestContext {
             tenant_id: scope_tenant.clone(),
@@ -215,7 +274,12 @@ impl AuthzServiceImpl {
                 policy_tuple_conflict(),
             )
             .await
-            .map_err(|err| Status::internal(format!("store relationship tuple failed: {err}")))?;
+            .map_err(|err| {
+                authz_tuple_internal_status(
+                    "store_relationship_tuple",
+                    format!("store relationship tuple failed: {err}"),
+                )
+            })?;
         let _ = self
             .bump_authz_revision(
                 &scope_tenant,
@@ -259,5 +323,193 @@ impl AuthzServiceImpl {
             ok: true,
             message: "relationship tuple stored".to_string(),
         }))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::proto::udb::core::authz::services::v1::authz_service_server::AuthzService;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::authz::AuthzSnapshot;
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
+    use tonic::{Code, Request};
+
+    fn svc() -> AuthzServiceImpl {
+        AuthzServiceImpl::new(AuthzSnapshot::default())
+    }
+
+    fn decode_detail(status: &Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_validation_fields(status: &Status, expected: &[(&str, &str)]) {
+        assert_eq!(status.code(), Code::InvalidArgument);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert_eq!(detail.field_violations.len(), expected.len());
+        for (actual, (field, description)) in detail.field_violations.iter().zip(expected) {
+            assert_eq!(actual.field, *field);
+            assert_eq!(actual.description, *description);
+        }
+    }
+
+    fn assert_internal_detail(status: &Status, operation: &str, message: &str) {
+        assert_eq!(status.code(), Code::Internal);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "authz");
+        assert_eq!(detail.operation, operation);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    #[test]
+    fn authz_tuple_internal_status_carries_typed_detail() {
+        let status = authz_tuple_internal_status(
+            "store_relationship_tuple",
+            "store relationship tuple failed: dispatch down",
+        );
+        assert_internal_detail(
+            &status,
+            "store_relationship_tuple",
+            "store relationship tuple failed: dispatch down",
+        );
+    }
+
+    #[tokio::test]
+    async fn put_role_binding_missing_binding_carries_field_violation() {
+        let err = svc()
+            .put_role_binding(Request::new(authz_pb::PutRoleBindingRequest::default()))
+            .await
+            .expect_err("missing binding must fail before runtime access");
+
+        assert_eq!(err.message(), "binding is required");
+        assert_validation_fields(&err, &[("binding", "must include a role binding")]);
+    }
+
+    #[tokio::test]
+    async fn put_role_binding_missing_identity_carries_field_violations() {
+        let err = svc()
+            .put_role_binding(Request::new(authz_pb::PutRoleBindingRequest {
+                binding: Some(authz_pb::RoleBinding {
+                    tenant: "tenant-1".to_string(),
+                    ..Default::default()
+                }),
+            }))
+            .await
+            .expect_err("missing binding identity must fail before runtime access");
+
+        assert_eq!(err.message(), "binding subject and role are required");
+        assert_validation_fields(
+            &err,
+            &[
+                ("binding.subject", "must be a non-empty binding subject"),
+                ("binding.role", "must be a non-empty role"),
+            ],
+        );
+    }
+
+    #[tokio::test]
+    async fn put_role_binding_missing_scope_carries_field_violations() {
+        let err = svc()
+            .put_role_binding(Request::new(authz_pb::PutRoleBindingRequest {
+                binding: Some(authz_pb::RoleBinding {
+                    subject: "user-1".to_string(),
+                    role: "reader".to_string(),
+                    ..Default::default()
+                }),
+            }))
+            .await
+            .expect_err("missing binding scope must fail before runtime access");
+
+        assert_eq!(err.message(), "binding tenant or project is required");
+        assert_validation_fields(
+            &err,
+            &[
+                (
+                    "binding.tenant",
+                    "must include tenant or project scope for the binding",
+                ),
+                (
+                    "binding.project",
+                    "must include tenant or project scope for the binding",
+                ),
+            ],
+        );
+    }
+
+    #[tokio::test]
+    async fn put_relationship_missing_tuple_carries_field_violation() {
+        let err = svc()
+            .put_relationship(Request::new(authz_pb::PutRelationshipRequest::default()))
+            .await
+            .expect_err("missing tuple must fail before runtime access");
+
+        assert_eq!(err.message(), "tuple is required");
+        assert_validation_fields(&err, &[("tuple", "must include a relationship tuple")]);
+    }
+
+    #[tokio::test]
+    async fn put_relationship_missing_identity_carries_field_violations() {
+        let err = svc()
+            .put_relationship(Request::new(authz_pb::PutRelationshipRequest {
+                tuple: Some(authz_pb::RelationshipTuple {
+                    tenant: "tenant-1".to_string(),
+                    ..Default::default()
+                }),
+            }))
+            .await
+            .expect_err("missing tuple identity must fail before runtime access");
+
+        assert_eq!(
+            err.message(),
+            "tuple subject, relation, and object are required"
+        );
+        assert_validation_fields(
+            &err,
+            &[
+                ("tuple.subject", "must be a non-empty tuple subject"),
+                ("tuple.relation", "must be a non-empty tuple relation"),
+                ("tuple.object", "must be a non-empty tuple object"),
+            ],
+        );
+    }
+
+    #[tokio::test]
+    async fn put_relationship_missing_scope_carries_field_violations() {
+        let err = svc()
+            .put_relationship(Request::new(authz_pb::PutRelationshipRequest {
+                tuple: Some(authz_pb::RelationshipTuple {
+                    subject: "user-1".to_string(),
+                    relation: "viewer".to_string(),
+                    object: "doc-1".to_string(),
+                    ..Default::default()
+                }),
+            }))
+            .await
+            .expect_err("missing tuple scope must fail before runtime access");
+
+        assert_eq!(err.message(), "tuple tenant or project is required");
+        assert_validation_fields(
+            &err,
+            &[
+                (
+                    "tuple.tenant",
+                    "must include tenant or project scope for the tuple",
+                ),
+                (
+                    "tuple.project",
+                    "must include tenant or project scope for the tuple",
+                ),
+            ],
+        );
     }
 }

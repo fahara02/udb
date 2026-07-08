@@ -18,6 +18,8 @@ use criterion::{Criterion, Throughput, black_box, criterion_group, criterion_mai
 use serde_json::Value as JsonValue;
 use udb::bench_internals as bi;
 
+const AUTHZ_POLICY_COUNTS: [usize; 2] = [32, 512];
+
 // ── Dataset loading (bounded, representative sample) ──────────────────────────
 
 fn data_dir() -> PathBuf {
@@ -217,6 +219,79 @@ fn bench_merge_context(c: &mut Criterion) {
     group.finish();
 }
 
+// ── Authz snapshot rebuild + descriptor-derived scope map ───────────────────
+
+fn sample_abac_policies(count: usize) -> Vec<bi::AbacPolicy> {
+    (0..count)
+        .map(|i| bi::AbacPolicy {
+            effect: if i % 17 == 0 {
+                bi::PolicyEffect::Deny
+            } else {
+                bi::PolicyEffect::Allow
+            },
+            service_identity: format!("svc-{}", i % 8),
+            tenant_id: format!("tenant-{}", i % 16),
+            purpose: if i % 3 == 0 { "audit" } else { "read" }.to_string(),
+            message_type: format!("udb.bench.Entity{}", i % 24),
+            operation: match i % 5 {
+                0 => "data.select",
+                1 => "data.upsert",
+                2 => "data.delete",
+                3 => "object.read",
+                _ => "backend.dispatch",
+            }
+            .to_string(),
+            required_scope: match i % 4 {
+                0 => "udb:read",
+                1 => "udb:write",
+                2 => "udb:admin",
+                _ => "",
+            }
+            .to_string(),
+        })
+        .collect()
+}
+
+fn bench_authz_and_scope_maps(c: &mut Criterion) {
+    let mut authz = c.benchmark_group("authz_snapshot_rebuild");
+    for count in AUTHZ_POLICY_COUNTS {
+        let policies = sample_abac_policies(count);
+        authz.throughput(Throughput::Elements(count as u64));
+        authz.bench_function(format!("from_abac_policies/{count}"), |b| {
+            b.iter(|| {
+                black_box(bi::rebuild_authz_snapshot_from_abac(
+                    black_box("bench-policy-version"),
+                    black_box(&policies),
+                ));
+            });
+        });
+    }
+    authz.finish();
+
+    let paths = bi::method_security_scope_paths();
+    assert!(
+        !paths.is_empty(),
+        "descriptor-derived method-security scope map has no scoped methods"
+    );
+    let mut scope_map = c.benchmark_group("method_security_scope_map");
+    scope_map.throughput(Throughput::Elements(paths.len() as u64));
+    scope_map.bench_function("rebuild_from_descriptor", |b| {
+        b.iter(|| {
+            black_box(bi::rebuild_method_security_scope_registry());
+        });
+    });
+    scope_map.bench_function("lookup_declared_scopes", |b| {
+        b.iter(|| {
+            let mut total = 0usize;
+            for path in &paths {
+                total += bi::method_security_scope_count(black_box(path));
+            }
+            black_box(total);
+        });
+    });
+    scope_map.finish();
+}
+
 // D.6: scalar vs maintained-SIMD-crate, measured side-by-side in ONE run across
 // the object-payload size regimes — the decision input for adopting `base64-simd`
 // / `crc32fast`. Only present when both SIMD features are enabled; otherwise a
@@ -261,6 +336,7 @@ criterion_group!(
     bench_dispatch_parse,
     bench_base64,
     bench_merge_context,
+    bench_authz_and_scope_maps,
     bench_simd_vs_scalar,
 );
 criterion_main!(benches);

@@ -47,6 +47,23 @@ pub struct AnalyticsServiceImpl {
     runtime: Option<Arc<DataBrokerRuntime>>,
 }
 
+fn analytics_capability_status(
+    operation: &'static str,
+    capability_required: &'static str,
+    message: &'static str,
+) -> Status {
+    crate::runtime::executor_utils::capability_status(
+        "analytics",
+        operation,
+        capability_required,
+        message,
+    )
+}
+
+fn analytics_internal_status(operation: impl Into<String>, message: impl Into<String>) -> Status {
+    crate::runtime::executor_utils::internal_status("analytics", operation, message)
+}
+
 impl AnalyticsServiceImpl {
     pub fn new() -> Self {
         Self {
@@ -67,7 +84,9 @@ impl AnalyticsServiceImpl {
 
     fn require_pool(&self) -> Result<&PgPool, Status> {
         self.pg_pool.as_ref().ok_or_else(|| {
-            Status::failed_precondition(
+            analytics_capability_status(
+                "postgres_store",
+                "postgres_store",
                 "analytics service requires a Postgres-backed store (no PG pool configured)",
             )
         })
@@ -159,6 +178,14 @@ fn logical_string(value: impl Into<String>) -> LogicalValue {
     LogicalValue::String(value.into())
 }
 
+fn analytics_required_field(
+    field: &'static str,
+    description: &'static str,
+    message: &'static str,
+) -> Status {
+    crate::runtime::executor_utils::invalid_argument_fields(message, [(field, description)])
+}
+
 fn maybe_string_filter(field: &str, value: &str) -> Option<LogicalFilter> {
     if value.trim().is_empty() {
         None
@@ -216,6 +243,7 @@ fn pipeline_summary_read(filter: Option<LogicalFilter>, offset: u64, limit: u32)
             direction: SortDirection::Desc,
             nulls: NullOrder::Default,
         }],
+        include: Vec::new(),
         pagination: Some(LogicalPagination::page(offset, limit)),
     }
 }
@@ -248,6 +276,7 @@ fn executor_performance_read(req: &ana_pb::GetExecutorPerformanceRequest) -> Log
             direction: SortDirection::Desc,
             nulls: NullOrder::Default,
         }],
+        include: Vec::new(),
         pagination: Some(LogicalPagination::limit(MAX_ANALYTICS_READ_ROWS)),
     }
 }
@@ -274,6 +303,7 @@ fn reconciliation_analytics_read() -> LogicalRead {
             direction: SortDirection::Desc,
             nulls: NullOrder::Default,
         }],
+        include: Vec::new(),
         pagination: Some(LogicalPagination::limit(MAX_ANALYTICS_READ_ROWS)),
     }
 }
@@ -330,6 +360,7 @@ fn sla_compliance_read(req: &ana_pb::GetSlaComplianceRequest) -> LogicalRead {
             direction: SortDirection::Desc,
             nulls: NullOrder::Default,
         }],
+        include: Vec::new(),
         pagination: Some(LogicalPagination::limit(MAX_ANALYTICS_READ_ROWS)),
     }
 }
@@ -567,7 +598,11 @@ impl AnalyticsService for AnalyticsServiceImpl {
             req.tenant_id = canonical;
         }
         if req.stage_name.trim().is_empty() {
-            return Err(Status::invalid_argument("stage_name is required"));
+            return Err(analytics_required_field(
+                "stage_name",
+                "must be a non-empty pipeline stage name",
+                "stage_name is required",
+            ));
         }
         let pool = self.require_pool()?;
         let m = pms_model();
@@ -690,7 +725,12 @@ impl AnalyticsService for AnalyticsServiceImpl {
         .bind(page.offset_i64())
         .fetch_all(pool)
         .await
-        .map_err(|err| Status::internal(format!("get pipeline summary failed: {err}")))?;
+        .map_err(|err| {
+            analytics_internal_status(
+                "get_pipeline_summary",
+                format!("get pipeline summary failed: {err}"),
+            )
+        })?;
         let total: i64 = rows
             .first()
             .and_then(|r| r.try_get("total_count").ok())
@@ -767,7 +807,12 @@ impl AnalyticsService for AnalyticsServiceImpl {
         .bind(&req.date_to)
         .fetch_all(pool)
         .await
-        .map_err(|err| Status::internal(format!("get executor performance failed: {err}")))?;
+        .map_err(|err| {
+            analytics_internal_status(
+                "get_executor_performance",
+                format!("get executor performance failed: {err}"),
+            )
+        })?;
         let summaries = rows.iter().map(eps_from_row).collect();
         Ok(Response::new(ana_pb::GetExecutorPerformanceResponse {
             summaries,
@@ -847,7 +892,12 @@ impl AnalyticsService for AnalyticsServiceImpl {
         .bind(&req.date_to)
         .fetch_all(pool)
         .await
-        .map_err(|err| Status::internal(format!("get reconciliation analytics failed: {err}")))?;
+        .map_err(|err| {
+            analytics_internal_status(
+                "get_reconciliation_analytics",
+                format!("get reconciliation analytics failed: {err}"),
+            )
+        })?;
         let summaries: Vec<_> = rows.iter().map(ras_from_row).collect();
         // Overall resolution rate = Σ exact_matches / Σ total_reconciliations;
         // avg_reconciliation_ms = mean of the per-day averages.
@@ -922,7 +972,9 @@ impl AnalyticsService for AnalyticsServiceImpl {
         .bind(&req.hour_to)
         .fetch_one(pool)
         .await
-        .map_err(|err| Status::internal(format!("get throughput failed: {err}")))?;
+        .map_err(|err| {
+            analytics_internal_status("get_throughput", format!("get throughput failed: {err}"))
+        })?;
         let total_requests: i64 = row.try_get("total_requests").unwrap_or(0);
         let total_successful: i64 = row.try_get("total_successful").unwrap_or(0);
         let overall_success_rate = if total_requests > 0 {
@@ -1009,7 +1061,12 @@ impl AnalyticsService for AnalyticsServiceImpl {
         .bind(&req.date_to)
         .fetch_all(pool)
         .await
-        .map_err(|err| Status::internal(format!("get sla compliance failed: {err}")))?;
+        .map_err(|err| {
+            analytics_internal_status(
+                "get_sla_compliance",
+                format!("get sla compliance failed: {err}"),
+            )
+        })?;
 
         // A zero threshold means "no threshold configured" → treat as always met
         // so an unconfigured SLA doesn't report spurious violations.
@@ -1068,11 +1125,103 @@ impl AnalyticsService for AnalyticsServiceImpl {
         .bind(&req.hour)
         .fetch_one(pool)
         .await
-        .map_err(|err| Status::internal(format!("trigger snapshot failed: {err}")))?;
+        .map_err(|err| {
+            analytics_internal_status(
+                "trigger_snapshot",
+                format!("trigger snapshot failed: {err}"),
+            )
+        })?;
         let n: i64 = row.try_get("n").unwrap_or(0);
         Ok(Response::new(ana_pb::TriggerSnapshotResponse {
             snapshots_written: n as i32,
         }))
+    }
+}
+
+#[cfg(test)]
+mod analytics_tests {
+    use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
+
+    fn decode_detail(status: &Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("error-detail trailer present")
+            .to_bytes()
+            .expect("trailer decodes to bytes");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_internal_detail(status: &Status, operation: &str, message: &str) {
+        assert_eq!(status.code(), tonic::Code::Internal);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "analytics");
+        assert_eq!(detail.operation, operation);
+        assert!(detail.capability_required.is_empty());
+        assert!(detail.policy_decision_id.is_empty());
+        assert!(detail.field_violations.is_empty());
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+    }
+
+    #[tokio::test]
+    async fn record_pipeline_metric_missing_stage_name_carries_field_violation() {
+        let svc = AnalyticsServiceImpl::new(); // no pool; validation must fire first
+        let request = Request::new(ana_pb::RecordPipelineMetricRequest {
+            stage_name: "  ".to_string(),
+            ..Default::default()
+        });
+        let err = svc
+            .record_pipeline_metric(request)
+            .await
+            .expect_err("missing stage_name must be rejected before pool access");
+        assert_eq!(err.code(), tonic::Code::InvalidArgument);
+        assert_eq!(err.message(), "stage_name is required");
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, "stage_name");
+        assert_eq!(
+            detail.field_violations[0].description,
+            "must be a non-empty pipeline stage name"
+        );
+    }
+
+    #[test]
+    fn analytics_missing_postgres_capability_carries_typed_detail() {
+        let err = analytics_capability_status(
+            "postgres_store",
+            "postgres_store",
+            "analytics service requires a Postgres-backed store (no PG pool configured)",
+        );
+        assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+        assert_eq!(
+            err.message(),
+            "analytics service requires a Postgres-backed store (no PG pool configured)"
+        );
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::Capability as i32);
+        assert_eq!(detail.backend, "analytics");
+        assert_eq!(detail.operation, "postgres_store");
+        assert_eq!(detail.capability_required, "postgres_store");
+        assert!(!detail.retryable);
+    }
+
+    #[test]
+    fn analytics_internal_status_carries_typed_detail() {
+        assert_internal_detail(
+            &analytics_internal_status(
+                "get_pipeline_summary",
+                "get pipeline summary failed: database is unavailable",
+            ),
+            "get_pipeline_summary",
+            "get pipeline summary failed: database is unavailable",
+        );
     }
 }
 

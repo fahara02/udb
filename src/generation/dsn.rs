@@ -41,7 +41,7 @@ pub struct UnifiedDsnCatalog {
     pub entries: Vec<UnifiedDsn>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct UnifiedDsn {
     pub id: String,
     pub message_name: String,
@@ -54,6 +54,25 @@ pub struct UnifiedDsn {
     pub owner_table: String,
 }
 
+// 4.6 secrets posture: `dsn` embeds credentials (e.g. `postgres://u:PASSWORD@h`).
+// Manual redacting `Debug` so a `{:?}` in any log line can never leak the password;
+// every other field prints normally (serialization is unaffected — only Debug).
+impl std::fmt::Debug for UnifiedDsn {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("UnifiedDsn")
+            .field("id", &self.id)
+            .field("message_name", &self.message_name)
+            .field("store_kind", &self.store_kind)
+            .field("backend", &self.backend)
+            .field("env_key", &self.env_key)
+            .field("dsn", &"[redacted]")
+            .field("resource_uri", &self.resource_uri)
+            .field("owner_schema", &self.owner_schema)
+            .field("owner_table", &self.owner_table)
+            .finish()
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct ParsedUnifiedDsn {
     pub scheme: String,
@@ -64,7 +83,7 @@ pub struct ParsedUnifiedDsn {
     pub resource_parts: Vec<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct ResolvedUnifiedDsn {
     pub id: String,
     pub dsn: String,
@@ -74,6 +93,55 @@ pub struct ResolvedUnifiedDsn {
     pub resource_path: String,
     pub valid: bool,
     pub error: String,
+}
+
+// 4.6 secrets posture: `dsn` and `base_dsn` embed credentials; redact both in Debug.
+// `redacted_base_dsn` is already sanitized, so it's safe to print.
+impl std::fmt::Debug for ResolvedUnifiedDsn {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ResolvedUnifiedDsn")
+            .field("id", &self.id)
+            .field("dsn", &"[redacted]")
+            .field("env_key", &self.env_key)
+            .field("base_dsn", &"[redacted]")
+            .field("redacted_base_dsn", &self.redacted_base_dsn)
+            .field("resource_path", &self.resource_path)
+            .field("valid", &self.valid)
+            .field("error", &self.error)
+            .finish()
+    }
+}
+
+#[cfg(test)]
+mod dsn_redaction_tests {
+    use super::*;
+
+    #[test]
+    fn dsn_debug_never_leaks_embedded_credentials() {
+        let secret = "postgres://u:udb-canary-SECRET@host:5432/db";
+        let u = UnifiedDsn {
+            dsn: secret.to_string(),
+            ..Default::default()
+        };
+        let dbg = format!("{u:?}");
+        assert!(
+            !dbg.contains("udb-canary-SECRET"),
+            "UnifiedDsn Debug leaked the password: {dbg}"
+        );
+        assert!(dbg.contains("[redacted]"));
+
+        let r = ResolvedUnifiedDsn {
+            dsn: secret.to_string(),
+            base_dsn: secret.to_string(),
+            redacted_base_dsn: "postgres://u:***@host:5432/db".to_string(),
+            ..Default::default()
+        };
+        let rdbg = format!("{r:?}");
+        assert!(
+            !rdbg.contains("udb-canary-SECRET"),
+            "ResolvedUnifiedDsn Debug leaked the password: {rdbg}"
+        );
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]

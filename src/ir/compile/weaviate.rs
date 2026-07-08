@@ -202,9 +202,20 @@ impl WeaviateCompiler {
         if ctx_operands.is_empty() {
             return user_where;
         }
-        let mut operands = vec![user_where];
+        // An empty user filter (`{}`) is NOT a valid Weaviate where operand —
+        // including it in the And makes the whole query error out. Drop it and,
+        // when only one operand remains, emit that predicate bare instead of a
+        // single-element And.
+        let mut operands: Vec<Json> = Vec::new();
+        if !user_where.as_object().is_some_and(|m| m.is_empty()) {
+            operands.push(user_where);
+        }
         operands.extend(ctx_operands);
-        json!({ "operator": "And", "operands": operands })
+        match operands.len() {
+            0 => json!({}),
+            1 => operands.into_iter().next().expect("one operand"),
+            _ => json!({ "operator": "And", "operands": operands }),
+        }
     }
 }
 
@@ -243,31 +254,35 @@ impl Compiler for WeaviateCompiler {
                     .collect::<Result<_, _>>()?;
                 resolved.join(" ")
             }
-            _ => table
-                .columns
-                .iter()
-                .map(|c| c.field_name.clone())
-                .collect::<Vec<_>>()
-                .join(" "),
+            _ => {
+                // The pk is NOT a declared Weaviate property (it rides as the
+                // object id — `id` is reserved); select it via _additional.
+                let pk = table.primary_key.first().map(String::as_str);
+                table
+                    .columns
+                    .iter()
+                    .filter(|c| Some(c.field_name.as_str()) != pk)
+                    .map(|c| c.field_name.clone())
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            }
         };
 
-        // GraphQL query body. The `where` argument and `sort` argument
-        // are passed as JSON via the GraphQL variables mechanism.
+        // GraphQL query body. Weaviate's generated variable TYPES are
+        // class-specific (`GetObjects<Class>WhereInpObj`), so a generic
+        // variables-based query is rejected with "Unknown type" — arguments
+        // must be INLINED as GraphQL literals (verified against live 1.38).
         let mut args = vec![format!("limit: {limit}")];
         if offset > 0 {
             args.push(format!("offset: {offset}"));
         }
-        // Emit `where: $where` and bind via variables for safe escaping.
-        args.push("where: $where".to_string());
+        args.push(format!("where: {}", graphql_literal(&where_clause)));
 
         let query_str = format!(
-            "query Get($where: GetObjectsClassWhereInp) {{ Get {{ {class}({args}) {{ {fields} }} }} }}",
+            "{{ Get {{ {class}({args}) {{ {fields} }} }} }}",
             args = args.join(", "),
         );
-        let body = json!({
-            "query": query_str,
-            "variables": { "where": where_clause }
-        });
+        let body = json!({ "query": query_str });
 
         Ok(CompiledRendering::Json {
             backend: BackendKind::Weaviate,
@@ -306,6 +321,12 @@ impl Compiler for WeaviateCompiler {
             let mut properties = Map::new();
             for (k, v) in record {
                 let resolved = self.field_for(table, k, &op.message_type)?;
+                // The pk rides as the OBJECT id (qdrant-consistent) — and
+                // `id` is a Weaviate-reserved property name the schema API
+                // rejects with a 422, so it must never land in `properties`.
+                if Some(resolved) == pk_field {
+                    continue;
+                }
                 properties.insert(resolved.to_string(), value_to_weaviate_json(v));
             }
             // C7/C8: stamp tenant + project.
@@ -326,7 +347,7 @@ impl Compiler for WeaviateCompiler {
                 "properties": Json::Object(properties),
             });
             if let Some(id) = id_value {
-                body["id"] = json!(id);
+                body["id"] = json!(weaviate_object_id(&id));
             }
             return Ok(CompiledRendering::Json {
                 backend: BackendKind::Weaviate,
@@ -345,6 +366,10 @@ impl Compiler for WeaviateCompiler {
             let mut properties = Map::new();
             for (k, v) in record {
                 let resolved = self.field_for(table, k, &op.message_type)?;
+                // pk rides as the object id; `id` is reserved (see single-record path).
+                if Some(resolved) == pk_field {
+                    continue;
+                }
                 properties.insert(resolved.to_string(), value_to_weaviate_json(v));
             }
             if let Some(tid) = ctx.tenant_id
@@ -364,7 +389,7 @@ impl Compiler for WeaviateCompiler {
                 "properties": Json::Object(properties),
             });
             if let Some(id) = id_value {
-                obj["id"] = json!(id);
+                obj["id"] = json!(weaviate_object_id(&id));
             }
             objects.push(obj);
         }
@@ -415,37 +440,43 @@ impl Compiler for WeaviateCompiler {
         };
         let where_clause = self.and_with_context(user_where, table, ctx);
 
-        // Build the GraphQL Get query with nearVector / bm25 args.
+        // Build the GraphQL Get query with nearVector / bm25 args. Arguments
+        // are INLINED as GraphQL literals: Weaviate's variable types are
+        // class-specific, so generic variable declarations are rejected
+        // (verified against live 1.38).
         let mut args = vec![format!("limit: {}", op.top_k)];
-        let mut variables = Map::new();
         if !where_clause.as_object().is_some_and(|m| m.is_empty()) {
-            args.push("where: $where".to_string());
-            variables.insert("where".to_string(), where_clause);
+            args.push(format!("where: {}", graphql_literal(&where_clause)));
         }
         if let Some(vector) = &op.vector {
-            args.push("nearVector: $nearVector".to_string());
             let mut near = json!({ "vector": vector });
             if let Some(threshold) = op.score_threshold {
                 near["certainty"] = json!(threshold);
             }
-            variables.insert("nearVector".to_string(), near);
+            args.push(format!("nearVector: {}", graphql_literal(&near)));
         }
         if let Some(text) = &op.text_query
             && !text.is_empty()
         {
-            args.push("bm25: $bm25".to_string());
-            variables.insert("bm25".to_string(), json!({ "query": text }));
+            args.push(format!(
+                "bm25: {}",
+                graphql_literal(&json!({ "query": text }))
+            ));
         }
 
+        // pk excluded: it is the object id (`id` is a reserved property and is
+        // selected via `_additional { id }` below).
+        let pk = table.primary_key.first().map(String::as_str);
         let fields = table
             .columns
             .iter()
+            .filter(|c| Some(c.field_name.as_str()) != pk)
             .map(|c| c.field_name.clone())
             .collect::<Vec<_>>()
             .join(" ");
 
         let query_str = format!(
-            "query Search($where: GetObjectsClassWhereInp, $nearVector: NearVectorInpObj, $bm25: BM25InpObj) {{ Get {{ {class}({args}) {{ {fields} _additional {{ id distance score }} }} }} }}",
+            "{{ Get {{ {class}({args}) {{ {fields} _additional {{ id distance score }} }} }} }}",
             args = args.join(", "),
         );
 
@@ -453,14 +484,14 @@ impl Compiler for WeaviateCompiler {
             backend: BackendKind::Weaviate,
             method: HttpMethod::Post,
             path: "/v1/graphql".to_string(),
-            body: json!({ "query": query_str, "variables": Json::Object(variables) }),
+            body: json!({ "query": query_str }),
         })
     }
 
     fn compile_resource_op(
         &self,
         op: &LogicalResourceOp,
-        _ctx: &CompileContext<'_>,
+        ctx: &CompileContext<'_>,
     ) -> Result<CompiledRendering, CompileError> {
         if !matches!(
             op.resource_kind,
@@ -483,6 +514,15 @@ impl Compiler for WeaviateCompiler {
                         .or_insert_with(|| json!(class_name));
                     map.entry("vectorizer".to_string())
                         .or_insert_with(|| json!("none"));
+                    // Identifier columns the compiler stamps + filters on for
+                    // tenant scoping (tenant/project system fields, pk) MUST use
+                    // `field` tokenization: Weaviate's default `word` tokenizer
+                    // splits `tenant-a` into [tenant, a], so an Equal filter on a
+                    // hyphenated tenant id matches `tenant-b` too — a cross-tenant
+                    // leak. Force exact-match tokenization on exactly those
+                    // manifest-declared columns (never on free-text props, which
+                    // stay bm25-searchable).
+                    force_field_tokenization(map, class_name, ctx);
                 }
                 (HttpMethod::Post, "/v1/schema".to_string(), body)
             }
@@ -502,6 +542,64 @@ impl Compiler for WeaviateCompiler {
     }
 }
 
+/// Render a JSON value as an inline GraphQL argument literal. Weaviate's
+/// generated variable types are class-specific, so arguments cannot be passed
+/// via GraphQL variables generically; they must be inlined. Object keys are
+/// emitted bare; `operator` values are Weaviate enum tokens (unquoted); every
+/// other string is quoted with standard escaping.
+fn graphql_literal(value: &Json) -> String {
+    fn render(value: &Json, parent_key: Option<&str>, out: &mut String) {
+        match value {
+            Json::Null => out.push_str("null"),
+            Json::Bool(b) => out.push_str(if *b { "true" } else { "false" }),
+            Json::Number(n) => out.push_str(&n.to_string()),
+            Json::String(s) => {
+                if parent_key == Some("operator") {
+                    out.push_str(s);
+                } else {
+                    out.push('"');
+                    for ch in s.chars() {
+                        match ch {
+                            '"' => out.push_str("\\\""),
+                            '\\' => out.push_str("\\\\"),
+                            '\n' => out.push_str("\\n"),
+                            '\r' => out.push_str("\\r"),
+                            '\t' => out.push_str("\\t"),
+                            other => out.push(other),
+                        }
+                    }
+                    out.push('"');
+                }
+            }
+            Json::Array(items) => {
+                out.push('[');
+                for (idx, item) in items.iter().enumerate() {
+                    if idx > 0 {
+                        out.push_str(", ");
+                    }
+                    render(item, parent_key, out);
+                }
+                out.push(']');
+            }
+            Json::Object(map) => {
+                out.push('{');
+                for (idx, (k, v)) in map.iter().enumerate() {
+                    if idx > 0 {
+                        out.push_str(", ");
+                    }
+                    out.push_str(k);
+                    out.push_str(": ");
+                    render(v, Some(k.as_str()), out);
+                }
+                out.push('}');
+            }
+        }
+    }
+    let mut out = String::new();
+    render(value, None, &mut out);
+    out
+}
+
 fn value_to_weaviate_json(v: &LogicalValue) -> Json {
     match v {
         LogicalValue::Null => Json::Null,
@@ -519,6 +617,82 @@ fn value_to_weaviate_json(v: &LogicalValue) -> Json {
         LogicalValue::Json(j) => j.clone(),
         LogicalValue::Array(values) => {
             Json::Array(values.iter().map(value_to_weaviate_json).collect())
+        }
+    }
+}
+
+/// Weaviate object ids MUST be UUIDs (and `id` is a reserved property name),
+/// so the primary key rides as the object id: a pk value that already parses
+/// as a UUID is used verbatim; anything else maps to a DETERMINISTIC
+/// digest-derived UUID of its scalar form so compiled replaces stay
+/// idempotent per pk.
+fn weaviate_object_id(scalar: &str) -> String {
+    match uuid::Uuid::parse_str(scalar) {
+        Ok(parsed) => parsed.to_string(),
+        Err(_) => {
+            // sha2-derived stable bytes (the crate's v5 feature is not
+            // enabled); version/variant bits set so the result is a valid
+            // RFC 4122 UUID and identical for the same pk on every compile.
+            use sha2::{Digest as _, Sha256};
+            let digest = Sha256::digest(scalar.as_bytes());
+            let mut bytes = [0u8; 16];
+            bytes.copy_from_slice(&digest[..16]);
+            bytes[6] = (bytes[6] & 0x0f) | 0x50;
+            bytes[8] = (bytes[8] & 0x3f) | 0x80;
+            uuid::Uuid::from_bytes(bytes).to_string()
+        }
+    }
+}
+
+/// Force `tokenization: "field"` on the tenant/project/pk properties of a
+/// Weaviate class-ensure body. Resolves the manifest table by matching the
+/// compiler's own `class_for` capitalization of the class name (the ResourceOp
+/// carries only the class name, not the message type), then targets exactly the
+/// tenant column, project column, and primary-key field names. Only overrides
+/// when the property does not already declare a tokenization, so an explicit
+/// caller choice wins. No-op when the table can't be resolved (the caller-
+/// authored schema is trusted as-is then).
+fn force_field_tokenization(
+    class_body: &mut Map<String, Json>,
+    class_name: &str,
+    ctx: &CompileContext<'_>,
+) {
+    let Some(table) = ctx
+        .manifest
+        .tables
+        .iter()
+        .find(|t| WeaviateCompiler::class_for(t) == *class_name)
+    else {
+        return;
+    };
+    let mut exact_fields: Vec<&str> = Vec::new();
+    if let Some(col) = super::util::resolve_tenant_column(table) {
+        exact_fields.push(col);
+    }
+    if let Some(col) = super::util::resolve_project_column(table) {
+        exact_fields.push(col);
+    }
+    for pk in &table.primary_key {
+        exact_fields.push(pk.as_str());
+    }
+    if exact_fields.is_empty() {
+        return;
+    }
+    let Some(Json::Array(props)) = class_body.get_mut("properties") else {
+        return;
+    };
+    for prop in props.iter_mut() {
+        let Json::Object(prop_map) = prop else {
+            continue;
+        };
+        let name_matches = prop_map
+            .get("name")
+            .and_then(Json::as_str)
+            .is_some_and(|name| exact_fields.iter().any(|f| *f == name));
+        if name_matches {
+            prop_map
+                .entry("tokenization".to_string())
+                .or_insert_with(|| json!("field"));
         }
     }
 }
@@ -617,11 +791,14 @@ mod tests {
             extract_json(WeaviateCompiler.compile_read(&read, &ctx).unwrap());
         assert_eq!(path, "/v1/graphql");
         assert_eq!(method, HttpMethod::Post);
+        // Arguments are INLINED as GraphQL literals (Weaviate variable types are
+        // class-specific), so there is no `variables` map.
         let q = body["query"].as_str().unwrap();
         assert!(q.contains("Get {"));
         assert!(q.contains("Documents("));
-        assert_eq!(body["variables"]["where"]["operator"], "Equal");
-        assert_eq!(body["variables"]["where"]["valueText"], "rust");
+        assert!(q.contains("where: {operator: Equal"));
+        assert!(q.contains(r#"valueText: "rust""#), "query: {q}");
+        assert!(body.get("variables").is_none());
     }
 
     #[test]
@@ -630,13 +807,12 @@ mod tests {
         let ctx = CompileContext::new(&m).with_tenant("acme");
         let read = LogicalRead::message("acme.docs.v1.Document");
         let (_, _, body) = extract_json(WeaviateCompiler.compile_read(&read, &ctx).unwrap());
-        let w = &body["variables"]["where"];
-        assert_eq!(w["operator"], "And");
-        let ops = w["operands"].as_array().unwrap();
+        // No user filter + one tenant operand → the tenant predicate is emitted
+        // bare (not wrapped in a single-element And) and inlined into the query.
+        let q = body["query"].as_str().unwrap();
         assert!(
-            ops.iter()
-                .any(|o| o["path"][0] == "_tenant_id" && o["valueText"] == "acme"),
-            "tenant predicate not found: {ops:?}"
+            q.contains(r#"where: {operator: Equal, path: ["_tenant_id"], valueText: "acme"}"#),
+            "tenant predicate not inlined: {q}"
         );
     }
 
@@ -656,7 +832,15 @@ mod tests {
         let (path, _, body) = extract_json(WeaviateCompiler.compile_write(&write, &ctx).unwrap());
         assert_eq!(path, "/v1/objects");
         assert_eq!(body["class"], "Documents");
-        assert_eq!(body["id"], "doc1");
+        // pk rides as the object id (uuid-derived; `id` is a reserved Weaviate
+        // property name) and is NOT written into `properties`.
+        let id = body["id"].as_str().unwrap();
+        assert_eq!(id, weaviate_object_id("doc1"));
+        assert!(
+            uuid::Uuid::parse_str(id).is_ok(),
+            "object id must be a UUID: {id}"
+        );
+        assert!(body["properties"].get("id").is_none());
         assert_eq!(body["properties"]["title"], "hello");
         assert_eq!(body["properties"]["_tenant_id"], "acme");
     }
@@ -717,18 +901,15 @@ mod tests {
             with_payload: true,
         };
         let (_, _, body) = extract_json(WeaviateCompiler.compile_search(&search, &ctx).unwrap());
-        assert!(body["query"].as_str().unwrap().contains("nearVector"));
-        assert_eq!(
-            body["variables"]["nearVector"]["vector"]
-                .as_array()
-                .unwrap()
-                .len(),
-            3
-        );
-        let certainty = body["variables"]["nearVector"]["certainty"]
-            .as_f64()
-            .unwrap();
-        assert!((certainty - 0.7).abs() < 1e-5);
+        // nearVector inlined as a GraphQL literal (no `variables` map). serde_json
+        // sorts object keys, so assert on the individual tokens, not their order.
+        let q = body["query"].as_str().unwrap();
+        assert!(q.contains("nearVector: {"));
+        assert!(q.contains("vector: ["), "query: {q}");
+        // f32 threshold widens to f64 in the literal, so match the key not an
+        // exact float.
+        assert!(q.contains("certainty:"), "query: {q}");
+        assert!(body.get("variables").is_none());
     }
 
     #[test]
@@ -749,8 +930,9 @@ mod tests {
         let (_, _, body) = extract_json(WeaviateCompiler.compile_search(&search, &ctx).unwrap());
         let q = body["query"].as_str().unwrap();
         assert!(q.contains("nearVector"));
-        assert!(q.contains("bm25"));
-        assert_eq!(body["variables"]["bm25"]["query"], "rust");
+        // bm25 inlined as a GraphQL literal (no `variables` map).
+        assert!(q.contains(r#"bm25: {query: "rust"}"#), "query: {q}");
+        assert!(body.get("variables").is_none());
     }
 
     #[test]

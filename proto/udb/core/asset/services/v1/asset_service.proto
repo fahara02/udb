@@ -657,6 +657,7 @@ message RegisterAssetRequest {
   };
   string tenant_id = 1;
   string project_id = 2;
+  // Stable public storage file UUID previously returned by StorageService.
   string file_id = 3;
   string name = 4;
   string media_type = 5;
@@ -790,6 +791,8 @@ message ListAssetsRequest {
   string status = 3;
   int32 page = 4;
   int32 page_size = 5;
+  // Opaque pagination token returned by ListAssetsResponse.next_page_token.
+  string page_token = 6;
 }
 
 message ListAssetsResponse {
@@ -806,6 +809,8 @@ message ListAssetsResponse {
   int32 total_count = 2;
   // Error information if operation failed
   udb.core.common.v1.ApiError error = 3;
+  // Opaque token for the next page; empty when no more assets are available.
+  string next_page_token = 4;
 }
 
 message GetAssetRequest {

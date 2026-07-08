@@ -12,6 +12,84 @@ use super::governance_logic::{
 use super::*;
 use crate::proto::udb::core::authz::services::v1 as authz_pb;
 
+fn governance_required_field(
+    field: &'static str,
+    description: &'static str,
+    message: &'static str,
+) -> Status {
+    crate::runtime::executor_utils::invalid_argument_fields(message, [(field, description)])
+}
+
+fn governance_policy_status(
+    operation: &'static str,
+    policy_decision_id: &'static str,
+    message: impl Into<String>,
+) -> Status {
+    crate::runtime::executor_utils::policy_status(operation, policy_decision_id, message)
+}
+
+fn governance_policy_status_with_code(
+    code: tonic::Code,
+    operation: &'static str,
+    policy_decision_id: &'static str,
+    message: impl Into<String>,
+) -> Status {
+    crate::runtime::executor_utils::policy_status_with_code(
+        code,
+        operation,
+        policy_decision_id,
+        message,
+    )
+}
+
+fn governance_draft_internal_status(
+    operation: impl Into<String>,
+    message: impl Into<String>,
+) -> Status {
+    crate::runtime::executor_utils::internal_status("authz", operation, message)
+}
+
+fn draft_not_editable_status(status: &str) -> Status {
+    governance_policy_status(
+        "policy_draft_update",
+        "draft_not_editable",
+        format!("draft in status {status} is not editable"),
+    )
+}
+
+fn draft_not_editable_static_status() -> Status {
+    governance_policy_status(
+        "policy_draft_update",
+        "draft_not_editable",
+        "draft is not editable",
+    )
+}
+
+fn draft_not_submittable_status(status: &str) -> Status {
+    governance_policy_status(
+        "policy_draft_submit",
+        "draft_not_submittable",
+        format!("draft in status {status} cannot be submitted"),
+    )
+}
+
+fn draft_not_reviewable_status(status: &str) -> Status {
+    governance_policy_status(
+        "policy_draft_review",
+        "draft_not_reviewable",
+        format!("draft in status {status} is not awaiting review"),
+    )
+}
+
+fn draft_separation_of_duties_status() -> Status {
+    governance_policy_status_with_code(
+        tonic::Code::PermissionDenied,
+        "policy_draft_review",
+        "separation_of_duties",
+        "separation of duties: the author of a high-risk draft cannot approve it",
+    )
+}
+
 impl AuthzServiceImpl {
     /// Resolve (or create) a `PolicySet` for a tenant/project/name, returning its
     /// id. Idempotent on (tenant, project, name).
@@ -23,7 +101,9 @@ impl AuthzServiceImpl {
         created_by: &str,
     ) -> Result<String, Status> {
         let runtime = self.runtime.as_ref().ok_or_else(|| {
-            Status::failed_precondition(
+            authz_capability_status(
+                "policy_set_persistence",
+                "runtime_native_entity_dispatch",
                 "native authz requires runtime-backed policy-set persistence",
             )
         })?;
@@ -75,13 +155,23 @@ impl AuthzServiceImpl {
                 vec!["policy_set_id".to_string()],
             )
             .await
-            .map_err(|err| Status::internal(format!("ensure policy set failed: {err}")))?;
+            .map_err(|err| {
+                governance_draft_internal_status(
+                    "ensure_policy_set",
+                    format!("ensure policy set failed: {err}"),
+                )
+            })?;
         returned
             .first()
             .and_then(|r| r.get("policy_set_id"))
             .and_then(|v| v.as_str())
             .map(|s| s.to_string())
-            .ok_or_else(|| Status::internal("ensure policy set returned no id".to_string()))
+            .ok_or_else(|| {
+                governance_draft_internal_status(
+                    "ensure_policy_set",
+                    "ensure policy set returned no id",
+                )
+            })
     }
 
     pub(super) async fn create_policy_draft_impl(
@@ -101,7 +191,11 @@ impl AuthzServiceImpl {
             .await?;
         let tenant = req.tenant_id.trim().to_string();
         if tenant.is_empty() {
-            return Err(Status::invalid_argument("tenant_id is required"));
+            return Err(governance_required_field(
+                "tenant_id",
+                "must be a non-empty tenant id",
+                "tenant_id is required",
+            ));
         }
         let project = req.project_id.clone();
 
@@ -167,7 +261,12 @@ impl AuthzServiceImpl {
         .bind(req.high_risk)
         .execute(pool)
         .await
-        .map_err(|err| Status::internal(format!("create policy draft failed: {err}")))?;
+        .map_err(|err| {
+            governance_draft_internal_status(
+                "create_policy_draft",
+                format!("create policy draft failed: {err}"),
+            )
+        })?;
 
         // Store the full document (incl. role bindings) on the draft payload via a
         // dedicated frozen version slot is deferred to promotion; the draft itself
@@ -214,19 +313,23 @@ impl AuthzServiceImpl {
             )
             .await?;
         if req.draft_id.trim().is_empty() {
-            return Err(Status::invalid_argument("draft_id is required"));
+            return Err(governance_required_field(
+                "draft_id",
+                "must be a non-empty policy draft id",
+                "draft_id is required",
+            ));
         }
         let draft = self.load_draft(&req.draft_id).await?;
         if !glogic::draft_editable(&draft.status) {
-            return Err(Status::failed_precondition(format!(
-                "draft in status {} is not editable",
-                draft.status
-            )));
+            return Err(draft_not_editable_status(&draft.status));
         }
         // Optimistic concurrency over the draft's updated_at epoch.
         let cur_updated = draft.updated_at.as_ref().map(|t| t.seconds).unwrap_or(0);
         if req.expected_updated_at_unix != 0 && req.expected_updated_at_unix != cur_updated {
-            return Err(Status::aborted(
+            return Err(crate::runtime::executor_utils::retryable_aborted_status(
+                "authz",
+                "draft expected updated_at",
+                0,
                 "draft was modified concurrently (expected_updated_at_unix mismatch)",
             ));
         }
@@ -272,9 +375,14 @@ impl AuthzServiceImpl {
         .bind(req.high_risk)
         .execute(pool)
         .await
-        .map_err(|err| Status::internal(format!("update policy draft failed: {err}")))?;
+        .map_err(|err| {
+            governance_draft_internal_status(
+                "update_policy_draft",
+                format!("update policy draft failed: {err}"),
+            )
+        })?;
         if result.rows_affected() == 0 {
-            return Err(Status::failed_precondition("draft is not editable"));
+            return Err(draft_not_editable_static_status());
         }
         self.persist_draft_document(&req.draft_id, &document)
             .await?;
@@ -308,7 +416,11 @@ impl AuthzServiceImpl {
         )
         .await?;
         if req.draft_id.trim().is_empty() {
-            return Err(Status::invalid_argument("draft_id is required"));
+            return Err(governance_required_field(
+                "draft_id",
+                "must be a non-empty policy draft id",
+                "draft_id is required",
+            ));
         }
         let draft = self.load_draft(&req.draft_id).await?;
         let after = self.load_draft_document(&req.draft_id).await?;
@@ -344,14 +456,15 @@ impl AuthzServiceImpl {
             )
             .await?;
         if req.draft_id.trim().is_empty() {
-            return Err(Status::invalid_argument("draft_id is required"));
+            return Err(governance_required_field(
+                "draft_id",
+                "must be a non-empty policy draft id",
+                "draft_id is required",
+            ));
         }
         let draft = self.load_draft(&req.draft_id).await?;
         if !glogic::draft_submittable(&draft.status) {
-            return Err(Status::failed_precondition(format!(
-                "draft in status {} cannot be submitted",
-                draft.status
-            )));
+            return Err(draft_not_submittable_status(&draft.status));
         }
         let pool = self.require_pool()?;
         let m = self.policy_drafts_model();
@@ -366,7 +479,12 @@ impl AuthzServiceImpl {
         .bind(&req.draft_id)
         .execute(pool)
         .await
-        .map_err(|err| Status::internal(format!("submit policy draft failed: {err}")))?;
+        .map_err(|err| {
+            governance_draft_internal_status(
+                "submit_policy_draft",
+                format!("submit policy draft failed: {err}"),
+            )
+        })?;
         self.emit_event(AuthEvent::new(
             topics::POLICY_DRAFT_SUBMITTED,
             req.draft_id.clone(),
@@ -429,7 +547,11 @@ impl AuthzServiceImpl {
             )
             .await?;
         if req.draft_id.trim().is_empty() {
-            return Err(Status::invalid_argument("draft_id is required"));
+            return Err(governance_required_field(
+                "draft_id",
+                "must be a non-empty policy draft id",
+                "draft_id is required",
+            ));
         }
         // Separation of duties: derive the approving reviewer from the
         // claim-derived actor (claim subject) so a single bearer cannot
@@ -443,23 +565,20 @@ impl AuthzServiceImpl {
             req.reviewer.clone()
         };
         if req.reason.trim().is_empty() {
-            return Err(Status::invalid_argument(
+            return Err(governance_required_field(
+                "reason",
+                "must be a non-empty approval decision reason",
                 "a reason is required for an approval decision",
             ));
         }
         let draft = self.load_draft(&req.draft_id).await?;
         if !glogic::draft_reviewable(&draft.status) {
-            return Err(Status::failed_precondition(format!(
-                "draft in status {} is not awaiting review",
-                draft.status
-            )));
+            return Err(draft_not_reviewable_status(&draft.status));
         }
         // Separation of duties (K2.2): the author of a high-risk draft cannot
         // approve it.
         if approve && !glogic::approval_allowed(draft.high_risk, &draft.author, &reviewer) {
-            return Err(Status::permission_denied(
-                "separation of duties: the author of a high-risk draft cannot approve it",
-            ));
+            return Err(draft_separation_of_duties_status());
         }
 
         let pool = self.require_pool()?;
@@ -487,7 +606,12 @@ impl AuthzServiceImpl {
         .bind(&req.reason)
         .execute(pool)
         .await
-        .map_err(|err| Status::internal(format!("record approval failed: {err}")))?;
+        .map_err(|err| {
+            governance_draft_internal_status(
+                "record_policy_approval",
+                format!("record approval failed: {err}"),
+            )
+        })?;
 
         let new_status = if approve {
             DRAFT_APPROVED
@@ -506,7 +630,12 @@ impl AuthzServiceImpl {
         .bind(new_status)
         .execute(pool)
         .await
-        .map_err(|err| Status::internal(format!("update draft status failed: {err}")))?;
+        .map_err(|err| {
+            governance_draft_internal_status(
+                "update_draft_status",
+                format!("update draft status failed: {err}"),
+            )
+        })?;
 
         // On approval, promote the draft into an immutable APPROVED PolicyVersion
         // ready for activation. Rejection leaves no version.
@@ -590,5 +719,210 @@ pub(super) fn document_to_proto(doc: &PolicyDocument) -> authz_pb::PolicyDocumen
                 source: "draft".to_string(),
             })
             .collect(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::governance::SCOPE_POLICY_READ;
+    use super::*;
+    use crate::proto::udb::core::authz::services::v1::authz_service_server::AuthzService;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::authz::AuthzSnapshot;
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
+    use tonic::{Code, Request, Status};
+
+    fn decode_detail(status: &Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_validation_field(status: &Status, field: &str, description: &str) {
+        assert_eq!(status.code(), Code::InvalidArgument);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, field);
+        assert_eq!(detail.field_violations[0].description, description);
+    }
+
+    fn assert_policy_detail(
+        status: &Status,
+        operation: &str,
+        policy_decision_id: &str,
+        message: &str,
+    ) {
+        assert_eq!(status.code(), Code::FailedPrecondition);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Policy as i32);
+        assert_eq!(detail.operation, operation);
+        assert_eq!(detail.policy_decision_id, policy_decision_id);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+    }
+
+    fn assert_permission_policy_detail(
+        status: &Status,
+        operation: &str,
+        policy_decision_id: &str,
+        message: &str,
+    ) {
+        assert_eq!(status.code(), Code::PermissionDenied);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Policy as i32);
+        assert_eq!(detail.operation, operation);
+        assert_eq!(detail.policy_decision_id, policy_decision_id);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+    }
+
+    fn assert_internal_detail(status: &Status, operation: &str, message: &str) {
+        assert_eq!(status.code(), Code::Internal);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "authz");
+        assert_eq!(detail.operation, operation);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    fn actor_with_scope(scope: &str) -> authz_pb::GovernanceActor {
+        authz_pb::GovernanceActor {
+            subject: "policy-author".to_string(),
+            tenant_id: "tenant-a".to_string(),
+            scopes: vec![scope.to_string()],
+            ..Default::default()
+        }
+    }
+
+    fn svc() -> AuthzServiceImpl {
+        AuthzServiceImpl::new(AuthzSnapshot::default())
+    }
+
+    #[test]
+    fn governance_draft_internal_status_carries_typed_detail() {
+        let status = governance_draft_internal_status(
+            "create_policy_draft",
+            "create policy draft failed: store closed",
+        );
+        assert_internal_detail(
+            &status,
+            "create_policy_draft",
+            "create policy draft failed: store closed",
+        );
+    }
+
+    #[tokio::test]
+    async fn update_policy_draft_missing_draft_id_carries_field_violation() {
+        let err = svc()
+            .update_policy_draft(Request::new(authz_pb::UpdatePolicyDraftRequest {
+                actor: Some(actor_with_scope(SCOPE_POLICY_WRITE)),
+                draft_id: " ".to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect_err("missing draft_id must fail before draft loading");
+
+        assert_eq!(err.message(), "draft_id is required");
+        assert_validation_field(&err, "draft_id", "must be a non-empty policy draft id");
+    }
+
+    #[tokio::test]
+    async fn diff_policy_draft_missing_draft_id_carries_field_violation() {
+        let err = svc()
+            .diff_policy_draft(Request::new(authz_pb::DiffPolicyDraftRequest {
+                actor: Some(actor_with_scope(SCOPE_POLICY_READ)),
+                draft_id: " ".to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect_err("missing draft_id must fail before draft loading");
+
+        assert_eq!(err.message(), "draft_id is required");
+        assert_validation_field(&err, "draft_id", "must be a non-empty policy draft id");
+    }
+
+    #[tokio::test]
+    async fn submit_policy_draft_missing_draft_id_carries_field_violation() {
+        let err = svc()
+            .submit_policy_draft(Request::new(authz_pb::SubmitPolicyDraftRequest {
+                actor: Some(actor_with_scope(SCOPE_POLICY_WRITE)),
+                draft_id: " ".to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect_err("missing draft_id must fail before draft loading");
+
+        assert_eq!(err.message(), "draft_id is required");
+        assert_validation_field(&err, "draft_id", "must be a non-empty policy draft id");
+    }
+
+    #[tokio::test]
+    async fn approve_policy_draft_missing_reason_carries_field_violation() {
+        let err = svc()
+            .approve_policy_draft(Request::new(authz_pb::ApprovePolicyDraftRequest {
+                actor: Some(actor_with_scope(SCOPE_POLICY_APPROVE)),
+                draft_id: "00000000-0000-0000-0000-000000000001".to_string(),
+                reason: " ".to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect_err("missing reason must fail before draft loading");
+
+        assert_eq!(
+            err.message(),
+            "a reason is required for an approval decision"
+        );
+        assert_validation_field(
+            &err,
+            "reason",
+            "must be a non-empty approval decision reason",
+        );
+    }
+
+    #[test]
+    fn policy_draft_lifecycle_denials_carry_policy_detail() {
+        assert_policy_detail(
+            &draft_not_editable_status(DRAFT_IN_REVIEW),
+            "policy_draft_update",
+            "draft_not_editable",
+            "draft in status IN_REVIEW is not editable",
+        );
+        assert_policy_detail(
+            &draft_not_editable_static_status(),
+            "policy_draft_update",
+            "draft_not_editable",
+            "draft is not editable",
+        );
+        assert_policy_detail(
+            &draft_not_submittable_status(DRAFT_APPROVED),
+            "policy_draft_submit",
+            "draft_not_submittable",
+            "draft in status APPROVED cannot be submitted",
+        );
+        assert_policy_detail(
+            &draft_not_reviewable_status(DRAFT_OPEN),
+            "policy_draft_review",
+            "draft_not_reviewable",
+            "draft in status OPEN is not awaiting review",
+        );
+    }
+
+    #[test]
+    fn policy_draft_separation_of_duties_carries_permission_policy_detail() {
+        assert_permission_policy_detail(
+            &draft_separation_of_duties_status(),
+            "policy_draft_review",
+            "separation_of_duties",
+            "separation of duties: the author of a high-risk draft cannot approve it",
+        );
     }
 }

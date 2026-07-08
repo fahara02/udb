@@ -19,14 +19,16 @@
 //! with `field_name` / `column_name` either-or matching.
 
 use crate::backend::BackendKind;
+use crate::generation::{CatalogManifest, ManifestTable};
 use crate::ir::filter::ComparisonOp;
 use crate::ir::operations::{
-    ConflictStrategy, LogicalAggregate, LogicalDelete, LogicalRead, LogicalResourceOp,
-    LogicalSearch, LogicalWrite, ResourceKind, ResourceOpKind,
+    ConflictStrategy, LogicalAggregate, LogicalDelete, LogicalInclude, LogicalRead,
+    LogicalResourceOp, LogicalSearch, LogicalWrite, ResourceKind, ResourceOpKind,
 };
 use crate::ir::value::LogicalValue;
 
 use super::sql_dialect::{SqlCompiler, SqlDialect};
+use super::util::resolve_include_relation;
 use super::{CompileContext, CompileError, CompiledRendering, Compiler};
 
 /// MySQL dialect marker for the generic [`SqlCompiler`]: backtick quoting,
@@ -98,6 +100,10 @@ impl Compiler for MysqlCompiler {
         BackendKind::Mysql
     }
 
+    fn supports_read_include(&self) -> bool {
+        true
+    }
+
     fn compile_read(
         &self,
         op: &LogicalRead,
@@ -106,7 +112,7 @@ impl Compiler for MysqlCompiler {
         let table = My::resolve_table(&op.message_type, ctx.manifest)?;
         let mut params: Vec<LogicalValue> = Vec::new();
 
-        let select = match &op.projection {
+        let mut select_items = match &op.projection {
             Some(p) if !p.is_select_all() => p
                 .fields
                 .iter()
@@ -114,10 +120,18 @@ impl Compiler for MysqlCompiler {
                     let col = My::column_for(table, f, &op.message_type)?;
                     Ok(format!("`{col}`"))
                 })
-                .collect::<Result<Vec<_>, CompileError>>()?
-                .join(", "),
-            _ => "*".to_string(),
+                .collect::<Result<Vec<_>, CompileError>>()?,
+            _ => vec!["*".to_string()],
         };
+        for include in &op.include {
+            select_items.push(render_belongs_to_include(
+                table,
+                ctx.manifest,
+                include,
+                &op.message_type,
+            )?);
+        }
+        let select = select_items.join(", ");
 
         // MySQL: `schema`.`table` — schema is the database name.
         let mut sql = format!(
@@ -370,10 +384,20 @@ impl Compiler for MysqlCompiler {
             table = table.table,
         );
 
-        if let Some(filter) = &op.filter
-            && let Some(body) = My::render_where(filter, table, &op.message_type, &mut params)?
-        {
-            sql.push_str(&format!(" WHERE {body}"));
+        // WHERE — user filter first (parameter numbering), then the tenant/
+        // project context predicates: aggregate reads have no runtime RLS
+        // seam on this engine, so the compiler is the scoping layer (same A2
+        // posture as ClickHouse/Cassandra).
+        let user_body = match &op.filter {
+            Some(filter) => My::render_where(filter, table, &op.message_type, &mut params)?,
+            None => None,
+        };
+        let ctx_body = My::context_predicates(table, ctx, &mut params);
+        match (user_body, ctx_body) {
+            (Some(user), Some(scope)) => sql.push_str(&format!(" WHERE ({user}) AND {scope}")),
+            (Some(user), None) => sql.push_str(&format!(" WHERE {user}")),
+            (None, Some(scope)) => sql.push_str(&format!(" WHERE {scope}")),
+            (None, None) => {}
         }
 
         if !group_columns.is_empty() {
@@ -657,10 +681,67 @@ impl Compiler for MysqlCompiler {
     }
 }
 
+fn render_belongs_to_include(
+    table: &ManifestTable,
+    manifest: &CatalogManifest,
+    include: &LogicalInclude,
+    message_type: &str,
+) -> Result<String, CompileError> {
+    let relation = resolve_include_relation(table, manifest, include, message_type)?;
+    let alias = format!("_udb_include_{}", relation.name);
+    let predicates = relation
+        .local_columns
+        .iter()
+        .zip(relation.target_columns.iter())
+        .map(|(local, target)| {
+            format!(
+                "`{alias}`.`{target}` = `{table}`.`{local}`",
+                table = table.table
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(" AND ");
+    let json_fields = relation
+        .target
+        .columns
+        .iter()
+        .map(|column| {
+            let key = if column.field_name.trim().is_empty() {
+                &column.column_name
+            } else {
+                &column.field_name
+            };
+            format!(
+                "'{}', `{alias}`.`{}`",
+                key.replace('\'', "''"),
+                column.column_name
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(", ");
+    if relation.many {
+        Ok(format!(
+            "COALESCE((SELECT JSON_ARRAYAGG(JSON_OBJECT({json_fields})) FROM `{schema}`.`{target_table}` `{alias}` \
+             WHERE {predicates}), JSON_ARRAY()) AS `{name}`",
+            schema = relation.target.schema,
+            target_table = relation.target.table,
+            name = relation.name,
+        ))
+    } else {
+        Ok(format!(
+            "(SELECT JSON_OBJECT({json_fields}) FROM `{schema}`.`{target_table}` `{alias}` \
+             WHERE {predicates} LIMIT 1) AS `{name}`",
+            schema = relation.target.schema,
+            target_table = relation.target.table,
+            name = relation.name,
+        ))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::generation::{CatalogManifest, ManifestColumn, ManifestTable};
+    use crate::generation::{CatalogManifest, ManifestColumn, ManifestForeignKey, ManifestTable};
     use crate::ir::filter::{ComparisonOp, LogicalFilter};
     use crate::ir::operations::{
         AggregateExpr, AggregateFunc, ConflictStrategy, LogicalAggregate, LogicalDelete,
@@ -716,6 +797,72 @@ mod tests {
         }
     }
 
+    fn relation_fixture() -> CatalogManifest {
+        CatalogManifest {
+            tables: vec![
+                ManifestTable {
+                    message_name: "Invoice".into(),
+                    proto_package: "billing.v1".into(),
+                    schema: "billing".into(),
+                    table: "invoices".into(),
+                    primary_key: vec!["invoice_id".into()],
+                    columns: vec![
+                        ManifestColumn {
+                            field_name: "invoice_id".into(),
+                            column_name: "invoice_id".into(),
+                            proto_type: "string".into(),
+                            sql_type: "varchar(64)".into(),
+                            is_primary: true,
+                            ..Default::default()
+                        },
+                        ManifestColumn {
+                            field_name: "customer_id".into(),
+                            column_name: "customer_id".into(),
+                            proto_type: "string".into(),
+                            sql_type: "varchar(64)".into(),
+                            ..Default::default()
+                        },
+                    ],
+                    foreign_keys: vec![ManifestForeignKey {
+                        name: "fk_invoice_customer".into(),
+                        columns: vec!["customer_id".into()],
+                        ref_schema: "crm".into(),
+                        ref_table: "customers".into(),
+                        ref_columns: vec!["customer_id".into()],
+                        ..Default::default()
+                    }],
+                    ..Default::default()
+                },
+                ManifestTable {
+                    message_name: "Customer".into(),
+                    proto_package: "crm.v1".into(),
+                    schema: "crm".into(),
+                    table: "customers".into(),
+                    primary_key: vec!["customer_id".into()],
+                    columns: vec![
+                        ManifestColumn {
+                            field_name: "customer_id".into(),
+                            column_name: "customer_id".into(),
+                            proto_type: "string".into(),
+                            sql_type: "varchar(64)".into(),
+                            is_primary: true,
+                            ..Default::default()
+                        },
+                        ManifestColumn {
+                            field_name: "name".into(),
+                            column_name: "name".into(),
+                            proto_type: "string".into(),
+                            sql_type: "varchar(255)".into(),
+                            ..Default::default()
+                        },
+                    ],
+                    ..Default::default()
+                },
+            ],
+            ..Default::default()
+        }
+    }
+
     fn sql(rendering: CompiledRendering) -> (String, Vec<LogicalValue>) {
         match rendering {
             CompiledRendering::Sql {
@@ -741,6 +888,26 @@ mod tests {
         assert!(statement.contains("WHERE `email` = ?"));
         assert!(statement.ends_with("LIMIT 10"));
         assert_eq!(params, vec![LogicalValue::String("a@b.com".into())]);
+    }
+
+    #[test]
+    fn include_lowers_fk_belongs_to_as_json_object_subselect() {
+        let m = relation_fixture();
+        let ctx = CompileContext::new(&m);
+        let read = LogicalRead::message("billing.v1.Invoice").with_include("customer");
+
+        let (statement, params) = sql(MysqlCompiler.compile_read(&read, &ctx).unwrap());
+
+        assert!(params.is_empty());
+        assert!(
+            statement.contains(
+                "(SELECT JSON_OBJECT('customer_id', `_udb_include_customer`.`customer_id`, \
+                 'name', `_udb_include_customer`.`name`) FROM `crm`.`customers` \
+                 `_udb_include_customer` WHERE `_udb_include_customer`.`customer_id` = \
+                 `invoices`.`customer_id` LIMIT 1) AS `customer`"
+            ),
+            "include must lower through the manifest FK; got: {statement}"
+        );
     }
 
     #[test]

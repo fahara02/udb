@@ -12,16 +12,12 @@
 //! versioning, no FINAL): `append_admin_audit` reads the latest hash, computes
 //! the next via the shared hasher, and INSERTs the row.
 //!
-//! ## Single-writer chain caveat
+//! ## Chain serialization
 //!
-//! ClickHouse has no `pg_advisory_xact_lock` and no atomic CAS, so unlike the
-//! Cassandra impl there is no chain-head CAS to serialise concurrent appenders.
-//! `append_admin_audit` reads the current latest hash and appends; two concurrent
-//! appenders could read the same latest hash and write two rows with the same
-//! `previous_hash`, forking the chain. SINGLE-WRITER CAVEAT (see `clickhouse.rs`
-//! module docs): the conformance run is sequential so the chain stays linear; a
-//! hardened multi-writer path would need a `Keeper`-backed lock or an external
-//! sequencer.
+//! ClickHouse has no `pg_advisory_xact_lock` and no atomic CAS, so
+//! `append_admin_audit` serializes read-latest-hash plus append under a
+//! KeeperMap-backed mutation lease. Concurrent appenders do not read the same
+//! chain head.
 //!
 //! ## Schema
 //!
@@ -40,6 +36,8 @@ use super::system_store::{
     AdminAuditChainReport, AdminAuditInsert, AdminAuditListFilter, AdminAuditRow, AdminAuditStore,
     SystemStoreResult, compute_admin_audit_hash, verify_admin_audit_chain_step,
 };
+
+const CLICKHOUSE_ADMIN_AUDIT_MUTATION_LOCK: &str = "__udb_clickhouse_admin_audit";
 
 /// Canonical audit SELECT column order. Pinned next to the mapper.
 const AUDIT_COLS: &str = "audit_id, actor, operation, target, request_json, result, \
@@ -70,6 +68,24 @@ impl ClickHouseCanonicalStore {
     fn audit_table(&self) -> SystemStoreResult<String> {
         self.qualified("udb_admin_audit_log")
             .map_err(|e| ch_err("audit_table", e))
+    }
+
+    async fn acquire_admin_audit_mutation_lock(&self, op: &str) -> SystemStoreResult<String> {
+        let owner = format!("{op}:{}", Uuid::new_v4());
+        self.acquire_system_mutation_lease(CLICKHOUSE_ADMIN_AUDIT_MUTATION_LOCK, &owner, op)
+            .await
+            .map_err(|err| ch_err(op, err))?;
+        Ok(owner)
+    }
+
+    async fn release_admin_audit_mutation_lock(
+        &self,
+        owner: &str,
+        op: &str,
+    ) -> SystemStoreResult<()> {
+        self.release_system_mutation_lease(CLICKHOUSE_ADMIN_AUDIT_MUTATION_LOCK, owner, op)
+            .await
+            .map_err(|err| ch_err(op, err))
     }
 }
 
@@ -126,53 +142,61 @@ impl AdminAuditStore for ClickHouseCanonicalStore {
     }
 
     async fn append_admin_audit(&self, entry: &AdminAuditInsert) -> SystemStoreResult<Uuid> {
-        let tbl = self.audit_table()?;
-        let audit_id = Uuid::new_v4();
-        // 1. Read the latest hash (empty when the chain is fresh).
-        let previous_hash = self.latest_admin_audit_hash().await?;
-        // 2. Compute the new row's current_hash via the SHARED hasher (byte-
-        //    identical to every other backend).
-        let current_hash = compute_admin_audit_hash(
-            &previous_hash,
-            &entry.actor,
-            &entry.operation,
-            &entry.target,
-            &entry.request_json,
-            &entry.result,
-            &entry.tenant_id,
-            &entry.project_id,
-            &entry.correlation_id,
-            &entry.signer_key_id,
-            &entry.external_anchor,
-        );
-        // 3. INSERT the row (append). SINGLE-WRITER CAVEAT (see module docs): no
-        //    chain-head CAS, so two concurrent appenders could fork the chain;
-        //    the conformance run is sequential so the chain stays linear.
-        let now = Self::now_unix_ms();
-        let sql = format!(
-            "INSERT INTO {tbl} ({AUDIT_COLS}) VALUES (\
-             {audit_id}, {actor}, {operation}, {target}, {request_json}, {result}, \
-             {tenant}, {project}, {corr}, {prev}, {cur}, {signer}, {anchor}, {created})",
-            audit_id = sql_lit(&audit_id.to_string()),
-            actor = sql_lit(&entry.actor),
-            operation = sql_lit(&entry.operation),
-            target = sql_lit(&entry.target),
-            request_json = sql_lit(&entry.request_json.to_string()),
-            result = sql_lit(&entry.result),
-            tenant = sql_lit(&entry.tenant_id),
-            project = sql_lit(&entry.project_id),
-            corr = sql_lit(&entry.correlation_id),
-            prev = sql_lit(&previous_hash),
-            cur = sql_lit(&current_hash),
-            signer = sql_lit(&entry.signer_key_id),
-            anchor = sql_lit(&entry.external_anchor),
-            created = now,
-        );
-        self.executor()
-            .execute_ddl(&sql)
-            .await
-            .map_err(|e| ch_err("append_admin_audit insert", e))?;
-        Ok(audit_id)
+        let owner = self
+            .acquire_admin_audit_mutation_lock("append_admin_audit")
+            .await?;
+        let result = async {
+            let tbl = self.audit_table()?;
+            let audit_id = Uuid::new_v4();
+            // 1. Read the latest hash (empty when the chain is fresh) while the
+            //    KeeperMap mutation lease serializes appenders.
+            let previous_hash = self.latest_admin_audit_hash().await?;
+            // 2. Compute the new row's current_hash via the SHARED hasher (byte-
+            //    identical to every other backend).
+            let current_hash = compute_admin_audit_hash(
+                &previous_hash,
+                &entry.actor,
+                &entry.operation,
+                &entry.target,
+                &entry.request_json,
+                &entry.result,
+                &entry.tenant_id,
+                &entry.project_id,
+                &entry.correlation_id,
+                &entry.signer_key_id,
+                &entry.external_anchor,
+            );
+            // 3. INSERT the immutable row (append).
+            let now = Self::now_unix_ms();
+            let sql = format!(
+                "INSERT INTO {tbl} ({AUDIT_COLS}) VALUES (\
+                 {audit_id}, {actor}, {operation}, {target}, {request_json}, {result}, \
+                 {tenant}, {project}, {corr}, {prev}, {cur}, {signer}, {anchor}, {created})",
+                audit_id = sql_lit(&audit_id.to_string()),
+                actor = sql_lit(&entry.actor),
+                operation = sql_lit(&entry.operation),
+                target = sql_lit(&entry.target),
+                request_json = sql_lit(&entry.request_json.to_string()),
+                result = sql_lit(&entry.result),
+                tenant = sql_lit(&entry.tenant_id),
+                project = sql_lit(&entry.project_id),
+                corr = sql_lit(&entry.correlation_id),
+                prev = sql_lit(&previous_hash),
+                cur = sql_lit(&current_hash),
+                signer = sql_lit(&entry.signer_key_id),
+                anchor = sql_lit(&entry.external_anchor),
+                created = now,
+            );
+            self.executor()
+                .execute_ddl(&sql)
+                .await
+                .map_err(|e| ch_err("append_admin_audit insert", e))?;
+            Ok(audit_id)
+        }
+        .await;
+        self.release_admin_audit_mutation_lock(&owner, "append_admin_audit")
+            .await?;
+        result
     }
 
     async fn list_admin_audit(

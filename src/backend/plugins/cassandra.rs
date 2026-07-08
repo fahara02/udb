@@ -30,7 +30,7 @@ impl crate::runtime::executors::handle::DispatchFactory for CassandraPlugin {
         let client = runtime
             .cassandra_for_instance(instance_name)
             .ok_or_else(|| {
-                tonic::Status::failed_precondition(format!(
+                super::dispatch_instance_not_configured_status("cassandra", format!(
                     "Cassandra instance '{instance_name}' not configured (set UDB_CASSANDRA_DSN)"
                 ))
             })?

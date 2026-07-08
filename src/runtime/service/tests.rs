@@ -1,10 +1,14 @@
 use super::*;
 use crate::generation::{CatalogManifest, ManifestColumn, ManifestTable};
 use crate::planning::broker::{DeletePlanRequest, build_delete_plan};
+use crate::proto::{ErrorDetail, ErrorKind};
 use crate::runtime::config::UdbConfig;
 use crate::runtime::core::DataBrokerRuntime;
+use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+use prost::Message as _;
 use serde_json::json;
 use std::sync::Arc;
+use tonic::Status;
 
 fn install_test_security() {
     crate::runtime::security::SecurityConfig::install_global(
@@ -18,6 +22,54 @@ fn install_test_security() {
     );
 }
 
+fn decode_detail(status: &Status) -> ErrorDetail {
+    let raw = status
+        .metadata()
+        .get_bin(ERROR_DETAIL_METADATA_KEY)
+        .expect("typed detail trailer is present");
+    crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+}
+
+fn assert_validation_field(status: &Status, field: &str, description: &str) {
+    assert_eq!(status.code(), tonic::Code::InvalidArgument);
+    let detail = decode_detail(status);
+    assert_eq!(detail.kind, ErrorKind::Validation as i32);
+    assert_eq!(detail.field_violations.len(), 1);
+    assert_eq!(detail.field_violations[0].field, field);
+    assert_eq!(detail.field_violations[0].description, description);
+}
+
+fn assert_capability_detail(
+    status: &Status,
+    backend: &str,
+    operation: &str,
+    capability_required: &str,
+    message: &str,
+) {
+    assert_eq!(status.code(), tonic::Code::FailedPrecondition);
+    assert_eq!(status.message(), message);
+    let detail = decode_detail(status);
+    assert_eq!(detail.kind, ErrorKind::Capability as i32);
+    assert_eq!(detail.backend, backend);
+    assert_eq!(detail.operation, operation);
+    assert_eq!(detail.capability_required, capability_required);
+    assert!(!detail.retryable);
+    assert_eq!(detail.retry_after_ms, 0);
+    assert!(detail.field_violations.is_empty());
+}
+
+fn assert_policy_detail(status: &Status, operation: &str, policy_decision_id: &str, message: &str) {
+    assert_eq!(status.code(), tonic::Code::PermissionDenied);
+    assert_eq!(status.message(), message);
+    let detail = decode_detail(status);
+    assert_eq!(detail.kind, ErrorKind::Policy as i32);
+    assert_eq!(detail.operation, operation);
+    assert_eq!(detail.policy_decision_id, policy_decision_id);
+    assert!(!detail.retryable);
+    assert_eq!(detail.retry_after_ms, 0);
+    assert!(detail.field_violations.is_empty());
+}
+
 #[test]
 fn catalog_payload_version_preserves_active_version_for_roundtrip_manifest() {
     let manifest = CatalogManifest {
@@ -28,6 +80,94 @@ fn catalog_payload_version_preserves_active_version_for_roundtrip_manifest() {
     let bytes = serde_json::to_vec(&manifest).expect("manifest json");
 
     assert_eq!(catalog_payload_version(&bytes, &manifest, "1.0.0"), "1.0.0");
+}
+
+#[test]
+fn parse_catalog_manifest_payload_empty_carries_field_violation() {
+    let err = parse_catalog_manifest_payload(&[])
+        .expect_err("empty manifest payload must fail before catalog reload");
+
+    assert_eq!(err.message(), "manifest_json is required");
+    assert_validation_field(
+        &err,
+        "manifest_json",
+        "must contain a CatalogManifest JSON payload",
+    );
+}
+
+#[test]
+fn parse_catalog_manifest_payload_invalid_json_carries_field_violation() {
+    let err = parse_catalog_manifest_payload(b"{")
+        .expect_err("invalid manifest payload must fail before catalog reload");
+
+    assert!(
+        err.message()
+            .starts_with("manifest_json is not a CatalogManifest:")
+    );
+    assert_validation_field(&err, "manifest_json", "must decode as a CatalogManifest");
+}
+
+#[test]
+fn unknown_backend_status_carries_field_violation() {
+    let err = unknown_backend_status("totally_nonexistent_backend");
+
+    assert_eq!(
+        err.message(),
+        "unknown backend 'totally_nonexistent_backend'"
+    );
+    assert_validation_field(&err, "backend", "must name a supported backend");
+}
+
+#[test]
+fn unknown_generic_operation_status_carries_field_violation() {
+    let err = unknown_generic_operation_status("teleport");
+
+    assert_eq!(
+        err.message(),
+        "unknown operation 'teleport'; allowed: ping, probe, ensure_resource, drop_resource, list_resources, query, mutate, transaction, search, get_object, put_object, delete_object"
+    );
+    assert_validation_field(
+        &err,
+        "operation",
+        "must be a supported generic dispatch operation",
+    );
+}
+
+#[test]
+fn backend_runtime_unsupported_status_carries_capability_detail() {
+    let err = backend_runtime_unsupported_status(
+        "azureblob",
+        "query",
+        "Azure Blob support is not available in this binary".to_string(),
+    );
+
+    assert_capability_detail(
+        &err,
+        "azureblob",
+        "query",
+        "backend_runtime_support",
+        "Azure Blob support is not available in this binary",
+    );
+}
+
+#[test]
+fn catalog_compatibility_status_carries_schema_detail() {
+    let err = catalog_compatibility_status(
+        "Select",
+        "incompatible catalog version: client is '1', active is '2': stale".to_string(),
+    );
+    assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+    assert_eq!(
+        err.message(),
+        "incompatible catalog version: client is '1', active is '2': stale"
+    );
+    let detail = decode_detail(&err);
+    assert_eq!(detail.kind, ErrorKind::Schema as i32);
+    assert_eq!(detail.backend, "catalog");
+    assert_eq!(detail.operation, "Select");
+    assert_eq!(detail.capability_required, "catalog_version_incompatible");
+    assert!(!detail.retryable);
+    assert_eq!(detail.retry_after_ms, 0);
 }
 
 #[test]
@@ -148,6 +288,15 @@ fn rls_bypass_guard_blocks_resource_drop_without_ack() {
     let err = guard_rls_bypass_operation("drop_resource", "{}")
         .expect_err("resource drops must require explicit RLS-bypass acknowledgement");
     assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+    assert_eq!(
+        err.message(),
+        "operation may bypass tenant isolation/RLS; set spec_json.udb_allow_rls_bypass=true after explicit tenant-scope review"
+    );
+    let detail = decode_detail(&err);
+    assert_eq!(detail.kind, ErrorKind::Policy as i32);
+    assert_eq!(detail.operation, "generic_dispatch_rls_bypass");
+    assert_eq!(detail.policy_decision_id, "rls_bypass_review_required");
+    assert!(!detail.retryable);
 }
 
 #[test]
@@ -561,6 +710,133 @@ fn full_service_descriptor_surface_snapshot() {
                 "UpdateTenantConfig",
             ],
         ),
+        // Phase 9 native services (master-plan 9.x).
+        (
+            "udb.core.backup.services.v1.BackupService",
+            &[
+                "DeleteBackupPolicy",
+                "GetBackup",
+                "GetBackupPolicy",
+                "ListBackupPolicies",
+                "ListBackups",
+                "PutBackupPolicy",
+                "RestoreTenant",
+                "StartTenantBackup",
+            ],
+        ),
+        (
+            "udb.core.cache.services.v1.CacheService",
+            &[
+                "CreateNamespace",
+                "Delete",
+                "DeleteNamespace",
+                "Get",
+                "GetNamespaceStats",
+                "Scan",
+                "Set",
+            ],
+        ),
+        (
+            "udb.core.config.services.v1.ConfigService",
+            &[
+                "DeleteFlag",
+                "EvaluateFlags",
+                "GetFlag",
+                "ListFlags",
+                "PutFlag",
+            ],
+        ),
+        (
+            "udb.core.embedding.services.v1.EmbeddingService",
+            &[
+                "Backfill",
+                "DeleteSource",
+                "ListSources",
+                "RegisterSource",
+                "ReportEmbedding",
+                "Retrieve",
+            ],
+        ),
+        (
+            "udb.core.livequery.services.v1.LiveQueryService",
+            &["Subscribe"],
+        ),
+        (
+            "udb.core.lock.services.v1.LockService",
+            &["AcquireLock", "ReleaseLock", "RenewLock"],
+        ),
+        (
+            "udb.core.metering.services.v1.MeteringService",
+            &[
+                "CheckQuota",
+                "GetQuota",
+                "ListQuotas",
+                "PutQuota",
+                "QueryUsage",
+                "RecordUsage",
+            ],
+        ),
+        (
+            "udb.core.scheduler.services.v1.SchedulerService",
+            &[
+                "CreateJob",
+                "DeleteJob",
+                "GetJob",
+                "ListJobs",
+                "PauseJob",
+                "ResumeJob",
+            ],
+        ),
+        (
+            "udb.core.search.services.v1.SearchService",
+            &[
+                "CreateIndex",
+                "DeleteIndex",
+                "ListIndexes",
+                "Reindex",
+                "Search",
+            ],
+        ),
+        (
+            "udb.core.vault.services.v1.VaultService",
+            &[
+                "CreateTransitKey",
+                "Decrypt",
+                "DeleteSecret",
+                "DestroySecret",
+                "Encrypt",
+                "GenerateDatabaseCredentials",
+                "GetSecret",
+                "Hmac",
+                "ListSecrets",
+                "PutSecret",
+                "RotateTransitKey",
+                "SealStatus",
+                "Sign",
+                "Verify",
+            ],
+        ),
+        (
+            "udb.core.webhook.services.v1.WebhookService",
+            &[
+                "CreateEndpoint",
+                "DeleteEndpoint",
+                "GetEndpoint",
+                "ListDeliveries",
+                "ListEndpoints",
+                "UpdateEndpoint",
+            ],
+        ),
+        (
+            "udb.core.workflow.services.v1.WorkflowService",
+            &[
+                "CancelWorkflow",
+                "GetWorkflow",
+                "ListWorkflows",
+                "SignalWorkflow",
+                "StartWorkflow",
+            ],
+        ),
         (
             "udb.services.v1.DataBroker",
             &[
@@ -785,6 +1061,13 @@ async fn mutation_response_headers_attach_write_receipt() {
     let receipt_json = &response.get_ref().write_receipt_json;
     let receipt: crate::runtime::consistency::WriteReceipt =
         serde_json::from_str(receipt_json).unwrap();
+    let typed_receipt = response
+        .get_ref()
+        .write_receipt
+        .as_ref()
+        .map(crate::runtime::consistency::WriteReceipt::from_proto)
+        .expect("typed write_receipt should be attached");
+    assert_eq!(typed_receipt, receipt);
     assert_eq!(
         receipt.manifest_checksum,
         svc.catalog.active().metadata.checksum
@@ -1329,6 +1612,15 @@ fn portal_permissions_distinguish_viewer_and_operator() {
             .code(),
         tonic::Code::PermissionDenied
     );
+    let err = svc
+        .require_portal_permission(&viewer, "RetrySagaCompensation", true)
+        .expect_err("viewer cannot run portal mutations");
+    assert_policy_detail(
+        &err,
+        "portal_permission",
+        "portal_operator_required",
+        "scope udb:admin or udb:portal:operator is required for RetrySagaCompensation",
+    );
 
     let operator = SecurityContext {
         scopes: vec!["udb:portal:operator".to_string()],
@@ -1337,6 +1629,48 @@ fn portal_permissions_distinguish_viewer_and_operator() {
     assert!(
         svc.require_portal_permission(&operator, "RetrySagaCompensation", true)
             .is_ok()
+    );
+}
+
+#[test]
+fn admin_scope_denial_carries_policy_detail() {
+    let viewer = SecurityContext {
+        scopes: vec!["udb:portal:viewer".to_string()],
+        ..SecurityContext::default()
+    };
+    let err = require_admin_scope(&viewer).expect_err("portal viewer is not a broker admin");
+    assert_policy_detail(
+        &err,
+        "admin_scope",
+        "admin_scope_required",
+        "scope udb:admin is required",
+    );
+}
+
+#[test]
+fn webrtc_peer_policy_denials_carry_policy_detail() {
+    let scope_err = service_policy_denied(
+        "webrtc_peer_token",
+        "webrtc_peer_scope_required",
+        "scope udb:webrtc:peer or udb:webrtc:signal is required",
+    );
+    assert_policy_detail(
+        &scope_err,
+        "webrtc_peer_token",
+        "webrtc_peer_scope_required",
+        "scope udb:webrtc:peer or udb:webrtc:signal is required",
+    );
+
+    let tenant_err = service_policy_denied(
+        "webrtc_peer_token",
+        "webrtc_peer_tenant_mismatch",
+        "x-tenant-id must match the peer token tenant",
+    );
+    assert_policy_detail(
+        &tenant_err,
+        "webrtc_peer_token",
+        "webrtc_peer_tenant_mismatch",
+        "x-tenant-id must match the peer token tenant",
     );
 }
 
@@ -1398,6 +1732,14 @@ async fn broker_v2_select_denied_without_policy() {
     let ctx = billing_ctx(&["udb:read"]);
     let err = svc.authorize(&ctx, "Payment", "Select").await.unwrap_err();
     assert_eq!(err.code(), tonic::Code::PermissionDenied);
+    let detail = decode_detail(&err);
+    assert_eq!(detail.kind, ErrorKind::Policy as i32);
+    assert_eq!(detail.operation, "data_plane_authorize");
+    assert!(detail.policy_decision_id.starts_with("authz_"));
+    assert_eq!(
+        err.message(),
+        "no authz policy (default deny); seed ABAC policies or set UDB_ABAC_DEFAULT_ALLOW=true"
+    );
 }
 
 #[tokio::test]
@@ -1422,6 +1764,29 @@ async fn broker_v2_admin_rpc_denied_without_grant() {
         .await
         .unwrap_err();
     assert_eq!(err.code(), tonic::Code::PermissionDenied);
+    let detail = decode_detail(&err);
+    assert_eq!(detail.kind, ErrorKind::Policy as i32);
+    assert_eq!(detail.operation, "data_plane_authorize");
+    assert!(detail.policy_decision_id.starts_with("authz_"));
+}
+
+#[tokio::test]
+async fn broker_v2_batch_item_denial_carries_policy_detail() {
+    let svc = v2_service(vec![]);
+    let ctx = billing_ctx(&["udb:read"]);
+    let snapshot = svc.current_abac_snapshot();
+    let err = DataBrokerService::authorize_message_item(&snapshot, &ctx, "Payment", "Select")
+        .await
+        .expect_err("batch item with no matching policy must be denied");
+    assert_eq!(err.code(), tonic::Code::PermissionDenied);
+    let detail = decode_detail(&err);
+    assert_eq!(detail.kind, ErrorKind::Policy as i32);
+    assert_eq!(detail.operation, "data_plane_authorize_item");
+    assert!(detail.policy_decision_id.starts_with("authz_"));
+    assert_eq!(
+        err.message(),
+        "no authz policy (default deny); seed ABAC policies or set UDB_ABAC_DEFAULT_ALLOW=true"
+    );
 }
 
 #[tokio::test]

@@ -18,6 +18,93 @@ struct PendingSagaStep {
     compensation_json: String,
 }
 
+fn tx_object_invalid_field(
+    field: impl Into<String>,
+    description: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    crate::runtime::executor_utils::invalid_argument_fields(
+        message,
+        [(field.into(), description.into())],
+    )
+}
+
+fn tx_object_internal_status(
+    operation: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    crate::runtime::executor_utils::internal_status("tx_object", operation, message)
+}
+
+fn mysql_xa_plan_replay_status(err: impl std::fmt::Display) -> tonic::Status {
+    crate::runtime::executor_utils::schema_status(
+        tonic::Code::FailedPrecondition,
+        "mysql",
+        "xa_plan_replay",
+        "mysql_xa_plan_replay",
+        format!(
+            "2PC refused before side effects: plan SQL cannot be replayed on the MySQL XA participant: {err}"
+        ),
+    )
+}
+
+fn xa_unsupported_participants_status(unsupported: &[String]) -> tonic::Status {
+    crate::runtime::executor_utils::capability_status(
+        "transaction",
+        "xa_commit",
+        "xa_participants",
+        format!(
+            "2PC refused before side effects: unsupported participants {}",
+            unsupported.join(", ")
+        ),
+    )
+}
+
+fn record_encryption_key_missing_status(schema: &str, table: &str) -> tonic::Status {
+    crate::runtime::executor_utils::capability_status(
+        "encryption",
+        "record_encryption",
+        "udb_encryption_key",
+        format!(
+            "table {schema}.{table} contains encrypted columns but UDB encryption key is not configured"
+        ),
+    )
+}
+
+fn s3_feature_disabled_status() -> tonic::Status {
+    crate::runtime::executor_utils::capability_status(
+        "s3",
+        "put_tx_object",
+        "s3_feature",
+        "s3/object-store feature is not enabled",
+    )
+}
+
+fn materialized_view_admin_scope_required_status() -> tonic::Status {
+    crate::runtime::executor_utils::policy_status_with_code(
+        tonic::Code::PermissionDenied,
+        "create_materialized_view",
+        "admin_scope_required",
+        "scope udb:admin is required",
+    )
+}
+
+fn validate_tx_identifier(value: &str, label: &str) -> Result<(), tonic::Status> {
+    if value.is_empty()
+        || !value
+            .chars()
+            .all(|ch| ch.is_ascii_alphanumeric() || ch == '_')
+        || value.starts_with(|ch: char| ch.is_ascii_digit())
+    {
+        return Err(tx_object_invalid_field(
+            label,
+            "must be a valid SQL identifier",
+            format!("{label} '{value}' is not a valid SQL identifier"),
+        ));
+    }
+    Ok(())
+}
+
 fn compensation_retry_delay(attempt: u32) -> std::time::Duration {
     std::time::Duration::from_millis(COMPENSATION_RETRY_BASE_DELAY_MS * u64::from(attempt))
 }
@@ -75,7 +162,10 @@ impl DataBrokerRuntime {
         metadata_context: RequestContext,
     ) -> Vec<Result<TxStatus, tonic::Status>> {
         let Some(pool) = &self.pg_pool else {
-            return vec![Err(tonic::Status::unavailable(
+            return vec![Err(crate::runtime::executor_utils::capability_status(
+                "postgres",
+                "begin_tx",
+                "postgres_backend",
                 "PostgreSQL backend is not configured",
             ))];
         };
@@ -87,7 +177,9 @@ impl DataBrokerRuntime {
             }
         }
         if mutations.is_empty() {
-            return vec![Err(tonic::Status::invalid_argument(
+            return vec![Err(tx_object_invalid_field(
+                "mutations",
+                "transaction stream must contain at least one mutation",
                 "transaction stream requires at least one mutation",
             ))];
         }
@@ -138,9 +230,12 @@ impl DataBrokerRuntime {
                 if let Some(ref sid) = saga_id {
                     self.saga_set_status(sid, "failed").await;
                 }
-                return vec![Err(tonic::Status::unavailable(format!(
-                    "PostgreSQL begin failed: {err}"
-                )))];
+                return vec![Err(crate::runtime::executor_utils::retryable_status(
+                    "postgres",
+                    "transaction_begin",
+                    crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
+                    format!("PostgreSQL begin failed: {err}"),
+                ))];
             }
         };
         let mut statuses = Vec::new();
@@ -187,9 +282,11 @@ impl DataBrokerRuntime {
                                         crate::broker::normalize_record_keys(table, &record);
                                     self.encrypt_record_for_table(table, &record)
                                 }
-                                None => {
-                                    Err(tonic::Status::invalid_argument("unknown message_type"))
-                                }
+                                None => Err(tx_object_invalid_field(
+                                    "message_type",
+                                    "must match a manifest table message type",
+                                    "unknown message_type",
+                                )),
                             };
                         match encrypted_record {
                             Ok(encrypted_record) => {
@@ -234,9 +331,10 @@ impl DataBrokerRuntime {
                                             )
                                             .await
                                         {
-                                            Err(tonic::Status::internal(format!(
-                                                "projection task enqueue failed: {err}"
-                                            )))
+                                            Err(tx_object_internal_status(
+                                                "enqueue_projection_tasks",
+                                                format!("projection task enqueue failed: {err}"),
+                                            ))
                                         } else {
                                             Ok(affected)
                                         }
@@ -292,9 +390,10 @@ impl DataBrokerRuntime {
                             )
                             .await
                         {
-                            Err(tonic::Status::internal(format!(
-                                "projection task enqueue failed: {err}"
-                            )))
+                            Err(tx_object_internal_status(
+                                "enqueue_projection_tasks",
+                                format!("projection task enqueue failed: {err}"),
+                            ))
                         } else {
                             Ok(affected)
                         }
@@ -377,14 +476,20 @@ impl DataBrokerRuntime {
                                 && !cdc_config.valid_topics.iter().any(|t| t == topic)
                                 && policy_decision.is_none())
                         {
-                            Err(tonic::Status::invalid_argument(format!(
-                                "topic '{topic}' is not in the registered topic registry; \
+                            Err(tx_object_invalid_field(
+                                "topic",
+                                "must be allowed by topic policy or UDB_CDC_VALID_TOPICS",
+                                format!(
+                                    "topic '{topic}' is not in the registered topic registry; \
                                  configure UDB_CDC_VALID_TOPICS or use an allowed topic"
-                            )))
+                                ),
+                            ))
                         } else {
                             let payload =
                                 mutation.payload.as_ref().map(struct_to_json).ok_or_else(|| {
-                                    tonic::Status::invalid_argument(
+                                    tx_object_invalid_field(
+                                        "payload",
+                                        "enqueue_outbox_event transaction mutations require payload",
                                         "enqueue_outbox_event transaction mutation requires payload",
                                     )
                                 });
@@ -447,9 +552,12 @@ impl DataBrokerRuntime {
                                                 .await
                                                 .map(|result| result.rows_affected())
                                                 .map_err(|err| {
-                                                    tonic::Status::internal(format!(
-                                                        "failed to enqueue tx event: {err}"
-                                                    ))
+                                                    tx_object_internal_status(
+                                                        "enqueue_tx_event",
+                                                        format!(
+                                                            "failed to enqueue tx event: {err}"
+                                                        ),
+                                                    )
                                                 })
                                         }
                                         Err(err) => Err(err),
@@ -462,10 +570,11 @@ impl DataBrokerRuntime {
                     Err(err) => Err(err),
                 }
             } else {
-                Err(tonic::Status::invalid_argument(format!(
-                    "unsupported transaction operation {}",
-                    mutation.operation
-                )))
+                Err(tx_object_invalid_field(
+                    "operation",
+                    "must be one of upsert, delete, vector_upsert, put_object, or enqueue_outbox_event",
+                    format!("unsupported transaction operation {}", mutation.operation),
+                ))
             };
             match result {
                 Ok(affected) => {
@@ -497,11 +606,10 @@ impl DataBrokerRuntime {
                             self.saga_set_status(sid, "compensated").await;
                         }
                     }
-                    statuses.push(Err(tonic::Status::internal(format!(
-                        "{}; {}",
-                        err.message(),
-                        compensation_message
-                    ))));
+                    statuses.push(Err(tx_object_internal_status(
+                        "mutation_failure_compensation",
+                        format!("{}; {}", err.message(), compensation_message),
+                    )));
                     for skipped in tx_mutations.iter().skip(mutation_index + 1) {
                         statuses.push(Ok(TxStatus {
                             state: crate::proto::tx_status::State::TxStateRolledBack as i32,
@@ -527,9 +635,10 @@ impl DataBrokerRuntime {
                     if let Some(ref sid) = saga_id {
                         self.saga_set_status(sid, "failed").await;
                     }
-                    statuses.push(Err(tonic::Status::internal(format!(
-                        "XA ledger is unavailable: {err}"
-                    ))));
+                    statuses.push(Err(tx_object_internal_status(
+                        "xa_ledger_unavailable",
+                        format!("XA ledger is unavailable: {err}"),
+                    )));
                     return statuses;
                 }
                 // Item 23: configured MySQL instances join the 2PC as XA
@@ -557,10 +666,7 @@ impl DataBrokerRuntime {
                         if let Some(ref sid) = saga_id {
                             self.saga_set_status(sid, "failed").await;
                         }
-                        statuses.push(Err(tonic::Status::failed_precondition(format!(
-                            "2PC refused before side effects: plan SQL cannot be replayed \
-                                 on the MySQL XA participant: {err}"
-                        ))));
+                        statuses.push(Err(mysql_xa_plan_replay_status(err)));
                         return statuses;
                     }
                     let mut instance_names: Vec<String> =
@@ -631,10 +737,13 @@ impl DataBrokerRuntime {
                             if let Some(ref sid) = saga_id {
                                 self.saga_set_status(sid, "in_doubt").await;
                             }
-                            statuses.push(Err(tonic::Status::internal(format!(
-                                "XA committed but ledger write failed for xid {}: {err}",
-                                outcome.ledger.xid
-                            ))));
+                            statuses.push(Err(tx_object_internal_status(
+                                "xa_ledger_commit_record",
+                                format!(
+                                    "XA committed but ledger write failed for xid {}: {err}",
+                                    outcome.ledger.xid
+                                ),
+                            )));
                             return statuses;
                         }
                         if let Some(ref sid) = saga_id {
@@ -653,10 +762,7 @@ impl DataBrokerRuntime {
                         if let Some(ref sid) = saga_id {
                             self.saga_set_status(sid, "failed").await;
                         }
-                        statuses.push(Err(tonic::Status::failed_precondition(format!(
-                            "2PC refused before side effects: unsupported participants {}",
-                            unsupported.join(", ")
-                        ))));
+                        statuses.push(Err(xa_unsupported_participants_status(&unsupported)));
                     }
                     Err(crate::runtime::xa::XaError::PrepareFailed { ledger, .. }) => {
                         let _ = crate::runtime::xa_recovery::record_xa_ledger_entry(
@@ -668,10 +774,17 @@ impl DataBrokerRuntime {
                         if let Some(ref sid) = saga_id {
                             self.saga_set_status(sid, "failed").await;
                         }
-                        statuses.push(Err(tonic::Status::aborted(format!(
-                            "2PC PREPARE failed for xid {}: {}",
-                            ledger.xid, ledger.reason
-                        ))));
+                        statuses.push(Err(
+                            crate::runtime::executor_utils::retryable_aborted_status(
+                                "transaction",
+                                "xa prepare",
+                                0,
+                                format!(
+                                    "2PC PREPARE failed for xid {}: {}",
+                                    ledger.xid, ledger.reason
+                                ),
+                            ),
+                        ));
                     }
                     Err(crate::runtime::xa::XaError::InDoubt { ledger }) => {
                         let ledger_err = crate::runtime::xa_recovery::record_xa_ledger_entry(
@@ -687,10 +800,17 @@ impl DataBrokerRuntime {
                         let ledger_note = ledger_err
                             .map(|err| format!("; additionally XA ledger write failed: {err}"))
                             .unwrap_or_default();
-                        statuses.push(Err(tonic::Status::aborted(format!(
-                            "2PC xid {} is IN-DOUBT and will be resolved by XA recovery{}",
-                            ledger.xid, ledger_note
-                        ))));
+                        statuses.push(Err(
+                            crate::runtime::executor_utils::retryable_aborted_status(
+                                "transaction",
+                                "xa in-doubt recovery",
+                                0,
+                                format!(
+                                    "2PC xid {} is IN-DOUBT and will be resolved by XA recovery{}",
+                                    ledger.xid, ledger_note
+                                ),
+                            ),
+                        ));
                     }
                 }
             } else {
@@ -725,9 +845,10 @@ impl DataBrokerRuntime {
                                 self.saga_set_status(sid, "compensated").await;
                             }
                         }
-                        statuses.push(Err(tonic::Status::internal(format!(
-                            "PostgreSQL commit failed: {err}; {comp_msg}"
-                        ))))
+                        statuses.push(Err(tx_object_internal_status(
+                            "postgres_commit_compensation",
+                            format!("PostgreSQL commit failed: {err}; {comp_msg}"),
+                        )))
                     }
                 }
             }
@@ -784,18 +905,20 @@ impl DataBrokerRuntime {
             .iter()
             .any(|scope| scope == "udb:admin" || scope == "*")
         {
-            return Err(tonic::Status::permission_denied(
-                "scope udb:admin is required",
-            ));
+            return Err(materialized_view_admin_scope_required_status());
         }
-        validate_identifier(&request.schema, "schema")?;
-        validate_identifier(&request.name, "name")?;
+        validate_tx_identifier(&request.schema, "schema")?;
+        validate_tx_identifier(&request.name, "name")?;
         let declared = declared_materialized_view(manifest, &request.schema, &request.name)
             .ok_or_else(|| {
-                tonic::Status::invalid_argument(format!(
-                    "materialized view {}.{} is not declared in the proto AST",
-                    request.schema, request.name
-                ))
+                tx_object_invalid_field(
+                    "view",
+                    "must be declared in the proto AST",
+                    format!(
+                        "materialized view {}.{} is not declared in the proto AST",
+                        request.schema, request.name
+                    ),
+                )
             })?;
         // Always use the trusted proto-AST query. If the caller supplies a query, it must
         // normalize to the same string as the declared query (whitespace differences only).
@@ -805,7 +928,9 @@ impl DataBrokerRuntime {
         {
             declared.query.as_str()
         } else {
-            return Err(tonic::Status::invalid_argument(
+            return Err(tx_object_invalid_field(
+                "query",
+                "must match the proto AST declaration",
                 "materialized view query does not match the proto AST declaration",
             ));
         };
@@ -820,7 +945,12 @@ impl DataBrokerRuntime {
         let result = sqlx::query(&sql)
             .execute(self.pg_pool()?)
             .await
-            .map_err(|err| tonic::Status::internal(format!("create view failed: {err}")))?;
+            .map_err(|err| {
+                tx_object_internal_status(
+                    "create_materialized_view",
+                    format!("create view failed: {err}"),
+                )
+            })?;
         let response = MutationResponse {
             mutation_id: Uuid::new_v4().to_string(),
             resource_uri: format!("materialized-view://{}/{}", request.schema, request.name),
@@ -915,8 +1045,8 @@ impl DataBrokerRuntime {
         schema: &str,
         name: &str,
     ) -> Result<(), tonic::Status> {
-        validate_identifier(schema, "schema")?;
-        validate_identifier(name, "name")?;
+        validate_tx_identifier(schema, "schema")?;
+        validate_tx_identifier(name, "name")?;
         let sql = format!(
             "REFRESH MATERIALIZED VIEW CONCURRENTLY {}.{}",
             qi_runtime(schema),
@@ -925,9 +1055,10 @@ impl DataBrokerRuntime {
         if let Err(err) = sqlx::query(&sql).execute(self.pg_pool()?).await {
             let error_text = err.to_string();
             if !is_unpopulated_materialized_view_refresh_error(&error_text) {
-                return Err(tonic::Status::internal(format!(
-                    "refresh view failed: {err}"
-                )));
+                return Err(tx_object_internal_status(
+                    "refresh_materialized_view",
+                    format!("refresh view failed: {err}"),
+                ));
             }
             let sql = format!(
                 "REFRESH MATERIALIZED VIEW {}.{}",
@@ -938,44 +1069,59 @@ impl DataBrokerRuntime {
                 .execute(self.pg_pool()?)
                 .await
                 .map_err(|err| {
-                    tonic::Status::internal(format!("initial refresh view failed: {err}"))
+                    tx_object_internal_status(
+                        "initial_refresh_materialized_view",
+                        format!("initial refresh view failed: {err}"),
+                    )
                 })?;
         }
         Ok(())
     }
 
     pub(crate) fn pg_pool(&self) -> Result<&PgPool, tonic::Status> {
-        self.pg_pool
-            .as_ref()
-            .ok_or_else(|| tonic::Status::unavailable("PostgreSQL backend is not configured"))
+        self.pg_pool.as_ref().ok_or_else(|| {
+            crate::runtime::executor_utils::capability_status(
+                "postgres",
+                "pool",
+                "postgres_backend",
+                "PostgreSQL backend is not configured",
+            )
+        })
     }
 
-    pub(crate) fn pg_select_pool_for_table(
+    pub(crate) async fn pg_select_pool_for_table_routed(
         &self,
         table: &crate::generation::ManifestTable,
         context: &RequestContext,
-    ) -> Result<PgPool, tonic::Status> {
-        if !context.target_instance.trim().is_empty() {
-            return self.pg_read_pool_for_context_checked(context);
-        }
-        if table.replica_hint.eq_ignore_ascii_case("primary") || context.requires_primary_read() {
-            return self.pg_pool().cloned();
-        }
-        self.pg_read_pool_for_context_checked(context)
+    ) -> Result<crate::runtime::core::RoutedReadPool, tonic::Status> {
+        let primary_required = table.replica_hint.eq_ignore_ascii_case("primary")
+            || context.requires_primary_read()
+            || super::accessors::read_fence_requires_primary(context);
+        self.pg_read_pool_routed(context, primary_required).await
     }
 
     #[cfg(feature = "qdrant")]
     pub(crate) fn qdrant(&self) -> Result<&QdrantHttpClient, tonic::Status> {
-        self.qdrant
-            .as_ref()
-            .ok_or_else(|| tonic::Status::unavailable("Qdrant backend is not configured"))
+        self.qdrant.as_ref().ok_or_else(|| {
+            crate::runtime::executor_utils::capability_status(
+                "qdrant",
+                "client",
+                "qdrant_backend",
+                "Qdrant backend is not configured",
+            )
+        })
     }
 
     #[cfg(feature = "s3")]
     pub(crate) fn s3(&self) -> Result<&aws_sdk_s3::Client, tonic::Status> {
-        self.s3
-            .as_ref()
-            .ok_or_else(|| tonic::Status::unavailable("S3/MinIO backend is not configured"))
+        self.s3.as_ref().ok_or_else(|| {
+            crate::runtime::executor_utils::capability_status(
+                "s3",
+                "client",
+                "s3_backend",
+                "S3/MinIO backend is not configured",
+            )
+        })
     }
 
     // Read-through cache (orchestration, §9.1). When the `redis` feature is off the
@@ -1183,10 +1329,10 @@ impl DataBrokerRuntime {
         let Some(encryption) = &self.encryption else {
             if table.columns.iter().any(is_encrypted_column) {
                 self.encryption_metrics.record("encrypt", false);
-                return Err(tonic::Status::failed_precondition(format!(
-                    "table {}.{} contains encrypted columns but UDB encryption key is not configured",
-                    table.schema, table.table
-                )));
+                return Err(record_encryption_key_missing_status(
+                    &table.schema,
+                    &table.table,
+                ));
             }
             return Ok(record.clone());
         };
@@ -1212,10 +1358,13 @@ impl DataBrokerRuntime {
                 }
                 Err(err) => {
                     self.encryption_metrics.record("encrypt", false);
-                    return Err(tonic::Status::internal(format!(
-                        "failed to encrypt {}.{}: {err}",
-                        table.table, column.column_name
-                    )));
+                    return Err(tx_object_internal_status(
+                        "encrypt_record_column",
+                        format!(
+                            "failed to encrypt {}.{}: {err}",
+                            table.table, column.column_name
+                        ),
+                    ));
                 }
             }
         }
@@ -1231,14 +1380,14 @@ impl DataBrokerRuntime {
         #[cfg(not(feature = "s3"))]
         {
             let _ = (manifest, mutation, metadata_context);
-            return Err(tonic::Status::failed_precondition(
-                "s3/object-store feature is not enabled",
-            ));
+            return Err(s3_feature_disabled_status());
         }
         #[cfg(feature = "s3")]
         {
             if mutation.object_data.len() > INLINE_OBJECT_LIMIT_BYTES {
-                return Err(tonic::Status::resource_exhausted(
+                return Err(crate::runtime::executor_utils::quota_refusal_status(
+                    "object",
+                    "transaction inline object size",
                     "Use GeneratePresignedUrl for files > 1MB",
                 ));
             }
@@ -1280,7 +1429,11 @@ impl DataBrokerRuntime {
                 .send()
                 .await
                 .map_err(|err| {
-                    tonic::Status::unavailable(format!("S3 put_object failed: {err}"))
+                    crate::runtime::executor_utils::backend_transport_status(
+                        "S3",
+                        "put_object",
+                        err,
+                    )
                 })?;
             Ok((
                 1,
@@ -1661,7 +1814,85 @@ fn is_unpopulated_materialized_view_refresh_error(error_text: &str) -> bool {
 
 #[cfg(test)]
 mod materialized_view_refresh_tests {
-    use super::is_unpopulated_materialized_view_refresh_error;
+    use super::*;
+    use crate::generation::ManifestMaterializedView;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
+
+    fn decode_detail(status: &tonic::Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed error detail trailer");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_single_field_violation(status: &tonic::Status, field: &str, description: &str) {
+        assert_eq!(status.code(), tonic::Code::InvalidArgument);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert!(!detail.retryable);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, field);
+        assert_eq!(detail.field_violations[0].description, description);
+    }
+
+    fn assert_typed_detail(
+        status: &tonic::Status,
+        kind: ErrorKind,
+        backend: &str,
+        operation: &str,
+        capability_required: &str,
+        message: &str,
+    ) {
+        assert_eq!(status.code(), tonic::Code::FailedPrecondition);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, kind as i32);
+        assert_eq!(detail.backend, backend);
+        assert_eq!(detail.operation, operation);
+        assert_eq!(detail.capability_required, capability_required);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    fn assert_policy_detail(
+        status: &tonic::Status,
+        operation: &str,
+        policy_decision_id: &str,
+        message: &str,
+    ) {
+        assert_eq!(status.code(), tonic::Code::PermissionDenied);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Policy as i32);
+        assert_eq!(detail.operation, operation);
+        assert_eq!(detail.policy_decision_id, policy_decision_id);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    fn assert_internal_detail(status: &tonic::Status, operation: &str, message: &str) {
+        assert_eq!(status.code(), tonic::Code::Internal);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "tx_object");
+        assert_eq!(detail.operation, operation);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    fn admin_context() -> RequestContext {
+        RequestContext {
+            scopes: vec!["udb:admin".to_string()],
+            ..RequestContext::default()
+        }
+    }
 
     #[test]
     fn detects_unpopulated_materialized_view_concurrent_refresh_error() {
@@ -1671,5 +1902,153 @@ mod materialized_view_refresh_tests {
         assert!(!is_unpopulated_materialized_view_refresh_error(
             "ERROR: could not create unique index for materialized view"
         ));
+    }
+
+    #[test]
+    fn tx_object_local_validation_carries_field_violations() {
+        let err = validate_tx_identifier("1bad", "schema").expect_err("invalid identifier");
+        assert_single_field_violation(&err, "schema", "must be a valid SQL identifier");
+
+        let err = tx_object_invalid_field(
+            "operation",
+            "must be one of upsert, delete, vector_upsert, put_object, or enqueue_outbox_event",
+            "unsupported transaction operation noop",
+        );
+        assert_single_field_violation(
+            &err,
+            "operation",
+            "must be one of upsert, delete, vector_upsert, put_object, or enqueue_outbox_event",
+        );
+    }
+
+    #[test]
+    fn tx_object_failed_preconditions_carry_typed_detail() {
+        let replay = mysql_xa_plan_replay_status("unsupported SQL");
+        assert_typed_detail(
+            &replay,
+            ErrorKind::Schema,
+            "mysql",
+            "xa_plan_replay",
+            "mysql_xa_plan_replay",
+            "2PC refused before side effects: plan SQL cannot be replayed on the MySQL XA participant: unsupported SQL",
+        );
+
+        let unsupported =
+            xa_unsupported_participants_status(&["mysql".to_string(), "qdrant".to_string()]);
+        assert_typed_detail(
+            &unsupported,
+            ErrorKind::Capability,
+            "transaction",
+            "xa_commit",
+            "xa_participants",
+            "2PC refused before side effects: unsupported participants mysql, qdrant",
+        );
+
+        let encryption = record_encryption_key_missing_status("private", "accounts");
+        assert_typed_detail(
+            &encryption,
+            ErrorKind::Capability,
+            "encryption",
+            "record_encryption",
+            "udb_encryption_key",
+            "table private.accounts contains encrypted columns but UDB encryption key is not configured",
+        );
+
+        let s3_feature = s3_feature_disabled_status();
+        assert_typed_detail(
+            &s3_feature,
+            ErrorKind::Capability,
+            "s3",
+            "put_tx_object",
+            "s3_feature",
+            "s3/object-store feature is not enabled",
+        );
+    }
+
+    #[test]
+    fn tx_object_internal_status_carries_typed_detail() {
+        let err = tx_object_internal_status(
+            "enqueue_projection_tasks",
+            "projection task enqueue failed: queue unavailable",
+        );
+        assert_internal_detail(
+            &err,
+            "enqueue_projection_tasks",
+            "projection task enqueue failed: queue unavailable",
+        );
+
+        let err = tx_object_internal_status(
+            "xa_ledger_commit_record",
+            "XA committed but ledger write failed for xid xa-1: unavailable",
+        );
+        assert_internal_detail(
+            &err,
+            "xa_ledger_commit_record",
+            "XA committed but ledger write failed for xid xa-1: unavailable",
+        );
+    }
+
+    #[tokio::test]
+    async fn create_materialized_view_admin_scope_denial_carries_policy_detail() {
+        let runtime = DataBrokerRuntime::default();
+        let err = runtime
+            .create_materialized_view(
+                &CatalogManifest::default(),
+                ViewDefinition::default(),
+                RequestContext::default(),
+            )
+            .await
+            .expect_err("admin scope denial must fail before validation or pg pool");
+
+        assert_policy_detail(
+            &err,
+            "create_materialized_view",
+            "admin_scope_required",
+            "scope udb:admin is required",
+        );
+    }
+
+    #[tokio::test]
+    async fn create_materialized_view_validation_carries_field_violations() {
+        let runtime = DataBrokerRuntime::default();
+        let manifest = CatalogManifest::default();
+        let request = ViewDefinition {
+            schema: "public".to_string(),
+            name: "missing_view".to_string(),
+            ..ViewDefinition::default()
+        };
+
+        let err = runtime
+            .create_materialized_view(&manifest, request, admin_context())
+            .await
+            .expect_err("undeclared materialized view must fail before pg pool");
+
+        assert_single_field_violation(&err, "view", "must be declared in the proto AST");
+
+        let manifest = CatalogManifest {
+            tables: vec![ManifestTable {
+                materialized_views: vec![ManifestMaterializedView {
+                    schema: "public".to_string(),
+                    name: "orders_mv".to_string(),
+                    query: "SELECT 1".to_string(),
+                    with_data: false,
+                }],
+                ..ManifestTable::default()
+            }],
+            ..CatalogManifest::default()
+        };
+        let request = ViewDefinition {
+            schema: "public".to_string(),
+            name: "orders_mv".to_string(),
+            query: "SELECT 2".to_string(),
+            ..ViewDefinition::default()
+        };
+
+        let err = runtime
+            .create_materialized_view(&manifest, request, admin_context())
+            .await
+            .expect_err("mismatched materialized view query must fail before pg pool");
+
+        assert_single_field_violation(&err, "query", "must match the proto AST declaration");
     }
 }

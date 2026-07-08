@@ -53,7 +53,30 @@ use crate::security::{
 
 mod analytics_service;
 mod asset_service;
-mod auth_service;
+// `pub(crate)` so the leader-elected compliance-evidence export worker
+// (`crate::runtime::evidence_export`, master-plan 4.4) can REUSE the canonical
+// `events::ComplianceEnvelope` + `build_native_compliance_envelope` instead of
+// defining a parallel evidence envelope. Only widens visibility within the crate.
+pub(crate) mod auth_service;
+// Phase 9.10: native BackupService — tenant-level logical backup and restore.
+// The leader wires `build_backup_service` + `add_service(backup_service::
+// BackupServiceServer::new(...))` in `serve()`, mirroring `tenant_service`/
+// `lock_service` (`BackupServiceServer` is pub-used inside the module).
+mod backup_service;
+// W13: native CacheService (master-plan 9.6) — a cache that invalidates itself.
+// The leader wires `build_cache_service` + `add_service(cache_service::
+// CacheServiceServer::new(...))` in `serve()`, mirroring `tenant_service`/
+// `lock_service` (`CacheServiceServer` is pub-used inside the module), and spawns
+// the CDC-journal invalidation worker under
+// `NativeWorkerHost::spawn_while_leader(WORKER_CACHE_INVALIDATOR, ..)`.
+mod cache_service;
+// W15 (Phase 9.8): native ConfigService — feature flags + runtime configuration
+// with a PURE, byte-identical EvaluateFlags (scope precedence + stable-hash
+// percentage rollout). The leader wires `build_config_service`
+// + `add_service(config_service::ConfigServiceServer::new(...))` in `serve()`,
+// mirroring `tenant_service`/`lock_service` (`ConfigServiceServer` is pub-used
+// inside the module). No background worker (evaluation is request-driven).
+mod config_service;
 // Phase 10: top-level `udb doctor` folds auth-readiness into one shared
 // readiness fact set; re-export the adapter so the bin crate can reach it.
 pub use auth_service::auth_readiness_triples;
@@ -66,6 +89,43 @@ pub use auth_service::auth_readiness_triples;
 /// `service` module, so this `pub(crate)` re-export is the reachable handle.)
 pub(crate) use auth_service::events::topics::AUTH_TOPIC_PATTERNS;
 pub use auth_service::{BootstrapAdmin, bootstrap_admin_user, served_bootstrap_admin};
+// W17: native LiveQueryService (master-plan 9.7). Server-streaming tenant-scoped
+// live queries: an initial mediated Snapshot then a fail-closed-filtered stream
+// of CDC Change deltas. The leader wires `build_livequery_service`
+// + `add_service(livequery_service::LiveQueryServiceServer::new(livequery_service))`
+// in `serve()`, mirroring `tenant_service`/`lock_service` (`LiveQueryServiceServer`
+// is pub-used inside the module). No leader-elected worker is needed — the delta
+// forwarder task is spawned per subscription inside the `Subscribe` handler.
+mod livequery_service;
+// W12: native LockService (master-plan 9.2). The leader wires `build_lock_service`
+// + `add_service(lock_service::LockServiceServer::new(...))` in `serve()`,
+// mirroring `tenant_service` (`LockServiceServer` is pub-used inside the module).
+mod lock_service;
+// W16 (Phase 9.9): native MeteringService — usage metering and quotas. Usage is a
+// durable, append-only `UsageEvent` stream fed by `metering_service::record_usage`
+// (a cheap single-INSERT seam the leader calls from `native_helpers::admit_on`,
+// which must NEVER fail the metered request); quotas are durable `QuotaRule` rows
+// and `CheckQuota` is a pure windowed SUM vs the limit (availability-first / fail
+// OPEN on a store outage). The leader wires `build_metering_service`
+// + `add_service(metering_service::MeteringServiceServer::new(...))` in `serve()`,
+// mirroring `tenant_service`/`lock_service` (`MeteringServiceServer` is pub-used
+// inside the module), and adds the one-line `record_usage` call inside `admit_on`.
+mod metering_service;
+// W18 (Phase 9.11): native EmbeddingService — the AI data plane. Inference runs in
+// SIDECARS ONLY (no embedding model is ever linked into the broker): on a source
+// row change (and on Backfill) the broker emits `udb.embedding.work.v1` events
+// carrying ONLY {tenant_id, source, row_pk, text, model_id, target_collection}
+// (NEVER credentials) and accepts the computed vector back via the internal-only
+// `ReportEmbedding` callback, upserting it (tenant-tagged) through the SAME runtime
+// vector seam the asset service uses. `Retrieve` is deadline-bounded and delegates
+// to the SearchService (9.5) hybrid-search seam with a server-side tenant filter.
+// The leader wires `build_embedding_service`
+// + `add_service(embedding_service::EmbeddingServiceServer::new(...))` in `serve()`,
+// mirroring `tenant_service`/`lock_service`/`search_service` (`EmbeddingServiceServer`
+// is pub-used inside the module), and spawns
+// `embedding_service::run_embedding_work_emitter_once` under a leader-elected worker
+// that joins active sources to the durable CDC journal.
+mod embedding_service;
 mod method_security;
 pub(crate) mod native_entity_store;
 #[cfg(test)]
@@ -75,9 +135,48 @@ pub mod native_registry;
 pub(crate) mod native_runtime;
 pub(crate) mod native_store_binding;
 mod notification_service;
+// Phase 9.3: native SchedulerService (cron + one-shot jobs). The leader-elected
+// tick worker (`run_scheduler_tick_once`) is spawned in `serve()` under
+// `run_while_leader(WORKER_SCHEDULER_TICK, ..)`; see scheduler_service::mod.
+mod scheduler_service;
+// W15 (Phase 9.5): native SearchService — one search box over everything.
+// Full-text/vector/hybrid indexes registered per tenant; queries ride the
+// mediated vector dispatch (server-side tenant filter injected) and cross-index
+// results are fused with pure RRF. The leader wires `build_search_service`
+// + `add_service(search_service::SearchServiceServer::new(...))` in `serve()`,
+// mirroring `tenant_service`/`lock_service` (`SearchServiceServer` is pub-used
+// inside the module), and spawns `search_service::run_index_freshness_consumer`
+// per active index under a leader-elected worker once the tenant-scoped CDC feed
+// is threaded in (freshness-worker follow-up).
+mod search_service;
 mod storage_service;
 mod tenant_service;
+// W14 (Phase 9.4): native WebhookService — tenant-scoped domain events delivered
+// to external HTTPS endpoints (HMAC-signed, SSRF-guarded). The leader wires
+// `build_webhook_service` + `add_service(webhook_service::WebhookServiceServer::new(...))`
+// in `serve()`, mirroring `tenant_service`/`lock_service`
+// (`WebhookServiceServer` is pub-used inside the module). With `http-client`, it
+// also spawns the durable CDC-journal delivery worker under
+// `NativeWorkerHost::spawn_while_leader(WORKER_WEBHOOK_DELIVERY, ..)`.
+mod webhook_service;
+// W13 (Phase 9): native VaultService (master-plan 9.1, flagship) — KV + transit
+// + seal secrets management. The leader wires `build_vault_service`
+// + `add_service(vault_service::VaultServiceServer::new(...))` in `serve()`,
+// mirroring `tenant_service`/`lock_service` (`VaultServiceServer` is pub-used
+// inside the module).
+mod vault_service;
 mod webrtc_service;
+// W17 (Phase 9.12): native WorkflowService — durable multi-step operations with
+// compensation. REUSES the existing saga engine (`runtime::saga`): StartWorkflow
+// records a saga via the additive `saga::start_workflow_saga` seam tagged with
+// `SagaKind::Workflow`, and CancelWorkflow flips that saga into the recoverable
+// state so the EXISTING `SagaRecoveryWorker` runs reverse-order compensation — no
+// second orchestration loop. The leader wires `build_workflow_service`
+// + `add_service(workflow_service::WorkflowServiceServer::new(...))` in `serve()`,
+// mirroring `tenant_service`/`scheduler_service` (`WorkflowServiceServer` is
+// pub-used inside the module), and spawns `workflow_service::run_workflow_tick_once`
+// under `NativeWorkerHost::spawn_while_leader(WORKER_WORKFLOW_TICK, ..)`.
+mod workflow_service;
 
 const UDB_FILE_DESCRIPTOR_SET: &[u8] = tonic::include_file_descriptor_set!("udb_descriptor");
 
@@ -404,10 +503,15 @@ impl DataBrokerService {
         if state == FsmState::Completed {
             Ok(())
         } else {
-            Err(Status::unavailable(format!(
-                "UDB startup lifecycle is {}, DataBroker is not ready",
-                state.as_str()
-            )))
+            Err(crate::runtime::executor_utils::retryable_status(
+                "data_broker",
+                "startup_not_ready",
+                crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
+                format!(
+                    "UDB startup lifecycle is {}, DataBroker is not ready",
+                    state.as_str()
+                ),
+            ))
         }
     }
 
@@ -449,7 +553,7 @@ impl DataBrokerService {
                     msg
                 );
             } else {
-                return Err(Status::failed_precondition(msg));
+                return Err(catalog_compatibility_status(operation, msg));
             }
         }
 
@@ -493,7 +597,11 @@ impl DataBrokerService {
             return Err(Status::unauthenticated("tenant_id is required"));
         }
         if security.purpose.trim().is_empty() {
-            return Err(Status::permission_denied("purpose is required"));
+            return Err(service_policy_denied(
+                "data_plane_authorize",
+                "purpose_required",
+                "purpose is required",
+            ));
         }
         let principal = Principal::from_security_context(security, Vec::new());
         let resource = ResourceRef::message(message_type);
@@ -517,7 +625,11 @@ impl DataBrokerService {
         if decision.allowed {
             Ok(decision.decision_id)
         } else {
-            Err(Status::permission_denied(decision.deny_reason))
+            Err(service_policy_denied(
+                "data_plane_authorize",
+                decision.decision_id,
+                decision.deny_reason,
+            ))
         }
     }
 
@@ -539,7 +651,11 @@ impl DataBrokerService {
             return Err(Status::unauthenticated("tenant_id is required"));
         }
         if security.purpose.trim().is_empty() {
-            return Err(Status::permission_denied("purpose is required"));
+            return Err(service_policy_denied(
+                "data_plane_authorize_item",
+                "purpose_required",
+                "purpose is required",
+            ));
         }
         let principal = Principal::from_security_context(security, Vec::new());
         let resource = ResourceRef::message(message_type);
@@ -556,7 +672,11 @@ impl DataBrokerService {
         if decision.allowed {
             Ok(decision.decision_id)
         } else {
-            Err(Status::permission_denied(decision.deny_reason))
+            Err(service_policy_denied(
+                "data_plane_authorize_item",
+                decision.decision_id,
+                decision.deny_reason,
+            ))
         }
     }
 
@@ -578,14 +698,22 @@ impl DataBrokerService {
         if allowed {
             Ok(())
         } else {
-            Err(Status::permission_denied(format!(
-                "scope udb:admin{} is required for {operation}",
+            Err(service_policy_denied(
+                "portal_permission",
                 if mutation {
-                    " or udb:portal:operator"
+                    "portal_operator_required"
                 } else {
-                    " or udb:portal:viewer"
-                }
-            )))
+                    "portal_viewer_required"
+                },
+                format!(
+                    "scope udb:admin{} is required for {operation}",
+                    if mutation {
+                        " or udb:portal:operator"
+                    } else {
+                        " or udb:portal:viewer"
+                    }
+                ),
+            ))
         }
     }
 
@@ -643,7 +771,14 @@ impl DataBrokerService {
                     redis
                         .get_multiplexed_async_connection()
                         .await
-                        .map_err(|e| Status::internal(format!("rate limit redis error: {}", e)))?,
+                        .map_err(|e| {
+                            crate::runtime::executor_utils::retryable_status(
+                                "redis",
+                                "rate_limit_connection",
+                                crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
+                                format!("rate limit redis error: {e}"),
+                            )
+                        })?,
                 );
             }
             guard
@@ -668,13 +803,27 @@ impl DataBrokerService {
             .arg(window_secs)
             .invoke_async(&mut conn)
             .await
-            .map_err(|e| Status::internal(format!("rate limit redis error: {e}")))?;
+            .map_err(|e| {
+                crate::runtime::executor_utils::retryable_status(
+                    "redis",
+                    "rate_limit_eval",
+                    crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
+                    format!("rate limit redis error: {e}"),
+                )
+            })?;
 
         if count > u64::from(max_rps) {
-            return Err(Status::resource_exhausted(format!(
-                "rate limit exceeded: {}/{} requests per {}s window",
-                count, max_rps, window_secs
-            )));
+            let retry_after_ms =
+                (window_secs.saturating_sub(unix_epoch % window_secs).max(1) as i64) * 1_000;
+            return Err(crate::runtime::executor_utils::quota_status(
+                "data_broker",
+                "distributed rate limit",
+                retry_after_ms,
+                format!(
+                    "rate limit exceeded: {}/{} requests per {}s window",
+                    count, max_rps, window_secs
+                ),
+            ));
         }
         Ok(())
     }
@@ -782,16 +931,21 @@ impl DataBrokerService {
         context: &crate::RequestContext,
     ) -> Response<MutationResponse> {
         let active = self.catalog.active_for(&context.project_id);
-        let receipt_json = if mutation.write_receipt_json.trim().is_empty() {
-            let receipt = self
-                .runtime_snapshot()
-                .current_write_receipt(&active.metadata.checksum)
-                .await;
-            serde_json::to_string(&receipt).unwrap_or_default()
+        let receipt = if let Some(receipt) = mutation.write_receipt.as_ref() {
+            crate::runtime::consistency::WriteReceipt::from_proto(receipt)
+        } else if !mutation.write_receipt_json.trim().is_empty() {
+            serde_json::from_str::<crate::runtime::consistency::WriteReceipt>(
+                &mutation.write_receipt_json,
+            )
+            .unwrap_or_else(|_| crate::runtime::consistency::WriteReceipt::empty())
         } else {
-            mutation.write_receipt_json.clone()
+            self.runtime_snapshot()
+                .current_write_receipt(&active.metadata.checksum)
+                .await
         };
+        let receipt_json = serde_json::to_string(&receipt).unwrap_or_default();
         mutation.write_receipt_json = receipt_json.clone();
+        mutation.write_receipt = Some(receipt.to_proto());
         let mut response = self.with_catalog_response_headers(Response::new(mutation), context);
         insert_ascii_header(
             response.metadata_mut(),
@@ -899,10 +1053,12 @@ impl DataBrokerService {
             Ok(Err(e)) => Err(e),
             Err(_) => {
                 self.metrics.inc_channel_timeout(op.as_str());
-                Err(Status::deadline_exceeded(format!(
-                    "{} channel timeout",
-                    op.as_str()
-                )))
+                Err(crate::runtime::executor_utils::deadline_exceeded_status(
+                    backend_label,
+                    format!("{} channel", op.as_str()),
+                    crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
+                    format!("{} channel timeout", op.as_str()),
+                ))
             }
         }
     }
@@ -981,13 +1137,15 @@ fn check_backend_capability(
     use crate::planning::backend::BackendKind;
     let backend_base = backend_selector_base(backend);
     let Some(kind) = BackendKind::from_store_kind("", backend_base) else {
-        return Err(Status::invalid_argument(format!(
-            "unknown backend '{backend}'"
-        )));
+        return Err(unknown_backend_status(backend));
     };
     let state = crate::backend::support_state_for_kind(&kind);
     if !state.is_runtime_supported() {
-        return Err(Status::failed_precondition(state.diagnostic(kind.as_str())));
+        return Err(backend_runtime_unsupported_status(
+            backend,
+            operation,
+            state.diagnostic(kind.as_str()),
+        ));
     }
     let cap = kind.capabilities();
     if capability_fn(&cap) {
@@ -1009,23 +1167,23 @@ fn check_generic_dispatch_operation(backend: &str, operation: &str) -> Result<()
     use crate::planning::backend::BackendKind;
     let backend_base = backend_selector_base(backend);
     let Some(kind) = BackendKind::from_store_kind("", backend_base) else {
-        return Err(Status::invalid_argument(format!(
-            "unknown backend '{backend}'"
-        )));
+        return Err(unknown_backend_status(backend));
     };
     let state = crate::backend::support_state_for_kind(&kind);
     if !state.is_runtime_supported() {
-        return Err(Status::failed_precondition(state.diagnostic(kind.as_str())));
+        return Err(backend_runtime_unsupported_status(
+            backend,
+            operation,
+            state.diagnostic(kind.as_str()),
+        ));
     }
     let supported = match operation {
         "ping" | "probe" | "ensure_resource" | "drop_resource" | "list_resources" | "query"
-        | "mutate" | "transaction" | "search" | "get_object" | "put_object" => {
+        | "mutate" | "transaction" | "search" | "get_object" | "put_object" | "delete_object" => {
             kind.supports_operation(operation)
         }
         other => {
-            return Err(Status::invalid_argument(format!(
-                "unknown operation '{other}'; allowed: ping, probe, ensure_resource, drop_resource, list_resources, query, mutate, transaction, search, get_object, put_object"
-            )));
+            return Err(unknown_generic_operation_status(other));
         }
     };
     if supported {
@@ -1041,6 +1199,34 @@ fn check_generic_dispatch_operation(backend: &str, operation: &str) -> Result<()
             ),
         ))
     }
+}
+
+fn backend_runtime_unsupported_status(backend: &str, operation: &str, message: String) -> Status {
+    crate::runtime::executor_utils::capability_status(
+        backend,
+        operation,
+        "backend_runtime_support",
+        message,
+    )
+}
+
+fn unknown_backend_status(backend: &str) -> Status {
+    crate::runtime::executor_utils::invalid_argument_fields(
+        format!("unknown backend '{backend}'"),
+        [("backend", "must name a supported backend")],
+    )
+}
+
+fn unknown_generic_operation_status(operation: &str) -> Status {
+    crate::runtime::executor_utils::invalid_argument_fields(
+        format!(
+            "unknown operation '{operation}'; allowed: ping, probe, ensure_resource, drop_resource, list_resources, query, mutate, transaction, search, get_object, put_object, delete_object"
+        ),
+        [(
+            "operation",
+            "must be a supported generic dispatch operation",
+        )],
+    )
 }
 
 fn backend_selector_base(selector: &str) -> &str {
@@ -1060,6 +1246,29 @@ fn non_empty(value: &str) -> Option<&str> {
     (!value.is_empty()).then_some(value)
 }
 
+fn catalog_compatibility_status(operation: &str, message: String) -> Status {
+    crate::runtime::executor_utils::schema_status(
+        tonic::Code::FailedPrecondition,
+        "catalog",
+        operation,
+        "catalog_version_incompatible",
+        message,
+    )
+}
+
+fn service_policy_denied(
+    operation: impl Into<String>,
+    policy_decision_id: impl Into<String>,
+    message: impl Into<String>,
+) -> Status {
+    crate::runtime::executor_utils::policy_status_with_code(
+        tonic::Code::PermissionDenied,
+        operation,
+        policy_decision_id,
+        message,
+    )
+}
+
 /// Require that the caller carries the `udb:admin` scope (or a matching
 /// wildcard) for admin-only RPCs. Delegates to [`SecurityContext::has_scope`],
 /// which honors the exact `udb:admin` scope as well as the `udb:*` and `*`
@@ -1069,7 +1278,11 @@ fn require_admin_scope(security: &SecurityContext) -> Result<(), Status> {
     if security.has_scope("udb:admin") {
         Ok(())
     } else {
-        Err(Status::permission_denied("scope udb:admin is required"))
+        Err(service_policy_denied(
+            "admin_scope",
+            "admin_scope_required",
+            "scope udb:admin is required",
+        ))
     }
 }
 
@@ -1103,7 +1316,9 @@ fn guard_rls_bypass_operation(operation: &str, spec_json: &str) -> Result<(), St
         || (matches!(operation, "query" | "mutate" | "transaction")
             && contains_rls_bypass_sql(spec_json));
     if bypass_like && !rls_bypass_ack(spec_json) {
-        return Err(Status::failed_precondition(
+        return Err(crate::runtime::executor_utils::policy_status(
+            "generic_dispatch_rls_bypass",
+            "rls_bypass_review_required",
             "operation may bypass tenant isolation/RLS; set spec_json.udb_allow_rls_bypass=true after explicit tenant-scope review",
         ));
     }
@@ -1145,7 +1360,9 @@ impl tonic::service::Interceptor for WebrtcPeerTokenAuth {
             )
         });
         if !allowed {
-            return Err(Status::permission_denied(
+            return Err(service_policy_denied(
+                "webrtc_peer_token",
+                "webrtc_peer_scope_required",
                 "scope udb:webrtc:peer or udb:webrtc:signal is required",
             ));
         }
@@ -1155,7 +1372,9 @@ impl tonic::service::Interceptor for WebrtcPeerTokenAuth {
             && !header_tenant.trim().is_empty()
             && claims.tenant_id.as_deref().unwrap_or_default() != header_tenant
         {
-            return Err(Status::permission_denied(
+            return Err(service_policy_denied(
+                "webrtc_peer_token",
+                "webrtc_peer_tenant_mismatch",
                 "x-tenant-id must match the peer token tenant",
             ));
         }
@@ -1268,10 +1487,19 @@ fn backend_instance_status(
 
 fn parse_catalog_manifest_payload(bytes: &[u8]) -> Result<CatalogManifest, Status> {
     if bytes.is_empty() {
-        return Err(Status::invalid_argument("manifest_json is required"));
+        return Err(crate::runtime::executor_utils::invalid_argument_fields(
+            "manifest_json is required",
+            [(
+                "manifest_json",
+                "must contain a CatalogManifest JSON payload",
+            )],
+        ));
     }
     serde_json::from_slice::<CatalogManifest>(bytes).map_err(|err| {
-        Status::invalid_argument(format!("manifest_json is not a CatalogManifest: {err}"))
+        crate::runtime::executor_utils::invalid_argument_fields(
+            format!("manifest_json is not a CatalogManifest: {err}"),
+            [("manifest_json", "must decode as a CatalogManifest")],
+        )
     })
 }
 
@@ -1512,7 +1740,7 @@ pub async fn serve(
     // EAGERLY at startup so a corrupt/empty embedded descriptor fails fast here
     // (fail-closed) rather than lazily on the first RPC after we are already
     // serving. `method_security_registry()` aborts on a zero-service / undecodable
-    // manifest via `descriptor_contract_manifest()`.
+    // manifest via `descriptor_contract_manifest_static()`.
     let _ = crate::runtime::service::method_security::method_security_registry();
 
     if !runtime.postgres_configured() {
@@ -2160,6 +2388,8 @@ pub async fn serve(
     // (it is moved into the data-plane server below). The listener only binds
     // when UDB_SCIM_HTTP_ADDR is set, so this is otherwise an idle Arc.
     let scim_http_idp = std::sync::Arc::new(service.build_identity_provider_service());
+    // W9 (4.2): SAML 2.0 Web-SSO ACS over HTTP — off unless UDB_SAML_HTTP_ADDR is set.
+    let saml_http_idp = std::sync::Arc::new(service.build_identity_provider_service());
 
     // Phase 9: versioned control-plane policy distribution (xDS-style) — streams
     // versioned resources to nodes with ACK/NACK/nonce + ordered delivery.
@@ -2170,6 +2400,355 @@ pub async fn serve(
     let tenant_service = service.build_tenant_service();
     let notification_service = service.build_notification_service();
     let analytics_service = service.build_analytics_service();
+    // W12 (Phase 9): native LockService (9.2) + SchedulerService (9.3).
+    let lock_service = service.build_lock_service();
+    let scheduler_service = service.build_scheduler_service();
+    // W13 (Phase 9): flagship VaultService (9.1) + CacheService (9.6).
+    let vault_service = service.build_vault_service();
+    let cache_service = service.build_cache_service();
+    // W14 (Phase 9): WebhookService (9.4) + BackupService (9.10).
+    let webhook_service = service.build_webhook_service();
+    let backup_service = service.build_backup_service();
+    // W15 (Phase 9): SearchService (9.5) + ConfigService (9.8).
+    let search_service = service.build_search_service();
+    let config_service = service.build_config_service();
+    // W16 (Phase 9): MeteringService (9.9). Usage rows are rolled up by a
+    // leader-elected worker into `udb.metering.rollup.v1` outbox events for
+    // billing/export consumers. 9.13 ReportDelivery rides on the already-wired
+    // NotificationService (no new registration); with `http-client`, a
+    // leader-elected generic provider worker drains queued notification intents.
+    let metering_service = service.build_metering_service();
+    // W17 (Phase 9): LiveQueryService (9.7) + WorkflowService (9.12).
+    let livequery_service = service.build_livequery_service();
+    let workflow_service = service.build_workflow_service();
+    // W18 (Phase 9): EmbeddingService (9.11). Inference runs in sidecars; the
+    // broker only emits deduped work events from the durable CDC journal and
+    // accepts the computed vectors through ReportEmbedding.
+    let embedding_service = service.build_embedding_service();
+    // 9.1: leader-elected Vault DB-credential lease reaper — revokes expired
+    // generated Postgres login roles and marks their durable lease rows REVOKED.
+    {
+        let vault_runtime = service.runtime.load_full();
+        if let Ok(vault_pool) = vault_runtime.native_store_pool_for_service("vault", true, "") {
+            let singleton_relation = vault_runtime.config().cdc.lock_log_relation();
+            let lease_pool = vault_pool.clone();
+            crate::runtime::service::native_runtime::NativeWorkerHost::spawn_while_leader(
+                crate::runtime::singleton::WORKER_VAULT_LEASE_REAPER,
+                "vault DB credential leases revoked expired login roles",
+                lease_pool,
+                singleton_relation,
+                crate::runtime::service::vault_service::vault_db_lease_reaper_interval(),
+                move || {
+                    let pool = vault_pool.clone();
+                    async move {
+                        crate::runtime::service::vault_service::run_vault_db_lease_reaper_once(
+                            &pool,
+                            crate::runtime::service::vault_service::VAULT_DB_LEASE_REAPER_BATCH,
+                        )
+                        .await
+                    }
+                },
+            );
+        }
+    }
+    // 9.9: leader-elected metering rollup — aggregates closed durable usage
+    // windows and emits deduped billing/export work events.
+    {
+        let metering_runtime = service.runtime.load_full();
+        if let Ok(metering_pool) =
+            metering_runtime.native_store_pool_for_service("metering", true, "")
+        {
+            let singleton_relation = metering_runtime.config().cdc.lock_log_relation();
+            let outbox_relation = metering_runtime.config().cdc.outbox_relation();
+            let journal_relation =
+                crate::runtime::system::SystemCatalogConfig::current().cdc_journal_relation();
+            let lease_pool = metering_pool.clone();
+            let metrics: Arc<dyn MetricsRecorder> = service.metrics.clone();
+            crate::runtime::service::native_runtime::NativeWorkerHost::spawn_while_leader(
+                crate::runtime::singleton::WORKER_METERING_ROLLUP,
+                "metering rollup emitted closed usage windows",
+                lease_pool,
+                singleton_relation,
+                crate::runtime::service::metering_service::metering_rollup_interval(),
+                move || {
+                    let pool = metering_pool.clone();
+                    let outbox = outbox_relation.clone();
+                    let journal = journal_relation.clone();
+                    let metrics = metrics.clone();
+                    async move {
+                        crate::runtime::service::metering_service::run_metering_rollup_once(
+                            &pool,
+                            &outbox,
+                            &journal,
+                            crate::runtime::service::metering_service::METERING_ROLLUP_BATCH,
+                            Some(&metrics),
+                        )
+                        .await
+                    }
+                },
+            );
+        }
+    }
+    {
+        let embedding_worker_service = std::sync::Arc::new(service.build_embedding_service());
+        let embedding_runtime = service.runtime.load_full();
+        if let Ok(embedding_pool) =
+            embedding_runtime.native_store_pool_for_service("embedding", true, "")
+        {
+            let singleton_relation = embedding_runtime.config().cdc.lock_log_relation();
+            let journal_relation =
+                crate::runtime::system::SystemCatalogConfig::current().cdc_journal_relation();
+            crate::runtime::service::native_runtime::NativeWorkerHost::spawn_while_leader(
+                crate::runtime::singleton::WORKER_EMBEDDING_WORK_EMITTER,
+                "embedding work emitted source changes",
+                embedding_pool,
+                singleton_relation,
+                crate::runtime::service::embedding_service::embedding_work_emitter_interval(),
+                move || {
+                    let service = embedding_worker_service.clone();
+                    let journal = journal_relation.clone();
+                    async move {
+                        crate::runtime::service::embedding_service::run_embedding_work_emitter_once(
+                            service,
+                            &journal,
+                            crate::runtime::service::embedding_service::EMBEDDING_WORK_EMITTER_BATCH,
+                        )
+                        .await
+                    }
+                },
+            );
+        }
+    }
+    // 9.3: leader-elected scheduler tick — claims DUE jobs (FOR UPDATE SKIP LOCKED)
+    // and FIRES them as `udb.scheduler.job.fired.v1` outbox events (never executes
+    // payloads in-process). One winner cluster-wide via the singleton lease.
+    {
+        let scheduler_runtime = service.runtime.load_full();
+        if let Ok(scheduler_pool) =
+            scheduler_runtime.native_store_pool_for_service("scheduler", true, "")
+        {
+            let singleton_relation = scheduler_runtime.config().cdc.lock_log_relation();
+            let outbox_relation = scheduler_runtime.config().cdc.outbox_relation();
+            let lease_pool = scheduler_pool.clone();
+            let tick_interval = std::time::Duration::from_secs(
+                std::env::var("UDB_SCHEDULER_TICK_INTERVAL_SECS")
+                    .ok()
+                    .and_then(|v| v.parse::<u64>().ok())
+                    .filter(|v| *v > 0)
+                    .unwrap_or(30),
+            );
+            crate::runtime::service::native_runtime::NativeWorkerHost::spawn_while_leader(
+                crate::runtime::singleton::WORKER_SCHEDULER_TICK,
+                "scheduler tick fired due jobs",
+                lease_pool,
+                singleton_relation,
+                tick_interval,
+                move || {
+                    let pool = scheduler_pool.clone();
+                    let outbox = outbox_relation.clone();
+                    async move {
+                        crate::runtime::service::scheduler_service::run_scheduler_tick_once(
+                            &pool,
+                            Some(&outbox),
+                            crate::runtime::service::scheduler_service::SCHEDULER_TICK_BATCH,
+                        )
+                        .await
+                    }
+                },
+            );
+        }
+    }
+    // 9.12: leader-elected workflow tick — claims DUE workflow instances (FOR
+    // UPDATE SKIP LOCKED) and atomically advances durable state + transition
+    // outbox events. It does NOT execute payloads or compensation in-process;
+    // compensation remains on the existing saga recovery worker.
+    {
+        let workflow_runtime = service.runtime.load_full();
+        if let Ok(workflow_pool) =
+            workflow_runtime.native_store_pool_for_service("workflow", true, "")
+        {
+            let singleton_relation = workflow_runtime.config().cdc.lock_log_relation();
+            let outbox_relation = workflow_runtime.config().cdc.outbox_relation();
+            let stores = workflow_runtime.default_system_stores();
+            let lease_pool = workflow_pool.clone();
+            let tick_interval = std::time::Duration::from_secs(
+                std::env::var("UDB_WORKFLOW_TICK_INTERVAL_SECS")
+                    .ok()
+                    .and_then(|v| v.parse::<u64>().ok())
+                    .filter(|v| *v > 0)
+                    .unwrap_or(30),
+            );
+            crate::runtime::service::native_runtime::NativeWorkerHost::spawn_while_leader(
+                crate::runtime::singleton::WORKER_WORKFLOW_TICK,
+                "workflow tick advanced due instances",
+                lease_pool,
+                singleton_relation,
+                tick_interval,
+                move || {
+                    let pool = workflow_pool.clone();
+                    let outbox = outbox_relation.clone();
+                    let stores = stores.clone();
+                    async move {
+                        crate::runtime::service::workflow_service::run_workflow_tick_once(
+                            &pool,
+                            Some(&outbox),
+                            stores,
+                            crate::runtime::service::workflow_service::WORKFLOW_TICK_BATCH,
+                        )
+                        .await
+                    }
+                },
+            );
+        }
+    }
+    // 9.4: leader-elected webhook delivery — reads published CDC-journal events,
+    // joins them to active tenant-bound endpoints, POSTs with HMAC signatures,
+    // and writes terminal delivery journal rows. One winner cluster-wide via the
+    // singleton lease; no `http-client` feature means no external HTTP worker.
+    #[cfg(feature = "http-client")]
+    {
+        let webhook_runtime = service.runtime.load_full();
+        if let Ok(webhook_pool) = webhook_runtime.native_store_pool_for_service("webhook", true, "")
+        {
+            let singleton_relation = webhook_runtime.config().cdc.lock_log_relation();
+            let outbox_relation = webhook_runtime.config().cdc.outbox_relation();
+            let journal_relation =
+                crate::runtime::system::SystemCatalogConfig::current().cdc_journal_relation();
+            let lease_pool = webhook_pool.clone();
+            let http = reqwest::Client::new();
+            let metrics: Arc<dyn MetricsRecorder> = service.metrics.clone();
+            crate::runtime::service::native_runtime::NativeWorkerHost::spawn_while_leader(
+                crate::runtime::singleton::WORKER_WEBHOOK_DELIVERY,
+                "webhook delivery posted events",
+                lease_pool,
+                singleton_relation,
+                crate::runtime::service::webhook_service::webhook_delivery_interval(),
+                move || {
+                    let pool = webhook_pool.clone();
+                    let http = http.clone();
+                    let outbox = outbox_relation.clone();
+                    let journal = journal_relation.clone();
+                    let metrics = metrics.clone();
+                    async move {
+                        crate::runtime::service::webhook_service::run_webhook_delivery_worker_once(
+                            &http,
+                            &pool,
+                            Some(&outbox),
+                            &journal,
+                            crate::runtime::service::webhook_service::WEBHOOK_DELIVERY_BATCH,
+                            Some(&metrics),
+                        )
+                        .await
+                    }
+                },
+            );
+        }
+    }
+    // 9.6: leader-elected cache invalidation — reads published CDC-journal
+    // events, derives tenant scope fail-closed, sweeps the corresponding native
+    // cache namespace with Redis SCAN, and emits `udb.cache.invalidated.v1`.
+    // Requires both Redis and the cache native Postgres store.
+    #[cfg(feature = "redis")]
+    {
+        let cache_runtime = service.runtime.load_full();
+        if let (Some(cache_redis), Ok(cache_pool)) = (
+            cache_runtime.redis_clone(),
+            cache_runtime.native_store_pool_for_service("cache", true, ""),
+        ) {
+            let singleton_relation = cache_runtime.config().cdc.lock_log_relation();
+            let outbox_relation = cache_runtime.config().cdc.outbox_relation();
+            let journal_relation =
+                crate::runtime::system::SystemCatalogConfig::current().cdc_journal_relation();
+            let lease_pool = cache_pool.clone();
+            let metrics: Arc<dyn MetricsRecorder> = service.metrics.clone();
+            crate::runtime::service::native_runtime::NativeWorkerHost::spawn_while_leader(
+                crate::runtime::singleton::WORKER_CACHE_INVALIDATOR,
+                "cache invalidation swept namespaces",
+                lease_pool,
+                singleton_relation,
+                crate::runtime::service::cache_service::cache_invalidation_interval(),
+                move || {
+                    let redis = cache_redis.clone();
+                    let pool = cache_pool.clone();
+                    let outbox = outbox_relation.clone();
+                    let journal = journal_relation.clone();
+                    let metrics = metrics.clone();
+                    async move {
+                        crate::runtime::service::cache_service::run_cache_invalidation_worker_once(
+                            &redis,
+                            &pool,
+                            &outbox,
+                            &journal,
+                            crate::runtime::service::cache_service::CACHE_INVALIDATION_BATCH,
+                            Some(&metrics),
+                        )
+                        .await
+                    }
+                },
+            );
+        }
+    }
+    // 9.13: leader-elected notification delivery — drains queued PENDING
+    // NotificationLog rows through the generic HTTP provider adapter. Provider
+    // SDKs remain out-of-broker sidecars; this worker only uses endpoint +
+    // wrapped credential envelopes resolved once from config.
+    #[cfg(feature = "http-client")]
+    {
+        let notification_runtime = service.runtime.load_full();
+        if let Ok(notification_pool) =
+            notification_runtime.native_store_pool_for_service("notification", true, "")
+        {
+            let singleton_relation = notification_runtime.config().cdc.lock_log_relation();
+            let outbox_relation = notification_runtime.config().cdc.outbox_relation();
+            let http = reqwest::Client::new();
+            let lease_pool = notification_pool.clone();
+            let metrics: Arc<dyn MetricsRecorder> = service.metrics.clone();
+            crate::runtime::service::native_runtime::NativeWorkerHost::spawn_while_leader(
+                crate::runtime::singleton::WORKER_NOTIFICATION_DELIVERY,
+                "notification delivery processed queued intents",
+                lease_pool,
+                singleton_relation,
+                crate::runtime::service::notification_service::notification_delivery_interval(),
+                move || {
+                    let runtime = notification_runtime.clone();
+                    let pool = notification_pool.clone();
+                    let outbox = outbox_relation.clone();
+                    let http = http.clone();
+                    let metrics = metrics.clone();
+                    async move {
+                        crate::runtime::service::notification_service::run_notification_delivery_worker_once(
+                            &http,
+                            runtime,
+                            &pool,
+                            Some(&outbox),
+                            crate::runtime::service::notification_service::NOTIFICATION_DELIVERY_BATCH,
+                            Some(&metrics),
+                        )
+                        .await
+                    }
+                },
+            );
+        }
+    }
+    // 4.4: leader-elected compliance-evidence export — periodically writes the
+    // audit window as chain-hashed JSONL (tamper-evident) to the compliance bucket
+    // through the object-store helper. One winner cluster-wide via the singleton
+    // lease (mirrors the scheduler tick). Off unless a compliance store resolves.
+    {
+        let evidence_runtime = service.runtime.load_full();
+        if let Ok(evidence_pool) =
+            evidence_runtime.native_store_pool_for_service("compliance", true, "")
+        {
+            let singleton_relation = evidence_runtime.config().cdc.lock_log_relation();
+            let config = crate::runtime::evidence_export::EvidenceExportConfig::from_env();
+            crate::runtime::evidence_export::spawn_evidence_export_worker(
+                evidence_runtime,
+                evidence_pool,
+                singleton_relation,
+                config,
+            );
+        }
+    }
     // Native storage (metadata/lifecycle), asset-management (pipelines), and
     // WebRTC (rooms/peers/tracks/TURN/signaling) control-plane services.
     let storage_service = service.build_storage_service();
@@ -2189,6 +2768,27 @@ pub async fn serve(
         }
     } else {
         tracing::info!("storage→asset auto-trigger consumer disabled: UDB_CDC_ENABLED=false");
+    }
+
+    // 5.2: leader-elected Kafka trigger-manager — reconciles one consumer per
+    // distinct pipeline `trigger_topic` (fail-closed if a topic is absent; no
+    // auto-create), so arbitrary topics (not just storage-finalized) can fire
+    // pipelines. Leader-only (one set of consumers cluster-wide via the lease).
+    #[cfg(feature = "kafka")]
+    if crate::runtime::cdc::cdc_delivery_enabled() {
+        if let Some(brokers) = runtime_config.kafka_brokers.clone() {
+            let trigger_runtime = service.runtime.load_full();
+            if let Ok(trigger_pool) =
+                trigger_runtime.native_store_pool_for_service("asset", true, "")
+            {
+                let singleton_relation = trigger_runtime.config().cdc.lock_log_relation();
+                std::sync::Arc::new(service.build_asset_service()).spawn_trigger_manager(
+                    brokers,
+                    trigger_pool,
+                    singleton_relation,
+                );
+            }
+        }
     }
 
     // Network-isolate the native auth control plane. `AuthnService` /
@@ -2273,6 +2873,28 @@ pub async fn serve(
             control_plane_service,
         )))
         .add_service(msec.wrap(tenant_service::TenantServiceServer::new(tenant_service)))
+        .add_service(msec.wrap(lock_service::LockServiceServer::new(lock_service)))
+        .add_service(msec.wrap(scheduler_service::SchedulerServiceServer::new(
+            scheduler_service,
+        )))
+        .add_service(msec.wrap(vault_service::VaultServiceServer::new(vault_service)))
+        .add_service(msec.wrap(cache_service::CacheServiceServer::new(cache_service)))
+        .add_service(msec.wrap(webhook_service::WebhookServiceServer::new(webhook_service)))
+        .add_service(msec.wrap(backup_service::BackupServiceServer::new(backup_service)))
+        .add_service(msec.wrap(search_service::SearchServiceServer::new(search_service)))
+        .add_service(msec.wrap(config_service::ConfigServiceServer::new(config_service)))
+        .add_service(msec.wrap(metering_service::MeteringServiceServer::new(
+            metering_service,
+        )))
+        .add_service(msec.wrap(livequery_service::LiveQueryServiceServer::new(
+            livequery_service,
+        )))
+        .add_service(msec.wrap(workflow_service::WorkflowServiceServer::new(
+            workflow_service,
+        )))
+        .add_service(msec.wrap(embedding_service::EmbeddingServiceServer::new(
+            embedding_service,
+        )))
         .add_service(
             msec.wrap(notification_service::NotificationServiceServer::new(
                 notification_service,
@@ -2373,6 +2995,9 @@ pub async fn serve(
     // requests onto the SAME gRPC SCIM handlers, so persistence + IdP events are
     // not duplicated. Detached task bound to the shared shutdown signal.
     let _scim_http = auth_service::spawn_scim_http_from_env(scim_http_idp, shutdown_signal());
+    // W9 (4.2): SAML ACS/metadata HTTP listener — mirrors SCIM (off by default,
+    // fail-closed, reuses the gRPC IdP saml_acs handler + its XML-DSig check).
+    let _saml_http = auth_service::spawn_saml_http_from_env(saml_http_idp, shutdown_signal());
 
     // Run selected listeners together; if one exits (error, graceful shutdown, or
     // unexpected listener completion), bring down all. `try_join!` waits after an

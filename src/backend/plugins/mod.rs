@@ -9,6 +9,18 @@
 
 use crate::backend::plugin::Backend;
 
+pub(super) fn dispatch_instance_not_configured_status(
+    backend: &'static str,
+    message: impl Into<String>,
+) -> tonic::Status {
+    crate::runtime::executor_utils::capability_status(
+        backend,
+        "dispatch_executor",
+        "configured_instance",
+        message,
+    )
+}
+
 #[cfg(feature = "azureblob")]
 pub mod azureblob;
 #[cfg(feature = "cassandra")]
@@ -101,4 +113,38 @@ pub fn all() -> Vec<&'static dyn Backend> {
     #[cfg(feature = "gcs")]
     out.push(&gcs::PLUGIN);
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::dispatch_instance_not_configured_status;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
+
+    #[test]
+    fn dispatch_instance_not_configured_carries_capability_detail() {
+        let status = dispatch_instance_not_configured_status(
+            "mysql",
+            "MySQL instance 'archive' is not configured (set UDB_MYSQL_DSN)",
+        );
+        assert_eq!(status.code(), tonic::Code::FailedPrecondition);
+        assert_eq!(
+            status.message(),
+            "MySQL instance 'archive' is not configured (set UDB_MYSQL_DSN)"
+        );
+
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present");
+        let detail = crate::runtime::executor_utils::decode_error_detail_from_raw(&raw);
+        assert_eq!(detail.kind, ErrorKind::Capability as i32);
+        assert_eq!(detail.backend, "mysql");
+        assert_eq!(detail.operation, "dispatch_executor");
+        assert_eq!(detail.capability_required, "configured_instance");
+        assert!(detail.field_violations.is_empty());
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+    }
 }

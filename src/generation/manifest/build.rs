@@ -1197,7 +1197,7 @@ pub(crate) fn generic_store_from_proto(
 /// S3/MinIO bucket names must be lowercase, so a literal/env-resolved name is
 /// lowercased. When a literal looks like an unresolved env-var key (UPPER /
 /// underscores) we warn, because that lowercases to an invalid bucket name
-/// (underscores are illegal) — the exact MedPAC failure.
+/// (underscores are illegal) — the exact unresolved-env-key failure.
 fn resolve_storage_bucket(bucket_env_key: &str, owner_table: &str, column_name: &str) -> String {
     let raw = bucket_env_key.trim();
     if raw.is_empty() {

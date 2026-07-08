@@ -1,0 +1,529 @@
+syntax = "proto3";
+
+package udb.core.metering.services.v1;
+
+import "google/api/annotations.proto";
+import "udb/core/common/v1/dto.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Metering.Services.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/metering/services/v1;meteringservicev1";
+option java_package = "com.udb.core.metering.services.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Metering\\Services\\V1";
+option php_namespace = "Udb\\Core\\Metering\\Services\\V1";
+
+// MeteringService (master-plan 9.9) — usage metering and quotas. Usage is an
+// append-only, durable stream of `UsageEvent` rows (written by a cheap admission
+// hook and by explicit RecordUsage ingest); quotas (`QuotaRule`) cap a metric
+// over a rolling window. CheckQuota is PURE aggregation — it sums the durable
+// rows in the window and compares against the limit (never an in-memory counter,
+// which would lie across restarts and replicas). Metering must NEVER fail the
+// metered request: the ingest hook log-and-swallows on error. Quota mutations are
+// durable, tenant-scoped by the verified claim, bump a monotone per-row revision,
+// and emit `udb.metering.quota.changed.v1`.
+service MeteringService {
+  option (udb.core.common.v1.native_service) = {
+    service_id: "metering"
+    logical_service_id: "metering"
+    proto_service_id: "metering"
+    display_name: "Metering"
+    category: "metering"
+    default_enabled: true
+    requires_postgres: true
+    control_plane_listener_allowed: true
+    sdk_facade_name: "metering"
+    cli_scaffold_group: "metering"
+    health_check_ref: "metering"
+    capability_ref: "native.metering"
+  };
+  option (udb.core.common.v1.service_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "metering"
+    generate_minimal_example: true
+  };
+  option (udb.core.common.v1.service_cli_scaffold) = {
+    scaffold_package: "metering"
+    import_path: "udb/native/metering"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+    generated_files: "udb.native.metering.config"
+    required_native_services: "metering"
+    secret_placeholders: "UDB_API_KEY"
+    smoke_test_command: "udb native lint"
+  };
+  option (udb.core.common.v1.service_dependency_contract) = {
+    required_native_services: "metering"
+    required_backends: "postgres"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+  };
+
+  // Explicitly ingest a usage event. Durable append (single INSERT, no read);
+  // attribution-only — it never blocks the caller's real operation.
+  rpc RecordUsage(RecordUsageRequest) returns (RecordUsageResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:metering:record-usage"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "metering.RecordUsage"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "record_usage" rest_operation_id: "recordUsage"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "metering"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "metering"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/metering/usage:record"
+      body: "*"
+    };
+  }
+
+  // Aggregate a tenant's usage for a metric over a rolling window (durable SUM).
+  rpc QueryUsage(QueryUsageRequest) returns (QueryUsageResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:metering:query-usage"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "metering.QueryUsage"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "query_usage" rest_operation_id: "queryUsage"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "metering"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "metering"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/metering/usage:query"
+      body: "*"
+    };
+  }
+
+  // Create or update a quota rule at a (tenant, project, metric) scope. Bumps the
+  // rule's monotone revision and emits `udb.metering.quota.changed.v1`.
+  rpc PutQuota(PutQuotaRequest) returns (PutQuotaResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:metering:put-quota"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "metering.PutQuota"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "put_quota" rest_operation_id: "putQuota"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "metering"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "metering"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "metering.PutQuota"
+      outbox_topic: "udb.metering.quota.changed.v1"
+      partition_key_field: "metric"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/metering/quotas:put"
+      body: "*"
+    };
+  }
+
+  // Fetch a single quota rule at an exact (tenant, project, metric) scope.
+  rpc GetQuota(GetQuotaRequest) returns (GetQuotaResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:metering:get-quota"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "metering.GetQuota"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "get_quota" rest_operation_id: "getQuota"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "metering"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "metering"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/metering/quotas/{metric}"};
+  }
+
+  // List a tenant's quota rules, optionally narrowed to a project.
+  rpc ListQuotas(ListQuotasRequest) returns (ListQuotasResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:metering:list-quotas"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "metering.ListQuotas"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "list_quotas" rest_operation_id: "listQuotas"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "metering"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "metering"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/metering/quotas"};
+  }
+
+  // Check a quota: sum durable usage in the rule's window and compare against the
+  // limit. Returns {allowed, used, limit, remaining}. The ingest hook remains
+  // best-effort, but explicit quota checks fail closed when the durable aggregate
+  // is unavailable, so an outage cannot silently bypass an enabled quota.
+  rpc CheckQuota(CheckQuotaRequest) returns (CheckQuotaResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:metering:check-quota"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "metering.CheckQuota"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "check_quota" rest_operation_id: "checkQuota"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "metering"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "metering"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/metering/quotas:check"
+      body: "*"
+    };
+  }
+}
+
+// A stored quota rule returned by Get/List.
+message QuotaState {
+  string tenant_id = 1;
+  string project_id = 2;
+  string metric = 3;
+  int64 limit_value = 4;
+  int64 window_seconds = 5;
+  bool enabled = 6;
+  int64 revision = 7;
+  string metadata_json = 8;
+}
+
+message RecordUsageRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "metering"
+    generate_minimal_example: true
+  };
+  // Verified against the bearer/claim tenant; cross-tenant values are rejected.
+  string tenant_id = 1;
+  string principal_id = 2;
+  string method = 3;
+  string unit = 4;
+  int64 quantity = 5;
+  // Event time (unix seconds); 0 = server now.
+  int64 occurred_at_unix = 6;
+  string metadata_json = 7; // JSON
+}
+
+message RecordUsageResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "metering"
+    generate_minimal_example: true
+  };
+  // True when the durable append was attempted. Metering never fails the caller:
+  // an underlying store error is swallowed and surfaced as recorded=false.
+  bool recorded = 1;
+  string message = 2;
+  udb.core.common.v1.ApiError error = 3;
+}
+
+message QueryUsageRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "metering"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string metric = 2;
+  // Rolling window length in seconds; 0 defaults to 24h.
+  int64 window_seconds = 3;
+}
+
+message QueryUsageResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "metering"
+    generate_minimal_example: true
+  };
+  string metric = 1;
+  int64 used = 2;
+  int64 window_seconds = 3;
+  int64 from_unix = 4;
+  int64 to_unix = 5;
+  string message = 6;
+  udb.core.common.v1.ApiError error = 7;
+}
+
+message PutQuotaRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "metering"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string project_id = 2;
+  string metric = 3;
+  int64 limit_value = 4;
+  int64 window_seconds = 5;
+  bool enabled = 6;
+  string metadata_json = 7; // JSON
+}
+
+message PutQuotaResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "metering"
+    generate_minimal_example: true
+  };
+  bool stored = 1;
+  string metric = 2;
+  int64 revision = 3;
+  string message = 4;
+  udb.core.common.v1.ApiError error = 5;
+}
+
+message GetQuotaRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "metering"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string project_id = 2;
+  string metric = 3;
+}
+
+message GetQuotaResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "metering"
+    generate_minimal_example: true
+  };
+  bool found = 1;
+  QuotaState quota = 2;
+  string message = 3;
+  udb.core.common.v1.ApiError error = 4;
+}
+
+message ListQuotasRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "metering"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string project_id = 2;
+  uint32 limit = 3;
+  // Requested page size. Defaults to limit/default-list-limit and is capped at
+  // the native list maximum.
+  int32 page_size = 4;
+  // Opaque pagination token returned by ListQuotasResponse.next_page_token.
+  string page_token = 5;
+}
+
+message ListQuotasResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "metering"
+    generate_minimal_example: true
+  };
+  repeated QuotaState quotas = 1;
+  string message = 2;
+  udb.core.common.v1.ApiError error = 3;
+  // Opaque token for the next page; empty when no more quotas are available.
+  string next_page_token = 4;
+}
+
+message CheckQuotaRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "metering"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string project_id = 2;
+  string metric = 3;
+}
+
+message CheckQuotaResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "metering"
+    generate_minimal_example: true
+  };
+  bool allowed = 1;
+  int64 used = 2;
+  int64 limit_value = 3;
+  int64 remaining = 4;
+  // True when no enabled rule governs the metric (unenforced → allowed).
+  bool unlimited = 5;
+  string message = 6;
+  udb.core.common.v1.ApiError error = 7;
+}

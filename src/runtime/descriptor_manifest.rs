@@ -1442,7 +1442,7 @@ struct DbColumnSecurityOpts {
     project_field: bool,
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(udb_portable)))]
 mod tests {
     use super::*;
 
@@ -1635,6 +1635,37 @@ mod tests {
                 "/udb.core.notification.services.v1.NotificationService/SendNotification",
                 &["udb.notification.sent.v1"],
             ),
+            // ReportDelivery publishes `udb.notification.delivery.<status>.v1`
+            // (emit_delivery_event/delivery_event_topic). The contract declares the
+            // canonical conditional emit (delivered.v1); the handler emits it on the
+            // delivered path. Other terminal statuses (sent/failed/pending) reuse the
+            // same conditional emit family.
+            (
+                "/udb.core.notification.services.v1.NotificationService/ReportDelivery",
+                &["udb.notification.delivery.delivered.v1"],
+            ),
+            // webrtc (src/runtime/service/webrtc_service/mod.rs)
+            (
+                "/udb.core.webrtc.services.v1.RoomService/StartRoomComposite",
+                &[
+                    "udb.webrtc.egress.started.v1",
+                    "udb.webrtc.egress.failed.v1",
+                ],
+            ),
+            (
+                "/udb.core.webrtc.services.v1.RoomService/StartTrackEgress",
+                &[
+                    "udb.webrtc.egress.started.v1",
+                    "udb.webrtc.egress.failed.v1",
+                ],
+            ),
+            (
+                "/udb.core.webrtc.services.v1.RoomService/StopEgress",
+                &[
+                    "udb.webrtc.egress.stopped.v1",
+                    "udb.webrtc.egress.failed.v1",
+                ],
+            ),
             // tenant: no runtime emits — intentional no-event (empty emits[]).
         ];
 
@@ -1727,20 +1758,20 @@ mod tests {
 
     // Phase 6 (final_task.md §7 "Make no-leak tests descriptor-derived so new
     // sensitive fields are automatically covered"): every field a proto marks
-    // `OUTPUT_VIEW_STORAGE_ONLY` must never be surfaced in an RPC response. This
-    // gate ENUMERATES that set from the descriptor, so a newly-annotated
-    // storage-only field automatically appears here and fails the assertion until
-    // it is acknowledged — at which point a `*_noleak_live` assertion must blank
-    // it. (The live no-leak tests prove the mappers actually blank User/Session
-    // fields; this descriptor gate proves the *coverage set* stays complete.)
+    // `OUTPUT_VIEW_STORAGE_ONLY` must be covered by the generated outbound DTO
+    // redaction layer. The assertion is keyed by full message name and field
+    // name so same-named secret fields cannot accidentally mask each other.
     #[test]
-    fn storage_only_fields_match_no_leak_coverage_set() {
+    fn storage_only_fields_match_generated_redaction_coverage() {
         if !embedded_contract_available() {
             return;
         }
         const OUTPUT_VIEW_STORAGE_ONLY: i32 = 1;
         let manifest = descriptor_contract_manifest();
-        let mut found: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+        let mut descriptor_fields: std::collections::BTreeMap<
+            String,
+            std::collections::BTreeSet<String>,
+        > = std::collections::BTreeMap::new();
         for message in &manifest.messages {
             for field in &message.fields {
                 let storage_only = field
@@ -1748,39 +1779,80 @@ mod tests {
                     .as_ref()
                     .is_some_and(|cs| cs.output_view == OUTPUT_VIEW_STORAGE_ONLY);
                 if storage_only {
-                    found.insert(field.name.clone());
+                    descriptor_fields
+                        .entry(message.full_name.clone())
+                        .or_default()
+                        .insert(field.name.clone());
                 }
             }
         }
-        // The acknowledged storage-only field names. Adding a new STORAGE_ONLY
-        // proto field will fail this test until it is added here AND blanked by a
-        // no-leak assertion, so a new sensitive field can never silently leak.
-        let expected: std::collections::BTreeSet<String> = [
-            "client_secret",
-            "code_hash",
-            "csrf_token_hash",
-            "current_refresh_jti_hash",
-            "device_fingerprint_hash",
-            "encrypted_private_material",
-            "fingerprint_hash",
-            "jti_hash",
-            "key_hash",
-            "passkey_json",
-            "password_hash",
-            "previous_refresh_jti_hash",
-            "saml_signing_key_pem",
-            "session_token_hash",
-            "session_token_lookup",
-            "state_json",
-            "totp_secret_enc",
-        ]
-        .into_iter()
-        .map(str::to_string)
-        .collect();
+
+        let generated_fields: std::collections::BTreeMap<
+            String,
+            std::collections::BTreeSet<String>,
+        > = crate::proto_redaction::GENERATED_STORAGE_ONLY_REDACTION_FIELDS
+            .iter()
+            .map(|(message, fields)| {
+                (
+                    (*message).to_string(),
+                    fields.iter().map(|field| (*field).to_string()).collect(),
+                )
+            })
+            .collect();
+
         assert_eq!(
-            found, expected,
-            "OUTPUT_VIEW_STORAGE_ONLY field set changed; update this gate AND ensure \
-             a *_noleak_live test blanks any new field so it cannot leak in responses"
+            descriptor_fields, generated_fields,
+            "OUTPUT_VIEW_STORAGE_ONLY descriptor fields must exactly match the \
+             generated RedactStorageOnly coverage map"
+        );
+    }
+
+    // Pure (no live DB) no-leak coverage for the Phase 9 vault/webhook secret
+    // columns. The build.rs `RedactStorageOnly` codegen blanks every
+    // OUTPUT_VIEW_STORAGE_ONLY field before an entity leaves the broker in a
+    // response; this exercises that generated redaction layer directly and asserts
+    // the four newly-annotated storage-only fields are actually stripped, so they
+    // can never be surfaced in an RPC response. (The live auth `*_noleak_live`
+    // tests prove the same for the User/Session columns against real Postgres; this
+    // gives the vault/webhook columns equivalent coverage without live infra.)
+    #[test]
+    fn phase9_storage_only_fields_are_blanked_by_generated_redaction() {
+        use crate::proto_redaction::RedactStorageOnly;
+
+        let mut secret = crate::proto::udb::core::vault::entity::v1::VaultSecret {
+            ciphertext: "sealed-secret-bytes".to_string(),
+            data_key_wrapped: "wrapped-dek".to_string(),
+            ..Default::default()
+        };
+        secret.redact_storage_only();
+        assert!(
+            secret.ciphertext.is_empty(),
+            "VaultSecret.ciphertext must be blanked by the storage-only redaction layer"
+        );
+        assert!(
+            secret.data_key_wrapped.is_empty(),
+            "VaultSecret.data_key_wrapped must be blanked by the storage-only redaction layer"
+        );
+
+        let mut key = crate::proto::udb::core::vault::entity::v1::VaultTransitKey {
+            wrapped_key_material: "wrapped-transit-dek".to_string(),
+            ..Default::default()
+        };
+        key.redact_storage_only();
+        assert!(
+            key.wrapped_key_material.is_empty(),
+            "VaultTransitKey.wrapped_key_material must be blanked by the storage-only \
+             redaction layer"
+        );
+
+        let mut endpoint = crate::proto::udb::core::webhook::entity::v1::WebhookEndpoint {
+            signing_secret: "hmac-signing-secret".to_string(),
+            ..Default::default()
+        };
+        endpoint.redact_storage_only();
+        assert!(
+            endpoint.signing_secret.is_empty(),
+            "WebhookEndpoint.signing_secret must be blanked by the storage-only redaction layer"
         );
     }
 

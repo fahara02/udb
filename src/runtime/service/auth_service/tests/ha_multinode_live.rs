@@ -516,6 +516,167 @@ async fn live_postgres_ha_policy_distribution_ack_nack_rollback() {
     cleanup_native_auth_db(&pool).await;
 }
 
+/// 6.2 served-path reload metric: the reload counter must fire through the REAL
+/// subscriber serving path (`subscriber::run_once`), not a stubbed recorder call.
+/// Seeds a baseline (no reload counted), publishes a fresh routing policy into the
+/// registry, ticks the subscriber again, and asserts
+/// `udb_control_reload_applied_total` increments for the changed type on a REAL
+/// `PrometheusMetrics` recorder.
+#[tokio::test]
+#[ignore = "requires live Postgres; run with UDB_LIVE_AUTH_TESTS=1 cargo test --lib live_postgres_control_reload_metric_fires_on_served_path -- --ignored --nocapture"]
+async fn live_postgres_control_reload_metric_fires_on_served_path() {
+    use super::super::control_plane::subscriber::{self, LastSeen, SubscriberHandle};
+    use crate::runtime::config::UdbConfig;
+    use crate::runtime::metrics::{MetricsRecorder, PrometheusMetrics};
+    use std::sync::Arc;
+
+    let _guard = live_auth_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_auth_db(&pool).await;
+
+    // A REAL prometheus recorder so the assertion proves the SERVED path emits the
+    // metric (not a direct `inc_control_reload_applied` stub call).
+    let metrics = Arc::new(PrometheusMetrics::new().expect("build prometheus metrics"));
+    let metrics_sink: Arc<dyn MetricsRecorder> = metrics.clone();
+    let handle = SubscriberHandle::new(pool.clone(), Arc::new(UdbConfig::default()))
+        .with_metrics(metrics_sink);
+
+    // 1. Seed the baseline — the seeding pass must NOT count a reload.
+    let baseline = subscriber::run_once(&handle, &LastSeen::default(), false)
+        .await
+        .expect("seed subscriber baseline");
+    let seeded_text = metrics.gather_text("");
+    assert!(
+        !seeded_text.contains("udb_control_reload_applied_total"),
+        "the seeding pass must NOT count a reload:\n{seeded_text}"
+    );
+
+    // 2. Publish a brand-new routing policy directly into the registry; resync is
+    //    additive (never prunes), so the next tick observes a real change.
+    let rt = ResourceType::RoutingPolicy;
+    let name = format!("served-reload-{}", Uuid::new_v4().simple());
+    store::upsert_resource(
+        &pool,
+        rt,
+        &name,
+        "",
+        "billing",
+        r#"{"route":"primary"}"#,
+        "metric-test",
+    )
+    .await
+    .expect("publish routing policy");
+
+    // 3. A second served tick detects the change and fires the reload metric
+    //    THROUGH the real subscriber path (run_once -> inc_control_reload_applied).
+    let _next = subscriber::run_once(&handle, &baseline, true)
+        .await
+        .expect("served reload tick");
+    let text = metrics.gather_text("");
+    assert!(
+        text.lines().any(|line| {
+            line.starts_with("udb_control_reload_applied_total{")
+                && line.contains("RESOURCE_TYPE_ROUTING_POLICY")
+        }),
+        "the served reload path must increment udb_control_reload_applied_total \
+         for the changed type:\n{text}"
+    );
+
+    cleanup_native_auth_db(&pool).await;
+}
+
+/// 6.2 snapshot retention + rollback: serve v1 then a bad v2 (both retained in the
+/// per-(node,type) ring), then `RollbackResources` to the retained v1 — the
+/// handler re-publishes the retained payloads through the same content-addressed
+/// registry, restoring the v1 world version. An unknown target fails CLOSED.
+#[tokio::test]
+#[ignore = "requires live Postgres; run with UDB_LIVE_AUTH_TESTS=1 cargo test --lib live_postgres_control_rollback_resources_restores_retained_snapshot -- --ignored --nocapture"]
+async fn live_postgres_control_rollback_resources_restores_retained_snapshot() {
+    use super::super::control_plane::ControlPlaneServiceImpl;
+    use crate::proto::udb::core::control::services::v1 as control_pb;
+    use crate::proto::udb::core::control::services::v1::control_plane_service_server::ControlPlaneService;
+
+    let _guard = live_auth_db_lock().lock().await;
+    let pool = live_pg_pool().await;
+    migrate_native_auth_db(&pool).await;
+
+    let rt = ResourceType::RoutingPolicy;
+    let node = format!("rollback-node-{}", Uuid::new_v4().simple());
+    let name = format!("rollback-routing-{}", Uuid::new_v4().simple());
+
+    // v1: a good policy is published and SERVED (retained in the node's ring).
+    let v1_payload = r#"{"route":"primary","weight":100}"#;
+    store::upsert_resource(&pool, rt, &name, "", "billing", v1_payload, "rb-test")
+        .await
+        .expect("publish v1");
+    store::ensure_node_state(&pool, &node, rt, &[name.clone()])
+        .await
+        .expect("seed node state");
+    let v1_resources = store::list_resources(&pool, rt, None, &[name.clone()])
+        .await
+        .expect("list v1 resources");
+    let world_v1 = store::world_version(&pool, rt, None, &[name.clone()])
+        .await
+        .expect("world v1");
+    store::retain_served_snapshot(&pool, &node, rt, &world_v1, &v1_resources)
+        .await
+        .expect("retain v1 snapshot");
+
+    // v2: a bad policy is published and SERVED (now the newest retained snapshot).
+    let v2_payload = r#"{"route":"","weight":-1}"#;
+    store::upsert_resource(&pool, rt, &name, "", "billing", v2_payload, "rb-test")
+        .await
+        .expect("publish v2");
+    let v2_resources = store::list_resources(&pool, rt, None, &[name.clone()])
+        .await
+        .expect("list v2 resources");
+    let world_v2 = store::world_version(&pool, rt, None, &[name.clone()])
+        .await
+        .expect("world v2");
+    store::retain_served_snapshot(&pool, &node, rt, &world_v2, &v2_resources)
+        .await
+        .expect("retain v2 snapshot");
+    assert_ne!(world_v1, world_v2, "v2 must change the world version");
+
+    // Roll back to the retained v1 through the RPC handler.
+    let svc = ControlPlaneServiceImpl::new().with_postgres(Some(pool.clone()));
+    let resp = svc
+        .rollback_resources(Request::new(control_pb::RollbackResourcesRequest {
+            node_id: node.clone(),
+            resource_type: rt as i32,
+            target_version: world_v1.clone(),
+            ..Default::default()
+        }))
+        .await
+        .expect("rollback to retained v1")
+        .into_inner();
+    assert_eq!(resp.rolled_back_to_version, world_v1);
+    assert_eq!(resp.resources_restored, v1_resources.len() as i32);
+
+    // The registry world is back at v1 (content-addressed re-publish restores it).
+    let world_after = store::world_version(&pool, rt, None, &[name.clone()])
+        .await
+        .expect("world after rollback");
+    assert_eq!(
+        world_after, world_v1,
+        "rollback must restore the retained v1 world version"
+    );
+
+    // Fail-closed: an unretained target version yields FAILED_PRECONDITION.
+    let err = svc
+        .rollback_resources(Request::new(control_pb::RollbackResourcesRequest {
+            node_id: node.clone(),
+            resource_type: rt as i32,
+            target_version: "no-such-retained-version".to_string(),
+            ..Default::default()
+        }))
+        .await
+        .expect_err("an unretained target must fail closed");
+    assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+
+    cleanup_native_auth_db(&pool).await;
+}
+
 /// API-key revocation propagation: `node1` revokes an API key; `node2`'s
 /// `ValidateApiKey` (which did not create or revoke it) denies it immediately,
 /// because revocation is a durable store read on the shared pool — the API-key

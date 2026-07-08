@@ -31,6 +31,71 @@ use super::resources::{
 pub const RESOURCE_MSG: &str = "udb.core.control.entity.v1.ControlPlaneResource";
 pub const NODE_STATE_MSG: &str = "udb.core.control.entity.v1.ControlPlaneNodeState";
 
+fn control_store_invalid_fields<I, F, D>(message: impl Into<String>, fields: I) -> Status
+where
+    I: IntoIterator<Item = (F, D)>,
+    F: Into<String>,
+    D: Into<String>,
+{
+    crate::runtime::executor_utils::invalid_argument_fields(message, fields)
+}
+
+fn control_store_required_field(
+    message: &'static str,
+    field: &'static str,
+    description: &'static str,
+) -> Status {
+    control_store_invalid_fields(message, [(field, description)])
+}
+
+fn control_store_internal_status(
+    operation: impl Into<String>,
+    message: impl Into<String>,
+) -> Status {
+    crate::runtime::executor_utils::internal_status("control_plane", operation, message)
+}
+
+fn validate_resource_upsert_input(
+    resource_type: ResourceType,
+    name: &str,
+    payload_json: &str,
+) -> Result<(), Status> {
+    if name.trim().is_empty() {
+        return Err(control_store_required_field(
+            "resource name is required",
+            "name",
+            "must be a non-empty control-plane resource name",
+        ));
+    }
+    if resource_type == ResourceType::Unspecified {
+        return Err(control_store_required_field(
+            "resource_type is required",
+            "resource_type",
+            "must specify a control-plane resource type",
+        ));
+    }
+    // Reject non-JSON payloads early so the registry only ever holds valid bodies.
+    if serde_json::from_str::<serde_json::Value>(payload_json.trim()).is_err() {
+        return Err(control_store_required_field(
+            "payload_json must be valid JSON",
+            "payload_json",
+            "must be valid JSON",
+        ));
+    }
+    Ok(())
+}
+
+fn validate_node_id(node_id: &str) -> Result<(), Status> {
+    if node_id.trim().is_empty() {
+        return Err(control_store_required_field(
+            "node_id is required",
+            "node_id",
+            "must be a non-empty control-plane node id",
+        ));
+    }
+    Ok(())
+}
+
 /// Per-node, per-type ACK/NACK ledger row (runtime view).
 #[derive(Debug, Clone, Default)]
 pub struct NodeStateRow {
@@ -41,7 +106,115 @@ pub struct NodeStateRow {
     pub last_good_version: String,
     pub last_response_nonce: String,
     pub nack_error_detail: String,
+    /// Raw JSON of the bounded served-snapshot ring (newest last). Parsed via
+    /// [`parse_served_snapshots`]; empty/absent == `"[]"`.
+    pub served_snapshots_json: String,
     pub updated_at_unix: i64,
+}
+
+/// How many recently-served snapshots to retain per (node, resource_type) so a
+/// `RollbackResources` request always has a durable, known-good target to
+/// re-serve. Named so the ring depth is a single source of truth (no magic
+/// number); the OLDEST entry is evicted once the ring exceeds this depth.
+pub const RETENTION_DEPTH: usize = 10;
+
+/// One resource inside a retained served snapshot — the exact (name, tenant,
+/// project, payload) tuple that was served, so a rollback can re-publish it
+/// through [`upsert_resource`] (the same registry resolver the serving path uses).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct RetainedResource {
+    pub name: String,
+    pub tenant_id: String,
+    pub project_id: String,
+    pub payload_json: String,
+}
+
+/// One retained served snapshot for a (node, resource_type): the aggregate world
+/// version served plus the resource set behind it. The rollback target.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct RetainedSnapshot {
+    pub version: String,
+    pub served_at_unix: i64,
+    pub resources: Vec<RetainedResource>,
+}
+
+/// Parse the `served_snapshots` ring JSON into typed snapshots (newest last).
+/// Tolerant: a malformed entry/field degrades to defaults rather than erroring,
+/// so a hand-edited ring can never break the serving path.
+pub fn parse_served_snapshots(raw: &str) -> Vec<RetainedSnapshot> {
+    serde_json::from_str::<serde_json::Value>(raw)
+        .ok()
+        .and_then(|value| value.as_array().cloned())
+        .unwrap_or_default()
+        .iter()
+        .map(|entry| RetainedSnapshot {
+            version: entry
+                .get("version")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or_default()
+                .to_string(),
+            served_at_unix: entry
+                .get("served_at_unix")
+                .and_then(serde_json::Value::as_i64)
+                .unwrap_or(0),
+            resources: entry
+                .get("resources")
+                .and_then(serde_json::Value::as_array)
+                .map(|arr| {
+                    arr.iter()
+                        .map(|r| RetainedResource {
+                            name: r
+                                .get("name")
+                                .and_then(serde_json::Value::as_str)
+                                .unwrap_or_default()
+                                .to_string(),
+                            tenant_id: r
+                                .get("tenant_id")
+                                .and_then(serde_json::Value::as_str)
+                                .unwrap_or_default()
+                                .to_string(),
+                            project_id: r
+                                .get("project_id")
+                                .and_then(serde_json::Value::as_str)
+                                .unwrap_or_default()
+                                .to_string(),
+                            payload_json: r
+                                .get("payload_json")
+                                .and_then(serde_json::Value::as_str)
+                                .unwrap_or_default()
+                                .to_string(),
+                        })
+                        .collect()
+                })
+                .unwrap_or_default(),
+        })
+        .collect()
+}
+
+/// Serialize a snapshot ring back to its JSON array form for the `served_snapshots`
+/// column. Inverse of [`parse_served_snapshots`].
+fn served_snapshots_to_json(snaps: &[RetainedSnapshot]) -> serde_json::Value {
+    serde_json::Value::Array(
+        snaps
+            .iter()
+            .map(|s| {
+                serde_json::json!({
+                    "version": s.version,
+                    "served_at_unix": s.served_at_unix,
+                    "resources": s
+                        .resources
+                        .iter()
+                        .map(|r| serde_json::json!({
+                            "name": r.name,
+                            "tenant_id": r.tenant_id,
+                            "project_id": r.project_id,
+                            "payload_json": r.payload_json,
+                        }))
+                        .collect::<Vec<_>>(),
+                })
+            })
+            .collect(),
+    )
 }
 
 fn map_err(context: &'static str) -> impl Fn(sqlx::Error) -> Status {
@@ -68,12 +241,21 @@ async fn execute_typed_write(pool: &PgPool, op: LogicalWrite) -> Result<u64, Sta
         &op,
         &ctx,
     )?;
-    let spec: serde_json::Value = serde_json::from_str(&compiled.spec_json)
-        .map_err(|err| Status::internal(format!("typed native write JSON failed: {err}")))?;
+    let spec: serde_json::Value = serde_json::from_str(&compiled.spec_json).map_err(|err| {
+        control_store_internal_status(
+            "typed_native_write_json",
+            format!("typed native write JSON failed: {err}"),
+        )
+    })?;
     let sql = spec
         .get("sql")
         .and_then(serde_json::Value::as_str)
-        .ok_or_else(|| Status::internal("typed native write did not compile to SQL"))?;
+        .ok_or_else(|| {
+            control_store_internal_status(
+                "typed_native_write_compile",
+                "typed native write did not compile to SQL",
+            )
+        })?;
     crate::runtime::core::validate_pg_mutation_sql(sql)?;
     let params = crate::runtime::core::dispatch_params(&spec)?;
     let param_types = crate::runtime::core::dispatch_param_types(&spec)?;
@@ -98,12 +280,21 @@ async fn execute_typed_read(
         &op,
         &ctx,
     )?;
-    let spec: serde_json::Value = serde_json::from_str(&compiled.spec_json)
-        .map_err(|err| Status::internal(format!("typed native read JSON failed: {err}")))?;
+    let spec: serde_json::Value = serde_json::from_str(&compiled.spec_json).map_err(|err| {
+        control_store_internal_status(
+            "typed_native_read_json",
+            format!("typed native read JSON failed: {err}"),
+        )
+    })?;
     let sql = spec
         .get("sql")
         .and_then(serde_json::Value::as_str)
-        .ok_or_else(|| Status::internal("typed native read did not compile to SQL"))?;
+        .ok_or_else(|| {
+            control_store_internal_status(
+                "typed_native_read_compile",
+                "typed native read did not compile to SQL",
+            )
+        })?;
     crate::runtime::core::validate_pg_read_sql(sql)?;
     let params = crate::runtime::core::dispatch_params(&spec)?;
     let param_types = crate::runtime::core::dispatch_param_types(&spec)?;
@@ -188,16 +379,7 @@ pub async fn upsert_resource(
     payload_json: &str,
     updated_by: &str,
 ) -> Result<ResourceModel, Status> {
-    if name.trim().is_empty() {
-        return Err(Status::invalid_argument("resource name is required"));
-    }
-    if resource_type == ResourceType::Unspecified {
-        return Err(Status::invalid_argument("resource_type is required"));
-    }
-    // Reject non-JSON payloads early so the registry only ever holds valid bodies.
-    if serde_json::from_str::<serde_json::Value>(payload_json.trim()).is_err() {
-        return Err(Status::invalid_argument("payload_json must be valid JSON"));
-    }
+    validate_resource_upsert_input(resource_type, name, payload_json)?;
     let rt_db = resource_type_to_db(resource_type);
     let content_hash = content_version(payload_json);
     let tenant_opt = empty_to_none(tenant_id);
@@ -407,6 +589,7 @@ fn node_state_select_columns() -> Vec<&'static str> {
         "last_good_version",
         "last_response_nonce",
         "nack_error_detail",
+        "served_snapshots",
         "updated_at",
     ]
 }
@@ -421,6 +604,7 @@ fn node_state_select_clause() -> String {
         m.text_or_empty_as("last_good_version", "last_good_version"),
         m.text_or_empty_as("last_response_nonce", "last_response_nonce"),
         m.text_or_empty_as("nack_error_detail", "nack_error_detail"),
+        m.json_text_as("served_snapshots", "served_snapshots_json"),
         m.timestamp_unix_as("updated_at", "updated_at_unix"),
     ];
     parts.join(", ")
@@ -437,6 +621,9 @@ fn node_state_row_from(row: &sqlx::postgres::PgRow) -> NodeStateRow {
         last_good_version: row.try_get("last_good_version").unwrap_or_default(),
         last_response_nonce: row.try_get("last_response_nonce").unwrap_or_default(),
         nack_error_detail: row.try_get("nack_error_detail").unwrap_or_default(),
+        served_snapshots_json: row
+            .try_get("served_snapshots_json")
+            .unwrap_or_else(|_| "[]".to_string()),
         updated_at_unix: row.try_get("updated_at_unix").unwrap_or(0),
     }
 }
@@ -489,6 +676,16 @@ fn node_state_row_from_json(row: &serde_json::Value) -> NodeStateRow {
             .and_then(serde_json::Value::as_str)
             .unwrap_or_default()
             .to_string(),
+        served_snapshots_json: row
+            .get("served_snapshots")
+            .map(|value| {
+                if value.is_string() {
+                    value.as_str().unwrap_or_default().to_string()
+                } else {
+                    value.to_string()
+                }
+            })
+            .unwrap_or_else(|| "[]".to_string()),
         updated_at_unix,
     }
 }
@@ -500,9 +697,7 @@ pub async fn ensure_node_state(
     resource_type: ResourceType,
     subscribed_names: &[String],
 ) -> Result<NodeStateRow, Status> {
-    if node_id.trim().is_empty() {
-        return Err(Status::invalid_argument("node_id is required"));
-    }
+    validate_node_id(node_id)?;
     let names_json = serde_json::to_string(subscribed_names).unwrap_or_else(|_| "[]".to_string());
     // Only overwrite the subscription set when the caller actually provided one,
     // so a bare ACK (no names) does not wipe an established subscription.
@@ -532,7 +727,10 @@ pub async fn ensure_node_state(
                 serde_json::from_str(&json)
                     .map(LogicalValue::Json)
                     .map_err(|err| {
-                        Status::invalid_argument(format!("subscribed_names JSON failed: {err}"))
+                        control_store_invalid_fields(
+                            format!("subscribed_names JSON failed: {err}"),
+                            [("subscribed_names", "must be valid subscribed_names JSON")],
+                        )
                     })?,
             );
             record.insert(
@@ -585,7 +783,9 @@ pub async fn ensure_node_state(
     }
     get_node_state(pool, node_id, resource_type)
         .await?
-        .ok_or_else(|| Status::internal("node state vanished after ensure"))
+        .ok_or_else(|| {
+            control_store_internal_status("ensure_node_state", "node state vanished after ensure")
+        })
 }
 
 /// Fetch the ledger row for (node, type), if present.
@@ -612,6 +812,7 @@ pub async fn get_node_state(
                     .collect::<Vec<_>>(),
             )),
             sort: Vec::new(),
+            include: Vec::new(),
             pagination: Some(LogicalPagination::limit(1)),
         },
     )
@@ -757,6 +958,102 @@ pub async fn record_nack(
     Ok(result.rows_affected() > 0)
 }
 
+/// Retain the snapshot just SERVED to (node, resource_type): append it to the
+/// node's bounded `served_snapshots` ring (newest last) and evict the oldest past
+/// [`RETENTION_DEPTH`], so a later [`RollbackResources`] has a durable target.
+///
+/// Re-serving the SAME newest version is a no-op (the serving loop only emits on
+/// a real version change, but this guard keeps the ring free of duplicates and
+/// stops a churn from rotating good snapshots out). The full `resources` set
+/// behind `version` is captured so a rollback re-publishes the exact world the
+/// node applied (make-before-break preserved on the way back).
+pub async fn retain_served_snapshot(
+    pool: &PgPool,
+    node_id: &str,
+    resource_type: ResourceType,
+    version: &str,
+    resources: &[ResourceModel],
+) -> Result<(), Status> {
+    let row = ensure_node_state(pool, node_id, resource_type, &[]).await?;
+    let mut snaps = parse_served_snapshots(&row.served_snapshots_json);
+    if snaps.last().map(|s| s.version.as_str()) == Some(version) {
+        return Ok(());
+    }
+    snaps.push(RetainedSnapshot {
+        version: version.to_string(),
+        served_at_unix: chrono::Utc::now().timestamp(),
+        resources: resources
+            .iter()
+            .map(|r| RetainedResource {
+                name: r.name.clone(),
+                tenant_id: r.tenant_id.clone(),
+                project_id: r.project_id.clone(),
+                payload_json: r.payload_json.clone(),
+            })
+            .collect(),
+    });
+    // Ring eviction: keep only the newest RETENTION_DEPTH snapshots.
+    let overflow = snaps.len().saturating_sub(RETENTION_DEPTH);
+    if overflow > 0 {
+        snaps.drain(0..overflow);
+    }
+    let json = served_snapshots_to_json(&snaps).to_string();
+    let m = native_model(
+        NODE_STATE_MSG,
+        &["node_id", "resource_type", "served_snapshots", "updated_at"],
+    );
+    // Touch ONLY the ring column for this (node, type) — never the ACK/NACK
+    // version columns, so retention can't perturb the state machine.
+    let sql = format!(
+        "UPDATE {rel} SET {snaps} = $3::JSONB, {updated} = NOW() \
+         WHERE {node} = $1 AND {rtype} = $2",
+        rel = m.relation,
+        snaps = m.q("served_snapshots"),
+        updated = m.q("updated_at"),
+        node = m.q("node_id"),
+        rtype = m.q("resource_type"),
+    );
+    sqlx::query(&sql)
+        .bind(node_id)
+        .bind(resource_type_to_db(resource_type))
+        .bind(&json)
+        .execute(pool)
+        .await
+        .map_err(map_err("control snapshot retention failed"))?;
+    Ok(())
+}
+
+/// Resolve the retained snapshot a [`RollbackResources`] should re-serve for
+/// (node, resource_type). When `target_version` is given, the retained snapshot
+/// whose version matches (newest match wins); otherwise the most-recently
+/// retained snapshot whose version DIFFERS from the node's current world (the
+/// "prior good"). Returns `None` when nothing suitable is retained so the caller
+/// fails closed instead of silently no-opping. Reuses [`world_version`] — the
+/// single existing version resolver — for the current-world comparison.
+pub async fn find_rollback_target(
+    pool: &PgPool,
+    node_id: &str,
+    resource_type: ResourceType,
+    target_version: Option<&str>,
+) -> Result<Option<RetainedSnapshot>, Status> {
+    let row = match get_node_state(pool, node_id, resource_type).await? {
+        Some(row) => row,
+        None => return Ok(None),
+    };
+    let snaps = parse_served_snapshots(&row.served_snapshots_json);
+    let found = match target_version.map(str::trim).filter(|v| !v.is_empty()) {
+        Some(target) => snaps.into_iter().rev().find(|s| s.version == target),
+        None => {
+            // The node's current world for its subscription set (reuses the
+            // existing resolver — no second tenant/version path).
+            let names = parse_subscribed_names(&row.subscribed_names_json);
+            let current = world_version(pool, resource_type, None, &names).await?;
+            snaps.into_iter().rev().find(|s| s.version != current)
+        }
+    };
+    Ok(found)
+}
+
 /// List ledger rows for admin visibility, optionally filtered by node and/or
 /// type. `resource_type == Unspecified` means "all types".
 pub async fn list_node_states(
@@ -845,4 +1142,116 @@ pub fn parse_subscribed_names(json: &str) -> Vec<String> {
 /// handler convenience).
 pub fn resource_type_of(row_type: &str) -> ResourceType {
     resources::resource_type_from_db(row_type)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
+    use tonic::{Code, Status};
+
+    fn decode_detail(status: &Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_validation_field(status: &Status, field: &str, description: &str) {
+        assert_eq!(status.code(), Code::InvalidArgument);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, field);
+        assert_eq!(detail.field_violations[0].description, description);
+    }
+
+    fn assert_internal_detail(status: &Status, operation: &str, message: &str) {
+        assert_eq!(status.code(), Code::Internal);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "control_plane");
+        assert_eq!(detail.operation, operation);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    #[test]
+    fn control_store_internal_status_carries_typed_detail() {
+        let err = control_store_internal_status(
+            "typed_native_read_compile",
+            "typed native read did not compile to SQL",
+        );
+
+        assert_internal_detail(
+            &err,
+            "typed_native_read_compile",
+            "typed native read did not compile to SQL",
+        );
+    }
+
+    #[test]
+    fn upsert_resource_missing_name_carries_field_violation() {
+        let err = validate_resource_upsert_input(ResourceType::BackendTargetDefinition, " ", "{}")
+            .expect_err("missing resource name must fail before Postgres availability");
+
+        assert_eq!(err.message(), "resource name is required");
+        assert_validation_field(
+            &err,
+            "name",
+            "must be a non-empty control-plane resource name",
+        );
+    }
+
+    #[test]
+    fn upsert_resource_missing_type_carries_field_violation() {
+        let err = validate_resource_upsert_input(ResourceType::Unspecified, "primary", "{}")
+            .expect_err("missing resource_type must fail before Postgres availability");
+
+        assert_eq!(err.message(), "resource_type is required");
+        assert_validation_field(
+            &err,
+            "resource_type",
+            "must specify a control-plane resource type",
+        );
+    }
+
+    #[test]
+    fn upsert_resource_invalid_payload_json_carries_field_violation() {
+        let err =
+            validate_resource_upsert_input(ResourceType::BackendTargetDefinition, "primary", "{")
+                .expect_err("invalid payload_json must fail before Postgres availability");
+
+        assert_eq!(err.message(), "payload_json must be valid JSON");
+        assert_validation_field(&err, "payload_json", "must be valid JSON");
+    }
+
+    #[test]
+    fn ensure_node_state_missing_node_id_carries_field_violation() {
+        let err = validate_node_id(" ")
+            .expect_err("missing node_id must fail before Postgres availability");
+
+        assert_eq!(err.message(), "node_id is required");
+        assert_validation_field(&err, "node_id", "must be a non-empty control-plane node id");
+    }
+
+    #[test]
+    fn subscribed_names_json_failure_carries_field_violation() {
+        let err = control_store_invalid_fields(
+            "subscribed_names JSON failed: forced",
+            [("subscribed_names", "must be valid subscribed_names JSON")],
+        );
+
+        assert_eq!(err.message(), "subscribed_names JSON failed: forced");
+        assert_validation_field(
+            &err,
+            "subscribed_names",
+            "must be valid subscribed_names JSON",
+        );
+    }
 }

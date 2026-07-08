@@ -47,10 +47,13 @@ impl crate::runtime::executors::handle::DispatchFactory for MssqlPlugin {
         let client = runtime
             .mssql_for_instance(instance_name)
             .ok_or_else(|| {
-                tonic::Status::failed_precondition(format!(
-                    "Mssql instance '{instance_name}' is not configured \
+                super::dispatch_instance_not_configured_status(
+                    "mssql",
+                    format!(
+                        "Mssql instance '{instance_name}' is not configured \
                      (set UDB_MSSQL_DSN)"
-                ))
+                    ),
+                )
             })?
             .clone();
         // A3 (2026-05-30): if a request context is present, build

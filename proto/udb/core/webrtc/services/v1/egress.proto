@@ -1,0 +1,219 @@
+syntax = "proto3";
+
+package udb.core.webrtc.services.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/dto.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Webrtc.Services.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/webrtc/services/v1;webrtcservicev1";
+option java_package = "com.udb.core.webrtc.services.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Webrtc\\Services\\V1";
+option php_namespace = "Udb\\Core\\Webrtc\\Services\\V1";
+
+// ============================================================
+// Recording / egress contracts (master-plan 5.5)
+//
+// Proto-first request/response messages for the four egress RPCs added to the
+// existing webrtc RoomService (StartRoomComposite / StartTrackEgress /
+// StopEgress / ListEgress). The handlers fail closed until a real egress
+// backend is wired (gated on UDB_WEBRTC_EGRESS_ENABLED); these contracts are the
+// stable surface clients code against in the meantime.
+//
+// `egress_id` is server-derived and BOUND to the verified tenant (never accepted
+// from an untrusted caller on start) so an egress can never reference another
+// tenant's session.
+// ============================================================
+
+// Lifecycle of one egress job.
+enum EgressStatus {
+  EGRESS_STATUS_UNSPECIFIED = 0;
+  // Accepted; the backend is bringing the egress up.
+  EGRESS_STATUS_STARTING = 1;
+  // Egress is running and producing output.
+  EGRESS_STATUS_ACTIVE = 2;
+  // Stop requested; the backend is tearing the egress down.
+  EGRESS_STATUS_STOPPING = 3;
+  // Egress has stopped cleanly (terminal).
+  EGRESS_STATUS_STOPPED = 4;
+  // Egress failed to start or aborted (terminal).
+  EGRESS_STATUS_FAILED = 5;
+}
+
+// Snapshot of one egress job, returned by ListEgress.
+message EgressInfo {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  // Server-derived, tenant-scoped egress identifier.
+  string egress_id = 1;
+  string tenant_id = 2;
+  string room_id = 3;
+  // Set only for track egress; empty for a room composite.
+  string track_id = 4;
+  // "room_composite" | "track".
+  string kind = 5;
+  EgressStatus status = 6;
+  // Output destination URI (e.g. an object-store key / presigned target).
+  string destination = 7;
+  google.protobuf.Timestamp started_at = 8;
+  google.protobuf.Timestamp stopped_at = 9;
+}
+
+// Start a composite (mixed) recording/egress of an entire room.
+message StartRoomCompositeRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string room_id = 2;
+  // Output container/format hint (e.g. "mp4", "hls"); backend-validated.
+  string format = 3;
+  // Output destination URI (e.g. object-store key); backend-validated.
+  string destination = 4;
+  // Optional layout/options as JSON.
+  string options = 5;
+}
+
+message StartRoomCompositeResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  // Server-derived, tenant-scoped egress identifier.
+  string egress_id = 1;
+  EgressStatus status = 2;
+  string message = 3;
+  // Error information if operation failed.
+  udb.core.common.v1.ApiError error = 4;
+}
+
+// Start an egress of a single published track.
+message StartTrackEgressRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string room_id = 2;
+  string track_id = 3;
+  // Output container/format hint; backend-validated.
+  string format = 4;
+  // Output destination URI; backend-validated.
+  string destination = 5;
+  // Optional options as JSON.
+  string options = 6;
+}
+
+message StartTrackEgressResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  string egress_id = 1;
+  EgressStatus status = 2;
+  string message = 3;
+  // Error information if operation failed.
+  udb.core.common.v1.ApiError error = 4;
+}
+
+// Stop a running egress. `egress_id` MUST be one returned to this tenant; the
+// server rejects an egress_id not scoped to the verified tenant.
+message StopEgressRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string egress_id = 2;
+}
+
+message StopEgressResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  string egress_id = 1;
+  EgressStatus status = 2;
+  string message = 3;
+  // Error information if operation failed.
+  udb.core.common.v1.ApiError error = 4;
+}
+
+// List egress jobs for the verified tenant, optionally filtered by room/state.
+message ListEgressRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  // Optional room filter; empty = all rooms for the tenant.
+  string room_id = 2;
+  // Optional status filter.
+  EgressStatus status = 3;
+  // Requested page size. Defaults to 50 and is capped at the native list maximum.
+  int32 page_size = 4;
+  // Opaque pagination token returned by ListEgressResponse.next_page_token.
+  string page_token = 5;
+}
+
+message ListEgressResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webrtc"
+    generate_minimal_example: true
+  };
+  repeated EgressInfo egresses = 1;
+  int32 total_count = 2;
+  // Error information if operation failed.
+  udb.core.common.v1.ApiError error = 3;
+  // Opaque token for the next page; empty when no more egress jobs are available.
+  string next_page_token = 4;
+}

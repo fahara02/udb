@@ -12,14 +12,241 @@ fn migration_approval_tokens_match(provided: &str, stored: &str) -> bool {
         && crate::runtime::authn::constant_time_eq(provided.trim(), stored.trim())
 }
 
+fn catalog_admin_invalid_field(
+    field: impl Into<String>,
+    description: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    crate::runtime::executor_utils::invalid_argument_fields(
+        message,
+        [(field.into(), description.into())],
+    )
+}
+
+fn catalog_admin_policy_status(
+    operation: &'static str,
+    policy_decision_id: &'static str,
+    message: impl Into<String>,
+) -> tonic::Status {
+    crate::runtime::executor_utils::policy_status(operation, policy_decision_id, message)
+}
+
+fn catalog_admin_policy_not_found_status(
+    operation: &'static str,
+    policy_decision_id: &'static str,
+    message: impl Into<String>,
+) -> tonic::Status {
+    crate::runtime::executor_utils::policy_status_with_code(
+        tonic::Code::NotFound,
+        operation,
+        policy_decision_id,
+        message,
+    )
+}
+
+fn catalog_admin_schema_status(
+    operation: &'static str,
+    schema_code: &'static str,
+    message: impl Into<String>,
+) -> tonic::Status {
+    crate::runtime::executor_utils::schema_status(
+        tonic::Code::FailedPrecondition,
+        "catalog",
+        operation,
+        schema_code,
+        message,
+    )
+}
+
+fn catalog_admin_not_found_status(
+    operation: &'static str,
+    schema_code: &'static str,
+    message: impl Into<String>,
+) -> tonic::Status {
+    crate::runtime::executor_utils::schema_status(
+        tonic::Code::NotFound,
+        "catalog",
+        operation,
+        schema_code,
+        message,
+    )
+}
+
+fn migration_run_not_found_status(operation: &'static str) -> tonic::Status {
+    catalog_admin_not_found_status(
+        operation,
+        "migration_run_not_found",
+        "migration run not found",
+    )
+}
+
+fn dlq_event_not_found_status(
+    operation: &'static str,
+    message: impl Into<String>,
+) -> tonic::Status {
+    catalog_admin_not_found_status(operation, "dlq_event_not_found", message)
+}
+
+fn dlq_event_not_found_or_not_replayable_status() -> tonic::Status {
+    catalog_admin_not_found_status(
+        "replay_dlq_event",
+        "dlq_event_not_found_or_not_replayable",
+        "DLQ event not found or not replayable",
+    )
+}
+
+fn catalog_admin_capability_status(
+    operation: &'static str,
+    capability_required: &'static str,
+    message: impl Into<String>,
+) -> tonic::Status {
+    crate::runtime::executor_utils::capability_status(
+        "catalog_admin",
+        operation,
+        capability_required,
+        message,
+    )
+}
+
+fn catalog_admin_internal_status(
+    operation: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    crate::runtime::executor_utils::internal_status("catalog_admin", operation, message)
+}
+
+fn migration_approval_token_required_status() -> tonic::Status {
+    catalog_admin_policy_status(
+        "apply_migration",
+        "approval_token_required",
+        "approval_token is required",
+    )
+}
+
+fn migration_apply_state_not_approved_status() -> tonic::Status {
+    catalog_admin_policy_status(
+        "apply_migration",
+        "migration_run_not_approved",
+        "migration run must be approved before apply and not be terminal",
+    )
+}
+
+fn migration_apply_token_mismatch_status() -> tonic::Status {
+    catalog_admin_policy_status(
+        "apply_migration",
+        "approval_token_mismatch",
+        "approval_token is missing or does not match the approved token",
+    )
+}
+
+fn migration_approve_not_preflight_status() -> tonic::Status {
+    catalog_admin_policy_status(
+        "approve_migration_plan",
+        "migration_run_not_preflight",
+        "migration run not found, not in PREFLIGHT, or already approved",
+    )
+}
+
+fn migration_apply_preflight_status(errors: &[String]) -> tonic::Status {
+    catalog_admin_schema_status(
+        "apply_migration",
+        "migration_apply_preflight_failed",
+        format!("apply_migration preflight failed: {}", errors.join("; ")),
+    )
+}
+
+fn migration_apply_state_changed_status() -> tonic::Status {
+    catalog_admin_policy_status(
+        "apply_migration",
+        "migration_approval_state_changed",
+        "migration run approval state changed before apply",
+    )
+}
+
+fn migration_apply_phase_refused_status(error: impl Into<String>) -> tonic::Status {
+    catalog_admin_policy_status("apply_migration", "migration_phase_refused", error)
+}
+
+fn dlq_missing_topic_status() -> tonic::Status {
+    catalog_admin_schema_status(
+        "replay_dlq_event",
+        "dlq_event_missing_topic",
+        "DLQ event has no topic and cannot be replayed",
+    )
+}
+
+fn system_store_unregistered_status() -> tonic::Status {
+    catalog_admin_capability_status(
+        "system_store",
+        "canonical_system_store",
+        "no canonical store is registered; saga/audit admin requires a provisioned \
+         Postgres / MySQL / SQLite system store (udb_system)",
+    )
+}
+
+fn parse_catalog_manifest_json(manifest_json: &[u8]) -> Result<serde_json::Value, tonic::Status> {
+    let manifest_json_str = std::str::from_utf8(manifest_json).map_err(|_| {
+        catalog_admin_invalid_field(
+            "manifest_json",
+            "must be valid UTF-8",
+            "manifest_json is not valid UTF-8",
+        )
+    })?;
+    serde_json::from_str(manifest_json_str).map_err(|err| {
+        catalog_admin_invalid_field(
+            "manifest_json",
+            "must be valid JSON",
+            format!("manifest_json parse error: {err}"),
+        )
+    })
+}
+
+fn validate_approval_token_for_plan(approval_token: &str) -> Result<(), tonic::Status> {
+    if approval_token.trim().is_empty() {
+        return Err(catalog_admin_invalid_field(
+            "approval_token",
+            "must be non-empty",
+            "approval_token must not be empty",
+        ));
+    }
+    Ok(())
+}
+
+fn parse_migration_run_id(run_id: &str) -> Result<Uuid, tonic::Status> {
+    run_id.parse().map_err(|_| {
+        catalog_admin_invalid_field("run_id", "must be a UUID", "run_id must be a UUID")
+    })
+}
+
+const ALLOWED_DLQ_STATUSES: &[&str] = &["OPEN", "REPLAYED", "DISMISSED", "QUARANTINED", "RETRYING"];
+
+fn parse_dlq_status_filter(status_filter: &str) -> Result<String, tonic::Status> {
+    let status_filter = status_filter.trim().to_ascii_uppercase();
+    if !status_filter.is_empty() && !ALLOWED_DLQ_STATUSES.contains(&status_filter.as_str()) {
+        return Err(catalog_admin_invalid_field(
+            "status_filter",
+            format!("must be one of {}", ALLOWED_DLQ_STATUSES.join(", ")),
+            format!(
+                "invalid status_filter '{status_filter}'; must be one of {:?}",
+                ALLOWED_DLQ_STATUSES
+            ),
+        ));
+    }
+    Ok(status_filter)
+}
+
+fn parse_dlq_id(dlq_id: &str) -> Result<Uuid, tonic::Status> {
+    dlq_id.parse().map_err(|_| {
+        catalog_admin_invalid_field("dlq_id", "must be a UUID", "dlq_id must be a UUID")
+    })
+}
+
 /// Fast-fail guard shared by `apply_migration` (before any ledger access) and
 /// [`validate_migration_apply_state_and_token`]: an empty approval token can
 /// never apply a migration.
 fn require_migration_approval_token(approval_token: &str) -> Result<(), tonic::Status> {
     if approval_token.trim().is_empty() {
-        return Err(tonic::Status::failed_precondition(
-            "approval_token is required",
-        ));
+        return Err(migration_approval_token_required_status());
     }
     Ok(())
 }
@@ -38,14 +265,10 @@ fn validate_migration_apply_state_and_token(
 ) -> Result<(), tonic::Status> {
     require_migration_approval_token(provided_token)?;
     if !matches!(state, "APPROVED" | "APPLYING" | "VERIFYING") {
-        return Err(tonic::Status::failed_precondition(
-            "migration run must be approved before apply and not be terminal",
-        ));
+        return Err(migration_apply_state_not_approved_status());
     }
     if !migration_approval_tokens_match(provided_token, stored_token) {
-        return Err(tonic::Status::failed_precondition(
-            "approval_token is missing or does not match the approved token",
-        ));
+        return Err(migration_apply_token_mismatch_status());
     }
     Ok(())
 }
@@ -83,9 +306,10 @@ async fn ensure_migration_payload_json_column(
          ADD COLUMN IF NOT EXISTS payload_json JSONB NOT NULL DEFAULT '{{}}'::JSONB"
     );
     sqlx::query(&alter).execute(pool).await.map_err(|err| {
-        tonic::Status::internal(format!(
-            "migration audit payload_json upgrade failed: {err}"
-        ))
+        catalog_admin_internal_status(
+            "migration_audit_payload_json_upgrade",
+            format!("migration audit payload_json upgrade failed: {err}"),
+        )
     })?;
 
     // One-time backfill of the legacy `rollback_json` column into the renamed
@@ -114,9 +338,10 @@ async fn ensure_migration_payload_json_column(
          END $$;"
     );
     sqlx::query(&backfill).execute(pool).await.map_err(|err| {
-        tonic::Status::internal(format!(
-            "migration audit payload_json backfill failed: {err}"
-        ))
+        catalog_admin_internal_status(
+            "migration_audit_payload_json_backfill",
+            format!("migration audit payload_json backfill failed: {err}"),
+        )
     })?;
     Ok(())
 }
@@ -137,9 +362,10 @@ async fn ensure_migration_runs_approved_state(
         ),
     ] {
         sqlx::query(&ddl).execute(pool).await.map_err(|err| {
-            tonic::Status::internal(format!(
-                "migration audit approved-state upgrade failed: {err}"
-            ))
+            catalog_admin_internal_status(
+                "migration_audit_approved_state_upgrade",
+                format!("migration audit approved-state upgrade failed: {err}"),
+            )
         })?;
     }
     Ok(())
@@ -578,14 +804,9 @@ impl DataBrokerRuntime {
         reason: &str,
     ) -> Result<String, tonic::Status> {
         use crate::runtime::system::SystemCatalogConfig;
+        let manifest_value = parse_catalog_manifest_json(manifest_json)?;
         let pool = self.pg_pool()?;
         let config = SystemCatalogConfig::default();
-        let manifest_json_str = std::str::from_utf8(manifest_json)
-            .map_err(|_| tonic::Status::invalid_argument("manifest_json is not valid UTF-8"))?;
-        let manifest_value: serde_json::Value =
-            serde_json::from_str(manifest_json_str).map_err(|err| {
-                tonic::Status::invalid_argument(format!("manifest_json parse error: {err}"))
-            })?;
         use sha2::{Digest, Sha256};
         let checksum = format!("{:x}", Sha256::digest(manifest_json));
         let cat_rel = config.catalog_versions_relation();
@@ -602,7 +823,9 @@ impl DataBrokerRuntime {
         .bind(manifest_value.to_string())
         .fetch_one(pool)
         .await
-        .map_err(|err| tonic::Status::internal(format!("stage_catalog failed: {err}")))?;
+        .map_err(|err| {
+            catalog_admin_internal_status("stage_catalog", format!("stage_catalog failed: {err}"))
+        })?;
         let _ = sqlx::query(&format!(
             "INSERT INTO {reload_rel}
                  (project_id, catalog_id, version, checksum_sha256, action, message)
@@ -643,9 +866,18 @@ impl DataBrokerRuntime {
             .fetch_optional(pool)
             .await
             .map_err(|err| {
-                tonic::Status::internal(format!("activate_catalog lookup failed: {err}"))
+                catalog_admin_internal_status(
+                    "activate_catalog_lookup",
+                    format!("activate_catalog lookup failed: {err}"),
+                )
             })?
-            .ok_or_else(|| tonic::Status::not_found("no staged catalog found for project"))?
+            .ok_or_else(|| {
+                catalog_admin_not_found_status(
+                    "activate_catalog",
+                    "staged_catalog_not_found",
+                    "no staged catalog found for project",
+                )
+            })?
         } else if let Ok(id) = catalog_id.parse::<Uuid>() {
             id
         } else {
@@ -659,15 +891,27 @@ impl DataBrokerRuntime {
             .fetch_optional(pool)
             .await
             .map_err(|err| {
-                tonic::Status::internal(format!("activate_catalog lookup failed: {err}"))
+                catalog_admin_internal_status(
+                    "activate_catalog_lookup",
+                    format!("activate_catalog lookup failed: {err}"),
+                )
             })?
-            .ok_or_else(|| tonic::Status::not_found("staged catalog version not found"))?
+            .ok_or_else(|| {
+                catalog_admin_not_found_status(
+                    "activate_catalog",
+                    "staged_catalog_version_not_found",
+                    "staged catalog version not found",
+                )
+            })?
         };
         // Activation mutates five tables; run them in a single transaction so a
         // mid-sequence failure cannot leave the catalog with no ACTIVE row (or
         // two). The transaction is dropped (rolled back) on any early return.
         let mut tx = pool.begin().await.map_err(|err| {
-            tonic::Status::internal(format!("activate_catalog begin failed: {err}"))
+            catalog_admin_internal_status(
+                "activate_catalog_begin",
+                format!("activate_catalog begin failed: {err}"),
+            )
         })?;
         // Find current active version for this project
         let from_version: Option<String> = sqlx::query_scalar(&format!(
@@ -678,7 +922,12 @@ impl DataBrokerRuntime {
         .bind(project_id)
         .fetch_optional(&mut *tx)
         .await
-        .map_err(|err| tonic::Status::internal(format!("activate_catalog lookup failed: {err}")))?;
+        .map_err(|err| {
+            catalog_admin_internal_status(
+                "activate_catalog_lookup",
+                format!("activate_catalog lookup failed: {err}"),
+            )
+        })?;
         // Deactivate old active
         sqlx::query(&format!(
             "UPDATE {cat_rel} SET status = 'ROLLED_BACK'
@@ -688,7 +937,10 @@ impl DataBrokerRuntime {
         .execute(&mut *tx)
         .await
         .map_err(|err| {
-            tonic::Status::internal(format!("activate_catalog deactivate failed: {err}"))
+            catalog_admin_internal_status(
+                "activate_catalog_deactivate",
+                format!("activate_catalog deactivate failed: {err}"),
+            )
         })?;
         // Activate new
         let rows = sqlx::query(&format!(
@@ -700,9 +952,16 @@ impl DataBrokerRuntime {
         .bind(project_id)
         .execute(&mut *tx)
         .await
-        .map_err(|err| tonic::Status::internal(format!("activate_catalog update failed: {err}")))?;
+        .map_err(|err| {
+            catalog_admin_internal_status(
+                "activate_catalog_update",
+                format!("activate_catalog update failed: {err}"),
+            )
+        })?;
         if rows.rows_affected() == 0 {
-            return Err(tonic::Status::not_found(
+            return Err(catalog_admin_not_found_status(
+                "activate_catalog",
+                "staged_catalog_not_found",
                 "catalog not found or not in STAGED status",
             ));
         }
@@ -714,7 +973,10 @@ impl DataBrokerRuntime {
         .fetch_one(&mut *tx)
         .await
         .map_err(|err| {
-            tonic::Status::internal(format!("activate_catalog version fetch failed: {err}"))
+            catalog_admin_internal_status(
+                "activate_catalog_version_fetch",
+                format!("activate_catalog version fetch failed: {err}"),
+            )
         })?;
         sqlx::query(&format!(
             "INSERT INTO {log_rel}
@@ -728,7 +990,12 @@ impl DataBrokerRuntime {
         .bind(reason)
         .execute(&mut *tx)
         .await
-        .map_err(|err| tonic::Status::internal(format!("activate_catalog log failed: {err}")))?;
+        .map_err(|err| {
+            catalog_admin_internal_status(
+                "activate_catalog_log",
+                format!("activate_catalog log failed: {err}"),
+            )
+        })?;
         sqlx::query(&format!(
             "INSERT INTO {binding_rel}
                  (project_id, active_catalog_id, active_version, active_checksum_sha256, compatibility_level, updated_at)
@@ -746,7 +1013,10 @@ impl DataBrokerRuntime {
         .execute(&mut *tx)
         .await
         .map_err(|err| {
-            tonic::Status::internal(format!("activate_catalog project binding failed: {err}"))
+            catalog_admin_internal_status(
+                "activate_catalog_project_binding",
+                format!("activate_catalog project binding failed: {err}"),
+            )
         })?;
         sqlx::query(&format!(
             "INSERT INTO {reload_rel}
@@ -761,10 +1031,16 @@ impl DataBrokerRuntime {
         .execute(&mut *tx)
         .await
         .map_err(|err| {
-            tonic::Status::internal(format!("activate_catalog reload log failed: {err}"))
+            catalog_admin_internal_status(
+                "activate_catalog_reload_log",
+                format!("activate_catalog reload log failed: {err}"),
+            )
         })?;
         tx.commit().await.map_err(|err| {
-            tonic::Status::internal(format!("activate_catalog commit failed: {err}"))
+            catalog_admin_internal_status(
+                "activate_catalog_commit",
+                format!("activate_catalog commit failed: {err}"),
+            )
         })?;
         Ok(())
     }
@@ -801,7 +1077,12 @@ impl DataBrokerRuntime {
         .bind(project_id)
         .fetch_all(pool)
         .await
-        .map_err(|err| tonic::Status::internal(format!("get_catalog_versions failed: {err}")))?;
+        .map_err(|err| {
+            catalog_admin_internal_status(
+                "get_catalog_versions",
+                format!("get_catalog_versions failed: {err}"),
+            )
+        })?;
         let mut out = Vec::new();
         for row in rows {
             out.push(serde_json::json!({
@@ -852,7 +1133,10 @@ impl DataBrokerRuntime {
         .fetch_optional(pool)
         .await
         .map_err(|err| {
-            tonic::Status::internal(format!("plan_migration manifest load failed: {err}"))
+            catalog_admin_internal_status(
+                "plan_migration_manifest_load",
+                format!("plan_migration manifest load failed: {err}"),
+            )
         })?;
 
         // ── 2. Build operations list ──────────────────────────────────────────
@@ -863,7 +1147,10 @@ impl DataBrokerRuntime {
         if let Some((version, json_str)) = manifest_row {
             catalog_version = version;
             let manifest: CatalogManifest = serde_json::from_str(&json_str).map_err(|err| {
-                tonic::Status::internal(format!("plan_migration manifest parse failed: {err}"))
+                catalog_admin_internal_status(
+                    "plan_migration_manifest_parse",
+                    format!("plan_migration manifest parse failed: {err}"),
+                )
             })?;
 
             // Bulk-fetch existing tables so we can diff in memory.
@@ -875,25 +1162,27 @@ impl DataBrokerRuntime {
                 .into_iter()
                 .collect();
 
-            let existing_tables: std::collections::HashSet<(String, String)> = if schema_names
-                .is_empty()
-            {
-                Default::default()
-            } else {
-                sqlx::query_as::<_, (String, String)>(
-                    "SELECT table_schema, table_name
+            let existing_tables: std::collections::HashSet<(String, String)> =
+                if schema_names.is_empty() {
+                    Default::default()
+                } else {
+                    sqlx::query_as::<_, (String, String)>(
+                        "SELECT table_schema, table_name
                          FROM information_schema.tables
                          WHERE table_schema = ANY($1)",
-                )
-                .bind(&schema_names)
-                .fetch_all(pool)
-                .await
-                .map_err(|err| {
-                    tonic::Status::internal(format!("plan_migration schema check failed: {err}"))
-                })?
-                .into_iter()
-                .collect()
-            };
+                    )
+                    .bind(&schema_names)
+                    .fetch_all(pool)
+                    .await
+                    .map_err(|err| {
+                        catalog_admin_internal_status(
+                            "plan_migration_schema_check",
+                            format!("plan_migration schema check failed: {err}"),
+                        )
+                    })?
+                    .into_iter()
+                    .collect()
+                };
 
             // One operation per manifest table.
             for table in &manifest.tables {
@@ -975,7 +1264,10 @@ impl DataBrokerRuntime {
         .fetch_one(pool)
         .await
         .map_err(|err| {
-            tonic::Status::internal(format!("plan_migration run insert failed: {err}"))
+            catalog_admin_internal_status(
+                "plan_migration_run_insert",
+                format!("plan_migration run insert failed: {err}"),
+            )
         })?;
 
         // ── 5. Write operations to migration_op_ledger ────────────────────────
@@ -996,7 +1288,10 @@ impl DataBrokerRuntime {
             .execute(pool)
             .await
             .map_err(|err| {
-                tonic::Status::internal(format!("plan_migration op insert failed: {err}"))
+                catalog_admin_internal_status(
+                    "plan_migration_op_insert",
+                    format!("plan_migration op insert failed: {err}"),
+                )
             })?;
         }
 
@@ -1012,18 +1307,12 @@ impl DataBrokerRuntime {
         approval_token: &str,
     ) -> Result<(), tonic::Status> {
         use crate::runtime::system::SystemCatalogConfig;
-        if approval_token.trim().is_empty() {
-            return Err(tonic::Status::invalid_argument(
-                "approval_token must not be empty",
-            ));
-        }
+        validate_approval_token_for_plan(approval_token)?;
+        let id: Uuid = parse_migration_run_id(run_id)?;
         let pool = self.pg_pool()?;
         let config = SystemCatalogConfig::default();
         let runs_rel = config.migration_runs_relation();
         ensure_migration_runs_approved_state(pool, &runs_rel, &config.migration_runs_table).await?;
-        let id: Uuid = run_id
-            .parse()
-            .map_err(|_| tonic::Status::invalid_argument("run_id must be a UUID"))?;
 
         let rows = sqlx::query(&format!(
             "UPDATE {runs_rel}
@@ -1037,11 +1326,14 @@ impl DataBrokerRuntime {
         .bind(project_id)
         .execute(pool)
         .await
-        .map_err(|err| tonic::Status::internal(format!("approve_migration_plan failed: {err}")))?;
+        .map_err(|err| {
+            catalog_admin_internal_status(
+                "approve_migration_plan",
+                format!("approve_migration_plan failed: {err}"),
+            )
+        })?;
         if rows.rows_affected() == 0 {
-            return Err(tonic::Status::failed_precondition(
-                "migration run not found, not in PREFLIGHT, or already approved",
-            ));
+            return Err(migration_approve_not_preflight_status());
         }
         Ok(())
     }
@@ -1055,6 +1347,7 @@ impl DataBrokerRuntime {
     ) -> Result<(), tonic::Status> {
         use crate::runtime::system::SystemCatalogConfig;
         require_migration_approval_token(approval_token)?;
+        let id: Uuid = parse_migration_run_id(run_id)?;
         let pool = self.pg_pool()?;
         let config = SystemCatalogConfig::default();
         let runs_rel = config.migration_runs_relation();
@@ -1062,9 +1355,6 @@ impl DataBrokerRuntime {
         let phase_ledger_rel = migration_phase_ledger_relation(&config);
         ensure_migration_runs_approved_state(pool, &runs_rel, &config.migration_runs_table).await?;
         ensure_migration_payload_json_column(pool, &ledger_rel).await?;
-        let id: Uuid = run_id
-            .parse()
-            .map_err(|_| tonic::Status::invalid_argument("run_id must be a UUID"))?;
 
         let run_row = sqlx::query(&format!(
             "SELECT state, approval_token, catalog_version, operations_hash
@@ -1075,8 +1365,13 @@ impl DataBrokerRuntime {
         .bind(project_id)
         .fetch_optional(pool)
         .await
-        .map_err(|err| tonic::Status::internal(format!("apply_migration run fetch failed: {err}")))?
-        .ok_or_else(|| tonic::Status::not_found("migration run not found"))?;
+        .map_err(|err| {
+            catalog_admin_internal_status(
+                "apply_migration_run_fetch",
+                format!("apply_migration run fetch failed: {err}"),
+            )
+        })?
+        .ok_or_else(|| migration_run_not_found_status("apply_migration"))?;
         let state = run_row.try_get::<String, _>("state").unwrap_or_default();
         let stored_token = run_row
             .try_get::<String, _>("approval_token")
@@ -1105,7 +1400,10 @@ impl DataBrokerRuntime {
             .fetch_all(pool)
             .await
             .map_err(|err| {
-                tonic::Status::internal(format!("apply_migration fetch ops failed: {err}"))
+                catalog_admin_internal_status(
+                    "apply_migration_fetch_ops",
+                    format!("apply_migration fetch ops failed: {err}"),
+                )
             })?;
         let preflight_ops: Vec<(i64, String, String, String, serde_json::Value)> = planned
             .iter()
@@ -1123,10 +1421,7 @@ impl DataBrokerRuntime {
             .collect();
         let preflight_errors = self.preflight_migration_apply_ops(&preflight_ops);
         if !preflight_errors.is_empty() {
-            return Err(tonic::Status::failed_precondition(format!(
-                "apply_migration preflight failed: {}",
-                preflight_errors.join("; ")
-            )));
+            return Err(migration_apply_preflight_status(&preflight_errors));
         }
 
         let rows = sqlx::query(&format!(
@@ -1144,11 +1439,14 @@ impl DataBrokerRuntime {
         .bind(project_id)
         .execute(pool)
         .await
-        .map_err(|err| tonic::Status::internal(format!("apply_migration failed: {err}")))?;
+        .map_err(|err| {
+            catalog_admin_internal_status(
+                "apply_migration_state_update",
+                format!("apply_migration failed: {err}"),
+            )
+        })?;
         if rows.rows_affected() == 0 {
-            return Err(tonic::Status::failed_precondition(
-                "migration run approval state changed before apply",
-            ));
+            return Err(migration_apply_state_changed_status());
         }
 
         let artifacts: Vec<GeneratedArtifact> = planned
@@ -1237,13 +1535,17 @@ impl DataBrokerRuntime {
                 .execute(pool)
                 .await
                 .map_err(|update_err| {
-                    tonic::Status::internal(format!(
-                        "apply_migration phase failure '{err}', and finalize failed: {update_err}"
-                    ))
+                    catalog_admin_internal_status(
+                        "apply_migration_phase_failure_finalize",
+                        format!(
+                            "apply_migration phase failure '{err}', and finalize failed: {update_err}"
+                        ),
+                    )
                 })?;
-                return Err(tonic::Status::internal(format!(
-                    "apply_migration phased runner failed: {err}"
-                )));
+                return Err(catalog_admin_internal_status(
+                    "apply_migration_phased_runner",
+                    format!("apply_migration phased runner failed: {err}"),
+                ));
             }
         };
 
@@ -1260,12 +1562,18 @@ impl DataBrokerRuntime {
                 .execute(pool)
                 .await
                 .map_err(|err| {
-                    tonic::Status::internal(format!("apply_migration finalize failed: {err}"))
+                    catalog_admin_internal_status(
+                        "apply_migration_finalize",
+                        format!("apply_migration finalize failed: {err}"),
+                    )
                 })?;
-                return Err(tonic::Status::internal(format!(
-                    "apply_migration paused in phase {}: {error}",
-                    phase.as_str()
-                )));
+                return Err(catalog_admin_internal_status(
+                    "apply_migration_paused",
+                    format!(
+                        "apply_migration paused in phase {}: {error}",
+                        phase.as_str()
+                    ),
+                ));
             }
             crate::migration::phase_runner::RunnerOutcome::Refused { phase, .. } => {
                 let error = format!(
@@ -1282,9 +1590,12 @@ impl DataBrokerRuntime {
                 .execute(pool)
                 .await
                 .map_err(|err| {
-                    tonic::Status::internal(format!("apply_migration finalize failed: {err}"))
+                    catalog_admin_internal_status(
+                        "apply_migration_finalize",
+                        format!("apply_migration finalize failed: {err}"),
+                    )
                 })?;
-                return Err(tonic::Status::failed_precondition(error));
+                return Err(migration_apply_phase_refused_status(error));
             }
         }
 
@@ -1297,7 +1608,10 @@ impl DataBrokerRuntime {
         .execute(pool)
         .await
         .map_err(|err| {
-            tonic::Status::internal(format!("apply_migration finalize failed: {err}"))
+            catalog_admin_internal_status(
+                "apply_migration_finalize",
+                format!("apply_migration finalize failed: {err}"),
+            )
         })?;
         Ok(())
     }
@@ -1309,12 +1623,10 @@ impl DataBrokerRuntime {
         run_id: &str,
     ) -> Result<serde_json::Value, tonic::Status> {
         use crate::runtime::system::SystemCatalogConfig;
+        let id: Uuid = parse_migration_run_id(run_id)?;
         let pool = self.pg_pool()?;
         let config = SystemCatalogConfig::default();
         let runs_rel = config.migration_runs_relation();
-        let id: Uuid = run_id
-            .parse()
-            .map_err(|_| tonic::Status::invalid_argument("run_id must be a UUID"))?;
         let row = sqlx::query(&format!(
             "SELECT run_id, project_id, catalog_version, state, started_at, finished_at, error
              FROM {runs_rel}
@@ -1324,8 +1636,13 @@ impl DataBrokerRuntime {
         .bind(project_id)
         .fetch_optional(pool)
         .await
-        .map_err(|err| tonic::Status::internal(format!("get_migration_status failed: {err}")))?
-        .ok_or_else(|| tonic::Status::not_found("migration run not found"))?;
+        .map_err(|err| {
+            catalog_admin_internal_status(
+                "get_migration_status",
+                format!("get_migration_status failed: {err}"),
+            )
+        })?
+        .ok_or_else(|| migration_run_not_found_status("get_migration_status"))?;
         Ok(serde_json::json!({
             "run_id": row.try_get::<Uuid,_>("run_id").map(|u| u.to_string()).unwrap_or_default(),
             "project_id": row.try_get::<String,_>("project_id").unwrap_or_default(),
@@ -1352,20 +1669,10 @@ impl DataBrokerRuntime {
     ) -> Result<Vec<serde_json::Value>, tonic::Status> {
         use crate::runtime::system::SystemCatalogConfig;
         use sqlx::QueryBuilder;
+        let status_filter = parse_dlq_status_filter(status_filter)?;
         let pool = self.pg_pool()?;
         let config = SystemCatalogConfig::default();
         let dlq_rel = config.dlq_relation();
-
-        // Validate status_filter against the known enum values
-        const ALLOWED_DLQ_STATUSES: &[&str] =
-            &["OPEN", "REPLAYED", "DISMISSED", "QUARANTINED", "RETRYING"];
-        let status_filter = status_filter.trim().to_ascii_uppercase();
-        if !status_filter.is_empty() && !ALLOWED_DLQ_STATUSES.contains(&status_filter.as_str()) {
-            return Err(tonic::Status::invalid_argument(format!(
-                "invalid status_filter '{status_filter}'; must be one of {:?}",
-                ALLOWED_DLQ_STATUSES
-            )));
-        }
 
         let offset: i64 = page_token.parse().unwrap_or(0);
 
@@ -1409,11 +1716,12 @@ impl DataBrokerRuntime {
         qb.push(" OFFSET ");
         qb.push_bind(offset);
 
-        let rows = qb
-            .build()
-            .fetch_all(pool)
-            .await
-            .map_err(|err| tonic::Status::internal(format!("list_dlq_events failed: {err}")))?;
+        let rows = qb.build().fetch_all(pool).await.map_err(|err| {
+            catalog_admin_internal_status(
+                "list_dlq_events",
+                format!("list_dlq_events failed: {err}"),
+            )
+        })?;
         Ok(rows.iter().map(|row| serde_json::json!({
             "dlq_id": row.try_get::<Uuid,_>("dlq_id").map(|u| u.to_string()).unwrap_or_default(),
             "event_id": row.try_get::<Uuid,_>("event_id").map(|u| u.to_string()).unwrap_or_default(),
@@ -1438,12 +1746,10 @@ impl DataBrokerRuntime {
         project_id: &str,
     ) -> Result<serde_json::Value, tonic::Status> {
         use crate::runtime::system::SystemCatalogConfig;
+        let id: Uuid = parse_dlq_id(dlq_id)?;
         let pool = self.pg_pool()?;
         let config = SystemCatalogConfig::default();
         let dlq_rel = config.dlq_relation();
-        let id: Uuid = dlq_id
-            .parse()
-            .map_err(|_| tonic::Status::invalid_argument("dlq_id must be a UUID"))?;
         let row = sqlx::query(&format!(
             "SELECT dlq_id, event_id, topic, tenant_id, project_id, payload, error_type, error_message,
                     retry_count, last_retry_at, next_retry_at, status,
@@ -1457,8 +1763,15 @@ impl DataBrokerRuntime {
         .bind(project_id)
         .fetch_optional(pool)
         .await
-        .map_err(|err| tonic::Status::internal(format!("get_dlq_event failed: {err}")))?
-        .ok_or_else(|| tonic::Status::not_found(format!("DLQ event {dlq_id} not found")))?;
+        .map_err(|err| {
+            catalog_admin_internal_status(
+                "get_dlq_event",
+                format!("get_dlq_event failed: {err}"),
+            )
+        })?
+        .ok_or_else(|| {
+            dlq_event_not_found_status("get_dlq_event", format!("DLQ event {dlq_id} not found"))
+        })?;
         Ok(serde_json::json!({
             "dlq_id": row.try_get::<Uuid,_>("dlq_id").map(|u| u.to_string()).unwrap_or_default(),
             "event_id": row.try_get::<Uuid,_>("event_id").map(|u| u.to_string()).unwrap_or_default(),
@@ -1484,13 +1797,11 @@ impl DataBrokerRuntime {
         project_id: &str,
     ) -> Result<String, tonic::Status> {
         use crate::runtime::system::SystemCatalogConfig;
+        let id: Uuid = parse_dlq_id(dlq_id)?;
         let pool = self.pg_pool()?;
         let config = SystemCatalogConfig::default();
         let dlq_rel = config.dlq_relation();
         let outbox_rel = config.cdc.outbox_relation();
-        let id: Uuid = dlq_id
-            .parse()
-            .map_err(|_| tonic::Status::invalid_argument("dlq_id must be a UUID"))?;
         let row = sqlx::query(&format!(
             "SELECT event_id, topic, payload, retry_count
              FROM {dlq_rel}
@@ -1501,17 +1812,28 @@ impl DataBrokerRuntime {
         .bind(project_id)
         .fetch_optional(pool)
         .await
-        .map_err(|err| tonic::Status::internal(format!("replay_dlq_event lookup failed: {err}")))?
-        .ok_or_else(|| tonic::Status::not_found("DLQ event not found or not replayable"))?;
+        .map_err(|err| {
+            catalog_admin_internal_status(
+                "replay_dlq_event_lookup",
+                format!("replay_dlq_event lookup failed: {err}"),
+            )
+        })?
+        .ok_or_else(dlq_event_not_found_or_not_replayable_status)?;
 
-        let original_event_id: Uuid = row
-            .try_get("event_id")
-            .map_err(|err| tonic::Status::internal(format!("DLQ event_id decode failed: {err}")))?;
+        let original_event_id: Uuid = row.try_get("event_id").map_err(|err| {
+            catalog_admin_internal_status(
+                "replay_dlq_event_id_decode",
+                format!("DLQ event_id decode failed: {err}"),
+            )
+        })?;
         let retry_count = row.try_get::<i32, _>("retry_count").unwrap_or_default();
         let stored_topic = row.try_get::<String, _>("topic").unwrap_or_default();
-        let stored_payload: serde_json::Value = row
-            .try_get("payload")
-            .map_err(|err| tonic::Status::internal(format!("DLQ payload decode failed: {err}")))?;
+        let stored_payload: serde_json::Value = row.try_get("payload").map_err(|err| {
+            catalog_admin_internal_status(
+                "replay_dlq_payload_decode",
+                format!("DLQ payload decode failed: {err}"),
+            )
+        })?;
         let payload = stored_payload
             .get("failed_event")
             .cloned()
@@ -1526,9 +1848,7 @@ impl DataBrokerRuntime {
             stored_topic
         };
         if topic.trim().is_empty() {
-            return Err(tonic::Status::failed_precondition(
-                "DLQ event has no topic and cannot be replayed",
-            ));
+            return Err(dlq_missing_topic_status());
         }
         let replay_event_id = if preserve_event_id {
             original_event_id
@@ -1543,10 +1863,12 @@ impl DataBrokerRuntime {
             .unwrap_or(dlq_id)
             .to_string();
 
-        let mut tx = pool
-            .begin()
-            .await
-            .map_err(|err| tonic::Status::internal(format!("DLQ replay begin failed: {err}")))?;
+        let mut tx = pool.begin().await.map_err(|err| {
+            catalog_admin_internal_status(
+                "replay_dlq_begin",
+                format!("DLQ replay begin failed: {err}"),
+            )
+        })?;
         // ONE shared insert path (`cdc::insert_outbox_row`): the DLQ replay re-enqueues
         // with the SAME SQL + bind types as every other writer. `replay_event_id` is
         // already a `Uuid` (Copy), and the canonical insert binds `$1::UUID` — folding
@@ -1560,7 +1882,12 @@ impl DataBrokerRuntime {
             &payload,
         )
         .await
-        .map_err(|err| tonic::Status::internal(format!("DLQ replay enqueue failed: {err}")))?;
+        .map_err(|err| {
+            catalog_admin_internal_status(
+                "replay_dlq_enqueue",
+                format!("DLQ replay enqueue failed: {err}"),
+            )
+        })?;
         sqlx::query(&format!(
             "UPDATE {dlq_rel}
              SET status = 'REPLAYED',
@@ -1573,10 +1900,18 @@ impl DataBrokerRuntime {
         .bind(id)
         .execute(&mut *tx)
         .await
-        .map_err(|err| tonic::Status::internal(format!("DLQ replay update failed: {err}")))?;
-        tx.commit()
-            .await
-            .map_err(|err| tonic::Status::internal(format!("DLQ replay commit failed: {err}")))?;
+        .map_err(|err| {
+            catalog_admin_internal_status(
+                "replay_dlq_update",
+                format!("DLQ replay update failed: {err}"),
+            )
+        })?;
+        tx.commit().await.map_err(|err| {
+            catalog_admin_internal_status(
+                "replay_dlq_commit",
+                format!("DLQ replay commit failed: {err}"),
+            )
+        })?;
         Ok(replay_event_id.to_string())
     }
 
@@ -1589,12 +1924,10 @@ impl DataBrokerRuntime {
         project_id: &str,
     ) -> Result<(), tonic::Status> {
         use crate::runtime::system::SystemCatalogConfig;
+        let id: Uuid = parse_dlq_id(dlq_id)?;
         let pool = self.pg_pool()?;
         let config = SystemCatalogConfig::default();
         let dlq_rel = config.dlq_relation();
-        let id: Uuid = dlq_id
-            .parse()
-            .map_err(|_| tonic::Status::invalid_argument("dlq_id must be a UUID"))?;
         let rows = sqlx::query(&format!(
             "UPDATE {dlq_rel} SET status = $1, updated_at = NOW() WHERE dlq_id = $2 AND tenant_id = $3 AND project_id = $4"
         ))
@@ -1604,11 +1937,17 @@ impl DataBrokerRuntime {
         .bind(project_id)
         .execute(pool)
         .await
-        .map_err(|err| tonic::Status::internal(format!("update_dlq_status failed: {err}")))?;
+        .map_err(|err| {
+            catalog_admin_internal_status(
+                "update_dlq_status",
+                format!("update_dlq_status failed: {err}"),
+            )
+        })?;
         if rows.rows_affected() == 0 {
-            return Err(tonic::Status::not_found(format!(
-                "DLQ event {dlq_id} not found"
-            )));
+            return Err(dlq_event_not_found_status(
+                "update_dlq_status",
+                format!("DLQ event {dlq_id} not found"),
+            ));
         }
         Ok(())
     }
@@ -1642,7 +1981,9 @@ impl DataBrokerRuntime {
         .bind(project_id)
         .fetch_optional(pool)
         .await
-        .map_err(|err| tonic::Status::internal(format!("get_cdc_status failed: {err}")))?;
+        .map_err(|err| {
+            catalog_admin_internal_status("get_cdc_status", format!("get_cdc_status failed: {err}"))
+        })?;
         match row {
             Some(r) => Ok(serde_json::json!({
                 "slot_name": r.try_get::<String,_>("slot_name").unwrap_or_default(),
@@ -1687,7 +2028,9 @@ impl DataBrokerRuntime {
         .bind(reason)
         .execute(pool)
         .await
-        .map_err(|err| tonic::Status::internal(format!("pause_cdc failed: {err}")))?;
+        .map_err(|err| {
+            catalog_admin_internal_status("pause_cdc", format!("pause_cdc failed: {err}"))
+        })?;
         Ok(())
     }
 
@@ -1714,7 +2057,9 @@ impl DataBrokerRuntime {
         .bind(project_id)
         .execute(pool)
         .await
-        .map_err(|err| tonic::Status::internal(format!("resume_cdc failed: {err}")))?;
+        .map_err(|err| {
+            catalog_admin_internal_status("resume_cdc", format!("resume_cdc failed: {err}"))
+        })?;
         Ok(())
     }
 
@@ -1741,7 +2086,12 @@ impl DataBrokerRuntime {
         .bind(project_id)
         .execute(pool)
         .await
-        .map_err(|err| tonic::Status::internal(format!("stepdown_cdc_leader failed: {err}")))?;
+        .map_err(|err| {
+            catalog_admin_internal_status(
+                "stepdown_cdc_leader",
+                format!("stepdown_cdc_leader failed: {err}"),
+            )
+        })?;
         Ok(())
     }
 
@@ -1814,12 +2164,8 @@ impl DataBrokerRuntime {
         &self,
     ) -> Result<std::sync::Arc<dyn crate::runtime::canonical_store::SystemStores>, tonic::Status>
     {
-        self.default_system_stores().ok_or_else(|| {
-            tonic::Status::failed_precondition(
-                "no canonical store is registered; saga/audit admin requires a provisioned \
-                 Postgres / MySQL / SQLite system store (udb_system)",
-            )
-        })
+        self.default_system_stores()
+            .ok_or_else(|| system_store_unregistered_status())
     }
 
     // ── Phase 5.1 — Policy admin ─────────────────────────────────────────────
@@ -1845,7 +2191,9 @@ impl DataBrokerRuntime {
         ))
         .fetch_all(pool)
         .await
-        .map_err(|err| tonic::Status::internal(format!("list_policies failed: {err}")))?;
+        .map_err(|err| {
+            catalog_admin_internal_status("list_policies", format!("list_policies failed: {err}"))
+        })?;
         Ok(rows.iter().map(|row| serde_json::json!({
             "policy_id": row.try_get::<i64,_>("policy_id").unwrap_or_default(),
             "effect": row.try_get::<String,_>("effect").unwrap_or_default(),
@@ -1886,7 +2234,12 @@ impl DataBrokerRuntime {
         .bind(offset.max(0))
         .fetch_all(pool)
         .await
-        .map_err(|err| tonic::Status::internal(format!("list_policies_page failed: {err}")))?;
+        .map_err(|err| {
+            catalog_admin_internal_status(
+                "list_policies_page",
+                format!("list_policies_page failed: {err}"),
+            )
+        })?;
         let total = rows
             .first()
             .and_then(|row| row.try_get::<i64, _>("total_count").ok())
@@ -1942,7 +2295,12 @@ impl DataBrokerRuntime {
             .bind(id)
             .fetch_one(pool)
             .await
-            .map_err(|err| tonic::Status::internal(format!("put_policy update failed: {err}")))?
+            .map_err(|err| {
+                catalog_admin_internal_status(
+                    "put_policy_update",
+                    format!("put_policy update failed: {err}"),
+                )
+            })?
         } else {
             sqlx::query_scalar(&format!(
                 "INSERT INTO {abac_table}
@@ -1962,7 +2320,12 @@ impl DataBrokerRuntime {
             .bind(enabled)
             .fetch_one(pool)
             .await
-            .map_err(|err| tonic::Status::internal(format!("put_policy insert failed: {err}")))?
+            .map_err(|err| {
+                catalog_admin_internal_status(
+                    "put_policy_insert",
+                    format!("put_policy insert failed: {err}"),
+                )
+            })?
         };
         Ok(new_id)
     }
@@ -1975,11 +2338,18 @@ impl DataBrokerRuntime {
             .bind(policy_id)
             .execute(pool)
             .await
-            .map_err(|err| tonic::Status::internal(format!("delete_policy failed: {err}")))?;
+            .map_err(|err| {
+                catalog_admin_internal_status(
+                    "delete_policy",
+                    format!("delete_policy failed: {err}"),
+                )
+            })?;
         if rows.rows_affected() == 0 {
-            return Err(tonic::Status::not_found(format!(
-                "policy {policy_id} not found"
-            )));
+            return Err(catalog_admin_policy_not_found_status(
+                "delete_policy",
+                "policy_not_found",
+                format!("policy {policy_id} not found"),
+            ));
         }
         Ok(())
     }
@@ -2066,7 +2436,10 @@ impl DataBrokerRuntime {
             .map(|_| ())
             .map_err(|err| {
                 tracing::warn!(error=?err, "audit log write failed (non-fatal)");
-                tonic::Status::internal(format!("write_audit_log failed: {err}"))
+                catalog_admin_internal_status(
+                    "write_audit_log",
+                    format!("write_audit_log failed: {err}"),
+                )
             })
     }
 
@@ -2097,7 +2470,9 @@ impl DataBrokerRuntime {
         .bind(cdc_topic_prefix)
         .execute(pool)
         .await
-        .map_err(|err| tonic::Status::internal(format!("ensure_project failed: {err}")))?;
+        .map_err(|err| {
+            catalog_admin_internal_status("ensure_project", format!("ensure_project failed: {err}"))
+        })?;
         Ok(())
     }
 
@@ -2118,7 +2493,9 @@ impl DataBrokerRuntime {
         ))
         .fetch_all(pool)
         .await
-        .map_err(|err| tonic::Status::internal(format!("list_projects failed: {err}")))?;
+        .map_err(|err| {
+            catalog_admin_internal_status("list_projects", format!("list_projects failed: {err}"))
+        })?;
         Ok(rows.iter().map(|row| serde_json::json!({
             "project_id": row.try_get::<String,_>("project_id").unwrap_or_default(),
             "name": row.try_get::<String,_>("name").unwrap_or_default(),
@@ -2164,10 +2541,12 @@ impl DataBrokerRuntime {
         qb.push_bind(limit.max(1));
         qb.push(" OFFSET ");
         qb.push_bind(offset.max(0));
-        let rows =
-            qb.build().fetch_all(pool).await.map_err(|err| {
-                tonic::Status::internal(format!("list_migration_runs failed: {err}"))
-            })?;
+        let rows = qb.build().fetch_all(pool).await.map_err(|err| {
+            catalog_admin_internal_status(
+                "list_migration_runs",
+                format!("list_migration_runs failed: {err}"),
+            )
+        })?;
         Ok(rows
             .iter()
             .map(|row| {
@@ -2218,7 +2597,10 @@ impl DataBrokerRuntime {
         let rows = AdminAuditStore::list_admin_audit(store.as_ref(), &filter)
             .await
             .map_err(|err| {
-                tonic::Status::internal(format!("list_admin_audit_logs failed: {err}"))
+                catalog_admin_internal_status(
+                    "list_admin_audit_logs",
+                    format!("list_admin_audit_logs failed: {err}"),
+                )
             })?;
         Ok(rows
             .into_iter()
@@ -2265,7 +2647,10 @@ impl DataBrokerRuntime {
         let report = AdminAuditStore::verify_admin_audit_chain(store.as_ref(), limit_opt)
             .await
             .map_err(|err| {
-                tonic::Status::internal(format!("verify_admin_audit_log_chain failed: {err}"))
+                catalog_admin_internal_status(
+                    "verify_admin_audit_log_chain",
+                    format!("verify_admin_audit_log_chain failed: {err}"),
+                )
             })?;
         Ok(match report {
             AdminAuditChainReport::Passed {
@@ -2308,6 +2693,127 @@ impl DataBrokerRuntime {
 #[cfg(test)]
 mod migration_approval_tests {
     use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
+
+    fn decode_detail(status: &tonic::Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed error detail trailer");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_single_field_violation(status: &tonic::Status, field: &str, description: &str) {
+        assert_eq!(status.code(), tonic::Code::InvalidArgument);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert!(!detail.retryable);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, field);
+        assert_eq!(detail.field_violations[0].description, description);
+    }
+
+    fn assert_policy_detail(
+        status: &tonic::Status,
+        operation: &str,
+        policy_decision_id: &str,
+        message: &str,
+    ) {
+        assert_policy_detail_with_code(
+            status,
+            tonic::Code::FailedPrecondition,
+            operation,
+            policy_decision_id,
+            message,
+        );
+    }
+
+    fn assert_policy_detail_with_code(
+        status: &tonic::Status,
+        code: tonic::Code,
+        operation: &str,
+        policy_decision_id: &str,
+        message: &str,
+    ) {
+        assert_eq!(status.code(), code);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Policy as i32);
+        assert_eq!(detail.operation, operation);
+        assert_eq!(detail.policy_decision_id, policy_decision_id);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    fn assert_schema_detail(
+        status: &tonic::Status,
+        operation: &str,
+        schema_code: &str,
+        message: &str,
+    ) {
+        assert_eq!(status.code(), tonic::Code::FailedPrecondition);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Schema as i32);
+        assert_eq!(detail.backend, "catalog");
+        assert_eq!(detail.operation, operation);
+        assert_eq!(detail.capability_required, schema_code);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    fn assert_not_found_schema_detail(
+        status: &tonic::Status,
+        operation: &str,
+        schema_code: &str,
+        message: &str,
+    ) {
+        assert_eq!(status.code(), tonic::Code::NotFound);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Schema as i32);
+        assert_eq!(detail.backend, "catalog");
+        assert_eq!(detail.operation, operation);
+        assert_eq!(detail.capability_required, schema_code);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    fn assert_capability_detail(
+        status: &tonic::Status,
+        backend: &str,
+        operation: &str,
+        capability_required: &str,
+        message: &str,
+    ) {
+        assert_eq!(status.code(), tonic::Code::FailedPrecondition);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Capability as i32);
+        assert_eq!(detail.backend, backend);
+        assert_eq!(detail.operation, operation);
+        assert_eq!(detail.capability_required, capability_required);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    fn assert_internal_detail(status: &tonic::Status, operation: &str, message: &str) {
+        assert_eq!(status.code(), tonic::Code::Internal);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "catalog_admin");
+        assert_eq!(detail.operation, operation);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
 
     #[test]
     fn approval_token_match_rejects_empty_and_wrong_tokens() {
@@ -2323,6 +2829,47 @@ mod migration_approval_tests {
         ));
     }
 
+    #[test]
+    fn catalog_admin_manifest_validation_carries_field_violations() {
+        let utf8 = parse_catalog_manifest_json(&[0xff]).unwrap_err();
+        assert_eq!(utf8.message(), "manifest_json is not valid UTF-8");
+        assert_single_field_violation(&utf8, "manifest_json", "must be valid UTF-8");
+
+        let json = parse_catalog_manifest_json(b"{").unwrap_err();
+        assert!(
+            json.message().starts_with("manifest_json parse error:"),
+            "unexpected message: {}",
+            json.message()
+        );
+        assert_single_field_violation(&json, "manifest_json", "must be valid JSON");
+    }
+
+    #[test]
+    fn catalog_admin_id_and_filter_validation_carries_field_violations() {
+        let token = validate_approval_token_for_plan(" ").unwrap_err();
+        assert_eq!(token.message(), "approval_token must not be empty");
+        assert_single_field_violation(&token, "approval_token", "must be non-empty");
+
+        let run_id = parse_migration_run_id("not-a-uuid").unwrap_err();
+        assert_eq!(run_id.message(), "run_id must be a UUID");
+        assert_single_field_violation(&run_id, "run_id", "must be a UUID");
+
+        let dlq_id = parse_dlq_id("not-a-uuid").unwrap_err();
+        assert_eq!(dlq_id.message(), "dlq_id must be a UUID");
+        assert_single_field_violation(&dlq_id, "dlq_id", "must be a UUID");
+
+        let status = parse_dlq_status_filter("bogus").unwrap_err();
+        assert_eq!(
+            status.message(),
+            "invalid status_filter 'BOGUS'; must be one of [\"OPEN\", \"REPLAYED\", \"DISMISSED\", \"QUARANTINED\", \"RETRYING\"]"
+        );
+        assert_single_field_violation(
+            &status,
+            "status_filter",
+            "must be one of OPEN, REPLAYED, DISMISSED, QUARANTINED, RETRYING",
+        );
+    }
+
     /// Audit item 10: `apply_migration`'s reject paths, exercised through the
     /// extracted validator the serving path now calls
     /// (`validate_migration_apply_state_and_token`), so the empty-token,
@@ -2332,13 +2879,21 @@ mod migration_approval_tests {
     fn apply_migration_validation_rejects_empty_token() {
         let err = validate_migration_apply_state_and_token("APPROVED", "", "stored-token")
             .expect_err("empty approval_token must be rejected");
-        assert_eq!(err.code(), tonic::Code::FailedPrecondition);
-        assert!(err.message().contains("approval_token is required"));
+        assert_policy_detail(
+            &err,
+            "apply_migration",
+            "approval_token_required",
+            "approval_token is required",
+        );
 
         let err = validate_migration_apply_state_and_token("APPROVED", "   ", "stored-token")
             .expect_err("whitespace-only approval_token must be rejected");
-        assert_eq!(err.code(), tonic::Code::FailedPrecondition);
-        assert!(err.message().contains("approval_token is required"));
+        assert_policy_detail(
+            &err,
+            "apply_migration",
+            "approval_token_required",
+            "approval_token is required",
+        );
     }
 
     #[test]
@@ -2346,14 +2901,22 @@ mod migration_approval_tests {
         let err =
             validate_migration_apply_state_and_token("APPROVED", "wrong-token", "stored-token")
                 .expect_err("mismatched approval_token must be rejected");
-        assert_eq!(err.code(), tonic::Code::FailedPrecondition);
-        assert!(err.message().contains("does not match the approved token"));
+        assert_policy_detail(
+            &err,
+            "apply_migration",
+            "approval_token_mismatch",
+            "approval_token is missing or does not match the approved token",
+        );
 
         // A run whose stored token was never set must also fail closed.
         let err = validate_migration_apply_state_and_token("APPROVED", "provided-token", "")
             .expect_err("missing stored token must be rejected");
-        assert_eq!(err.code(), tonic::Code::FailedPrecondition);
-        assert!(err.message().contains("does not match the approved token"));
+        assert_policy_detail(
+            &err,
+            "apply_migration",
+            "approval_token_mismatch",
+            "approval_token is missing or does not match the approved token",
+        );
     }
 
     #[test]
@@ -2369,9 +2932,159 @@ mod migration_approval_tests {
             let err =
                 validate_migration_apply_state_and_token(state, "stored-token", "stored-token")
                     .expect_err("non-approved migration state must be rejected");
-            assert_eq!(err.code(), tonic::Code::FailedPrecondition);
-            assert!(err.message().contains("must be approved before apply"));
+            assert_policy_detail(
+                &err,
+                "apply_migration",
+                "migration_run_not_approved",
+                "migration run must be approved before apply and not be terminal",
+            );
         }
+    }
+
+    #[test]
+    fn catalog_admin_failed_preconditions_carry_typed_detail() {
+        assert_policy_detail(
+            &migration_approve_not_preflight_status(),
+            "approve_migration_plan",
+            "migration_run_not_preflight",
+            "migration run not found, not in PREFLIGHT, or already approved",
+        );
+        assert_schema_detail(
+            &migration_apply_preflight_status(&["operation 7 has no executable SQL".to_string()]),
+            "apply_migration",
+            "migration_apply_preflight_failed",
+            "apply_migration preflight failed: operation 7 has no executable SQL",
+        );
+        assert_policy_detail(
+            &migration_apply_state_changed_status(),
+            "apply_migration",
+            "migration_approval_state_changed",
+            "migration run approval state changed before apply",
+        );
+        assert_policy_detail(
+            &migration_apply_phase_refused_status("phase Apply refused by capability/ledger state"),
+            "apply_migration",
+            "migration_phase_refused",
+            "phase Apply refused by capability/ledger state",
+        );
+        assert_schema_detail(
+            &dlq_missing_topic_status(),
+            "replay_dlq_event",
+            "dlq_event_missing_topic",
+            "DLQ event has no topic and cannot be replayed",
+        );
+        assert_capability_detail(
+            &system_store_unregistered_status(),
+            "catalog_admin",
+            "system_store",
+            "canonical_system_store",
+            "no canonical store is registered; saga/audit admin requires a provisioned Postgres / MySQL / SQLite system store (udb_system)",
+        );
+    }
+
+    #[test]
+    fn catalog_admin_activate_not_found_statuses_carry_schema_detail() {
+        for (schema_code, message) in [
+            (
+                "staged_catalog_not_found",
+                "no staged catalog found for project",
+            ),
+            (
+                "staged_catalog_version_not_found",
+                "staged catalog version not found",
+            ),
+            (
+                "staged_catalog_not_found",
+                "catalog not found or not in STAGED status",
+            ),
+        ] {
+            assert_not_found_schema_detail(
+                &catalog_admin_not_found_status("activate_catalog", schema_code, message),
+                "activate_catalog",
+                schema_code,
+                message,
+            );
+        }
+    }
+
+    #[test]
+    fn catalog_admin_migration_dlq_not_found_statuses_carry_schema_detail() {
+        let dlq_id = "11111111-1111-4111-8111-111111111111";
+        for (status, operation, schema_code, message) in [
+            (
+                migration_run_not_found_status("apply_migration"),
+                "apply_migration",
+                "migration_run_not_found",
+                "migration run not found".to_string(),
+            ),
+            (
+                migration_run_not_found_status("get_migration_status"),
+                "get_migration_status",
+                "migration_run_not_found",
+                "migration run not found".to_string(),
+            ),
+            (
+                dlq_event_not_found_status(
+                    "get_dlq_event",
+                    format!("DLQ event {dlq_id} not found"),
+                ),
+                "get_dlq_event",
+                "dlq_event_not_found",
+                format!("DLQ event {dlq_id} not found"),
+            ),
+            (
+                dlq_event_not_found_or_not_replayable_status(),
+                "replay_dlq_event",
+                "dlq_event_not_found_or_not_replayable",
+                "DLQ event not found or not replayable".to_string(),
+            ),
+            (
+                dlq_event_not_found_status(
+                    "update_dlq_status",
+                    format!("DLQ event {dlq_id} not found"),
+                ),
+                "update_dlq_status",
+                "dlq_event_not_found",
+                format!("DLQ event {dlq_id} not found"),
+            ),
+        ] {
+            assert_not_found_schema_detail(&status, operation, schema_code, &message);
+        }
+    }
+
+    #[test]
+    fn catalog_admin_internal_status_carries_typed_detail() {
+        assert_internal_detail(
+            &catalog_admin_internal_status(
+                "activate_catalog_lookup",
+                "activate_catalog lookup failed: broken",
+            ),
+            "activate_catalog_lookup",
+            "activate_catalog lookup failed: broken",
+        );
+        assert_internal_detail(
+            &catalog_admin_internal_status(
+                "replay_dlq_enqueue",
+                "DLQ replay enqueue failed: broken",
+            ),
+            "replay_dlq_enqueue",
+            "DLQ replay enqueue failed: broken",
+        );
+    }
+
+    #[test]
+    fn catalog_admin_policy_delete_not_found_carries_policy_detail() {
+        assert_policy_detail_with_code(
+            &catalog_admin_policy_not_found_status(
+                "delete_policy",
+                "policy_not_found",
+                "policy 42 not found",
+            ),
+            tonic::Code::NotFound,
+            "delete_policy",
+            "policy_not_found",
+            "policy 42 not found",
+        );
     }
 
     #[test]

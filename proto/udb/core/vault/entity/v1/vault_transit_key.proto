@@ -1,0 +1,96 @@
+syntax = "proto3";
+
+package udb.core.vault.entity.v1;
+
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Vault.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/vault/entity/v1;vaultv1";
+option java_package = "com.udb.core.vault.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Vault\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Vault\\Entity\\V1";
+
+// ---------------------------------------------------------------------------
+// VaultTransitKey — one VERSION of a named transit key (master-plan 9.1).
+//
+// "Encryption/MAC as a service": callers Encrypt/Decrypt/Sign/Verify/Hmac by
+// key NAME and the key material NEVER leaves the broker. Each version holds a
+// random DEK wrapped by the master KEK
+// (`DataBrokerRuntime::encrypt_secret_at_rest`); only `wrapped_key_material` is
+// stored (OUTPUT_VIEW_STORAGE_ONLY). Rotation mirrors the auth-service signing
+// key state machine: the ACTIVE version encrypts/signs, while ACTIVE + VERIFYING
+// versions still decrypt/verify during the rotation overlap window. RLS scopes
+// rows to the current tenant; uniqueness is (tenant_id, key_name, version).
+// ---------------------------------------------------------------------------
+message VaultTransitKey {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "vault_transit_keys"
+    schema_name: "udb_vault"
+    migration_order: 2
+    is_table: true
+    comment: "Versioned transit keys for encrypt/decrypt/sign/verify (master-plan 9.1)"
+    soft_delete: false
+    audit_fields: true
+    enable_rls: true
+    rls_policies: {
+      policy_name: "tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text)"
+      permissive: true
+    }
+    indexes: {
+      index_name: "idx_vault_transit_keys_tenant_name_version_unique"
+      index_type: "BTREE"
+      unique: true
+      columns: "tenant_id"
+      columns: "key_name"
+      columns: "version"
+    }
+    indexes: {
+      index_name: "idx_vault_transit_keys_tenant_name"
+      index_type: "BTREE"
+      columns: "tenant_id"
+      columns: "key_name"
+    }
+    cdc_topic: "udb.vault.vault_transit_keys.cdc"
+    required_scope: "vault:read"
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "none"
+    retention_class: "vault.operational"
+    retention_days: 2555
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
+
+  string key_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "key_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(64)" not_null: true index: { index_name: "idx_vault_transit_keys_tenant" index_type: "BTREE" } }];
+
+  // Application-supplied transit key name (e.g. "orders-pii"). Encrypt/Sign use
+  // the ACTIVE version of this name; Decrypt/Verify select the version embedded
+  // in the ciphertext/signature and accept ACTIVE or VERIFYING.
+  string key_name = 3 [(udb.core.common.v1.pg_column) = { column_name: "key_name" sql_type: "VARCHAR(255)" not_null: true }];
+
+  int32 version = 4 [(udb.core.common.v1.pg_column) = { column_name: "version" sql_type: "INTEGER" not_null: true default_value: "1" }];
+
+  // Key purpose/algorithm marker. "aes256-gcm-siv" for encrypt/decrypt;
+  // sign/verify/hmac derive an HMAC-SHA256 MAC from the same DEK.
+  string algorithm = 5 [(udb.core.common.v1.pg_column) = { column_name: "algorithm" sql_type: "VARCHAR(40)" not_null: true default_value: "'aes256-gcm-siv'" }];
+
+  // The version's random DEK wrapped by the master KEK. STORAGE_ONLY: never
+  // surfaced by the generated read/redaction layer and never exported by any RPC.
+  string wrapped_key_material = 6 [(udb.core.common.v1.pg_column) = { column_name: "wrapped_key_material" sql_type: "TEXT" not_null: true comment: "Transit DEK wrapped by the master KEK" }, (udb.core.common.v1.sensitive) = true, (udb.core.common.v1.log_redacted) = true, (udb.core.common.v1.db_column_security) = { secret_classification: SECRET_CLASSIFICATION_TOKEN output_view: OUTPUT_VIEW_STORAGE_ONLY redaction_strategy: REDACTION_STRATEGY_REDACT encryption_key_class: "vault-kek" uniqueness_scope: "tenant" }];
+
+  // ACTIVE (encrypt/sign + decrypt/verify) | VERIFYING (decrypt/verify only,
+  // rotation overlap) | RETIRED (excluded). Mirrors the signing-key registry.
+  string state = 7 [(udb.core.common.v1.pg_column) = { column_name: "state" sql_type: "VARCHAR(20)" not_null: true default_value: "'ACTIVE'" index: { index_name: "idx_vault_transit_keys_state" index_type: "BTREE" } }];
+
+  string metadata_json = 8 [(udb.core.common.v1.pg_column) = { column_name: "metadata_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'{}'::jsonb" comment: "Non-secret metadata for audit and routing" }];
+}

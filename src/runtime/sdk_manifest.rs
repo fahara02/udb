@@ -12,7 +12,7 @@
 
 use std::collections::BTreeMap;
 
-use crate::runtime::descriptor_manifest::descriptor_contract_manifest;
+use crate::runtime::descriptor_manifest::descriptor_contract_manifest_static;
 
 /// One RPC method, flattened with its owning service for easy per-RPC template
 /// iteration. All names are the raw proto identifiers; mapping them to a
@@ -121,9 +121,23 @@ pub struct EntityDescriptor {
     pub tenant_field: String,
     pub project_field: String,
     pub soft_delete_field: String,
+    pub version_field: String,
     pub proto_package: String,
     pub language_classes: BTreeMap<String, String>,
     pub json_field_names: Vec<String>,
+    pub relations: Vec<EntityRelationDescriptor>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+pub struct EntityRelationDescriptor {
+    pub name: String,
+    pub kind: String,
+    pub local_fields: Vec<String>,
+    pub target_message_type: String,
+    pub target_table: String,
+    pub target_fields: Vec<String>,
+    pub on_delete: String,
+    pub on_update: String,
 }
 
 impl RpcDescriptor {
@@ -151,7 +165,7 @@ impl RpcDescriptor {
 /// All UDB RPCs across every embedded service, sorted by
 /// `(service_full, method)` for deterministic codegen output.
 pub fn rpc_manifest() -> Vec<RpcDescriptor> {
-    let manifest = descriptor_contract_manifest();
+    let manifest = descriptor_contract_manifest_static();
     let registry = crate::runtime::service::native_registry::native_service_registry();
     let mut out = Vec::new();
     for service in &manifest.services {
@@ -320,7 +334,7 @@ pub fn rpc_manifest() -> Vec<RpcDescriptor> {
 }
 
 pub fn entity_manifest() -> Vec<EntityDescriptor> {
-    let descriptor = descriptor_contract_manifest();
+    let descriptor = descriptor_contract_manifest_static();
     let catalog = crate::runtime::native_catalog::native_manifest();
     let mut out = Vec::new();
     for message in descriptor
@@ -334,7 +348,7 @@ pub fn entity_manifest() -> Vec<EntityDescriptor> {
             continue;
         };
         out.push(EntityDescriptor {
-            message_type: message.name.clone(),
+            message_type: message.full_name.clone(),
             short_name: message.name.clone(),
             table: table.table.clone(),
             primary_keys: table.primary_key.clone(),
@@ -345,6 +359,7 @@ pub fn entity_manifest() -> Vec<EntityDescriptor> {
             } else {
                 String::new()
             },
+            version_field: entity_version_field(table).unwrap_or_default(),
             proto_package: table.proto_package.clone(),
             language_classes: table.language_classes.clone(),
             json_field_names: table
@@ -352,6 +367,7 @@ pub fn entity_manifest() -> Vec<EntityDescriptor> {
                 .iter()
                 .map(|column| column.field_name.clone())
                 .collect(),
+            relations: entity_relations(table, &catalog.tables),
         });
     }
     out.sort_by(|a, b| {
@@ -360,6 +376,159 @@ pub fn entity_manifest() -> Vec<EntityDescriptor> {
             .then_with(|| a.table.cmp(&b.table))
     });
     out
+}
+
+fn entity_relations(
+    table: &crate::generation::manifest::ManifestTable,
+    tables: &[crate::generation::manifest::ManifestTable],
+) -> Vec<EntityRelationDescriptor> {
+    let mut out = Vec::new();
+    for fk in &table.foreign_keys {
+        if fk.columns.is_empty() || fk.ref_table.trim().is_empty() {
+            continue;
+        }
+        let target = tables.iter().find(|candidate| {
+            candidate.table == fk.ref_table
+                && (fk.ref_schema.trim().is_empty() || candidate.schema == fk.ref_schema)
+        });
+        let Some(target) = target else {
+            continue;
+        };
+        let local_fields = fk
+            .columns
+            .iter()
+            .filter_map(|column| manifest_field_for_column(table, column))
+            .collect::<Vec<_>>();
+        let target_columns = if fk.ref_columns.is_empty() {
+            target.primary_key.as_slice()
+        } else {
+            fk.ref_columns.as_slice()
+        };
+        let target_fields = target_columns
+            .iter()
+            .filter_map(|column| manifest_field_for_column(target, column))
+            .collect::<Vec<_>>();
+        if local_fields.is_empty() || target_fields.is_empty() {
+            continue;
+        }
+        out.push(EntityRelationDescriptor {
+            name: relation_name(&local_fields, target),
+            kind: "belongs_to".to_string(),
+            local_fields,
+            target_message_type: manifest_message_type(target),
+            target_table: format!("{}.{}", target.schema, target.table),
+            target_fields,
+            on_delete: fk.on_delete.clone(),
+            on_update: fk.on_update.clone(),
+        });
+    }
+    for child in tables {
+        for fk in &child.foreign_keys {
+            if fk.columns.is_empty() || fk.ref_table != table.table {
+                continue;
+            }
+            if !fk.ref_schema.trim().is_empty() && fk.ref_schema != table.schema {
+                continue;
+            }
+            let local_columns = if fk.ref_columns.is_empty() {
+                table.primary_key.as_slice()
+            } else {
+                fk.ref_columns.as_slice()
+            };
+            let local_fields = local_columns
+                .iter()
+                .filter_map(|column| manifest_field_for_column(table, column))
+                .collect::<Vec<_>>();
+            let target_fields = fk
+                .columns
+                .iter()
+                .filter_map(|column| manifest_field_for_column(child, column))
+                .collect::<Vec<_>>();
+            if local_fields.is_empty() || target_fields.is_empty() {
+                continue;
+            }
+            out.push(EntityRelationDescriptor {
+                name: has_many_relation_name(child),
+                kind: "has_many".to_string(),
+                local_fields,
+                target_message_type: manifest_message_type(child),
+                target_table: format!("{}.{}", child.schema, child.table),
+                target_fields,
+                on_delete: fk.on_delete.clone(),
+                on_update: fk.on_update.clone(),
+            });
+        }
+    }
+    out.sort_by(|a, b| {
+        a.name
+            .cmp(&b.name)
+            .then_with(|| a.target_message_type.cmp(&b.target_message_type))
+            .then_with(|| a.local_fields.cmp(&b.local_fields))
+    });
+    out
+}
+
+fn entity_version_field(table: &crate::generation::manifest::ManifestTable) -> Option<String> {
+    const VERSION_FIELD_NAMES: [&str; 4] = ["version", "revision", "row_version", "lock_version"];
+    table
+        .columns
+        .iter()
+        .find(|column| {
+            VERSION_FIELD_NAMES.contains(&column.field_name.as_str())
+                || VERSION_FIELD_NAMES.contains(&column.column_name.as_str())
+        })
+        .map(|column| column.field_name.clone())
+}
+
+fn manifest_field_for_column(
+    table: &crate::generation::manifest::ManifestTable,
+    column_name: &str,
+) -> Option<String> {
+    table
+        .columns
+        .iter()
+        .find(|column| column.column_name == column_name)
+        .map(|column| column.field_name.clone())
+}
+
+fn manifest_message_type(table: &crate::generation::manifest::ManifestTable) -> String {
+    if table.proto_package.trim().is_empty() {
+        table.message_name.clone()
+    } else {
+        format!("{}.{}", table.proto_package, table.message_name)
+    }
+}
+
+fn relation_name(
+    local_fields: &[String],
+    target: &crate::generation::manifest::ManifestTable,
+) -> String {
+    local_fields
+        .first()
+        .map(|field| {
+            field
+                .strip_suffix("_id")
+                .or_else(|| field.strip_suffix("_uuid"))
+                .unwrap_or(field)
+                .to_string()
+        })
+        .filter(|name| !name.trim().is_empty())
+        .unwrap_or_else(|| alias_snake_case(&target.message_name))
+}
+
+fn has_many_relation_name(table: &crate::generation::manifest::ManifestTable) -> String {
+    let table_name = alias_snake_case(&table.table);
+    if !table_name.trim().is_empty() {
+        return table_name;
+    }
+    let alias = alias_snake_case(&table.message_name);
+    if alias.ends_with('s') {
+        alias
+    } else if let Some(stem) = alias.strip_suffix('y') {
+        format!("{stem}ies")
+    } else {
+        format!("{alias}s")
+    }
 }
 
 fn credential_type_name(value: i32) -> &'static str {
@@ -457,6 +626,15 @@ fn alias_camel_case(value: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::generation::manifest::{ManifestColumn, ManifestForeignKey, ManifestTable};
+
+    fn manifest_column(field_name: &str, column_name: &str) -> ManifestColumn {
+        ManifestColumn {
+            field_name: field_name.to_string(),
+            column_name: column_name.to_string(),
+            ..ManifestColumn::default()
+        }
+    }
 
     #[test]
     fn manifest_is_derived_from_embedded_descriptors() {
@@ -551,7 +729,7 @@ mod tests {
 
     #[test]
     fn every_descriptor_native_service_id_reaches_sdk_manifest() {
-        let descriptor = descriptor_contract_manifest();
+        let descriptor = descriptor_contract_manifest_static();
         let expected: std::collections::BTreeSet<String> = descriptor
             .services
             .iter()
@@ -596,9 +774,85 @@ mod tests {
         assert!(
             entities
                 .iter()
-                .any(|entity| entity.message_type == "Tenant"),
+                .any(|entity| entity.message_type == "udb.core.tenant.entity.v1.Tenant"),
             "expected native Tenant entity descriptor in manifest"
         );
+    }
+
+    #[test]
+    fn entity_relations_are_derived_from_foreign_keys() {
+        let child = ManifestTable {
+            message_name: "Invoice".to_string(),
+            proto_package: "billing.v1".to_string(),
+            schema: "billing".to_string(),
+            table: "invoices".to_string(),
+            columns: vec![
+                manifest_column("invoice_id", "invoice_id"),
+                manifest_column("customer_id", "customer_id"),
+            ],
+            foreign_keys: vec![ManifestForeignKey {
+                columns: vec!["customer_id".to_string()],
+                ref_schema: "crm".to_string(),
+                ref_table: "customers".to_string(),
+                ref_columns: vec!["customer_id".to_string()],
+                on_delete: "cascade".to_string(),
+                ..ManifestForeignKey::default()
+            }],
+            ..ManifestTable::default()
+        };
+        let target = ManifestTable {
+            message_name: "Customer".to_string(),
+            proto_package: "crm.v1".to_string(),
+            schema: "crm".to_string(),
+            table: "customers".to_string(),
+            columns: vec![manifest_column("customer_id", "customer_id")],
+            primary_key: vec!["customer_id".to_string()],
+            ..ManifestTable::default()
+        };
+
+        let relations = entity_relations(&child, &[child.clone(), target.clone()]);
+
+        assert_eq!(relations.len(), 1);
+        let relation = &relations[0];
+        assert_eq!(relation.name, "customer");
+        assert_eq!(relation.kind, "belongs_to");
+        assert_eq!(relation.local_fields, ["customer_id"]);
+        assert_eq!(relation.target_message_type, "crm.v1.Customer");
+        assert_eq!(relation.target_table, "crm.customers");
+        assert_eq!(relation.target_fields, ["customer_id"]);
+        assert_eq!(relation.on_delete, "cascade");
+
+        let inverse = entity_relations(&target, &[child, target.clone()]);
+        assert_eq!(inverse.len(), 1);
+        let relation = &inverse[0];
+        assert_eq!(relation.name, "invoices");
+        assert_eq!(relation.kind, "has_many");
+        assert_eq!(relation.local_fields, ["customer_id"]);
+        assert_eq!(relation.target_message_type, "billing.v1.Invoice");
+        assert_eq!(relation.target_table, "billing.invoices");
+        assert_eq!(relation.target_fields, ["customer_id"]);
+        assert_eq!(relation.on_delete, "cascade");
+    }
+
+    #[test]
+    fn entity_version_field_is_conservative() {
+        let table = ManifestTable {
+            columns: vec![
+                manifest_column("updated_at", "updated_at"),
+                manifest_column("lock_version", "lock_version"),
+            ],
+            ..ManifestTable::default()
+        };
+        assert_eq!(
+            entity_version_field(&table).as_deref(),
+            Some("lock_version")
+        );
+
+        let timestamp_only = ManifestTable {
+            columns: vec![manifest_column("updated_at", "updated_at")],
+            ..ManifestTable::default()
+        };
+        assert_eq!(entity_version_field(&timestamp_only), None);
     }
 
     #[test]

@@ -1,5 +1,85 @@
 //! service.rs split — data RPC handlers (Phase G).
 use super::*;
+use crate::runtime::core::{logical_value_to_json, postgres_param_types};
+
+fn handlers_data_invalid_field(
+    field: impl Into<String>,
+    description: impl Into<String>,
+    message: impl Into<String>,
+) -> Status {
+    crate::runtime::executor_utils::invalid_argument_fields(
+        message,
+        [(field.into(), description.into())],
+    )
+}
+
+fn neutral_ir_compile_failed_status(err: crate::ir::compile::CompileError) -> Status {
+    handlers_data_invalid_field(
+        "ir",
+        "neutral IR must compile for the selected backend",
+        format!("neutral IR compile failed [{}]: {err}", err.code()),
+    )
+}
+
+fn raw_dispatch_disabled_status(kind: &crate::backend::BackendKind) -> Status {
+    let backend = kind.as_str();
+    let upper = backend.to_ascii_uppercase();
+    crate::runtime::executor_utils::policy_status(
+        "generic_dispatch_raw_dispatch",
+        "raw_dispatch_requires_ir_envelope",
+        format!(
+            "raw dispatch disabled for mediated backend {backend}; supply an `ir` \
+             envelope or set {}{upper}=1",
+            crate::runtime::config::RAW_DISPATCH_OPT_OUT_PREFIX
+        ),
+    )
+}
+
+fn generic_dispatch_scope_status() -> Status {
+    crate::runtime::executor_utils::policy_status_with_code(
+        tonic::Code::PermissionDenied,
+        "GenericDispatch",
+        "dispatch_scope_required",
+        "scope udb:dispatch or udb:admin is required",
+    )
+}
+
+fn neutral_ir_compiler_unavailable_status(
+    kind: &crate::backend::BackendKind,
+    operation: &str,
+) -> Status {
+    crate::runtime::executor_utils::capability_status(
+        kind.as_str(),
+        operation,
+        "neutral_ir_compiler",
+        format!(
+            "backend '{}' has no neutral-IR compiler in this build",
+            kind.as_str()
+        ),
+    )
+}
+
+fn generic_dispatch_compiled_capability_status(
+    backend: &str,
+    operation: &str,
+    capability_required: &str,
+    message: impl Into<String>,
+) -> Status {
+    crate::runtime::executor_utils::capability_status(
+        backend,
+        operation,
+        capability_required,
+        message,
+    )
+}
+
+fn generic_dispatch_internal_status(
+    backend: &str,
+    operation: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    crate::runtime::executor_utils::internal_status(backend, operation, message)
+}
 
 impl DataBrokerService {
     pub(crate) async fn select_inner(
@@ -383,9 +463,7 @@ impl DataBrokerService {
             return self.record_grpc(
                 "GenericDispatch",
                 started,
-                Err(Status::permission_denied(
-                    "scope udb:dispatch or udb:admin is required",
-                )),
+                Err(generic_dispatch_scope_status()),
             );
         }
         let req = request.into_inner();
@@ -430,7 +508,7 @@ impl DataBrokerService {
                             "resource_uri": req.resource_uri,
                             "write_like": matches!(
                                 req.operation.as_str(),
-                                "ensure_resource" | "drop_resource" | "mutate" | "transaction" | "put_object"
+                                "ensure_resource" | "drop_resource" | "mutate" | "transaction" | "put_object" | "delete_object"
                             ),
                             "requires_scope": "udb:dispatch or udb:admin",
                             "channel": "generic_dispatch"
@@ -449,7 +527,12 @@ impl DataBrokerService {
         // `write_like` above); read-only ops stay on read instances.
         let write_like = matches!(
             req.operation.as_str(),
-            "ensure_resource" | "drop_resource" | "mutate" | "transaction" | "put_object"
+            "ensure_resource"
+                | "drop_resource"
+                | "mutate"
+                | "transaction"
+                | "put_object"
+                | "delete_object"
         );
         let result: Result<String, tonic::Status> = self
             .execute_backend_operation(
@@ -506,10 +589,22 @@ impl DataBrokerService {
             &operation,
             &spec_json,
         )?;
+        // item 2.1 — IR mediated-by-default. When the request carried no `ir`
+        // envelope, `compiled_dispatch` is None and the raw `spec_json` would flow
+        // straight to the executor with no tenant/predicate injection. For backends
+        // that HAVE a neutral-IR compiler this raw fall-through is now the gated
+        // exception: blocked (fail-closed) in production, counted in dev.
+        if compiled_dispatch.is_none() {
+            enforce_raw_dispatch_gate(&resolved_backend.backend, self.metrics.as_ref())?;
+        }
         let operation = compiled_dispatch
             .as_ref()
             .map(|compiled| compiled.operation.clone())
             .unwrap_or(operation);
+        let resource_name = compiled_dispatch
+            .as_ref()
+            .and_then(|compiled| compiled.resource_name.clone())
+            .unwrap_or(resource_name);
         let spec_json = compiled_dispatch
             .as_ref()
             .map(|compiled| compiled.spec_json.clone())
@@ -517,7 +612,12 @@ impl DataBrokerService {
         let write = if compiled_dispatch.is_some() {
             matches!(
                 operation.as_str(),
-                "ensure_resource" | "drop_resource" | "mutate" | "transaction" | "put_object"
+                "ensure_resource"
+                    | "drop_resource"
+                    | "mutate"
+                    | "transaction"
+                    | "put_object"
+                    | "delete_object"
             )
         } else {
             write
@@ -559,6 +659,7 @@ impl DataBrokerService {
             tonic::Code::FailedPrecondition,
             Some(&admission_context),
         )?;
+        let dispatch_backend = breaker_backend.clone();
         let result = self
             .execute_with_channel_scoped(
                 crate::runtime::channels::OperationChannel::GenericDispatch,
@@ -576,16 +677,30 @@ impl DataBrokerService {
                     // concurrent load) fails ONLY this request as `Internal` — the
                     // process and both listeners stay up. The panic hook (C1) still
                     // logs+flushes the panic location before catch_unwind converts it.
+                    let panic_backend = dispatch_backend.clone();
+                    let panic_operation = operation.clone();
                     let dispatch = async move {
                     match operation.as_str() {
                         "ping" => executor
                             .ping()
                             .await
                             .map(|_| r#"{"status":"ok"}"#.to_string())
-                            .map_err(tonic::Status::unavailable),
+                            .map_err(|err| {
+                                crate::runtime::executor_utils::backend_transport_status(
+                                    &dispatch_backend,
+                                    "ping",
+                                    err,
+                                )
+                            }),
                         "probe" => match executor.probe().await {
                             Ok(probe) => serde_json::to_string(&probe)
-                                .map_err(|e| tonic::Status::internal(e.to_string())),
+                                .map_err(|e| {
+                                    generic_dispatch_internal_status(
+                                        &dispatch_backend,
+                                        "probe",
+                                        e.to_string(),
+                                    )
+                                }),
                             Err(status) => Err(status),
                         },
                         "ensure_resource" => executor
@@ -598,7 +713,13 @@ impl DataBrokerService {
                             .map(|_| r#"{"status":"ok"}"#.to_string()),
                         "list_resources" => match executor.list_resources().await {
                             Ok(list) => serde_json::to_string(&list)
-                                .map_err(|e| tonic::Status::internal(e.to_string())),
+                                .map_err(|e| {
+                                    generic_dispatch_internal_status(
+                                        &dispatch_backend,
+                                        "list_resources",
+                                        e.to_string(),
+                                    )
+                                }),
                             Err(status) => Err(status),
                         },
                         "query" => executor.query(&spec_json).await,
@@ -616,24 +737,36 @@ impl DataBrokerService {
                         "put_object" => {
                             let spec_value: serde_json::Value =
                                 serde_json::from_str(&spec_json).map_err(|err| {
-                                    tonic::Status::invalid_argument(format!(
-                                        "put_object spec_json must be valid JSON: {err}"
-                                    ))
+                                    handlers_data_invalid_field(
+                                        "spec_json",
+                                        "put_object spec_json must be valid JSON",
+                                        format!("put_object spec_json must be valid JSON: {err}"),
+                                    )
                                 })?;
                             let bytes =
                                 crate::runtime::executor_utils::object_bytes_from_json(&spec_value)?;
                             executor.put_object(&spec_json, bytes).await
                         }
-                        other => Err(tonic::Status::invalid_argument(format!(
-                            "unknown operation '{other}'; allowed: ping, probe, ensure_resource, drop_resource, list_resources, query, mutate, transaction, search, get_object, put_object"
-                        ))),
+                        "delete_object" => executor
+                            .delete_object(&spec_json)
+                            .await
+                            .map(|_| r#"{"status":"ok"}"#.to_string()),
+                        other => Err(handlers_data_invalid_field(
+                            "operation",
+                            "must be one of ping, probe, ensure_resource, drop_resource, list_resources, query, mutate, transaction, search, get_object, put_object, or delete_object",
+                            format!(
+                                "unknown operation '{other}'; allowed: ping, probe, ensure_resource, drop_resource, list_resources, query, mutate, transaction, search, get_object, put_object, delete_object"
+                            ),
+                        )),
                     }
                     };
                     std::panic::AssertUnwindSafe(dispatch)
                         .catch_unwind()
                         .await
                         .unwrap_or_else(|_| {
-                            Err(tonic::Status::internal(
+                            Err(generic_dispatch_internal_status(
+                                &panic_backend,
+                                panic_operation,
                                 "backend operation panicked; request failed (broker stayed up)",
                             ))
                         })
@@ -653,6 +786,66 @@ impl DataBrokerService {
 pub(crate) struct CompiledDispatchRequest {
     pub(crate) operation: String,
     pub(crate) spec_json: String,
+    pub(crate) resource_name: Option<String>,
+}
+
+// The per-backend raw-dispatch opt-out env resolution lives in
+// `crate::runtime::config::raw_dispatch_opt_out` (the startup/config boundary) so
+// this hot-path handler file carries NO env reads — the `connection_manager`
+// hot-path + env-confinement guards forbid `std::env` access in `handlers_*.rs`.
+
+/// item 2.1 — gate the raw (un-mediated) generic-dispatch fall-through.
+///
+/// `backend` is the resolved canonical backend token. Behaviour:
+/// * Non-mediated backends (KV / object stores with no neutral-IR compiler):
+///   unchanged — raw dispatch is the only path, so it is always allowed.
+/// * Mediated backends in **production** (`SecurityConfig::is_production()`):
+///   raw dispatch is BLOCKED with `failed_precondition` unless the operator set
+///   `UDB_DISPATCH_ALLOW_RAW_<BACKEND>` truthy.
+/// * Mediated backends in **dev** (non-production): allowed, but increments
+///   `udb_raw_dispatch_total{backend}` so drift off the mediated path is visible.
+fn enforce_raw_dispatch_gate(
+    backend: &str,
+    metrics: &dyn crate::metrics::MetricsRecorder,
+) -> Result<(), Status> {
+    let Some(kind) = crate::backend::BackendKind::from_token(backend) else {
+        // No recognised kind ⇒ no compiler ⇒ nothing to mediate around.
+        return Ok(());
+    };
+    raw_dispatch_decision(
+        &kind,
+        crate::runtime::security::SecurityConfig::current().is_production(),
+        crate::runtime::config::raw_dispatch_opt_out(backend),
+        metrics,
+    )
+}
+
+/// Pure decision core for the raw-dispatch gate, separated from the global env /
+/// `SecurityConfig` reads so the policy is unit-testable without touching process
+/// state. See [`enforce_raw_dispatch_gate`] for the resolved-from-globals wrapper.
+fn raw_dispatch_decision(
+    kind: &crate::backend::BackendKind,
+    is_production: bool,
+    opt_out: bool,
+    metrics: &dyn crate::metrics::MetricsRecorder,
+) -> Result<(), Status> {
+    // Only gate backends that are compiler-mediated on the DATA-PLANE path
+    // (`compiler_mediated_runtime_path_wired` = the single source from 2.3, which
+    // already excludes KV/object stores like redis/memcached/s3 where raw IS the
+    // legitimate path). Using the bare `is_mediated_backend` here would wrongly
+    // gate KV backends that merely have a compiler arm.
+    if !crate::backend::plugin::compiler_mediated_runtime_path_wired(kind) {
+        return Ok(());
+    }
+    if opt_out {
+        return Ok(());
+    }
+    if is_production {
+        return Err(raw_dispatch_disabled_status(kind));
+    }
+    // Dev mode: permit the raw path but record the drift.
+    metrics.inc_raw_dispatch_total(kind.as_str());
+    Ok(())
 }
 
 fn compile_neutral_ir_dispatch(
@@ -663,8 +856,13 @@ fn compile_neutral_ir_dispatch(
     requested_operation: &str,
     spec_json: &str,
 ) -> Result<Option<CompiledDispatchRequest>, Status> {
-    let spec: serde_json::Value = serde_json::from_str(spec_json)
-        .map_err(|err| Status::invalid_argument(format!("invalid spec_json: {err}")))?;
+    let spec: serde_json::Value = serde_json::from_str(spec_json).map_err(|err| {
+        handlers_data_invalid_field(
+            "spec_json",
+            "must be valid dispatch JSON",
+            format!("invalid spec_json: {err}"),
+        )
+    })?;
     let Some(ir) = spec
         .get("ir")
         .or_else(|| spec.get("neutral_ir"))
@@ -673,16 +871,24 @@ fn compile_neutral_ir_dispatch(
         return Ok(None);
     };
     let Some(kind) = crate::backend::BackendKind::from_token(backend) else {
-        return Err(Status::invalid_argument(format!(
-            "backend '{backend}' has no neutral-IR compiler"
-        )));
+        return Err(handlers_data_invalid_field(
+            "backend",
+            "must identify a backend with a neutral-IR compiler",
+            format!("backend '{backend}' has no neutral-IR compiler"),
+        ));
     };
     let ir_op = ir
         .get("op")
         .or_else(|| ir.get("operation"))
         .or_else(|| spec.get("ir_op"))
         .and_then(serde_json::Value::as_str)
-        .ok_or_else(|| Status::invalid_argument("neutral IR dispatch requires `ir.op`"))?;
+        .ok_or_else(|| {
+            handlers_data_invalid_field(
+                "ir.op",
+                "neutral IR dispatch requires an operation",
+                "neutral IR dispatch requires `ir.op`",
+            )
+        })?;
     let payload = ir_payload(ir)?;
     let mut ctx = crate::ir::compile::CompileContext::new(manifest)
         .with_tenant(&context.tenant_id)
@@ -709,7 +915,9 @@ fn ir_payload(ir: &serde_json::Value) -> Result<serde_json::Value, Status> {
         return Ok(payload.clone());
     }
     let serde_json::Value::Object(map) = ir else {
-        return Err(Status::invalid_argument(
+        return Err(handlers_data_invalid_field(
+            "ir",
+            "neutral IR dispatch body must be an object",
             "neutral IR dispatch `ir` must be an object",
         ));
     };
@@ -739,52 +947,67 @@ fn compile_ir_payload(
     use crate::ir::compile::{CompileOperation, compile_for_backend};
     let compile = |op: CompileOperation<'_>| {
         compile_for_backend(kind, op, ctx)
-            .ok_or_else(|| {
-                Status::failed_precondition(format!(
-                    "backend '{}' has no neutral-IR compiler in this build",
-                    kind.as_str()
-                ))
-            })?
-            .map_err(|err| {
-                Status::invalid_argument(format!(
-                    "neutral IR compile failed [{}]: {err}",
-                    err.code()
-                ))
-            })
+            .ok_or_else(|| neutral_ir_compiler_unavailable_status(kind, "neutral_ir_dispatch"))?
+            .map_err(neutral_ir_compile_failed_status)
     };
     match ir_op.trim().to_ascii_lowercase().as_str() {
         "read" | "query" => {
-            let op: crate::ir::LogicalRead = serde_json::from_value(payload)
-                .map_err(|err| Status::invalid_argument(format!("invalid LogicalRead: {err}")))?;
+            let op: crate::ir::LogicalRead = serde_json::from_value(payload).map_err(|err| {
+                handlers_data_invalid_field(
+                    "ir",
+                    "must be a valid LogicalRead payload",
+                    format!("invalid LogicalRead: {err}"),
+                )
+            })?;
             Ok((compile(CompileOperation::Read(&op))?, LogicalOpFamily::Read))
         }
         "write" | "upsert" | "mutate" => {
-            let op: crate::ir::LogicalWrite = serde_json::from_value(payload)
-                .map_err(|err| Status::invalid_argument(format!("invalid LogicalWrite: {err}")))?;
+            let op: crate::ir::LogicalWrite = serde_json::from_value(payload).map_err(|err| {
+                handlers_data_invalid_field(
+                    "ir",
+                    "must be a valid LogicalWrite payload",
+                    format!("invalid LogicalWrite: {err}"),
+                )
+            })?;
             Ok((
                 compile(CompileOperation::Write(&op))?,
                 LogicalOpFamily::Write,
             ))
         }
         "update" => {
-            let op: crate::ir::LogicalUpdate = serde_json::from_value(payload)
-                .map_err(|err| Status::invalid_argument(format!("invalid LogicalUpdate: {err}")))?;
+            let op: crate::ir::LogicalUpdate = serde_json::from_value(payload).map_err(|err| {
+                handlers_data_invalid_field(
+                    "ir",
+                    "must be a valid LogicalUpdate payload",
+                    format!("invalid LogicalUpdate: {err}"),
+                )
+            })?;
             Ok((
                 compile(CompileOperation::Update(&op))?,
                 LogicalOpFamily::Update,
             ))
         }
         "delete" => {
-            let op: crate::ir::LogicalDelete = serde_json::from_value(payload)
-                .map_err(|err| Status::invalid_argument(format!("invalid LogicalDelete: {err}")))?;
+            let op: crate::ir::LogicalDelete = serde_json::from_value(payload).map_err(|err| {
+                handlers_data_invalid_field(
+                    "ir",
+                    "must be a valid LogicalDelete payload",
+                    format!("invalid LogicalDelete: {err}"),
+                )
+            })?;
             Ok((
                 compile(CompileOperation::Delete(&op))?,
                 LogicalOpFamily::Delete,
             ))
         }
         "search" => {
-            let op: crate::ir::LogicalSearch = serde_json::from_value(payload)
-                .map_err(|err| Status::invalid_argument(format!("invalid LogicalSearch: {err}")))?;
+            let op: crate::ir::LogicalSearch = serde_json::from_value(payload).map_err(|err| {
+                handlers_data_invalid_field(
+                    "ir",
+                    "must be a valid LogicalSearch payload",
+                    format!("invalid LogicalSearch: {err}"),
+                )
+            })?;
             Ok((
                 compile(CompileOperation::Search(&op))?,
                 LogicalOpFamily::Search,
@@ -793,7 +1016,11 @@ fn compile_ir_payload(
         "resource_op" | "resource" => {
             let op: crate::ir::LogicalResourceOp =
                 serde_json::from_value(payload).map_err(|err| {
-                    Status::invalid_argument(format!("invalid LogicalResourceOp: {err}"))
+                    handlers_data_invalid_field(
+                        "ir",
+                        "must be a valid LogicalResourceOp payload",
+                        format!("invalid LogicalResourceOp: {err}"),
+                    )
                 })?;
             Ok((
                 compile(CompileOperation::ResourceOp(&op))?,
@@ -803,16 +1030,22 @@ fn compile_ir_payload(
         "aggregate" => {
             let op: crate::ir::LogicalAggregate =
                 serde_json::from_value(payload).map_err(|err| {
-                    Status::invalid_argument(format!("invalid LogicalAggregate: {err}"))
+                    handlers_data_invalid_field(
+                        "ir",
+                        "must be a valid LogicalAggregate payload",
+                        format!("invalid LogicalAggregate: {err}"),
+                    )
                 })?;
             Ok((
                 compile(CompileOperation::Aggregate(&op))?,
                 LogicalOpFamily::Aggregate,
             ))
         }
-        other => Err(Status::invalid_argument(format!(
-            "unsupported neutral IR op '{other}'"
-        ))),
+        other => Err(handlers_data_invalid_field(
+            "ir.op",
+            "must be a supported neutral IR operation",
+            format!("unsupported neutral IR op '{other}'"),
+        )),
     }
 }
 
@@ -823,15 +1056,8 @@ pub(crate) fn compile_logical_read_dispatch(
 ) -> Result<CompiledDispatchRequest, Status> {
     use crate::ir::compile::{CompileOperation, compile_for_backend};
     let rendering = compile_for_backend(kind, CompileOperation::Read(op), ctx)
-        .ok_or_else(|| {
-            Status::failed_precondition(format!(
-                "backend '{}' has no neutral-IR compiler in this build",
-                kind.as_str()
-            ))
-        })?
-        .map_err(|err| {
-            Status::invalid_argument(format!("neutral IR compile failed [{}]: {err}", err.code()))
-        })?;
+        .ok_or_else(|| neutral_ir_compiler_unavailable_status(kind, "compile_logical_read"))?
+        .map_err(neutral_ir_compile_failed_status)?;
     compiled_rendering_to_dispatch(&rendering, LogicalOpFamily::Read)
 }
 
@@ -842,15 +1068,8 @@ pub(crate) fn compile_logical_write_dispatch(
 ) -> Result<CompiledDispatchRequest, Status> {
     use crate::ir::compile::{CompileOperation, compile_for_backend};
     let rendering = compile_for_backend(kind, CompileOperation::Write(op), ctx)
-        .ok_or_else(|| {
-            Status::failed_precondition(format!(
-                "backend '{}' has no neutral-IR compiler in this build",
-                kind.as_str()
-            ))
-        })?
-        .map_err(|err| {
-            Status::invalid_argument(format!("neutral IR compile failed [{}]: {err}", err.code()))
-        })?;
+        .ok_or_else(|| neutral_ir_compiler_unavailable_status(kind, "compile_logical_write"))?
+        .map_err(neutral_ir_compile_failed_status)?;
     compiled_rendering_to_dispatch(&rendering, LogicalOpFamily::Write)
 }
 
@@ -862,15 +1081,8 @@ pub(crate) fn compile_logical_update_dispatch(
 ) -> Result<CompiledDispatchRequest, Status> {
     use crate::ir::compile::{CompileOperation, compile_for_backend};
     let rendering = compile_for_backend(kind, CompileOperation::Update(op), ctx)
-        .ok_or_else(|| {
-            Status::failed_precondition(format!(
-                "backend '{}' has no neutral-IR compiler in this build",
-                kind.as_str()
-            ))
-        })?
-        .map_err(|err| {
-            Status::invalid_argument(format!("neutral IR compile failed [{}]: {err}", err.code()))
-        })?;
+        .ok_or_else(|| neutral_ir_compiler_unavailable_status(kind, "compile_logical_update"))?
+        .map_err(neutral_ir_compile_failed_status)?;
     compiled_rendering_to_dispatch(&rendering, LogicalOpFamily::Update)
 }
 
@@ -881,15 +1093,8 @@ pub(crate) fn compile_logical_aggregate_dispatch(
 ) -> Result<CompiledDispatchRequest, Status> {
     use crate::ir::compile::{CompileOperation, compile_for_backend};
     let rendering = compile_for_backend(kind, CompileOperation::Aggregate(op), ctx)
-        .ok_or_else(|| {
-            Status::failed_precondition(format!(
-                "backend '{}' has no neutral-IR compiler in this build",
-                kind.as_str()
-            ))
-        })?
-        .map_err(|err| {
-            Status::invalid_argument(format!("neutral IR compile failed [{}]: {err}", err.code()))
-        })?;
+        .ok_or_else(|| neutral_ir_compiler_unavailable_status(kind, "compile_logical_aggregate"))?
+        .map_err(neutral_ir_compile_failed_status)?;
     compiled_rendering_to_dispatch(&rendering, LogicalOpFamily::Aggregate)
 }
 
@@ -901,15 +1106,8 @@ pub(crate) fn compile_logical_delete_dispatch(
 ) -> Result<CompiledDispatchRequest, Status> {
     use crate::ir::compile::{CompileOperation, compile_for_backend};
     let rendering = compile_for_backend(kind, CompileOperation::Delete(op), ctx)
-        .ok_or_else(|| {
-            Status::failed_precondition(format!(
-                "backend '{}' has no neutral-IR compiler in this build",
-                kind.as_str()
-            ))
-        })?
-        .map_err(|err| {
-            Status::invalid_argument(format!("neutral IR compile failed [{}]: {err}", err.code()))
-        })?;
+        .ok_or_else(|| neutral_ir_compiler_unavailable_status(kind, "compile_logical_delete"))?
+        .map_err(neutral_ir_compile_failed_status)?;
     compiled_rendering_to_dispatch(&rendering, LogicalOpFamily::Delete)
 }
 
@@ -959,6 +1157,7 @@ fn compiled_rendering_to_dispatch(
             Ok(CompiledDispatchRequest {
                 operation: operation.to_string(),
                 spec_json: spec.to_string(),
+                resource_name: None,
             })
         }
         CompiledRendering::Json {
@@ -1000,6 +1199,7 @@ fn compiled_rendering_to_dispatch(
             Ok(CompiledDispatchRequest {
                 operation: operation.to_string(),
                 spec_json: spec.to_string(),
+                resource_name: None,
             })
         }
         CompiledRendering::Object {
@@ -1012,10 +1212,14 @@ fn compiled_rendering_to_dispatch(
             let operation = match op {
                 ObjectOp::GetObject | ObjectOp::HeadObject => "get_object",
                 ObjectOp::PutObject => "put_object",
-                ObjectOp::DeleteObject | ObjectOp::ListObjects | ObjectOp::GeneratePresigned => {
-                    return Err(Status::failed_precondition(format!(
-                        "compiled object op '{op:?}' is not exposed by GenericDispatch"
-                    )));
+                ObjectOp::DeleteObject => "delete_object",
+                ObjectOp::ListObjects | ObjectOp::GeneratePresigned => {
+                    return Err(generic_dispatch_compiled_capability_status(
+                        "object",
+                        "compiled_object_rendering",
+                        "generic_dispatch_object_resource_op",
+                        format!("compiled object op '{op:?}' is not exposed by GenericDispatch"),
+                    ));
                 }
             };
             let mut spec = serde_json::json!({
@@ -1030,6 +1234,7 @@ fn compiled_rendering_to_dispatch(
             Ok(CompiledDispatchRequest {
                 operation: operation.to_string(),
                 spec_json: spec.to_string(),
+                resource_name: None,
             })
         }
     }
@@ -1043,6 +1248,15 @@ fn json_rendering_to_dispatch(
     family: LogicalOpFamily,
 ) -> Result<CompiledDispatchRequest, Status> {
     use crate::backend::BackendKind;
+    if matches!(backend, BackendKind::Qdrant) && matches!(family, LogicalOpFamily::ResourceOp) {
+        return qdrant_resource_rendering_to_dispatch(method, path, body);
+    }
+    if matches!(backend, BackendKind::Mongodb) {
+        return mongodb_rendering_to_dispatch(path, body, family);
+    }
+    if matches!(backend, BackendKind::Neo4j) {
+        return neo4j_rendering_to_dispatch(body, family);
+    }
     let operation = match family {
         LogicalOpFamily::Write | LogicalOpFamily::Update | LogicalOpFamily::Delete => "mutate",
         LogicalOpFamily::Search => "search",
@@ -1050,7 +1264,6 @@ fn json_rendering_to_dispatch(
         LogicalOpFamily::Read | LogicalOpFamily::Aggregate => "query",
     };
     let spec = match backend {
-        BackendKind::Mongodb => mongodb_rendering_body(path, body, family)?,
         BackendKind::Qdrant => qdrant_rendering_body(path, body, family)?,
         BackendKind::Elasticsearch | BackendKind::Pinecone | BackendKind::Weaviate => {
             serde_json::json!({
@@ -1070,7 +1283,255 @@ fn json_rendering_to_dispatch(
     Ok(CompiledDispatchRequest {
         operation: operation.to_string(),
         spec_json: spec.to_string(),
+        resource_name: None,
     })
+}
+
+fn neo4j_rendering_to_dispatch(
+    body: &serde_json::Value,
+    family: LogicalOpFamily,
+) -> Result<CompiledDispatchRequest, Status> {
+    let statement = body
+        .get("statements")
+        .and_then(serde_json::Value::as_array)
+        .and_then(|statements| statements.first())
+        .ok_or_else(|| {
+            handlers_data_invalid_field(
+                "statements",
+                "compiled Neo4j rendering must contain at least one statement",
+                "compiled Neo4j rendering missing statement",
+            )
+        })?;
+    let cypher = statement
+        .get("statement")
+        .and_then(serde_json::Value::as_str)
+        .ok_or_else(|| {
+            handlers_data_invalid_field(
+                "statements.statement",
+                "compiled Neo4j statement text is required",
+                "compiled Neo4j statement missing text",
+            )
+        })?;
+    let parameters = statement
+        .get("parameters")
+        .cloned()
+        .unwrap_or_else(|| serde_json::json!({}));
+    let operation = match family {
+        LogicalOpFamily::Read | LogicalOpFamily::Aggregate | LogicalOpFamily::Search => "query",
+        LogicalOpFamily::Write
+        | LogicalOpFamily::Update
+        | LogicalOpFamily::Delete
+        | LogicalOpFamily::ResourceOp => "mutate",
+    };
+    let spec = if operation == "query" {
+        serde_json::json!({
+            "cypher": cypher,
+            "parameters": parameters,
+            "compiler_mediated": true,
+        })
+    } else {
+        serde_json::json!({
+            "operation": "cypher",
+            "cypher": cypher,
+            "parameters": parameters,
+            "compiler_mediated": true,
+        })
+    };
+    Ok(CompiledDispatchRequest {
+        operation: operation.to_string(),
+        spec_json: spec.to_string(),
+        resource_name: None,
+    })
+}
+
+fn mongodb_rendering_to_dispatch(
+    path: &str,
+    body: &serde_json::Value,
+    family: LogicalOpFamily,
+) -> Result<CompiledDispatchRequest, Status> {
+    let (operation, spec, resource_name) = match family {
+        LogicalOpFamily::Read => ("query", mongodb_rendering_body(path, body, family)?, None),
+        LogicalOpFamily::Aggregate | LogicalOpFamily::Search => {
+            ("query", mongodb_rendering_body(path, body, family)?, None)
+        }
+        LogicalOpFamily::Write | LogicalOpFamily::Update | LogicalOpFamily::Delete => {
+            ("mutate", mongodb_rendering_body(path, body, family)?, None)
+        }
+        LogicalOpFamily::ResourceOp => mongodb_resource_rendering_to_dispatch_parts(path, body)?,
+    };
+    Ok(CompiledDispatchRequest {
+        operation: operation.to_string(),
+        spec_json: spec.to_string(),
+        resource_name,
+    })
+}
+
+fn qdrant_resource_rendering_to_dispatch(
+    method: &crate::ir::compile::HttpMethod,
+    path: &str,
+    body: &serde_json::Value,
+) -> Result<CompiledDispatchRequest, Status> {
+    use crate::ir::compile::HttpMethod;
+    let collection = qdrant_collection_from_path(path);
+    let operation = match method {
+        HttpMethod::Put => "ensure_resource",
+        HttpMethod::Delete => "drop_resource",
+        HttpMethod::Get => "list_resources",
+        _ => {
+            return Err(generic_dispatch_compiled_capability_status(
+                "qdrant",
+                "compiled_resource_rendering",
+                "qdrant_resource_http_method",
+                format!(
+                    "compiled Qdrant resource op uses unsupported HTTP method {}",
+                    http_method_token(method)
+                ),
+            ));
+        }
+    };
+    if !matches!(method, HttpMethod::Get) && collection.as_deref().unwrap_or("").is_empty() {
+        return Err(handlers_data_invalid_field(
+            "collection",
+            "compiled Qdrant resource path must include a collection name",
+            "compiled Qdrant resource op missing collection name in path",
+        ));
+    }
+    Ok(CompiledDispatchRequest {
+        operation: operation.to_string(),
+        spec_json: body.to_string(),
+        resource_name: collection,
+    })
+}
+
+fn mongodb_resource_rendering_to_dispatch_parts(
+    path: &str,
+    body: &serde_json::Value,
+) -> Result<(&'static str, serde_json::Value, Option<String>), Status> {
+    let collection = body
+        .get("collection")
+        .and_then(serde_json::Value::as_str)
+        .filter(|value| !value.trim().is_empty());
+    if path.ends_with("createCollection") {
+        let collection = collection.ok_or_else(|| {
+            handlers_data_invalid_field(
+                "collection",
+                "compiled MongoDB createCollection requires collection",
+                "compiled MongoDB createCollection missing collection",
+            )
+        })?;
+        return Ok((
+            "ensure_resource",
+            body.get("options")
+                .cloned()
+                .unwrap_or_else(|| serde_json::json!({})),
+            Some(collection.to_string()),
+        ));
+    }
+    if path.ends_with("dropCollection") {
+        let collection = collection.ok_or_else(|| {
+            handlers_data_invalid_field(
+                "collection",
+                "compiled MongoDB dropCollection requires collection",
+                "compiled MongoDB dropCollection missing collection",
+            )
+        })?;
+        return Ok((
+            "drop_resource",
+            serde_json::json!({}),
+            Some(collection.to_string()),
+        ));
+    }
+    if path.ends_with("listCollections") {
+        return Ok(("list_resources", serde_json::json!({}), None));
+    }
+    if path.ends_with("createIndex") {
+        let collection = collection.ok_or_else(|| {
+            handlers_data_invalid_field(
+                "collection",
+                "compiled MongoDB createIndex requires collection",
+                "compiled MongoDB createIndex missing collection",
+            )
+        })?;
+        let mut index = serde_json::Map::new();
+        if let Some(keys) = body.get("keys").or_else(|| body.get("key")) {
+            index.insert("key".to_string(), keys.clone());
+        }
+        if let Some(name) = body.get("name") {
+            index.insert("name".to_string(), name.clone());
+        }
+        if let Some(unique) = body.get("unique") {
+            index.insert("unique".to_string(), unique.clone());
+        }
+        if let Some(expire) = body
+            .get("expire_after_seconds")
+            .or_else(|| body.get("expireAfterSeconds"))
+        {
+            index.insert("expire_after_seconds".to_string(), expire.clone());
+        }
+        return Ok((
+            "mutate",
+            serde_json::json!({
+                "collection": collection,
+                "operation": "create_indexes",
+                "indexes": [serde_json::Value::Object(index)],
+                "compiler_mediated": true,
+            }),
+            None,
+        ));
+    }
+    if path.ends_with("listIndexes") {
+        let collection = collection.ok_or_else(|| {
+            handlers_data_invalid_field(
+                "collection",
+                "compiled MongoDB listIndexes requires collection",
+                "compiled MongoDB listIndexes missing collection",
+            )
+        })?;
+        return Ok((
+            "query",
+            serde_json::json!({
+                "collection": collection,
+                "operation": "list_indexes",
+                "compiler_mediated": true,
+            }),
+            None,
+        ));
+    }
+    if path.ends_with("dropIndex") {
+        let collection = collection.ok_or_else(|| {
+            handlers_data_invalid_field(
+                "collection",
+                "compiled MongoDB dropIndex requires collection",
+                "compiled MongoDB dropIndex missing collection",
+            )
+        })?;
+        let name = body
+            .get("name")
+            .and_then(serde_json::Value::as_str)
+            .ok_or_else(|| {
+                handlers_data_invalid_field(
+                    "name",
+                    "compiled MongoDB dropIndex requires name",
+                    "compiled MongoDB dropIndex missing name",
+                )
+            })?;
+        return Ok((
+            "mutate",
+            serde_json::json!({
+                "collection": collection,
+                "operation": "drop_index",
+                "name": name,
+                "compiler_mediated": true,
+            }),
+            None,
+        ));
+    }
+    Err(generic_dispatch_compiled_capability_status(
+        "mongodb",
+        "compiled_resource_rendering",
+        "mongodb_resource_path",
+        format!("compiled MongoDB resource op uses unsupported path '{path}'"),
+    ))
 }
 
 fn mongodb_rendering_body(
@@ -1080,15 +1541,21 @@ fn mongodb_rendering_body(
 ) -> Result<serde_json::Value, Status> {
     let mut spec = body.clone();
     let serde_json::Value::Object(map) = &mut spec else {
-        return Err(Status::invalid_argument(
+        return Err(handlers_data_invalid_field(
+            "body",
+            "MongoDB compiled rendering body must be an object",
             "MongoDB compiled rendering body must be an object",
         ));
     };
     match family {
         LogicalOpFamily::Read => {}
-        LogicalOpFamily::Aggregate | LogicalOpFamily::Search => {
+        LogicalOpFamily::Aggregate => {
             map.insert("operation".into(), serde_json::json!("aggregate"));
         }
+        LogicalOpFamily::Search if path.ends_with("aggregate") => {
+            map.insert("operation".into(), serde_json::json!("aggregate"));
+        }
+        LogicalOpFamily::Search => {}
         LogicalOpFamily::Write | LogicalOpFamily::Update => {
             if path.ends_with("insertMany") || map.contains_key("documents") {
                 map.insert("operation".into(), serde_json::json!("insert_many"));
@@ -1117,7 +1584,9 @@ fn qdrant_rendering_body(
 ) -> Result<serde_json::Value, Status> {
     let mut spec = body.clone();
     let serde_json::Value::Object(map) = &mut spec else {
-        return Err(Status::invalid_argument(
+        return Err(handlers_data_invalid_field(
+            "body",
+            "Qdrant compiled rendering body must be an object",
             "Qdrant compiled rendering body must be an object",
         ));
     };
@@ -1157,83 +1626,6 @@ fn http_method_token(method: &crate::ir::compile::HttpMethod) -> &'static str {
     }
 }
 
-fn logical_value_to_json(value: &crate::ir::value::LogicalValue) -> serde_json::Value {
-    use crate::ir::value::LogicalValue;
-    match value {
-        LogicalValue::Null => serde_json::Value::Null,
-        LogicalValue::Bool(value) => serde_json::Value::Bool(*value),
-        LogicalValue::Int(value) => serde_json::json!(value),
-        LogicalValue::Float(value) => serde_json::Number::from_f64(*value)
-            .map(serde_json::Value::Number)
-            .unwrap_or(serde_json::Value::Null),
-        LogicalValue::String(value) => serde_json::Value::String(value.clone()),
-        LogicalValue::Bytes(value) => {
-            use base64::{Engine as _, engine::general_purpose::STANDARD as B64};
-            serde_json::Value::String(format!("base64:{}", B64.encode(value)))
-        }
-        LogicalValue::Timestamp(value) => serde_json::Value::String(value.to_rfc3339()),
-        LogicalValue::Json(value) => value.clone(),
-        LogicalValue::Array(values) => {
-            serde_json::Value::Array(values.iter().map(logical_value_to_json).collect())
-        }
-    }
-}
-
-fn logical_value_param_type(value: &crate::ir::value::LogicalValue) -> &'static str {
-    use crate::ir::value::LogicalValue;
-    match value {
-        LogicalValue::Json(_) => "json",
-        // A `Timestamp` renders to an RFC-3339 *string*; without this hint the
-        // executor would bind it as `text`, which Postgres refuses to coerce
-        // into a `timestamptz` column on INSERT ("column … is of type timestamp
-        // with time zone but expression is of type text"). Type it so the bind
-        // path parses it back to a real `DateTime<Utc>`.
-        LogicalValue::Timestamp(_) => "timestamptz",
-        LogicalValue::Array(values) => match values
-            .iter()
-            .find(|value| !matches!(value, LogicalValue::Null))
-        {
-            Some(LogicalValue::String(_)) => "array_string",
-            Some(LogicalValue::Int(_)) => "array_int",
-            Some(LogicalValue::Float(_)) => "array_float",
-            Some(LogicalValue::Bool(_)) => "array_bool",
-            _ => "json",
-        },
-        _ => "",
-    }
-}
-
-fn postgres_param_types(
-    statement: &str,
-    params: &[crate::ir::value::LogicalValue],
-) -> Vec<&'static str> {
-    params
-        .iter()
-        .enumerate()
-        .map(|(idx, value)| {
-            let value_type = logical_value_param_type(value);
-            if value_type.is_empty() {
-                postgres_placeholder_cast_type(statement, idx + 1).unwrap_or("")
-            } else {
-                value_type
-            }
-        })
-        .collect()
-}
-
-fn postgres_placeholder_cast_type(statement: &str, position: usize) -> Option<&'static str> {
-    let marker = format!("${position}::");
-    let (_, tail) = statement.split_once(&marker)?;
-    let lower = tail.trim_start().to_ascii_lowercase();
-    if lower.starts_with("timestamp with time zone") || lower.starts_with("timestamptz") {
-        Some("timestamptz")
-    } else if lower.starts_with("uuid") {
-        Some("uuid")
-    } else {
-        None
-    }
-}
-
 fn inline_sql_params(
     statement: &str,
     params: &[crate::ir::value::LogicalValue],
@@ -1243,7 +1635,11 @@ fn inline_sql_params(
     for ch in statement.chars() {
         if ch == '?' {
             let value = params.next().ok_or_else(|| {
-                Status::invalid_argument("compiled SQL has more placeholders than params")
+                handlers_data_invalid_field(
+                    "params",
+                    "compiled SQL placeholders must match params length",
+                    "compiled SQL has more placeholders than params",
+                )
             })?;
             out.push_str(&clickhouse_literal(value));
         } else {
@@ -1251,7 +1647,9 @@ fn inline_sql_params(
         }
     }
     if params.next().is_some() {
-        return Err(Status::invalid_argument(
+        return Err(handlers_data_invalid_field(
+            "params",
+            "compiled SQL params length must match placeholders",
             "compiled SQL has more params than placeholders",
         ));
     }
@@ -1293,6 +1691,9 @@ fn clickhouse_literal(value: &crate::ir::value::LogicalValue) -> String {
 mod tests {
     use super::*;
     use crate::generation::{ManifestColumn, ManifestTable};
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
 
     fn fixture_manifest() -> CatalogManifest {
         CatalogManifest {
@@ -1323,6 +1724,248 @@ mod tests {
             }],
             ..Default::default()
         }
+    }
+
+    fn decode_detail(status: &tonic::Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed error detail trailer");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_single_field_violation(status: &tonic::Status, field: &str, description: &str) {
+        assert_eq!(status.code(), tonic::Code::InvalidArgument);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert!(!detail.retryable);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, field);
+        assert_eq!(detail.field_violations[0].description, description);
+    }
+
+    fn assert_capability_detail(
+        status: &tonic::Status,
+        backend: &str,
+        operation: &str,
+        capability_required: &str,
+    ) {
+        assert_eq!(status.code(), tonic::Code::FailedPrecondition);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Capability as i32);
+        assert_eq!(detail.backend, backend);
+        assert_eq!(detail.operation, operation);
+        assert_eq!(detail.capability_required, capability_required);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    fn assert_policy_detail(status: &tonic::Status, operation: &str, policy_decision_id: &str) {
+        assert_eq!(status.code(), tonic::Code::FailedPrecondition);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Policy as i32);
+        assert_eq!(detail.operation, operation);
+        assert_eq!(detail.policy_decision_id, policy_decision_id);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    fn assert_internal_detail(status: &tonic::Status, backend: &str, operation: &str) {
+        assert_eq!(status.code(), tonic::Code::Internal);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, backend);
+        assert_eq!(detail.operation, operation);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    #[test]
+    fn generic_dispatch_internal_status_carries_typed_detail() {
+        let err = generic_dispatch_internal_status(
+            "clickhouse",
+            "mutate",
+            "backend operation panicked; request failed (broker stayed up)",
+        );
+        assert_eq!(
+            err.message(),
+            "backend operation panicked; request failed (broker stayed up)"
+        );
+        assert_internal_detail(&err, "clickhouse", "mutate");
+    }
+
+    #[test]
+    fn generic_dispatch_scope_denial_carries_policy_detail() {
+        let err = generic_dispatch_scope_status();
+        assert_eq!(err.code(), tonic::Code::PermissionDenied);
+        assert_eq!(err.message(), "scope udb:dispatch or udb:admin is required");
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::Policy as i32);
+        assert_eq!(detail.operation, "GenericDispatch");
+        assert_eq!(detail.policy_decision_id, "dispatch_scope_required");
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    #[test]
+    fn neutral_ir_validation_carries_field_violations() {
+        let manifest = fixture_manifest();
+        let context = crate::RequestContext::default();
+
+        let err = compile_neutral_ir_dispatch("postgres", None, &context, &manifest, "query", "{")
+            .expect_err("invalid spec_json must fail");
+        assert_single_field_violation(&err, "spec_json", "must be valid dispatch JSON");
+
+        let spec = serde_json::json!({"ir": {"op": "read"}});
+        let err = compile_neutral_ir_dispatch(
+            "bogus",
+            None,
+            &context,
+            &manifest,
+            "query",
+            &spec.to_string(),
+        )
+        .expect_err("unknown compiler backend must fail");
+        assert_single_field_violation(
+            &err,
+            "backend",
+            "must identify a backend with a neutral-IR compiler",
+        );
+
+        let spec = serde_json::json!({"ir": {"message_type": "acme.billing.v1.Customer"}});
+        let err = compile_neutral_ir_dispatch(
+            "postgres",
+            None,
+            &context,
+            &manifest,
+            "query",
+            &spec.to_string(),
+        )
+        .expect_err("missing ir.op must fail");
+        assert_single_field_violation(&err, "ir.op", "neutral IR dispatch requires an operation");
+
+        let err = ir_payload(&serde_json::json!("bad")).expect_err("scalar ir body must fail");
+        assert_single_field_violation(&err, "ir", "neutral IR dispatch body must be an object");
+
+        let err = compile_ir_payload(
+            &crate::backend::BackendKind::Postgres,
+            "unknown",
+            serde_json::json!({}),
+            &crate::ir::compile::CompileContext::new(&manifest),
+        )
+        .expect_err("unsupported ir op must fail");
+        assert_single_field_violation(&err, "ir.op", "must be a supported neutral IR operation");
+    }
+
+    #[test]
+    fn compiled_rendering_validation_carries_field_violations() {
+        use crate::ir::compile::HttpMethod;
+        use crate::ir::value::LogicalValue;
+
+        let err = neo4j_rendering_to_dispatch(&serde_json::json!({}), LogicalOpFamily::Search)
+            .expect_err("missing Neo4j statement must fail");
+        assert_single_field_violation(
+            &err,
+            "statements",
+            "compiled Neo4j rendering must contain at least one statement",
+        );
+
+        let err = qdrant_resource_rendering_to_dispatch(
+            &HttpMethod::Put,
+            "/collections",
+            &serde_json::json!({}),
+        )
+        .expect_err("missing Qdrant collection must fail");
+        assert_single_field_violation(
+            &err,
+            "collection",
+            "compiled Qdrant resource path must include a collection name",
+        );
+
+        let err = mongodb_resource_rendering_to_dispatch_parts(
+            "/action/createCollection",
+            &serde_json::json!({}),
+        )
+        .expect_err("missing MongoDB collection must fail");
+        assert_single_field_violation(
+            &err,
+            "collection",
+            "compiled MongoDB createCollection requires collection",
+        );
+
+        let err = mongodb_rendering_body("", &serde_json::json!("bad"), LogicalOpFamily::Read)
+            .expect_err("MongoDB body must be object");
+        assert_single_field_violation(
+            &err,
+            "body",
+            "MongoDB compiled rendering body must be an object",
+        );
+
+        let err = qdrant_rendering_body("", &serde_json::json!("bad"), LogicalOpFamily::Read)
+            .expect_err("Qdrant body must be object");
+        assert_single_field_violation(
+            &err,
+            "body",
+            "Qdrant compiled rendering body must be an object",
+        );
+
+        let err = inline_sql_params("SELECT ? ?", &[LogicalValue::Int(1)])
+            .expect_err("missing inline param must fail");
+        assert_single_field_violation(
+            &err,
+            "params",
+            "compiled SQL placeholders must match params length",
+        );
+
+        let err = inline_sql_params("SELECT ?", &[LogicalValue::Int(1), LogicalValue::Int(2)])
+            .expect_err("extra inline param must fail");
+        assert_single_field_violation(
+            &err,
+            "params",
+            "compiled SQL params length must match placeholders",
+        );
+    }
+
+    #[test]
+    fn compiled_rendering_capability_denials_carry_error_detail() {
+        use crate::ir::compile::HttpMethod;
+
+        let err = qdrant_resource_rendering_to_dispatch(
+            &HttpMethod::Post,
+            "/collections/customers_vec",
+            &serde_json::json!({}),
+        )
+        .expect_err("unsupported Qdrant resource method must fail");
+        assert_eq!(
+            err.message(),
+            "compiled Qdrant resource op uses unsupported HTTP method POST"
+        );
+        assert_capability_detail(
+            &err,
+            "qdrant",
+            "compiled_resource_rendering",
+            "qdrant_resource_http_method",
+        );
+
+        let err = mongodb_resource_rendering_to_dispatch_parts(
+            "/action/renameCollection",
+            &serde_json::json!({}),
+        )
+        .expect_err("unsupported MongoDB resource path must fail");
+        assert_eq!(
+            err.message(),
+            "compiled MongoDB resource op uses unsupported path '/action/renameCollection'"
+        );
+        assert_capability_detail(
+            &err,
+            "mongodb",
+            "compiled_resource_rendering",
+            "mongodb_resource_path",
+        );
     }
 
     #[test]
@@ -1370,6 +2013,189 @@ mod tests {
                 .contains("FROM \"public\".\"customers\"")
         );
         assert_eq!(dispatch["params"], serde_json::json!(["a@b.com"]));
+    }
+
+    #[test]
+    fn qdrant_compiled_resource_op_routes_to_resource_admin_executor() {
+        use crate::ir::compile::HttpMethod;
+
+        let ensure = qdrant_resource_rendering_to_dispatch(
+            &HttpMethod::Put,
+            "/collections/customers_vec",
+            &serde_json::json!({"vectors": {"size": 3, "distance": "Cosine"}}),
+        )
+        .expect("qdrant ensure resource dispatch");
+        assert_eq!(ensure.operation, "ensure_resource");
+        assert_eq!(ensure.resource_name.as_deref(), Some("customers_vec"));
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(&ensure.spec_json).expect("ensure spec json")
+                ["vectors"]["size"],
+            3
+        );
+
+        let drop = qdrant_resource_rendering_to_dispatch(
+            &HttpMethod::Delete,
+            "/collections/customers_vec",
+            &serde_json::json!({}),
+        )
+        .expect("qdrant drop resource dispatch");
+        assert_eq!(drop.operation, "drop_resource");
+        assert_eq!(drop.resource_name.as_deref(), Some("customers_vec"));
+
+        let list = qdrant_resource_rendering_to_dispatch(
+            &HttpMethod::Get,
+            "/collections",
+            &serde_json::json!({}),
+        )
+        .expect("qdrant list resource dispatch");
+        assert_eq!(list.operation, "list_resources");
+        assert_eq!(list.resource_name, None);
+    }
+
+    #[test]
+    fn mongodb_compiled_text_search_routes_to_query_find() {
+        let compiled = mongodb_rendering_to_dispatch(
+            "/action/find",
+            &serde_json::json!({
+                "collection": "customers",
+                "filter": {
+                    "$text": { "$search": "Alice" },
+                    "tenant_id": "tenant-a"
+                },
+                "projection": {
+                    "id": 1,
+                    "name": 1,
+                    "_score": { "$meta": "textScore" }
+                },
+                "limit": 10
+            }),
+            LogicalOpFamily::Search,
+        )
+        .expect("MongoDB text search dispatch");
+        assert_eq!(compiled.operation, "query");
+        assert_eq!(compiled.resource_name, None);
+        let spec: serde_json::Value =
+            serde_json::from_str(&compiled.spec_json).expect("MongoDB search spec");
+        assert_eq!(spec["compiler_mediated"], true);
+        assert!(spec.get("operation").is_none());
+        assert_eq!(spec["filter"]["tenant_id"], "tenant-a");
+    }
+
+    #[test]
+    fn mongodb_compiled_index_ensure_routes_to_create_indexes_mutation() {
+        let compiled = mongodb_rendering_to_dispatch(
+            "/action/createIndex",
+            &serde_json::json!({
+                "collection": "customers",
+                "name": "idx_customers_name_text",
+                "keys": { "name": "text", "email": "text" }
+            }),
+            LogicalOpFamily::ResourceOp,
+        )
+        .expect("MongoDB index ensure dispatch");
+        assert_eq!(compiled.operation, "mutate");
+        let spec: serde_json::Value =
+            serde_json::from_str(&compiled.spec_json).expect("MongoDB index spec");
+        assert_eq!(spec["compiler_mediated"], true);
+        assert_eq!(spec["operation"], "create_indexes");
+        assert_eq!(spec["collection"], "customers");
+        assert_eq!(spec["indexes"][0]["name"], "idx_customers_name_text");
+        assert_eq!(spec["indexes"][0]["key"]["name"], "text");
+    }
+
+    #[test]
+    fn neo4j_compiled_search_routes_to_query_cypher() {
+        let compiled = neo4j_rendering_to_dispatch(
+            &serde_json::json!({
+                "statements": [{
+                    "statement": "CALL db.index.fulltext.queryNodes('Customer_fulltext', $p0) YIELD node, score WITH node AS n, score AS _score WHERE n.`_tenant_id` = $p1 RETURN n, _score",
+                    "parameters": { "p0": "Alice", "p1": "tenant-a" }
+                }]
+            }),
+            LogicalOpFamily::Search,
+        )
+        .expect("Neo4j search dispatch");
+        assert_eq!(compiled.operation, "query");
+        let spec: serde_json::Value =
+            serde_json::from_str(&compiled.spec_json).expect("Neo4j query spec");
+        assert_eq!(spec["compiler_mediated"], true);
+        assert_eq!(spec["parameters"]["p1"], "tenant-a");
+        assert!(spec.get("operation").is_none());
+    }
+
+    #[test]
+    fn neo4j_compiled_resource_op_routes_to_cypher_mutation() {
+        let compiled = neo4j_rendering_to_dispatch(
+            &serde_json::json!({
+                "statements": [{
+                    "statement": "CREATE FULLTEXT INDEX `Customer_fulltext` IF NOT EXISTS FOR (n:`Customer`) ON EACH [n.`name`, n.`email`]",
+                    "parameters": {}
+                }]
+            }),
+            LogicalOpFamily::ResourceOp,
+        )
+        .expect("Neo4j resource dispatch");
+        assert_eq!(compiled.operation, "mutate");
+        let spec: serde_json::Value =
+            serde_json::from_str(&compiled.spec_json).expect("Neo4j mutation spec");
+        assert_eq!(spec["compiler_mediated"], true);
+        assert_eq!(spec["operation"], "cypher");
+        assert!(
+            spec["cypher"]
+                .as_str()
+                .expect("cypher text")
+                .contains("CREATE FULLTEXT INDEX")
+        );
+    }
+
+    #[test]
+    fn raw_dispatch_gate_blocks_mediated_backend_in_production() {
+        use crate::backend::BackendKind;
+        use crate::metrics::{NoopMetrics, PrometheusMetrics};
+
+        let pg = BackendKind::Postgres; // mediated (always compiled in)
+        let noop = NoopMetrics;
+
+        // Production + no opt-out ⇒ fail-closed with failed_precondition.
+        let blocked = raw_dispatch_decision(&pg, true, false, &noop)
+            .expect_err("production raw dispatch must be blocked");
+        assert_eq!(blocked.code(), tonic::Code::FailedPrecondition);
+        assert!(
+            blocked
+                .message()
+                .contains("UDB_DISPATCH_ALLOW_RAW_POSTGRES"),
+            "error must name the per-backend opt-out env: {}",
+            blocked.message()
+        );
+        assert_policy_detail(
+            &blocked,
+            "generic_dispatch_raw_dispatch",
+            "raw_dispatch_requires_ir_envelope",
+        );
+
+        // Production + opt-out env truthy ⇒ allowed.
+        raw_dispatch_decision(&pg, true, true, &noop)
+            .expect("opt-out must permit raw dispatch even in production");
+
+        // Dev mode ⇒ allowed AND the drift counter is incremented.
+        let prom = PrometheusMetrics::new().expect("build PrometheusMetrics");
+        raw_dispatch_decision(&pg, false, false, &prom)
+            .expect("dev-mode raw dispatch must be allowed");
+        let text = prom.gather_text("");
+        assert!(
+            text.contains("udb_raw_dispatch_total{backend=\"postgres\"} 1"),
+            "dev-mode raw dispatch must increment the drift counter:\n{text}"
+        );
+
+        // KV backend (Redis) is unaffected even in production — raw dispatch is its
+        // legitimate path. Redis has a compiler arm (`is_mediated_backend` is true),
+        // but it is NOT compiler-mediated on the data-plane path, so the gate must
+        // skip it. This is exactly why the gate keys on
+        // `compiler_mediated_runtime_path_wired`, not the bare `is_mediated_backend`.
+        let redis = BackendKind::Redis;
+        assert!(!crate::backend::plugin::compiler_mediated_runtime_path_wired(&redis));
+        raw_dispatch_decision(&redis, true, false, &noop)
+            .expect("non-data-plane-mediated backend must never be gated");
     }
 
     #[test]

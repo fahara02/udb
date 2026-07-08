@@ -101,8 +101,12 @@ impl SubscriberHandle {
 /// Per-type world versions captured on the previous tick, so the next tick can
 /// report exactly WHICH resource types changed (for the per-type
 /// `inc_control_reload_applied` metric).
+///
+/// `pub(crate)` (with private fields) so the crate's live integration tests can
+/// seed a baseline (`LastSeen::default()`) and drive [`run_once`] on the REAL
+/// served reload path, asserting the reload metric fires (not a stubbed call).
 #[derive(Default, Clone)]
-struct LastSeen {
+pub(crate) struct LastSeen {
     fingerprint: String,
     authz_version: String,
     per_type: std::collections::BTreeMap<&'static str, String>,
@@ -143,7 +147,10 @@ pub fn spawn_control_plane_subscriber(handle: SubscriberHandle) -> tokio::task::
 /// On a real change (and only after the baseline is seeded) fire the notify and
 /// record the per-type reload metric. Factored out for unit-testing the diff
 /// logic. Returns the new `LastSeen` baseline.
-async fn run_once(
+///
+/// `pub(crate)` so the live integration suite can exercise the REAL served
+/// reload path (seed, mutate the registry, tick again, assert the reload metric).
+pub(crate) async fn run_once(
     handle: &SubscriberHandle,
     last: &LastSeen,
     seeded: bool,

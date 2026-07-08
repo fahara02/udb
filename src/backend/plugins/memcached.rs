@@ -35,10 +35,13 @@ impl crate::runtime::executors::handle::DispatchFactory for MemcachedPlugin {
         let client = runtime
             .memcached_for_instance(instance_name)
             .ok_or_else(|| {
-                tonic::Status::failed_precondition(format!(
-                    "Memcached instance '{instance_name}' is not configured \
+                super::dispatch_instance_not_configured_status(
+                    "memcached",
+                    format!(
+                        "Memcached instance '{instance_name}' is not configured \
                      (set UDB_MEMCACHED_DSN)"
-                ))
+                    ),
+                )
             })?
             .clone();
         Ok(

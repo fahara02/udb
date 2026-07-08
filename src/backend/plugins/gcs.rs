@@ -30,9 +30,10 @@ impl crate::runtime::executors::handle::DispatchFactory for GcsPlugin {
         let client = runtime
             .gcs_for_instance(instance_name)
             .ok_or_else(|| {
-                tonic::Status::failed_precondition(format!(
-                    "GCS instance '{instance_name}' not configured (set UDB_GCS_DSN)"
-                ))
+                super::dispatch_instance_not_configured_status(
+                    "gcs",
+                    format!("GCS instance '{instance_name}' not configured (set UDB_GCS_DSN)"),
+                )
             })?
             .clone();
         Ok(crate::runtime::executors::handle::DispatchExecutor::Gcs(

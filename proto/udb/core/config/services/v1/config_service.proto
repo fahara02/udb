@@ -1,0 +1,484 @@
+syntax = "proto3";
+
+package udb.core.config.services.v1;
+
+import "google/api/annotations.proto";
+import "udb/core/common/v1/dto.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Config.Services.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/config/services/v1;configservicev1";
+option java_package = "com.udb.core.config.services.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Config\\Services\\V1";
+option php_namespace = "Udb\\Core\\Config\\Services\\V1";
+
+// ConfigService (master-plan 9.8) — feature flags and runtime configuration.
+// Flags are scoped to (tenant, project, environment); evaluation precedence is
+// environment > project > tenant-default. EvaluateFlags is a PURE function of
+// (flags, context) — the same algorithm ships in the SDK so client and server
+// agree bit-for-bit (the unit-test fixtures are the SDK<->server contract).
+// Every mutation is durable, tenant-scoped by the verified claim, bumps a
+// monotone per-row revision, and emits `udb.config.flag.changed.v1`.
+service ConfigService {
+  option (udb.core.common.v1.native_service) = {
+    service_id: "config"
+    logical_service_id: "config"
+    proto_service_id: "config"
+    display_name: "Config"
+    category: "config"
+    default_enabled: true
+    requires_postgres: true
+    control_plane_listener_allowed: true
+    sdk_facade_name: "config"
+    cli_scaffold_group: "config"
+    health_check_ref: "config"
+    capability_ref: "native.config"
+  };
+  option (udb.core.common.v1.service_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "config"
+    generate_minimal_example: true
+  };
+  option (udb.core.common.v1.service_cli_scaffold) = {
+    scaffold_package: "config"
+    import_path: "udb/native/config"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+    generated_files: "udb.native.config.config"
+    required_native_services: "config"
+    secret_placeholders: "UDB_API_KEY"
+    smoke_test_command: "udb native lint"
+  };
+  option (udb.core.common.v1.service_dependency_contract) = {
+    required_native_services: "config"
+    required_backends: "postgres"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+  };
+
+  // Create or update a flag at a (tenant, project, environment) scope. Bumps the
+  // flag's monotone revision and emits `udb.config.flag.changed.v1`.
+  rpc PutFlag(PutFlagRequest) returns (PutFlagResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:config:put-flag"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "config.PutFlag"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "put_flag" rest_operation_id: "putFlag"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "config"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "config"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "config.PutFlag"
+      outbox_topic: "udb.config.flag.changed.v1"
+      partition_key_field: "flag_key"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/config/flags:put"
+      body: "*"
+    };
+  }
+
+  // Fetch a single flag's stored definition at an exact (tenant, project,
+  // environment, key) scope. Read-only; performs no rollout evaluation.
+  rpc GetFlag(GetFlagRequest) returns (GetFlagResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:config:get-flag"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "config.GetFlag"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "get_flag" rest_operation_id: "getFlag"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "config"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "config"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/config/flags/{flag_key}"};
+  }
+
+  // List a tenant's flags, optionally narrowed to a project and/or environment.
+  rpc ListFlags(ListFlagsRequest) returns (ListFlagsResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:config:list-flags"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "config.ListFlags"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "list_flags" rest_operation_id: "listFlags"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "config"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "config"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/config/flags"};
+  }
+
+  // Delete a flag at an exact scope. Destructive; bumps the revision in the
+  // emitted change event.
+  rpc DeleteFlag(DeleteFlagRequest) returns (DeleteFlagResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:config:delete-flag"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "config.DeleteFlag"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "delete_flag" rest_operation_id: "deleteFlag"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "config"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "config"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "config.DeleteFlag"
+      outbox_topic: "udb.config.flag.changed.v1"
+      partition_key_field: "flag_key"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/config/flags:delete"
+      body: "*"
+    };
+  }
+
+  // Evaluate a set of flag keys for an evaluation context. The server applies the
+  // SAME pure algorithm the SDK uses (scope precedence + stable-hash percentage
+  // rollout) and returns the resolved typed values plus a server-authoritative
+  // cache TTL and the observed config revision. Read-only.
+  rpc EvaluateFlags(EvaluateFlagsRequest) returns (EvaluateFlagsResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:config:evaluate-flags"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "config.EvaluateFlags"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "evaluate_flags" rest_operation_id: "evaluateFlags"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "config"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "config"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/config/flags:evaluate"
+      body: "*"
+    };
+  }
+}
+
+// Typed flag value. The oneof carries exactly one arm; the server stores it
+// canonically as a value_type discriminator plus a serialized JSON value.
+message FlagValue {
+  oneof value {
+    bool bool_value = 1;
+    string string_value = 2;
+    double number_value = 3;
+    // Raw JSON text (object/array/scalar) for structured config.
+    string json_value = 4;
+  }
+}
+
+// A stored flag definition returned by Get/List (no rollout applied).
+message FlagState {
+  string tenant_id = 1;
+  string project_id = 2;
+  string environment = 3;
+  string flag_key = 4;
+  FlagValue value = 5;
+  bool enabled = 6;
+  int32 rollout_percentage = 7;
+  string rollout_context_key = 8;
+  int64 revision = 9;
+  string metadata_json = 10;
+}
+
+// Evaluation context. `attributes` carries the subject values the rollout hash
+// keys on (e.g. {"user_id": "u-42"}); project_id/environment select the scope.
+message EvaluateContext {
+  string project_id = 1;
+  string environment = 2;
+  map<string, string> attributes = 3;
+}
+
+message PutFlagRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "config"
+    generate_minimal_example: true
+  };
+  // Verified against the bearer/claim tenant; cross-tenant values are rejected.
+  string tenant_id = 1;
+  string project_id = 2;
+  string environment = 3;
+  string flag_key = 4;
+  FlagValue value = 5;
+  bool enabled = 6;
+  int32 rollout_percentage = 7;
+  string rollout_context_key = 8;
+  string metadata_json = 9; // JSON
+}
+
+message PutFlagResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "config"
+    generate_minimal_example: true
+  };
+  bool stored = 1;
+  string flag_key = 2;
+  int64 revision = 3;
+  string message = 4;
+  udb.core.common.v1.ApiError error = 5;
+}
+
+message GetFlagRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "config"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string project_id = 2;
+  string environment = 3;
+  string flag_key = 4;
+}
+
+message GetFlagResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "config"
+    generate_minimal_example: true
+  };
+  bool found = 1;
+  FlagState flag = 2;
+  string message = 3;
+  udb.core.common.v1.ApiError error = 4;
+}
+
+message ListFlagsRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "config"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string project_id = 2;
+  string environment = 3;
+  uint32 limit = 4;
+  // Requested page size. Defaults to limit/default-list-limit and is capped at
+  // the native list maximum.
+  int32 page_size = 5;
+  // Opaque pagination token returned by ListFlagsResponse.next_page_token.
+  string page_token = 6;
+}
+
+message ListFlagsResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "config"
+    generate_minimal_example: true
+  };
+  repeated FlagState flags = 1;
+  string message = 2;
+  udb.core.common.v1.ApiError error = 3;
+  // Opaque token for the next page; empty when no more flags are available.
+  string next_page_token = 4;
+}
+
+message DeleteFlagRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "config"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string project_id = 2;
+  string environment = 3;
+  string flag_key = 4;
+}
+
+message DeleteFlagResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "config"
+    generate_minimal_example: true
+  };
+  bool deleted = 1;
+  int64 revision = 2;
+  string message = 3;
+  udb.core.common.v1.ApiError error = 4;
+}
+
+message EvaluateFlagsRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "config"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  repeated string keys = 2;
+  EvaluateContext context = 3;
+}
+
+message EvaluateFlagsResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "config"
+    generate_minimal_example: true
+  };
+  // Resolved typed value per requested key (absent keys are omitted).
+  map<string, FlagValue> values = 1;
+  // Server-authoritative cache TTL; the SDK eval cache reuses this, it is not a
+  // per-request env read.
+  int64 server_ttl_seconds = 2;
+  // Max per-row revision across the evaluated flags (staleness signal).
+  int64 config_revision = 3;
+  string message = 4;
+  udb.core.common.v1.ApiError error = 5;
+}

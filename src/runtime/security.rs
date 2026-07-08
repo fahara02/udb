@@ -36,7 +36,7 @@ pub struct SecurityContext {
 /// Phase 9: Security configuration
 static INSTALLED_SECURITY_CONFIG: OnceLock<Mutex<SecurityConfig>> = OnceLock::new();
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct SecurityConfig {
     /// Require TLS for production gRPC
@@ -87,6 +87,62 @@ pub struct SecurityConfig {
     /// Lifetime of UDB-issued access tokens in seconds
     /// (`UDB_JWT_ACCESS_TTL_SECONDS`). Defaults to 900 (15 minutes).
     pub jwt_access_ttl_secs: u64,
+}
+
+// Manual `Debug` redacting the inline RSA `jwt_private_key` UDB signs tokens
+// with. The JWT *public* key, issuer/audience and JWKS URL are non-secret and
+// print normally.
+impl std::fmt::Debug for SecurityConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SecurityConfig")
+            .field("tls_required", &self.tls_required)
+            .field("pg_tls_required", &self.pg_tls_required)
+            .field("redis_tls_required", &self.redis_tls_required)
+            .field("kafka_tls_required", &self.kafka_tls_required)
+            .field("service_identity_required", &self.service_identity_required)
+            .field("jwt_public_key", &self.jwt_public_key)
+            .field("mtls_required", &self.mtls_required)
+            .field("allow_header_scopes", &self.allow_header_scopes)
+            .field(
+                "encryption_key_rotation_enabled",
+                &self.encryption_key_rotation_enabled,
+            )
+            .field("current_encryption_key_id", &self.current_encryption_key_id)
+            .field("audit_sink_url", &self.audit_sink_url)
+            .field("pii_safe_logging", &self.pii_safe_logging)
+            .field("metric_endpoint_allowlist", &self.metric_endpoint_allowlist)
+            .field("jwt_issuer", &self.jwt_issuer)
+            .field("jwt_audience", &self.jwt_audience)
+            .field("jwt_allowed_algs", &self.jwt_allowed_algs)
+            .field("jwt_clock_skew_secs", &self.jwt_clock_skew_secs)
+            .field("jwt_jwks_url", &self.jwt_jwks_url)
+            .field("jwt_jwks_cache_ttl_secs", &self.jwt_jwks_cache_ttl_secs)
+            .field(
+                "jwt_private_key",
+                &self.jwt_private_key.as_ref().map(|_| "[redacted]"),
+            )
+            .field("jwt_access_ttl_secs", &self.jwt_access_ttl_secs)
+            .finish()
+    }
+}
+
+#[cfg(test)]
+mod secret_no_leak {
+    use super::*;
+
+    #[test]
+    fn security_config_debug_redacts_private_key() {
+        let canary = "udb-canary-SECRET";
+        let cfg = SecurityConfig {
+            jwt_private_key: Some(canary.to_string()),
+            ..Default::default()
+        };
+        let dbg = format!("{cfg:?}");
+        assert!(
+            !dbg.contains(canary),
+            "SecurityConfig leaked jwt_private_key: {dbg}"
+        );
+    }
 }
 
 impl Default for SecurityConfig {
@@ -637,6 +693,12 @@ pub struct SecurityClaims {
     /// cache can refuse to serve a cached hit past the token's own expiry.
     #[serde(default)]
     pub exp: Option<i64>,
+    /// Issued-at (unix seconds). Minted into UDB JWTs; mapped here so the
+    /// tenant-level revocation kill (3.3 `tenant_denied_after`) can compare a
+    /// token's age against the tenant cutoff. Optional — absent on external IdP
+    /// tokens that omit `iat`.
+    #[serde(default)]
+    pub iat: Option<i64>,
     // Registered/UDB claims parsed for mapping. `nbf`, `aud`, and `iss` are
     // validated by `jsonwebtoken`'s `Validation` (not mapped here) — adding
     // `aud` here as a String would break tokens whose `aud` is an array.
@@ -1422,12 +1484,25 @@ pub fn enforce_select_export_controls(
         .filter(|column| selected.iter().any(|field| field == &column.column_name))
         .any(is_aead_or_pii_column);
     if blocked {
-        Err(Status::permission_denied(
+        Err(export_control_policy_status(
+            "pii_export_scope_required",
             "PII/encrypted fields require purpose export, verification, or audit, or scope udb:pii:read",
         ))
     } else {
         Ok(())
     }
+}
+
+fn export_control_policy_status(
+    policy_decision_id: impl Into<String>,
+    message: impl Into<String>,
+) -> Status {
+    crate::runtime::executor_utils::policy_status_with_code(
+        tonic::Code::PermissionDenied,
+        "select_export_controls",
+        policy_decision_id,
+        message,
+    )
 }
 
 fn is_aead_or_pii_column(column: &ManifestColumn) -> bool {
@@ -1721,11 +1796,17 @@ pub fn check_ip_allowlist(peer_addr: Option<&str>, allowlist: &[String]) -> Resu
     }
 
     let Some(addr) = peer_addr else {
-        return Err(Status::permission_denied("peer address not available"));
+        return Err(ip_allowlist_policy_status(
+            "peer_address_missing",
+            "peer address not available",
+        ));
     };
 
     let ip = peer_ip_from_addr(addr).ok_or_else(|| {
-        Status::permission_denied(format!("peer address '{addr}' is not a valid IP address"))
+        ip_allowlist_policy_status(
+            "peer_address_invalid",
+            format!("peer address '{addr}' is not a valid IP address"),
+        )
     })?;
 
     for allowed in allowlist {
@@ -1734,10 +1815,22 @@ pub fn check_ip_allowlist(peer_addr: Option<&str>, allowlist: &[String]) -> Resu
         }
     }
 
-    Err(Status::permission_denied(format!(
-        "IP {} not in allowlist",
-        ip
-    )))
+    Err(ip_allowlist_policy_status(
+        "ip_not_in_allowlist",
+        format!("IP {} not in allowlist", ip),
+    ))
+}
+
+fn ip_allowlist_policy_status(
+    policy_decision_id: impl Into<String>,
+    message: impl Into<String>,
+) -> Status {
+    crate::runtime::executor_utils::policy_status_with_code(
+        tonic::Code::PermissionDenied,
+        "ip_allowlist",
+        policy_decision_id,
+        message,
+    )
 }
 
 fn peer_ip_from_addr(addr: &str) -> Option<IpAddr> {
@@ -2031,6 +2124,31 @@ pub fn lint_policies(policies: &[AbacPolicy]) -> Vec<PolicyLintFinding> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
+
+    fn decode_detail(status: &Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present")
+            .to_bytes()
+            .expect("typed detail trailer decodes to bytes");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_ip_allowlist_policy_detail(status: &Status, policy_decision_id: &str, message: &str) {
+        assert_eq!(status.code(), tonic::Code::PermissionDenied);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Policy as i32);
+        assert_eq!(detail.operation, "ip_allowlist");
+        assert_eq!(detail.policy_decision_id, policy_decision_id);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
 
     #[test]
     fn sign_access_token_stamps_kid_header() {
@@ -2090,14 +2208,133 @@ mod tests {
     fn ip_allowlist_supports_ipv4_cidr_and_socket_addr() {
         let allowlist = vec!["10.20.0.0/16".to_string()];
         assert!(check_ip_allowlist(Some("10.20.30.40:443"), &allowlist).is_ok());
-        assert!(check_ip_allowlist(Some("10.21.30.40:443"), &allowlist).is_err());
+        let err = check_ip_allowlist(Some("10.21.30.40:443"), &allowlist)
+            .expect_err("outside-CIDR peer must be denied");
+        assert_ip_allowlist_policy_detail(
+            &err,
+            "ip_not_in_allowlist",
+            "IP 10.21.30.40 not in allowlist",
+        );
     }
 
     #[test]
     fn ip_allowlist_supports_ipv6_cidr() {
         let allowlist = vec!["2001:db8::/32".to_string()];
         assert!(check_ip_allowlist(Some("[2001:db8::1]:443"), &allowlist).is_ok());
-        assert!(check_ip_allowlist(Some("2001:db9::1"), &allowlist).is_err());
+        let err = check_ip_allowlist(Some("2001:db9::1"), &allowlist)
+            .expect_err("outside-CIDR IPv6 peer must be denied");
+        assert_ip_allowlist_policy_detail(
+            &err,
+            "ip_not_in_allowlist",
+            "IP 2001:db9::1 not in allowlist",
+        );
+    }
+
+    #[test]
+    fn ip_allowlist_missing_or_invalid_peer_carries_policy_detail() {
+        let allowlist = vec!["10.20.0.0/16".to_string()];
+        let missing =
+            check_ip_allowlist(None, &allowlist).expect_err("configured allowlist requires peer");
+        assert_ip_allowlist_policy_detail(
+            &missing,
+            "peer_address_missing",
+            "peer address not available",
+        );
+
+        let invalid = check_ip_allowlist(Some("not an ip"), &allowlist)
+            .expect_err("invalid peer address must be denied");
+        assert_ip_allowlist_policy_detail(
+            &invalid,
+            "peer_address_invalid",
+            "peer address 'not an ip' is not a valid IP address",
+        );
+    }
+
+    fn pii_manifest() -> CatalogManifest {
+        CatalogManifest {
+            tables: vec![crate::generation::ManifestTable {
+                message_name: "Customer".to_string(),
+                schema: "billing".to_string(),
+                table: "customers".to_string(),
+                columns: vec![
+                    ManifestColumn {
+                        field_name: "id".to_string(),
+                        column_name: "id".to_string(),
+                        proto_type: "string".to_string(),
+                        sql_type: "TEXT".to_string(),
+                        ..ManifestColumn::default()
+                    },
+                    ManifestColumn {
+                        field_name: "email".to_string(),
+                        column_name: "email".to_string(),
+                        proto_type: "string".to_string(),
+                        sql_type: "TEXT".to_string(),
+                        security: crate::generation::ManifestColumnSecurity {
+                            is_pii: true,
+                            ..crate::generation::ManifestColumnSecurity::default()
+                        },
+                        ..ManifestColumn::default()
+                    },
+                ],
+                ..crate::generation::ManifestTable::default()
+            }],
+            ..CatalogManifest::default()
+        }
+    }
+
+    #[test]
+    fn select_export_controls_pii_denial_carries_policy_detail() {
+        let manifest = pii_manifest();
+        let context = SecurityContext {
+            purpose: "billing".to_string(),
+            scopes: vec!["udb:read".to_string()],
+            ..SecurityContext::default()
+        };
+        let err =
+            enforce_select_export_controls(&manifest, &context, "Customer", &["email".to_string()])
+                .expect_err("PII field selection requires export purpose or pii scope");
+        assert_eq!(err.code(), tonic::Code::PermissionDenied);
+        assert_eq!(
+            err.message(),
+            "PII/encrypted fields require purpose export, verification, or audit, or scope udb:pii:read"
+        );
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::Policy as i32);
+        assert_eq!(detail.operation, "select_export_controls");
+        assert_eq!(detail.policy_decision_id, "pii_export_scope_required");
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    #[test]
+    fn select_export_controls_allow_export_purpose_or_pii_scope() {
+        let manifest = pii_manifest();
+        let export_context = SecurityContext {
+            purpose: "export".to_string(),
+            scopes: vec!["udb:read".to_string()],
+            ..SecurityContext::default()
+        };
+        enforce_select_export_controls(
+            &manifest,
+            &export_context,
+            "Customer",
+            &["email".to_string()],
+        )
+        .expect("export purpose may read PII fields");
+
+        let pii_scope_context = SecurityContext {
+            purpose: "billing".to_string(),
+            scopes: vec!["udb:read".to_string(), "udb:pii:read".to_string()],
+            ..SecurityContext::default()
+        };
+        enforce_select_export_controls(
+            &manifest,
+            &pii_scope_context,
+            "Customer",
+            &["email".to_string()],
+        )
+        .expect("pii scope may read PII fields");
     }
 
     #[test]

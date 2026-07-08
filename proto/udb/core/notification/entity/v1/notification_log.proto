@@ -93,3 +93,90 @@ message NotificationLog {
   string rendered_subject = 20 [(udb.core.common.v1.pg_column) = { column_name: "rendered_subject" sql_type: "TEXT" }];
   string rendered_body = 21 [(udb.core.common.v1.pg_column) = { column_name: "rendered_body" sql_type: "TEXT" }];
 }
+
+// ---------------------------------------------------------------------------
+// NotificationDeliveryAttempt — master-plan 9.13 delivery-status record.
+//
+// The broker records each notification SEND as a PENDING NotificationLog
+// (intent). A leader-elected delivery worker, or a provider webhook bridge that
+// calls NotificationService.ReportDelivery, then drives the terminal per-channel
+// delivery outcome here: one durable, tenant-scoped row per (notification,
+// channel, provider) carrying the queued/sent/failed/delivered status, the
+// attempt count, the provider's message id, the last error, and a timestamp.
+// This EXTENDS the existing intent/outbox path — it does not replace it. RLS
+// scopes rows to the current tenant.
+// ---------------------------------------------------------------------------
+message NotificationDeliveryAttempt {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "notification_delivery_attempts"
+    schema_name: "udb_notification"
+    migration_order: 4
+    is_table: true
+    comment: "Per-channel notification delivery-status record (master-plan 9.13)"
+    soft_delete: false
+    audit_fields: true
+    enable_rls: true
+    force_rls: true
+    rls_policies: {
+      policy_name: "tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text OR current_setting('app.platform_admin', true) = 'true')"
+      permissive: true
+    }
+    indexes: {
+      index_name: "uq_notif_delivery_attempt_target"
+      index_type: "BTREE"
+      columns: "notification_id"
+      columns: "channel"
+      columns: "provider"
+      unique: true
+    }
+    indexes: {
+      index_name: "idx_notif_delivery_attempt_tenant_status"
+      index_type: "BTREE"
+      columns: "tenant_id"
+      columns: "status"
+    }
+    cdc_topic: "udb.notification.delivery.cdc"
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "none"
+    retention_class: "notification.operational"
+    retention_days: 90
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
+
+  string attempt_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "attempt_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+
+  // The NotificationLog (intent) this delivery outcome is for.
+  string notification_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "notification_id" sql_type: "UUID" not_null: true index: { index_name: "idx_notif_delivery_attempt_notification" index_type: "BTREE" } }];
+
+  string tenant_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(120)" not_null: true }];
+
+  NotificationChannel channel = 4 [(udb.core.common.v1.pg_column) = { column_name: "channel" sql_type: "VARCHAR(20)" not_null: true }];
+
+  // Delivery provider that handled (or will handle) this channel: SES, SMTP,
+  // TWILIO, FCM, etc.
+  string provider = 5 [(udb.core.common.v1.pg_column) = { column_name: "provider" sql_type: "VARCHAR(60)" not_null: true default_value: "''" }];
+
+  // queued(PENDING) | sent(SENT) | delivered(DELIVERED) | failed(FAILED).
+  NotificationStatus status = 6 [(udb.core.common.v1.pg_column) = { column_name: "status" sql_type: "VARCHAR(20)" not_null: true default_value: "'PENDING'" index: { index_name: "idx_notif_delivery_attempt_status" index_type: "BTREE" } }];
+
+  int32 attempt_count = 7 [(udb.core.common.v1.pg_column) = { column_name: "attempt_count" sql_type: "INTEGER" not_null: true default_value: "0" }];
+
+  string last_error = 8 [(udb.core.common.v1.pg_column) = { column_name: "last_error" sql_type: "TEXT" }];
+
+  // The delivery provider's message id (SES, Twilio, FCM, …) for the terminal attempt.
+  string provider_message_id = 9 [(udb.core.common.v1.pg_column) = { column_name: "provider_message_id" sql_type: "VARCHAR(255)" }];
+
+  google.protobuf.Timestamp created_at = 10 [(udb.core.common.v1.pg_column) = { column_name: "created_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true exclude_from_update: true }];
+
+  // The "ts" of the latest reported outcome.
+  google.protobuf.Timestamp updated_at = 11 [(udb.core.common.v1.pg_column) = { column_name: "updated_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" }];
+}

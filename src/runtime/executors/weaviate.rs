@@ -8,18 +8,31 @@ use serde_json::Value as JsonValue;
 use crate::runtime::backend_context::{
     AppliedContext, BackendContextEnforcer, ContextEffect, enforce_with_mechanism,
 };
-use crate::runtime::executor_utils::{build_probe, http_status_to_tonic, parse_rest_dispatch};
+use crate::runtime::executor_utils::{
+    backend_transport_status, build_probe, capability_status, http_status_to_tonic,
+    invalid_argument_fields, parse_rest_dispatch,
+};
 use crate::runtime::executors::http::{HttpClientSpec, env_timeout};
 use crate::runtime::executors::{
     BackendExecutor, BackendHealth, BackendProbe, MutationExecutor, ObjectExecutor, QueryExecutor,
     ResourceAdminExecutor, SearchExecutor,
 };
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct WeaviateHttpClient {
     base_url: String,
     api_key: Option<String>,
     http: reqwest::Client,
+}
+
+// 4.6 secrets posture: redact `api_key` in Debug.
+impl std::fmt::Debug for WeaviateHttpClient {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("WeaviateHttpClient")
+            .field("base_url", &self.base_url)
+            .field("api_key", &self.api_key.as_ref().map(|_| "[redacted]"))
+            .finish_non_exhaustive()
+    }
 }
 
 impl WeaviateHttpClient {
@@ -71,12 +84,12 @@ impl WeaviateHttpClient {
         let resp = req
             .send()
             .await
-            .map_err(|e| tonic::Status::unavailable(format!("weaviate request failed: {e}")))?;
+            .map_err(|e| backend_transport_status("weaviate", "request", e))?;
         let status = resp.status();
         let text = resp
             .text()
             .await
-            .map_err(|e| tonic::Status::internal(format!("weaviate response read failed: {e}")))?;
+            .map_err(|e| backend_transport_status("weaviate", "response read", e))?;
         if !status.is_success() {
             return Err(weaviate_status_to_tonic(status, &text));
         }
@@ -84,7 +97,7 @@ impl WeaviateHttpClient {
             return Ok(JsonValue::Object(Default::default()));
         }
         serde_json::from_str(&text)
-            .map_err(|e| tonic::Status::internal(format!("weaviate response parse failed: {e}")))
+            .map_err(|e| backend_transport_status("weaviate", "response parse", e))
     }
 }
 
@@ -109,6 +122,30 @@ pub(crate) fn weaviate_class_name(resource_name: &str) -> String {
         out.insert_str(0, "Udb");
     }
     out
+}
+
+fn invalid_ensure_resource_spec_status(err: serde_json::Error) -> tonic::Status {
+    invalid_argument_fields(
+        format!("invalid spec: {err}"),
+        [(
+            "spec_json",
+            "must be valid JSON for Weaviate ensure_resource",
+        )],
+    )
+}
+
+fn weaviate_internal_status(
+    operation: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    crate::runtime::executor_utils::internal_status("weaviate", operation, message)
+}
+
+fn encode_weaviate_response(
+    operation: &'static str,
+    value: &JsonValue,
+) -> Result<String, tonic::Status> {
+    serde_json::to_string(value).map_err(|e| weaviate_internal_status(operation, e.to_string()))
 }
 
 #[derive(Debug, Clone)]
@@ -144,7 +181,7 @@ impl QueryExecutor for WeaviateExecutor {
     async fn query(&self, req: &str) -> Result<String, tonic::Status> {
         let (m, p, b) = parse_rest_dispatch(req)?;
         let r = self.client.request_json(m, &p, &b).await?;
-        serde_json::to_string(&r).map_err(|e| tonic::Status::internal(e.to_string()))
+        encode_weaviate_response("query_response_encode", &r)
     }
 }
 
@@ -152,7 +189,7 @@ impl MutationExecutor for WeaviateExecutor {
     async fn mutate(&self, req: &str) -> Result<String, tonic::Status> {
         let (m, p, b) = parse_rest_dispatch(req)?;
         let r = self.client.request_json(m, &p, &b).await?;
-        serde_json::to_string(&r).map_err(|e| tonic::Status::internal(e.to_string()))
+        encode_weaviate_response("mutate_response_encode", &r)
     }
 }
 
@@ -160,18 +197,24 @@ impl SearchExecutor for WeaviateExecutor {
     async fn search(&self, req: &str) -> Result<String, tonic::Status> {
         let (m, p, b) = parse_rest_dispatch(req)?;
         let r = self.client.request_json(m, &p, &b).await?;
-        serde_json::to_string(&r).map_err(|e| tonic::Status::internal(e.to_string()))
+        encode_weaviate_response("search_response_encode", &r)
     }
 }
 
 impl ObjectExecutor for WeaviateExecutor {
     async fn get_object(&self, _: &str) -> Result<Vec<u8>, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "weaviate",
+            "get_object",
+            "object_store",
             "UDB_UNSUPPORTED_OPERATION: Weaviate is not an object store",
         ))
     }
     async fn put_object(&self, _: &str, _: Vec<u8>) -> Result<String, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "weaviate",
+            "put_object",
+            "object_store",
             "UDB_UNSUPPORTED_OPERATION: Weaviate is not an object store",
         ))
     }
@@ -183,8 +226,8 @@ impl ResourceAdminExecutor for WeaviateExecutor {
         resource_name: &str,
         spec_json: &str,
     ) -> Result<(), tonic::Status> {
-        let _spec: JsonValue = serde_json::from_str(spec_json)
-            .map_err(|e| tonic::Status::invalid_argument(format!("invalid spec: {e}")))?;
+        let _spec: JsonValue =
+            serde_json::from_str(spec_json).map_err(invalid_ensure_resource_spec_status)?;
         let spec = serde_json::json!({
             "class": weaviate_class_name(resource_name),
             "vectorizer": "none",
@@ -228,7 +271,10 @@ impl ResourceAdminExecutor for WeaviateExecutor {
 
 impl BackendExecutor for WeaviateExecutor {
     async fn transaction(&self, _: &str) -> Result<String, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "weaviate",
+            "transaction",
+            "transactions",
             "UDB_UNSUPPORTED_OPERATION: Weaviate has no transaction primitive",
         ))
     }
@@ -240,6 +286,45 @@ impl BackendExecutor for WeaviateExecutor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
+
+    fn decode_detail(status: &tonic::Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_spec_json_violation(status: &tonic::Status) {
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, "spec_json");
+    }
+
+    fn assert_internal_detail(status: &tonic::Status, operation: &str, message: &str) {
+        assert_eq!(status.code(), tonic::Code::Internal);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "weaviate");
+        assert_eq!(detail.operation, operation);
+        assert!(!detail.retryable);
+    }
+
+    #[test]
+    fn weaviate_internal_status_carries_typed_detail() {
+        let status =
+            weaviate_internal_status("query_response_encode", "weaviate response encode failed");
+        assert_internal_detail(
+            &status,
+            "query_response_encode",
+            "weaviate response encode failed",
+        );
+    }
 
     #[test]
     fn parse_dispatch_works() {
@@ -269,5 +354,15 @@ mod tests {
             ..Default::default()
         };
         assert!(matches!(exec.enforce(&ctx), ContextEffect::Enforced { .. }));
+    }
+
+    #[test]
+    fn ensure_resource_spec_validation_carries_field_violation() {
+        let err = serde_json::from_str::<JsonValue>("{")
+            .map_err(invalid_ensure_resource_spec_status)
+            .unwrap_err();
+        assert_eq!(err.code(), tonic::Code::InvalidArgument);
+        assert!(err.message().starts_with("invalid spec:"));
+        assert_spec_json_violation(&err);
     }
 }

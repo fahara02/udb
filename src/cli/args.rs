@@ -19,6 +19,12 @@ pub(crate) enum Command {
         /// (encryption key, auth secrets, sessions, auth-plane exposure, redis,
         /// authz default-deny) — UDB_FRICTION §2.
         enterprise: bool,
+        /// `--fix`: APPLY the auto-fixable remediations doctor already emits, but
+        /// ONLY to local files (e.g. append a missing `UDB_*` with a documented
+        /// safe default to `.env`, normalize CRLF line endings). NEVER touches
+        /// remote/DB/network state and never applies a finding whose correct edit
+        /// is ambiguous or would loosen posture — those stay advisory-only.
+        fix: bool,
     },
     /// Emit the resolved runtime backend contract for the current project's
     /// manifest (required backends, env vars, current status) so application
@@ -102,6 +108,13 @@ pub(crate) enum Command {
     },
     /// Native auth control-plane CLI over generated authn/authz/apikey RPCs.
     Auth(AuthCommand),
+    /// Authz governance CLI over the generated AuthzService RPCs (policy
+    /// simulation / "what would change if this bundle shipped").
+    Authz(AuthzCommand),
+    /// Compliance evidence automation (master-plan 4.4). Drains the durable
+    /// audit window into a chain-hashed evidence bundle written through the
+    /// storage-service object helpers and emits a machine-readable manifest.
+    Compliance(ComplianceCommand),
     /// Export UDB's embedded proto contract (annotations + broker/service protos)
     /// into a local proto tree, so a project can `import "udb/core/common/v1/
     /// db.proto"` without cloning the repo or depending on a registry. The files
@@ -139,6 +152,23 @@ pub(crate) enum Command {
         out_dir: String,
         /// RPC-manifest selectors applied before rendering (`generate` only).
         selector: SdkSelector,
+    },
+    /// ORM ergonomics (master-plan 10.5): generate typed entity/repository
+    /// models from the embedded proto descriptor set. This REUSES the SDK
+    /// generation machinery (`sdk_gen::run_orm_scaffold` → the same FSM/template
+    /// pipeline as `udb sdk generate`) — it is NOT a second generator — and
+    /// surfaces the `udb plan` / `udb sync-migrations` → model-generation path.
+    Orm {
+        action: OrmAction,
+        /// Language to generate models for, or `all`. Defaults to `all`.
+        lang: String,
+        /// Optional entity FQN (`pkg.Message`) or short message name to scope
+        /// generation to a single entity. `None` generates every entity.
+        entity: Option<String>,
+        /// Template root. Defaults to `sdk-templates`.
+        templates_dir: String,
+        /// Output root. Defaults to `sdk`.
+        out_dir: String,
     },
     /// Inspect and lint the descriptor-derived native service contract, and
     /// drive the native-service app lifecycle (add/remove/generate/doctor/smoke).
@@ -215,6 +245,14 @@ pub(crate) enum SdkAction {
     Manifest,
     ListLangs,
     Init,
+}
+
+/// Sub-action of `udb orm`. Currently only `scaffold` (model generation), kept
+/// as an enum so future ORM ergonomics verbs slot in without changing the
+/// dispatch shape.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum OrmAction {
+    Scaffold,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -294,6 +332,51 @@ pub(crate) enum AuthCommand {
     PolicyLint,
 }
 
+/// `udb authz …` governance subcommands. Currently a single verb — policy
+/// simulation — which calls the server-side `AuthzService.SimulatePolicy` model.
+pub(crate) enum AuthzCommand {
+    /// `udb authz simulate --bundle <path> [--draft <id>] [--tenant <t>]
+    ///   [--project <p>] [--persist] [--policy-version <id>]`
+    ///
+    /// Loads a candidate policy bundle (policies/bindings/tuples + simulation
+    /// `cases`) and/or a stored draft id, asks the server to evaluate every case
+    /// against BOTH the active snapshot and the candidate, and renders the
+    /// allow/deny diff. The server runs its own policy engine and never mutates
+    /// durable state unless `--persist` is given.
+    Simulate {
+        bundle: String,
+        draft_id: String,
+        tenant: String,
+        project: String,
+        persist: bool,
+        policy_version_id: String,
+    },
+}
+
+/// `udb compliance …` subcommands. Currently a single verb — `evidence` —
+/// which exports the durable auth-audit window (the relation owned by the
+/// auth_service `PostgresAuditLogSink`) into a chain-hashed JSONL evidence
+/// bundle, writes it through the storage-service object helpers, and renders a
+/// machine-readable manifest.
+pub(crate) enum ComplianceCommand {
+    /// `udb compliance evidence [--since <rfc3339>] [--until <rfc3339>]
+    ///   [--tenant <id>] [--backend <s3|minio>] [--bucket <name>]
+    ///   [--prefix <key-prefix>] [--project <id>] [--limit <n>]
+    ///   [--out <local-manifest-path>] [--dry-run]`
+    Evidence {
+        since: String,
+        until: String,
+        tenant: String,
+        backend: String,
+        bucket: String,
+        prefix: String,
+        project: String,
+        limit: i64,
+        out: String,
+        dry_run: bool,
+    },
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum DevAction {
     Up,
@@ -333,6 +416,7 @@ const KNOWN_COMMANDS: &[&str] = &[
     "health-check",
     "init",
     "init-project",
+    "scaffold",
     "dev",
     "explain",
     "manifest-export",
@@ -343,6 +427,8 @@ const KNOWN_COMMANDS: &[&str] = &[
     "sync-migrations",
     "dbops sync",
     "auth",
+    "authz simulate",
+    "compliance evidence",
     "serve",
     "proto export",
     "proto fmt",
@@ -376,6 +462,8 @@ const SDK_ACTIONS: &[&str] = &[
     "manifest",
     "list-langs/languages",
 ];
+
+const ORM_ACTIONS: &[&str] = &["scaffold"];
 
 const NATIVE_ACTIONS: &[&str] = &[
     "manifest",
@@ -511,6 +599,58 @@ fn parse_auth_subcommand(args: &[String]) -> Option<(AuthCommand, usize)> {
     Some((command, 3))
 }
 
+/// Parse the `authz …` subcommand grammar (`authz <verb> [flags]`). Returns the
+/// parsed [`AuthzCommand`] and the number of leading positional tokens consumed
+/// (always 2: `authz <verb>`). Returns `None` for any unrecognized shape so the
+/// caller falls through to InvalidUsage.
+fn parse_authz_subcommand(args: &[String]) -> Option<(AuthzCommand, usize)> {
+    let has_flag = |flag: &str| -> bool { args.iter().any(|a| a == flag) };
+    let flag_value = |flag: &str| -> Option<String> {
+        args.windows(2).find(|w| w[0] == flag).map(|w| w[1].clone())
+    };
+    let command = match args.get(1).map(|value| value.as_str()) {
+        Some("simulate") | Some("sim") => AuthzCommand::Simulate {
+            bundle: flag_value("--bundle").unwrap_or_default(),
+            draft_id: flag_value("--draft").unwrap_or_default(),
+            tenant: flag_value("--tenant").unwrap_or_default(),
+            project: flag_value("--project").unwrap_or_default(),
+            persist: has_flag("--persist"),
+            policy_version_id: flag_value("--policy-version").unwrap_or_default(),
+        },
+        _ => return None,
+    };
+    Some((command, 2))
+}
+
+/// Parse the `compliance …` subcommand grammar (`compliance <verb> [flags]`).
+/// Returns the parsed [`ComplianceCommand`] and the number of leading positional
+/// tokens consumed (always 2: `compliance <verb>`). Returns `None` for any
+/// unrecognized shape so the caller falls through to InvalidUsage.
+fn parse_compliance_subcommand(args: &[String]) -> Option<(ComplianceCommand, usize)> {
+    let has_flag = |flag: &str| -> bool { args.iter().any(|a| a == flag) };
+    let flag_value = |flag: &str| -> Option<String> {
+        args.windows(2).find(|w| w[0] == flag).map(|w| w[1].clone())
+    };
+    let command = match args.get(1).map(|value| value.as_str()) {
+        Some("evidence") | Some("export") => ComplianceCommand::Evidence {
+            since: flag_value("--since").unwrap_or_default(),
+            until: flag_value("--until").unwrap_or_default(),
+            tenant: flag_value("--tenant").unwrap_or_default(),
+            backend: flag_value("--backend").unwrap_or_default(),
+            bucket: flag_value("--bucket").unwrap_or_default(),
+            prefix: flag_value("--prefix").unwrap_or_default(),
+            project: flag_value("--project").unwrap_or_default(),
+            limit: flag_value("--limit")
+                .and_then(|value| value.parse::<i64>().ok())
+                .unwrap_or(0),
+            out: flag_value("--out").unwrap_or_default(),
+            dry_run: has_flag("--dry-run"),
+        },
+        _ => return None,
+    };
+    Some((command, 2))
+}
+
 /// Split a comma-separated flag value into trimmed, non-empty tokens.
 pub(crate) fn split_csv(value: &str) -> Vec<String> {
     value
@@ -527,6 +667,7 @@ const VALUE_FLAGS: &[&str] = &[
     "--backend",
     "--out",
     "--lang",
+    "--entity",
     "--templates",
     "--config",
     "--tenant",
@@ -560,6 +701,13 @@ const VALUE_FLAGS: &[&str] = &[
     "--native-service",
     "--feature",
     "--proto-strategy",
+    "--bundle",
+    "--draft",
+    "--policy-version",
+    "--since",
+    "--until",
+    "--bucket",
+    "--prefix",
 ];
 
 /// Collect positional (non-flag) tokens after `start`, skipping any token that
@@ -605,6 +753,7 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
     };
     let with_probes = has_flag("--probe");
     let doctor_enterprise = has_flag("--enterprise");
+    let doctor_fix = has_flag("--fix");
     // --prior <path> : load a prior CatalogManifest JSON for drift/plan diffs.
     let prior_manifest_path: Option<String> = flag_value("--prior");
     let _ = prior_manifest_path; // used by Drift/Plan handlers via env fallback below
@@ -640,6 +789,7 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
                 output_mode: doctor_output_mode,
                 with_probes,
                 enterprise: doctor_enterprise,
+                fix: doctor_fix,
             }
         }
         Some("requirements") | Some("requires") => {
@@ -681,7 +831,10 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
                 proto_strategy: flag_value("--proto-strategy"),
             })
         }
-        Some("init-project") => {
+        // `scaffold` is the canonical name for the six-language example emitter
+        // (used by the scaffold-compiles CI gate); `init-project` is the legacy
+        // alias. Both dispatch to the same scaffold_files() emitter.
+        Some("init-project") | Some("scaffold") => {
             offset = 1;
             Command::InitProject
         }
@@ -749,6 +902,23 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
                 parse_auth_subcommand(args).expect("guard guarantees Some");
             offset = consumed;
             Command::Auth(auth_command)
+        }
+        // `udb authz simulate --bundle <path> …` — policy governance simulation.
+        // Unrecognized `authz …` shapes fall through to InvalidUsage.
+        Some("authz") if parse_authz_subcommand(args).is_some() => {
+            let (authz_command, consumed) =
+                parse_authz_subcommand(args).expect("guard guarantees Some");
+            offset = consumed;
+            Command::Authz(authz_command)
+        }
+        // `udb compliance evidence [--since … --until … --bucket … --prefix …]`
+        // — master-plan 4.4 compliance-evidence export. Unrecognized
+        // `compliance …` shapes fall through to InvalidUsage.
+        Some("compliance") if parse_compliance_subcommand(args).is_some() => {
+            let (compliance_command, consumed) =
+                parse_compliance_subcommand(args).expect("guard guarantees Some");
+            offset = consumed;
+            Command::Compliance(compliance_command)
         }
         Some("serve") => {
             offset = 1;
@@ -819,6 +989,37 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
                     include_deps: has_flag("--include-deps"),
                     strict_server_capabilities: has_flag("--strict-server-capabilities"),
                 },
+            }
+        }
+        // `udb orm scaffold [--lang <name>|all] [--entity <pkg.Message>]
+        //    [--templates <dir>] [--out <dir>]` — master-plan 10.5. Reuses the
+        // SDK generation machinery to emit typed entity/repository models.
+        Some("orm") => {
+            offset = 2;
+            let action = match args.get(1).map(|value| value.as_str()) {
+                None => OrmAction::Scaffold,
+                Some(value) if value.starts_with("--") => OrmAction::Scaffold,
+                Some("scaffold") | Some("models") | Some("generate") => OrmAction::Scaffold,
+                Some(other) => {
+                    return (
+                        invalid_usage(format!(
+                            "unknown orm action '{other}'{}; known: {}",
+                            did_you_mean(other, ORM_ACTIONS),
+                            ORM_ACTIONS.join(", ")
+                        )),
+                        "proto".to_string(),
+                        String::new(),
+                        DEFAULT_GRPC_BIND_ADDR.to_string(),
+                    );
+                }
+            };
+            Command::Orm {
+                action,
+                lang: flag_value("--lang").unwrap_or_else(|| "all".to_string()),
+                entity: flag_value("--entity"),
+                templates_dir: flag_value("--templates")
+                    .unwrap_or_else(|| "sdk-templates".to_string()),
+                out_dir: flag_value("--out").unwrap_or_else(|| "sdk".to_string()),
             }
         }
         // `udb native <manifest|list|lint|add|remove|generate|doctor|smoke> [services...]
@@ -961,6 +1162,8 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
                     arg.as_str(),
                     "--human"
                         | "--probe"
+                        | "--fix"
+                        | "--enterprise"
                         | "--force-bootstrap"
                         | "--yes"
                         | "--force"
@@ -979,6 +1182,7 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
                         | "--no-tui"
                         | "--json-plan"
                         | "--dry-run"
+                        | "--persist"
                 )
             {
                 None

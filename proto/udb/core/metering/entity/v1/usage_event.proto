@@ -1,0 +1,98 @@
+syntax = "proto3";
+
+package udb.core.metering.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Metering.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/metering/entity/v1;meteringv1";
+option java_package = "com.udb.core.metering.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Metering\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Metering\\Entity\\V1";
+
+// ---------------------------------------------------------------------------
+// UsageEvent — durable, append-only metering row (master-plan 9.9). One row is
+// written per metered operation by the admission hook (a single cheap INSERT,
+// no read) plus by explicit `RecordUsage` ingest. Durability is the whole point:
+// in-memory counters lie across restarts and replicas, so usage is summed from
+// these rows, never from Prometheus counters. `occurred_at_unix` is carried as a
+// plain BIGINT alongside the TIMESTAMPTZ so a window SUM is a backend-neutral
+// integer range filter (no per-backend timestamp binding). RLS scopes rows to
+// the current tenant. Metering must NEVER fail the metered request, so the
+// writer log-and-swallows on error.
+// ---------------------------------------------------------------------------
+message UsageEvent {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "usage_events"
+    schema_name: "udb_metering"
+    migration_order: 1
+    is_table: true
+    comment: "Append-only usage metering events (master-plan 9.9)"
+    soft_delete: false
+    audit_fields: true
+    enable_rls: true
+    rls_policies: {
+      policy_name: "tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text)"
+      permissive: true
+    }
+    indexes: {
+      index_name: "idx_usage_events_tenant_method_ts"
+      index_type: "BTREE"
+      columns: "tenant_id"
+      columns: "method"
+      columns: "occurred_at_unix"
+    }
+    indexes: {
+      index_name: "idx_usage_events_tenant_ts"
+      index_type: "BTREE"
+      columns: "tenant_id"
+      columns: "occurred_at_unix"
+    }
+    cdc_topic: "udb.metering.usage_events.cdc"
+    required_scope: "metering:read"
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "none"
+    retention_class: "metering.operational"
+    retention_days: 400
+    audit_mode: AUDIT_MODE_NONE
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: true
+    data_residency_policy_ref: "tenant.data_residency"
+  };
+
+  string usage_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "usage_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(64)" not_null: true index: { index_name: "idx_usage_events_tenant" index_type: "BTREE" } }];
+
+  // Attribution subject (principal / api-key / worker id). May be empty when the
+  // admission hook has no principal in scope; it is never the metered request's
+  // failure mode, only an attribution dimension.
+  string principal_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "principal_id" sql_type: "VARCHAR(255)" not_null: true default_value: "''" }];
+
+  // The metered method / resource — the dimension a `QuotaRule.metric` matches.
+  string method = 4 [(udb.core.common.v1.pg_column) = { column_name: "method" sql_type: "VARCHAR(255)" not_null: true }];
+
+  // Unit of the quantity (e.g. "request", "byte", "row"). Lets one tenant meter
+  // multiple cost dimensions of the same method.
+  string unit = 5 [(udb.core.common.v1.pg_column) = { column_name: "unit" sql_type: "VARCHAR(64)" not_null: true default_value: "'request'" }];
+
+  // Quantity consumed by this event (>= 0). The window SUM of this column is the
+  // durable usage figure CheckQuota compares against the limit.
+  int64 quantity = 6 [(udb.core.common.v1.pg_column) = { column_name: "quantity" sql_type: "BIGINT" not_null: true default_value: "1" }];
+
+  google.protobuf.Timestamp occurred_at = 7 [(udb.core.common.v1.pg_column) = { column_name: "occurred_at" sql_type: "TIMESTAMPTZ" not_null: true comment: "When the metered operation happened" }];
+
+  // Same instant as `occurred_at`, denormalized to unix seconds so a windowed
+  // SUM is a backend-neutral integer range filter (no timestamp binding).
+  int64 occurred_at_unix = 8 [(udb.core.common.v1.pg_column) = { column_name: "occurred_at_unix" sql_type: "BIGINT" not_null: true default_value: "0" }];
+
+  string metadata_json = 9 [(udb.core.common.v1.pg_column) = { column_name: "metadata_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'{}'::jsonb" comment: "Non-secret usage metadata for cost attribution and routing" }];
+}

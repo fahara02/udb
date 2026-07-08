@@ -233,7 +233,7 @@ impl BackendPluginContract {
     }
 }
 
-fn compiler_mediated_runtime_path_wired(kind: &BackendKind) -> bool {
+pub(crate) fn compiler_mediated_runtime_path_wired(kind: &BackendKind) -> bool {
     // GenericDispatch now accepts a neutral `ir` envelope, lowers it through
     // `ir::compile::compile_for_backend`, converts the `CompiledRendering` into
     // the existing executor request shape, and executes it on the same
@@ -243,26 +243,13 @@ fn compiler_mediated_runtime_path_wired(kind: &BackendKind) -> bool {
     if !kind.capabilities_v2().compiler_mediated {
         return false;
     }
-    match kind {
-        BackendKind::Postgres => true,
-        BackendKind::Mysql => cfg!(any(feature = "mysql", test)),
-        BackendKind::Sqlite => cfg!(any(feature = "sqlite", test)),
-        BackendKind::Mssql => cfg!(any(feature = "mssql", test)),
-        BackendKind::Clickhouse => cfg!(any(feature = "clickhouse", test)),
-        BackendKind::Mongodb => cfg!(any(feature = "mongodb", test)),
-        BackendKind::Neo4j => cfg!(any(feature = "neo4j", test)),
-        BackendKind::Qdrant => cfg!(any(feature = "qdrant", test)),
-        BackendKind::Elasticsearch => cfg!(any(feature = "elasticsearch", test)),
-        BackendKind::Weaviate => cfg!(any(feature = "weaviate", test)),
-        BackendKind::Pinecone => cfg!(any(feature = "pinecone", test)),
-        BackendKind::Cassandra => cfg!(any(feature = "cassandra", test)),
-        BackendKind::Redis
-        | BackendKind::Memcached
-        | BackendKind::Minio
-        | BackendKind::S3
-        | BackendKind::AzureBlob
-        | BackendKind::Gcs => false,
-    }
+    // Whether a compiler is actually compiled into THIS build is owned by
+    // `ir::compile` (the same `#[cfg(..)]` arms that drive `compile_for_backend`).
+    // Defer to it instead of re-listing the feature gates here, so the two can
+    // never drift. The V2 gate above is the policy filter (KV/object stores
+    // intentionally are not classified as compiler-mediated data-plane targets
+    // even though planner-only compilers exist for them).
+    crate::ir::compile::is_mediated_backend(kind)
 }
 
 /// Result of validating one plugin against the stable contract.
@@ -530,6 +517,24 @@ mod tests {
             #[cfg(feature = "gcs")]
             BackendKind::Gcs,
         ]
+    }
+
+    #[test]
+    fn wired_classification_agrees_with_single_source_of_truth() {
+        // Anti-drift guard for master-plan item 2.3: `compiler_mediated_runtime_path_wired`
+        // no longer hand-lists per-backend `cfg!()` results. It must equal the V2 policy
+        // filter ANDed with `ir::compile::is_mediated_backend` (the one source of truth for
+        // "this build has a compiler for `kind`"). If the two ever disagree, the hand-list
+        // has crept back in.
+        for kind in BackendKind::all_known() {
+            let expected = kind.capabilities_v2().compiler_mediated
+                && crate::ir::compile::is_mediated_backend(kind);
+            assert_eq!(
+                compiler_mediated_runtime_path_wired(kind),
+                expected,
+                "{kind:?}: wired classification diverged from V2 filter + is_mediated_backend"
+            );
+        }
     }
 
     #[test]

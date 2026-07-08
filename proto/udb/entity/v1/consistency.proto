@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package udb.entity.v1;
+
+option go_package = "github.com/udb-project/udb/gen/go/udb/entity/v1;entityv1";
+option java_package = "com.udb.entity.v1";
+option csharp_namespace = "Udb.Entity.V1";
+option php_namespace = "Udb\\Entity\\V1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Entity\\V1";
+
+// Pinned request consistency modes. These enum values mirror the stable
+// x-udb-consistency header tokens and the legacy RequestContext.consistency
+// string field; do not rename them without a wire-compatibility migration.
+enum ConsistencyMode {
+  CONSISTENCY_MODE_UNSPECIFIED = 0;
+  CONSISTENCY_MODE_STRONG = 1;
+  CONSISTENCY_MODE_READ_YOUR_WRITES = 2;
+  CONSISTENCY_MODE_BOUNDED_STALENESS = 3;
+  CONSISTENCY_MODE_REPLICA_BOUNDED = 4;
+  CONSISTENCY_MODE_EVENTUAL = 5;
+  CONSISTENCY_MODE_PROJECTION_OK = 6;
+  CONSISTENCY_MODE_CACHE_OK = 7;
+}
+
+// Typed form of the write receipt also exposed as
+// MutationResponse.write_receipt_json for compatibility.
+message WriteReceipt {
+  string source_lsn = 1;
+  uint64 outbox_seq = 2;
+  repeated string projection_task_ids = 3;
+  string manifest_checksum = 4;
+  int64 written_at_unix_ms = 5;
+}
+
+// Typed form of the read fence also accepted as
+// RequestContext.read_fence_json for compatibility.
+message ReadFence {
+  string min_outbox_lsn = 1;
+  repeated string projection_task_ids = 2;
+  uint64 max_wait_ms = 3;
+}

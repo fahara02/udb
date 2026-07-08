@@ -8,7 +8,7 @@
 //! sixth mode meant editing strings in six places and hoping you found
 //! all of them.
 //!
-//! U6 centralises consistency as a typed [`ConsistencyMode`] with six
+//! U6 centralises consistency as a typed [`ConsistencyMode`] with seven
 //! pinned variants, plus the two primitives that make cross-backend
 //! "read-your-writes" actually work:
 //!
@@ -28,7 +28,7 @@
 
 use serde::{Deserialize, Serialize};
 
-/// The six pinned consistency modes a request may declare.
+/// The seven pinned consistency modes a request may declare.
 ///
 /// **Pinned**: the `as_str` tokens are public contract — SDK enums,
 /// `x-udb-consistency` header values, lint allowlist, ABAC policy
@@ -49,6 +49,35 @@ pub enum ConsistencyMode {
     /// `RequestContext.max_replica_lag_ms`. Bounded staleness in the
     /// sense the Spanner / Cosmos DB papers use it.
     BoundedStaleness,
+    /// **REPLICA_BOUNDED** — explicitly route the read to a physical read
+    /// REPLICA within a bounded staleness budget, and FAIL OVER to the
+    /// primary (never error, never serve silently-stale) when the replica
+    /// cannot be proven fresh in time.
+    ///
+    /// Distinct from [`Self::BoundedStaleness`] in two ways:
+    /// 1. It targets SQL read replicas only — it does NOT opt into
+    ///    projection-backed targets (`allows_projection()` is `false`), so a
+    ///    bounded read here is always served by a real replica or the
+    ///    primary, never a Mongo/Qdrant/ClickHouse projection.
+    /// 2. On a backend with no real replication-position token (object
+    ///    store, plain cache) it FAILS OVER to the primary rather than
+    ///    refusing — the primary trivially satisfies the read.
+    ///
+    /// ## Timeout / failover contract
+    ///
+    /// Honoured by
+    /// [`crate::runtime::replica::PgReplicaManager::choose_bounded_replica`]:
+    /// pick a replica within `max_replica_lag_ms` lag, then WAIT on its REAL
+    /// applied replication position (`pg_last_wal_replay_lsn()`, a GTID, or a
+    /// monotone outbox seq — NEVER a wall clock) until it passes the caller's
+    /// write LSN, using `max_replica_lag_ms` as the wait budget. If the fence
+    /// does not clear inside that budget (or no replica is eligible), the
+    /// broker FAILS OVER to the primary and ALWAYS attaches a
+    /// [`StaleReadWarning`] (`ReplicaLagExceeded` when no replica was
+    /// eligible, `FenceTimedOut` when the chosen replica didn't catch up) —
+    /// a failed-over read is never returned silently. Decided on the real
+    /// replication token, NOT a wall clock.
+    ReplicaBounded,
     /// Read from any healthy replica or projection target. No fence,
     /// no lag bound. The cheapest mode; required for high-fanout reads.
     Eventual,
@@ -80,6 +109,7 @@ impl ConsistencyMode {
             Self::Strong => "strong",
             Self::ReadYourWrites => "read_your_writes",
             Self::BoundedStaleness => "bounded_staleness",
+            Self::ReplicaBounded => "replica_bounded",
             Self::Eventual => "eventual",
             Self::ProjectionOk => "projection_ok",
             Self::CacheOk => "cache_ok",
@@ -96,6 +126,7 @@ impl ConsistencyMode {
             "strong" | "linearizable" | "primary" => Some(Self::Strong),
             "read_your_writes" | "ryw" | "read-your-writes" => Some(Self::ReadYourWrites),
             "bounded_staleness" | "bounded-staleness" => Some(Self::BoundedStaleness),
+            "replica_bounded" | "replica-bounded" => Some(Self::ReplicaBounded),
             "eventual" | "eventual_consistency" => Some(Self::Eventual),
             "projection_ok" | "projection-ok" => Some(Self::ProjectionOk),
             "cache_ok" | "cache-ok" => Some(Self::CacheOk),
@@ -134,6 +165,32 @@ impl ConsistencyMode {
     /// fence (the cache entry's own checksum is its consistency proof).
     pub fn honours_fence(self) -> bool {
         !matches!(self, Self::CacheOk)
+    }
+
+    pub(crate) fn from_proto_i32(mode: i32) -> Option<Self> {
+        match mode {
+            1 => Some(Self::Strong),
+            2 => Some(Self::ReadYourWrites),
+            3 => Some(Self::BoundedStaleness),
+            4 => Some(Self::ReplicaBounded),
+            5 => Some(Self::Eventual),
+            6 => Some(Self::ProjectionOk),
+            7 => Some(Self::CacheOk),
+            _ => None,
+        }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn to_proto_i32(self) -> i32 {
+        match self {
+            Self::Strong => 1,
+            Self::ReadYourWrites => 2,
+            Self::BoundedStaleness => 3,
+            Self::ReplicaBounded => 4,
+            Self::Eventual => 5,
+            Self::ProjectionOk => 6,
+            Self::CacheOk => 7,
+        }
     }
 }
 
@@ -182,6 +239,26 @@ impl WriteReceipt {
             && self.projection_task_ids.is_empty()
             && self.manifest_checksum.is_empty()
     }
+
+    pub(crate) fn to_proto(&self) -> crate::proto::WriteReceipt {
+        crate::proto::WriteReceipt {
+            source_lsn: self.source_lsn.clone(),
+            outbox_seq: self.outbox_seq,
+            projection_task_ids: self.projection_task_ids.clone(),
+            manifest_checksum: self.manifest_checksum.clone(),
+            written_at_unix_ms: self.written_at_unix_ms,
+        }
+    }
+
+    pub(crate) fn from_proto(proto: &crate::proto::WriteReceipt) -> Self {
+        Self {
+            source_lsn: proto.source_lsn.clone(),
+            outbox_seq: proto.outbox_seq,
+            projection_task_ids: proto.projection_task_ids.clone(),
+            manifest_checksum: proto.manifest_checksum.clone(),
+            written_at_unix_ms: proto.written_at_unix_ms,
+        }
+    }
 }
 
 /// Attached to a read request to demand "wait until the active backend
@@ -220,6 +297,23 @@ impl ReadFence {
 
     pub fn is_empty(&self) -> bool {
         self.min_outbox_lsn.is_empty() && self.projection_task_ids.is_empty()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn to_proto(&self) -> crate::proto::ReadFence {
+        crate::proto::ReadFence {
+            min_outbox_lsn: self.min_outbox_lsn.clone(),
+            projection_task_ids: self.projection_task_ids.clone(),
+            max_wait_ms: self.max_wait_ms,
+        }
+    }
+
+    pub(crate) fn from_proto(proto: &crate::proto::ReadFence) -> Self {
+        Self {
+            min_outbox_lsn: proto.min_outbox_lsn.clone(),
+            projection_task_ids: proto.projection_task_ids.clone(),
+            max_wait_ms: proto.max_wait_ms,
+        }
     }
 }
 
@@ -323,6 +417,195 @@ impl ConsistencyPolicy {
     }
 }
 
+// ── 6.4 REPLICA_BOUNDED read routing ──────────────────────────────────────────
+//
+// A bounded-staleness read may be served from a read replica ONLY IF the
+// broker can prove the replica has caught up past the caller's write — and
+// "prove" means waiting on the backend's REAL replication position
+// (`CanonicalStore::wait_for_token` over a PG WAL LSN, a MySQL GTID/binlog
+// position, or a monotone outbox `event_seq`). A backend whose only "version"
+// is a wall clock (object-store `LastModified`, cache TTL stamp) cannot be
+// fenced honestly: `wait_for_token` on a wall-clock value returns the instant
+// `now()` passes the stamp, which is a *vacuous* fence — it clears immediately
+// and serves stale data while claiming freshness. Such backends are REFUSED a
+// bounded read, never faked.
+
+/// Classifies a backend's durability token for bounded-read eligibility.
+///
+/// `RealPosition` backends mint a monotone replication/write position that a
+/// later read can wait on (this is what `CanonicalStore::current_durability_token`
+/// returns for every UDB canonical store — verified per impl). `WallClock`
+/// backends have no such position; a fence on them is vacuous.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DurabilityTokenClass {
+    /// Monotone replication/write position (PG WAL LSN, MySQL GTID or
+    /// `file:<file>:<pos>`, SQLite `data_version`, or a durable monotone
+    /// outbox `event_seq` counter on MSSQL / MongoDB / Redis / Qdrant /
+    /// ClickHouse / Neo4j / Cassandra / Weaviate / Pinecone / Elasticsearch).
+    /// A `wait_for_token` against one of these blocks until the store has
+    /// actually applied past it — a real fence.
+    RealPosition,
+    /// No real replication position — only a wall clock / opaque timestamp
+    /// (object stores, plain caches). Bounded reads are refused for these.
+    WallClock,
+}
+
+/// Classify a backend label (`CanonicalStore::backend_label`, the
+/// `BackendKind::as_str` token, or a SDK-supplied alias). The allowlist
+/// names every backend whose `current_durability_token` was verified to
+/// return a monotone position; everything else — object stores (s3, minio,
+/// azureblob, gcs), plain caches (memcached), and unknown labels — is
+/// `WallClock` and therefore refused a bounded read.
+pub fn durability_token_class(backend_label: &str) -> DurabilityTokenClass {
+    match backend_label.trim().to_ascii_lowercase().as_str() {
+        "postgres" | "postgresql" | "pg" | "mysql" | "mariadb" | "mssql" | "sqlserver"
+        | "sqlite" | "mongodb" | "mongo" | "redis" | "qdrant" | "clickhouse" | "neo4j"
+        | "cassandra" | "scylla" | "weaviate" | "pinecone" | "elasticsearch" => {
+            DurabilityTokenClass::RealPosition
+        }
+        // Object stores / caches / unknown: no real replication position.
+        _ => DurabilityTokenClass::WallClock,
+    }
+}
+
+/// True when `backend_label` mints a real replication position and can
+/// therefore honour a bounded-staleness fence on a replica.
+pub fn supports_bounded_reads(backend_label: &str) -> bool {
+    matches!(
+        durability_token_class(backend_label),
+        DurabilityTokenClass::RealPosition
+    )
+}
+
+/// Typed refusal returned (inside [`ReadRouting::RefusedBounded`]) when a
+/// caller asks for bounded staleness against a backend that has no real
+/// replication-position token. The handler surfaces this as
+/// `tonic::Code::FailedPrecondition` rather than silently serving the
+/// primary or — worse — a vacuously-fenced stale replica read.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BoundedReadRefused {
+    /// Backend label that was asked for a bounded read.
+    pub backend: String,
+    /// Why the bounded read was refused (stable operator-facing string).
+    pub reason: &'static str,
+}
+
+impl std::fmt::Display for BoundedReadRefused {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "bounded-staleness read refused for backend '{}': {}",
+            self.backend, self.reason
+        )
+    }
+}
+
+impl std::error::Error for BoundedReadRefused {}
+
+/// The pure routing decision for a single read/write request, computed once
+/// at handler entry from the [`ConsistencyPolicy`], whether the op mutates,
+/// and the target backend. The runtime maps each variant to an action:
+///
+/// - [`ReadRouting::Primary`] → use the primary pool.
+/// - [`ReadRouting::ReplicaBounded`] → `PgReplicaManager::choose_bounded_replica`
+///   (pick a replica within `max_staleness_ms` lag, WAIT on its real applied
+///   LSN past `min_lsn`, FAIL OVER to primary on timeout).
+/// - [`ReadRouting::ReplicaUnfenced`] → any healthy replica, no fence.
+/// - [`ReadRouting::RefusedBounded`] → return the typed error.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ReadRouting {
+    /// Serve from the primary. Writes ALWAYS land here; so do `Strong`
+    /// reads and `ReadYourWrites` reads with no fence.
+    Primary,
+    /// Route to a read replica and fence on the backend's REAL replication
+    /// position. `min_lsn` is the caller's write position (`None` ⇒
+    /// lag-bounded selection only, no LSN wait). `max_staleness_ms` is the
+    /// wait budget; the caller fails over to the primary on timeout.
+    ReplicaBounded {
+        max_staleness_ms: u64,
+        min_lsn: Option<String>,
+    },
+    /// Route to any healthy replica with no fence (`Eventual`,
+    /// `ProjectionOk`, `CacheOk`). No staleness bound.
+    ReplicaUnfenced,
+    /// Bounded staleness was requested for a backend with no real
+    /// replication-position token — refused, never faked.
+    RefusedBounded(BoundedReadRefused),
+}
+
+impl ConsistencyPolicy {
+    /// Resolve the pure routing decision for this request. `is_write`
+    /// short-circuits to [`ReadRouting::Primary`] — writes NEVER route to a
+    /// replica. `backend_label` is the canonical-store backend the read
+    /// targets; it gates whether a bounded read is honourable or refused.
+    pub fn route_read(&self, is_write: bool, backend_label: &str) -> ReadRouting {
+        // 1) Writes are primary-only, unconditionally.
+        if is_write {
+            return ReadRouting::Primary;
+        }
+        // 2) Strong, and ReadYourWrites-without-a-fence, force the primary.
+        if self.force_primary() {
+            return ReadRouting::Primary;
+        }
+        match self.mode {
+            // Reached here only when RYW carries a fence (force_primary was
+            // false): route to a replica and wait on the fence LSN, with the
+            // fence's own max_wait_ms as the budget.
+            ConsistencyMode::ReadYourWrites => self.bounded_or_refuse(backend_label, false),
+            // Explicit bounded staleness: honour on a real-position backend,
+            // refuse on a wall-clock backend.
+            ConsistencyMode::BoundedStaleness => self.bounded_or_refuse(backend_label, true),
+            // REPLICA_BOUNDED: same replica + LSN-fence + lag-budget routing as
+            // BoundedStaleness, but FAILS OVER to the primary on a wall-clock
+            // backend (refuse_on_wallclock = false) instead of refusing — the
+            // mode degrades to the primary, it never errors.
+            ConsistencyMode::ReplicaBounded => self.bounded_or_refuse(backend_label, false),
+            // No fence, no bound — any replica/projection/cache target.
+            ConsistencyMode::Eventual
+            | ConsistencyMode::ProjectionOk
+            | ConsistencyMode::CacheOk => ReadRouting::ReplicaUnfenced,
+            // force_primary already handled Strong.
+            ConsistencyMode::Strong => ReadRouting::Primary,
+        }
+    }
+
+    /// Shared tail for the two fenced read modes. `refuse_on_wallclock`
+    /// distinguishes BoundedStaleness (explicitly asked for a replica
+    /// bounded read ⇒ REFUSE if we can't fence honestly) from RYW (the
+    /// primary trivially satisfies read-your-writes ⇒ fall back to primary
+    /// rather than error).
+    fn bounded_or_refuse(&self, backend_label: &str, refuse_on_wallclock: bool) -> ReadRouting {
+        let min_lsn = {
+            let lsn = self.fence.min_outbox_lsn.trim();
+            (!lsn.is_empty()).then(|| lsn.to_string())
+        };
+        let max_staleness_ms = match self.mode {
+            // Bounded-staleness family: the budget is the caller's lag bound.
+            ConsistencyMode::BoundedStaleness | ConsistencyMode::ReplicaBounded => {
+                self.max_replica_lag_ms
+            }
+            // RYW: the budget is the fence's own wait window.
+            _ => self.fence.max_wait_ms,
+        };
+        if supports_bounded_reads(backend_label) {
+            ReadRouting::ReplicaBounded {
+                max_staleness_ms,
+                min_lsn,
+            }
+        } else if refuse_on_wallclock {
+            ReadRouting::RefusedBounded(BoundedReadRefused {
+                backend: backend_label.to_string(),
+                reason: "backend mints no real replication-position token; a bounded-staleness \
+                         fence on it would be a vacuous wall-clock fence",
+            })
+        } else {
+            // RYW against a wall-clock backend: the primary always has the
+            // caller's writes, so route there instead of erroring.
+            ReadRouting::Primary
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -371,6 +654,7 @@ mod tests {
             ConsistencyMode::BoundedStaleness.as_str(),
             "bounded_staleness"
         );
+        assert_eq!(ConsistencyMode::ReplicaBounded.as_str(), "replica_bounded");
         assert_eq!(ConsistencyMode::Eventual.as_str(), "eventual");
         assert_eq!(ConsistencyMode::ProjectionOk.as_str(), "projection_ok");
         assert_eq!(ConsistencyMode::CacheOk.as_str(), "cache_ok");
@@ -473,6 +757,76 @@ mod tests {
         );
         assert_eq!(fence.max_wait_ms, 5_000);
         assert!(!fence.is_empty());
+    }
+
+    #[test]
+    fn write_receipt_proto_round_trip_preserves_serde_shape() {
+        let receipt = WriteReceipt {
+            source_lsn: "0/1A2B3C".into(),
+            outbox_seq: 42,
+            projection_task_ids: vec!["task-a".into(), "task-b".into()],
+            manifest_checksum: "abc123".into(),
+            written_at_unix_ms: 1_700_000_000_000,
+        };
+
+        let proto = receipt.to_proto();
+        let decoded = WriteReceipt::from_proto(&proto);
+
+        assert_eq!(decoded, receipt);
+        assert_eq!(
+            serde_json::to_value(decoded).unwrap(),
+            serde_json::json!({
+                "source_lsn": "0/1A2B3C",
+                "outbox_seq": 42,
+                "projection_task_ids": ["task-a", "task-b"],
+                "manifest_checksum": "abc123",
+                "written_at_unix_ms": 1_700_000_000_000i64,
+            })
+        );
+    }
+
+    #[test]
+    fn read_fence_proto_round_trip_preserves_serde_shape() {
+        let fence = ReadFence {
+            min_outbox_lsn: "0/1A2B3C".into(),
+            projection_task_ids: vec!["task-a".into()],
+            max_wait_ms: 2_500,
+        };
+
+        let proto = fence.to_proto();
+        let decoded = ReadFence::from_proto(&proto);
+
+        assert_eq!(decoded, fence);
+        assert_eq!(
+            serde_json::to_value(decoded).unwrap(),
+            serde_json::json!({
+                "min_outbox_lsn": "0/1A2B3C",
+                "projection_task_ids": ["task-a"],
+                "max_wait_ms": 2_500,
+            })
+        );
+    }
+
+    #[test]
+    fn consistency_mode_proto_numbers_match_pinned_wire_tokens() {
+        for mode in [
+            ConsistencyMode::Strong,
+            ConsistencyMode::ReadYourWrites,
+            ConsistencyMode::BoundedStaleness,
+            ConsistencyMode::ReplicaBounded,
+            ConsistencyMode::Eventual,
+            ConsistencyMode::ProjectionOk,
+            ConsistencyMode::CacheOk,
+        ] {
+            assert_eq!(
+                ConsistencyMode::from_proto_i32(mode.to_proto_i32()),
+                Some(mode),
+                "{} must round-trip through the proto enum number",
+                mode.as_str()
+            );
+        }
+        assert_eq!(ConsistencyMode::from_proto_i32(0), None);
+        assert_eq!(ConsistencyMode::from_proto_i32(999), None);
     }
 
     #[test]
@@ -591,6 +945,7 @@ mod tests {
             ConsistencyMode::Strong,
             ConsistencyMode::ReadYourWrites,
             ConsistencyMode::BoundedStaleness,
+            ConsistencyMode::ReplicaBounded,
             ConsistencyMode::Eventual,
             ConsistencyMode::ProjectionOk,
             ConsistencyMode::CacheOk,
@@ -601,5 +956,278 @@ mod tests {
             let back: ConsistencyMode = serde_json::from_str(&json).unwrap();
             assert_eq!(back, mode);
         }
+    }
+
+    // ── 6.4 REPLICA_BOUNDED routing decision ──────────────────────────────
+
+    /// Every backend with a verified monotone position token classifies as
+    /// `RealPosition`; object stores / caches / unknown labels are
+    /// `WallClock` and therefore refused a bounded read.
+    #[test]
+    fn durability_token_class_is_pinned() {
+        for real in [
+            "postgres",
+            "postgresql",
+            "mysql",
+            "mariadb",
+            "mssql",
+            "sqlserver",
+            "sqlite",
+            "mongodb",
+            "redis",
+            "qdrant",
+            "clickhouse",
+            "neo4j",
+            "cassandra",
+            "weaviate",
+            "pinecone",
+            "elasticsearch",
+        ] {
+            assert_eq!(
+                durability_token_class(real),
+                DurabilityTokenClass::RealPosition,
+                "{real} mints a real position token"
+            );
+            assert!(
+                supports_bounded_reads(real),
+                "{real} supports bounded reads"
+            );
+        }
+        for wall in [
+            "s3",
+            "minio",
+            "azureblob",
+            "gcs",
+            "memcached",
+            "weird-future-backend",
+        ] {
+            assert_eq!(
+                durability_token_class(wall),
+                DurabilityTokenClass::WallClock,
+                "{wall} has no real position token"
+            );
+            assert!(
+                !supports_bounded_reads(wall),
+                "{wall} must be refused a bounded read"
+            );
+        }
+        // Case / whitespace insensitive.
+        assert!(supports_bounded_reads("  Postgres "));
+    }
+
+    /// Writes NEVER route to a replica — regardless of the declared mode,
+    /// even the cheapest `Eventual`.
+    #[test]
+    fn writes_always_route_to_primary() {
+        for mode in [
+            ConsistencyMode::Strong,
+            ConsistencyMode::ReadYourWrites,
+            ConsistencyMode::BoundedStaleness,
+            ConsistencyMode::ReplicaBounded,
+            ConsistencyMode::Eventual,
+            ConsistencyMode::ProjectionOk,
+            ConsistencyMode::CacheOk,
+        ] {
+            let policy = ConsistencyPolicy {
+                mode,
+                max_replica_lag_ms: 1_000,
+                ..Default::default()
+            };
+            assert_eq!(
+                policy.route_read(true, "postgres"),
+                ReadRouting::Primary,
+                "write under {mode:?} must route to primary"
+            );
+        }
+    }
+
+    /// Strong reads and RYW-without-fence force the primary.
+    #[test]
+    fn strong_and_unfenced_ryw_route_to_primary() {
+        let strong = ConsistencyPolicy {
+            mode: ConsistencyMode::Strong,
+            ..Default::default()
+        };
+        assert_eq!(strong.route_read(false, "postgres"), ReadRouting::Primary);
+
+        let ryw = ConsistencyPolicy {
+            mode: ConsistencyMode::ReadYourWrites,
+            ..Default::default()
+        };
+        assert_eq!(ryw.route_read(false, "postgres"), ReadRouting::Primary);
+    }
+
+    /// Bounded staleness against a real-position backend routes to a replica
+    /// with the LSN fence and the lag budget carried through.
+    #[test]
+    fn bounded_staleness_routes_to_replica_with_real_token() {
+        let policy = ConsistencyPolicy {
+            mode: ConsistencyMode::BoundedStaleness,
+            max_replica_lag_ms: 750,
+            fence: ReadFence {
+                min_outbox_lsn: "0/1A2B3C".into(),
+                max_wait_ms: 9_999,
+                ..Default::default()
+            },
+        };
+        assert_eq!(
+            policy.route_read(false, "postgres"),
+            ReadRouting::ReplicaBounded {
+                max_staleness_ms: 750,
+                min_lsn: Some("0/1A2B3C".to_string()),
+            }
+        );
+
+        // Real-position backend whose token is an outbox seq, not an LSN —
+        // still bounded-eligible.
+        let policy = ConsistencyPolicy {
+            mode: ConsistencyMode::BoundedStaleness,
+            max_replica_lag_ms: 200,
+            fence: ReadFence::default(),
+        };
+        assert_eq!(
+            policy.route_read(false, "mongodb"),
+            ReadRouting::ReplicaBounded {
+                max_staleness_ms: 200,
+                // No fence LSN ⇒ lag-bounded selection only.
+                min_lsn: None,
+            }
+        );
+    }
+
+    /// Bounded staleness against a wall-clock backend is REFUSED with a
+    /// typed error — never faked, never silently downgraded.
+    #[test]
+    fn bounded_staleness_refused_on_wallclock_backend() {
+        let policy = ConsistencyPolicy {
+            mode: ConsistencyMode::BoundedStaleness,
+            max_replica_lag_ms: 500,
+            fence: ReadFence::default(),
+        };
+        for backend in ["s3", "azureblob", "gcs", "memcached", "unknown"] {
+            match policy.route_read(false, backend) {
+                ReadRouting::RefusedBounded(refused) => {
+                    assert_eq!(refused.backend, backend);
+                    assert!(!refused.reason.is_empty());
+                    // It's a real std::error::Error with a useful message.
+                    let err: &dyn std::error::Error = &refused;
+                    assert!(err.to_string().contains(backend));
+                }
+                other => panic!("expected RefusedBounded for {backend}, got {other:?}"),
+            }
+        }
+    }
+
+    /// RYW WITH a fence routes to a replica on a real-position backend
+    /// (waiting on the fence LSN), but falls back to the PRIMARY — not a
+    /// refusal — on a wall-clock backend, since the primary trivially
+    /// satisfies read-your-writes.
+    #[test]
+    fn fenced_ryw_routes_to_replica_or_primary_never_refused() {
+        let policy = ConsistencyPolicy {
+            mode: ConsistencyMode::ReadYourWrites,
+            max_replica_lag_ms: 0,
+            fence: ReadFence {
+                min_outbox_lsn: "0/200".into(),
+                max_wait_ms: 1_500,
+                ..Default::default()
+            },
+        };
+        assert_eq!(
+            policy.route_read(false, "postgres"),
+            ReadRouting::ReplicaBounded {
+                max_staleness_ms: 1_500,
+                min_lsn: Some("0/200".to_string()),
+            }
+        );
+        // Wall-clock backend: primary, not RefusedBounded.
+        assert_eq!(policy.route_read(false, "s3"), ReadRouting::Primary);
+    }
+
+    /// Eventual / ProjectionOk / CacheOk route to an unfenced replica on any
+    /// backend (no real-position requirement — there's no fence to honour).
+    #[test]
+    fn eventual_family_routes_to_unfenced_replica() {
+        for mode in [
+            ConsistencyMode::Eventual,
+            ConsistencyMode::ProjectionOk,
+            ConsistencyMode::CacheOk,
+        ] {
+            let policy = ConsistencyPolicy {
+                mode,
+                ..Default::default()
+            };
+            assert_eq!(
+                policy.route_read(false, "s3"),
+                ReadRouting::ReplicaUnfenced,
+                "{mode:?} routes to an unfenced replica"
+            );
+        }
+    }
+
+    // ── 6.4 REPLICA_BOUNDED distinct mode ─────────────────────────────────
+
+    /// The REPLICA_BOUNDED wire token + aliases parse to the distinct
+    /// variant, and it is its own mode (not an alias of BoundedStaleness).
+    #[test]
+    fn replica_bounded_token_and_aliases_parse() {
+        assert_eq!(ConsistencyMode::ReplicaBounded.as_str(), "replica_bounded");
+        assert_eq!(
+            ConsistencyMode::parse("replica_bounded"),
+            Some(ConsistencyMode::ReplicaBounded)
+        );
+        assert_eq!(
+            ConsistencyMode::parse("replica-bounded"),
+            Some(ConsistencyMode::ReplicaBounded)
+        );
+        // Distinct from BoundedStaleness.
+        assert_ne!(
+            ConsistencyMode::ReplicaBounded,
+            ConsistencyMode::BoundedStaleness
+        );
+    }
+
+    /// REPLICA_BOUNDED capability matrix: it is replica-eligible and
+    /// honours the fence, but — unlike BoundedStaleness — it is REPLICA-only
+    /// (no projection-backed targets) and never accepts a cache hit.
+    #[test]
+    fn replica_bounded_is_replica_only() {
+        assert!(ConsistencyMode::ReplicaBounded.allows_replica());
+        assert!(ConsistencyMode::ReplicaBounded.honours_fence());
+        assert!(
+            !ConsistencyMode::ReplicaBounded.allows_projection(),
+            "REPLICA_BOUNDED targets SQL replicas only, never projections"
+        );
+        assert!(!ConsistencyMode::ReplicaBounded.allows_cache());
+    }
+
+    /// REPLICA_BOUNDED routing: on a real-position backend it routes to a
+    /// replica with the LSN fence (the REAL token, not a wall clock) and the
+    /// lag budget; on a wall-clock backend it FAILS OVER to the primary
+    /// rather than refusing (the key difference from BoundedStaleness, which
+    /// refuses). Writes always route to the primary.
+    #[test]
+    fn replica_bounded_routes_to_replica_then_fails_over_to_primary() {
+        let policy = ConsistencyPolicy {
+            mode: ConsistencyMode::ReplicaBounded,
+            max_replica_lag_ms: 500,
+            fence: ReadFence {
+                min_outbox_lsn: "0/1A2B3C".into(),
+                max_wait_ms: 9_999,
+                ..Default::default()
+            },
+        };
+        // Real-position backend: replica + LSN fence + lag budget.
+        assert_eq!(
+            policy.route_read(false, "postgres"),
+            ReadRouting::ReplicaBounded {
+                max_staleness_ms: 500,
+                min_lsn: Some("0/1A2B3C".to_string()),
+            }
+        );
+        // Wall-clock backend: FAIL OVER to primary — NOT RefusedBounded.
+        assert_eq!(policy.route_read(false, "s3"), ReadRouting::Primary);
+        // Writes never route to a replica, even under REPLICA_BOUNDED.
+        assert_eq!(policy.route_read(true, "postgres"), ReadRouting::Primary);
     }
 }

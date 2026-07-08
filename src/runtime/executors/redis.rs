@@ -3,7 +3,9 @@
 use redis::AsyncCommands;
 use serde_json::{Value as Json, json};
 
-use crate::runtime::executor_utils::build_probe;
+use crate::runtime::executor_utils::{
+    backend_transport_status, build_probe, capability_status, invalid_argument_fields,
+};
 use crate::runtime::executors::{
     BackendExecutor, BackendHealth, BackendProbe, MutationExecutor, ObjectExecutor, QueryExecutor,
     ResourceAdminExecutor, SearchExecutor,
@@ -58,7 +60,7 @@ impl RedisExecutor {
             .conn
             .get_or_try_init(|| self.client.get_multiplexed_async_connection())
             .await
-            .map_err(|err| tonic::Status::unavailable(format!("redis connection failed: {err}")))?;
+            .map_err(|err| backend_transport_status("redis", "connection", err))?;
         Ok(conn.clone())
     }
 }
@@ -74,12 +76,43 @@ impl BackendHealth for RedisExecutor {
     }
 }
 
+fn redis_invalid_field(
+    field: impl Into<String>,
+    description: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    invalid_argument_fields(message, [(field.into(), description.into())])
+}
+
+fn invalid_redis_request_json_status(err: serde_json::Error) -> tonic::Status {
+    redis_invalid_field(
+        "request_json",
+        "must be valid JSON for Redis generic dispatch",
+        format!("invalid request json: {err}"),
+    )
+}
+
+fn redis_required_field_status(field: &'static str, message: &'static str) -> tonic::Status {
+    redis_invalid_field(
+        field,
+        format!("{field} is required for this Redis operation"),
+        message,
+    )
+}
+
+fn unsupported_redis_operation_status(kind: &'static str, operation: &str) -> tonic::Status {
+    redis_invalid_field(
+        "operation",
+        format!("unsupported Redis {kind} operation"),
+        format!("unsupported Redis {kind} operation '{operation}'"),
+    )
+}
+
 impl QueryExecutor for RedisExecutor {
     /// `{"operation":"get|mget|exists","key":"k","keys":["a"]}`.
     async fn query(&self, request_json: &str) -> Result<String, tonic::Status> {
-        let spec: Json = serde_json::from_str(request_json).map_err(|err| {
-            tonic::Status::invalid_argument(format!("invalid request json: {err}"))
-        })?;
+        let spec: Json =
+            serde_json::from_str(request_json).map_err(invalid_redis_request_json_status)?;
         let operation = spec
             .get("operation")
             .and_then(Json::as_str)
@@ -90,10 +123,11 @@ impl QueryExecutor for RedisExecutor {
                 let key = spec
                     .get("key")
                     .and_then(Json::as_str)
-                    .ok_or_else(|| tonic::Status::invalid_argument("key is required"))?;
-                let value: Option<Vec<u8>> = conn.get(key).await.map_err(|err| {
-                    tonic::Status::unavailable(format!("redis GET failed: {err}"))
-                })?;
+                    .ok_or_else(|| redis_required_field_status("key", "key is required"))?;
+                let value: Option<Vec<u8>> = conn
+                    .get(key)
+                    .await
+                    .map_err(|err| backend_transport_status("redis", "GET", err))?;
                 Ok(json!({
                     "key": key,
                     "hit": value.is_some(),
@@ -105,13 +139,20 @@ impl QueryExecutor for RedisExecutor {
                 let keys = spec
                     .get("keys")
                     .and_then(Json::as_array)
-                    .ok_or_else(|| tonic::Status::invalid_argument("keys must be an array"))?
+                    .ok_or_else(|| {
+                        redis_invalid_field(
+                            "keys",
+                            "must be an array for Redis mget",
+                            "keys must be an array",
+                        )
+                    })?
                     .iter()
                     .filter_map(Json::as_str)
                     .collect::<Vec<_>>();
-                let values: Vec<Option<Vec<u8>>> = conn.get(&keys).await.map_err(|err| {
-                    tonic::Status::unavailable(format!("redis MGET failed: {err}"))
-                })?;
+                let values: Vec<Option<Vec<u8>>> = conn
+                    .get(&keys)
+                    .await
+                    .map_err(|err| backend_transport_status("redis", "MGET", err))?;
                 Ok(json!({
                     "values": keys.into_iter().zip(values.into_iter()).map(|(key, value)| {
                         json!({
@@ -127,10 +168,11 @@ impl QueryExecutor for RedisExecutor {
                 let key = spec
                     .get("key")
                     .and_then(Json::as_str)
-                    .ok_or_else(|| tonic::Status::invalid_argument("key is required"))?;
-                let exists: bool = conn.exists(key).await.map_err(|err| {
-                    tonic::Status::unavailable(format!("redis EXISTS failed: {err}"))
-                })?;
+                    .ok_or_else(|| redis_required_field_status("key", "key is required"))?;
+                let exists: bool = conn
+                    .exists(key)
+                    .await
+                    .map_err(|err| backend_transport_status("redis", "EXISTS", err))?;
                 Ok(json!({ "key": key, "exists": exists }).to_string())
             }
             "scan" | "cache_scan" => {
@@ -156,15 +198,13 @@ impl QueryExecutor for RedisExecutor {
                     .arg(limit)
                     .query_async(&mut conn)
                     .await
-                    .map_err(|err| {
-                        tonic::Status::unavailable(format!("redis SCAN failed: {err}"))
-                    })?;
+                    .map_err(|err| backend_transport_status("redis", "SCAN", err))?;
                 let values: Vec<Option<Vec<u8>>> = if keys.is_empty() {
                     Vec::new()
                 } else {
-                    conn.get(&keys).await.map_err(|err| {
-                        tonic::Status::unavailable(format!("redis MGET after SCAN failed: {err}"))
-                    })?
+                    conn.get(&keys)
+                        .await
+                        .map_err(|err| backend_transport_status("redis", "MGET after SCAN", err))?
                 };
                 let entries = keys
                     .into_iter()
@@ -187,9 +227,7 @@ impl QueryExecutor for RedisExecutor {
                 })
                 .to_string())
             }
-            other => Err(tonic::Status::invalid_argument(format!(
-                "unsupported Redis query operation '{other}'"
-            ))),
+            other => Err(unsupported_redis_operation_status("query", other)),
         }
     }
 }
@@ -197,9 +235,8 @@ impl QueryExecutor for RedisExecutor {
 impl MutationExecutor for RedisExecutor {
     /// `{"operation":"set|delete|expire","key":"k","value":"v","ttl":60}`.
     async fn mutate(&self, request_json: &str) -> Result<String, tonic::Status> {
-        let spec: Json = serde_json::from_str(request_json).map_err(|err| {
-            tonic::Status::invalid_argument(format!("invalid request json: {err}"))
-        })?;
+        let spec: Json =
+            serde_json::from_str(request_json).map_err(invalid_redis_request_json_status)?;
         let operation = spec
             .get("operation")
             .and_then(Json::as_str)
@@ -207,7 +244,7 @@ impl MutationExecutor for RedisExecutor {
         let key = spec
             .get("key")
             .and_then(Json::as_str)
-            .ok_or_else(|| tonic::Status::invalid_argument("key is required"))?;
+            .ok_or_else(|| redis_required_field_status("key", "key is required"))?;
         let mut conn = self.connection().await?;
         match operation {
             "set" | "cache_set" | "write_through" => {
@@ -219,46 +256,47 @@ impl MutationExecutor for RedisExecutor {
                             .map(ToString::to_string)
                             .unwrap_or_else(|| value.to_string())
                     })
-                    .ok_or_else(|| tonic::Status::invalid_argument("value is required"))?;
+                    .ok_or_else(|| redis_required_field_status("value", "value is required"))?;
                 if let Some(ttl) = spec.get("ttl").and_then(Json::as_u64) {
                     conn.set_ex::<_, _, ()>(key, value, ttl)
                         .await
-                        .map_err(|err| {
-                            tonic::Status::unavailable(format!("redis SETEX failed: {err}"))
-                        })?;
+                        .map_err(|err| backend_transport_status("redis", "SETEX", err))?;
                 } else {
-                    conn.set::<_, _, ()>(key, value).await.map_err(|err| {
-                        tonic::Status::unavailable(format!("redis SET failed: {err}"))
-                    })?;
+                    conn.set::<_, _, ()>(key, value)
+                        .await
+                        .map_err(|err| backend_transport_status("redis", "SET", err))?;
                 }
                 Ok(json!({ "affected_rows": 1 }).to_string())
             }
             "delete" | "del" | "cache_delete" => {
-                let deleted: u64 = conn.del(key).await.map_err(|err| {
-                    tonic::Status::unavailable(format!("redis DEL failed: {err}"))
-                })?;
+                let deleted: u64 = conn
+                    .del(key)
+                    .await
+                    .map_err(|err| backend_transport_status("redis", "DEL", err))?;
                 Ok(json!({ "affected_rows": deleted }).to_string())
             }
             "expire" => {
                 let ttl = spec
                     .get("ttl")
                     .and_then(Json::as_i64)
-                    .ok_or_else(|| tonic::Status::invalid_argument("ttl is required"))?;
-                let changed: bool = conn.expire(key, ttl).await.map_err(|err| {
-                    tonic::Status::unavailable(format!("redis EXPIRE failed: {err}"))
-                })?;
+                    .ok_or_else(|| redis_required_field_status("ttl", "ttl is required"))?;
+                let changed: bool = conn
+                    .expire(key, ttl)
+                    .await
+                    .map_err(|err| backend_transport_status("redis", "EXPIRE", err))?;
                 Ok(json!({ "affected_rows": i64::from(changed) }).to_string())
             }
-            other => Err(tonic::Status::invalid_argument(format!(
-                "unsupported Redis mutation operation '{other}'"
-            ))),
+            other => Err(unsupported_redis_operation_status("mutation", other)),
         }
     }
 }
 
 impl SearchExecutor for RedisExecutor {
     async fn search(&self, _request_json: &str) -> Result<String, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "redis",
+            "search",
+            "vector_search",
             "redis does not support vector search",
         ))
     }
@@ -266,7 +304,10 @@ impl SearchExecutor for RedisExecutor {
 
 impl ObjectExecutor for RedisExecutor {
     async fn get_object(&self, _request_json: &str) -> Result<Vec<u8>, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "redis",
+            "get_object",
+            "object_store",
             "redis is not an object store",
         ))
     }
@@ -276,7 +317,10 @@ impl ObjectExecutor for RedisExecutor {
         _request_json: &str,
         _bytes: Vec<u8>,
     ) -> Result<String, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "redis",
+            "put_object",
+            "object_store",
             "redis is not an object store",
         ))
     }
@@ -288,19 +332,28 @@ impl ResourceAdminExecutor for RedisExecutor {
         _resource_name: &str,
         _spec_json: &str,
     ) -> Result<(), tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "redis",
+            "ensure_resource",
+            "resource_lifecycle",
             "redis does not expose resource lifecycle operations",
         ))
     }
 
     async fn drop_resource(&self, _resource_name: &str) -> Result<(), tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "redis",
+            "drop_resource",
+            "resource_lifecycle",
             "redis does not expose resource lifecycle operations",
         ))
     }
 
     async fn list_resources(&self) -> Result<Vec<String>, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "redis",
+            "list_resources",
+            "resource_lifecycle",
             "redis does not expose resource lifecycle operations",
         ))
     }
@@ -308,7 +361,10 @@ impl ResourceAdminExecutor for RedisExecutor {
 
 impl BackendExecutor for RedisExecutor {
     async fn transaction(&self, _request_json: &str) -> Result<String, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "redis",
+            "transaction",
+            "transactions",
             "redis generic dispatch does not expose MULTI/EXEC transactions",
         ))
     }
@@ -318,5 +374,75 @@ impl BackendExecutor for RedisExecutor {
             "redis",
             <Self as BackendHealth>::ping(self).await,
         ))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
+
+    fn decode_detail(status: &tonic::Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_single_field(status: &tonic::Status, field: &str) {
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, field);
+    }
+
+    #[test]
+    fn redis_request_json_validation_carries_field_violation() {
+        let err = serde_json::from_str::<Json>("{")
+            .map_err(invalid_redis_request_json_status)
+            .unwrap_err();
+        assert_eq!(err.code(), tonic::Code::InvalidArgument);
+        assert!(err.message().starts_with("invalid request json:"));
+        assert_single_field(&err, "request_json");
+    }
+
+    #[test]
+    fn redis_required_field_validation_carries_field_violations() {
+        let key = redis_required_field_status("key", "key is required");
+        assert_eq!(key.message(), "key is required");
+        assert_single_field(&key, "key");
+
+        let value = redis_required_field_status("value", "value is required");
+        assert_eq!(value.message(), "value is required");
+        assert_single_field(&value, "value");
+
+        let ttl = redis_required_field_status("ttl", "ttl is required");
+        assert_eq!(ttl.message(), "ttl is required");
+        assert_single_field(&ttl, "ttl");
+
+        let keys = redis_invalid_field(
+            "keys",
+            "must be an array for Redis mget",
+            "keys must be an array",
+        );
+        assert_eq!(keys.message(), "keys must be an array");
+        assert_single_field(&keys, "keys");
+    }
+
+    #[test]
+    fn redis_unsupported_operation_validation_carries_field_violation() {
+        let query = unsupported_redis_operation_status("query", "bad");
+        assert_eq!(query.message(), "unsupported Redis query operation 'bad'");
+        assert_single_field(&query, "operation");
+
+        let mutation = unsupported_redis_operation_status("mutation", "bad");
+        assert_eq!(
+            mutation.message(),
+            "unsupported Redis mutation operation 'bad'"
+        );
+        assert_single_field(&mutation, "operation");
     }
 }

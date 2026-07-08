@@ -6,8 +6,9 @@
 //! covers the F13 gaps that the existing pass does *not* catch —
 //! abuse/rate-limit hygiene on public RPCs, tenant-source enforceability,
 //! tenant-scoped table RLS misconfiguration, loss of scalar field security
-//! signals during descriptor decoding, and a hard RPC inventory drift gate so
-//! that proto surface changes can't silently slip past the contract.
+//! signals during descriptor decoding, SDK alias completeness/collision checks,
+//! and a hard RPC inventory drift gate so that proto surface changes can't
+//! silently slip past the contract.
 //!
 //! Every finding is a JSON object shaped `{severity, code, path, message, hint}`
 //! so the CLI gate can render and aggregate them uniformly. `severity` is one of
@@ -17,6 +18,8 @@ use udb::runtime::descriptor_manifest::{
     DescriptorContractManifest, EndpointSecurityContract, FieldContract, MessageContract,
     RpcContract,
 };
+
+use std::collections::BTreeMap;
 
 // SDK RPC-count drift (F13) is enforced by the committed-manifest CI gate
 // (`docs/generated/udb-native-contract.json` is regenerated and `git diff`-ed),
@@ -254,6 +257,11 @@ pub(crate) fn descriptor_lint_findings(
     // (or renaming the RPC out from under it) does.
     findings.extend(workflow_contract_coverage_findings(manifest));
 
+    // 6. SDK alias surface (errors): any RPC that opts into the generated facade
+    // must carry a descriptor-owned method_alias, and aliases must not collide
+    // after SDK language casing normalization.
+    findings.extend(sdk_alias_findings(manifest));
+
     for message in &manifest.messages {
         // 3. tenant_scoped_table_rls_gap (warning)
         if let Some(table) = message.db_table_security.as_ref() {
@@ -296,6 +304,69 @@ pub(crate) fn descriptor_lint_findings(
     // hardcoded baseline — see the module-level note.)
 
     findings
+}
+
+fn sdk_alias_findings(manifest: &DescriptorContractManifest) -> Vec<serde_json::Value> {
+    let mut findings = Vec::new();
+    let mut seen: BTreeMap<(String, String, String), (String, String)> = BTreeMap::new();
+
+    for rpc in manifest
+        .services
+        .iter()
+        .flat_map(|service| service.methods.iter())
+    {
+        let Some(surface) = rpc.sdk_surface.as_ref() else {
+            continue;
+        };
+        if !surface.include_in_facade {
+            continue;
+        }
+
+        let alias = surface.method_alias.trim();
+        if alias.is_empty() {
+            findings.push(serde_json::json!({
+                "severity": "error",
+                "code": "sdk_method_alias_missing",
+                "path": rpc.grpc_path(),
+                "message": format!(
+                    "public SDK RPC {} opts into sdk_surface but has no method_alias",
+                    rpc.grpc_path()
+                ),
+                "hint": "set sdk_surface.method_alias to the descriptor-owned public SDK method name",
+            }));
+            continue;
+        }
+
+        for (namespace, rendered) in sdk_alias_namespaces(alias) {
+            let key = (rpc.service_full(), namespace.to_string(), rendered.clone());
+            if let Some((previous_path, previous_alias)) = seen.get(&key) {
+                if previous_path != &rpc.grpc_path() {
+                    findings.push(serde_json::json!({
+                        "severity": "error",
+                        "code": "sdk_method_alias_collision",
+                        "path": rpc.grpc_path(),
+                        "message": format!(
+                            "public SDK alias {alias:?} for {} collides with {previous_alias:?} from {previous_path} after {namespace} normalization as {rendered:?}",
+                            rpc.grpc_path()
+                        ),
+                        "hint": "choose distinct sdk_surface.method_alias values after snake_case/lowerCamel/PascalCase SDK normalization",
+                    }));
+                }
+            } else {
+                seen.insert(key, (rpc.grpc_path(), alias.to_string()));
+            }
+        }
+    }
+
+    findings
+}
+
+fn sdk_alias_namespaces(alias: &str) -> [(&'static str, String); 3] {
+    [
+        ("snake_case", alias_snake_case(alias)),
+        ("lowerCamel", alias_camel_case(alias)),
+        ("PascalCase", alias_pascal_case(alias)),
+    ]
 }
 
 /// Enforce the R1.3 workflow-facing contract coverage floor: every entry in
@@ -461,12 +532,90 @@ fn rls_gap_detail(missing_column: bool, missing_template: bool) -> &'static str 
     }
 }
 
+fn alias_words(value: &str) -> Vec<String> {
+    let mut words = Vec::new();
+    let mut current = String::new();
+    let chars: Vec<char> = value.trim().chars().collect();
+    for (idx, ch) in chars.iter().copied().enumerate() {
+        if !ch.is_ascii_alphanumeric() {
+            if !current.is_empty() {
+                words.push(std::mem::take(&mut current));
+            }
+            continue;
+        }
+        if !current.is_empty() {
+            let prev = current.chars().last().unwrap_or_default();
+            let next = chars.get(idx + 1).copied();
+            let lower_to_upper = prev.is_ascii_lowercase() && ch.is_ascii_uppercase();
+            let acronym_to_word = prev.is_ascii_uppercase()
+                && ch.is_ascii_uppercase()
+                && next.is_some_and(|n| n.is_ascii_lowercase());
+            let alpha_digit = prev.is_ascii_alphabetic() && ch.is_ascii_digit();
+            let digit_alpha = prev.is_ascii_digit() && ch.is_ascii_alphabetic();
+            if lower_to_upper || acronym_to_word || alpha_digit || digit_alpha {
+                words.push(std::mem::take(&mut current));
+            }
+        }
+        current.push(ch);
+    }
+    if !current.is_empty() {
+        words.push(current);
+    }
+    if words.is_empty() {
+        vec![value.trim().to_string()]
+    } else {
+        words
+    }
+}
+
+fn title_word(word: &str) -> String {
+    let mut chars = word.chars();
+    let Some(first) = chars.next() else {
+        return String::new();
+    };
+    let mut out = String::new();
+    out.push(first.to_ascii_uppercase());
+    for ch in chars {
+        out.push(ch.to_ascii_lowercase());
+    }
+    out
+}
+
+fn alias_snake_case(value: &str) -> String {
+    alias_words(value)
+        .into_iter()
+        .map(|word| word.to_ascii_lowercase())
+        .collect::<Vec<_>>()
+        .join("_")
+}
+
+fn alias_pascal_case(value: &str) -> String {
+    alias_words(value)
+        .into_iter()
+        .map(|word| title_word(&word))
+        .collect::<String>()
+}
+
+fn alias_camel_case(value: &str) -> String {
+    let words = alias_words(value);
+    let mut out = String::new();
+    for (idx, word) in words.iter().enumerate() {
+        if idx == 0 {
+            out.push_str(&word.to_ascii_lowercase());
+        } else {
+            out.push_str(&title_word(word));
+        }
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use udb::runtime::descriptor_manifest::{
         DbColumnSecurityContract, DbTableSecurityContract, ReadAfterWriteContract,
-        ScalarFieldSecurity, ServiceContract, descriptor_contract_manifest,
+        ScalarFieldSecurity, SdkSurfaceContract, ServiceContract,
+        descriptor_contract_manifest_static,
     };
 
     fn empty_security() -> EndpointSecurityContract {
@@ -489,6 +638,22 @@ mod tests {
             project_field: String::new(),
             idempotency_required: false,
             request_context_required: false,
+        }
+    }
+
+    fn sdk_surface(method_alias: &str) -> SdkSurfaceContract {
+        SdkSurfaceContract {
+            include_in_facade: true,
+            method_alias: method_alias.to_string(),
+            rest_operation_id: String::new(),
+            required_credential_provider: "udb".to_string(),
+            streaming_helper_type: String::new(),
+            default_deadline_ms: 30000,
+            default_max_attempts: 3,
+            browser_safe: true,
+            server_only: false,
+            boilerplate_recipe_tags: Vec::new(),
+            generate_minimal_example: true,
         }
     }
 
@@ -801,13 +966,52 @@ mod tests {
         );
     }
 
+    #[test]
+    fn public_sdk_rpc_missing_method_alias_is_error() {
+        let sec = empty_security();
+        let mut rpc = rpc_with("SendOTP", ".udb.test.v1.SendOtpRequest", sec);
+        rpc.sdk_surface = Some(sdk_surface(""));
+        let manifest = manifest_of(vec![service_with(vec![rpc])], Vec::new());
+
+        let findings = descriptor_lint_findings(&manifest);
+        let hit = findings.iter().find(|f| {
+            f.get("code").and_then(|c| c.as_str()) == Some("sdk_method_alias_missing")
+                && f.get("path").and_then(|p| p.as_str())
+                    == Some("/udb.test.v1.TestService/SendOTP")
+        });
+        let hit = hit.expect("expected sdk_method_alias_missing for SendOTP");
+        assert_eq!(hit.get("severity").and_then(|s| s.as_str()), Some("error"));
+    }
+
+    #[test]
+    fn public_sdk_alias_collision_after_language_normalization_is_error() {
+        let sec = empty_security();
+        let mut send_otp = rpc_with("SendOTP", ".udb.test.v1.SendOtpRequest", sec.clone());
+        send_otp.sdk_surface = Some(sdk_surface("send_otp"));
+        let mut send_otp_camel = rpc_with("SendOtpAlias", ".udb.test.v1.SendOtpRequest", sec);
+        send_otp_camel.sdk_surface = Some(sdk_surface("sendOtp"));
+        let manifest = manifest_of(
+            vec![service_with(vec![send_otp, send_otp_camel])],
+            Vec::new(),
+        );
+
+        let findings = descriptor_lint_findings(&manifest);
+        let hit = findings.iter().find(|f| {
+            f.get("code").and_then(|c| c.as_str()) == Some("sdk_method_alias_collision")
+                && f.get("path").and_then(|p| p.as_str())
+                    == Some("/udb.test.v1.TestService/SendOtpAlias")
+        });
+        let hit = hit.expect("expected sdk_method_alias_collision for normalized sendOtp alias");
+        assert_eq!(hit.get("severity").and_then(|s| s.as_str()), Some("error"));
+    }
+
     /// The real embedded manifest must produce ZERO error-severity findings so
     /// the gate passes today. Warnings are acceptable. This also pins
     /// NATIVE_RPC_BASELINE to the live manifest total (no drift error).
     #[test]
     fn real_manifest_yields_no_error_findings() {
-        let manifest = descriptor_contract_manifest();
-        let findings = descriptor_lint_findings(&manifest);
+        let manifest = descriptor_contract_manifest_static();
+        let findings = descriptor_lint_findings(manifest);
         let errors: Vec<&serde_json::Value> = findings
             .iter()
             .filter(|f| f.get("severity").and_then(|s| s.as_str()) == Some("error"))

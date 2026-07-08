@@ -40,6 +40,82 @@ pub(super) const SCOPE_AUTHZ_IMPERSONATE: &str = "authz:impersonate";
 /// so emergency bypasses are always short-lived.
 pub(super) const BREAK_GLASS_MAX_TTL_SECS: i64 = 900; // 15 minutes
 
+fn governance_permission_status(
+    rpc: &str,
+    policy_decision_id: impl Into<String>,
+    message: impl Into<String>,
+) -> Status {
+    crate::runtime::executor_utils::policy_status_with_code(
+        tonic::Code::PermissionDenied,
+        rpc,
+        policy_decision_id,
+        message,
+    )
+}
+
+fn governance_internal_status(operation: impl Into<String>, message: impl Into<String>) -> Status {
+    crate::runtime::executor_utils::internal_status("authz", operation, message)
+}
+
+fn governance_actor_required_status(rpc: &str) -> Status {
+    governance_permission_status(
+        rpc,
+        "governance_actor_required",
+        format!("{rpc} requires a governance actor with an explicit authz scope"),
+    )
+}
+
+fn governance_impersonation_denied_status(
+    rpc: &str,
+    claim_subject: &str,
+    actor_subject: &str,
+) -> Status {
+    governance_permission_status(
+        rpc,
+        "governance_impersonation_scope_required",
+        format!(
+            "{rpc}: claim subject {claim_subject:?} may not act as {actor_subject:?} without the {SCOPE_AUTHZ_IMPERSONATE} scope or a cross-tenant admin identity"
+        ),
+    )
+}
+
+fn break_glass_reason_required_status(rpc: &str) -> Status {
+    governance_permission_status(
+        rpc,
+        "break_glass_reason_required",
+        "break-glass requires a reason",
+    )
+}
+
+fn break_glass_ttl_invalid_status(rpc: &str) -> Status {
+    governance_permission_status(
+        rpc,
+        "break_glass_ttl_invalid",
+        format!(
+            "break-glass grant must expire within {BREAK_GLASS_MAX_TTL_SECS}s and be in the future"
+        ),
+    )
+}
+
+fn governance_scope_required_status(rpc: &str, required_scopes: &[&str]) -> Status {
+    governance_permission_status(
+        rpc,
+        "governance_scope_required",
+        format!(
+            "{rpc} requires one of the authz governance scopes {:?} (or break-glass); a bearer token alone is insufficient",
+            required_scopes
+        ),
+    )
+}
+
+fn governance_policy_denied_status(rpc: &str, deny_reason: &str) -> Status {
+    governance_permission_status(
+        rpc,
+        "governance_policy_denied",
+        format!("{rpc} denied by native.authz.governance policy: {deny_reason}"),
+    )
+}
+
 /// Built-in role definitions seeded per tenant (Phase K5). `(role_code, name)`.
 /// These cover the distinct security-admin / policy-author / policy-approver /
 /// auditor separation-of-duties roles plus operational admin roles.
@@ -224,11 +300,7 @@ impl AuthzServiceImpl {
         required_scopes: &[&str],
         now: i64,
     ) -> Result<String, Status> {
-        let actor = actor.ok_or_else(|| {
-            Status::permission_denied(format!(
-                "{rpc} requires a governance actor with an explicit authz scope"
-            ))
-        })?;
+        let actor = actor.ok_or_else(|| governance_actor_required_status(rpc))?;
         // Identity is bound to the VERIFIED claim when this call arrived over the
         // authenticated control-plane transport. The `actor.*` body fields are
         // request-supplied intent and MUST NOT be used to attribute audit/events
@@ -260,10 +332,11 @@ impl AuthzServiceImpl {
                         .iter()
                         .any(|s| s.trim() == SCOPE_AUTHZ_IMPERSONATE);
                 if !allowed {
-                    return Err(Status::permission_denied(format!(
-                        "{rpc}: claim subject {claim_subject:?} may not act as {:?} without the {SCOPE_AUTHZ_IMPERSONATE} scope or a cross-tenant admin identity",
-                        actor.subject
-                    )));
+                    return Err(governance_impersonation_denied_status(
+                        rpc,
+                        &claim_subject,
+                        &actor.subject,
+                    ));
                 }
                 true
             } else {
@@ -303,13 +376,11 @@ impl AuthzServiceImpl {
         // audited as a governance resource; just not blocked on a standing scope.
         if actor.break_glass {
             if actor.break_glass_reason.trim().is_empty() {
-                return Err(Status::permission_denied("break-glass requires a reason"));
+                return Err(break_glass_reason_required_status(rpc));
             }
             let exp = actor.break_glass_expires_at_unix;
             if exp <= now || exp - now > BREAK_GLASS_MAX_TTL_SECS {
-                return Err(Status::permission_denied(format!(
-                    "break-glass grant must expire within {BREAK_GLASS_MAX_TTL_SECS}s and be in the future"
-                )));
+                return Err(break_glass_ttl_invalid_status(rpc));
             }
             self.audit_governance(&subject, &tenant, rpc, resource_action, true, now)
                 .await;
@@ -381,10 +452,7 @@ impl AuthzServiceImpl {
         if !has_scope {
             self.audit_governance(&subject, &tenant, rpc, resource_action, false, now)
                 .await;
-            return Err(Status::permission_denied(format!(
-                "{rpc} requires one of the authz governance scopes {:?} (or break-glass); a bearer token alone is insufficient",
-                required_scopes
-            )));
+            return Err(governance_scope_required_status(rpc, required_scopes));
         }
 
         // Authorize the governance action itself through the live snapshot, so an
@@ -437,10 +505,7 @@ impl AuthzServiceImpl {
                 if !decision.allowed {
                     self.audit_governance(&subject, &tenant, rpc, resource_action, false, now)
                         .await;
-                    return Err(Status::permission_denied(format!(
-                        "{rpc} denied by native.authz.governance policy: {}",
-                        decision.deny_reason
-                    )));
+                    return Err(governance_policy_denied_status(rpc, &decision.deny_reason));
                 }
             }
         }
@@ -532,7 +597,12 @@ impl AuthzServiceImpl {
         .bind(project)
         .fetch_optional(pool)
         .await
-        .map_err(|err| Status::internal(format!("read authz revision failed: {err}")))?;
+        .map_err(|err| {
+            governance_internal_status(
+                "read_authz_revision",
+                format!("read authz revision failed: {err}"),
+            )
+        })?;
         match row {
             Some(row) => Ok((
                 row.try_get("policy_revision").unwrap_or(0),
@@ -573,7 +643,11 @@ impl AuthzServiceImpl {
             cur_rel
         };
         let runtime = self.runtime.as_ref().ok_or_else(|| {
-            Status::failed_precondition("native authz requires runtime-backed revision persistence")
+            authz_capability_status(
+                "revision_persistence",
+                "runtime_native_entity_dispatch",
+                "native authz requires runtime-backed revision persistence",
+            )
         })?;
         // P6.10 Wave 0: revision append via the typed native write (no raw SQL).
         // `revision_id` is server-generated in Rust (was `gen_random_uuid()`);
@@ -622,7 +696,12 @@ impl AuthzServiceImpl {
                 ConflictStrategy::Error,
             )
             .await
-            .map_err(|err| Status::internal(format!("bump authz revision failed: {err}")))?;
+            .map_err(|err| {
+                governance_internal_status(
+                    "bump_authz_revision",
+                    format!("bump authz revision failed: {err}"),
+                )
+            })?;
         Ok((new_policy, new_rel))
     }
 
@@ -675,12 +754,20 @@ fn change_type_to_db(ct: authz_entity_pb::AuthzChangeType) -> &'static str {
 /// needed (`authz:role:write`) in the rejection message. Off by default.
 pub(super) fn guard_governed_role_mutation(rpc: &str) -> Result<(), tonic::Status> {
     if governed_mode_enabled() {
-        return Err(tonic::Status::failed_precondition(format!(
-            "governed mode: direct {rpc} is disabled; bind roles through a governed policy draft \
-             (carrying role bindings) and activate it, or use a break-glass governance RPC with {SCOPE_ROLE_WRITE}"
-        )));
+        return Err(governed_role_mutation_status(rpc));
     }
     Ok(())
+}
+
+fn governed_role_mutation_status(rpc: &str) -> tonic::Status {
+    crate::runtime::executor_utils::policy_status(
+        "authz_governed_role_mutation",
+        "role_mutation_requires_governance",
+        format!(
+            "governed mode: direct {rpc} is disabled; bind roles through a governed policy draft \
+             (carrying role bindings) and activate it, or use a break-glass governance RPC with {SCOPE_ROLE_WRITE}"
+        ),
+    )
 }
 
 /// Whether governed mode is active. In governed mode the direct active-mutation
@@ -696,4 +783,134 @@ pub(super) fn governed_mode_enabled() -> bool {
             v == "1" || v == "true" || v == "yes" || v == "on"
         })
         .unwrap_or(false)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
+
+    fn decode_detail(status: &tonic::Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_permission_policy_detail(
+        status: &tonic::Status,
+        operation: &str,
+        policy_decision_id: &str,
+        message: &str,
+    ) {
+        assert_eq!(status.code(), tonic::Code::PermissionDenied);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Policy as i32);
+        assert_eq!(detail.operation, operation);
+        assert_eq!(detail.policy_decision_id, policy_decision_id);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+    }
+
+    fn assert_internal_detail(status: &tonic::Status, operation: &str, message: &str) {
+        assert_eq!(status.code(), tonic::Code::Internal);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "authz");
+        assert_eq!(detail.operation, operation);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    #[test]
+    fn governance_internal_status_carries_typed_detail() {
+        let status = governance_internal_status(
+            "bump_authz_revision",
+            "bump authz revision failed: store closed",
+        );
+        assert_internal_detail(
+            &status,
+            "bump_authz_revision",
+            "bump authz revision failed: store closed",
+        );
+    }
+
+    #[test]
+    fn governed_role_mutation_denial_carries_policy_detail() {
+        let err = governed_role_mutation_status("CreateRole");
+        assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+        assert_eq!(
+            err.message(),
+            "governed mode: direct CreateRole is disabled; bind roles through a governed policy draft \
+             (carrying role bindings) and activate it, or use a break-glass governance RPC with authz:role:write"
+        );
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::Policy as i32);
+        assert_eq!(detail.operation, "authz_governed_role_mutation");
+        assert_eq!(
+            detail.policy_decision_id,
+            "role_mutation_requires_governance"
+        );
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+    }
+
+    #[test]
+    fn governance_authorization_denials_carry_policy_detail() {
+        let actor_required = governance_actor_required_status("ActivatePolicyVersion");
+        assert_permission_policy_detail(
+            &actor_required,
+            "ActivatePolicyVersion",
+            "governance_actor_required",
+            "ActivatePolicyVersion requires a governance actor with an explicit authz scope",
+        );
+
+        let impersonation =
+            governance_impersonation_denied_status("SubmitPolicyDraft", "alice", "bob");
+        assert_permission_policy_detail(
+            &impersonation,
+            "SubmitPolicyDraft",
+            "governance_impersonation_scope_required",
+            "SubmitPolicyDraft: claim subject \"alice\" may not act as \"bob\" without the authz:impersonate scope or a cross-tenant admin identity",
+        );
+
+        let break_glass_reason = break_glass_reason_required_status("RollbackPolicyVersion");
+        assert_permission_policy_detail(
+            &break_glass_reason,
+            "RollbackPolicyVersion",
+            "break_glass_reason_required",
+            "break-glass requires a reason",
+        );
+
+        let break_glass_ttl = break_glass_ttl_invalid_status("RollbackPolicyVersion");
+        assert_permission_policy_detail(
+            &break_glass_ttl,
+            "RollbackPolicyVersion",
+            "break_glass_ttl_invalid",
+            "break-glass grant must expire within 900s and be in the future",
+        );
+
+        let scope_required =
+            governance_scope_required_status("ApprovePolicyDraft", &[SCOPE_POLICY_APPROVE]);
+        assert_permission_policy_detail(
+            &scope_required,
+            "ApprovePolicyDraft",
+            "governance_scope_required",
+            "ApprovePolicyDraft requires one of the authz governance scopes [\"authz:policy:approve\"] (or break-glass); a bearer token alone is insufficient",
+        );
+
+        let policy_denied = governance_policy_denied_status("SimulatePolicy", "deny-by-rule");
+        assert_permission_policy_detail(
+            &policy_denied,
+            "SimulatePolicy",
+            "governance_policy_denied",
+            "SimulatePolicy denied by native.authz.governance policy: deny-by-rule",
+        );
+    }
 }

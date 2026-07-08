@@ -1,0 +1,113 @@
+syntax = "proto3";
+
+package udb.core.config.entity.v1;
+
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Config.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/config/entity/v1;configv1";
+option java_package = "com.udb.core.config.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Config\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Config\\Entity\\V1";
+
+// ---------------------------------------------------------------------------
+// Flag — durable feature-flag / runtime-config row (master-plan 9.8). A flag is
+// scoped to (tenant, project, environment); the evaluation precedence is
+// environment > project > tenant-default and is computed by a PURE function so
+// the SDK and the server agree bit-for-bit. The typed value is a oneof
+// (bool | string | number | json) stored canonically as a discriminator
+// (`value_type`) plus a serialized `value_json` so a single JSONB column can
+// carry any arm without per-arm columns. Percentage rollout is a STABLE hash of
+// `flag_key + ":" + <rollout-context subject>` compared against
+// `rollout_percentage`, so the same subject always lands in the same bucket on
+// every node. `revision` is a monotone per-row counter bumped on every change so
+// clients can detect staleness. RLS scopes rows to the current tenant.
+// ---------------------------------------------------------------------------
+message Flag {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "flags"
+    schema_name: "udb_config"
+    migration_order: 1
+    is_table: true
+    comment: "Feature flags and runtime configuration with percentage rollout (master-plan 9.8)"
+    soft_delete: false
+    audit_fields: true
+    enable_rls: true
+    rls_policies: {
+      policy_name: "tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text)"
+      permissive: true
+    }
+    indexes: {
+      index_name: "idx_flags_scope_key_unique"
+      index_type: "BTREE"
+      unique: true
+      columns: "tenant_id"
+      columns: "project_id"
+      columns: "environment"
+      columns: "flag_key"
+    }
+    indexes: {
+      index_name: "idx_flags_tenant_key"
+      index_type: "BTREE"
+      columns: "tenant_id"
+      columns: "flag_key"
+    }
+    cdc_topic: "udb.config.flags.cdc"
+    required_scope: "config:read"
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "none"
+    retention_class: "config.operational"
+    retention_days: 365
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
+
+  string flag_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "flag_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(64)" not_null: true index: { index_name: "idx_flags_tenant" index_type: "BTREE" } }];
+
+  // Project scope; empty means the flag applies to every project of the tenant.
+  string project_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "project_id" sql_type: "VARCHAR(255)" not_null: true default_value: "''" }];
+
+  // Deployment environment scope (e.g. "prod"); empty means every environment.
+  // Most specific scope wins at evaluation: environment > project > tenant.
+  string environment = 4 [(udb.core.common.v1.pg_column) = { column_name: "environment" sql_type: "VARCHAR(64)" not_null: true default_value: "''" }];
+
+  // Application-chosen logical flag key (un-prefixed).
+  string flag_key = 5 [(udb.core.common.v1.pg_column) = { column_name: "flag_key" sql_type: "VARCHAR(255)" not_null: true }];
+
+  // Discriminator for the typed value oneof: BOOL | STRING | NUMBER | JSON.
+  string value_type = 6 [(udb.core.common.v1.pg_column) = { column_name: "value_type" sql_type: "VARCHAR(16)" not_null: true default_value: "'BOOL'" }];
+
+  // Canonical serialized value for ANY value_type (bool -> true/false, number ->
+  // 42, string -> "x", json -> object). A single JSONB column carries every arm
+  // of the oneof so evaluation is uniform and storage stays normalized.
+  string value_json = 7 [(udb.core.common.v1.pg_column) = { column_name: "value_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'false'::jsonb" comment: "Canonical serialized typed value (bool|string|number|json)" }];
+
+  // Master switch; a disabled flag evaluates to its type's off value.
+  bool enabled = 8 [(udb.core.common.v1.pg_column) = { column_name: "enabled" sql_type: "BOOLEAN" not_null: true default_value: "true" }];
+
+  // Percentage rollout in [0,100]. 100 = fully on, 0 = fully off; 0<pct<100 gates
+  // on a STABLE hash of the rollout-context subject so the same subject is sticky.
+  int32 rollout_percentage = 9 [(udb.core.common.v1.pg_column) = { column_name: "rollout_percentage" sql_type: "INTEGER" not_null: true default_value: "100" }];
+
+  // Name of the evaluation-context attribute whose value is hashed for the
+  // percentage bucket (e.g. "user_id"). Empty hashes the empty subject (still
+  // deterministic, but every subject shares one bucket).
+  string rollout_context_key = 10 [(udb.core.common.v1.pg_column) = { column_name: "rollout_context_key" sql_type: "VARCHAR(255)" not_null: true default_value: "''" }];
+
+  // Monotone per-row revision, bumped on every change. The config-domain revision
+  // a client observes is the max revision across the flags it evaluated.
+  int64 revision = 11 [(udb.core.common.v1.pg_column) = { column_name: "revision" sql_type: "BIGINT" not_null: true default_value: "0" }];
+
+  string metadata_json = 12 [(udb.core.common.v1.pg_column) = { column_name: "metadata_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'{}'::jsonb" comment: "Non-secret flag metadata for audit and routing" }];
+}

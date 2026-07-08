@@ -13,7 +13,9 @@ use bytes::Bytes;
 use serde_json::Value as JsonValue;
 
 use crate::runtime::executor_utils::{
-    json_required_str, object_bytes_from_json, reject_oversized_object,
+    HTTP_RETRYABLE_BACKOFF_MS, backend_transport_status, capability_status, internal_status,
+    invalid_argument_fields, json_required_str, object_bytes_from_json, reject_oversized_object,
+    retryable_status,
 };
 use crate::runtime::executors::{
     BackendExecutor, BackendHealth, BackendProbe, ExecutorByteStream, MutationExecutor,
@@ -59,7 +61,10 @@ impl BackendHealth for S3Executor {
 
 impl QueryExecutor for S3Executor {
     async fn query(&self, _request_json: &str) -> Result<String, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "s3",
+            "query",
+            "generic_query",
             "s3 does not support generic query",
         ))
     }
@@ -67,7 +72,10 @@ impl QueryExecutor for S3Executor {
 
 impl MutationExecutor for S3Executor {
     async fn mutate(&self, _request_json: &str) -> Result<String, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "s3",
+            "mutate",
+            "object_dispatch",
             "s3 mutation is via get_object/put_object",
         ))
     }
@@ -75,17 +83,31 @@ impl MutationExecutor for S3Executor {
 
 impl SearchExecutor for S3Executor {
     async fn search(&self, _request_json: &str) -> Result<String, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "s3",
+            "search",
+            "search",
             "s3 does not support search",
         ))
     }
 }
 
+fn invalid_s3_request_json_status(err: serde_json::Error) -> tonic::Status {
+    invalid_argument_fields(
+        format!("invalid request json: {err}"),
+        [("request_json", "must be valid JSON for S3 object dispatch")],
+    )
+}
+
+fn s3_internal_status(operation: impl Into<String>, message: impl Into<String>) -> tonic::Status {
+    internal_status("S3", operation, message)
+}
+
 impl ObjectExecutor for S3Executor {
     /// `{"bucket":"b","object_key"|"key":"k"}`.
     async fn get_object(&self, request_json: &str) -> Result<Vec<u8>, tonic::Status> {
-        let spec: JsonValue = serde_json::from_str(request_json)
-            .map_err(|e| tonic::Status::invalid_argument(format!("invalid request json: {e}")))?;
+        let spec: JsonValue =
+            serde_json::from_str(request_json).map_err(invalid_s3_request_json_status)?;
         let bucket = json_required_str(&spec, "bucket")?;
         let object_key =
             json_required_str(&spec, "object_key").or_else(|_| json_required_str(&spec, "key"))?;
@@ -96,12 +118,12 @@ impl ObjectExecutor for S3Executor {
             .key(object_key)
             .send()
             .await
-            .map_err(|err| tonic::Status::unavailable(format!("S3 get_object failed: {err}")))?;
+            .map_err(|err| backend_transport_status("S3", "get_object", err))?;
         let bytes = output
             .body
             .collect()
             .await
-            .map_err(|err| tonic::Status::unavailable(format!("S3 body read failed: {err}")))?
+            .map_err(|err| backend_transport_status("S3", "body read", err))?
             .into_bytes()
             .to_vec();
         Ok(bytes)
@@ -113,8 +135,8 @@ impl ObjectExecutor for S3Executor {
         request_json: &str,
         bytes: Vec<u8>,
     ) -> Result<String, tonic::Status> {
-        let spec: JsonValue = serde_json::from_str(request_json)
-            .map_err(|e| tonic::Status::invalid_argument(format!("invalid request json: {e}")))?;
+        let spec: JsonValue =
+            serde_json::from_str(request_json).map_err(invalid_s3_request_json_status)?;
         let bucket = json_required_str(&spec, "bucket")?;
         let object_key =
             json_required_str(&spec, "object_key").or_else(|_| json_required_str(&spec, "key"))?;
@@ -143,7 +165,7 @@ impl ObjectExecutor for S3Executor {
         request
             .send()
             .await
-            .map_err(|err| tonic::Status::unavailable(format!("S3 put_object failed: {err}")))?;
+            .map_err(|err| backend_transport_status("S3", "put_object", err))?;
         Ok(serde_json::json!({
             "resource_uri": format!("s3://{bucket}/{object_key}"),
             "affected_rows": 1,
@@ -158,8 +180,8 @@ impl ObjectExecutor for S3Executor {
         &self,
         request_json: &str,
     ) -> Result<ExecutorByteStream, tonic::Status> {
-        let spec: JsonValue = serde_json::from_str(request_json)
-            .map_err(|e| tonic::Status::invalid_argument(format!("invalid request json: {e}")))?;
+        let spec: JsonValue =
+            serde_json::from_str(request_json).map_err(invalid_s3_request_json_status)?;
         let bucket = json_required_str(&spec, "bucket")?.to_string();
         let object_key = json_required_str(&spec, "object_key")
             .or_else(|_| json_required_str(&spec, "key"))?
@@ -171,7 +193,7 @@ impl ObjectExecutor for S3Executor {
             .key(&object_key)
             .send()
             .await
-            .map_err(|err| tonic::Status::unavailable(format!("S3 get_object failed: {err}")))?;
+            .map_err(|err| backend_transport_status("S3", "get_object", err))?;
         let chunk_bytes = s3_download_chunk_bytes();
         let stream = async_stream::try_stream! {
             use tokio::io::AsyncReadExt as _;
@@ -179,7 +201,7 @@ impl ObjectExecutor for S3Executor {
             let mut buf = vec![0u8; chunk_bytes];
             loop {
                 let read = reader.read(&mut buf).await.map_err(|err| {
-                    tonic::Status::unavailable(format!("S3 body read failed: {err}"))
+                    backend_transport_status("S3", "body read", err)
                 })?;
                 if read == 0 {
                     break;
@@ -200,8 +222,8 @@ impl ObjectExecutor for S3Executor {
         stream: ExecutorByteStream,
     ) -> Result<String, tonic::Status> {
         use tokio_stream::StreamExt as _;
-        let spec: JsonValue = serde_json::from_str(request_json)
-            .map_err(|e| tonic::Status::invalid_argument(format!("invalid request json: {e}")))?;
+        let spec: JsonValue =
+            serde_json::from_str(request_json).map_err(invalid_s3_request_json_status)?;
         let bucket = json_required_str(&spec, "bucket")?.to_string();
         let object_key = json_required_str(&spec, "object_key")
             .or_else(|_| json_required_str(&spec, "key"))?
@@ -233,13 +255,17 @@ impl ObjectExecutor for S3Executor {
                 if let Some(ct) = &content_type {
                     create = create.content_type(ct);
                 }
-                let created = create.send().await.map_err(|e| {
-                    tonic::Status::unavailable(format!("S3 create_multipart_upload failed: {e}"))
-                })?;
+                let created = create
+                    .send()
+                    .await
+                    .map_err(|e| backend_transport_status("S3", "create_multipart_upload", e))?;
                 let upload_id = created
                     .upload_id()
                     .ok_or_else(|| {
-                        tonic::Status::unavailable(
+                        retryable_status(
+                            "S3",
+                            "create_multipart_upload",
+                            HTTP_RETRYABLE_BACKOFF_MS,
                             "S3 create_multipart_upload returned no upload_id",
                         )
                     })?
@@ -278,9 +304,7 @@ impl ObjectExecutor for S3Executor {
                         .upload_id(upload_id.clone())
                         .send()
                         .await;
-                    return Err(tonic::Status::unavailable(format!(
-                        "S3 upload_part failed: {e}"
-                    )));
+                    return Err(backend_transport_status("S3", "upload_part", e));
                 }
             }
         }
@@ -297,9 +321,10 @@ impl ObjectExecutor for S3Executor {
                 if let Some(ct) = &content_type {
                     request = request.content_type(ct);
                 }
-                request.send().await.map_err(|e| {
-                    tonic::Status::unavailable(format!("S3 put_object failed: {e}"))
-                })?;
+                request
+                    .send()
+                    .await
+                    .map_err(|e| backend_transport_status("S3", "put_object", e))?;
             }
             Some((upload_id, mut parts, part_number)) => {
                 // Flush the trailing (< part-size) remainder as the final part.
@@ -330,9 +355,7 @@ impl ObjectExecutor for S3Executor {
                                 .upload_id(upload_id.clone())
                                 .send()
                                 .await;
-                            return Err(tonic::Status::unavailable(format!(
-                                "S3 upload_part (final) failed: {e}"
-                            )));
+                            return Err(backend_transport_status("S3", "upload_part (final)", e));
                         }
                     }
                 }
@@ -357,9 +380,11 @@ impl ObjectExecutor for S3Executor {
                         .upload_id(upload_id)
                         .send()
                         .await;
-                    return Err(tonic::Status::unavailable(format!(
-                        "S3 complete_multipart_upload failed: {e}"
-                    )));
+                    return Err(backend_transport_status(
+                        "S3",
+                        "complete_multipart_upload",
+                        e,
+                    ));
                 }
             }
         }
@@ -373,8 +398,8 @@ impl ObjectExecutor for S3Executor {
     /// `{"bucket","object_key"|"key"}` — deletes the object. S3 delete is
     /// idempotent (deleting a missing key succeeds).
     async fn delete_object(&self, request_json: &str) -> Result<(), tonic::Status> {
-        let spec: JsonValue = serde_json::from_str(request_json)
-            .map_err(|e| tonic::Status::invalid_argument(format!("invalid request json: {e}")))?;
+        let spec: JsonValue =
+            serde_json::from_str(request_json).map_err(invalid_s3_request_json_status)?;
         let bucket = json_required_str(&spec, "bucket")?;
         let object_key =
             json_required_str(&spec, "object_key").or_else(|_| json_required_str(&spec, "key"))?;
@@ -385,7 +410,59 @@ impl ObjectExecutor for S3Executor {
             .send()
             .await
             .map(|_| ())
-            .map_err(|err| tonic::Status::unavailable(format!("S3 delete_object failed: {err}")))
+            .map_err(|err| backend_transport_status("S3", "delete_object", err))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
+
+    fn decode_detail(status: &tonic::Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_internal_detail(status: &tonic::Status, operation: &str, message: &str) {
+        assert_eq!(status.code(), tonic::Code::Internal);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "S3");
+        assert_eq!(detail.operation, operation);
+        assert!(!detail.retryable);
+    }
+
+    #[test]
+    fn internal_status_carries_typed_detail() {
+        let status = s3_internal_status(
+            "create_bucket",
+            "s3 create_bucket failed: AccessDenied: forbidden",
+        );
+        assert_internal_detail(
+            &status,
+            "create_bucket",
+            "s3 create_bucket failed: AccessDenied: forbidden",
+        );
+    }
+
+    #[test]
+    fn request_json_validation_carries_field_violation() {
+        let err = serde_json::from_str::<JsonValue>("{")
+            .map_err(invalid_s3_request_json_status)
+            .unwrap_err();
+        assert_eq!(err.code(), tonic::Code::InvalidArgument);
+        assert!(err.message().starts_with("invalid request json:"));
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, "request_json");
     }
 }
 
@@ -415,11 +492,14 @@ impl ResourceAdminExecutor for S3Executor {
                 }) {
                     Ok(())
                 } else {
-                    Err(tonic::Status::internal(format!(
-                        "s3 create_bucket failed: {}: {}",
-                        err.code().unwrap_or("unknown"),
-                        err.message().unwrap_or_default()
-                    )))
+                    Err(s3_internal_status(
+                        "create_bucket",
+                        format!(
+                            "s3 create_bucket failed: {}: {}",
+                            err.code().unwrap_or("unknown"),
+                            err.message().unwrap_or_default()
+                        ),
+                    ))
                 }
             })
     }
@@ -430,7 +510,7 @@ impl ResourceAdminExecutor for S3Executor {
             .send()
             .await
             .map(|_| ())
-            .map_err(|e| tonic::Status::internal(format!("s3 delete_bucket failed: {e}")))
+            .map_err(|e| backend_transport_status("S3", "delete_bucket", e))
     }
     async fn list_resources(&self) -> Result<Vec<String>, tonic::Status> {
         let resp = self
@@ -438,7 +518,7 @@ impl ResourceAdminExecutor for S3Executor {
             .list_buckets()
             .send()
             .await
-            .map_err(|e| tonic::Status::internal(format!("s3 list_buckets failed: {e}")))?;
+            .map_err(|e| backend_transport_status("S3", "list_buckets", e))?;
         Ok(resp
             .buckets()
             .iter()
@@ -450,7 +530,10 @@ impl ResourceAdminExecutor for S3Executor {
 
 impl BackendExecutor for S3Executor {
     async fn transaction(&self, _request_json: &str) -> Result<String, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "s3",
+            "transaction",
+            "transactions",
             "s3 does not support transactions",
         ))
     }

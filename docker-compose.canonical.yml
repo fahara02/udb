@@ -3,7 +3,8 @@
 # These are NOT in docker-compose.integration.yml (which only ships Postgres +
 # Redis + Kafka + Qdrant + MinIO). They are split into their own compose file so
 # the integration/CI stack stays lean; bring them up only when working on the
-# MySQL / SQL Server / MongoDB / Cassandra canonical stores.
+# MySQL / SQL Server / MongoDB / Cassandra / Neo4j / ClickHouse /
+# Elasticsearch / Weaviate canonical stores.
 #
 # Host ports use the same high-port convention as the integration stack to avoid
 # clashing with any locally-installed engine.
@@ -13,8 +14,13 @@
 # Host-side DSNs (cargo tests run on the host and reach these via published ports):
 #   UDB_MYSQL_DSN=mysql://udb:udb@127.0.0.1:53306/udb
 #   UDB_MSSQL_DSN=Server=127.0.0.1,51433;User=sa;Password=Udb_Strong#2026;Database=udb;TrustServerCertificate=true
-#   UDB_NOSQL_DSN=mongodb://127.0.0.1:57017/udb?replicaSet=rs0   (also export as UDB_MONGODB_DSN)
+#   UDB_NOSQL_DSN=mongodb://127.0.0.1:57017/udb?directConnection=true   (also export as UDB_MONGODB_DSN)
 #   UDB_CASSANDRA_DSN=127.0.0.1:59042
+#   UDB_CLICKHOUSE_DSN=http://127.0.0.1:58123/udb
+#   UDB_COLUMN_DSN=http://127.0.0.1:58123/udb
+#   UDB_COLUMN_USER=udb UDB_COLUMN_PASSWORD=udb UDB_COLUMN_DATABASE=udb
+#   UDB_ELASTIC_DSN=http://127.0.0.1:59200
+#   UDB_WEAVIATE_DSN=http://127.0.0.1:58080
 name: udb
 
 services:
@@ -106,6 +112,9 @@ services:
       start_period: 20s
 
   # B.10c — ClickHouse (canonical store uses the native HTTP interface).
+  # The HA-canonical store requires KeeperMap for advisory leases and
+  # single-writer mutation fencing, so the local CI service runs single-node
+  # embedded ClickHouse Keeper via docker/clickhouse/config.d/keeper.xml.
   clickhouse:
     image: clickhouse/clickhouse-server:24.8
     environment:
@@ -113,16 +122,60 @@ services:
       CLICKHOUSE_PASSWORD: udb
       CLICKHOUSE_DB: udb
       CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+    volumes:
+      - ./docker/clickhouse/config.d/keeper.xml:/etc/clickhouse-server/config.d/keeper.xml:ro
     ports:
       - "58123:8123"   # HTTP
       - "59009:9000"   # native TCP
+      - "59181:9181"   # embedded Keeper client port
+      - "59234:9234"   # embedded Keeper raft port
     ulimits:
       nofile:
         soft: 262144
         hard: 262144
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- 'http://localhost:8123/ping' >/dev/null 2>&1 || exit 1"]
+      test:
+        - CMD-SHELL
+        - >-
+          wget -qO- 'http://localhost:8123/ping' >/dev/null 2>&1 &&
+          clickhouse client --host 127.0.0.1 --port 9000 --user udb --password udb
+          --query "SELECT count() FROM system.zookeeper WHERE path = '/'" >/dev/null
+          2>&1
       interval: 10s
       timeout: 5s
       retries: 30
       start_period: 15s
+
+  # C9 — Elasticsearch. The vector canonical SystemStores use the HTTP API and
+  # rely on Elasticsearch optimistic concurrency (_seq_no/_primary_term), so CI
+  # must provision this service whenever it claims ES canonical conformance.
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.3
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+    mem_limit: 1536m
+    ports:
+      - "59200:9200"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9200 >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 40
+      start_period: 30s
+
+  # C9 — Weaviate. Runs standalone with no vectorizer; the live IR golden
+  # supplies explicit objects and uses BM25/text search over tenant-filtered
+  # payloads, so no inference module is needed in CI.
+  weaviate:
+    image: cr.weaviate.io/semitechnologies/weaviate:1.38.1
+    environment:
+      QUERY_DEFAULTS_LIMIT: "25"
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: "true"
+      PERSISTENCE_DATA_PATH: /var/lib/weaviate
+      DEFAULT_VECTORIZER_MODULE: none
+      CLUSTER_HOSTNAME: node1
+    ports:
+      - "58080:8080"
+      - "58051:50051"

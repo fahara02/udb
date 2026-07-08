@@ -23,7 +23,9 @@ use serde_json::Value as JsonValue;
 use crate::runtime::backend_context::{
     AppliedContext, BackendContextEnforcer, ContextEffect, enforce_with_mechanism,
 };
-use crate::runtime::executor_utils::{build_probe, parse_sql_dispatch};
+use crate::runtime::executor_utils::{
+    build_probe, capability_status, invalid_argument_fields, parse_sql_dispatch,
+};
 use crate::runtime::executors::{
     BackendExecutor, BackendHealth, BackendProbe, MutationExecutor, ObjectExecutor, QueryExecutor,
     ResourceAdminExecutor, SearchExecutor,
@@ -285,12 +287,34 @@ fn cql_leading_keyword(cql: &str) -> String {
         .to_ascii_uppercase()
 }
 
+fn cassandra_sql_validation_status(
+    message: impl Into<String>,
+    description: impl Into<String>,
+) -> tonic::Status {
+    invalid_argument_fields(message, [("sql", description.into())])
+}
+
+fn cassandra_internal_status(
+    operation: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    crate::runtime::executor_utils::internal_status("cassandra", operation, message)
+}
+
+fn encode_cassandra_response(
+    operation: &'static str,
+    value: &JsonValue,
+) -> Result<String, tonic::Status> {
+    serde_json::to_string(value).map_err(|e| cassandra_internal_status(operation, e.to_string()))
+}
+
 fn validate_cassandra_query(cql: &str) -> Result<(), tonic::Status> {
     match cql_leading_keyword(cql).as_str() {
         "SELECT" => Ok(()),
-        other => Err(tonic::Status::invalid_argument(format!(
-            "cassandra query accepts SELECT only, got '{other}'"
-        ))),
+        other => Err(cassandra_sql_validation_status(
+            format!("cassandra query accepts SELECT only, got '{other}'"),
+            "must start with SELECT for Cassandra query dispatch",
+        )),
     }
 }
 
@@ -305,12 +329,47 @@ fn is_cassandra_live_probe(cql: &str) -> bool {
     matches!(normalized.as_str(), "select 1" | "select 1 as live_probe")
 }
 
-fn validate_cassandra_mutation(cql: &str) -> Result<(), tonic::Status> {
+fn validate_cassandra_compiled_mutation(cql: &str) -> Result<(), tonic::Status> {
+    let normalized = cql
+        .trim()
+        .trim_end_matches(';')
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .to_ascii_uppercase();
+    if normalized.starts_with("CREATE TABLE IF NOT EXISTS ")
+        || normalized.starts_with("CREATE INDEX IF NOT EXISTS ")
+        || normalized.starts_with("CREATE KEYSPACE IF NOT EXISTS ")
+        || normalized.starts_with("DROP TABLE IF EXISTS ")
+        || normalized.starts_with("DROP INDEX IF EXISTS ")
+        || normalized.starts_with("DROP KEYSPACE IF EXISTS ")
+    {
+        return Ok(());
+    }
+    Err(cassandra_sql_validation_status(
+        format!(
+            "cassandra compiler-mediated mutate does not accept '{}'",
+            cql_leading_keyword(cql)
+        ),
+        "compiler-mediated Cassandra mutation must be CREATE/DROP table, index, or keyspace DDL",
+    ))
+}
+
+fn is_compiler_mediated_dispatch(req: &str) -> bool {
+    serde_json::from_str::<JsonValue>(req)
+        .ok()
+        .and_then(|value| value.get("compiler_mediated").and_then(JsonValue::as_bool))
+        .unwrap_or(false)
+}
+
+fn validate_cassandra_mutation(cql: &str, compiler_mediated: bool) -> Result<(), tonic::Status> {
     match cql_leading_keyword(cql).as_str() {
         "INSERT" | "UPDATE" | "DELETE" | "BEGIN" => Ok(()),
-        other => Err(tonic::Status::invalid_argument(format!(
-            "cassandra mutate accepts INSERT/UPDATE/DELETE/BATCH only, got '{other}'"
-        ))),
+        "CREATE" | "DROP" if compiler_mediated => validate_cassandra_compiled_mutation(cql),
+        other => Err(cassandra_sql_validation_status(
+            format!("cassandra mutate accepts INSERT/UPDATE/DELETE/BATCH only, got '{other}'"),
+            "must start with INSERT, UPDATE, DELETE, or BEGIN for Cassandra mutation dispatch",
+        )),
     }
 }
 
@@ -323,7 +382,12 @@ impl QueryExecutor for CassandraExecutor {
                 .session
                 .query("SELECT release_version FROM system.local", ())
                 .await
-                .map_err(|e| tonic::Status::internal(format!("cassandra query failed: {e}")))?;
+                .map_err(|e| {
+                    cassandra_internal_status(
+                        "live_probe_query",
+                        format!("cassandra query failed: {e}"),
+                    )
+                })?;
             return Ok(serde_json::json!([{ "live_probe": 1 }]).to_string());
         }
         let params: Vec<CqlValue> = params_json.iter().map(json_to_cql).collect();
@@ -332,7 +396,9 @@ impl QueryExecutor for CassandraExecutor {
             .session
             .query(cql.as_str(), &params[..])
             .await
-            .map_err(|e| tonic::Status::internal(format!("cassandra query failed: {e}")))?;
+            .map_err(|e| {
+                cassandra_internal_status("query", format!("cassandra query failed: {e}"))
+            })?;
         let rows = result.rows.unwrap_or_default();
         let column_specs: Vec<String> = result.col_specs.iter().map(|c| c.name.clone()).collect();
         let mut out: Vec<JsonValue> = Vec::with_capacity(rows.len());
@@ -348,21 +414,22 @@ impl QueryExecutor for CassandraExecutor {
             }
             out.push(JsonValue::Object(obj));
         }
-        serde_json::to_string(&JsonValue::Array(out))
-            .map_err(|e| tonic::Status::internal(e.to_string()))
+        encode_cassandra_response("query_response_encode", &JsonValue::Array(out))
     }
 }
 
 impl MutationExecutor for CassandraExecutor {
     async fn mutate(&self, req: &str) -> Result<String, tonic::Status> {
         let (cql, params_json) = parse_sql_dispatch(req)?;
-        validate_cassandra_mutation(&cql)?;
+        validate_cassandra_mutation(&cql, is_compiler_mediated_dispatch(req))?;
         let params: Vec<CqlValue> = params_json.iter().map(json_to_cql).collect();
         self.client
             .session
             .query(cql.as_str(), &params[..])
             .await
-            .map_err(|e| tonic::Status::internal(format!("cassandra mutate failed: {e}")))?;
+            .map_err(|e| {
+                cassandra_internal_status("mutate", format!("cassandra mutate failed: {e}"))
+            })?;
         // Cassandra doesn't report rows_affected for writes — INSERT /
         // UPDATE / DELETE are always "applied" at the protocol level
         // unless LWT (`IF NOT EXISTS`) reports `[applied]: false`.
@@ -372,7 +439,10 @@ impl MutationExecutor for CassandraExecutor {
 
 impl SearchExecutor for CassandraExecutor {
     async fn search(&self, _: &str) -> Result<String, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "cassandra",
+            "search",
+            "search",
             "UDB_UNSUPPORTED_OPERATION: Cassandra has no native search surface; \
              pair with Elasticsearch for full-text or Qdrant for vector",
         ))
@@ -381,12 +451,18 @@ impl SearchExecutor for CassandraExecutor {
 
 impl ObjectExecutor for CassandraExecutor {
     async fn get_object(&self, _: &str) -> Result<Vec<u8>, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "cassandra",
+            "get_object",
+            "object_store",
             "UDB_UNSUPPORTED_OPERATION: Cassandra is not an object store",
         ))
     }
     async fn put_object(&self, _: &str, _: Vec<u8>) -> Result<String, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "cassandra",
+            "put_object",
+            "object_store",
             "UDB_UNSUPPORTED_OPERATION: Cassandra is not an object store",
         ))
     }
@@ -419,8 +495,9 @@ impl ResourceAdminExecutor for CassandraExecutor {
             "params": []
         });
         let body = self.query(&req.to_string()).await?;
-        let v: JsonValue = serde_json::from_str(&body)
-            .map_err(|e| tonic::Status::internal(format!("list parse: {e}")))?;
+        let v: JsonValue = serde_json::from_str(&body).map_err(|e| {
+            cassandra_internal_status("list_resources_parse", format!("list parse: {e}"))
+        })?;
         let mut out = Vec::new();
         if let JsonValue::Array(rows) = v {
             for row in rows {
@@ -435,7 +512,10 @@ impl ResourceAdminExecutor for CassandraExecutor {
 
 impl BackendExecutor for CassandraExecutor {
     async fn transaction(&self, _: &str) -> Result<String, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "cassandra",
+            "transaction",
+            "transactions",
             "UDB_UNSUPPORTED_OPERATION: Cassandra has no multi-statement transactions; \
              use LWT (IF NOT EXISTS) for per-row atomicity",
         ))
@@ -448,7 +528,46 @@ impl BackendExecutor for CassandraExecutor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
     use serde_json::json;
+
+    fn decode_detail(status: &tonic::Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_sql_violation(status: &tonic::Status) {
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, "sql");
+    }
+
+    fn assert_internal_detail(status: &tonic::Status, operation: &str, message: &str) {
+        assert_eq!(status.code(), tonic::Code::Internal);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "cassandra");
+        assert_eq!(detail.operation, operation);
+        assert!(!detail.retryable);
+    }
+
+    #[test]
+    fn cassandra_internal_status_carries_typed_detail() {
+        let status =
+            cassandra_internal_status("query_response_encode", "cassandra response encode failed");
+        assert_internal_detail(
+            &status,
+            "query_response_encode",
+            "cassandra response encode failed",
+        );
+    }
 
     #[test]
     fn parse_dispatch_extracts_sql_and_params() {
@@ -473,5 +592,50 @@ mod tests {
     fn cql_to_json_maps_text() {
         let cql = CqlValue::Text("hello".into());
         assert_eq!(cql_to_json(&cql), json!("hello"));
+    }
+
+    #[test]
+    fn raw_mutation_rejects_ddl() {
+        let err =
+            validate_cassandra_mutation("CREATE TABLE IF NOT EXISTS \"ks\".\"t\" (id text)", false)
+                .unwrap_err();
+        assert_eq!(err.code(), tonic::Code::InvalidArgument);
+        assert_eq!(
+            err.message(),
+            "cassandra mutate accepts INSERT/UPDATE/DELETE/BATCH only, got 'CREATE'"
+        );
+        assert_sql_violation(&err);
+    }
+
+    #[test]
+    fn compiler_mediated_mutation_allows_only_known_ddl_shapes() {
+        validate_cassandra_mutation(
+            "CREATE TABLE IF NOT EXISTS \"ks\".\"t\" (id text PRIMARY KEY)",
+            true,
+        )
+        .unwrap();
+        validate_cassandra_mutation("DROP TABLE IF EXISTS \"ks\".\"t\"", true).unwrap();
+        let err = validate_cassandra_mutation(
+            "CREATE MATERIALIZED VIEW \"ks\".\"mv\" AS SELECT * FROM \"ks\".\"t\"",
+            true,
+        )
+        .unwrap_err();
+        assert_eq!(err.code(), tonic::Code::InvalidArgument);
+        assert_eq!(
+            err.message(),
+            "cassandra compiler-mediated mutate does not accept 'CREATE'"
+        );
+        assert_sql_violation(&err);
+    }
+
+    #[test]
+    fn query_keyword_validation_carries_field_violation() {
+        let err = validate_cassandra_query("DELETE FROM ks.t WHERE id = ?").unwrap_err();
+        assert_eq!(err.code(), tonic::Code::InvalidArgument);
+        assert_eq!(
+            err.message(),
+            "cassandra query accepts SELECT only, got 'DELETE'"
+        );
+        assert_sql_violation(&err);
     }
 }

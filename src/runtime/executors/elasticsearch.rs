@@ -31,7 +31,9 @@ use serde_json::Value as JsonValue;
 use crate::runtime::backend_context::{
     AppliedContext, BackendContextEnforcer, ContextEffect, enforce_with_mechanism,
 };
-use crate::runtime::executor_utils::build_probe;
+use crate::runtime::executor_utils::{
+    backend_transport_status, build_probe, capability_status, invalid_argument_fields,
+};
 use crate::runtime::executors::http::{HttpClientSpec, env_timeout};
 use crate::runtime::executors::{
     BackendExecutor, BackendHealth, BackendProbe, MutationExecutor, ObjectExecutor, QueryExecutor,
@@ -133,13 +135,15 @@ impl ElasticsearchHttpClient {
         if !body.is_null() && !matches!(body, JsonValue::Object(m) if m.is_empty()) {
             req = req.json(body);
         }
-        let resp = req.send().await.map_err(|e| {
-            tonic::Status::unavailable(format!("Elasticsearch request failed: {e}"))
-        })?;
+        let resp = req
+            .send()
+            .await
+            .map_err(|e| backend_transport_status("Elasticsearch", "request", e))?;
         let status = resp.status();
-        let text = resp.text().await.map_err(|e| {
-            tonic::Status::internal(format!("Elasticsearch response read failed: {e}"))
-        })?;
+        let text = resp
+            .text()
+            .await
+            .map_err(|e| backend_transport_status("Elasticsearch", "response read", e))?;
         if !status.is_success() {
             return Err(es_status_to_tonic(status, &text));
         }
@@ -147,10 +151,11 @@ impl ElasticsearchHttpClient {
             return Ok(JsonValue::Object(Default::default()));
         }
         serde_json::from_str(&text).map_err(|e| {
-            tonic::Status::internal(format!(
-                "Elasticsearch response parse failed: {e}; body: {}",
-                text.chars().take(200).collect::<String>()
-            ))
+            backend_transport_status(
+                "Elasticsearch",
+                "response parse",
+                format!("{e}; body: {}", text.chars().take(200).collect::<String>()),
+            )
         })
     }
 
@@ -167,24 +172,46 @@ impl ElasticsearchHttpClient {
             .post(url)
             .header(reqwest::header::CONTENT_TYPE, "application/x-ndjson")
             .body(ndjson.to_string());
-        let resp =
-            self.auth(req).send().await.map_err(|e| {
-                tonic::Status::unavailable(format!("Elasticsearch _bulk failed: {e}"))
-            })?;
+        let resp = self
+            .auth(req)
+            .send()
+            .await
+            .map_err(|e| backend_transport_status("Elasticsearch", "_bulk", e))?;
         let status = resp.status();
-        let text = resp.text().await.map_err(|e| {
-            tonic::Status::internal(format!("Elasticsearch _bulk read failed: {e}"))
-        })?;
+        let text = resp
+            .text()
+            .await
+            .map_err(|e| backend_transport_status("Elasticsearch", "_bulk response read", e))?;
         if !status.is_success() {
             return Err(es_status_to_tonic(status, &text));
         }
         serde_json::from_str(&text).map_err(|e| {
-            tonic::Status::internal(format!(
-                "Elasticsearch _bulk parse failed: {e}; body: {}",
-                text.chars().take(200).collect::<String>()
-            ))
+            backend_transport_status(
+                "Elasticsearch",
+                "_bulk response parse",
+                format!("{e}; body: {}", text.chars().take(200).collect::<String>()),
+            )
         })
     }
+}
+
+fn elasticsearch_internal_status(
+    operation: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    crate::runtime::executor_utils::internal_status("elasticsearch", operation, message)
+}
+
+fn encode_elasticsearch_response(
+    operation: &'static str,
+    value: &JsonValue,
+) -> Result<String, tonic::Status> {
+    serde_json::to_string(value).map_err(|e| {
+        elasticsearch_internal_status(
+            operation,
+            format!("Elasticsearch response serialise failed: {e}"),
+        )
+    })
 }
 
 /// Translate an HTTP error from ES into a typed `tonic::Status`.
@@ -255,11 +282,21 @@ impl BackendHealth for ElasticsearchExecutor {
 // `executor_utils::parse_rest_dispatch` (byte-identical shape).
 use crate::runtime::executor_utils::parse_rest_dispatch as parse_dispatch;
 
+fn invalid_ensure_resource_spec_status(err: serde_json::Error) -> tonic::Status {
+    invalid_argument_fields(
+        format!("invalid ensure_resource spec: {err}"),
+        [(
+            "spec_json",
+            "must be valid JSON for Elasticsearch ensure_resource",
+        )],
+    )
+}
+
 impl QueryExecutor for ElasticsearchExecutor {
     async fn query(&self, request_json: &str) -> Result<String, tonic::Status> {
         let (method, path, body) = parse_dispatch(request_json)?;
         let resp = self.client.request_json(method, &path, &body).await?;
-        serde_json::to_string(&resp).map_err(|e| tonic::Status::internal(e.to_string()))
+        encode_elasticsearch_response("query_response_encode", &resp)
     }
 }
 
@@ -271,11 +308,10 @@ impl MutationExecutor for ElasticsearchExecutor {
         // type is JSON. Unwrap here and post as ndjson.
         if let Some(ndjson) = body.get("ndjson").and_then(|v| v.as_str()) {
             let resp = self.client.request_ndjson(&path, ndjson).await?;
-            return serde_json::to_string(&resp)
-                .map_err(|e| tonic::Status::internal(e.to_string()));
+            return encode_elasticsearch_response("bulk_response_encode", &resp);
         }
         let resp = self.client.request_json(method, &path, &body).await?;
-        serde_json::to_string(&resp).map_err(|e| tonic::Status::internal(e.to_string()))
+        encode_elasticsearch_response("mutate_response_encode", &resp)
     }
 }
 
@@ -283,13 +319,16 @@ impl SearchExecutor for ElasticsearchExecutor {
     async fn search(&self, request_json: &str) -> Result<String, tonic::Status> {
         let (method, path, body) = parse_dispatch(request_json)?;
         let resp = self.client.request_json(method, &path, &body).await?;
-        serde_json::to_string(&resp).map_err(|e| tonic::Status::internal(e.to_string()))
+        encode_elasticsearch_response("search_response_encode", &resp)
     }
 }
 
 impl ObjectExecutor for ElasticsearchExecutor {
     async fn get_object(&self, _request_json: &str) -> Result<Vec<u8>, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "elasticsearch",
+            "get_object",
+            "object_store",
             "UDB_UNSUPPORTED_OPERATION: Elasticsearch is not an object store; route to S3/MinIO",
         ))
     }
@@ -298,7 +337,10 @@ impl ObjectExecutor for ElasticsearchExecutor {
         _request_json: &str,
         _bytes: Vec<u8>,
     ) -> Result<String, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "elasticsearch",
+            "put_object",
+            "object_store",
             "UDB_UNSUPPORTED_OPERATION: Elasticsearch is not an object store; route to S3/MinIO",
         ))
     }
@@ -310,9 +352,8 @@ impl ResourceAdminExecutor for ElasticsearchExecutor {
         resource_name: &str,
         spec_json: &str,
     ) -> Result<(), tonic::Status> {
-        let raw: JsonValue = serde_json::from_str(spec_json).map_err(|e| {
-            tonic::Status::invalid_argument(format!("invalid ensure_resource spec: {e}"))
-        })?;
+        let raw: JsonValue =
+            serde_json::from_str(spec_json).map_err(invalid_ensure_resource_spec_status)?;
         let dimension = raw
             .get("dimension")
             .or_else(|| raw.get("vector_size"))
@@ -375,7 +416,10 @@ impl ResourceAdminExecutor for ElasticsearchExecutor {
 
 impl BackendExecutor for ElasticsearchExecutor {
     async fn transaction(&self, _request_json: &str) -> Result<String, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "elasticsearch",
+            "transaction",
+            "transactions",
             "UDB_UNSUPPORTED_OPERATION: Elasticsearch does not provide multi-document \
              transactions; each _bulk request is atomic per-shard but not cross-document",
         ))
@@ -389,7 +433,43 @@ impl BackendExecutor for ElasticsearchExecutor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
     use serde_json::json;
+
+    fn decode_detail(status: &tonic::Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("error-detail trailer present")
+            .to_bytes()
+            .expect("trailer decodes to bytes");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_internal_detail(status: &tonic::Status, operation: &str, message: &str) {
+        assert_eq!(status.code(), tonic::Code::Internal);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "elasticsearch");
+        assert_eq!(detail.operation, operation);
+        assert!(!detail.retryable);
+    }
+
+    #[test]
+    fn elasticsearch_internal_status_carries_typed_detail() {
+        let status = elasticsearch_internal_status(
+            "query_response_encode",
+            "Elasticsearch response serialise failed",
+        );
+        assert_internal_detail(
+            &status,
+            "query_response_encode",
+            "Elasticsearch response serialise failed",
+        );
+    }
 
     #[test]
     fn auth_basic_attaches_credentials() {
@@ -467,6 +547,25 @@ mod tests {
     fn es_status_maps_429_to_resource_exhausted() {
         let status = es_status_to_tonic(reqwest::StatusCode::TOO_MANY_REQUESTS, "{}");
         assert_eq!(status.code(), tonic::Code::ResourceExhausted);
+        let detail = decode_detail(&status);
+        assert_eq!(detail.kind, ErrorKind::Quota as i32);
+        assert!(detail.retryable);
+        assert_eq!(detail.retry_after_ms, 250);
+        assert_eq!(detail.backend, "Elasticsearch");
+        assert_eq!(detail.operation, "request");
+    }
+
+    #[test]
+    fn ensure_resource_spec_validation_carries_field_violation() {
+        let err = serde_json::from_str::<JsonValue>("{")
+            .map_err(invalid_ensure_resource_spec_status)
+            .unwrap_err();
+        assert_eq!(err.code(), tonic::Code::InvalidArgument);
+        assert!(err.message().starts_with("invalid ensure_resource spec:"));
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, "spec_json");
     }
 
     #[test]

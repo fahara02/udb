@@ -12,6 +12,35 @@ use crate::runtime::schema_registry::{LookupError, NegotiationOutcome, SchemaReg
 // than a few seconds — health must stay responsive (directive: no capability lies).
 const HEALTH_REPORT_CACHE_TTL_SECS: u64 = 3;
 
+fn catalog_version_incompatible_status(operation: &'static str, reason: String) -> Status {
+    crate::runtime::executor_utils::schema_status(
+        tonic::Code::FailedPrecondition,
+        "catalog",
+        operation,
+        "catalog_version_incompatible",
+        reason,
+    )
+}
+
+fn message_schema_not_found_status(message_type: &str, project_id: &str) -> Status {
+    crate::runtime::executor_utils::schema_status(
+        tonic::Code::NotFound,
+        "catalog",
+        "LookupMessageSchema",
+        "message_schema_not_found",
+        format!("message schema '{message_type}' not found for project '{project_id}'"),
+    )
+}
+
+fn project_scope_mismatch_status(operation: &'static str) -> Status {
+    crate::runtime::executor_utils::policy_status_with_code(
+        tonic::Code::PermissionDenied,
+        operation,
+        "project_scope_mismatch",
+        "requested project_id does not match authenticated project",
+    )
+}
+
 #[allow(clippy::type_complexity)]
 fn health_report_cache() -> &'static std::sync::Mutex<
     std::collections::HashMap<(String, bool), (std::time::Instant, HealthReportResponse)>,
@@ -198,6 +227,12 @@ impl DataBrokerService {
                 protocol_support,
                 backend_protocol_support,
                 native_services,
+                // master-plan 3.5: surface the operator-declared deployment tier
+                // resolved ONCE at startup (the same OnceLock the startup floor
+                // gate uses). Empty string when no tier was declared.
+                deployment_tier: crate::runtime::core::declared_deployment_tier()
+                    .map(|tier| tier.as_str().to_string())
+                    .unwrap_or_default(),
             })),
         )
     }
@@ -448,9 +483,7 @@ impl DataBrokerService {
                 return self.record_grpc(
                     "LookupMessageSchema",
                     started,
-                    Err(Status::permission_denied(
-                        "requested project_id does not match authenticated project",
-                    )),
+                    Err(project_scope_mismatch_status("LookupMessageSchema")),
                 );
             }
         }
@@ -469,16 +502,17 @@ impl DataBrokerService {
                     return self.record_grpc(
                         "LookupMessageSchema",
                         started,
-                        Err(Status::not_found(format!(
-                            "message schema '{message_type}' not found for project '{project_id}'"
-                        ))),
+                        Err(message_schema_not_found_status(&message_type, &project_id)),
                     );
                 }
                 Err(LookupError::Incompatible { reason, .. }) => {
                     return self.record_grpc(
                         "LookupMessageSchema",
                         started,
-                        Err(Status::failed_precondition(reason)),
+                        Err(catalog_version_incompatible_status(
+                            "LookupMessageSchema",
+                            reason,
+                        )),
                     );
                 }
             };
@@ -505,9 +539,7 @@ impl DataBrokerService {
                 return self.record_grpc(
                     "ListMessageSchemas",
                     started,
-                    Err(Status::permission_denied(
-                        "requested project_id does not match authenticated project",
-                    )),
+                    Err(project_scope_mismatch_status("ListMessageSchemas")),
                 );
             }
         }
@@ -524,7 +556,10 @@ impl DataBrokerService {
             return self.record_grpc(
                 "ListMessageSchemas",
                 started,
-                Err(Status::failed_precondition(reason)),
+                Err(catalog_version_incompatible_status(
+                    "ListMessageSchemas",
+                    reason,
+                )),
             );
         }
         let active = self.catalog.active_for(&project_id);
@@ -555,6 +590,78 @@ pub enum HealthPlane {
     NativeControlPlane,
     /// The peer-facing WebRTC listener (`UDB_WEBRTC_GRPC_ADDR`).
     WebRtcPeer,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
+
+    fn decode_detail(status: &Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    #[test]
+    fn catalog_version_incompatible_carries_schema_detail() {
+        let err = catalog_version_incompatible_status(
+            "LookupMessageSchema",
+            "client catalog version 1 is incompatible with active version 2".to_string(),
+        );
+        assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+        assert_eq!(
+            err.message(),
+            "client catalog version 1 is incompatible with active version 2"
+        );
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::Schema as i32);
+        assert_eq!(detail.backend, "catalog");
+        assert_eq!(detail.operation, "LookupMessageSchema");
+        assert_eq!(detail.capability_required, "catalog_version_incompatible");
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+    }
+
+    #[test]
+    fn message_schema_not_found_carries_schema_detail() {
+        let err = message_schema_not_found_status("app.Invoice", "billing");
+        assert_eq!(err.code(), tonic::Code::NotFound);
+        assert_eq!(
+            err.message(),
+            "message schema 'app.Invoice' not found for project 'billing'"
+        );
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::Schema as i32);
+        assert_eq!(detail.backend, "catalog");
+        assert_eq!(detail.operation, "LookupMessageSchema");
+        assert_eq!(detail.capability_required, "message_schema_not_found");
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+    }
+
+    #[test]
+    fn project_scope_mismatch_carries_policy_detail() {
+        for operation in ["LookupMessageSchema", "ListMessageSchemas"] {
+            let err = project_scope_mismatch_status(operation);
+            assert_eq!(err.code(), tonic::Code::PermissionDenied);
+            assert_eq!(
+                err.message(),
+                "requested project_id does not match authenticated project"
+            );
+            let detail = decode_detail(&err);
+            assert_eq!(detail.kind, ErrorKind::Policy as i32);
+            assert_eq!(detail.backend, "");
+            assert_eq!(detail.operation, operation);
+            assert_eq!(detail.policy_decision_id, "project_scope_mismatch");
+            assert!(!detail.retryable);
+            assert_eq!(detail.retry_after_ms, 0);
+        }
+    }
 }
 
 /// Build a `tonic_health` service for a single UDB listener, with each gRPC

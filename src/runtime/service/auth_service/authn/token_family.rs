@@ -76,10 +76,19 @@ fn token_family_model() -> NativeModel {
     )
 }
 
+fn token_family_internal_status(
+    operation: impl Into<String>,
+    message: impl Into<String>,
+) -> Status {
+    crate::runtime::executor_utils::internal_status("authn", operation, message)
+}
+
 impl AuthnServiceImpl {
     fn require_family_pool(&self) -> Result<&PgPool, Status> {
         self.pg_pool.as_ref().ok_or_else(|| {
-            Status::failed_precondition(
+            authn_capability_status(
+                "refresh_token_rotation",
+                "native_postgres_auth_store",
                 "refresh-token rotation requires the native Postgres auth store",
             )
         })
@@ -148,7 +157,12 @@ impl AuthnServiceImpl {
                     crate::ir::ConflictStrategy::Error,
                 )
                 .await
-                .map_err(|err| Status::internal(format!("mint refresh family failed: {err}")))?;
+                .map_err(|err| {
+                    token_family_internal_status(
+                        "mint_refresh_family",
+                        format!("mint refresh family failed: {err}"),
+                    )
+                })?;
             return Ok(authn::token_family::format_refresh_token(&family_id, &jti));
         }
         let sql = format!(
@@ -175,7 +189,12 @@ impl AuthnServiceImpl {
             .bind(&jti_hash)
             .execute(pool)
             .await
-            .map_err(|err| Status::internal(format!("mint refresh family failed: {err}")))?;
+            .map_err(|err| {
+                token_family_internal_status(
+                    "mint_refresh_family",
+                    format!("mint refresh family failed: {err}"),
+                )
+            })?;
         Ok(authn::token_family::format_refresh_token(&family_id, &jti))
     }
 
@@ -219,7 +238,10 @@ impl AuthnServiceImpl {
                 .await
                 .map(|(affected, _)| affected)
                 .map_err(|err| {
-                    Status::internal(format!("revoke families for session failed: {err}"))
+                    token_family_internal_status(
+                        "revoke_families_for_session",
+                        format!("revoke families for session failed: {err}"),
+                    )
                 });
         }
         let m = token_family_model();
@@ -237,7 +259,12 @@ impl AuthnServiceImpl {
             .bind(&session_hash)
             .execute(pool)
             .await
-            .map_err(|err| Status::internal(format!("revoke families for session failed: {err}")))?
+            .map_err(|err| {
+                token_family_internal_status(
+                    "revoke_families_for_session",
+                    format!("revoke families for session failed: {err}"),
+                )
+            })?
             .rows_affected())
     }
 
@@ -279,7 +306,10 @@ impl AuthnServiceImpl {
                     .native_entity_update_for_service("authn", &context, op)
                     .await
                     .map_err(|err| {
-                        Status::internal(format!("revoke families for principal failed: {err}"))
+                        token_family_internal_status(
+                            "revoke_families_for_principal",
+                            format!("revoke families for principal failed: {err}"),
+                        )
                     })?;
                 total += affected;
             }
@@ -302,7 +332,10 @@ impl AuthnServiceImpl {
             .execute(pool)
             .await
             .map_err(|err| {
-                Status::internal(format!("revoke families for principal failed: {err}"))
+                token_family_internal_status(
+                    "revoke_families_for_principal",
+                    format!("revoke families for principal failed: {err}"),
+                )
             })?
             .rows_affected())
     }
@@ -352,7 +385,12 @@ impl AuthnServiceImpl {
             .bind(&new_hash)
             .fetch_optional(pool)
             .await
-            .map_err(|err| Status::internal(format!("rotate refresh family failed: {err}")))?
+            .map_err(|err| {
+                token_family_internal_status(
+                    "rotate_refresh_family",
+                    format!("rotate refresh family failed: {err}"),
+                )
+            })?
         {
             let family = TokenFamilyRow {
                 family_id: family_id.to_string(),
@@ -393,7 +431,12 @@ impl AuthnServiceImpl {
             .bind(&presented_hash)
             .fetch_optional(pool)
             .await
-            .map_err(|err| Status::internal(format!("inspect refresh family failed: {err}")))?
+            .map_err(|err| {
+                token_family_internal_status(
+                    "inspect_refresh_family",
+                    format!("inspect refresh family failed: {err}"),
+                )
+            })?
         else {
             return Ok(RotateOutcome::NotFound);
         };
@@ -440,7 +483,12 @@ impl AuthnServiceImpl {
             .bind(&family.family_id)
             .execute(pool)
             .await
-            .map_err(|err| Status::internal(format!("revoke reused family failed: {err}")))?;
+            .map_err(|err| {
+                token_family_internal_status(
+                    "revoke_reused_family",
+                    format!("revoke reused family failed: {err}"),
+                )
+            })?;
         // Kill every active session for the principal — refresh-token theft means
         // the chain is compromised; the legitimate user must re-authenticate.
         let principal = if family.principal_id.is_empty() {
@@ -489,5 +537,71 @@ impl AuthnServiceImpl {
         )
         .await;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
+
+    fn decode_detail(status: &Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_internal_detail(status: &Status, operation: &str, message: &str) {
+        assert_eq!(status.code(), tonic::Code::Internal);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "authn");
+        assert_eq!(detail.operation, operation);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    #[test]
+    fn token_family_internal_status_carries_typed_detail() {
+        let status = token_family_internal_status(
+            "rotate_refresh_family",
+            "rotate refresh family failed: store closed",
+        );
+        assert_internal_detail(
+            &status,
+            "rotate_refresh_family",
+            "rotate refresh family failed: store closed",
+        );
+    }
+
+    #[test]
+    fn refresh_family_missing_postgres_store_capability_carries_typed_detail() {
+        let svc = AuthnServiceImpl::new(
+            authn::AuthnConfig::default(),
+            crate::runtime::security::SecurityConfig::default(),
+        );
+        let err = match svc.require_family_pool() {
+            Err(status) => status,
+            Ok(_) => panic!("pool-less refresh family service must fail closed"),
+        };
+
+        assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+        assert_eq!(
+            err.message(),
+            "refresh-token rotation requires the native Postgres auth store"
+        );
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::Capability as i32);
+        assert_eq!(detail.backend, "authn");
+        assert_eq!(detail.operation, "refresh_token_rotation");
+        assert_eq!(detail.capability_required, "native_postgres_auth_store");
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
     }
 }

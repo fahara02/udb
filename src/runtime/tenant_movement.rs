@@ -10,6 +10,18 @@ pub enum TenantMovementOperation {
     BackupExport,
     RestoreImport,
     ReplicationPublication,
+    TenantPurge,
+}
+
+impl TenantMovementOperation {
+    fn policy_operation(self) -> &'static str {
+        match self {
+            Self::BackupExport => "tenant_movement_backup_export",
+            Self::RestoreImport => "tenant_movement_restore_import",
+            Self::ReplicationPublication => "tenant_movement_replication_publication",
+            Self::TenantPurge => "tenant_movement_purge",
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -53,9 +65,32 @@ pub fn validate_tenant_movement_scope(request: &TenantMovementRequest<'_>) -> Re
     Ok(())
 }
 
+pub fn tenant_movement_policy_status(
+    operation: TenantMovementOperation,
+    message: impl Into<String>,
+) -> tonic::Status {
+    crate::runtime::executor_utils::policy_status_with_code(
+        tonic::Code::PermissionDenied,
+        operation.policy_operation(),
+        "tenant_movement_scope_required",
+        message,
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
+
+    fn decode_detail(status: &tonic::Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
 
     #[test]
     fn backup_export_requires_tenant_filter() {
@@ -97,6 +132,19 @@ mod tests {
     }
 
     #[test]
+    fn tenant_purge_requires_tenant_filter() {
+        let err = validate_tenant_movement_scope(&TenantMovementRequest {
+            operation: TenantMovementOperation::TenantPurge,
+            tenant_id: "tenant-a",
+            target_tenant_id: None,
+            tenant_filter_present: false,
+            privileged_cross_tenant: false,
+        })
+        .expect_err("tenant purge without a tenant filter must fail closed");
+        assert!(err.contains("tenant filter"));
+    }
+
+    #[test]
     fn privileged_cross_tenant_movement_is_explicit() {
         validate_tenant_movement_scope(&TenantMovementRequest {
             operation: TenantMovementOperation::RestoreImport,
@@ -106,5 +154,30 @@ mod tests {
             privileged_cross_tenant: true,
         })
         .expect("privileged cross-tenant movement should be explicit and allowed");
+    }
+
+    #[test]
+    fn tenant_movement_scope_status_carries_policy_detail() {
+        let err = validate_tenant_movement_scope(&TenantMovementRequest {
+            operation: TenantMovementOperation::RestoreImport,
+            tenant_id: "tenant-a",
+            target_tenant_id: Some("tenant-b"),
+            tenant_filter_present: true,
+            privileged_cross_tenant: false,
+        })
+        .expect_err("cross-tenant restore must need explicit approval");
+        let status = tenant_movement_policy_status(TenantMovementOperation::RestoreImport, err);
+        assert_eq!(status.code(), tonic::Code::PermissionDenied);
+        assert!(
+            status
+                .message()
+                .contains("cannot move tenant 'tenant-a' data into tenant 'tenant-b'")
+        );
+        let detail = decode_detail(&status);
+        assert_eq!(detail.kind, ErrorKind::Policy as i32);
+        assert_eq!(detail.operation, "tenant_movement_restore_import");
+        assert_eq!(detail.policy_decision_id, "tenant_movement_scope_required");
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
     }
 }

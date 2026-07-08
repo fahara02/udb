@@ -28,7 +28,7 @@ pub fn decode_bundle_signature(sig: &str) -> Result<Vec<u8>, base64::DecodeError
 }
 
 /// Operator configuration for policy-bundle signing, read from the environment.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct PolicyBundleConfig {
     /// `UDB_POLICY_BUNDLE_SECRET` — HMAC signing secret. Falls back to
     /// `UDB_SESSION_HASH_SECRET` (the Stage-1 keyed-hash secret) when unset.
@@ -39,6 +39,18 @@ pub struct PolicyBundleConfig {
     pub key_id: String,
     /// `UDB_POLICY_BUNDLE_TTL_SECS` — bundle validity window (default 300).
     pub ttl_seconds: u64,
+}
+
+// 4.6 secrets posture: redact the HMAC signing `secret` in Debug so a `{:?}` in a
+// log can never leak it (key_id/ttl are non-secret and print normally).
+impl std::fmt::Debug for PolicyBundleConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PolicyBundleConfig")
+            .field("secret", &"[redacted]")
+            .field("key_id", &self.key_id)
+            .field("ttl_seconds", &self.ttl_seconds)
+            .finish()
+    }
 }
 
 impl Default for PolicyBundleConfig {

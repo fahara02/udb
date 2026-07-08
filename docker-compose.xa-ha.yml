@@ -1,0 +1,69 @@
+# XA recovery HA smoke overlay.
+#
+# Use with:
+#   docker compose -p udb-xa-ha \
+#     -f docker-compose.integration.yml \
+#     -f docker-compose.canonical.yml \
+#     -f docker-compose.xa-ha.yml \
+#     --profile broker-xa-ha up -d --build postgres redis kafka qdrant minio mysql udb-xa-ha-a udb-xa-ha-b
+#
+# This file deliberately avoids changing the normal broker-ha profile: the XA
+# smoke needs MySQL and faster recovery intervals, while the default HA lease
+# smoke should remain lean.
+
+x-udb-xa-ha-env: &udb-xa-ha-env
+  UDB_PG_DSN: postgres://udb:udb@postgres:5432/udb
+  UDB_REDIS_DSN: redis://redis:6379/0
+  UDB_QDRANT_URL: http://qdrant:6333
+  UDB_MINIO_ENDPOINT: http://minio:9000
+  UDB_MINIO_ACCESS_KEY: minio
+  UDB_MINIO_SECRET_KEY: minio123
+  UDB_KAFKA_BROKERS: kafka:9092
+  UDB_MYSQL_DSN: mysql://udb:udb@mysql:3306/udb
+  UDB_XA_RECOVERY_INTERVAL_SECS: "2"
+  UDB_XA_RECOVERY_MAX_ATTEMPTS: "10"
+  UDB_XA_RECOVERY_GRACE_SECS: "0"
+  UDB_ABAC_DEFAULT_ALLOW: "true"
+  RUST_LOG: info
+
+x-udb-xa-ha-depends: &udb-xa-ha-depends
+  postgres:
+    condition: service_healthy
+  redis:
+    condition: service_healthy
+  kafka:
+    condition: service_healthy
+  qdrant:
+    condition: service_healthy
+  minio:
+    condition: service_healthy
+  mysql:
+    condition: service_healthy
+
+x-udb-xa-ha-healthcheck: &udb-xa-ha-healthcheck
+  test: ["CMD", "/usr/local/bin/grpc_health_probe", "-addr=127.0.0.1:50051"]
+  interval: 10s
+  timeout: 5s
+  start_period: 30s
+  retries: 6
+
+services:
+  udb-xa-ha-a:
+    profiles: ["broker-xa-ha"]
+    hostname: udb-xa-ha-a
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment: *udb-xa-ha-env
+    depends_on: *udb-xa-ha-depends
+    healthcheck: *udb-xa-ha-healthcheck
+
+  udb-xa-ha-b:
+    profiles: ["broker-xa-ha"]
+    hostname: udb-xa-ha-b
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment: *udb-xa-ha-env
+    depends_on: *udb-xa-ha-depends
+    healthcheck: *udb-xa-ha-healthcheck

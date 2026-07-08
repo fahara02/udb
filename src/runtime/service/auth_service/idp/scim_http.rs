@@ -51,11 +51,31 @@ use idp_pb::identity_provider_service_server::IdentityProviderService;
 use super::IdentityProviderServiceImpl;
 
 /// Runtime config for the SCIM HTTP listener, resolved from the environment.
+///
+/// Does NOT derive `Debug`: `bearer_token` is the static shared SCIM credential
+/// (Okta/Entra connector secret). A manual `Debug` impl (below) redacts it so a
+/// future `tracing`/`{:?}` of this config can never spill the token into logs;
+/// the addr/tenant/provider remain visible for debuggability.
 struct ScimHttpConfig {
     addr: SocketAddr,
     bearer_token: String,
     default_tenant: String,
     default_provider: String,
+}
+
+// 4.6 secrets posture: `bearer_token` is a long-lived provisioning credential;
+// redact it in Debug while keeping the non-secret routing fields visible. A
+// derived Debug would print the token verbatim — the canary test below locks
+// this in (it fails if the manual impl is ever replaced by a derive).
+impl std::fmt::Debug for ScimHttpConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ScimHttpConfig")
+            .field("addr", &self.addr)
+            .field("bearer_token", &"[redacted]")
+            .field("default_tenant", &self.default_tenant)
+            .field("default_provider", &self.default_provider)
+            .finish()
+    }
 }
 
 impl ScimHttpConfig {
@@ -736,4 +756,39 @@ fn http_response_with_location(status: u16, body: &str, location: Option<String>
 
 fn http_no_content() -> String {
     "HTTP/1.1 204 No Content\r\ncontent-length: 0\r\nconnection: close\r\n\r\n".to_string()
+}
+
+#[cfg(test)]
+mod scim_http_redaction_tests {
+    use super::*;
+
+    // 4.6 secrets posture canary: a `{:?}` of ScimHttpConfig must never spill the
+    // bearer token. Mirrors the dsn.rs / encryption.rs redaction canaries.
+    #[test]
+    fn scim_http_config_debug_never_leaks_bearer_token() {
+        let cfg = ScimHttpConfig {
+            addr: "127.0.0.1:9999".parse().expect("valid addr"),
+            bearer_token: "udb-canary-SCIM-SECRET".to_string(),
+            default_tenant: "acme".to_string(),
+            default_provider: "okta".to_string(),
+        };
+        let dbg = format!("{cfg:?}");
+        assert!(
+            !dbg.contains("udb-canary-SCIM-SECRET"),
+            "ScimHttpConfig Debug leaked the bearer token: {dbg}"
+        );
+        assert!(
+            dbg.contains("[redacted]"),
+            "expected redaction marker: {dbg}"
+        );
+        // Non-secret routing fields stay visible (don't over-redact).
+        assert!(
+            dbg.contains("acme"),
+            "default_tenant should remain visible: {dbg}"
+        );
+        assert!(
+            dbg.contains("okta"),
+            "default_provider should remain visible: {dbg}"
+        );
+    }
 }

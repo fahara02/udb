@@ -15,6 +15,74 @@ const AUTHN_CHANGE_USER_STATUS_PATH: &str =
 const AUTHN_ADMIN_RESET_PASSWORD_PATH: &str =
     "/udb.core.authn.services.v1.AuthnService/AdminResetPassword";
 
+fn authn_core_invalid_fields<I, F, D>(message: impl Into<String>, fields: I) -> Status
+where
+    I: IntoIterator<Item = (F, D)>,
+    F: Into<String>,
+    D: Into<String>,
+{
+    crate::runtime::executor_utils::invalid_argument_fields(message, fields)
+}
+
+fn create_user_password_policy_status(message: impl Into<String>) -> Status {
+    authn_core_invalid_fields(
+        message,
+        [(
+            "password",
+            "must satisfy the configured password policy for native users",
+        )],
+    )
+}
+
+fn create_user_password_secret_status() -> Status {
+    authn_capability_status(
+        "native_user_passwords",
+        "password_hash_secret",
+        "native user passwords require UDB_PASSWORD_HASH_SECRET or UDB_SESSION_HASH_SECRET",
+    )
+}
+
+fn authn_core_policy_status(
+    operation: impl Into<String>,
+    policy_decision_id: impl Into<String>,
+    message: impl Into<String>,
+) -> Status {
+    crate::runtime::executor_utils::policy_status_with_code(
+        tonic::Code::PermissionDenied,
+        operation,
+        policy_decision_id,
+        message,
+    )
+}
+
+fn authn_core_internal_status(operation: impl Into<String>, message: impl Into<String>) -> Status {
+    crate::runtime::executor_utils::internal_status("authn", operation, message)
+}
+
+fn authn_read_tenant_scope_required_status() -> Status {
+    authn_core_policy_status(
+        "authn_user_read",
+        "tenant_scoped_bearer_required",
+        "operation requires a tenant-scoped bearer token or a cross-tenant admin role",
+    )
+}
+
+fn authn_read_tenant_mismatch_status() -> Status {
+    authn_core_policy_status(
+        "authn_user_read",
+        "tenant_mismatch",
+        "request tenant must match the bearer token tenant",
+    )
+}
+
+fn created_by_principal_mismatch_status() -> Status {
+    authn_core_policy_status(
+        "create_user",
+        "created_by_principal_mismatch",
+        "created_by principal must match the authenticated bearer subject",
+    )
+}
+
 pub(super) fn user_record_to_pb(rec: &UserRecord) -> authn_entity_pb::User {
     let mut dto = authn_entity_pb::User {
         user_id: rec.user_id.clone(),
@@ -66,11 +134,15 @@ pub(super) fn user_record_to_pb(rec: &UserRecord) -> authn_entity_pb::User {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::proto::udb::core::authn::services::v1::authn_service_server::AuthnService;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
     use std::collections::BTreeSet;
 
     fn storage_only_field_names(message_full_name: &str) -> BTreeSet<String> {
         const OUTPUT_VIEW_STORAGE_ONLY: i32 = 1;
-        let manifest = crate::runtime::descriptor_manifest::descriptor_contract_manifest();
+        let manifest = crate::runtime::descriptor_manifest::descriptor_contract_manifest_static();
         let message = manifest
             .messages
             .iter()
@@ -157,6 +229,152 @@ mod tests {
             ..crate::runtime::authn::AuthnConfig::default()
         };
         AuthnServiceImpl::new(config, crate::runtime::security::SecurityConfig::default())
+    }
+
+    fn decode_detail(status: &Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_validation_fields(status: &Status, expected: &[(&str, &str)]) {
+        assert_eq!(status.code(), tonic::Code::InvalidArgument);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert_eq!(detail.field_violations.len(), expected.len());
+        for (actual, (field, description)) in detail.field_violations.iter().zip(expected) {
+            assert_eq!(actual.field, *field);
+            assert_eq!(actual.description, *description);
+        }
+    }
+
+    fn assert_capability_detail(
+        status: &Status,
+        operation: &str,
+        capability_required: &str,
+        message: &str,
+    ) {
+        assert_eq!(status.code(), tonic::Code::FailedPrecondition);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Capability as i32);
+        assert_eq!(detail.backend, "authn");
+        assert_eq!(detail.operation, operation);
+        assert_eq!(detail.capability_required, capability_required);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+    }
+
+    fn assert_policy_detail(
+        status: &Status,
+        operation: &str,
+        policy_decision_id: &str,
+        message: &str,
+    ) {
+        assert_eq!(status.code(), tonic::Code::PermissionDenied);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Policy as i32);
+        assert_eq!(detail.operation, operation);
+        assert_eq!(detail.policy_decision_id, policy_decision_id);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    fn assert_internal_detail(status: &Status, operation: &str, message: &str) {
+        assert_eq!(status.code(), tonic::Code::Internal);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "authn");
+        assert_eq!(detail.operation, operation);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    #[test]
+    fn authn_core_internal_status_carries_typed_detail() {
+        let status = authn_core_internal_status("list_users", "list users failed: store closed");
+        assert_internal_detail(&status, "list_users", "list users failed: store closed");
+    }
+
+    #[test]
+    fn create_user_password_secret_status_carries_capability_detail() {
+        let err = create_user_password_secret_status();
+
+        assert_capability_detail(
+            &err,
+            "native_user_passwords",
+            "password_hash_secret",
+            "native user passwords require UDB_PASSWORD_HASH_SECRET or UDB_SESSION_HASH_SECRET",
+        );
+    }
+
+    #[tokio::test]
+    async fn create_user_missing_identity_carries_field_violations() {
+        let err = deny_test_service()
+            .create_user(Request::new(authn_pb::CreateUserRequest::default()))
+            .await
+            .expect_err("missing username/email must fail before authz or pool access");
+
+        assert_eq!(err.message(), "username and email are required");
+        assert_validation_fields(
+            &err,
+            &[
+                ("username", "must be a non-empty username"),
+                ("email", "must be a non-empty email address"),
+            ],
+        );
+    }
+
+    #[tokio::test]
+    async fn get_user_missing_lookup_identity_carries_field_violations() {
+        let err = deny_test_service()
+            .get_user(Request::new(authn_pb::GetUserRequest::default()))
+            .await
+            .expect_err("missing lookup identity must fail before claim/store access");
+
+        assert_eq!(
+            err.message(),
+            "one of user_id, username, or email is required"
+        );
+        assert_validation_fields(
+            &err,
+            &[
+                ("user_id", "must include at least one lookup identity"),
+                ("username", "must include at least one lookup identity"),
+                ("email", "must include at least one lookup identity"),
+            ],
+        );
+    }
+
+    #[tokio::test]
+    async fn change_user_status_missing_new_status_carries_field_violation() {
+        let err = deny_test_service()
+            .change_user_status(Request::new(authn_pb::ChangeUserStatusRequest::default()))
+            .await
+            .expect_err("missing new_status must fail before authz or store access");
+
+        assert_eq!(err.message(), "new_status is required");
+        assert_validation_fields(&err, &[("new_status", "must specify a target user status")]);
+    }
+
+    #[test]
+    fn create_user_password_policy_status_carries_field_violation() {
+        let err = create_user_password_policy_status("password must contain a symbol");
+
+        assert_eq!(err.message(), "password must contain a symbol");
+        assert_validation_fields(
+            &err,
+            &[(
+                "password",
+                "must satisfy the configured password policy for native users",
+            )],
+        );
     }
 
     /// Build a deny-test service whose admin-mutation handlers decide against a
@@ -253,6 +471,41 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn create_user_created_by_mismatch_carries_policy_detail() {
+        let svc = deny_test_service();
+        let ctx = crate::runtime::service::method_security::test_claim_context(
+            "admin-a",
+            "tenant-a",
+            "",
+            &["authn.user.create"],
+            &[],
+        );
+        let req = Request::new(authn_pb::CreateUserRequest {
+            username: "victim".to_string(),
+            email: "victim@example.com".to_string(),
+            password: "CorrectHorse1!".to_string(),
+            tenant_id: "tenant-a".to_string(),
+            context: Some(crate::proto::udb::core::common::v1::RequestContext {
+                principal_id: "other-admin".to_string(),
+                ..Default::default()
+            }),
+            ..Default::default()
+        });
+        let err = crate::runtime::service::method_security::scope_claim_context_for_test(
+            ctx,
+            svc.create_user_impl(req),
+        )
+        .await
+        .expect_err("created_by mismatch must be denied before store access");
+        assert_policy_detail(
+            &err,
+            "create_user",
+            "created_by_principal_mismatch",
+            "created_by principal must match the authenticated bearer subject",
+        );
+    }
+
+    #[tokio::test]
     async fn create_user_denies_caller_without_action_scope() {
         // D2: authenticated, same-tenant, but no concrete action scope and no broad
         // admin scope → the per-action guard denies (coarse gate was the only check
@@ -314,7 +567,12 @@ mod tests {
             })
             .await
             .expect_err("non-admin read must stay in the claim tenant");
-        assert_eq!(err.code(), tonic::Code::PermissionDenied);
+        assert_policy_detail(
+            &err,
+            "authn_user_read",
+            "tenant_mismatch",
+            "request tenant must match the bearer token tenant",
+        );
     }
 
     #[tokio::test]
@@ -332,7 +590,12 @@ mod tests {
             })
             .await
             .expect_err("non-admin read must have a tenant-bound bearer");
-        assert_eq!(err.code(), tonic::Code::PermissionDenied);
+        assert_policy_detail(
+            &err,
+            "authn_user_read",
+            "tenant_scoped_bearer_required",
+            "operation requires a tenant-scoped bearer token or a cross-tenant admin role",
+        );
     }
 
     #[tokio::test]
@@ -621,9 +884,7 @@ fn claim_bound_read_tenant(request_tenant: &str) -> Result<Option<String>, Statu
             subject = %ctx.subject,
             "DENY: authn read requires a tenant-bound bearer or cross-tenant admin"
         );
-        return Err(Status::permission_denied(
-            "operation requires a tenant-scoped bearer token or a cross-tenant admin role",
-        ));
+        return Err(authn_read_tenant_scope_required_status());
     }
 
     if !request_tenant.is_empty() && request_tenant != claim_tenant {
@@ -634,9 +895,7 @@ fn claim_bound_read_tenant(request_tenant: &str) -> Result<Option<String>, Statu
             request_tenant = %request_tenant,
             "DENY: authn read tenant does not match the validated bearer tenant"
         );
-        return Err(Status::permission_denied(
-            "request tenant must match the bearer token tenant",
-        ));
+        return Err(authn_read_tenant_mismatch_status());
     }
 
     Ok(Some(claim_tenant.to_string()))
@@ -648,13 +907,21 @@ impl AuthnServiceImpl {
         request: Request<authn_pb::CreateUserRequest>,
     ) -> Result<Response<authn_pb::CreateUserResponse>, Status> {
         if self.password_hash_key().is_empty() {
-            return Err(Status::failed_precondition(
-                "native user passwords require UDB_PASSWORD_HASH_SECRET or UDB_SESSION_HASH_SECRET",
-            ));
+            return Err(create_user_password_secret_status());
         }
         let req = request.into_inner();
-        if req.username.trim().is_empty() || req.email.trim().is_empty() {
-            return Err(Status::invalid_argument("username and email are required"));
+        let mut missing_identity = Vec::new();
+        if req.username.trim().is_empty() {
+            missing_identity.push(("username", "must be a non-empty username"));
+        }
+        if req.email.trim().is_empty() {
+            missing_identity.push(("email", "must be a non-empty email address"));
+        }
+        if !missing_identity.is_empty() {
+            return Err(authn_core_invalid_fields(
+                "username and email are required",
+                missing_identity,
+            ));
         }
         // D2: per-action authz beyond the coarse transport `udb:admin` gate, plus
         // D1: the new user's body tenant/project must match the validated bearer
@@ -688,7 +955,7 @@ impl AuthnServiceImpl {
         if req.external_provider_id.trim().is_empty() {
             authn::PasswordPolicy::from_env()
                 .validate(&req.password)
-                .map_err(Status::invalid_argument)?;
+                .map_err(create_user_password_policy_status)?;
         }
         let now = now_unix();
         let user_id = Uuid::new_v4().to_string();
@@ -717,9 +984,7 @@ impl AuthnServiceImpl {
         } else if body_principal.as_str() != claim_ctx.subject.trim()
             && !claim_ctx.is_cross_tenant_admin()
         {
-            return Err(Status::permission_denied(
-                "created_by principal must match the authenticated bearer subject",
-            ));
+            return Err(created_by_principal_mismatch_status());
         } else {
             body_principal
         };
@@ -799,10 +1064,12 @@ impl AuthnServiceImpl {
         // at any step (incl. the audit write) rolls the whole creation back rather
         // than leaving a user without its OTP or without its event.
         let pool = self.require_pool()?;
-        let mut tx = pool
-            .begin()
-            .await
-            .map_err(|err| Status::internal(format!("create user tx begin failed: {err}")))?;
+        let mut tx = pool.begin().await.map_err(|err| {
+            authn_core_internal_status(
+                "create_user_tx_begin",
+                format!("create user tx begin failed: {err}"),
+            )
+        })?;
         self.users
             .put_user_in_tx(&mut *tx, rec.clone())
             .await
@@ -812,9 +1079,12 @@ impl AuthnServiceImpl {
             .await
             .map_err(crate::runtime::executor_utils::status_from_store_string)?;
         self.emit_event_in_tx(&mut *tx, event).await?;
-        tx.commit()
-            .await
-            .map_err(|err| Status::internal(format!("create user commit failed: {err}")))?;
+        tx.commit().await.map_err(|err| {
+            authn_core_internal_status(
+                "create_user_tx_commit",
+                format!("create user commit failed: {err}"),
+            )
+        })?;
         // Post-commit, best-effort OTP delivery (cannot be rolled back; the OTP is
         // already durable and the caller holds the otp_id).
         self.deliver_otp_code(
@@ -841,8 +1111,13 @@ impl AuthnServiceImpl {
         let has_username = !req.username.trim().is_empty();
         let has_email = !req.email.trim().is_empty();
         if !has_user_id && !has_username && !has_email {
-            return Err(Status::invalid_argument(
+            return Err(authn_core_invalid_fields(
                 "one of user_id, username, or email is required",
+                [
+                    ("user_id", "must include at least one lookup identity"),
+                    ("username", "must include at least one lookup identity"),
+                    ("email", "must include at least one lookup identity"),
+                ],
             ));
         }
         let tenant = claim_bound_read_tenant("")?;
@@ -871,8 +1146,8 @@ impl AuthnServiceImpl {
                 self.users.get_user_by_email(&email).await
             }
         }
-        .map_err(Status::internal)?
-        .ok_or_else(|| Status::not_found("user not found"))?;
+        .map_err(|err| authn_core_internal_status("get_user", err))?
+        .ok_or_else(super::authn_user_not_found_status)?;
         Ok(Response::new(authn_pb::GetUserResponse {
             user: Some(user_record_to_pb(&user)),
         }))
@@ -896,7 +1171,7 @@ impl AuthnServiceImpl {
                 offset,
             )
             .await
-            .map_err(Status::internal)?;
+            .map_err(|err| authn_core_internal_status("list_users", err))?;
         let users = users.iter().map(user_record_to_pb).collect();
         Ok(Response::new(authn_pb::ListUsersResponse {
             users,
@@ -927,8 +1202,8 @@ impl AuthnServiceImpl {
             .users
             .get_user_by_id(&req.user_id)
             .await
-            .map_err(Status::internal)?
-            .ok_or_else(|| Status::not_found("user not found"))?;
+            .map_err(|err| authn_core_internal_status("update_user_load", err))?
+            .ok_or_else(super::authn_user_not_found_status)?;
         // The EXISTING user must be in the caller's tenant (a tenant-A admin cannot
         // edit a tenant-B user). Cross-tenant admins bypass.
         crate::runtime::service::method_security::enforce_body_tenant_matches_claim(
@@ -946,28 +1221,73 @@ impl AuthnServiceImpl {
                 &req.project_id,
             )?;
         }
-        if !req.full_name.trim().is_empty() {
+        let update_mask = crate::runtime::service::native_helpers::update_mask_path_set(
+            req.update_mask.as_ref(),
+            &[
+                "full_name",
+                "email",
+                "tenant_id",
+                "account_kind",
+                "project_id",
+                "profile_attributes",
+                "external_provider_id",
+                "external_subject",
+            ],
+        )?;
+        if crate::runtime::service::native_helpers::update_mask_allows(
+            &update_mask,
+            "full_name",
+            !req.full_name.trim().is_empty(),
+        ) {
             rec.full_name = req.full_name;
         }
-        if !req.email.trim().is_empty() {
+        if crate::runtime::service::native_helpers::update_mask_allows(
+            &update_mask,
+            "email",
+            !req.email.trim().is_empty(),
+        ) {
             rec.email = req.email.trim().to_ascii_lowercase();
         }
-        if !req.tenant_id.trim().is_empty() {
+        if crate::runtime::service::native_helpers::update_mask_allows(
+            &update_mask,
+            "tenant_id",
+            !req.tenant_id.trim().is_empty(),
+        ) {
             rec.tenant_id = req.tenant_id;
         }
-        if req.account_kind != authn_entity_pb::AccountKind::Unspecified as i32 {
+        if crate::runtime::service::native_helpers::update_mask_allows(
+            &update_mask,
+            "account_kind",
+            req.account_kind != authn_entity_pb::AccountKind::Unspecified as i32,
+        ) {
             rec.account_kind = account_kind_from_proto(req.account_kind);
         }
-        if !req.project_id.trim().is_empty() {
+        if crate::runtime::service::native_helpers::update_mask_allows(
+            &update_mask,
+            "project_id",
+            !req.project_id.trim().is_empty(),
+        ) {
             rec.project_id = req.project_id;
         }
-        if !req.external_provider_id.trim().is_empty() {
+        if crate::runtime::service::native_helpers::update_mask_allows(
+            &update_mask,
+            "external_provider_id",
+            !req.external_provider_id.trim().is_empty(),
+        ) {
             rec.external_provider_id = req.external_provider_id;
         }
-        if !req.external_subject.trim().is_empty() {
+        if crate::runtime::service::native_helpers::update_mask_allows(
+            &update_mask,
+            "external_subject",
+            !req.external_subject.trim().is_empty(),
+        ) {
             rec.external_subject = req.external_subject;
         }
-        if !req.profile_attributes.is_empty() {
+        if crate::runtime::service::native_helpers::update_mask_allows(
+            &update_mask,
+            "profile_attributes",
+            !req.profile_attributes.is_empty(),
+        ) {
             rec.profile_attributes_json =
                 serde_json::to_string(&req.profile_attributes).unwrap_or_else(|_| "{}".to_string());
         }
@@ -987,7 +1307,10 @@ impl AuthnServiceImpl {
     ) -> Result<Response<authn_pb::ChangeUserStatusResponse>, Status> {
         let req = request.into_inner();
         if req.new_status == authn_entity_pb::UserStatus::Unspecified as i32 {
-            return Err(Status::invalid_argument("new_status is required"));
+            return Err(authn_core_invalid_fields(
+                "new_status is required",
+                [("new_status", "must specify a target user status")],
+            ));
         }
         // D2: status changes are privileged; require a concrete action scope.
         let claim_ctx = crate::runtime::service::method_security::current_claim_context();
@@ -1013,8 +1336,8 @@ impl AuthnServiceImpl {
             .users
             .get_user_by_id(&req.user_id)
             .await
-            .map_err(Status::internal)?
-            .ok_or_else(|| Status::not_found("user not found"))?;
+            .map_err(|err| authn_core_internal_status("change_user_status_load", err))?
+            .ok_or_else(super::authn_user_not_found_status)?;
         // D1: the target user must be in the caller's tenant (cross-tenant admins
         // bypass) — a tenant-A admin cannot suspend/lock a tenant-B user.
         crate::runtime::service::method_security::enforce_body_tenant_matches_claim(
@@ -1054,18 +1377,23 @@ impl AuthnServiceImpl {
         // Atomicity (§7): the user-status UPDATE and its audit event commit in one
         // transaction on the shared auth Postgres pool.
         let pool = self.require_pool()?;
-        let mut tx = pool
-            .begin()
-            .await
-            .map_err(|err| Status::internal(format!("status change tx begin failed: {err}")))?;
+        let mut tx = pool.begin().await.map_err(|err| {
+            authn_core_internal_status(
+                "change_user_status_tx_begin",
+                format!("status change tx begin failed: {err}"),
+            )
+        })?;
         self.users
             .put_user_in_tx(&mut *tx, rec.clone())
             .await
-            .map_err(Status::internal)?;
+            .map_err(|err| authn_core_internal_status("change_user_status_store", err))?;
         self.emit_event_in_tx(&mut *tx, event).await?;
-        tx.commit()
-            .await
-            .map_err(|err| Status::internal(format!("status change commit failed: {err}")))?;
+        tx.commit().await.map_err(|err| {
+            authn_core_internal_status(
+                "change_user_status_tx_commit",
+                format!("status change commit failed: {err}"),
+            )
+        })?;
         Ok(Response::new(authn_pb::ChangeUserStatusResponse {
             user: Some(user_record_to_pb(&rec)),
         }))
@@ -1102,8 +1430,8 @@ impl AuthnServiceImpl {
             .users
             .get_user_by_id(&req.user_id)
             .await
-            .map_err(Status::internal)?
-            .ok_or_else(|| Status::not_found("user not found"))?;
+            .map_err(|err| authn_core_internal_status("admin_reset_password_load", err))?
+            .ok_or_else(super::authn_user_not_found_status)?;
         // D1: the target user must be in the caller's tenant (cross-tenant admins
         // bypass) — a tenant-A admin cannot trigger a reset for a tenant-B user.
         crate::runtime::service::method_security::enforce_body_tenant_matches_claim(

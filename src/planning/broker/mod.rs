@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::collections::BTreeMap;
 use std::collections::{BTreeSet, HashMap};
 use std::sync::{Mutex, OnceLock};
 
@@ -8,6 +9,11 @@ use crate::generation::sql::{
     qi, resolve_project_column, resolve_tenant_column, table_requires_tenant_column,
 };
 use crate::generation::{CatalogManifest, ManifestTable};
+use crate::ir::{
+    ComparisonOp, ConflictStrategy, LogicalDelete, LogicalFilter, LogicalPagination,
+    LogicalProjection, LogicalRead, LogicalRecord, LogicalSort, LogicalValue, LogicalWrite,
+    SortDirection,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct RequestContext {
@@ -424,6 +430,112 @@ pub fn build_select_query_plan(
     plan
 }
 
+/// Convert the data-plane Select planner input into the canonical neutral read
+/// shape. This is the 2.4 merge seam: the data-plane wrapper still owns its
+/// value-adds (context/scope checks, PII projection exclusion, tenant/project
+/// isolation, cache/audit metadata), while the emitted read can be compiled by
+/// the shared IR compilers once live SQL equivalence is proven.
+pub(crate) fn build_select_logical_read(
+    manifest: &CatalogManifest,
+    request: &SelectPlanRequest,
+) -> Result<LogicalRead, Vec<String>> {
+    let Some(table) = table_for_message(manifest, &request.message_type) else {
+        return Err(vec![format!(
+            "unknown message_type {}",
+            request.message_type
+        )]);
+    };
+
+    let mut errors = Vec::new();
+    if request.context.tenant_id.trim().is_empty() {
+        errors.push("tenant_id is required".to_string());
+    }
+    if request.context.purpose.trim().is_empty() {
+        errors.push("purpose is required".to_string());
+    }
+    if !has_scope(&request.context, "udb:read") {
+        errors.push("scope udb:read is required".to_string());
+    }
+
+    let allowed = allowed_columns(table);
+    let resolver = column_resolver(table);
+    let filter_json = normalize_filter_keys(&resolver, &request.filter);
+    let filter_columns = filter_columns(&filter_json, &allowed, &mut errors);
+    let tenant = tenant_column(table);
+    if tenant.is_empty() {
+        if table_requires_tenant_column(table) {
+            errors.push(unresolved_tenant_column_error(table));
+        }
+    } else if !filter_columns.contains(&tenant) {
+        errors.push(format!("tenant isolation requires filter on {}", tenant));
+    }
+    let project = project_column(table);
+    if !project.is_empty() && !filter_columns.contains(&project) {
+        errors.push(format!("project isolation requires filter on {}", project));
+    }
+
+    let selected_columns = if request.fields.is_empty() {
+        table
+            .columns
+            .iter()
+            .filter(|column| !column.security.is_pii && !column.security.is_encrypted)
+            .map(|column| column.column_name.clone())
+            .collect::<Vec<_>>()
+    } else {
+        request
+            .fields
+            .iter()
+            .map(|field| {
+                let column = resolve_column(&resolver, field);
+                if !allowed.contains(&column) {
+                    errors.push(format!("unknown selected field {}", column));
+                }
+                column
+            })
+            .collect::<Vec<_>>()
+    };
+
+    let sort = request
+        .sort
+        .iter()
+        .map(|sort| {
+            let column = resolve_column(&resolver, &sort.field);
+            if !allowed.contains(&column) {
+                errors.push(format!("unknown sort field {}", column));
+            }
+            LogicalSort {
+                field: column,
+                direction: if sort.descending {
+                    SortDirection::Desc
+                } else {
+                    SortDirection::Asc
+                },
+                nulls: Default::default(),
+            }
+        })
+        .collect::<Vec<_>>();
+
+    let filter = logical_filter_from_planner_json(&filter_json, &allowed, &mut errors);
+    if !errors.is_empty() {
+        return Err(errors);
+    }
+
+    const MAX_QUERY_LIMIT: i32 = 100_000;
+    let pagination = (request.limit > 0).then(|| LogicalPagination {
+        limit: Some(request.limit.min(MAX_QUERY_LIMIT) as u32),
+        ..Default::default()
+    });
+
+    Ok(LogicalRead {
+        message_type: request.message_type.clone(),
+        filter,
+        projection: Some(LogicalProjection::fields(selected_columns)),
+        sort,
+        include: Vec::new(),
+        pagination,
+    })
+}
+
 fn build_select_query_plan_uncached(
     manifest: &CatalogManifest,
     request: &SelectPlanRequest,
@@ -736,6 +848,139 @@ pub fn build_upsert_plan(
     }
 }
 
+/// Convert the data-plane Upsert planner input into a neutral write while
+/// preserving the wrapper's validation boundary (scope, tenant/project binding,
+/// server-owned column exclusion, conflict uniqueness, and return shape).
+pub(crate) fn build_upsert_logical_write(
+    manifest: &CatalogManifest,
+    request: &UpsertPlanRequest,
+) -> Result<LogicalWrite, Vec<String>> {
+    let Some(table) = table_for_message(manifest, &request.message_type) else {
+        return Err(vec![format!(
+            "unknown message_type {}",
+            request.message_type
+        )]);
+    };
+
+    let mut errors = validate_write_context(&request.context);
+    let allowed = allowed_columns(table);
+    let resolver = column_resolver(table);
+    let Some(record) = request.record.as_object() else {
+        return Err(vec!["record must be a JSON object".to_string()]);
+    };
+
+    let mut logical_record: LogicalRecord = BTreeMap::new();
+    for (key, value) in record {
+        let column = resolve_column(&resolver, key);
+        if !allowed.contains(&column) {
+            errors.push(format!("unknown record field {}", key));
+        } else if !is_server_owned_column(table, &column) {
+            logical_record.insert(column, logical_value_from_json(value));
+        }
+    }
+    if logical_record.is_empty() {
+        errors.push("upsert requires at least one client-writable record field".to_string());
+    }
+
+    let record_columns = logical_record.keys().cloned().collect::<Vec<_>>();
+    let tenant = tenant_column(table);
+    if tenant.is_empty() {
+        if table_requires_tenant_column(table) {
+            errors.push(unresolved_tenant_column_error(table));
+        }
+    } else if !record_columns.contains(&tenant) {
+        errors.push(format!("tenant isolation requires record field {}", tenant));
+    }
+    if !tenant.is_empty()
+        && let Some(LogicalValue::String(tenant_value)) = logical_record.get(&tenant)
+        && tenant_value != &request.context.tenant_id
+    {
+        errors.push("record tenant_id must match RequestContext.tenant_id".to_string());
+    }
+
+    let project = project_column(table);
+    if !project.is_empty() && !request.context.project_id.is_empty() {
+        if !record_columns.contains(&project) {
+            errors.push(format!(
+                "project isolation requires record field {}",
+                project
+            ));
+        }
+        if let Some(LogicalValue::String(project_value)) = logical_record.get(&project)
+            && project_value != &request.context.project_id
+        {
+            errors.push("record project_id must match RequestContext.project_id".to_string());
+        }
+    }
+
+    let conflict_columns = if request.conflict_fields.is_empty() {
+        table.primary_key.clone()
+    } else {
+        request
+            .conflict_fields
+            .iter()
+            .map(|field| resolve_column(&resolver, field))
+            .collect::<Vec<_>>()
+    };
+    if conflict_columns.is_empty() {
+        errors.push("upsert requires conflict_fields or a manifest primary key".to_string());
+    }
+    for column in &conflict_columns {
+        if !allowed.contains(column) {
+            errors.push(format!("unknown conflict field {}", column));
+        }
+    }
+    if !conflict_columns.is_empty() && !conflict_target_is_unique(table, &conflict_columns) {
+        errors.push(
+            "conflict_fields must match the primary key or a declared unique index".to_string(),
+        );
+    }
+
+    let update_columns = record_columns
+        .iter()
+        .filter(|column| {
+            !conflict_columns.contains(column) && !is_update_excluded_column(table, column)
+        })
+        .cloned()
+        .collect::<Vec<_>>();
+    let uses_primary_conflict =
+        request.conflict_fields.is_empty() || conflict_columns == table.primary_key;
+    let conflict = if update_columns.is_empty() {
+        if !uses_primary_conflict {
+            errors.push(
+                "neutral IR cannot represent alternate-unique ON CONFLICT DO NOTHING yet"
+                    .to_string(),
+            );
+        }
+        ConflictStrategy::Ignore
+    } else if uses_primary_conflict {
+        ConflictStrategy::update(update_columns)
+    } else {
+        ConflictStrategy::update_on(update_columns, conflict_columns.clone())
+    };
+
+    if !errors.is_empty() {
+        return Err(errors);
+    }
+
+    let return_fields = if request.return_record {
+        table
+            .columns
+            .iter()
+            .map(|column| column.column_name.clone())
+            .collect()
+    } else {
+        Vec::new()
+    };
+
+    Ok(LogicalWrite {
+        message_type: request.message_type.clone(),
+        records: vec![logical_record],
+        conflict,
+        return_fields,
+    })
+}
+
 pub fn build_delete_plan(
     manifest: &CatalogManifest,
     request: &DeletePlanRequest,
@@ -808,6 +1053,55 @@ pub fn build_delete_plan(
         errors,
         ..SqlOperationPlan::default()
     }
+}
+
+/// Convert the data-plane Delete planner input into the canonical neutral
+/// delete shape. The bridge keeps the data-plane tenant/project/scope checks and
+/// refuses unbounded or planner-only Postgres filters rather than downgrading
+/// them to a broader delete.
+pub(crate) fn build_delete_logical_delete(
+    manifest: &CatalogManifest,
+    request: &DeletePlanRequest,
+) -> Result<LogicalDelete, Vec<String>> {
+    let Some(table) = table_for_message(manifest, &request.message_type) else {
+        return Err(vec![format!(
+            "unknown message_type {}",
+            request.message_type
+        )]);
+    };
+
+    let mut errors = validate_write_context(&request.context);
+    let allowed = allowed_columns(table);
+    let resolver = column_resolver(table);
+    let filter_json = normalize_filter_keys(&resolver, &request.filter);
+    let filter_columns = filter_columns(&filter_json, &allowed, &mut errors);
+
+    let tenant = tenant_column(table);
+    if tenant.is_empty() {
+        if table_requires_tenant_column(table) {
+            errors.push(unresolved_tenant_column_error(table));
+        }
+    } else if !filter_columns.contains(&tenant) {
+        errors.push(format!("tenant isolation requires filter on {}", tenant));
+    }
+    let project = project_column(table);
+    if !project.is_empty() && !filter_columns.contains(&project) {
+        errors.push(format!("project isolation requires filter on {}", project));
+    }
+
+    let filter = logical_filter_from_planner_json(&filter_json, &allowed, &mut errors);
+    if filter.is_none() {
+        errors.push("delete requires at least one safe filter predicate".to_string());
+    }
+    if !errors.is_empty() {
+        return Err(errors);
+    }
+
+    Ok(LogicalDelete {
+        message_type: request.message_type.clone(),
+        filter: filter.expect("checked above"),
+        return_fields: Vec::new(),
+    })
 }
 
 pub fn build_transaction_plan(
@@ -1418,7 +1712,11 @@ fn compile_filter_predicates(
                 }
             }
             CompiledFilter {
-                sql: parts.join(" AND "),
+                sql: if parts.len() > 1 {
+                    format!("({})", parts.join(" AND "))
+                } else {
+                    parts.join(" AND ")
+                },
                 next_param,
             }
         }
@@ -1623,6 +1921,191 @@ fn unescape_like_pattern(pattern: &str) -> String {
     out
 }
 
+fn logical_value_from_json(value: &Value) -> LogicalValue {
+    match value {
+        Value::Null => LogicalValue::Null,
+        Value::Bool(v) => LogicalValue::Bool(*v),
+        Value::Number(n) => n
+            .as_i64()
+            .map(LogicalValue::Int)
+            .or_else(|| n.as_f64().map(LogicalValue::Float))
+            .unwrap_or_else(|| LogicalValue::Json(value.clone())),
+        Value::String(v) => LogicalValue::String(v.clone()),
+        Value::Array(values) => LogicalValue::Array(
+            values
+                .iter()
+                .map(logical_value_from_json)
+                .collect::<Vec<_>>(),
+        ),
+        Value::Object(_) => LogicalValue::Json(value.clone()),
+    }
+}
+
+fn logical_filter_from_planner_json(
+    value: &Value,
+    allowed: &BTreeSet<String>,
+    errors: &mut Vec<String>,
+) -> Option<LogicalFilter> {
+    let Value::Object(map) = value else {
+        return None;
+    };
+    let mut clauses = Vec::new();
+    for (key, nested) in map {
+        let normalized = key.to_ascii_lowercase();
+        if matches!(normalized.as_str(), "$raw" | "raw" | "sql" | "where_sql") {
+            errors.push(format!("raw SQL filter key '{}' is not allowed", key));
+            continue;
+        }
+        if matches!(normalized.as_str(), "$and" | "and" | "$or" | "or") {
+            let Some(items) = nested.as_array() else {
+                errors.push("logical filter operator requires an array".to_string());
+                continue;
+            };
+            let mut branches = Vec::new();
+            for item in items {
+                if let Some(branch) = logical_filter_from_planner_json(item, allowed, errors) {
+                    branches.push(branch);
+                }
+            }
+            clauses.push(if normalized.contains("or") {
+                LogicalFilter::Or(branches)
+            } else {
+                LogicalFilter::And(branches)
+            });
+            continue;
+        }
+        if !allowed.contains(&normalized) {
+            if !is_operator(&normalized) {
+                errors.push(format!("unknown filter field {}", key));
+            }
+            continue;
+        }
+        if let Some(clause) = logical_column_filter_from_json(&normalized, nested, errors) {
+            clauses.push(clause);
+        }
+    }
+
+    match clauses.len() {
+        0 => None,
+        1 => clauses.into_iter().next(),
+        _ => Some(LogicalFilter::And(clauses)),
+    }
+}
+
+fn logical_column_filter_from_json(
+    column: &str,
+    value: &Value,
+    errors: &mut Vec<String>,
+) -> Option<LogicalFilter> {
+    let Value::Object(map) = value else {
+        return Some(LogicalFilter::Comparison {
+            field: column.to_string(),
+            op: ComparisonOp::Eq,
+            value: logical_value_from_json(value),
+        });
+    };
+
+    let mut clauses = Vec::new();
+    for (op, op_value) in map {
+        let normalized = op.to_ascii_lowercase();
+        match normalized.as_str() {
+            "$eq" | "=" => clauses.push(LogicalFilter::Comparison {
+                field: column.to_string(),
+                op: ComparisonOp::Eq,
+                value: logical_value_from_json(op_value),
+            }),
+            "$ne" | "!=" => clauses.push(LogicalFilter::Comparison {
+                field: column.to_string(),
+                op: ComparisonOp::Ne,
+                value: logical_value_from_json(op_value),
+            }),
+            "$gt" | ">" => clauses.push(LogicalFilter::Comparison {
+                field: column.to_string(),
+                op: ComparisonOp::Gt,
+                value: logical_value_from_json(op_value),
+            }),
+            "$gte" | ">=" => clauses.push(LogicalFilter::Comparison {
+                field: column.to_string(),
+                op: ComparisonOp::Ge,
+                value: logical_value_from_json(op_value),
+            }),
+            "$lt" | "<" => clauses.push(LogicalFilter::Comparison {
+                field: column.to_string(),
+                op: ComparisonOp::Lt,
+                value: logical_value_from_json(op_value),
+            }),
+            "$lte" | "<=" => clauses.push(LogicalFilter::Comparison {
+                field: column.to_string(),
+                op: ComparisonOp::Le,
+                value: logical_value_from_json(op_value),
+            }),
+            "$like" | "like" | "$ilike" | "ilike" => {
+                let Some(pattern) = op_value.as_str() else {
+                    errors.push(format!(
+                        "{} filter on {} requires a string value",
+                        op, column
+                    ));
+                    continue;
+                };
+                let guard_pattern = unescape_like_pattern(pattern);
+                if guard_pattern.starts_with('%') || guard_pattern.starts_with('_') {
+                    errors.push(format!(
+                        "$like/$ilike on column '{}' starts with a wildcard — \
+                         this forces a full sequential scan; use a full-text search \
+                         index ($matches) or add a trigram GIN index instead",
+                        column
+                    ));
+                    continue;
+                }
+                if pattern.len() > 256 {
+                    errors.push(format!(
+                        "$like/$ilike pattern on column '{}' exceeds 256 characters",
+                        column
+                    ));
+                    continue;
+                }
+                clauses.push(LogicalFilter::Comparison {
+                    field: column.to_string(),
+                    op: if normalized.contains("ilike") {
+                        ComparisonOp::ILike
+                    } else {
+                        ComparisonOp::Like
+                    },
+                    value: LogicalValue::String(pattern.to_string()),
+                });
+            }
+            "$in" | "in" => {
+                let Some(values) = op_value.as_array() else {
+                    errors.push(format!("$in filter on {} requires an array value", column));
+                    continue;
+                };
+                clauses.push(LogicalFilter::InList {
+                    field: column.to_string(),
+                    values: values.iter().map(logical_value_from_json).collect(),
+                });
+            }
+            "$is_null" | "is_null" => clauses.push(LogicalFilter::IsNull(column.to_string())),
+            "$not_null" | "is_not_null" => clauses.push(LogicalFilter::Not(Box::new(
+                LogicalFilter::IsNull(column.to_string()),
+            ))),
+            "$contains" | "contains" | "$contained_by" | "contained_by" | "$has_key"
+            | "has_key" | "$overlaps" | "overlaps" | "$matches" | "matches" => {
+                errors.push(format!(
+                    "filter operator '{}' on column '{}' has no neutral IR equivalent yet",
+                    op, column
+                ));
+            }
+            _ => errors.push(format!("unsupported filter operator {}", op)),
+        }
+    }
+
+    match clauses.len() {
+        0 => None,
+        1 => clauses.into_iter().next(),
+        _ => Some(LogicalFilter::And(clauses)),
+    }
+}
+
 // Phase I: broker.rs split into helper modules.
 mod helpers;
 pub(crate) use helpers::*;
@@ -1630,7 +2113,12 @@ pub(crate) use helpers::*;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::generation::{ManifestColumn, ManifestColumnSecurity, ManifestTableSecurity};
+    use crate::generation::{
+        ManifestColumn, ManifestColumnSecurity, ManifestIndex, ManifestTableSecurity,
+    };
+    use crate::ir::compile::{
+        CompileContext, CompileOperation, CompiledRendering, compile_for_backend,
+    };
     use serde_json::json;
 
     fn test_column(name: &str) -> ManifestColumn {
@@ -1669,6 +2157,30 @@ mod tests {
             purpose: "test".to_string(),
             scopes: vec!["udb:write".to_string()],
             ..RequestContext::default()
+        }
+    }
+
+    fn compile_pg_sql(
+        manifest: &CatalogManifest,
+        context: &RequestContext,
+        op: CompileOperation<'_>,
+    ) -> (String, Vec<LogicalValue>) {
+        let compile_ctx = CompileContext::new(manifest)
+            .with_tenant(&context.tenant_id)
+            .with_project(&context.project_id);
+        let rendering = compile_for_backend(&BackendKind::Postgres, op, &compile_ctx)
+            .expect("Postgres compiler must be present in this build")
+            .expect("data-plane bridge should compile for Postgres");
+        match rendering {
+            CompiledRendering::Sql {
+                backend,
+                statement,
+                params,
+            } => {
+                assert_eq!(backend, BackendKind::Postgres);
+                (statement, params)
+            }
+            other => panic!("expected Postgres SQL rendering, got {other:?}"),
         }
     }
 
@@ -1841,6 +2353,387 @@ mod tests {
             !plan.sql.contains("ESCAPE '\\\\'"),
             "rendered SQL should not contain two backslashes between quotes: {}",
             plan.sql
+        );
+    }
+
+    #[test]
+    fn select_planner_logical_read_preserves_wrapper_value_adds() {
+        let mut tenant = test_column("tenant_id");
+        tenant.is_tenant_column = true;
+        let mut email = test_column("email");
+        email.security = ManifestColumnSecurity {
+            is_pii: true,
+            is_encrypted: true,
+            mask_in_logs: true,
+            ..ManifestColumnSecurity::default()
+        };
+        let manifest = test_manifest(ManifestTable {
+            columns: vec![test_column("id"), tenant, test_column("status"), email],
+            ..ManifestTable::default()
+        });
+
+        let read = build_select_logical_read(
+            &manifest,
+            &SelectPlanRequest {
+                context: read_context(),
+                message_type: "acme.test.v1.Widget".to_string(),
+                filter: json!({
+                    "tenant_id": "tenant-a",
+                    "status": {"$in": ["open", "queued"]},
+                }),
+                sort: vec![SortSpec {
+                    field: "status".to_string(),
+                    descending: true,
+                }],
+                limit: 25,
+                ..SelectPlanRequest::default()
+            },
+        )
+        .expect("planner request should lower to neutral read");
+
+        assert_eq!(read.message_type, "acme.test.v1.Widget");
+        assert_eq!(
+            read.projection.expect("projection").fields,
+            vec!["id", "tenant_id", "status"],
+            "implicit data-plane reads must keep excluding PII/encrypted columns"
+        );
+        assert_eq!(read.sort.len(), 1);
+        assert_eq!(read.sort[0].field, "status");
+        assert_eq!(read.sort[0].direction, SortDirection::Desc);
+        assert_eq!(read.pagination.expect("limit").limit, Some(25));
+        let mut fields = Vec::new();
+        read.filter
+            .as_ref()
+            .expect("filter")
+            .referenced_fields(&mut fields);
+        fields.sort();
+        assert_eq!(fields, vec!["status", "tenant_id"]);
+    }
+
+    #[test]
+    fn select_planner_bridge_matches_postgres_compiler_for_safe_subset() {
+        let mut tenant = test_column("tenant_id");
+        tenant.is_tenant_column = true;
+        let manifest = test_manifest(ManifestTable {
+            columns: vec![test_column("id"), tenant, test_column("status")],
+            ..ManifestTable::default()
+        });
+        let context = read_context();
+        let request = SelectPlanRequest {
+            context: context.clone(),
+            message_type: "acme.test.v1.Widget".to_string(),
+            filter: json!({
+                "tenant_id": "tenant-a",
+                "status": "open",
+            }),
+            fields: vec![
+                "id".to_string(),
+                "tenant_id".to_string(),
+                "status".to_string(),
+            ],
+            sort: vec![SortSpec {
+                field: "status".to_string(),
+                descending: true,
+            }],
+            limit: 10,
+        };
+
+        let legacy_plan = build_select_query_plan(&manifest, &request);
+        assert!(legacy_plan.errors.is_empty(), "{:?}", legacy_plan.errors);
+        let read = build_select_logical_read(&manifest, &request)
+            .expect("data-plane Select should lower to neutral read");
+        let (compiled_sql, compiled_params) =
+            compile_pg_sql(&manifest, &context, CompileOperation::Read(&read));
+
+        assert_eq!(legacy_plan.sql, compiled_sql);
+        assert_eq!(
+            legacy_plan.parameter_columns,
+            vec!["tenant_id".to_string(), "status".to_string()]
+        );
+        assert_eq!(
+            compiled_params,
+            vec![
+                LogicalValue::String("tenant-a".to_string()),
+                LogicalValue::String("open".to_string())
+            ]
+        );
+    }
+
+    #[test]
+    fn select_planner_logical_read_rejects_unrepresented_pg_only_ops() {
+        let mut tenant = test_column("tenant_id");
+        tenant.is_tenant_column = true;
+        let manifest = test_manifest(ManifestTable {
+            columns: vec![test_column("id"), tenant, test_column("payload")],
+            ..ManifestTable::default()
+        });
+
+        let errors = build_select_logical_read(
+            &manifest,
+            &SelectPlanRequest {
+                context: read_context(),
+                message_type: "acme.test.v1.Widget".to_string(),
+                filter: json!({
+                    "tenant_id": "tenant-a",
+                    "payload": {"$contains": {"kind": "invoice"}},
+                }),
+                ..SelectPlanRequest::default()
+            },
+        )
+        .expect_err("jsonb containment has no neutral filter equivalent yet");
+
+        assert!(
+            errors.iter().any(|error| error.contains(
+                "filter operator '$contains' on column 'payload' has no neutral IR equivalent yet"
+            )),
+            "{errors:?}"
+        );
+    }
+
+    #[test]
+    fn upsert_planner_logical_write_preserves_wrapper_value_adds() {
+        let mut tenant = test_column("tenant_id");
+        tenant.is_tenant_column = true;
+        let mut status = test_column("status");
+        status.field_name = "public_status".to_string();
+        let mut created_at = test_column("created_at");
+        created_at.exclude_from_insert = true;
+        let manifest = test_manifest(ManifestTable {
+            columns: vec![
+                test_column("id"),
+                tenant,
+                test_column("code"),
+                status,
+                created_at,
+            ],
+            indexes: vec![ManifestIndex {
+                name: "uniq_widget_code".to_string(),
+                columns: vec!["code".to_string()],
+                unique: true,
+                ..ManifestIndex::default()
+            }],
+            ..ManifestTable::default()
+        });
+
+        let write = build_upsert_logical_write(
+            &manifest,
+            &UpsertPlanRequest {
+                context: write_context(),
+                message_type: "acme.test.v1.Widget".to_string(),
+                record: json!({
+                    "id": "w1",
+                    "tenant_id": "tenant-a",
+                    "code": "external-1",
+                    "public_status": "open",
+                    "created_at": "server-owned"
+                }),
+                conflict_fields: vec!["code".to_string()],
+                return_record: true,
+                ..UpsertPlanRequest::default()
+            },
+        )
+        .expect("planner upsert should lower to neutral write");
+
+        assert_eq!(write.records.len(), 1);
+        let record = &write.records[0];
+        assert_eq!(
+            record.keys().cloned().collect::<Vec<_>>(),
+            vec!["code", "id", "status", "tenant_id"],
+            "server-owned columns are excluded and proto field aliases resolve to physical columns"
+        );
+        assert_eq!(
+            write.conflict,
+            ConflictStrategy::update_on(
+                vec!["status".to_string(), "tenant_id".to_string()],
+                vec!["code".to_string()]
+            )
+        );
+        assert_eq!(
+            write.return_fields,
+            vec!["id", "tenant_id", "code", "status", "created_at"]
+        );
+    }
+
+    #[test]
+    fn upsert_planner_logical_write_rejects_unrepresented_alt_unique_do_nothing() {
+        let mut tenant = test_column("tenant_id");
+        tenant.is_tenant_column = true;
+        let manifest = test_manifest(ManifestTable {
+            columns: vec![test_column("id"), tenant, test_column("code")],
+            indexes: vec![ManifestIndex {
+                name: "uniq_widget_tenant_code".to_string(),
+                columns: vec!["tenant_id".to_string(), "code".to_string()],
+                unique: true,
+                ..ManifestIndex::default()
+            }],
+            ..ManifestTable::default()
+        });
+
+        let errors = build_upsert_logical_write(
+            &manifest,
+            &UpsertPlanRequest {
+                context: write_context(),
+                message_type: "acme.test.v1.Widget".to_string(),
+                record: json!({
+                    "tenant_id": "tenant-a",
+                    "code": "external-1"
+                }),
+                conflict_fields: vec!["tenant_id".to_string(), "code".to_string()],
+                ..UpsertPlanRequest::default()
+            },
+        )
+        .expect_err("alternate-unique DO NOTHING is not represented by current IR");
+
+        assert!(
+            errors.iter().any(|error| error.contains(
+                "neutral IR cannot represent alternate-unique ON CONFLICT DO NOTHING yet"
+            )),
+            "{errors:?}"
+        );
+    }
+
+    #[test]
+    fn upsert_planner_bridge_matches_postgres_compiler_for_safe_subset() {
+        let mut tenant = test_column("tenant_id");
+        tenant.is_tenant_column = true;
+        let manifest = test_manifest(ManifestTable {
+            columns: vec![test_column("id"), tenant, test_column("status")],
+            ..ManifestTable::default()
+        });
+        let context = write_context();
+        let request = UpsertPlanRequest {
+            context: context.clone(),
+            message_type: "acme.test.v1.Widget".to_string(),
+            record: json!({
+                "id": "w1",
+                "tenant_id": "tenant-a",
+                "status": "open",
+            }),
+            return_record: false,
+            ..UpsertPlanRequest::default()
+        };
+
+        let legacy_plan = build_upsert_plan(&manifest, &request);
+        assert!(legacy_plan.errors.is_empty(), "{:?}", legacy_plan.errors);
+        let write = build_upsert_logical_write(&manifest, &request)
+            .expect("data-plane Upsert should lower to neutral write");
+        let (compiled_sql, compiled_params) =
+            compile_pg_sql(&manifest, &context, CompileOperation::Write(&write));
+
+        assert_eq!(legacy_plan.sql, compiled_sql);
+        assert_eq!(
+            legacy_plan.parameter_columns,
+            vec![
+                "id".to_string(),
+                "status".to_string(),
+                "tenant_id".to_string()
+            ]
+        );
+        assert_eq!(
+            compiled_params,
+            vec![
+                LogicalValue::String("w1".to_string()),
+                LogicalValue::String("open".to_string()),
+                LogicalValue::String("tenant-a".to_string())
+            ]
+        );
+    }
+
+    #[test]
+    fn delete_planner_logical_delete_preserves_wrapper_value_adds() {
+        let mut tenant = test_column("tenant_id");
+        tenant.is_tenant_column = true;
+        let manifest = test_manifest(ManifestTable {
+            columns: vec![test_column("id"), tenant, test_column("status")],
+            ..ManifestTable::default()
+        });
+
+        let delete = build_delete_logical_delete(
+            &manifest,
+            &DeletePlanRequest {
+                context: write_context(),
+                message_type: "acme.test.v1.Widget".to_string(),
+                filter: json!({
+                    "tenant_id": "tenant-a",
+                    "status": {"$ne": "archived"}
+                }),
+            },
+        )
+        .expect("planner delete should lower to neutral delete");
+
+        assert_eq!(delete.message_type, "acme.test.v1.Widget");
+        let mut fields = Vec::new();
+        delete.filter.referenced_fields(&mut fields);
+        fields.sort();
+        assert_eq!(fields, vec!["status", "tenant_id"]);
+    }
+
+    #[test]
+    fn delete_planner_logical_delete_rejects_unrepresented_pg_only_ops() {
+        let mut tenant = test_column("tenant_id");
+        tenant.is_tenant_column = true;
+        let manifest = test_manifest(ManifestTable {
+            columns: vec![test_column("id"), tenant, test_column("payload")],
+            ..ManifestTable::default()
+        });
+
+        let errors = build_delete_logical_delete(
+            &manifest,
+            &DeletePlanRequest {
+                context: write_context(),
+                message_type: "acme.test.v1.Widget".to_string(),
+                filter: json!({
+                    "tenant_id": "tenant-a",
+                    "payload": {"$contains": {"kind": "invoice"}}
+                }),
+            },
+        )
+        .expect_err("jsonb containment has no neutral filter equivalent yet");
+
+        assert!(
+            errors.iter().any(|error| error.contains(
+                "filter operator '$contains' on column 'payload' has no neutral IR equivalent yet"
+            )),
+            "{errors:?}"
+        );
+    }
+
+    #[test]
+    fn delete_planner_bridge_matches_postgres_compiler_for_safe_subset() {
+        let mut tenant = test_column("tenant_id");
+        tenant.is_tenant_column = true;
+        let manifest = test_manifest(ManifestTable {
+            columns: vec![test_column("id"), tenant, test_column("status")],
+            ..ManifestTable::default()
+        });
+        let context = write_context();
+        let request = DeletePlanRequest {
+            context: context.clone(),
+            message_type: "acme.test.v1.Widget".to_string(),
+            filter: json!({
+                "tenant_id": "tenant-a",
+                "status": "archived",
+            }),
+        };
+
+        let legacy_plan = build_delete_plan(&manifest, &request);
+        assert!(legacy_plan.errors.is_empty(), "{:?}", legacy_plan.errors);
+        let delete = build_delete_logical_delete(&manifest, &request)
+            .expect("data-plane Delete should lower to neutral delete");
+        let (compiled_sql, compiled_params) =
+            compile_pg_sql(&manifest, &context, CompileOperation::Delete(&delete));
+
+        assert_eq!(legacy_plan.sql, compiled_sql);
+        assert_eq!(
+            legacy_plan.parameter_columns,
+            vec!["tenant_id".to_string(), "status".to_string()]
+        );
+        assert_eq!(
+            compiled_params,
+            vec![
+                LogicalValue::String("tenant-a".to_string()),
+                LogicalValue::String("archived".to_string())
+            ]
         );
     }
 }

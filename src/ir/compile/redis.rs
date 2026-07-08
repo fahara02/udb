@@ -1,15 +1,15 @@
 //! Redis compiler (U2 step 6b).
 //!
 //! Redis is a key-value store; the IR's `LogicalRead` / `Write` /
-//! `Delete` map to GET / SET / DEL commands on a deterministic key
-//! template. The template is:
+//! `Delete` map to GET / SET / DEL commands on a deterministic key.
+//! The namespace is:
 //!
 //! `udb:{project}:{tenant}:{message_type}:{primary_key_value}`
 //!
-//! …which is what the existing read-through cache already uses for typed
-//! Select. The executor expands the template against the active
-//! `RequestContext` at issue time; the compiler emits the template plus
-//! the resolved key components.
+//! ...which is what the existing read-through cache already uses for typed
+//! Select. The compiler resolves tenant/project/pk into the concrete key
+//! because generic dispatch receives only executor JSON, not the original IR
+//! filter.
 //!
 //! `LogicalSearch` is intentionally unsupported (Redis isn't a vector
 //! store; even RediSearch is a separate module not assumed available).
@@ -57,11 +57,8 @@ impl RedisCompiler {
         }
     }
 
-    /// Build the deterministic Redis key template + concrete key string.
-    /// `tenant`, `project` get injected by the executor against the
-    /// active context; the template tracks the variable positions so the
-    /// executor can expand without re-parsing.
-    fn build_key_template(
+    /// Build the deterministic Redis key namespace pattern + concrete key.
+    fn build_key(
         ctx: &CompileContext<'_>,
         message_type: &str,
         pk_value: &LogicalValue,
@@ -105,11 +102,11 @@ impl Compiler for RedisCompiler {
                 op: "non_pk_predicate",
             }
         })?;
-        let (template, _key) = Self::build_key_template(ctx, &op.message_type, pk_value);
+        let (_pattern, key) = Self::build_key(ctx, &op.message_type, pk_value);
         Ok(CompiledRendering::KeyValue {
             backend: BackendKind::Redis,
             op: KeyValueOp::Get,
-            key_template: template,
+            key_template: key,
             value: None,
             ttl_seconds: None,
         })
@@ -156,11 +153,11 @@ impl Compiler for RedisCompiler {
             message: format!("failed to serialise record: {err}"),
         })?;
 
-        let (template, _) = Self::build_key_template(ctx, &op.message_type, pk_value);
+        let (_pattern, key) = Self::build_key(ctx, &op.message_type, pk_value);
         Ok(CompiledRendering::KeyValue {
             backend: BackendKind::Redis,
             op: KeyValueOp::Set,
-            key_template: template,
+            key_template: key,
             value: Some(json_value),
             // TTL defaults; the runtime overrides from per-request cache
             // policy. Zero means "no TTL" / persist.
@@ -189,11 +186,11 @@ impl Compiler for RedisCompiler {
                 op: "non_pk_predicate",
             }
         })?;
-        let (template, _) = Self::build_key_template(ctx, &op.message_type, pk_value);
+        let (_pattern, key) = Self::build_key(ctx, &op.message_type, pk_value);
         Ok(CompiledRendering::KeyValue {
             backend: BackendKind::Redis,
             op: KeyValueOp::Delete,
-            key_template: template,
+            key_template: key,
             value: None,
             ttl_seconds: None,
         })
@@ -263,10 +260,7 @@ mod tests {
             });
         let (op, template, _) = kv(RedisCompiler.compile_read(&read, &ctx).unwrap());
         assert_eq!(op, KeyValueOp::Get);
-        assert_eq!(
-            template,
-            "udb:{project}:{tenant}:acme.cache.v1.Session:{pk}"
-        );
+        assert_eq!(template, "udb:default:acme:acme.cache.v1.Session:abc");
     }
 
     #[test]

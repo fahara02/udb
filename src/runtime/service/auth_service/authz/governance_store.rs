@@ -11,6 +11,13 @@ use super::governance_logic::{self as glogic, PolicyDocument};
 use super::*;
 use crate::proto::udb::core::authz::entity::v1 as authz_entity_pb;
 
+fn governance_store_internal_status(
+    operation: impl Into<String>,
+    message: impl Into<String>,
+) -> Status {
+    crate::runtime::executor_utils::internal_status("authz", operation, message)
+}
+
 impl AuthzServiceImpl {
     /// Persist the full candidate document onto a draft row: policies go in
     /// `proposed_policies_json`, tuples + role bindings in `proposed_tuples_json`.
@@ -20,7 +27,11 @@ impl AuthzServiceImpl {
         document: &PolicyDocument,
     ) -> Result<(), Status> {
         let runtime = self.runtime.as_ref().ok_or_else(|| {
-            Status::failed_precondition("native authz requires runtime-backed draft persistence")
+            authz_capability_status(
+                "draft_persistence",
+                "runtime_native_entity_dispatch",
+                "native authz requires runtime-backed draft persistence",
+            )
         })?;
         // P6.10 Wave 4: typed UPDATE of the two JSONB document columns (was raw
         // UPDATE). Values are built as JSON directly and bound as JSONB.
@@ -66,7 +77,12 @@ impl AuthzServiceImpl {
                 },
             )
             .await
-            .map_err(|err| Status::internal(format!("persist draft document failed: {err}")))?;
+            .map_err(|err| {
+                governance_store_internal_status(
+                    "persist_draft_document",
+                    format!("persist draft document failed: {err}"),
+                )
+            })?;
         Ok(())
     }
 
@@ -101,8 +117,16 @@ impl AuthzServiceImpl {
         .bind(draft_id)
         .fetch_optional(pool)
         .await
-        .map_err(|err| Status::internal(format!("load draft failed: {err}")))?
-        .ok_or_else(|| Status::not_found("policy draft not found"))?;
+        .map_err(|err| {
+            governance_store_internal_status("load_draft", format!("load draft failed: {err}"))
+        })?
+        .ok_or_else(|| {
+            authz_not_found_status(
+                "load_policy_draft",
+                "policy_draft_not_found",
+                "policy draft not found",
+            )
+        })?;
         let updated_unix: i64 = row.try_get("updated_at_unix").unwrap_or(0);
         Ok(authz_entity_pb::PolicyDraft {
             draft_id: row.try_get("draft_id").map_err(decode_err)?,
@@ -160,7 +184,12 @@ impl AuthzServiceImpl {
         .bind(policy_set_id)
         .fetch_optional(pool)
         .await
-        .map_err(|err| Status::internal(format!("load policy set failed: {err}")))?;
+        .map_err(|err| {
+            governance_store_internal_status(
+                "load_policy_set",
+                format!("load policy set failed: {err}"),
+            )
+        })?;
         Ok(row.map(|row| authz_entity_pb::PolicySet {
             policy_set_id: row.try_get("policy_set_id").unwrap_or_default(),
             tenant_id: row.try_get("tenant_id").unwrap_or_default(),
@@ -213,8 +242,16 @@ impl AuthzServiceImpl {
         .bind(version_id)
         .fetch_optional(pool)
         .await
-        .map_err(|err| Status::internal(format!("load version failed: {err}")))?
-        .ok_or_else(|| Status::not_found("policy version not found"))?;
+        .map_err(|err| {
+            governance_store_internal_status("load_version", format!("load version failed: {err}"))
+        })?
+        .ok_or_else(|| {
+            authz_not_found_status(
+                "load_policy_version",
+                "policy_version_not_found",
+                "policy version not found",
+            )
+        })?;
         Ok(version_from_row(&row))
     }
 
@@ -250,7 +287,12 @@ impl AuthzServiceImpl {
         .bind(approval_id)
         .fetch_optional(pool)
         .await
-        .map_err(|err| Status::internal(format!("load approval failed: {err}")))?;
+        .map_err(|err| {
+            governance_store_internal_status(
+                "load_approval",
+                format!("load approval failed: {err}"),
+            )
+        })?;
         Ok(row.map(|row| authz_entity_pb::PolicyApproval {
             approval_id: row.try_get("approval_id").unwrap_or_default(),
             draft_id: row.try_get("draft_id").unwrap_or_default(),
@@ -317,7 +359,12 @@ impl AuthzServiceImpl {
         .bind(&draft.draft_id)
         .fetch_one(pool)
         .await
-        .map_err(|err| Status::internal(format!("promote draft to version failed: {err}")))?;
+        .map_err(|err| {
+            governance_store_internal_status(
+                "promote_draft_to_version",
+                format!("promote draft to version failed: {err}"),
+            )
+        })?;
         let version_number: i64 = row.try_get("version_number").unwrap_or(1);
         Ok(authz_entity_pb::PolicyVersion {
             policy_version_id: version_id,
@@ -344,7 +391,10 @@ impl AuthzServiceImpl {
 }
 
 fn decode_err(e: sqlx::Error) -> Status {
-    Status::internal(format!("decode governance row failed: {e}"))
+    governance_store_internal_status(
+        "decode_governance_row",
+        format!("decode governance row failed: {e}"),
+    )
 }
 
 /// Reconstruct the candidate document from a draft entity.
@@ -413,5 +463,47 @@ pub(super) fn version_state_to_db(state: authz_entity_pb::PolicyVersionState) ->
         S::Superseded => "POLICY_VERSION_STATE_SUPERSEDED",
         S::Rejected => "POLICY_VERSION_STATE_REJECTED",
         S::RolledBack => "POLICY_VERSION_STATE_ROLLED_BACK",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
+    use tonic::Code;
+
+    fn decode_detail(status: &Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_internal_detail(status: &Status, operation: &str, message: &str) {
+        assert_eq!(status.code(), Code::Internal);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "authz");
+        assert_eq!(detail.operation, operation);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    #[test]
+    fn governance_store_internal_status_carries_typed_detail() {
+        let status = governance_store_internal_status(
+            "promote_draft_to_version",
+            "promote draft to version failed: store closed",
+        );
+        assert_internal_detail(
+            &status,
+            "promote_draft_to_version",
+            "promote draft to version failed: store closed",
+        );
     }
 }

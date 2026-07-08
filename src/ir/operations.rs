@@ -36,8 +36,21 @@ pub struct LogicalRead {
     pub projection: Option<LogicalProjection>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub sort: Vec<LogicalSort>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub include: Vec<LogicalInclude>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pagination: Option<LogicalPagination>,
+}
+
+/// Eager relation include request for `LogicalRead`.
+///
+/// The client-facing ORM can now express eager relation loading in the neutral
+/// envelope, but compilers must explicitly lower it. Until a backend implements
+/// JOIN/batched eager loading, the shared compiler gate rejects non-empty include
+/// lists with `OperatorUnsupported` instead of silently ignoring them.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct LogicalInclude {
+    pub relation: String,
 }
 
 /// A neutral write — insert or upsert depending on `conflict`.
@@ -366,6 +379,13 @@ impl LogicalRead {
 
     pub fn with_sort(mut self, s: Vec<LogicalSort>) -> Self {
         self.sort = s;
+        self
+    }
+
+    pub fn with_include(mut self, relation: impl Into<String>) -> Self {
+        self.include.push(LogicalInclude {
+            relation: relation.into(),
+        });
         self
     }
 

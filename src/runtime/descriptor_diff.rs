@@ -644,7 +644,7 @@ fn kind_str(kind: ChangeKind) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::runtime::descriptor_manifest::descriptor_contract_manifest;
+    use crate::runtime::descriptor_manifest::descriptor_contract_manifest_static;
 
     fn endpoint(mode: i32) -> EndpointSecurityContract {
         EndpointSecurityContract {
@@ -838,8 +838,8 @@ mod tests {
 
     #[test]
     fn live_manifest_diff_against_self_is_empty() {
-        let live = descriptor_contract_manifest();
-        let changes = diff_manifests(&live, &live);
+        let live = descriptor_contract_manifest_static();
+        let changes = diff_manifests(live, live);
         assert!(
             changes.is_empty(),
             "diffing the live manifest against itself must yield zero changes, got: {changes:?}"

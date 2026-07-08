@@ -8,6 +8,8 @@ option csharp_namespace = "Udb.Entity.V1";
 option php_namespace = "Udb\\Entity\\V1";
 option php_metadata_namespace = "Udb\\GPBMetadata\\Entity\\V1";
 
+import "udb/entity/v1/consistency.proto";
+
 message RequestContext {
   string tenant_id = 1;
   string user_id = 2;
@@ -44,4 +46,11 @@ message RequestContext {
   string region = 19;
   // Caller-provided labels available to policy, routing, audit, and telemetry.
   map<string, string> attributes = 20;
+  // Typed read fence. Kept in lockstep with read_fence_json for clients that can
+  // consume protobuf messages directly. Metadata/header values still win when
+  // both are supplied.
+  ReadFence read_fence = 21;
+  // Typed consistency mode. Mirrors the legacy consistency string/header token;
+  // the x-udb-consistency metadata header still wins when both are supplied.
+  ConsistencyMode consistency_mode = 22;
 }

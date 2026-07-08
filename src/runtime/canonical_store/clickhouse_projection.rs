@@ -16,11 +16,9 @@
 //! The PG atomic batch claim becomes: read the FINAL candidates filtered by
 //! status / retry / next_retry / target, then per-row versioned-CAS flip
 //! PENDING/FAILED → IN_PROGRESS (INSERT version+1 with the new status), re-read
-//! that row's FINAL status, and keep it only if it now reads IN_PROGRESS at our
-//! version. SINGLE-WRITER CAVEAT (see `clickhouse.rs` module docs): the
-//! read-decide-insert-reread is not atomic, so two workers racing the same row
-//! can both insert version+1 and both believe they won; the conformance run is
-//! single-threaded so this holds.
+//! that row's FINAL status, and keep it only if it now reads IN_PROGRESS. The
+//! read-decide-insert-reread sequence runs under a KeeperMap-backed projection
+//! mutation lease, so two broker processes do not claim the same task.
 //!
 //! ## Schema (mirrors the logical PG schema; ClickHouse types)
 //!
@@ -48,6 +46,8 @@ use super::system_store::{
     ProjectionTaskInsert, ProjectionTaskRow, ProjectionTaskStatus, ProjectionTaskStore,
     ProjectionTaskSummary, SystemStoreError, SystemStoreResult,
 };
+
+const CLICKHOUSE_PROJECTION_MUTATION_LOCK: &str = "__udb_clickhouse_projection_tasks";
 
 // ── Shared JSONCompact cell helpers (reused by every phase-2 impl) ────────────
 //
@@ -295,6 +295,24 @@ impl ClickHouseCanonicalStore {
             .await
             .map_err(|e| ch_err("insert_task_version", e))
     }
+
+    async fn acquire_projection_mutation_lock(&self, op: &str) -> SystemStoreResult<String> {
+        let owner = format!("{op}:{}", Uuid::new_v4());
+        self.acquire_system_mutation_lease(CLICKHOUSE_PROJECTION_MUTATION_LOCK, &owner, op)
+            .await
+            .map_err(|err| ch_err(op, err))?;
+        Ok(owner)
+    }
+
+    async fn release_projection_mutation_lock(
+        &self,
+        owner: &str,
+        op: &str,
+    ) -> SystemStoreResult<()> {
+        self.release_system_mutation_lease(CLICKHOUSE_PROJECTION_MUTATION_LOCK, owner, op)
+            .await
+            .map_err(|err| ch_err(op, err))
+    }
 }
 
 #[async_trait]
@@ -349,64 +367,72 @@ impl ProjectionTaskStore for ClickHouseCanonicalStore {
         &self,
         task: &ProjectionTaskInsert,
     ) -> SystemStoreResult<Uuid> {
-        let tbl = self.projection_table()?;
-        // Idempotent on idempotency_key: read FINAL by key; if a row exists return
-        // its task_id (PG's `ON CONFLICT (idempotency_key) DO NOTHING` + fallback
-        // SELECT). SINGLE-WRITER CAVEAT (see clickhouse.rs module docs): two
-        // concurrent enqueues of the same key can both miss here and both insert a
-        // fresh task_id; the conformance run is single-threaded so this holds.
-        let existing_sql = format!(
-            "SELECT task_id FROM {tbl} FINAL WHERE idempotency_key = {key}",
-            key = sql_lit(&task.idempotency_key),
-        );
-        let existing = self
-            .executor()
-            .select_rows(&existing_sql)
-            .await
-            .map_err(|e| ch_err("enqueue_projection_task lookup", e))?;
-        if let Some(row) = existing.first() {
-            return ch_uuid(row, "task_id");
-        }
+        let owner = self
+            .acquire_projection_mutation_lock("enqueue_projection_task")
+            .await?;
+        let result = async {
+            let tbl = self.projection_table()?;
+            // Idempotent on idempotency_key: read FINAL by key; if a row exists return
+            // its task_id (PG's `ON CONFLICT (idempotency_key) DO NOTHING` + fallback
+            // SELECT). The KeeperMap mutation lease serializes this read→insert path
+            // across broker processes.
+            let existing_sql = format!(
+                "SELECT task_id FROM {tbl} FINAL WHERE idempotency_key = {key}",
+                key = sql_lit(&task.idempotency_key),
+            );
+            let existing = self
+                .executor()
+                .select_rows(&existing_sql)
+                .await
+                .map_err(|e| ch_err("enqueue_projection_task lookup", e))?;
+            if let Some(row) = existing.first() {
+                return ch_uuid(row, "task_id");
+            }
 
-        // Fresh enqueue: insert version 1 with full payload (incl. the
-        // manifest/message/schema/source_table columns the claim row omits but
-        // dead_letter_groups needs). Status starts PENDING, retry_count 0,
-        // next_retry_at / completed_at absent (sentinel 0).
-        let new_id = Uuid::new_v4();
-        let now = Self::now_unix_ms();
-        let sql = format!(
-            "INSERT INTO {tbl} (\
-             task_id, idempotency_key, project_id, manifest_checksum, message_type, \
-             source_schema, source_table, source_row_key, operation, target_backend, \
-             target_instance, projection_kind, resource_name, target_options, \
-             source_payload, source_checksum, status, retry_count, last_error, \
-             created_at, updated_at, next_retry_at, completed_at, version) VALUES (\
-             {task_id}, {idem}, {project}, {manifest}, {message}, {schema}, {source_table}, \
-             {row_key}, {operation}, {backend}, {instance}, {kind}, {resource}, {options}, \
-             {payload}, {checksum}, {status}, 0, '', {now}, {now}, 0, 0, 1)",
-            task_id = sql_lit(&new_id.to_string()),
-            idem = sql_lit(&task.idempotency_key),
-            project = sql_lit(&task.project_id),
-            manifest = sql_lit(&task.manifest_checksum),
-            message = sql_lit(&task.message_type),
-            schema = sql_lit(&task.source_schema),
-            source_table = sql_lit(&task.source_table),
-            row_key = sql_lit(&task.source_row_key.to_string()),
-            operation = sql_lit(task.operation.as_str()),
-            backend = sql_lit(&task.target_backend),
-            instance = sql_lit(&task.target_instance),
-            kind = sql_lit(&task.projection_kind),
-            resource = sql_lit(&task.resource_name),
-            options = sql_lit(&task.target_options.to_string()),
-            payload = sql_lit(&task.source_payload.to_string()),
-            checksum = sql_lit(&task.source_checksum),
-            status = sql_lit(ProjectionTaskStatus::Pending.as_str()),
-        );
-        self.executor()
-            .execute_ddl(&sql)
-            .await
-            .map_err(|e| ch_err("enqueue_projection_task insert", e))?;
-        Ok(new_id)
+            // Fresh enqueue: insert version 1 with full payload (incl. the
+            // manifest/message/schema/source_table columns the claim row omits but
+            // dead_letter_groups needs). Status starts PENDING, retry_count 0,
+            // next_retry_at / completed_at absent (sentinel 0).
+            let new_id = Uuid::new_v4();
+            let now = Self::now_unix_ms();
+            let sql = format!(
+                "INSERT INTO {tbl} (\
+                 task_id, idempotency_key, project_id, manifest_checksum, message_type, \
+                 source_schema, source_table, source_row_key, operation, target_backend, \
+                 target_instance, projection_kind, resource_name, target_options, \
+                 source_payload, source_checksum, status, retry_count, last_error, \
+                 created_at, updated_at, next_retry_at, completed_at, version) VALUES (\
+                 {task_id}, {idem}, {project}, {manifest}, {message}, {schema}, {source_table}, \
+                 {row_key}, {operation}, {backend}, {instance}, {kind}, {resource}, {options}, \
+                 {payload}, {checksum}, {status}, 0, '', {now}, {now}, 0, 0, 1)",
+                task_id = sql_lit(&new_id.to_string()),
+                idem = sql_lit(&task.idempotency_key),
+                project = sql_lit(&task.project_id),
+                manifest = sql_lit(&task.manifest_checksum),
+                message = sql_lit(&task.message_type),
+                schema = sql_lit(&task.source_schema),
+                source_table = sql_lit(&task.source_table),
+                row_key = sql_lit(&task.source_row_key.to_string()),
+                operation = sql_lit(task.operation.as_str()),
+                backend = sql_lit(&task.target_backend),
+                instance = sql_lit(&task.target_instance),
+                kind = sql_lit(&task.projection_kind),
+                resource = sql_lit(&task.resource_name),
+                options = sql_lit(&task.target_options.to_string()),
+                payload = sql_lit(&task.source_payload.to_string()),
+                checksum = sql_lit(&task.source_checksum),
+                status = sql_lit(ProjectionTaskStatus::Pending.as_str()),
+            );
+            self.executor()
+                .execute_ddl(&sql)
+                .await
+                .map_err(|e| ch_err("enqueue_projection_task insert", e))?;
+            Ok(new_id)
+        }
+        .await;
+        self.release_projection_mutation_lock(&owner, "enqueue_projection_task")
+            .await?;
+        result
     }
 
     async fn claim_projection_tasks(
@@ -416,106 +442,122 @@ impl ProjectionTaskStore for ClickHouseCanonicalStore {
         if filter.batch_size <= 0 {
             return Ok(Vec::new());
         }
-        let tbl = self.projection_table()?;
-        // FINAL candidate scan: read latest-version rows (with the static cols +
-        // version so each version+1 flip preserves them), filter PENDING/FAILED +
-        // retry/next_retry/target in Rust (mirrors PG's pending/failed candidate
-        // CTEs). FINAL is required — a raw read would surface superseded rows.
-        let scan = format!("SELECT {TASK_COLS}, {TASK_STATIC_COLS}, version FROM {tbl} FINAL");
-        let rows = self
-            .executor()
-            .select_rows(&scan)
-            .await
-            .map_err(|e| ch_err("claim_projection_tasks scan", e))?;
-        let now = Utc::now();
-        let mut candidates: Vec<(ProjectionTaskRow, TaskStaticCols, u64)> = Vec::new();
-        for row in &rows {
-            let task = row_to_projection_task(row)?;
-            if !task.status.is_claimable() {
-                continue;
-            }
-            if task.retry_count >= filter.max_retries {
-                continue;
-            }
-            if let Some(p) = &filter.project_id {
-                if &task.project_id != p {
+        let owner = self
+            .acquire_projection_mutation_lock("claim_projection_tasks")
+            .await?;
+        let result = async {
+            let tbl = self.projection_table()?;
+            // FINAL candidate scan: read latest-version rows (with the static cols +
+            // version so each version+1 flip preserves them), filter PENDING/FAILED +
+            // retry/next_retry/target in Rust (mirrors PG's pending/failed candidate
+            // CTEs). FINAL is required — a raw read would surface superseded rows.
+            let scan = format!("SELECT {TASK_COLS}, {TASK_STATIC_COLS}, version FROM {tbl} FINAL");
+            let rows = self
+                .executor()
+                .select_rows(&scan)
+                .await
+                .map_err(|e| ch_err("claim_projection_tasks scan", e))?;
+            let now = Utc::now();
+            let mut candidates: Vec<(ProjectionTaskRow, TaskStaticCols, u64)> = Vec::new();
+            for row in &rows {
+                let task = row_to_projection_task(row)?;
+                if !task.status.is_claimable() {
                     continue;
                 }
-            }
-            if let Some(b) = &filter.target_backend {
-                if &task.target_backend != b {
+                if task.retry_count >= filter.max_retries {
                     continue;
                 }
-            }
-            if let Some(i) = &filter.target_instance {
-                if &task.target_instance != i {
-                    continue;
-                }
-            }
-            // FAILED rows are only eligible once next_retry_at is due (PG's
-            // `next_retry_at IS NULL OR next_retry_at <= NOW()`). PENDING is always
-            // eligible. mark_failed clears next_retry_at to sentinel-0 → always due.
-            if task.status == ProjectionTaskStatus::Failed {
-                if let Some(nra) = task.next_retry_at {
-                    if nra > now {
+                if let Some(p) = &filter.project_id {
+                    if &task.project_id != p {
                         continue;
                     }
                 }
+                if let Some(b) = &filter.target_backend {
+                    if &task.target_backend != b {
+                        continue;
+                    }
+                }
+                if let Some(i) = &filter.target_instance {
+                    if &task.target_instance != i {
+                        continue;
+                    }
+                }
+                // FAILED rows are only eligible once next_retry_at is due (PG's
+                // `next_retry_at IS NULL OR next_retry_at <= NOW()`). PENDING is always
+                // eligible. mark_failed clears next_retry_at to sentinel-0 → always due.
+                if task.status == ProjectionTaskStatus::Failed {
+                    if let Some(nra) = task.next_retry_at {
+                        if nra > now {
+                            continue;
+                        }
+                    }
+                }
+                candidates.push((task, row_to_static_cols(row), ch_u64(row, "version")));
             }
-            candidates.push((task, row_to_static_cols(row), ch_u64(row, "version")));
-        }
-        // Oldest-first, like PG's `ORDER BY created_at`.
-        candidates.sort_by(|a, b| a.0.created_at.cmp(&b.0.created_at));
+            // Oldest-first, like PG's `ORDER BY created_at`.
+            candidates.sort_by(|a, b| a.0.created_at.cmp(&b.0.created_at));
 
-        // Per-row versioned-CAS flip PENDING/FAILED → IN_PROGRESS. SINGLE-WRITER
-        // CAVEAT (see clickhouse.rs module docs): read-decide-insert-reread is not
-        // atomic, so two workers racing the same row can both insert version+1 and
-        // both believe they won; the conformance run is single-threaded so this
-        // holds. We re-read FINAL after the INSERT and keep the row only if it now
-        // reads IN_PROGRESS.
-        let claim_now = Self::now_unix_ms();
-        let claim_dt = DateTime::<Utc>::from_timestamp_millis(claim_now).unwrap_or_else(Utc::now);
-        let mut out = Vec::new();
-        for (mut task, statics, version) in candidates {
-            if out.len() as i64 >= filter.batch_size {
-                break;
-            }
-            // version+1 INSERT carrying the IN_PROGRESS status at the new
-            // updated_at, preserving every other field + the static cols.
-            let next_version = version.saturating_add(1).max(1);
-            let mut flipped = task.clone();
-            flipped.status = ProjectionTaskStatus::InProgress;
-            flipped.updated_at = claim_dt;
-            self.insert_task_version(&flipped, &statics, next_version)
-                .await?;
+            // Per-row versioned flip PENDING/FAILED → IN_PROGRESS. The KeeperMap
+            // mutation lease serializes this read-decide-insert-reread path across
+            // broker processes.
+            let claim_now = Self::now_unix_ms();
+            let claim_dt =
+                DateTime::<Utc>::from_timestamp_millis(claim_now).unwrap_or_else(Utc::now);
+            let mut out = Vec::new();
+            for (mut task, statics, version) in candidates {
+                if out.len() as i64 >= filter.batch_size {
+                    break;
+                }
+                // version+1 INSERT carrying the IN_PROGRESS status at the new
+                // updated_at, preserving every other field + the static cols.
+                let next_version = version.saturating_add(1).max(1);
+                let mut flipped = task.clone();
+                flipped.status = ProjectionTaskStatus::InProgress;
+                flipped.updated_at = claim_dt;
+                self.insert_task_version(&flipped, &statics, next_version)
+                    .await?;
 
-            // Re-read FINAL to confirm the live row is now IN_PROGRESS (the flip
-            // won the last-writer-by-version collapse).
-            if let Some((confirmed, _, _)) = self.read_task_final(task.task_id).await? {
-                if confirmed.status == ProjectionTaskStatus::InProgress {
-                    task.status = ProjectionTaskStatus::InProgress;
-                    task.updated_at = claim_dt;
-                    out.push(task);
+                // Re-read FINAL to confirm the live row is now IN_PROGRESS (the flip
+                // won the last-writer-by-version collapse).
+                if let Some((confirmed, _, _)) = self.read_task_final(task.task_id).await? {
+                    if confirmed.status == ProjectionTaskStatus::InProgress {
+                        task.status = ProjectionTaskStatus::InProgress;
+                        task.updated_at = claim_dt;
+                        out.push(task);
+                    }
                 }
             }
+            Ok(out)
         }
-        Ok(out)
+        .await;
+        self.release_projection_mutation_lock(&owner, "claim_projection_tasks")
+            .await?;
+        result
     }
 
     async fn mark_projection_task_completed(&self, task_id: Uuid) -> SystemStoreResult<()> {
-        // PG: status COMPLETED, completed_at = NOW(), next_retry_at = NULL.
-        // version+1 INSERT preserving the rest of the row + static cols.
-        let Some((mut task, statics, version)) = self.read_task_final(task_id).await? else {
-            return Ok(());
-        };
-        let now = Self::now_unix_ms();
-        let now_dt = DateTime::<Utc>::from_timestamp_millis(now).unwrap_or_else(Utc::now);
-        task.status = ProjectionTaskStatus::Completed;
-        task.updated_at = now_dt;
-        task.completed_at = Some(now_dt);
-        task.next_retry_at = None; // cleared → sentinel 0 → round-trips None.
-        self.insert_task_version(&task, &statics, version.saturating_add(1).max(1))
-            .await
+        let owner = self
+            .acquire_projection_mutation_lock("mark_projection_task_completed")
+            .await?;
+        let result = async {
+            // PG: status COMPLETED, completed_at = NOW(), next_retry_at = NULL.
+            // version+1 INSERT preserving the rest of the row + static cols.
+            let Some((mut task, statics, version)) = self.read_task_final(task_id).await? else {
+                return Ok(());
+            };
+            let now = Self::now_unix_ms();
+            let now_dt = DateTime::<Utc>::from_timestamp_millis(now).unwrap_or_else(Utc::now);
+            task.status = ProjectionTaskStatus::Completed;
+            task.updated_at = now_dt;
+            task.completed_at = Some(now_dt);
+            task.next_retry_at = None; // cleared → sentinel 0 → round-trips None.
+            self.insert_task_version(&task, &statics, version.saturating_add(1).max(1))
+                .await
+        }
+        .await;
+        self.release_projection_mutation_lock(&owner, "mark_projection_task_completed")
+            .await?;
+        result
     }
 
     async fn mark_projection_task_failed(
@@ -534,85 +576,113 @@ impl ProjectionTaskStore for ClickHouseCanonicalStore {
                 new_status.as_str()
             )));
         }
-        let Some((mut task, statics, version)) = self.read_task_final(task_id).await? else {
-            return Ok(());
-        };
-        let now = Self::now_unix_ms();
-        // PG clears next_retry_at to NULL here; the contract re-claims the FAILED
-        // row immediately afterward, so a None next_retry_at (always due) matches.
-        task.status = new_status;
-        task.retry_count = new_retry_count;
-        task.last_error = error.to_string();
-        task.next_retry_at = None;
-        task.updated_at = DateTime::<Utc>::from_timestamp_millis(now).unwrap_or_else(Utc::now);
-        self.insert_task_version(&task, &statics, version.saturating_add(1).max(1))
-            .await
+        let owner = self
+            .acquire_projection_mutation_lock("mark_projection_task_failed")
+            .await?;
+        let result = async {
+            let Some((mut task, statics, version)) = self.read_task_final(task_id).await? else {
+                return Ok(());
+            };
+            let now = Self::now_unix_ms();
+            // PG clears next_retry_at to NULL here; the contract re-claims the FAILED
+            // row immediately afterward, so a None next_retry_at (always due) matches.
+            task.status = new_status;
+            task.retry_count = new_retry_count;
+            task.last_error = error.to_string();
+            task.next_retry_at = None;
+            task.updated_at = DateTime::<Utc>::from_timestamp_millis(now).unwrap_or_else(Utc::now);
+            self.insert_task_version(&task, &statics, version.saturating_add(1).max(1))
+                .await
+        }
+        .await;
+        self.release_projection_mutation_lock(&owner, "mark_projection_task_failed")
+            .await?;
+        result
     }
 
     async fn requeue_dead_letter_tasks(
         &self,
         target_backend: Option<&str>,
     ) -> SystemStoreResult<i64> {
-        let tbl = self.projection_table()?;
-        let scan = format!("SELECT {TASK_COLS}, {TASK_STATIC_COLS}, version FROM {tbl} FINAL");
-        let rows = self
-            .executor()
-            .select_rows(&scan)
-            .await
-            .map_err(|e| ch_err("requeue_dead_letter_tasks scan", e))?;
-        let now = Self::now_unix_ms();
-        let now_dt = DateTime::<Utc>::from_timestamp_millis(now).unwrap_or_else(Utc::now);
-        let mut n = 0i64;
-        for row in &rows {
-            let mut task = row_to_projection_task(row)?;
-            if task.status != ProjectionTaskStatus::DeadLetter {
-                continue;
-            }
-            if let Some(b) = target_backend {
-                if &task.target_backend != b {
+        let owner = self
+            .acquire_projection_mutation_lock("requeue_dead_letter_tasks")
+            .await?;
+        let result = async {
+            let tbl = self.projection_table()?;
+            let scan = format!("SELECT {TASK_COLS}, {TASK_STATIC_COLS}, version FROM {tbl} FINAL");
+            let rows = self
+                .executor()
+                .select_rows(&scan)
+                .await
+                .map_err(|e| ch_err("requeue_dead_letter_tasks scan", e))?;
+            let now = Self::now_unix_ms();
+            let now_dt = DateTime::<Utc>::from_timestamp_millis(now).unwrap_or_else(Utc::now);
+            let mut n = 0i64;
+            for row in &rows {
+                let mut task = row_to_projection_task(row)?;
+                if task.status != ProjectionTaskStatus::DeadLetter {
                     continue;
                 }
+                if let Some(b) = target_backend {
+                    if &task.target_backend != b {
+                        continue;
+                    }
+                }
+                let next_version = ch_u64(row, "version").saturating_add(1).max(1);
+                task.status = ProjectionTaskStatus::Pending;
+                task.retry_count = 0;
+                task.last_error = String::new();
+                task.next_retry_at = None;
+                task.updated_at = now_dt;
+                self.insert_task_version(&task, &row_to_static_cols(row), next_version)
+                    .await?;
+                n += 1;
             }
-            let next_version = ch_u64(row, "version").saturating_add(1).max(1);
-            task.status = ProjectionTaskStatus::Pending;
-            task.retry_count = 0;
-            task.last_error = String::new();
-            task.next_retry_at = None;
-            task.updated_at = now_dt;
-            self.insert_task_version(&task, &row_to_static_cols(row), next_version)
-                .await?;
-            n += 1;
+            Ok(n)
         }
-        Ok(n)
+        .await;
+        self.release_projection_mutation_lock(&owner, "requeue_dead_letter_tasks")
+            .await?;
+        result
     }
 
     async fn reset_stale_in_progress_tasks(&self, stale_after: Duration) -> SystemStoreResult<i64> {
-        let tbl = self.projection_table()?;
-        let scan = format!("SELECT {TASK_COLS}, {TASK_STATIC_COLS}, version FROM {tbl} FINAL");
-        let rows = self
-            .executor()
-            .select_rows(&scan)
-            .await
-            .map_err(|e| ch_err("reset_stale_in_progress_tasks scan", e))?;
-        let cutoff = Utc::now()
-            - chrono::Duration::from_std(stale_after).unwrap_or_else(|_| chrono::Duration::zero());
-        let now = Self::now_unix_ms();
-        let now_dt = DateTime::<Utc>::from_timestamp_millis(now).unwrap_or_else(Utc::now);
-        let mut n = 0i64;
-        for row in &rows {
-            let mut task = row_to_projection_task(row)?;
-            if task.status != ProjectionTaskStatus::InProgress || task.updated_at >= cutoff {
-                continue;
+        let owner = self
+            .acquire_projection_mutation_lock("reset_stale_in_progress_tasks")
+            .await?;
+        let result = async {
+            let tbl = self.projection_table()?;
+            let scan = format!("SELECT {TASK_COLS}, {TASK_STATIC_COLS}, version FROM {tbl} FINAL");
+            let rows = self
+                .executor()
+                .select_rows(&scan)
+                .await
+                .map_err(|e| ch_err("reset_stale_in_progress_tasks scan", e))?;
+            let cutoff = Utc::now()
+                - chrono::Duration::from_std(stale_after)
+                    .unwrap_or_else(|_| chrono::Duration::zero());
+            let now = Self::now_unix_ms();
+            let now_dt = DateTime::<Utc>::from_timestamp_millis(now).unwrap_or_else(Utc::now);
+            let mut n = 0i64;
+            for row in &rows {
+                let mut task = row_to_projection_task(row)?;
+                if task.status != ProjectionTaskStatus::InProgress || task.updated_at >= cutoff {
+                    continue;
+                }
+                let next_version = ch_u64(row, "version").saturating_add(1).max(1);
+                task.status = ProjectionTaskStatus::Pending;
+                task.last_error = "stale in-progress reconciliation".to_string();
+                task.updated_at = now_dt;
+                self.insert_task_version(&task, &row_to_static_cols(row), next_version)
+                    .await?;
+                n += 1;
             }
-            let next_version = ch_u64(row, "version").saturating_add(1).max(1);
-            task.status = ProjectionTaskStatus::Pending;
-            task.last_error = "stale in-progress reconciliation".to_string();
-            task.updated_at = now_dt;
-            self.insert_task_version(&task, &row_to_static_cols(row), next_version)
-                .await?;
-            n += 1;
+            Ok(n)
         }
-        Ok(n)
+        .await;
+        self.release_projection_mutation_lock(&owner, "reset_stale_in_progress_tasks")
+            .await?;
+        result
     }
 
     async fn pending_task_metrics(&self, limit: i64) -> SystemStoreResult<Vec<PendingTaskMetric>> {
@@ -715,42 +785,51 @@ impl ProjectionTaskStore for ClickHouseCanonicalStore {
         target_backend: &str,
         target_instance: &str,
     ) -> SystemStoreResult<i64> {
-        let tbl = self.projection_table()?;
-        // The static cols (incl. source_table) aren't on ProjectionTaskRow, so
-        // select them explicitly — both to match on source_table and to preserve
-        // them on the version+1 rewrite. FINAL collapses to the latest version.
-        let scan = format!("SELECT {TASK_COLS}, {TASK_STATIC_COLS}, version FROM {tbl} FINAL");
-        let rows = self
-            .executor()
-            .select_rows(&scan)
-            .await
-            .map_err(|e| ch_err("requeue_dead_letter_by_source scan", e))?;
-        let now = Self::now_unix_ms();
-        let now_dt = DateTime::<Utc>::from_timestamp_millis(now).unwrap_or_else(Utc::now);
-        let mut n = 0i64;
-        for row in &rows {
-            let mut task = row_to_projection_task(row)?;
-            if task.status != ProjectionTaskStatus::DeadLetter {
-                continue;
+        let owner = self
+            .acquire_projection_mutation_lock("requeue_dead_letter_by_source")
+            .await?;
+        let result = async {
+            let tbl = self.projection_table()?;
+            // The static cols (incl. source_table) aren't on ProjectionTaskRow, so
+            // select them explicitly — both to match on source_table and to preserve
+            // them on the version+1 rewrite. FINAL collapses to the latest version.
+            let scan = format!("SELECT {TASK_COLS}, {TASK_STATIC_COLS}, version FROM {tbl} FINAL");
+            let rows = self
+                .executor()
+                .select_rows(&scan)
+                .await
+                .map_err(|e| ch_err("requeue_dead_letter_by_source scan", e))?;
+            let now = Self::now_unix_ms();
+            let now_dt = DateTime::<Utc>::from_timestamp_millis(now).unwrap_or_else(Utc::now);
+            let mut n = 0i64;
+            for row in &rows {
+                let mut task = row_to_projection_task(row)?;
+                if task.status != ProjectionTaskStatus::DeadLetter {
+                    continue;
+                }
+                let statics = row_to_static_cols(row);
+                if statics.source_table != source_table
+                    || task.target_backend != target_backend
+                    || task.target_instance != target_instance
+                {
+                    continue;
+                }
+                let next_version = ch_u64(row, "version").saturating_add(1).max(1);
+                task.status = ProjectionTaskStatus::Pending;
+                task.retry_count = 0;
+                task.last_error = "reconciliation repair".to_string();
+                task.next_retry_at = None;
+                task.updated_at = now_dt;
+                self.insert_task_version(&task, &statics, next_version)
+                    .await?;
+                n += 1;
             }
-            let statics = row_to_static_cols(row);
-            if statics.source_table != source_table
-                || task.target_backend != target_backend
-                || task.target_instance != target_instance
-            {
-                continue;
-            }
-            let next_version = ch_u64(row, "version").saturating_add(1).max(1);
-            task.status = ProjectionTaskStatus::Pending;
-            task.retry_count = 0;
-            task.last_error = "reconciliation repair".to_string();
-            task.next_retry_at = None;
-            task.updated_at = now_dt;
-            self.insert_task_version(&task, &statics, next_version)
-                .await?;
-            n += 1;
+            Ok(n)
         }
-        Ok(n)
+        .await;
+        self.release_projection_mutation_lock(&owner, "requeue_dead_letter_by_source")
+            .await?;
+        result
     }
 
     async fn pending_projection_task_count(

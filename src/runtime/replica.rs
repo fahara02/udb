@@ -118,6 +118,23 @@ impl PgReplicaPool {
     }
 }
 
+/// Outcome of a [`PgReplicaManager::choose_bounded_replica`] attempt
+/// (6.4 REPLICA_BOUNDED routing).
+#[derive(Debug, Clone)]
+pub enum BoundedReplicaRead {
+    /// A replica was selected and provably caught up past the fence LSN
+    /// within the staleness budget. Serve the read from this pool.
+    Replica(PgPool),
+    /// No eligible replica, or the replica did not catch up to the fence
+    /// LSN before the staleness deadline (or a poll error). The caller MUST
+    /// serve the read from the primary — never a stale replica — and MUST
+    /// surface the carried [`StaleReadWarning`] so the failed-over read is
+    /// never returned silently (6.4 doctrine). `ReplicaLagExceeded` when no
+    /// replica was eligible within the budget; `FenceTimedOut` when the
+    /// chosen replica didn't catch up to the fence LSN in time.
+    FailoverToPrimary(crate::runtime::consistency::StaleReadWarning),
+}
+
 #[derive(Debug, Clone)]
 pub struct PgReplicaManager {
     replicas: Arc<Vec<PgReplicaPool>>,
@@ -227,6 +244,83 @@ impl PgReplicaManager {
 
         self.query_total.fetch_add(1, Ordering::Relaxed);
         Some(selected.pool())
+    }
+
+    /// 6.4 REPLICA_BOUNDED routing: select a read replica whose lag is
+    /// within `max_staleness`, then WAIT on its REAL applied WAL position
+    /// (`pg_last_wal_replay_lsn()`) until it reaches `min_lsn`, using
+    /// `max_staleness` as the wait budget. Returns the chosen pool only when
+    /// the replica provably caught up past the caller's write; otherwise
+    /// [`BoundedReplicaRead::FailoverToPrimary`] so the caller serves the
+    /// read from the primary (which definitionally has the write) — a
+    /// bounded read NEVER returns stale data without failing over.
+    ///
+    /// The fence is anchored to the replica's physical replay LSN, NOT a
+    /// wall clock: a wall-clock fence would clear the instant `now()` passes
+    /// a timestamp and serve stale data while claiming freshness. `min_lsn`
+    /// is the caller's `WriteReceipt`/`ReadFence` Postgres LSN; `None` (or
+    /// blank) degrades to pure lag-bounded selection with no LSN wait.
+    pub async fn choose_bounded_replica(
+        &self,
+        min_lsn: Option<&str>,
+        max_staleness: Duration,
+    ) -> BoundedReplicaRead {
+        use crate::runtime::consistency::StaleReadWarning;
+        let budget_ms = max_staleness.as_millis() as u64;
+
+        // Step 1: pick a replica inside the staleness/lag budget. None ⇒ no
+        // eligible replica ⇒ fail over to the primary, attaching a
+        // `ReplicaLagExceeded` warning so the caller never serves the
+        // failed-over read silently.
+        let Some(pool) = self.choose_pool_with_max_lag(Some(max_staleness)) else {
+            self.fallback_total.fetch_add(1, Ordering::Relaxed);
+            let (instance, lag_ms) = self.least_lagged_report();
+            return BoundedReplicaRead::FailoverToPrimary(StaleReadWarning::ReplicaLagExceeded {
+                instance,
+                lag_ms,
+                budget_ms,
+            });
+        };
+
+        // Step 2: with no LSN fence, lag-bounded selection IS the contract.
+        let Some(target_lsn) = min_lsn.map(str::trim).filter(|lsn| !lsn.is_empty()) else {
+            return BoundedReplicaRead::Replica(pool);
+        };
+
+        // Step 3: wait on the replica's REAL applied LSN, failing over on
+        // timeout or any error (malformed token, lost connection). The fence
+        // is decided on the physical replay position (a REAL token), NOT a
+        // wall clock; on failover we attach a `FenceTimedOut` warning so the
+        // primary-served result is never returned silently.
+        let started = Instant::now();
+        match wait_for_replica_replay_lsn(&pool, target_lsn, max_staleness).await {
+            Ok(true) => BoundedReplicaRead::Replica(pool),
+            _ => {
+                self.fallback_total.fetch_add(1, Ordering::Relaxed);
+                let (instance, _) = self.least_lagged_report();
+                BoundedReplicaRead::FailoverToPrimary(StaleReadWarning::FenceTimedOut {
+                    backend: "postgres".to_string(),
+                    instance,
+                    lag_ms: started.elapsed().as_millis() as u64,
+                })
+            }
+        }
+    }
+
+    /// Best-effort `(instance_label, lag_ms)` of the least-lagged replica,
+    /// used to populate a failover [`StaleReadWarning`]. Returns
+    /// `("<none>", 0)` when there are no replicas configured.
+    fn least_lagged_report(&self) -> (String, u64) {
+        self.replicas
+            .iter()
+            .map(|replica| {
+                (
+                    replica.label.clone(),
+                    replica.lag_millis.load(Ordering::Relaxed),
+                )
+            })
+            .min_by_key(|(_, lag)| *lag)
+            .unwrap_or_else(|| ("<none>".to_string(), 0))
     }
 
     pub async fn refresh_health_once(&self) {
@@ -340,6 +434,53 @@ async fn probe_replica(replica: PgReplicaPool) {
             replica.mark_healthy(lag_millis, latency_millis);
         }
         Err(err) => replica.mark_unhealthy(latency_millis, err.to_string()),
+    }
+}
+
+/// Poll interval for the replica-LSN fence loop, capped to the overall
+/// budget so the loop returns promptly on a short staleness window.
+/// Tunable via `UDB_REPLICA_LSN_POLL_MS` (default 25 ms), mirroring the
+/// canonical-store durability poll cadence.
+fn replica_lsn_poll_interval(timeout: Duration) -> Duration {
+    let ms = std::env::var("UDB_REPLICA_LSN_POLL_MS")
+        .ok()
+        .and_then(|v| v.parse::<u64>().ok())
+        .filter(|v| *v > 0)
+        .unwrap_or(25);
+    Duration::from_millis(ms).min(timeout.max(Duration::from_millis(1)))
+}
+
+/// Wait until `pool` (a read replica) has REPLAYED WAL up to `target_lsn`,
+/// or `timeout` elapses. Returns `Ok(true)` when the replica's applied LSN
+/// reached the target, `Ok(false)` on timeout, `Err` on a poll failure.
+///
+/// `pg_last_wal_replay_lsn()` is the replica's PHYSICAL apply position — the
+/// real replication position, NOT a wall clock. The comparison runs
+/// server-side (`$1::pg_lsn <= …`) to avoid client-side hex-parsing bugs,
+/// and `COALESCE(…, false)` maps a NULL replay LSN (a primary, or a replica
+/// that hasn't begun replaying) to "not cleared" so the caller fails over
+/// instead of being handed a vacuous pass. Mirrors
+/// `PostgresCanonicalStore::wait_for_token`.
+async fn wait_for_replica_replay_lsn(
+    pool: &PgPool,
+    target_lsn: &str,
+    timeout: Duration,
+) -> Result<bool, sqlx::Error> {
+    let started = Instant::now();
+    let poll = replica_lsn_poll_interval(timeout);
+    loop {
+        let cleared: bool =
+            sqlx::query_scalar("SELECT COALESCE($1::pg_lsn <= pg_last_wal_replay_lsn(), false)")
+                .bind(target_lsn)
+                .fetch_one(pool)
+                .await?;
+        if cleared {
+            return Ok(true);
+        }
+        if started.elapsed() >= timeout {
+            return Ok(false);
+        }
+        tokio::time::sleep(poll).await;
     }
 }
 
@@ -488,5 +629,99 @@ mod tests {
         let manager = PgReplicaManager::empty();
         assert!(manager.is_empty());
         assert_eq!(manager.len(), 0);
+    }
+
+    // ── 6.4 REPLICA_BOUNDED routing ──────────────────────────────────────────
+
+    /// With no eligible replica (empty manager), a bounded read fails over
+    /// to the primary — whether or not an LSN fence was supplied. No live DB
+    /// is touched because replica selection short-circuits to `None`.
+    #[tokio::test]
+    async fn bounded_read_fails_over_to_primary_without_replicas() {
+        let manager = PgReplicaManager::empty();
+        assert!(matches!(
+            manager
+                .choose_bounded_replica(Some("0/1A2B3C"), Duration::from_millis(50))
+                .await,
+            BoundedReplicaRead::FailoverToPrimary(_)
+        ));
+        assert!(matches!(
+            manager
+                .choose_bounded_replica(None, Duration::from_millis(50))
+                .await,
+            BoundedReplicaRead::FailoverToPrimary(_)
+        ));
+    }
+
+    /// PrimaryOnly strategy never selects a replica, so a bounded read
+    /// always fails over to the primary.
+    #[tokio::test]
+    async fn bounded_read_fails_over_under_primary_only_strategy() {
+        let manager = PgReplicaManager::new(
+            vec![],
+            PgReplicaStrategy::PrimaryOnly,
+            Duration::from_secs(3),
+            false,
+        );
+        assert!(matches!(
+            manager
+                .choose_bounded_replica(Some("0/100"), Duration::from_millis(10))
+                .await,
+            BoundedReplicaRead::FailoverToPrimary(_)
+        ));
+    }
+
+    /// 6.4 doctrine: a bounded read that fails over to the primary NEVER does
+    /// so silently — the failover decision carries a `StaleReadWarning`. With
+    /// a REAL LSN token supplied and no eligible replica, the warning is
+    /// `ReplicaLagExceeded` and carries the staleness budget, so the caller
+    /// can attach it to the response.
+    #[tokio::test]
+    async fn bounded_read_failover_attaches_stale_read_warning() {
+        use crate::runtime::consistency::StaleReadWarning;
+        let manager = PgReplicaManager::empty();
+        match manager
+            .choose_bounded_replica(Some("0/1A2B3C"), Duration::from_millis(40))
+            .await
+        {
+            BoundedReplicaRead::FailoverToPrimary(StaleReadWarning::ReplicaLagExceeded {
+                budget_ms,
+                ..
+            }) => {
+                assert_eq!(
+                    budget_ms, 40,
+                    "failover warning carries the staleness budget"
+                );
+            }
+            other => panic!("expected FailoverToPrimary(ReplicaLagExceeded), got {other:?}"),
+        }
+        // No-fence bounded read with no replica also fails over with a warning.
+        assert!(matches!(
+            manager
+                .choose_bounded_replica(None, Duration::from_millis(10))
+                .await,
+            BoundedReplicaRead::FailoverToPrimary(StaleReadWarning::ReplicaLagExceeded { .. })
+        ));
+    }
+
+    /// The LSN poll interval honours the env override and never exceeds the
+    /// staleness budget (so a tiny window returns promptly).
+    #[test]
+    fn replica_lsn_poll_interval_is_capped_to_budget() {
+        // Default 25 ms when the budget is generous.
+        assert_eq!(
+            replica_lsn_poll_interval(Duration::from_secs(5)),
+            Duration::from_millis(25)
+        );
+        // Capped to the budget when the window is shorter than the poll.
+        assert_eq!(
+            replica_lsn_poll_interval(Duration::from_millis(5)),
+            Duration::from_millis(5)
+        );
+        // Never zero even for a zero budget (avoids a busy-spin).
+        assert_eq!(
+            replica_lsn_poll_interval(Duration::ZERO),
+            Duration::from_millis(1)
+        );
     }
 }

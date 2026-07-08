@@ -421,8 +421,35 @@ pub(crate) fn parse_dispatch_json(request_json: &str) -> Result<JsonValue, tonic
     if request_json.trim().is_empty() {
         return Ok(serde_json::json!({}));
     }
-    serde_json::from_str(request_json)
-        .map_err(|err| tonic::Status::invalid_argument(format!("invalid spec_json: {err}")))
+    serde_json::from_str(request_json).map_err(|err| {
+        core_helper_invalid_field(
+            "spec_json",
+            "must be valid JSON",
+            format!("invalid spec_json: {err}"),
+        )
+    })
+}
+
+fn core_helper_invalid_field(
+    field: impl Into<String>,
+    description: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    crate::runtime::executor_utils::invalid_argument_fields(
+        message,
+        [(field.into(), description.into())],
+    )
+}
+
+fn core_helper_failed_precondition_field(
+    field: impl Into<String>,
+    description: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    crate::runtime::executor_utils::failed_precondition_fields(
+        message,
+        [(field.into(), description.into())],
+    )
 }
 
 // `json_required_str`, `json_required_f32_vec`, `json_i32`, and `json_bool` now
@@ -434,7 +461,9 @@ pub(crate) fn parse_dispatch_json(request_json: &str) -> Result<JsonValue, tonic
 pub(crate) fn dispatch_params(value: &JsonValue) -> Result<Vec<JsonValue>, tonic::Status> {
     match value.get("params").or_else(|| value.get("parameters")) {
         Some(JsonValue::Array(params)) => Ok(params.clone()),
-        Some(_) => Err(tonic::Status::invalid_argument(
+        Some(_) => Err(core_helper_invalid_field(
+            "params",
+            "must be an array",
             "params/parameters must be an array",
         )),
         None => Ok(Vec::new()),
@@ -449,12 +478,18 @@ pub(crate) fn dispatch_param_types(
             .iter()
             .map(|value| {
                 value.as_str().map(str::to_string).ok_or_else(|| {
-                    tonic::Status::invalid_argument("param_types entries must be strings")
+                    core_helper_invalid_field(
+                        "param_types",
+                        "entries must be strings",
+                        "param_types entries must be strings",
+                    )
                 })
             })
             .collect::<Result<Vec<_>, _>>()
             .map(Some),
-        Some(_) => Err(tonic::Status::invalid_argument(
+        Some(_) => Err(core_helper_invalid_field(
+            "param_types",
+            "must be an array",
             "param_types must be an array",
         )),
         None => Ok(None),
@@ -464,11 +499,17 @@ pub(crate) fn dispatch_param_types(
 pub(crate) fn validate_single_statement(sql: &str) -> Result<(), tonic::Status> {
     let trimmed = sql.trim();
     if trimmed.is_empty() {
-        return Err(tonic::Status::invalid_argument("sql is required"));
+        return Err(core_helper_invalid_field(
+            "sql",
+            "must be non-empty",
+            "sql is required",
+        ));
     }
     let semicolon_count = trimmed.chars().filter(|ch| *ch == ';').count();
     if semicolon_count > 1 || (semicolon_count == 1 && !trimmed.ends_with(';')) {
-        return Err(tonic::Status::invalid_argument(
+        return Err(core_helper_invalid_field(
+            "sql",
+            "must contain exactly one statement",
             "generic PostgreSQL dispatch accepts exactly one statement",
         ));
     }
@@ -486,7 +527,9 @@ pub(crate) fn validate_pg_read_sql(sql: &str) -> Result<(), tonic::Status> {
     if matches!(first.as_str(), "select" | "with" | "show" | "explain") {
         Ok(())
     } else {
-        Err(tonic::Status::failed_precondition(
+        Err(core_helper_failed_precondition_field(
+            "sql",
+            "must start with SELECT, WITH, SHOW, or EXPLAIN",
             "generic PostgreSQL query allows only SELECT, WITH, SHOW, or EXPLAIN",
         ))
     }
@@ -503,7 +546,9 @@ pub(crate) fn validate_pg_mutation_sql(sql: &str) -> Result<(), tonic::Status> {
     if matches!(first.as_str(), "insert" | "update" | "delete") {
         Ok(())
     } else {
-        Err(tonic::Status::failed_precondition(
+        Err(core_helper_failed_precondition_field(
+            "sql",
+            "must start with INSERT, UPDATE, or DELETE",
             "generic PostgreSQL mutate allows only INSERT, UPDATE, or DELETE",
         ))
     }
@@ -527,7 +572,9 @@ pub(crate) fn validate_read_sql(sql: &str) -> Result<(), tonic::Status> {
     ) {
         Ok(())
     } else {
-        Err(tonic::Status::failed_precondition(
+        Err(core_helper_failed_precondition_field(
+            "sql",
+            "must start with SELECT, WITH, SHOW, EXPLAIN, or PRAGMA",
             "generic query allows only SELECT, WITH, SHOW, EXPLAIN, or PRAGMA",
         ))
     }
@@ -547,7 +594,9 @@ pub(crate) fn validate_mutation_sql(sql: &str) -> Result<(), tonic::Status> {
     if matches!(first.as_str(), "insert" | "update" | "delete" | "replace") {
         Ok(())
     } else {
-        Err(tonic::Status::failed_precondition(
+        Err(core_helper_failed_precondition_field(
+            "sql",
+            "must start with INSERT, UPDATE, DELETE, or REPLACE",
             "generic mutate allows only INSERT, UPDATE, DELETE, or REPLACE",
         ))
     }
@@ -572,7 +621,9 @@ pub(crate) fn bind_typed_generic_pg_params<'q>(
         return Ok(bind_generic_pg_params(query, params));
     };
     if param_types.len() != params.len() {
-        return Err(tonic::Status::invalid_argument(
+        return Err(core_helper_invalid_field(
+            "param_types",
+            "length must match params length",
             "param_types length must match params length",
         ));
     }
@@ -583,7 +634,9 @@ pub(crate) fn bind_typed_generic_pg_params<'q>(
                     .iter()
                     .map(|item| {
                         item.as_str().map(strip_nul).ok_or_else(|| {
-                            tonic::Status::invalid_argument(
+                            core_helper_invalid_field(
+                                "params",
+                                "array_string params must contain only strings",
                                 "array_string params must contain only strings",
                             )
                         })
@@ -596,7 +649,9 @@ pub(crate) fn bind_typed_generic_pg_params<'q>(
                     .iter()
                     .map(|item| {
                         item.as_i64().ok_or_else(|| {
-                            tonic::Status::invalid_argument(
+                            core_helper_invalid_field(
+                                "params",
+                                "array_int params must contain only integers",
                                 "array_int params must contain only integers",
                             )
                         })
@@ -609,7 +664,9 @@ pub(crate) fn bind_typed_generic_pg_params<'q>(
                     .iter()
                     .map(|item| {
                         item.as_f64().ok_or_else(|| {
-                            tonic::Status::invalid_argument(
+                            core_helper_invalid_field(
+                                "params",
+                                "array_float params must contain only numbers",
                                 "array_float params must contain only numbers",
                             )
                         })
@@ -622,7 +679,9 @@ pub(crate) fn bind_typed_generic_pg_params<'q>(
                     .iter()
                     .map(|item| {
                         item.as_bool().ok_or_else(|| {
-                            tonic::Status::invalid_argument(
+                            core_helper_invalid_field(
+                                "params",
+                                "array_bool params must contain only booleans",
                                 "array_bool params must contain only booleans",
                             )
                         })
@@ -643,14 +702,18 @@ pub(crate) fn bind_typed_generic_pg_params<'q>(
                     }
                     JsonValue::String(raw) => {
                         let dt = chrono::DateTime::parse_from_rfc3339(raw).map_err(|err| {
-                            tonic::Status::invalid_argument(format!(
-                                "timestamptz params must be RFC3339 strings: {err}"
-                            ))
+                            core_helper_invalid_field(
+                                "params",
+                                "timestamptz params must be RFC3339 strings",
+                                format!("timestamptz params must be RFC3339 strings: {err}"),
+                            )
                         })?;
                         query.bind(dt.with_timezone(&chrono::Utc))
                     }
                     _ => {
-                        return Err(tonic::Status::invalid_argument(
+                        return Err(core_helper_invalid_field(
+                            "params",
+                            "timestamptz params must be strings or null",
                             "timestamptz params must be strings or null",
                         ));
                     }
@@ -663,14 +726,18 @@ pub(crate) fn bind_typed_generic_pg_params<'q>(
                 }
                 JsonValue::String(raw) => {
                     let parsed = uuid::Uuid::parse_str(raw).map_err(|err| {
-                        tonic::Status::invalid_argument(format!(
-                            "uuid params must be UUID strings: {err}"
-                        ))
+                        core_helper_invalid_field(
+                            "params",
+                            "uuid params must be UUID strings",
+                            format!("uuid params must be UUID strings: {err}"),
+                        )
                     })?;
                     query.bind(parsed)
                 }
                 _ => {
-                    return Err(tonic::Status::invalid_argument(
+                    return Err(core_helper_invalid_field(
+                        "params",
+                        "uuid params must be strings or null",
                         "uuid params must be strings or null",
                     ));
                 }
@@ -738,7 +805,11 @@ fn json_array_values<'a>(
     param_type: &str,
 ) -> Result<&'a Vec<JsonValue>, tonic::Status> {
     value.as_array().ok_or_else(|| {
-        tonic::Status::invalid_argument(format!("{param_type} params must be arrays"))
+        core_helper_invalid_field(
+            "params",
+            format!("{param_type} params must be arrays"),
+            format!("{param_type} params must be arrays"),
+        )
     })
 }
 
@@ -1286,6 +1357,196 @@ pub(crate) fn effective_backend_instance_config(config: &UdbConfig) -> BackendIn
     BackendInstanceConfig { instances }
 }
 
+#[cfg(test)]
+mod generic_dispatch_validation_tests {
+    use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
+    use serde_json::json;
+
+    fn decode_detail(status: &tonic::Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed error detail trailer");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_single_field_violation(status: &tonic::Status, field: &str, description: &str) {
+        assert_eq!(status.code(), tonic::Code::InvalidArgument);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert!(!detail.retryable);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, field);
+        assert_eq!(detail.field_violations[0].description, description);
+    }
+
+    fn assert_failed_precondition_field_violation(
+        status: &tonic::Status,
+        field: &str,
+        description: &str,
+    ) {
+        assert_eq!(status.code(), tonic::Code::FailedPrecondition);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert!(!detail.retryable);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, field);
+        assert_eq!(detail.field_violations[0].description, description);
+    }
+
+    fn expect_status<T>(result: Result<T, tonic::Status>, context: &str) -> tonic::Status {
+        match result {
+            Ok(_) => panic!("{context}"),
+            Err(status) => status,
+        }
+    }
+
+    #[test]
+    fn generic_dispatch_json_and_sql_validation_carry_field_violations() {
+        let invalid_spec = parse_dispatch_json("{").unwrap_err();
+        assert!(
+            invalid_spec.message().starts_with("invalid spec_json:"),
+            "unexpected message: {}",
+            invalid_spec.message()
+        );
+        assert_single_field_violation(&invalid_spec, "spec_json", "must be valid JSON");
+
+        let params = dispatch_params(&json!({ "params": "not-array" })).unwrap_err();
+        assert_eq!(params.message(), "params/parameters must be an array");
+        assert_single_field_violation(&params, "params", "must be an array");
+
+        let param_types = dispatch_param_types(&json!({ "param_types": [1] })).unwrap_err();
+        assert_eq!(param_types.message(), "param_types entries must be strings");
+        assert_single_field_violation(&param_types, "param_types", "entries must be strings");
+
+        let param_types_shape =
+            dispatch_param_types(&json!({ "param_types": "uuid" })).unwrap_err();
+        assert_eq!(param_types_shape.message(), "param_types must be an array");
+        assert_single_field_violation(&param_types_shape, "param_types", "must be an array");
+
+        let empty_sql = validate_single_statement("").unwrap_err();
+        assert_eq!(empty_sql.message(), "sql is required");
+        assert_single_field_violation(&empty_sql, "sql", "must be non-empty");
+
+        let multi_sql = validate_single_statement("select 1; select 2").unwrap_err();
+        assert_eq!(
+            multi_sql.message(),
+            "generic PostgreSQL dispatch accepts exactly one statement"
+        );
+        assert_single_field_violation(&multi_sql, "sql", "must contain exactly one statement");
+
+        let pg_read_verb = validate_pg_read_sql("delete from customers").unwrap_err();
+        assert_eq!(
+            pg_read_verb.message(),
+            "generic PostgreSQL query allows only SELECT, WITH, SHOW, or EXPLAIN"
+        );
+        assert_failed_precondition_field_violation(
+            &pg_read_verb,
+            "sql",
+            "must start with SELECT, WITH, SHOW, or EXPLAIN",
+        );
+
+        let pg_mutation_verb = validate_pg_mutation_sql("select 1").unwrap_err();
+        assert_eq!(
+            pg_mutation_verb.message(),
+            "generic PostgreSQL mutate allows only INSERT, UPDATE, or DELETE"
+        );
+        assert_failed_precondition_field_violation(
+            &pg_mutation_verb,
+            "sql",
+            "must start with INSERT, UPDATE, or DELETE",
+        );
+
+        let read_verb = validate_read_sql("delete from customers").unwrap_err();
+        assert_eq!(
+            read_verb.message(),
+            "generic query allows only SELECT, WITH, SHOW, EXPLAIN, or PRAGMA"
+        );
+        assert_failed_precondition_field_violation(
+            &read_verb,
+            "sql",
+            "must start with SELECT, WITH, SHOW, EXPLAIN, or PRAGMA",
+        );
+
+        let mutation_verb = validate_mutation_sql("select 1").unwrap_err();
+        assert_eq!(
+            mutation_verb.message(),
+            "generic mutate allows only INSERT, UPDATE, DELETE, or REPLACE"
+        );
+        assert_failed_precondition_field_violation(
+            &mutation_verb,
+            "sql",
+            "must start with INSERT, UPDATE, DELETE, or REPLACE",
+        );
+    }
+
+    #[test]
+    fn typed_generic_pg_param_validation_carries_field_violations() {
+        let array_shape = json_array_values(&json!("not-array"), "array_string").unwrap_err();
+        assert_eq!(array_shape.message(), "array_string params must be arrays");
+        assert_single_field_violation(&array_shape, "params", "array_string params must be arrays");
+
+        let len_mismatch = expect_status(
+            bind_typed_generic_pg_params(
+                sqlx::query("SELECT $1"),
+                &[json!("value")],
+                Some(&["uuid".to_string(), "uuid".to_string()]),
+            ),
+            "param_types length mismatch must fail",
+        );
+        assert_eq!(
+            len_mismatch.message(),
+            "param_types length must match params length"
+        );
+        assert_single_field_violation(
+            &len_mismatch,
+            "param_types",
+            "length must match params length",
+        );
+
+        let bad_uuid = expect_status(
+            bind_typed_generic_pg_params(
+                sqlx::query("SELECT $1"),
+                &[json!("not-a-uuid")],
+                Some(&["uuid".to_string()]),
+            ),
+            "invalid uuid param must fail",
+        );
+        assert!(
+            bad_uuid
+                .message()
+                .starts_with("uuid params must be UUID strings:"),
+            "unexpected message: {}",
+            bad_uuid.message()
+        );
+        assert_single_field_violation(&bad_uuid, "params", "uuid params must be UUID strings");
+
+        let bad_timestamp = expect_status(
+            bind_typed_generic_pg_params(
+                sqlx::query("SELECT $1"),
+                &[json!("not-a-timestamp")],
+                Some(&["timestamptz".to_string()]),
+            ),
+            "invalid timestamptz param must fail",
+        );
+        assert!(
+            bad_timestamp
+                .message()
+                .starts_with("timestamptz params must be RFC3339 strings:"),
+            "unexpected message: {}",
+            bad_timestamp.message()
+        );
+        assert_single_field_violation(
+            &bad_timestamp,
+            "params",
+            "timestamptz params must be RFC3339 strings",
+        );
+    }
+}
+
 #[cfg(all(test, feature = "mssql"))]
 mod b4_mssql_helper_tests {
     use super::*;
@@ -1310,4 +1571,209 @@ mod b4_mssql_helper_tests {
         };
         assert!(mssql_executor_from_instance(&unconfigured).is_none());
     }
+}
+
+// ── Compiled-IR Postgres parameter helpers ────────────────────────────────────
+// Shared by the GenericDispatch compiled-dispatch path (handlers_data) and the
+// 2.4 bridged data-plane emitter below: LogicalValue params are converted to
+// JSON wire values plus per-parameter type hints so `bind_typed_generic_pg_params`
+// restores typed binds (timestamptz/uuid/json/arrays) instead of text.
+
+pub(crate) fn logical_value_to_json(value: &crate::ir::value::LogicalValue) -> serde_json::Value {
+    use crate::ir::value::LogicalValue;
+    match value {
+        LogicalValue::Null => serde_json::Value::Null,
+        LogicalValue::Bool(value) => serde_json::Value::Bool(*value),
+        LogicalValue::Int(value) => serde_json::json!(value),
+        LogicalValue::Float(value) => serde_json::Number::from_f64(*value)
+            .map(serde_json::Value::Number)
+            .unwrap_or(serde_json::Value::Null),
+        LogicalValue::String(value) => serde_json::Value::String(value.clone()),
+        LogicalValue::Bytes(value) => {
+            use base64::{Engine as _, engine::general_purpose::STANDARD as B64};
+            serde_json::Value::String(format!("base64:{}", B64.encode(value)))
+        }
+        LogicalValue::Timestamp(value) => serde_json::Value::String(value.to_rfc3339()),
+        LogicalValue::Json(value) => value.clone(),
+        LogicalValue::Array(values) => {
+            serde_json::Value::Array(values.iter().map(logical_value_to_json).collect())
+        }
+    }
+}
+
+fn logical_value_param_type(value: &crate::ir::value::LogicalValue) -> &'static str {
+    use crate::ir::value::LogicalValue;
+    match value {
+        LogicalValue::Json(_) => "json",
+        // A `Timestamp` renders to an RFC-3339 *string*; without this hint the
+        // executor would bind it as `text`, which Postgres refuses to coerce
+        // into a `timestamptz` column on INSERT ("column … is of type timestamp
+        // with time zone but expression is of type text"). Type it so the bind
+        // path parses it back to a real `DateTime<Utc>`.
+        LogicalValue::Timestamp(_) => "timestamptz",
+        LogicalValue::Array(values) => match values
+            .iter()
+            .find(|value| !matches!(value, LogicalValue::Null))
+        {
+            Some(LogicalValue::String(_)) => "array_string",
+            Some(LogicalValue::Int(_)) => "array_int",
+            Some(LogicalValue::Float(_)) => "array_float",
+            Some(LogicalValue::Bool(_)) => "array_bool",
+            _ => "json",
+        },
+        _ => "",
+    }
+}
+
+pub(crate) fn postgres_param_types(
+    statement: &str,
+    params: &[crate::ir::value::LogicalValue],
+) -> Vec<&'static str> {
+    params
+        .iter()
+        .enumerate()
+        .map(|(idx, value)| {
+            let value_type = logical_value_param_type(value);
+            if value_type.is_empty() {
+                postgres_placeholder_cast_type(statement, idx + 1).unwrap_or("")
+            } else {
+                value_type
+            }
+        })
+        .collect()
+}
+
+fn postgres_placeholder_cast_type(statement: &str, position: usize) -> Option<&'static str> {
+    let marker = format!("${position}::");
+    let (_, tail) = statement.split_once(&marker)?;
+    let lower = tail.trim_start().to_ascii_lowercase();
+    if lower.starts_with("timestamp with time zone") || lower.starts_with("timestamptz") {
+        Some("timestamptz")
+    } else if lower.starts_with("uuid") {
+        Some("uuid")
+    } else {
+        None
+    }
+}
+
+// ── 2.4 merge seam: bridged neutral-IR emitter for the Postgres data plane ────
+// The data-plane SELECT/UPSERT/DELETE wrappers keep every value-add (plan-error
+// validation, plan cache, scope/purpose checks, PII projection exclusion,
+// encryption, dedup, outbox/projection enqueue, audit/cache policy) and only the
+// SQL emission is swapped: when the planner request lowers to neutral IR, the
+// shared Postgres compiler renders the statement (live row equivalence is pinned
+// by `postgres_data_plane_planner_and_bridged_ir_match_live_rows`). Requests the
+// neutral IR cannot represent (planner-only JSONB/full-text operators,
+// alternate-unique DO NOTHING) fall back to the planner SQL — merge, not delete.
+
+pub(crate) struct BridgedPgStatement {
+    pub(crate) sql: String,
+    pub(crate) params: Vec<JsonValue>,
+    pub(crate) param_types: Vec<String>,
+}
+
+/// Kill switch for the bridged emitter, resolved once. Default ON; set
+/// `UDB_PG_BRIDGED_EMITTER=0|false|off` to restore planner-emitted SQL for the
+/// full surface (the fallback path that remains in place for planner-only shapes).
+pub(crate) fn pg_bridged_emitter_enabled() -> bool {
+    static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ENABLED.get_or_init(|| {
+        !matches!(
+            std::env::var("UDB_PG_BRIDGED_EMITTER")
+                .unwrap_or_default()
+                .trim()
+                .to_ascii_lowercase()
+                .as_str(),
+            "0" | "false" | "off"
+        )
+    })
+}
+
+fn compile_bridged_postgres_statement(
+    manifest: &CatalogManifest,
+    context: &crate::RequestContext,
+    operation: crate::ir::compile::CompileOperation<'_>,
+) -> Option<BridgedPgStatement> {
+    use crate::ir::compile::{CompileContext, CompiledRendering, compile_for_backend};
+    let compile_ctx = CompileContext::new(manifest)
+        .with_tenant(&context.tenant_id)
+        .with_project(&context.project_id);
+    match compile_for_backend(
+        &crate::backend::BackendKind::Postgres,
+        operation,
+        &compile_ctx,
+    ) {
+        Some(Ok(CompiledRendering::Sql {
+            backend,
+            statement,
+            params,
+        })) if backend == crate::backend::BackendKind::Postgres => {
+            let param_types = postgres_param_types(&statement, &params)
+                .into_iter()
+                .map(str::to_string)
+                .collect();
+            let params = params.iter().map(logical_value_to_json).collect();
+            Some(BridgedPgStatement {
+                sql: statement,
+                params,
+                param_types,
+            })
+        }
+        Some(Err(err)) => {
+            tracing::debug!(error = %err, "bridged Postgres IR compile fell back to planner SQL");
+            None
+        }
+        _ => None,
+    }
+}
+
+/// Bridged emission for the data-plane SELECT path. `None` = use planner SQL.
+pub(crate) fn bridged_pg_select_statement(
+    manifest: &CatalogManifest,
+    request: &crate::planning::broker::SelectPlanRequest,
+) -> Option<BridgedPgStatement> {
+    if !pg_bridged_emitter_enabled() {
+        return None;
+    }
+    let read = crate::planning::broker::build_select_logical_read(manifest, request).ok()?;
+    compile_bridged_postgres_statement(
+        manifest,
+        &request.context,
+        crate::ir::compile::CompileOperation::Read(&read),
+    )
+}
+
+/// Bridged emission for the data-plane UPSERT path. The caller passes the
+/// plan request whose `record` is ALREADY key-normalized and encrypted, so the
+/// compiled parameter values match what the planner path would bind. `None` =
+/// use planner SQL.
+pub(crate) fn bridged_pg_upsert_statement(
+    manifest: &CatalogManifest,
+    request: &crate::planning::broker::UpsertPlanRequest,
+) -> Option<BridgedPgStatement> {
+    if !pg_bridged_emitter_enabled() {
+        return None;
+    }
+    let write = crate::planning::broker::build_upsert_logical_write(manifest, request).ok()?;
+    compile_bridged_postgres_statement(
+        manifest,
+        &request.context,
+        crate::ir::compile::CompileOperation::Write(&write),
+    )
+}
+
+/// Bridged emission for the data-plane DELETE path. `None` = use planner SQL.
+pub(crate) fn bridged_pg_delete_statement(
+    manifest: &CatalogManifest,
+    request: &crate::planning::broker::DeletePlanRequest,
+) -> Option<BridgedPgStatement> {
+    if !pg_bridged_emitter_enabled() {
+        return None;
+    }
+    let delete = crate::planning::broker::build_delete_logical_delete(manifest, request).ok()?;
+    compile_bridged_postgres_statement(
+        manifest,
+        &request.context,
+        crate::ir::compile::CompileOperation::Delete(&delete),
+    )
 }

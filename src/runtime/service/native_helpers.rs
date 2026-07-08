@@ -5,6 +5,7 @@
 //! same way (tenant_id / project_id at the envelope top level).
 
 use sqlx::PgPool;
+use std::collections::BTreeSet;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tonic::{Status, metadata::MetadataMap};
@@ -25,6 +26,42 @@ pub(crate) const MAX_LIST_ROWS: i64 = 500;
 
 pub(crate) const DEFAULT_OBJECT_BACKEND: &str = "minio";
 pub(crate) const DEFAULT_OBJECT_BUCKET: &str = "udb-storage";
+
+pub(crate) fn update_mask_path_set(
+    mask: Option<&prost_types::FieldMask>,
+    allowed_paths: &[&str],
+) -> Result<Option<BTreeSet<String>>, Status> {
+    let Some(mask) = mask else {
+        return Ok(None);
+    };
+    let allowed: BTreeSet<&str> = allowed_paths.iter().copied().collect();
+    let mut paths = BTreeSet::new();
+    for path in &mask.paths {
+        if !allowed.contains(path.as_str()) {
+            return Err(crate::runtime::executor_utils::invalid_argument_fields(
+                "update_mask contains unsupported path",
+                [(
+                    "update_mask",
+                    format!(
+                        "unsupported path `{path}`; allowed paths: {}",
+                        allowed_paths.join(", ")
+                    ),
+                )],
+            ));
+        }
+        paths.insert(path.clone());
+    }
+    Ok(Some(paths))
+}
+
+pub(crate) fn update_mask_allows(
+    mask: &Option<BTreeSet<String>>,
+    field: &str,
+    legacy_present: bool,
+) -> bool {
+    mask.as_ref()
+        .map_or(legacy_present, |paths| paths.contains(field))
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct NativePageWindow {
@@ -67,6 +104,54 @@ pub(crate) fn native_page_window(
     }
 }
 
+pub(crate) fn native_offset_page_window(
+    page: i32,
+    page_size: i32,
+    page_token: &str,
+    default_page_size: i32,
+) -> NativePageWindow {
+    let default_page_size = default_page_size.clamp(1, MAX_LIST_ROWS as i32);
+    let page_size = page_size
+        .gt(&0)
+        .then_some(page_size)
+        .unwrap_or(default_page_size)
+        .min(MAX_LIST_ROWS as i32);
+    let token_offset = page_token
+        .trim()
+        .parse::<usize>()
+        .ok()
+        .filter(|offset| *offset > 0);
+    let offset = token_offset.unwrap_or_else(|| {
+        let page_number = page.max(1) as usize;
+        page_number
+            .saturating_sub(1)
+            .saturating_mul(page_size as usize)
+    });
+    let page_number = (offset / page_size as usize) + 1;
+    NativePageWindow {
+        limit: page_size as usize,
+        offset,
+        page: page_number as i32,
+        page_size,
+    }
+}
+
+pub(crate) fn native_next_page_token(offset: usize, limit: usize, returned: usize) -> String {
+    if returned >= limit && limit > 0 {
+        offset.saturating_add(limit).to_string()
+    } else {
+        String::new()
+    }
+}
+
+pub(crate) fn native_next_page_token_for_total(offset: usize, limit: usize, total: i64) -> String {
+    if limit > 0 && (offset as i64).saturating_add(limit as i64) < total {
+        offset.saturating_add(limit).to_string()
+    } else {
+        String::new()
+    }
+}
+
 pub(crate) fn native_page_response(
     page: Option<&common_pb::PageRequest>,
     total_items: i64,
@@ -83,7 +168,7 @@ pub(crate) fn native_page_response(
         page_size: window.page_size,
         total_items,
         total_pages,
-        next_page_token: String::new(),
+        next_page_token: native_next_page_token_for_total(window.offset, window.limit, total_items),
         total_count: total_items,
         has_next: window.page < total_pages,
         has_previous: window.page > 1 && total_pages > 0,
@@ -112,7 +197,25 @@ pub(crate) async fn admit_on(
     tenant: &str,
     project: Option<&str>,
 ) -> Result<Option<ChannelPermit>, Status> {
+    async fn record_admission_usage(service_label: &str, op: OperationChannel, tenant: &str) {
+        let Some(pool) = super::metering_service::admission_metering_pool() else {
+            return;
+        };
+        let method = super::metering_service::admission_metering_method(service_label, op.as_str());
+        let _ = super::metering_service::record_usage(
+            &pool,
+            tenant,
+            "",
+            &method,
+            super::metering_service::ADMISSION_METERING_UNIT,
+            i64::from(op.default_cost()),
+            super::metering_service::now_unix(),
+        )
+        .await;
+    }
+
     let Some(channels) = channels else {
+        record_admission_usage(service_label, op, tenant).await;
         return Ok(None);
     };
     let tenant_label = if tenant.trim().is_empty() {
@@ -146,6 +249,7 @@ pub(crate) async fn admit_on(
                 op.as_str(),
                 f64::from(op.default_cost()),
             );
+            record_admission_usage(service_label, op, tenant).await;
             Ok(Some(permit))
         }
         Err(err) => {
@@ -200,18 +304,24 @@ where
         Ok(result) => result,
         Err(_) => {
             metrics.inc_channel_timeout(op.as_str());
-            Err(Status::deadline_exceeded(format!(
-                "{} channel timeout",
-                op.as_str()
-            )))
+            Err(crate::runtime::executor_utils::deadline_exceeded_status(
+                backend,
+                format!("{} channel", op.as_str()),
+                crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
+                format!("{} channel timeout", op.as_str()),
+            ))
         }
     }
 }
 
 /// Parse a required UUID field, mapping failures to `InvalidArgument`.
 pub(crate) fn parse_uuid(field: &str, value: &str) -> Result<Uuid, Status> {
-    Uuid::parse_str(value.trim())
-        .map_err(|_| Status::invalid_argument(format!("{field} must be a valid UUID")))
+    Uuid::parse_str(value.trim()).map_err(|_| {
+        crate::runtime::executor_utils::invalid_argument_fields(
+            format!("{field} must be a valid UUID"),
+            [(field, "must be a valid UUID")],
+        )
+    })
 }
 
 /// Normalize a JSON string column input: blank → `{}` so JSONB binds stay valid.
@@ -274,13 +384,17 @@ pub(crate) fn validate_request_scope(
     let request_tenant_id = request_tenant_id.trim();
     let request_project_id = request_project_id.trim();
     if request_tenant_id.is_empty() {
-        return Err(Status::invalid_argument("tenant_id is required"));
+        return Err(crate::runtime::executor_utils::invalid_argument_fields(
+            "tenant_id is required",
+            [("tenant_id", "must be a non-empty tenant id")],
+        ));
     }
 
     if let Some(header_tenant) = metadata_value(metadata, "x-tenant-id")
         && header_tenant != request_tenant_id
     {
-        return Err(Status::permission_denied(
+        return Err(native_scope_policy_status(
+            "tenant_metadata_mismatch",
             "request tenant_id must match x-tenant-id",
         ));
     }
@@ -290,7 +404,8 @@ pub(crate) fn validate_request_scope(
         && !request_project_id.is_empty()
         && header_project != request_project_id
     {
-        return Err(Status::permission_denied(
+        return Err(native_scope_policy_status(
+            "project_metadata_mismatch",
             "request project_id must match project metadata",
         ));
     }
@@ -304,7 +419,8 @@ pub(crate) fn validate_request_scope(
         let claim = crate::runtime::service::method_security::current_claim_context();
         let claim_tenant = claim.tenant_id.trim();
         if !claim_tenant.is_empty() && claim_tenant != request_tenant_id {
-            return Err(Status::permission_denied(
+            return Err(native_scope_policy_status(
+                "tenant_claim_mismatch",
                 "request tenant_id must match bearer token tenant",
             ));
         }
@@ -313,12 +429,25 @@ pub(crate) fn validate_request_scope(
             && !request_project_id.is_empty()
             && claim_project != request_project_id
         {
-            return Err(Status::permission_denied(
+            return Err(native_scope_policy_status(
+                "project_claim_mismatch",
                 "request project_id must match bearer token project",
             ));
         }
     }
     Ok(())
+}
+
+fn native_scope_policy_status(
+    policy_decision_id: impl Into<String>,
+    message: impl Into<String>,
+) -> Status {
+    crate::runtime::executor_utils::policy_status_with_code(
+        tonic::Code::PermissionDenied,
+        "native_request_scope",
+        policy_decision_id,
+        message,
+    )
 }
 
 pub(crate) fn validate_request_tenant(
@@ -368,9 +497,29 @@ pub(crate) fn native_service_context(
     }
 }
 
+/// Build a native context for tenant-scoped services whose backing entities are
+/// not project-scoped. Unlike [`native_service_context`], this deliberately does
+/// not fall back to `x-udb-project-id`; UUID-typed nullable `project_id` columns
+/// must not receive human project tokens as compiler-injected predicates.
+pub(crate) fn tenant_only_native_service_context(
+    metadata: &MetadataMap,
+    tenant_id: &str,
+) -> crate::RequestContext {
+    crate::RequestContext {
+        tenant_id: tenant_id.to_string(),
+        project_id: String::new(),
+        correlation_id: metadata
+            .get("x-correlation-id")
+            .and_then(|value| value.to_str().ok())
+            .unwrap_or_default()
+            .to_string(),
+        ..crate::RequestContext::default()
+    }
+}
+
 #[cfg(test)]
 mod native_service_context_tests {
-    use super::native_service_context;
+    use super::{native_service_context, tenant_only_native_service_context};
     use tonic::metadata::MetadataMap;
 
     #[test]
@@ -396,6 +545,15 @@ mod native_service_context_tests {
         md.insert("x-correlation-id", "corr-9".parse().unwrap());
         let ctx = native_service_context(&md, "tenant-1", "p");
         assert_eq!(ctx.correlation_id, "corr-9");
+    }
+
+    #[test]
+    fn tenant_only_context_does_not_fall_back_to_project_metadata() {
+        let mut md = MetadataMap::new();
+        md.insert("x-udb-project-id", "proj-from-md".parse().unwrap());
+        let ctx = tenant_only_native_service_context(&md, "tenant-1");
+        assert_eq!(ctx.tenant_id, "tenant-1");
+        assert_eq!(ctx.project_id, "");
     }
 }
 
@@ -681,12 +839,25 @@ pub(crate) async fn enqueue_outbox_event_with_context(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
     use tonic::metadata::MetadataValue;
 
     fn metadata_with(name: &'static str, value: &'static str) -> MetadataMap {
         let mut metadata = MetadataMap::new();
         metadata.insert(name, MetadataValue::from_static(value));
         metadata
+    }
+
+    fn decode_detail(status: &Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("error-detail trailer present")
+            .to_bytes()
+            .expect("trailer decodes to bytes");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
     }
 
     #[test]
@@ -712,6 +883,42 @@ mod tests {
         let err = validate_request_tenant(&metadata, "tenant-b")
             .expect_err("body tenant must match request metadata");
         assert_eq!(err.code(), tonic::Code::PermissionDenied);
+        assert_eq!(err.message(), "request tenant_id must match x-tenant-id");
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::Policy as i32);
+        assert_eq!(detail.operation, "native_request_scope");
+        assert_eq!(detail.policy_decision_id, "tenant_metadata_mismatch");
+    }
+
+    #[test]
+    fn request_scope_missing_tenant_carries_field_violation() {
+        let metadata = MetadataMap::new();
+        let err = validate_request_tenant(&metadata, "  ").expect_err("tenant is required");
+        assert_eq!(err.code(), tonic::Code::InvalidArgument);
+        assert_eq!(err.message(), "tenant_id is required");
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, "tenant_id");
+        assert_eq!(
+            detail.field_violations[0].description,
+            "must be a non-empty tenant id"
+        );
+    }
+
+    #[test]
+    fn parse_uuid_invalid_value_carries_field_violation() {
+        let err = parse_uuid("user_id", "not-a-uuid").expect_err("invalid UUID must fail");
+        assert_eq!(err.code(), tonic::Code::InvalidArgument);
+        assert_eq!(err.message(), "user_id must be a valid UUID");
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, "user_id");
+        assert_eq!(
+            detail.field_violations[0].description,
+            "must be a valid UUID"
+        );
     }
 
     #[test]
@@ -720,6 +927,64 @@ mod tests {
         let err = validate_request_scope(&metadata, "tenant-a", "project-b")
             .expect_err("body project must match request metadata");
         assert_eq!(err.code(), tonic::Code::PermissionDenied);
+        assert_eq!(
+            err.message(),
+            "request project_id must match project metadata"
+        );
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::Policy as i32);
+        assert_eq!(detail.operation, "native_request_scope");
+        assert_eq!(detail.policy_decision_id, "project_metadata_mismatch");
+    }
+
+    #[tokio::test]
+    async fn request_scope_rejects_claim_tenant_mismatch_with_policy_detail() {
+        let claim = crate::runtime::service::method_security::test_claim_context(
+            "user-1",
+            "tenant-a",
+            "",
+            &["udb:native:write"],
+            &[],
+        );
+        crate::runtime::service::method_security::scope_claim_context_for_test(claim, async {
+            let err = validate_request_tenant(&MetadataMap::new(), "tenant-b")
+                .expect_err("body tenant must match bearer claim tenant");
+            assert_eq!(err.code(), tonic::Code::PermissionDenied);
+            assert_eq!(
+                err.message(),
+                "request tenant_id must match bearer token tenant"
+            );
+            let detail = decode_detail(&err);
+            assert_eq!(detail.kind, ErrorKind::Policy as i32);
+            assert_eq!(detail.operation, "native_request_scope");
+            assert_eq!(detail.policy_decision_id, "tenant_claim_mismatch");
+        })
+        .await;
+    }
+
+    #[tokio::test]
+    async fn request_scope_rejects_claim_project_mismatch_with_policy_detail() {
+        let claim = crate::runtime::service::method_security::test_claim_context(
+            "user-1",
+            "tenant-a",
+            "project-a",
+            &["udb:native:write"],
+            &[],
+        );
+        crate::runtime::service::method_security::scope_claim_context_for_test(claim, async {
+            let err = validate_request_scope(&MetadataMap::new(), "tenant-a", "project-b")
+                .expect_err("body project must match bearer claim project");
+            assert_eq!(err.code(), tonic::Code::PermissionDenied);
+            assert_eq!(
+                err.message(),
+                "request project_id must match bearer token project"
+            );
+            let detail = decode_detail(&err);
+            assert_eq!(detail.kind, ErrorKind::Policy as i32);
+            assert_eq!(detail.operation, "native_request_scope");
+            assert_eq!(detail.policy_decision_id, "project_claim_mismatch");
+        })
+        .await;
     }
 
     #[test]

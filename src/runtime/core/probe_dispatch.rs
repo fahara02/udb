@@ -3,6 +3,53 @@ use super::*;
 #[cfg(any(feature = "mongodb", feature = "neo4j", feature = "clickhouse"))]
 use crate::runtime::executors::BackendHealth;
 
+fn probe_dispatch_invalid_field(
+    field: impl Into<String>,
+    description: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    crate::runtime::executor_utils::invalid_argument_fields(
+        message,
+        [(field.into(), description.into())],
+    )
+}
+
+fn outbox_topic_not_allowed_status(topic: &str) -> tonic::Status {
+    probe_dispatch_invalid_field(
+        "topic",
+        "must be allowed by topic policy or UDB_CDC_VALID_TOPICS",
+        format!(
+            "topic '{topic}' is not in the registered topic registry; \
+                 configure UDB_CDC_VALID_TOPICS or use an allowed topic"
+        ),
+    )
+}
+
+fn unknown_probe_backend_status(backend: &str) -> tonic::Status {
+    probe_dispatch_invalid_field(
+        "backend",
+        "must be one of postgres, redis, mongodb, neo4j, clickhouse, qdrant, s3, or minio",
+        format!(
+            "unknown backend '{backend}'; valid: postgres, redis, mongodb, neo4j, clickhouse, qdrant, s3, minio"
+        ),
+    )
+}
+
+fn probe_backend_not_configured_status(
+    backend: &'static str,
+    capability_required: &'static str,
+    message: &'static str,
+) -> tonic::Status {
+    crate::runtime::executor_utils::capability_status(backend, "ping", capability_required, message)
+}
+
+fn probe_dispatch_internal_status(
+    operation: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    crate::runtime::executor_utils::internal_status("probe_dispatch", operation, message)
+}
+
 impl DataBrokerRuntime {
     pub fn configured_probe_backends(
         &self,
@@ -540,10 +587,7 @@ impl DataBrokerRuntime {
                 && !valid_topics.is_empty()
                 && !valid_topics.iter().any(|t| t == topic))
         {
-            return Err(tonic::Status::invalid_argument(format!(
-                "topic '{topic}' is not in the registered topic registry; \
-                 configure UDB_CDC_VALID_TOPICS or use an allowed topic"
-            )));
+            return Err(outbox_topic_not_allowed_status(topic));
         }
 
         let (event_id_uuid, event_id, enriched) =
@@ -582,7 +626,10 @@ impl DataBrokerRuntime {
                             error = %e,
                             "Redis unavailable for idempotency check; refusing keyed enqueue (fail-closed)"
                         );
-                        return Err(tonic::Status::unavailable(
+                        return Err(crate::runtime::executor_utils::retryable_status(
+                            "redis",
+                            "idempotency_dedup_check",
+                            crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
                             "idempotency dedup store unavailable; keyed enqueue refused (fail-closed)",
                         ));
                     }
@@ -603,7 +650,12 @@ impl DataBrokerRuntime {
             &enriched,
         )
         .await
-        .map_err(|e| tonic::Status::internal(format!("failed to enqueue event: {e}")))?;
+        .map_err(|e| {
+            probe_dispatch_internal_status(
+                "enqueue_outbox_event",
+                format!("failed to enqueue event: {e}"),
+            )
+        })?;
 
         // Store idempotency key in Redis with 7-day TTL.
         if let Some(ikey) = idempotency_key
@@ -666,7 +718,12 @@ impl DataBrokerRuntime {
         ))
         .fetch_all(pool)
         .await
-        .map_err(|err| tonic::Status::internal(format!("topic policy query failed: {err}")))?;
+        .map_err(|err| {
+            probe_dispatch_internal_status(
+                "topic_policy_allows",
+                format!("topic policy query failed: {err}"),
+            )
+        })?;
         if rows.is_empty() {
             return Ok(None);
         }
@@ -707,7 +764,9 @@ impl DataBrokerRuntime {
                     .acquire()
                     .await
                     .map_err(|err| {
-                        tonic::Status::unavailable(format!("postgres ping failed: {err}"))
+                        crate::runtime::executor_utils::backend_transport_status(
+                            "postgres", "ping", err,
+                        )
                     })?;
                 Ok(())
             }
@@ -718,7 +777,9 @@ impl DataBrokerRuntime {
                     .get_multiplexed_async_connection()
                     .await
                     .map_err(|err| {
-                        tonic::Status::unavailable(format!("redis ping failed: {err}"))
+                        crate::runtime::executor_utils::backend_transport_status(
+                            "redis", "ping", err,
+                        )
                     })?;
                 Ok(())
             }
@@ -727,7 +788,11 @@ impl DataBrokerRuntime {
                 if self.mongodb_for_instance(instance).is_ok() {
                     Ok(())
                 } else {
-                    Err(tonic::Status::failed_precondition("mongodb not configured"))
+                    Err(probe_backend_not_configured_status(
+                        "mongodb",
+                        "mongodb_backend",
+                        "mongodb not configured",
+                    ))
                 }
             }
             #[cfg(feature = "neo4j")]
@@ -735,7 +800,11 @@ impl DataBrokerRuntime {
                 if self.neo4j_for_instance(instance).is_ok() {
                     Ok(())
                 } else {
-                    Err(tonic::Status::failed_precondition("neo4j not configured"))
+                    Err(probe_backend_not_configured_status(
+                        "neo4j",
+                        "neo4j_backend",
+                        "neo4j not configured",
+                    ))
                 }
             }
             #[cfg(feature = "clickhouse")]
@@ -743,34 +812,44 @@ impl DataBrokerRuntime {
                 if self.clickhouse_for_instance(instance).is_ok() {
                     Ok(())
                 } else {
-                    Err(tonic::Status::failed_precondition(
+                    Err(probe_backend_not_configured_status(
+                        "clickhouse",
+                        "clickhouse_backend",
                         "clickhouse not configured",
                     ))
                 }
             }
             #[cfg(feature = "qdrant")]
             "qdrant" => {
-                let client = self
-                    .qdrant_for_instance(instance)
-                    .map_err(|_| tonic::Status::failed_precondition("qdrant not configured"))?;
+                let client = self.qdrant_for_instance(instance).map_err(|_| {
+                    probe_backend_not_configured_status(
+                        "qdrant",
+                        "qdrant_backend",
+                        "qdrant not configured",
+                    )
+                })?;
                 let qexec = QdrantExecutor(client.clone());
                 <QdrantExecutor as crate::runtime::executors::BackendHealth>::ping(&qexec)
                     .await
-                    .map_err(tonic::Status::unavailable)
+                    .map_err(|err| {
+                        crate::runtime::executor_utils::backend_transport_status(
+                            "qdrant", "ping", err,
+                        )
+                    })
             }
             #[cfg(feature = "s3")]
             "s3" | "minio" => {
                 if self.s3_for_instance(instance).is_ok() {
                     Ok(())
                 } else {
-                    Err(tonic::Status::failed_precondition(
+                    Err(probe_backend_not_configured_status(
+                        "s3",
+                        "s3_backend",
                         "s3/minio not configured",
                     ))
                 }
             }
-            other => Err(tonic::Status::invalid_argument(format!(
-                "unknown backend '{other}'; valid: postgres, redis, mongodb, neo4j, clickhouse, qdrant, s3, minio"
-            ))),
+            other => Err(unknown_probe_backend_status(other)),
         }
     }
 
@@ -1300,4 +1379,61 @@ impl DataBrokerRuntime {
     }
 
     // ── Phase 1.2 — Catalog stage / activate / rollback ──────────────────────
+}
+
+#[cfg(test)]
+mod probe_dispatch_validation_tests {
+    use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
+
+    fn decode_detail(status: &tonic::Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed error detail trailer");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_single_field_violation(status: &tonic::Status, field: &str, description: &str) {
+        assert_eq!(status.code(), tonic::Code::InvalidArgument);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert!(!detail.retryable);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, field);
+        assert_eq!(detail.field_violations[0].description, description);
+    }
+
+    fn assert_internal_detail(status: &tonic::Status, operation: &str, message: &str) {
+        assert_eq!(status.code(), tonic::Code::Internal);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "probe_dispatch");
+        assert_eq!(detail.operation, operation);
+        assert!(!detail.retryable);
+    }
+
+    #[test]
+    fn probe_dispatch_validation_carries_field_violations() {
+        assert_single_field_violation(
+            &outbox_topic_not_allowed_status("private.topic"),
+            "topic",
+            "must be allowed by topic policy or UDB_CDC_VALID_TOPICS",
+        );
+        assert_single_field_violation(
+            &unknown_probe_backend_status("bogus"),
+            "backend",
+            "must be one of postgres, redis, mongodb, neo4j, clickhouse, qdrant, s3, or minio",
+        );
+    }
+
+    #[test]
+    fn probe_dispatch_internal_status_carries_typed_detail() {
+        let status =
+            probe_dispatch_internal_status("topic_policy_allows", "topic policy query failed");
+        assert_internal_detail(&status, "topic_policy_allows", "topic policy query failed");
+    }
 }

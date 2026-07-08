@@ -18,6 +18,10 @@
 //!   `None`-when-absent.
 //! - State / status values stored as their EXACT PG canonical strings.
 //!
+//! The run-row rewrites and migration-op sequence allocation run under a
+//! KeeperMap-backed migration-audit mutation lease, so ClickHouse's
+//! read-insert-reread counter emulation is not exposed to concurrent writers.
+//!
 //! ## Schema
 //!
 //! - `udb_migration_runs` — `ReplacingMergeTree(version) ORDER BY run_id`.
@@ -43,6 +47,7 @@ use super::system_store::{
 
 /// Well-known counter row id for the migration-op ledger sequence.
 const OP_SEQ_ID: &str = "migration_op";
+const CLICKHOUSE_MIGRATION_AUDIT_MUTATION_LOCK: &str = "__udb_clickhouse_migration_audit";
 
 const RUN_COLS: &str = "run_id, project_id, catalog_version, state, operations_hash, \
      approval_token, started_at, finished_at, error";
@@ -104,6 +109,24 @@ impl ClickHouseCanonicalStore {
     fn op_seq_table(&self) -> SystemStoreResult<String> {
         self.qualified("udb_migration_op_seq")
             .map_err(|e| ch_err("op_seq_table", e))
+    }
+
+    async fn acquire_migration_audit_mutation_lock(&self, op: &str) -> SystemStoreResult<String> {
+        let owner = format!("{op}:{}", Uuid::new_v4());
+        self.acquire_system_mutation_lease(CLICKHOUSE_MIGRATION_AUDIT_MUTATION_LOCK, &owner, op)
+            .await
+            .map_err(|err| ch_err(op, err))?;
+        Ok(owner)
+    }
+
+    async fn release_migration_audit_mutation_lock(
+        &self,
+        owner: &str,
+        op: &str,
+    ) -> SystemStoreResult<()> {
+        self.release_system_mutation_lease(CLICKHOUSE_MIGRATION_AUDIT_MUTATION_LOCK, owner, op)
+            .await
+            .map_err(|err| ch_err(op, err))
     }
 
     async fn has_ledger_column(&self, column: &str) -> SystemStoreResult<bool> {
@@ -172,11 +195,8 @@ impl ClickHouseCanonicalStore {
 
     /// Allocate the next monotone ledger id via the ReplacingMergeTree counter,
     /// emulating CAS: read current seq with FINAL → INSERT version+1 row → re-read
-    /// FINAL to confirm. SINGLE-WRITER CAVEAT (see clickhouse.rs module docs): two
-    /// concurrent allocators can both read `current` and both insert `current+1`,
-    /// which FINAL collapses into one — yielding a duplicate id. The conformance
-    /// run is single-threaded so this holds; a hardened path needs an external
-    /// sequencer / Keeper lock.
+    /// FINAL to confirm. Callers hold the migration-audit mutation lease, so this
+    /// read-insert-reread allocation has one writer across broker processes.
     async fn next_op_id(&self) -> SystemStoreResult<i64> {
         let seq_table = self.op_seq_table()?;
         let read_sql = format!(
@@ -215,7 +235,7 @@ impl ClickHouseCanonicalStore {
                 "next_op_id",
                 format!(
                     "ledger-id allocation lost a race: inserted {next}, re-read {confirmed} \
-                     (single-writer assumption violated — see ClickHouseCanonicalStore docs)"
+                     (migration-audit mutation lease invariant violated)"
                 ),
             ));
         }
@@ -306,57 +326,75 @@ impl MigrationAuditStore for ClickHouseCanonicalStore {
     }
 
     async fn start_migration_run(&self, run: &MigrationRunInsert) -> SystemStoreResult<Uuid> {
-        let run_id = Uuid::new_v4();
-        let now = Self::now_unix_ms();
-        let row = MigrationRunRow {
-            run_id,
-            project_id: run.project_id.clone(),
-            catalog_version: run.catalog_version.clone(),
-            state: run.state,
-            operations_hash: run.operations_hash.clone(),
-            approval_token: run.approval_token.clone(),
-            started_at: DateTime::<Utc>::from_timestamp_millis(now).unwrap_or_else(Utc::now),
-            // finished_at absent → sentinel 0 → round-trips None.
-            finished_at: None,
-            error: String::new(),
-        };
-        self.insert_run_version(&row, 1).await?;
-        Ok(run_id)
+        let owner = self
+            .acquire_migration_audit_mutation_lock("start_migration_run")
+            .await?;
+        let result = async {
+            let run_id = Uuid::new_v4();
+            let now = Self::now_unix_ms();
+            let row = MigrationRunRow {
+                run_id,
+                project_id: run.project_id.clone(),
+                catalog_version: run.catalog_version.clone(),
+                state: run.state,
+                operations_hash: run.operations_hash.clone(),
+                approval_token: run.approval_token.clone(),
+                started_at: DateTime::<Utc>::from_timestamp_millis(now).unwrap_or_else(Utc::now),
+                // finished_at absent → sentinel 0 → round-trips None.
+                finished_at: None,
+                error: String::new(),
+            };
+            self.insert_run_version(&row, 1).await?;
+            Ok(run_id)
+        }
+        .await;
+        self.release_migration_audit_mutation_lock(&owner, "start_migration_run")
+            .await?;
+        result
     }
 
     async fn record_migration_op(&self, op: &MigrationOpInsert) -> SystemStoreResult<i64> {
-        let id = self.next_op_id().await?;
-        let ledger = self.ledger_table()?;
-        // applied_at set only when status == APPLIED (PG's CASE); otherwise sentinel
-        // 0 so it round-trips as None.
-        let applied_at = if op.status == OpLedgerStatus::Applied {
-            opt_dt_lit(Some(
-                DateTime::<Utc>::from_timestamp_millis(Self::now_unix_ms())
-                    .unwrap_or_else(Utc::now),
-            ))
-        } else {
-            0
-        };
-        let sql = format!(
-            "INSERT INTO {ledger} ({OP_COLS}) VALUES (\
-             {id}, {run_id}, {op_index}, {backend}, {resource}, {kind}, {status}, \
-             {payload}, {error}, {applied})",
-            id = id,
-            run_id = sql_lit(&op.run_id.to_string()),
-            op_index = op.operation_index,
-            backend = sql_lit(&op.backend),
-            resource = sql_lit(&op.resource_uri),
-            kind = sql_lit(&op.operation_kind),
-            status = sql_lit(op.status.as_str()),
-            payload = sql_lit(&op.payload_json.to_string()),
-            error = sql_lit(&op.error),
-            applied = applied_at,
-        );
-        self.executor()
-            .execute_ddl(&sql)
-            .await
-            .map_err(|e| ch_err("record_migration_op insert", e))?;
-        Ok(id)
+        let owner = self
+            .acquire_migration_audit_mutation_lock("record_migration_op")
+            .await?;
+        let result = async {
+            let id = self.next_op_id().await?;
+            let ledger = self.ledger_table()?;
+            // applied_at set only when status == APPLIED (PG's CASE); otherwise sentinel
+            // 0 so it round-trips as None.
+            let applied_at = if op.status == OpLedgerStatus::Applied {
+                opt_dt_lit(Some(
+                    DateTime::<Utc>::from_timestamp_millis(Self::now_unix_ms())
+                        .unwrap_or_else(Utc::now),
+                ))
+            } else {
+                0
+            };
+            let sql = format!(
+                "INSERT INTO {ledger} ({OP_COLS}) VALUES (\
+                 {id}, {run_id}, {op_index}, {backend}, {resource}, {kind}, {status}, \
+                 {payload}, {error}, {applied})",
+                id = id,
+                run_id = sql_lit(&op.run_id.to_string()),
+                op_index = op.operation_index,
+                backend = sql_lit(&op.backend),
+                resource = sql_lit(&op.resource_uri),
+                kind = sql_lit(&op.operation_kind),
+                status = sql_lit(op.status.as_str()),
+                payload = sql_lit(&op.payload_json.to_string()),
+                error = sql_lit(&op.error),
+                applied = applied_at,
+            );
+            self.executor()
+                .execute_ddl(&sql)
+                .await
+                .map_err(|e| ch_err("record_migration_op insert", e))?;
+            Ok(id)
+        }
+        .await;
+        self.release_migration_audit_mutation_lock(&owner, "record_migration_op")
+            .await?;
+        result
     }
 
     async fn finish_migration_run(
@@ -365,20 +403,30 @@ impl MigrationAuditStore for ClickHouseCanonicalStore {
         new_state: MigrationRunState,
         error: &str,
     ) -> SystemStoreResult<()> {
-        // finished_at MUST persist + round-trip as Some. version+1 INSERT. A
-        // missing run is an error (PG's rows_affected == 0 → InvalidInput).
-        let Some((mut run, version)) = self.read_run_versioned(run_id).await? else {
-            return Err(SystemStoreError::InvalidInput(format!(
-                "migration run {run_id} not found for finish_migration_run"
-            )));
-        };
-        run.state = new_state;
-        run.error = error.to_string();
-        run.finished_at = Some(
-            DateTime::<Utc>::from_timestamp_millis(Self::now_unix_ms()).unwrap_or_else(Utc::now),
-        );
-        self.insert_run_version(&run, version.saturating_add(1).max(1))
-            .await
+        let owner = self
+            .acquire_migration_audit_mutation_lock("finish_migration_run")
+            .await?;
+        let result = async {
+            // finished_at MUST persist + round-trip as Some. version+1 INSERT. A
+            // missing run is an error (PG's rows_affected == 0 → InvalidInput).
+            let Some((mut run, version)) = self.read_run_versioned(run_id).await? else {
+                return Err(SystemStoreError::InvalidInput(format!(
+                    "migration run {run_id} not found for finish_migration_run"
+                )));
+            };
+            run.state = new_state;
+            run.error = error.to_string();
+            run.finished_at = Some(
+                DateTime::<Utc>::from_timestamp_millis(Self::now_unix_ms())
+                    .unwrap_or_else(Utc::now),
+            );
+            self.insert_run_version(&run, version.saturating_add(1).max(1))
+                .await
+        }
+        .await;
+        self.release_migration_audit_mutation_lock(&owner, "finish_migration_run")
+            .await?;
+        result
     }
 
     async fn get_migration_run(&self, run_id: Uuid) -> SystemStoreResult<Option<MigrationRunRow>> {

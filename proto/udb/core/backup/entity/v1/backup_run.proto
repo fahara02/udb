@@ -1,0 +1,105 @@
+syntax = "proto3";
+
+package udb.core.backup.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Backup.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/backup/entity/v1;backupv1";
+option java_package = "com.udb.core.backup.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Backup\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Backup\\Entity\\V1";
+
+// ---------------------------------------------------------------------------
+// BackupRun — durable journal of one logical backup or restore (master-plan
+// 9.10). Each StartTenantBackup / RestoreTenant appends a row here recording
+// the object prefix, the manifest checksum, the per-run row/table counts, and
+// the count of tables EXCLUDED for lack of a tenant column (reported, never
+// silently skipped). RLS scopes rows to the tenant. ListBackups/GetBackup read
+// this journal; the encrypted artifacts themselves live in object storage.
+// ---------------------------------------------------------------------------
+message BackupRun {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "backup_runs"
+    schema_name: "udb_backup"
+    migration_order: 2
+    is_table: true
+    comment: "Durable journal of tenant logical backup/restore runs (master-plan 9.10)"
+    soft_delete: false
+    audit_fields: true
+    enable_rls: true
+    rls_policies: {
+      policy_name: "tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text)"
+      permissive: true
+    }
+    indexes: {
+      index_name: "idx_backup_runs_tenant_created"
+      index_type: "BTREE"
+      columns: "tenant_id"
+      columns: "created_at"
+    }
+    indexes: {
+      index_name: "idx_backup_runs_tenant_status"
+      index_type: "BTREE"
+      columns: "tenant_id"
+      columns: "status"
+    }
+    cdc_topic: "udb.backup.backup_runs.cdc"
+    required_scope: "backup:read"
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "none"
+    retention_class: "backup.run"
+    retention_days: 3650
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
+
+  string backup_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "backup_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(64)" not_null: true index: { index_name: "idx_backup_runs_tenant" index_type: "BTREE" } }];
+
+  // BACKUP | RESTORE — which movement produced this journal row.
+  string kind = 3 [(udb.core.common.v1.pg_column) = { column_name: "kind" sql_type: "VARCHAR(20)" not_null: true default_value: "'BACKUP'" }];
+
+  // RUNNING | COMPLETED | FAILED.
+  string status = 4 [(udb.core.common.v1.pg_column) = { column_name: "status" sql_type: "VARCHAR(20)" not_null: true default_value: "'RUNNING'" index: { index_name: "idx_backup_runs_status" index_type: "BTREE" } }];
+
+  // Object-store prefix the artifacts were written under,
+  // e.g. `backups/<tenant>/<ts>/`.
+  string object_prefix = 5 [(udb.core.common.v1.pg_column) = { column_name: "object_prefix" sql_type: "VARCHAR(512)" not_null: true default_value: "''" }];
+
+  // SHA-256 of the manifest object, the integrity anchor for the whole run.
+  string manifest_checksum = 6 [(udb.core.common.v1.pg_column) = { column_name: "manifest_checksum" sql_type: "VARCHAR(128)" not_null: true default_value: "''" }];
+
+  int32 table_count = 7 [(udb.core.common.v1.pg_column) = { column_name: "table_count" sql_type: "INTEGER" not_null: true default_value: "0" }];
+
+  int64 total_rows = 8 [(udb.core.common.v1.pg_column) = { column_name: "total_rows" sql_type: "BIGINT" not_null: true default_value: "0" }];
+
+  // Tables reported EXCLUDED (no resolvable tenant column) — surfaced, never
+  // silently dropped.
+  int32 excluded_count = 9 [(udb.core.common.v1.pg_column) = { column_name: "excluded_count" sql_type: "INTEGER" not_null: true default_value: "0" }];
+
+  // For a RESTORE: the tenant whose backup was the source.
+  string source_tenant_id = 10 [(udb.core.common.v1.pg_column) = { column_name: "source_tenant_id" sql_type: "VARCHAR(64)" not_null: true default_value: "''" }];
+
+  // For a RESTORE: the fresh tenant the rows were restored INTO.
+  string target_tenant_id = 11 [(udb.core.common.v1.pg_column) = { column_name: "target_tenant_id" sql_type: "VARCHAR(64)" not_null: true default_value: "''" }];
+
+  string error_message = 12 [(udb.core.common.v1.pg_column) = { column_name: "error_message" sql_type: "TEXT" not_null: true default_value: "''" }];
+
+  google.protobuf.Timestamp created_at = 13 [(udb.core.common.v1.pg_column) = { column_name: "created_at" sql_type: "TIMESTAMPTZ" comment: "When the run started" }];
+
+  google.protobuf.Timestamp completed_at = 14 [(udb.core.common.v1.pg_column) = { column_name: "completed_at" sql_type: "TIMESTAMPTZ" comment: "When the run finished" }];
+
+  string metadata_json = 15 [(udb.core.common.v1.pg_column) = { column_name: "metadata_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'{}'::jsonb" comment: "Non-secret run metadata" }];
+}

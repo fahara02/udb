@@ -549,6 +549,7 @@ impl EncryptionMetrics {
 mod helpers;
 pub(crate) use helpers::*;
 mod accessors;
+pub(crate) use accessors::RoutedReadPool;
 mod catalog_admin;
 mod catalog_sql;
 mod native_store;
@@ -557,6 +558,20 @@ mod probe_dispatch;
 mod reload;
 pub use reload::{ConfigReloadMode, ConfigReloadOptions, ConfigReloadReport};
 pub(crate) mod setup_data;
+
+/// Operator-declared deployment tier (`UDB_DEPLOYMENT_TIER`), resolved EXACTLY
+/// once at startup via a `OnceLock` (master-plan 3.5). `None` = no tier declared
+/// (the permissive dev default). Public re-export of the setup-data resolver so
+/// the CLI (`udb doctor`) and the `GetCapabilities` handler surface the SAME
+/// cached value — no second env read, no copy of the classification.
+pub fn declared_deployment_tier() -> Option<crate::backend::ControlPlaneHaLevel> {
+    setup_data::declared_deployment_tier()
+}
+// GDPR tenant/account hard-delete ripple (planner + executor). The PurgeTenant
+// gRPC handler is wired after codegen (W7/M2); the glob re-export keeps the
+// planner/executor reachable without an unused-import warning until then.
+pub(crate) mod tenant_purge;
+pub(crate) use tenant_purge::*;
 mod tx_object;
 
 /// Result returned by `enqueue_outbox_event`.
@@ -589,6 +604,49 @@ enum TxStrategy {
     TwoPhase,
 }
 
+fn core_invalid_field(
+    field: impl Into<String>,
+    description: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    crate::runtime::executor_utils::invalid_argument_fields(
+        message,
+        [(field.into(), description.into())],
+    )
+}
+
+fn two_phase_unsupported_operation_status(operation: &str) -> tonic::Status {
+    crate::runtime::executor_utils::policy_status(
+        "transaction_strategy",
+        "two_phase_participant_required",
+        format!(
+            "two_phase requested but operation '{operation}' is not a prepared-transaction participant"
+        ),
+    )
+}
+
+fn two_phase_disabled_status() -> tonic::Status {
+    crate::runtime::executor_utils::policy_status(
+        "transaction_strategy",
+        "two_phase_execution_disabled",
+        "two_phase requested but prepared transaction execution is disabled; \
+         set UDB_2PC_ENABLED=true to enable live PREPARE TRANSACTION + COMMIT PREPARED",
+    )
+}
+
+fn decrypt_encryption_key_missing_status(column_name: &str) -> tonic::Status {
+    crate::runtime::executor_utils::capability_status(
+        "encryption",
+        "record_decryption",
+        "udb_encryption_key",
+        format!("column {column_name} is encrypted but UDB encryption key is not configured"),
+    )
+}
+
+fn core_internal_status(operation: impl Into<String>, message: impl Into<String>) -> tonic::Status {
+    internal_status("core", operation, message)
+}
+
 fn requested_tx_strategy(
     metadata_context: &RequestContext,
     mutations: &[Mutation],
@@ -606,7 +664,9 @@ fn requested_tx_strategy(
         if let Some(existing) = strategy
             && existing != parsed
         {
-            return Err(tonic::Status::invalid_argument(
+            return Err(core_invalid_field(
+                "routing_policy",
+                "must declare at most one transaction strategy",
                 "conflicting transaction strategies in request routing policy",
             ));
         }
@@ -636,9 +696,11 @@ fn parse_tx_strategy(policy: &str) -> Result<Option<TxStrategy>, tonic::Status> 
                 || token.contains("transaction_strategy=")
                 || token.starts_with("tx:") =>
             {
-                return Err(tonic::Status::invalid_argument(format!(
-                    "unsupported transaction strategy '{value}'"
-                )));
+                return Err(core_invalid_field(
+                    "routing_policy",
+                    "must be saga, best_effort, or two_phase",
+                    format!("unsupported transaction strategy '{value}'"),
+                ));
             }
             _ => None,
         };
@@ -667,9 +729,7 @@ fn validate_tx_strategy(strategy: TxStrategy, mutations: &[Mutation]) -> Result<
                 .map(|mutation| mutation.operation.to_ascii_lowercase())
                 .find(|operation| !matches!(operation.as_str(), "upsert" | "delete"));
             if let Some(operation) = unsupported {
-                return Err(tonic::Status::failed_precondition(format!(
-                    "two_phase requested but operation '{operation}' is not a prepared-transaction participant"
-                )));
+                return Err(two_phase_unsupported_operation_status(&operation));
             }
             // B: when operator has opted-in via `UDB_2PC_ENABLED=true`,
             // accept the request — `tx_object::begin_tx` will replace
@@ -679,10 +739,7 @@ fn validate_tx_strategy(strategy: TxStrategy, mutations: &[Mutation]) -> Result<
             if two_phase_runtime_enabled() {
                 Ok(())
             } else {
-                Err(tonic::Status::failed_precondition(
-                    "two_phase requested but prepared transaction execution is disabled; \
-                     set UDB_2PC_ENABLED=true to enable live PREPARE TRANSACTION + COMMIT PREPARED",
-                ))
+                Err(two_phase_disabled_status())
             }
         }
     }
@@ -729,15 +786,23 @@ fn prepare_outbox_envelope(
     schema_uri: Option<&str>,
 ) -> Result<(Uuid, String, serde_json::Value), tonic::Status> {
     if topic.trim().is_empty() {
-        return Err(tonic::Status::invalid_argument("outbox topic is required"));
+        return Err(core_invalid_field(
+            "topic",
+            "must be non-empty",
+            "outbox topic is required",
+        ));
     }
     if partition_key.trim().is_empty() {
-        return Err(tonic::Status::invalid_argument(
+        return Err(core_invalid_field(
+            "partition_key",
+            "must be non-empty",
             "outbox partition_key is required",
         ));
     }
     let obj = payload.as_object().ok_or_else(|| {
-        tonic::Status::invalid_argument(
+        core_invalid_field(
+            "payload",
+            "must be a JSON object conforming to the EventEnvelope schema",
             "event payload must be a JSON object conforming to the EventEnvelope schema",
         )
     })?;
@@ -747,15 +812,19 @@ fn prepare_outbox_envelope(
             .map(str::trim)
             .filter(|value| !value.is_empty())
             .ok_or_else(|| {
-                tonic::Status::invalid_argument(format!(
-                    "event payload field '{field}' must be a non-empty string"
-                ))
+                core_invalid_field(
+                    format!("payload.{field}"),
+                    "must be a non-empty string",
+                    format!("event payload field '{field}' must be a non-empty string"),
+                )
             })
     };
     let event_id_uuid = Uuid::parse_str(envelope_field("event_id")?).map_err(|err| {
-        tonic::Status::invalid_argument(format!(
-            "event payload field 'event_id' must be a valid UUID: {err}"
-        ))
+        core_invalid_field(
+            "payload.event_id",
+            "must be a valid UUID",
+            format!("event payload field 'event_id' must be a valid UUID: {err}"),
+        )
     })?;
     for field in ["event_type", "correlation_id", "document_id"] {
         envelope_field(field)?;
@@ -765,7 +834,9 @@ fn prepare_outbox_envelope(
     }
     let document_id = envelope_field("document_id")?;
     if partition_key != document_id {
-        return Err(tonic::Status::invalid_argument(
+        return Err(core_invalid_field(
+            "partition_key",
+            "must equal payload.document_id",
             "outbox partition_key must equal payload.document_id",
         ));
     }
@@ -923,7 +994,10 @@ where
         query = query.bind(*key).bind(value.as_str());
     }
     query.execute(executor).await.map_err(|err| {
-        tonic::Status::internal(format!("failed to set request database context: {err}"))
+        core_internal_status(
+            "set_request_context",
+            format!("failed to set request database context: {err}"),
+        )
     })?;
     Ok(())
 }
@@ -991,7 +1065,10 @@ pub(crate) async fn reset_request_local_settings_conn(
     // NOT use it here.
     let executor: &mut sqlx::PgConnection = &mut **conn;
     executor.execute(sql.as_str()).await.map_err(|err| {
-        tonic::Status::internal(format!("failed to reset request database context: {err}"))
+        core_internal_status(
+            "reset_request_context",
+            format!("failed to reset request database context: {err}"),
+        )
     })?;
     Ok(())
 }
@@ -1079,7 +1156,89 @@ mod rls_conn_leak_tests {
 #[cfg(test)]
 mod outbox_envelope_tests {
     use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
     use serde_json::json;
+
+    fn decode_detail(status: &tonic::Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed error detail trailer");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_single_field_violation(status: &tonic::Status, field: &str, description: &str) {
+        assert_eq!(status.code(), tonic::Code::InvalidArgument);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert!(!detail.retryable);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, field);
+        assert_eq!(detail.field_violations[0].description, description);
+    }
+
+    fn assert_policy_detail(
+        status: &tonic::Status,
+        operation: &str,
+        policy_decision_id: &str,
+        message: &str,
+    ) {
+        assert_eq!(status.code(), tonic::Code::FailedPrecondition);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Policy as i32);
+        assert_eq!(detail.operation, operation);
+        assert_eq!(detail.policy_decision_id, policy_decision_id);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    fn assert_capability_detail(
+        status: &tonic::Status,
+        backend: &str,
+        operation: &str,
+        capability_required: &str,
+        message: &str,
+    ) {
+        assert_eq!(status.code(), tonic::Code::FailedPrecondition);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Capability as i32);
+        assert_eq!(detail.backend, backend);
+        assert_eq!(detail.operation, operation);
+        assert_eq!(detail.capability_required, capability_required);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    fn assert_internal_detail(status: &tonic::Status, operation: &str, message: &str) {
+        assert_eq!(status.code(), tonic::Code::Internal);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "core");
+        assert_eq!(detail.operation, operation);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    #[test]
+    fn core_internal_status_carries_typed_detail() {
+        let status = core_internal_status(
+            "set_request_context",
+            "failed to set request database context",
+        );
+        assert_internal_detail(
+            &status,
+            "set_request_context",
+            "failed to set request database context",
+        );
+    }
 
     #[test]
     fn prepare_outbox_envelope_requires_document_partition_key() {
@@ -1095,8 +1254,85 @@ mod outbox_envelope_tests {
             None,
         )
         .unwrap_err();
-        assert_eq!(err.code(), tonic::Code::InvalidArgument);
-        assert!(err.message().contains("partition_key"));
+        assert_eq!(
+            err.message(),
+            "outbox partition_key must equal payload.document_id"
+        );
+        assert_single_field_violation(&err, "partition_key", "must equal payload.document_id");
+    }
+
+    #[test]
+    fn prepare_outbox_envelope_boundary_errors_carry_field_violations() {
+        let empty_topic = prepare_outbox_envelope(
+            "",
+            "doc-1",
+            json!({
+                "event_id": "11111111-1111-4111-8111-111111111111",
+                "event_type": "document.uploaded.v1",
+                "correlation_id": "corr-1",
+                "document_id": "doc-1"
+            }),
+            None,
+        )
+        .unwrap_err();
+        assert_eq!(empty_topic.message(), "outbox topic is required");
+        assert_single_field_violation(&empty_topic, "topic", "must be non-empty");
+
+        let empty_partition = prepare_outbox_envelope(
+            "document.uploaded.v1",
+            "",
+            json!({
+                "event_id": "11111111-1111-4111-8111-111111111111",
+                "event_type": "document.uploaded.v1",
+                "correlation_id": "corr-1",
+                "document_id": "doc-1"
+            }),
+            None,
+        )
+        .unwrap_err();
+        assert_eq!(
+            empty_partition.message(),
+            "outbox partition_key is required"
+        );
+        assert_single_field_violation(&empty_partition, "partition_key", "must be non-empty");
+
+        let non_object =
+            prepare_outbox_envelope("document.uploaded.v1", "doc-1", json!("bad"), None)
+                .unwrap_err();
+        assert_eq!(
+            non_object.message(),
+            "event payload must be a JSON object conforming to the EventEnvelope schema"
+        );
+        assert_single_field_violation(
+            &non_object,
+            "payload",
+            "must be a JSON object conforming to the EventEnvelope schema",
+        );
+
+        let invalid_event_id = prepare_outbox_envelope(
+            "document.uploaded.v1",
+            "doc-1",
+            json!({
+                "event_id": "not-a-uuid",
+                "event_type": "document.uploaded.v1",
+                "correlation_id": "corr-1",
+                "document_id": "doc-1"
+            }),
+            None,
+        )
+        .unwrap_err();
+        assert!(
+            invalid_event_id
+                .message()
+                .starts_with("event payload field 'event_id' must be a valid UUID:"),
+            "unexpected message: {}",
+            invalid_event_id.message()
+        );
+        assert_single_field_violation(
+            &invalid_event_id,
+            "payload.event_id",
+            "must be a valid UUID",
+        );
     }
 
     #[test]
@@ -1144,8 +1380,11 @@ mod outbox_envelope_tests {
             None,
         )
         .unwrap_err();
-        assert_eq!(err.code(), tonic::Code::InvalidArgument);
-        assert!(err.message().contains("tenant_id"));
+        assert_eq!(
+            err.message(),
+            "event payload field 'tenant_id' must be a non-empty string"
+        );
+        assert_single_field_violation(&err, "payload.tenant_id", "must be a non-empty string");
     }
 
     #[test]
@@ -1545,7 +1784,26 @@ mod outbox_envelope_tests {
             }],
         )
         .unwrap_err();
-        assert_eq!(conflict.code(), tonic::Code::InvalidArgument);
+        assert_eq!(
+            conflict.message(),
+            "conflicting transaction strategies in request routing policy"
+        );
+        assert_single_field_violation(
+            &conflict,
+            "routing_policy",
+            "must declare at most one transaction strategy",
+        );
+
+        let unsupported = parse_tx_strategy("tx_strategy=maybe").unwrap_err();
+        assert_eq!(
+            unsupported.message(),
+            "unsupported transaction strategy 'maybe'"
+        );
+        assert_single_field_violation(
+            &unsupported,
+            "routing_policy",
+            "must be saga, best_effort, or two_phase",
+        );
     }
 
     /// Serialise env-flipping 2PC tests so they don't race with
@@ -1572,8 +1830,12 @@ mod outbox_envelope_tests {
             ..Default::default()
         }];
         let err = validate_tx_strategy(TxStrategy::TwoPhase, &relational_only).unwrap_err();
-        assert_eq!(err.code(), tonic::Code::FailedPrecondition);
-        assert!(err.message().contains("disabled"));
+        assert_policy_detail(
+            &err,
+            "transaction_strategy",
+            "two_phase_execution_disabled",
+            "two_phase requested but prepared transaction execution is disabled; set UDB_2PC_ENABLED=true to enable live PREPARE TRANSACTION + COMMIT PREPARED",
+        );
 
         let external = vec![Mutation {
             operation: "vector_upsert".to_string(),
@@ -1581,11 +1843,33 @@ mod outbox_envelope_tests {
             ..Default::default()
         }];
         let err = validate_tx_strategy(TxStrategy::TwoPhase, &external).unwrap_err();
-        assert_eq!(err.code(), tonic::Code::FailedPrecondition);
-        assert!(
-            err.message()
-                .contains("not a prepared-transaction participant")
+        assert_policy_detail(
+            &err,
+            "transaction_strategy",
+            "two_phase_participant_required",
+            "two_phase requested but operation 'vector_upsert' is not a prepared-transaction participant",
         );
+    }
+
+    #[test]
+    fn decrypt_without_configured_key_carries_capability_detail() {
+        let metrics = EncryptionMetrics::default();
+        let err = decrypt_record_value(
+            None,
+            &metrics,
+            "email",
+            JsonValue::String("udb-aead:v1:test".to_string()),
+        )
+        .expect_err("ciphertext without configured encryption key must fail");
+
+        assert_capability_detail(
+            &err,
+            "encryption",
+            "record_decryption",
+            "udb_encryption_key",
+            "column email is encrypted but UDB encryption key is not configured",
+        );
+        assert_eq!(metrics.snapshot().decrypt_error, 1);
     }
 
     #[test]
@@ -2044,7 +2328,10 @@ fn rows_to_record_set(
         }
         records_json.push(
             serde_json::to_vec(&JsonValue::Object(json_row)).map_err(|err| {
-                tonic::Status::internal(format!("failed to serialize record JSON: {err}"))
+                core_internal_status(
+                    "serialize_record_json",
+                    format!("failed to serialize record JSON: {err}"),
+                )
             })?,
         );
         proto_rows.push(ProtoRow::default());
@@ -2071,9 +2358,7 @@ fn decrypt_record_value(
     }
     let Some(encryption) = encryption else {
         metrics.record("decrypt", false);
-        return Err(tonic::Status::failed_precondition(format!(
-            "column {column_name} is encrypted but UDB encryption key is not configured"
-        )));
+        return Err(decrypt_encryption_key_missing_status(column_name));
     };
     match encryption.decrypt_json_value(&ciphertext) {
         Ok(value) => {
@@ -2082,9 +2367,10 @@ fn decrypt_record_value(
         }
         Err(err) => {
             metrics.record("decrypt", false);
-            Err(tonic::Status::internal(format!(
-                "failed to decrypt column {column_name}: {err}"
-            )))
+            Err(core_internal_status(
+                "decrypt_record_value",
+                format!("failed to decrypt column {column_name}: {err}"),
+            ))
         }
     }
 }

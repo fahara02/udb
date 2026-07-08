@@ -43,7 +43,8 @@ COPY third_party ./third_party
 COPY configs ./configs
 
 ENV RUST_LOG=info \
-    UDB_METRICS_ADDR=0.0.0.0:50052
+    UDB_METRICS_ADDR=0.0.0.0:50052 \
+    UDB_FFMPEG_ROOT=/app/third_party/ffmpeg
 
 EXPOSE 50051 50052
 USER udb:udb

@@ -1,6 +1,65 @@
 //! service.rs split — admin RPC handlers (Phase G).
 use super::*;
 
+fn admin_invalid_fields<I, F, D>(message: impl Into<String>, fields: I) -> Status
+where
+    I: IntoIterator<Item = (F, D)>,
+    F: Into<String>,
+    D: Into<String>,
+{
+    crate::runtime::executor_utils::invalid_argument_fields(message, fields)
+}
+
+fn admin_required_field(
+    message: &'static str,
+    field: &'static str,
+    description: &'static str,
+) -> Status {
+    admin_invalid_fields(message, [(field, description)])
+}
+
+fn admin_capability_status(
+    operation: &'static str,
+    capability_required: &'static str,
+    message: &'static str,
+) -> Status {
+    crate::runtime::executor_utils::capability_status(
+        "admin",
+        operation,
+        capability_required,
+        message,
+    )
+}
+
+fn admin_internal_status(operation: impl Into<String>, message: impl Into<String>) -> Status {
+    crate::runtime::executor_utils::internal_status("admin", operation, message)
+}
+
+fn invalid_redaction_payload_json(err: serde_json::Error) -> Status {
+    admin_invalid_fields(
+        format!("payload_json must be JSON: {err}"),
+        [("payload_json", "must be valid JSON bytes")],
+    )
+}
+
+fn validate_projection_drift_request(project_id: &str, message_type: &str) -> Result<(), Status> {
+    if project_id.trim().is_empty() {
+        return Err(admin_required_field(
+            "project_id is required in request or metadata",
+            "project_id",
+            "must be supplied in request or metadata",
+        ));
+    }
+    if message_type.trim().is_empty() {
+        return Err(admin_required_field(
+            "message_type is required",
+            "message_type",
+            "must be a non-empty projected message type",
+        ));
+    }
+    Ok(())
+}
+
 impl DataBrokerService {
     pub(crate) async fn list_dlq_events_inner(
         &self,
@@ -402,9 +461,7 @@ impl DataBrokerService {
         let payload: serde_json::Value = if req.payload_json.is_empty() {
             serde_json::Value::Object(serde_json::Map::new())
         } else {
-            serde_json::from_slice(&req.payload_json).map_err(|err| {
-                Status::invalid_argument(format!("payload_json must be JSON: {err}"))
-            })?
+            serde_json::from_slice(&req.payload_json).map_err(invalid_redaction_payload_json)?
         };
         let runtime = self.runtime_snapshot();
         let cdc_config = &runtime.config().cdc;
@@ -432,7 +489,10 @@ impl DataBrokerService {
             redaction_version,
         );
         let payload_json = serde_json::to_vec(&preview.payload).map_err(|err| {
-            Status::internal(format!("failed to serialize redaction preview: {err}"))
+            admin_internal_status(
+                "PreviewCdcRedaction",
+                format!("failed to serialize redaction preview: {err}"),
+            )
         })?;
         let audit_redacted_fields = preview.redacted_fields.clone();
         if let Err(err) = runtime
@@ -485,28 +545,17 @@ impl DataBrokerService {
         } else {
             req.project_id.trim().to_string()
         };
-        if project_id.trim().is_empty() {
-            return self.record_grpc(
-                "ScanProjectionDrift",
-                started,
-                Err(Status::invalid_argument(
-                    "project_id is required in request or metadata",
-                )),
-            );
-        }
         let message_type = req.message_type.trim().to_string();
-        if message_type.is_empty() {
-            return self.record_grpc(
-                "ScanProjectionDrift",
-                started,
-                Err(Status::invalid_argument("message_type is required")),
-            );
+        if let Err(err) = validate_projection_drift_request(&project_id, &message_type) {
+            return self.record_grpc("ScanProjectionDrift", started, Err(err));
         }
         let Some(engine) = self.projection_engine.as_ref() else {
             return self.record_grpc(
                 "ScanProjectionDrift",
                 started,
-                Err(Status::failed_precondition(
+                Err(admin_capability_status(
+                    "projection_drift",
+                    "projection_engine",
                     "projection engine is not available; configure Postgres canonical source and system store",
                 )),
             );
@@ -526,15 +575,26 @@ impl DataBrokerService {
                 crate::runtime::projection::message_type_matches(&plan.message_type, &message_type)
             })
             .ok_or_else(|| {
-                Status::invalid_argument(format!(
-                    "message_type '{}' has no projection plan in project '{}'",
-                    message_type, project_id
-                ))
+                admin_invalid_fields(
+                    format!(
+                        "message_type '{}' has no projection plan in project '{}'",
+                        message_type, project_id
+                    ),
+                    [(
+                        "message_type",
+                        "must match a configured projection plan for the project",
+                    )],
+                )
             })?;
         let samples = engine
             .load_source_samples(&active.manifest, &message_type, source_limit)
             .await
-            .map_err(|err| Status::internal(format!("projection source scan failed: {err}")))?;
+            .map_err(|err| {
+                admin_internal_status(
+                    "ScanProjectionDrift",
+                    format!("projection source scan failed: {err}"),
+                )
+            })?;
         let runtime = self.runtime_snapshot();
         let worker =
             crate::runtime::drift_reconciliation::DriftScannerWorker::new(runtime.clone(), mode);
@@ -587,9 +647,10 @@ impl DataBrokerService {
                             .to_string(),
                         })
                         .map_err(|err| {
-                            Status::internal(format!(
-                                "failed to encode drift row key as JSON: {err}"
-                            ))
+                            admin_internal_status(
+                                "ScanProjectionDrift",
+                                format!("failed to encode drift row key as JSON: {err}"),
+                            )
                         })
                 })
                 .collect::<Result<Vec<_>, _>>()?;
@@ -608,8 +669,12 @@ impl DataBrokerService {
         }
         let summary =
             crate::runtime::drift_reconciliation::DriftScanner::summarise(&summary_reports);
-        let summary_json = serde_json::to_vec(&summary)
-            .map_err(|err| Status::internal(format!("failed to serialize drift summary: {err}")))?;
+        let summary_json = serde_json::to_vec(&summary).map_err(|err| {
+            admin_internal_status(
+                "ScanProjectionDrift",
+                format!("failed to serialize drift summary: {err}"),
+            )
+        })?;
         if let Err(err) = runtime
             .write_audit_log(
                 &security.service_identity,
@@ -816,7 +881,9 @@ impl DataBrokerService {
             return self.record_grpc(
                 "EnsureBaseline",
                 started,
-                Err(Status::failed_precondition(
+                Err(admin_capability_status(
+                    "ensure_baseline",
+                    "admin_seed_enabled",
                     "admin baseline seeding is disabled; set UDB_ENABLE_ADMIN_SEED=1 to enable",
                 )),
             );
@@ -831,40 +898,50 @@ impl DataBrokerService {
             Err(err) => return self.record_grpc("EnsureBaseline", started, Err(err)),
         };
         let config = crate::runtime::system::SystemCatalogConfig::default();
-        let saga_rel = config.saga_relation();
         let dlq_rel = config.dlq_relation();
 
-        let saga_id = Uuid::new_v4();
         let dlq_event_id = Uuid::new_v4();
 
-        let result: Result<(), Status> = async {
-            // Idempotent manual-review saga row (mirrors the saga DDL columns).
-            sqlx::query(&format!(
-                "INSERT INTO {saga_rel} \
-                 (saga_id, tx_id, tenant_id, correlation_id, status, backend_instance, operation, \
-                  current_step, retry_count, recovery_attempts, compensation_status, steps, \
-                  compensations, last_error, created_at, updated_at) \
-                 VALUES ($1, '', $2, $3, 'manual_review', '', 'mutate', 0, 0, 0, 'manual_review', \
-                         '[]'::JSONB, '[]'::JSONB, 'baseline seed', NOW(), NOW()) \
-                 ON CONFLICT (saga_id) DO NOTHING"
-            ))
-            .bind(saga_id)
-            .bind(&tenant_id)
-            .bind(&security.correlation_id)
-            .execute(pool)
+        let result: Result<(Uuid, Uuid), Status> = async {
+            let store = runtime.default_system_stores().ok_or_else(|| {
+                admin_capability_status(
+                    "ensure_baseline",
+                    "canonical_system_store",
+                    "admin baseline seeding requires a canonical system store",
+                )
+            })?;
+            let saga_id = crate::runtime::canonical_store::system_store::SagaStore::record_saga(
+                store.as_ref(),
+                &crate::runtime::canonical_store::system_store::SagaInsert {
+                    tx_id: Uuid::new_v4().to_string(),
+                    tenant_id: tenant_id.clone(),
+                    correlation_id: security.correlation_id.clone(),
+                    backend_instance: "admin".to_string(),
+                    operation: "ensure_baseline".to_string(),
+                    status: crate::runtime::canonical_store::system_store::SagaStatus::ManualReview,
+                    steps: serde_json::json!([]),
+                    compensations: serde_json::json!([]),
+                },
+            )
             .await
-            .map_err(|err| Status::internal(format!("EnsureBaseline saga insert failed: {err}")))?;
+            .map_err(|err| {
+                admin_internal_status(
+                    "EnsureBaseline",
+                    format!("EnsureBaseline saga insert failed: {err}"),
+                )
+            })?;
 
             // Retryable DLQ row mirroring `durable_dlq_insert_sql`: status
             // RETRYING, ON CONFLICT (event_id) DO NOTHING (the conflict target
             // is `event_id`, NOT `dlq_id`).
-            sqlx::query(&format!(
+            let dlq_id = sqlx::query_scalar::<_, Uuid>(&format!(
                 "INSERT INTO {dlq_rel} \
                  (event_id, topic, tenant_id, project_id, error_type, error_message, payload, \
                   status, next_retry_at, created_at) \
                  VALUES ($1, $2, $3, $4, $5, $6, $7::JSONB, 'RETRYING', \
                          NOW() + ($8::BIGINT * INTERVAL '1 second'), NOW()) \
-                 ON CONFLICT (event_id) DO NOTHING"
+                 ON CONFLICT (event_id) DO NOTHING \
+                 RETURNING dlq_id"
             ))
             .bind(dlq_event_id)
             .bind("udb.admin.baseline.seed")
@@ -874,15 +951,20 @@ impl DataBrokerService {
             .bind("baseline seed")
             .bind(serde_json::json!({}))
             .bind(60_i64)
-            .execute(pool)
+            .fetch_one(pool)
             .await
-            .map_err(|err| Status::internal(format!("EnsureBaseline dlq insert failed: {err}")))?;
-            Ok(())
+            .map_err(|err| {
+                admin_internal_status(
+                    "EnsureBaseline",
+                    format!("EnsureBaseline dlq insert failed: {err}"),
+                )
+            })?;
+            Ok((saga_id, dlq_id))
         }
         .await;
 
         match result {
-            Ok(()) => {
+            Ok((saga_id, dlq_id)) => {
                 if let Err(err) = runtime
                     .write_audit_log(
                         &security.service_identity,
@@ -890,6 +972,7 @@ impl DataBrokerService {
                         &saga_id.to_string(),
                         &serde_json::json!({
                             "saga_id": saga_id.to_string(),
+                            "dlq_id": dlq_id.to_string(),
                             "dlq_event_id": dlq_event_id.to_string(),
                         }),
                         "ok",
@@ -906,7 +989,7 @@ impl DataBrokerService {
                     started,
                     Ok(Response::new(EnsureBaselineResponse {
                         saga_ids: vec![saga_id.to_string()],
-                        dlq_ids: vec![dlq_event_id.to_string()],
+                        dlq_ids: vec![dlq_id.to_string()],
                         device_id: String::new(),
                     })),
                 )
@@ -940,8 +1023,10 @@ fn projection_drift_scan_mode(
         }
         "full" => {
             if limit <= 0 {
-                return Err(Status::invalid_argument(
+                return Err(admin_required_field(
                     "full projection drift scans require limit > 0 to bound the canonical source read",
+                    "limit",
+                    "must be greater than 0 when scan_mode is full",
                 ));
             }
             Ok((
@@ -950,9 +1035,10 @@ fn projection_drift_scan_mode(
                 "full".to_string(),
             ))
         }
-        other => Err(Status::invalid_argument(format!(
-            "unsupported projection drift scan_mode '{other}'; use sample or full"
-        ))),
+        other => Err(admin_invalid_fields(
+            format!("unsupported projection drift scan_mode '{other}'; use sample or full"),
+            [("scan_mode", "must be sample or full")],
+        )),
     }
 }
 
@@ -998,4 +1084,179 @@ fn take_json_i64(
             _ => None,
         })
         .unwrap_or_default()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
+    use tonic::{Code, Status};
+
+    fn decode_detail(status: &Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_validation_field(status: &Status, field: &str, description: &str) {
+        assert_eq!(status.code(), Code::InvalidArgument);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, field);
+        assert_eq!(detail.field_violations[0].description, description);
+    }
+
+    fn assert_capability_detail(
+        status: &Status,
+        operation: &str,
+        capability_required: &str,
+        message: &str,
+    ) {
+        assert_eq!(status.code(), Code::FailedPrecondition);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Capability as i32);
+        assert_eq!(detail.backend, "admin");
+        assert_eq!(detail.operation, operation);
+        assert_eq!(detail.capability_required, capability_required);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    fn assert_internal_detail(status: &Status, operation: &str, message: &str) {
+        assert_eq!(status.code(), Code::Internal);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "admin");
+        assert_eq!(detail.operation, operation);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    #[test]
+    fn admin_internal_status_carries_typed_detail() {
+        assert_internal_detail(
+            &admin_internal_status(
+                "ScanProjectionDrift",
+                "projection source scan failed: missing source",
+            ),
+            "ScanProjectionDrift",
+            "projection source scan failed: missing source",
+        );
+    }
+
+    #[test]
+    fn admin_setup_capabilities_carry_typed_detail() {
+        for (operation, capability_required, message) in [
+            (
+                "projection_drift",
+                "projection_engine",
+                "projection engine is not available; configure Postgres canonical source and system store",
+            ),
+            (
+                "ensure_baseline",
+                "admin_seed_enabled",
+                "admin baseline seeding is disabled; set UDB_ENABLE_ADMIN_SEED=1 to enable",
+            ),
+        ] {
+            let status = admin_capability_status(operation, capability_required, message);
+            assert_capability_detail(&status, operation, capability_required, message);
+        }
+    }
+
+    #[test]
+    fn redaction_preview_invalid_payload_json_carries_field_violation() {
+        let err = serde_json::from_slice::<serde_json::Value>(b"{")
+            .map_err(invalid_redaction_payload_json)
+            .expect_err("invalid payload_json must fail before redaction preview");
+
+        assert!(err.message().starts_with("payload_json must be JSON:"));
+        assert_validation_field(&err, "payload_json", "must be valid JSON bytes");
+    }
+
+    #[test]
+    fn projection_drift_missing_project_id_carries_field_violation() {
+        let err = validate_projection_drift_request(" ", "acme.Invoice")
+            .expect_err("missing project_id must fail before projection lookup");
+
+        assert_eq!(
+            err.message(),
+            "project_id is required in request or metadata"
+        );
+        assert_validation_field(
+            &err,
+            "project_id",
+            "must be supplied in request or metadata",
+        );
+    }
+
+    #[test]
+    fn projection_drift_missing_message_type_carries_field_violation() {
+        let err = validate_projection_drift_request("project-a", " ")
+            .expect_err("missing message_type must fail before projection lookup");
+
+        assert_eq!(err.message(), "message_type is required");
+        assert_validation_field(
+            &err,
+            "message_type",
+            "must be a non-empty projected message type",
+        );
+    }
+
+    #[test]
+    fn projection_drift_full_scan_without_limit_carries_field_violation() {
+        let err = projection_drift_scan_mode("full", 100, 0)
+            .expect_err("full scan without limit must fail before source read");
+
+        assert_eq!(
+            err.message(),
+            "full projection drift scans require limit > 0 to bound the canonical source read"
+        );
+        assert_validation_field(
+            &err,
+            "limit",
+            "must be greater than 0 when scan_mode is full",
+        );
+    }
+
+    #[test]
+    fn projection_drift_unknown_scan_mode_carries_field_violation() {
+        let err = projection_drift_scan_mode("everything", 100, 10)
+            .expect_err("unsupported scan_mode must fail before source read");
+
+        assert_eq!(
+            err.message(),
+            "unsupported projection drift scan_mode 'everything'; use sample or full"
+        );
+        assert_validation_field(&err, "scan_mode", "must be sample or full");
+    }
+
+    #[test]
+    fn projection_drift_missing_plan_status_carries_field_violation() {
+        let err = admin_invalid_fields(
+            "message_type 'acme.Invoice' has no projection plan in project 'project-a'",
+            [(
+                "message_type",
+                "must match a configured projection plan for the project",
+            )],
+        );
+
+        assert_eq!(
+            err.message(),
+            "message_type 'acme.Invoice' has no projection plan in project 'project-a'"
+        );
+        assert_validation_field(
+            &err,
+            "message_type",
+            "must match a configured projection plan for the project",
+        );
+    }
 }

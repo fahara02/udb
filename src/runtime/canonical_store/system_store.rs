@@ -1947,6 +1947,53 @@ where
     adapter.set_saga_row(&key, &row).await
 }
 
+/// Operator-driven recompensation request for the JSON-record stores
+/// (Qdrant / vector system / any other [`JsonSystemRecordAdapter`]).
+///
+/// This is the single source of truth for the recompensation semantics
+/// across the JSON backends, mirroring the Postgres reference impl
+/// (`postgres_saga.rs::request_saga_recompensation`):
+///
+/// - eligible source states are `failed_compensation` and `manual_review`;
+/// - the saga is moved to `indeterminate` so the recovery worker re-drives
+///   it, `last_error` is cleared, and `compensation_status` becomes
+///   `retry_requested`;
+/// - because `indeterminate` is **not** an eligible source state, a second
+///   recompensation request on the same saga is refused. (PG enforces this
+///   via the `WHERE status IN (...)` guard + `rows_affected == 0` check; the
+///   JSON path enforces it with the same eligibility match.)
+///
+/// A missing saga is treated as a no-op (`Ok(())`), matching the existing
+/// JSON-store convention for absent rows.
+pub(crate) async fn request_json_saga_recompensation<A>(
+    adapter: &A,
+    saga_id: Uuid,
+) -> SystemStoreResult<()>
+where
+    A: JsonSystemRecordAdapter + ?Sized,
+{
+    let key = adapter.saga_record_key(saga_id);
+    let Some(mut row) = adapter.get_saga_row(&key).await? else {
+        return Ok(());
+    };
+    if !matches!(
+        row.status,
+        SagaStatus::FailedCompensation | SagaStatus::ManualReview
+    ) {
+        return Err(SystemStoreError::InvalidInput(format!(
+            "saga {saga_id} is not in a retryable state (must be failed_compensation or manual_review)"
+        )));
+    }
+    // Mirror the PG transition: move the saga to `indeterminate` so the
+    // recovery worker re-drives it AND a second recompensation request is
+    // refused (indeterminate is not an eligible source state).
+    row.status = SagaStatus::Indeterminate;
+    row.last_error = String::new();
+    row.compensation_status = CompensationStatus::RetryRequested;
+    row.updated_at = Utc::now();
+    adapter.set_saga_row(&key, &row).await
+}
+
 pub(crate) async fn increment_json_saga_recovery_attempts<A>(
     adapter: &A,
     saga_id: Uuid,

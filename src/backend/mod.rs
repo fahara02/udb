@@ -99,6 +99,64 @@ impl BackendKind {
         }
     }
 
+    /// master-plan 10.6: the ORM capability tier this backend exposes to a
+    /// generated SDK ORM layer.
+    ///
+    /// This is a *pure projection* of the storage [`tier()`] ([`BackendTier`] —
+    /// the single tier source of truth) onto the smaller ORM-capability
+    /// vocabulary; it deliberately introduces **no parallel `OrmTier` enum**
+    /// (the drift guard), returning a `&'static str` derived from the existing
+    /// `BackendTier` discriminant:
+    ///
+    /// ```text
+    ///   Sql | Column -> "relational"   (eager relations / joins / unit-of-work)
+    ///   Document     -> "document"      (embedded docs, no eager joins)
+    ///   Cache        -> "kv"            (key/value get/set, no query builder)
+    ///   Vector       -> "vector"        (similarity search)
+    ///   Object       -> "blob"          (bucket/key blob store)
+    ///   Graph        -> "graph"         (relationship traversal)
+    /// ```
+    ///
+    /// Because `GetCapabilities` requires `admin_scope` (an ORM client cannot
+    /// read it at runtime), the SDK ORM generator embeds this value as a
+    /// **build-time constant** during `udb sdk generate` and feature-gates ORM
+    /// capabilities (e.g. eager `.include()` is only valid for `"relational"`).
+    pub fn orm_tier(&self) -> &'static str {
+        match self.tier() {
+            BackendTier::Sql | BackendTier::Column => "relational",
+            BackendTier::Document => "document",
+            BackendTier::Cache => "kv",
+            BackendTier::Vector => "vector",
+            BackendTier::Object => "blob",
+            BackendTier::Graph => "graph",
+        }
+    }
+
+    /// Every backend kind, in declaration order. The single authoritative
+    /// enumeration of the enum's variants, used by build-time projections (the
+    /// SDK ORM-tier manifest in `cli/sdk_gen.rs`) and capability sweeps so no
+    /// caller hand-maintains a parallel variant list that could drift.
+    pub const ALL: [BackendKind; 18] = [
+        BackendKind::Postgres,
+        BackendKind::Mysql,
+        BackendKind::Sqlite,
+        BackendKind::Mssql,
+        BackendKind::Clickhouse,
+        BackendKind::Redis,
+        BackendKind::Memcached,
+        BackendKind::Qdrant,
+        BackendKind::Weaviate,
+        BackendKind::Pinecone,
+        BackendKind::Minio,
+        BackendKind::S3,
+        BackendKind::AzureBlob,
+        BackendKind::Gcs,
+        BackendKind::Mongodb,
+        BackendKind::Elasticsearch,
+        BackendKind::Neo4j,
+        BackendKind::Cassandra,
+    ];
+
     /// P2P: returns the backend's data-plane role.
     ///
     /// Pinned per backend kind. `Canonical` backends can host the UDB
@@ -188,6 +246,8 @@ impl BackendKind {
                 supports_sql_ddl: true,
                 supports_transactions: true,
                 supports_xa: false,
+                // 3.6 live proof source: tests/ha/xa_two_participant.rs
+                // drives Postgres as one participant in PG+MySQL 2PC.
                 supports_two_phase_commit: true,
                 supports_rls: true,
                 supports_vector_search: false,
@@ -204,7 +264,9 @@ impl BackendKind {
             },
             // MySQL: XA participant is compiled and wired only when the
             // `mysql` feature is present. Slim builds must not advertise
-            // a runtime they cannot construct.
+            // a runtime they cannot construct. 3.6 live proof source:
+            // tests/ha/xa_two_participant.rs drives MySQL as the second
+            // participant and through the recovery registry.
             Self::Mysql => BackendCapability {
                 supports_sql_ddl: true,
                 supports_transactions: true,
@@ -630,19 +692,41 @@ impl BackendKind {
         }
     }
 
-    /// Phase 1 HA control-plane support level. This separates "has a local
-    /// SystemStores implementation" from "may be advertised as HA canonical".
+    /// Deployment support tier for control-plane state — the SINGLE source of
+    /// truth used by the `UDB_DEPLOYMENT_TIER` startup floor (master-plan 3.5),
+    /// `udb doctor`, and GetCapabilities. It declares the highest tier at which a
+    /// backend may host UDB control-plane state, independent of whether it is
+    /// compiled/registered in the current build.
+    ///
+    /// Maintainer decision (final, non-negotiable): ClickHouse AND the vector
+    /// stores (Qdrant / Weaviate / Pinecone / Elasticsearch) are FULL-CANONICAL
+    /// control-plane backends and map to `HaCanonical` here. Their real
+    /// multi-process distributed-lock hardening is tracked separately (master-plan
+    /// 3.1 / 3.2); the deployment tier does NOT pin them below HA and they must
+    /// never be reclassified projection-only.
     pub fn control_plane_ha_level(&self) -> ControlPlaneHaLevel {
-        if !self.system_store_support().is_canonical() {
-            return ControlPlaneHaLevel::ProjectionOnly;
-        }
         match self {
+            // Embedded, single-process state only — never broker HA.
             Self::Sqlite => ControlPlaneHaLevel::DevSingleNode,
-            // ClickHouse's native store carries an explicit single-writer caveat;
-            // it is useful as a constrained SystemStores backend but must not be
-            // advertised as multi-broker HA canonical.
-            Self::Clickhouse => ControlPlaneHaLevel::SystemStoreCapable,
-            _ => ControlPlaneHaLevel::HaCanonical,
+            // Pure data-plane object / cache backends never host control-plane
+            // state, so they sit below every operating deployment tier.
+            Self::Memcached | Self::Minio | Self::S3 | Self::AzureBlob | Self::Gcs => {
+                ControlPlaneHaLevel::ProjectionOnly
+            }
+            // Distributed relational / document / wide-column / graph canonical
+            // stores, plus ClickHouse + the vector stores (see decision above).
+            Self::Postgres
+            | Self::Mysql
+            | Self::Mssql
+            | Self::Mongodb
+            | Self::Cassandra
+            | Self::Neo4j
+            | Self::Redis
+            | Self::Clickhouse
+            | Self::Qdrant
+            | Self::Weaviate
+            | Self::Pinecone
+            | Self::Elasticsearch => ControlPlaneHaLevel::HaCanonical,
         }
     }
 
@@ -1342,7 +1426,11 @@ impl SystemStoreSupport {
 /// This is deliberately stricter than [`BackendRole`]. A backend may have a
 /// compiled `SystemStores` implementation while still needing runtime topology
 /// or single-writer constraints before it can be treated as HA canonical.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+///
+/// The variants are declared in ascending capability order so the derived
+/// `Ord` doubles as the deployment-tier comparison: a registered store
+/// satisfies a declared deployment tier iff `store_level >= declared_tier`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ControlPlaneHaLevel {
     /// Data-plane/projection target only; must not host UDB control-plane state.
@@ -1362,6 +1450,25 @@ impl ControlPlaneHaLevel {
             Self::DevSingleNode => "dev_single_node",
             Self::SystemStoreCapable => "system_store_capable",
             Self::HaCanonical => "ha_canonical",
+        }
+    }
+
+    /// Parse an operator-declared `UDB_DEPLOYMENT_TIER` value into the minimum
+    /// control-plane HA level every registered canonical store must satisfy at
+    /// startup (master-plan 3.5). `ProjectionOnly` is intentionally NOT a valid
+    /// deployment floor — a deployment declares one of the three operating
+    /// tiers; returns `None` for an unrecognised value so the caller can decide
+    /// (the startup gate treats an unrecognised non-empty value as fatal).
+    pub fn parse_deployment_tier(raw: &str) -> Option<Self> {
+        match raw.trim().to_ascii_lowercase().as_str() {
+            "dev_single_node" | "dev-single-node" | "dev" | "single_node" | "single-node" => {
+                Some(Self::DevSingleNode)
+            }
+            "system_store_capable" | "system-store-capable" | "system" | "system_store" => {
+                Some(Self::SystemStoreCapable)
+            }
+            "ha_canonical" | "ha-canonical" | "ha" | "canonical" => Some(Self::HaCanonical),
+            _ => None,
         }
     }
 }
@@ -1760,6 +1867,7 @@ const OP_TRANSACTION: &str = "transaction";
 const OP_SEARCH: &str = "search";
 const OP_GET_OBJECT: &str = "get_object";
 const OP_PUT_OBJECT: &str = "put_object";
+const OP_DELETE_OBJECT: &str = "delete_object";
 const OP_ENSURE_RESOURCE: &str = "ensure_resource";
 const OP_DROP_RESOURCE: &str = "drop_resource";
 const OP_LIST_RESOURCES: &str = "list_resources";
@@ -1844,7 +1952,7 @@ impl BackendKind {
             ops.push(OP_SEARCH);
         }
         if cap.is_object_store {
-            ops.extend([OP_GET_OBJECT, OP_PUT_OBJECT]);
+            ops.extend([OP_GET_OBJECT, OP_PUT_OBJECT, OP_DELETE_OBJECT]);
         }
         ops.sort_unstable();
         ops.dedup();
@@ -1854,9 +1962,8 @@ impl BackendKind {
     pub fn supports_operation(&self, operation: &str) -> bool {
         match operation {
             OP_PING | OP_PROBE | OP_ENSURE_RESOURCE | OP_DROP_RESOURCE | OP_LIST_RESOURCES
-            | OP_QUERY | OP_MUTATE | OP_TRANSACTION | OP_SEARCH | OP_GET_OBJECT | OP_PUT_OBJECT => {
-                self.supported_operations().contains(&operation)
-            }
+            | OP_QUERY | OP_MUTATE | OP_TRANSACTION | OP_SEARCH | OP_GET_OBJECT | OP_PUT_OBJECT
+            | OP_DELETE_OBJECT => self.supported_operations().contains(&operation),
             _ => false,
         }
     }
@@ -2230,26 +2337,99 @@ mod tests {
     // drift silently. Do not "fix" a failure by changing a token; that breaks
     // user-authored configs.
 
-    const ALL_KINDS: [BackendKind; 18] = [
-        BackendKind::Postgres,
-        BackendKind::Mysql,
-        BackendKind::Sqlite,
-        BackendKind::Mssql,
-        BackendKind::Clickhouse,
-        BackendKind::Redis,
-        BackendKind::Memcached,
-        BackendKind::Qdrant,
-        BackendKind::Weaviate,
-        BackendKind::Pinecone,
-        BackendKind::Minio,
-        BackendKind::S3,
-        BackendKind::AzureBlob,
-        BackendKind::Gcs,
-        BackendKind::Mongodb,
-        BackendKind::Elasticsearch,
-        BackendKind::Neo4j,
-        BackendKind::Cassandra,
-    ];
+    // Reuse the single authoritative variant enumeration (no parallel list).
+    const ALL_KINDS: [BackendKind; 18] = BackendKind::ALL;
+
+    // ── master-plan 10.6: ORM capability-tier projection ───────────────────────
+    // `orm_tier()` is a DERIVED projection of `tier()`/`BackendTier` (the single
+    // tier source of truth). There must be NO parallel `OrmTier` enum — verify
+    // with: `grep -rn "OrmTier" src/` returns zero matches, and the only
+    // ORM-tier vocabulary is the `&'static str` set asserted below.
+    #[test]
+    fn orm_tier_projects_each_backend_to_the_right_category() {
+        let expect = |kind: BackendKind, tier: &str| {
+            assert_eq!(
+                kind.orm_tier(),
+                tier,
+                "{} should project to ORM tier {tier}",
+                kind.as_str()
+            );
+        };
+        // Relational (Sql | Column).
+        expect(BackendKind::Postgres, "relational");
+        expect(BackendKind::Mysql, "relational");
+        expect(BackendKind::Sqlite, "relational");
+        expect(BackendKind::Mssql, "relational");
+        expect(BackendKind::Clickhouse, "relational");
+        expect(BackendKind::Cassandra, "relational"); // Column tier
+        // Document.
+        expect(BackendKind::Mongodb, "document");
+        // Key/value (Cache).
+        expect(BackendKind::Redis, "kv");
+        expect(BackendKind::Memcached, "kv");
+        // Vector.
+        expect(BackendKind::Qdrant, "vector");
+        expect(BackendKind::Weaviate, "vector");
+        expect(BackendKind::Pinecone, "vector");
+        expect(BackendKind::Elasticsearch, "vector");
+        // Blob (Object).
+        expect(BackendKind::Minio, "blob");
+        expect(BackendKind::S3, "blob");
+        expect(BackendKind::AzureBlob, "blob");
+        expect(BackendKind::Gcs, "blob");
+        // Graph.
+        expect(BackendKind::Neo4j, "graph");
+    }
+
+    /// The projection must stay a closed set derived from `BackendTier`: every
+    /// backend maps to exactly one of the six known ORM tiers, and the mapping
+    /// agrees with the storage tier (so the two views can never disagree).
+    #[test]
+    fn orm_tier_is_a_total_closed_projection_of_backend_tier() {
+        const KNOWN: [&str; 6] = ["relational", "document", "kv", "vector", "blob", "graph"];
+        for kind in ALL_KINDS {
+            let orm = kind.orm_tier();
+            assert!(
+                KNOWN.contains(&orm),
+                "{} produced unknown ORM tier {orm:?}",
+                kind.as_str()
+            );
+            // The projection is a function of `tier()` alone — re-derive it and
+            // confirm equality (drift guard: orm_tier must NOT carry its own
+            // per-backend table).
+            let from_tier = match kind.tier() {
+                BackendTier::Sql | BackendTier::Column => "relational",
+                BackendTier::Document => "document",
+                BackendTier::Cache => "kv",
+                BackendTier::Vector => "vector",
+                BackendTier::Object => "blob",
+                BackendTier::Graph => "graph",
+            };
+            assert_eq!(
+                orm,
+                from_tier,
+                "{} orm_tier diverged from tier()",
+                kind.as_str()
+            );
+        }
+    }
+
+    /// master-plan 10.6 example: an ORM eager-load (`.include()`) is only valid
+    /// on a `relational` backend. The Rust ORM query-builder lives in the SDK
+    /// templates (`sdk-templates/<lang>/`), not in this crate, so we assert the
+    /// build-time tier that gates it: a Document backend projects to `"document"`
+    /// (NOT `"relational"`), which is exactly the signal the generated SDK uses
+    /// to reject eager `.include()` with `UnsupportedOperation`. (SDK-side
+    /// feature-gating of the builder is a follow-up — see the lane note.)
+    #[test]
+    fn document_backend_is_not_relational_so_include_is_unsupported() {
+        assert_ne!(
+            BackendKind::Mongodb.orm_tier(),
+            "relational",
+            "a document store must not advertise relational eager-load capability"
+        );
+        assert_eq!(BackendKind::Mongodb.orm_tier(), "document");
+    }
 
     fn serde_token(b: &BackendKind) -> String {
         serde_json::to_string(b)
@@ -2717,9 +2897,13 @@ mod tests {
             BackendKind::Qdrant.system_store_support(),
             SystemStoreSupport::None
         );
+        // Per the (non-negotiable) maintainer decision the deployment TIER for
+        // vector stores is HA-canonical even though the role/system-store promotion
+        // (the real distributed-lock work) is tracked separately — the tier does
+        // not pin them projection-only.
         assert_eq!(
             BackendKind::Qdrant.control_plane_ha_level(),
-            ControlPlaneHaLevel::ProjectionOnly
+            ControlPlaneHaLevel::HaCanonical
         );
         assert!(
             profile
@@ -2740,15 +2924,67 @@ mod tests {
             BackendKind::Sqlite.control_plane_ha_level(),
             ControlPlaneHaLevel::DevSingleNode
         );
+        // Decision-welded: ClickHouse + the vector stores are HA-canonical tier.
         assert_eq!(
-            BackendKind::Qdrant.control_plane_ha_level(),
+            BackendKind::Clickhouse.control_plane_ha_level(),
+            ControlPlaneHaLevel::HaCanonical
+        );
+        for vector in [
+            BackendKind::Qdrant,
+            BackendKind::Weaviate,
+            BackendKind::Pinecone,
+            BackendKind::Elasticsearch,
+        ] {
+            assert_eq!(
+                vector.control_plane_ha_level(),
+                ControlPlaneHaLevel::HaCanonical,
+                "{vector:?} must be HA-canonical tier (maintainer decision)"
+            );
+        }
+        // Pure data-plane object/cache backends stay below every operating tier.
+        assert_eq!(
+            BackendKind::S3.control_plane_ha_level(),
             ControlPlaneHaLevel::ProjectionOnly
         );
         let matrix = BackendKind::Qdrant.capability_matrix_entry();
         assert_eq!(
             matrix.control_plane_ha_level,
-            ControlPlaneHaLevel::ProjectionOnly
+            ControlPlaneHaLevel::HaCanonical
         );
+    }
+
+    #[test]
+    fn deployment_tier_ordering_and_parsing() {
+        use ControlPlaneHaLevel as L;
+        // Ascending capability order backs the deployment-tier `>=` floor check.
+        assert!(L::ProjectionOnly < L::DevSingleNode);
+        assert!(L::DevSingleNode < L::SystemStoreCapable);
+        assert!(L::SystemStoreCapable < L::HaCanonical);
+        // A registered store satisfies a declared tier iff its level >= the tier.
+        assert!(L::HaCanonical >= L::SystemStoreCapable);
+        assert!(L::DevSingleNode < L::HaCanonical);
+
+        assert_eq!(
+            L::parse_deployment_tier("ha_canonical"),
+            Some(L::HaCanonical)
+        );
+        assert_eq!(L::parse_deployment_tier(" HA "), Some(L::HaCanonical));
+        assert_eq!(
+            L::parse_deployment_tier("system_store_capable"),
+            Some(L::SystemStoreCapable)
+        );
+        assert_eq!(
+            L::parse_deployment_tier("dev_single_node"),
+            Some(L::DevSingleNode)
+        );
+        // ProjectionOnly is not a valid declared floor; unknown values reject.
+        assert_eq!(L::parse_deployment_tier("projection_only"), None);
+        assert_eq!(L::parse_deployment_tier("bogus"), None);
+        // Unset/blank maps to None at the parse layer too, so the startup
+        // resolver treats an empty `UDB_DEPLOYMENT_TIER` as "no tier declared"
+        // (permissive dev default) rather than a hard error.
+        assert_eq!(L::parse_deployment_tier(""), None);
+        assert_eq!(L::parse_deployment_tier("   "), None);
     }
 
     #[test]

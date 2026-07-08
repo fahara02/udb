@@ -3,6 +3,7 @@ syntax = "proto3";
 package udb.core.idp.services.v1;
 
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/field_mask.proto";
 import "udb/core/idp/entity/v1/identity_provider.proto";
 import "udb/core/idp/entity/v1/external_identity.proto";
 import "udb/core/idp/entity/v1/enums.proto";
@@ -24,6 +25,8 @@ message CreateProviderRequest {
   udb.core.idp.entity.v1.IdpKind kind = 2;
   string display_name = 3;
   string issuer = 4;
+  // Stable public SAML entityID. Caller-chosen format follows the SAML entityID
+  // URI/string rules and is scoped by tenant/provider kind.
   string entity_id = 5;
   string jwks_url = 6;
   string saml_metadata_url = 7;
@@ -65,6 +68,9 @@ message UpdateProviderRequest {
   string saml_signing_key_pem = 15; // empty = unchanged
   string updated_by = 16;
   udb.core.common.v1.RequestContext context = 17;
+  // Optional PATCH mask relative to the provider resource. When omitted, legacy
+  // clients keep the historical non-empty-field patch behavior.
+  google.protobuf.FieldMask update_mask = 18;
 }
 
 message UpdateProviderResponse {

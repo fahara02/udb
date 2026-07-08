@@ -20,9 +20,27 @@ pub(crate) fn emit_init_project_scaffold() {
             Err(e) => eprintln!("failed to write {path}: {e}"),
         }
     }
-    eprintln!(
-        "\nProject scaffold created. Run `udb system-ddl | psql $DATABASE_URL` to bootstrap."
-    );
+    eprintln!("\nProject scaffold created.");
+    eprintln!("{}", migration_to_orm_next_steps());
+}
+
+/// Operator next-steps that surface the existing migration pipeline and link it
+/// to ORM model generation (master-plan 10.5). The scaffold deliberately does
+/// not reimplement migration or codegen — it points at `udb plan` /
+/// `udb sync-migrations` (the migration pipeline) and `udb orm scaffold` (which
+/// reuses the SDK generation machinery) so a fresh project goes
+/// schema → migration → typed models with the shipped commands.
+pub(crate) fn migration_to_orm_next_steps() -> String {
+    [
+        "Next steps (migration → ORM models):",
+        "  1. udb plan                              # preview the migration plan from your proto",
+        "  2. udb sync-migrations                   # write db_ops/migrations artifacts (proto is source of truth)",
+        "  3. udb system-ddl | psql $DATABASE_URL   # apply the schema to the database",
+        "  4. udb orm scaffold --lang <lang> [--entity <pkg.Message>]",
+        "                                           # generate typed entity/repository models (reuses `udb sdk generate`)",
+        "See docs/orm-scaffold.md for the full migrate-plan/apply → model-generation workflow.",
+    ]
+    .join("\n")
 }
 
 /// The scaffold's `(relative_path, file_contents)` pairs. Extracted from the
@@ -231,6 +249,68 @@ var resp = await client.GetHealthReportAsync(new HealthReportRequest {
 });
 Console.WriteLine(resp);
 "#;
+    let java_client = r#"// examples/java/Client.java — minimal UDB gRPC client (Java)
+// mvn dependency: dev.udb:udb-java-client
+import com.udb.entity.v1.HealthReportRequest;
+import com.udb.entity.v1.RequestContext;
+import com.udb.services.v1.DataBrokerGrpc;
+import io.grpc.ManagedChannel;
+import io.grpc.ManagedChannelBuilder;
+
+public final class Client {
+  private Client() {}
+
+  public static void main(String[] args) {
+    ManagedChannel channel = ManagedChannelBuilder
+        .forAddress("localhost", 50051)
+        .usePlaintext()
+        .build();
+    try {
+      DataBrokerGrpc.DataBrokerBlockingStub client = DataBrokerGrpc.newBlockingStub(channel);
+      HealthReportRequest req = HealthReportRequest.newBuilder()
+          .setContext(RequestContext.newBuilder()
+              .setPurpose("health")
+              .setServiceIdentity("example")
+              .build())
+          .setWithProbes(false)
+          .build();
+      System.out.println(client.getHealthReport(req));
+    } finally {
+      channel.shutdownNow();
+    }
+  }
+}
+"#;
+    let php_client = r#"<?php
+// examples/php/client.php — minimal UDB gRPC client (PHP)
+// composer require fahara02/udb-laravel
+
+require __DIR__ . '/vendor/autoload.php';
+
+use Grpc\ChannelCredentials;
+use Udb\Entity\V1\HealthReportRequest;
+use Udb\Entity\V1\RequestContext;
+use Udb\Services\V1\DataBrokerClient;
+
+$client = new DataBrokerClient('localhost:50051', [
+    'credentials' => ChannelCredentials::createInsecure(),
+]);
+
+$ctx = (new RequestContext())
+    ->setPurpose('health')
+    ->setServiceIdentity('example');
+$req = (new HealthReportRequest())
+    ->setContext($ctx)
+    ->setWithProbes(false);
+
+[$resp, $status] = $client->GetHealthReport($req)->wait();
+if ($status->code !== \Grpc\STATUS_OK) {
+    fwrite(STDERR, "GetHealthReport failed: {$status->details}\n");
+    exit(1);
+}
+
+echo $resp->serializeToJsonString(), PHP_EOL;
+"#;
     vec![
         ("proto/app/v1/user.proto", proto_sample),
         ("configs/database.yaml", config_template),
@@ -239,6 +319,8 @@ Console.WriteLine(resp);
         ("examples/python/client.py", python_client),
         ("examples/typescript/client.ts", typescript_client),
         ("examples/csharp/Client.cs", csharp_client),
+        ("examples/java/Client.java", java_client),
+        ("examples/php/client.php", php_client),
     ]
 }
 
@@ -293,6 +375,24 @@ mod tests {
             ts.contains("data_broker.proto"),
             "TS example must load the DataBroker proto"
         );
+    }
+
+    #[test]
+    fn scaffold_emits_examples_for_all_six_sdks() {
+        let files = scaffold_files()
+            .into_iter()
+            .map(|(path, _)| path)
+            .collect::<std::collections::BTreeSet<_>>();
+        for expected in [
+            "examples/go/client.go",
+            "examples/python/client.py",
+            "examples/typescript/client.ts",
+            "examples/csharp/Client.cs",
+            "examples/java/Client.java",
+            "examples/php/client.php",
+        ] {
+            assert!(files.contains(expected), "scaffold missing {expected}");
+        }
     }
 
     #[test]

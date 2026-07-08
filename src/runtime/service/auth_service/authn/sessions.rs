@@ -3,6 +3,70 @@
 
 use super::*;
 
+fn session_invalid_fields<I, F, D>(message: impl Into<String>, fields: I) -> Status
+where
+    I: IntoIterator<Item = (F, D)>,
+    F: Into<String>,
+    D: Into<String>,
+{
+    crate::runtime::executor_utils::invalid_argument_fields(message, fields)
+}
+
+fn unsupported_validate_token_type_status() -> Status {
+    session_invalid_fields(
+        "supported token_type values are SESSION, API_KEY, JWT_ACCESS, and JWT_REFRESH",
+        [(
+            "token_type",
+            "must be SESSION, API_KEY, JWT_ACCESS, or JWT_REFRESH",
+        )],
+    )
+}
+
+fn session_policy_status_with_code(
+    code: tonic::Code,
+    operation: &'static str,
+    policy_decision_id: &'static str,
+    message: &'static str,
+) -> Status {
+    crate::runtime::executor_utils::policy_status_with_code(
+        code,
+        operation,
+        policy_decision_id,
+        message,
+    )
+}
+
+fn list_sessions_tenant_scope_required_status() -> Status {
+    session_policy_status_with_code(
+        tonic::Code::PermissionDenied,
+        "list_sessions",
+        "tenant_scoped_bearer_required",
+        "operation requires a tenant-scoped bearer token or a cross-tenant admin role",
+    )
+}
+
+fn list_sessions_target_tenant_required_status() -> Status {
+    session_policy_status_with_code(
+        tonic::Code::PermissionDenied,
+        "list_sessions",
+        "target_user_tenant_required",
+        "target user must belong to the bearer token tenant",
+    )
+}
+
+fn refresh_user_active_status() -> Status {
+    session_policy_status_with_code(
+        tonic::Code::PermissionDenied,
+        "refresh_token",
+        "user_not_active",
+        "user is not active",
+    )
+}
+
+fn session_internal_status(operation: impl Into<String>, message: impl Into<String>) -> Status {
+    crate::runtime::executor_utils::internal_status("authn", operation, message)
+}
+
 fn validate_session_response(
     rec: Option<SessionRecord>,
     now_unix: u64,
@@ -47,6 +111,10 @@ fn validate_session_response(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::proto::udb::core::authn::services::v1::authn_service_server::AuthnService;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
 
     fn session_record() -> SessionRecord {
         SessionRecord {
@@ -79,6 +147,246 @@ mod tests {
         assert!(!response.token_id.contains("hmac-sha256"));
     }
 
+    fn session_test_service() -> AuthnServiceImpl {
+        AuthnServiceImpl::new(
+            authn::AuthnConfig {
+                session_enabled: true,
+                session_hash_secret: "session-test-secret".to_string(),
+                ..authn::AuthnConfig::default()
+            },
+            crate::runtime::security::SecurityConfig::default(),
+        )
+    }
+
+    fn decode_detail(status: &Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_validation_fields(status: &Status, expected: &[(&str, &str)]) {
+        assert_eq!(status.code(), tonic::Code::InvalidArgument);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert_eq!(detail.field_violations.len(), expected.len());
+        for (actual, (field, description)) in detail.field_violations.iter().zip(expected) {
+            assert_eq!(actual.field, *field);
+            assert_eq!(actual.description, *description);
+        }
+    }
+
+    fn assert_capability_detail(
+        status: &Status,
+        operation: &str,
+        capability_required: &str,
+        message: &str,
+    ) {
+        assert_eq!(status.code(), tonic::Code::FailedPrecondition);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Capability as i32);
+        assert_eq!(detail.backend, "authn");
+        assert_eq!(detail.operation, operation);
+        assert_eq!(detail.capability_required, capability_required);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    fn assert_policy_detail(
+        status: &Status,
+        operation: &str,
+        policy_decision_id: &str,
+        message: &str,
+    ) {
+        assert_eq!(status.code(), tonic::Code::PermissionDenied);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Policy as i32);
+        assert_eq!(detail.operation, operation);
+        assert_eq!(detail.policy_decision_id, policy_decision_id);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    fn assert_internal_detail(status: &Status, operation: &str, message: &str) {
+        assert_eq!(status.code(), tonic::Code::Internal);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "authn");
+        assert_eq!(detail.operation, operation);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    fn user_record() -> UserRecord {
+        UserRecord {
+            user_id: "user-1".to_string(),
+            username: "ada".to_string(),
+            email: "ada@example.com".to_string(),
+            password_hash: "argon2id$secret".to_string(),
+            account_kind: authn::AccountKind::Person,
+            status: authn::AccountStatus::Active,
+            tenant_id: "acme".to_string(),
+            full_name: "Ada".to_string(),
+            totp_secret_hash: String::new(),
+            mfa_enabled: false,
+            failed_login_count: 0,
+            locked_until_unix: 0,
+            email_verified_at_unix: 0,
+            last_login_at_unix: 0,
+            created_by: "admin".to_string(),
+            created_at_unix: 1,
+            updated_at_unix: 2,
+            deleted_at_unix: 0,
+            deleted_by: String::new(),
+            project_id: "billing".to_string(),
+            external_provider_id: String::new(),
+            external_subject: String::new(),
+            profile_attributes_json: "{}".to_string(),
+        }
+    }
+
+    #[test]
+    fn session_internal_status_carries_typed_detail() {
+        let status = session_internal_status("validate_token_session", "session validation failed");
+        assert_internal_detail(
+            &status,
+            "validate_token_session",
+            "session validation failed",
+        );
+    }
+
+    #[tokio::test]
+    async fn create_session_disabled_carries_capability_detail() {
+        let svc = AuthnServiceImpl::new(
+            authn::AuthnConfig::default(),
+            crate::runtime::security::SecurityConfig::default(),
+        );
+
+        let err = svc
+            .create_session(Request::new(authn_pb::CreateSessionRequest::default()))
+            .await
+            .expect_err("disabled sessions must fail before principal validation");
+
+        assert_capability_detail(
+            &err,
+            "create_session",
+            "server_side_sessions",
+            "sessions disabled (set UDB_SESSION_ENABLED and UDB_SESSION_HASH_SECRET)",
+        );
+    }
+
+    #[tokio::test]
+    async fn create_login_session_disabled_carries_capability_detail() {
+        let svc = AuthnServiceImpl::new(
+            authn::AuthnConfig::default(),
+            crate::runtime::security::SecurityConfig::default(),
+        );
+
+        let err = svc
+            .create_login_session(&user_record(), String::new(), Vec::new(), Vec::new(), 1)
+            .await
+            .expect_err("disabled sessions must fail before session persistence");
+
+        assert_capability_detail(
+            &err,
+            "session_creation",
+            "server_side_sessions",
+            "sessions disabled (set UDB_SESSION_ENABLED and UDB_SESSION_HASH_SECRET)",
+        );
+    }
+
+    #[tokio::test]
+    async fn create_session_missing_principal_carries_field_violation() {
+        let err = session_test_service()
+            .create_session(Request::new(authn_pb::CreateSessionRequest::default()))
+            .await
+            .expect_err("missing principal must fail before session store access");
+
+        assert_eq!(err.message(), "principal is required");
+        assert_validation_fields(
+            &err,
+            &[("principal", "must include an authenticated principal")],
+        );
+    }
+
+    #[tokio::test]
+    async fn refresh_token_missing_credential_carries_field_violations() {
+        let err = session_test_service()
+            .refresh_token(Request::new(authn_pb::RefreshTokenRequest::default()))
+            .await
+            .expect_err("missing refresh credential must fail before session store access");
+
+        assert_eq!(err.message(), "refresh_token or session_id is required");
+        assert_validation_fields(
+            &err,
+            &[
+                (
+                    "refresh_token",
+                    "must include a refresh token or session id",
+                ),
+                ("session_id", "must include a refresh token or session id"),
+            ],
+        );
+    }
+
+    #[tokio::test]
+    async fn logout_all_sessions_missing_principal_context_carries_field_violation() {
+        let err = session_test_service()
+            .logout(Request::new(authn_pb::LogoutRequest {
+                all_sessions: true,
+                ..Default::default()
+            }))
+            .await
+            .expect_err("missing principal context must fail before session store access");
+
+        assert_eq!(
+            err.message(),
+            "context.principal_id is required for all_sessions logout"
+        );
+        assert_validation_fields(
+            &err,
+            &[(
+                "context.principal_id",
+                "must be a non-empty principal id when all_sessions is true",
+            )],
+        );
+    }
+
+    #[tokio::test]
+    async fn list_sessions_missing_user_id_carries_field_violation() {
+        let err = session_test_service()
+            .list_sessions(Request::new(authn_pb::ListSessionsRequest::default()))
+            .await
+            .expect_err("missing user_id must fail before authz or session store access");
+
+        assert_eq!(err.message(), "user_id is required");
+        assert_validation_fields(&err, &[("user_id", "must be a non-empty user id")]);
+    }
+
+    #[test]
+    fn unsupported_validate_token_type_carries_field_violation() {
+        let err = unsupported_validate_token_type_status();
+
+        assert_eq!(
+            err.message(),
+            "supported token_type values are SESSION, API_KEY, JWT_ACCESS, and JWT_REFRESH"
+        );
+        assert_validation_fields(
+            &err,
+            &[(
+                "token_type",
+                "must be SESSION, API_KEY, JWT_ACCESS, or JWT_REFRESH",
+            )],
+        );
+    }
+
     #[tokio::test]
     async fn list_sessions_denies_tenantless_non_admin_before_store_access() {
         let svc = AuthnServiceImpl::new(
@@ -103,7 +411,31 @@ mod tests {
         )
         .await
         .expect_err("tenantless non-admin must be denied before session listing");
-        assert_eq!(err.code(), tonic::Code::PermissionDenied);
+        assert_policy_detail(
+            &err,
+            "list_sessions",
+            "tenant_scoped_bearer_required",
+            "operation requires a tenant-scoped bearer token or a cross-tenant admin role",
+        );
+    }
+
+    #[test]
+    fn session_policy_denials_carry_typed_detail() {
+        let target_tenant = list_sessions_target_tenant_required_status();
+        assert_policy_detail(
+            &target_tenant,
+            "list_sessions",
+            "target_user_tenant_required",
+            "target user must belong to the bearer token tenant",
+        );
+
+        let inactive = refresh_user_active_status();
+        assert_policy_detail(
+            &inactive,
+            "refresh_token",
+            "user_not_active",
+            "user is not active",
+        );
     }
 }
 
@@ -156,16 +488,14 @@ impl AuthnServiceImpl {
                 target_user = %user_id,
                 "DENY: list_sessions requires a tenant-bound bearer or cross-tenant admin"
             );
-            return Err(Status::permission_denied(
-                "operation requires a tenant-scoped bearer token or a cross-tenant admin role",
-            ));
+            return Err(list_sessions_tenant_scope_required_status());
         }
         let target = self
             .users
             .get_user_by_id(user_id)
             .await
-            .map_err(Status::internal)?
-            .ok_or_else(|| Status::not_found("user not found"))?;
+            .map_err(|err| session_internal_status("authorize_list_sessions_target_user", err))?
+            .ok_or_else(super::authn_user_not_found_status)?;
         if target.tenant_id.trim().is_empty() {
             tracing::warn!(
                 target: "udb.audit.authz",
@@ -173,9 +503,7 @@ impl AuthnServiceImpl {
                 target_user = %user_id,
                 "DENY: list_sessions target user has no tenant boundary"
             );
-            return Err(Status::permission_denied(
-                "target user must belong to the bearer token tenant",
-            ));
+            return Err(list_sessions_target_tenant_required_status());
         }
         crate::runtime::service::method_security::enforce_body_tenant_matches_claim(
             &ctx,
@@ -195,7 +523,9 @@ impl AuthnServiceImpl {
         now: u64,
     ) -> Result<(String, u64), Status> {
         if !self.config.sessions_usable() {
-            return Err(Status::failed_precondition(
+            return Err(authn_capability_status(
+                "session_creation",
+                "server_side_sessions",
                 "sessions disabled (set UDB_SESSION_ENABLED and UDB_SESSION_HASH_SECRET)",
             ));
         }
@@ -221,7 +551,10 @@ impl AuthnServiceImpl {
             revoked_at_unix: 0,
             client_fingerprint,
         };
-        self.sessions.put(&rec).await.map_err(Status::internal)?;
+        self.sessions
+            .put(&rec)
+            .await
+            .map_err(|err| session_internal_status("create_login_session", err))?;
         Ok((raw_session_id, expires))
     }
 
@@ -230,14 +563,19 @@ impl AuthnServiceImpl {
         request: Request<authn_pb::CreateSessionRequest>,
     ) -> Result<Response<authn_pb::CreateSessionResponse>, Status> {
         if !self.config.sessions_usable() {
-            return Err(Status::failed_precondition(
+            return Err(authn_capability_status(
+                "create_session",
+                "server_side_sessions",
                 "sessions disabled (set UDB_SESSION_ENABLED and UDB_SESSION_HASH_SECRET)",
             ));
         }
         let req = request.into_inner();
-        let p = req
-            .principal
-            .ok_or_else(|| Status::invalid_argument("principal is required"))?;
+        let p = req.principal.ok_or_else(|| {
+            session_invalid_fields(
+                "principal is required",
+                [("principal", "must include an authenticated principal")],
+            )
+        })?;
         let now = now_unix();
         let ttl = if req.ttl_seconds > 0 {
             req.ttl_seconds as u64
@@ -262,7 +600,10 @@ impl AuthnServiceImpl {
             revoked_at_unix: 0,
             client_fingerprint: req.client_fingerprint,
         };
-        self.sessions.put(&rec).await.map_err(Status::internal)?;
+        self.sessions
+            .put(&rec)
+            .await
+            .map_err(|err| session_internal_status("create_session", err))?;
         Ok(Response::new(authn_pb::CreateSessionResponse {
             session_id: raw_session_id,
             expires_at_unix: expires as i64,
@@ -288,7 +629,7 @@ impl AuthnServiceImpl {
             ttl,
         )
         .await
-        .map_err(Status::internal)?
+        .map_err(|err| session_internal_status("refresh_session", err))?
         {
             Some(rec) => {
                 // Phase L2: emit a session-refresh event (no raw token material —
@@ -340,7 +681,7 @@ impl AuthnServiceImpl {
                 .sessions
                 .revoke_all_for_principal(&req.principal_id, now)
                 .await
-                .map_err(Status::internal)?;
+                .map_err(|err| session_internal_status("revoke_sessions_for_principal", err))?;
             self.metrics.observe_revocation_propagation_seconds(
                 propagation_started.elapsed().as_secs_f64(),
             );
@@ -357,7 +698,7 @@ impl AuthnServiceImpl {
             .sessions
             .revoke(&hash, now)
             .await
-            .map_err(Status::internal)?;
+            .map_err(|err| session_internal_status("revoke_session", err))?;
         if ok {
             // I2.3 — push the revoked session handle (which is the JWT `jti` for any
             // access token issued against this session) onto the durable cluster-wide
@@ -427,8 +768,15 @@ impl AuthnServiceImpl {
         // token-family flow). No rotation token is returned in this path.
         let session_ref = presented;
         if session_ref.trim().is_empty() {
-            return Err(Status::invalid_argument(
+            return Err(session_invalid_fields(
                 "refresh_token or session_id is required",
+                [
+                    (
+                        "refresh_token",
+                        "must include a refresh token or session id",
+                    ),
+                    ("session_id", "must include a refresh token or session id"),
+                ],
             ));
         }
         // Sliding refresh: extend the backing session, then mint a fresh
@@ -441,14 +789,14 @@ impl AuthnServiceImpl {
             self.config.session_ttl_secs,
         )
         .await
-        .map_err(Status::internal)?
+        .map_err(|err| session_internal_status("refresh_token_legacy_session", err))?
         else {
             return Err(Status::unauthenticated("invalid credential"));
         };
         // Phase 3: a suspended/deactivated user must not keep minting access
         // tokens via a lingering session — gate refresh on live user status.
         if !self.user_is_active(&rec.user_id).await? {
-            return Err(Status::permission_denied("user is not active"));
+            return Err(refresh_user_active_status());
         }
         // Block 1 (auth_fix.md, Decision E): re-resolve on refresh so a role
         // revoked since login stops minting `udb:admin`. The `service_identity`
@@ -505,7 +853,7 @@ impl AuthnServiceImpl {
                 // A suspended/deactivated user must not keep minting tokens via a
                 // lingering refresh family — gate on live user status.
                 if !self.user_is_active(&family.user_id).await? {
-                    return Err(Status::permission_denied("user is not active"));
+                    return Err(refresh_user_active_status());
                 }
                 // Block 1 (auth_fix.md, Decision E): the token family stores no
                 // grants (`TokenFamilyRow` has no scopes/roles columns), so
@@ -560,8 +908,12 @@ impl AuthnServiceImpl {
                 .map(|ctx| ctx.principal_id.clone())
                 .unwrap_or_default();
             if principal_id.trim().is_empty() {
-                return Err(Status::invalid_argument(
+                return Err(session_invalid_fields(
                     "context.principal_id is required for all_sessions logout",
+                    [(
+                        "context.principal_id",
+                        "must be a non-empty principal id when all_sessions is true",
+                    )],
                 ));
             }
             // Kill every refresh-token family for the principal too — otherwise a
@@ -571,7 +923,7 @@ impl AuthnServiceImpl {
             self.sessions
                 .revoke_all_for_principal(&principal_id, now)
                 .await
-                .map_err(Status::internal)
+                .map_err(|err| session_internal_status("logout_all_sessions", err))
                 .map(|count| {
                     self.metrics.observe_revocation_propagation_seconds(
                         propagation_started.elapsed().as_secs_f64(),
@@ -584,7 +936,7 @@ impl AuthnServiceImpl {
                 .sessions
                 .revoke(&hash, now)
                 .await
-                .map_err(Status::internal)?;
+                .map_err(|err| session_internal_status("logout_session", err))?;
             if revoked {
                 // I2.3 — denylist the session handle (== JWT `jti`) so any still-valid
                 // access token for this session is rejected cluster-wide on logout,
@@ -624,7 +976,7 @@ impl AuthnServiceImpl {
                     self.config.session_idle_ttl_secs,
                 )
                 .await
-                .map_err(Status::internal)?;
+                .map_err(|err| session_internal_status("validate_token_session", err))?;
                 validate_session_response(rec, now)
             }
             authn_entity_pb::TokenType::ApiKey => {
@@ -635,7 +987,7 @@ impl AuthnServiceImpl {
                     now,
                 )
                 .await
-                .map_err(Status::internal)?;
+                .map_err(|err| session_internal_status("validate_token_api_key", err))?;
                 validate_api_key_response(rec)
             }
             authn_entity_pb::TokenType::JwtAccess | authn_entity_pb::TokenType::JwtRefresh => {
@@ -683,9 +1035,7 @@ impl AuthnServiceImpl {
                 }
             }
             _ => {
-                return Err(Status::invalid_argument(
-                    "supported token_type values are SESSION, API_KEY, JWT_ACCESS, and JWT_REFRESH",
-                ));
+                return Err(unsupported_validate_token_type_status());
             }
         };
         Ok(Response::new(response))
@@ -702,7 +1052,7 @@ impl AuthnServiceImpl {
             .sessions
             .get(&hash)
             .await
-            .map_err(Status::internal)?
+            .map_err(|err| session_internal_status("get_session", err))?
             .map(|rec| session_record_to_pb(&rec, now));
         Ok(Response::new(authn_pb::GetSessionResponse { session }))
     }
@@ -713,7 +1063,10 @@ impl AuthnServiceImpl {
     ) -> Result<Response<authn_pb::ListSessionsResponse>, Status> {
         let req = request.into_inner();
         if req.user_id.trim().is_empty() {
-            return Err(Status::invalid_argument("user_id is required"));
+            return Err(session_invalid_fields(
+                "user_id is required",
+                [("user_id", "must be a non-empty user id")],
+            ));
         }
         // D3: bind the target user to the validated bearer claim before reading
         // sessions, mirroring the ListDevices target-user authorization.
@@ -726,7 +1079,7 @@ impl AuthnServiceImpl {
             .sessions
             .list_for_principal_page(&req.user_id, req.active_only, now, limit, offset)
             .await
-            .map_err(Status::internal)?;
+            .map_err(|err| session_internal_status("list_sessions", err))?;
         let sessions = sessions
             .iter()
             .map(|rec| session_record_to_pb(rec, now))
@@ -760,7 +1113,7 @@ impl AuthnServiceImpl {
             self.config.session_idle_ttl_secs,
         )
         .await
-        .map_err(Status::internal)?
+        .map_err(|err| session_internal_status("validate_csrf_session", err))?
         .is_some();
         let expected = self.csrf_token_for(&req.session_id);
         let token_ok = authn::constant_time_eq(&expected, &req.csrf_token);

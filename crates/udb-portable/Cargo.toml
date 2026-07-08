@@ -55,6 +55,7 @@ tracing = "0.1"
 #            `wasmbind` feature is NOT required — only serde.
 base64 = "0.22"
 chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["serde", "v4"] }
 # Descriptor / RPC-contract decode (`descriptor_manifest.rs`): hand-decodes the
 # embedded `FileDescriptorSet` bytes (prost only — NOT prost-types, which drops
 # the unknown UDB option extensions). wasm32-unknown-unknown clean.

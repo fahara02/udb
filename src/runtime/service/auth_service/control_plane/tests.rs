@@ -12,8 +12,16 @@
 //!     NACK error;
 //!   * an ACK/NACK whose nonce does not match the last response nonce is ignored.
 
+use super::ControlPlaneServiceImpl;
 use super::resources::{ResourceModel, aggregate_version, content_version, ordered_resource_types};
+use crate::proto::udb::core::common::v1 as common_pb;
 use crate::proto::udb::core::control::entity::v1::ResourceType;
+use crate::proto::udb::core::control::services::v1 as control_pb;
+use crate::proto::udb::core::control::services::v1::control_plane_service_server::ControlPlaneService;
+use crate::proto::{ErrorDetail, ErrorKind};
+use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+use prost::Message as _;
+use tonic::{Code, Request, Status};
 
 /// Minimal mirror of one `ControlPlaneNodeState` row: the fields the ACK/NACK
 /// transition reads and writes. Kept in lock-step with `store::NodeStateRow`.
@@ -23,6 +31,261 @@ struct Ledger {
     last_good_version: String,
     last_response_nonce: String,
     nack_error_detail: String,
+}
+
+fn decode_detail(status: &Status) -> ErrorDetail {
+    let raw = status
+        .metadata()
+        .get_bin(ERROR_DETAIL_METADATA_KEY)
+        .expect("typed detail trailer is present");
+    crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+}
+
+fn assert_validation_field(status: &Status, field: &str, description: &str) {
+    assert_eq!(status.code(), Code::InvalidArgument);
+    let detail = decode_detail(status);
+    assert_eq!(detail.kind, ErrorKind::Validation as i32);
+    assert_eq!(detail.field_violations.len(), 1);
+    assert_eq!(detail.field_violations[0].field, field);
+    assert_eq!(detail.field_violations[0].description, description);
+}
+
+fn assert_capability_detail(
+    status: &Status,
+    backend: &str,
+    operation: &str,
+    capability_required: &str,
+    message: &str,
+) {
+    assert_eq!(status.code(), Code::FailedPrecondition);
+    assert_eq!(status.message(), message);
+    let detail = decode_detail(status);
+    assert_eq!(detail.kind, ErrorKind::Capability as i32);
+    assert_eq!(detail.backend, backend);
+    assert_eq!(detail.operation, operation);
+    assert_eq!(detail.capability_required, capability_required);
+    assert!(!detail.retryable);
+    assert_eq!(detail.retry_after_ms, 0);
+}
+
+fn assert_schema_detail(
+    status: &Status,
+    backend: &str,
+    operation: &str,
+    schema_code: &str,
+    message: &str,
+) {
+    assert_eq!(status.code(), Code::NotFound);
+    assert_eq!(status.message(), message);
+    let detail = decode_detail(status);
+    assert_eq!(detail.kind, ErrorKind::Schema as i32);
+    assert_eq!(detail.backend, backend);
+    assert_eq!(detail.operation, operation);
+    assert_eq!(detail.capability_required, schema_code);
+    assert!(!detail.retryable);
+    assert_eq!(detail.retry_after_ms, 0);
+}
+
+fn assert_policy_detail(status: &Status, operation: &str, policy_decision_id: &str, message: &str) {
+    assert_eq!(status.code(), Code::FailedPrecondition);
+    assert_eq!(status.message(), message);
+    let detail = decode_detail(status);
+    assert_eq!(detail.kind, ErrorKind::Policy as i32);
+    assert_eq!(detail.operation, operation);
+    assert_eq!(detail.policy_decision_id, policy_decision_id);
+    assert!(!detail.retryable);
+    assert_eq!(detail.retry_after_ms, 0);
+}
+
+fn assert_internal_detail(status: &Status, backend: &str, operation: &str, message: &str) {
+    assert_eq!(status.code(), Code::Internal);
+    assert_eq!(status.message(), message);
+    let detail = decode_detail(status);
+    assert_eq!(detail.kind, ErrorKind::Internal as i32);
+    assert_eq!(detail.backend, backend);
+    assert_eq!(detail.operation, operation);
+    assert!(!detail.retryable);
+    assert_eq!(detail.retry_after_ms, 0);
+    assert!(detail.field_violations.is_empty());
+}
+
+#[test]
+fn control_plane_missing_postgres_store_capability_carries_typed_detail() {
+    let svc = ControlPlaneServiceImpl::new();
+    let err = match svc.require_pool() {
+        Err(status) => status,
+        Ok(_) => panic!("pool-less control plane must fail closed"),
+    };
+
+    assert_capability_detail(
+        &err,
+        "control_plane",
+        "postgres_store",
+        "postgres_store",
+        "control-plane service requires a Postgres-backed store (no PG pool configured)",
+    );
+}
+
+#[test]
+fn control_plane_internal_status_carries_typed_detail() {
+    let err = ControlPlaneServiceImpl::internal_status(
+        "delta_resources",
+        "control delta stream error: transport closed",
+    );
+
+    assert_internal_detail(
+        &err,
+        "control_plane",
+        "delta_resources",
+        "control delta stream error: transport closed",
+    );
+}
+
+#[test]
+fn control_plane_rollback_missing_target_carries_policy_detail() {
+    assert_policy_detail(
+        &ControlPlaneServiceImpl::rollback_target_required_status(),
+        "control_plane_rollback",
+        "rollback_target_required",
+        "no retained snapshot to roll back to for this (node, resource_type, target_version)",
+    );
+}
+
+#[test]
+fn control_plane_node_state_not_found_carries_schema_detail() {
+    assert_schema_detail(
+        &ControlPlaneServiceImpl::node_state_not_found_status(),
+        "control_plane",
+        "AckStatus",
+        "node_state_not_found",
+        "no node state for this (node, resource_type)",
+    );
+}
+
+#[tokio::test]
+async fn get_resources_missing_resource_type_carries_field_violation() {
+    let svc = ControlPlaneServiceImpl::new(); // no pool; validation runs first
+
+    let err = svc
+        .get_resources(Request::new(control_pb::GetResourcesRequest {
+            resource_type: ResourceType::Unspecified as i32,
+            page: Some(common_pb::PageRequest::default()),
+            ..Default::default()
+        }))
+        .await
+        .expect_err("missing resource_type must fail before Postgres availability");
+
+    assert_eq!(err.message(), "resource_type is required");
+    assert_validation_field(
+        &err,
+        "resource_type",
+        "must specify a control-plane resource type",
+    );
+}
+
+#[tokio::test]
+async fn ack_status_missing_node_id_carries_field_violation() {
+    let svc = ControlPlaneServiceImpl::new(); // no pool; validation runs first
+
+    let err = svc
+        .ack_status(Request::new(control_pb::AckStatusRequest {
+            node_id: " ".to_string(),
+            resource_type: ResourceType::BackendTargetDefinition as i32,
+            ..Default::default()
+        }))
+        .await
+        .expect_err("missing node_id must fail before Postgres availability");
+
+    assert_eq!(err.message(), "node_id is required");
+    assert_validation_field(&err, "node_id", "must be a non-empty control-plane node id");
+}
+
+#[tokio::test]
+async fn ack_status_missing_resource_type_carries_field_violation() {
+    let svc = ControlPlaneServiceImpl::new(); // no pool; validation runs first
+
+    let err = svc
+        .ack_status(Request::new(control_pb::AckStatusRequest {
+            node_id: "node-a".to_string(),
+            resource_type: ResourceType::Unspecified as i32,
+            ..Default::default()
+        }))
+        .await
+        .expect_err("missing resource_type must fail before Postgres availability");
+
+    assert_eq!(err.message(), "resource_type is required");
+    assert_validation_field(
+        &err,
+        "resource_type",
+        "must specify a control-plane resource type",
+    );
+}
+
+#[tokio::test]
+async fn rollback_resources_missing_node_id_carries_field_violation() {
+    let svc = ControlPlaneServiceImpl::new(); // no pool; validation runs first
+
+    let err = svc
+        .rollback_resources(Request::new(control_pb::RollbackResourcesRequest {
+            node_id: " ".to_string(),
+            resource_type: ResourceType::BackendTargetDefinition as i32,
+            ..Default::default()
+        }))
+        .await
+        .expect_err("missing node_id must fail before Postgres availability");
+
+    assert_eq!(err.message(), "node_id is required");
+    assert_validation_field(&err, "node_id", "must be a non-empty control-plane node id");
+}
+
+#[test]
+fn stream_resources_empty_stream_status_carries_field_violation() {
+    let err = ControlPlaneServiceImpl::empty_discovery_stream_status();
+
+    assert_eq!(err.message(), "empty control discovery stream");
+    assert_validation_field(&err, "stream", "must include an initial DiscoveryRequest");
+}
+
+#[test]
+fn stream_resources_missing_node_id_status_carries_field_violation() {
+    let err = ControlPlaneServiceImpl::missing_discovery_node_id_status();
+
+    assert_eq!(
+        err.message(),
+        "node_id is required on the first DiscoveryRequest"
+    );
+    assert_validation_field(
+        &err,
+        "node_id",
+        "must be a non-empty node id on the first DiscoveryRequest",
+    );
+}
+
+#[test]
+fn delta_resources_empty_stream_status_carries_field_violation() {
+    let err = ControlPlaneServiceImpl::empty_delta_stream_status();
+
+    assert_eq!(err.message(), "empty control delta stream");
+    assert_validation_field(
+        &err,
+        "stream",
+        "must include an initial DeltaDiscoveryRequest",
+    );
+}
+
+#[test]
+fn delta_resources_missing_node_id_status_carries_field_violation() {
+    let err = ControlPlaneServiceImpl::missing_delta_node_id_status();
+
+    assert_eq!(
+        err.message(),
+        "node_id is required on the first DeltaDiscoveryRequest"
+    );
+    assert_validation_field(
+        &err,
+        "node_id",
+        "must be a non-empty node id on the first DeltaDiscoveryRequest",
+    );
 }
 
 impl Ledger {

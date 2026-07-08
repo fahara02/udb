@@ -86,13 +86,22 @@ impl XaInDoubtParticipant for MysqlInDoubtParticipant {
     }
 
     async fn list_prepared_xids(&self) -> Result<Vec<String>, String> {
-        use sqlx::Row;
+        use sqlx::{Executor, Row};
         // `XA RECOVER` returns rows with `formatID`, `gtrid_length`,
         // `bqual_length`, `data`. The `data` column is the xid we
         // assigned (`udb-<uuid>`). We project just `data` so the
         // result is a clean Vec<String>.
-        let rows = sqlx::query("XA RECOVER")
-            .fetch_all(&self.pool)
+        //
+        // MySQL rejects `XA RECOVER` over the prepared-statement protocol
+        // with ER_UNSUPPORTED_PS (1295, "not supported in the prepared
+        // statement protocol yet"), which is what `sqlx::query(..)` uses.
+        // Pass the raw SQL straight to the executor so it runs via the
+        // text protocol (COM_QUERY) instead — otherwise every MySQL
+        // in-doubt recovery attempt fails and the ledger row is never
+        // driven terminal.
+        let rows = self
+            .pool
+            .fetch_all("XA RECOVER")
             .await
             .map_err(|e| format!("XA RECOVER failed: {e}"))?;
         let mut out = Vec::with_capacity(rows.len());

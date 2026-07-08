@@ -1,0 +1,120 @@
+syntax = "proto3";
+
+package udb.core.workflow.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+import "udb/core/common/v1/types.proto";
+import "udb/core/workflow/entity/v1/enums.proto";
+
+option csharp_namespace = "udb.core.Workflow.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/workflow/entity/v1;workflowv1";
+option java_package = "com.udb.core.workflow.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Workflow\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Workflow\\Entity\\V1";
+
+// WorkflowInstance — a durable, tenant-scoped multi-step operation orchestrated by
+// the native WorkflowService (master-plan 9.12). The instance is the durable state
+// that survives a broker restart or leader change: it carries the workflow_type
+// discriminator, the current/total step counters, the opaque payload, the
+// reverse-order compensation list, and a link to the saga row the EXISTING saga
+// engine recorded for it. Forward progress is driven by the leader-elected workflow
+// tick (`FOR UPDATE SKIP LOCKED`, one advancer cluster-wide); cancellation hands the
+// linked saga to the existing `SagaRecoveryWorker` so compensation reuses the
+// established reverse-order machinery rather than reimplementing it.
+message WorkflowInstance {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "workflow_instances"
+    schema_name: "udb_workflow"
+    migration_order: 1
+    is_table: true
+    soft_delete: true
+    audit_fields: true
+    enable_rls: true
+    force_rls: true
+    rls_policies: {
+      policy_name: "workflow_tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true) OR current_setting('app.platform_admin', true) = 'true')"
+      permissive: true
+    }
+    indexes: {
+      index_name: "idx_workflow_instances_tenant"
+      index_type: "BTREE"
+      columns: "tenant_id"
+    }
+    indexes: {
+      index_name: "idx_workflow_instances_due"
+      index_type: "BTREE"
+      columns: "status"
+      columns: "next_run_at"
+    }
+    cdc_topic: "udb.workflow.workflow_instances.cdc"
+    required_scope: "workflow:read"
+    comment: "Durable multi-step workflow/saga instances advanced by the leader-elected workflow tick"
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "soft_delete"
+    retention_class: "workflow.operational"
+    retention_days: 2555
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
+
+  string workflow_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "workflow_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "UUID" not_null: true }];
+
+  string project_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "project_id" sql_type: "UUID" }];
+
+  // Application-defined workflow type (the workflow/saga_kind discriminator). The
+  // engine maps every instance to `saga::SagaKind::Workflow` so the recorded saga
+  // row is distinguishable from a plain data-plane saga; the DEFAULT kind is the
+  // pre-9.12 data-plane saga whose behavior is unchanged.
+  string workflow_type = 4 [(udb.core.common.v1.pg_column) = { column_name: "workflow_type" sql_type: "VARCHAR(255)" not_null: true }];
+
+  WorkflowStatus status = 5 [(udb.core.common.v1.pg_column) = { column_name: "status" sql_type: "VARCHAR(24)" not_null: true default_value: "'RUNNING'" index: { index_name: "idx_workflow_instances_status" index_type: "BTREE" } }];
+
+  // Steps advanced so far; advanced by one per tick until it reaches total_steps.
+  int32 current_step = 6 [(udb.core.common.v1.pg_column) = { column_name: "current_step" sql_type: "INTEGER" not_null: true default_value: "0" }];
+
+  // Total forward steps in this workflow (bounded; see MAX_WORKFLOW_STEPS).
+  int32 total_steps = 7 [(udb.core.common.v1.pg_column) = { column_name: "total_steps" sql_type: "INTEGER" not_null: true default_value: "1" }];
+
+  // Opaque JSON payload carried verbatim with every fired transition event; the
+  // consumer interprets it. The workflow tick never executes it in-process.
+  string payload = 8 [(udb.core.common.v1.pg_column) = { column_name: "payload" sql_type: "JSONB" is_json: true comment: "Opaque workflow payload delivered with transition events" }];
+
+  // Reverse-order compensation payloads handed to the saga engine; the EXISTING
+  // SagaRecoveryWorker dispatches these (reverse-order) when the workflow is
+  // cancelled. Matches `runtime::saga_compensators::CompensationPayload`.
+  string compensations = 9 [(udb.core.common.v1.pg_column) = { column_name: "compensations" sql_type: "JSONB" is_json: true comment: "Reverse-order compensation payloads for the saga engine" }];
+
+  string correlation_id = 10 [(udb.core.common.v1.pg_column) = { column_name: "correlation_id" sql_type: "VARCHAR(255)" }];
+
+  // The saga row this workflow recorded in `udb_sagas` (the reused engine record).
+  // Cancellation flips this saga into the recoverable state so the existing
+  // recovery worker runs its compensations.
+  string saga_id = 11 [(udb.core.common.v1.pg_column) = { column_name: "saga_id" sql_type: "UUID" comment: "Linked saga row driving compensation" }];
+
+  // When WAITING_SIGNAL, the signal name the workflow is blocked on.
+  string pending_signal = 12 [(udb.core.common.v1.pg_column) = { column_name: "pending_signal" sql_type: "VARCHAR(255)" }];
+
+  string last_error = 13 [(udb.core.common.v1.pg_column) = { column_name: "last_error" sql_type: "TEXT" }];
+
+  // When the workflow is next eligible to advance. NULL once terminal.
+  google.protobuf.Timestamp next_run_at = 14 [(udb.core.common.v1.pg_column) = { column_name: "next_run_at" sql_type: "TIMESTAMPTZ" comment: "When the instance is next due to advance" }];
+
+  google.protobuf.Timestamp last_transition_at = 15 [(udb.core.common.v1.pg_column) = { column_name: "last_transition_at" sql_type: "TIMESTAMPTZ" comment: "When the instance last changed state" }];
+
+  udb.core.common.v1.AuditInfo audit_info = 16 [(udb.core.common.v1.pg_column) = { column_name: "audit_info" sql_type: "JSONB" not_null: true default_value: "'{}'::jsonb" is_json: true comment: "Audit trail stored as JSON" }];
+
+  google.protobuf.Timestamp deleted_at = 17 [(udb.core.common.v1.pg_column) = { column_name: "deleted_at" sql_type: "TIMESTAMPTZ" comment: "Soft delete timestamp" }];
+  string deleted_by = 18 [(udb.core.common.v1.pg_column) = { column_name: "deleted_by" sql_type: "UUID" comment: "Soft delete actor" }];
+}

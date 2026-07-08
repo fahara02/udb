@@ -51,6 +51,7 @@ pub use idp::IdentityProviderServiceServer;
 // (above) and built/owned inside `service::mod` through
 // `DataBrokerService::build_identity_provider_service`, so it needs no parent
 // re-export — only the HTTP-spawn entry point is surfaced here.
+pub(crate) use idp::spawn_saml_http_from_env;
 pub(crate) use idp::spawn_scim_http_from_env;
 // Phase 9: versioned control-plane policy distribution (xDS-style). The parent
 // `service` module mounts `ControlPlaneServiceServer` on the native auth listener

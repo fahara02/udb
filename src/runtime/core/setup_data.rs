@@ -7,6 +7,176 @@
 use super::*;
 use crate::backend::plugin::RegisterCtx;
 
+fn setup_data_invalid_field(
+    field: impl Into<String>,
+    description: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    crate::runtime::executor_utils::invalid_argument_fields(
+        message,
+        [(field.into(), description.into())],
+    )
+}
+
+fn unknown_message_type_status() -> tonic::Status {
+    setup_data_invalid_field(
+        "message_type",
+        "must match a manifest table message type",
+        "unknown message_type",
+    )
+}
+
+fn empty_object_stream_status() -> tonic::Status {
+    setup_data_invalid_field(
+        "stream",
+        "object upload stream must contain at least one chunk",
+        "empty object stream",
+    )
+}
+
+fn unsupported_presign_method_status() -> tonic::Status {
+    setup_data_invalid_field(
+        "method",
+        "presigned URLs support only PUT or GET",
+        "presigned URLs support only PUT or GET",
+    )
+}
+
+fn invalid_part_count_status() -> tonic::Status {
+    setup_data_invalid_field(
+        "part_count",
+        "multipart upload part_count must be positive",
+        "part_count must be positive",
+    )
+}
+
+fn invalid_presign_ttl_status(err: impl std::fmt::Display) -> tonic::Status {
+    setup_data_invalid_field(
+        "ttl_seconds",
+        "must produce a valid presign expiration",
+        format!("invalid presign ttl: {err}"),
+    )
+}
+
+fn setup_data_capability_status(
+    backend: impl Into<String>,
+    operation: impl Into<String>,
+    capability_required: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    crate::runtime::executor_utils::capability_status(
+        backend,
+        operation,
+        capability_required,
+        message,
+    )
+}
+
+fn setup_data_internal_status(
+    operation: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    crate::runtime::executor_utils::internal_status("setup_data", operation, message)
+}
+
+fn qdrant_vector_feature_status(operation: &'static str) -> tonic::Status {
+    setup_data_capability_status(
+        "qdrant",
+        operation,
+        "qdrant_feature",
+        "qdrant/vector feature is not enabled",
+    )
+}
+
+fn vector_hybrid_qdrant_only_status(backend: &str) -> tonic::Status {
+    setup_data_capability_status(
+        "qdrant",
+        "vector_hybrid_search",
+        "qdrant_backend",
+        format!("vector hybrid search is only wired for qdrant, not '{backend}'"),
+    )
+}
+
+fn no_object_store_feature_status(operation: &'static str) -> tonic::Status {
+    setup_data_capability_status(
+        "object_store",
+        operation,
+        "object_store_feature",
+        "no object-store feature (s3/gcs/azureblob) is enabled",
+    )
+}
+
+fn s3_object_feature_status(operation: &'static str) -> tonic::Status {
+    setup_data_capability_status(
+        "s3",
+        operation,
+        "s3_feature",
+        "s3/object-store feature is not enabled",
+    )
+}
+
+fn s3_minio_feature_status(operation: &'static str) -> tonic::Status {
+    setup_data_capability_status(
+        "s3",
+        operation,
+        "s3_feature",
+        "s3/minio feature is not enabled",
+    )
+}
+
+fn gcs_feature_status(operation: &'static str) -> tonic::Status {
+    setup_data_capability_status(
+        "gcs",
+        operation,
+        "gcs_feature",
+        "gcs feature is not enabled",
+    )
+}
+
+fn azureblob_feature_status(operation: &'static str) -> tonic::Status {
+    setup_data_capability_status(
+        "azureblob",
+        operation,
+        "azureblob_feature",
+        "azureblob feature is not enabled",
+    )
+}
+
+fn object_instance_missing_status(
+    backend: &'static str,
+    operation: &'static str,
+    instance: &str,
+) -> tonic::Status {
+    setup_data_capability_status(
+        backend,
+        operation,
+        "configured_instance",
+        format!("{backend} instance '{instance}' is not configured"),
+    )
+}
+
+fn unsupported_object_backend_status(operation: &'static str, backend: &str) -> tonic::Status {
+    setup_data_capability_status(
+        backend,
+        operation,
+        "supported_object_backend",
+        format!("unsupported object backend '{backend}'"),
+    )
+}
+
+#[cfg(any(feature = "s3", feature = "gcs", feature = "azureblob"))]
+fn typed_object_backend_required_status(backend: &str) -> tonic::Status {
+    setup_data_capability_status(
+        backend,
+        "typed_object_rpc",
+        "object_store_backend",
+        format!(
+            "typed object RPCs require an object-store backend, but the \
+             store is configured for '{backend}'"
+        ),
+    )
+}
+
 impl DataBrokerRuntime {
     pub(crate) fn record_vector_resource_backend(
         &self,
@@ -282,6 +452,11 @@ impl DataBrokerRuntime {
         }
         assert_pg_outbox_receipt_store_consistency(&runtime);
 
+        // 3.5: enforce the operator-declared deployment-tier floor now that every
+        // store has registered. Fail-closed at boot if any canonical store is
+        // below the declared UDB_DEPLOYMENT_TIER.
+        assert_deployment_tier_floor(&runtime);
+
         // S1: all store registration is done; record whether a FULL
         // canonical system store (saga / admin-audit / migration / projection
         // tables) actually registered as the default. If a relational write
@@ -436,11 +611,15 @@ impl DataBrokerRuntime {
         }
 
         let table = table_for_message(manifest, &request.message_type)
-            .ok_or_else(|| tonic::Status::invalid_argument("unknown message_type"))?;
-        let pool = self.pg_select_pool_for_table(table, &context)?;
+            .ok_or_else(unknown_message_type_status)?;
+        let routed_pool = self
+            .pg_select_pool_for_table_routed(table, &context)
+            .await?;
+        let routed_warning = routed_pool.warning().cloned();
+        let pool = routed_pool.pool();
         // 03.2.1.2: capture the typed stale-read warning side-channel (the proto
         // `RecordSet` cannot carry it) so the handler can emit the response header.
-        let stale_warning = self
+        let fence_warning = self
             .enforce_read_fence(
                 &context,
                 "postgres",
@@ -451,6 +630,7 @@ impl DataBrokerRuntime {
                 },
             )
             .await?;
+        let stale_warning = routed_warning.or(fence_warning);
         // READ fast-path: a read-only SELECT does NOT need a transaction. We
         // acquire ONE pooled connection, install the RLS context as SESSION
         // settings (is_local=false) on it, run the SELECT on that SAME
@@ -458,24 +638,36 @@ impl DataBrokerRuntime {
         // connection returns to the pool — on BOTH the success and error path.
         // This drops the BEGIN+COMMIT round-trips while keeping RLS isolation
         // byte-identical (same keys/values as the write path).
-        let mut conn = pool
-            .acquire()
-            .await
-            .map_err(|e| tonic::Status::internal(format!("PG connection acquire failed: {e}")))?;
+        let mut conn = pool.acquire().await.map_err(|e| {
+            setup_data_internal_status(
+                "select_connection_acquire",
+                format!("PG connection acquire failed: {e}"),
+            )
+        })?;
         set_request_local_settings_conn(&mut conn, &context).await?;
+        // 2.4 merge: prefer the bridged neutral-IR emission (live row parity is
+        // pinned by the planner/IR A-B oracle); the planner SQL stays as the
+        // fallback for planner-only filter shapes neutral IR cannot represent.
+        let bridged = bridged_pg_select_statement(manifest, &plan_request);
         let values = filter_bind_values(&filter);
-        let query = bind_values(
-            sqlx::query(&plan.sql),
-            table,
-            &plan.parameter_columns,
-            &values,
-        )?;
+        let query = match bridged.as_ref() {
+            Some(stmt) => bind_typed_generic_pg_params(
+                sqlx::query(&stmt.sql),
+                &stmt.params,
+                Some(&stmt.param_types),
+            )?,
+            None => bind_values(
+                sqlx::query(&plan.sql),
+                table,
+                &plan.parameter_columns,
+                &values,
+            )?,
+        };
         // Capture the SELECT result WITHOUT early-`?`-returning, so the reset
         // below runs unconditionally even on query failure (leak-safety).
-        let rows_result = query
-            .fetch_all(&mut *conn)
-            .await
-            .map_err(|err| tonic::Status::internal(format!("PostgreSQL select failed: {err}")));
+        let rows_result = query.fetch_all(&mut *conn).await.map_err(|err| {
+            setup_data_internal_status("select_query", format!("PostgreSQL select failed: {err}"))
+        });
         let reset_result = reset_request_local_settings_conn(&mut conn, &context).await;
         // Leak-safety teardown: if the RESET succeeded the connection is clean
         // and may recycle into the pool (plain drop). If the RESET FAILED the
@@ -537,11 +729,13 @@ impl DataBrokerRuntime {
         for (column, value) in &plan.bindings {
             query = bind_one(query, Some(column), value)?;
         }
-        let pool = self
-            .pg_read_pool_for_context(&context)
-            .ok_or_else(|| tonic::Status::unavailable("PostgreSQL backend is not configured"))?;
+        let primary_required = context.requires_primary_read()
+            || super::accessors::read_fence_requires_primary(&context);
+        let routed_pool = self.pg_read_pool_routed(&context, primary_required).await?;
+        let routed_warning = routed_pool.warning().cloned();
+        let pool = routed_pool.pool();
         // 03.2.1.3: same typed stale-read warning side-channel as `select`.
-        let stale_warning = self
+        let fence_warning = self
             .enforce_read_fence(
                 &context,
                 "postgres",
@@ -552,19 +746,25 @@ impl DataBrokerRuntime {
                 },
             )
             .await?;
+        let stale_warning = routed_warning.or(fence_warning);
         // READ fast-path (see `select`): no transaction. Acquire one pooled
         // connection, install RLS context as SESSION settings, run the join
         // SELECT, then ALWAYS reset the session GUCs before the connection
         // returns to the pool — on success AND error.
-        let mut conn = pool
-            .acquire()
-            .await
-            .map_err(|e| tonic::Status::internal(format!("PG connection acquire failed: {e}")))?;
+        let mut conn = pool.acquire().await.map_err(|e| {
+            setup_data_internal_status(
+                "join_connection_acquire",
+                format!("PG connection acquire failed: {e}"),
+            )
+        })?;
         set_request_local_settings_conn(&mut conn, &context).await?;
         // Capture the SELECT result WITHOUT early-`?`-returning so the reset
         // runs unconditionally even on query failure (leak-safety).
         let rows_result = query.fetch_all(&mut *conn).await.map_err(|err| {
-            tonic::Status::internal(format!("PostgreSQL join select failed: {err}"))
+            setup_data_internal_status(
+                "join_query",
+                format!("PostgreSQL join select failed: {err}"),
+            )
         });
         let reset_result = reset_request_local_settings_conn(&mut conn, &context).await;
         // Recycle the connection only if it was cleaned; otherwise close it
@@ -610,25 +810,26 @@ impl DataBrokerRuntime {
         let plan = build_upsert_plan(manifest, &plan_request);
         reject_plan(&plan.errors)?;
         let pool = self.pg_pool()?;
-        let mut tx = pool
-            .begin()
-            .await
-            .map_err(|e| tonic::Status::internal(format!("PG transaction begin failed: {e}")))?;
+        let mut tx = pool.begin().await.map_err(|e| {
+            setup_data_internal_status(
+                "upsert_transaction_begin",
+                format!("PG transaction begin failed: {e}"),
+            )
+        })?;
         set_request_local_settings(&mut tx, &context).await?;
         // KEYSTONE (lane 05): keyed-only durable dedup. Fires ONLY when an
         // idempotency_key is supplied — keyless writes (the hot-path majority)
         // take zero extra SQL and zero behavioral change. The claim runs in THIS
         // write tx, so a dedup-store failure aborts the whole write (fail-closed).
         let dedup_ctx = {
-            let key = request.idempotency_key.trim();
-            if key.is_empty() {
-                None
-            } else {
+            let key = idempotency_key_for_dedup(&request.idempotency_key)?;
+            if let Some(key) = key {
                 let config = crate::runtime::system::SystemCatalogConfig::current();
                 let dedup_key = idempotency_dedup_key(
                     &context.tenant_id,
                     &context.project_id,
                     &request.message_type,
+                    "upsert",
                     key,
                 );
                 let claim = claim_idempotency_key_in_tx(
@@ -645,27 +846,57 @@ impl DataBrokerRuntime {
                     // Replay: do NOT run the write. Drop the tx (rolls back the
                     // dedup re-read) and return the stored original response.
                     drop(tx);
-                    return Ok(mutation_response_from_idempotency_json(
+                    return mutation_response_from_idempotency_json_for_claim(
                         &claim.prior_response_json,
-                    ));
+                        &context.tenant_id,
+                        &context.project_id,
+                        &request.message_type,
+                    );
                 }
-                Some((config, dedup_key))
+                Some(IdempotencyPersistContext {
+                    config,
+                    dedup_key,
+                    tenant_id: context.tenant_id.clone(),
+                    project_id: context.project_id.clone(),
+                    message_type: request.message_type.clone(),
+                    operation: "upsert",
+                })
+            } else {
+                None
             }
         };
         let table = table_for_message(manifest, &request.message_type)
-            .ok_or_else(|| tonic::Status::invalid_argument("unknown message_type"))?;
+            .ok_or_else(unknown_message_type_status)?;
         // #117: rewrite proto `field_name` record keys to physical `column_name`s
         // so encryption + binding (keyed by `plan.parameter_columns`, which the
         // planner already resolved) find each value.
         let record = crate::broker::normalize_record_keys(table, &record);
         let encrypted_record = self.encrypt_record_for_table(table, &record)?;
+        // 2.4 merge: lower the ALREADY key-normalized, encrypted record so the
+        // compiled parameter values match what the planner path binds; the
+        // planner SQL stays as the fallback for conflict/record shapes neutral
+        // IR cannot represent (live row parity pinned by the A-B oracle).
+        let bridged = bridged_pg_upsert_statement(
+            manifest,
+            &UpsertPlanRequest {
+                record: encrypted_record.clone(),
+                ..plan_request.clone()
+            },
+        );
         let values = record_values(&encrypted_record, &plan.parameter_columns)?;
-        let query = bind_values(
-            sqlx::query(&plan.sql),
-            table,
-            &plan.parameter_columns,
-            &values,
-        )?;
+        let query = match bridged.as_ref() {
+            Some(stmt) => bind_typed_generic_pg_params(
+                sqlx::query(&stmt.sql),
+                &stmt.params,
+                Some(&stmt.param_types),
+            )?,
+            None => bind_values(
+                sqlx::query(&plan.sql),
+                table,
+                &plan.parameter_columns,
+                &values,
+            )?,
+        };
 
         let (affected_rows, record_json) = if request.return_record {
             let row = query.fetch_optional(&mut *tx).await.map_err(|err| {
@@ -690,10 +921,7 @@ impl DataBrokerRuntime {
                         self.encryption.as_ref(),
                         &self.encryption_metrics,
                     )?;
-                    (
-                        1,
-                        record_set.records_json.first().cloned().unwrap_or_default(),
-                    )
+                    (1, returned_record_json_or_status(&record_set.records_json)?)
                 }
                 None => (0, Vec::new()),
             }
@@ -728,7 +956,10 @@ impl DataBrokerRuntime {
                 )
                 .await
                 .map_err(|err| {
-                    tonic::Status::internal(format!("projection task enqueue failed: {err}"))
+                    setup_data_internal_status(
+                        "upsert_projection_task_enqueue",
+                        format!("projection task enqueue failed: {err}"),
+                    )
                 })?;
             // mutations→CDC: emit a transactional-outbox change event for
             // CDC-enabled entities IN THE SAME TX, so a real mutation flows
@@ -762,26 +993,39 @@ impl DataBrokerRuntime {
                 written_at_unix_ms: unix_millis(),
             },
         };
+        let write_receipt_json = write_receipt_json_or_status(&receipt)?;
+        let resource_uri = mutation_response_resource_uri_or_fallback(
+            &context,
+            &request.message_type,
+            table,
+            &record,
+            &plan.resource_uri,
+            dedup_ctx.is_some(),
+        )?;
         let response = MutationResponse {
             mutation_id: Uuid::new_v4().to_string(),
-            resource_uri: plan.resource_uri,
+            resource_uri,
             checksum_sha256: checksum_json(&record),
             record_json,
             affected_rows,
             // Fresh path only — the duplicate path returned early in the dedup
             // block above, so `false` here is now truthful.
             was_duplicate: false,
-            write_receipt_json: serde_json::to_string(&receipt).unwrap_or_default(),
+            write_receipt_json,
+            write_receipt: Some(receipt.to_proto()),
             ..MutationResponse::default()
         };
         // KEYSTONE (lane 05): persist the first writer's response summary into the
         // dedup row IN THE SAME TX, so a replay returns the original body (not an
         // empty one). Keyed writes only.
-        if let Some((config, dedup_key)) = dedup_ctx.as_ref() {
-            persist_idempotency_response_in_tx(&mut tx, config, dedup_key, &response).await?;
+        if let Some(dedup_ctx) = dedup_ctx.as_ref() {
+            persist_idempotency_response_in_tx(&mut tx, dedup_ctx, &response).await?;
         }
         tx.commit().await.map_err(|err| {
-            tonic::Status::internal(format!("PostgreSQL upsert commit failed: {err}"))
+            setup_data_internal_status(
+                "upsert_commit",
+                format!("PostgreSQL upsert commit failed: {err}"),
+            )
         })?;
 
         let _ = self
@@ -867,7 +1111,9 @@ impl DataBrokerRuntime {
             &envelope,
         )
         .await
-        .map_err(|err| tonic::Status::internal(format!("CDC outbox emit failed: {err}")))
+        .map_err(|err| {
+            setup_data_internal_status("cdc_outbox_emit", format!("CDC outbox emit failed: {err}"))
+        })
     }
 
     pub async fn delete(
@@ -878,42 +1124,52 @@ impl DataBrokerRuntime {
         context: RequestContext,
         idempotency_key: String,
     ) -> Result<MutationResponse, tonic::Status> {
-        let plan = build_delete_plan(
-            manifest,
-            &DeletePlanRequest {
-                context: context.clone(),
-                message_type: message_type.to_string(),
-                filter: filter.clone(),
-            },
-        );
+        let plan_request = DeletePlanRequest {
+            context: context.clone(),
+            message_type: message_type.to_string(),
+            filter: filter.clone(),
+        };
+        let plan = build_delete_plan(manifest, &plan_request);
         reject_plan(&plan.errors)?;
         let pool = self.pg_pool()?;
-        let table = table_for_message(manifest, message_type)
-            .ok_or_else(|| tonic::Status::invalid_argument("unknown message_type"))?;
+        let table =
+            table_for_message(manifest, message_type).ok_or_else(unknown_message_type_status)?;
+        // 2.4 merge: prefer the bridged neutral-IR emission; the planner SQL
+        // stays as the fallback for planner-only filter shapes (live row parity
+        // pinned by the A-B oracle).
+        let bridged = bridged_pg_delete_statement(manifest, &plan_request);
         let values = filter_bind_values(&filter);
-        let query = bind_values(
-            sqlx::query(&plan.sql),
-            table,
-            &plan.parameter_columns,
-            &values,
-        )?;
-        let mut tx = pool
-            .begin()
-            .await
-            .map_err(|e| tonic::Status::internal(format!("PG transaction begin failed: {e}")))?;
+        let query = match bridged.as_ref() {
+            Some(stmt) => bind_typed_generic_pg_params(
+                sqlx::query(&stmt.sql),
+                &stmt.params,
+                Some(&stmt.param_types),
+            )?,
+            None => bind_values(
+                sqlx::query(&plan.sql),
+                table,
+                &plan.parameter_columns,
+                &values,
+            )?,
+        };
+        let mut tx = pool.begin().await.map_err(|e| {
+            setup_data_internal_status(
+                "delete_transaction_begin",
+                format!("PG transaction begin failed: {e}"),
+            )
+        })?;
         set_request_local_settings(&mut tx, &context).await?;
         // KEYSTONE (lane 05): keyed-only durable dedup, same-tx, fail-closed.
         // Keyless deletes are unaffected.
         let dedup_ctx = {
-            let key = idempotency_key.trim();
-            if key.is_empty() {
-                None
-            } else {
+            let key = idempotency_key_for_dedup(&idempotency_key)?;
+            if let Some(key) = key {
                 let config = crate::runtime::system::SystemCatalogConfig::current();
                 let dedup_key = idempotency_dedup_key(
                     &context.tenant_id,
                     &context.project_id,
                     message_type,
+                    "delete",
                     key,
                 );
                 let claim = claim_idempotency_key_in_tx(
@@ -928,17 +1184,28 @@ impl DataBrokerRuntime {
                 .await?;
                 if !claim.fresh {
                     drop(tx);
-                    return Ok(mutation_response_from_idempotency_json(
+                    return mutation_response_from_idempotency_json_for_claim(
                         &claim.prior_response_json,
-                    ));
+                        &context.tenant_id,
+                        &context.project_id,
+                        message_type,
+                    );
                 }
-                Some((config, dedup_key))
+                Some(IdempotencyPersistContext {
+                    config,
+                    dedup_key,
+                    tenant_id: context.tenant_id.clone(),
+                    project_id: context.project_id.clone(),
+                    message_type: message_type.to_string(),
+                    operation: "delete",
+                })
+            } else {
+                None
             }
         };
-        let result = query
-            .execute(&mut *tx)
-            .await
-            .map_err(|err| tonic::Status::internal(format!("PostgreSQL delete failed: {err}")))?;
+        let result = query.execute(&mut *tx).await.map_err(|err| {
+            setup_data_internal_status("delete_query", format!("PostgreSQL delete failed: {err}"))
+        })?;
         let mut projection_task_ids = Vec::new();
         if result.rows_affected() > 0 {
             let projection_plans =
@@ -955,7 +1222,10 @@ impl DataBrokerRuntime {
                 )
                 .await
                 .map_err(|err| {
-                    tonic::Status::internal(format!("projection task enqueue failed: {err}"))
+                    setup_data_internal_status(
+                        "delete_projection_task_enqueue",
+                        format!("projection task enqueue failed: {err}"),
+                    )
                 })?;
             // mutations→CDC: emit a delete change event for CDC-enabled entities in
             // the same tx (the filter carries the deleted row's key).
@@ -987,23 +1257,36 @@ impl DataBrokerRuntime {
                 written_at_unix_ms: unix_millis(),
             },
         };
+        let write_receipt_json = write_receipt_json_or_status(&receipt)?;
+        let resource_uri = mutation_response_resource_uri_or_fallback(
+            &context,
+            message_type,
+            table,
+            &filter,
+            &plan.resource_uri,
+            dedup_ctx.is_some(),
+        )?;
         let response = MutationResponse {
             mutation_id: Uuid::new_v4().to_string(),
-            resource_uri: plan.resource_uri,
+            resource_uri,
             affected_rows: result.rows_affected() as i64,
             // Fresh path only — a replayed keyed delete returned early above with
             // was_duplicate=true, so the default `false` here is truthful.
             was_duplicate: false,
-            write_receipt_json: serde_json::to_string(&receipt).unwrap_or_default(),
+            write_receipt_json,
+            write_receipt: Some(receipt.to_proto()),
             ..MutationResponse::default()
         };
         // KEYSTONE (lane 05): persist the first writer's response summary in-tx so
         // a replay returns the original body. Keyed deletes only.
-        if let Some((config, dedup_key)) = dedup_ctx.as_ref() {
-            persist_idempotency_response_in_tx(&mut tx, config, dedup_key, &response).await?;
+        if let Some(dedup_ctx) = dedup_ctx.as_ref() {
+            persist_idempotency_response_in_tx(&mut tx, dedup_ctx, &response).await?;
         }
         tx.commit().await.map_err(|err| {
-            tonic::Status::internal(format!("PostgreSQL delete commit failed: {err}"))
+            setup_data_internal_status(
+                "delete_commit",
+                format!("PostgreSQL delete commit failed: {err}"),
+            )
         })?;
         let _ = self
             .cache_delete_pattern(&cache_invalidation_pattern("select", message_type))
@@ -1020,9 +1303,7 @@ impl DataBrokerRuntime {
         #[cfg(not(feature = "qdrant"))]
         {
             let _ = (manifest, request, metadata_context);
-            return Err(tonic::Status::failed_precondition(
-                "qdrant/vector feature is not enabled",
-            ));
+            return Err(qdrant_vector_feature_status("vector_search"));
         }
         #[cfg(feature = "qdrant")]
         {
@@ -1092,9 +1373,7 @@ impl DataBrokerRuntime {
         #[cfg(not(feature = "qdrant"))]
         {
             let _ = (manifest, request, metadata_context);
-            return Err(tonic::Status::failed_precondition(
-                "qdrant/vector feature is not enabled",
-            ));
+            return Err(qdrant_vector_feature_status("vector_hybrid_search"));
         }
         #[cfg(feature = "qdrant")]
         {
@@ -1117,10 +1396,7 @@ impl DataBrokerRuntime {
             );
             reject_plan(&plan.errors)?;
             if !plan.backend.trim().is_empty() && !plan.backend.eq_ignore_ascii_case("qdrant") {
-                return Err(tonic::Status::failed_precondition(format!(
-                    "vector hybrid search is only wired for qdrant, not '{}'",
-                    plan.backend
-                )));
+                return Err(vector_hybrid_qdrant_only_status(&plan.backend));
             }
             let target_instance = if context.target_instance.trim().is_empty() {
                 self.choose_instance_name_for_project("qdrant", false, &context.project_id)
@@ -1169,9 +1445,7 @@ impl DataBrokerRuntime {
         #[cfg(not(feature = "qdrant"))]
         {
             let _ = (manifest, request, metadata_context);
-            return Err(tonic::Status::failed_precondition(
-                "qdrant/vector feature is not enabled",
-            ));
+            return Err(qdrant_vector_feature_status("vector_upsert"));
         }
         #[cfg(feature = "qdrant")]
         {
@@ -1285,9 +1559,7 @@ impl DataBrokerRuntime {
         #[cfg(not(any(feature = "s3", feature = "gcs", feature = "azureblob")))]
         {
             let _ = (manifest, &mut stream, metadata_context);
-            return Err(tonic::Status::failed_precondition(
-                "no object-store feature (s3/gcs/azureblob) is enabled",
-            ));
+            return Err(no_object_store_feature_status("put_object"));
         }
         #[cfg(any(feature = "s3", feature = "gcs", feature = "azureblob"))]
         {
@@ -1297,7 +1569,7 @@ impl DataBrokerRuntime {
             // object. Size is bounded cumulatively by `UDB_MAX_OBJECT_BYTES`.
             let first = match stream.next().await {
                 Some(chunk) => chunk?,
-                None => return Err(tonic::Status::invalid_argument("empty object stream")),
+                None => return Err(empty_object_stream_status()),
             };
             let context = merge_context(first.context.as_ref(), metadata_context);
             let plan = build_object_stream_plan(
@@ -1358,9 +1630,7 @@ impl DataBrokerRuntime {
                         .await?;
                     }
                     #[cfg(not(feature = "s3"))]
-                    return Err(tonic::Status::failed_precondition(
-                        "s3/minio feature is not enabled",
-                    ));
+                    return Err(s3_minio_feature_status("put_object"));
                 }
                 "gcs" => {
                     #[cfg(feature = "gcs")]
@@ -1373,9 +1643,7 @@ impl DataBrokerRuntime {
                         let client = self
                             .gcs_for_instance(instance)
                             .ok_or_else(|| {
-                                tonic::Status::failed_precondition(format!(
-                                    "gcs instance '{instance}' is not configured"
-                                ))
+                                object_instance_missing_status("gcs", "put_object", instance)
                             })?
                             .clone();
                         let executor = crate::runtime::executors::gcs::GcsExecutor::new(client);
@@ -1392,9 +1660,7 @@ impl DataBrokerRuntime {
                         .await?;
                     }
                     #[cfg(not(feature = "gcs"))]
-                    return Err(tonic::Status::failed_precondition(
-                        "gcs feature is not enabled",
-                    ));
+                    return Err(gcs_feature_status("put_object"));
                 }
                 "azureblob" => {
                     #[cfg(feature = "azureblob")]
@@ -1407,9 +1673,7 @@ impl DataBrokerRuntime {
                         let client = self
                             .azureblob_for_instance(instance)
                             .ok_or_else(|| {
-                                tonic::Status::failed_precondition(format!(
-                                    "azureblob instance '{instance}' is not configured"
-                                ))
+                                object_instance_missing_status("azureblob", "put_object", instance)
                             })?
                             .clone();
                         let executor =
@@ -1427,14 +1691,10 @@ impl DataBrokerRuntime {
                         .await?;
                     }
                     #[cfg(not(feature = "azureblob"))]
-                    return Err(tonic::Status::failed_precondition(
-                        "azureblob feature is not enabled",
-                    ));
+                    return Err(azureblob_feature_status("put_object"));
                 }
                 other => {
-                    return Err(tonic::Status::failed_precondition(format!(
-                        "unsupported object backend '{other}'"
-                    )));
+                    return Err(unsupported_object_backend_status("put_object", other));
                 }
             }
 
@@ -1461,9 +1721,7 @@ impl DataBrokerRuntime {
         #[cfg(not(any(feature = "s3", feature = "gcs", feature = "azureblob")))]
         {
             let _ = (manifest, request, metadata_context);
-            return Err(tonic::Status::failed_precondition(
-                "no object-store feature (s3/gcs/azureblob) is enabled",
-            ));
+            return Err(no_object_store_feature_status("get_object"));
         }
         #[cfg(any(feature = "s3", feature = "gcs", feature = "azureblob"))]
         {
@@ -1527,9 +1785,7 @@ impl DataBrokerRuntime {
                         byte_stream_to_chunk_stream(src, bucket, object_key, backend.clone())
                     }
                     #[cfg(not(feature = "s3"))]
-                    return Err(tonic::Status::failed_precondition(
-                        "s3/minio feature is not enabled",
-                    ));
+                    return Err(s3_minio_feature_status("get_object"));
                 }
                 "gcs" => {
                     #[cfg(feature = "gcs")]
@@ -1543,9 +1799,7 @@ impl DataBrokerRuntime {
                         let client = self
                             .gcs_for_instance(instance)
                             .ok_or_else(|| {
-                                tonic::Status::failed_precondition(format!(
-                                    "gcs instance '{instance}' is not configured"
-                                ))
+                                object_instance_missing_status("gcs", "get_object", instance)
                             })?
                             .clone();
                         let executor = crate::runtime::executors::gcs::GcsExecutor::new(client);
@@ -1553,9 +1807,7 @@ impl DataBrokerRuntime {
                         byte_stream_to_chunk_stream(src, bucket, object_key, backend.clone())
                     }
                     #[cfg(not(feature = "gcs"))]
-                    return Err(tonic::Status::failed_precondition(
-                        "gcs feature is not enabled",
-                    ));
+                    return Err(gcs_feature_status("get_object"));
                 }
                 "azureblob" => {
                     #[cfg(feature = "azureblob")]
@@ -1569,9 +1821,7 @@ impl DataBrokerRuntime {
                         let client = self
                             .azureblob_for_instance(instance)
                             .ok_or_else(|| {
-                                tonic::Status::failed_precondition(format!(
-                                    "azureblob instance '{instance}' is not configured"
-                                ))
+                                object_instance_missing_status("azureblob", "get_object", instance)
                             })?
                             .clone();
                         let executor =
@@ -1580,14 +1830,10 @@ impl DataBrokerRuntime {
                         byte_stream_to_chunk_stream(src, bucket, object_key, backend.clone())
                     }
                     #[cfg(not(feature = "azureblob"))]
-                    return Err(tonic::Status::failed_precondition(
-                        "azureblob feature is not enabled",
-                    ));
+                    return Err(azureblob_feature_status("get_object"));
                 }
                 other => {
-                    return Err(tonic::Status::failed_precondition(format!(
-                        "unsupported object backend '{other}'"
-                    )));
+                    return Err(unsupported_object_backend_status("get_object", other));
                 }
             };
             Ok(chunk_stream)
@@ -1603,9 +1849,7 @@ impl DataBrokerRuntime {
         #[cfg(not(feature = "s3"))]
         {
             let _ = (manifest, request, metadata_context);
-            return Err(tonic::Status::failed_precondition(
-                "s3/object-store feature is not enabled",
-            ));
+            return Err(s3_object_feature_status("generate_presigned_url"));
         }
         #[cfg(feature = "s3")]
         {
@@ -1623,9 +1867,7 @@ impl DataBrokerRuntime {
             reject_plan(&decision.errors)?;
             let method = request.method.to_ascii_uppercase();
             if method != "PUT" && method != "GET" {
-                return Err(tonic::Status::invalid_argument(
-                    "presigned URLs support only PUT or GET",
-                ));
+                return Err(unsupported_presign_method_status());
             }
             let target_instance = if context.target_instance.trim().is_empty() {
                 let write = method == "PUT";
@@ -1669,9 +1911,7 @@ impl DataBrokerRuntime {
         #[cfg(not(feature = "qdrant"))]
         {
             let _ = (instance, project_id, collection, dimension, points);
-            Err(tonic::Status::failed_precondition(
-                "qdrant/vector feature is not enabled",
-            ))
+            Err(qdrant_vector_feature_status("vector_upsert_backend_target"))
         }
         #[cfg(feature = "qdrant")]
         {
@@ -1732,9 +1972,7 @@ impl DataBrokerRuntime {
         #[cfg(not(feature = "qdrant"))]
         {
             let _ = (instance, project_id, collection, point_ids);
-            Err(tonic::Status::failed_precondition(
-                "qdrant/vector feature is not enabled",
-            ))
+            Err(qdrant_vector_feature_status("vector_delete_backend_target"))
         }
         #[cfg(feature = "qdrant")]
         {
@@ -1777,17 +2015,13 @@ impl DataBrokerRuntime {
                 content_type,
                 ttl_seconds,
             );
-            Err(tonic::Status::failed_precondition(
-                "s3/object-store feature is not enabled",
-            ))
+            Err(s3_object_feature_status("presign_object_backend_target"))
         }
         #[cfg(feature = "s3")]
         {
             let method = method.to_ascii_uppercase();
             if method != "PUT" && method != "GET" {
-                return Err(tonic::Status::invalid_argument(
-                    "presigned URLs support only PUT or GET",
-                ));
+                return Err(unsupported_presign_method_status());
             }
             let project = project_id.trim();
             let project = if project.is_empty() {
@@ -1827,9 +2061,7 @@ impl DataBrokerRuntime {
         #[cfg(not(feature = "s3"))]
         {
             let _ = (backend_target, project_id, bucket, object_key);
-            Err(tonic::Status::failed_precondition(
-                "s3/object-store feature is not enabled",
-            ))
+            Err(s3_object_feature_status("object_exists_backend_target"))
         }
         #[cfg(feature = "s3")]
         {
@@ -1877,9 +2109,11 @@ impl DataBrokerRuntime {
                     if not_found {
                         Ok(None)
                     } else {
-                        Err(tonic::Status::unavailable(format!(
-                            "S3 object head failed: {err}"
-                        )))
+                        Err(crate::runtime::executor_utils::backend_transport_status(
+                            "S3",
+                            "object head",
+                            err,
+                        ))
                     }
                 }
             }
@@ -1895,9 +2129,7 @@ impl DataBrokerRuntime {
         #[cfg(not(feature = "s3"))]
         {
             let _ = (manifest, request, metadata_context);
-            return Err(tonic::Status::failed_precondition(
-                "s3/object-store feature is not enabled",
-            ));
+            return Err(s3_object_feature_status("initiate_multipart_upload"));
         }
         #[cfg(feature = "s3")]
         {
@@ -1914,9 +2146,7 @@ impl DataBrokerRuntime {
             );
             reject_plan(&decision.errors)?;
             if request.part_count <= 0 {
-                return Err(tonic::Status::invalid_argument(
-                    "part_count must be positive",
-                ));
+                return Err(invalid_part_count_status());
             }
             let target_instance = if context.target_instance.trim().is_empty() {
                 self.choose_instance_name_for_project("minio", true, &context.project_id)
@@ -1939,13 +2169,16 @@ impl DataBrokerRuntime {
                 .send()
                 .await
                 .map_err(|err| {
-                    tonic::Status::unavailable(format!("S3 multipart init failed: {err}"))
+                    crate::runtime::executor_utils::backend_transport_status(
+                        "S3",
+                        "multipart init",
+                        err,
+                    )
                 })?;
             let upload_id = upload.upload_id().unwrap_or_default().to_string();
             let ttl = bounded_ttl(request.ttl_seconds);
-            let config = PresigningConfig::expires_in(Duration::from_secs(ttl)).map_err(|err| {
-                tonic::Status::invalid_argument(format!("invalid presign ttl: {err}"))
-            })?;
+            let config = PresigningConfig::expires_in(Duration::from_secs(ttl))
+                .map_err(invalid_presign_ttl_status)?;
             let mut part_urls = Vec::new();
             for part_number in 1..=request.part_count {
                 let url = s3
@@ -1957,7 +2190,11 @@ impl DataBrokerRuntime {
                     .presigned(config.clone())
                     .await
                     .map_err(|err| {
-                        tonic::Status::unavailable(format!("S3 part presign failed: {err}"))
+                        crate::runtime::executor_utils::backend_transport_status(
+                            "S3",
+                            "part presign",
+                            err,
+                        )
                     })?;
                 part_urls.push(url.uri().to_string());
             }
@@ -1985,19 +2222,45 @@ struct IdempotencyClaim {
     prior_response_json: JsonValue,
 }
 
+struct IdempotencyPersistContext {
+    config: crate::runtime::system::SystemCatalogConfig,
+    dedup_key: String,
+    tenant_id: String,
+    project_id: String,
+    message_type: String,
+    operation: &'static str,
+}
+
 /// Tenant+project-scoped salted dedup key. Returns the hex SHA-256 of
-/// `"{tenant}\0{project}\0{message_type}\0{key}"` — NEVER the bare client key, so
-/// two tenants (or projects) reusing `"key-1"` cannot collide (RLS/tenant-scope
-/// guardrail). Mirrors the `checksum_str` hashing already used for receipts.
+/// `"{tenant}\0{project}\0{message_type}\0{operation}\0{key}"` — NEVER the bare
+/// client key, so two tenants (or projects) reusing `"key-1"` cannot collide
+/// (RLS/tenant-scope guardrail), and two mutation RPCs sharing a caller key do
+/// not replay each other's response. Mirrors the `checksum_str` hashing already
+/// used for receipts.
 fn idempotency_dedup_key(
     tenant_id: &str,
     project_id: &str,
     message_type: &str,
+    operation: &str,
     key: &str,
 ) -> String {
     crate::runtime::executor_utils::checksum_str(&format!(
-        "{tenant_id}\0{project_id}\0{message_type}\0{key}"
+        "{tenant_id}\0{project_id}\0{message_type}\0{operation}\0{key}"
     ))
+}
+
+fn idempotency_key_for_dedup(key: &str) -> Result<Option<&str>, tonic::Status> {
+    if key.is_empty() {
+        return Ok(None);
+    }
+    if key.chars().any(|ch| ch.is_whitespace() || ch.is_control()) {
+        return Err(setup_data_invalid_field(
+            "idempotency_key",
+            "must be empty or contain no whitespace or control characters",
+            "idempotency_key must be empty or contain no whitespace or control characters",
+        ));
+    }
+    Ok(Some(key))
 }
 
 /// Atomically claim a dedup key INSIDE the caller's write transaction, mirroring
@@ -2006,9 +2269,9 @@ fn idempotency_dedup_key(
 /// Because the INSERT runs in the same `sqlx::Transaction` as the data write, a
 /// dedup-table failure naturally aborts the whole tx (fail-closed by
 /// construction): the write cannot commit without this INSERT succeeding, and a
-/// conflict means we never run the write. The `sqlx` error is mapped via
-/// `sqlx_error_to_status` so the caller surfaces a fail-closed status (the tx is
-/// dropped on Err).
+/// conflict means we never run the write. Any claim SQL failure is surfaced as a
+/// retryable `UNAVAILABLE` dedup-store error so SDKs can safely retry the SAME
+/// keyed mutation while the tx is dropped fail-closed.
 async fn claim_idempotency_key_in_tx(
     tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     config: &crate::runtime::system::SystemCatalogConfig,
@@ -2019,7 +2282,43 @@ async fn claim_idempotency_key_in_tx(
     operation: &str,
 ) -> Result<IdempotencyClaim, tonic::Status> {
     let rel = config.idempotency_keys_relation();
-    let sql = format!(
+    let sql = idempotency_claim_sql(&rel);
+    let row: Option<(bool, JsonValue)> = sqlx::query_as(&sql)
+        .bind(dedup_key)
+        .bind(tenant_id)
+        .bind(project_id)
+        .bind(message_type)
+        .bind(operation)
+        .fetch_optional(&mut **tx)
+        .await
+        .map_err(|err| idempotency_dedup_claim_status(&err))?;
+    let Some(row) = row else {
+        return Err(setup_data_internal_status(
+            "idempotency_dedup_claim_shape",
+            "idempotency dedup claim returned no row for matching scope",
+        ));
+    };
+    Ok(IdempotencyClaim {
+        fresh: row.0,
+        prior_response_json: row.1,
+    })
+}
+
+fn idempotency_dedup_claim_status(err: &sqlx::Error) -> tonic::Status {
+    tracing::error!(
+        error = %err,
+        "idempotency dedup claim failed; keyed mutation refused fail-closed"
+    );
+    crate::runtime::executor_utils::retryable_status(
+        "postgres",
+        "idempotency_dedup_claim",
+        250,
+        "idempotency dedup claim failed: dedup store unavailable (fail-closed)",
+    )
+}
+
+fn idempotency_claim_sql(rel: &str) -> String {
+    format!(
         "WITH ins AS (
              INSERT INTO {rel}
                  (dedup_key, tenant_id, project_id, message_type, operation, response_json)
@@ -2029,39 +2328,25 @@ async fn claim_idempotency_key_in_tx(
          )
          SELECT inserted, response_json FROM ins
          UNION ALL
-         SELECT false AS inserted, response_json FROM {rel} WHERE dedup_key = $1
+         SELECT false AS inserted, response_json
+         FROM {rel}
+         WHERE dedup_key = $1
+           AND tenant_id = $2
+           AND project_id = $3
+           AND message_type = $4
+           AND operation = $5
+           AND NOT EXISTS (SELECT 1 FROM ins)
          LIMIT 1"
-    );
-    let row: (bool, JsonValue) = sqlx::query_as(&sql)
-        .bind(dedup_key)
-        .bind(tenant_id)
-        .bind(project_id)
-        .bind(message_type)
-        .bind(operation)
-        .fetch_one(&mut **tx)
-        .await
-        .map_err(|err| {
-            crate::runtime::executor_utils::sqlx_error_to_status(
-                "idempotency dedup claim failed",
-                &err,
-            )
-        })?;
-    Ok(IdempotencyClaim {
-        fresh: row.0,
-        prior_response_json: row.1,
-    })
+    )
 }
 
 /// Persist the first writer's `MutationResponse` summary into the dedup row,
 /// inside the same write tx, so a later replay returns the original body.
 /// `record_json` (the protobuf field) is `bytes` (a single blob); we base64 it
 /// for JSON-safe round-tripping.
-async fn persist_idempotency_response_in_tx(
-    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-    config: &crate::runtime::system::SystemCatalogConfig,
-    dedup_key: &str,
+fn mutation_response_idempotency_json(
     response: &MutationResponse,
-) -> Result<(), tonic::Status> {
+) -> Result<JsonValue, tonic::Status> {
     use base64::Engine as _;
     let record_json_b64 = base64::engine::general_purpose::STANDARD.encode(&response.record_json);
     let summary = serde_json::json!({
@@ -2072,11 +2357,332 @@ async fn persist_idempotency_response_in_tx(
         "affected_rows": response.affected_rows,
         "write_receipt_json": response.write_receipt_json,
     });
-    let rel = config.idempotency_keys_relation();
-    let sql = format!("UPDATE {rel} SET response_json = $1 WHERE dedup_key = $2");
-    sqlx::query(&sql)
+    idempotency_response_write_receipt_lockstep(response, &summary)?;
+    mutation_response_from_idempotency_json(&summary)?;
+    Ok(summary)
+}
+
+fn mutation_response_idempotency_json_for_claim(
+    response: &MutationResponse,
+    tenant_id: &str,
+    project_id: &str,
+    message_type: &str,
+) -> Result<JsonValue, tonic::Status> {
+    let mut summary = mutation_response_idempotency_json(response)?;
+    let Some(object) = summary.as_object_mut() else {
+        return Err(setup_data_internal_status(
+            "idempotency_response_summary_shape",
+            "idempotency response summary must be a JSON object",
+        ));
+    };
+    object.insert(
+        "tenant_id".to_string(),
+        JsonValue::String(tenant_id.to_string()),
+    );
+    object.insert(
+        "project_id".to_string(),
+        JsonValue::String(project_id.to_string()),
+    );
+    object.insert(
+        "message_type".to_string(),
+        JsonValue::String(message_type.to_string()),
+    );
+    mutation_response_from_idempotency_json_for_claim(
+        &summary,
+        tenant_id,
+        project_id,
+        message_type,
+    )?;
+    Ok(summary)
+}
+
+fn idempotency_response_write_receipt_lockstep(
+    response: &MutationResponse,
+    summary: &JsonValue,
+) -> Result<(), tonic::Status> {
+    let (_, summary_receipt) = idempotency_replay_write_receipt(summary)?;
+    let Some(response_receipt) = response.write_receipt.as_ref() else {
+        return Err(setup_data_internal_status(
+            "idempotency_response_write_receipt_missing",
+            "idempotency response summary requires typed write_receipt before persist",
+        ));
+    };
+    let response_receipt = crate::runtime::consistency::WriteReceipt::from_proto(response_receipt);
+    if response_receipt != summary_receipt {
+        return Err(setup_data_internal_status(
+            "idempotency_response_write_receipt_mismatch",
+            "idempotency response summary typed write_receipt must match write_receipt_json before persist",
+        ));
+    }
+    Ok(())
+}
+
+fn idempotency_response_persist_row_count_status(rows_affected: u64) -> Result<(), tonic::Status> {
+    if rows_affected == 1 {
+        return Ok(());
+    }
+    Err(setup_data_internal_status(
+        "idempotency_response_persist_row_count",
+        format!("idempotency response persist affected {rows_affected} rows; expected exactly one"),
+    ))
+}
+
+fn write_receipt_json_or_status(
+    receipt: &crate::runtime::consistency::WriteReceipt,
+) -> Result<String, tonic::Status> {
+    serde_json::to_string(receipt).map_err(|err| {
+        setup_data_internal_status(
+            "write_receipt_json_encode",
+            format!("write receipt JSON serialization failed: {err}"),
+        )
+    })
+}
+
+fn mutation_response_resource_uri(
+    context: &RequestContext,
+    message_type: &str,
+    table: &ManifestTable,
+    identity_source: &JsonValue,
+) -> Result<String, tonic::Status> {
+    let tenant = mutation_resource_uri_token("tenant_id", &context.tenant_id)?;
+    let message = mutation_resource_uri_token("message_type", message_type)?;
+    let resource_id = mutation_resource_id_from_json(table, identity_source)?;
+    Ok(format!("udb://{tenant}/{message}/{resource_id}"))
+}
+
+fn mutation_response_resource_uri_or_fallback(
+    context: &RequestContext,
+    message_type: &str,
+    table: &ManifestTable,
+    identity_source: &JsonValue,
+    fallback_resource_uri: &str,
+    require_data_plane_uri: bool,
+) -> Result<String, tonic::Status> {
+    match mutation_response_resource_uri(context, message_type, table, identity_source) {
+        Ok(uri) => Ok(uri),
+        Err(err) if require_data_plane_uri => Err(err),
+        Err(_) => Ok(fallback_resource_uri.to_string()),
+    }
+}
+
+fn mutation_resource_uri_token(label: &str, value: &str) -> Result<String, tonic::Status> {
+    if value.trim().is_empty() {
+        return Err(setup_data_internal_status(
+            "mutation_resource_uri_token",
+            format!("mutation response resource_uri {label} must be non-empty"),
+        ));
+    }
+    if value != value.trim() || value.chars().any(char::is_whitespace) || value.contains('/') {
+        return Err(setup_data_internal_status(
+            "mutation_resource_uri_token",
+            format!("mutation response resource_uri {label} must be an unpadded path token"),
+        ));
+    }
+    if value.chars().any(char::is_control) {
+        return Err(setup_data_internal_status(
+            "mutation_resource_uri_token",
+            format!("mutation response resource_uri {label} must not contain control characters"),
+        ));
+    }
+    Ok(value.to_string())
+}
+
+fn mutation_resource_id_from_json(
+    table: &ManifestTable,
+    identity_source: &JsonValue,
+) -> Result<String, tonic::Status> {
+    for primary_key in &table.primary_key {
+        if let Some(value) = manifest_json_value(table, identity_source, primary_key) {
+            return mutation_resource_id_value("primary key", value);
+        }
+    }
+
+    let Some(object) = identity_source.as_object() else {
+        return Err(setup_data_internal_status(
+            "mutation_resource_uri_identity_source",
+            "mutation response resource_uri identity source must be a JSON object",
+        ));
+    };
+    let mut fields = object.iter().collect::<Vec<_>>();
+    fields.sort_by(|left, right| left.0.cmp(right.0));
+
+    if let Some((field, value)) = mutation_identity_field_from_json(identity_source)? {
+        return mutation_resource_id_value(field, value);
+    }
+
+    for (field, value) in fields {
+        let name = field.to_ascii_lowercase();
+        if name != "tenant_id"
+            && name != "project_id"
+            && let Some(token) = mutation_resource_id_scalar(value)
+        {
+            return mutation_resource_uri_token(field, &token);
+        }
+    }
+
+    Err(setup_data_internal_status(
+        "mutation_resource_uri_identity_required",
+        "mutation response resource_uri requires a scalar primary key or identity field",
+    ))
+}
+
+fn manifest_json_value<'a>(
+    table: &'a ManifestTable,
+    identity_source: &'a JsonValue,
+    column_name: &str,
+) -> Option<&'a JsonValue> {
+    let object = identity_source.as_object()?;
+    if let Some(value) = object.get(column_name) {
+        return Some(value);
+    }
+    let direct = table
+        .columns
+        .iter()
+        .find(|column| column.column_name == column_name)
+        .and_then(|column| {
+            (!column.field_name.is_empty())
+                .then(|| object.get(&column.field_name))
+                .flatten()
+        });
+    if direct.is_some() {
+        return direct;
+    }
+
+    let mut found = None;
+    for key in ["$and", "and"] {
+        let Some(JsonValue::Array(items)) = object.get(key) else {
+            continue;
+        };
+        for item in items {
+            let Some(value) = manifest_json_value(table, item, column_name) else {
+                continue;
+            };
+            if found.is_some() {
+                return None;
+            }
+            found = Some(value);
+        }
+    }
+    found
+}
+
+fn mutation_identity_field_from_json<'a>(
+    identity_source: &'a JsonValue,
+) -> Result<Option<(&'a str, &'a JsonValue)>, tonic::Status> {
+    let mut found = None;
+    mutation_collect_identity_field(identity_source, &mut found)?;
+    Ok(found)
+}
+
+fn mutation_collect_identity_field<'a>(
+    identity_source: &'a JsonValue,
+    found: &mut Option<(&'a str, &'a JsonValue)>,
+) -> Result<(), tonic::Status> {
+    let Some(object) = identity_source.as_object() else {
+        return Ok(());
+    };
+    let mut fields = object.iter().collect::<Vec<_>>();
+    fields.sort_by(|left, right| left.0.cmp(right.0));
+    for (field, value) in fields {
+        let name = field.to_ascii_lowercase();
+        if (name == "id" || name.ends_with("_id")) && name != "tenant_id" && name != "project_id" {
+            if found.is_some() {
+                return Err(setup_data_internal_status(
+                    "mutation_resource_uri_identity_ambiguous",
+                    "mutation response resource_uri identity field is ambiguous",
+                ));
+            }
+            *found = Some((field.as_str(), value));
+        }
+    }
+    for key in ["$and", "and"] {
+        let Some(JsonValue::Array(items)) = object.get(key) else {
+            continue;
+        };
+        for item in items {
+            mutation_collect_identity_field(item, found)?;
+        }
+    }
+    Ok(())
+}
+
+fn mutation_resource_id_value(label: &str, value: &JsonValue) -> Result<String, tonic::Status> {
+    let token = if let Some(token) = mutation_resource_id_scalar(value) {
+        token
+    } else if let Some(eq_value) = mutation_resource_id_eq_value(value) {
+        mutation_resource_id_scalar(eq_value).ok_or_else(|| {
+            setup_data_internal_status(
+                "mutation_resource_uri_equality_scalar",
+                format!("mutation response resource_uri {label} equality value must be scalar"),
+            )
+        })?
+    } else {
+        return Err(setup_data_internal_status(
+            "mutation_resource_uri_scalar_equality_required",
+            format!("mutation response resource_uri {label} must be a scalar equality value"),
+        ));
+    };
+    mutation_resource_uri_token(label, &token)
+}
+
+fn mutation_resource_id_eq_value(value: &JsonValue) -> Option<&JsonValue> {
+    let JsonValue::Object(map) = value else {
+        return None;
+    };
+    if map.len() != 1 {
+        return None;
+    }
+    map.get("$eq").or_else(|| map.get("="))
+}
+
+fn mutation_resource_id_scalar(value: &JsonValue) -> Option<String> {
+    match value {
+        JsonValue::Null | JsonValue::Array(_) | JsonValue::Object(_) => None,
+        _ => Some(crate::runtime::executor_utils::json_scalar_to_string(value)),
+    }
+}
+
+fn returned_record_json_or_status(records_json: &[Vec<u8>]) -> Result<Vec<u8>, tonic::Status> {
+    records_json.first().cloned().ok_or_else(|| {
+        setup_data_internal_status(
+            "upsert_returning_record_json",
+            "PostgreSQL upsert RETURNING row decoded without record_json",
+        )
+    })
+}
+
+fn idempotency_response_persist_sql(rel: &str) -> String {
+    format!(
+        "UPDATE {rel}
+         SET response_json = $1
+         WHERE dedup_key = $2
+           AND tenant_id = $3
+           AND project_id = $4
+           AND message_type = $5
+           AND operation = $6"
+    )
+}
+
+async fn persist_idempotency_response_in_tx(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    dedup_ctx: &IdempotencyPersistContext,
+    response: &MutationResponse,
+) -> Result<(), tonic::Status> {
+    let summary = mutation_response_idempotency_json_for_claim(
+        response,
+        &dedup_ctx.tenant_id,
+        &dedup_ctx.project_id,
+        &dedup_ctx.message_type,
+    )?;
+    let rel = dedup_ctx.config.idempotency_keys_relation();
+    let sql = idempotency_response_persist_sql(&rel);
+    let result = sqlx::query(&sql)
         .bind(&summary)
-        .bind(dedup_key)
+        .bind(&dedup_ctx.dedup_key)
+        .bind(&dedup_ctx.tenant_id)
+        .bind(&dedup_ctx.project_id)
+        .bind(&dedup_ctx.message_type)
+        .bind(dedup_ctx.operation)
         .execute(&mut **tx)
         .await
         .map_err(|err| {
@@ -2085,47 +2691,493 @@ async fn persist_idempotency_response_in_tx(
                 &err,
             )
         })?;
+    idempotency_response_persist_row_count_status(result.rows_affected())?;
     Ok(())
 }
 
-/// Reconstruct a `MutationResponse` (with `was_duplicate = true`) from a dedup
-/// row's stored summary on the replay path.
-fn mutation_response_from_idempotency_json(prior: &JsonValue) -> MutationResponse {
-    use base64::Engine as _;
-    let record_json = prior
-        .get("record_json")
-        .and_then(|v| v.as_str())
-        .and_then(|s| base64::engine::general_purpose::STANDARD.decode(s).ok())
-        .unwrap_or_default();
-    MutationResponse {
-        mutation_id: prior
-            .get("mutation_id")
-            .and_then(|v| v.as_str())
-            .unwrap_or_default()
-            .to_string(),
-        resource_uri: prior
-            .get("resource_uri")
-            .and_then(|v| v.as_str())
-            .unwrap_or_default()
-            .to_string(),
-        checksum_sha256: prior
-            .get("checksum_sha256")
-            .and_then(|v| v.as_str())
-            .unwrap_or_default()
-            .to_string(),
-        record_json,
-        affected_rows: prior
-            .get("affected_rows")
-            .and_then(|v| v.as_i64())
-            .unwrap_or_default(),
-        was_duplicate: true,
-        write_receipt_json: prior
-            .get("write_receipt_json")
-            .and_then(|v| v.as_str())
-            .unwrap_or_default()
-            .to_string(),
-        ..MutationResponse::default()
+fn idempotency_replay_response_status(message: impl Into<String>) -> tonic::Status {
+    setup_data_internal_status(
+        "idempotency_replay_response",
+        format!("idempotency replay response invalid: {}", message.into()),
+    )
+}
+
+fn idempotency_replay_string(
+    prior: &JsonValue,
+    field: &str,
+    allow_empty: bool,
+) -> Result<String, tonic::Status> {
+    let value = prior
+        .get(field)
+        .and_then(|value| value.as_str())
+        .ok_or_else(|| {
+            idempotency_replay_response_status(format!("missing string field {field}"))
+        })?;
+    if !allow_empty && value.is_empty() {
+        return Err(idempotency_replay_response_status(format!(
+            "empty string field {field}"
+        )));
     }
+    Ok(value.to_string())
+}
+
+fn idempotency_replay_i64(prior: &JsonValue, field: &str) -> Result<i64, tonic::Status> {
+    let value = prior
+        .get(field)
+        .and_then(|value| value.as_i64())
+        .ok_or_else(|| {
+            idempotency_replay_response_status(format!("missing integer field {field}"))
+        })?;
+    if value < 0 {
+        return Err(idempotency_replay_response_status(format!(
+            "negative integer field {field}"
+        )));
+    }
+    Ok(value)
+}
+
+fn idempotency_replay_mutation_id(prior: &JsonValue) -> Result<String, tonic::Status> {
+    let mutation_id = idempotency_replay_string(prior, "mutation_id", false)?;
+    let parsed = Uuid::parse_str(&mutation_id)
+        .map_err(|err| idempotency_replay_response_status(format!("invalid mutation_id: {err}")))?;
+    if parsed.to_string() != mutation_id {
+        return Err(idempotency_replay_response_status(
+            "mutation_id must be a canonical lowercase UUID",
+        ));
+    }
+    Ok(mutation_id)
+}
+
+fn idempotency_replay_checksum(prior: &JsonValue) -> Result<String, tonic::Status> {
+    let checksum = idempotency_replay_string(prior, "checksum_sha256", true)?;
+    validate_idempotency_sha256_token("checksum_sha256", &checksum, true)?;
+    Ok(checksum)
+}
+
+fn validate_idempotency_sha256_token(
+    field: &str,
+    checksum: &str,
+    allow_empty: bool,
+) -> Result<(), tonic::Status> {
+    if checksum.is_empty() {
+        if allow_empty {
+            return Ok(());
+        }
+        return Err(idempotency_replay_response_status(format!(
+            "{field} must be non-empty"
+        )));
+    }
+    let Some(hex) = checksum.strip_prefix("sha256:") else {
+        let message = if allow_empty {
+            format!("{field} must be empty or start with sha256:")
+        } else {
+            format!("{field} must start with sha256:")
+        };
+        return Err(idempotency_replay_response_status(message));
+    };
+    if hex.len() != 64
+        || !hex
+            .chars()
+            .all(|ch| ch.is_ascii_hexdigit() && !ch.is_ascii_uppercase())
+    {
+        let message = if allow_empty {
+            format!("{field} must be empty or sha256:<64 lowercase hex>")
+        } else {
+            format!("{field} must be sha256:<64 lowercase hex>")
+        };
+        return Err(idempotency_replay_response_status(message));
+    }
+    Ok(())
+}
+
+fn idempotency_replay_resource_uri(prior: &JsonValue) -> Result<String, tonic::Status> {
+    let resource_uri = idempotency_replay_string(prior, "resource_uri", false)?;
+    let _ = idempotency_replay_resource_uri_scope(&resource_uri)?;
+    Ok(resource_uri)
+}
+
+fn idempotency_replay_resource_uri_scope(
+    resource_uri: &str,
+) -> Result<(&str, &str), tonic::Status> {
+    const PREFIX: &str = "udb://";
+    if !resource_uri.starts_with(PREFIX) {
+        return Err(idempotency_replay_response_status(
+            "resource_uri must start with udb://",
+        ));
+    }
+    if resource_uri.chars().any(char::is_whitespace) {
+        return Err(idempotency_replay_response_status(
+            "resource_uri must not include whitespace",
+        ));
+    }
+    if resource_uri.chars().any(char::is_control) {
+        return Err(idempotency_replay_response_status(
+            "resource_uri must not contain control characters",
+        ));
+    }
+    let rest = &resource_uri[PREFIX.len()..];
+    let Some((authority, path)) = rest.split_once('/') else {
+        return Err(idempotency_replay_response_status(
+            "resource_uri must include non-empty authority and path",
+        ));
+    };
+    if authority.is_empty() || path.is_empty() {
+        return Err(idempotency_replay_response_status(
+            "resource_uri must include non-empty authority and path",
+        ));
+    }
+    let path_segments = path.split('/').collect::<Vec<_>>();
+    if path_segments.len() != 2 || path_segments.iter().any(|segment| segment.is_empty()) {
+        return Err(idempotency_replay_response_status(
+            "resource_uri path must include message type and resource id",
+        ));
+    }
+    Ok((authority, path_segments[0]))
+}
+
+fn idempotency_replay_resource_uri_matches_claim(
+    resource_uri: &str,
+    tenant_id: &str,
+    message_type: &str,
+) -> Result<(), tonic::Status> {
+    let (authority, message) = idempotency_replay_resource_uri_scope(resource_uri)?;
+    if authority != tenant_id {
+        return Err(idempotency_replay_response_status(
+            "resource_uri authority must match idempotency claim tenant_id",
+        ));
+    }
+    if message != message_type {
+        return Err(idempotency_replay_response_status(
+            "resource_uri message type must match idempotency claim message_type",
+        ));
+    }
+    Ok(())
+}
+
+fn idempotency_replay_project_matches_claim(
+    prior: &JsonValue,
+    project_id: &str,
+) -> Result<(), tonic::Status> {
+    let stored_project = idempotency_replay_string(prior, "project_id", true)?;
+    if stored_project != project_id {
+        return Err(idempotency_replay_response_status(
+            "project_id must match idempotency claim project_id",
+        ));
+    }
+    Ok(())
+}
+
+fn idempotency_replay_scope_matches_claim(
+    prior: &JsonValue,
+    tenant_id: &str,
+    project_id: &str,
+    message_type: &str,
+) -> Result<(), tonic::Status> {
+    let stored_tenant = idempotency_replay_string(prior, "tenant_id", false)?;
+    if stored_tenant != tenant_id {
+        return Err(idempotency_replay_response_status(
+            "tenant_id must match idempotency claim tenant_id",
+        ));
+    }
+    idempotency_replay_project_matches_claim(prior, project_id)?;
+    let stored_message = idempotency_replay_string(prior, "message_type", false)?;
+    if stored_message != message_type {
+        return Err(idempotency_replay_response_status(
+            "message_type must match idempotency claim message_type",
+        ));
+    }
+    Ok(())
+}
+
+struct IdempotencyJsonNoDuplicateKeys<'a> {
+    label: &'a str,
+}
+
+struct IdempotencyJsonNoDuplicateKeysVisitor<'a> {
+    label: &'a str,
+}
+
+impl<'de> serde::de::DeserializeSeed<'de> for IdempotencyJsonNoDuplicateKeys<'_> {
+    type Value = ();
+
+    fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+    where
+        D: serde::de::Deserializer<'de>,
+    {
+        deserializer.deserialize_any(IdempotencyJsonNoDuplicateKeysVisitor { label: self.label })
+    }
+}
+
+impl<'de> serde::de::Visitor<'de> for IdempotencyJsonNoDuplicateKeysVisitor<'_> {
+    type Value = ();
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str("JSON value without duplicate object keys")
+    }
+
+    fn visit_bool<E>(self, _value: bool) -> Result<Self::Value, E> {
+        Ok(())
+    }
+
+    fn visit_i64<E>(self, _value: i64) -> Result<Self::Value, E> {
+        Ok(())
+    }
+
+    fn visit_u64<E>(self, _value: u64) -> Result<Self::Value, E> {
+        Ok(())
+    }
+
+    fn visit_f64<E>(self, _value: f64) -> Result<Self::Value, E> {
+        Ok(())
+    }
+
+    fn visit_str<E>(self, _value: &str) -> Result<Self::Value, E> {
+        Ok(())
+    }
+
+    fn visit_string<E>(self, _value: String) -> Result<Self::Value, E> {
+        Ok(())
+    }
+
+    fn visit_none<E>(self) -> Result<Self::Value, E> {
+        Ok(())
+    }
+
+    fn visit_unit<E>(self) -> Result<Self::Value, E> {
+        Ok(())
+    }
+
+    fn visit_some<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+    where
+        D: serde::de::Deserializer<'de>,
+    {
+        serde::de::DeserializeSeed::deserialize(
+            IdempotencyJsonNoDuplicateKeys { label: self.label },
+            deserializer,
+        )
+    }
+
+    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+    where
+        A: serde::de::SeqAccess<'de>,
+    {
+        while seq
+            .next_element_seed(IdempotencyJsonNoDuplicateKeys { label: self.label })?
+            .is_some()
+        {}
+        Ok(())
+    }
+
+    fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+    where
+        A: serde::de::MapAccess<'de>,
+    {
+        let mut seen = std::collections::HashSet::new();
+        while let Some(key) = map.next_key::<String>()? {
+            if !seen.insert(key.clone()) {
+                return Err(<A::Error as serde::de::Error>::custom(format!(
+                    "{} must not contain duplicate JSON key {key:?}",
+                    self.label
+                )));
+            }
+            map.next_value_seed(IdempotencyJsonNoDuplicateKeys { label: self.label })?;
+        }
+        Ok(())
+    }
+}
+
+fn validate_idempotency_json_no_duplicate_keys(
+    label: &str,
+    json: &[u8],
+) -> Result<(), tonic::Status> {
+    let mut deserializer = serde_json::Deserializer::from_slice(json);
+    serde::de::DeserializeSeed::deserialize(
+        IdempotencyJsonNoDuplicateKeys { label },
+        &mut deserializer,
+    )
+    .map_err(|err| idempotency_replay_response_status(err.to_string()))
+}
+
+fn idempotency_replay_record_json(prior: &JsonValue) -> Result<Vec<u8>, tonic::Status> {
+    use base64::Engine as _;
+    let record_json_b64 = idempotency_replay_string(prior, "record_json", true)?;
+    let record_json = base64::engine::general_purpose::STANDARD
+        .decode(record_json_b64)
+        .map_err(|err| idempotency_replay_response_status(format!("invalid record_json: {err}")))?;
+    if record_json.is_empty() {
+        return Ok(record_json);
+    }
+    validate_idempotency_json_no_duplicate_keys("record_json", &record_json)?;
+    let value = serde_json::from_slice::<JsonValue>(&record_json).map_err(|err| {
+        idempotency_replay_response_status(format!(
+            "record_json must be a valid JSON object: {err}"
+        ))
+    })?;
+    let Some(object) = value.as_object() else {
+        return Err(idempotency_replay_response_status(
+            "record_json must be a JSON object",
+        ));
+    };
+    if object.is_empty() {
+        return Err(idempotency_replay_response_status(
+            "record_json must be a non-empty JSON object",
+        ));
+    }
+    Ok(record_json)
+}
+
+fn validate_idempotency_replay_write_receipt(
+    receipt: &crate::runtime::consistency::WriteReceipt,
+) -> Result<(), tonic::Status> {
+    if receipt.outbox_seq < 0 {
+        return Err(idempotency_replay_response_status(
+            "write_receipt_json outbox_seq must be non-negative",
+        ));
+    }
+    if receipt.written_at_unix_ms <= 0 {
+        return Err(idempotency_replay_response_status(
+            "write_receipt_json written_at_unix_ms must be positive",
+        ));
+    }
+    if receipt.source_lsn.trim().is_empty() {
+        return Err(idempotency_replay_response_status(
+            "write_receipt_json source_lsn must be non-empty",
+        ));
+    }
+    if receipt.source_lsn != receipt.source_lsn.trim()
+        || receipt.source_lsn.chars().any(char::is_whitespace)
+    {
+        return Err(idempotency_replay_response_status(
+            "write_receipt_json source_lsn must not include whitespace",
+        ));
+    }
+    if receipt.source_lsn.chars().any(char::is_control) {
+        return Err(idempotency_replay_response_status(
+            "write_receipt_json source_lsn must not contain control characters",
+        ));
+    }
+    if receipt.manifest_checksum.trim().is_empty() {
+        return Err(idempotency_replay_response_status(
+            "write_receipt_json manifest_checksum must be non-empty",
+        ));
+    }
+    if receipt.manifest_checksum != receipt.manifest_checksum.trim() {
+        return Err(idempotency_replay_response_status(
+            "write_receipt_json manifest_checksum must not include surrounding whitespace",
+        ));
+    }
+    validate_idempotency_sha256_token(
+        "write_receipt_json manifest_checksum",
+        &receipt.manifest_checksum,
+        false,
+    )?;
+    for (index, task_id) in receipt.projection_task_ids.iter().enumerate() {
+        if task_id.trim().is_empty()
+            || task_id != task_id.trim()
+            || task_id.chars().any(char::is_whitespace)
+        {
+            return Err(idempotency_replay_response_status(format!(
+                "write_receipt_json projection_task_ids[{index}] must be non-empty and contain no whitespace"
+            )));
+        }
+        if task_id.chars().any(char::is_control) {
+            return Err(idempotency_replay_response_status(format!(
+                "write_receipt_json projection_task_ids[{index}] must not contain control characters"
+            )));
+        }
+    }
+    Ok(())
+}
+
+const IDEMPOTENCY_WRITE_RECEIPT_FIELDS: [&str; 5] = [
+    "source_lsn",
+    "outbox_seq",
+    "projection_task_ids",
+    "manifest_checksum",
+    "written_at_unix_ms",
+];
+
+fn validate_idempotency_replay_write_receipt_object(
+    write_receipt_json: &str,
+) -> Result<(), tonic::Status> {
+    let value = serde_json::from_str::<JsonValue>(write_receipt_json).map_err(|err| {
+        idempotency_replay_response_status(format!("invalid write_receipt_json: {err}"))
+    })?;
+    let Some(object) = value.as_object() else {
+        return Err(idempotency_replay_response_status(
+            "write_receipt_json must be a JSON object",
+        ));
+    };
+    for field in IDEMPOTENCY_WRITE_RECEIPT_FIELDS {
+        if !object.contains_key(field) {
+            return Err(idempotency_replay_response_status(format!(
+                "write_receipt_json missing field {field}"
+            )));
+        }
+    }
+    for field in object.keys() {
+        if !IDEMPOTENCY_WRITE_RECEIPT_FIELDS.contains(&field.as_str()) {
+            return Err(idempotency_replay_response_status(format!(
+                "write_receipt_json unexpected field {field}"
+            )));
+        }
+    }
+    Ok(())
+}
+
+fn idempotency_replay_write_receipt(
+    prior: &JsonValue,
+) -> Result<(String, crate::runtime::consistency::WriteReceipt), tonic::Status> {
+    let write_receipt_json = idempotency_replay_string(prior, "write_receipt_json", false)?;
+    if write_receipt_json != write_receipt_json.trim() {
+        return Err(idempotency_replay_response_status(
+            "write_receipt_json must not include surrounding whitespace",
+        ));
+    }
+    validate_idempotency_json_no_duplicate_keys(
+        "write_receipt_json",
+        write_receipt_json.as_bytes(),
+    )?;
+    validate_idempotency_replay_write_receipt_object(&write_receipt_json)?;
+    let write_receipt =
+        serde_json::from_str::<crate::runtime::consistency::WriteReceipt>(&write_receipt_json)
+            .map_err(|err| {
+                idempotency_replay_response_status(format!("invalid write_receipt_json: {err}"))
+            })?;
+    validate_idempotency_replay_write_receipt(&write_receipt)?;
+    Ok((write_receipt_json, write_receipt))
+}
+
+/// Reconstruct a `MutationResponse` (with `was_duplicate = true`) from a dedup
+/// row's stored summary on the replay path. Corrupt/incomplete summaries fail
+/// closed instead of returning a misleading empty duplicate response.
+fn mutation_response_from_idempotency_json(
+    prior: &JsonValue,
+) -> Result<MutationResponse, tonic::Status> {
+    let (write_receipt_json, write_receipt) = idempotency_replay_write_receipt(prior)?;
+    Ok(MutationResponse {
+        mutation_id: idempotency_replay_mutation_id(prior)?,
+        resource_uri: idempotency_replay_resource_uri(prior)?,
+        checksum_sha256: idempotency_replay_checksum(prior)?,
+        record_json: idempotency_replay_record_json(prior)?,
+        affected_rows: idempotency_replay_i64(prior, "affected_rows")?,
+        was_duplicate: true,
+        write_receipt_json,
+        write_receipt: Some(write_receipt.to_proto()),
+        ..MutationResponse::default()
+    })
+}
+
+fn mutation_response_from_idempotency_json_for_claim(
+    prior: &JsonValue,
+    tenant_id: &str,
+    project_id: &str,
+    message_type: &str,
+) -> Result<MutationResponse, tonic::Status> {
+    idempotency_replay_scope_matches_claim(prior, tenant_id, project_id, message_type)?;
+    let response = mutation_response_from_idempotency_json(prior)?;
+    idempotency_replay_resource_uri_matches_claim(&response.resource_uri, tenant_id, message_type)?;
+    Ok(response)
 }
 
 /// Add convention/env-derived Tier 4+ runtime instances that are not expressible
@@ -2262,41 +3314,1587 @@ fn assert_pg_outbox_receipt_store_consistency(runtime: &DataBrokerRuntime) {
     }
 }
 
+/// Operator-declared deployment tier (`UDB_DEPLOYMENT_TIER`), resolved EXACTLY
+/// once (master-plan 3.5). `None` = no tier declared, so the startup tier floor
+/// is not enforced (the dev default). An unrecognised non-empty value is a hard
+/// startup failure — the operator clearly intended to declare a tier.
+pub(crate) fn declared_deployment_tier() -> Option<crate::backend::ControlPlaneHaLevel> {
+    static DECLARED: std::sync::OnceLock<Option<crate::backend::ControlPlaneHaLevel>> =
+        std::sync::OnceLock::new();
+    *DECLARED.get_or_init(|| {
+        let raw = std::env::var("UDB_DEPLOYMENT_TIER").ok()?;
+        if raw.trim().is_empty() {
+            return None;
+        }
+        match crate::backend::ControlPlaneHaLevel::parse_deployment_tier(&raw) {
+            Some(tier) => Some(tier),
+            // Fail-closed: a typo'd tier must not silently degrade to "no floor".
+            None => panic!(
+                "UDB_DEPLOYMENT_TIER='{}' is not a recognised deployment tier \
+                 (expected one of dev_single_node|system_store_capable|ha_canonical)",
+                raw.trim()
+            ),
+        }
+    })
+}
+
+/// Pure deployment-tier floor check (master-plan 3.5). Returns the registered
+/// canonical stores whose control-plane HA level is BELOW the operator-declared
+/// deployment tier. Mirrors `SecurityConfig::validate_compliance_profile`'s
+/// shape — `Ok(())` when every store satisfies the floor, else the
+/// human-readable violations. No I/O, no env reads; unit-testable in isolation.
+fn validate_deployment_tier_floor(
+    declared: crate::backend::ControlPlaneHaLevel,
+    registered: &[(String, crate::backend::ControlPlaneHaLevel)],
+) -> Result<(), Vec<String>> {
+    let mut errors = Vec::new();
+    for (label, level) in registered {
+        if *level < declared {
+            errors.push(format!(
+                "canonical store '{label}' has control-plane HA level '{}', below the declared \
+                 deployment tier '{}' (UDB_DEPLOYMENT_TIER) — refusing to start",
+                level.as_str(),
+                declared.as_str(),
+            ));
+        }
+    }
+    if errors.is_empty() {
+        Ok(())
+    } else {
+        Err(errors)
+    }
+}
+
+/// Startup deployment-tier gate (master-plan 3.5). When the operator declares a
+/// minimum `UDB_DEPLOYMENT_TIER`, refuse to start if any canonical store
+/// registered below it — a misconfiguration must fail at boot, not at 3am.
+/// Fail-closed: like [`assert_pg_outbox_receipt_store_consistency`] above, a
+/// violation aborts runtime construction rather than degrading silently. The
+/// per-backend classification is read from the single source of truth,
+/// `BackendKind::control_plane_ha_level()`.
+fn assert_deployment_tier_floor(runtime: &DataBrokerRuntime) {
+    let Some(declared) = declared_deployment_tier() else {
+        return;
+    };
+    let registered_levels: Vec<(String, crate::backend::ControlPlaneHaLevel)> = runtime
+        .canonical_stores
+        .lock()
+        .map(|stores| {
+            stores
+                .registered_keys()
+                .into_iter()
+                .filter_map(|(label, instance)| {
+                    crate::backend::BackendKind::from_store_kind("", &label)
+                        .or_else(|| crate::backend::BackendKind::from_token(&label))
+                        .map(|kind| (format!("{label}:{instance}"), kind.control_plane_ha_level()))
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    if let Err(violations) = validate_deployment_tier_floor(declared, &registered_levels) {
+        panic!(
+            "deployment tier '{}' not satisfied at startup: {}",
+            declared.as_str(),
+            violations.join("; ")
+        );
+    }
+}
+
+#[cfg(test)]
+mod setup_data_validation_tests {
+    use super::{
+        empty_object_stream_status, gcs_feature_status, invalid_part_count_status,
+        invalid_presign_ttl_status, no_object_store_feature_status, object_instance_missing_status,
+        qdrant_vector_feature_status, s3_object_feature_status, setup_data_internal_status,
+        unknown_message_type_status, unsupported_object_backend_status,
+        unsupported_presign_method_status, vector_hybrid_qdrant_only_status,
+        vector_search_dispatch_spec, vector_upsert_dispatch_spec,
+    };
+    use crate::proto::{ErrorDetail, ErrorKind, VectorPointMutation, VectorSearchRequest};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
+
+    fn decode_detail(status: &tonic::Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed error detail trailer");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_single_field_violation(status: &tonic::Status, field: &str, description: &str) {
+        assert_eq!(status.code(), tonic::Code::InvalidArgument);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert!(!detail.retryable);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, field);
+        assert_eq!(detail.field_violations[0].description, description);
+    }
+
+    fn assert_capability_detail(
+        status: &tonic::Status,
+        backend: &str,
+        operation: &str,
+        capability_required: &str,
+        message: &str,
+    ) {
+        assert_eq!(status.code(), tonic::Code::FailedPrecondition);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Capability as i32);
+        assert_eq!(detail.backend, backend);
+        assert_eq!(detail.operation, operation);
+        assert_eq!(detail.capability_required, capability_required);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    fn assert_internal_detail(status: &tonic::Status, operation: &str, message: &str) {
+        assert_eq!(status.code(), tonic::Code::Internal);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "setup_data");
+        assert_eq!(detail.operation, operation);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    #[test]
+    fn setup_data_boundary_validation_carries_field_violations() {
+        assert_single_field_violation(
+            &unknown_message_type_status(),
+            "message_type",
+            "must match a manifest table message type",
+        );
+        assert_single_field_violation(
+            &empty_object_stream_status(),
+            "stream",
+            "object upload stream must contain at least one chunk",
+        );
+        assert_single_field_violation(
+            &unsupported_presign_method_status(),
+            "method",
+            "presigned URLs support only PUT or GET",
+        );
+        assert_single_field_violation(
+            &invalid_part_count_status(),
+            "part_count",
+            "multipart upload part_count must be positive",
+        );
+        assert_single_field_violation(
+            &invalid_presign_ttl_status("too long"),
+            "ttl_seconds",
+            "must produce a valid presign expiration",
+        );
+    }
+
+    #[test]
+    fn setup_data_vector_object_capability_refusals_carry_detail() {
+        assert_capability_detail(
+            &qdrant_vector_feature_status("vector_search"),
+            "qdrant",
+            "vector_search",
+            "qdrant_feature",
+            "qdrant/vector feature is not enabled",
+        );
+        assert_capability_detail(
+            &vector_hybrid_qdrant_only_status("pinecone"),
+            "qdrant",
+            "vector_hybrid_search",
+            "qdrant_backend",
+            "vector hybrid search is only wired for qdrant, not 'pinecone'",
+        );
+        assert_capability_detail(
+            &no_object_store_feature_status("put_object"),
+            "object_store",
+            "put_object",
+            "object_store_feature",
+            "no object-store feature (s3/gcs/azureblob) is enabled",
+        );
+        assert_capability_detail(
+            &s3_object_feature_status("generate_presigned_url"),
+            "s3",
+            "generate_presigned_url",
+            "s3_feature",
+            "s3/object-store feature is not enabled",
+        );
+        assert_capability_detail(
+            &gcs_feature_status("get_object"),
+            "gcs",
+            "get_object",
+            "gcs_feature",
+            "gcs feature is not enabled",
+        );
+        assert_capability_detail(
+            &object_instance_missing_status("gcs", "put_object", "archive"),
+            "gcs",
+            "put_object",
+            "configured_instance",
+            "gcs instance 'archive' is not configured",
+        );
+        assert_capability_detail(
+            &unsupported_object_backend_status("put_object", "postgres"),
+            "postgres",
+            "put_object",
+            "supported_object_backend",
+            "unsupported object backend 'postgres'",
+        );
+    }
+
+    #[test]
+    fn setup_data_typed_dispatch_backend_refusals_carry_capability_detail() {
+        let vector_search = vector_search_dispatch_spec(
+            "redis",
+            &VectorSearchRequest {
+                context: None,
+                collection: "Docs".to_string(),
+                vector: vec![0.1, 0.2],
+                filter: None,
+                limit: 10,
+                score_threshold: 0.0,
+                with_payload: false,
+            },
+        )
+        .expect_err("unsupported typed vector backend must fail closed");
+        assert_capability_detail(
+            &vector_search,
+            "redis",
+            "typed_vector_search",
+            "typed_vector_search_backend",
+            "typed vector search is not wired for backend 'redis'",
+        );
+
+        let vector_upsert = vector_upsert_dispatch_spec(
+            "redis",
+            "Docs",
+            &VectorPointMutation {
+                id: "p1".to_string(),
+                vector: vec![0.1, 0.2],
+                payload: None,
+            },
+        )
+        .expect_err("unsupported typed vector upsert backend must fail closed");
+        assert_capability_detail(
+            &vector_upsert,
+            "redis",
+            "typed_vector_upsert",
+            "typed_vector_upsert_backend",
+            "typed vector upsert is not wired for backend 'redis'",
+        );
+    }
+
+    #[test]
+    fn setup_data_internal_status_carries_typed_detail() {
+        assert_internal_detail(
+            &setup_data_internal_status("select_query", "PostgreSQL select failed: broken"),
+            "select_query",
+            "PostgreSQL select failed: broken",
+        );
+        assert_internal_detail(
+            &setup_data_internal_status(
+                "idempotency_replay_response",
+                "idempotency replay response invalid: broken",
+            ),
+            "idempotency_replay_response",
+            "idempotency replay response invalid: broken",
+        );
+    }
+
+    #[cfg(any(feature = "s3", feature = "gcs", feature = "azureblob"))]
+    #[test]
+    fn setup_data_typed_object_backend_refusal_carries_capability_detail() {
+        assert_capability_detail(
+            &super::typed_object_backend_required_status("postgres"),
+            "postgres",
+            "typed_object_rpc",
+            "object_store_backend",
+            "typed object RPCs require an object-store backend, but the store is configured for 'postgres'",
+        );
+    }
+}
+
 #[cfg(test)]
 mod setup_data_consistency_tests {
     use super::{
-        full_canonical_store_requires_opt_in, idempotency_dedup_key,
-        merge_runtime_backend_instances, pg_outbox_receipt_store_mismatch,
-        projection_system_store_opt_in_value,
+        RequestContext, full_canonical_store_requires_opt_in, idempotency_claim_sql,
+        idempotency_dedup_claim_status, idempotency_dedup_key, idempotency_key_for_dedup,
+        idempotency_response_persist_row_count_status, idempotency_response_persist_sql,
+        merge_runtime_backend_instances, mutation_response_from_idempotency_json,
+        mutation_response_from_idempotency_json_for_claim, mutation_response_idempotency_json,
+        mutation_response_resource_uri, mutation_response_resource_uri_or_fallback,
+        pg_outbox_receipt_store_mismatch, projection_system_store_opt_in_value,
+        returned_record_json_or_status, validate_deployment_tier_floor,
+        write_receipt_json_or_status,
     };
+    use crate::backend::ControlPlaneHaLevel;
+    use crate::proto::{ErrorDetail, ErrorKind, MutationResponse};
     use crate::runtime::config::{BackendInstance, BackendInstanceConfig, BackendInstanceRole};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use base64::Engine as _;
+    use prost::Message as _;
+
+    fn decode_error_detail(status: &tonic::Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed error detail trailer");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    #[test]
+    fn deployment_tier_floor_refuses_stores_below_declared_tier() {
+        // A declared HA-canonical tier accepts HA-canonical stores (incl. the
+        // decision-welded ClickHouse + vector stores) but refuses a dev/embedded
+        // store — fail at boot, not at 3am.
+        let registered = vec![
+            (
+                "postgres:primary".to_string(),
+                ControlPlaneHaLevel::HaCanonical,
+            ),
+            (
+                "clickhouse:analytics".to_string(),
+                ControlPlaneHaLevel::HaCanonical,
+            ),
+            (
+                "qdrant:vectors".to_string(),
+                ControlPlaneHaLevel::HaCanonical,
+            ),
+            (
+                "sqlite:local".to_string(),
+                ControlPlaneHaLevel::DevSingleNode,
+            ),
+        ];
+
+        // HA-canonical floor: the sqlite store violates it.
+        let err = validate_deployment_tier_floor(ControlPlaneHaLevel::HaCanonical, &registered)
+            .expect_err("sqlite must be refused below an HA-canonical floor");
+        assert_eq!(err.len(), 1, "only the sqlite store is below the floor");
+        assert!(err[0].contains("sqlite:local"));
+        assert!(err[0].contains("ha_canonical"));
+
+        // SystemStoreCapable floor: still refuses the dev_single_node sqlite store.
+        assert!(
+            validate_deployment_tier_floor(ControlPlaneHaLevel::SystemStoreCapable, &registered)
+                .is_err()
+        );
+
+        // DevSingleNode floor: every store now satisfies it (>= dev_single_node).
+        assert!(
+            validate_deployment_tier_floor(ControlPlaneHaLevel::DevSingleNode, &registered).is_ok()
+        );
+
+        // Empty registry trivially satisfies any declared tier.
+        assert!(validate_deployment_tier_floor(ControlPlaneHaLevel::HaCanonical, &[]).is_ok());
+    }
 
     #[test]
     fn idempotency_dedup_key_is_tenant_and_project_scoped() {
         // KEYSTONE (lane 05): the salted dedup key MUST differ across tenants and
-        // projects for the same client key, or two tenants reusing "key-1" would
-        // collide (RLS/tenant-scope bypass). Verifies 05.1.4.2 / the scoping
-        // guarantee asserted served-path by 05.6.2.1.
+        // projects for the same client key, and across operation names for the
+        // same entity, or independent mutation RPCs could replay each other.
+        // Verifies 05.1.4.2 / the scoping guarantee asserted served-path by
+        // 05.6.2.1.
         let key = "key-1";
         let mt = "Payment";
-        let a = idempotency_dedup_key("tenant-a", "proj-1", mt, key);
-        let b = idempotency_dedup_key("tenant-b", "proj-1", mt, key);
-        let c = idempotency_dedup_key("tenant-a", "proj-2", mt, key);
-        let d = idempotency_dedup_key("tenant-a", "proj-1", "Invoice", key);
+        let op = "upsert";
+        let a = idempotency_dedup_key("tenant-a", "proj-1", mt, op, key);
+        let b = idempotency_dedup_key("tenant-b", "proj-1", mt, op, key);
+        let c = idempotency_dedup_key("tenant-a", "proj-2", mt, op, key);
+        let d = idempotency_dedup_key("tenant-a", "proj-1", "Invoice", op, key);
+        let e = idempotency_dedup_key("tenant-a", "proj-1", mt, "delete", key);
+        let f = idempotency_dedup_key("tenant-a", "proj-1", mt, op, " key-1 ");
         assert_ne!(a, b, "distinct tenants must not collide");
         assert_ne!(a, c, "distinct projects must not collide");
         assert_ne!(a, d, "distinct message types must not collide");
+        assert_ne!(a, e, "distinct operations must not collide");
+        assert_ne!(a, f, "caller key bytes must not be trim-normalized");
         // Same inputs are stable (deterministic) and never the bare client key.
-        assert_eq!(a, idempotency_dedup_key("tenant-a", "proj-1", mt, key));
+        assert_eq!(a, idempotency_dedup_key("tenant-a", "proj-1", mt, op, key));
         assert!(a.starts_with("sha256:"));
         assert!(!a.contains(key), "must never embed the bare client key");
         // A NUL-boundary collision guard: ("a","bc",..) vs ("ab","c",..) must
         // not hash equal (the \0 separators prevent field-shifting collisions).
-        let shift1 = idempotency_dedup_key("a", "bc", mt, key);
-        let shift2 = idempotency_dedup_key("ab", "c", mt, key);
+        let shift1 = idempotency_dedup_key("a", "bc", mt, op, key);
+        let shift2 = idempotency_dedup_key("ab", "c", mt, op, key);
         assert_ne!(
             shift1, shift2,
             "NUL separators must prevent field-shift collisions"
+        );
+    }
+
+    #[test]
+    fn idempotency_key_for_dedup_rejects_whitespace_and_control_tokens() {
+        assert_eq!(
+            idempotency_key_for_dedup("").expect("empty key is keyless"),
+            None
+        );
+        assert_eq!(
+            idempotency_key_for_dedup("key-1").expect("canonical key is accepted"),
+            Some("key-1")
+        );
+
+        for key in [
+            " ",
+            " key-1",
+            "key-1 ",
+            "key 1",
+            "key\t1",
+            "key\n1",
+            "\0",
+            "key\0",
+            "key\u{0007}1",
+        ] {
+            let err = idempotency_key_for_dedup(key)
+                .expect_err("invalid idempotency key token must fail closed");
+            assert_eq!(err.code(), tonic::Code::InvalidArgument);
+            assert!(err.message().contains("idempotency_key"));
+            assert!(err.message().contains("whitespace"));
+            assert!(err.message().contains("control"));
+            let detail = decode_error_detail(&err);
+            assert_eq!(detail.kind, ErrorKind::Validation as i32);
+            assert!(!detail.retryable);
+            assert_eq!(detail.field_violations.len(), 1);
+            assert_eq!(detail.field_violations[0].field, "idempotency_key");
+            assert_eq!(
+                detail.field_violations[0].description,
+                "must be empty or contain no whitespace or control characters"
+            );
+        }
+    }
+
+    fn resource_uri_test_table() -> crate::generation::ManifestTable {
+        crate::generation::ManifestTable {
+            message_name: "Invoice".to_string(),
+            primary_key: vec!["invoice_id".to_string()],
+            columns: vec![
+                crate::generation::ManifestColumn {
+                    field_name: "invoiceId".to_string(),
+                    column_name: "invoice_id".to_string(),
+                    is_primary: true,
+                    ..crate::generation::ManifestColumn::default()
+                },
+                crate::generation::ManifestColumn {
+                    field_name: "tenant_id".to_string(),
+                    column_name: "tenant_id".to_string(),
+                    is_tenant_column: true,
+                    ..crate::generation::ManifestColumn::default()
+                },
+                crate::generation::ManifestColumn {
+                    field_name: "project_id".to_string(),
+                    column_name: "project_id".to_string(),
+                    is_project_column: true,
+                    ..crate::generation::ManifestColumn::default()
+                },
+                crate::generation::ManifestColumn {
+                    field_name: "status".to_string(),
+                    column_name: "status".to_string(),
+                    ..crate::generation::ManifestColumn::default()
+                },
+            ],
+            ..crate::generation::ManifestTable::default()
+        }
+    }
+
+    #[test]
+    fn mutation_response_resource_uri_uses_data_plane_identity() {
+        let table = resource_uri_test_table();
+        let context = RequestContext {
+            tenant_id: "tenant-a".to_string(),
+            project_id: "project-a".to_string(),
+            ..RequestContext::default()
+        };
+
+        let from_column = mutation_response_resource_uri(
+            &context,
+            "Invoice",
+            &table,
+            &serde_json::json!({"invoice_id": "inv-1", "tenant_id": "tenant-a"}),
+        )
+        .expect("primary key column should build data-plane URI");
+        assert_eq!(from_column, "udb://tenant-a/Invoice/inv-1");
+
+        let from_field_alias = mutation_response_resource_uri(
+            &context,
+            "Invoice",
+            &table,
+            &serde_json::json!({"invoiceId": "inv-2", "tenant_id": "tenant-a"}),
+        )
+        .expect("primary key field alias should build data-plane URI");
+        assert_eq!(from_field_alias, "udb://tenant-a/Invoice/inv-2");
+
+        let from_eq_filter = mutation_response_resource_uri(
+            &context,
+            "Invoice",
+            &table,
+            &serde_json::json!({"invoice_id": {"$eq": "inv-3"}, "tenant_id": "tenant-a"}),
+        )
+        .expect("primary key equality filter should build data-plane URI");
+        assert_eq!(from_eq_filter, "udb://tenant-a/Invoice/inv-3");
+
+        let from_and_filter = mutation_response_resource_uri(
+            &context,
+            "Invoice",
+            &table,
+            &serde_json::json!({
+                "and": [
+                    {"tenant_id": "tenant-a"},
+                    {"invoiceId": {"=": "inv-4"}}
+                ]
+            }),
+        )
+        .expect("primary key equality inside AND filter should build data-plane URI");
+        assert_eq!(from_and_filter, "udb://tenant-a/Invoice/inv-4");
+    }
+
+    #[test]
+    fn mutation_response_resource_uri_falls_back_to_identity_fields() {
+        let table = crate::generation::ManifestTable::default();
+        let context = RequestContext {
+            tenant_id: "tenant-a".to_string(),
+            ..RequestContext::default()
+        };
+        let uri = mutation_response_resource_uri(
+            &context,
+            "Invoice",
+            &table,
+            &serde_json::json!({
+                "tenant_id": "tenant-a",
+                "customer_id": "cust-1",
+                "total_cents": 42
+            }),
+        )
+        .expect("identity field should build data-plane URI");
+        assert_eq!(uri, "udb://tenant-a/Invoice/cust-1");
+
+        let and_uri = mutation_response_resource_uri(
+            &context,
+            "Invoice",
+            &table,
+            &serde_json::json!({
+                "and": [
+                    {"tenant_id": "tenant-a"},
+                    {"customer_id": {"$eq": "cust-2"}}
+                ]
+            }),
+        )
+        .expect("identity field inside AND filter should build data-plane URI");
+        assert_eq!(and_uri, "udb://tenant-a/Invoice/cust-2");
+    }
+
+    #[test]
+    fn mutation_response_resource_uri_rejects_ambiguous_identity_tokens() {
+        let table = resource_uri_test_table();
+        let context = RequestContext {
+            tenant_id: "tenant-a".to_string(),
+            ..RequestContext::default()
+        };
+
+        for record in [
+            serde_json::json!({"invoice_id": ""}),
+            serde_json::json!({"invoice_id": " inv-1 "}),
+            serde_json::json!({"invoice_id": "inv 1"}),
+            serde_json::json!({"invoice_id": "inv\u{0000}1"}),
+            serde_json::json!({"invoice_id": {"$in": ["inv-1"]}}),
+            serde_json::json!({"invoice_id": {"eq": "inv-1"}}),
+            serde_json::json!({"or": [{"invoice_id": "inv-1"}, {"invoice_id": "inv-2"}]}),
+            serde_json::json!({
+                "and": [
+                    {"customer_id": "cust-1"},
+                    {"account_id": "acct-1"}
+                ]
+            }),
+        ] {
+            let err = mutation_response_resource_uri(&context, "Invoice", &table, &record)
+                .expect_err("ambiguous resource identity must fail closed");
+            assert_eq!(err.code(), tonic::Code::Internal);
+            assert!(err.message().contains("mutation response resource_uri"));
+        }
+    }
+
+    #[test]
+    fn mutation_response_resource_uri_fallback_is_keyless_only() {
+        let table = resource_uri_test_table();
+        let context = RequestContext {
+            tenant_id: "tenant-a".to_string(),
+            ..RequestContext::default()
+        };
+        let bulk_filter = serde_json::json!({
+            "tenant_id": "tenant-a",
+            "project_id": "project-a"
+        });
+
+        let keyless = mutation_response_resource_uri_or_fallback(
+            &context,
+            "Invoice",
+            &table,
+            &bulk_filter,
+            "sql://billing/invoices",
+            false,
+        )
+        .expect("keyless bulk delete may keep planner resource URI");
+        assert_eq!(keyless, "sql://billing/invoices");
+
+        let keyed = mutation_response_resource_uri_or_fallback(
+            &context,
+            "Invoice",
+            &table,
+            &bulk_filter,
+            "sql://billing/invoices",
+            true,
+        )
+        .expect_err("keyed first-writer summary must require data-plane resource URI");
+        assert_eq!(keyed.code(), tonic::Code::Internal);
+        assert!(keyed.message().contains("mutation response resource_uri"));
+    }
+
+    #[test]
+    fn idempotency_claim_sql_suppresses_replay_arm_after_insert() {
+        let sql = idempotency_claim_sql("udb_idempotency_keys");
+        assert!(sql.contains("WITH ins AS ("));
+        assert!(sql.contains("ON CONFLICT (dedup_key) DO NOTHING"));
+        assert!(sql.contains("RETURNING true AS inserted, response_json"));
+        assert!(sql.contains("SELECT false AS inserted, response_json"));
+        assert!(sql.contains("AND NOT EXISTS (SELECT 1 FROM ins)"));
+        assert!(
+            sql.find("RETURNING true AS inserted, response_json")
+                < sql.find("AND NOT EXISTS (SELECT 1 FROM ins)"),
+            "fresh insert claim must suppress the fallback replay arm"
+        );
+    }
+
+    #[test]
+    fn idempotency_dedup_claim_status_is_retryable_unavailable() {
+        let status = idempotency_dedup_claim_status(&sqlx::Error::RowNotFound);
+        assert_eq!(status.code(), tonic::Code::Unavailable);
+        assert!(
+            status.message().contains("idempotency dedup claim failed"),
+            "status must identify the idempotency dedup subsystem"
+        );
+        let detail = decode_error_detail(&status);
+        assert_eq!(detail.backend, "postgres");
+        assert_eq!(detail.operation, "idempotency_dedup_claim");
+        assert_eq!(detail.kind, ErrorKind::Retryable as i32);
+        assert!(detail.retryable);
+        assert_eq!(detail.retry_after_ms, 250);
+    }
+
+    #[test]
+    fn idempotency_replay_response_restores_first_writer_summary() {
+        let encoded_record =
+            base64::engine::general_purpose::STANDARD.encode(br#"{"id":"rec-1","v":7}"#);
+        let prior = serde_json::json!({
+            "mutation_id": "11111111-1111-4111-8111-111111111111",
+            "tenant_id": "tenant-a",
+            "project_id": "project-a",
+            "message_type": "Payment",
+            "resource_uri": "udb://tenant-a/Payment/rec-1",
+            "checksum_sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "record_json": encoded_record,
+            "affected_rows": 1,
+            "write_receipt_json": "{\"source_lsn\":\"0/1A2B\",\"outbox_seq\":9,\"projection_task_ids\":[\"p1\"],\"manifest_checksum\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"written_at_unix_ms\":1700000000000}"
+        });
+
+        let replay =
+            mutation_response_from_idempotency_json(&prior).expect("stored replay summary decodes");
+        assert!(replay.was_duplicate, "replays must be marked duplicate");
+        assert_eq!(replay.mutation_id, "11111111-1111-4111-8111-111111111111");
+        assert_eq!(replay.resource_uri, "udb://tenant-a/Payment/rec-1");
+        assert_eq!(
+            replay.checksum_sha256,
+            "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+        );
+        assert_eq!(replay.record_json, br#"{"id":"rec-1","v":7}"#);
+        assert_eq!(replay.affected_rows, 1);
+        assert_eq!(
+            replay.write_receipt_json,
+            "{\"source_lsn\":\"0/1A2B\",\"outbox_seq\":9,\"projection_task_ids\":[\"p1\"],\"manifest_checksum\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"written_at_unix_ms\":1700000000000}"
+        );
+        let typed_receipt = replay
+            .write_receipt
+            .as_ref()
+            .map(crate::runtime::consistency::WriteReceipt::from_proto)
+            .expect("replay should restore typed write_receipt from stored JSON");
+        assert_eq!(typed_receipt.source_lsn, "0/1A2B");
+        assert_eq!(typed_receipt.outbox_seq, 9);
+        assert_eq!(typed_receipt.projection_task_ids, vec!["p1".to_string()]);
+    }
+
+    #[test]
+    fn idempotency_response_json_roundtrips_full_mutation_response() {
+        let receipt = crate::runtime::consistency::WriteReceipt {
+            source_lsn: "0/2B3C".to_string(),
+            outbox_seq: 12,
+            projection_task_ids: vec!["projection-1".to_string()],
+            manifest_checksum:
+                "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+                    .to_string(),
+            written_at_unix_ms: 1_700_000_000_123,
+        };
+        let receipt_json = serde_json::to_string(&receipt).expect("receipt JSON serializes");
+        let first = MutationResponse {
+            mutation_id: "22222222-2222-4222-8222-222222222222".to_string(),
+            resource_uri: "udb://tenant-a/Payment/batch-1".to_string(),
+            checksum_sha256:
+                "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+                    .to_string(),
+            record_json: br#"{"id":"batch-1","amount":42}"#.to_vec(),
+            affected_rows: 1,
+            was_duplicate: false,
+            write_receipt_json: receipt_json.clone(),
+            write_receipt: Some(receipt.to_proto()),
+            ..MutationResponse::default()
+        };
+
+        let stored = mutation_response_idempotency_json(&first)
+            .expect("first-writer idempotency summary is replay-decodable");
+        let replay = mutation_response_from_idempotency_json(&stored)
+            .expect("stored replay summary decodes");
+
+        assert!(
+            replay.was_duplicate,
+            "stored replays must be marked duplicate"
+        );
+        assert_eq!(replay.mutation_id, first.mutation_id);
+        assert_eq!(replay.resource_uri, first.resource_uri);
+        assert_eq!(replay.checksum_sha256, first.checksum_sha256);
+        assert_eq!(replay.record_json, first.record_json);
+        assert_eq!(replay.affected_rows, first.affected_rows);
+        assert_eq!(replay.write_receipt_json, receipt_json);
+        let typed_receipt = replay
+            .write_receipt
+            .as_ref()
+            .map(crate::runtime::consistency::WriteReceipt::from_proto)
+            .expect("replay should restore typed write_receipt from stored JSON");
+        assert_eq!(typed_receipt.source_lsn, receipt.source_lsn);
+        assert_eq!(typed_receipt.outbox_seq, receipt.outbox_seq);
+        assert_eq!(
+            typed_receipt.projection_task_ids,
+            receipt.projection_task_ids
+        );
+        assert_eq!(typed_receipt.manifest_checksum, receipt.manifest_checksum);
+        assert_eq!(typed_receipt.written_at_unix_ms, receipt.written_at_unix_ms);
+    }
+
+    #[test]
+    fn idempotency_replay_response_is_claim_scoped() {
+        let encoded_record =
+            base64::engine::general_purpose::STANDARD.encode(br#"{"id":"rec-1","v":7}"#);
+        let prior = serde_json::json!({
+            "mutation_id": "11111111-1111-4111-8111-111111111111",
+            "tenant_id": "tenant-a",
+            "project_id": "project-a",
+            "message_type": "Payment",
+            "resource_uri": "udb://tenant-a/Payment/rec-1",
+            "checksum_sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "record_json": encoded_record,
+            "affected_rows": 1,
+            "write_receipt_json": "{\"source_lsn\":\"0/1A2B\",\"outbox_seq\":9,\"projection_task_ids\":[],\"manifest_checksum\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"written_at_unix_ms\":1700000000000}"
+        });
+
+        let replay = mutation_response_from_idempotency_json_for_claim(
+            &prior,
+            "tenant-a",
+            "project-a",
+            "Payment",
+        )
+        .expect("stored replay summary matches the dedup claim scope");
+        assert!(
+            replay.was_duplicate,
+            "claim-scoped replay remains duplicate"
+        );
+
+        let wrong_tenant = mutation_response_from_idempotency_json_for_claim(
+            &prior,
+            "tenant-b",
+            "project-a",
+            "Payment",
+        )
+        .expect_err("stored replay summary with wrong tenant must fail closed");
+        assert_eq!(wrong_tenant.code(), tonic::Code::Internal);
+        assert!(
+            wrong_tenant
+                .message()
+                .contains("tenant_id must match idempotency claim tenant_id")
+        );
+
+        let wrong_project = mutation_response_from_idempotency_json_for_claim(
+            &prior,
+            "tenant-a",
+            "project-b",
+            "Payment",
+        )
+        .expect_err("stored replay summary with wrong project must fail closed");
+        assert_eq!(wrong_project.code(), tonic::Code::Internal);
+        assert!(
+            wrong_project
+                .message()
+                .contains("project_id must match idempotency claim project_id")
+        );
+
+        let wrong_message = mutation_response_from_idempotency_json_for_claim(
+            &prior,
+            "tenant-a",
+            "project-a",
+            "Invoice",
+        )
+        .expect_err("stored replay summary with wrong message type must fail closed");
+        assert_eq!(wrong_message.code(), tonic::Code::Internal);
+        assert!(
+            wrong_message
+                .message()
+                .contains("message_type must match idempotency claim message_type")
+        );
+    }
+
+    #[test]
+    fn idempotency_response_json_must_be_replay_decodable_before_persist() {
+        let bad = MutationResponse {
+            mutation_id: "33333333-3333-4333-8333-333333333333".to_string(),
+            resource_uri: "udb://tenant-a/Payment/rec-1".to_string(),
+            checksum_sha256:
+                "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+                    .to_string(),
+            record_json: br#"{"id":"rec-1"}"#.to_vec(),
+            affected_rows: 1,
+            was_duplicate: false,
+            write_receipt_json: "not-json".to_string(),
+            ..MutationResponse::default()
+        };
+
+        let err = mutation_response_idempotency_json(&bad)
+            .expect_err("idempotency response summary must be replay-decodable before persist");
+        assert_eq!(err.code(), tonic::Code::Internal);
+    }
+
+    #[test]
+    fn idempotency_response_json_requires_typed_receipt_lockstep_before_persist() {
+        let receipt = crate::runtime::consistency::WriteReceipt {
+            source_lsn: "0/3C4D".to_string(),
+            outbox_seq: 13,
+            projection_task_ids: vec!["projection-2".to_string()],
+            manifest_checksum:
+                "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+                    .to_string(),
+            written_at_unix_ms: 1_700_000_000_456,
+        };
+        let receipt_json = serde_json::to_string(&receipt).expect("receipt JSON serializes");
+        let missing_typed = MutationResponse {
+            mutation_id: "44444444-4444-4444-8444-444444444444".to_string(),
+            resource_uri: "udb://tenant-a/Payment/rec-1".to_string(),
+            checksum_sha256:
+                "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+                    .to_string(),
+            record_json: Vec::new(),
+            affected_rows: 1,
+            was_duplicate: false,
+            write_receipt_json: receipt_json.clone(),
+            write_receipt: None,
+            ..MutationResponse::default()
+        };
+
+        let missing_err = mutation_response_idempotency_json(&missing_typed)
+            .expect_err("typed write_receipt must be present before persist");
+        assert_eq!(missing_err.code(), tonic::Code::Internal);
+        assert!(
+            missing_err
+                .message()
+                .contains("requires typed write_receipt before persist")
+        );
+
+        let mut other_receipt = receipt.clone();
+        other_receipt.outbox_seq += 1;
+        let mismatched_typed = MutationResponse {
+            write_receipt: Some(other_receipt.to_proto()),
+            ..missing_typed
+        };
+        let mismatch_err = mutation_response_idempotency_json(&mismatched_typed)
+            .expect_err("typed write_receipt must match write_receipt_json before persist");
+        assert_eq!(mismatch_err.code(), tonic::Code::Internal);
+        assert!(
+            mismatch_err
+                .message()
+                .contains("typed write_receipt must match write_receipt_json before persist")
+        );
+    }
+
+    #[test]
+    fn idempotency_replay_response_rejects_corrupt_summary() {
+        let missing = mutation_response_from_idempotency_json(&serde_json::json!({}))
+            .expect_err("empty stored replay summary must fail closed");
+        assert_eq!(missing.code(), tonic::Code::Internal);
+        assert!(
+            missing
+                .message()
+                .contains("idempotency replay response invalid")
+        );
+        assert!(
+            missing
+                .message()
+                .contains("missing string field write_receipt_json")
+        );
+
+        let invalid_mutation_id = serde_json::json!({
+            "mutation_id": "not-a-uuid",
+            "resource_uri": "udb://tenant-a/Payment/rec-1",
+            "checksum_sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "record_json": "",
+            "affected_rows": 1,
+            "write_receipt_json": "{\"source_lsn\":\"0/1A2B\",\"outbox_seq\":9,\"projection_task_ids\":[],\"manifest_checksum\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"written_at_unix_ms\":1700000000000}"
+        });
+        let invalid_mutation_id_err = mutation_response_from_idempotency_json(&invalid_mutation_id)
+            .expect_err("malformed stored mutation_id must fail closed");
+        assert_eq!(invalid_mutation_id_err.code(), tonic::Code::Internal);
+        assert!(
+            invalid_mutation_id_err
+                .message()
+                .contains("invalid mutation_id")
+        );
+
+        let uppercase_mutation_id = serde_json::json!({
+            "mutation_id": "33333333-3333-4333-8333-AAAAAAAAAAAA",
+            "resource_uri": "udb://tenant-a/Payment/rec-1",
+            "checksum_sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "record_json": "",
+            "affected_rows": 1,
+            "write_receipt_json": "{\"source_lsn\":\"0/1A2B\",\"outbox_seq\":9,\"projection_task_ids\":[],\"manifest_checksum\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"written_at_unix_ms\":1700000000000}"
+        });
+        let uppercase_mutation_id_err =
+            mutation_response_from_idempotency_json(&uppercase_mutation_id)
+                .expect_err("uppercase stored mutation_id must fail closed");
+        assert_eq!(uppercase_mutation_id_err.code(), tonic::Code::Internal);
+        assert!(
+            uppercase_mutation_id_err
+                .message()
+                .contains("mutation_id must be a canonical lowercase UUID")
+        );
+
+        let compact_mutation_id = serde_json::json!({
+            "mutation_id": "33333333333343338333333333333333",
+            "resource_uri": "udb://tenant-a/Payment/rec-1",
+            "checksum_sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "record_json": "",
+            "affected_rows": 1,
+            "write_receipt_json": "{\"source_lsn\":\"0/1A2B\",\"outbox_seq\":9,\"projection_task_ids\":[],\"manifest_checksum\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"written_at_unix_ms\":1700000000000}"
+        });
+        let compact_mutation_id_err = mutation_response_from_idempotency_json(&compact_mutation_id)
+            .expect_err("compact stored mutation_id must fail closed");
+        assert_eq!(compact_mutation_id_err.code(), tonic::Code::Internal);
+        assert!(
+            compact_mutation_id_err
+                .message()
+                .contains("mutation_id must be a canonical lowercase UUID")
+        );
+
+        let invalid_record = serde_json::json!({
+            "mutation_id": "33333333-3333-4333-8333-333333333333",
+            "resource_uri": "udb://tenant-a/Payment/rec-1",
+            "checksum_sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "record_json": "not base64!",
+            "affected_rows": 1,
+            "write_receipt_json": "{\"source_lsn\":\"0/1A2B\",\"outbox_seq\":9,\"projection_task_ids\":[],\"manifest_checksum\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"written_at_unix_ms\":1700000000000}"
+        });
+        let invalid_record_err = mutation_response_from_idempotency_json(&invalid_record)
+            .expect_err("invalid stored record_json must fail closed");
+        assert_eq!(invalid_record_err.code(), tonic::Code::Internal);
+        assert!(invalid_record_err.message().contains("invalid record_json"));
+
+        let duplicate_record_json =
+            base64::engine::general_purpose::STANDARD.encode(br#"{"id":"rec-1","id":"rec-2"}"#);
+        let duplicate_record = serde_json::json!({
+            "mutation_id": "33333333-3333-4333-8333-333333333333",
+            "resource_uri": "udb://tenant-a/Payment/rec-1",
+            "checksum_sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "record_json": duplicate_record_json,
+            "affected_rows": 1,
+            "write_receipt_json": "{\"source_lsn\":\"0/1A2B\",\"outbox_seq\":9,\"projection_task_ids\":[],\"manifest_checksum\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"written_at_unix_ms\":1700000000000}"
+        });
+        let duplicate_record_err = mutation_response_from_idempotency_json(&duplicate_record)
+            .expect_err("stored record_json duplicate key must fail closed");
+        assert_eq!(duplicate_record_err.code(), tonic::Code::Internal);
+        assert!(
+            duplicate_record_err
+                .message()
+                .contains("record_json must not contain duplicate JSON key")
+        );
+
+        let non_json_record = serde_json::json!({
+            "mutation_id": "33333333-3333-4333-8333-333333333333",
+            "resource_uri": "udb://tenant-a/Payment/rec-1",
+            "checksum_sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "record_json": "bm90LWpzb24=",
+            "affected_rows": 1,
+            "write_receipt_json": "{\"source_lsn\":\"0/1A2B\",\"outbox_seq\":9,\"projection_task_ids\":[],\"manifest_checksum\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"written_at_unix_ms\":1700000000000}"
+        });
+        let non_json_record_err = mutation_response_from_idempotency_json(&non_json_record)
+            .expect_err("stored record_json non-JSON payload must fail closed");
+        assert_eq!(non_json_record_err.code(), tonic::Code::Internal);
+
+        let array_record = serde_json::json!({
+            "mutation_id": "33333333-3333-4333-8333-333333333333",
+            "resource_uri": "udb://tenant-a/Payment/rec-1",
+            "checksum_sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "record_json": "W10=",
+            "affected_rows": 1,
+            "write_receipt_json": "{\"source_lsn\":\"0/1A2B\",\"outbox_seq\":9,\"projection_task_ids\":[],\"manifest_checksum\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"written_at_unix_ms\":1700000000000}"
+        });
+        let array_record_err = mutation_response_from_idempotency_json(&array_record)
+            .expect_err("stored record_json array payload must fail closed");
+        assert_eq!(array_record_err.code(), tonic::Code::Internal);
+        assert!(
+            array_record_err
+                .message()
+                .contains("record_json must be a JSON object")
+        );
+
+        let empty_object_record = serde_json::json!({
+            "mutation_id": "33333333-3333-4333-8333-333333333333",
+            "resource_uri": "udb://tenant-a/Payment/rec-1",
+            "checksum_sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "record_json": "e30=",
+            "affected_rows": 1,
+            "write_receipt_json": "{\"source_lsn\":\"0/1A2B\",\"outbox_seq\":9,\"projection_task_ids\":[],\"manifest_checksum\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"written_at_unix_ms\":1700000000000}"
+        });
+        let empty_object_record_err = mutation_response_from_idempotency_json(&empty_object_record)
+            .expect_err("stored record_json empty object payload must fail closed");
+        assert_eq!(empty_object_record_err.code(), tonic::Code::Internal);
+        assert!(
+            empty_object_record_err
+                .message()
+                .contains("record_json must be a non-empty JSON object")
+        );
+
+        let invalid_receipt = serde_json::json!({
+            "mutation_id": "33333333-3333-4333-8333-333333333333",
+            "resource_uri": "udb://tenant-a/Payment/rec-1",
+            "checksum_sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "record_json": "",
+            "affected_rows": 1,
+            "write_receipt_json": "not-json"
+        });
+        let invalid_receipt_err = mutation_response_from_idempotency_json(&invalid_receipt)
+            .expect_err("invalid stored write_receipt_json must fail closed");
+        assert_eq!(invalid_receipt_err.code(), tonic::Code::Internal);
+
+        let duplicate_receipt_key = serde_json::json!({
+            "mutation_id": "33333333-3333-4333-8333-333333333333",
+            "resource_uri": "udb://tenant-a/Payment/rec-1",
+            "checksum_sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "record_json": "",
+            "affected_rows": 1,
+            "write_receipt_json": "{\"source_lsn\":\"0/1A2B\",\"outbox_seq\":9,\"outbox_seq\":10,\"projection_task_ids\":[],\"manifest_checksum\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"written_at_unix_ms\":1700000000000}"
+        });
+        let duplicate_receipt_key_err =
+            mutation_response_from_idempotency_json(&duplicate_receipt_key)
+                .expect_err("stored write_receipt_json duplicate key must fail closed");
+        assert_eq!(duplicate_receipt_key_err.code(), tonic::Code::Internal);
+        assert!(
+            duplicate_receipt_key_err
+                .message()
+                .contains("write_receipt_json must not contain duplicate JSON key")
+        );
+
+        let missing_receipt_field = serde_json::json!({
+            "mutation_id": "33333333-3333-4333-8333-333333333333",
+            "resource_uri": "udb://tenant-a/Payment/rec-1",
+            "checksum_sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "record_json": "",
+            "affected_rows": 1,
+            "write_receipt_json": "{\"source_lsn\":\"0/1A2B\",\"outbox_seq\":9,\"projection_task_ids\":[],\"written_at_unix_ms\":1700000000000}"
+        });
+        let missing_receipt_field_err =
+            mutation_response_from_idempotency_json(&missing_receipt_field)
+                .expect_err("stored write_receipt_json missing field must fail closed");
+        assert_eq!(missing_receipt_field_err.code(), tonic::Code::Internal);
+        assert!(
+            missing_receipt_field_err
+                .message()
+                .contains("write_receipt_json missing field manifest_checksum")
+        );
+
+        let unexpected_receipt_field = serde_json::json!({
+            "mutation_id": "33333333-3333-4333-8333-333333333333",
+            "resource_uri": "udb://tenant-a/Payment/rec-1",
+            "checksum_sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "record_json": "",
+            "affected_rows": 1,
+            "write_receipt_json": "{\"source_lsn\":\"0/1A2B\",\"outbox_seq\":9,\"projection_task_ids\":[],\"manifest_checksum\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"written_at_unix_ms\":1700000000000,\"shadow_fence\":\"0/FFFF\"}"
+        });
+        let unexpected_receipt_field_err =
+            mutation_response_from_idempotency_json(&unexpected_receipt_field)
+                .expect_err("stored write_receipt_json unexpected field must fail closed");
+        assert_eq!(unexpected_receipt_field_err.code(), tonic::Code::Internal);
+        assert!(
+            unexpected_receipt_field_err
+                .message()
+                .contains("write_receipt_json unexpected field shadow_fence")
+        );
+
+        let padded_receipt_json = serde_json::json!({
+            "mutation_id": "33333333-3333-4333-8333-333333333333",
+            "resource_uri": "udb://tenant-a/Payment/rec-1",
+            "checksum_sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "record_json": "",
+            "affected_rows": 1,
+            "write_receipt_json": " {\"source_lsn\":\"0/1A2B\",\"outbox_seq\":9,\"projection_task_ids\":[],\"manifest_checksum\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"written_at_unix_ms\":1700000000000} "
+        });
+        let padded_receipt_json_err = mutation_response_from_idempotency_json(&padded_receipt_json)
+            .expect_err("stored write_receipt_json padding must fail closed");
+        assert_eq!(padded_receipt_json_err.code(), tonic::Code::Internal);
+        assert!(
+            padded_receipt_json_err
+                .message()
+                .contains("write_receipt_json must not include surrounding whitespace")
+        );
+
+        let negative_affected_rows = serde_json::json!({
+            "mutation_id": "33333333-3333-4333-8333-333333333333",
+            "resource_uri": "udb://tenant-a/Payment/rec-1",
+            "checksum_sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "record_json": "",
+            "affected_rows": -1,
+            "write_receipt_json": "{\"source_lsn\":\"0/1A2B\",\"outbox_seq\":9,\"projection_task_ids\":[],\"manifest_checksum\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"written_at_unix_ms\":1700000000000}"
+        });
+        let negative_rows_err = mutation_response_from_idempotency_json(&negative_affected_rows)
+            .expect_err("negative stored affected_rows must fail closed");
+        assert_eq!(negative_rows_err.code(), tonic::Code::Internal);
+        assert!(
+            negative_rows_err
+                .message()
+                .contains("negative integer field affected_rows")
+        );
+
+        let invalid_checksum = serde_json::json!({
+            "mutation_id": "33333333-3333-4333-8333-333333333333",
+            "resource_uri": "udb://tenant-a/Payment/rec-1",
+            "checksum_sha256": "not-a-sha-token",
+            "record_json": "",
+            "affected_rows": 1,
+            "write_receipt_json": "{\"source_lsn\":\"0/1A2B\",\"outbox_seq\":9,\"projection_task_ids\":[],\"manifest_checksum\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"written_at_unix_ms\":1700000000000}"
+        });
+        let invalid_checksum_err = mutation_response_from_idempotency_json(&invalid_checksum)
+            .expect_err("malformed stored checksum_sha256 must fail closed");
+        assert_eq!(invalid_checksum_err.code(), tonic::Code::Internal);
+        assert!(
+            invalid_checksum_err
+                .message()
+                .contains("checksum_sha256 must be empty or start with sha256:")
+        );
+
+        let short_checksum = serde_json::json!({
+            "mutation_id": "33333333-3333-4333-8333-333333333333",
+            "resource_uri": "udb://tenant-a/Payment/rec-1",
+            "checksum_sha256": "sha256:abc",
+            "record_json": "",
+            "affected_rows": 1,
+            "write_receipt_json": "{\"source_lsn\":\"0/1A2B\",\"outbox_seq\":9,\"projection_task_ids\":[],\"manifest_checksum\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"written_at_unix_ms\":1700000000000}"
+        });
+        let short_checksum_err = mutation_response_from_idempotency_json(&short_checksum)
+            .expect_err("short stored checksum_sha256 must fail closed");
+        assert_eq!(short_checksum_err.code(), tonic::Code::Internal);
+        assert!(
+            short_checksum_err
+                .message()
+                .contains("checksum_sha256 must be empty or sha256:<64 lowercase hex>")
+        );
+
+        let uppercase_checksum = serde_json::json!({
+            "mutation_id": "33333333-3333-4333-8333-333333333333",
+            "resource_uri": "udb://tenant-a/Payment/rec-1",
+            "checksum_sha256": "sha256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+            "record_json": "",
+            "affected_rows": 1,
+            "write_receipt_json": "{\"source_lsn\":\"0/1A2B\",\"outbox_seq\":9,\"projection_task_ids\":[],\"manifest_checksum\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"written_at_unix_ms\":1700000000000}"
+        });
+        let uppercase_checksum_err = mutation_response_from_idempotency_json(&uppercase_checksum)
+            .expect_err("uppercase stored checksum_sha256 must fail closed");
+        assert_eq!(uppercase_checksum_err.code(), tonic::Code::Internal);
+        assert!(
+            uppercase_checksum_err
+                .message()
+                .contains("checksum_sha256 must be empty or sha256:<64 lowercase hex>")
+        );
+
+        let invalid_resource_uri = serde_json::json!({
+            "mutation_id": "33333333-3333-4333-8333-333333333333",
+            "resource_uri": "tenant-a/Payment/rec-1",
+            "checksum_sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "record_json": "",
+            "affected_rows": 1,
+            "write_receipt_json": "{\"source_lsn\":\"0/1A2B\",\"outbox_seq\":9,\"projection_task_ids\":[],\"manifest_checksum\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"written_at_unix_ms\":1700000000000}"
+        });
+        let invalid_resource_uri_err =
+            mutation_response_from_idempotency_json(&invalid_resource_uri)
+                .expect_err("malformed stored resource_uri must fail closed");
+        assert_eq!(invalid_resource_uri_err.code(), tonic::Code::Internal);
+        assert!(
+            invalid_resource_uri_err
+                .message()
+                .contains("resource_uri must start with udb://")
+        );
+
+        let short_resource_uri = serde_json::json!({
+            "mutation_id": "33333333-3333-4333-8333-333333333333",
+            "resource_uri": "udb://tenant-a",
+            "checksum_sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "record_json": "",
+            "affected_rows": 1,
+            "write_receipt_json": "{\"source_lsn\":\"0/1A2B\",\"outbox_seq\":9,\"projection_task_ids\":[],\"manifest_checksum\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"written_at_unix_ms\":1700000000000}"
+        });
+        let short_resource_uri_err = mutation_response_from_idempotency_json(&short_resource_uri)
+            .expect_err("stored resource_uri without path must fail closed");
+        assert_eq!(short_resource_uri_err.code(), tonic::Code::Internal);
+        assert!(
+            short_resource_uri_err
+                .message()
+                .contains("resource_uri must include non-empty authority and path")
+        );
+
+        let collection_resource_uri = serde_json::json!({
+            "mutation_id": "33333333-3333-4333-8333-333333333333",
+            "resource_uri": "udb://tenant-a/Payment",
+            "checksum_sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "record_json": "",
+            "affected_rows": 1,
+            "write_receipt_json": "{\"source_lsn\":\"0/1A2B\",\"outbox_seq\":9,\"projection_task_ids\":[],\"manifest_checksum\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"written_at_unix_ms\":1700000000000}"
+        });
+        let collection_resource_uri_err =
+            mutation_response_from_idempotency_json(&collection_resource_uri)
+                .expect_err("stored resource_uri without resource id must fail closed");
+        assert_eq!(collection_resource_uri_err.code(), tonic::Code::Internal);
+        assert!(
+            collection_resource_uri_err
+                .message()
+                .contains("resource_uri path must include message type and resource id")
+        );
+
+        let trailing_resource_uri = serde_json::json!({
+            "mutation_id": "33333333-3333-4333-8333-333333333333",
+            "resource_uri": "udb://tenant-a/Payment/",
+            "checksum_sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "record_json": "",
+            "affected_rows": 1,
+            "write_receipt_json": "{\"source_lsn\":\"0/1A2B\",\"outbox_seq\":9,\"projection_task_ids\":[],\"manifest_checksum\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"written_at_unix_ms\":1700000000000}"
+        });
+        let trailing_resource_uri_err =
+            mutation_response_from_idempotency_json(&trailing_resource_uri)
+                .expect_err("stored resource_uri empty resource id must fail closed");
+        assert_eq!(trailing_resource_uri_err.code(), tonic::Code::Internal);
+        assert!(
+            trailing_resource_uri_err
+                .message()
+                .contains("resource_uri path must include message type and resource id")
+        );
+
+        let extra_segment_resource_uri = serde_json::json!({
+            "mutation_id": "33333333-3333-4333-8333-333333333333",
+            "resource_uri": "udb://tenant-a/Payment/rec-1/extra",
+            "checksum_sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "record_json": "",
+            "affected_rows": 1,
+            "write_receipt_json": "{\"source_lsn\":\"0/1A2B\",\"outbox_seq\":9,\"projection_task_ids\":[],\"manifest_checksum\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"written_at_unix_ms\":1700000000000}"
+        });
+        let extra_segment_resource_uri_err =
+            mutation_response_from_idempotency_json(&extra_segment_resource_uri)
+                .expect_err("stored resource_uri extra segment must fail closed");
+        assert_eq!(extra_segment_resource_uri_err.code(), tonic::Code::Internal);
+        assert!(
+            extra_segment_resource_uri_err
+                .message()
+                .contains("resource_uri path must include message type and resource id")
+        );
+
+        let whitespace_resource_uri = serde_json::json!({
+            "mutation_id": "33333333-3333-4333-8333-333333333333",
+            "resource_uri": "udb://tenant-a/Payment/rec 1",
+            "checksum_sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "record_json": "",
+            "affected_rows": 1,
+            "write_receipt_json": "{\"source_lsn\":\"0/1A2B\",\"outbox_seq\":9,\"projection_task_ids\":[],\"manifest_checksum\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"written_at_unix_ms\":1700000000000}"
+        });
+        let whitespace_resource_uri_err =
+            mutation_response_from_idempotency_json(&whitespace_resource_uri)
+                .expect_err("stored resource_uri whitespace must fail closed");
+        assert_eq!(whitespace_resource_uri_err.code(), tonic::Code::Internal);
+        assert!(
+            whitespace_resource_uri_err
+                .message()
+                .contains("resource_uri must not include whitespace")
+        );
+
+        let control_resource_uri = serde_json::json!({
+            "mutation_id": "33333333-3333-4333-8333-333333333333",
+            "resource_uri": "udb://tenant-a/Payment/rec-1\u{0000}",
+            "checksum_sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "record_json": "",
+            "affected_rows": 1,
+            "write_receipt_json": "{\"source_lsn\":\"0/1A2B\",\"outbox_seq\":9,\"projection_task_ids\":[],\"manifest_checksum\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"written_at_unix_ms\":1700000000000}"
+        });
+        let control_resource_uri_err =
+            mutation_response_from_idempotency_json(&control_resource_uri)
+                .expect_err("stored resource_uri control character must fail closed");
+        assert_eq!(control_resource_uri_err.code(), tonic::Code::Internal);
+        assert!(
+            control_resource_uri_err
+                .message()
+                .contains("resource_uri must not contain control characters")
+        );
+
+        let invalid_receipt_timestamp = serde_json::json!({
+            "mutation_id": "33333333-3333-4333-8333-333333333333",
+            "resource_uri": "udb://tenant-a/Payment/rec-1",
+            "checksum_sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "record_json": "",
+            "affected_rows": 1,
+            "write_receipt_json": "{\"source_lsn\":\"0/1A2B\",\"outbox_seq\":9,\"projection_task_ids\":[],\"manifest_checksum\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"written_at_unix_ms\":0}"
+        });
+        let invalid_receipt_timestamp_err =
+            mutation_response_from_idempotency_json(&invalid_receipt_timestamp)
+                .expect_err("stored write_receipt_json timestamp must fail closed");
+        assert_eq!(invalid_receipt_timestamp_err.code(), tonic::Code::Internal);
+        assert!(
+            invalid_receipt_timestamp_err
+                .message()
+                .contains("write_receipt_json written_at_unix_ms must be positive")
+        );
+
+        let empty_receipt_lsn = serde_json::json!({
+            "mutation_id": "33333333-3333-4333-8333-333333333333",
+            "resource_uri": "udb://tenant-a/Payment/rec-1",
+            "checksum_sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "record_json": "",
+            "affected_rows": 1,
+            "write_receipt_json": "{\"source_lsn\":\"\",\"outbox_seq\":9,\"projection_task_ids\":[],\"manifest_checksum\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"written_at_unix_ms\":1700000000000}"
+        });
+        let empty_receipt_lsn_err = mutation_response_from_idempotency_json(&empty_receipt_lsn)
+            .expect_err("stored write_receipt_json empty source_lsn must fail closed");
+        assert_eq!(empty_receipt_lsn_err.code(), tonic::Code::Internal);
+        assert!(
+            empty_receipt_lsn_err
+                .message()
+                .contains("write_receipt_json source_lsn must be non-empty")
+        );
+
+        let spaced_receipt_lsn = serde_json::json!({
+            "mutation_id": "33333333-3333-4333-8333-333333333333",
+            "resource_uri": "udb://tenant-a/Payment/rec-1",
+            "checksum_sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "record_json": "",
+            "affected_rows": 1,
+            "write_receipt_json": "{\"source_lsn\":\"0 /1A2B\",\"outbox_seq\":9,\"projection_task_ids\":[],\"manifest_checksum\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"written_at_unix_ms\":1700000000000}"
+        });
+        let spaced_receipt_lsn_err = mutation_response_from_idempotency_json(&spaced_receipt_lsn)
+            .expect_err("stored write_receipt_json source_lsn whitespace must fail closed");
+        assert_eq!(spaced_receipt_lsn_err.code(), tonic::Code::Internal);
+        assert!(
+            spaced_receipt_lsn_err
+                .message()
+                .contains("write_receipt_json source_lsn must not include whitespace")
+        );
+
+        let control_receipt_lsn = serde_json::json!({
+            "mutation_id": "33333333-3333-4333-8333-333333333333",
+            "resource_uri": "udb://tenant-a/Payment/rec-1",
+            "checksum_sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "record_json": "",
+            "affected_rows": 1,
+            "write_receipt_json": "{\"source_lsn\":\"0/1A2B\\u0000\",\"outbox_seq\":9,\"projection_task_ids\":[],\"manifest_checksum\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"written_at_unix_ms\":1700000000000}"
+        });
+        let control_receipt_lsn_err = mutation_response_from_idempotency_json(&control_receipt_lsn)
+            .expect_err("stored write_receipt_json source_lsn control character must fail closed");
+        assert_eq!(control_receipt_lsn_err.code(), tonic::Code::Internal);
+        assert!(
+            control_receipt_lsn_err
+                .message()
+                .contains("write_receipt_json source_lsn must not contain control characters")
+        );
+
+        let padded_receipt_manifest = serde_json::json!({
+            "mutation_id": "33333333-3333-4333-8333-333333333333",
+            "resource_uri": "udb://tenant-a/Payment/rec-1",
+            "checksum_sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "record_json": "",
+            "affected_rows": 1,
+            "write_receipt_json": "{\"source_lsn\":\"0/1A2B\",\"outbox_seq\":9,\"projection_task_ids\":[],\"manifest_checksum\":\" sha256:1111111111111111111111111111111111111111111111111111111111111111 \",\"written_at_unix_ms\":1700000000000}"
+        });
+        let padded_receipt_manifest_err =
+            mutation_response_from_idempotency_json(&padded_receipt_manifest)
+                .expect_err("stored write_receipt_json manifest checksum padding must fail closed");
+        assert_eq!(padded_receipt_manifest_err.code(), tonic::Code::Internal);
+        assert!(padded_receipt_manifest_err.message().contains(
+            "write_receipt_json manifest_checksum must not include surrounding whitespace"
+        ));
+
+        let invalid_receipt_manifest = serde_json::json!({
+            "mutation_id": "33333333-3333-4333-8333-333333333333",
+            "resource_uri": "udb://tenant-a/Payment/rec-1",
+            "checksum_sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "record_json": "",
+            "affected_rows": 1,
+            "write_receipt_json": "{\"source_lsn\":\"0/1A2B\",\"outbox_seq\":9,\"projection_task_ids\":[],\"manifest_checksum\":\"not-a-sha-token\",\"written_at_unix_ms\":1700000000000}"
+        });
+        let invalid_receipt_manifest_err =
+            mutation_response_from_idempotency_json(&invalid_receipt_manifest)
+                .expect_err("stored write_receipt_json manifest checksum prefix must fail closed");
+        assert_eq!(invalid_receipt_manifest_err.code(), tonic::Code::Internal);
+        assert!(
+            invalid_receipt_manifest_err
+                .message()
+                .contains("write_receipt_json manifest_checksum must start with sha256:")
+        );
+
+        let short_receipt_manifest = serde_json::json!({
+            "mutation_id": "33333333-3333-4333-8333-333333333333",
+            "resource_uri": "udb://tenant-a/Payment/rec-1",
+            "checksum_sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "record_json": "",
+            "affected_rows": 1,
+            "write_receipt_json": "{\"source_lsn\":\"0/1A2B\",\"outbox_seq\":9,\"projection_task_ids\":[],\"manifest_checksum\":\"sha256:abc\",\"written_at_unix_ms\":1700000000000}"
+        });
+        let short_receipt_manifest_err =
+            mutation_response_from_idempotency_json(&short_receipt_manifest)
+                .expect_err("stored write_receipt_json manifest checksum shape must fail closed");
+        assert_eq!(short_receipt_manifest_err.code(), tonic::Code::Internal);
+        assert!(
+            short_receipt_manifest_err
+                .message()
+                .contains("write_receipt_json manifest_checksum must be sha256:<64 lowercase hex>")
+        );
+
+        let uppercase_receipt_manifest = serde_json::json!({
+            "mutation_id": "33333333-3333-4333-8333-333333333333",
+            "resource_uri": "udb://tenant-a/Payment/rec-1",
+            "checksum_sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "record_json": "",
+            "affected_rows": 1,
+            "write_receipt_json": "{\"source_lsn\":\"0/1A2B\",\"outbox_seq\":9,\"projection_task_ids\":[],\"manifest_checksum\":\"sha256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"written_at_unix_ms\":1700000000000}"
+        });
+        let uppercase_receipt_manifest_err =
+            mutation_response_from_idempotency_json(&uppercase_receipt_manifest)
+                .expect_err("stored write_receipt_json manifest checksum case must fail closed");
+        assert_eq!(uppercase_receipt_manifest_err.code(), tonic::Code::Internal);
+        assert!(
+            uppercase_receipt_manifest_err
+                .message()
+                .contains("write_receipt_json manifest_checksum must be sha256:<64 lowercase hex>")
+        );
+
+        let invalid_receipt_task = serde_json::json!({
+            "mutation_id": "33333333-3333-4333-8333-333333333333",
+            "resource_uri": "udb://tenant-a/Payment/rec-1",
+            "checksum_sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "record_json": "",
+            "affected_rows": 1,
+            "write_receipt_json": "{\"source_lsn\":\"0/1A2B\",\"outbox_seq\":9,\"projection_task_ids\":[\" task-1 \"],\"manifest_checksum\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"written_at_unix_ms\":1700000000000}"
+        });
+        let invalid_receipt_task_err =
+            mutation_response_from_idempotency_json(&invalid_receipt_task)
+                .expect_err("stored write_receipt_json task id padding must fail closed");
+        assert_eq!(invalid_receipt_task_err.code(), tonic::Code::Internal);
+        assert!(invalid_receipt_task_err.message().contains(
+            "write_receipt_json projection_task_ids[0] must be non-empty and contain no whitespace"
+        ));
+
+        let spaced_receipt_task = serde_json::json!({
+            "mutation_id": "33333333-3333-4333-8333-333333333333",
+            "resource_uri": "udb://tenant-a/Payment/rec-1",
+            "checksum_sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "record_json": "",
+            "affected_rows": 1,
+            "write_receipt_json": "{\"source_lsn\":\"0/1A2B\",\"outbox_seq\":9,\"projection_task_ids\":[\"task 1\"],\"manifest_checksum\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"written_at_unix_ms\":1700000000000}"
+        });
+        let spaced_receipt_task_err = mutation_response_from_idempotency_json(&spaced_receipt_task)
+            .expect_err("stored write_receipt_json task id whitespace must fail closed");
+        assert_eq!(spaced_receipt_task_err.code(), tonic::Code::Internal);
+        assert!(spaced_receipt_task_err.message().contains(
+            "write_receipt_json projection_task_ids[0] must be non-empty and contain no whitespace"
+        ));
+
+        let control_receipt_task = serde_json::json!({
+            "mutation_id": "33333333-3333-4333-8333-333333333333",
+            "resource_uri": "udb://tenant-a/Payment/rec-1",
+            "checksum_sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            "record_json": "",
+            "affected_rows": 1,
+            "write_receipt_json": "{\"source_lsn\":\"0/1A2B\",\"outbox_seq\":9,\"projection_task_ids\":[\"task-1\\u0000\"],\"manifest_checksum\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"written_at_unix_ms\":1700000000000}"
+        });
+        let control_receipt_task_err =
+            mutation_response_from_idempotency_json(&control_receipt_task)
+                .expect_err("stored write_receipt_json task id control character must fail closed");
+        assert_eq!(control_receipt_task_err.code(), tonic::Code::Internal);
+        assert!(control_receipt_task_err.message().contains(
+            "write_receipt_json projection_task_ids[0] must not contain control characters"
+        ));
+    }
+
+    #[test]
+    fn idempotency_response_persist_requires_exactly_one_row() {
+        assert!(idempotency_response_persist_row_count_status(1).is_ok());
+        let missing = idempotency_response_persist_row_count_status(0)
+            .expect_err("missing dedup row must fail closed");
+        assert_eq!(missing.code(), tonic::Code::Internal);
+        assert!(missing.message().contains("affected 0 rows"));
+        assert!(missing.message().contains("expected exactly one"));
+        let duplicate = idempotency_response_persist_row_count_status(2)
+            .expect_err("duplicate dedup rows must fail closed");
+        assert_eq!(duplicate.code(), tonic::Code::Internal);
+        assert!(duplicate.message().contains("affected 2 rows"));
+        assert!(duplicate.message().contains("expected exactly one"));
+    }
+
+    #[test]
+    fn idempotency_response_persist_update_is_scope_bound() {
+        let sql = idempotency_response_persist_sql("udb_idempotency_keys");
+        assert!(sql.contains("UPDATE udb_idempotency_keys"));
+        assert!(sql.contains("SET response_json = $1"));
+        assert!(sql.contains("WHERE dedup_key = $2"));
+        assert!(sql.contains("AND tenant_id = $3"));
+        assert!(sql.contains("AND project_id = $4"));
+        assert!(sql.contains("AND message_type = $5"));
+        assert!(sql.contains("AND operation = $6"));
+    }
+
+    #[test]
+    fn write_receipt_json_serialization_is_not_silent_default() {
+        let receipt = crate::runtime::consistency::WriteReceipt {
+            source_lsn: "0/3C4D".to_string(),
+            outbox_seq: 21,
+            projection_task_ids: vec!["projection-a".to_string()],
+            manifest_checksum:
+                "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+                    .to_string(),
+            written_at_unix_ms: 1_700_000_000_456,
+        };
+        let json = write_receipt_json_or_status(&receipt).expect("receipt JSON serializes");
+        assert!(!json.is_empty());
+        assert!(json.contains("0/3C4D"));
+        let decoded: crate::runtime::consistency::WriteReceipt =
+            serde_json::from_str(&json).expect("receipt JSON decodes");
+        assert_eq!(decoded.source_lsn, receipt.source_lsn);
+        assert_eq!(decoded.outbox_seq, receipt.outbox_seq);
+        assert_eq!(decoded.projection_task_ids, receipt.projection_task_ids);
+        assert_eq!(decoded.manifest_checksum, receipt.manifest_checksum);
+        assert_eq!(decoded.written_at_unix_ms, receipt.written_at_unix_ms);
+    }
+
+    #[test]
+    fn return_record_json_decode_is_not_silent_default() {
+        let err = returned_record_json_or_status(&[])
+            .expect_err("empty RETURNING decode must fail closed");
+        assert_eq!(err.code(), tonic::Code::Internal);
+        assert!(
+            err.message()
+                .contains("RETURNING row decoded without record_json")
+        );
+
+        let record = br#"{"id":"rec-1"}"#.to_vec();
+        assert_eq!(
+            returned_record_json_or_status(std::slice::from_ref(&record))
+                .expect("returned record_json decodes"),
+            record
         );
     }
 
@@ -2827,7 +5425,7 @@ pub(crate) async fn register_elasticsearch(ctx: &mut RegisterCtx<'_>) {
 }
 
 #[cfg(feature = "elasticsearch")]
-fn parse_elasticsearch_dsn(
+pub(crate) fn parse_elasticsearch_dsn(
     raw: &str,
 ) -> (
     String,
@@ -3064,13 +5662,7 @@ pub(crate) async fn register_weaviate(ctx: &mut RegisterCtx<'_>) {
     else {
         return;
     };
-    let (base, api_key) = if let Some(rest) = raw.strip_prefix("apikey://")
-        && let Some((key, host)) = rest.split_once('@')
-    {
-        (format!("https://{host}"), Some(key.to_string()))
-    } else {
-        (raw, None)
-    };
+    let (base, api_key) = parse_weaviate_dsn(&raw);
     let client = WeaviateHttpClient::new(base, api_key);
     report.weaviate_configured = true;
     runtime
@@ -3100,6 +5692,17 @@ pub(crate) async fn register_weaviate(ctx: &mut RegisterCtx<'_>) {
         }
     }
     runtime.weaviate = Some(client);
+}
+
+#[cfg(feature = "weaviate")]
+pub(crate) fn parse_weaviate_dsn(raw: &str) -> (String, Option<String>) {
+    let trimmed = raw.trim();
+    if let Some(rest) = trimmed.strip_prefix("apikey://")
+        && let Some((key, host)) = rest.split_once('@')
+    {
+        return (format!("https://{host}"), Some(key.to_string()));
+    }
+    (trimmed.to_string(), None)
 }
 
 /// C9: register Pinecone. DSN form:
@@ -3226,17 +5829,7 @@ pub(crate) async fn register_cassandra(ctx: &mut RegisterCtx<'_>) {
 /// Parses out the account + access key; uses
 /// `StorageCredentials::access_key` for auth.
 #[cfg(feature = "azureblob")]
-pub(crate) async fn register_azureblob(ctx: &mut RegisterCtx<'_>) {
-    use crate::runtime::executors::azureblob::AzureBlobClient;
-    let RegisterCtx {
-        runtime, report, ..
-    } = ctx;
-    let Some(dsn) = std::env::var("UDB_AZUREBLOB_DSN")
-        .ok()
-        .filter(|s| !s.trim().is_empty())
-    else {
-        return;
-    };
+pub(crate) fn parse_azureblob_dsn(dsn: &str) -> Option<(String, String)> {
     let mut account = String::new();
     let mut key = String::new();
     for kv in dsn.split(';') {
@@ -3249,11 +5842,29 @@ pub(crate) async fn register_azureblob(ctx: &mut RegisterCtx<'_>) {
         }
     }
     if account.is_empty() || key.is_empty() {
+        return None;
+    }
+    Some((account, key))
+}
+
+#[cfg(feature = "azureblob")]
+pub(crate) async fn register_azureblob(ctx: &mut RegisterCtx<'_>) {
+    use crate::runtime::executors::azureblob::AzureBlobClient;
+    let RegisterCtx {
+        runtime, report, ..
+    } = ctx;
+    let Some(dsn) = std::env::var("UDB_AZUREBLOB_DSN")
+        .ok()
+        .filter(|s| !s.trim().is_empty())
+    else {
+        return;
+    };
+    let Some((account, key)) = parse_azureblob_dsn(&dsn) else {
         report.warnings.push(format!(
             "Azure Blob DSN missing account/key (expected `account=…;key=…`)"
         ));
         return;
-    }
+    };
     let client = AzureBlobClient::from_account_key(&account, &key);
     report.azureblob_configured = true;
     runtime
@@ -3880,12 +6491,16 @@ fn vector_search_dispatch_spec(
             }
         }),
         other => {
-            return Err(tonic::Status::failed_precondition(format!(
-                "typed vector search is not wired for backend '{other}'"
-            )));
+            return Err(setup_data_capability_status(
+                other,
+                "typed_vector_search",
+                "typed_vector_search_backend",
+                format!("typed vector search is not wired for backend '{other}'"),
+            ));
         }
     };
-    serde_json::to_string(&spec).map_err(|err| tonic::Status::internal(err.to_string()))
+    serde_json::to_string(&spec)
+        .map_err(|err| setup_data_internal_status("vector_search_spec_encode", err.to_string()))
 }
 
 fn vector_upsert_dispatch_spec(
@@ -3937,17 +6552,25 @@ fn vector_upsert_dispatch_spec(
             }
         }),
         other => {
-            return Err(tonic::Status::failed_precondition(format!(
-                "typed vector upsert is not wired for backend '{other}'"
-            )));
+            return Err(setup_data_capability_status(
+                other,
+                "typed_vector_upsert",
+                "typed_vector_upsert_backend",
+                format!("typed vector upsert is not wired for backend '{other}'"),
+            ));
         }
     };
-    serde_json::to_string(&spec).map_err(|err| tonic::Status::internal(err.to_string()))
+    serde_json::to_string(&spec)
+        .map_err(|err| setup_data_internal_status("vector_upsert_spec_encode", err.to_string()))
 }
 
 fn parse_vector_search_response(backend: &str, raw: &str) -> Result<VectorSet, tonic::Status> {
-    let parsed: JsonValue = serde_json::from_str(raw)
-        .map_err(|err| tonic::Status::internal(format!("vector search response parse: {err}")))?;
+    let parsed: JsonValue = serde_json::from_str(raw).map_err(|err| {
+        setup_data_internal_status(
+            "vector_search_response_parse",
+            format!("vector search response parse: {err}"),
+        )
+    })?;
     let points = match backend {
         "elasticsearch" => parsed
             .pointer("/hits/hits")
@@ -4030,13 +6653,11 @@ async fn presign_s3_url(
     ttl: u64,
 ) -> Result<String, tonic::Status> {
     if method != "PUT" && method != "GET" {
-        return Err(tonic::Status::invalid_argument(
-            "presigned URLs support only PUT or GET",
-        ));
+        return Err(unsupported_presign_method_status());
     }
     let config =
         aws_sdk_s3::presigning::PresigningConfig::expires_in(std::time::Duration::from_secs(ttl))
-            .map_err(|err| tonic::Status::invalid_argument(format!("invalid presign ttl: {err}")))?;
+            .map_err(invalid_presign_ttl_status)?;
     // The PUT and GET presign calls return different SdkError<…> error types, so
     // each branch maps its own result to the shared `String` URL (or a
     // `tonic::Status`) before the `if`/`else` joins — keeping both arms the same
@@ -4053,7 +6674,9 @@ async fn presign_s3_url(
             .presigned(config)
             .await
             .map(|p| p.uri().to_string())
-            .map_err(|err| tonic::Status::unavailable(format!("S3 presign failed: {err}")))
+            .map_err(|err| {
+                crate::runtime::executor_utils::backend_transport_status("S3", "presign", err)
+            })
     } else {
         s3.get_object()
             .bucket(bucket)
@@ -4061,7 +6684,9 @@ async fn presign_s3_url(
             .presigned(config)
             .await
             .map(|p| p.uri().to_string())
-            .map_err(|err| tonic::Status::unavailable(format!("S3 presign failed: {err}")))
+            .map_err(|err| {
+                crate::runtime::executor_utils::backend_transport_status("S3", "presign", err)
+            })
     }
 }
 
@@ -4103,9 +6728,11 @@ fn grpc_put_byte_stream(
     Box::pin(async_stream::try_stream! {
         let mut total = first.len() as u64;
         if total > max_bytes {
-            Err(tonic::Status::resource_exhausted(format!(
-                "object exceeds UDB_MAX_OBJECT_BYTES ({max_bytes})"
-            )))?;
+            Err(crate::runtime::executor_utils::quota_refusal_status(
+                "object",
+                "grpc object stream size",
+                format!("object exceeds UDB_MAX_OBJECT_BYTES ({max_bytes})"),
+            ))?;
         }
         bytes_seen.store(total, Ordering::Relaxed);
         chunks_seen.store(1, Ordering::Relaxed);
@@ -4115,9 +6742,11 @@ fn grpc_put_byte_stream(
             let chunk = chunk?;
             total += chunk.data.len() as u64;
             if total > max_bytes {
-                Err(tonic::Status::resource_exhausted(format!(
-                    "object exceeds UDB_MAX_OBJECT_BYTES ({max_bytes})"
-                )))?;
+                Err(crate::runtime::executor_utils::quota_refusal_status(
+                    "object",
+                    "grpc object stream size",
+                    format!("object exceeds UDB_MAX_OBJECT_BYTES ({max_bytes})"),
+                ))?;
             }
             bytes_seen.store(total, Ordering::Relaxed);
             chunks_seen.fetch_add(1, Ordering::Relaxed);
@@ -4222,9 +6851,6 @@ fn ensure_typed_object_backend(backend: &str) -> Result<(), tonic::Status> {
     {
         Ok(())
     } else {
-        Err(tonic::Status::failed_precondition(format!(
-            "typed object RPCs require an object-store backend, but the \
-             store is configured for '{backend}'"
-        )))
+        Err(typed_object_backend_required_status(backend))
     }
 }

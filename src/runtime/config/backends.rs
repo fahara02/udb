@@ -6,7 +6,7 @@ use super::*;
 /// PostgreSQL is the only backend that hosts the migration ledger tables.
 /// The Go UDB service resolves DSN strings from these fields.
 /// Mirrors the legacy Go service `DBConfig` shape.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(default)]
 pub struct DbConfig {
     /// Deployment mode: `SelfHosted` (Docker / on-premise) or `Cloud` (Neon,
@@ -48,6 +48,31 @@ pub struct DbConfig {
     pub acquire_timeout_secs: u64,
 }
 
+// Manual `Debug` that redacts credential material (`password`, `pooler_dsn`,
+// `direct_dsn` may embed userinfo) so a `{:?}` of this config never leaks a
+// secret into logs. Non-secret fields print normally to preserve debuggability.
+impl std::fmt::Debug for DbConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DbConfig")
+            .field("deploy", &self.deploy)
+            .field("host", &self.host)
+            .field("port", &self.port)
+            .field("database", &self.database)
+            .field("role", &self.role)
+            .field("password", &"[redacted]")
+            .field("ssl_mode", &self.ssl_mode)
+            .field("pooler_dsn", &"[redacted]")
+            .field("direct_dsn", &"[redacted]")
+            .field("max_open_conns", &self.max_open_conns)
+            .field("max_idle_conns", &self.max_idle_conns)
+            .field("conn_max_lifetime_secs", &self.conn_max_lifetime_secs)
+            .field("conn_max_idle_secs", &self.conn_max_idle_secs)
+            .field("min_connections", &self.min_connections)
+            .field("acquire_timeout_secs", &self.acquire_timeout_secs)
+            .finish()
+    }
+}
+
 impl DbConfig {
     /// Returns `true` when the minimum required fields (`host`, `database`, `role`) are set.
     pub fn is_configured(&self) -> bool {
@@ -85,7 +110,7 @@ impl DbConfig {
 ///
 /// Used for: session cache, rate-limit counters, read-through cache, feature flags.
 /// Spec §16.1 Tier 2.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(default)]
 pub struct RedisConfig {
     /// Deployment mode: `SelfHosted` (Docker / on-premise) or `Cloud`
@@ -118,6 +143,28 @@ pub struct RedisConfig {
     pub mode: String,
     /// Sentinel master name (only used when `mode = "sentinel"`).
     pub sentinel_master: String,
+}
+
+// Manual `Debug` redacting the auth `password` and raw `dsn` (which may embed
+// `requirepass`/userinfo). Non-secret connection metadata prints normally.
+impl std::fmt::Debug for RedisConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RedisConfig")
+            .field("deploy", &self.deploy)
+            .field("host", &self.host)
+            .field("port", &self.port)
+            .field("password", &"[redacted]")
+            .field("database", &self.database)
+            .field("pool_size", &self.pool_size)
+            .field("min_idle_conns", &self.min_idle_conns)
+            .field("max_retries", &self.max_retries)
+            .field("dsn", &self.dsn.as_ref().map(|_| "[redacted]"))
+            .field("tls_enabled", &self.tls_enabled)
+            .field("default_ttl_secs", &self.default_ttl_secs)
+            .field("mode", &self.mode)
+            .field("sentinel_master", &self.sentinel_master)
+            .finish()
+    }
 }
 
 impl RedisConfig {
@@ -160,7 +207,7 @@ impl RedisConfig {
 ///
 /// Used for: embedding similarity search, OCR correction history,
 /// template clustering.  Spec §16.1 Tier 3.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(default)]
 pub struct QdrantConfig {
     /// Deployment mode: `SelfHosted` (Docker / on-premise) or `Cloud`
@@ -187,6 +234,25 @@ pub struct QdrantConfig {
     /// Raw URL / DSN. When set, takes precedence over host/port.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub url: Option<String>,
+}
+
+// Manual `Debug` redacting the `api_key`. The `url`/host fields are non-secret
+// endpoint metadata and print normally.
+impl std::fmt::Debug for QdrantConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("QdrantConfig")
+            .field("deploy", &self.deploy)
+            .field("host", &self.host)
+            .field("grpc_port", &self.grpc_port)
+            .field("http_port", &self.http_port)
+            .field("api_key", &"[redacted]")
+            .field("tls_enabled", &self.tls_enabled)
+            .field("default_dimension", &self.default_dimension)
+            .field("default_distance", &self.default_distance)
+            .field("max_retries", &self.max_retries)
+            .field("url", &self.url)
+            .finish()
+    }
 }
 
 impl QdrantConfig {
@@ -252,7 +318,7 @@ impl QdrantConfig {
 ///
 /// Used for: OCR artifact storage, processed document exports, model archives.
 /// Spec §16.1 Tier 4.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(default)]
 pub struct MinioConfig {
     /// Deployment mode: `SelfHosted` (Docker MinIO / on-premise) or `Cloud`
@@ -276,6 +342,25 @@ pub struct MinioConfig {
     pub max_retries: u32,
     /// Part size (bytes) for multipart uploads.  Default: `64 MiB`.
     pub multipart_part_size_bytes: u64,
+}
+
+// Manual `Debug` redacting the S3/MinIO credential pair (`access_key`,
+// `secret_key`) — the same pair the `masked_log` helper omits. Endpoint/region
+// metadata prints normally.
+impl std::fmt::Debug for MinioConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MinioConfig")
+            .field("deploy", &self.deploy)
+            .field("endpoint", &self.endpoint)
+            .field("access_key", &"[redacted]")
+            .field("secret_key", &"[redacted]")
+            .field("use_ssl", &self.use_ssl)
+            .field("bucket_prefix", &self.bucket_prefix)
+            .field("region", &self.region)
+            .field("max_retries", &self.max_retries)
+            .field("multipart_part_size_bytes", &self.multipart_part_size_bytes)
+            .finish()
+    }
 }
 
 impl MinioConfig {
@@ -514,6 +599,61 @@ impl AuditSinkConfig {
             )),
         }
         errors
+    }
+}
+
+#[cfg(test)]
+mod secret_no_leak {
+    use super::*;
+
+    // Item 4.6 — every backend config that holds a credential must redact it in
+    // its `{:?}` output so secrets never reach logs through a Debug formatter.
+    const CANARY: &str = "udb-canary-SECRET";
+
+    #[test]
+    fn db_config_debug_redacts_secrets() {
+        let cfg = DbConfig {
+            password: CANARY.to_string(),
+            pooler_dsn: format!("postgres://u:{CANARY}@h/db"),
+            direct_dsn: format!("postgres://u:{CANARY}@h/db"),
+            host: "h".to_string(),
+            ..Default::default()
+        };
+        let dbg = format!("{cfg:?}");
+        assert!(!dbg.contains(CANARY), "DbConfig leaked a secret: {dbg}");
+        assert!(dbg.contains("host"), "DbConfig dropped debuggable fields");
+    }
+
+    #[test]
+    fn redis_config_debug_redacts_secrets() {
+        let cfg = RedisConfig {
+            password: CANARY.to_string(),
+            dsn: Some(format!("redis://:{CANARY}@h")),
+            ..Default::default()
+        };
+        let dbg = format!("{cfg:?}");
+        assert!(!dbg.contains(CANARY), "RedisConfig leaked a secret: {dbg}");
+    }
+
+    #[test]
+    fn qdrant_config_debug_redacts_secrets() {
+        let cfg = QdrantConfig {
+            api_key: CANARY.to_string(),
+            ..Default::default()
+        };
+        let dbg = format!("{cfg:?}");
+        assert!(!dbg.contains(CANARY), "QdrantConfig leaked a secret: {dbg}");
+    }
+
+    #[test]
+    fn minio_config_debug_redacts_secrets() {
+        let cfg = MinioConfig {
+            access_key: CANARY.to_string(),
+            secret_key: CANARY.to_string(),
+            ..Default::default()
+        };
+        let dbg = format!("{cfg:?}");
+        assert!(!dbg.contains(CANARY), "MinioConfig leaked a secret: {dbg}");
     }
 }
 

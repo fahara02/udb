@@ -33,7 +33,7 @@
 
 use std::sync::Arc;
 
-use tonic::{Request, Response, Status};
+use tonic::{Code, Request, Response, Status};
 use uuid::Uuid;
 
 use crate::proto::udb::core::apikey::entity::v1 as apikey_entity_pb;
@@ -42,6 +42,7 @@ use crate::proto::udb::core::common::v1 as common_pb;
 use apikey_pb::api_key_service_server::ApiKeyService;
 
 use crate::runtime::authn::{self, ApiKeyRecord, ApiKeyStore, AuthnConfig, UnavailableApiKeyStore};
+use crate::runtime::service::native_helpers::{update_mask_allows, update_mask_path_set};
 
 use super::events::{self, AuthEvent, AuthEventSink, ComplianceEnvelope, topics};
 use super::mappings::{bounded_page_response, bounded_page_window, timestamp_from_unix};
@@ -90,6 +91,82 @@ impl ApiKeyServiceImpl {
 
     fn hash_key(&self) -> Vec<u8> {
         self.config.api_key_hash_secret().as_bytes().to_vec()
+    }
+
+    fn required_field(
+        field: &'static str,
+        description: &'static str,
+        message: &'static str,
+    ) -> Status {
+        crate::runtime::executor_utils::invalid_argument_fields(message, [(field, description)])
+    }
+
+    fn capability_status(
+        operation: &'static str,
+        capability_required: &'static str,
+        message: &'static str,
+    ) -> Status {
+        crate::runtime::executor_utils::capability_status(
+            "api_key",
+            operation,
+            capability_required,
+            message,
+        )
+    }
+
+    fn api_key_not_found_status(operation: &'static str) -> Status {
+        crate::runtime::executor_utils::schema_status(
+            Code::NotFound,
+            "api_key",
+            operation,
+            "api_key_not_found",
+            "api key not found",
+        )
+    }
+
+    fn policy_status_with_code(
+        code: Code,
+        operation: &'static str,
+        policy_decision_id: &'static str,
+        message: &'static str,
+    ) -> Status {
+        crate::runtime::executor_utils::policy_status_with_code(
+            code,
+            operation,
+            policy_decision_id,
+            message,
+        )
+    }
+
+    fn internal_status(operation: impl Into<String>, message: impl Into<String>) -> Status {
+        crate::runtime::executor_utils::internal_status("api_key", operation, message)
+    }
+
+    fn tenant_context_required_status() -> Status {
+        Self::policy_status_with_code(
+            Code::PermissionDenied,
+            "api_key_tenant_scope",
+            "caller_tenant_context_required",
+            "api key is tenant-scoped; caller tenant context is required",
+        )
+    }
+
+    fn tenant_mismatch_status() -> Status {
+        Self::policy_status_with_code(
+            Code::PermissionDenied,
+            "api_key_tenant_scope",
+            "caller_tenant_mismatch",
+            "api key belongs to a different tenant",
+        )
+    }
+
+    fn read_tenant_required_status() -> Status {
+        Self::policy_status_with_code(
+            Code::PermissionDenied,
+            "api_key_read_scope",
+            "tenant_scoped_bearer_required",
+            "api key read requires a tenant-scoped bearer token or a cross-tenant admin role",
+        )
     }
 
     /// Default per-minute request ceiling enforced by `ValidateApiKey`
@@ -237,14 +314,10 @@ impl ApiKeyServiceImpl {
             if Self::caller_is_cross_tenant_admin(context) {
                 return Ok(());
             }
-            return Err(Status::permission_denied(
-                "api key is tenant-scoped; caller tenant context is required",
-            ));
+            return Err(Self::tenant_context_required_status());
         }
         if caller_tenant != record_tenant && !Self::caller_is_cross_tenant_admin(context) {
-            return Err(Status::permission_denied(
-                "api key belongs to a different tenant",
-            ));
+            return Err(Self::tenant_mismatch_status());
         }
         Ok(())
     }
@@ -318,9 +391,7 @@ impl ApiKeyServiceImpl {
             .map(|tenant| tenant.tenant_id.trim().to_string())
             .unwrap_or_default();
         if caller_tenant.is_empty() {
-            return Err(Status::permission_denied(
-                "api key read requires a tenant-scoped bearer token or a cross-tenant admin role",
-            ));
+            return Err(Self::read_tenant_required_status());
         }
         Ok(Some(caller_tenant))
     }
@@ -597,13 +668,19 @@ impl ApiKeyService for ApiKeyServiceImpl {
         request: Request<apikey_pb::CreateApiKeyRequest>,
     ) -> Result<Response<apikey_pb::CreateApiKeyResponse>, Status> {
         if self.hash_key().is_empty() {
-            return Err(Status::failed_precondition(
+            return Err(Self::capability_status(
+                "create_hashing",
+                "api_key_hash_secret",
                 "API key hashing requires UDB_SESSION_HASH_SECRET",
             ));
         }
         let req = request.into_inner();
         if req.owner_id.trim().is_empty() {
-            return Err(Status::invalid_argument("owner_id is required"));
+            return Err(Self::required_field(
+                "owner_id",
+                "must be a non-empty API key owner id",
+                "owner_id is required",
+            ));
         }
         let prefix = format!(
             "udbk_{}",
@@ -650,7 +727,7 @@ impl ApiKeyService for ApiKeyServiceImpl {
         self.api_keys
             .put(rec.clone())
             .await
-            .map_err(Status::internal)?;
+            .map_err(|err| Self::internal_status("create_api_key_store", err))?;
         self.emit_event(AuthEvent::new(
             topics::API_KEY_CREATED,
             rec.key_prefix.clone(),
@@ -682,13 +759,13 @@ impl ApiKeyService for ApiKeyServiceImpl {
             .api_keys
             .get_by_prefix(&req.key_id)
             .await
-            .map_err(Status::internal)?
+            .map_err(|err| Self::internal_status("get_api_key_load", err))?
         {
             Some(rec) => {
                 self.enforce_caller_tenant(caller_context.as_ref(), &rec.tenant_id)?;
                 Some(api_key_to_pb(&rec, now))
             }
-            None => return Err(Status::not_found("api key not found")),
+            None => return Err(Self::api_key_not_found_status("get_api_key")),
         };
         Ok(Response::new(apikey_pb::GetApiKeyResponse { key }))
     }
@@ -699,7 +776,11 @@ impl ApiKeyService for ApiKeyServiceImpl {
     ) -> Result<Response<apikey_pb::ListApiKeysResponse>, Status> {
         let req = request.into_inner();
         if req.owner_id.trim().is_empty() {
-            return Err(Status::invalid_argument("owner_id is required"));
+            return Err(Self::required_field(
+                "owner_id",
+                "must be a non-empty API key owner id",
+                "owner_id is required",
+            ));
         }
         let now = now_unix();
         // Convert the proto status filter to the domain enum the store expects
@@ -713,7 +794,7 @@ impl ApiKeyService for ApiKeyServiceImpl {
             .api_keys
             .list_for_principal(&req.owner_id, false, now)
             .await
-            .map_err(Status::internal)?;
+            .map_err(|err| Self::internal_status("list_api_keys_store", err))?;
         records.retain(|rec| Self::api_key_matches_status(rec, status, now));
         if let Some(tenant_filter) = tenant_filter {
             records.retain(|rec| rec.tenant_id.trim() == tenant_filter);
@@ -744,8 +825,8 @@ impl ApiKeyService for ApiKeyServiceImpl {
             .api_keys
             .get_by_prefix(&req.key_id)
             .await
-            .map_err(Status::internal)?
-            .ok_or_else(|| Status::not_found("api key not found"))?;
+            .map_err(|err| Self::internal_status("update_api_key_load", err))?
+            .ok_or_else(|| Self::api_key_not_found_status("update_api_key"))?;
         // Resolve-before-mutate (I2.5): enforce caller tenant against the record.
         // The caller tenant comes from the VALIDATED claim (installed by the
         // method-security layer), NOT the client-supplied `req.context` body —
@@ -753,16 +834,18 @@ impl ApiKeyService for ApiKeyServiceImpl {
         // spoofable/absent body tenant.
         let caller_context = Self::current_claim_request_context();
         self.enforce_caller_tenant(caller_context.as_ref(), &rec.tenant_id)?;
-        if !req.scopes.is_empty() {
+        let update_mask =
+            update_mask_path_set(req.update_mask.as_ref(), &["scopes", "expires_at"])?;
+        if update_mask_allows(&update_mask, "scopes", !req.scopes.is_empty()) {
             rec.scopes = req.scopes;
         }
-        if req.expires_at.is_some() {
+        if update_mask_allows(&update_mask, "expires_at", req.expires_at.is_some()) {
             rec.expires_at_unix = expires_at_unix(req.expires_at);
         }
         self.api_keys
             .put(rec.clone())
             .await
-            .map_err(Status::internal)?;
+            .map_err(|err| Self::internal_status("update_api_key_store", err))?;
         self.emit_event(AuthEvent::new(
             topics::API_KEY_UPDATED,
             rec.key_prefix.clone(),
@@ -792,8 +875,8 @@ impl ApiKeyService for ApiKeyServiceImpl {
             .api_keys
             .get_by_prefix(&req.key_id)
             .await
-            .map_err(Status::internal)?
-            .ok_or_else(|| Status::not_found("api key not found"))?;
+            .map_err(|err| Self::internal_status("revoke_api_key_load", err))?
+            .ok_or_else(|| Self::api_key_not_found_status("revoke_api_key"))?;
         // Caller tenant from the VALIDATED claim, not the spoofable body context.
         let caller_context = Self::current_claim_request_context();
         self.enforce_caller_tenant(caller_context.as_ref(), &existing.tenant_id)?;
@@ -801,9 +884,9 @@ impl ApiKeyService for ApiKeyServiceImpl {
             .api_keys
             .revoke(&req.key_id, now)
             .await
-            .map_err(Status::internal)?;
+            .map_err(|err| Self::internal_status("revoke_api_key_store", err))?;
         if !ok {
-            return Err(Status::not_found("api key not found"));
+            return Err(Self::api_key_not_found_status("revoke_api_key"));
         }
         self.emit_event(AuthEvent::new(
             topics::API_KEY_REVOKED,
@@ -827,14 +910,20 @@ impl ApiKeyService for ApiKeyServiceImpl {
         request: Request<apikey_pb::RotateApiKeyRequest>,
     ) -> Result<Response<apikey_pb::RotateApiKeyResponse>, Status> {
         if self.hash_key().is_empty() {
-            return Err(Status::failed_precondition(
+            return Err(Self::capability_status(
+                "rotate_hashing",
+                "api_key_hash_secret",
                 "API key hashing requires UDB_SESSION_HASH_SECRET",
             ));
         }
         let req = request.into_inner();
         let key_ref = req.key_id.trim();
         if key_ref.is_empty() {
-            return Err(Status::invalid_argument("key_id is required"));
+            return Err(Self::required_field(
+                "key_id",
+                "must be a non-empty API key id",
+                "key_id is required",
+            ));
         }
         let now = now_unix();
         // Resolve the record FIRST, then enforce caller tenant against it (no
@@ -844,8 +933,8 @@ impl ApiKeyService for ApiKeyServiceImpl {
             .api_keys
             .get_by_prefix(key_ref)
             .await
-            .map_err(Status::internal)?
-            .ok_or_else(|| Status::not_found("api key not found"))?;
+            .map_err(|err| Self::internal_status("rotate_api_key_load", err))?
+            .ok_or_else(|| Self::api_key_not_found_status("rotate_api_key"))?;
         // Caller tenant from the VALIDATED claim, not the spoofable body context.
         let caller_context = Self::current_claim_request_context();
         self.enforce_caller_tenant(caller_context.as_ref(), &existing.tenant_id)?;
@@ -879,7 +968,7 @@ impl ApiKeyService for ApiKeyServiceImpl {
         self.api_keys
             .rotate(&existing.key_prefix, new_rec.clone(), now)
             .await
-            .map_err(Status::internal)?;
+            .map_err(|err| Self::internal_status("rotate_api_key_store", err))?;
         self.emit_event(AuthEvent::new(
             topics::API_KEY_ROTATED,
             new_rec.key_prefix.clone(),
@@ -912,11 +1001,6 @@ impl ApiKeyService for ApiKeyServiceImpl {
         use sqlx::Row;
 
         let req = request.into_inner();
-        let Some(pool) = self.pg_pool.as_ref() else {
-            return Err(Status::failed_precondition(
-                "emergency revoke requires a Postgres backend",
-            ));
-        };
         // At least one selector must be present so this never revokes "everything".
         let has_selector = !req.key_prefix.trim().is_empty()
             || !req.owner_id.trim().is_empty()
@@ -925,7 +1009,9 @@ impl ApiKeyService for ApiKeyServiceImpl {
             || !req.scope.trim().is_empty()
             || req.created_before.is_some();
         if !has_selector {
-            return Err(Status::invalid_argument(
+            return Err(Self::required_field(
+                "selectors",
+                "must include at least one of key_prefix, owner_id, tenant_id, project_id, scope, or created_before",
                 "at least one selector is required (prefix/owner/tenant/project/scope/created_before)",
             ));
         }
@@ -946,10 +1032,19 @@ impl ApiKeyService for ApiKeyServiceImpl {
             caller_tenant
         };
         if tenant_filter.trim().is_empty() {
-            return Err(Status::invalid_argument(
+            return Err(Self::required_field(
+                "tenant_id",
+                "must be supplied directly or by caller tenant context",
                 "emergency revoke requires tenant_id or tenant context",
             ));
         }
+        let Some(pool) = self.pg_pool.as_ref() else {
+            return Err(Self::capability_status(
+                "emergency_revoke",
+                "postgres_backend",
+                "emergency revoke requires a Postgres backend",
+            ));
+        };
         let actor = req
             .context
             .as_ref()
@@ -1029,7 +1124,12 @@ impl ApiKeyService for ApiKeyServiceImpl {
             .bind(created_before)
             .fetch_all(pool)
             .await
-            .map_err(|err| Status::internal(format!("emergency revoke select failed: {err}")))?;
+            .map_err(|err| {
+                Self::internal_status(
+                    "emergency_revoke_select",
+                    format!("emergency revoke select failed: {err}"),
+                )
+            })?;
         let prefixes: Vec<String> = rows
             .iter()
             .filter_map(|r| r.try_get::<String, _>("key_prefix").ok())
@@ -1041,7 +1141,7 @@ impl ApiKeyService for ApiKeyServiceImpl {
                 .api_keys
                 .revoke(prefix, now)
                 .await
-                .map_err(Status::internal)?
+                .map_err(|err| Self::internal_status("emergency_revoke_store", err))?
             {
                 revoked.push(prefix.clone());
             }
@@ -1110,7 +1210,7 @@ impl ApiKeyService for ApiKeyServiceImpl {
             now,
         )
         .await
-        .map_err(Status::internal)?
+        .map_err(|err| Self::internal_status("validate_api_key_store", err))?
         else {
             // Validation failed (no matching/active key): emit the security
             // event so a bad/expired/revoked key attempt is audited. There is no
@@ -1294,10 +1394,16 @@ impl ApiKeyService for ApiKeyServiceImpl {
         let req = request.into_inner();
         let key_ref = req.key_id.trim();
         if key_ref.is_empty() {
-            return Err(Status::invalid_argument("key_id is required"));
+            return Err(Self::required_field(
+                "key_id",
+                "must be a non-empty API key id",
+                "key_id is required",
+            ));
         }
         let Some(pool) = self.pg_pool.as_ref() else {
-            return Err(Status::failed_precondition(
+            return Err(Self::capability_status(
+                "usage_stats",
+                "postgres_backend",
                 "api-key usage stats require a Postgres backend",
             ));
         };
@@ -1361,7 +1467,12 @@ impl ApiKeyService for ApiKeyServiceImpl {
             .bind(to_secs)
             .fetch_all(pool)
             .await
-            .map_err(|err| Status::internal(format!("usage stats query failed: {err}")))?;
+            .map_err(|err| {
+                Self::internal_status(
+                    "usage_stats_query",
+                    format!("usage stats query failed: {err}"),
+                )
+            })?;
 
         // Fold (day, status) rows into one ApiKeyDailyStat per day.
         struct DayAgg {
@@ -1422,7 +1533,7 @@ mod tests {
     /// The descriptor's `OUTPUT_VIEW_STORAGE_ONLY` field set for a proto message.
     fn storage_only_field_names(message_full_name: &str) -> BTreeSet<String> {
         const OUTPUT_VIEW_STORAGE_ONLY: i32 = 1;
-        let manifest = crate::runtime::descriptor_manifest::descriptor_contract_manifest();
+        let manifest = crate::runtime::descriptor_manifest::descriptor_contract_manifest_static();
         let message = manifest
             .messages
             .iter()
@@ -1510,9 +1621,12 @@ mod tests {
     use crate::proto::udb::core::apikey::services::v1::api_key_service_server::ApiKeyService;
     use crate::proto::udb::core::common::v1 as common_pb;
     use crate::proto::udb::core::common::v1::{RequestContext, TenantContext};
+    use crate::proto::{ErrorDetail, ErrorKind};
     use crate::runtime::authn::{ApiKeyStore, AuthnConfig};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
     use std::sync::Arc;
-    use tonic::{Code, Request};
+    use tonic::{Code, Request, Status};
 
     #[derive(Clone, Default)]
     struct MemoryApiKeyStore {
@@ -1580,6 +1694,13 @@ mod tests {
         )
     }
 
+    fn config_with_api_key_hash_secret() -> AuthnConfig {
+        AuthnConfig {
+            api_key_hash_secret: "test-hash-secret".to_string(),
+            ..Default::default()
+        }
+    }
+
     fn api_key_rec(prefix: &str, owner: &str, tenant: &str) -> ApiKeyRecord {
         ApiKeyRecord {
             key_prefix: prefix.to_string(),
@@ -1590,6 +1711,306 @@ mod tests {
             created_at_unix: 1,
             ..Default::default()
         }
+    }
+
+    fn decode_detail(status: &Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_validation_field(status: &Status, field: &str, description: &str) {
+        assert_eq!(status.code(), Code::InvalidArgument);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, field);
+        assert_eq!(detail.field_violations[0].description, description);
+    }
+
+    fn assert_capability_detail(
+        status: &Status,
+        operation: &str,
+        capability_required: &str,
+        message: &str,
+    ) {
+        assert_eq!(status.code(), Code::FailedPrecondition);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Capability as i32);
+        assert_eq!(detail.backend, "api_key");
+        assert_eq!(detail.operation, operation);
+        assert_eq!(detail.capability_required, capability_required);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    fn assert_schema_detail(status: &Status, operation: &str, schema_code: &str, message: &str) {
+        assert_eq!(status.code(), Code::NotFound);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Schema as i32);
+        assert_eq!(detail.backend, "api_key");
+        assert_eq!(detail.operation, operation);
+        assert_eq!(detail.capability_required, schema_code);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    fn assert_policy_detail(
+        status: &Status,
+        operation: &str,
+        policy_decision_id: &str,
+        message: &str,
+    ) {
+        assert_eq!(status.code(), Code::PermissionDenied);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Policy as i32);
+        assert_eq!(detail.operation, operation);
+        assert_eq!(detail.policy_decision_id, policy_decision_id);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    fn assert_internal_detail(status: &Status, operation: &str, message: &str) {
+        assert_eq!(status.code(), Code::Internal);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "api_key");
+        assert_eq!(detail.operation, operation);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    #[test]
+    fn api_key_internal_status_carries_typed_detail() {
+        let status = ApiKeyServiceImpl::internal_status(
+            "validate_api_key_store",
+            "validate API key failed: store closed",
+        );
+        assert_internal_detail(
+            &status,
+            "validate_api_key_store",
+            "validate API key failed: store closed",
+        );
+    }
+
+    #[tokio::test]
+    async fn create_api_key_missing_hash_secret_carries_capability_detail() {
+        let svc = ApiKeyServiceImpl::with_store(
+            AuthnConfig::default(),
+            Arc::new(MemoryApiKeyStore::default()),
+        );
+
+        let err = svc
+            .create_api_key(Request::new(apikey_pb::CreateApiKeyRequest {
+                owner_id: "owner-1".to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect_err("missing API-key hash secret must fail before persistence");
+
+        assert_capability_detail(
+            &err,
+            "create_hashing",
+            "api_key_hash_secret",
+            "API key hashing requires UDB_SESSION_HASH_SECRET",
+        );
+    }
+
+    #[tokio::test]
+    async fn rotate_api_key_missing_hash_secret_carries_capability_detail() {
+        let svc = svc_with_records(Vec::new());
+
+        let err = svc
+            .rotate_api_key(Request::new(apikey_pb::RotateApiKeyRequest {
+                key_id: "key-1".to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect_err("missing API-key hash secret must fail before key lookup");
+
+        assert_capability_detail(
+            &err,
+            "rotate_hashing",
+            "api_key_hash_secret",
+            "API key hashing requires UDB_SESSION_HASH_SECRET",
+        );
+    }
+
+    #[tokio::test]
+    async fn emergency_revoke_missing_postgres_carries_capability_detail() {
+        let svc = svc();
+        let claim = crate::runtime::service::method_security::test_claim_context(
+            "admin-1",
+            "acme",
+            "",
+            &["auth:admin"],
+            &["admin"],
+        );
+
+        let err =
+            crate::runtime::service::method_security::scope_claim_context_for_test(claim, async {
+                svc.emergency_revoke_api_keys(Request::new(
+                    apikey_pb::EmergencyRevokeApiKeysRequest {
+                        owner_id: "owner-1".to_string(),
+                        ..Default::default()
+                    },
+                ))
+                .await
+            })
+            .await
+            .expect_err("missing Postgres backend must fail after selector/tenant validation");
+
+        assert_capability_detail(
+            &err,
+            "emergency_revoke",
+            "postgres_backend",
+            "emergency revoke requires a Postgres backend",
+        );
+    }
+
+    #[tokio::test]
+    async fn get_api_key_usage_stats_missing_postgres_carries_capability_detail() {
+        let svc = svc();
+
+        let err = svc
+            .get_api_key_usage_stats(Request::new(apikey_pb::GetApiKeyUsageStatsRequest {
+                key_id: "key-1".to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect_err("missing Postgres backend must fail after key_id validation");
+
+        assert_capability_detail(
+            &err,
+            "usage_stats",
+            "postgres_backend",
+            "api-key usage stats require a Postgres backend",
+        );
+    }
+
+    #[tokio::test]
+    async fn create_api_key_missing_owner_id_carries_field_violation() {
+        let svc = ApiKeyServiceImpl::with_store(
+            config_with_api_key_hash_secret(),
+            Arc::new(MemoryApiKeyStore::default()),
+        );
+
+        let err = svc
+            .create_api_key(Request::new(apikey_pb::CreateApiKeyRequest {
+                owner_id: " ".to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect_err("missing owner_id must fail");
+
+        assert_eq!(err.message(), "owner_id is required");
+        assert_validation_field(&err, "owner_id", "must be a non-empty API key owner id");
+    }
+
+    #[tokio::test]
+    async fn list_api_keys_missing_owner_id_carries_field_violation() {
+        let svc = svc_with_records(Vec::new());
+
+        let err = svc
+            .list_api_keys(Request::new(apikey_pb::ListApiKeysRequest {
+                owner_id: " ".to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect_err("missing owner_id must fail");
+
+        assert_eq!(err.message(), "owner_id is required");
+        assert_validation_field(&err, "owner_id", "must be a non-empty API key owner id");
+    }
+
+    #[tokio::test]
+    async fn rotate_api_key_missing_key_id_carries_field_violation() {
+        let svc = ApiKeyServiceImpl::with_store(
+            config_with_api_key_hash_secret(),
+            Arc::new(MemoryApiKeyStore::default()),
+        );
+
+        let err = svc
+            .rotate_api_key(Request::new(apikey_pb::RotateApiKeyRequest {
+                key_id: " ".to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect_err("missing key_id must fail");
+
+        assert_eq!(err.message(), "key_id is required");
+        assert_validation_field(&err, "key_id", "must be a non-empty API key id");
+    }
+
+    #[tokio::test]
+    async fn get_api_key_usage_stats_missing_key_id_carries_field_violation() {
+        let svc = svc();
+
+        let err = svc
+            .get_api_key_usage_stats(Request::new(apikey_pb::GetApiKeyUsageStatsRequest {
+                key_id: " ".to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect_err("missing key_id must fail before Postgres availability");
+
+        assert_eq!(err.message(), "key_id is required");
+        assert_validation_field(&err, "key_id", "must be a non-empty API key id");
+    }
+
+    #[tokio::test]
+    async fn emergency_revoke_missing_selector_carries_field_violation() {
+        let svc = svc();
+
+        let err = svc
+            .emergency_revoke_api_keys(Request::new(
+                apikey_pb::EmergencyRevokeApiKeysRequest::default(),
+            ))
+            .await
+            .expect_err("selectorless emergency revoke must fail before Postgres availability");
+
+        assert_eq!(
+            err.message(),
+            "at least one selector is required (prefix/owner/tenant/project/scope/created_before)"
+        );
+        assert_validation_field(
+            &err,
+            "selectors",
+            "must include at least one of key_prefix, owner_id, tenant_id, project_id, scope, or created_before",
+        );
+    }
+
+    #[tokio::test]
+    async fn emergency_revoke_missing_tenant_context_carries_field_violation() {
+        let svc = svc();
+
+        let err = svc
+            .emergency_revoke_api_keys(Request::new(apikey_pb::EmergencyRevokeApiKeysRequest {
+                owner_id: "owner-1".to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect_err("tenantless emergency revoke must fail before Postgres availability");
+
+        assert_eq!(
+            err.message(),
+            "emergency revoke requires tenant_id or tenant context"
+        );
+        assert_validation_field(
+            &err,
+            "tenant_id",
+            "must be supplied directly or by caller tenant context",
+        );
     }
 
     #[tokio::test]
@@ -1614,7 +2035,12 @@ mod tests {
         )
         .await
         .expect_err("cross-tenant GetApiKey must be denied");
-        assert_eq!(err.code(), Code::PermissionDenied);
+        assert_policy_detail(
+            &err,
+            "api_key_tenant_scope",
+            "caller_tenant_mismatch",
+            "api key belongs to a different tenant",
+        );
 
         let acme_claim = crate::runtime::service::method_security::test_claim_context(
             "user-1",
@@ -1652,7 +2078,12 @@ mod tests {
             .await
             .expect_err("missing API key must not be masked as OK+null");
 
-        assert_eq!(err.code(), Code::NotFound);
+        assert_schema_detail(
+            &err,
+            "get_api_key",
+            "api_key_not_found",
+            "api key not found",
+        );
     }
 
     #[tokio::test]
@@ -1737,17 +2168,64 @@ mod tests {
     fn enforce_caller_tenant_denies_empty_caller_for_tenant_scoped_key() {
         let svc = svc();
         // No context at all.
-        assert!(svc.enforce_caller_tenant(None, "acme").is_err());
+        let err = svc
+            .enforce_caller_tenant(None, "acme")
+            .expect_err("tenant-scoped key requires caller context");
+        assert_policy_detail(
+            &err,
+            "api_key_tenant_scope",
+            "caller_tenant_context_required",
+            "api key is tenant-scoped; caller tenant context is required",
+        );
         // Context present but no tenant set.
-        assert!(
-            svc.enforce_caller_tenant(Some(&ctx("", &[])), "acme")
-                .is_err()
+        let err = svc
+            .enforce_caller_tenant(Some(&ctx("", &[])), "acme")
+            .expect_err("empty caller tenant must be denied");
+        assert_policy_detail(
+            &err,
+            "api_key_tenant_scope",
+            "caller_tenant_context_required",
+            "api key is tenant-scoped; caller tenant context is required",
         );
         // Context with a tenant that does not match.
-        assert!(
-            svc.enforce_caller_tenant(Some(&ctx("other", &[])), "acme")
-                .is_err()
+        let err = svc
+            .enforce_caller_tenant(Some(&ctx("other", &[])), "acme")
+            .expect_err("cross-tenant caller must be denied");
+        assert_policy_detail(
+            &err,
+            "api_key_tenant_scope",
+            "caller_tenant_mismatch",
+            "api key belongs to a different tenant",
         );
+    }
+
+    #[test]
+    fn read_tenant_filter_requires_tenant_scope_with_policy_detail() {
+        let err = ApiKeyServiceImpl::read_tenant_filter(Some(&ctx("", &[])))
+            .expect_err("tenantless non-admin reads must be denied");
+        assert_policy_detail(
+            &err,
+            "api_key_read_scope",
+            "tenant_scoped_bearer_required",
+            "api key read requires a tenant-scoped bearer token or a cross-tenant admin role",
+        );
+    }
+
+    #[test]
+    fn api_key_not_found_statuses_carry_schema_detail() {
+        for operation in [
+            "get_api_key",
+            "update_api_key",
+            "revoke_api_key",
+            "rotate_api_key",
+        ] {
+            assert_schema_detail(
+                &ApiKeyServiceImpl::api_key_not_found_status(operation),
+                operation,
+                "api_key_not_found",
+                "api key not found",
+            );
+        }
     }
 
     // Same-tenant caller is allowed; a global (empty-tenant) key is accepted from

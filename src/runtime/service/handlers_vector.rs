@@ -1,6 +1,15 @@
 //! service.rs split — vector RPC handlers (Phase G).
 use super::*;
 
+fn vector_hybrid_search_unsupported_status() -> Status {
+    crate::runtime::executor_utils::capability_status(
+        "qdrant",
+        "VectorHybridSearch",
+        "hybrid_search",
+        "backend qdrant does not support hybrid_search",
+    )
+}
+
 impl DataBrokerService {
     pub(crate) async fn vector_search_inner(
         &self,
@@ -71,9 +80,7 @@ impl DataBrokerService {
                 return self.record_grpc(
                     "VectorHybridSearch",
                     started,
-                    Err(Status::failed_precondition(
-                        "backend qdrant does not support hybrid_search",
-                    )),
+                    Err(vector_hybrid_search_unsupported_status()),
                 );
             }
         }
@@ -213,5 +220,38 @@ impl DataBrokerService {
                 &response_context,
             )),
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
+
+    fn decode_detail(status: &Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    #[test]
+    fn vector_hybrid_search_unsupported_carries_capability_detail() {
+        let err = vector_hybrid_search_unsupported_status();
+        assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+        assert_eq!(
+            err.message(),
+            "backend qdrant does not support hybrid_search"
+        );
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::Capability as i32);
+        assert_eq!(detail.backend, "qdrant");
+        assert_eq!(detail.operation, "VectorHybridSearch");
+        assert_eq!(detail.capability_required, "hybrid_search");
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
     }
 }

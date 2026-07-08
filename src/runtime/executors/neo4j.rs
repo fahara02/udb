@@ -34,7 +34,7 @@ use reqwest::Client;
 use serde_json::{Value as Json, json};
 
 use crate::backend::BackendKind;
-use crate::runtime::executor_utils::build_probe;
+use crate::runtime::executor_utils::{build_probe, capability_status, invalid_argument_fields};
 use crate::runtime::executors::{
     BackendExecutor, BackendHealth, BackendProbe, MutationExecutor, ObjectExecutor, QueryExecutor,
     ResourceAdminExecutor, SearchExecutor,
@@ -66,10 +66,57 @@ fn validate_neo4j_identifier(id: &str) -> Result<(), String> {
     Ok(())
 }
 
+fn neo4j_invalid_field_status(
+    field: impl Into<String>,
+    description: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    invalid_argument_fields(message, [(field.into(), description.into())])
+}
+
+fn invalid_neo4j_request_json_status(err: serde_json::Error) -> tonic::Status {
+    neo4j_invalid_field_status(
+        "request_json",
+        "must be valid JSON for Neo4j generic dispatch",
+        format!("invalid request json: {err}"),
+    )
+}
+
+fn neo4j_required_field_status(field: &str) -> tonic::Status {
+    neo4j_invalid_field_status(
+        field.to_string(),
+        format!("{field} is required for this Neo4j operation"),
+        format!("missing required field '{field}'"),
+    )
+}
+
+fn unsupported_neo4j_operation_status(operation: &str) -> tonic::Status {
+    neo4j_invalid_field_status(
+        "operation",
+        "unsupported Neo4j mutation operation",
+        format!("unsupported Neo4j mutation operation '{operation}'"),
+    )
+}
+
+fn neo4j_identifier_status(field: impl Into<String>, message: impl Into<String>) -> tonic::Status {
+    neo4j_invalid_field_status(field, "must be a valid Neo4j identifier", message)
+}
+
+fn neo4j_internal_status(
+    operation: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    crate::runtime::executor_utils::internal_status("neo4j", operation, message)
+}
+
+fn encode_neo4j_response(rows: &[Json], operation: &'static str) -> Result<String, tonic::Status> {
+    serde_json::to_string(rows).map_err(|err| neo4j_internal_status(operation, err.to_string()))
+}
+
 // ── Configuration ─────────────────────────────────────────────────────────────
 
 /// Connection configuration for Neo4j HTTP Transactional API.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Neo4jConfig {
     /// HTTP(S) base URL to the Neo4j HTTP API root.
     /// e.g. `http://localhost:7474` or `https://xxxxx.databases.neo4j.io`
@@ -86,6 +133,21 @@ pub struct Neo4jConfig {
     pub dev_mode: bool,
     /// Request timeout in seconds.
     pub timeout_secs: u64,
+}
+
+// 4.6 secrets posture: redact `password` in Debug (host/user/db are non-secret).
+impl std::fmt::Debug for Neo4jConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Neo4jConfig")
+            .field("http_base", &self.http_base)
+            .field("username", &self.username)
+            .field("password", &"[redacted]")
+            .field("database", &self.database)
+            .field("is_cloud", &self.is_cloud)
+            .field("dev_mode", &self.dev_mode)
+            .field("timeout_secs", &self.timeout_secs)
+            .finish()
+    }
 }
 
 impl Neo4jConfig {
@@ -466,44 +528,42 @@ impl QueryExecutor for Neo4jExecutor {
     /// `{"cypher":"MATCH ...","parameters":{...}}` or
     /// `{"label":"L","filter":{...},"limit":N}`.
     async fn query(&self, request_json: &str) -> Result<String, tonic::Status> {
-        let spec: Json = serde_json::from_str(request_json)
-            .map_err(|e| tonic::Status::invalid_argument(format!("invalid request json: {e}")))?;
+        let spec: Json =
+            serde_json::from_str(request_json).map_err(invalid_neo4j_request_json_status)?;
         let rows = if let Some(cypher) = spec.get("cypher").and_then(Json::as_str) {
             let params = spec.get("parameters").cloned().unwrap_or_else(|| json!({}));
-            self.cypher(&[(cypher, params)])
+            self.run_single(cypher, params)
                 .await
-                .map_err(tonic::Status::internal)?
+                .map_err(|err| neo4j_internal_status("query_cypher", err))?
         } else {
             let label = spec
                 .get("label")
                 .and_then(Json::as_str)
-                .ok_or_else(|| tonic::Status::invalid_argument("missing required field 'label'"))?;
+                .ok_or_else(|| neo4j_required_field_status("label"))?;
             let filter = spec.get("filter").cloned().unwrap_or_else(|| json!({}));
             let limit = spec.get("limit").and_then(Json::as_i64).unwrap_or(100);
             self.find_nodes(label, filter, limit)
                 .await
-                .map_err(tonic::Status::internal)?
+                .map_err(|err| neo4j_internal_status("find_nodes", err))?
         };
-        serde_json::to_string(&rows).map_err(|e| tonic::Status::internal(e.to_string()))
+        encode_neo4j_response(&rows, "query_response_encode")
     }
 }
 
 impl MutationExecutor for Neo4jExecutor {
     /// `{"operation":"cypher|create_node|upsert_node|update_node|delete_node|create_relationship|upsert_relationship", ...}`.
     async fn mutate(&self, request_json: &str) -> Result<String, tonic::Status> {
-        let spec: Json = serde_json::from_str(request_json)
-            .map_err(|e| tonic::Status::invalid_argument(format!("invalid request json: {e}")))?;
+        let spec: Json =
+            serde_json::from_str(request_json).map_err(invalid_neo4j_request_json_status)?;
         let operation = spec
             .get("operation")
             .and_then(Json::as_str)
-            .ok_or_else(|| tonic::Status::invalid_argument("missing required field 'operation'"))?;
+            .ok_or_else(|| neo4j_required_field_status("operation"))?;
         let req_str = |key: &str| -> Result<String, tonic::Status> {
             spec.get(key)
                 .and_then(Json::as_str)
                 .map(|s| s.to_string())
-                .ok_or_else(|| {
-                    tonic::Status::invalid_argument(format!("missing required field '{key}'"))
-                })
+                .ok_or_else(|| neo4j_required_field_status(key))
         };
         match operation {
             "cypher" => {
@@ -512,8 +572,8 @@ impl MutationExecutor for Neo4jExecutor {
                 let rows = self
                     .cypher(&[(&cypher, params)])
                     .await
-                    .map_err(tonic::Status::internal)?;
-                serde_json::to_string(&rows).map_err(|e| tonic::Status::internal(e.to_string()))
+                    .map_err(|err| neo4j_internal_status("mutate_cypher", err))?;
+                encode_neo4j_response(&rows, "mutate_response_encode")
             }
             "create_node" | "upsert_node" => {
                 let label = req_str("label")?;
@@ -525,7 +585,7 @@ impl MutationExecutor for Neo4jExecutor {
                     .unwrap_or_else(|| json!({}));
                 self.create_node(&label, &id, properties)
                     .await
-                    .map_err(tonic::Status::internal)?;
+                    .map_err(|err| neo4j_internal_status("create_node", err))?;
                 Ok(r#"{"affected_rows":1}"#.to_string())
             }
             "update_node" => {
@@ -534,7 +594,7 @@ impl MutationExecutor for Neo4jExecutor {
                 let properties = spec.get("properties").cloned().unwrap_or_else(|| json!({}));
                 self.update_node(&label, &id, properties)
                     .await
-                    .map_err(tonic::Status::internal)?;
+                    .map_err(|err| neo4j_internal_status("update_node", err))?;
                 Ok(r#"{"affected_rows":1}"#.to_string())
             }
             "delete_node" => {
@@ -542,7 +602,7 @@ impl MutationExecutor for Neo4jExecutor {
                 let id = req_str("id")?;
                 self.delete_node(&label, &id)
                     .await
-                    .map_err(tonic::Status::internal)?;
+                    .map_err(|err| neo4j_internal_status("delete_node", err))?;
                 Ok(r#"{"affected_rows":1}"#.to_string())
             }
             "create_relationship" | "upsert_relationship" => {
@@ -561,19 +621,20 @@ impl MutationExecutor for Neo4jExecutor {
                     properties,
                 )
                 .await
-                .map_err(tonic::Status::internal)?;
+                .map_err(|err| neo4j_internal_status("create_relationship", err))?;
                 Ok(r#"{"affected_rows":1}"#.to_string())
             }
-            other => Err(tonic::Status::invalid_argument(format!(
-                "unsupported Neo4j mutation operation '{other}'"
-            ))),
+            other => Err(unsupported_neo4j_operation_status(other)),
         }
     }
 }
 
 impl SearchExecutor for Neo4jExecutor {
     async fn search(&self, _request_json: &str) -> Result<String, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "neo4j",
+            "search",
+            "vector_search",
             "neo4j does not support generic vector search dispatch",
         ))
     }
@@ -581,7 +642,10 @@ impl SearchExecutor for Neo4jExecutor {
 
 impl ObjectExecutor for Neo4jExecutor {
     async fn get_object(&self, _request_json: &str) -> Result<Vec<u8>, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "neo4j",
+            "get_object",
+            "object_store",
             "neo4j is not an object store",
         ))
     }
@@ -590,7 +654,10 @@ impl ObjectExecutor for Neo4jExecutor {
         _request_json: &str,
         _bytes: Vec<u8>,
     ) -> Result<String, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "neo4j",
+            "put_object",
+            "object_store",
             "neo4j is not an object store",
         ))
     }
@@ -602,13 +669,15 @@ impl ResourceAdminExecutor for Neo4jExecutor {
         resource_name: &str,
         spec_json: &str,
     ) -> Result<(), tonic::Status> {
-        validate_neo4j_identifier(resource_name).map_err(tonic::Status::internal)?;
+        validate_neo4j_identifier(resource_name)
+            .map_err(|err| neo4j_identifier_status("resource_name", err))?;
         let spec: Json = serde_json::from_str(spec_json).unwrap_or(json!({}));
         let prop = spec
             .get("constraint_property")
             .and_then(|v| v.as_str())
             .unwrap_or("id");
-        validate_neo4j_identifier(prop).map_err(tonic::Status::internal)?;
+        validate_neo4j_identifier(prop)
+            .map_err(|err| neo4j_identifier_status("constraint_property", err))?;
         let constraint_name = format!("udb_{resource_name}_{prop}_unique");
         let cypher = format!(
             "CREATE CONSTRAINT {constraint_name} IF NOT EXISTS \
@@ -617,21 +686,22 @@ impl ResourceAdminExecutor for Neo4jExecutor {
         self.run_single(&cypher, json!({}))
             .await
             .map(|_| ())
-            .map_err(tonic::Status::internal)
+            .map_err(|err| neo4j_internal_status("ensure_resource", err))
     }
     async fn drop_resource(&self, resource_name: &str) -> Result<(), tonic::Status> {
-        validate_neo4j_identifier(resource_name).map_err(tonic::Status::internal)?;
+        validate_neo4j_identifier(resource_name)
+            .map_err(|err| neo4j_identifier_status("resource_name", err))?;
         let cypher = format!("DROP CONSTRAINT udb_{resource_name}_id_unique IF EXISTS");
         self.run_single(&cypher, json!({}))
             .await
             .map(|_| ())
-            .map_err(tonic::Status::internal)
+            .map_err(|err| neo4j_internal_status("drop_resource", err))
     }
     async fn list_resources(&self) -> Result<Vec<String>, tonic::Status> {
         let rows = self
             .run_single("SHOW CONSTRAINTS WHERE name STARTS WITH 'udb_'", json!({}))
             .await
-            .map_err(tonic::Status::internal)?;
+            .map_err(|err| neo4j_internal_status("list_resources", err))?;
         let names = rows
             .iter()
             .filter_map(|r| r.get("name").and_then(|v| v.as_str()))
@@ -643,7 +713,10 @@ impl ResourceAdminExecutor for Neo4jExecutor {
 
 impl BackendExecutor for Neo4jExecutor {
     async fn transaction(&self, _request_json: &str) -> Result<String, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "neo4j",
+            "transaction",
+            "transactions",
             "neo4j transactions are not exposed via generic dispatch",
         ))
     }
@@ -660,6 +733,57 @@ impl BackendExecutor for Neo4jExecutor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
+
+    fn test_executor() -> Neo4jExecutor {
+        Neo4jExecutor::new(Neo4jConfig {
+            http_base: "http://localhost:7474".to_string(),
+            username: "neo4j".to_string(),
+            password: "secret".to_string(),
+            database: "neo4j".to_string(),
+            is_cloud: false,
+            dev_mode: true,
+            timeout_secs: 30,
+        })
+    }
+
+    fn decode_detail(status: &tonic::Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_single_field(status: &tonic::Status, field: &str) {
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, field);
+    }
+
+    fn assert_internal_detail(status: &tonic::Status, operation: &str, message: &str) {
+        assert_eq!(status.code(), tonic::Code::Internal);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "neo4j");
+        assert_eq!(detail.operation, operation);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    #[test]
+    fn neo4j_internal_status_carries_typed_detail() {
+        let status = neo4j_internal_status("find_nodes", "Neo4j HTTP request failed: closed");
+        assert_internal_detail(&status, "find_nodes", "Neo4j HTTP request failed: closed");
+
+        let status = neo4j_internal_status("ensure_resource", "Neo4j returned errors");
+        assert_internal_detail(&status, "ensure_resource", "Neo4j returned errors");
+    }
 
     #[test]
     fn neo4j_executor_kind_and_name() {
@@ -678,16 +802,87 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn neo4j_query_validation_carries_field_violations() {
+        let exec = test_executor();
+
+        let invalid_json = QueryExecutor::query(&exec, "not json").await.unwrap_err();
+        assert_eq!(invalid_json.code(), tonic::Code::InvalidArgument);
+        assert!(invalid_json.message().starts_with("invalid request json:"));
+        assert_single_field(&invalid_json, "request_json");
+
+        let missing_label = QueryExecutor::query(&exec, "{}").await.unwrap_err();
+        assert_eq!(missing_label.message(), "missing required field 'label'");
+        assert_single_field(&missing_label, "label");
+    }
+
+    #[tokio::test]
+    async fn neo4j_mutation_validation_carries_field_violations() {
+        let exec = test_executor();
+
+        let invalid_json = MutationExecutor::mutate(&exec, "not json")
+            .await
+            .unwrap_err();
+        assert_eq!(invalid_json.code(), tonic::Code::InvalidArgument);
+        assert!(invalid_json.message().starts_with("invalid request json:"));
+        assert_single_field(&invalid_json, "request_json");
+
+        let missing_operation = MutationExecutor::mutate(&exec, "{}").await.unwrap_err();
+        assert_eq!(
+            missing_operation.message(),
+            "missing required field 'operation'"
+        );
+        assert_single_field(&missing_operation, "operation");
+
+        let missing_cypher = MutationExecutor::mutate(&exec, r#"{"operation":"cypher"}"#)
+            .await
+            .unwrap_err();
+        assert_eq!(missing_cypher.message(), "missing required field 'cypher'");
+        assert_single_field(&missing_cypher, "cypher");
+
+        let unsupported = MutationExecutor::mutate(&exec, r#"{"operation":"bogus"}"#)
+            .await
+            .unwrap_err();
+        assert_eq!(
+            unsupported.message(),
+            "unsupported Neo4j mutation operation 'bogus'"
+        );
+        assert_single_field(&unsupported, "operation");
+    }
+
+    #[tokio::test]
+    async fn neo4j_resource_identifier_validation_carries_field_violations() {
+        let exec = test_executor();
+
+        let invalid_resource = ResourceAdminExecutor::ensure_resource(
+            &exec,
+            "bad-name",
+            r#"{"constraint_property":"id"}"#,
+        )
+        .await
+        .unwrap_err();
+        assert_eq!(
+            invalid_resource.message(),
+            "Neo4j identifier 'bad-name' contains invalid characters; only ASCII letters, digits, and underscores are allowed"
+        );
+        assert_single_field(&invalid_resource, "resource_name");
+
+        let invalid_property = ResourceAdminExecutor::ensure_resource(
+            &exec,
+            "GoodLabel",
+            r#"{"constraint_property":"1bad"}"#,
+        )
+        .await
+        .unwrap_err();
+        assert_eq!(
+            invalid_property.message(),
+            "Neo4j identifier '1bad' must start with a letter or underscore"
+        );
+        assert_single_field(&invalid_property, "constraint_property");
+    }
+
+    #[tokio::test]
     async fn neo4j_backend_executor_rejects_unsupported_and_malformed() {
-        let exec = Neo4jExecutor::new(Neo4jConfig {
-            http_base: "http://localhost:7474".to_string(),
-            username: "neo4j".to_string(),
-            password: "secret".to_string(),
-            database: "neo4j".to_string(),
-            is_cloud: false,
-            dev_mode: true,
-            timeout_secs: 30,
-        });
+        let exec = test_executor();
         assert!(SearchExecutor::search(&exec, "{}").await.is_err());
         assert!(ObjectExecutor::get_object(&exec, "{}").await.is_err());
         assert!(BackendExecutor::transaction(&exec, "{}").await.is_err());

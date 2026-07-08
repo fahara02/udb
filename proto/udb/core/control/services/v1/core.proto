@@ -163,3 +163,33 @@ message AckStatusResponse {
   // True iff the node's last response was rejected (NACK) and not yet recovered.
   bool nacked = 4;
 }
+
+// ============================================================
+// Rollback to a retained served snapshot.
+// ============================================================
+
+// Roll a (node, resource_type) back to a retained prior snapshot. The named
+// node's bounded `served_snapshots` ring supplies the target payloads; the
+// server re-publishes them through the SAME content-addressed registry the push
+// path serves from, so every subscribing node converges back onto the retained
+// version. Fails closed (FAILED_PRECONDITION) when no matching snapshot is
+// retained — a rollback never silently no-ops.
+message RollbackResourcesRequest {
+  // The node whose retained served snapshots provide the rollback target set.
+  string node_id = 1;
+  udb.core.control.entity.v1.ResourceType resource_type = 2;
+  // Optional explicit retained version to roll back to. Empty == the most recent
+  // retained snapshot whose version differs from the current world (prior good).
+  string target_version = 3;
+  udb.core.common.v1.RequestContext context = 4;
+}
+
+message RollbackResourcesResponse {
+  // The retained version the resources were rolled back to (re-published).
+  string rolled_back_to_version = 1;
+  // The aggregate world version after re-publishing (content-addressed, so it
+  // equals `rolled_back_to_version` once the retained payloads are restored).
+  string current_version = 2;
+  // Number of resources re-published from the retained snapshot.
+  int32 resources_restored = 3;
+}

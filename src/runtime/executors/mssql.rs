@@ -43,7 +43,7 @@ use crate::runtime::backend_context::{
 };
 use crate::runtime::core::{validate_mutation_sql, validate_read_sql};
 use crate::runtime::executor_utils::{
-    base64_cell, build_probe, parse_sql_dispatch, with_executor_timeout,
+    base64_cell, build_probe, capability_status, parse_sql_dispatch, with_executor_timeout,
 };
 use crate::runtime::executors::{
     BackendExecutor, BackendHealth, BackendProbe, MutationExecutor, ObjectExecutor, QueryExecutor,
@@ -498,6 +498,22 @@ pub(crate) fn bind_refs<'a>(params: &'a [SqlParam]) -> Vec<&'a dyn tiberius::ToS
         .collect()
 }
 
+fn mssql_internal_status(
+    operation: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    crate::runtime::executor_utils::internal_status("mssql", operation, message)
+}
+
+fn encode_mssql_response(
+    operation: &'static str,
+    value: &JsonValue,
+) -> Result<String, tonic::Status> {
+    serde_json::to_string(value).map_err(|e| {
+        mssql_internal_status(operation, format!("mssql response serialise failed: {e}"))
+    })
+}
+
 impl QueryExecutor for MssqlExecutor {
     async fn query(&self, request_json: &str) -> Result<String, tonic::Status> {
         with_executor_timeout("SQL Server", "query", async {
@@ -519,11 +535,9 @@ impl QueryExecutor for MssqlExecutor {
                     Ok::<_, tiberius::error::Error>(rows)
                 })
                 .await
-                .map_err(|e| tonic::Status::internal(format!("mssql query failed: {e}")))?;
+                .map_err(|e| mssql_internal_status("query", format!("mssql query failed: {e}")))?;
             let json: Vec<JsonValue> = rows.iter().map(row_to_json).collect();
-            serde_json::to_string(&JsonValue::Array(json)).map_err(|e| {
-                tonic::Status::internal(format!("mssql response serialise failed: {e}"))
-            })
+            encode_mssql_response("query_response_encode", &JsonValue::Array(json))
         })
         .await
     }
@@ -547,7 +561,9 @@ impl MutationExecutor for MssqlExecutor {
                     Ok::<_, tiberius::error::Error>(result.rows_affected().iter().sum::<u64>())
                 })
                 .await
-                .map_err(|e| tonic::Status::internal(format!("mssql mutate failed: {e}")))?;
+                .map_err(|e| {
+                    mssql_internal_status("mutate", format!("mssql mutate failed: {e}"))
+                })?;
             Ok(serde_json::json!({ "rows_affected": result }).to_string())
         })
         .await
@@ -564,7 +580,10 @@ impl SearchExecutor for MssqlExecutor {
 
 impl ObjectExecutor for MssqlExecutor {
     async fn get_object(&self, _request_json: &str) -> Result<Vec<u8>, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "mssql",
+            "get_object",
+            "object_store",
             "UDB_UNSUPPORTED_OPERATION: SQL Server is not an object store; route to S3/MinIO",
         ))
     }
@@ -573,7 +592,10 @@ impl ObjectExecutor for MssqlExecutor {
         _request_json: &str,
         _bytes: Vec<u8>,
     ) -> Result<String, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "mssql",
+            "put_object",
+            "object_store",
             "UDB_UNSUPPORTED_OPERATION: SQL Server is not an object store; route to S3/MinIO",
         ))
     }
@@ -607,8 +629,9 @@ impl ResourceAdminExecutor for MssqlExecutor {
             "params": []
         });
         let body = self.query(&req.to_string()).await?;
-        let parsed: JsonValue = serde_json::from_str(&body)
-            .map_err(|e| tonic::Status::internal(format!("list_resources parse: {e}")))?;
+        let parsed: JsonValue = serde_json::from_str(&body).map_err(|e| {
+            mssql_internal_status("list_resources_parse", format!("list_resources parse: {e}"))
+        })?;
         let mut out = Vec::new();
         if let JsonValue::Array(rows) = parsed {
             for row in rows {
@@ -654,7 +677,9 @@ impl BackendExecutor for MssqlExecutor {
                 }
             })
             .await
-            .map_err(|e| tonic::Status::internal(format!("mssql transaction failed: {e}")))?;
+            .map_err(|e| {
+                mssql_internal_status("transaction", format!("mssql transaction failed: {e}"))
+            })?;
         Ok(serde_json::json!({ "rows_affected": result }).to_string())
     }
 
@@ -666,7 +691,39 @@ impl BackendExecutor for MssqlExecutor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
     use serde_json::json;
+
+    fn decode_detail(status: &tonic::Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_internal_detail(status: &tonic::Status, operation: &str, message: &str) {
+        assert_eq!(status.code(), tonic::Code::Internal);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "mssql");
+        assert_eq!(detail.operation, operation);
+        assert!(!detail.retryable);
+    }
+
+    #[test]
+    fn mssql_internal_status_carries_typed_detail() {
+        let status =
+            mssql_internal_status("query_response_encode", "mssql response serialise failed");
+        assert_internal_detail(
+            &status,
+            "query_response_encode",
+            "mssql response serialise failed",
+        );
+    }
 
     #[test]
     fn parse_dispatch_extracts_sql_and_params() {
@@ -836,7 +893,7 @@ mod b5_lifecycle_capability_tests {
             .expect("error-detail trailer present")
             .to_bytes()
             .expect("trailer decodes to bytes");
-        ErrorDetail::decode(raw.as_ref()).expect("trailer decodes as ErrorDetail")
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
     }
 
     #[tokio::test]

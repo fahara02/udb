@@ -17,6 +17,15 @@ use crate::runtime::native_catalog::native_model;
 use crate::runtime::security::UDB_RS256_KID;
 use sqlx::Row;
 
+// Master-plan 3.4: the signing-key source is abstracted behind a `KeyProvider`
+// (see `key_provider.rs`). The seed path resolves its private PEM through the
+// active provider (default `EnvKeyProvider` = today's env/config path, selected
+// once by `UDB_SIGNING_KEY_PROVIDER`), so the source can become a KMS/HSM without
+// touching the seal/seed logic below. The seal-at-rest step
+// ([`DataBrokerRuntime::encrypt_secret_at_rest`]) stays *downstream* of the
+// provider — a provider supplies cleartext private material; it does not seal.
+use super::key_provider::active_key_provider;
+
 /// One published signing key (public material + kid + algorithm) for JWKS. Only
 /// ACTIVE/VERIFYING keys ever become a `RegistryKey` — the publishability gate is
 /// applied while reading the row (the `state` is consumed there), so the published
@@ -43,6 +52,10 @@ fn signing_key_model() -> crate::runtime::native_catalog::NativeModel {
             "rotation_reason",
         ],
     )
+}
+
+fn signing_key_internal_status(operation: impl Into<String>, message: impl Into<String>) -> Status {
+    crate::runtime::executor_utils::internal_status("authn", operation, message)
 }
 
 impl AuthnServiceImpl {
@@ -87,7 +100,23 @@ impl AuthnServiceImpl {
         if !matches!(existing, Ok(0)) {
             return;
         }
-        let private_plain = self.security.jwt_private_pem().unwrap_or_default();
+        // Resolve the signing private material via the active `KeyProvider`
+        // (default `EnvKeyProvider` = today's env/config path, selected once by
+        // `UDB_SIGNING_KEY_PROVIDER`). Byte-identical to the prior
+        // `self.security.jwt_private_pem().unwrap_or_default()` for the env path:
+        // `EnvKeyProvider::signing_key_pem` returns `Ok(pem)` when configured and
+        // `Ok("")` when absent/empty, so `private_plain` is exactly the PEM-or-""
+        // it was before, and the seal step below is unchanged. A provider `Err` is
+        // only reachable for a non-env/misconfigured provider (the env path is
+        // infallible); we log and skip the seed rather than writing an empty key,
+        // leaving the env-key signing path as the fallback.
+        let private_plain = match active_key_provider(&self.security).signing_key_pem() {
+            Ok(pem) => pem,
+            Err(err) => {
+                tracing::warn!(error = %err, "skipping signing-key seed: signing-key provider unavailable");
+                return;
+            }
+        };
         // Seal the private material at rest. On error (fail-closed mode with no key
         // configured) we refuse to seed rather than write the PEM in the clear.
         let private = match runtime.encrypt_secret_at_rest(&private_plain) {
@@ -191,9 +220,10 @@ impl AuthnServiceImpl {
         {
             Ok(rows) => rows,
             Err(err) => {
-                return Err(Status::internal(format!(
-                    "signing-key registry read failed: {err}"
-                )));
+                return Err(signing_key_internal_status(
+                    "jwks_registry_read",
+                    format!("signing-key registry read failed: {err}"),
+                ));
             }
         };
         Ok(rows
@@ -246,7 +276,12 @@ impl AuthnServiceImpl {
             .bind(signing_key_domain::STATE_ACTIVE)
             .fetch_optional(pool)
             .await
-            .map_err(|err| Status::internal(format!("active signing-key read failed: {err}")))?;
+            .map_err(|err| {
+                signing_key_internal_status(
+                    "active_signing_key_read",
+                    format!("active signing-key read failed: {err}"),
+                )
+            })?;
         let Some(row) = row else {
             return Ok(None);
         };
@@ -257,9 +292,12 @@ impl AuthnServiceImpl {
         if key_id.is_empty() || stored.is_empty() {
             return Ok(None);
         }
-        let pem = runtime
-            .decrypt_secret_at_rest(&stored)
-            .map_err(|err| Status::internal(format!("active signing-key decrypt failed: {err}")))?;
+        let pem = runtime.decrypt_secret_at_rest(&stored).map_err(|err| {
+            signing_key_internal_status(
+                "active_signing_key_decrypt",
+                format!("active signing-key decrypt failed: {err}"),
+            )
+        })?;
         Ok(Some((key_id, pem)))
     }
 
@@ -336,7 +374,53 @@ impl AuthnServiceImpl {
             .bind(signing_key_domain::EMERGENCY_COMPROMISE_REASON)
             .execute(executor)
             .await
-            .map_err(|err| Status::internal(format!("compromise signing key failed: {err}")))?;
+            .map_err(|err| {
+                signing_key_internal_status(
+                    "compromise_signing_key",
+                    format!("compromise signing key failed: {err}"),
+                )
+            })?;
         Ok(res.rows_affected())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
+
+    fn decode_detail(status: &Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_internal_detail(status: &Status, operation: &str, message: &str) {
+        assert_eq!(status.code(), tonic::Code::Internal);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "authn");
+        assert_eq!(detail.operation, operation);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    #[test]
+    fn signing_key_internal_status_carries_typed_detail() {
+        let status = signing_key_internal_status(
+            "active_signing_key_decrypt",
+            "active signing-key decrypt failed: missing key",
+        );
+        assert_internal_detail(
+            &status,
+            "active_signing_key_decrypt",
+            "active signing-key decrypt failed: missing key",
+        );
     }
 }

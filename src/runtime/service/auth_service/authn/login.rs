@@ -4,6 +4,68 @@
 
 use super::*;
 
+fn login_invalid_fields<I, F, D>(message: impl Into<String>, fields: I) -> Status
+where
+    I: IntoIterator<Item = (F, D)>,
+    F: Into<String>,
+    D: Into<String>,
+{
+    crate::runtime::executor_utils::invalid_argument_fields(message, fields)
+}
+
+fn oidc_feature_required_status() -> Status {
+    authn_capability_status(
+        "oidc_authentication",
+        "oidc_feature",
+        "OIDC authentication requires building UDB with the `oidc` feature",
+    )
+}
+
+fn tenant_mfa_enrollment_required_status() -> Status {
+    crate::runtime::executor_utils::policy_status(
+        "password_login",
+        "tenant_mfa_enrollment_required",
+        "MFA enrollment required by tenant policy",
+    )
+}
+
+fn login_policy_status_with_code(
+    operation: impl Into<String>,
+    policy_decision_id: impl Into<String>,
+    message: impl Into<String>,
+) -> Status {
+    crate::runtime::executor_utils::policy_status_with_code(
+        tonic::Code::PermissionDenied,
+        operation,
+        policy_decision_id,
+        message,
+    )
+}
+
+fn login_internal_status(operation: impl Into<String>, message: impl Into<String>) -> Status {
+    crate::runtime::executor_utils::internal_status("authn", operation, message)
+}
+
+fn password_login_user_active_status() -> Status {
+    login_policy_status_with_code("password_login", "user_not_active", "user is not active")
+}
+
+fn password_change_otp_verified_status() -> Status {
+    login_policy_status_with_code(
+        "change_password",
+        "password_change_otp_verified",
+        "password-change OTP is not verified",
+    )
+}
+
+fn reset_password_request_valid_status() -> Status {
+    login_policy_status_with_code(
+        "reset_password",
+        "reset_request_valid",
+        "invalid reset request",
+    )
+}
+
 impl AuthnServiceImpl {
     pub(super) async fn authenticate_impl(
         &self,
@@ -21,7 +83,7 @@ impl AuthnServiceImpl {
                 now,
             )
             .await
-            .map_err(Status::internal)?
+            .map_err(|err| login_internal_status("authenticate_api_key", err.to_string()))?
             .ok_or_else(|| Status::unauthenticated("invalid credential"))?;
             let principal = principal_from_api_key(&rec);
             return Ok(Response::new(authn_pb::AuthnResponse {
@@ -47,7 +109,7 @@ impl AuthnServiceImpl {
                 self.config.session_idle_ttl_secs,
             )
             .await
-            .map_err(Status::internal)?
+            .map_err(|err| login_internal_status("authenticate_session", err.to_string()))?
             .ok_or_else(|| Status::unauthenticated("invalid credential"))?;
             let principal = principal_from_session(&rec);
             return Ok(Response::new(authn_pb::AuthnResponse {
@@ -80,9 +142,7 @@ impl AuthnServiceImpl {
             }
             #[cfg(not(feature = "oidc"))]
             {
-                return Err(Status::failed_precondition(
-                    "OIDC authentication requires building UDB with the `oidc` feature",
-                ));
+                return Err(oidc_feature_required_status());
             }
         }
 
@@ -173,8 +233,14 @@ impl AuthnServiceImpl {
             }));
         }
 
-        Err(Status::invalid_argument(
+        Err(login_invalid_fields(
             "no credential supplied (set api_key, session_id, bearer_token, or external_provider_id+external_token)",
+            [
+                ("api_key", "must include one supported credential"),
+                ("session_id", "must include one supported credential"),
+                ("bearer_token", "must include one supported credential"),
+                ("external_token", "must include one supported credential"),
+            ],
         ))
     }
 
@@ -189,14 +255,16 @@ impl AuthnServiceImpl {
             .users
             .get_user_by_username(&login_name)
             .await
-            .map_err(Status::internal)?
+            .map_err(|err| login_internal_status("password_login_user_lookup", err.to_string()))?
         {
             Some(user) => user,
             None => self
                 .users
                 .get_user_by_email(&login_name)
                 .await
-                .map_err(Status::internal)?
+                .map_err(|err| {
+                    login_internal_status("password_login_email_lookup", err.to_string())
+                })?
                 .ok_or_else(|| Status::unauthenticated("invalid username or password"))?,
         };
         // Brute-force lockout: reject while locked, using the same opaque
@@ -231,7 +299,9 @@ impl AuthnServiceImpl {
             let event_tenant = user.tenant_id.clone();
             let event_ip = req.ip_address.clone();
             let event_ua = req.user_agent.clone();
-            self.users.put_user(user).await.map_err(Status::internal)?;
+            self.users.put_user(user).await.map_err(|err| {
+                login_internal_status("password_login_failed_attempt_update", err.to_string())
+            })?;
             // Audit the failed credential attempt (security-sensitive).
             self.emit_event(
                 AuthEvent::new(
@@ -295,8 +365,13 @@ impl AuthnServiceImpl {
         if user.status != crate::runtime::authn::AccountStatus::Active
             && user.status != crate::runtime::authn::AccountStatus::PendingVerification
         {
-            return Err(Status::permission_denied("user is not active"));
+            return Err(password_login_user_active_status());
         }
+        let prior_failed_login_count = user.failed_login_count;
+        let prior_locked_until_unix = user.locked_until_unix;
+        let prior_last_login_at_unix = user.last_login_at_unix;
+        let prior_updated_at_unix = user.updated_at_unix;
+        let prior_password_hash = user.password_hash.clone();
         user.failed_login_count = 0;
         user.locked_until_unix = 0;
         user.last_login_at_unix = now;
@@ -306,10 +381,9 @@ impl AuthnServiceImpl {
         if authn::password_hash_needs_upgrade(&user.password_hash) {
             user.password_hash = authn::hash_password(&req.password, &self.password_hash_key());
         }
-        self.users
-            .put_user(user.clone())
-            .await
-            .map_err(Status::internal)?;
+        self.users.put_user(user.clone()).await.map_err(|err| {
+            login_internal_status("password_login_success_update", err.to_string())
+        })?;
         // Tenant MFA-enforcement policy: when the tenant requires MFA, a user who
         // has not yet enrolled a second factor cannot complete a password-only
         // login — they must enrol first.
@@ -318,11 +392,11 @@ impl AuthnServiceImpl {
                 .users
                 .tenant_requires_mfa(&user.tenant_id)
                 .await
-                .map_err(Status::internal)?
+                .map_err(|err| {
+                    login_internal_status("password_login_tenant_mfa_policy", err.to_string())
+                })?
         {
-            return Err(Status::failed_precondition(
-                "MFA enrollment required by tenant policy",
-            ));
+            return Err(tenant_mfa_enrollment_required_status());
         }
         // Second factor (only when the user has MFA enrolled). The password is
         // already proven above; the factor here is additive and bound to THIS
@@ -348,7 +422,12 @@ impl AuthnServiceImpl {
                 self.users
                     .consume_recovery_code(&user.user_id, &hash, now)
                     .await
-                    .map_err(Status::internal)?
+                    .map_err(|err| {
+                        login_internal_status(
+                            "password_login_consume_recovery_code",
+                            err.to_string(),
+                        )
+                    })?
             } else if has_otp {
                 // Email/SMS one-time code: must be a LOGIN_2FA code issued to
                 // this same user (the code itself is carried in totp_code).
@@ -432,7 +511,7 @@ impl AuthnServiceImpl {
         // session record (the refresh carrier) and the issued JWT below.
         let (scopes, roles) =
             self.resolve_effective_grants(&user.user_id, &user.tenant_id, &user.project_id);
-        let (session_id, _expires) = self
+        let session_result = self
             .create_login_session(
                 &user,
                 format!("{}|{}|{}", req.device_name, req.ip_address, req.user_agent),
@@ -440,7 +519,26 @@ impl AuthnServiceImpl {
                 roles.clone(),
                 now,
             )
-            .await?;
+            .await;
+        let (session_id, _expires) = match session_result {
+            Ok(session) => session,
+            Err(err) => {
+                let mut restored = user.clone();
+                restored.failed_login_count = prior_failed_login_count;
+                restored.locked_until_unix = prior_locked_until_unix;
+                restored.last_login_at_unix = prior_last_login_at_unix;
+                restored.updated_at_unix = prior_updated_at_unix;
+                restored.password_hash = prior_password_hash;
+                if let Err(restore_err) = self.users.put_user(restored).await {
+                    tracing::warn!(
+                        user_id = %user.user_id,
+                        error = %restore_err,
+                        "failed to restore login state after session creation failure"
+                    );
+                }
+                return Err(err);
+            }
+        };
         self.metrics.record_auth_login(true);
         self.emit_event(
             AuthEvent::new(
@@ -549,13 +647,21 @@ impl AuthnServiceImpl {
         let req = request.into_inner();
         authn::PasswordPolicy::from_env()
             .validate(&req.new_password)
-            .map_err(Status::invalid_argument)?;
+            .map_err(|err| {
+                login_invalid_fields(
+                    err,
+                    [(
+                        "new_password",
+                        "must satisfy the configured password policy",
+                    )],
+                )
+            })?;
         let mut user = self
             .users
             .get_user_by_id(&req.user_id)
             .await
-            .map_err(Status::internal)?
-            .ok_or_else(|| Status::not_found("user not found"))?;
+            .map_err(|err| login_internal_status("change_password_user_load", err.to_string()))?
+            .ok_or_else(super::authn_user_not_found_status)?;
         if !authn::verify_password(
             &req.current_password,
             &self.password_hash_key(),
@@ -568,8 +674,8 @@ impl AuthnServiceImpl {
                 .users
                 .get_otp(&req.otp_id)
                 .await
-                .map_err(Status::internal)?
-                .ok_or_else(|| Status::not_found("otp not found"))?;
+                .map_err(|err| login_internal_status("change_password_otp_load", err.to_string()))?
+                .ok_or_else(super::authn_otp_not_found_status)?;
             // The OTP must belong to the user, be consumed, AND be of a
             // sensitive-operation / password-reset type — otherwise a consumed
             // login-2FA or email-verification OTP would satisfy the gate.
@@ -579,16 +685,17 @@ impl AuthnServiceImpl {
                 || otp.status != authn_entity_pb::OtpStatus::Used as i32
                 || !type_ok
             {
-                return Err(Status::permission_denied(
-                    "password-change OTP is not verified",
-                ));
+                return Err(password_change_otp_verified_status());
             }
         }
         let now = now_unix();
         let event_tenant = user.tenant_id.clone();
         user.password_hash = authn::hash_password(&req.new_password, &self.password_hash_key());
         user.updated_at_unix = now;
-        self.users.put_user(user).await.map_err(Status::internal)?;
+        self.users
+            .put_user(user)
+            .await
+            .map_err(|err| login_internal_status("change_password_store", err.to_string()))?;
         self.emit_event(
             AuthEvent::new(
                 topics::PASSWORD_CHANGED,
@@ -631,14 +738,17 @@ impl AuthnServiceImpl {
             .users
             .get_user_by_username(&identifier)
             .await
-            .map_err(Status::internal)?
-        {
+            .map_err(|err| {
+                login_internal_status("forgot_password_username_lookup", err.to_string())
+            })? {
             Some(u) => Some(u),
             None => self
                 .users
                 .get_user_by_email(&identifier)
                 .await
-                .map_err(Status::internal)?,
+                .map_err(|err| {
+                    login_internal_status("forgot_password_email_lookup", err.to_string())
+                })?,
         };
         let (otp_id, code) = if let Some(user) = user {
             let (otp_id, code) = self
@@ -701,7 +811,15 @@ impl AuthnServiceImpl {
         Self::require_uuid_arg(&req.otp_id, "otp_id")?;
         authn::PasswordPolicy::from_env()
             .validate(&req.new_password)
-            .map_err(Status::invalid_argument)?;
+            .map_err(|err| {
+                login_invalid_fields(
+                    err,
+                    [(
+                        "new_password",
+                        "must satisfy the configured password policy",
+                    )],
+                )
+            })?;
         let now = now_unix();
         // The PASSWORD_RESET OTP is the proof of control — no current password.
         let rec = self
@@ -712,20 +830,23 @@ impl AuthnServiceImpl {
                 now,
             )
             .await?
-            .ok_or_else(|| Status::permission_denied("invalid reset request"))?;
+            .ok_or_else(reset_password_request_valid_status)?;
         let mut user = self
             .users
             .get_user_by_id(&rec.user_id)
             .await
-            .map_err(Status::internal)?
-            .ok_or_else(|| Status::not_found("user not found"))?;
+            .map_err(|err| login_internal_status("reset_password_user_load", err.to_string()))?
+            .ok_or_else(super::authn_user_not_found_status)?;
         user.password_hash = authn::hash_password(&req.new_password, &self.password_hash_key());
         user.failed_login_count = 0;
         user.locked_until_unix = 0;
         user.updated_at_unix = now;
         let user_id = user.user_id.clone();
         let tenant = user.tenant_id.clone();
-        self.users.put_user(user).await.map_err(Status::internal)?;
+        self.users
+            .put_user(user)
+            .await
+            .map_err(|err| login_internal_status("reset_password_store", err.to_string()))?;
         // Invalidate every existing session after a reset.
         let _ = self.sessions.revoke_all_for_principal(&user_id, now).await;
         self.emit_event(
@@ -779,5 +900,214 @@ impl AuthnServiceImpl {
             user_id,
             changed_at_unix: now as i64,
         }))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::proto::udb::core::authn::services::v1::authn_service_server::AuthnService;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
+
+    fn svc() -> AuthnServiceImpl {
+        AuthnServiceImpl::new(
+            authn::AuthnConfig::default(),
+            crate::runtime::security::SecurityConfig::default(),
+        )
+    }
+
+    fn decode_detail(status: &Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_validation_fields(status: &Status, expected: &[(&str, &str)]) {
+        assert_eq!(status.code(), tonic::Code::InvalidArgument);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert_eq!(detail.field_violations.len(), expected.len());
+        for (actual, (field, description)) in detail.field_violations.iter().zip(expected) {
+            assert_eq!(actual.field, *field);
+            assert_eq!(actual.description, *description);
+        }
+    }
+
+    fn assert_capability_detail(
+        status: &Status,
+        operation: &str,
+        capability_required: &str,
+        message: &str,
+    ) {
+        assert_eq!(status.code(), tonic::Code::FailedPrecondition);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Capability as i32);
+        assert_eq!(detail.backend, "authn");
+        assert_eq!(detail.operation, operation);
+        assert_eq!(detail.capability_required, capability_required);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+    }
+
+    fn assert_policy_detail(
+        status: &Status,
+        operation: &str,
+        policy_decision_id: &str,
+        message: &str,
+    ) {
+        assert_eq!(status.code(), tonic::Code::FailedPrecondition);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Policy as i32);
+        assert_eq!(detail.operation, operation);
+        assert_eq!(detail.policy_decision_id, policy_decision_id);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+    }
+
+    fn assert_permission_policy_detail(
+        status: &Status,
+        operation: &str,
+        policy_decision_id: &str,
+        message: &str,
+    ) {
+        assert_eq!(status.code(), tonic::Code::PermissionDenied);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Policy as i32);
+        assert_eq!(detail.operation, operation);
+        assert_eq!(detail.policy_decision_id, policy_decision_id);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+    }
+
+    fn assert_internal_detail(status: &Status, operation: &str, message: &str) {
+        assert_eq!(status.code(), tonic::Code::Internal);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "authn");
+        assert_eq!(detail.operation, operation);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    #[test]
+    fn login_internal_status_carries_typed_detail() {
+        let status = login_internal_status("password_login_user_lookup", "login lookup failed");
+        assert_internal_detail(&status, "password_login_user_lookup", "login lookup failed");
+    }
+
+    #[test]
+    fn oidc_feature_required_status_carries_capability_detail() {
+        let err = oidc_feature_required_status();
+
+        assert_capability_detail(
+            &err,
+            "oidc_authentication",
+            "oidc_feature",
+            "OIDC authentication requires building UDB with the `oidc` feature",
+        );
+    }
+
+    #[test]
+    fn tenant_mfa_enrollment_policy_carries_typed_detail() {
+        assert_policy_detail(
+            &tenant_mfa_enrollment_required_status(),
+            "password_login",
+            "tenant_mfa_enrollment_required",
+            "MFA enrollment required by tenant policy",
+        );
+    }
+
+    #[test]
+    fn login_password_policy_denials_carry_permission_detail() {
+        assert_permission_policy_detail(
+            &password_login_user_active_status(),
+            "password_login",
+            "user_not_active",
+            "user is not active",
+        );
+        assert_permission_policy_detail(
+            &password_change_otp_verified_status(),
+            "change_password",
+            "password_change_otp_verified",
+            "password-change OTP is not verified",
+        );
+        assert_permission_policy_detail(
+            &reset_password_request_valid_status(),
+            "reset_password",
+            "reset_request_valid",
+            "invalid reset request",
+        );
+    }
+
+    #[tokio::test]
+    async fn authenticate_missing_credential_carries_field_violations() {
+        let err = svc()
+            .authenticate(Request::new(authn_pb::AuthnRequest::default()))
+            .await
+            .expect_err("missing credential must fail before any store lookup");
+
+        assert_eq!(
+            err.message(),
+            "no credential supplied (set api_key, session_id, bearer_token, or external_provider_id+external_token)"
+        );
+        assert_validation_fields(
+            &err,
+            &[
+                ("api_key", "must include one supported credential"),
+                ("session_id", "must include one supported credential"),
+                ("bearer_token", "must include one supported credential"),
+                ("external_token", "must include one supported credential"),
+            ],
+        );
+    }
+
+    #[tokio::test]
+    async fn change_password_weak_new_password_carries_field_violation() {
+        let err = svc()
+            .change_password(Request::new(authn_pb::ChangePasswordRequest {
+                new_password: "short".to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect_err("weak new password must fail before user lookup");
+
+        assert_eq!(err.message(), "password must be at least 10 characters");
+        assert_validation_fields(
+            &err,
+            &[(
+                "new_password",
+                "must satisfy the configured password policy",
+            )],
+        );
+    }
+
+    #[tokio::test]
+    async fn reset_password_weak_new_password_carries_field_violation() {
+        let err = svc()
+            .reset_password(Request::new(authn_pb::ResetPasswordRequest {
+                otp_id: "00000000-0000-0000-0000-000000000001".to_string(),
+                new_password: "short".to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect_err("weak new password must fail before otp lookup");
+
+        assert_eq!(err.message(), "password must be at least 10 characters");
+        assert_validation_fields(
+            &err,
+            &[(
+                "new_password",
+                "must satisfy the configured password policy",
+            )],
+        );
     }
 }

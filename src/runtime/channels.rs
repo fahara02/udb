@@ -173,14 +173,14 @@ struct TokenBucket {
 }
 
 #[derive(Debug)]
-struct ScopedSemaphoreEntry {
-    sem: Arc<Semaphore>,
-    last_access: Instant,
-    limit: usize,
+pub(crate) struct ScopedSemaphoreEntry {
+    pub(crate) sem: Arc<Semaphore>,
+    pub(crate) last_access: Instant,
+    pub(crate) limit: usize,
 }
 
 impl ScopedSemaphoreEntry {
-    fn has_outstanding_permits(&self) -> bool {
+    pub(crate) fn has_outstanding_permits(&self) -> bool {
         self.sem.available_permits() < self.limit
     }
 }
@@ -222,16 +222,16 @@ fn scope_key2(op: OperationChannel, backend: &str, instance: &str) -> u64 {
 }
 
 /// Max live entries in any per-scope map before idle/over-cap eviction kicks in.
-const SCOPE_MAP_MAX_ENTRIES: usize = 10_000;
+pub(crate) const SCOPE_MAP_MAX_ENTRIES: usize = 10_000;
 /// Entries idle longer than this are evicted on the next eviction sweep.
-const SCOPE_MAP_IDLE_TTL: std::time::Duration = std::time::Duration::from_secs(3600);
+pub(crate) const SCOPE_MAP_IDLE_TTL: std::time::Duration = std::time::Duration::from_secs(3600);
 
 /// Bound a per-scope map (#206/#211): evict idle (> `ttl`) entries, then the
 /// oldest entries until the map is back at `cap`. Lazy — only scans once the map
 /// has reached `cap`, so the common small-map path stays O(1). `last` reads each value's
 /// last-access instant (the sidecar `Instant` for semaphores, `last_refill`
 /// for token buckets, the staged-at instant for catalogs).
-fn evict_scope_map<K, V>(
+pub(crate) fn evict_scope_map<K, V>(
     map: &mut HashMap<K, V>,
     cap: usize,
     ttl: std::time::Duration,
@@ -631,7 +631,15 @@ impl ChannelManager {
                 _instance: None,
                 _backend_instance: None,
             })
-            .map_err(|_| Status::resource_exhausted(format!("{} channel overloaded", op.as_str())))
+            .map_err(|_| {
+                let message = format!("{} channel overloaded", op.as_str());
+                crate::runtime::executor_utils::quota_status(
+                    "channel",
+                    format!("{} immediate admission", op.as_str()),
+                    0,
+                    message,
+                )
+            })
     }
 
     #[allow(clippy::result_large_err)]
@@ -670,7 +678,7 @@ impl ChannelManager {
         instance_name: Option<&str>,
         cost: u32,
     ) -> Result<ChannelPermit, Status> {
-        self.check_controls(tenant_id, project_id)?;
+        self.check_controls(op, tenant_id, project_id)?;
         self.acquire_budget(op, tenant_id, project_id, backend, instance_name, cost)?;
         let timeout = self.queue_timeout_ms(op);
         let base = self
@@ -762,22 +770,41 @@ impl ChannelManager {
     ) -> Result<OwnedSemaphorePermit, Status> {
         if queue_timeout_ms == 0 {
             return sem.clone().try_acquire_owned().map_err(|_| {
-                Status::resource_exhausted(format!("{} {label} overloaded", op.as_str()))
+                let message = format!("{} {label} overloaded", op.as_str());
+                crate::runtime::executor_utils::quota_status(
+                    "channel",
+                    format!("{} {label} admission", op.as_str()),
+                    0,
+                    message,
+                )
             });
         }
         match tokio::time::timeout(Duration::from_millis(queue_timeout_ms), sem.acquire_owned())
             .await
         {
             Ok(Ok(permit)) => Ok(permit),
-            Ok(Err(_)) => Err(Status::resource_exhausted(format!(
-                "{} {label} closed",
-                op.as_str()
-            ))),
-            Err(_) => Err(Status::resource_exhausted(format!(
-                "{} {label} overloaded after waiting {}ms",
-                op.as_str(),
-                queue_timeout_ms
-            ))),
+            Ok(Err(_)) => {
+                let message = format!("{} {label} closed", op.as_str());
+                Err(crate::runtime::executor_utils::retryable_status(
+                    "channel",
+                    message.clone(),
+                    0,
+                    message,
+                ))
+            }
+            Err(_) => {
+                let message = format!(
+                    "{} {label} overloaded after waiting {}ms",
+                    op.as_str(),
+                    queue_timeout_ms
+                );
+                Err(crate::runtime::executor_utils::quota_status(
+                    "channel",
+                    format!("{} {label} admission", op.as_str()),
+                    queue_timeout_ms as i64,
+                    message,
+                ))
+            }
         }
     }
 
@@ -875,6 +902,7 @@ impl ChannelManager {
 
     fn check_controls(
         &self,
+        op: OperationChannel,
         tenant_id: Option<&str>,
         project_id: Option<&str>,
     ) -> Result<(), Status> {
@@ -887,19 +915,33 @@ impl ChannelManager {
                 match control {
                     ScopeControl::Active => {}
                     ScopeControl::Paused => {
-                        return Err(Status::unavailable(format!(
-                            "{scope} '{value}' is paused; retry after 30s"
-                        )));
+                        let message = format!("{scope} '{value}' is paused; retry after 30s");
+                        return Err(crate::runtime::executor_utils::retryable_status(
+                            "channel",
+                            format!("{} scope control", op.as_str()),
+                            30_000,
+                            message,
+                        ));
                     }
                     ScopeControl::Draining => {
-                        return Err(Status::resource_exhausted(format!(
+                        let message = format!(
                             "{scope} '{value}' is draining and not accepting new work; retry after 30s"
-                        )));
+                        );
+                        return Err(crate::runtime::executor_utils::quota_status(
+                            "channel",
+                            format!("{} scope control", op.as_str()),
+                            30_000,
+                            message,
+                        ));
                     }
                     ScopeControl::Shed => {
-                        return Err(Status::resource_exhausted(format!(
-                            "{scope} '{value}' is shedding load; retry after 5s"
-                        )));
+                        let message = format!("{scope} '{value}' is shedding load; retry after 5s");
+                        return Err(crate::runtime::executor_utils::quota_status(
+                            "channel",
+                            format!("{} scope control", op.as_str()),
+                            5_000,
+                            message,
+                        ));
                     }
                 }
             }
@@ -1012,11 +1054,17 @@ impl ChannelManager {
         bucket.last_refill = now;
         if bucket.tokens < weighted_cost {
             let wait_secs = ((weighted_cost - bucket.tokens) / rate.max(0.001)).ceil() as u64;
-            return Err(Status::resource_exhausted(format!(
+            let message = format!(
                 "{} fair queue budget exhausted for project '{project}' tenant '{tenant}'; retry after {}s",
                 op.as_str(),
                 wait_secs.max(1)
-            )));
+            );
+            return Err(crate::runtime::executor_utils::quota_status(
+                "channel",
+                format!("{} fair admission", op.as_str()),
+                wait_secs.max(1) as i64 * 1_000,
+                message,
+            ));
         }
         bucket.tokens -= weighted_cost;
         Ok(())
@@ -1125,11 +1173,11 @@ impl ChannelManager {
     }
 }
 
-fn scoped_value(value: Option<&str>) -> Option<&str> {
+pub(crate) fn scoped_value(value: Option<&str>) -> Option<&str> {
     value.map(str::trim).filter(|value| !value.is_empty())
 }
 
-fn env_part(value: &str) -> String {
+pub(crate) fn env_part(value: &str) -> String {
     value
         .chars()
         .map(|ch| {
@@ -1158,7 +1206,20 @@ fn configured_base_limit(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
     use tonic::Code;
+
+    fn decode_detail(status: &Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("error-detail trailer present")
+            .to_bytes()
+            .expect("trailer decodes to bytes");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
 
     fn test_manager(limit: usize) -> ChannelManager {
         test_manager_with_env(limit, [])
@@ -1223,6 +1284,11 @@ mod tests {
         let err = manager.acquire(OperationChannel::Read).unwrap_err();
         assert_eq!(err.code(), Code::ResourceExhausted);
         assert!(err.message().contains("read channel overloaded"));
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::Quota as i32);
+        assert!(detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert_eq!(detail.operation, "read_immediate_admission");
     }
 
     #[test]
@@ -1276,6 +1342,9 @@ mod tests {
                 "{label} error message should contain channel name, got: {}",
                 err.message()
             );
+            let detail = decode_detail(&err);
+            assert_eq!(detail.kind, ErrorKind::Quota as i32);
+            assert_eq!(detail.operation, format!("{label}_immediate_admission"));
         }
     }
 
@@ -1295,6 +1364,26 @@ mod tests {
         let manager = test_manager(0);
         let err = manager.acquire(OperationChannel::Read).unwrap_err();
         assert_eq!(err.code(), Code::ResourceExhausted);
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::Quota as i32);
+    }
+
+    #[tokio::test]
+    async fn closed_channel_reports_unavailable_with_retryable_detail() {
+        let manager = test_manager(1);
+        manager.read_sem.close();
+        let err = manager
+            .acquire_fair_with_backpressure(OperationChannel::Read, None, None, None, None, 1)
+            .await
+            .unwrap_err();
+        assert_eq!(err.code(), Code::Unavailable);
+        assert!(err.message().contains("read channel closed"));
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::Retryable as i32);
+        assert!(detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert_eq!(detail.backend, "channel");
+        assert_eq!(detail.operation, "read_channel_closed");
     }
 
     #[test]
@@ -1414,6 +1503,10 @@ mod tests {
             .await
             .unwrap_err();
         assert_eq!(err.code(), Code::ResourceExhausted);
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::Quota as i32);
+        assert_eq!(detail.retry_after_ms, 100);
+        assert_eq!(detail.operation, "write_tenant_channel_admission");
     }
 
     #[tokio::test]
@@ -1443,6 +1536,10 @@ mod tests {
             .unwrap_err();
         assert_eq!(err.code(), Code::ResourceExhausted);
         assert!(err.message().contains("project channel"));
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::Quota as i32);
+        assert_eq!(detail.retry_after_ms, 100);
+        assert_eq!(detail.operation, "read_project_channel_admission");
     }
 
     #[tokio::test]
@@ -1477,6 +1574,12 @@ mod tests {
             .await
             .unwrap_err();
         assert_eq!(same_tenant.code(), Code::ResourceExhausted);
+        let detail = decode_detail(&same_tenant);
+        assert_eq!(detail.kind, ErrorKind::Quota as i32);
+        assert!(detail.retryable);
+        assert_eq!(detail.retry_after_ms, 1_000_000);
+        assert_eq!(detail.backend, "channel");
+        assert_eq!(detail.operation, "admin_fair_admission");
         let other_tenant = manager
             .acquire_fair_with_backpressure(
                 OperationChannel::Admin,
@@ -1506,6 +1609,23 @@ mod tests {
             .await
             .unwrap_err();
         assert_eq!(paused.code(), Code::Unavailable);
+        manager.set_scope_control("tenant", "t1", ScopeControl::Draining);
+        let draining = manager
+            .acquire_fair_with_backpressure(
+                OperationChannel::Read,
+                Some("t1"),
+                Some("p1"),
+                Some("postgres"),
+                Some("primary"),
+                1,
+            )
+            .await
+            .unwrap_err();
+        assert_eq!(draining.code(), Code::ResourceExhausted);
+        let detail = decode_detail(&draining);
+        assert_eq!(detail.kind, ErrorKind::Quota as i32);
+        assert_eq!(detail.retry_after_ms, 30_000);
+        assert_eq!(detail.operation, "read_scope_control");
         manager.set_scope_control("tenant", "t1", ScopeControl::Shed);
         let shed = manager
             .acquire_fair_with_backpressure(
@@ -1519,6 +1639,10 @@ mod tests {
             .await
             .unwrap_err();
         assert_eq!(shed.code(), Code::ResourceExhausted);
+        let detail = decode_detail(&shed);
+        assert_eq!(detail.kind, ErrorKind::Quota as i32);
+        assert_eq!(detail.retry_after_ms, 5_000);
+        assert_eq!(detail.operation, "read_scope_control");
         manager.clear_scope_control("tenant", "t1");
         assert!(
             manager

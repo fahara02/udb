@@ -224,7 +224,14 @@ impl AuthnServiceImpl {
         };
         // Real introspection: a signature-valid, unexpired token is still only
         // `active` if it is not revoked and its persisted session/user state holds.
-        let (revoked, revocation_reason) = self.is_token_revoked(&jti).await;
+        let (revoked, revocation_reason) = self
+            .is_token_revoked(
+                &jti,
+                claims.tenant_id.as_deref().unwrap_or_default(),
+                claims.sub.as_deref().unwrap_or_default(),
+                claims.iat.unwrap_or(0).max(0) as u64,
+            )
+            .await;
         let persisted_ok = self.jwt_persisted_state_valid(&claims, now).await?;
         let active = !revoked && persisted_ok;
         Ok(Response::new(authn_pb::IntrospectTokenResponse {

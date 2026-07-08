@@ -556,11 +556,13 @@ impl Compiler for MongoDbCompiler {
             stage.insert("queryVector".into(), json!(vector));
             stage.insert("numCandidates".into(), json!((op.top_k * 10).max(100)));
             stage.insert("limit".into(), json!(op.top_k));
-            if let Some(f) = &op.filter {
-                let rendered = self.render_filter(f, table, &op.message_type)?;
-                if !rendered.as_object().is_some_and(|m| m.is_empty()) {
-                    stage.insert("filter".into(), rendered);
-                }
+            let user_filter = match &op.filter {
+                Some(f) => self.render_filter(f, table, &op.message_type)?,
+                None => Json::Object(Map::new()),
+            };
+            let filter = and_with_context(user_filter, table, ctx);
+            if !filter.as_object().is_some_and(|m| m.is_empty()) {
+                stage.insert("filter".into(), filter);
             }
             let mut pipeline = vec![json!({ "$vectorSearch": Json::Object(stage) })];
             // Append score projection so callers can read `_score`.
@@ -603,10 +605,27 @@ impl Compiler for MongoDbCompiler {
                 }
             }
         }
+        if let Some(tid) = ctx.tenant_id
+            && !tid.is_empty()
+            && let Some(column) = Some(super::util::tenant_system_field(table))
+        {
+            find_filter.insert(column.to_string(), json!(tid));
+        }
+        if let Some(pid) = ctx.project_id
+            && !pid.is_empty()
+            && let Some(column) = Some(super::util::project_system_field(table))
+        {
+            find_filter.insert(column.to_string(), json!(pid));
+        }
+        let mut projection = Map::new();
+        for column in &table.columns {
+            projection.insert(column.field_name.clone(), json!(1));
+        }
+        projection.insert("_score".to_string(), json!({ "$meta": "textScore" }));
         let mut body = json!({
             "collection": table.table,
             "filter": Json::Object(find_filter),
-            "projection": { "_score": { "$meta": "textScore" } },
+            "projection": Json::Object(projection),
             "sort": { "_score": { "$meta": "textScore" } },
             "limit": op.top_k,
         });
@@ -1153,6 +1172,29 @@ mod tests {
         // No outer $and wrap — the tenant injection is a no-op.
         assert!(body["filter"].get("$and").is_none());
         assert_eq!(body["filter"]["email"]["$eq"], "a@b.com");
+    }
+
+    #[test]
+    fn search_with_tenant_context_ands_predicate_and_projects_fields() {
+        let m = fixture_manifest();
+        let ctx = CompileContext::new(&m).with_tenant("tenant-a");
+        let search = LogicalSearch {
+            message_type: "acme.billing.v1.Customer".into(),
+            vector: None,
+            text_query: Some("Alice".into()),
+            filter: None,
+            top_k: 10,
+            score_threshold: None,
+            require_hybrid: false,
+            with_vector: false,
+            with_payload: true,
+        };
+        let (path, body) = extract_json(MongoDbCompiler.compile_search(&search, &ctx).unwrap());
+        assert_eq!(path, "/action/find");
+        assert_eq!(body["filter"]["$text"]["$search"], "Alice");
+        assert_eq!(body["filter"]["_tenant_id"], "tenant-a");
+        assert_eq!(body["projection"]["name"], 1);
+        assert_eq!(body["projection"]["_score"]["$meta"], "textScore");
     }
 
     #[test]

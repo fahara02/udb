@@ -160,6 +160,8 @@ fn resolve_existing_project_path(raw: &str, manifest_dir: &std::path::Path) -> s
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    println!("cargo:rustc-check-cfg=cfg(udb_portable)");
+
     let manifest_dir = std::path::PathBuf::from(std::env::var("CARGO_MANIFEST_DIR")?);
 
     if std::env::var_os("PROTOC").is_none() {
@@ -375,6 +377,26 @@ fn render_storage_only_redaction(proto_files: &[std::path::PathBuf]) -> String {
         "/// Blank every `output_view: OUTPUT_VIEW_STORAGE_ONLY` field on an outbound DTO.\n",
     );
     out.push_str("pub trait RedactStorageOnly {\n    fn redact_storage_only(&mut self);\n}\n\n");
+    out.push_str(
+        "/// Proto-derived `(fully-qualified-message, storage-only-fields)` coverage emitted with the redaction impls.\n",
+    );
+    out.push_str("pub const GENERATED_STORAGE_ONLY_REDACTION_FIELDS: &[(&str, &[&str])] = &[\n");
+    for ((package, message), fields) in &entries {
+        let full_name = if package.is_empty() {
+            message.clone()
+        } else {
+            format!("{package}.{message}")
+        };
+        out.push_str(&format!("    (\"{full_name}\", &["));
+        for (idx, field) in fields.iter().enumerate() {
+            if idx > 0 {
+                out.push_str(", ");
+            }
+            out.push_str(&format!("\"{field}\""));
+        }
+        out.push_str("]),\n");
+    }
+    out.push_str("];\n\n");
     for ((package, message), fields) in &entries {
         // Match prost-build's identifier casing so the impl path resolves
         // (e.g. proto `OTP` -> Rust `Otp`); already-camel names are unchanged.

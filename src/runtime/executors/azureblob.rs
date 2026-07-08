@@ -26,7 +26,10 @@ use azure_storage_blobs::prelude::*;
 use crate::runtime::backend_context::{
     AppliedContext, BackendContextEnforcer, ContextEffect, enforce_with_mechanism,
 };
-use crate::runtime::executor_utils::{build_probe, parse_object_dispatch, reject_oversized_object};
+use crate::runtime::executor_utils::{
+    backend_transport_status, build_probe, capability_status, invalid_argument_fields,
+    parse_object_dispatch, reject_oversized_object,
+};
 use crate::runtime::executors::{
     BackendExecutor, BackendHealth, BackendProbe, ExecutorByteStream, MutationExecutor,
     ObjectExecutor, QueryExecutor, ResourceAdminExecutor, SearchExecutor,
@@ -115,9 +118,26 @@ fn parse_dispatch(req: &str) -> Result<(String, String, String, Option<String>),
     )
 }
 
+fn object_op_mismatch_status(
+    method: &'static str,
+    expected: &'static str,
+    actual: &str,
+) -> tonic::Status {
+    invalid_argument_fields(
+        format!("{method} expects op=\"{expected}\", got '{actual}'"),
+        [(
+            "op",
+            format!("must be \"{expected}\" when calling {method}"),
+        )],
+    )
+}
+
 impl QueryExecutor for AzureBlobExecutor {
     async fn query(&self, _req: &str) -> Result<String, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "azureblob",
+            "query",
+            "generic_query",
             "UDB_UNSUPPORTED_OPERATION: Azure Blob has no query surface; use get_object",
         ))
     }
@@ -125,7 +145,10 @@ impl QueryExecutor for AzureBlobExecutor {
 
 impl MutationExecutor for AzureBlobExecutor {
     async fn mutate(&self, _req: &str) -> Result<String, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "azureblob",
+            "mutate",
+            "object_dispatch",
             "UDB_UNSUPPORTED_OPERATION: Azure Blob has no mutation surface; use put_object",
         ))
     }
@@ -133,7 +156,10 @@ impl MutationExecutor for AzureBlobExecutor {
 
 impl SearchExecutor for AzureBlobExecutor {
     async fn search(&self, _: &str) -> Result<String, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "azureblob",
+            "search",
+            "search",
             "UDB_UNSUPPORTED_OPERATION: Azure Blob is not searchable",
         ))
     }
@@ -143,9 +169,7 @@ impl ObjectExecutor for AzureBlobExecutor {
     async fn get_object(&self, request_json: &str) -> Result<Vec<u8>, tonic::Status> {
         let (op, container, blob, _) = parse_dispatch(request_json)?;
         if op != "get" {
-            return Err(tonic::Status::invalid_argument(format!(
-                "get_object expects op=\"get\", got '{op}'"
-            )));
+            return Err(object_op_mismatch_status("get_object", "get", &op));
         }
         let blob_client = self.client.container(&container).blob_client(blob.clone());
         // collect() pulls the full blob into memory; large blobs would
@@ -153,7 +177,7 @@ impl ObjectExecutor for AzureBlobExecutor {
         let data = blob_client
             .get_content()
             .await
-            .map_err(|e| tonic::Status::internal(format!("azure blob get failed: {e}")))?;
+            .map_err(|e| backend_transport_status("azure blob", "get", e))?;
         Ok(data)
     }
 
@@ -164,9 +188,7 @@ impl ObjectExecutor for AzureBlobExecutor {
     ) -> Result<String, tonic::Status> {
         let (op, container, blob, content_type) = parse_dispatch(request_json)?;
         if op != "put" {
-            return Err(tonic::Status::invalid_argument(format!(
-                "put_object expects op=\"put\", got '{op}'"
-            )));
+            return Err(object_op_mismatch_status("put_object", "put", &op));
         }
         reject_oversized_object(bytes.len())?;
         let blob_client = self.client.container(&container).blob_client(blob.clone());
@@ -175,7 +197,7 @@ impl ObjectExecutor for AzureBlobExecutor {
             put = put.content_type(ct);
         }
         put.await
-            .map_err(|e| tonic::Status::internal(format!("azure blob put failed: {e}")))?;
+            .map_err(|e| backend_transport_status("azure blob", "put", e))?;
         Ok(serde_json::json!({ "ok": true, "container": container, "blob": blob }).to_string())
     }
 
@@ -192,11 +214,11 @@ impl ObjectExecutor for AzureBlobExecutor {
             let mut pages = blob_client.get().into_stream();
             while let Some(page) = pages.next().await {
                 let page = page
-                    .map_err(|e| tonic::Status::internal(format!("azure blob get failed: {e}")))?;
+                    .map_err(|e| backend_transport_status("azure blob", "get", e))?;
                 let mut data = page.data;
                 while let Some(chunk) = data.next().await {
                     let bytes = chunk.map_err(|e| {
-                        tonic::Status::internal(format!("azure blob read failed: {e}"))
+                        backend_transport_status("azure blob", "read", e)
                     })?;
                     yield bytes;
                 }
@@ -234,7 +256,7 @@ impl ObjectExecutor for AzureBlobExecutor {
             blob_client
                 .put_block(block_id.clone(), body)
                 .await
-                .map_err(|e| tonic::Status::unavailable(format!("azure put_block failed: {e}")))?;
+                .map_err(|e| backend_transport_status("azure", "put_block", e))?;
             block_list
                 .blocks
                 .push(BlobBlockType::new_uncommitted(block_id));
@@ -247,9 +269,7 @@ impl ObjectExecutor for AzureBlobExecutor {
             blob_client
                 .put_block(block_id.clone(), buf)
                 .await
-                .map_err(|e| {
-                    tonic::Status::unavailable(format!("azure put_block (final) failed: {e}"))
-                })?;
+                .map_err(|e| backend_transport_status("azure", "put_block (final)", e))?;
             block_list
                 .blocks
                 .push(BlobBlockType::new_uncommitted(block_id));
@@ -260,7 +280,7 @@ impl ObjectExecutor for AzureBlobExecutor {
         }
         commit
             .await
-            .map_err(|e| tonic::Status::unavailable(format!("azure put_block_list failed: {e}")))?;
+            .map_err(|e| backend_transport_status("azure", "put_block_list", e))?;
         Ok(serde_json::json!({ "ok": true, "container": container, "blob": blob }).to_string())
     }
 
@@ -271,7 +291,7 @@ impl ObjectExecutor for AzureBlobExecutor {
             .delete()
             .await
             .map(|_| ())
-            .map_err(|e| tonic::Status::internal(format!("azure blob delete failed: {e}")))
+            .map_err(|e| backend_transport_status("azure blob", "delete", e))
     }
 }
 
@@ -287,9 +307,11 @@ impl ResourceAdminExecutor for AzureBlobExecutor {
         match container.create().await {
             Ok(_) => Ok(()),
             Err(e) if e.to_string().contains("ContainerAlreadyExists") => Ok(()),
-            Err(e) => Err(tonic::Status::internal(format!(
-                "azure blob create container failed: {e}"
-            ))),
+            Err(e) => Err(backend_transport_status(
+                "azure blob",
+                "create container",
+                e,
+            )),
         }
     }
     async fn drop_resource(&self, resource_name: &str) -> Result<(), tonic::Status> {
@@ -297,7 +319,7 @@ impl ResourceAdminExecutor for AzureBlobExecutor {
             .container(resource_name)
             .delete()
             .await
-            .map_err(|e| tonic::Status::internal(format!("azure blob drop container: {e}")))?;
+            .map_err(|e| backend_transport_status("azure blob", "drop container", e))?;
         Ok(())
     }
     async fn list_resources(&self) -> Result<Vec<String>, tonic::Status> {
@@ -306,7 +328,7 @@ impl ResourceAdminExecutor for AzureBlobExecutor {
         let mut stream = self.client.inner.list_containers().into_stream();
         while let Some(page) = stream.next().await {
             let page =
-                page.map_err(|e| tonic::Status::internal(format!("azure blob list: {e}")))?;
+                page.map_err(|e| backend_transport_status("azure blob", "list containers", e))?;
             for c in page.containers {
                 out.push(c.name);
             }
@@ -317,7 +339,10 @@ impl ResourceAdminExecutor for AzureBlobExecutor {
 
 impl BackendExecutor for AzureBlobExecutor {
     async fn transaction(&self, _: &str) -> Result<String, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "azureblob",
+            "transaction",
+            "transactions",
             "UDB_UNSUPPORTED_OPERATION: Azure Blob has no transaction primitive",
         ))
     }
@@ -329,6 +354,31 @@ impl BackendExecutor for AzureBlobExecutor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
+
+    fn decode_detail(status: &tonic::Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_op_violation(status: &tonic::Status, expected_method: &str) {
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, "op");
+        assert!(
+            detail.field_violations[0]
+                .description
+                .contains(expected_method),
+            "{:?}",
+            detail.field_violations[0]
+        );
+    }
 
     #[test]
     fn parse_dispatch_extracts_op_container_blob() {
@@ -353,5 +403,16 @@ mod tests {
         let req = r#"{"op":"get","blob":"x"}"#;
         let err = parse_dispatch(req).unwrap_err();
         assert_eq!(err.code(), tonic::Code::InvalidArgument);
+    }
+
+    #[test]
+    fn object_operation_mismatch_carries_field_violation() {
+        let get = object_op_mismatch_status("get_object", "get", "put");
+        assert_eq!(get.message(), "get_object expects op=\"get\", got 'put'");
+        assert_op_violation(&get, "get_object");
+
+        let put = object_op_mismatch_status("put_object", "put", "get");
+        assert_eq!(put.message(), "put_object expects op=\"put\", got 'get'");
+        assert_op_violation(&put, "put_object");
     }
 }

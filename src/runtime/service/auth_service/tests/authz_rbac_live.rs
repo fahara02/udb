@@ -113,6 +113,7 @@ async fn live_postgres_authz_role_policy_roundtrip() {
             user_id: user.user_id.clone(),
             domain: "acme".to_string(),
             active_only: true,
+            ..Default::default()
         }))
         .await
         .expect("list Postgres user roles")

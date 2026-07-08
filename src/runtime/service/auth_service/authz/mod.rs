@@ -34,6 +34,9 @@ use crate::runtime::authz::{
 };
 use crate::runtime::channels::{ChannelManager, ChannelPermit, OperationChannel};
 use crate::runtime::native_catalog::{NativeModel, native_model};
+use crate::runtime::service::native_helpers::{
+    native_next_page_token_for_total, native_offset_page_window,
+};
 
 use super::events::{self, AuthEvent, AuthEventSink, topics};
 
@@ -50,6 +53,85 @@ mod governance_drafts;
 mod governance_logic;
 mod governance_sim;
 mod governance_store;
+
+fn authz_capability_status(
+    operation: &'static str,
+    capability_required: &'static str,
+    message: &'static str,
+) -> Status {
+    crate::runtime::executor_utils::capability_status(
+        "authz",
+        operation,
+        capability_required,
+        message,
+    )
+}
+
+fn authz_not_found_status(
+    operation: &'static str,
+    schema_code: &'static str,
+    message: &'static str,
+) -> Status {
+    crate::runtime::executor_utils::schema_status(
+        tonic::Code::NotFound,
+        "authz",
+        operation,
+        schema_code,
+        message,
+    )
+}
+
+fn authz_internal_status(operation: impl Into<String>, message: impl Into<String>) -> Status {
+    crate::runtime::executor_utils::internal_status("authz", operation, message)
+}
+
+fn governed_direct_mutation_status(rpc: &'static str, policy_decision_id: &'static str) -> Status {
+    crate::runtime::executor_utils::policy_status(
+        "authz_governed_direct_mutation",
+        policy_decision_id,
+        format!(
+            "governed mode: direct {rpc} is disabled; create a policy draft and activate it (or use break-glass governance)"
+        ),
+    )
+}
+
+fn authz_attribution_policy_status(
+    operation: &'static str,
+    policy_decision_id: &'static str,
+    message: &'static str,
+) -> Status {
+    crate::runtime::executor_utils::policy_status_with_code(
+        tonic::Code::PermissionDenied,
+        operation,
+        policy_decision_id,
+        message,
+    )
+}
+
+fn created_by_caller_mismatch_status(operation: &'static str) -> Status {
+    authz_attribution_policy_status(
+        operation,
+        "created_by_caller_mismatch",
+        "created_by must match the authenticated caller",
+    )
+}
+
+fn assigned_by_caller_mismatch_status() -> Status {
+    authz_attribution_policy_status(
+        "assign_role",
+        "assigned_by_caller_mismatch",
+        "assigned_by must match the authenticated caller",
+    )
+}
+
+fn policy_bundle_signing_not_configured_status() -> Status {
+    authz_capability_status(
+        "policy_bundle_signing",
+        "policy_bundle_signing_secret",
+        "policy bundle signing is not configured; set UDB_POLICY_BUNDLE_SECRET \
+                 (or UDB_SESSION_HASH_SECRET)",
+    )
+}
 
 fn policy_rule_model() -> NativeModel {
     native_model(
@@ -315,9 +397,30 @@ pub(super) fn stable_uuid_from_subject(subject: &str) -> Uuid {
     Uuid::from_bytes(bytes)
 }
 
+fn authz_invalid_fields<I, F, D>(message: impl Into<String>, fields: I) -> Status
+where
+    I: IntoIterator<Item = (F, D)>,
+    F: Into<String>,
+    D: Into<String>,
+{
+    crate::runtime::executor_utils::invalid_argument_fields(message, fields)
+}
+
+fn authz_required_field(
+    message: &'static str,
+    field: &'static str,
+    description: &'static str,
+) -> Status {
+    authz_invalid_fields(message, [(field, description)])
+}
+
 pub(super) fn parse_uuid_field(field_name: &str, value: &str) -> Result<Uuid, Status> {
-    Uuid::parse_str(value)
-        .map_err(|_| Status::invalid_argument(format!("{field_name} must be a UUID")))
+    Uuid::parse_str(value).map_err(|_| {
+        authz_invalid_fields(
+            format!("{field_name} must be a UUID"),
+            [(field_name.to_string(), "must be a UUID")],
+        )
+    })
 }
 
 pub(super) fn timestamp_unix_field(
@@ -328,9 +431,10 @@ pub(super) fn timestamp_unix_field(
         return Ok(None);
     };
     if value.seconds <= 0 {
-        return Err(Status::invalid_argument(format!(
-            "{field_name} must be a positive unix timestamp"
-        )));
+        return Err(authz_invalid_fields(
+            format!("{field_name} must be a positive unix timestamp"),
+            [(field_name.to_string(), "must be a positive unix timestamp")],
+        ));
     }
     Ok(Some(value.seconds))
 }
@@ -431,7 +535,8 @@ pub(super) fn effect_from_db(value: &str) -> i32 {
 /// Map a `roles` row to the `Role` entity. Timestamps are not read back
 /// (left `None`); the durable columns carry the role's logical state.
 fn role_from_row(row: &sqlx::postgres::PgRow) -> Result<authz_entity_pb::Role, Status> {
-    let map = |e: sqlx::Error| Status::internal(format!("decode role failed: {e}"));
+    let map =
+        |e: sqlx::Error| authz_internal_status("decode_role", format!("decode role failed: {e}"));
     Ok(authz_entity_pb::Role {
         role_id: row.try_get("role_id").map_err(map)?,
         name: row.try_get("name").map_err(map)?,
@@ -455,7 +560,9 @@ fn role_from_row(row: &sqlx::postgres::PgRow) -> Result<authz_entity_pb::Role, S
 
 /// Map a `user_roles` row to the `UserRole` entity.
 fn user_role_from_row(row: &sqlx::postgres::PgRow) -> Result<authz_entity_pb::UserRole, Status> {
-    let map = |e: sqlx::Error| Status::internal(format!("decode user role failed: {e}"));
+    let map = |e: sqlx::Error| {
+        authz_internal_status("decode_user_role", format!("decode user role failed: {e}"))
+    };
     Ok(authz_entity_pb::UserRole {
         user_role_id: row.try_get("user_role_id").map_err(map)?,
         user_id: row.try_get("user_id").map_err(map)?,
@@ -481,7 +588,12 @@ fn user_role_from_row(row: &sqlx::postgres::PgRow) -> Result<authz_entity_pb::Us
 fn policy_rule_from_row(
     row: &sqlx::postgres::PgRow,
 ) -> Result<authz_entity_pb::PolicyRule, Status> {
-    let map = |e: sqlx::Error| Status::internal(format!("decode policy rule failed: {e}"));
+    let map = |e: sqlx::Error| {
+        authz_internal_status(
+            "decode_policy_rule",
+            format!("decode policy rule failed: {e}"),
+        )
+    };
     Ok(authz_entity_pb::PolicyRule {
         policy_id: row.try_get("policy_id").map_err(map)?,
         subject: row.try_get("subject").map_err(map)?,
@@ -781,7 +893,9 @@ impl AuthzServiceImpl {
         .bind(domain)
         .fetch_optional(pool)
         .await
-        .map_err(|err| Status::internal(format!("resolve role code failed: {err}")))?;
+        .map_err(|err| {
+            authz_internal_status("resolve_role_code", format!("resolve role code failed: {err}"))
+        })?;
         Ok(row.and_then(|r| r.try_get::<String, _>("role").ok()))
     }
 
@@ -789,7 +903,9 @@ impl AuthzServiceImpl {
     /// Postgres pool is configured.
     pub(super) fn require_pool(&self) -> Result<&PgPool, Status> {
         self.pg_pool.as_ref().ok_or_else(|| {
-            Status::failed_precondition(
+            authz_capability_status(
+                "postgres_auth_store",
+                "postgres_auth_store",
                 "this operation requires a Postgres-backed auth store (no PG pool configured)",
             )
         })
@@ -1028,7 +1144,9 @@ impl AuthzServiceImpl {
     /// Native authz reads and mutations require a Postgres-backed store. There is
     /// no in-memory fallback, so a missing pool fails closed.
     pub(super) fn require_snapshot_fallback(&self) -> Result<(), Status> {
-        Err(Status::failed_precondition(
+        Err(authz_capability_status(
+            "snapshot_fallback",
+            "postgres_auth_store",
             "native authz requires a Postgres-backed auth store",
         ))
     }
@@ -1057,25 +1175,46 @@ impl AuthzServiceImpl {
         ))
         .fetch_all(pool)
         .await
-        .map_err(|err| Status::internal(format!("read authz revision fence failed: {err}")))?;
+        .map_err(|err| {
+            authz_internal_status(
+                "read_authz_revision_fence",
+                format!("read authz revision fence failed: {err}"),
+            )
+        })?;
 
         let mut hasher = Sha256::new();
         for row in rows {
-            let tenant_id: String = row
-                .try_get("tenant_id")
-                .map_err(|err| Status::internal(format!("decode authz fence failed: {err}")))?;
-            let project_id: String = row
-                .try_get("project_id")
-                .map_err(|err| Status::internal(format!("decode authz fence failed: {err}")))?;
-            let policy_revision: i64 = row
-                .try_get("policy_revision")
-                .map_err(|err| Status::internal(format!("decode authz fence failed: {err}")))?;
-            let relationship_revision: i64 = row
-                .try_get("relationship_revision")
-                .map_err(|err| Status::internal(format!("decode authz fence failed: {err}")))?;
-            let content_hash: String = row
-                .try_get("content_hash")
-                .map_err(|err| Status::internal(format!("decode authz fence failed: {err}")))?;
+            let tenant_id: String = row.try_get("tenant_id").map_err(|err| {
+                authz_internal_status(
+                    "decode_authz_revision_fence",
+                    format!("decode authz fence failed: {err}"),
+                )
+            })?;
+            let project_id: String = row.try_get("project_id").map_err(|err| {
+                authz_internal_status(
+                    "decode_authz_revision_fence",
+                    format!("decode authz fence failed: {err}"),
+                )
+            })?;
+            let policy_revision: i64 = row.try_get("policy_revision").map_err(|err| {
+                authz_internal_status(
+                    "decode_authz_revision_fence",
+                    format!("decode authz fence failed: {err}"),
+                )
+            })?;
+            let relationship_revision: i64 =
+                row.try_get("relationship_revision").map_err(|err| {
+                    authz_internal_status(
+                        "decode_authz_revision_fence",
+                        format!("decode authz fence failed: {err}"),
+                    )
+                })?;
+            let content_hash: String = row.try_get("content_hash").map_err(|err| {
+                authz_internal_status(
+                    "decode_authz_revision_fence",
+                    format!("decode authz fence failed: {err}"),
+                )
+            })?;
             hasher.update(tenant_id.as_bytes());
             hasher.update([0]);
             hasher.update(project_id.as_bytes());
@@ -1119,15 +1258,21 @@ impl AuthzServiceImpl {
         ))
         .fetch_all(pool)
         .await
-        .map_err(|err| Status::internal(format!("load authz policies failed: {err}")))?;
+        .map_err(|err| {
+            authz_internal_status(
+                "load_authz_policies",
+                format!("load authz policies failed: {err}"),
+            )
+        })?;
 
         let mut policies = Vec::with_capacity(policy_rows.len());
         for row in &policy_rows {
-            policies.push(
-                policy_from_pg_row(row).map_err(|err| {
-                    Status::internal(format!("decode authz policy failed: {err}"))
-                })?,
-            );
+            policies.push(policy_from_pg_row(row).map_err(|err| {
+                authz_internal_status(
+                    "decode_authz_policy",
+                    format!("decode authz policy failed: {err}"),
+                )
+            })?);
         }
 
         let binding_rows = sqlx::query(&format!(
@@ -1152,21 +1297,38 @@ impl AuthzServiceImpl {
         ))
         .fetch_all(pool)
         .await
-        .map_err(|err| Status::internal(format!("load role bindings failed: {err}")))?;
+        .map_err(|err| {
+            authz_internal_status(
+                "load_role_bindings",
+                format!("load role bindings failed: {err}"),
+            )
+        })?;
         let mut role_bindings = Vec::with_capacity(binding_rows.len());
         for row in binding_rows {
             role_bindings.push(RoleBinding {
                 subject: row.try_get("subject").map_err(|err| {
-                    Status::internal(format!("decode role binding failed: {err}"))
+                    authz_internal_status(
+                        "decode_role_binding",
+                        format!("decode role binding failed: {err}"),
+                    )
                 })?,
                 role: row.try_get("role").map_err(|err| {
-                    Status::internal(format!("decode role binding failed: {err}"))
+                    authz_internal_status(
+                        "decode_role_binding",
+                        format!("decode role binding failed: {err}"),
+                    )
                 })?,
                 tenant: row.try_get("tenant").map_err(|err| {
-                    Status::internal(format!("decode role binding failed: {err}"))
+                    authz_internal_status(
+                        "decode_role_binding",
+                        format!("decode role binding failed: {err}"),
+                    )
                 })?,
                 project: row.try_get("project").map_err(|err| {
-                    Status::internal(format!("decode role binding failed: {err}"))
+                    authz_internal_status(
+                        "decode_role_binding",
+                        format!("decode role binding failed: {err}"),
+                    )
                 })?,
             });
         }
@@ -1185,27 +1347,47 @@ impl AuthzServiceImpl {
         ))
         .fetch_all(pool)
         .await
-        .map_err(|err| Status::internal(format!("load grouping tuples failed: {err}")))?;
+        .map_err(|err| {
+            authz_internal_status(
+                "load_grouping_tuples",
+                format!("load grouping tuples failed: {err}"),
+            )
+        })?;
         let now = now_unix();
         for row in grouping_rows {
-            let condition: String = row
-                .try_get("condition")
-                .map_err(|err| Status::internal(format!("decode grouping tuple failed: {err}")))?;
+            let condition: String = row.try_get("condition").map_err(|err| {
+                authz_internal_status(
+                    "decode_grouping_tuple",
+                    format!("decode grouping tuple failed: {err}"),
+                )
+            })?;
             if tuple_condition_expired(&condition, now) {
                 continue;
             }
             role_bindings.push(RoleBinding {
                 subject: row.try_get("subject").map_err(|err| {
-                    Status::internal(format!("decode grouping tuple failed: {err}"))
+                    authz_internal_status(
+                        "decode_grouping_tuple",
+                        format!("decode grouping tuple failed: {err}"),
+                    )
                 })?,
                 role: row.try_get("role").map_err(|err| {
-                    Status::internal(format!("decode grouping tuple failed: {err}"))
+                    authz_internal_status(
+                        "decode_grouping_tuple",
+                        format!("decode grouping tuple failed: {err}"),
+                    )
                 })?,
                 tenant: row.try_get("tenant").map_err(|err| {
-                    Status::internal(format!("decode grouping tuple failed: {err}"))
+                    authz_internal_status(
+                        "decode_grouping_tuple",
+                        format!("decode grouping tuple failed: {err}"),
+                    )
                 })?,
                 project: row.try_get("project").map_err(|err| {
-                    Status::internal(format!("decode grouping tuple failed: {err}"))
+                    authz_internal_status(
+                        "decode_grouping_tuple",
+                        format!("decode grouping tuple failed: {err}"),
+                    )
                 })?,
             });
         }
@@ -1224,30 +1406,53 @@ impl AuthzServiceImpl {
         ))
         .fetch_all(pool)
         .await
-        .map_err(|err| Status::internal(format!("load relationship tuples failed: {err}")))?;
+        .map_err(|err| {
+            authz_internal_status(
+                "load_relationship_tuples",
+                format!("load relationship tuples failed: {err}"),
+            )
+        })?;
         let mut tuples = Vec::with_capacity(tuple_rows.len());
         for row in tuple_rows {
             let condition: String = row.try_get("condition").map_err(|err| {
-                Status::internal(format!("decode relationship tuple failed: {err}"))
+                authz_internal_status(
+                    "decode_relationship_tuple",
+                    format!("decode relationship tuple failed: {err}"),
+                )
             })?;
             if tuple_condition_expired(&condition, now) {
                 continue;
             }
             tuples.push(RelationshipTuple {
                 subject: row.try_get("subject").map_err(|err| {
-                    Status::internal(format!("decode relationship tuple failed: {err}"))
+                    authz_internal_status(
+                        "decode_relationship_tuple",
+                        format!("decode relationship tuple failed: {err}"),
+                    )
                 })?,
                 relation: row.try_get("relation").map_err(|err| {
-                    Status::internal(format!("decode relationship tuple failed: {err}"))
+                    authz_internal_status(
+                        "decode_relationship_tuple",
+                        format!("decode relationship tuple failed: {err}"),
+                    )
                 })?,
                 object: row.try_get("object").map_err(|err| {
-                    Status::internal(format!("decode relationship tuple failed: {err}"))
+                    authz_internal_status(
+                        "decode_relationship_tuple",
+                        format!("decode relationship tuple failed: {err}"),
+                    )
                 })?,
                 tenant: row.try_get("tenant").map_err(|err| {
-                    Status::internal(format!("decode relationship tuple failed: {err}"))
+                    authz_internal_status(
+                        "decode_relationship_tuple",
+                        format!("decode relationship tuple failed: {err}"),
+                    )
                 })?,
                 project: row.try_get("project").map_err(|err| {
-                    Status::internal(format!("decode relationship tuple failed: {err}"))
+                    authz_internal_status(
+                        "decode_relationship_tuple",
+                        format!("decode relationship tuple failed: {err}"),
+                    )
                 })?,
             });
         }
@@ -1290,7 +1495,10 @@ impl AuthzServiceImpl {
         self.metrics
             .observe_policy_reload_seconds(reload_started.elapsed().as_secs_f64());
         if revision_before != revision_after {
-            return Err(Status::aborted(
+            return Err(crate::runtime::executor_utils::retryable_aborted_status(
+                "authz",
+                "snapshot reload revision",
+                0,
                 "authz revision changed while loading snapshot; retry snapshot load",
             ));
         }
@@ -1512,16 +1720,24 @@ impl AuthzService for AuthzServiceImpl {
         // break-glass governance RPC). Off by default so legacy deployments keep
         // the direct path.
         if governance::governed_mode_enabled() {
-            return Err(Status::failed_precondition(
-                "governed mode: direct PutAuthzPolicy is disabled; create a policy draft and activate it (or use break-glass governance)",
+            return Err(governed_direct_mutation_status(
+                "PutAuthzPolicy",
+                "put_authz_policy_disabled",
             ));
         }
-        let p = request
-            .into_inner()
-            .policy
-            .ok_or_else(|| Status::invalid_argument("policy is required"))?;
+        let p = request.into_inner().policy.ok_or_else(|| {
+            authz_required_field(
+                "policy is required",
+                "policy",
+                "must include an authz policy",
+            )
+        })?;
         if p.id.trim().is_empty() {
-            return Err(Status::invalid_argument("policy id is required"));
+            return Err(authz_required_field(
+                "policy id is required",
+                "policy.id",
+                "must be a non-empty policy id",
+            ));
         }
         // Reject unknown effect strings rather than silently defaulting to Allow:
         // a typo'd effect must never become a permissive policy.
@@ -1530,10 +1746,13 @@ impl AuthzService for AuthzServiceImpl {
         } else if p.effect.eq_ignore_ascii_case("allow") {
             Effect::Allow
         } else {
-            return Err(Status::invalid_argument(format!(
-                "policy effect must be 'allow' or 'deny', got '{}'",
-                p.effect
-            )));
+            return Err(authz_invalid_fields(
+                format!(
+                    "policy effect must be 'allow' or 'deny', got '{}'",
+                    p.effect
+                ),
+                [("policy.effect", "must be either 'allow' or 'deny'")],
+            ));
         };
         let policy = AuthzPolicy {
             id: p.id,
@@ -1553,7 +1772,9 @@ impl AuthzService for AuthzServiceImpl {
         };
         if self.pg_pool.is_some() {
             let runtime = self.runtime.as_ref().ok_or_else(|| {
-                Status::failed_precondition(
+                authz_capability_status(
+                    "policy_persistence",
+                    "runtime_native_entity_dispatch",
                     "native authz requires runtime-backed policy persistence",
                 )
             })?;
@@ -1653,7 +1874,12 @@ impl AuthzService for AuthzServiceImpl {
                     ]),
                 )
                 .await
-                .map_err(|err| Status::internal(format!("store authz policy failed: {err}")))?;
+                .map_err(|err| {
+                    authz_internal_status(
+                        "store_authz_policy",
+                        format!("store authz policy failed: {err}"),
+                    )
+                })?;
             let _ = self
                 .bump_authz_revision(
                     &policy.tenant,
@@ -1701,13 +1927,25 @@ impl AuthzService for AuthzServiceImpl {
     ) -> Result<Response<authz_pb::CheckAccessResponse>, Status> {
         let req = request.into_inner();
         if req.user_id.trim().is_empty() {
-            return Err(Status::invalid_argument("user_id is required"));
+            return Err(authz_required_field(
+                "user_id is required",
+                "user_id",
+                "must be a non-empty user id",
+            ));
         }
         if req.object.trim().is_empty() {
-            return Err(Status::invalid_argument("object is required"));
+            return Err(authz_required_field(
+                "object is required",
+                "object",
+                "must be a non-empty object",
+            ));
         }
         if req.action.trim().is_empty() {
-            return Err(Status::invalid_argument("action is required"));
+            return Err(authz_required_field(
+                "action is required",
+                "action",
+                "must be a non-empty action",
+            ));
         }
 
         let mut principal = req
@@ -1815,7 +2053,27 @@ impl AuthzService for AuthzServiceImpl {
         governance::guard_governed_role_mutation("CreateRole")?;
         let req = request.into_inner();
         if req.name.trim().is_empty() {
-            return Err(Status::invalid_argument("name is required"));
+            return Err(authz_required_field(
+                "name is required",
+                "name",
+                "must be a non-empty role name",
+            ));
+        }
+        let tenant_id = tenant_from_domain(&req.tenant_id, &req.domain);
+        if tenant_id.trim().is_empty() {
+            return Err(authz_invalid_fields(
+                "tenant_id or domain is required",
+                [
+                    (
+                        "tenant_id",
+                        "must include tenant_id or a tenant/project/resource domain",
+                    ),
+                    (
+                        "domain",
+                        "must include tenant_id or a tenant/project/resource domain",
+                    ),
+                ],
+            ));
         }
         // Bind `created_by` to the authenticated caller on the served path: derive
         // it from the claim subject when the body omits it, and forge-guard a
@@ -1829,26 +2087,28 @@ impl AuthzService for AuthzServiceImpl {
             } else {
                 let supplied = parse_uuid_field("created_by", &req.created_by)?;
                 if supplied != claim_id && !ctx.is_cross_tenant_admin() {
-                    return Err(Status::permission_denied(
-                        "created_by must match the authenticated caller",
-                    ));
+                    return Err(created_by_caller_mismatch_status("create_role"));
                 }
                 supplied
             }
         } else {
             if req.created_by.trim().is_empty() {
-                return Err(Status::invalid_argument("created_by is required"));
+                return Err(authz_required_field(
+                    "created_by is required",
+                    "created_by",
+                    "must be a non-empty creator id",
+                ));
             }
             parse_uuid_field("created_by", &req.created_by)?
         };
         let runtime = self.runtime.as_ref().ok_or_else(|| {
-            Status::failed_precondition("native authz requires runtime-backed role persistence")
+            authz_capability_status(
+                "role_persistence",
+                "runtime_native_entity_dispatch",
+                "native authz requires runtime-backed role persistence",
+            )
         })?;
         let role_id = Uuid::new_v4().to_string();
-        let tenant_id = tenant_from_domain(&req.tenant_id, &req.domain);
-        if tenant_id.trim().is_empty() {
-            return Err(Status::invalid_argument("tenant_id or domain is required"));
-        }
         let metadata_json =
             serde_json::to_string(&req.metadata).unwrap_or_else(|_| "{}".to_string());
         // P6.10 Wave 1: typed native insert (was raw INSERT). `is_system=false`,
@@ -1998,13 +2258,26 @@ impl AuthzService for AuthzServiceImpl {
             req.user_id.clone()
         };
         if principal_ref.trim().is_empty() || req.role_id.trim().is_empty() {
-            return Err(Status::invalid_argument(
+            return Err(authz_invalid_fields(
                 "user_id (or principal_id) and role_id are required",
+                [
+                    (
+                        "user_id",
+                        "must include user_id or principal_id for the role binding",
+                    ),
+                    (
+                        "principal_id",
+                        "must include user_id or principal_id for the role binding",
+                    ),
+                    ("role_id", "must be a non-empty role id"),
+                ],
             ));
         }
         if matches!(principal_kind, PrincipalKind::Group) && req.principal_id.trim().is_empty() {
-            return Err(Status::invalid_argument(
+            return Err(authz_required_field(
                 "group role bindings require an explicit principal_id (IdP/SCIM group mapping)",
+                "principal_id",
+                "must be explicit for group role bindings",
             ));
         }
         // Bind `assigned_by` to the authenticated caller on the served path (same
@@ -2020,15 +2293,17 @@ impl AuthzService for AuthzServiceImpl {
             } else {
                 let supplied = parse_uuid_field("assigned_by", &req.assigned_by)?;
                 if supplied != claim_id && !ctx.is_cross_tenant_admin() {
-                    return Err(Status::permission_denied(
-                        "assigned_by must match the authenticated caller",
-                    ));
+                    return Err(assigned_by_caller_mismatch_status());
                 }
                 supplied
             }
         } else {
             if req.assigned_by.trim().is_empty() {
-                return Err(Status::invalid_argument("assigned_by is required"));
+                return Err(authz_required_field(
+                    "assigned_by is required",
+                    "assigned_by",
+                    "must be a non-empty assigner id",
+                ));
             }
             parse_uuid_field("assigned_by", &req.assigned_by)?
         };
@@ -2047,7 +2322,19 @@ impl AuthzService for AuthzServiceImpl {
         let expires_at_unix = timestamp_unix_field("expires_at", req.expires_at.clone())?;
         let tenant_id = tenant_from_domain(&req.tenant_id, &req.domain);
         if tenant_id.trim().is_empty() {
-            return Err(Status::invalid_argument("tenant_id or domain is required"));
+            return Err(authz_invalid_fields(
+                "tenant_id or domain is required",
+                [
+                    (
+                        "tenant_id",
+                        "must include tenant_id or a tenant/project/resource domain",
+                    ),
+                    (
+                        "domain",
+                        "must include tenant_id or a tenant/project/resource domain",
+                    ),
+                ],
+            ));
         }
 
         // Non-USER principals (service account / workload / group / external)
@@ -2081,7 +2368,9 @@ impl AuthzService for AuthzServiceImpl {
             // update on conflict. domain and tenant_id both = tenant_id (raw `$3` reuse);
             // object/effect are insert literals ''.
             let runtime = self.runtime.as_ref().ok_or_else(|| {
-                Status::failed_precondition(
+                authz_capability_status(
+                    "tuple_persistence",
+                    "runtime_native_entity_dispatch",
                     "native authz requires runtime-backed tuple persistence",
                 )
             })?;
@@ -2141,7 +2430,10 @@ impl AuthzService for AuthzServiceImpl {
                 )
                 .await
                 .map_err(|err| {
-                    Status::internal(format!("assign role (principal) failed: {err}"))
+                    authz_internal_status(
+                        "assign_role_principal",
+                        format!("assign role (principal) failed: {err}"),
+                    )
                 })?;
             self.emit_event(
                 AuthEvent::new(
@@ -2218,7 +2510,9 @@ impl AuthzService for AuthzServiceImpl {
             _ => LogicalValue::Null,
         };
         let runtime = self.runtime.as_ref().ok_or_else(|| {
-            Status::failed_precondition(
+            authz_capability_status(
+                "user_role_persistence",
+                "runtime_native_entity_dispatch",
                 "native authz requires runtime-backed user-role persistence",
             )
         })?;
@@ -2279,7 +2573,9 @@ impl AuthzService for AuthzServiceImpl {
                 vec!["user_role_id".to_string()],
             )
             .await
-            .map_err(|err| Status::internal(format!("assign role failed: {err}")))?;
+            .map_err(|err| {
+                authz_internal_status("assign_role", format!("assign role failed: {err}"))
+            })?;
         let user_role_id = returned
             .first()
             .and_then(|r| r.get("user_role_id"))
@@ -2350,22 +2646,39 @@ impl AuthzService for AuthzServiceImpl {
     ) -> Result<Response<authz_pb::CreatePolicyRuleResponse>, Status> {
         // K2.2: governed mode disables direct active mutation (use the draft flow).
         if governance::governed_mode_enabled() {
-            return Err(Status::failed_precondition(
-                "governed mode: direct CreatePolicyRule is disabled; create a policy draft and activate it (or use break-glass governance)",
+            return Err(governed_direct_mutation_status(
+                "CreatePolicyRule",
+                "create_policy_rule_disabled",
             ));
         }
         let req = request.into_inner();
         if req.subject.trim().is_empty() {
-            return Err(Status::invalid_argument("subject is required"));
+            return Err(authz_required_field(
+                "subject is required",
+                "subject",
+                "must be a non-empty policy subject",
+            ));
         }
         if req.domain.trim().is_empty() {
-            return Err(Status::invalid_argument("domain is required"));
+            return Err(authz_required_field(
+                "domain is required",
+                "domain",
+                "must be a non-empty policy domain",
+            ));
         }
         if req.object.trim().is_empty() {
-            return Err(Status::invalid_argument("object is required"));
+            return Err(authz_required_field(
+                "object is required",
+                "object",
+                "must be a non-empty policy object",
+            ));
         }
         if req.action.trim().is_empty() {
-            return Err(Status::invalid_argument("action is required"));
+            return Err(authz_required_field(
+                "action is required",
+                "action",
+                "must be a non-empty policy action",
+            ));
         }
         // Bind `created_by` to the authenticated caller on the served path (same
         // shape as create_role.created_by): derive from the claim subject when the
@@ -2378,15 +2691,17 @@ impl AuthzService for AuthzServiceImpl {
             } else {
                 let supplied = parse_uuid_field("created_by", &req.created_by)?;
                 if supplied != claim_id && !ctx.is_cross_tenant_admin() {
-                    return Err(Status::permission_denied(
-                        "created_by must match the authenticated caller",
-                    ));
+                    return Err(created_by_caller_mismatch_status("create_policy_rule"));
                 }
                 supplied
             }
         } else {
             if req.created_by.trim().is_empty() {
-                return Err(Status::invalid_argument("created_by is required"));
+                return Err(authz_required_field(
+                    "created_by is required",
+                    "created_by",
+                    "must be a non-empty creator id",
+                ));
             }
             parse_uuid_field("created_by", &req.created_by)?
         };
@@ -2414,12 +2729,17 @@ impl AuthzService for AuthzServiceImpl {
         let policy_rule = policy_to_rule_pb(&policy);
         if self.pg_pool.is_some() {
             let runtime = self.runtime.as_ref().ok_or_else(|| {
-                Status::failed_precondition(
+                authz_capability_status(
+                    "policy_persistence",
+                    "runtime_native_entity_dispatch",
                     "native authz requires runtime-backed policy persistence",
                 )
             })?;
             let attributes = serde_json::to_value(&policy.conditions).map_err(|err| {
-                Status::internal(format!("encode policy conditions failed: {err}"))
+                authz_internal_status(
+                    "encode_policy_conditions",
+                    format!("encode policy conditions failed: {err}"),
+                )
             })?;
             // P6.10 Wave 1: typed native insert (was raw INSERT). `is_active=TRUE`
             // literal preserved; `created_by` is a validated UUID; `attributes_json`
@@ -2499,17 +2819,26 @@ impl AuthzService for AuthzServiceImpl {
                     vec!["policy_id".to_string()],
                 )
                 .await
-                .map_err(|err| Status::internal(format!("create policy rule failed: {err}")))?;
+                .map_err(|err| {
+                    authz_internal_status(
+                        "create_policy_rule",
+                        format!("create policy rule failed: {err}"),
+                    )
+                })?;
             let created_policy_id = returned
                 .first()
                 .and_then(|r| r.get("policy_id"))
                 .and_then(|v| v.as_str())
                 .ok_or_else(|| {
-                    Status::internal("create policy rule returned no persisted id".to_string())
+                    authz_internal_status(
+                        "create_policy_rule",
+                        "create policy rule returned no persisted id",
+                    )
                 })?
                 .to_string();
             if created_policy_id != policy.id {
-                return Err(Status::internal(
+                return Err(authz_internal_status(
+                    "create_policy_rule",
                     "create policy rule returned mismatched policy_id",
                 ));
             }
@@ -2543,7 +2872,11 @@ impl AuthzService for AuthzServiceImpl {
     ) -> Result<Response<authz_pb::ListUserPermissionsResponse>, Status> {
         let req = request.into_inner();
         if req.user_id.trim().is_empty() {
-            return Err(Status::invalid_argument("user_id is required"));
+            return Err(authz_required_field(
+                "user_id is required",
+                "user_id",
+                "must be a non-empty user id",
+            ));
         }
         let snap = self.current_snapshot().await?;
         let mut roles = Vec::new();
@@ -2587,8 +2920,20 @@ impl AuthzService for AuthzServiceImpl {
                 });
             }
         }
+        let page_window = native_offset_page_window(1, req.page_size, &req.page_token, 50);
+        let total = permissions.len() as i64;
+        let permissions = permissions
+            .into_iter()
+            .skip(page_window.offset)
+            .take(page_window.limit)
+            .collect();
         Ok(Response::new(authz_pb::ListUserPermissionsResponse {
             permissions,
+            next_page_token: native_next_page_token_for_total(
+                page_window.offset,
+                page_window.limit,
+                total,
+            ),
         }))
     }
     async fn list_access_decision_audits(
@@ -2604,11 +2949,17 @@ impl AuthzService for AuthzServiceImpl {
         governance::guard_governed_role_mutation("RevokeRole")?;
         let req = request.into_inner();
         if req.user_role_id.trim().is_empty() {
-            return Err(Status::invalid_argument("user_role_id is required"));
+            return Err(authz_required_field(
+                "user_role_id is required",
+                "user_role_id",
+                "must be a non-empty user-role assignment id",
+            ));
         }
         let user_role_id = parse_uuid_field("user_role_id", &req.user_role_id)?;
         let runtime = self.runtime.as_ref().ok_or_else(|| {
-            Status::failed_precondition(
+            authz_capability_status(
+                "user_role_persistence",
+                "runtime_native_entity_dispatch",
                 "native authz requires runtime-backed user-role persistence",
             )
         })?;
@@ -2627,7 +2978,9 @@ impl AuthzService for AuthzServiceImpl {
         let deleted_rows = runtime
             .native_entity_delete_rows_for_service("authz", &context, op)
             .await
-            .map_err(|err| Status::internal(format!("revoke role failed: {err}")))?;
+            .map_err(|err| {
+                authz_internal_status("revoke_role", format!("revoke role failed: {err}"))
+            })?;
         let revoked = !deleted_rows.is_empty();
         if let Some(row) = deleted_rows.first() {
             let tenant: String = row
@@ -2688,7 +3041,11 @@ impl AuthzService for AuthzServiceImpl {
     ) -> Result<Response<authz_pb::ListUserRolesResponse>, Status> {
         let req = request.into_inner();
         if req.user_id.trim().is_empty() {
-            return Err(Status::invalid_argument("user_id is required"));
+            return Err(authz_required_field(
+                "user_id is required",
+                "user_id",
+                "must be a non-empty user id",
+            ));
         }
         let user_id = parse_uuid_field("user_id", &req.user_id)?;
         let pool = self.require_pool()?;
@@ -2710,13 +3067,27 @@ impl AuthzService for AuthzServiceImpl {
         .bind(req.active_only)
         .fetch_all(pool)
         .await
-        .map_err(|err| Status::internal(format!("list user roles failed: {err}")))?;
+        .map_err(|err| {
+            authz_internal_status("list_user_roles", format!("list user roles failed: {err}"))
+        })?;
         let mut user_roles = Vec::with_capacity(rows.len());
         for row in &rows {
             user_roles.push(user_role_from_row(row)?);
         }
+        let page_window = native_offset_page_window(1, req.page_size, &req.page_token, 50);
+        let total = user_roles.len() as i64;
+        let user_roles = user_roles
+            .into_iter()
+            .skip(page_window.offset)
+            .take(page_window.limit)
+            .collect();
         Ok(Response::new(authz_pb::ListUserRolesResponse {
             user_roles,
+            next_page_token: native_next_page_token_for_total(
+                page_window.offset,
+                page_window.limit,
+                total,
+            ),
         }))
     }
     async fn get_role(
@@ -2725,7 +3096,13 @@ impl AuthzService for AuthzServiceImpl {
     ) -> Result<Response<authz_pb::GetRoleResponse>, Status> {
         let req = request.into_inner();
         if req.role_id.trim().is_empty() && req.role_code.trim().is_empty() {
-            return Err(Status::invalid_argument("role_id or role_code is required"));
+            return Err(authz_invalid_fields(
+                "role_id or role_code is required",
+                [
+                    ("role_id", "must include role_id or role_code"),
+                    ("role_code", "must include role_id or role_code"),
+                ],
+            ));
         }
         let role_id_filter = if req.role_id.trim().is_empty() {
             None
@@ -2753,12 +3130,16 @@ impl AuthzService for AuthzServiceImpl {
         .bind(&req.domain)
         .fetch_optional(pool)
         .await
-        .map_err(|err| Status::internal(format!("get role failed: {err}")))?;
+        .map_err(|err| authz_internal_status("get_role", format!("get role failed: {err}")))?;
         match row {
             Some(row) => Ok(Response::new(authz_pb::GetRoleResponse {
                 role: Some(role_from_row(&row)?),
             })),
-            None => Err(Status::not_found("role not found")),
+            None => Err(authz_not_found_status(
+                "get_role",
+                "role_not_found",
+                "role not found",
+            )),
         }
     }
     async fn list_roles(
@@ -2786,7 +3167,7 @@ impl AuthzService for AuthzServiceImpl {
         .bind(req.active_only)
         .fetch_all(pool)
         .await
-        .map_err(|err| Status::internal(format!("list roles failed: {err}")))?;
+        .map_err(|err| authz_internal_status("list_roles", format!("list roles failed: {err}")))?;
         let mut all = Vec::with_capacity(rows.len());
         for row in &rows {
             all.push(role_from_row(row)?);
@@ -2811,7 +3192,11 @@ impl AuthzService for AuthzServiceImpl {
     ) -> Result<Response<authz_pb::BatchCheckPermissionsResponse>, Status> {
         let req = request.into_inner();
         if req.user_id.trim().is_empty() {
-            return Err(Status::invalid_argument("user_id is required"));
+            return Err(authz_required_field(
+                "user_id is required",
+                "user_id",
+                "must be a non-empty user id",
+            ));
         }
         let attributes: BTreeMap<String, String> = req
             .context
@@ -2859,21 +3244,59 @@ impl AuthzService for AuthzServiceImpl {
         governance::guard_governed_role_mutation("UpdateRole")?;
         let req = request.into_inner();
         if req.role_id.trim().is_empty() {
-            return Err(Status::invalid_argument("role_id is required"));
+            return Err(authz_required_field(
+                "role_id is required",
+                "role_id",
+                "must be a non-empty role id",
+            ));
         }
         let role_id = parse_uuid_field("role_id", &req.role_id)?;
         if req.updated_by.trim().is_empty() {
-            return Err(Status::invalid_argument("updated_by is required"));
+            return Err(authz_required_field(
+                "updated_by is required",
+                "updated_by",
+                "must be a non-empty updater id",
+            ));
         }
+        let update_mask = crate::runtime::service::native_helpers::update_mask_path_set(
+            req.update_mask.as_ref(),
+            &["name", "description", "is_active"],
+        )?;
+        if update_mask
+            .as_ref()
+            .is_some_and(|paths| paths.contains("is_active"))
+            && req.is_active.is_none()
+        {
+            return Err(authz_required_field(
+                "is_active is required when present in update_mask",
+                "is_active",
+                "must be supplied when update_mask includes is_active",
+            ));
+        }
+        let update_name = crate::runtime::service::native_helpers::update_mask_allows(
+            &update_mask,
+            "name",
+            !req.name.trim().is_empty(),
+        );
+        let update_description = crate::runtime::service::native_helpers::update_mask_allows(
+            &update_mask,
+            "description",
+            !req.description.trim().is_empty(),
+        );
+        let update_is_active = crate::runtime::service::native_helpers::update_mask_allows(
+            &update_mask,
+            "is_active",
+            req.is_active.is_some(),
+        );
         let pool = self.require_pool()?;
         let role_model = self.roles_model();
         let rel = role_model.relation.clone();
         let projection = role_select_projection(&role_model);
         let row = sqlx::query(&format!(
             "UPDATE {rel} SET \
-               {name} = COALESCE(NULLIF($2, ''), {name}), \
-               {description} = COALESCE(NULLIF($3, ''), {description}), \
-               {is_active} = COALESCE($4, {is_active}) \
+               {name} = CASE WHEN $2 THEN $3 ELSE {name} END, \
+               {description} = CASE WHEN $4 THEN $5 ELSE {description} END, \
+               {is_active} = CASE WHEN $6 THEN $7 ELSE {is_active} END \
              WHERE {role_id} = $1::UUID AND {deleted_at} IS NULL \
              RETURNING {projection}",
             name = role_model.q("name"),
@@ -2883,16 +3306,23 @@ impl AuthzService for AuthzServiceImpl {
             deleted_at = role_model.q("deleted_at"),
         ))
         .bind(role_id)
+        .bind(update_name)
         .bind(&req.name)
+        .bind(update_description)
         .bind(&req.description)
-        .bind(req.is_active)
+        .bind(update_is_active)
+        .bind(req.is_active.unwrap_or(false))
         .fetch_optional(pool)
         .await
         .map_err(|err| {
             crate::runtime::executor_utils::sqlx_error_to_status("update role failed", &err)
         })?;
         let Some(row) = row else {
-            return Err(Status::not_found("role not found"));
+            return Err(authz_not_found_status(
+                "update_role",
+                "role_not_found",
+                "role not found",
+            ));
         };
         let role = role_from_row(&row)?;
         self.emit_event(
@@ -2944,10 +3374,18 @@ impl AuthzService for AuthzServiceImpl {
         governance::guard_governed_role_mutation("DeleteRole")?;
         let req = request.into_inner();
         if req.role_id.trim().is_empty() {
-            return Err(Status::invalid_argument("role_id is required"));
+            return Err(authz_required_field(
+                "role_id is required",
+                "role_id",
+                "must be a non-empty role id",
+            ));
         }
         if req.deleted_by.trim().is_empty() {
-            return Err(Status::invalid_argument("deleted_by is required"));
+            return Err(authz_required_field(
+                "deleted_by is required",
+                "deleted_by",
+                "must be a non-empty deleter id",
+            ));
         }
         let role_id = parse_uuid_field("role_id", &req.role_id)?;
         let deleted_by = parse_uuid_field("deleted_by", &req.deleted_by)?;
@@ -2965,7 +3403,12 @@ impl AuthzService for AuthzServiceImpl {
         .bind(role_id)
         .fetch_optional(pool)
         .await
-        .map_err(|err| Status::internal(format!("read role scope failed: {err}")))?;
+        .map_err(|err| {
+            authz_internal_status(
+                "read_role_scope",
+                format!("read role scope failed: {err}"),
+            )
+        })?;
         let (role_tenant, role_project) = scope_row
             .map(|r| {
                 (
@@ -2975,7 +3418,11 @@ impl AuthzService for AuthzServiceImpl {
             })
             .unwrap_or_default();
         let runtime = self.runtime.as_ref().ok_or_else(|| {
-            Status::failed_precondition("native authz requires runtime-backed role persistence")
+            authz_capability_status(
+                "role_persistence",
+                "runtime_native_entity_dispatch",
+                "native authz requires runtime-backed role persistence",
+            )
         })?;
         // P6.10 Wave 1: typed soft-delete (deleted_at=NOW, deleted_by, is_active=FALSE)
         // with the `deleted_at IS NULL` idempotency guard, then the typed cascade
@@ -3014,7 +3461,9 @@ impl AuthzService for AuthzServiceImpl {
                 },
             )
             .await
-            .map_err(|err| Status::internal(format!("delete role failed: {err}")))?;
+            .map_err(|err| {
+                authz_internal_status("delete_role", format!("delete role failed: {err}"))
+            })?;
         if affected > 0 {
             runtime
                 .native_entity_delete_for_service(
@@ -3032,7 +3481,10 @@ impl AuthzService for AuthzServiceImpl {
                 )
                 .await
                 .map_err(|err| {
-                    Status::internal(format!("delete role assignments failed: {err}"))
+                    authz_internal_status(
+                        "delete_role_assignments",
+                        format!("delete role assignments failed: {err}"),
+                    )
                 })?;
         }
         if affected > 0 && !role_tenant.trim().is_empty() {
@@ -3057,7 +3509,11 @@ impl AuthzService for AuthzServiceImpl {
     ) -> Result<Response<authz_pb::GetPolicyRuleResponse>, Status> {
         let req = request.into_inner();
         if req.policy_id.trim().is_empty() {
-            return Err(Status::invalid_argument("policy_id is required"));
+            return Err(authz_required_field(
+                "policy_id is required",
+                "policy_id",
+                "must be a non-empty policy id",
+            ));
         }
         if let Some(pool) = &self.pg_pool {
             let policy_id = parse_uuid_field("policy_id", &req.policy_id)?;
@@ -3075,12 +3531,18 @@ impl AuthzService for AuthzServiceImpl {
             .bind(policy_id)
             .fetch_optional(pool)
             .await
-            .map_err(|err| Status::internal(format!("get policy rule failed: {err}")))?;
+            .map_err(|err| {
+                authz_internal_status("get_policy_rule", format!("get policy rule failed: {err}"))
+            })?;
             return match row {
                 Some(row) => Ok(Response::new(authz_pb::GetPolicyRuleResponse {
                     policy: Some(policy_rule_from_row(&row)?),
                 })),
-                None => Err(Status::not_found("policy rule not found")),
+                None => Err(authz_not_found_status(
+                    "get_policy_rule",
+                    "policy_rule_not_found",
+                    "policy rule not found",
+                )),
             };
         }
         let snap = self.current_snapshot().await?;
@@ -3124,7 +3586,12 @@ impl AuthzService for AuthzServiceImpl {
             .bind(req.active_only)
             .fetch_all(pool)
             .await
-            .map_err(|err| Status::internal(format!("list policy rules failed: {err}")))?;
+            .map_err(|err| {
+                authz_internal_status(
+                    "list_policy_rules",
+                    format!("list policy rules failed: {err}"),
+                )
+            })?;
             let all = rows
                 .iter()
                 .map(policy_rule_from_row)
@@ -3165,12 +3632,18 @@ impl AuthzService for AuthzServiceImpl {
     ) -> Result<Response<authz_pb::DeletePolicyRuleResponse>, Status> {
         let req = request.into_inner();
         if req.policy_id.trim().is_empty() {
-            return Err(Status::invalid_argument("policy_id is required"));
+            return Err(authz_required_field(
+                "policy_id is required",
+                "policy_id",
+                "must be a non-empty policy id",
+            ));
         }
         let mut deleted = false;
         if self.pg_pool.is_some() {
             let runtime = self.runtime.as_ref().ok_or_else(|| {
-                Status::failed_precondition(
+                authz_capability_status(
+                    "policy_persistence",
+                    "runtime_native_entity_dispatch",
                     "native authz requires runtime-backed policy persistence",
                 )
             })?;
@@ -3218,7 +3691,12 @@ impl AuthzService for AuthzServiceImpl {
             let (affected, _) = runtime
                 .native_entity_update_for_service("authz", &context, op)
                 .await
-                .map_err(|err| Status::internal(format!("delete policy rule failed: {err}")))?;
+                .map_err(|err| {
+                    authz_internal_status(
+                        "delete_policy_rule",
+                        format!("delete policy rule failed: {err}"),
+                    )
+                })?;
             deleted = affected > 0;
         } else {
             self.require_snapshot_fallback()?;
@@ -3300,7 +3778,11 @@ impl AuthzService for AuthzServiceImpl {
             principal.principal_id = principal.subject.clone();
         }
         if principal.tenant_id.trim().is_empty() {
-            return Err(Status::invalid_argument("tenant_id is required"));
+            return Err(authz_required_field(
+                "tenant_id is required",
+                "tenant_id",
+                "must be a non-empty tenant id",
+            ));
         }
 
         let mut resource = req
@@ -3439,16 +3921,15 @@ impl AuthzService for AuthzServiceImpl {
         // A bundle is always tenant-scoped; an empty tenant must not fall through
         // to "all tenants" (that would sign + return every tenant's policies).
         if req.tenant_id.trim().is_empty() {
-            return Err(Status::invalid_argument(
+            return Err(authz_required_field(
                 "tenant_id is required for a policy bundle",
+                "tenant_id",
+                "must be a non-empty tenant id for a policy bundle",
             ));
         }
         let cfg = PolicyBundleConfig::from_env();
         if !cfg.enabled() {
-            return Err(Status::failed_precondition(
-                "policy bundle signing is not configured; set UDB_POLICY_BUNDLE_SECRET \
-                 (or UDB_SESSION_HASH_SECRET)",
-            ));
+            return Err(policy_bundle_signing_not_configured_status());
         }
         let snap = self.current_snapshot().await?;
         let tenant = if req.tenant_id.trim().is_empty() {
@@ -3461,7 +3942,9 @@ impl AuthzService for AuthzServiceImpl {
         let now = now_unix() as i64;
         let signed = PolicyEngine::bundle(snap.as_ref(), &cfg, &tenant, &req.project_id, now)
             .await
-            .ok_or_else(|| Status::internal("failed to sign policy bundle"))?;
+            .ok_or_else(|| {
+                authz_internal_status("sign_policy_bundle", "failed to sign policy bundle")
+            })?;
 
         // Audit the bundle issuance (security-sensitive). Only the bundle metadata
         // (key id, versions) is recorded — never the signed bundle bytes.
@@ -3737,6 +4220,816 @@ mod version_tests {
         assert_eq!(policy_content_version(&a), policy_content_version(&b));
         // And it is stable across calls.
         assert_eq!(policy_content_version(&a), policy_content_version(&a));
+    }
+}
+
+#[cfg(test)]
+mod validation_tests {
+    use super::*;
+    use crate::proto::udb::core::authz::services::v1::authz_service_server::AuthzService;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::authz::AuthzSnapshot;
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
+    use tonic::{Code, Request, Status};
+
+    fn svc() -> AuthzServiceImpl {
+        AuthzServiceImpl::new(AuthzSnapshot::default())
+    }
+
+    fn decode_detail(status: &Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_validation_fields(status: &Status, expected: &[(&str, &str)]) {
+        assert_eq!(status.code(), Code::InvalidArgument);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert_eq!(detail.field_violations.len(), expected.len());
+        for (actual, (field, description)) in detail.field_violations.iter().zip(expected) {
+            assert_eq!(actual.field, *field);
+            assert_eq!(actual.description, *description);
+        }
+    }
+
+    fn assert_capability_detail(
+        status: &Status,
+        operation: &str,
+        capability_required: &str,
+        message: &str,
+    ) {
+        assert_eq!(status.code(), Code::FailedPrecondition);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Capability as i32);
+        assert_eq!(detail.backend, "authz");
+        assert_eq!(detail.operation, operation);
+        assert_eq!(detail.capability_required, capability_required);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+    }
+
+    fn assert_schema_detail(status: &Status, operation: &str, schema_code: &str, message: &str) {
+        assert_eq!(status.code(), Code::NotFound);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Schema as i32);
+        assert_eq!(detail.backend, "authz");
+        assert_eq!(detail.operation, operation);
+        assert_eq!(detail.capability_required, schema_code);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+    }
+
+    fn assert_policy_detail(
+        status: &Status,
+        operation: &str,
+        policy_decision_id: &str,
+        message: &str,
+    ) {
+        assert_eq!(status.code(), Code::FailedPrecondition);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Policy as i32);
+        assert_eq!(detail.operation, operation);
+        assert_eq!(detail.policy_decision_id, policy_decision_id);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+    }
+
+    fn assert_permission_policy_detail(
+        status: &Status,
+        operation: &str,
+        policy_decision_id: &str,
+        message: &str,
+    ) {
+        assert_eq!(status.code(), Code::PermissionDenied);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Policy as i32);
+        assert_eq!(detail.operation, operation);
+        assert_eq!(detail.policy_decision_id, policy_decision_id);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+    }
+
+    fn assert_internal_detail(status: &Status, operation: &str, message: &str) {
+        assert_eq!(status.code(), Code::Internal);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "authz");
+        assert_eq!(detail.operation, operation);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    #[test]
+    fn authz_internal_status_carries_typed_detail() {
+        let status = authz_internal_status("load_authz_policies", "load authz policies failed");
+
+        assert_internal_detail(&status, "load_authz_policies", "load authz policies failed");
+    }
+
+    #[test]
+    fn authz_missing_store_capabilities_carry_typed_detail() {
+        let svc = svc();
+
+        let pool_err = match svc.require_pool() {
+            Err(status) => status,
+            Ok(_) => panic!("pool-less authz service must fail closed"),
+        };
+        assert_capability_detail(
+            &pool_err,
+            "postgres_auth_store",
+            "postgres_auth_store",
+            "this operation requires a Postgres-backed auth store (no PG pool configured)",
+        );
+
+        let fallback_err = match svc.require_snapshot_fallback() {
+            Err(status) => status,
+            Ok(_) => panic!("snapshot fallback without Postgres must fail closed"),
+        };
+        assert_capability_detail(
+            &fallback_err,
+            "snapshot_fallback",
+            "postgres_auth_store",
+            "native authz requires a Postgres-backed auth store",
+        );
+    }
+
+    #[test]
+    fn authz_missing_runtime_capabilities_carry_typed_detail() {
+        for (operation, message) in [
+            (
+                "policy_persistence",
+                "native authz requires runtime-backed policy persistence",
+            ),
+            (
+                "role_persistence",
+                "native authz requires runtime-backed role persistence",
+            ),
+            (
+                "tuple_persistence",
+                "native authz requires runtime-backed tuple persistence",
+            ),
+            (
+                "user_role_persistence",
+                "native authz requires runtime-backed user-role persistence",
+            ),
+            (
+                "draft_persistence",
+                "native authz requires runtime-backed draft persistence",
+            ),
+            (
+                "policy_set_persistence",
+                "native authz requires runtime-backed policy-set persistence",
+            ),
+            (
+                "revision_persistence",
+                "native authz requires runtime-backed revision persistence",
+            ),
+            (
+                "canary_persistence",
+                "native authz requires runtime-backed canary persistence",
+            ),
+        ] {
+            let status =
+                authz_capability_status(operation, "runtime_native_entity_dispatch", message);
+            assert_capability_detail(
+                &status,
+                operation,
+                "runtime_native_entity_dispatch",
+                message,
+            );
+        }
+    }
+
+    #[test]
+    fn policy_bundle_signing_missing_secret_carries_capability_detail() {
+        let status = policy_bundle_signing_not_configured_status();
+
+        assert_capability_detail(
+            &status,
+            "policy_bundle_signing",
+            "policy_bundle_signing_secret",
+            "policy bundle signing is not configured; set UDB_POLICY_BUNDLE_SECRET (or UDB_SESSION_HASH_SECRET)",
+        );
+    }
+
+    #[test]
+    fn authz_not_found_denials_carry_schema_detail() {
+        for (status, operation, schema_code, message) in [
+            (
+                authz_not_found_status("get_role", "role_not_found", "role not found"),
+                "get_role",
+                "role_not_found",
+                "role not found",
+            ),
+            (
+                authz_not_found_status("update_role", "role_not_found", "role not found"),
+                "update_role",
+                "role_not_found",
+                "role not found",
+            ),
+            (
+                authz_not_found_status(
+                    "get_policy_rule",
+                    "policy_rule_not_found",
+                    "policy rule not found",
+                ),
+                "get_policy_rule",
+                "policy_rule_not_found",
+                "policy rule not found",
+            ),
+            (
+                authz_not_found_status(
+                    "load_policy_draft",
+                    "policy_draft_not_found",
+                    "policy draft not found",
+                ),
+                "load_policy_draft",
+                "policy_draft_not_found",
+                "policy draft not found",
+            ),
+            (
+                authz_not_found_status(
+                    "load_policy_version",
+                    "policy_version_not_found",
+                    "policy version not found",
+                ),
+                "load_policy_version",
+                "policy_version_not_found",
+                "policy version not found",
+            ),
+            (
+                authz_not_found_status(
+                    "load_policy_set",
+                    "policy_set_not_found",
+                    "policy set not found",
+                ),
+                "load_policy_set",
+                "policy_set_not_found",
+                "policy set not found",
+            ),
+            (
+                authz_not_found_status(
+                    "load_canary",
+                    "policy_canary_not_found",
+                    "canary not found",
+                ),
+                "load_canary",
+                "policy_canary_not_found",
+                "canary not found",
+            ),
+        ] {
+            assert_schema_detail(&status, operation, schema_code, message);
+        }
+    }
+
+    #[test]
+    fn governed_direct_mutation_denials_carry_policy_detail() {
+        for (rpc, decision_id) in [
+            ("PutAuthzPolicy", "put_authz_policy_disabled"),
+            ("CreatePolicyRule", "create_policy_rule_disabled"),
+            ("PutRoleBinding", "put_role_binding_disabled"),
+            ("PutRelationship", "put_relationship_disabled"),
+        ] {
+            assert_policy_detail(
+                &governed_direct_mutation_status(rpc, decision_id),
+                "authz_governed_direct_mutation",
+                decision_id,
+                &format!(
+                    "governed mode: direct {rpc} is disabled; create a policy draft and activate it (or use break-glass governance)"
+                ),
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn put_authz_policy_missing_policy_carries_field_violation() {
+        let err = svc()
+            .put_authz_policy(Request::new(authz_pb::PutAuthzPolicyRequest::default()))
+            .await
+            .expect_err("missing policy must fail before persistence");
+
+        assert_eq!(err.message(), "policy is required");
+        assert_validation_fields(&err, &[("policy", "must include an authz policy")]);
+    }
+
+    #[tokio::test]
+    async fn put_authz_policy_missing_policy_id_carries_field_violation() {
+        let err = svc()
+            .put_authz_policy(Request::new(authz_pb::PutAuthzPolicyRequest {
+                policy: Some(authz_pb::AuthzPolicyRecord {
+                    enabled: true,
+                    effect: "allow".to_string(),
+                    ..Default::default()
+                }),
+            }))
+            .await
+            .expect_err("missing policy id must fail before persistence");
+
+        assert_eq!(err.message(), "policy id is required");
+        assert_validation_fields(&err, &[("policy.id", "must be a non-empty policy id")]);
+    }
+
+    #[tokio::test]
+    async fn put_authz_policy_invalid_effect_carries_field_violation() {
+        let err = svc()
+            .put_authz_policy(Request::new(authz_pb::PutAuthzPolicyRequest {
+                policy: Some(authz_pb::AuthzPolicyRecord {
+                    id: "policy-1".to_string(),
+                    enabled: true,
+                    effect: "maybe".to_string(),
+                    ..Default::default()
+                }),
+            }))
+            .await
+            .expect_err("invalid policy effect must fail before persistence");
+
+        assert_eq!(
+            err.message(),
+            "policy effect must be 'allow' or 'deny', got 'maybe'"
+        );
+        assert_validation_fields(
+            &err,
+            &[("policy.effect", "must be either 'allow' or 'deny'")],
+        );
+    }
+
+    #[tokio::test]
+    async fn check_access_missing_user_id_carries_field_violation() {
+        let err = svc()
+            .check_access(Request::new(authz_pb::CheckAccessRequest {
+                object: "invoice".to_string(),
+                action: "read".to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect_err("missing user_id must fail before policy evaluation");
+
+        assert_eq!(err.message(), "user_id is required");
+        assert_validation_fields(&err, &[("user_id", "must be a non-empty user id")]);
+    }
+
+    #[tokio::test]
+    async fn check_access_missing_object_carries_field_violation() {
+        let err = svc()
+            .check_access(Request::new(authz_pb::CheckAccessRequest {
+                user_id: "user-1".to_string(),
+                action: "read".to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect_err("missing object must fail before policy evaluation");
+
+        assert_eq!(err.message(), "object is required");
+        assert_validation_fields(&err, &[("object", "must be a non-empty object")]);
+    }
+
+    #[tokio::test]
+    async fn check_access_missing_action_carries_field_violation() {
+        let err = svc()
+            .check_access(Request::new(authz_pb::CheckAccessRequest {
+                user_id: "user-1".to_string(),
+                object: "invoice".to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect_err("missing action must fail before policy evaluation");
+
+        assert_eq!(err.message(), "action is required");
+        assert_validation_fields(&err, &[("action", "must be a non-empty action")]);
+    }
+
+    #[tokio::test]
+    async fn create_role_missing_name_carries_field_violation() {
+        let err = svc()
+            .create_role(Request::new(authz_pb::CreateRoleRequest {
+                tenant_id: "tenant-a".to_string(),
+                created_by: "2a75f9e0-11b2-4625-80a3-1f47e4b45151".to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect_err("missing role name must fail before runtime access");
+
+        assert_eq!(err.message(), "name is required");
+        assert_validation_fields(&err, &[("name", "must be a non-empty role name")]);
+    }
+
+    #[tokio::test]
+    async fn create_role_missing_scope_carries_field_violations() {
+        let err = svc()
+            .create_role(Request::new(authz_pb::CreateRoleRequest {
+                name: "Reader".to_string(),
+                created_by: "2a75f9e0-11b2-4625-80a3-1f47e4b45151".to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect_err("missing tenant scope must fail before runtime access");
+
+        assert_eq!(err.message(), "tenant_id or domain is required");
+        assert_validation_fields(
+            &err,
+            &[
+                (
+                    "tenant_id",
+                    "must include tenant_id or a tenant/project/resource domain",
+                ),
+                (
+                    "domain",
+                    "must include tenant_id or a tenant/project/resource domain",
+                ),
+            ],
+        );
+    }
+
+    #[tokio::test]
+    async fn create_role_missing_created_by_carries_field_violation() {
+        let err = svc()
+            .create_role(Request::new(authz_pb::CreateRoleRequest {
+                name: "Reader".to_string(),
+                tenant_id: "tenant-a".to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect_err("missing creator must fail before runtime access");
+
+        assert_eq!(err.message(), "created_by is required");
+        assert_validation_fields(&err, &[("created_by", "must be a non-empty creator id")]);
+    }
+
+    #[tokio::test]
+    async fn create_role_invalid_created_by_carries_field_violation() {
+        let err = svc()
+            .create_role(Request::new(authz_pb::CreateRoleRequest {
+                name: "Reader".to_string(),
+                tenant_id: "tenant-a".to_string(),
+                created_by: "not-a-uuid".to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect_err("invalid creator UUID must fail before runtime access");
+
+        assert_eq!(err.message(), "created_by must be a UUID");
+        assert_validation_fields(&err, &[("created_by", "must be a UUID")]);
+    }
+
+    #[tokio::test]
+    async fn create_role_created_by_mismatch_carries_policy_detail() {
+        let ctx = crate::runtime::service::method_security::test_claim_context(
+            "role-admin",
+            "tenant-a",
+            "",
+            &["udb:authz:admin"],
+            &[],
+        );
+        let req = Request::new(authz_pb::CreateRoleRequest {
+            name: "Reader".to_string(),
+            tenant_id: "tenant-a".to_string(),
+            created_by: "2a75f9e0-11b2-4625-80a3-1f47e4b45151".to_string(),
+            ..Default::default()
+        });
+        let err = crate::runtime::service::method_security::scope_claim_context_for_test(
+            ctx,
+            svc().create_role(req),
+        )
+        .await
+        .expect_err("created_by mismatch must fail before runtime access");
+
+        assert_permission_policy_detail(
+            &err,
+            "create_role",
+            "created_by_caller_mismatch",
+            "created_by must match the authenticated caller",
+        );
+    }
+
+    #[tokio::test]
+    async fn assign_role_missing_identity_carries_field_violations() {
+        let err = svc()
+            .assign_role(Request::new(authz_pb::AssignRoleRequest::default()))
+            .await
+            .expect_err("missing assignment identity must fail before runtime access");
+
+        assert_eq!(
+            err.message(),
+            "user_id (or principal_id) and role_id are required"
+        );
+        assert_validation_fields(
+            &err,
+            &[
+                (
+                    "user_id",
+                    "must include user_id or principal_id for the role binding",
+                ),
+                (
+                    "principal_id",
+                    "must include user_id or principal_id for the role binding",
+                ),
+                ("role_id", "must be a non-empty role id"),
+            ],
+        );
+    }
+
+    #[tokio::test]
+    async fn assign_role_group_missing_principal_id_carries_field_violation() {
+        let err = svc()
+            .assign_role(Request::new(authz_pb::AssignRoleRequest {
+                user_id: "external-group".to_string(),
+                role_id: "2a75f9e0-11b2-4625-80a3-1f47e4b45151".to_string(),
+                principal_kind: authz_entity_pb::PrincipalKind::Group as i32,
+                ..Default::default()
+            }))
+            .await
+            .expect_err("group binding without principal_id must fail before runtime access");
+
+        assert_eq!(
+            err.message(),
+            "group role bindings require an explicit principal_id (IdP/SCIM group mapping)"
+        );
+        assert_validation_fields(
+            &err,
+            &[("principal_id", "must be explicit for group role bindings")],
+        );
+    }
+
+    #[tokio::test]
+    async fn assign_role_missing_assigned_by_carries_field_violation() {
+        let err = svc()
+            .assign_role(Request::new(authz_pb::AssignRoleRequest {
+                user_id: "2a75f9e0-11b2-4625-80a3-1f47e4b45151".to_string(),
+                role_id: "3d89cab2-1b72-46c8-9577-4a09d3a08848".to_string(),
+                tenant_id: "tenant-a".to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect_err("missing assigner must fail before runtime access");
+
+        assert_eq!(err.message(), "assigned_by is required");
+        assert_validation_fields(&err, &[("assigned_by", "must be a non-empty assigner id")]);
+    }
+
+    #[tokio::test]
+    async fn assign_role_assigned_by_mismatch_carries_policy_detail() {
+        let ctx = crate::runtime::service::method_security::test_claim_context(
+            "role-admin",
+            "tenant-a",
+            "",
+            &["udb:authz:admin"],
+            &[],
+        );
+        let req = Request::new(authz_pb::AssignRoleRequest {
+            user_id: "2a75f9e0-11b2-4625-80a3-1f47e4b45151".to_string(),
+            role_id: "3d89cab2-1b72-46c8-9577-4a09d3a08848".to_string(),
+            tenant_id: "tenant-a".to_string(),
+            assigned_by: "4b0d3c76-16d1-4c91-9831-d62a25d6e37b".to_string(),
+            ..Default::default()
+        });
+        let err = crate::runtime::service::method_security::scope_claim_context_for_test(
+            ctx,
+            svc().assign_role(req),
+        )
+        .await
+        .expect_err("assigned_by mismatch must fail before runtime access");
+
+        assert_permission_policy_detail(
+            &err,
+            "assign_role",
+            "assigned_by_caller_mismatch",
+            "assigned_by must match the authenticated caller",
+        );
+    }
+
+    #[tokio::test]
+    async fn assign_role_missing_scope_carries_field_violations() {
+        let err = svc()
+            .assign_role(Request::new(authz_pb::AssignRoleRequest {
+                user_id: "2a75f9e0-11b2-4625-80a3-1f47e4b45151".to_string(),
+                role_id: "3d89cab2-1b72-46c8-9577-4a09d3a08848".to_string(),
+                assigned_by: "4b0d3c76-16d1-4c91-9831-d62a25d6e37b".to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect_err("missing assignment scope must fail before runtime access");
+
+        assert_eq!(err.message(), "tenant_id or domain is required");
+        assert_validation_fields(
+            &err,
+            &[
+                (
+                    "tenant_id",
+                    "must include tenant_id or a tenant/project/resource domain",
+                ),
+                (
+                    "domain",
+                    "must include tenant_id or a tenant/project/resource domain",
+                ),
+            ],
+        );
+    }
+
+    #[tokio::test]
+    async fn create_policy_rule_missing_subject_carries_field_violation() {
+        let err = svc()
+            .create_policy_rule(Request::new(authz_pb::CreatePolicyRuleRequest {
+                domain: "tenant:tenant-a".to_string(),
+                object: "invoice".to_string(),
+                action: "read".to_string(),
+                created_by: "2a75f9e0-11b2-4625-80a3-1f47e4b45151".to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect_err("missing policy subject must fail before runtime access");
+
+        assert_eq!(err.message(), "subject is required");
+        assert_validation_fields(&err, &[("subject", "must be a non-empty policy subject")]);
+    }
+
+    #[tokio::test]
+    async fn create_policy_rule_missing_effect_carries_field_violation() {
+        let err = svc()
+            .create_policy_rule(Request::new(authz_pb::CreatePolicyRuleRequest {
+                subject: "user:reader".to_string(),
+                domain: "tenant:tenant-a".to_string(),
+                object: "invoice".to_string(),
+                action: "read".to_string(),
+                created_by: "2a75f9e0-11b2-4625-80a3-1f47e4b45151".to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect_err("missing policy effect must fail before runtime access");
+
+        assert_eq!(err.message(), "policy effect is required");
+        assert_validation_fields(&err, &[("effect", "must be either ALLOW or DENY")]);
+    }
+
+    #[tokio::test]
+    async fn create_policy_rule_created_by_mismatch_carries_policy_detail() {
+        let ctx = crate::runtime::service::method_security::test_claim_context(
+            "policy-admin",
+            "tenant-a",
+            "",
+            &["udb:authz:admin"],
+            &[],
+        );
+        let req = Request::new(authz_pb::CreatePolicyRuleRequest {
+            subject: "user:reader".to_string(),
+            domain: "tenant:tenant-a".to_string(),
+            object: "invoice".to_string(),
+            action: "read".to_string(),
+            effect: authz_entity_pb::PolicyEffect::Allow as i32,
+            created_by: "2a75f9e0-11b2-4625-80a3-1f47e4b45151".to_string(),
+            ..Default::default()
+        });
+        let err = crate::runtime::service::method_security::scope_claim_context_for_test(
+            ctx,
+            svc().create_policy_rule(req),
+        )
+        .await
+        .expect_err("created_by mismatch must fail before runtime access");
+
+        assert_permission_policy_detail(
+            &err,
+            "create_policy_rule",
+            "created_by_caller_mismatch",
+            "created_by must match the authenticated caller",
+        );
+    }
+
+    #[tokio::test]
+    async fn list_user_permissions_missing_user_id_carries_field_violation() {
+        let err = svc()
+            .list_user_permissions(Request::new(authz_pb::ListUserPermissionsRequest::default()))
+            .await
+            .expect_err("missing user_id must fail before snapshot access");
+
+        assert_eq!(err.message(), "user_id is required");
+        assert_validation_fields(&err, &[("user_id", "must be a non-empty user id")]);
+    }
+
+    #[tokio::test]
+    async fn get_role_missing_lookup_carries_field_violations() {
+        let err = svc()
+            .get_role(Request::new(authz_pb::GetRoleRequest::default()))
+            .await
+            .expect_err("missing role lookup must fail before Postgres access");
+
+        assert_eq!(err.message(), "role_id or role_code is required");
+        assert_validation_fields(
+            &err,
+            &[
+                ("role_id", "must include role_id or role_code"),
+                ("role_code", "must include role_id or role_code"),
+            ],
+        );
+    }
+
+    #[tokio::test]
+    async fn update_role_missing_updated_by_carries_field_violation() {
+        let err = svc()
+            .update_role(Request::new(authz_pb::UpdateRoleRequest {
+                role_id: "2a75f9e0-11b2-4625-80a3-1f47e4b45151".to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect_err("missing updater must fail before Postgres access");
+
+        assert_eq!(err.message(), "updated_by is required");
+        assert_validation_fields(&err, &[("updated_by", "must be a non-empty updater id")]);
+    }
+
+    #[tokio::test]
+    async fn delete_role_missing_deleted_by_carries_field_violation() {
+        let err = svc()
+            .delete_role(Request::new(authz_pb::DeleteRoleRequest {
+                role_id: "2a75f9e0-11b2-4625-80a3-1f47e4b45151".to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect_err("missing deleter must fail before Postgres access");
+
+        assert_eq!(err.message(), "deleted_by is required");
+        assert_validation_fields(&err, &[("deleted_by", "must be a non-empty deleter id")]);
+    }
+
+    #[tokio::test]
+    async fn revoke_role_missing_user_role_id_carries_field_violation() {
+        let err = svc()
+            .revoke_role(Request::new(authz_pb::RevokeRoleRequest::default()))
+            .await
+            .expect_err("missing user_role_id must fail before runtime access");
+
+        assert_eq!(err.message(), "user_role_id is required");
+        assert_validation_fields(
+            &err,
+            &[(
+                "user_role_id",
+                "must be a non-empty user-role assignment id",
+            )],
+        );
+    }
+
+    #[tokio::test]
+    async fn get_policy_rule_missing_policy_id_carries_field_violation() {
+        let err = svc()
+            .get_policy_rule(Request::new(authz_pb::GetPolicyRuleRequest::default()))
+            .await
+            .expect_err("missing policy id must fail before lookup");
+
+        assert_eq!(err.message(), "policy_id is required");
+        assert_validation_fields(&err, &[("policy_id", "must be a non-empty policy id")]);
+    }
+
+    #[tokio::test]
+    async fn delete_policy_rule_missing_policy_id_carries_field_violation() {
+        let err = svc()
+            .delete_policy_rule(Request::new(authz_pb::DeletePolicyRuleRequest::default()))
+            .await
+            .expect_err("missing policy id must fail before delete");
+
+        assert_eq!(err.message(), "policy_id is required");
+        assert_validation_fields(&err, &[("policy_id", "must be a non-empty policy id")]);
+    }
+
+    #[tokio::test]
+    async fn get_native_access_missing_tenant_id_carries_field_violation() {
+        let err = svc()
+            .get_native_access(Request::new(authz_pb::NativeAccessRequest {
+                principal: Some(authz_pb::Principal {
+                    subject: "user-1".to_string(),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            }))
+            .await
+            .expect_err("missing native-access tenant must fail before decision evaluation");
+
+        assert_eq!(err.message(), "tenant_id is required");
+        assert_validation_fields(&err, &[("tenant_id", "must be a non-empty tenant id")]);
+    }
+
+    #[tokio::test]
+    async fn get_policy_bundle_missing_tenant_id_carries_field_violation() {
+        let err = svc()
+            .get_policy_bundle(Request::new(authz_pb::PolicyBundleRequest::default()))
+            .await
+            .expect_err("missing bundle tenant must fail before signing config access");
+
+        assert_eq!(err.message(), "tenant_id is required for a policy bundle");
+        assert_validation_fields(
+            &err,
+            &[(
+                "tenant_id",
+                "must be a non-empty tenant id for a policy bundle",
+            )],
+        );
     }
 }
 

@@ -52,9 +52,37 @@ fn active_catalog_version_response(
     })
 }
 
+fn catalog_version_not_found_status() -> Status {
+    crate::runtime::executor_utils::schema_status(
+        tonic::Code::NotFound,
+        "catalog",
+        "GetCatalogVersion",
+        "catalog_version_not_found",
+        "catalog version not found",
+    )
+}
+
+fn catalog_handler_internal_status(
+    operation: impl Into<String>,
+    message: impl Into<String>,
+) -> Status {
+    crate::runtime::executor_utils::internal_status("catalog", operation, message)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
+
+    fn decode_detail(status: &Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
 
     #[test]
     fn active_catalog_version_response_serves_in_memory_active_catalog() {
@@ -91,6 +119,43 @@ mod tests {
         assert!(
             active_catalog_version_response(&catalog, "default", "boot-checksum").is_some(),
             "active checksum selector should match the in-memory active catalog"
+        );
+    }
+
+    #[test]
+    fn catalog_version_not_found_carries_schema_detail() {
+        let err = catalog_version_not_found_status();
+        assert_eq!(err.code(), tonic::Code::NotFound);
+        assert_eq!(err.message(), "catalog version not found");
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::Schema as i32);
+        assert_eq!(detail.backend, "catalog");
+        assert_eq!(detail.operation, "GetCatalogVersion");
+        assert_eq!(detail.capability_required, "catalog_version_not_found");
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+    }
+
+    fn assert_internal_detail(status: &Status, operation: &str, message: &str) {
+        assert_eq!(status.code(), tonic::Code::Internal);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "catalog");
+        assert_eq!(detail.operation, operation);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+    }
+
+    #[test]
+    fn catalog_handler_internal_status_carries_typed_detail() {
+        assert_internal_detail(
+            &catalog_handler_internal_status(
+                "GetCatalogManifest",
+                "failed to serialize catalog manifest: invalid value",
+            ),
+            "GetCatalogManifest",
+            "failed to serialize catalog manifest: invalid value",
         );
     }
 }
@@ -131,9 +196,10 @@ impl DataBrokerService {
                 return self.record_grpc(
                     "GetCatalogManifest",
                     started,
-                    Err(Status::internal(format!(
-                        "failed to serialize catalog manifest: {e}"
-                    ))),
+                    Err(catalog_handler_internal_status(
+                        "GetCatalogManifest",
+                        format!("failed to serialize catalog manifest: {e}"),
+                    )),
                 );
             }
         };
@@ -288,18 +354,20 @@ impl DataBrokerService {
                         return self.record_grpc(
                             "ActivateCatalog",
                             started,
-                            Err(Status::internal(format!(
-                                "failed to stage active catalog in memory: {err}"
-                            ))),
+                            Err(catalog_handler_internal_status(
+                                "ActivateCatalog",
+                                format!("failed to stage active catalog in memory: {err}"),
+                            )),
                         );
                     }
                     if let Err(err) = self.catalog.activate_catalog(&checksum).await {
                         return self.record_grpc(
                             "ActivateCatalog",
                             started,
-                            Err(Status::internal(format!(
-                                "failed to activate catalog in memory: {err}"
-                            ))),
+                            Err(catalog_handler_internal_status(
+                                "ActivateCatalog",
+                                format!("failed to activate catalog in memory: {err}"),
+                            )),
                         );
                     }
                 }
@@ -321,10 +389,13 @@ impl DataBrokerService {
                     return self.record_grpc(
                         "ActivateCatalog",
                         started,
-                        Err(Status::internal(format!(
-                            "failed to write ActivateCatalog audit log: {}",
-                            err.message()
-                        ))),
+                        Err(catalog_handler_internal_status(
+                            "ActivateCatalog",
+                            format!(
+                                "failed to write ActivateCatalog audit log: {}",
+                                err.message()
+                            ),
+                        )),
                     );
                 }
                 CatalogVersionResponse {
@@ -410,18 +481,20 @@ impl DataBrokerService {
                             return self.record_grpc(
                                 "RollbackCatalog",
                                 started,
-                                Err(Status::internal(format!(
-                                    "failed to stage rollback catalog in memory: {err}"
-                                ))),
+                                Err(catalog_handler_internal_status(
+                                    "RollbackCatalog",
+                                    format!("failed to stage rollback catalog in memory: {err}"),
+                                )),
                             );
                         }
                         if let Err(err) = self.catalog.activate_catalog(&checksum).await {
                             return self.record_grpc(
                                 "RollbackCatalog",
                                 started,
-                                Err(Status::internal(format!(
-                                    "failed to activate rollback catalog in memory: {err}"
-                                ))),
+                                Err(catalog_handler_internal_status(
+                                    "RollbackCatalog",
+                                    format!("failed to activate rollback catalog in memory: {err}"),
+                                )),
                             );
                         }
                     }
@@ -434,10 +507,13 @@ impl DataBrokerService {
                         return self.record_grpc(
                             "RollbackCatalog",
                             started,
-                            Err(Status::internal(format!(
-                                "failed to write RollbackCatalog audit log: {}",
-                                err.message()
-                            ))),
+                            Err(catalog_handler_internal_status(
+                                "RollbackCatalog",
+                                format!(
+                                    "failed to write RollbackCatalog audit log: {}",
+                                    err.message()
+                                ),
+                            )),
                         );
                     }
                     CatalogVersionResponse {
@@ -623,7 +699,7 @@ impl DataBrokerService {
             return self.record_grpc(
                 "GetCatalogVersion",
                 started,
-                Err(Status::not_found("catalog version not found")),
+                Err(catalog_version_not_found_status()),
             );
         };
         self.record_grpc(
@@ -884,7 +960,10 @@ impl DataBrokerService {
                 response.metadata_mut().insert(
                     "x-udb-approval-token",
                     tonic::metadata::MetadataValue::try_from(token.as_str()).map_err(|err| {
-                        Status::internal(format!("approval token metadata failed: {err}"))
+                        catalog_handler_internal_status(
+                            "ApproveMigrationPlan",
+                            format!("approval token metadata failed: {err}"),
+                        )
                     })?,
                 );
                 self.record_grpc("ApproveMigrationPlan", started, Ok(response))

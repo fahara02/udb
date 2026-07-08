@@ -78,6 +78,9 @@ pub mod s3;
 mod sql_dialect;
 mod util;
 
+#[cfg(all(test, not(udb_portable)))]
+mod live_tests;
+
 /// What every per-backend compiler implements.
 ///
 /// All methods default to a typed `OperationNotSupported` error so a
@@ -89,6 +92,13 @@ pub trait Compiler: Send + Sync {
     /// The backend this compiler targets. Used by the dispatcher to look
     /// the right compiler up by `BackendKind`.
     fn kind(&self) -> BackendKind;
+
+    /// True only for compilers that explicitly lower `LogicalRead.include`.
+    /// Backends that do not opt in keep the shared fail-closed guard in
+    /// [`compile_with`], so eager includes are never silently ignored.
+    fn supports_read_include(&self) -> bool {
+        false
+    }
 
     fn compile_read(
         &self,
@@ -190,6 +200,15 @@ fn compile_with<C: Compiler>(
     op: CompileOperation<'_>,
     ctx: &CompileContext<'_>,
 ) -> Result<CompiledRendering, CompileError> {
+    if let CompileOperation::Read(read) = op
+        && !read.include.is_empty()
+        && !compiler.supports_read_include()
+    {
+        return Err(CompileError::OperatorUnsupported {
+            backend: compiler.kind(),
+            op: "include",
+        });
+    }
     match op {
         CompileOperation::Read(op) => compiler.compile_read(op, ctx),
         CompileOperation::Write(op) => compiler.compile_write(op, ctx),
@@ -372,6 +391,66 @@ pub fn compile_for_backend(
             }
         }
     }
+}
+
+/// The backends whose IR compiler is actually compiled into this build, i.e.
+/// the exact set for which [`compile_for_backend`] returns `Some(..)` rather
+/// than `None`.
+///
+/// This is the ONE source of truth for "does this build have a compiler for
+/// `kind`". It mirrors [`compile_for_backend`] arm-for-arm using the SAME
+/// `#[cfg(any(feature = "...", test))]` gating, so the list cannot drift from
+/// what the compiler dispatch can actually lower — keep the two functions
+/// adjacent and edit them together. `BackendKind::Minio` shares the S3
+/// compiler, matching the `S3 | Minio` arm above.
+pub fn mediated_backends() -> Vec<BackendKind> {
+    let mut out = Vec::new();
+    // Postgres is always compiled in (no feature gate).
+    out.push(BackendKind::Postgres);
+    #[cfg(any(feature = "mysql", test))]
+    out.push(BackendKind::Mysql);
+    #[cfg(any(feature = "sqlite", test))]
+    out.push(BackendKind::Sqlite);
+    #[cfg(any(feature = "mssql", test))]
+    out.push(BackendKind::Mssql);
+    #[cfg(any(feature = "clickhouse", test))]
+    out.push(BackendKind::Clickhouse);
+    #[cfg(any(feature = "mongodb", test))]
+    out.push(BackendKind::Mongodb);
+    #[cfg(any(feature = "neo4j", test))]
+    out.push(BackendKind::Neo4j);
+    #[cfg(any(feature = "qdrant", test))]
+    out.push(BackendKind::Qdrant);
+    #[cfg(any(feature = "elasticsearch", test))]
+    out.push(BackendKind::Elasticsearch);
+    #[cfg(any(feature = "memcached", test))]
+    out.push(BackendKind::Memcached);
+    #[cfg(any(feature = "weaviate", test))]
+    out.push(BackendKind::Weaviate);
+    #[cfg(any(feature = "pinecone", test))]
+    out.push(BackendKind::Pinecone);
+    #[cfg(any(feature = "cassandra", test))]
+    out.push(BackendKind::Cassandra);
+    #[cfg(any(feature = "azureblob", test))]
+    out.push(BackendKind::AzureBlob);
+    #[cfg(any(feature = "gcs", test))]
+    out.push(BackendKind::Gcs);
+    #[cfg(any(feature = "redis", test))]
+    out.push(BackendKind::Redis);
+    #[cfg(any(feature = "s3", test))]
+    {
+        // The `S3 | Minio` arm of `compile_for_backend` is gated on `feature = "s3"`.
+        out.push(BackendKind::S3);
+        out.push(BackendKind::Minio);
+    }
+    out
+}
+
+/// True when this build has an IR compiler compiled in for `kind` — i.e. when
+/// [`compile_for_backend`] would return `Some(..)`. Delegates to
+/// [`mediated_backends`] so there is a single source of truth.
+pub fn is_mediated_backend(kind: &BackendKind) -> bool {
+    mediated_backends().contains(kind)
 }
 
 /// Inputs every compiler needs but doesn't own.
@@ -651,6 +730,58 @@ mod tests {
             CompileError::Malformed { reason: "x".into() }.code(),
             "malformed"
         );
+    }
+
+    #[test]
+    fn read_include_fails_closed_for_backend_without_lowering() {
+        let m = manifest();
+        let ctx = CompileContext::new(&m);
+        let read = LogicalRead::message("X").with_include("tenant");
+
+        let err = compile_with(NoopCompiler, CompileOperation::Read(&read), &ctx)
+            .expect_err("include must not be silently ignored");
+        assert!(matches!(
+            err,
+            CompileError::OperatorUnsupported { op: "include", .. }
+        ));
+        assert_eq!(err.code(), "operator_unsupported");
+    }
+
+    #[test]
+    fn every_mediated_backend_has_a_real_compile_arm() {
+        // Anti-drift guard for master-plan item 2.3: `mediated_backends()` and
+        // `compile_for_backend` share the same `#[cfg(..)]` arms, so for every
+        // backend the list claims is mediated, `compile_for_backend` must (a)
+        // actually return `Some(..)` (the arm exists / is compiled in) and (b)
+        // not reject a trivial read with `OperationNotSupported` (the compiler
+        // really lowers reads). A drift between the two lists shows up here as a
+        // `None` or an `OperationNotSupported`.
+        let m = manifest();
+        let ctx = CompileContext::new(&m);
+        let mediated = mediated_backends();
+        assert!(
+            !mediated.is_empty(),
+            "at least Postgres is always compiled in"
+        );
+        assert!(
+            mediated.contains(&BackendKind::Postgres),
+            "Postgres has no feature gate and must always be mediated"
+        );
+        for kind in mediated {
+            // `is_mediated_backend` must agree with the list it derives from.
+            assert!(
+                is_mediated_backend(&kind),
+                "{kind:?} in mediated_backends() but is_mediated_backend() said no"
+            );
+
+            let read = LogicalRead::message("X");
+            let result = compile_for_backend(&kind, CompileOperation::Read(&read), &ctx);
+            let outcome = result
+                .unwrap_or_else(|| panic!("{kind:?} is mediated but compile arm returned None"));
+            if let Err(CompileError::OperationNotSupported { op, .. }) = &outcome {
+                panic!("{kind:?} is mediated but rejected a trivial read as unsupported (op={op})");
+            }
+        }
     }
 
     #[test]

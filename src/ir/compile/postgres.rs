@@ -13,15 +13,17 @@
 //! before any SQL is emitted.
 
 use crate::backend::BackendKind;
-use crate::generation::ManifestTable;
+use crate::generation::{CatalogManifest, ManifestTable};
 use crate::ir::filter::ComparisonOp;
 use crate::ir::operations::{
-    ConflictStrategy, LogicalAggregate, LogicalAssignment, LogicalDelete, LogicalRead,
-    LogicalResourceOp, LogicalSearch, LogicalUpdate, LogicalWrite, ResourceKind, ResourceOpKind,
+    ConflictStrategy, LogicalAggregate, LogicalAssignment, LogicalDelete, LogicalInclude,
+    LogicalRead, LogicalResourceOp, LogicalSearch, LogicalUpdate, LogicalWrite, ResourceKind,
+    ResourceOpKind,
 };
 use crate::ir::value::LogicalValue;
 
 use super::sql_dialect::{SqlCompiler, SqlDialect};
+use super::util::resolve_include_relation;
 use super::{CompileContext, CompileError, CompiledRendering, Compiler};
 
 /// Postgres dialect marker for the generic [`SqlCompiler`]. Captures the
@@ -239,6 +241,10 @@ impl Compiler for PostgresCompiler {
         BackendKind::Postgres
     }
 
+    fn supports_read_include(&self) -> bool {
+        true
+    }
+
     fn compile_read(
         &self,
         op: &LogicalRead,
@@ -248,7 +254,7 @@ impl Compiler for PostgresCompiler {
         let mut params: Vec<LogicalValue> = Vec::new();
 
         // Projection.
-        let select = match &op.projection {
+        let mut select_items = match &op.projection {
             Some(p) if !p.is_select_all() => p
                 .fields
                 .iter()
@@ -256,10 +262,18 @@ impl Compiler for PostgresCompiler {
                     let col = Pg::column_for(table, f, &op.message_type)?;
                     Ok(format!("\"{col}\""))
                 })
-                .collect::<Result<Vec<_>, CompileError>>()?
-                .join(", "),
-            _ => "*".to_string(),
+                .collect::<Result<Vec<_>, CompileError>>()?,
+            _ => vec!["*".to_string()],
         };
+        for include in &op.include {
+            select_items.push(render_belongs_to_include(
+                table,
+                ctx.manifest,
+                include,
+                &op.message_type,
+            )?);
+        }
+        let select = select_items.join(", ");
 
         let mut sql = format!(
             "SELECT {select} FROM \"{schema}\".\"{table}\"",
@@ -667,12 +681,21 @@ impl Compiler for PostgresCompiler {
             table = table.table,
         );
 
-        // WHERE — applied before grouping, so it references manifest
-        // columns just like a normal read.
-        if let Some(filter) = &op.filter
-            && let Some(body) = Pg::render_where(filter, table, &op.message_type, &mut params)?
-        {
-            sql.push_str(&format!(" WHERE {body}"));
+        // WHERE — user filter first (parameter numbering), then the tenant/
+        // project context predicates: aggregate reads have no runtime RLS
+        // seam when the compiled SQL is executed outside the request-scoped
+        // transaction, so the compiler is the scoping layer (same A2 posture
+        // as ClickHouse/Cassandra).
+        let user_body = match &op.filter {
+            Some(filter) => Pg::render_where(filter, table, &op.message_type, &mut params)?,
+            None => None,
+        };
+        let ctx_body = Pg::context_predicates(table, ctx, &mut params);
+        match (user_body, ctx_body) {
+            (Some(user), Some(scope)) => sql.push_str(&format!(" WHERE ({user}) AND {scope}")),
+            (Some(user), None) => sql.push_str(&format!(" WHERE {user}")),
+            (None, Some(scope)) => sql.push_str(&format!(" WHERE {scope}")),
+            (None, None) => {}
         }
 
         // GROUP BY.
@@ -804,9 +827,10 @@ impl Compiler for PostgresCompiler {
                     });
                 }
                 let text = op.text_query.as_deref().unwrap();
+                let ts_lang = super::util::tsvector_query_language(table);
                 Pg::push_param(&mut params, LogicalValue::String(text.to_string()));
                 where_parts.push(format!(
-                    "\"_search_tsv\" @@ plainto_tsquery(${})",
+                    "\"_search_tsv\" @@ plainto_tsquery('{ts_lang}', ${})",
                     params.len()
                 ));
             }
@@ -849,18 +873,19 @@ impl Compiler for PostgresCompiler {
                 ),
             });
         }
+        let ts_lang = super::util::tsvector_query_language(table);
         Pg::push_param(&mut params, LogicalValue::String(text.to_string()));
         let mut sql = format!(
-            "SELECT *, ts_rank_cd(\"_search_tsv\", plainto_tsquery($1)) AS _score \
+            "SELECT *, ts_rank_cd(\"_search_tsv\", plainto_tsquery('{ts_lang}', $1)) AS _score \
              FROM \"{schema}\".\"{table}\" \
-             WHERE \"_search_tsv\" @@ plainto_tsquery($1)",
+             WHERE \"_search_tsv\" @@ plainto_tsquery('{ts_lang}', $1)",
             schema = table.schema,
             table = table.table,
         );
         if let Some(threshold) = op.score_threshold {
             Pg::push_param(&mut params, LogicalValue::Float(threshold as f64));
             sql.push_str(&format!(
-                " AND ts_rank_cd(\"_search_tsv\", plainto_tsquery($1)) >= ${}",
+                " AND ts_rank_cd(\"_search_tsv\", plainto_tsquery('{ts_lang}', $1)) >= ${}",
                 params.len()
             ));
         }
@@ -1032,16 +1057,57 @@ impl Compiler for PostgresCompiler {
     }
 }
 
+fn render_belongs_to_include(
+    table: &ManifestTable,
+    manifest: &CatalogManifest,
+    include: &LogicalInclude,
+    message_type: &str,
+) -> Result<String, CompileError> {
+    let relation = resolve_include_relation(table, manifest, include, message_type)?;
+    let alias = format!("_udb_include_{}", relation.name);
+    let predicates = relation
+        .local_columns
+        .iter()
+        .zip(relation.target_columns.iter())
+        .map(|(local, target)| {
+            format!(
+                "\"{alias}\".\"{target}\" = \"{table}\".\"{local}\"",
+                table = table.table
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(" AND ");
+    if relation.many {
+        Ok(format!(
+            "COALESCE((SELECT jsonb_agg(to_jsonb(\"{alias}\".*)) FROM \"{schema}\".\"{target_table}\" \"{alias}\" \
+             WHERE {predicates}), '[]'::jsonb) AS \"{name}\"",
+            schema = relation.target.schema,
+            target_table = relation.target.table,
+            name = relation.name,
+        ))
+    } else {
+        Ok(format!(
+            "(SELECT to_jsonb(\"{alias}\".*) FROM \"{schema}\".\"{target_table}\" \"{alias}\" \
+             WHERE {predicates} LIMIT 1) AS \"{name}\"",
+            schema = relation.target.schema,
+            target_table = relation.target.table,
+            name = relation.name,
+        ))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::generation::{CatalogManifest, ManifestColumn, ManifestIndex, ManifestTable};
+    use crate::generation::{
+        CatalogManifest, ManifestColumn, ManifestForeignKey, ManifestIndex, ManifestTable,
+    };
     use crate::ir::filter::{ComparisonOp, LogicalFilter};
     use crate::ir::operations::{
         AggregateExpr, AggregateFunc, ConflictStrategy, LogicalAggregate, LogicalAssignment,
         LogicalDelete, LogicalRead, LogicalUpdate, LogicalWrite,
     };
-    use crate::ir::projection::{LogicalPagination, LogicalSort, SortDirection};
+    use crate::ir::projection::{LogicalPagination, LogicalProjection, LogicalSort, SortDirection};
     use crate::ir::value::LogicalValue;
 
     fn fixture_manifest() -> CatalogManifest {
@@ -1089,6 +1155,78 @@ mod tests {
         };
         CatalogManifest {
             tables: vec![table],
+            ..Default::default()
+        }
+    }
+
+    fn relation_manifest() -> CatalogManifest {
+        let invoice = ManifestTable {
+            message_name: "Invoice".to_string(),
+            proto_package: "billing.v1".to_string(),
+            schema: "billing".to_string(),
+            table: "invoices".to_string(),
+            primary_key: vec!["invoice_id".to_string()],
+            columns: vec![
+                ManifestColumn {
+                    field_name: "invoice_id".into(),
+                    column_name: "invoice_id".into(),
+                    proto_type: "string".into(),
+                    sql_type: "uuid".into(),
+                    is_primary: true,
+                    ..Default::default()
+                },
+                ManifestColumn {
+                    field_name: "tenant_id".into(),
+                    column_name: "tenant_id".into(),
+                    proto_type: "string".into(),
+                    sql_type: "uuid".into(),
+                    ..Default::default()
+                },
+                ManifestColumn {
+                    field_name: "customer_id".into(),
+                    column_name: "customer_id".into(),
+                    proto_type: "string".into(),
+                    sql_type: "uuid".into(),
+                    ..Default::default()
+                },
+            ],
+            foreign_keys: vec![ManifestForeignKey {
+                name: "fk_invoice_customer".into(),
+                columns: vec!["customer_id".into()],
+                ref_schema: "crm".into(),
+                ref_table: "customers".into(),
+                ref_columns: vec!["customer_id".into()],
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+        let customer = ManifestTable {
+            message_name: "Customer".to_string(),
+            proto_package: "crm.v1".to_string(),
+            schema: "crm".to_string(),
+            table: "customers".to_string(),
+            primary_key: vec!["customer_id".to_string()],
+            columns: vec![
+                ManifestColumn {
+                    field_name: "customer_id".into(),
+                    column_name: "customer_id".into(),
+                    proto_type: "string".into(),
+                    sql_type: "uuid".into(),
+                    is_primary: true,
+                    ..Default::default()
+                },
+                ManifestColumn {
+                    field_name: "name".into(),
+                    column_name: "name".into(),
+                    proto_type: "string".into(),
+                    sql_type: "text".into(),
+                    ..Default::default()
+                },
+            ],
+            ..Default::default()
+        };
+        CatalogManifest {
+            tables: vec![invoice, customer],
             ..Default::default()
         }
     }
@@ -1146,6 +1284,96 @@ mod tests {
             extract_sql(PostgresCompiler.compile_read(&read, &ctx).expect("compile"));
         assert!(sql.contains("WHERE \"name\" IN ($1, $2, $3)"));
         assert_eq!(params.len(), 3);
+    }
+
+    #[test]
+    fn read_include_lowers_fk_belongs_to_as_correlated_json_subselect() {
+        let m = relation_manifest();
+        let ctx = CompileContext::new(&m);
+        let read = LogicalRead::message("billing.v1.Invoice")
+            .with_projection(LogicalProjection::fields([
+                "invoice_id".to_string(),
+                "customer_id".to_string(),
+            ]))
+            .with_include("customer");
+
+        let (sql, params) =
+            extract_sql(PostgresCompiler.compile_read(&read, &ctx).expect("compile"));
+
+        assert!(params.is_empty());
+        assert!(
+            sql.starts_with(
+                "SELECT \"invoice_id\", \"customer_id\", \
+                 (SELECT to_jsonb(\"_udb_include_customer\".*)"
+            ),
+            "include projection must be appended to the read projection; got: {sql}"
+        );
+        assert!(
+            sql.contains(
+                "FROM \"crm\".\"customers\" \"_udb_include_customer\" \
+                 WHERE \"_udb_include_customer\".\"customer_id\" = \
+                 \"invoices\".\"customer_id\" LIMIT 1) AS \"customer\""
+            ),
+            "include must lower through the manifest FK; got: {sql}"
+        );
+    }
+
+    #[test]
+    fn read_include_lowers_inverse_fk_has_many_as_correlated_json_array() {
+        let m = relation_manifest();
+        let ctx = CompileContext::new(&m);
+        let read = LogicalRead::message("crm.v1.Customer")
+            .with_projection(LogicalProjection::fields(["customer_id".to_string()]))
+            .with_include("invoices");
+
+        let (sql, params) =
+            extract_sql(PostgresCompiler.compile_read(&read, &ctx).expect("compile"));
+
+        assert!(params.is_empty());
+        assert!(
+            sql.contains(
+                "COALESCE((SELECT jsonb_agg(to_jsonb(\"_udb_include_invoices\".*)) \
+                 FROM \"billing\".\"invoices\" \"_udb_include_invoices\""
+            ),
+            "has-many include must project a JSON array; got: {sql}"
+        );
+        assert!(
+            sql.contains(
+                "WHERE \"_udb_include_invoices\".\"customer_id\" = \
+                 \"customers\".\"customer_id\"), '[]'::jsonb) AS \"invoices\""
+            ),
+            "has-many include must lower through the inverse manifest FK; got: {sql}"
+        );
+    }
+
+    #[test]
+    fn read_include_unknown_relation_fails_closed() {
+        let m = relation_manifest();
+        let ctx = CompileContext::new(&m);
+        let read = LogicalRead::message("billing.v1.Invoice").with_include("missing");
+
+        let err = PostgresCompiler.compile_read(&read, &ctx).unwrap_err();
+
+        assert!(matches!(err, CompileError::Malformed { .. }));
+        assert!(
+            err.to_string().contains("unknown include relation"),
+            "unexpected error: {err}"
+        );
+    }
+
+    #[test]
+    fn read_include_unsafe_relation_name_fails_closed() {
+        let m = relation_manifest();
+        let ctx = CompileContext::new(&m);
+        let read = LogicalRead::message("billing.v1.Invoice").with_include("customer;drop");
+
+        let err = PostgresCompiler.compile_read(&read, &ctx).unwrap_err();
+
+        assert!(matches!(err, CompileError::Malformed { .. }));
+        assert!(
+            err.to_string().contains("not a safe relation name"),
+            "unexpected error: {err}"
+        );
     }
 
     #[test]

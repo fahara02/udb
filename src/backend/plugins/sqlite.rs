@@ -48,9 +48,12 @@ impl crate::runtime::executors::handle::DispatchFactory for SqlitePlugin {
         let pool = runtime
             .sqlite_pool_for_instance(instance_name)
             .ok_or_else(|| {
-                tonic::Status::failed_precondition(format!(
-                    "SQLite instance '{instance_name}' is not configured (set UDB_SQLITE_DSN)"
-                ))
+                super::dispatch_instance_not_configured_status(
+                    "sqlite",
+                    format!(
+                        "SQLite instance '{instance_name}' is not configured (set UDB_SQLITE_DSN)"
+                    ),
+                )
             })?
             .clone();
         // Thread the request context so generic-dispatch populates the

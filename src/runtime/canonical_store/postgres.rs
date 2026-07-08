@@ -117,10 +117,17 @@ impl CanonicalStore for PostgresCanonicalStore {
             crate::runtime::canonical_store::POSTGRES_DURABILITY_POLL_MS,
         );
         loop {
-            // pg_last_wal_replay_lsn returns NULL on a primary;
-            // pg_current_wal_lsn is always ≥ any replica LSN.
+            // Durable position: on a standby it is the last replayed LSN; on a
+            // primary it is the current WAL LSN. Gate on pg_is_in_recovery()
+            // rather than COALESCE-ing pg_last_wal_replay_lsn() — a primary that
+            // was PROMOTED from a standby (or restored via PITR/base backup)
+            // retains a NON-NULL, stale replay LSN that trails the current WAL,
+            // which would make a COALESCE pick the stale value and the fence
+            // never clear for the primary's own writes.
             let row: Option<(String,)> = sqlx::query_as(
-                "SELECT COALESCE(pg_last_wal_replay_lsn()::TEXT, pg_current_wal_lsn()::TEXT)",
+                "SELECT CASE WHEN pg_is_in_recovery() \
+                    THEN pg_last_wal_replay_lsn()::TEXT \
+                    ELSE pg_current_wal_lsn()::TEXT END",
             )
             .fetch_optional(&self.pool)
             .await

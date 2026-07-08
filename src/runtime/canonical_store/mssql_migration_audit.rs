@@ -150,16 +150,22 @@ impl MigrationAuditStore for MssqlCanonicalStore {
             .await
             .map_err(|e| SystemStoreError::query("mssql", payload_col.clone(), e))?;
         // Only tables created by an OLD schema have the legacy `rollback_json`
-        // column; one created by the current DDL never does, so an
-        // unconditional UPDATE referencing it fails with
-        // `Invalid column name 'rollback_json'` (code 207) and aborts
-        // canonical-store registration. Guard the backfill on the column's
-        // existence (COL_LENGTH, the same idiom used for payload_json above).
+        // column; one created by the current DDL never does, so a backfill
+        // referencing it fails with `Invalid column name 'rollback_json'`
+        // (code 207) and aborts canonical-store registration. A plain
+        // `IF COL_LENGTH(...) ... UPDATE ... SET payload_json = rollback_json`
+        // does NOT help: SQL Server resolves column names for an EXISTING table
+        // at COMPILE time for the whole batch (deferred name resolution applies
+        // only to not-yet-existing objects), so the guarded UPDATE still fails
+        // to compile even when the IF is false. Wrap the UPDATE in EXEC(...) so
+        // its compilation is deferred to runtime — the dynamic statement is only
+        // parsed when the IF branch actually runs (i.e. when the legacy column
+        // exists). No inner single quotes to escape in the UPDATE body.
         let backfill = format!(
             "IF COL_LENGTH('{ledger_rel}', 'rollback_json') IS NOT NULL \
-             UPDATE {ledger_rel} \
+             EXEC('UPDATE {ledger_rel} \
              SET payload_json = rollback_json \
-             WHERE payload_json IS NULL AND rollback_json IS NOT NULL"
+             WHERE payload_json IS NULL AND rollback_json IS NOT NULL')"
         );
         self.client()
             .simple_batch(&backfill)

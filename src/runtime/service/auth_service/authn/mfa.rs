@@ -30,6 +30,26 @@ pub(crate) fn otp_dev_echo_enabled() -> bool {
     })
 }
 
+fn mfa_required_field(
+    field: &'static str,
+    description: &'static str,
+    message: &'static str,
+) -> Status {
+    crate::runtime::executor_utils::invalid_argument_fields(message, [(field, description)])
+}
+
+fn mfa_internal_status(operation: impl Into<String>, message: impl Into<String>) -> Status {
+    crate::runtime::executor_utils::internal_status("authn", operation, message)
+}
+
+fn mfa_webauthn_enrollment_rpc_required_status() -> Status {
+    crate::runtime::executor_utils::policy_status(
+        "mfa_enrollment",
+        "webauthn_enrollment_rpc_required",
+        "WebAuthn enrollment uses StartWebAuthnRegistration and FinishWebAuthnRegistration",
+    )
+}
+
 impl AuthnServiceImpl {
     pub(super) async fn issue_otp(
         &self,
@@ -56,7 +76,10 @@ impl AuthnServiceImpl {
         let (rec, code) =
             self.prepare_otp_record(user, otp_type, channel, address, correlation_id, now);
         let otp_id = rec.otp_id.clone();
-        self.users.put_otp(rec).await.map_err(Status::internal)?;
+        self.users
+            .put_otp(rec)
+            .await
+            .map_err(|err| mfa_internal_status("issue_otp_store", err.to_string()))?;
         // Best-effort outbound delivery to the operator's channel gateway. A
         // delivery failure (or no configured webhook) never fails issuance — the
         // OTP is persisted and the caller holds the otp_id.
@@ -141,14 +164,17 @@ impl AuthnServiceImpl {
             .users
             .latest_otp_created_at(user_id, otp_type)
             .await
-            .map_err(Status::internal)?
+            .map_err(|err| mfa_internal_status("otp_cooldown_lookup", err.to_string()))?
         {
             let ready_at = last.saturating_add(cooldown);
             if now < ready_at {
-                return Err(Status::resource_exhausted(format!(
-                    "OTP cooldown active; retry in {} seconds",
-                    ready_at - now
-                )));
+                let retry_after_secs = ready_at - now;
+                return Err(crate::runtime::executor_utils::quota_status(
+                    "authn",
+                    "otp cooldown",
+                    retry_after_secs as i64 * 1_000,
+                    format!("OTP cooldown active; retry in {retry_after_secs} seconds"),
+                ));
             }
         }
         Ok(())
@@ -161,7 +187,12 @@ impl AuthnServiceImpl {
         expected_type: Option<i32>,
         now: u64,
     ) -> Result<Option<OtpRecord>, Status> {
-        let Some(mut rec) = self.users.get_otp(otp_id).await.map_err(Status::internal)? else {
+        let Some(mut rec) = self
+            .users
+            .get_otp(otp_id)
+            .await
+            .map_err(|err| mfa_internal_status("verify_otp_load", err.to_string()))?
+        else {
             return Ok(None);
         };
         if expected_type.is_some_and(|kind| rec.otp_type != kind) {
@@ -169,7 +200,10 @@ impl AuthnServiceImpl {
         }
         if rec.status != authn_entity_pb::OtpStatus::Pending as i32 || now >= rec.expires_at_unix {
             rec.status = authn_entity_pb::OtpStatus::Expired as i32;
-            self.users.update_otp(rec).await.map_err(Status::internal)?;
+            self.users
+                .update_otp(rec)
+                .await
+                .map_err(|err| mfa_internal_status("verify_otp_expire_update", err.to_string()))?;
             return Ok(None);
         }
         if !authn::verify_otp_code(code, &self.otp_hash_key(), &rec.code_hash) {
@@ -177,7 +211,9 @@ impl AuthnServiceImpl {
             if authn::mfa_challenge::should_expire_after_failed_attempt(rec.attempt_count) {
                 rec.status = authn_entity_pb::OtpStatus::Expired as i32;
             }
-            self.users.update_otp(rec).await.map_err(Status::internal)?;
+            self.users.update_otp(rec).await.map_err(|err| {
+                mfa_internal_status("verify_otp_failed_attempt_update", err.to_string())
+            })?;
             return Ok(None);
         }
         // Atomically flip PENDING→USED so two concurrent submissions of the same
@@ -187,7 +223,7 @@ impl AuthnServiceImpl {
             .users
             .consume_otp_pending(otp_id, now)
             .await
-            .map_err(Status::internal)?
+            .map_err(|err| mfa_internal_status("verify_otp_consume_pending", err.to_string()))?
         {
             return Ok(None);
         }
@@ -205,8 +241,8 @@ impl AuthnServiceImpl {
             .users
             .get_user_by_id(&req.user_id)
             .await
-            .map_err(Status::internal)?
-            .ok_or_else(|| Status::not_found("user not found"))?;
+            .map_err(|err| mfa_internal_status("send_otp_user_load", err.to_string()))?
+            .ok_or_else(super::authn_user_not_found_status)?;
         let otp_type = if req.otp_type == authn_entity_pb::OtpType::Unspecified as i32 {
             authn_entity_pb::OtpType::SensitiveOperation as i32
         } else {
@@ -269,11 +305,13 @@ impl AuthnServiceImpl {
         if let Some(rec) = verified {
             let mut event_tenant_for_otp = String::new();
             if rec.otp_type == authn_entity_pb::OtpType::EmailVerification as i32 {
-                if let Some(mut user) = self
-                    .users
-                    .get_user_by_id(&rec.user_id)
-                    .await
-                    .map_err(Status::internal)?
+                if let Some(mut user) =
+                    self.users
+                        .get_user_by_id(&rec.user_id)
+                        .await
+                        .map_err(|err| {
+                            mfa_internal_status("verify_otp_email_user_load", err.to_string())
+                        })?
                 {
                     user.status = crate::runtime::authn::AccountStatus::Active;
                     user.email_verified_at_unix = now_unix();
@@ -281,7 +319,9 @@ impl AuthnServiceImpl {
                     let event_email = user.email.clone();
                     let event_tenant = user.tenant_id.clone();
                     event_tenant_for_otp = event_tenant.clone();
-                    self.users.put_user(user).await.map_err(Status::internal)?;
+                    self.users.put_user(user).await.map_err(|err| {
+                        mfa_internal_status("verify_otp_email_user_update", err.to_string())
+                    })?;
                     self.emit_event(
                         AuthEvent::new(
                             topics::EMAIL_VERIFIED,
@@ -310,7 +350,9 @@ impl AuthnServiceImpl {
                 self.users
                     .mark_phone_verified(&rec.user_id, now_unix())
                     .await
-                    .map_err(Status::internal)?;
+                    .map_err(|err| {
+                        mfa_internal_status("verify_otp_phone_mark_verified", err.to_string())
+                    })?;
                 self.emit_event(
                     AuthEvent::new(
                         topics::PHONE_VERIFIED,
@@ -372,12 +414,9 @@ impl AuthnServiceImpl {
             // Failed/expired/replayed OTP verification. Resolve the owning user +
             // tenant from the OTP id so the audit row is attributable; skip the
             // event only when the OTP id is unknown (no subject to attribute to).
-            if let Some(otp) = self
-                .users
-                .get_otp(&req.otp_id)
-                .await
-                .map_err(Status::internal)?
-            {
+            if let Some(otp) = self.users.get_otp(&req.otp_id).await.map_err(|err| {
+                mfa_internal_status("verify_otp_failure_audit_lookup", err.to_string())
+            })? {
                 self.emit_event(
                     AuthEvent::new(
                         topics::OTP_FAILED,
@@ -420,14 +459,14 @@ impl AuthnServiceImpl {
             .users
             .get_otp(&req.original_otp_id)
             .await
-            .map_err(Status::internal)?
-            .ok_or_else(|| Status::not_found("otp not found"))?;
+            .map_err(|err| mfa_internal_status("resend_otp_original_load", err.to_string()))?
+            .ok_or_else(super::authn_otp_not_found_status)?;
         let user = self
             .users
             .get_user_by_id(&original.user_id)
             .await
-            .map_err(Status::internal)?
-            .ok_or_else(|| Status::not_found("user not found"))?;
+            .map_err(|err| mfa_internal_status("resend_otp_user_load", err.to_string()))?
+            .ok_or_else(super::authn_user_not_found_status)?;
         let now = now_unix();
         self.enforce_otp_cooldown(&user.user_id, original.otp_type, now)
             .await?;
@@ -439,7 +478,7 @@ impl AuthnServiceImpl {
         self.users
             .update_otp(original.clone())
             .await
-            .map_err(Status::internal)?;
+            .map_err(|err| mfa_internal_status("resend_otp_supersede_update", err.to_string()))?;
         Ok(Response::new(authn_pb::ResendOtpResponse {
             otp_id,
             expires_in_seconds: self.config.otp_ttl_secs as i32,
@@ -454,30 +493,32 @@ impl AuthnServiceImpl {
     ) -> Result<Response<authn_pb::EnrollMfaResponse>, Status> {
         let req = request.into_inner();
         if req.mfa_type == authn_entity_pb::AuthFactorKind::Webauthn as i32 {
-            return Err(Status::failed_precondition(
-                "WebAuthn enrollment uses StartWebAuthnRegistration and FinishWebAuthnRegistration",
-            ));
+            return Err(mfa_webauthn_enrollment_rpc_required_status());
         }
         let mut user = self
             .users
             .get_user_by_id(&req.user_id)
             .await
-            .map_err(Status::internal)?
-            .ok_or_else(|| Status::not_found("user not found"))?;
+            .map_err(|err| mfa_internal_status("enroll_mfa_user_load", err.to_string()))?
+            .ok_or_else(super::authn_user_not_found_status)?;
         let now = now_unix();
         // RFC 6238 TOTP: mint a real base32 secret, store it encrypted-at-rest
         // as a *pending* enrollment (MFA stays disabled until the user proves
         // possession with a code), and hand the secret + provisioning URI back
         // once for the authenticator app to scan.
         let secret = authn::totp::generate_secret();
-        let enc = authn::totp::encrypt_secret(&secret, &self.otp_hash_key())
-            .ok_or_else(|| Status::internal("failed to secure TOTP secret"))?;
+        let enc = authn::totp::encrypt_secret(&secret, &self.otp_hash_key()).ok_or_else(|| {
+            mfa_internal_status("enroll_mfa_secret_encrypt", "failed to secure TOTP secret")
+        })?;
         let uri = authn::totp::provisioning_uri("UDB", &user.username, &secret);
         user.totp_secret_hash = enc;
         user.updated_at_unix = now;
         let event_user_id = user.user_id.clone();
         let event_tenant = user.tenant_id.clone();
-        self.users.put_user(user).await.map_err(Status::internal)?;
+        self.users
+            .put_user(user)
+            .await
+            .map_err(|err| mfa_internal_status("enroll_mfa_store", err.to_string()))?;
         // Pending TOTP enrollment started (security-sensitive; MFA is not yet
         // active until ConfirmMfaEnrollment proves possession of a code).
         self.emit_event(
@@ -522,8 +563,8 @@ impl AuthnServiceImpl {
             .users
             .get_user_by_id(&req.user_id)
             .await
-            .map_err(Status::internal)?
-            .ok_or_else(|| Status::not_found("user not found"))?;
+            .map_err(|err| mfa_internal_status("confirm_mfa_user_load", err.to_string()))?
+            .ok_or_else(super::authn_user_not_found_status)?;
         // Verify the submitted code against the pending TOTP secret minted at
         // enrollment. Only flip `mfa_enabled` on a valid code.
         let verified = authn::totp::decrypt_secret(&user.totp_secret_hash, &self.otp_hash_key())
@@ -538,7 +579,10 @@ impl AuthnServiceImpl {
         user.updated_at_unix = now;
         let event_user_id = user.user_id.clone();
         let event_tenant = user.tenant_id.clone();
-        self.users.put_user(user).await.map_err(Status::internal)?;
+        self.users
+            .put_user(user)
+            .await
+            .map_err(|err| mfa_internal_status("confirm_mfa_store", err.to_string()))?;
         // MFA second factor activated (the user proved possession of a TOTP code).
         self.emit_event(
             AuthEvent::new(
@@ -578,8 +622,8 @@ impl AuthnServiceImpl {
             .users
             .get_user_by_id(&req.user_id)
             .await
-            .map_err(Status::internal)?
-            .ok_or_else(|| Status::not_found("user not found"))?;
+            .map_err(|err| mfa_internal_status("recovery_codes_user_load", err.to_string()))?
+            .ok_or_else(super::authn_user_not_found_status)?;
         let count = if req.count <= 0 {
             10
         } else {
@@ -597,7 +641,7 @@ impl AuthnServiceImpl {
         self.users
             .replace_recovery_codes(&req.user_id, &user.tenant_id, &hashes)
             .await
-            .map_err(Status::internal)?;
+            .map_err(|err| mfa_internal_status("recovery_codes_replace", err.to_string()))?;
         // Audit the regeneration (the plaintext codes NEVER enter the body — only
         // the count). Replacing the set invalidates any prior codes.
         self.emit_event(
@@ -634,12 +678,16 @@ impl AuthnServiceImpl {
     ) -> Result<Response<authn_pb::PutMfaPolicyResponse>, Status> {
         let req = request.into_inner();
         if req.tenant_id.trim().is_empty() {
-            return Err(Status::invalid_argument("tenant_id is required"));
+            return Err(mfa_required_field(
+                "tenant_id",
+                "must be a non-empty tenant id",
+                "tenant_id is required",
+            ));
         }
         self.users
             .put_mfa_policy(&req.tenant_id, req.require_mfa)
             .await
-            .map_err(Status::internal)?;
+            .map_err(|err| mfa_internal_status("put_mfa_policy", err.to_string()))?;
         Ok(Response::new(authn_pb::PutMfaPolicyResponse {
             tenant_id: req.tenant_id,
             require_mfa: req.require_mfa,
@@ -652,13 +700,17 @@ impl AuthnServiceImpl {
     ) -> Result<Response<authn_pb::GetMfaPolicyResponse>, Status> {
         let req = request.into_inner();
         if req.tenant_id.trim().is_empty() {
-            return Err(Status::invalid_argument("tenant_id is required"));
+            return Err(mfa_required_field(
+                "tenant_id",
+                "must be a non-empty tenant id",
+                "tenant_id is required",
+            ));
         }
         let require_mfa = self
             .users
             .tenant_requires_mfa(&req.tenant_id)
             .await
-            .map_err(Status::internal)?;
+            .map_err(|err| mfa_internal_status("get_mfa_policy", err.to_string()))?;
         Ok(Response::new(authn_pb::GetMfaPolicyResponse {
             tenant_id: req.tenant_id,
             require_mfa,
@@ -672,10 +724,16 @@ impl AuthnServiceImpl {
         let req = request.into_inner();
         let phone = req.phone.trim().to_string();
         if phone.is_empty() {
-            return Err(Status::invalid_argument("phone is required"));
+            return Err(mfa_required_field(
+                "phone",
+                "must be a non-empty phone number",
+                "phone is required",
+            ));
         }
         if phone.chars().count() > 32 {
-            return Err(Status::invalid_argument(
+            return Err(mfa_required_field(
+                "phone",
+                "must be at most 32 characters (E.164 format)",
                 "phone must be at most 32 characters (E.164 format)",
             ));
         }
@@ -683,13 +741,17 @@ impl AuthnServiceImpl {
             .users
             .get_user_by_id(&req.user_id)
             .await
-            .map_err(Status::internal)?
-            .ok_or_else(|| Status::not_found("user not found"))?;
+            .map_err(|err| {
+                mfa_internal_status("send_phone_verification_user_load", err.to_string())
+            })?
+            .ok_or_else(super::authn_user_not_found_status)?;
         // Record the number (clearing any prior verification), then SMS an OTP.
         self.users
             .set_user_phone(&user.user_id, &phone)
             .await
-            .map_err(Status::internal)?;
+            .map_err(|err| {
+                mfa_internal_status("send_phone_verification_set_phone", err.to_string())
+            })?;
         let now = now_unix();
         self.enforce_otp_cooldown(
             &user.user_id,
@@ -718,5 +780,147 @@ impl AuthnServiceImpl {
             otp_id,
             dev_otp_code,
         }))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::proto::udb::core::authn::services::v1::authn_service_server::AuthnService;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::authn::AuthnConfig;
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use crate::runtime::security::SecurityConfig;
+    use prost::Message as _;
+    use tonic::{Code, Request};
+
+    fn svc() -> AuthnServiceImpl {
+        AuthnServiceImpl::new(AuthnConfig::default(), SecurityConfig::default())
+    }
+
+    fn decode_detail(status: &Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present")
+            .to_bytes()
+            .expect("typed detail trailer decodes to bytes");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_validation_field(status: &Status, field: &str, description: &str) {
+        assert_eq!(status.code(), Code::InvalidArgument);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, field);
+        assert_eq!(detail.field_violations[0].description, description);
+    }
+
+    fn assert_policy_detail(
+        status: &Status,
+        operation: &str,
+        policy_decision_id: &str,
+        message: &str,
+    ) {
+        assert_eq!(status.code(), Code::FailedPrecondition);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Policy as i32);
+        assert_eq!(detail.operation, operation);
+        assert_eq!(detail.policy_decision_id, policy_decision_id);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+    }
+
+    fn assert_internal_detail(status: &Status, operation: &str, message: &str) {
+        assert_eq!(status.code(), Code::Internal);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "authn");
+        assert_eq!(detail.operation, operation);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    #[test]
+    fn mfa_internal_status_carries_typed_detail() {
+        let status = mfa_internal_status("verify_otp_load", "otp store failed");
+        assert_internal_detail(&status, "verify_otp_load", "otp store failed");
+    }
+
+    #[test]
+    fn webauthn_mfa_enrollment_policy_carries_typed_detail() {
+        assert_policy_detail(
+            &mfa_webauthn_enrollment_rpc_required_status(),
+            "mfa_enrollment",
+            "webauthn_enrollment_rpc_required",
+            "WebAuthn enrollment uses StartWebAuthnRegistration and FinishWebAuthnRegistration",
+        );
+    }
+
+    #[tokio::test]
+    async fn put_mfa_policy_missing_tenant_id_carries_field_violation() {
+        let err = svc()
+            .put_mfa_policy(Request::new(authn_pb::PutMfaPolicyRequest {
+                tenant_id: " ".to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect_err("missing tenant_id must fail before store access");
+
+        assert_eq!(err.message(), "tenant_id is required");
+        assert_validation_field(&err, "tenant_id", "must be a non-empty tenant id");
+    }
+
+    #[tokio::test]
+    async fn get_mfa_policy_missing_tenant_id_carries_field_violation() {
+        let err = svc()
+            .get_mfa_policy(Request::new(authn_pb::GetMfaPolicyRequest {
+                tenant_id: " ".to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect_err("missing tenant_id must fail before store access");
+
+        assert_eq!(err.message(), "tenant_id is required");
+        assert_validation_field(&err, "tenant_id", "must be a non-empty tenant id");
+    }
+
+    #[tokio::test]
+    async fn send_phone_verification_missing_phone_carries_field_violation() {
+        let err = svc()
+            .send_phone_verification(Request::new(authn_pb::SendPhoneVerificationRequest {
+                phone: " ".to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect_err("missing phone must fail before user lookup");
+
+        assert_eq!(err.message(), "phone is required");
+        assert_validation_field(&err, "phone", "must be a non-empty phone number");
+    }
+
+    #[tokio::test]
+    async fn send_phone_verification_long_phone_carries_field_violation() {
+        let err = svc()
+            .send_phone_verification(Request::new(authn_pb::SendPhoneVerificationRequest {
+                phone: "1".repeat(33),
+                ..Default::default()
+            }))
+            .await
+            .expect_err("invalid phone length must fail before user lookup");
+
+        assert_eq!(
+            err.message(),
+            "phone must be at most 32 characters (E.164 format)"
+        );
+        assert_validation_field(
+            &err,
+            "phone",
+            "must be at most 32 characters (E.164 format)",
+        );
     }
 }

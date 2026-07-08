@@ -2,6 +2,10 @@
 
 use super::*;
 
+fn authz_audit_internal_status(operation: impl Into<String>, message: impl Into<String>) -> Status {
+    crate::runtime::executor_utils::internal_status("authz", operation, message)
+}
+
 fn decision_source_from_db(value: &str) -> i32 {
     match value {
         "ROLE_POLICY" | "DECISION_SOURCE_ROLE_POLICY" => {
@@ -77,7 +81,12 @@ fn audit_select_projection(model: &NativeModel) -> String {
 fn audit_from_row(
     row: &sqlx::postgres::PgRow,
 ) -> Result<authz_entity_pb::AccessDecisionAudit, Status> {
-    let map = |e: sqlx::Error| Status::internal(format!("decode access audit failed: {e}"));
+    let map = |e: sqlx::Error| {
+        authz_audit_internal_status(
+            "decode_access_audit",
+            format!("decode access audit failed: {e}"),
+        )
+    };
     Ok(authz_entity_pb::AccessDecisionAudit {
         decision_audit_id: row.try_get("decision_audit_id").map_err(map)?,
         user_id: row.try_get("user_id").map_err(map)?,
@@ -118,6 +127,30 @@ fn audit_from_row(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
+    use tonic::Code;
+
+    fn decode_detail(status: &Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_internal_detail(status: &Status, operation: &str, message: &str) {
+        assert_eq!(status.code(), Code::Internal);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "authz");
+        assert_eq!(detail.operation, operation);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
 
     #[test]
     fn audit_text_redacts_credential_shaped_values() {
@@ -160,6 +193,19 @@ mod tests {
         assert!(ctx.decision_input.contains("[REDACTED]"));
         assert!(!ctx.decision_input.contains("udbk_live.abc"));
         assert!(!ctx.decision_input.contains("203.0.113.9"));
+    }
+
+    #[test]
+    fn authz_audit_internal_status_carries_typed_detail() {
+        let status = authz_audit_internal_status(
+            "list_access_audits",
+            "list access audits failed: db closed",
+        );
+        assert_internal_detail(
+            &status,
+            "list_access_audits",
+            "list access audits failed: db closed",
+        );
     }
 }
 
@@ -215,7 +261,12 @@ impl AuthzServiceImpl {
         .bind(offset)
         .fetch_all(pool)
         .await
-        .map_err(|err| Status::internal(format!("list access audits failed: {err}")))?;
+        .map_err(|err| {
+            authz_audit_internal_status(
+                "list_access_audits",
+                format!("list access audits failed: {err}"),
+            )
+        })?;
         let mut all = Vec::with_capacity(rows.len());
         for row in &rows {
             all.push(audit_from_row(row)?);
@@ -237,7 +288,12 @@ impl AuthzServiceImpl {
         .bind(&req.correlation_id)
         .fetch_one(pool)
         .await
-        .map_err(|err| Status::internal(format!("count access audits failed: {err}")))?;
+        .map_err(|err| {
+            authz_audit_internal_status(
+                "count_access_audits",
+                format!("count access audits failed: {err}"),
+            )
+        })?;
         Ok(Response::new(authz_pb::ListAccessDecisionAuditsResponse {
             page: Some(page_response(total as usize, req.page.as_ref())),
             audits: all,

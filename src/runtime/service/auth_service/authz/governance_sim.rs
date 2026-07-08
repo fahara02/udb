@@ -9,6 +9,21 @@ use crate::proto::udb::core::authz::entity::v1 as authz_entity_pb;
 use crate::proto::udb::core::authz::services::v1 as authz_pb;
 use crate::runtime::authz::PolicyEngine;
 
+fn simulation_required_field(
+    field: &'static str,
+    description: &'static str,
+    message: &'static str,
+) -> Status {
+    crate::runtime::executor_utils::invalid_argument_fields(message, [(field, description)])
+}
+
+fn governance_sim_internal_status(
+    operation: impl Into<String>,
+    message: impl Into<String>,
+) -> Status {
+    crate::runtime::executor_utils::internal_status("authz", operation, message)
+}
+
 impl AuthzServiceImpl {
     pub(super) async fn simulate_policy_impl(
         &self,
@@ -175,10 +190,13 @@ impl AuthzServiceImpl {
             PolicyDocument::from_snapshot(&snap, &tenant, &project)
         };
         let eval = doc.to_snapshot();
-        let case = req
-            .test_case
-            .as_ref()
-            .ok_or_else(|| Status::invalid_argument("test_case is required"))?;
+        let case = req.test_case.as_ref().ok_or_else(|| {
+            simulation_required_field(
+                "test_case",
+                "must include a simulation case to explain",
+                "test_case is required",
+            )
+        })?;
         let (principal, resource, action, purpose, attrs) = simulation_inputs(case);
         let decision = PolicyEngine::explain(
             &eval,
@@ -283,7 +301,12 @@ impl AuthzServiceImpl {
         .bind(&state_filter)
         .fetch_all(pool)
         .await
-        .map_err(|err| Status::internal(format!("list policy versions failed: {err}")))?;
+        .map_err(|err| {
+            governance_sim_internal_status(
+                "list_policy_versions",
+                format!("list policy versions failed: {err}"),
+            )
+        })?;
         let all: Vec<_> = rows
             .iter()
             .map(super::governance_store::version_from_row)
@@ -416,7 +439,11 @@ impl AuthzServiceImpl {
             )
             .await?;
         if req.tenant_id.trim().is_empty() {
-            return Err(Status::invalid_argument("tenant_id is required"));
+            return Err(simulation_required_field(
+                "tenant_id",
+                "must be a non-empty tenant id",
+                "tenant_id is required",
+            ));
         }
         let pool = self.require_pool()?;
         let m = self.roles_model();
@@ -446,7 +473,12 @@ impl AuthzServiceImpl {
             .bind(code)
             .execute(pool)
             .await
-            .map_err(|err| Status::internal(format!("seed role failed: {err}")))?;
+            .map_err(|err| {
+                governance_sim_internal_status(
+                    "seed_builtin_role",
+                    format!("seed role failed: {err}"),
+                )
+            })?;
             if result.rows_affected() > 0 {
                 created += 1;
             } else {
@@ -763,5 +795,107 @@ fn legacy_abac_document(tenant: &str) -> PolicyDocument {
         policies,
         role_bindings: Vec::new(),
         tuples: Vec::new(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::governance::{SCOPE_AUTHZ_ADMIN, SCOPE_POLICY_READ};
+    use super::*;
+    use crate::proto::udb::core::authz::services::v1::authz_service_server::AuthzService;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::authz::AuthzSnapshot;
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
+    use tonic::{Code, Request, Status};
+
+    fn decode_detail(status: &Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_validation_field(status: &Status, field: &str, description: &str) {
+        assert_eq!(status.code(), Code::InvalidArgument);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, field);
+        assert_eq!(detail.field_violations[0].description, description);
+    }
+
+    fn assert_internal_detail(status: &Status, operation: &str, message: &str) {
+        assert_eq!(status.code(), Code::Internal);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "authz");
+        assert_eq!(detail.operation, operation);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    fn actor_with_scope(scope: &str) -> authz_pb::GovernanceActor {
+        authz_pb::GovernanceActor {
+            subject: "policy-operator".to_string(),
+            tenant_id: "tenant-a".to_string(),
+            scopes: vec![scope.to_string()],
+            ..Default::default()
+        }
+    }
+
+    fn svc() -> AuthzServiceImpl {
+        AuthzServiceImpl::new(AuthzSnapshot::default())
+    }
+
+    #[test]
+    fn governance_sim_internal_status_carries_typed_detail() {
+        let status = governance_sim_internal_status(
+            "list_policy_versions",
+            "list policy versions failed: pool closed",
+        );
+        assert_internal_detail(
+            &status,
+            "list_policy_versions",
+            "list policy versions failed: pool closed",
+        );
+    }
+
+    #[tokio::test]
+    async fn explain_policy_missing_test_case_carries_field_violation() {
+        let err = svc()
+            .explain_policy(Request::new(authz_pb::ExplainPolicyRequest {
+                actor: Some(actor_with_scope(SCOPE_POLICY_READ)),
+                tenant_id: "tenant-a".to_string(),
+                test_case: None,
+                ..Default::default()
+            }))
+            .await
+            .expect_err("missing test_case must fail before decision evaluation");
+
+        assert_eq!(err.message(), "test_case is required");
+        assert_validation_field(
+            &err,
+            "test_case",
+            "must include a simulation case to explain",
+        );
+    }
+
+    #[tokio::test]
+    async fn seed_builtin_roles_missing_tenant_id_carries_field_violation() {
+        let err = svc()
+            .seed_builtin_roles(Request::new(authz_pb::SeedBuiltinRolesRequest {
+                actor: Some(actor_with_scope(SCOPE_AUTHZ_ADMIN)),
+                tenant_id: " ".to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect_err("missing tenant_id must fail before Postgres availability");
+
+        assert_eq!(err.message(), "tenant_id is required");
+        assert_validation_field(&err, "tenant_id", "must be a non-empty tenant id");
     }
 }

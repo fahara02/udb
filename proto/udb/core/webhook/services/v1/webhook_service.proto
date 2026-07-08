@@ -1,0 +1,525 @@
+syntax = "proto3";
+
+package udb.core.webhook.services.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/field_mask.proto";
+import "udb/core/common/v1/dto.proto";
+import "udb/core/common/v1/security.proto";
+import "udb/core/webhook/entity/v1/webhook_endpoint.proto";
+import "udb/core/webhook/entity/v1/webhook_delivery.proto";
+
+option csharp_namespace = "udb.core.Webhook.Services.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/webhook/services/v1;webhookservicev1";
+option java_package = "com.udb.core.webhook.services.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Webhook\\Services\\V1";
+option php_namespace = "Udb\\Core\\Webhook\\Services\\V1";
+
+// WebhookService (master-plan 9.4) — delivers tenant-scoped domain events to the
+// outside world. A tenant registers an external HTTPS endpoint with a topic
+// subscription; the leader-elected delivery worker consumes the tenant-bound CDC
+// stream, signs each event body with the per-endpoint secret (HMAC-SHA256 →
+// `X-Udb-Signature`), POSTs it with retries/backoff, dead-letters after
+// `max_attempts`, and journals every delivery. Every external target is run
+// through an SSRF guard at registration AND again at delivery (DNS rebinding):
+// https-only, never a private/loopback/link-local/CGNAT host.
+service WebhookService {
+  option (udb.core.common.v1.native_service) = {
+    service_id: "webhook"
+    logical_service_id: "webhook"
+    proto_service_id: "webhook"
+    display_name: "Webhooks"
+    category: "webhook"
+    default_enabled: true
+    requires_postgres: true
+    control_plane_listener_allowed: true
+    sdk_facade_name: "webhook"
+    cli_scaffold_group: "webhook"
+    health_check_ref: "webhook"
+    capability_ref: "native.webhook"
+  };
+  option (udb.core.common.v1.service_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webhook"
+    generate_minimal_example: true
+  };
+  option (udb.core.common.v1.service_cli_scaffold) = {
+    scaffold_package: "webhook"
+    import_path: "udb/native/webhook"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+    generated_files: "udb.native.webhook.config"
+    required_native_services: "webhook"
+    secret_placeholders: "UDB_API_KEY"
+    smoke_test_command: "udb native lint"
+  };
+  option (udb.core.common.v1.service_dependency_contract) = {
+    required_native_services: "webhook"
+    required_backends: "postgres"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+  };
+
+  // Register an external webhook endpoint. The target URL is SSRF-validated
+  // (https-only, no private/loopback/link-local/CGNAT host). The per-endpoint
+  // signing secret is returned exactly once in the response and never again.
+  rpc CreateEndpoint(CreateEndpointRequest) returns (CreateEndpointResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:webhook:create-endpoint"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "webhook.CreateEndpoint"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "create_endpoint" rest_operation_id: "createWebhookEndpoint"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "webhook"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "webhook"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "webhook.CreateEndpoint"
+      outbox_topic: "udb.webhook.endpoint.created.v1"
+      partition_key_field: "endpoint_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/webhook/endpoints"
+      body: "*"
+    };
+  }
+
+  // Fetch one webhook endpoint (the signing secret is NEVER returned on read).
+  rpc GetEndpoint(GetEndpointRequest) returns (GetEndpointResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:webhook:get-endpoint"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "webhook.GetEndpoint"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "get_endpoint" rest_operation_id: "getWebhookEndpoint"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "webhook"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "webhook"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      get: "/v1/webhook/endpoints/{endpoint_id}"
+    };
+  }
+
+  // List a tenant's webhook endpoints (signing secrets are NEVER returned).
+  rpc ListEndpoints(ListEndpointsRequest) returns (ListEndpointsResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:webhook:list-endpoints"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "webhook.ListEndpoints"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "list_endpoints" rest_operation_id: "listWebhookEndpoints"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "webhook"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "webhook"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      get: "/v1/webhook/endpoints"
+    };
+  }
+
+  // Update an endpoint. A changed URL is SSRF-revalidated before it is stored.
+  rpc UpdateEndpoint(UpdateEndpointRequest) returns (UpdateEndpointResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:webhook:update-endpoint"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "webhook.UpdateEndpoint"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "update_endpoint" rest_operation_id: "updateWebhookEndpoint"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "webhook"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "webhook"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "webhook.UpdateEndpoint"
+      outbox_topic: "udb.webhook.endpoint.updated.v1"
+      partition_key_field: "endpoint_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      patch: "/v1/webhook/endpoints/{endpoint_id}"
+      body: "*"
+    };
+  }
+
+  // Delete (soft) a webhook endpoint; no further events are delivered to it.
+  rpc DeleteEndpoint(DeleteEndpointRequest) returns (DeleteEndpointResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:webhook:delete-endpoint"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "webhook.DeleteEndpoint"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "delete_endpoint" rest_operation_id: "deleteWebhookEndpoint"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "webhook"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "webhook"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "webhook.DeleteEndpoint"
+      outbox_topic: "udb.webhook.endpoint.deleted.v1"
+      partition_key_field: "endpoint_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      delete: "/v1/webhook/endpoints/{endpoint_id}"
+    };
+  }
+
+  // List the delivery journal for a tenant, optionally narrowed to one endpoint
+  // or one delivery status.
+  rpc ListDeliveries(ListDeliveriesRequest) returns (ListDeliveriesResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:webhook:list-deliveries"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "webhook.ListDeliveries"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "list_deliveries" rest_operation_id: "listWebhookDeliveries"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "webhook"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "webhook"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      get: "/v1/webhook/deliveries"
+    };
+  }
+}
+
+message CreateEndpointRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webhook"
+    generate_minimal_example: true
+  };
+  // Verified against the bearer/claim tenant; cross-tenant values are rejected.
+  string tenant_id = 1;
+  string url = 2;
+  string topic_pattern = 3;
+  string description = 4;
+  int32 max_attempts = 5;
+  // Optional caller-supplied signing secret; when empty the broker generates one
+  // and returns it once in the response.
+  string signing_secret = 6;
+  string metadata_json = 7; // JSON
+}
+
+message CreateEndpointResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webhook"
+    generate_minimal_example: true
+  };
+  string endpoint_id = 1;
+  // The per-endpoint signing secret — returned ONCE here, never surfaced again.
+  string signing_secret = 2;
+  string message = 3;
+  udb.core.common.v1.ApiError error = 4;
+}
+
+message GetEndpointRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webhook"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string endpoint_id = 2;
+}
+
+message GetEndpointResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webhook"
+    generate_minimal_example: true
+  };
+  udb.core.webhook.entity.v1.WebhookEndpoint endpoint = 1;
+  udb.core.common.v1.ApiError error = 2;
+}
+
+message ListEndpointsRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webhook"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+  bool active_only = 4;
+  // Opaque pagination token returned by ListEndpointsResponse.next_page_token.
+  string page_token = 5;
+}
+
+message ListEndpointsResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webhook"
+    generate_minimal_example: true
+  };
+  repeated udb.core.webhook.entity.v1.WebhookEndpoint endpoints = 1;
+  int32 total_count = 2;
+  udb.core.common.v1.ApiError error = 3;
+  // Opaque token for the next page; empty when no more endpoints are available.
+  string next_page_token = 4;
+}
+
+message UpdateEndpointRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webhook"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string endpoint_id = 2;
+  string url = 3;
+  string topic_pattern = 4;
+  string description = 5;
+  bool active = 6;
+  int32 max_attempts = 7;
+  // Optional PATCH mask relative to the webhook endpoint resource. When omitted,
+  // legacy clients keep the historical non-empty-field patch behavior.
+  google.protobuf.FieldMask update_mask = 8;
+}
+
+message UpdateEndpointResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webhook"
+    generate_minimal_example: true
+  };
+  string message = 1;
+  udb.core.common.v1.ApiError error = 2;
+}
+
+message DeleteEndpointRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webhook"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string endpoint_id = 2;
+}
+
+message DeleteEndpointResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webhook"
+    generate_minimal_example: true
+  };
+  string message = 1;
+  udb.core.common.v1.ApiError error = 2;
+}
+
+message ListDeliveriesRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webhook"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string endpoint_id = 2; // optional filter
+  string status = 3;      // optional filter
+  int32 page = 4;
+  int32 page_size = 5;
+  // Opaque pagination token returned by ListDeliveriesResponse.next_page_token.
+  string page_token = 6;
+}
+
+message ListDeliveriesResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "webhook"
+    generate_minimal_example: true
+  };
+  repeated udb.core.webhook.entity.v1.WebhookDelivery deliveries = 1;
+  int32 total_count = 2;
+  udb.core.common.v1.ApiError error = 3;
+  // Opaque token for the next page; empty when no more deliveries are available.
+  string next_page_token = 4;
+}

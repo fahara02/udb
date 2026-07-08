@@ -18,6 +18,66 @@ pub const WORKER_WEBRTC_STALE_PEER_REAPER: &str = "udb:webrtc:stale-peer-reaper"
 pub const WORKER_PROJECTION_MATERIALIZER: &str = "udb:projection:materializer";
 pub const WORKER_PROJECTION_RECONCILIATION: &str = "udb:projection:reconciliation";
 pub const WORKER_XA_RECOVERY: &str = "udb:xa:recovery";
+/// Leader-elected Vault database-credential lease reaper (master-plan 9.1).
+/// Only the lease holder revokes and drops expired generated Postgres login
+/// roles, then marks the durable VaultDbCredentialLease row REVOKED. The handler
+/// never stores the password, so the lease row is the sole revocation source.
+pub const WORKER_VAULT_LEASE_REAPER: &str = "udb:vault:lease-reaper";
+/// Leader-elected scheduler tick (master-plan 9.3). Only the lease holder claims
+/// DUE `scheduled_jobs` rows (`FOR UPDATE SKIP LOCKED`) and FIRES outbox events
+/// (`udb.scheduler.job.fired.v1`), so a cron/one-shot job is never double-fired
+/// across the cluster — the tick runs once per interval cluster-wide, not per node.
+pub const WORKER_SCHEDULER_TICK: &str = "udb:scheduler:tick";
+/// Leader-elected compliance-evidence export worker (master-plan 4.4). Only the
+/// lease holder drains the durable audit window into the compliance-evidence
+/// bucket, so a chain-hashed evidence bundle is produced exactly once per
+/// interval across the cluster rather than once per node.
+pub const WORKER_EVIDENCE_EXPORT: &str = "udb:compliance:evidence-export";
+/// Leader-elected CDC-driven cache-invalidation worker (master-plan 9.6). Only the
+/// lease holder consumes the tenant-scoped CDC change stream and SCAN+DEL-sweeps
+/// the affected `udb:cache:<tenant>:<ns>:*` namespace, emitting
+/// `udb.cache.invalidated.v1` exactly once per change cluster-wide instead of
+/// every node racing to invalidate (and double-emitting). The consumer body is
+/// `service::cache_service::run_cache_invalidation_once`.
+pub const WORKER_CACHE_INVALIDATOR: &str = "udb:cache:invalidator";
+/// Leader-elected webhook delivery worker (master-plan 9.4). Only the lease
+/// holder consumes the tenant-scoped CDC change stream and POSTs each event to the
+/// matching tenant's external endpoints (HMAC-signed, SSRF-revalidated at delivery
+/// time), so an event is delivered once per (event, endpoint) cluster-wide instead
+/// of every node racing to deliver (and double-POSTing). The consumer body is
+/// `service::webhook_service::run_webhook_delivery_once`.
+pub const WORKER_WEBHOOK_DELIVERY: &str = "udb:webhook:delivery";
+/// Leader-elected embedding work emitter (master-plan 9.11). Only the lease
+/// holder joins active embedding sources to durable CDC-journal source changes,
+/// emits `udb.embedding.work.v1` once per source event for sidecar inference, and
+/// deletes orphan vectors on source-row deletes via the shared vector seam.
+pub const WORKER_EMBEDDING_WORK_EMITTER: &str = "udb:embedding:work-emitter";
+/// Leader-elected notification delivery worker (master-plan 9.13). Only the
+/// lease holder drains queued `NotificationLog` intents through the generic
+/// provider HTTP adapter, decrypting wrapped credentials only at use and writing
+/// terminal `NotificationDeliveryAttempt` rows through the shared ReportDelivery
+/// writer shape.
+pub const WORKER_NOTIFICATION_DELIVERY: &str = "udb:notification:delivery";
+/// Leader-elected metering rollup worker (master-plan 9.9). Only the lease
+/// holder aggregates closed `UsageEvent` windows and emits
+/// `udb.metering.rollup.v1` outbox records for billing/export consumers. The
+/// rollup id is deterministic per tenant/method/unit/window so retries are
+/// deduped against both the outbox and CDC journal.
+pub const WORKER_METERING_ROLLUP: &str = "udb:metering:rollup";
+/// Leader-elected workflow tick worker (master-plan 9.12). Only the lease holder
+/// claims due workflow instances (`FOR UPDATE SKIP LOCKED`) and advances durable
+/// state + outbox transition atomically, so a workflow step is never advanced once
+/// per replica. Compensation stays on the existing saga recovery worker; this
+/// tick only emits transition events.
+pub const WORKER_WORKFLOW_TICK: &str = "udb:workflow:tick";
+/// Leader-elected Kafka-triggered asset-pipeline manager (master-plan 5.2). Only
+/// the lease holder reconciles the distinct active `trigger_topic`s across
+/// pipeline definitions, running exactly one consumer per topic cluster-wide
+/// (start on definition-add, stop on definition-remove). A singleton avoids every
+/// node racing to discover and spawn the same per-topic consumers; at-least-once
+/// redelivery is made safe by the handler's idempotency (correlation_id = file_id),
+/// not single-ownership. The consumer body is `asset_service::run_trigger_consumer`.
+pub const WORKER_ASSET_TRIGGER_MANAGER: &str = "udb:asset:trigger-manager";
 
 const MIN_LEASE_TTL_SECS: u64 = 5;
 pub const WORKER_SINGLETON_LEASE_TTL: Duration = Duration::from_secs(30);
@@ -35,7 +95,7 @@ pub struct SingletonHaTarget {
 
 pub const SINGLETON_HA_TARGET: SingletonHaTarget = SingletonHaTarget {
     max_duplicate_winners: 1,
-    max_failover_seconds: MIN_LEASE_TTL_SECS,
+    max_failover_seconds: WORKER_SINGLETON_LEASE_TTL.as_secs(),
     recovery_point: "last durable SystemStores/outbox/saga/2PC ledger commit",
 };
 
@@ -311,6 +371,14 @@ mod tests {
             worker_lock_key(WORKER_PROJECTION_MATERIALIZER),
             worker_lock_key(WORKER_PROJECTION_RECONCILIATION)
         );
+        assert_eq!(
+            worker_lock_key(WORKER_EVIDENCE_EXPORT),
+            worker_lock_key(WORKER_EVIDENCE_EXPORT)
+        );
+        assert_ne!(
+            worker_lock_key(WORKER_EVIDENCE_EXPORT),
+            worker_lock_key(WORKER_XA_RECOVERY)
+        );
     }
 
     #[test]
@@ -325,7 +393,10 @@ mod tests {
     #[test]
     fn singleton_ha_target_is_bounded_by_lease_floor() {
         assert_eq!(SINGLETON_HA_TARGET.max_duplicate_winners, 1);
-        assert_eq!(SINGLETON_HA_TARGET.max_failover_seconds, MIN_LEASE_TTL_SECS);
+        assert_eq!(
+            SINGLETON_HA_TARGET.max_failover_seconds,
+            WORKER_SINGLETON_LEASE_TTL.as_secs()
+        );
         assert!(SINGLETON_HA_TARGET.recovery_point.contains("durable"));
     }
 

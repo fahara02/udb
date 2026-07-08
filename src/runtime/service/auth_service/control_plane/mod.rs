@@ -47,7 +47,12 @@ pub use crate::proto::udb::core::control::services::v1::control_plane_service_se
 use super::DataBrokerService;
 use super::mappings::{bounded_page_response, bounded_page_window, timestamp_from_unix};
 
-use resources::{ResourceModel, aggregate_version, ordered_resource_types, resource_type_from_i32};
+use crate::runtime::metrics::MetricsRecorder;
+
+use resources::{
+    ResourceModel, aggregate_version, ordered_resource_types, resource_type_from_i32,
+    resource_type_to_db,
+};
 
 /// How often the aggregated stream re-checks the registry for a new version to
 /// push (the change-notify hook). A focused follow-up replaces this poll with a
@@ -64,6 +69,9 @@ pub struct ControlPlaneServiceImpl {
     /// Phase 9 scaling: shared concurrent-push throttle (+ debounce) so a fleet
     /// of nodes cannot stampede the registry on a burst of version bumps.
     scaler: Option<Arc<scaling::PushScaler>>,
+    /// Metrics sink so the inbound ACK/NACK pump can count NACKs
+    /// (`udb_control_nack_total`). Optional: no metrics ⇒ counting is skipped.
+    metrics: Option<Arc<dyn MetricsRecorder>>,
 }
 
 impl ControlPlaneServiceImpl {
@@ -72,6 +80,7 @@ impl ControlPlaneServiceImpl {
             pg_pool: None,
             reload: None,
             scaler: None,
+            metrics: None,
         }
     }
 
@@ -92,13 +101,84 @@ impl ControlPlaneServiceImpl {
         self
     }
 
+    /// Wire the metrics sink so inbound NACKs are counted (`udb_control_nack_total`).
+    pub fn with_metrics(mut self, metrics: Arc<dyn MetricsRecorder>) -> Self {
+        self.metrics = Some(metrics);
+        self
+    }
+
     /// Control-plane distribution is durable-only: fail closed without a pool.
     fn require_pool(&self) -> Result<&PgPool, Status> {
         self.pg_pool.as_ref().ok_or_else(|| {
-            Status::failed_precondition(
+            crate::runtime::executor_utils::capability_status(
+                "control_plane",
+                "postgres_store",
+                "postgres_store",
                 "control-plane service requires a Postgres-backed store (no PG pool configured)",
             )
         })
+    }
+
+    fn rollback_target_required_status() -> Status {
+        crate::runtime::executor_utils::policy_status(
+            "control_plane_rollback",
+            "rollback_target_required",
+            "no retained snapshot to roll back to for this (node, resource_type, target_version)",
+        )
+    }
+
+    fn node_state_not_found_status() -> Status {
+        crate::runtime::executor_utils::schema_status(
+            tonic::Code::NotFound,
+            "control_plane",
+            "AckStatus",
+            "node_state_not_found",
+            "no node state for this (node, resource_type)",
+        )
+    }
+
+    fn internal_status(operation: impl Into<String>, message: impl Into<String>) -> Status {
+        crate::runtime::executor_utils::internal_status("control_plane", operation, message)
+    }
+
+    fn required_field(
+        field: &'static str,
+        description: &'static str,
+        message: &'static str,
+    ) -> Status {
+        crate::runtime::executor_utils::invalid_argument_fields(message, [(field, description)])
+    }
+
+    fn empty_discovery_stream_status() -> Status {
+        Self::required_field(
+            "stream",
+            "must include an initial DiscoveryRequest",
+            "empty control discovery stream",
+        )
+    }
+
+    fn missing_discovery_node_id_status() -> Status {
+        Self::required_field(
+            "node_id",
+            "must be a non-empty node id on the first DiscoveryRequest",
+            "node_id is required on the first DiscoveryRequest",
+        )
+    }
+
+    fn empty_delta_stream_status() -> Status {
+        Self::required_field(
+            "stream",
+            "must include an initial DeltaDiscoveryRequest",
+            "empty control delta stream",
+        )
+    }
+
+    fn missing_delta_node_id_status() -> Status {
+        Self::required_field(
+            "node_id",
+            "must be a non-empty node id on the first DeltaDiscoveryRequest",
+            "node_id is required on the first DeltaDiscoveryRequest",
+        )
     }
 }
 
@@ -163,13 +243,13 @@ impl ControlPlaneService for ControlPlaneServiceImpl {
         let first = inbound
             .message()
             .await
-            .map_err(|e| Status::internal(format!("control stream error: {e}")))?
-            .ok_or_else(|| Status::invalid_argument("empty control discovery stream"))?;
+            .map_err(|e| {
+                Self::internal_status("stream_resources", format!("control stream error: {e}"))
+            })?
+            .ok_or_else(Self::empty_discovery_stream_status)?;
         let node_id = first.node_id.trim().to_string();
         if node_id.is_empty() {
-            return Err(Status::invalid_argument(
-                "node_id is required on the first DiscoveryRequest",
-            ));
+            return Err(Self::missing_discovery_node_id_status());
         }
 
         // Seed ledger rows for every distributed type so the poll loop has a
@@ -177,18 +257,25 @@ impl ControlPlaneService for ControlPlaneServiceImpl {
         for rt in ordered_resource_types() {
             store::ensure_node_state(&pool, &node_id, *rt, &[]).await?;
         }
-        apply_inbound(&pool, &node_id, &first).await?;
+        apply_inbound(&pool, &node_id, &first, self.metrics.as_deref()).await?;
 
         // Inbound pump: durably record every subsequent ACK/NACK/subscription.
         let inbound_pool = pool.clone();
         let inbound_node = node_id.clone();
+        let inbound_metrics = self.metrics.clone();
         tokio::spawn(async move {
             while let Ok(Some(msg)) = inbound.message().await {
                 // Bind to the first node_id; ignore frames that try to rebind.
                 if !msg.node_id.trim().is_empty() && msg.node_id.trim() != inbound_node {
                     continue;
                 }
-                let _ = apply_inbound(&inbound_pool, &inbound_node, &msg).await;
+                let _ = apply_inbound(
+                    &inbound_pool,
+                    &inbound_node,
+                    &msg,
+                    inbound_metrics.as_deref(),
+                )
+                .await;
             }
         });
 
@@ -223,6 +310,12 @@ impl ControlPlaneService for ControlPlaneServiceImpl {
                     // make-before-break: allocate a fresh nonce, mark it as the
                     // node's last_response_nonce, and push this type's resources.
                     let nonce = store::next_response_nonce(&out_pool, &out_node, rt).await?;
+                    // Retain exactly what we are about to SERVE so a later
+                    // RollbackResources has a durable, known-good target (bounded
+                    // ring per (node, type); a re-send of an unchanged world is a
+                    // no-op inside the store).
+                    store::retain_served_snapshot(&out_pool, &out_node, rt, &world, &resources)
+                        .await?;
                     let pb_resources: Vec<control_pb::Resource> =
                         resources.iter().map(resource_to_pb).collect();
                     // Phase 9 scaling: a concurrent-push permit caps how many node
@@ -279,18 +372,21 @@ impl ControlPlaneService for ControlPlaneServiceImpl {
         let first = inbound
             .message()
             .await
-            .map_err(|e| Status::internal(format!("control delta stream error: {e}")))?
-            .ok_or_else(|| Status::invalid_argument("empty control delta stream"))?;
+            .map_err(|e| {
+                Self::internal_status(
+                    "delta_resources",
+                    format!("control delta stream error: {e}"),
+                )
+            })?
+            .ok_or_else(Self::empty_delta_stream_status)?;
         let node_id = first.node_id.trim().to_string();
         if node_id.is_empty() {
-            return Err(Status::invalid_argument(
-                "node_id is required on the first DeltaDiscoveryRequest",
-            ));
+            return Err(Self::missing_delta_node_id_status());
         }
         for rt in ordered_resource_types() {
             store::ensure_node_state(&pool, &node_id, *rt, &[]).await?;
         }
-        apply_inbound_delta(&pool, &node_id, &first).await?;
+        apply_inbound_delta(&pool, &node_id, &first, self.metrics.as_deref()).await?;
 
         // The node's last-known per-resource versions, seeded from the first
         // request and namespaced by resource_type (the first frame's type).
@@ -303,12 +399,19 @@ impl ControlPlaneService for ControlPlaneServiceImpl {
 
         let inbound_pool = pool.clone();
         let inbound_node = node_id.clone();
+        let inbound_metrics = self.metrics.clone();
         tokio::spawn(async move {
             while let Ok(Some(msg)) = inbound.message().await {
                 if !msg.node_id.trim().is_empty() && msg.node_id.trim() != inbound_node {
                     continue;
                 }
-                let _ = apply_inbound_delta(&inbound_pool, &inbound_node, &msg).await;
+                let _ = apply_inbound_delta(
+                    &inbound_pool,
+                    &inbound_node,
+                    &msg,
+                    inbound_metrics.as_deref(),
+                )
+                .await;
             }
         });
 
@@ -355,6 +458,11 @@ impl ControlPlaneService for ControlPlaneServiceImpl {
                     if changed.is_empty() && removed.is_empty() {
                         continue;
                     }
+                    // Even though delta carries only the changed set, retain the
+                    // FULL world snapshot behind this version so a delta subscriber
+                    // also has a complete rollback target (same ring as SotW).
+                    store::retain_served_snapshot(&out_pool, &out_node, rt, &world, &resources)
+                        .await?;
                     let nonce = store::next_response_nonce(&out_pool, &out_node, rt).await?;
                     yield control_pb::DeltaDiscoveryResponse {
                         resource_type: rt as i32,
@@ -375,12 +483,16 @@ impl ControlPlaneService for ControlPlaneServiceImpl {
         &self,
         request: Request<control_pb::GetResourcesRequest>,
     ) -> Result<Response<control_pb::GetResourcesResponse>, Status> {
-        let pool = self.require_pool()?;
         let req = request.into_inner();
         let rt = resource_type_from_i32(req.resource_type);
         if rt == ResourceType::Unspecified {
-            return Err(Status::invalid_argument("resource_type is required"));
+            return Err(Self::required_field(
+                "resource_type",
+                "must specify a control-plane resource type",
+                "resource_type is required",
+            ));
         }
+        let pool = self.require_pool()?;
         let tenant = if req.tenant_id.trim().is_empty() {
             None
         } else {
@@ -436,18 +548,26 @@ impl ControlPlaneService for ControlPlaneServiceImpl {
         &self,
         request: Request<control_pb::AckStatusRequest>,
     ) -> Result<Response<control_pb::AckStatusResponse>, Status> {
-        let pool = self.require_pool()?;
         let req = request.into_inner();
         if req.node_id.trim().is_empty() {
-            return Err(Status::invalid_argument("node_id is required"));
+            return Err(Self::required_field(
+                "node_id",
+                "must be a non-empty control-plane node id",
+                "node_id is required",
+            ));
         }
         let rt = resource_type_from_i32(req.resource_type);
         if rt == ResourceType::Unspecified {
-            return Err(Status::invalid_argument("resource_type is required"));
+            return Err(Self::required_field(
+                "resource_type",
+                "must specify a control-plane resource type",
+                "resource_type is required",
+            ));
         }
+        let pool = self.require_pool()?;
         let row = store::get_node_state(pool, req.node_id.trim(), rt)
             .await?
-            .ok_or_else(|| Status::not_found("no node state for this (node, resource_type)"))?;
+            .ok_or_else(Self::node_state_not_found_status)?;
         let names = store::parse_subscribed_names(&row.subscribed_names_json);
         let world = store::world_version(pool, rt, None, &names).await?;
         let acknowledged = row.accepted_version == world && row.nack_error_detail.is_empty();
@@ -457,6 +577,70 @@ impl ControlPlaneService for ControlPlaneServiceImpl {
             current_version: world,
             acknowledged,
             nacked,
+        }))
+    }
+
+    /// Roll a (node, resource_type) back to a retained served snapshot. The named
+    /// node's bounded snapshot ring supplies the target payloads; they are
+    /// re-published through the SAME content-addressed registry the push path
+    /// serves from (`store::upsert_resource`), then every open stream is woken so
+    /// the rolled-back world is re-served immediately. Fails closed when no
+    /// matching snapshot is retained (a rollback never silently no-ops).
+    async fn rollback_resources(
+        &self,
+        request: Request<control_pb::RollbackResourcesRequest>,
+    ) -> Result<Response<control_pb::RollbackResourcesResponse>, Status> {
+        let req = request.into_inner();
+        let node_id = req.node_id.trim();
+        if node_id.is_empty() {
+            return Err(Self::required_field(
+                "node_id",
+                "must be a non-empty control-plane node id",
+                "node_id is required",
+            ));
+        }
+        let rt = resource_type_from_i32(req.resource_type);
+        if rt == ResourceType::Unspecified {
+            return Err(Self::required_field(
+                "resource_type",
+                "must specify a control-plane resource type",
+                "resource_type is required",
+            ));
+        }
+        let pool = self.require_pool()?.clone();
+        let target = Some(req.target_version.trim()).filter(|v| !v.is_empty());
+        // Fail closed: never silently no-op a rollback when there is no retained
+        // target for this (node, resource_type, target_version).
+        let snapshot = store::find_rollback_target(&pool, node_id, rt, target)
+            .await?
+            .ok_or_else(Self::rollback_target_required_status)?;
+        // Re-publish each retained resource through the existing registry resolver
+        // (content-addressed, so this restores exactly the retained world version
+        // — no second tenant/version path is introduced).
+        let mut restored = 0i32;
+        for r in &snapshot.resources {
+            store::upsert_resource(
+                &pool,
+                rt,
+                &r.name,
+                &r.tenant_id,
+                &r.project_id,
+                &r.payload_json,
+                "control.rollback",
+            )
+            .await?;
+            restored += 1;
+        }
+        // Wake every open node stream so the rolled-back world is RE-SERVED now
+        // (the served path), not only on the next poll tick.
+        if let Some(reload) = self.reload.as_ref() {
+            reload.notify_waiters();
+        }
+        let current = store::world_version(&pool, rt, None, &[]).await?;
+        Ok(Response::new(control_pb::RollbackResourcesResponse {
+            rolled_back_to_version: snapshot.version,
+            current_version: current,
+            resources_restored: restored,
         }))
     }
 }
@@ -474,6 +658,7 @@ async fn apply_inbound(
     pool: &PgPool,
     node_id: &str,
     req: &control_pb::DiscoveryRequest,
+    metrics: Option<&dyn MetricsRecorder>,
 ) -> Result<(), Status> {
     let rt = resource_type_from_i32(req.resource_type);
     if rt == ResourceType::Unspecified {
@@ -491,6 +676,11 @@ async fn apply_inbound(
             let detail =
                 serde_json::json!({ "code": err.code, "message": err.message }).to_string();
             store::record_nack(pool, node_id, rt, &req.response_nonce, &detail).await?;
+            // A node rejected the pushed version (kept its last-good): count it by
+            // resource type so a flood of NACKs (a bad policy rollout) is visible.
+            if let Some(m) = metrics {
+                m.inc_control_nack(resource_type_to_db(rt));
+            }
         }
         _ if !req.version_info.trim().is_empty() => {
             store::record_ack(pool, node_id, rt, &req.version_info, &req.response_nonce).await?;
@@ -506,6 +696,7 @@ async fn apply_inbound_delta(
     pool: &PgPool,
     node_id: &str,
     req: &control_pb::DeltaDiscoveryRequest,
+    metrics: Option<&dyn MetricsRecorder>,
 ) -> Result<(), Status> {
     let rt = resource_type_from_i32(req.resource_type);
     if rt == ResourceType::Unspecified {
@@ -533,6 +724,10 @@ async fn apply_inbound_delta(
             let detail =
                 serde_json::json!({ "code": err.code, "message": err.message }).to_string();
             store::record_nack(pool, node_id, rt, &req.response_nonce, &detail).await?;
+            // Same NACK accounting as the SOTW path (`apply_inbound`).
+            if let Some(m) = metrics {
+                m.inc_control_nack(resource_type_to_db(rt));
+            }
         }
         _ if !req.response_nonce.trim().is_empty() => {
             // A delta ACK acknowledges the nonce; the applied version is the
@@ -576,7 +771,8 @@ impl DataBrokerService {
         let scaler = Arc::new(scaling::PushScaler::from_env(Some(self.metrics.clone())));
         let mut svc = ControlPlaneServiceImpl::new()
             .with_postgres(pg_pool.clone())
-            .with_scaler(scaler);
+            .with_scaler(scaler)
+            .with_metrics(self.metrics.clone());
         if let Some(pool) = pg_pool {
             let config = Arc::new(runtime.config().clone());
             // Populate the versioned registry from real config at startup so the

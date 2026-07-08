@@ -327,6 +327,7 @@ fn compile_sample_query(schemas: &[ProtoSchema]) -> serde_json::Value {
         projection: None,
         sort: Vec::new(),
         pagination: None,
+        include: Vec::new(),
     };
     match PostgresCompiler.compile_read(&read, &ctx) {
         Ok(CompiledRendering::Sql { statement, .. }) => serde_json::json!({

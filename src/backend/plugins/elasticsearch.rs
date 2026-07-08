@@ -38,10 +38,13 @@ impl crate::runtime::executors::handle::DispatchFactory for ElasticsearchPlugin 
         let client = runtime
             .elasticsearch_for_instance(instance_name)
             .ok_or_else(|| {
-                tonic::Status::failed_precondition(format!(
-                    "Elasticsearch instance '{instance_name}' is not configured \
+                super::dispatch_instance_not_configured_status(
+                    "elasticsearch",
+                    format!(
+                        "Elasticsearch instance '{instance_name}' is not configured \
                      (set UDB_ELASTIC_DSN)"
-                ))
+                    ),
+                )
             })?
             .clone();
         Ok(

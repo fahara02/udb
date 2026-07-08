@@ -97,15 +97,20 @@ where
     tokio::time::timeout(executor_timeout_duration(), future)
         .await
         .map_err(|_| {
-            tonic::Status::deadline_exceeded(format!(
-                "{backend} generic {operation} exceeded UDB_EXECUTOR_TIMEOUT_MS"
-            ))
+            deadline_exceeded_status(
+                backend,
+                format!("generic_{operation}"),
+                HTTP_RETRYABLE_BACKOFF_MS,
+                format!("{backend} generic {operation} exceeded UDB_EXECUTOR_TIMEOUT_MS"),
+            )
         })?
 }
 
 pub(crate) fn reject_oversized_object(len: usize) -> Result<(), tonic::Status> {
     if len > INLINE_OBJECT_LIMIT_BYTES {
-        Err(tonic::Status::resource_exhausted(
+        Err(quota_refusal_status(
+            "object",
+            "inline_object_size",
             "generic object writes are limited to 1MB; use presigned upload for larger files",
         ))
     } else {
@@ -126,22 +131,164 @@ pub(crate) fn reject_oversized_object(len: usize) -> Result<(), tonic::Status> {
 /// Binary trailer metadata key carrying the prost-encoded `ErrorDetail`.
 /// The `-bin` suffix is required by gRPC for binary metadata values.
 pub(crate) const ERROR_DETAIL_METADATA_KEY: &str = "udb-error-detail-bin";
+const MAX_ERROR_DETAIL_STRING_BYTES: usize = 8 * 1024;
 
 /// Build a `tonic::Status` with the given code + human message and attach a
-/// prost-encoded [`ErrorDetail`] under [`ERROR_DETAIL_METADATA_KEY`]. The
-/// message is preserved verbatim so callers that still read the string keep
-/// working; SDKs that understand the typed detail decode the metadata instead.
-pub(crate) fn status_with_error_detail(
+/// prost-encoded [`ErrorDetail`] under [`ERROR_DETAIL_METADATA_KEY`]. Clean
+/// messages are preserved, while malformed public text is bounded and stripped
+/// of control characters before SDKs or REST gateways can expose it.
+fn status_with_error_detail(
     code: tonic::Code,
     message: impl Into<String>,
     detail: crate::proto::ErrorDetail,
 ) -> tonic::Status {
     use prost::Message as _;
+    let message = bounded_error_detail_string(message.into(), "error");
+    let detail = sanitized_error_detail(detail);
     let mut metadata = tonic::metadata::MetadataMap::new();
     let encoded = detail.encode_to_vec();
     let value = tonic::metadata::MetadataValue::from_bytes(&encoded);
     metadata.insert_bin(ERROR_DETAIL_METADATA_KEY, value);
-    tonic::Status::with_metadata(code, message.into(), metadata)
+    tonic::Status::with_metadata(code, message, metadata)
+}
+
+#[cfg(test)]
+pub(crate) trait ErrorDetailRawBytes {
+    fn raw_error_detail_bytes(&self) -> bytes::Bytes;
+}
+
+#[cfg(test)]
+impl ErrorDetailRawBytes for tonic::metadata::MetadataValue<tonic::metadata::Binary> {
+    fn raw_error_detail_bytes(&self) -> bytes::Bytes {
+        self.to_bytes()
+            .expect("typed detail metadata decodes to bytes")
+    }
+}
+
+#[cfg(test)]
+impl ErrorDetailRawBytes for bytes::Bytes {
+    fn raw_error_detail_bytes(&self) -> bytes::Bytes {
+        self.clone()
+    }
+}
+
+#[cfg(test)]
+impl<T> ErrorDetailRawBytes for &T
+where
+    T: ErrorDetailRawBytes + ?Sized,
+{
+    fn raw_error_detail_bytes(&self) -> bytes::Bytes {
+        (*self).raw_error_detail_bytes()
+    }
+}
+
+#[cfg(test)]
+pub(crate) fn decode_error_detail_from_raw<T>(raw: &T) -> crate::proto::ErrorDetail
+where
+    T: ErrorDetailRawBytes + ?Sized,
+{
+    use prost::Message as _;
+    let bytes = raw.raw_error_detail_bytes();
+    crate::proto::ErrorDetail::decode(bytes.as_ref()).expect("typed detail decodes")
+}
+
+fn non_negative_retry_after_ms(retry_after_ms: i64) -> i64 {
+    retry_after_ms.max(0)
+}
+
+fn bounded_error_detail_string(value: String, fallback: &str) -> String {
+    let trimmed = value.trim();
+    let mut sanitized = String::with_capacity(trimmed.len().min(MAX_ERROR_DETAIL_STRING_BYTES));
+    for ch in trimmed.chars().filter(|ch| !ch.is_control()) {
+        if sanitized.len() + ch.len_utf8() > MAX_ERROR_DETAIL_STRING_BYTES {
+            break;
+        }
+        sanitized.push(ch);
+    }
+    if sanitized.is_empty() && !fallback.is_empty() {
+        fallback.to_string()
+    } else {
+        sanitized
+    }
+}
+
+fn bounded_error_detail_field_path(value: String) -> String {
+    let field = bounded_error_detail_string(value, "field");
+    if field.chars().any(char::is_whitespace) {
+        "field".to_string()
+    } else {
+        field
+    }
+}
+
+fn bounded_error_detail_token(value: String, fallback: &str) -> String {
+    let value = bounded_error_detail_string(value, fallback);
+    let token = value.split_whitespace().collect::<Vec<_>>().join("_");
+    if token.is_empty() {
+        fallback.to_string()
+    } else {
+        token
+    }
+}
+
+fn sanitized_error_detail(mut detail: crate::proto::ErrorDetail) -> crate::proto::ErrorDetail {
+    detail.backend = bounded_error_detail_string(detail.backend, "");
+    detail.operation = bounded_error_detail_string(detail.operation, "");
+    detail.capability_required = bounded_error_detail_string(detail.capability_required, "");
+    detail.policy_decision_id = bounded_error_detail_string(detail.policy_decision_id, "");
+    detail.correlation_id = bounded_error_detail_string(detail.correlation_id, "");
+    detail.retry_after_ms = non_negative_retry_after_ms(detail.retry_after_ms);
+    if !detail.retryable {
+        detail.retry_after_ms = 0;
+    }
+    if detail.kind == crate::proto::ErrorKind::Validation as i32 {
+        detail.backend.clear();
+        detail.operation.clear();
+        detail.capability_required.clear();
+        detail.retryable = false;
+        detail.retry_after_ms = 0;
+        if detail.field_violations.is_empty() {
+            detail
+                .field_violations
+                .push(crate::proto::ErrorFieldViolation {
+                    field: "field".to_string(),
+                    description: "invalid field".to_string(),
+                });
+        }
+    }
+    if detail.kind != crate::proto::ErrorKind::Validation as i32
+        && detail.kind != crate::proto::ErrorKind::Quota as i32
+        && detail.kind != crate::proto::ErrorKind::Retryable as i32
+    {
+        detail.retryable = false;
+        detail.retry_after_ms = 0;
+    }
+    if detail.kind != crate::proto::ErrorKind::Validation as i32 {
+        detail.field_violations.clear();
+    }
+    if detail.kind != crate::proto::ErrorKind::Policy as i32 {
+        detail.policy_decision_id.clear();
+    }
+    if detail.kind != crate::proto::ErrorKind::Capability as i32
+        && detail.kind != crate::proto::ErrorKind::Schema as i32
+    {
+        detail.capability_required.clear();
+    }
+    if detail.kind == crate::proto::ErrorKind::Quota as i32
+        || detail.kind == crate::proto::ErrorKind::Retryable as i32
+    {
+        detail.backend = bounded_error_detail_token(std::mem::take(&mut detail.backend), "backend");
+        detail.operation =
+            bounded_error_detail_token(std::mem::take(&mut detail.operation), "operation");
+    }
+    for violation in &mut detail.field_violations {
+        violation.field = bounded_error_detail_field_path(std::mem::take(&mut violation.field));
+        violation.description = bounded_error_detail_string(
+            std::mem::take(&mut violation.description),
+            "invalid field",
+        );
+    }
+    detail
 }
 
 /// Backend-capability refusal: the target backend does not support the
@@ -163,8 +310,47 @@ pub(crate) fn capability_status(
         policy_decision_id: String::new(),
         correlation_id: String::new(),
         kind: crate::proto::ErrorKind::Capability as i32,
+        field_violations: Vec::new(),
     };
     status_with_error_detail(tonic::Code::FailedPrecondition, message, detail)
+}
+
+/// Policy-decision refusal: the request was syntactically valid, but a local or
+/// external policy rejected it. `FailedPrecondition`, `kind = POLICY`, not
+/// retryable. `policy_decision_id` is the stable machine-readable reason SDKs
+/// can branch on; callers supply the same human message they would otherwise
+/// pass to `Status::failed_precondition`.
+pub(crate) fn policy_status(
+    operation: impl Into<String>,
+    policy_decision_id: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    policy_status_with_code(
+        tonic::Code::FailedPrecondition,
+        operation,
+        policy_decision_id,
+        message,
+    )
+}
+
+pub(crate) fn policy_status_with_code(
+    code: tonic::Code,
+    operation: impl Into<String>,
+    policy_decision_id: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    let detail = crate::proto::ErrorDetail {
+        backend: String::new(),
+        operation: operation.into(),
+        capability_required: String::new(),
+        retryable: false,
+        retry_after_ms: 0,
+        policy_decision_id: policy_decision_id.into(),
+        correlation_id: String::new(),
+        kind: crate::proto::ErrorKind::Policy as i32,
+        field_violations: Vec::new(),
+    };
+    status_with_error_detail(code, message, detail)
 }
 
 /// Transient-failure refusal the caller may retry. `Unavailable`,
@@ -180,12 +366,202 @@ pub(crate) fn retryable_status(
         operation: operation.into(),
         capability_required: String::new(),
         retryable: true,
-        retry_after_ms,
+        retry_after_ms: non_negative_retry_after_ms(retry_after_ms),
         policy_decision_id: String::new(),
         correlation_id: String::new(),
         kind: crate::proto::ErrorKind::Retryable as i32,
+        field_violations: Vec::new(),
     };
     status_with_error_detail(tonic::Code::Unavailable, message, detail)
+}
+
+/// Deadline/timeout refusal the caller may retry. Preserves
+/// `DeadlineExceeded` while carrying the same typed retryable detail shape as
+/// transient unavailable transport failures.
+pub(crate) fn deadline_exceeded_status(
+    backend: impl Into<String>,
+    operation: impl Into<String>,
+    retry_after_ms: i64,
+    message: impl Into<String>,
+) -> tonic::Status {
+    let detail = crate::proto::ErrorDetail {
+        backend: backend.into(),
+        operation: operation.into(),
+        capability_required: String::new(),
+        retryable: true,
+        retry_after_ms: non_negative_retry_after_ms(retry_after_ms),
+        policy_decision_id: String::new(),
+        correlation_id: String::new(),
+        kind: crate::proto::ErrorKind::Retryable as i32,
+        field_violations: Vec::new(),
+    };
+    status_with_error_detail(tonic::Code::DeadlineExceeded, message, detail)
+}
+
+/// Transient backend transport failure. Keeps the old public
+/// "{backend} {operation} failed: ..." message shape while adding the typed
+/// retryable detail SDKs use for bounded automatic retry decisions.
+pub(crate) fn backend_transport_status(
+    backend: impl std::fmt::Display,
+    operation: impl std::fmt::Display,
+    error: impl std::fmt::Display,
+) -> tonic::Status {
+    // Accept owned/borrowed runtime backend names (e.g. the dispatch target's
+    // backend string), not just static literals: callers in the dispatch and
+    // cache paths pass values that live only for the request.
+    let backend = backend.to_string();
+    let operation = operation.to_string();
+    let message = format!("{backend} {operation} failed: {error}");
+    retryable_status(backend, operation, HTTP_RETRYABLE_BACKOFF_MS, message)
+}
+
+/// Optimistic-concurrency or conflict retry. `Aborted`, `kind = RETRYABLE`,
+/// `retryable = true`, with an optional suggested backoff.
+pub(crate) fn retryable_aborted_status(
+    backend: impl Into<String>,
+    operation: impl Into<String>,
+    retry_after_ms: i64,
+    message: impl Into<String>,
+) -> tonic::Status {
+    let detail = crate::proto::ErrorDetail {
+        backend: backend.into(),
+        operation: operation.into(),
+        capability_required: String::new(),
+        retryable: true,
+        retry_after_ms: non_negative_retry_after_ms(retry_after_ms),
+        policy_decision_id: String::new(),
+        correlation_id: String::new(),
+        kind: crate::proto::ErrorKind::Retryable as i32,
+        field_violations: Vec::new(),
+    };
+    status_with_error_detail(tonic::Code::Aborted, message, detail)
+}
+
+/// Quota/backpressure refusal the caller may retry after the server-advised
+/// delay. `ResourceExhausted`, `kind = QUOTA`, `retryable = true`.
+pub(crate) fn quota_status(
+    backend: impl Into<String>,
+    operation: impl Into<String>,
+    retry_after_ms: i64,
+    message: impl Into<String>,
+) -> tonic::Status {
+    let detail = crate::proto::ErrorDetail {
+        backend: backend.into(),
+        operation: operation.into(),
+        capability_required: String::new(),
+        retryable: true,
+        retry_after_ms: non_negative_retry_after_ms(retry_after_ms),
+        policy_decision_id: String::new(),
+        correlation_id: String::new(),
+        kind: crate::proto::ErrorKind::Quota as i32,
+        field_violations: Vec::new(),
+    };
+    status_with_error_detail(tonic::Code::ResourceExhausted, message, detail)
+}
+
+/// Hard quota/capacity refusal. `ResourceExhausted`, `kind = QUOTA`, not
+/// retryable by itself because the caller must free capacity or change quota
+/// before retrying.
+pub(crate) fn quota_refusal_status(
+    backend: impl Into<String>,
+    operation: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    let detail = crate::proto::ErrorDetail {
+        backend: backend.into(),
+        operation: operation.into(),
+        capability_required: String::new(),
+        retryable: false,
+        retry_after_ms: 0,
+        policy_decision_id: String::new(),
+        correlation_id: String::new(),
+        kind: crate::proto::ErrorKind::Quota as i32,
+        field_violations: Vec::new(),
+    };
+    status_with_error_detail(tonic::Code::ResourceExhausted, message, detail)
+}
+
+/// Validation refusal: one or more request fields are malformed or semantically
+/// invalid. `InvalidArgument`, `kind = VALIDATION`, not retryable. The message
+/// stays human-readable; SDKs read the structured field list from the typed
+/// detail.
+pub(crate) fn invalid_argument_fields<I, F, D>(
+    message: impl Into<String>,
+    fields: I,
+) -> tonic::Status
+where
+    I: IntoIterator<Item = (F, D)>,
+    F: Into<String>,
+    D: Into<String>,
+{
+    let detail = crate::proto::ErrorDetail {
+        backend: String::new(),
+        operation: String::new(),
+        capability_required: String::new(),
+        retryable: false,
+        retry_after_ms: 0,
+        policy_decision_id: String::new(),
+        correlation_id: String::new(),
+        kind: crate::proto::ErrorKind::Validation as i32,
+        field_violations: fields
+            .into_iter()
+            .map(|(field, description)| crate::proto::ErrorFieldViolation {
+                field: field.into(),
+                description: description.into(),
+            })
+            .collect(),
+    };
+    status_with_error_detail(tonic::Code::InvalidArgument, message, detail)
+}
+
+/// Field-validation refusal for state-dependent checks that already use
+/// `FailedPrecondition` on the public wire contract. This keeps the status code
+/// stable while still giving SDKs structured `field_violations`.
+pub(crate) fn failed_precondition_fields<I, F, D>(
+    message: impl Into<String>,
+    fields: I,
+) -> tonic::Status
+where
+    I: IntoIterator<Item = (F, D)>,
+    F: Into<String>,
+    D: Into<String>,
+{
+    let detail = crate::proto::ErrorDetail {
+        backend: String::new(),
+        operation: String::new(),
+        capability_required: String::new(),
+        retryable: false,
+        retry_after_ms: 0,
+        policy_decision_id: String::new(),
+        correlation_id: String::new(),
+        kind: crate::proto::ErrorKind::Validation as i32,
+        field_violations: fields
+            .into_iter()
+            .map(|(field, description)| crate::proto::ErrorFieldViolation {
+                field: field.into(),
+                description: description.into(),
+            })
+            .collect(),
+    };
+    status_with_error_detail(tonic::Code::FailedPrecondition, message, detail)
+}
+
+fn executor_utils_invalid_field(
+    field: impl Into<String>,
+    description: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    invalid_argument_fields(message, [(field.into(), description.into())])
+}
+
+fn referential_constraint_status() -> tonic::Status {
+    schema_status(
+        tonic::Code::FailedPrecondition,
+        "database",
+        "referential_constraint",
+        "foreign_key_violation",
+        "operation violates a referential constraint",
+    )
 }
 
 /// Central classifier for `sqlx::Error` -> typed `tonic::Status` (bug_report.md
@@ -216,7 +592,13 @@ pub(crate) fn sqlx_error_to_status(context: &str, err: &sqlx::Error) -> tonic::S
                         }
                         None => "resource already exists".to_string(),
                     };
-                    return tonic::Status::already_exists(msg);
+                    return schema_status(
+                        tonic::Code::AlreadyExists,
+                        "database",
+                        "unique_constraint",
+                        "unique_violation",
+                        msg,
+                    );
                 }
                 "23502" => {
                     // NOT NULL violation. Name the column when the driver exposes
@@ -225,17 +607,23 @@ pub(crate) fn sqlx_error_to_status(context: &str, err: &sqlx::Error) -> tonic::S
                         Some(c) => format!("required field '{c}' is missing"),
                         None => "a required field is missing".to_string(),
                     };
-                    return tonic::Status::invalid_argument(msg);
+                    let field =
+                        not_null_column(db.message()).unwrap_or_else(|| "database".to_string());
+                    return executor_utils_invalid_field(
+                        field,
+                        "required database field is missing",
+                        msg,
+                    );
                 }
                 "22P02" | "22007" => {
-                    return tonic::Status::invalid_argument(
+                    return executor_utils_invalid_field(
+                        "parameter",
+                        "must be a valid UUID/value for the target column",
                         "invalid identifier format (a parameter must be a valid UUID/value)",
                     );
                 }
                 "23503" => {
-                    return tonic::Status::failed_precondition(
-                        "operation violates a referential constraint",
-                    );
+                    return referential_constraint_status();
                 }
                 _ => {}
             }
@@ -275,12 +663,12 @@ pub(crate) fn sqlx_error_to_status(context: &str, err: &sqlx::Error) -> tonic::S
         if verbose_db_errors() {
             detail.push_str(&format!(": {}", db.message()));
         }
-        return tonic::Status::internal(format!("{context}{detail}"));
+        return internal_status("database", context, format!("{context}{detail}"));
     }
     // Not a database error at all (pool acquire / IO / protocol). Still log it —
     // these were equally invisible before — and keep the generic Internal.
     tracing::error!(context = %context, error = %err, "database call failed (non-database error)");
-    tonic::Status::internal(context.to_string())
+    internal_status("database", context, context.to_string())
 }
 
 /// Whether to ALSO echo the raw driver message in client-facing `Internal` DB
@@ -308,7 +696,12 @@ fn verbose_db_errors() -> bool {
 /// it in `Status::internal(format!(...))` would clobber the correct code (e.g.
 /// turn an `InvalidArgument`/`AlreadyExists` into `Internal`).
 pub(crate) fn prefix_status(context: &str, status: tonic::Status) -> tonic::Status {
-    tonic::Status::new(status.code(), format!("{context}: {}", status.message()))
+    tonic::Status::with_details_and_metadata(
+        status.code(),
+        format!("{context}: {}", status.message()),
+        bytes::Bytes::copy_from_slice(status.details()),
+        status.metadata().clone(),
+    )
 }
 
 /// Prefix used to smuggle a typed gRPC code through the `Result<_, String>`
@@ -346,16 +739,43 @@ pub(crate) fn sqlx_error_to_tagged_string(context: &str, err: &sqlx::Error) -> S
 
 /// Decode a String produced by [`sqlx_error_to_tagged_string`] (or any other
 /// store String) into a typed `Status`. Tagged strings restore their original
-/// gRPC code + clean message; untagged strings become `Status::internal`.
+/// gRPC code + clean message; untagged strings become typed internal store
+/// failures instead of losing ErrorDetail at the String boundary.
 pub(crate) fn status_from_store_string(s: String) -> tonic::Status {
     if let Some(rest) = s.strip_prefix(STATUS_TAG_PREFIX) {
         if let Some((code_str, msg)) = rest.split_once(':') {
             if let Ok(code_num) = code_str.parse::<i32>() {
-                return tonic::Status::new(tonic::Code::from(code_num), msg.to_string());
+                let code = tonic::Code::from(code_num);
+                return tagged_status_to_typed_status(code, msg);
             }
         }
     }
-    tonic::Status::internal(s)
+    internal_status("store", "string_status", s)
+}
+
+fn tagged_status_to_typed_status(code: tonic::Code, message: &str) -> tonic::Status {
+    match code {
+        tonic::Code::InvalidArgument => invalid_argument_fields(
+            message,
+            [("database", "database store rejected the request")],
+        ),
+        tonic::Code::FailedPrecondition
+            if message == "operation violates a referential constraint" =>
+        {
+            referential_constraint_status()
+        }
+        tonic::Code::AlreadyExists => schema_status(
+            tonic::Code::AlreadyExists,
+            "database",
+            "unique_constraint",
+            "unique_violation",
+            message,
+        ),
+        tonic::Code::Unavailable => {
+            retryable_status("store", "tagged_status", HTTP_RETRYABLE_BACKOFF_MS, message)
+        }
+        _ => tonic::Status::new(code, message.to_string()),
+    }
 }
 
 /// Extract the offending column name from a Postgres NOT NULL violation message
@@ -369,6 +789,52 @@ fn not_null_column(message: &str) -> Option<String> {
     } else {
         Some(name.to_string())
     }
+}
+
+/// Schema/catalog compatibility refusal. The caller selects the public gRPC code
+/// already used by that boundary; the detail carries `kind = SCHEMA` and stores a
+/// stable schema code in `capability_required` for SDK branching.
+pub(crate) fn schema_status(
+    code: tonic::Code,
+    backend: impl Into<String>,
+    operation: impl Into<String>,
+    schema_code: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    let detail = crate::proto::ErrorDetail {
+        backend: backend.into(),
+        operation: operation.into(),
+        capability_required: schema_code.into(),
+        retryable: false,
+        retry_after_ms: 0,
+        policy_decision_id: String::new(),
+        correlation_id: String::new(),
+        kind: crate::proto::ErrorKind::Schema as i32,
+        field_violations: Vec::new(),
+    };
+    status_with_error_detail(code, message, detail)
+}
+
+/// Unexpected internal failure with typed detail. Keeps the public gRPC code as
+/// `Internal` while adding stable backend/operation identity for SDK and REST
+/// diagnostics.
+pub(crate) fn internal_status(
+    backend: impl Into<String>,
+    operation: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    let detail = crate::proto::ErrorDetail {
+        backend: backend.into(),
+        operation: operation.into(),
+        capability_required: String::new(),
+        retryable: false,
+        retry_after_ms: 0,
+        policy_decision_id: String::new(),
+        correlation_id: String::new(),
+        kind: crate::proto::ErrorKind::Internal as i32,
+        field_violations: Vec::new(),
+    };
+    status_with_error_detail(tonic::Code::Internal, message, detail)
 }
 
 /// Compiler refusal: map a `CompileError::code()` token onto a typed
@@ -399,6 +865,7 @@ pub(crate) fn compile_error_status(
         policy_decision_id: String::new(),
         correlation_id: String::new(),
         kind: crate::proto::ErrorKind::Schema as i32,
+        field_violations: Vec::new(),
     };
     status_with_error_detail(tonic::Code::InvalidArgument, message, detail)
 }
@@ -513,6 +980,19 @@ pub(crate) fn merge_context(
     let Some(proto) = proto_context else {
         return metadata_context;
     };
+    let proto_typed_consistency =
+        crate::runtime::consistency::ConsistencyMode::from_proto_i32(proto.consistency_mode)
+            .map(|mode| mode.as_str().to_string())
+            .unwrap_or_default();
+    let proto_consistency = first_non_empty(&proto.consistency, &proto_typed_consistency);
+    let proto_typed_read_fence_json = proto
+        .read_fence
+        .as_ref()
+        .map(crate::runtime::consistency::ReadFence::from_proto)
+        .and_then(|fence| serde_json::to_string(&fence).ok())
+        .unwrap_or_default();
+    let proto_read_fence_json =
+        first_non_empty(&proto.read_fence_json, &proto_typed_read_fence_json);
     RequestContext {
         // SECURITY: tenant_id is the authenticated isolation boundary — take it
         // from the request metadata context, NOT a caller-supplied per-op proto
@@ -522,7 +1002,7 @@ pub(crate) fn merge_context(
         correlation_id: first_non_empty(&proto.correlation_id, &metadata_context.correlation_id),
         purpose: first_non_empty(&proto.purpose, &metadata_context.purpose),
         project_id: metadata_context.project_id,
-        consistency: metadata_context.consistency,
+        consistency: first_non_empty(&metadata_context.consistency, &proto_consistency),
         client_catalog_version: metadata_context.client_catalog_version,
         target_backend: first_non_empty(&proto.target_backend, &metadata_context.target_backend),
         target_instance: first_non_empty(&proto.target_instance, &metadata_context.target_instance),
@@ -542,7 +1022,7 @@ pub(crate) fn merge_context(
         // (tenant_id / project_id / scopes / service_identity / decision_id). A
         // caller-supplied per-op proto fence can no longer override a fence the
         // transport already pinned; it is honored only when the header sets none.
-        read_fence_json: first_non_empty(&metadata_context.read_fence_json, &proto.read_fence_json),
+        read_fence_json: first_non_empty(&metadata_context.read_fence_json, &proto_read_fence_json),
         // SECURITY (01.1.1.1): scopes are an authenticated capability — they drive
         // PII unmasking, the materialized-view admin gate, and seed the cache key.
         // Take them ONLY from the verified metadata/claim side; a caller-supplied
@@ -571,7 +1051,11 @@ pub(crate) fn reject_plan(errors: &[String]) -> Result<(), tonic::Status> {
     if errors.is_empty() {
         Ok(())
     } else {
-        Err(tonic::Status::invalid_argument(errors.join("; ")))
+        Err(executor_utils_invalid_field(
+            "plan",
+            "planner validation errors must be resolved",
+            errors.join("; "),
+        ))
     }
 }
 
@@ -851,18 +1335,32 @@ pub(crate) fn json_scalar_to_string(value: &JsonValue) -> String {
     }
 }
 
+#[cfg(test)]
 pub(crate) fn json_i64(value: &JsonValue) -> Result<i64, tonic::Status> {
     value
         .as_i64()
         .or_else(|| value.as_str()?.parse().ok())
-        .ok_or_else(|| tonic::Status::invalid_argument(format!("expected integer, got {value}")))
+        .ok_or_else(|| {
+            executor_utils_invalid_field(
+                "value",
+                "must be an integer or integer string",
+                format!("expected integer, got {value}"),
+            )
+        })
 }
 
+#[cfg(test)]
 pub(crate) fn json_f64(value: &JsonValue) -> Result<f64, tonic::Status> {
     value
         .as_f64()
         .or_else(|| value.as_str()?.parse().ok())
-        .ok_or_else(|| tonic::Status::invalid_argument(format!("expected number, got {value}")))
+        .ok_or_else(|| {
+            executor_utils_invalid_field(
+                "value",
+                "must be a number or numeric string",
+                format!("expected number, got {value}"),
+            )
+        })
 }
 
 pub(crate) fn json_is_ciphertext(value: &JsonValue) -> bool {
@@ -946,7 +1444,13 @@ pub(crate) fn json_required_str<'a>(
         .get(key)
         .and_then(JsonValue::as_str)
         .filter(|raw| !raw.trim().is_empty())
-        .ok_or_else(|| tonic::Status::invalid_argument(format!("{key} is required")))
+        .ok_or_else(|| {
+            executor_utils_invalid_field(
+                key,
+                "must be a non-empty string",
+                format!("{key} is required"),
+            )
+        })
 }
 
 pub(crate) fn json_required_f32_vec(
@@ -956,17 +1460,25 @@ pub(crate) fn json_required_f32_vec(
     let values = value
         .get(key)
         .and_then(JsonValue::as_array)
-        .ok_or_else(|| tonic::Status::invalid_argument(format!("{key} must be an array")))?;
+        .ok_or_else(|| {
+            executor_utils_invalid_field(key, "must be an array", format!("{key} must be an array"))
+        })?;
     if values.is_empty() {
-        return Err(tonic::Status::invalid_argument(format!(
-            "{key} must not be empty"
-        )));
+        return Err(executor_utils_invalid_field(
+            key,
+            "must not be empty",
+            format!("{key} must not be empty"),
+        ));
     }
     values
         .iter()
         .map(|value| {
             value.as_f64().map(|number| number as f32).ok_or_else(|| {
-                tonic::Status::invalid_argument(format!("{key} must contain only numbers"))
+                executor_utils_invalid_field(
+                    key,
+                    "must contain only numbers",
+                    format!("{key} must contain only numbers"),
+                )
             })
         })
         .collect()
@@ -993,7 +1505,11 @@ pub(crate) fn object_bytes_from_json(value: &JsonValue) -> Result<Vec<u8>, tonic
     {
         // D.5: through the accel layer (scalar today; SIMD swap-in point for D.6).
         return crate::runtime::accel::base64_decode(base64_value).map_err(|err| {
-            tonic::Status::invalid_argument(format!("invalid object base64: {err}"))
+            executor_utils_invalid_field(
+                "data_base64",
+                "must be valid base64 object bytes",
+                format!("invalid object base64: {err}"),
+            )
         });
     }
     if let Some(text) = value
@@ -1003,11 +1519,14 @@ pub(crate) fn object_bytes_from_json(value: &JsonValue) -> Result<Vec<u8>, tonic
     {
         return Ok(text.as_bytes().to_vec());
     }
-    Err(tonic::Status::invalid_argument(
+    Err(executor_utils_invalid_field(
+        "object_bytes",
+        "data_base64, content_base64, data_text, or content_text is required",
         "object bytes are required as data_base64, content_base64, data_text, or content_text",
     ))
 }
 
+#[cfg(test)]
 pub(crate) fn validate_identifier(value: &str, label: &str) -> Result<(), tonic::Status> {
     if value.is_empty()
         || !value
@@ -1015,9 +1534,11 @@ pub(crate) fn validate_identifier(value: &str, label: &str) -> Result<(), tonic:
             .all(|ch| ch.is_ascii_alphanumeric() || ch == '_')
         || value.starts_with(|ch: char| ch.is_ascii_digit())
     {
-        return Err(tonic::Status::invalid_argument(format!(
-            "{label} '{value}' is not a valid SQL identifier"
-        )));
+        return Err(executor_utils_invalid_field(
+            label,
+            "must be a valid SQL identifier",
+            format!("{label} '{value}' is not a valid SQL identifier"),
+        ));
     }
     Ok(())
 }
@@ -1071,12 +1592,23 @@ pub(crate) fn env_i32(key: &str) -> Option<i32> {
 pub(crate) fn parse_sql_dispatch(
     request_json: &str,
 ) -> Result<(String, Vec<JsonValue>), tonic::Status> {
-    let value: JsonValue = serde_json::from_str(request_json)
-        .map_err(|e| tonic::Status::invalid_argument(format!("invalid dispatch JSON: {e}")))?;
+    let value: JsonValue = serde_json::from_str(request_json).map_err(|e| {
+        executor_utils_invalid_field(
+            "request_json",
+            "must be valid dispatch JSON",
+            format!("invalid dispatch JSON: {e}"),
+        )
+    })?;
     let sql = value
         .get("sql")
         .and_then(JsonValue::as_str)
-        .ok_or_else(|| tonic::Status::invalid_argument("missing `sql` in dispatch request"))?
+        .ok_or_else(|| {
+            executor_utils_invalid_field(
+                "sql",
+                "dispatch request must include sql",
+                "missing `sql` in dispatch request",
+            )
+        })?
         .to_string();
     let params = value
         .get("params")
@@ -1194,10 +1726,9 @@ where
     for<'q> <DB as sqlx::Database>::Arguments<'q>: sqlx::IntoArguments<'q, DB>,
 {
     for stmt in statements {
-        sqlx::query(stmt)
-            .execute(&mut **tx)
-            .await
-            .map_err(|err| tonic::Status::internal(format!("{error_prefix}: {err}")))?;
+        sqlx::query(stmt).execute(&mut **tx).await.map_err(|err| {
+            internal_status("database", error_prefix, format!("{error_prefix}: {err}"))
+        })?;
     }
     Ok(())
 }
@@ -1219,17 +1750,28 @@ pub(crate) fn parse_object_dispatch(
     object_keys: &[&str],
     bucket_label: &str,
 ) -> Result<(String, String, String, Option<String>), tonic::Status> {
-    let v: JsonValue = serde_json::from_str(req)
-        .map_err(|e| tonic::Status::invalid_argument(format!("invalid dispatch JSON: {e}")))?;
+    let v: JsonValue = serde_json::from_str(req).map_err(|e| {
+        executor_utils_invalid_field(
+            "request_json",
+            "must be valid dispatch JSON",
+            format!("invalid dispatch JSON: {e}"),
+        )
+    })?;
     let op = v
         .get("op")
         .and_then(JsonValue::as_str)
-        .ok_or_else(|| tonic::Status::invalid_argument("missing `op`"))?
+        .ok_or_else(|| executor_utils_invalid_field("op", "operation is required", "missing `op`"))?
         .to_string();
     let bucket = bucket_keys
         .iter()
         .find_map(|key| v.get(*key).and_then(JsonValue::as_str))
-        .ok_or_else(|| tonic::Status::invalid_argument(format!("missing `{bucket_label}`")))?
+        .ok_or_else(|| {
+            executor_utils_invalid_field(
+                bucket_label,
+                "bucket/container field is required",
+                format!("missing `{bucket_label}`"),
+            )
+        })?
         .to_string();
     let object = object_keys
         .iter()
@@ -1254,19 +1796,30 @@ pub(crate) fn parse_object_dispatch(
 pub(crate) fn parse_rest_dispatch(
     req: &str,
 ) -> Result<(reqwest::Method, String, JsonValue), tonic::Status> {
-    let mut v: JsonValue = serde_json::from_str(req)
-        .map_err(|e| tonic::Status::invalid_argument(format!("invalid dispatch JSON: {e}")))?;
+    let mut v: JsonValue = serde_json::from_str(req).map_err(|e| {
+        executor_utils_invalid_field(
+            "request_json",
+            "must be valid dispatch JSON",
+            format!("invalid dispatch JSON: {e}"),
+        )
+    })?;
     let path = v
         .get("path")
         .and_then(JsonValue::as_str)
-        .ok_or_else(|| tonic::Status::invalid_argument("missing `path`"))?
+        .ok_or_else(|| executor_utils_invalid_field("path", "path is required", "missing `path`"))?
         .to_string();
     let method = v
         .get("method")
         .and_then(JsonValue::as_str)
         .unwrap_or("POST")
         .parse::<reqwest::Method>()
-        .map_err(|e| tonic::Status::invalid_argument(format!("bad method: {e}")))?;
+        .map_err(|e| {
+            executor_utils_invalid_field(
+                "method",
+                "must be a valid HTTP method",
+                format!("bad method: {e}"),
+            )
+        })?;
     // D.3: move the (possibly large, nested) body out via `Value::take` instead of
     // deep-cloning it. `path`/`method` are already extracted, so replacing `body`
     // with Null is harmless; the returned body is byte-for-byte the same value.
@@ -1290,11 +1843,37 @@ pub(crate) fn http_status_to_tonic(
 ) -> tonic::Status {
     let code = status.as_u16();
     match code {
-        400 | 422 => tonic::Status::invalid_argument(format!("{backend} {code}: {detail}")),
-        401 | 403 => tonic::Status::permission_denied(format!("{backend} {code}: {detail}")),
-        404 => tonic::Status::not_found(format!("{backend} 404: {detail}")),
-        409 => tonic::Status::already_exists(format!("{backend} 409: {detail}")),
-        429 => tonic::Status::resource_exhausted(format!("{backend} 429: {detail}")),
+        400 | 422 => executor_utils_invalid_field(
+            "request",
+            "backend rejected the request as invalid",
+            format!("{backend} {code}: {detail}"),
+        ),
+        401 | 403 => policy_status_with_code(
+            tonic::Code::PermissionDenied,
+            "backend_http_authz",
+            format!("{}_http_{code}", backend),
+            format!("{backend} {code}: {detail}"),
+        ),
+        404 => schema_status(
+            tonic::Code::NotFound,
+            backend,
+            "request",
+            "backend_http_not_found",
+            format!("{backend} 404: {detail}"),
+        ),
+        409 => schema_status(
+            tonic::Code::AlreadyExists,
+            backend,
+            "request",
+            "backend_http_conflict",
+            format!("{backend} 409: {detail}"),
+        ),
+        429 => quota_status(
+            backend,
+            "request",
+            HTTP_RETRYABLE_BACKOFF_MS,
+            format!("{backend} 429: {detail}"),
+        ),
         // 5xx is a transient server-side failure: emit the typed retryable detail
         // (Unavailable, retryable=true, suggested backoff) so SDK clients retry.
         500..=599 => retryable_status(
@@ -1303,7 +1882,11 @@ pub(crate) fn http_status_to_tonic(
             HTTP_RETRYABLE_BACKOFF_MS,
             format!("{backend} {code}: {detail}"),
         ),
-        _ => tonic::Status::internal(format!("{backend} {code}: {detail}")),
+        _ => internal_status(
+            backend,
+            format!("http_{code}"),
+            format!("{backend} {code}: {detail}"),
+        ),
     }
 }
 
@@ -1343,9 +1926,13 @@ pub(crate) fn qdrant_status(status: reqwest::StatusCode) -> Result<(), tonic::St
             format!("Qdrant returned HTTP {status}"),
         ))
     } else {
-        Err(tonic::Status::unavailable(format!(
-            "Qdrant returned HTTP {status}"
-        )))
+        Err(schema_status(
+            tonic::Code::FailedPrecondition,
+            "qdrant",
+            "request",
+            "qdrant_http_rejected",
+            format!("Qdrant returned HTTP {status}"),
+        ))
     }
 }
 
@@ -1392,11 +1979,22 @@ mod conversion_tests {
 
 #[cfg(test)]
 mod error_detail_tests {
+    #[cfg(feature = "qdrant")]
+    use super::qdrant_status;
     use super::{
-        ERROR_DETAIL_METADATA_KEY, capability_status, compile_error_status, retryable_status,
+        ERROR_DETAIL_METADATA_KEY, HTTP_RETRYABLE_BACKOFF_MS, INLINE_OBJECT_LIMIT_BYTES,
+        STATUS_TAG_PREFIX, backend_transport_status, capability_status, compile_error_status,
+        deadline_exceeded_status, failed_precondition_fields, http_status_to_tonic,
+        internal_status, invalid_argument_fields, json_f64, json_i64, json_required_f32_vec,
+        json_required_str, object_bytes_from_json, parse_sql_dispatch, policy_status,
+        policy_status_with_code, prefix_status, quota_refusal_status, quota_status,
+        referential_constraint_status, reject_oversized_object, reject_plan,
+        retryable_aborted_status, retryable_status, schema_status, sqlx_error_to_status,
+        status_from_store_string, status_with_error_detail, validate_identifier,
     };
     use crate::proto::{ErrorDetail, ErrorKind};
     use prost::Message as _;
+    use serde_json::json;
 
     /// Decode the prost `ErrorDetail` from the binary trailer the way an SDK
     /// would, so the test proves the typed detail is recoverable end-to-end.
@@ -1407,7 +2005,7 @@ mod error_detail_tests {
             .expect("error-detail trailer present")
             .to_bytes()
             .expect("trailer decodes to bytes");
-        ErrorDetail::decode(raw.as_ref()).expect("trailer decodes as ErrorDetail")
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
     }
 
     #[test]
@@ -1430,6 +2028,76 @@ mod error_detail_tests {
     }
 
     #[test]
+    fn policy_status_carries_typed_detail_and_preserves_message() {
+        let status = policy_status(
+            "webauthn_registration_policy",
+            "resident_key_required",
+            "WebAuthn policy denied registration",
+        );
+        assert_eq!(status.code(), tonic::Code::FailedPrecondition);
+        assert_eq!(status.message(), "WebAuthn policy denied registration");
+        let detail = decode_detail(&status);
+        assert_eq!(detail.kind, ErrorKind::Policy as i32);
+        assert_eq!(detail.operation, "webauthn_registration_policy");
+        assert_eq!(detail.policy_decision_id, "resident_key_required");
+        assert!(detail.backend.is_empty());
+        assert!(detail.capability_required.is_empty());
+        assert!(detail.field_violations.is_empty());
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+    }
+
+    #[test]
+    fn policy_status_with_code_preserves_permission_denied_code() {
+        let status = policy_status_with_code(
+            tonic::Code::PermissionDenied,
+            "backend_http_authz",
+            "pinecone_http_403",
+            "pinecone 403: forbidden",
+        );
+        assert_eq!(status.code(), tonic::Code::PermissionDenied);
+        assert_eq!(status.message(), "pinecone 403: forbidden");
+        let detail = decode_detail(&status);
+        assert_eq!(detail.kind, ErrorKind::Policy as i32);
+        assert_eq!(detail.operation, "backend_http_authz");
+        assert_eq!(detail.policy_decision_id, "pinecone_http_403");
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+    }
+
+    #[cfg(any(feature = "pinecone", feature = "weaviate", feature = "elasticsearch"))]
+    #[test]
+    fn http_status_to_tonic_authz_rejection_carries_policy_detail() {
+        let status = http_status_to_tonic(reqwest::StatusCode::FORBIDDEN, "forbidden", "pinecone");
+        assert_eq!(status.code(), tonic::Code::PermissionDenied);
+        assert_eq!(status.message(), "pinecone 403: forbidden");
+        let detail = decode_detail(&status);
+        assert_eq!(detail.kind, ErrorKind::Policy as i32);
+        assert_eq!(detail.operation, "backend_http_authz");
+        assert_eq!(detail.policy_decision_id, "pinecone_http_403");
+        assert!(detail.field_violations.is_empty());
+    }
+
+    #[cfg(any(feature = "pinecone", feature = "weaviate", feature = "elasticsearch"))]
+    #[test]
+    fn http_status_to_tonic_429_carries_quota_retry_after_detail() {
+        let status = http_status_to_tonic(
+            reqwest::StatusCode::TOO_MANY_REQUESTS,
+            "rate limited",
+            "pinecone",
+        );
+        assert_eq!(status.code(), tonic::Code::ResourceExhausted);
+        assert_eq!(status.message(), "pinecone 429: rate limited");
+        let detail = decode_detail(&status);
+        assert_eq!(detail.kind, ErrorKind::Quota as i32);
+        assert_eq!(detail.backend, "pinecone");
+        assert_eq!(detail.operation, "request");
+        assert!(detail.retryable);
+        assert_eq!(detail.retry_after_ms, HTTP_RETRYABLE_BACKOFF_MS);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    #[test]
     fn retryable_status_is_unavailable_with_backoff() {
         let status = retryable_status("postgres", "query", 250, "temporarily unavailable");
         assert_eq!(status.code(), tonic::Code::Unavailable);
@@ -1437,6 +2105,775 @@ mod error_detail_tests {
         assert!(detail.retryable);
         assert_eq!(detail.retry_after_ms, 250);
         assert_eq!(detail.kind, ErrorKind::Retryable as i32);
+    }
+
+    #[test]
+    fn deadline_exceeded_status_preserves_deadline_code_with_retry_detail() {
+        let status =
+            deadline_exceeded_status("channel", "read channel", 500, "read channel timeout");
+        assert_eq!(status.code(), tonic::Code::DeadlineExceeded);
+        assert_eq!(status.message(), "read channel timeout");
+        let detail = decode_detail(&status);
+        assert_eq!(detail.backend, "channel");
+        assert_eq!(detail.operation, "read_channel");
+        assert!(detail.retryable);
+        assert_eq!(detail.retry_after_ms, 500);
+        assert_eq!(detail.kind, ErrorKind::Retryable as i32);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    #[test]
+    fn backend_transport_status_is_typed_retryable() {
+        let status = backend_transport_status("Qdrant", "collection check", "connection reset");
+        assert_eq!(status.code(), tonic::Code::Unavailable);
+        assert_eq!(
+            status.message(),
+            "Qdrant collection check failed: connection reset"
+        );
+        let detail = decode_detail(&status);
+        assert_eq!(detail.backend, "Qdrant");
+        assert_eq!(detail.operation, "collection_check");
+        assert!(detail.retryable);
+        assert_eq!(detail.retry_after_ms, HTTP_RETRYABLE_BACKOFF_MS);
+        assert_eq!(detail.kind, ErrorKind::Retryable as i32);
+    }
+
+    #[cfg(feature = "qdrant")]
+    #[test]
+    fn qdrant_client_http_rejections_carry_schema_detail() {
+        let status = qdrant_status(reqwest::StatusCode::BAD_REQUEST)
+            .expect_err("4xx Qdrant response should be rejected");
+        assert_eq!(status.code(), tonic::Code::FailedPrecondition);
+        assert_eq!(status.message(), "Qdrant returned HTTP 400 Bad Request");
+        let detail = decode_detail(&status);
+        assert_eq!(detail.kind, ErrorKind::Schema as i32);
+        assert_eq!(detail.backend, "qdrant");
+        assert_eq!(detail.operation, "request");
+        assert_eq!(detail.capability_required, "qdrant_http_rejected");
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+    }
+
+    #[test]
+    fn retryable_aborted_status_preserves_aborted_code() {
+        let status = retryable_aborted_status(
+            "authz",
+            "optimistic concurrency",
+            0,
+            "policy changed concurrently",
+        );
+        assert_eq!(status.code(), tonic::Code::Aborted);
+        assert_eq!(status.message(), "policy changed concurrently");
+        let detail = decode_detail(&status);
+        assert_eq!(detail.backend, "authz");
+        assert_eq!(detail.operation, "optimistic_concurrency");
+        assert!(detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert_eq!(detail.kind, ErrorKind::Retryable as i32);
+    }
+
+    #[test]
+    fn error_detail_builder_clears_retryable_field_violations() {
+        let status = status_with_error_detail(
+            tonic::Code::Unavailable,
+            "temporarily unavailable",
+            ErrorDetail {
+                backend: "postgres".to_string(),
+                operation: "query".to_string(),
+                capability_required: String::new(),
+                retryable: true,
+                retry_after_ms: 250,
+                policy_decision_id: String::new(),
+                correlation_id: String::new(),
+                kind: ErrorKind::Retryable as i32,
+                field_violations: vec![crate::proto::ErrorFieldViolation {
+                    field: "tenant_id".to_string(),
+                    description: "required".to_string(),
+                }],
+            },
+        );
+        let detail = decode_detail(&status);
+        assert_eq!(detail.kind, ErrorKind::Retryable as i32);
+        assert!(detail.field_violations.is_empty());
+        assert_eq!(detail.backend, "postgres");
+        assert_eq!(detail.operation, "query");
+    }
+
+    #[test]
+    fn quota_status_is_resource_exhausted_with_backoff() {
+        let status = quota_status(
+            "channel",
+            "admin fair admission",
+            1_000,
+            "admin fair queue budget exhausted; retry after 1s",
+        );
+        assert_eq!(status.code(), tonic::Code::ResourceExhausted);
+        let detail = decode_detail(&status);
+        assert_eq!(detail.backend, "channel");
+        assert_eq!(detail.operation, "admin_fair_admission");
+        assert!(detail.retryable);
+        assert_eq!(detail.retry_after_ms, 1_000);
+        assert_eq!(detail.kind, ErrorKind::Quota as i32);
+    }
+
+    #[test]
+    fn error_detail_builder_clears_quota_field_violations() {
+        let status = status_with_error_detail(
+            tonic::Code::ResourceExhausted,
+            "quota exhausted",
+            ErrorDetail {
+                backend: "channel".to_string(),
+                operation: "fair_admission".to_string(),
+                capability_required: String::new(),
+                retryable: true,
+                retry_after_ms: 250,
+                policy_decision_id: String::new(),
+                correlation_id: String::new(),
+                kind: ErrorKind::Quota as i32,
+                field_violations: vec![crate::proto::ErrorFieldViolation {
+                    field: "tenant_id".to_string(),
+                    description: "required".to_string(),
+                }],
+            },
+        );
+        let detail = decode_detail(&status);
+        assert_eq!(detail.kind, ErrorKind::Quota as i32);
+        assert!(detail.field_violations.is_empty());
+        assert_eq!(detail.backend, "channel");
+        assert_eq!(detail.operation, "fair_admission");
+    }
+
+    #[test]
+    fn error_detail_builder_clears_non_validation_field_violations() {
+        let capability_status = status_with_error_detail(
+            tonic::Code::FailedPrecondition,
+            "unsupported operation",
+            ErrorDetail {
+                backend: "cassandra".to_string(),
+                operation: "ensure_resource".to_string(),
+                capability_required: "supports_resource_lifecycle".to_string(),
+                retryable: false,
+                retry_after_ms: 0,
+                policy_decision_id: String::new(),
+                correlation_id: String::new(),
+                kind: ErrorKind::Capability as i32,
+                field_violations: vec![crate::proto::ErrorFieldViolation {
+                    field: "sql".to_string(),
+                    description: "unsupported".to_string(),
+                }],
+            },
+        );
+        let capability_detail = decode_detail(&capability_status);
+        assert_eq!(capability_detail.kind, ErrorKind::Capability as i32);
+        assert!(capability_detail.field_violations.is_empty());
+        assert_eq!(capability_detail.backend, "cassandra");
+        assert_eq!(
+            capability_detail.capability_required,
+            "supports_resource_lifecycle"
+        );
+
+        let policy_status = status_with_error_detail(
+            tonic::Code::PermissionDenied,
+            "policy denied request",
+            ErrorDetail {
+                backend: String::new(),
+                operation: "authorize".to_string(),
+                capability_required: String::new(),
+                retryable: false,
+                retry_after_ms: 0,
+                policy_decision_id: "decision-123".to_string(),
+                correlation_id: String::new(),
+                kind: ErrorKind::Policy as i32,
+                field_violations: vec![crate::proto::ErrorFieldViolation {
+                    field: "principal".to_string(),
+                    description: "denied".to_string(),
+                }],
+            },
+        );
+        let policy_detail = decode_detail(&policy_status);
+        assert_eq!(policy_detail.kind, ErrorKind::Policy as i32);
+        assert!(policy_detail.field_violations.is_empty());
+        assert_eq!(policy_detail.operation, "authorize");
+        assert_eq!(policy_detail.policy_decision_id, "decision-123");
+
+        let schema_status = status_with_error_detail(
+            tonic::Code::InvalidArgument,
+            "schema compile failed",
+            ErrorDetail {
+                backend: "postgres".to_string(),
+                operation: "compile".to_string(),
+                capability_required: "operation_not_supported".to_string(),
+                retryable: false,
+                retry_after_ms: 0,
+                policy_decision_id: String::new(),
+                correlation_id: String::new(),
+                kind: ErrorKind::Schema as i32,
+                field_violations: vec![crate::proto::ErrorFieldViolation {
+                    field: "table_name".to_string(),
+                    description: "bad schema".to_string(),
+                }],
+            },
+        );
+        let schema_detail = decode_detail(&schema_status);
+        assert_eq!(schema_detail.kind, ErrorKind::Schema as i32);
+        assert!(schema_detail.field_violations.is_empty());
+        assert_eq!(schema_detail.backend, "postgres");
+        assert_eq!(schema_detail.capability_required, "operation_not_supported");
+
+        for kind in [
+            ErrorKind::Internal as i32,
+            ErrorKind::Unspecified as i32,
+            99,
+        ] {
+            let status = status_with_error_detail(
+                tonic::Code::Internal,
+                "internal failure",
+                ErrorDetail {
+                    backend: "broker".to_string(),
+                    operation: "dispatch".to_string(),
+                    capability_required: String::new(),
+                    retryable: false,
+                    retry_after_ms: 0,
+                    policy_decision_id: String::new(),
+                    correlation_id: String::new(),
+                    kind,
+                    field_violations: vec![crate::proto::ErrorFieldViolation {
+                        field: "request".to_string(),
+                        description: "not validation".to_string(),
+                    }],
+                },
+            );
+            let detail = decode_detail(&status);
+            assert_eq!(detail.kind, kind);
+            assert!(detail.field_violations.is_empty());
+            assert_eq!(detail.backend, "broker");
+            assert_eq!(detail.operation, "dispatch");
+        }
+    }
+
+    #[test]
+    fn error_detail_builder_canonicalizes_non_retryable_error_kinds() {
+        for kind in [
+            ErrorKind::Capability as i32,
+            ErrorKind::Policy as i32,
+            ErrorKind::Schema as i32,
+            ErrorKind::Internal as i32,
+            ErrorKind::Unspecified as i32,
+            99,
+        ] {
+            let status = status_with_error_detail(
+                tonic::Code::FailedPrecondition,
+                "not retryable",
+                ErrorDetail {
+                    backend: "broker".to_string(),
+                    operation: "dispatch".to_string(),
+                    capability_required: "not_retryable".to_string(),
+                    retryable: true,
+                    retry_after_ms: 250,
+                    policy_decision_id: String::new(),
+                    correlation_id: String::new(),
+                    kind,
+                    field_violations: Vec::new(),
+                },
+            );
+            let detail = decode_detail(&status);
+            assert_eq!(detail.kind, kind);
+            assert!(!detail.retryable);
+            assert_eq!(detail.retry_after_ms, 0);
+        }
+    }
+
+    #[test]
+    fn retryable_details_never_expose_negative_backoff() {
+        let unavailable = retryable_status("postgres", "query", -250, "retry now");
+        let unavailable_detail = decode_detail(&unavailable);
+        assert_eq!(unavailable_detail.retry_after_ms, 0);
+
+        let aborted = retryable_aborted_status("authz", "policy update", -1, "retry now");
+        let aborted_detail = decode_detail(&aborted);
+        assert_eq!(aborted_detail.retry_after_ms, 0);
+
+        let deadline = deadline_exceeded_status("channel", "read", -500, "retry now");
+        let deadline_detail = decode_detail(&deadline);
+        assert_eq!(deadline_detail.retry_after_ms, 0);
+
+        let quota = quota_status("channel", "fair_admission", -1_000, "retry now");
+        let quota_detail = decode_detail(&quota);
+        assert_eq!(quota_detail.retry_after_ms, 0);
+    }
+
+    #[test]
+    fn error_detail_builder_never_exposes_negative_backoff() {
+        let status = status_with_error_detail(
+            tonic::Code::Unavailable,
+            "retry later",
+            ErrorDetail {
+                backend: "custom".to_string(),
+                operation: "custom retry".to_string(),
+                capability_required: String::new(),
+                retryable: true,
+                retry_after_ms: -750,
+                policy_decision_id: String::new(),
+                correlation_id: String::new(),
+                kind: ErrorKind::Retryable as i32,
+                field_violations: Vec::new(),
+            },
+        );
+        let detail = decode_detail(&status);
+        assert_eq!(detail.retry_after_ms, 0);
+    }
+
+    #[test]
+    fn error_detail_builder_canonicalizes_retryable_identity_tokens() {
+        for kind in [ErrorKind::Retryable as i32, ErrorKind::Quota as i32] {
+            let status = status_with_error_detail(
+                tonic::Code::ResourceExhausted,
+                "retry later",
+                ErrorDetail {
+                    backend: " fair admission ".to_string(),
+                    operation: "worker queue".to_string(),
+                    capability_required: String::new(),
+                    retryable: true,
+                    retry_after_ms: 250,
+                    policy_decision_id: String::new(),
+                    correlation_id: String::new(),
+                    kind,
+                    field_violations: Vec::new(),
+                },
+            );
+            let detail = decode_detail(&status);
+            assert_eq!(detail.backend, "fair_admission");
+            assert_eq!(detail.operation, "worker_queue");
+        }
+
+        let status = status_with_error_detail(
+            tonic::Code::ResourceExhausted,
+            "retry later",
+            ErrorDetail {
+                backend: String::new(),
+                operation: String::new(),
+                capability_required: String::new(),
+                retryable: true,
+                retry_after_ms: 250,
+                policy_decision_id: String::new(),
+                correlation_id: String::new(),
+                kind: ErrorKind::Quota as i32,
+                field_violations: Vec::new(),
+            },
+        );
+        let detail = decode_detail(&status);
+        assert_eq!(detail.backend, "backend");
+        assert_eq!(detail.operation, "operation");
+    }
+
+    #[test]
+    fn error_detail_builder_clears_non_retryable_backoff() {
+        for kind in [
+            ErrorKind::Retryable as i32,
+            ErrorKind::Quota as i32,
+            ErrorKind::Capability as i32,
+            ErrorKind::Policy as i32,
+            ErrorKind::Schema as i32,
+        ] {
+            let status = status_with_error_detail(
+                tonic::Code::ResourceExhausted,
+                "not retryable",
+                ErrorDetail {
+                    backend: "broker".to_string(),
+                    operation: "dispatch".to_string(),
+                    capability_required: String::new(),
+                    retryable: false,
+                    retry_after_ms: 2_500,
+                    policy_decision_id: String::new(),
+                    correlation_id: String::new(),
+                    kind,
+                    field_violations: Vec::new(),
+                },
+            );
+            let detail = decode_detail(&status);
+            assert!(!detail.retryable);
+            assert_eq!(detail.retry_after_ms, 0);
+        }
+    }
+
+    #[test]
+    fn error_detail_builder_clears_non_policy_decision_ids() {
+        let policy_status = status_with_error_detail(
+            tonic::Code::PermissionDenied,
+            "policy denied request",
+            ErrorDetail {
+                backend: String::new(),
+                operation: "authorize".to_string(),
+                capability_required: String::new(),
+                retryable: false,
+                retry_after_ms: 0,
+                policy_decision_id: "decision-123".to_string(),
+                correlation_id: String::new(),
+                kind: ErrorKind::Policy as i32,
+                field_violations: Vec::new(),
+            },
+        );
+        let policy_detail = decode_detail(&policy_status);
+        assert_eq!(policy_detail.policy_decision_id, "decision-123");
+
+        for kind in [
+            ErrorKind::Validation as i32,
+            ErrorKind::Retryable as i32,
+            ErrorKind::Quota as i32,
+            ErrorKind::Capability as i32,
+            ErrorKind::Schema as i32,
+            ErrorKind::Internal as i32,
+            ErrorKind::Unspecified as i32,
+            99,
+        ] {
+            let status = status_with_error_detail(
+                tonic::Code::ResourceExhausted,
+                "not policy",
+                ErrorDetail {
+                    backend: "broker".to_string(),
+                    operation: "dispatch".to_string(),
+                    capability_required: String::new(),
+                    retryable: false,
+                    retry_after_ms: 0,
+                    policy_decision_id: "decision-123".to_string(),
+                    correlation_id: String::new(),
+                    kind,
+                    field_violations: Vec::new(),
+                },
+            );
+            let detail = decode_detail(&status);
+            assert!(detail.policy_decision_id.is_empty());
+        }
+    }
+
+    #[test]
+    fn error_detail_builder_clears_non_capability_required_fields() {
+        for (kind, expected) in [
+            (ErrorKind::Capability as i32, "native_resource_lifecycle"),
+            (ErrorKind::Schema as i32, "operation_not_supported"),
+        ] {
+            let status = status_with_error_detail(
+                tonic::Code::FailedPrecondition,
+                "capability or schema",
+                ErrorDetail {
+                    backend: "broker".to_string(),
+                    operation: "dispatch".to_string(),
+                    capability_required: expected.to_string(),
+                    retryable: false,
+                    retry_after_ms: 0,
+                    policy_decision_id: String::new(),
+                    correlation_id: String::new(),
+                    kind,
+                    field_violations: Vec::new(),
+                },
+            );
+            let detail = decode_detail(&status);
+            assert_eq!(detail.capability_required, expected);
+        }
+
+        for kind in [
+            ErrorKind::Validation as i32,
+            ErrorKind::Retryable as i32,
+            ErrorKind::Quota as i32,
+            ErrorKind::Policy as i32,
+            ErrorKind::Internal as i32,
+            ErrorKind::Unspecified as i32,
+            99,
+        ] {
+            let status = status_with_error_detail(
+                tonic::Code::ResourceExhausted,
+                "not capability",
+                ErrorDetail {
+                    backend: "broker".to_string(),
+                    operation: "dispatch".to_string(),
+                    capability_required: "native_resource_lifecycle".to_string(),
+                    retryable: false,
+                    retry_after_ms: 0,
+                    policy_decision_id: String::new(),
+                    correlation_id: String::new(),
+                    kind,
+                    field_violations: Vec::new(),
+                },
+            );
+            let detail = decode_detail(&status);
+            assert!(detail.capability_required.is_empty());
+        }
+    }
+
+    #[test]
+    fn error_detail_builder_canonicalizes_validation_retry_shape() {
+        let status_with_field = status_with_error_detail(
+            tonic::Code::InvalidArgument,
+            "tenant_id is required",
+            ErrorDetail {
+                backend: "admission".to_string(),
+                operation: "fair_queue".to_string(),
+                capability_required: "quota".to_string(),
+                retryable: true,
+                retry_after_ms: 250,
+                policy_decision_id: String::new(),
+                correlation_id: String::new(),
+                kind: ErrorKind::Validation as i32,
+                field_violations: vec![crate::proto::ErrorFieldViolation {
+                    field: "tenant_id".to_string(),
+                    description: "required".to_string(),
+                }],
+            },
+        );
+        let detail = decode_detail(&status_with_field);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert!(detail.backend.is_empty());
+        assert!(detail.operation.is_empty());
+        assert!(detail.capability_required.is_empty());
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert_eq!(detail.field_violations[0].field, "tenant_id");
+
+        let status_without_fields = status_with_error_detail(
+            tonic::Code::InvalidArgument,
+            "invalid request",
+            ErrorDetail {
+                backend: String::new(),
+                operation: String::new(),
+                capability_required: String::new(),
+                retryable: false,
+                retry_after_ms: 0,
+                policy_decision_id: String::new(),
+                correlation_id: String::new(),
+                kind: ErrorKind::Validation as i32,
+                field_violations: Vec::new(),
+            },
+        );
+        let fallback_detail = decode_detail(&status_without_fields);
+        assert_eq!(fallback_detail.field_violations.len(), 1);
+        assert_eq!(fallback_detail.field_violations[0].field, "field");
+        assert_eq!(
+            fallback_detail.field_violations[0].description,
+            "invalid field"
+        );
+    }
+
+    #[test]
+    fn error_detail_public_strings_are_bounded_and_control_free() {
+        let long_backend = "b".repeat(super::MAX_ERROR_DETAIL_STRING_BYTES + 8);
+        let long_message = "m".repeat(super::MAX_ERROR_DETAIL_STRING_BYTES + 8);
+        let long_description = "d".repeat(super::MAX_ERROR_DETAIL_STRING_BYTES + 8);
+        let status = retryable_status(
+            format!("{long_backend}\n"),
+            "query\tpath",
+            1,
+            format!(" {long_message}\n"),
+        );
+        assert_eq!(status.message().len(), super::MAX_ERROR_DETAIL_STRING_BYTES);
+        assert!(status.message().chars().all(|ch| !ch.is_control()));
+        let detail = decode_detail(&status);
+        assert_eq!(detail.backend.len(), super::MAX_ERROR_DETAIL_STRING_BYTES);
+        assert!(detail.backend.chars().all(|ch| !ch.is_control()));
+        assert_eq!(detail.operation, "querypath");
+
+        let fallback_status = retryable_status("postgres", "query", 1, "\n\t");
+        assert_eq!(fallback_status.message(), "error");
+
+        let field_status = invalid_argument_fields(
+            "bad request",
+            [
+                ("\n", "bad\rfield"),
+                ("field\nname", "\t"),
+                (" tenant_id ", " required "),
+                ("tenant id", "not canonical"),
+                ("description", long_description.as_str()),
+            ],
+        );
+        let field_detail = decode_detail(&field_status);
+        assert_eq!(field_detail.field_violations[0].field, "field");
+        assert_eq!(field_detail.field_violations[0].description, "badfield");
+        assert_eq!(field_detail.field_violations[1].field, "fieldname");
+        assert_eq!(
+            field_detail.field_violations[1].description,
+            "invalid field"
+        );
+        assert_eq!(field_detail.field_violations[2].field, "tenant_id");
+        assert_eq!(field_detail.field_violations[2].description, "required");
+        assert_eq!(field_detail.field_violations[3].field, "field");
+        assert_eq!(
+            field_detail.field_violations[3].description,
+            "not canonical"
+        );
+        assert_eq!(
+            field_detail.field_violations[4].description.len(),
+            super::MAX_ERROR_DETAIL_STRING_BYTES
+        );
+        assert!(
+            field_detail.field_violations[4]
+                .description
+                .chars()
+                .all(|ch| !ch.is_control())
+        );
+    }
+
+    #[test]
+    fn quota_refusal_status_is_resource_exhausted_without_retry() {
+        let status = quota_refusal_status(
+            "storage",
+            "tenant_storage_quota",
+            "tenant storage quota exceeded",
+        );
+        assert_eq!(status.code(), tonic::Code::ResourceExhausted);
+        let detail = decode_detail(&status);
+        assert_eq!(detail.backend, "storage");
+        assert_eq!(detail.operation, "tenant_storage_quota");
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert_eq!(detail.kind, ErrorKind::Quota as i32);
+    }
+
+    #[test]
+    fn reject_oversized_object_carries_typed_quota_detail() {
+        let status =
+            reject_oversized_object(INLINE_OBJECT_LIMIT_BYTES + 1).expect_err("oversized object");
+        assert_eq!(status.code(), tonic::Code::ResourceExhausted);
+        let detail = decode_detail(&status);
+        assert_eq!(detail.kind, ErrorKind::Quota as i32);
+        assert_eq!(detail.backend, "object");
+        assert_eq!(detail.operation, "inline_object_size");
+        assert!(!detail.retryable);
+    }
+
+    #[test]
+    fn invalid_argument_fields_carries_structured_field_violations() {
+        let status = invalid_argument_fields(
+            "tenant_id is required",
+            [("tenant_id", "must be a non-empty tenant id")],
+        );
+        assert_eq!(status.code(), tonic::Code::InvalidArgument);
+        assert_eq!(status.message(), "tenant_id is required");
+        let detail = decode_detail(&status);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert!(!detail.retryable);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, "tenant_id");
+        assert_eq!(
+            detail.field_violations[0].description,
+            "must be a non-empty tenant id"
+        );
+    }
+
+    #[test]
+    fn failed_precondition_fields_carries_validation_detail_without_changing_code() {
+        let status = failed_precondition_fields(
+            "uploaded object etag does not match",
+            [("etag", "must match the uploaded object's store ETag")],
+        );
+        assert_eq!(status.code(), tonic::Code::FailedPrecondition);
+        assert_eq!(status.message(), "uploaded object etag does not match");
+        let detail = decode_detail(&status);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, "etag");
+        assert_eq!(
+            detail.field_violations[0].description,
+            "must match the uploaded object's store ETag"
+        );
+    }
+
+    #[test]
+    fn prefix_status_preserves_typed_error_detail_metadata() {
+        let status = invalid_argument_fields(
+            "tenant_id is required",
+            [("tenant_id", "must be a non-empty tenant id")],
+        );
+        let prefixed = prefix_status("create user failed", status);
+        assert_eq!(prefixed.code(), tonic::Code::InvalidArgument);
+        assert_eq!(
+            prefixed.message(),
+            "create user failed: tenant_id is required"
+        );
+        let detail = decode_detail(&prefixed);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert!(!detail.retryable);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, "tenant_id");
+        assert_eq!(
+            detail.field_violations[0].description,
+            "must be a non-empty tenant id"
+        );
+    }
+
+    fn assert_single_field_violation(status: &tonic::Status, field: &str, description: &str) {
+        assert_eq!(status.code(), tonic::Code::InvalidArgument);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert!(!detail.retryable);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, field);
+        assert_eq!(detail.field_violations[0].description, description);
+    }
+
+    #[test]
+    fn shared_json_validation_helpers_carry_field_violations() {
+        assert_single_field_violation(
+            &json_i64(&json!("abc")).expect_err("invalid integer"),
+            "value",
+            "must be an integer or integer string",
+        );
+        assert_single_field_violation(
+            &json_f64(&json!("abc")).expect_err("invalid number"),
+            "value",
+            "must be a number or numeric string",
+        );
+        assert_single_field_violation(
+            &json_required_str(&json!({}), "collection").expect_err("missing string"),
+            "collection",
+            "must be a non-empty string",
+        );
+        assert_single_field_violation(
+            &json_required_f32_vec(&json!({"vector": []}), "vector").expect_err("empty vector"),
+            "vector",
+            "must not be empty",
+        );
+        assert_single_field_violation(
+            &json_required_f32_vec(&json!({"vector": ["nan"]}), "vector")
+                .expect_err("non-numeric vector"),
+            "vector",
+            "must contain only numbers",
+        );
+    }
+
+    #[test]
+    fn shared_dispatch_validation_helpers_carry_field_violations() {
+        assert_single_field_violation(
+            &object_bytes_from_json(&json!({"data_base64": "!"}))
+                .expect_err("invalid object base64"),
+            "data_base64",
+            "must be valid base64 object bytes",
+        );
+        assert_single_field_violation(
+            &object_bytes_from_json(&json!({})).expect_err("missing object bytes"),
+            "object_bytes",
+            "data_base64, content_base64, data_text, or content_text is required",
+        );
+        assert_single_field_violation(
+            &validate_identifier("1bad", "schema").expect_err("invalid identifier"),
+            "schema",
+            "must be a valid SQL identifier",
+        );
+        assert_single_field_violation(
+            &parse_sql_dispatch("{").expect_err("invalid dispatch json"),
+            "request_json",
+            "must be valid dispatch JSON",
+        );
+        assert_single_field_violation(
+            &parse_sql_dispatch(r#"{"params":[]}"#).expect_err("missing sql"),
+            "sql",
+            "dispatch request must include sql",
+        );
+        assert_single_field_violation(
+            &reject_plan(&["missing field".to_string()]).expect_err("plan errors"),
+            "plan",
+            "planner validation errors must be resolved",
+        );
     }
 
     #[test]
@@ -1452,6 +2889,205 @@ mod error_detail_tests {
         assert_eq!(detail.capability_required, "operation_not_supported");
         assert_eq!(detail.kind, ErrorKind::Schema as i32);
         assert!(!detail.retryable);
+    }
+
+    #[test]
+    fn schema_status_carries_schema_kind_without_changing_code() {
+        let status = schema_status(
+            tonic::Code::FailedPrecondition,
+            "catalog",
+            "LookupMessageSchema",
+            "catalog_version_incompatible",
+            "client catalog version is incompatible",
+        );
+        assert_eq!(status.code(), tonic::Code::FailedPrecondition);
+        assert_eq!(status.message(), "client catalog version is incompatible");
+        let detail = decode_detail(&status);
+        assert_eq!(detail.kind, ErrorKind::Schema as i32);
+        assert_eq!(detail.backend, "catalog");
+        assert_eq!(detail.operation, "LookupMessageSchema");
+        assert_eq!(detail.capability_required, "catalog_version_incompatible");
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    #[test]
+    fn internal_status_carries_internal_kind_with_identity() {
+        let status = internal_status("pinecone", "http_418", "pinecone 418: teapot");
+        assert_eq!(status.code(), tonic::Code::Internal);
+        assert_eq!(status.message(), "pinecone 418: teapot");
+        let detail = decode_detail(&status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "pinecone");
+        assert_eq!(detail.operation, "http_418");
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+        assert!(detail.policy_decision_id.is_empty());
+        assert!(detail.capability_required.is_empty());
+    }
+
+    #[test]
+    fn sqlx_non_database_error_preserves_internal_code_with_detail() {
+        let err = sqlx::Error::PoolClosed;
+        let status = sqlx_error_to_status("pool acquire failed", &err);
+        assert_eq!(status.code(), tonic::Code::Internal);
+        assert_eq!(status.message(), "pool acquire failed");
+        let detail = decode_detail(&status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "database");
+        assert_eq!(detail.operation, "pool acquire failed");
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    #[test]
+    fn untagged_store_string_preserves_internal_code_with_detail() {
+        let status = status_from_store_string("native store decode failed".to_string());
+        assert_eq!(status.code(), tonic::Code::Internal);
+        assert_eq!(status.message(), "native store decode failed");
+        let detail = decode_detail(&status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "store");
+        assert_eq!(detail.operation, "string_status");
+        assert!(!detail.retryable);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    #[test]
+    fn unique_constraint_status_preserves_already_exists_with_schema_detail() {
+        let status = schema_status(
+            tonic::Code::AlreadyExists,
+            "database",
+            "unique_constraint",
+            "unique_violation",
+            "resource already exists",
+        );
+        assert_eq!(status.code(), tonic::Code::AlreadyExists);
+        assert_eq!(status.message(), "resource already exists");
+        let detail = decode_detail(&status);
+        assert_eq!(detail.kind, ErrorKind::Schema as i32);
+        assert_eq!(detail.backend, "database");
+        assert_eq!(detail.operation, "unique_constraint");
+        assert_eq!(detail.capability_required, "unique_violation");
+        assert!(!detail.retryable);
+    }
+
+    #[cfg(any(feature = "pinecone", feature = "weaviate", feature = "elasticsearch"))]
+    #[test]
+    fn http_status_to_tonic_conflict_carries_schema_detail() {
+        let status = http_status_to_tonic(reqwest::StatusCode::CONFLICT, "exists", "pinecone");
+        assert_eq!(status.code(), tonic::Code::AlreadyExists);
+        assert_eq!(status.message(), "pinecone 409: exists");
+        let detail = decode_detail(&status);
+        assert_eq!(detail.kind, ErrorKind::Schema as i32);
+        assert_eq!(detail.backend, "pinecone");
+        assert_eq!(detail.operation, "request");
+        assert_eq!(detail.capability_required, "backend_http_conflict");
+    }
+
+    #[cfg(any(feature = "pinecone", feature = "weaviate", feature = "elasticsearch"))]
+    #[test]
+    fn http_status_to_tonic_not_found_carries_schema_detail() {
+        let status = http_status_to_tonic(reqwest::StatusCode::NOT_FOUND, "missing", "pinecone");
+        assert_eq!(status.code(), tonic::Code::NotFound);
+        assert_eq!(status.message(), "pinecone 404: missing");
+        let detail = decode_detail(&status);
+        assert_eq!(detail.kind, ErrorKind::Schema as i32);
+        assert_eq!(detail.backend, "pinecone");
+        assert_eq!(detail.operation, "request");
+        assert_eq!(detail.capability_required, "backend_http_not_found");
+    }
+
+    #[cfg(any(feature = "pinecone", feature = "weaviate", feature = "elasticsearch"))]
+    #[test]
+    fn http_status_to_tonic_unexpected_status_carries_internal_detail() {
+        let status = http_status_to_tonic(reqwest::StatusCode::IM_A_TEAPOT, "teapot", "pinecone");
+        assert_eq!(status.code(), tonic::Code::Internal);
+        assert_eq!(status.message(), "pinecone 418: teapot");
+        let detail = decode_detail(&status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "pinecone");
+        assert_eq!(detail.operation, "http_418");
+        assert!(!detail.retryable);
+    }
+
+    #[test]
+    fn referential_constraint_status_carries_schema_detail() {
+        let status = referential_constraint_status();
+        assert_eq!(status.code(), tonic::Code::FailedPrecondition);
+        assert_eq!(
+            status.message(),
+            "operation violates a referential constraint"
+        );
+        let detail = decode_detail(&status);
+        assert_eq!(detail.kind, ErrorKind::Schema as i32);
+        assert_eq!(detail.backend, "database");
+        assert_eq!(detail.operation, "referential_constraint");
+        assert_eq!(detail.capability_required, "foreign_key_violation");
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    #[test]
+    fn tagged_store_invalid_argument_preserves_validation_detail() {
+        let status = status_from_store_string(format!(
+            "{STATUS_TAG_PREFIX}{}:required field 'email' is missing",
+            tonic::Code::InvalidArgument as i32
+        ));
+        assert_eq!(status.code(), tonic::Code::InvalidArgument);
+        assert_eq!(status.message(), "required field 'email' is missing");
+        let detail = decode_detail(&status);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, "database");
+        assert!(!detail.retryable);
+    }
+
+    #[test]
+    fn tagged_store_referential_constraint_preserves_schema_detail() {
+        let status = status_from_store_string(format!(
+            "{STATUS_TAG_PREFIX}{}:operation violates a referential constraint",
+            tonic::Code::FailedPrecondition as i32
+        ));
+        assert_eq!(status.code(), tonic::Code::FailedPrecondition);
+        let detail = decode_detail(&status);
+        assert_eq!(detail.kind, ErrorKind::Schema as i32);
+        assert_eq!(detail.backend, "database");
+        assert_eq!(detail.operation, "referential_constraint");
+        assert_eq!(detail.capability_required, "foreign_key_violation");
+    }
+
+    #[test]
+    fn tagged_store_already_exists_preserves_schema_detail() {
+        let status = status_from_store_string(format!(
+            "{STATUS_TAG_PREFIX}{}:resource already exists",
+            tonic::Code::AlreadyExists as i32
+        ));
+        assert_eq!(status.code(), tonic::Code::AlreadyExists);
+        let detail = decode_detail(&status);
+        assert_eq!(detail.kind, ErrorKind::Schema as i32);
+        assert_eq!(detail.backend, "database");
+        assert_eq!(detail.operation, "unique_constraint");
+        assert_eq!(detail.capability_required, "unique_violation");
+    }
+
+    #[test]
+    fn tagged_store_unavailable_preserves_retryable_detail() {
+        let status = status_from_store_string(format!(
+            "{STATUS_TAG_PREFIX}{}:backend temporarily unavailable (not primary)",
+            tonic::Code::Unavailable as i32
+        ));
+        assert_eq!(status.code(), tonic::Code::Unavailable);
+        let detail = decode_detail(&status);
+        assert_eq!(detail.kind, ErrorKind::Retryable as i32);
+        assert_eq!(detail.backend, "store");
+        assert_eq!(detail.operation, "tagged_status");
+        assert!(detail.retryable);
+        assert_eq!(detail.retry_after_ms, HTTP_RETRYABLE_BACKOFF_MS);
     }
 }
 
@@ -1702,6 +3338,88 @@ mod merge_context_scope_authority_tests {
         };
         let merged = merge_context(Some(&proto), metadata_ctx(&["udb:read"]));
         assert_eq!(merged.read_fence_json, r#"{"seq":7}"#);
+    }
+
+    #[test]
+    fn typed_body_read_fence_used_only_when_metadata_absent() {
+        let proto = ProtoRequestContext {
+            read_fence: Some(crate::proto::ReadFence {
+                min_outbox_lsn: "0/9".into(),
+                projection_task_ids: Vec::new(),
+                max_wait_ms: 500,
+            }),
+            ..ProtoRequestContext::default()
+        };
+        let merged = merge_context(Some(&proto), metadata_ctx(&["udb:read"]));
+        assert_eq!(
+            merged.read_fence_json,
+            r#"{"min_outbox_lsn":"0/9","max_wait_ms":500}"#
+        );
+    }
+
+    #[test]
+    fn metadata_read_fence_wins_over_typed_body_read_fence() {
+        let mut meta = metadata_ctx(&["udb:read"]);
+        meta.read_fence_json = r#"{"min_outbox_lsn":"0/metadata"}"#.into();
+        let proto = ProtoRequestContext {
+            read_fence: Some(crate::proto::ReadFence {
+                min_outbox_lsn: "0/body".into(),
+                projection_task_ids: Vec::new(),
+                max_wait_ms: 500,
+            }),
+            ..ProtoRequestContext::default()
+        };
+        let merged = merge_context(Some(&proto), meta);
+        assert_eq!(merged.read_fence_json, r#"{"min_outbox_lsn":"0/metadata"}"#);
+    }
+
+    #[test]
+    fn legacy_body_read_fence_json_wins_over_typed_body_read_fence() {
+        let proto = ProtoRequestContext {
+            read_fence_json: r#"{"min_outbox_lsn":"0/legacy"}"#.into(),
+            read_fence: Some(crate::proto::ReadFence {
+                min_outbox_lsn: "0/typed".into(),
+                projection_task_ids: Vec::new(),
+                max_wait_ms: 500,
+            }),
+            ..ProtoRequestContext::default()
+        };
+        let merged = merge_context(Some(&proto), metadata_ctx(&["udb:read"]));
+        assert_eq!(merged.read_fence_json, r#"{"min_outbox_lsn":"0/legacy"}"#);
+    }
+
+    #[test]
+    fn typed_body_consistency_used_only_when_metadata_absent() {
+        let proto = ProtoRequestContext {
+            consistency_mode: 2,
+            ..ProtoRequestContext::default()
+        };
+        let merged = merge_context(Some(&proto), metadata_ctx(&["udb:read"]));
+        assert_eq!(merged.consistency, "read_your_writes");
+    }
+
+    #[test]
+    fn legacy_body_consistency_string_wins_over_typed_body_consistency() {
+        let proto = ProtoRequestContext {
+            consistency: "eventual".into(),
+            consistency_mode: 2,
+            ..ProtoRequestContext::default()
+        };
+        let merged = merge_context(Some(&proto), metadata_ctx(&["udb:read"]));
+        assert_eq!(merged.consistency, "eventual");
+    }
+
+    #[test]
+    fn metadata_consistency_wins_over_body_consistency_fields() {
+        let mut meta = metadata_ctx(&["udb:read"]);
+        meta.consistency = "strong".into();
+        let proto = ProtoRequestContext {
+            consistency: "eventual".into(),
+            consistency_mode: 2,
+            ..ProtoRequestContext::default()
+        };
+        let merged = merge_context(Some(&proto), meta);
+        assert_eq!(merged.consistency, "strong");
     }
 
     #[test]

@@ -104,8 +104,91 @@ pub(crate) fn run(
         SdkAction::Manifest => emit_manifest_json(),
         SdkAction::ListLangs => list_languages(templates_dir),
         SdkAction::Init => init_sdk(lang),
-        SdkAction::Generate => generate(lang, templates_dir, out_dir, selector),
+        SdkAction::Generate => generate(lang, templates_dir, out_dir, selector, None),
     }
+}
+
+/// Entry point for `udb orm scaffold` (master-plan 10.5).
+///
+/// ORM model generation is deliberately **not** a separate code path: it drives
+/// the exact same [`generate`] FSM/template pipeline as `udb sdk generate`,
+/// optionally scoped to a single entity via [`select_entities`]. There is no
+/// second/duplicate generator here — the typed entity/repository wrappers come
+/// from the same `@@UDB_ENTITY_BEGIN` template blocks rendered from the embedded
+/// descriptor set, so generated models can never drift from the SDK surface or
+/// the wire contract. `udb plan` / `udb sync-migrations` evolve the schema; this
+/// regenerates the models that read/write it.
+pub(crate) fn run_orm_scaffold(
+    lang: &str,
+    templates_dir: &str,
+    out_dir: &str,
+    entity: Option<&str>,
+) -> i32 {
+    generate(
+        lang,
+        templates_dir,
+        out_dir,
+        &SdkSelector::default(),
+        entity,
+    )
+}
+
+/// Restrict the entity manifest to a single entity when `--entity <fqn>` is
+/// passed. Accepts either the fully-qualified `pkg.Message` name or the bare
+/// message name. Codegen STOPS (typed error) when the filter matches no known
+/// entity — emitting an empty model set would be a silent lie. `None` (no
+/// filter) returns the full manifest unchanged, so `udb sdk generate` behavior
+/// is identical to before.
+fn select_entities(
+    entities: Vec<EntityDescriptor>,
+    filter: Option<&str>,
+) -> Result<Vec<EntityDescriptor>, String> {
+    let Some(target) = filter.map(str::trim).filter(|t| !t.is_empty()) else {
+        return Ok(entities);
+    };
+    let selected: Vec<EntityDescriptor> = entities
+        .into_iter()
+        .filter(|entity| entity_matches(entity, target))
+        .collect();
+    if selected.is_empty() {
+        return Err(format!(
+            "--entity `{target}` matched no annotated entity; pass the message name \
+             (e.g. `User`) or its fully-qualified `pkg.Message` name (see `udb sdk manifest`)"
+        ));
+    }
+    Ok(selected)
+}
+
+fn validate_repository_entities(entities: &[EntityDescriptor]) -> Result<(), String> {
+    for entity in entities {
+        if entity.primary_keys.is_empty() {
+            let name = if entity.message_type.trim().is_empty() {
+                entity.short_name.as_str()
+            } else {
+                entity.message_type.as_str()
+            };
+            return Err(format!(
+                "entity `{name}` has no descriptor primary key; add a primary_key column \
+                 annotation before generating repository wrappers"
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// Whether `entity` is named by `target` — either its bare message name or its
+/// fully-qualified `proto_package.Message` name.
+fn entity_matches(entity: &EntityDescriptor, target: &str) -> bool {
+    if entity.message_type == target {
+        return true;
+    }
+    if entity.short_name == target {
+        return true;
+    }
+    if !entity.proto_package.is_empty() {
+        return format!("{}.{}", entity.proto_package, entity.short_name) == target;
+    }
+    false
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -456,6 +539,10 @@ fn emit_manifest_json() -> i32 {
         "protocol_version": udb::runtime::native_catalog::protocol_version(),
         "service_count": services.len(),
         "rpc_count": manifest.len(),
+        // master-plan 10.6: per-backend ORM capability tier, derived at build
+        // time from BackendKind::orm_tier() (a projection of BackendTier — no
+        // parallel enum). Surfaced here so generators/tooling can embed it.
+        "backend_orm_tiers": backend_orm_tiers_json(),
         "services": service_objs,
     });
     match serde_json::to_string_pretty(&doc) {
@@ -678,8 +765,17 @@ fn list_languages(templates_dir: &str) -> i32 {
     0
 }
 
-/// Drive the generation FSM for one language or `all`.
-fn generate(lang: &str, templates_dir: &str, out_dir: &str, selector: &SdkSelector) -> i32 {
+/// Drive the generation FSM for one language or `all`. `entity_filter`, when
+/// `Some`, scopes the rendered entity/repository models to a single entity
+/// (used by `udb orm scaffold --entity`); `None` renders every entity exactly
+/// as `udb sdk generate` always has.
+fn generate(
+    lang: &str,
+    templates_dir: &str,
+    out_dir: &str,
+    selector: &SdkSelector,
+    entity_filter: Option<&str>,
+) -> i32 {
     let mut fsm = Fsm::new();
 
     // ── Start ─▶ LoadManifest ───────────────────────────────────────────────
@@ -696,7 +792,13 @@ fn generate(lang: &str, templates_dir: &str, out_dir: &str, selector: &SdkSelect
         Ok(filtered) => filtered,
         Err(err) => return fsm.fail(err),
     };
-    let entities = entity_manifest();
+    let entities = match select_entities(entity_manifest(), entity_filter) {
+        Ok(entities) => entities,
+        Err(err) => return fsm.fail(err),
+    };
+    if let Err(err) = validate_repository_entities(&entities) {
+        return fsm.fail(err);
+    }
     if manifest.is_empty() {
         return fsm.fail(
             "selectors matched no RPCs — relax --surface/--service/--native-services".to_string(),
@@ -898,6 +1000,72 @@ fn resolve_langs(templates_root: &Path, lang: &str) -> Result<Vec<String>, Strin
     }
 }
 
+/// master-plan 10.6: the per-backend ORM capability tier, projected at SDK
+/// generation time from [`udb::backend::BackendKind::orm_tier`] over the single
+/// authoritative [`udb::backend::BackendKind::ALL`] variant enumeration. Emitted
+/// as a `{ "<backend token>": "<orm tier>" }` object so it can be embedded as a
+/// build-time constant the SDK ORM layer feature-gates on (GetCapabilities needs
+/// admin_scope and is not reachable by an ORM client at runtime). DERIVED, never
+/// a parallel `OrmTier` enum.
+fn backend_orm_tiers_json() -> serde_json::Value {
+    let map: serde_json::Map<String, serde_json::Value> = udb::backend::BackendKind::ALL
+        .iter()
+        .map(|kind| {
+            (
+                kind.as_str().to_string(),
+                serde_json::Value::from(kind.orm_tier()),
+            )
+        })
+        .collect();
+    serde_json::Value::Object(map)
+}
+
+/// master-plan 10.4: the per-backend transaction honesty role, projected at SDK
+/// generation time from [`udb::backend::BackendKind::role`]. This is the same
+/// [`udb::backend::BackendRole`] source the runtime uses; SDK UnitOfWork helpers
+/// embed it so they can fail closed before claiming a BeginTx transaction on a
+/// projection-only backend.
+fn backend_roles_json() -> serde_json::Value {
+    let map: serde_json::Map<String, serde_json::Value> = udb::backend::BackendKind::ALL
+        .iter()
+        .map(|kind| {
+            (
+                kind.as_str().to_string(),
+                serde_json::Value::from(kind.role().as_str()),
+            )
+        })
+        .collect();
+    serde_json::Value::Object(map)
+}
+
+fn backend_roles_java_literal() -> String {
+    let entries = udb::backend::BackendKind::ALL
+        .iter()
+        .map(|kind| {
+            format!(
+                "Map.entry(\"{}\", \"{}\")",
+                kind.as_str(),
+                kind.role().as_str()
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(", ");
+    format!("Map.ofEntries({entries})")
+}
+
+fn backend_orm_tiers_java_literal() -> String {
+    let entries = udb::backend::BackendKind::ALL
+        .iter()
+        .map(|kind| format!("Map.entry(\"{}\", \"{}\")", kind.as_str(), kind.orm_tier()))
+        .collect::<Vec<_>>()
+        .join(", ");
+    format!("Map.ofEntries({entries})")
+}
+
+fn json_string_literal(value: &serde_json::Value) -> String {
+    serde_json::to_string(&value.to_string()).unwrap_or_else(|_| "\"{}\"".to_string())
+}
+
 /// Scalar substitutions common to every language.
 fn base_scalars(manifest: &[RpcDescriptor], service_count: usize) -> Vec<(String, String)> {
     vec![
@@ -911,6 +1079,37 @@ fn base_scalars(manifest: &[RpcDescriptor], service_count: usize) -> Vec<(String
         ),
         ("RPC_COUNT".to_string(), manifest.len().to_string()),
         ("SERVICE_COUNT".to_string(), service_count.to_string()),
+        // master-plan 10.6: embed the per-backend ORM capability tier as a
+        // build-time constant. `BackendKind::orm_tier()` DERIVES it from the
+        // storage tier (`BackendTier`, the single tier source of truth) — there
+        // is no parallel enum. We embed at generation time because the runtime
+        // `GetCapabilities` RPC requires admin_scope, so an ORM client cannot
+        // read the tier itself; the SDK feature-gates ORM capabilities (e.g.
+        // eager `.include()` is only valid for `"relational"`) on this map.
+        (
+            "ORM_TIERS".to_string(),
+            backend_orm_tiers_json().to_string(),
+        ),
+        (
+            "ORM_TIERS_STRING".to_string(),
+            json_string_literal(&backend_orm_tiers_json()),
+        ),
+        (
+            "ORM_TIERS_JAVA".to_string(),
+            backend_orm_tiers_java_literal(),
+        ),
+        (
+            "BACKEND_ROLES".to_string(),
+            backend_roles_json().to_string(),
+        ),
+        (
+            "BACKEND_ROLES_STRING".to_string(),
+            json_string_literal(&backend_roles_json()),
+        ),
+        (
+            "BACKEND_ROLES_JAVA".to_string(),
+            backend_roles_java_literal(),
+        ),
         (
             "GENERATED_NOTE".to_string(),
             "Generated by `udb sdk generate` from the embedded proto descriptor set. \
@@ -946,6 +1145,12 @@ fn render_language(
             let raw =
                 std::fs::read_to_string(src).map_err(|e| format!("read {}: {e}", src.display()))?;
             let body = render_text(&raw, manifest, entities, scalars);
+            if let Some(token) = first_unresolved_template_token(&body) {
+                return Err(format!(
+                    "{} rendered unresolved template token {token}",
+                    rel_str
+                ));
+            }
             let dest_rel = rel_str.trim_end_matches(".tmpl");
             let dest = out_dir.join(dest_rel);
             write_file(&dest, body.as_bytes())?;
@@ -994,8 +1199,9 @@ fn write_file(dest: &Path, contents: &[u8]) -> Result<(), String> {
 
 // ── Rendering engine ────────────────────────────────────────────────────────
 
-/// Render a template: expand per-RPC and per-service blocks, then substitute
-/// scalar placeholders across the whole result.
+/// Render a template: expand per-RPC/per-service/per-entity blocks, apply
+/// global non-entity defaults, then substitute scalar placeholders across the
+/// whole result.
 fn render_text(
     template: &str,
     manifest: &[RpcDescriptor],
@@ -1003,7 +1209,41 @@ fn render_text(
     scalars: &[(String, String)],
 ) -> String {
     let expanded = expand_blocks(template, manifest, entities);
-    apply_scalars(&expanded, scalars)
+    let with_defaults = apply_global_template_defaults(&expanded);
+    apply_scalars(&with_defaults, scalars)
+}
+
+fn apply_global_template_defaults(text: &str) -> String {
+    const EMPTY_GLOBALS: [&str; 6] = [
+        "{{ENTITY_TS_RELATION_ACCESSORS}}",
+        "{{ENTITY_PY_RELATION_ACCESSORS}}",
+        "{{ENTITY_GO_RELATION_ACCESSORS}}",
+        "{{ENTITY_CSHARP_RELATION_ACCESSORS}}",
+        "{{ENTITY_JAVA_RELATION_ACCESSORS}}",
+        "{{ENTITY_PHP_RELATION_ACCESSORS}}",
+    ];
+    let mut out = text.to_string();
+    for token in EMPTY_GLOBALS {
+        out = out.replace(token, "");
+    }
+    out
+}
+
+fn first_unresolved_template_token(text: &str) -> Option<String> {
+    let mut rest = text;
+    while let Some(start) = rest.find("{{") {
+        let after_start = &rest[start..];
+        let Some(end) = after_start.find("}}") else {
+            return Some(after_start.chars().take(48).collect());
+        };
+        let token = &after_start[..end + 2];
+        // Template docs intentionally mention the entity placeholder family.
+        if token != "{{ENTITY_*}}" {
+            return Some(token.to_string());
+        }
+        rest = &after_start[end + 2..];
+    }
+    None
 }
 
 const RPC_BEGIN: &str = "@@UDB_RPC_BEGIN";
@@ -1065,7 +1305,7 @@ fn expand_rpc_blocks(text: &str, manifest: &[RpcDescriptor]) -> String {
         if let Some(filter) = marker_filter(line, RPC_BEGIN) {
             let (body, next) = collect_body(&lines, i + 1, RPC_END);
             for rpc in manifest.iter().filter(|r| rpc_matches(r, &filter)) {
-                out.push_str(&substitute_rpc(&body, rpc));
+                out.push_str(&substitute_rpc(&body, rpc, manifest));
             }
             i = next;
         } else {
@@ -1240,17 +1480,19 @@ fn service_matches(svc: &ServiceInfo, filter: &str) -> bool {
     }
 }
 
-fn substitute_rpc(body: &str, rpc: &RpcDescriptor) -> String {
+fn substitute_rpc(body: &str, rpc: &RpcDescriptor, manifest: &[RpcDescriptor]) -> String {
     let alias_snake = rpc_alias_snake(rpc);
     let alias_camel = rpc_alias_camel(rpc);
     let alias_pascal = rpc_alias_pascal(rpc);
-    let php_method_alias_entries = php_method_alias_entries(rpc, &alias_snake, &alias_camel);
+    let php_method_camel = php_rpc_method_camel(rpc, manifest, &alias_camel);
+    let php_method_alias_entries =
+        php_method_alias_entries(rpc, manifest, &alias_snake, &php_method_camel);
     let rest_operation_id = if rpc.rest_operation_id.trim().is_empty() {
         alias_camel.clone()
     } else {
         rpc.rest_operation_id.clone()
     };
-    let pairs: [(&str, String); 33] = [
+    let pairs: [(&str, String); 36] = [
         ("{{RPC_NAME}}", rpc.method.clone()),
         ("{{RPC_WIRE_NAME}}", rpc.method.clone()),
         ("{{RPC_SNAKE}}", rpc.method_snake.clone()),
@@ -1258,6 +1500,8 @@ fn substitute_rpc(body: &str, rpc: &RpcDescriptor) -> String {
         ("{{RPC_ALIAS_CAMEL}}", alias_camel.clone()),
         ("{{RPC_ALIAS_PASCAL}}", alias_pascal.clone()),
         ("{{REST_OPERATION_ID}}", rest_operation_id.clone()),
+        ("{{RPC_HTTP_METHOD}}", rpc.http_verb.clone()),
+        ("{{RPC_HTTP_PATH}}", rpc.http_path.clone()),
         // Compatibility placeholders used by older templates during migration.
         ("{{RPC_WIRE_PATH}}", rpc.grpc_path()),
         ("{{RPC_API_ALIAS}}", alias_snake.clone()),
@@ -1265,6 +1509,7 @@ fn substitute_rpc(body: &str, rpc: &RpcDescriptor) -> String {
         ("{{RPC_METHOD_ALIAS_SNAKE}}", alias_snake),
         ("{{RPC_METHOD_ALIAS_CAMEL}}", alias_camel),
         ("{{RPC_METHOD_ALIAS_PASCAL}}", alias_pascal),
+        ("{{PHP_RPC_METHOD_CAMEL}}", php_method_camel),
         ("{{RPC_INPUT}}", rpc.input_short.clone()),
         ("{{RPC_INPUT_PKG}}", rpc.input_pkg.clone()),
         ("{{RPC_OUTPUT}}", rpc.output_short.clone()),
@@ -1337,13 +1582,86 @@ fn rpc_alias_pascal(rpc: &RpcDescriptor) -> String {
     }
 }
 
-fn php_method_alias_entries(rpc: &RpcDescriptor, alias_snake: &str, alias_camel: &str) -> String {
+fn same_rpc(left: &RpcDescriptor, right: &RpcDescriptor) -> bool {
+    left.service_name == right.service_name
+        && left.service_pkg == right.service_pkg
+        && left.method == right.method
+}
+
+fn php_rpc_method_camel(
+    rpc: &RpcDescriptor,
+    manifest: &[RpcDescriptor],
+    alias_camel: &str,
+) -> String {
+    let mut duplicate_count = 0usize;
+    let mut facade_owner = false;
+    for other in manifest
+        .iter()
+        .filter(|other| rpc_alias_camel(other) == alias_camel)
+    {
+        duplicate_count += 1;
+        if other.service_name == "DataBroker" {
+            facade_owner = same_rpc(other, rpc);
+        }
+    }
+    if duplicate_count <= 1 || facade_owner {
+        return alias_camel.to_string();
+    }
+    format!(
+        "{}{}",
+        alias_camel_case(&rpc.service_name),
+        alias_pascal_case(&rpc.method)
+    )
+}
+
+fn php_alias_owner_is_rpc(manifest: &[RpcDescriptor], alias: &str, rpc: &RpcDescriptor) -> bool {
+    let mut best_key: Option<(u8, u8, usize)> = None;
+    let mut best_is_rpc = false;
+    for (idx, candidate) in manifest.iter().enumerate() {
+        let candidate_alias_snake = rpc_alias_snake(candidate);
+        let aliases = [
+            candidate_alias_snake.as_str(),
+            candidate.method_snake.as_str(),
+        ];
+        if !aliases
+            .into_iter()
+            .any(|candidate_alias| candidate_alias == alias)
+        {
+            continue;
+        }
+        let key = (
+            if candidate.service_name == "DataBroker" {
+                0
+            } else {
+                1
+            },
+            if candidate_alias_snake == alias { 0 } else { 1 },
+            idx,
+        );
+        if match best_key {
+            Some(best) => key < best,
+            None => true,
+        } {
+            best_key = Some(key);
+            best_is_rpc = same_rpc(candidate, rpc);
+        }
+    }
+    best_is_rpc
+}
+
+fn php_method_alias_entries(
+    rpc: &RpcDescriptor,
+    manifest: &[RpcDescriptor],
+    alias_snake: &str,
+    php_method_camel: &str,
+) -> String {
     let mut seen = BTreeSet::new();
     [alias_snake, rpc.method_snake.as_str()]
         .into_iter()
         .filter(|alias| !alias.trim().is_empty())
         .filter(|alias| seen.insert((*alias).to_string()))
-        .map(|alias| format!("        \"{alias}\" => \"{alias_camel}\","))
+        .filter(|alias| php_alias_owner_is_rpc(manifest, alias, rpc))
+        .map(|alias| format!("        \"{alias}\" => \"{php_method_camel}\","))
         .collect::<Vec<_>>()
         .join("\n")
 }
@@ -1425,6 +1743,100 @@ fn alias_camel_case(value: &str) -> String {
     out
 }
 
+fn code_string(value: &str) -> String {
+    serde_json::to_string(value).unwrap_or_else(|_| "\"\"".to_string())
+}
+
+fn entity_relation_accessors_ts(entity: &EntityDescriptor) -> String {
+    entity
+        .relations
+        .iter()
+        .map(|rel| {
+            format!(
+                "  {}Relation(parent: Record<string, unknown>): Query {{\n    return this.relationQuery({}, parent);\n  }}",
+                alias_camel_case(&rel.name),
+                code_string(&rel.name)
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n\n")
+}
+
+fn entity_relation_accessors_python(entity: &EntityDescriptor) -> String {
+    entity
+        .relations
+        .iter()
+        .map(|rel| {
+            format!(
+                "    def {}_relation(self, parent: Mapping[str, Any]) -> Query:\n        return self.relation_query({}, parent)",
+                alias_snake_case(&rel.name),
+                code_string(&rel.name)
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n\n")
+}
+
+fn entity_relation_accessors_go(entity: &EntityDescriptor) -> String {
+    entity
+        .relations
+        .iter()
+        .map(|rel| {
+            format!(
+                "func (r *Repository) {}Relation(parent map[string]any) (*QueryBuilder, error) {{\n\treturn r.RelationQuery({}, parent)\n}}",
+                alias_pascal_case(&rel.name),
+                code_string(&rel.name)
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n\n")
+}
+
+fn entity_relation_accessors_csharp(entity: &EntityDescriptor) -> String {
+    entity
+        .relations
+        .iter()
+        .map(|rel| {
+            format!(
+                "    public IrQuery {}Relation(IReadOnlyDictionary<string, object?> parent) =>\n        RelationQuery({}, parent);",
+                alias_pascal_case(&rel.name),
+                code_string(&rel.name)
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n\n")
+}
+
+fn entity_relation_accessors_java(entity: &EntityDescriptor) -> String {
+    entity
+        .relations
+        .iter()
+        .map(|rel| {
+            format!(
+                "    public Query {}Relation(Map<String, Object> parent) {{\n      return relationQuery({}, parent);\n    }}",
+                alias_camel_case(&rel.name),
+                code_string(&rel.name)
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n\n")
+}
+
+fn entity_relation_accessors_php(entity: &EntityDescriptor) -> String {
+    entity
+        .relations
+        .iter()
+        .map(|rel| {
+            format!(
+                "    public function {}Relation(array $parent): IrQuery\n    {{\n        return $this->relationQuery({}, $parent);\n    }}",
+                alias_camel_case(&rel.name),
+                code_string(&rel.name)
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n\n")
+}
+
 fn substitute_entity(body: &str, entity: &EntityDescriptor) -> String {
     let primary_keys = entity
         .primary_keys
@@ -1432,44 +1844,140 @@ fn substitute_entity(body: &str, entity: &EntityDescriptor) -> String {
         .map(|key| format!("\"{key}\""))
         .collect::<Vec<_>>()
         .join(", ");
-    let pairs: [(&str, String); 8] = [
-        ("{{ENTITY_MESSAGE_TYPE}}", entity.message_type.clone()),
-        ("{{ENTITY_TABLE}}", entity.table.clone()),
-        ("{{ENTITY_PRIMARY_KEYS}}", primary_keys),
-        ("{{ENTITY_TENANT_FIELD}}", entity.tenant_field.clone()),
-        ("{{ENTITY_PROJECT_FIELD}}", entity.project_field.clone()),
-        (
-            "{{ENTITY_SOFT_DELETE_FIELD}}",
-            entity.soft_delete_field.clone(),
-        ),
-        (
-            "{{ENTITY_TS_TYPE}}",
+    let json_fields = entity
+        .json_field_names
+        .iter()
+        .map(|field| format!("\"{field}\""))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let relations_json = serde_json::to_string(&entity.relations).unwrap_or_else(|_| "[]".into());
+    let relations_json_string =
+        serde_json::to_string(&relations_json).unwrap_or_else(|_| "\"[]\"".into());
+    let java_string_list = |values: &[String]| {
+        if values.is_empty() {
+            "List.of()".to_string()
+        } else {
+            format!(
+                "List.of({})",
+                values
+                    .iter()
+                    .map(|value| code_string(value))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )
+        }
+    };
+    let java_relations = if entity.relations.is_empty() {
+        "List.of()".to_string()
+    } else {
+        format!(
+            "List.of({})",
             entity
-                .language_classes
-                .get("ts")
-                .cloned()
-                .unwrap_or_default(),
-        ),
-        (
-            "{{ENTITY_GO_TYPE}}",
-            entity
-                .language_classes
-                .get("go")
-                .cloned()
-                .unwrap_or_default(),
-        ),
-    ];
-    let mut text = body.to_string();
-    for (key, value) in &pairs {
-        text = text.replace(key, value);
-    }
+                .relations
+                .iter()
+                .map(|rel| format!(
+                    "new EntityRelationBinding({}, {}, {}, {}, {}, {}, {}, {})",
+                    code_string(&rel.name),
+                    code_string(&rel.kind),
+                    java_string_list(&rel.local_fields),
+                    code_string(&rel.target_message_type),
+                    code_string(&rel.target_table),
+                    java_string_list(&rel.target_fields),
+                    code_string(&rel.on_delete),
+                    code_string(&rel.on_update)
+                ))
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
+    };
+    let short_name = if entity.short_name.trim().is_empty() {
+        entity
+            .message_type
+            .rsplit('.')
+            .next()
+            .unwrap_or(&entity.message_type)
+            .to_string()
+    } else {
+        entity.short_name.clone()
+    };
+    let lang = |keys: &[&str], fallback: &str| {
+        keys.iter()
+            .find_map(|key| entity.language_classes.get(*key))
+            .map(|value| value.as_str())
+            .filter(|value| !value.trim().is_empty())
+            .unwrap_or(fallback)
+            .to_string()
+    };
     let py_import = entity
         .language_classes
         .get("py")
         .or_else(|| entity.language_classes.get("python"))
         .cloned()
         .unwrap_or_default();
-    text.replace("{{ENTITY_PY_IMPORT}}", &py_import)
+    let pairs: [(&str, String); 27] = [
+        ("{{ENTITY_MESSAGE_TYPE}}", entity.message_type.clone()),
+        ("{{ENTITY_SHORT_NAME}}", short_name.clone()),
+        ("{{ENTITY_ALIAS_SNAKE}}", alias_snake_case(&short_name)),
+        ("{{ENTITY_ALIAS_CAMEL}}", alias_camel_case(&short_name)),
+        ("{{ENTITY_ALIAS_PASCAL}}", alias_pascal_case(&short_name)),
+        ("{{ENTITY_TABLE}}", entity.table.clone()),
+        ("{{ENTITY_PRIMARY_KEYS}}", primary_keys),
+        ("{{ENTITY_JSON_FIELDS}}", json_fields),
+        ("{{ENTITY_RELATIONS_JSON}}", relations_json),
+        ("{{ENTITY_RELATIONS_JSON_STRING}}", relations_json_string),
+        ("{{ENTITY_JAVA_RELATIONS}}", java_relations),
+        ("{{ENTITY_TENANT_FIELD}}", entity.tenant_field.clone()),
+        ("{{ENTITY_PROJECT_FIELD}}", entity.project_field.clone()),
+        (
+            "{{ENTITY_SOFT_DELETE_FIELD}}",
+            entity.soft_delete_field.clone(),
+        ),
+        ("{{ENTITY_VERSION_FIELD}}", entity.version_field.clone()),
+        (
+            "{{ENTITY_TS_TYPE}}",
+            lang(&["ts", "typescript"], "Record<string, unknown>"),
+        ),
+        ("{{ENTITY_GO_TYPE}}", lang(&["go"], "map[string]any")),
+        (
+            "{{ENTITY_JAVA_TYPE}}",
+            lang(&["java"], "Map<String, Object>"),
+        ),
+        (
+            "{{ENTITY_CSHARP_TYPE}}",
+            lang(&["csharp", "cs"], "IReadOnlyDictionary<string, object?>"),
+        ),
+        ("{{ENTITY_PHP_TYPE}}", lang(&["php"], "array")),
+        ("{{ENTITY_PY_IMPORT}}", py_import),
+        (
+            "{{ENTITY_TS_RELATION_ACCESSORS}}",
+            entity_relation_accessors_ts(entity),
+        ),
+        (
+            "{{ENTITY_PY_RELATION_ACCESSORS}}",
+            entity_relation_accessors_python(entity),
+        ),
+        (
+            "{{ENTITY_GO_RELATION_ACCESSORS}}",
+            entity_relation_accessors_go(entity),
+        ),
+        (
+            "{{ENTITY_CSHARP_RELATION_ACCESSORS}}",
+            entity_relation_accessors_csharp(entity),
+        ),
+        (
+            "{{ENTITY_JAVA_RELATION_ACCESSORS}}",
+            entity_relation_accessors_java(entity),
+        ),
+        (
+            "{{ENTITY_PHP_RELATION_ACCESSORS}}",
+            entity_relation_accessors_php(entity),
+        ),
+    ];
+    let mut text = body.to_string();
+    for (key, value) in &pairs {
+        text = text.replace(key, value);
+    }
+    text
 }
 
 fn substitute_service(body: &str, svc: &ServiceInfo, manifest: &[RpcDescriptor]) -> String {
@@ -1546,6 +2054,7 @@ impl Fsm {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use udb::runtime::sdk_manifest::EntityRelationDescriptor;
 
     fn sample_manifest() -> Vec<RpcDescriptor> {
         vec![
@@ -1668,6 +2177,78 @@ mod tests {
     }
 
     #[test]
+    fn orm_tiers_are_embedded_at_build_time() {
+        // master-plan 10.6: the ORM tier map is embedded as a build-time scalar
+        // because GetCapabilities (runtime) requires admin_scope.
+        let scalars = base_scalars(&sample_manifest(), 1);
+        let orm = scalars
+            .iter()
+            .find(|(k, _)| k == "ORM_TIERS")
+            .map(|(_, v)| v.clone())
+            .expect("ORM_TIERS scalar must be embedded");
+        let parsed: serde_json::Value =
+            serde_json::from_str(&orm).expect("ORM_TIERS must be valid JSON");
+        // Derived directly from BackendKind::orm_tier() — spot-check the tiers.
+        assert_eq!(parsed["postgres"], "relational");
+        assert_eq!(parsed["mongodb"], "document");
+        assert_eq!(parsed["redis"], "kv");
+        assert_eq!(parsed["qdrant"], "vector");
+        assert_eq!(parsed["s3"], "blob");
+        assert_eq!(parsed["neo4j"], "graph");
+        // Every one of the 18 backend kinds is present.
+        assert_eq!(
+            parsed.as_object().map(|m| m.len()),
+            Some(udb::backend::BackendKind::ALL.len())
+        );
+        let java = scalars
+            .iter()
+            .find(|(k, _)| k == "ORM_TIERS_JAVA")
+            .map(|(_, v)| v.clone())
+            .expect("ORM_TIERS_JAVA scalar must be embedded");
+        assert!(java.contains("Map.entry(\"postgres\", \"relational\")"));
+        assert!(java.contains("Map.entry(\"mongodb\", \"document\")"));
+        let string_literal = scalars
+            .iter()
+            .find(|(k, _)| k == "ORM_TIERS_STRING")
+            .map(|(_, v)| v.clone())
+            .expect("ORM_TIERS_STRING scalar must be embedded");
+        assert!(string_literal.contains("\\\"postgres\\\":\\\"relational\\\""));
+    }
+
+    #[test]
+    fn backend_roles_are_embedded_at_build_time() {
+        // master-plan 10.4: UnitOfWork transaction honesty comes from the same
+        // BackendRole projection the runtime uses, embedded at generation time.
+        let scalars = base_scalars(&sample_manifest(), 1);
+        let roles = scalars
+            .iter()
+            .find(|(k, _)| k == "BACKEND_ROLES")
+            .map(|(_, v)| v.clone())
+            .expect("BACKEND_ROLES scalar must be embedded");
+        let parsed: serde_json::Value =
+            serde_json::from_str(&roles).expect("BACKEND_ROLES must be valid JSON");
+        assert_eq!(parsed["postgres"], "canonical");
+        assert_eq!(parsed["s3"], "projection");
+        assert_eq!(
+            parsed.as_object().map(|m| m.len()),
+            Some(udb::backend::BackendKind::ALL.len())
+        );
+        let java = scalars
+            .iter()
+            .find(|(k, _)| k == "BACKEND_ROLES_JAVA")
+            .map(|(_, v)| v.clone())
+            .expect("BACKEND_ROLES_JAVA scalar must be embedded");
+        assert!(java.contains("Map.entry(\"postgres\", \"canonical\")"));
+        assert!(java.contains("Map.entry(\"s3\", \"projection\")"));
+        let string_literal = scalars
+            .iter()
+            .find(|(k, _)| k == "BACKEND_ROLES_STRING")
+            .map(|(_, v)| v.clone())
+            .expect("BACKEND_ROLES_STRING scalar must be embedded");
+        assert!(string_literal.contains("\\\"postgres\\\":\\\"canonical\\\""));
+    }
+
+    #[test]
     fn scalars_are_substituted() {
         let scalars = vec![
             ("UDB_VERSION".to_string(), "9.9.9".to_string()),
@@ -1675,6 +2256,30 @@ mod tests {
         ];
         let out = render_text("v={{UDB_VERSION}} lang={{LANG}}", &[], &[], &scalars);
         assert_eq!(out.trim_end(), "v=9.9.9 lang=python");
+    }
+
+    #[test]
+    fn global_relation_accessor_slots_render_empty_outside_entity_blocks() {
+        let out = render_text(
+            "before\n{{ENTITY_TS_RELATION_ACCESSORS}}\nafter\n",
+            &[],
+            &[],
+            &[],
+        );
+        assert_eq!(out, "before\n\nafter\n");
+        assert_eq!(first_unresolved_template_token(&out), None);
+    }
+
+    #[test]
+    fn unresolved_template_tokens_are_reported_but_entity_family_docs_are_allowed() {
+        assert_eq!(
+            first_unresolved_template_token("ok {{ENTITY_*}} docs"),
+            None
+        );
+        assert_eq!(
+            first_unresolved_template_token("bad {{RPC_UNKNOWN}} token").as_deref(),
+            Some("{{RPC_UNKNOWN}}")
+        );
     }
 
     #[test]
@@ -1751,6 +2356,50 @@ mod tests {
     }
 
     #[test]
+    fn php_rpc_wrappers_disambiguate_alias_collisions() {
+        let mut manifest = sample_manifest();
+        manifest.truncate(1);
+        manifest[0].method = "CacheDelete".to_string();
+        manifest[0].method_snake = "cache_delete".to_string();
+        manifest[0].method_alias = "cache_delete".to_string();
+        manifest[0].method_alias_snake = "cache_delete".to_string();
+        manifest[0].method_alias_camel = "cacheDelete".to_string();
+        manifest[0].method_alias_pascal = "CacheDelete".to_string();
+
+        let mut cache_delete = manifest[0].clone();
+        cache_delete.service_name = "CacheService".to_string();
+        cache_delete.service_pkg = "udb.core.cache.services.v1".to_string();
+        cache_delete.method = "Delete".to_string();
+        cache_delete.method_snake = "delete".to_string();
+        cache_delete.method_alias = "cache_delete".to_string();
+        cache_delete.method_alias_snake = "cache_delete".to_string();
+        cache_delete.method_alias_camel = "cacheDelete".to_string();
+        cache_delete.method_alias_pascal = "CacheDelete".to_string();
+        manifest.push(cache_delete);
+
+        let tmpl = r#"
+// @@UDB_RPC_BEGIN kind=unary
+{{PHP_METHOD_ALIAS_ENTRIES}}
+public function {{PHP_RPC_METHOD_CAMEL}}(): void {}
+// @@UDB_RPC_END
+"#;
+        let out = render_text(tmpl, &manifest, &[], &[]);
+        assert_eq!(
+            out.lines()
+                .filter(|line| line.contains("\"cache_delete\" =>"))
+                .count(),
+            1,
+            "{out}"
+        );
+        assert!(
+            out.contains("\"cache_delete\" => \"cacheDelete\","),
+            "{out}"
+        );
+        assert_eq!(out.matches("public function cacheDelete()").count(), 1);
+        assert!(out.contains("public function cacheServiceDelete()"));
+    }
+
+    #[test]
     fn sdk_manifest_json_exposes_template_token_fields() {
         let manifest = sample_manifest();
         let rpc = &manifest[0];
@@ -1799,27 +2448,122 @@ mod tests {
         language_classes.insert("ts".to_string(), "Policy".to_string());
         language_classes.insert("python".to_string(), "udb.entity.v1.Policy".to_string());
         let entities = vec![EntityDescriptor {
-            message_type: "Policy".to_string(),
+            message_type: "udb.entity.v1.Policy".to_string(),
             short_name: "Policy".to_string(),
             table: "policies".to_string(),
             primary_keys: vec!["id".to_string(), "tenant_id".to_string()],
             tenant_field: "tenant_id".to_string(),
             project_field: "project_id".to_string(),
             soft_delete_field: "deleted_at".to_string(),
+            version_field: "version".to_string(),
             proto_package: "udb.entity.v1".to_string(),
             language_classes,
             json_field_names: vec!["id".to_string(), "tenant_id".to_string()],
+            relations: vec![EntityRelationDescriptor {
+                name: "tenant".to_string(),
+                kind: "belongs_to".to_string(),
+                local_fields: vec!["tenant_id".to_string()],
+                target_message_type: "udb.entity.v1.Tenant".to_string(),
+                target_table: "udb.tenants".to_string(),
+                target_fields: vec!["id".to_string()],
+                on_delete: "cascade".to_string(),
+                on_update: String::new(),
+            }],
         }];
         let tmpl = "// @@UDB_ENTITY_BEGIN\n\
                     {{ENTITY_MESSAGE_TYPE}} {{ENTITY_TABLE}} []string{ {{ENTITY_PRIMARY_KEYS}} } \
-                    {{ENTITY_TENANT_FIELD}} {{ENTITY_PROJECT_FIELD}} {{ENTITY_SOFT_DELETE_FIELD}} \
+                    fields=[{{ENTITY_JSON_FIELDS}}] aliases={{ENTITY_ALIAS_SNAKE}}/{{ENTITY_ALIAS_CAMEL}}/{{ENTITY_ALIAS_PASCAL}} \
+                    relations={{ENTITY_RELATIONS_JSON}} java_relations={{ENTITY_JAVA_RELATIONS}} \
+                    {{ENTITY_TENANT_FIELD}} {{ENTITY_PROJECT_FIELD}} {{ENTITY_SOFT_DELETE_FIELD}} {{ENTITY_VERSION_FIELD}} \
                     {{ENTITY_GO_TYPE}} {{ENTITY_TS_TYPE}} {{ENTITY_PY_IMPORT}}\n\
+                    ts={{ENTITY_TS_RELATION_ACCESSORS}}\n\
+                    py={{ENTITY_PY_RELATION_ACCESSORS}}\n\
+                    go={{ENTITY_GO_RELATION_ACCESSORS}}\n\
+                    cs={{ENTITY_CSHARP_RELATION_ACCESSORS}}\n\
+                    java={{ENTITY_JAVA_RELATION_ACCESSORS}}\n\
+                    php={{ENTITY_PHP_RELATION_ACCESSORS}}\n\
                     // @@UDB_ENTITY_END\n";
         let out = render_text(tmpl, &[], &entities, &[]);
-        assert!(out.contains("Policy policies []string{ \"id\", \"tenant_id\" }"));
-        assert!(out.contains("tenant_id project_id deleted_at"));
+        assert!(out.contains("udb.entity.v1.Policy policies []string{ \"id\", \"tenant_id\" }"));
+        assert!(out.contains("fields=[\"id\", \"tenant_id\"] aliases=policy/policy/Policy"));
+        assert!(out.contains(
+            "relations=[{\"name\":\"tenant\",\"kind\":\"belongs_to\",\"local_fields\":[\"tenant_id\"],\"target_message_type\":\"udb.entity.v1.Tenant\""
+        ));
+        assert!(out.contains(
+            "java_relations=List.of(new EntityRelationBinding(\"tenant\", \"belongs_to\", List.of(\"tenant_id\"), \"udb.entity.v1.Tenant\""
+        ));
+        assert!(out.contains("tenant_id project_id deleted_at version"));
         assert!(out.contains("entityv1.Policy Policy udb.entity.v1.Policy"));
+        assert!(out.contains("tenantRelation(parent: Record<string, unknown>): Query"));
+        assert!(out.contains("def tenant_relation(self, parent: Mapping[str, Any]) -> Query"));
+        assert!(out.contains("func (r *Repository) TenantRelation(parent map[string]any)"));
+        assert!(out.contains(
+            "public IrQuery TenantRelation(IReadOnlyDictionary<string, object?> parent)"
+        ));
+        assert!(out.contains("public Query tenantRelation(Map<String, Object> parent)"));
+        assert!(out.contains("public function tenantRelation(array $parent): IrQuery"));
         assert!(!out.contains("@@UDB_ENTITY"));
+    }
+
+    fn sample_entities() -> Vec<EntityDescriptor> {
+        let entity = |message: &str, pkg: &str, table: &str| EntityDescriptor {
+            message_type: format!("{pkg}.{message}"),
+            short_name: message.to_string(),
+            table: table.to_string(),
+            primary_keys: vec!["id".to_string()],
+            tenant_field: "tenant_id".to_string(),
+            project_field: String::new(),
+            soft_delete_field: String::new(),
+            version_field: String::new(),
+            proto_package: pkg.to_string(),
+            language_classes: std::collections::BTreeMap::new(),
+            json_field_names: vec!["id".to_string()],
+            relations: Vec::new(),
+        };
+        vec![
+            entity("User", "myapp.v1", "users"),
+            entity("Invoice", "myapp.v1", "invoices"),
+        ]
+    }
+
+    // master-plan 10.5: the `udb orm scaffold` entry point reuses `generate`;
+    // the only ORM-specific behavior is the optional per-entity scoping. These
+    // assert the arg → generator-params mapping at that boundary.
+    #[test]
+    fn select_entities_none_returns_full_manifest_unchanged() {
+        let entities = sample_entities();
+        let out = select_entities(entities.clone(), None).expect("None is identity");
+        assert_eq!(out, entities);
+        // An empty/whitespace `--entity` is treated as "no filter", not "no match".
+        let out_blank = select_entities(entities.clone(), Some("  ")).expect("blank is identity");
+        assert_eq!(out_blank, entities);
+    }
+
+    #[test]
+    fn select_entities_matches_short_name_and_fqn() {
+        let by_short = select_entities(sample_entities(), Some("User")).expect("short-name match");
+        assert_eq!(by_short.len(), 1);
+        assert_eq!(by_short[0].message_type, "myapp.v1.User");
+
+        let by_fqn =
+            select_entities(sample_entities(), Some("myapp.v1.Invoice")).expect("fqn match");
+        assert_eq!(by_fqn.len(), 1);
+        assert_eq!(by_fqn[0].message_type, "myapp.v1.Invoice");
+    }
+
+    #[test]
+    fn select_entities_unknown_entity_errors_and_stops() {
+        let err = select_entities(sample_entities(), Some("Nope")).unwrap_err();
+        assert!(err.contains("matched no annotated entity"), "got: {err}");
+    }
+
+    #[test]
+    fn repository_entities_without_primary_key_error_and_stop() {
+        let mut entities = sample_entities();
+        entities[0].primary_keys.clear();
+        let err = validate_repository_entities(&entities).unwrap_err();
+        assert!(err.contains("has no descriptor primary key"), "got: {err}");
+        assert!(err.contains("myapp.v1.User"), "got: {err}");
     }
 
     #[test]

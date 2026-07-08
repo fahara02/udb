@@ -21,7 +21,7 @@ use tonic::Status;
 use crate::proto::udb::core::control::entity::v1::ResourceType;
 use crate::runtime::config::UdbConfig;
 use crate::runtime::descriptor_manifest::{
-    DescriptorContractManifest, descriptor_contract_manifest,
+    DescriptorContractManifest, descriptor_contract_manifest_static,
 };
 use crate::runtime::service::native_registry::resolved_native_service_statuses;
 
@@ -58,6 +58,13 @@ fn is_sensitive_label_key(key: &str) -> bool {
         .any(|fragment| lower.contains(fragment))
 }
 
+fn control_sourcing_internal_status(
+    operation: impl Into<String>,
+    message: impl Into<String>,
+) -> Status {
+    crate::runtime::executor_utils::internal_status("control_plane", operation, message)
+}
+
 /// Snapshot the five real config sources into the registry. Idempotent +
 /// content-addressed: re-running with unchanged inputs bumps no versions.
 ///
@@ -82,8 +89,8 @@ pub async fn sync_resources_from_config(
 /// without threading the manifest through every caller. A read-snapshot resync
 /// is idempotent, so no singleton lease is required (see `subscriber.rs`).
 pub async fn resync(pool: &PgPool, config: &UdbConfig) -> Result<(), Status> {
-    let descriptor = descriptor_contract_manifest();
-    sync_resources_from_config(pool, config, &descriptor).await
+    let descriptor = descriptor_contract_manifest_static();
+    sync_resources_from_config(pool, config, descriptor).await
 }
 
 // ── 1. BACKEND_TARGET_DEFINITION ────────────────────────────────────────────────
@@ -121,8 +128,12 @@ async fn source_backend_targets(pool: &PgPool, config: &UdbConfig) -> Result<(),
             "labels": serde_json::Value::Object(labels),
             "capabilities": capabilities,
         });
-        let payload_json = serde_json::to_string(&payload)
-            .map_err(|e| Status::internal(format!("backend target payload encode failed: {e}")))?;
+        let payload_json = serde_json::to_string(&payload).map_err(|e| {
+            control_sourcing_internal_status(
+                "backend_target_payload",
+                format!("backend target payload encode failed: {e}"),
+            )
+        })?;
         store::upsert_resource(
             pool,
             ResourceType::BackendTargetDefinition,
@@ -160,7 +171,10 @@ async fn source_native_service_enablement(pool: &PgPool, config: &UdbConfig) -> 
             "descriptor_version": status.descriptor_version,
         });
         let payload_json = serde_json::to_string(&payload).map_err(|e| {
-            Status::internal(format!("service enablement payload encode failed: {e}"))
+            control_sourcing_internal_status(
+                "service_enablement_payload",
+                format!("service enablement payload encode failed: {e}"),
+            )
         })?;
         store::upsert_resource(
             pool,
@@ -204,7 +218,10 @@ async fn source_method_security(
                 "request_context_required": es.request_context_required,
             });
             let payload_json = serde_json::to_string(&payload).map_err(|e| {
-                Status::internal(format!("method security payload encode failed: {e}"))
+                control_sourcing_internal_status(
+                    "method_security_payload",
+                    format!("method security payload encode failed: {e}"),
+                )
             })?;
             store::upsert_resource(
                 pool,
@@ -238,8 +255,12 @@ async fn source_routing_policy(pool: &PgPool, config: &UdbConfig) -> Result<(), 
             "fail_open": config.pg_replica_fail_open,
             "health_interval_secs": config.pg_replica_health_interval_secs,
         });
-        let payload_json = serde_json::to_string(&payload)
-            .map_err(|e| Status::internal(format!("routing policy payload encode failed: {e}")))?;
+        let payload_json = serde_json::to_string(&payload).map_err(|e| {
+            control_sourcing_internal_status(
+                "routing_policy_payload",
+                format!("routing policy payload encode failed: {e}"),
+            )
+        })?;
         store::upsert_resource(
             pool,
             ResourceType::RoutingPolicy,
@@ -255,8 +276,12 @@ async fn source_routing_policy(pool: &PgPool, config: &UdbConfig) -> Result<(), 
     // Project-routing strictness mode (fleet-wide).
     if !config.project_routing_mode.trim().is_empty() {
         let payload = serde_json::json!({ "mode": config.project_routing_mode });
-        let payload_json = serde_json::to_string(&payload)
-            .map_err(|e| Status::internal(format!("project routing payload encode failed: {e}")))?;
+        let payload_json = serde_json::to_string(&payload).map_err(|e| {
+            control_sourcing_internal_status(
+                "project_routing_payload",
+                format!("project routing payload encode failed: {e}"),
+            )
+        })?;
         store::upsert_resource(
             pool,
             ResourceType::RoutingPolicy,
@@ -303,8 +328,12 @@ async fn source_rls_tenant_policy(
             "rls_policy_template": sec.rls_policy_template,
             "soft_delete_mode": sec.soft_delete_mode,
         });
-        let payload_json = serde_json::to_string(&payload)
-            .map_err(|e| Status::internal(format!("rls policy payload encode failed: {e}")))?;
+        let payload_json = serde_json::to_string(&payload).map_err(|e| {
+            control_sourcing_internal_status(
+                "rls_policy_payload",
+                format!("rls policy payload encode failed: {e}"),
+            )
+        })?;
         // Fleet-wide RLS posture (tenant="" == NULL). The per-tenant overlay is
         // served on-demand via GetResources(tenant_id=...) which layers tenant
         // rows on top of these fleet rows.
@@ -325,6 +354,43 @@ async fn source_rls_tenant_policy(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
+
+    fn decode_detail(status: &Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_internal_detail(status: &Status, operation: &str, message: &str) {
+        assert_eq!(status.code(), tonic::Code::Internal);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "control_plane");
+        assert_eq!(detail.operation, operation);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    #[test]
+    fn control_sourcing_internal_status_carries_typed_detail() {
+        let err = control_sourcing_internal_status(
+            "method_security_payload",
+            "method security payload encode failed: cycle",
+        );
+
+        assert_internal_detail(
+            &err,
+            "method_security_payload",
+            "method security payload encode failed: cycle",
+        );
+    }
 
     #[test]
     fn sensitive_label_keys_are_detected() {

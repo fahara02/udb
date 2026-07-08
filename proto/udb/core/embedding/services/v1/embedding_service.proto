@@ -1,0 +1,543 @@
+syntax = "proto3";
+
+package udb.core.embedding.services.v1;
+
+import "google/api/annotations.proto";
+import "udb/core/common/v1/dto.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Embedding.Services.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/embedding/services/v1;embeddingservicev1";
+option java_package = "com.udb.core.embedding.services.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Embedding\\Services\\V1";
+option php_namespace = "Udb\\Core\\Embedding\\Services\\V1";
+
+// EmbeddingService (master-plan 9.11) — the AI data plane. Registers tenant-scoped
+// source entities to vector-index on change. INFERENCE RUNS IN SIDECARS ONLY: no
+// embedding model is ever linked into the broker. On a source row change (and on
+// Backfill) the broker emits a `udb.embedding.work.v1` event carrying ONLY the row
+// primary key + extracted text (NEVER credentials); a sidecar computes the vector
+// and returns it via the internal-only `ReportEmbedding` callback, which upserts
+// it through the shared asset vector-upsert seam tagged with the verified tenant.
+// `Retrieve` delegates to the SearchService (9.5) hybrid-search seam with a
+// server-side tenant filter — never a raw vector query.
+service EmbeddingService {
+  option (udb.core.common.v1.native_service) = {
+    service_id: "embedding"
+    logical_service_id: "embedding"
+    proto_service_id: "embedding"
+    display_name: "Embeddings"
+    category: "embedding"
+    default_enabled: true
+    requires_postgres: true
+    control_plane_listener_allowed: true
+    sdk_facade_name: "embedding"
+    cli_scaffold_group: "embedding"
+    health_check_ref: "embedding"
+    capability_ref: "native.embedding"
+  };
+  option (udb.core.common.v1.service_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "embedding"
+    generate_minimal_example: true
+  };
+  option (udb.core.common.v1.service_cli_scaffold) = {
+    scaffold_package: "embedding"
+    import_path: "udb/native/embedding"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+    generated_files: "udb.native.embedding.config"
+    required_native_services: "embedding"
+    secret_placeholders: "UDB_API_KEY"
+    smoke_test_command: "udb native lint"
+  };
+  option (udb.core.common.v1.service_dependency_contract) = {
+    required_native_services: "embedding"
+    required_backends: "postgres"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+  };
+
+  // Register a tenant-scoped source to vector-index on change. Fails closed
+  // (failed_precondition) when the source table has no resolvable tenant column.
+  rpc RegisterSource(RegisterSourceRequest) returns (RegisterSourceResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:embedding:register-source"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "embedding.RegisterSource"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "register_source" rest_operation_id: "registerEmbeddingSource"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "embedding"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "embedding"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "embedding.RegisterSource"
+      outbox_topic: "udb.embedding.source.registered.v1"
+      partition_key_field: "source_name"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/embedding/sources:register"
+      body: "*"
+    };
+  }
+
+  // List the calling tenant's registered sources.
+  rpc ListSources(ListSourcesRequest) returns (ListSourcesResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:embedding:list-sources"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "embedding.ListSources"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "list_sources" rest_operation_id: "listEmbeddingSources"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "embedding"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "embedding"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/embedding/sources"};
+  }
+
+  // Delete a tenant-scoped source registration (destructive: stops indexing on
+  // change; the engine collection teardown runs on the follow-up worker).
+  rpc DeleteSource(DeleteSourceRequest) returns (DeleteSourceResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:embedding:delete-source"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "embedding.DeleteSource"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "delete_source" rest_operation_id: "deleteEmbeddingSource"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "embedding"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "embedding"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "embedding.DeleteSource"
+      outbox_topic: "udb.embedding.source.deleted.v1"
+      partition_key_field: "source_name"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/embedding/sources:delete"
+      body: "*"
+    };
+  }
+
+  // Enqueue embedding work for the source's EXISTING rows. The per-row work
+  // enumeration runs in the leader-spawned work emitter, which calls the same
+  // `udb.embedding.work.v1` emit path the CDC change handler uses.
+  rpc Backfill(BackfillRequest) returns (BackfillResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:embedding:backfill"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "embedding.Backfill"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "backfill" rest_operation_id: "backfillEmbeddingSource"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "embedding"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "embedding"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "embedding.Backfill"
+      outbox_topic: "udb.embedding.backfill.requested.v1"
+      partition_key_field: "source_name"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/embedding/sources:backfill"
+      body: "*"
+    };
+  }
+
+  // SIDECAR CALLBACK (internal only). A sidecar that computed an embedding for a
+  // source row returns the dense vector here; the broker upserts it through the
+  // shared asset vector-upsert seam, tagged with the VERIFIED claim tenant (a
+  // vector with no/foreign tenant is rejected — no fail-open). `internal_grpc_only`
+  // restricts this to a loopback peer; it is never exposed in an SDK facade.
+  rpc ReportEmbedding(ReportEmbeddingRequest) returns (ReportEmbeddingResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:embedding:report-embedding"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "embedding.ReportEmbedding"
+      request_context_required: true
+      tenant_required: true
+      internal_grpc_only: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: false
+      method_alias: "report_embedding"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "embedding"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "embedding"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+  }
+
+  // Deadline-bounded semantic search over a source's vector collection. DELEGATES
+  // to the SearchService (9.5) hybrid-search seam with a server-side tenant filter
+  // injected from the verified claim. The broker never embeds the query (the
+  // caller supplies an already-embedded `query_vector`); it never issues a raw
+  // engine query. Returns `deadline_exceeded` if the gRPC deadline is past.
+  rpc Retrieve(RetrieveRequest) returns (RetrieveResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:embedding:retrieve"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "embedding.Retrieve"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "retrieve" rest_operation_id: "retrieveEmbedding"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "embedding"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "embedding"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/embedding:retrieve"
+      body: "*"
+    };
+  }
+}
+
+message RegisterSourceRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "embedding"
+    generate_minimal_example: true
+  };
+  // Verified against the bearer/claim tenant; cross-tenant values are rejected.
+  string tenant_id = 1;
+  string source_name = 2;
+  // Fully-qualified source entity message type to embed on change.
+  string source_message_type = 3;
+  // Source field name(s) whose text is concatenated and sent to the sidecar.
+  repeated string text_fields = 4;
+  // Target vector collection the reported embedding is upserted into.
+  string target_collection = 5;
+  // Stable public model id in caller-chosen provider format; credentials live
+  // in the sidecar and are not encoded in this identifier.
+  string model_id = 6;
+  string metadata_json = 7; // JSON
+}
+
+message RegisterSourceResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "embedding"
+    generate_minimal_example: true
+  };
+  string source_id = 1;
+  string source_name = 2;
+  // The resolved SOURCE-table tenant column the source is scoped by.
+  string tenant_column = 3;
+  string message = 4;
+  udb.core.common.v1.ApiError error = 5;
+}
+
+message ListSourcesRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "embedding"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  int32 page_size = 2;
+  // Opaque pagination token returned by ListSourcesResponse.next_page_token.
+  string page_token = 3;
+}
+
+message EmbeddingSourceSummary {
+  string source_id = 1;
+  string source_name = 2;
+  string source_message_type = 3;
+  string target_collection = 4;
+  string model_id = 5;
+  string status = 6;
+}
+
+message ListSourcesResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "embedding"
+    generate_minimal_example: true
+  };
+  repeated EmbeddingSourceSummary sources = 1;
+  string message = 2;
+  udb.core.common.v1.ApiError error = 3;
+  // Opaque token for the next page; empty when no more sources are available.
+  string next_page_token = 4;
+}
+
+message DeleteSourceRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "embedding"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string source_name = 2;
+}
+
+message DeleteSourceResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "embedding"
+    generate_minimal_example: true
+  };
+  bool deleted = 1;
+  string message = 2;
+  udb.core.common.v1.ApiError error = 3;
+}
+
+message BackfillRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "embedding"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string source_name = 2;
+}
+
+message BackfillResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "embedding"
+    generate_minimal_example: true
+  };
+  string backfill_id = 1;
+  bool accepted = 2;
+  string message = 3;
+  udb.core.common.v1.ApiError error = 4;
+}
+
+message ReportEmbeddingRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: false
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "embedding"
+  };
+  // Verified against the bearer/claim tenant; cross-tenant values are rejected.
+  string tenant_id = 1;
+  string source_name = 2;
+  // Primary key of the source row this embedding belongs to (= vector point id).
+  string row_pk = 3;
+  // The dense embedding the sidecar computed.
+  repeated float vector = 4;
+  // The model id the sidecar used (echo of the work event's model_id).
+  string model = 5;
+  // Embedding dimensionality (0 ⇒ inferred from `vector`).
+  int32 dims = 6;
+}
+
+message ReportEmbeddingResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: false
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "embedding"
+  };
+  bool upserted = 1;
+  string message = 2;
+  udb.core.common.v1.ApiError error = 3;
+}
+
+message RetrieveRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "embedding"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string source_name = 2;
+  // Optional lexical query; when present alongside query_vector, the delegated
+  // search runs hybrid (lexical + vector) fusion.
+  string query_text = 3;
+  // Already-embedded query vector (the broker never embeds the query).
+  repeated float query_vector = 4;
+  int32 top_k = 5;
+}
+
+message RetrieveHit {
+  string id = 1;
+  double score = 2;
+  string payload_json = 3; // JSON
+}
+
+message RetrieveResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "embedding"
+    generate_minimal_example: true
+  };
+  repeated RetrieveHit hits = 1;
+  string message = 2;
+  udb.core.common.v1.ApiError error = 3;
+}

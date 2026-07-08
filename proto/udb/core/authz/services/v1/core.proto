@@ -3,6 +3,7 @@ syntax = "proto3";
 package udb.core.authz.services.v1;
 
 import "google/api/field_behavior.proto";
+import "google/protobuf/field_mask.proto";
 import "google/protobuf/timestamp.proto";
 import "udb/core/authz/entity/v1/access_decision_audit.proto";
 import "udb/core/authz/entity/v1/enums.proto";
@@ -309,6 +310,10 @@ message ListUserPermissionsRequest {
   };
   string user_id = 1 [(google.api.field_behavior) = REQUIRED];
   string domain = 2 [(google.api.field_behavior) = REQUIRED];
+  // Requested page size. Defaults to 50 and is capped at the native list maximum.
+  int32 page_size = 3 [(google.api.field_behavior) = OPTIONAL];
+  // Opaque pagination token returned by ListUserPermissionsResponse.next_page_token.
+  string page_token = 4 [(google.api.field_behavior) = OPTIONAL];
 }
 
 message EffectivePermission {
@@ -321,6 +326,8 @@ message EffectivePermission {
     boilerplate_recipe_tags: "authz"
     generate_minimal_example: true
   };
+  // Canonical public permission object. Combined with action/domain/resource_type
+  // it forms the stable permission identity returned by ListUserPermissions.
   string object = 1;
   string action = 2;
   string via_role = 3;
@@ -339,6 +346,8 @@ message ListUserPermissionsResponse {
     generate_minimal_example: true
   };
   repeated EffectivePermission permissions = 1;
+  // Opaque token for the next page; empty when no more permissions are available.
+  string next_page_token = 2;
 }
 
 message ListAccessDecisionAuditsRequest {
@@ -413,6 +422,10 @@ message ListUserRolesRequest {
   string user_id = 1;
   string domain = 2;
   bool active_only = 3;
+  // Requested page size. Defaults to 50 and is capped at the native list maximum.
+  int32 page_size = 4;
+  // Opaque pagination token returned by ListUserRolesResponse.next_page_token.
+  string page_token = 5;
 }
 
 message ListUserRolesResponse {
@@ -426,6 +439,8 @@ message ListUserRolesResponse {
     generate_minimal_example: true
   };
   repeated udb.core.authz.entity.v1.UserRole user_roles = 1;
+  // Opaque token for the next page; empty when no more user roles are available.
+  string next_page_token = 2;
 }
 
 message GetRoleRequest {
@@ -543,6 +558,9 @@ message UpdateRoleRequest {
   string description = 3 [(google.api.field_behavior) = OPTIONAL];
   optional bool is_active = 4 [(google.api.field_behavior) = OPTIONAL];
   string updated_by = 5 [(google.api.field_behavior) = REQUIRED];
+  // Optional PATCH mask relative to the role resource. When omitted, legacy
+  // clients keep the historical non-empty-field patch behavior.
+  google.protobuf.FieldMask update_mask = 6;
 }
 
 message UpdateRoleResponse {

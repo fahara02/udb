@@ -37,7 +37,7 @@ use serde::Serialize;
 use serde_json::{Value as Json, json};
 
 use crate::backend::BackendKind;
-use crate::runtime::executor_utils::build_probe;
+use crate::runtime::executor_utils::{build_probe, capability_status, invalid_argument_fields};
 use crate::runtime::executors::{
     BackendExecutor, BackendHealth, BackendProbe, MutationExecutor, ObjectExecutor, QueryExecutor,
     ResourceAdminExecutor, SearchExecutor,
@@ -46,7 +46,7 @@ use crate::runtime::executors::{
 // ── Configuration ─────────────────────────────────────────────────────────────
 
 /// Connection configuration parsed from env-vars.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct MongoDbConfig {
     /// Full HTTP(S) base URL to the Atlas Data API (or self-hosted equivalent).
     /// e.g. `https://data.mongodb-api.com/app/<APP_ID>/endpoint/data/v1`
@@ -61,6 +61,20 @@ pub struct MongoDbConfig {
     pub dev_mode: bool,
     /// Request timeout in seconds.
     pub timeout_secs: u64,
+}
+
+// 4.6 secrets posture: redact the `api_key` bearer token in Debug.
+impl std::fmt::Debug for MongoDbConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MongoDbConfig")
+            .field("api_base", &self.api_base)
+            .field("api_key", &self.api_key.as_ref().map(|_| "[redacted]"))
+            .field("database", &self.database)
+            .field("is_cloud", &self.is_cloud)
+            .field("dev_mode", &self.dev_mode)
+            .field("timeout_secs", &self.timeout_secs)
+            .finish()
+    }
 }
 
 /// Native MongoDB wire-protocol connection configuration.
@@ -225,6 +239,65 @@ fn mongo_wrap_update(update: Json) -> Json {
     } else {
         json!({ "$set": update })
     }
+}
+
+fn mongodb_command_first_batch(resp: &Json) -> Vec<Json> {
+    resp.get("cursor")
+        .and_then(|cursor| cursor.get("firstBatch"))
+        .or_else(|| {
+            resp.get("document")
+                .and_then(|document| document.get("cursor"))
+                .and_then(|cursor| cursor.get("firstBatch"))
+        })
+        .and_then(Json::as_array)
+        .cloned()
+        .unwrap_or_default()
+}
+
+fn mongodb_invalid_field_status(
+    field: impl Into<String>,
+    description: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    invalid_argument_fields(message, [(field.into(), description.into())])
+}
+
+fn invalid_mongodb_request_json_status(err: serde_json::Error) -> tonic::Status {
+    mongodb_invalid_field_status(
+        "request_json",
+        "must be valid JSON for MongoDB generic dispatch",
+        format!("invalid request json: {err}"),
+    )
+}
+
+fn mongodb_required_field_status(
+    field: &'static str,
+    description: &'static str,
+    message: &'static str,
+) -> tonic::Status {
+    mongodb_invalid_field_status(field, description, message)
+}
+
+fn unsupported_mongodb_mutation_operation_status(operation: &str) -> tonic::Status {
+    mongodb_invalid_field_status(
+        "operation",
+        "unsupported MongoDB mutation operation",
+        format!("unsupported MongoDB mutation operation '{operation}'"),
+    )
+}
+
+fn mongodb_internal_status(
+    operation: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    crate::runtime::executor_utils::internal_status("mongodb", operation, message)
+}
+
+fn encode_mongodb_response<T: Serialize>(
+    value: &T,
+    operation: &'static str,
+) -> Result<String, tonic::Status> {
+    serde_json::to_string(value).map_err(|err| mongodb_internal_status(operation, err.to_string()))
 }
 
 #[cfg(feature = "mongodb-native")]
@@ -486,6 +559,33 @@ impl MongoDbExecutor {
         Ok(docs)
     }
 
+    pub async fn aggregate_documents(
+        &self,
+        collection: &str,
+        pipeline: Vec<Json>,
+    ) -> Result<Vec<Json>, String> {
+        #[cfg(feature = "mongodb-native")]
+        if matches!(self.transport, MongoDbTransport::Native(_)) {
+            let resp = self
+                .run_command(json!({
+                    "aggregate": collection,
+                    "pipeline": pipeline,
+                    "cursor": {}
+                }))
+                .await?;
+            return Ok(mongodb_command_first_batch(&resp));
+        }
+
+        let mut body = self.base_body(collection);
+        body["pipeline"] = Json::Array(pipeline);
+        let resp = self.post_action("aggregate", body).await?;
+        Ok(resp
+            .get("documents")
+            .and_then(Json::as_array)
+            .cloned()
+            .unwrap_or_default())
+    }
+
     /// Update the first document matching `filter` using MongoDB `$set` semantics.
     pub async fn update_document(
         &self,
@@ -673,6 +773,19 @@ impl MongoDbExecutor {
         }))
         .await
         .map(|_| ())
+    }
+
+    async fn list_indexes(&self, collection: &str) -> Result<Vec<Json>, String> {
+        let resp = self
+            .run_command(json!({ "listIndexes": collection }))
+            .await?;
+        Ok(mongodb_command_first_batch(&resp))
+    }
+
+    async fn drop_index(&self, collection: &str, name: &str) -> Result<(), String> {
+        self.run_command(json!({ "dropIndexes": collection, "index": name }))
+            .await
+            .map(|_| ())
     }
 
     #[cfg(feature = "mongodb-native")]
@@ -1058,13 +1171,17 @@ impl BackendHealth for MongoDbExecutor {
 impl QueryExecutor for MongoDbExecutor {
     /// `{"collection":"c","filter":{...},"projection":{...},"limit":N}`.
     async fn query(&self, request_json: &str) -> Result<String, tonic::Status> {
-        let spec: Json = serde_json::from_str(request_json)
-            .map_err(|e| tonic::Status::invalid_argument(format!("invalid request json: {e}")))?;
+        let spec: Json =
+            serde_json::from_str(request_json).map_err(invalid_mongodb_request_json_status)?;
         let collection = spec
             .get("collection")
             .and_then(Json::as_str)
             .ok_or_else(|| {
-                tonic::Status::invalid_argument("missing required field 'collection'")
+                mongodb_required_field_status(
+                    "collection",
+                    "collection is required for MongoDB query dispatch",
+                    "missing required field 'collection'",
+                )
             })?;
         if matches!(
             spec.get("operation").and_then(Json::as_str),
@@ -1080,13 +1197,41 @@ impl QueryExecutor for MongoDbExecutor {
                 let result = self
                     .watch_changes(collection, pipeline)
                     .await
-                    .map_err(tonic::Status::internal)?;
+                    .map_err(|err| mongodb_internal_status("watch_changes", err))?;
                 return Ok(result.to_string());
             }
             #[cfg(not(feature = "mongodb-native"))]
-            return Err(tonic::Status::failed_precondition(
+            return Err(capability_status(
+                "mongodb",
+                "watch_changes",
+                "mongodb_native_change_streams",
                 "MongoDB change streams require the mongodb-native feature",
             ));
+        }
+        if matches!(
+            spec.get("operation").and_then(Json::as_str),
+            Some("aggregate")
+        ) {
+            let pipeline = spec
+                .get("pipeline")
+                .and_then(Json::as_array)
+                .cloned()
+                .unwrap_or_default();
+            let rows = self
+                .aggregate_documents(collection, pipeline)
+                .await
+                .map_err(|err| mongodb_internal_status("aggregate_documents", err))?;
+            return encode_mongodb_response(&rows, "aggregate_response_encode");
+        }
+        if matches!(
+            spec.get("operation").and_then(Json::as_str),
+            Some("list_indexes" | "listIndexes")
+        ) {
+            let rows = self
+                .list_indexes(collection)
+                .await
+                .map_err(|err| mongodb_internal_status("list_indexes", err))?;
+            return encode_mongodb_response(&rows, "list_indexes_response_encode");
         }
         let filter = spec.get("filter").cloned().unwrap_or_else(|| json!({}));
         let projection = spec.get("projection").cloned().unwrap_or_else(|| json!({}));
@@ -1094,44 +1239,65 @@ impl QueryExecutor for MongoDbExecutor {
         let rows = self
             .find_documents(collection, filter, projection, limit)
             .await
-            .map_err(tonic::Status::internal)?;
-        serde_json::to_string(&rows).map_err(|e| tonic::Status::internal(e.to_string()))
+            .map_err(|err| mongodb_internal_status("find_documents", err))?;
+        encode_mongodb_response(&rows, "query_response_encode")
     }
 }
 
 impl MutationExecutor for MongoDbExecutor {
     /// `{"collection":"c","operation":"insert|upsert|update|delete", ...}`.
     async fn mutate(&self, request_json: &str) -> Result<String, tonic::Status> {
-        let spec: Json = serde_json::from_str(request_json)
-            .map_err(|e| tonic::Status::invalid_argument(format!("invalid request json: {e}")))?;
+        let spec: Json =
+            serde_json::from_str(request_json).map_err(invalid_mongodb_request_json_status)?;
         let collection = spec
             .get("collection")
             .and_then(Json::as_str)
             .ok_or_else(|| {
-                tonic::Status::invalid_argument("missing required field 'collection'")
+                mongodb_required_field_status(
+                    "collection",
+                    "collection is required for MongoDB mutation dispatch",
+                    "missing required field 'collection'",
+                )
             })?;
         let operation = spec
             .get("operation")
             .and_then(Json::as_str)
-            .ok_or_else(|| tonic::Status::invalid_argument("missing required field 'operation'"))?;
+            .ok_or_else(|| {
+                mongodb_required_field_status(
+                    "operation",
+                    "operation is required for MongoDB mutation dispatch",
+                    "missing required field 'operation'",
+                )
+            })?;
         match operation {
             "insert" | "insert_one" => {
-                let document = spec
-                    .get("document")
-                    .cloned()
-                    .ok_or_else(|| tonic::Status::invalid_argument("document is required"))?;
+                let document = spec.get("document").cloned().ok_or_else(|| {
+                    mongodb_required_field_status(
+                        "document",
+                        "document is required for insert operations",
+                        "document is required",
+                    )
+                })?;
                 let id = self
                     .insert_document(collection, document)
                     .await
                     .map_err(crate::runtime::executor_utils::status_from_store_string)?;
-                Ok(json!({ "inserted_id": id }).to_string())
+                // `affected_rows` mirrors the insert_many/update/delete branches so
+                // dispatch consumers read ONE row-count key for every mutation shape.
+                Ok(json!({ "inserted_id": id, "affected_rows": 1 }).to_string())
             }
             "insert_many" | "bulk_insert" => {
                 let documents = spec
                     .get("documents")
                     .or_else(|| spec.get("docs"))
                     .and_then(Json::as_array)
-                    .ok_or_else(|| tonic::Status::invalid_argument("documents must be an array"))?;
+                    .ok_or_else(|| {
+                        mongodb_required_field_status(
+                            "documents",
+                            "documents/docs must be an array",
+                            "documents must be an array",
+                        )
+                    })?;
                 let count = self
                     .insert_many(collection, documents)
                     .await
@@ -1139,15 +1305,24 @@ impl MutationExecutor for MongoDbExecutor {
                 Ok(json!({ "affected_rows": count }).to_string())
             }
             "update" | "update_one" => {
-                let filter = spec
-                    .get("filter")
-                    .cloned()
-                    .ok_or_else(|| tonic::Status::invalid_argument("filter is required"))?;
+                let filter = spec.get("filter").cloned().ok_or_else(|| {
+                    mongodb_required_field_status(
+                        "filter",
+                        "filter is required for update operations",
+                        "filter is required",
+                    )
+                })?;
                 let update = spec
                     .get("update")
                     .or_else(|| spec.get("document"))
                     .cloned()
-                    .ok_or_else(|| tonic::Status::invalid_argument("update is required"))?;
+                    .ok_or_else(|| {
+                        mongodb_required_field_status(
+                            "update",
+                            "update/document is required for update operations",
+                            "update is required",
+                        )
+                    })?;
                 let count = self
                     .update_document(collection, filter, update)
                     .await
@@ -1155,15 +1330,24 @@ impl MutationExecutor for MongoDbExecutor {
                 Ok(json!({ "affected_rows": count }).to_string())
             }
             "update_many" | "bulk_update" => {
-                let filter = spec
-                    .get("filter")
-                    .cloned()
-                    .ok_or_else(|| tonic::Status::invalid_argument("filter is required"))?;
+                let filter = spec.get("filter").cloned().ok_or_else(|| {
+                    mongodb_required_field_status(
+                        "filter",
+                        "filter is required for bulk update operations",
+                        "filter is required",
+                    )
+                })?;
                 let update = spec
                     .get("update")
                     .or_else(|| spec.get("document"))
                     .cloned()
-                    .ok_or_else(|| tonic::Status::invalid_argument("update is required"))?;
+                    .ok_or_else(|| {
+                        mongodb_required_field_status(
+                            "update",
+                            "update/document is required for bulk update operations",
+                            "update is required",
+                        )
+                    })?;
                 let count = self
                     .update_many(collection, filter, update)
                     .await
@@ -1171,15 +1355,24 @@ impl MutationExecutor for MongoDbExecutor {
                 Ok(json!({ "affected_rows": count }).to_string())
             }
             "upsert" | "upsert_one" => {
-                let filter = spec
-                    .get("filter")
-                    .cloned()
-                    .ok_or_else(|| tonic::Status::invalid_argument("filter is required"))?;
+                let filter = spec.get("filter").cloned().ok_or_else(|| {
+                    mongodb_required_field_status(
+                        "filter",
+                        "filter is required for upsert operations",
+                        "filter is required",
+                    )
+                })?;
                 let update = spec
                     .get("update")
                     .or_else(|| spec.get("document"))
                     .cloned()
-                    .ok_or_else(|| tonic::Status::invalid_argument("document is required"))?;
+                    .ok_or_else(|| {
+                        mongodb_required_field_status(
+                            "document",
+                            "update/document is required for upsert operations",
+                            "document is required",
+                        )
+                    })?;
                 let count = self
                     .upsert_document(collection, filter, update)
                     .await
@@ -1187,10 +1380,13 @@ impl MutationExecutor for MongoDbExecutor {
                 Ok(json!({ "affected_rows": count }).to_string())
             }
             "delete" | "delete_one" => {
-                let filter = spec
-                    .get("filter")
-                    .cloned()
-                    .ok_or_else(|| tonic::Status::invalid_argument("filter is required"))?;
+                let filter = spec.get("filter").cloned().ok_or_else(|| {
+                    mongodb_required_field_status(
+                        "filter",
+                        "filter is required for delete operations",
+                        "filter is required",
+                    )
+                })?;
                 let count = self
                     .delete_document(collection, filter)
                     .await
@@ -1198,10 +1394,13 @@ impl MutationExecutor for MongoDbExecutor {
                 Ok(json!({ "affected_rows": count }).to_string())
             }
             "delete_many" | "bulk_delete" => {
-                let filter = spec
-                    .get("filter")
-                    .cloned()
-                    .ok_or_else(|| tonic::Status::invalid_argument("filter is required"))?;
+                let filter = spec.get("filter").cloned().ok_or_else(|| {
+                    mongodb_required_field_status(
+                        "filter",
+                        "filter is required for bulk delete operations",
+                        "filter is required",
+                    )
+                })?;
                 let count = self
                     .delete_many(collection, filter)
                     .await
@@ -1212,22 +1411,46 @@ impl MutationExecutor for MongoDbExecutor {
                 let indexes = spec
                     .get("indexes")
                     .and_then(Json::as_array)
-                    .ok_or_else(|| tonic::Status::invalid_argument("indexes must be an array"))?;
+                    .ok_or_else(|| {
+                        mongodb_required_field_status(
+                            "indexes",
+                            "indexes must be an array",
+                            "indexes must be an array",
+                        )
+                    })?;
                 self.ensure_indexes(collection, indexes)
                     .await
-                    .map_err(tonic::Status::internal)?;
+                    .map_err(|err| mongodb_internal_status("ensure_indexes", err))?;
                 Ok(json!({ "affected_rows": indexes.len() }).to_string())
             }
-            other => Err(tonic::Status::invalid_argument(format!(
-                "unsupported MongoDB mutation operation '{other}'"
-            ))),
+            "drop_index" | "dropIndexes" => {
+                let name = spec
+                    .get("name")
+                    .or_else(|| spec.get("index"))
+                    .and_then(Json::as_str)
+                    .ok_or_else(|| {
+                        mongodb_required_field_status(
+                            "name",
+                            "name/index is required for drop_index operations",
+                            "index name is required",
+                        )
+                    })?;
+                self.drop_index(collection, name)
+                    .await
+                    .map_err(crate::runtime::executor_utils::status_from_store_string)?;
+                Ok(json!({ "affected_rows": 1 }).to_string())
+            }
+            other => Err(unsupported_mongodb_mutation_operation_status(other)),
         }
     }
 }
 
 impl SearchExecutor for MongoDbExecutor {
     async fn search(&self, _request_json: &str) -> Result<String, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "mongodb",
+            "search",
+            "vector_search",
             "mongodb does not support generic vector search dispatch",
         ))
     }
@@ -1235,7 +1458,10 @@ impl SearchExecutor for MongoDbExecutor {
 
 impl ObjectExecutor for MongoDbExecutor {
     async fn get_object(&self, _request_json: &str) -> Result<Vec<u8>, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "mongodb",
+            "get_object",
+            "object_store",
             "mongodb is not an object store",
         ))
     }
@@ -1244,7 +1470,10 @@ impl ObjectExecutor for MongoDbExecutor {
         _request_json: &str,
         _bytes: Vec<u8>,
     ) -> Result<String, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "mongodb",
+            "put_object",
+            "object_store",
             "mongodb is not an object store",
         ))
     }
@@ -1279,7 +1508,7 @@ impl ResourceAdminExecutor for MongoDbExecutor {
         self.run_command(json!({ "create": resource_name }))
             .await
             .map(|_| ())
-            .map_err(tonic::Status::internal)?;
+            .map_err(|err| mongodb_internal_status("run_command_create_collection", err))?;
         let indexes = spec
             .get("indexes")
             .and_then(Json::as_array)
@@ -1287,7 +1516,7 @@ impl ResourceAdminExecutor for MongoDbExecutor {
             .unwrap_or_default();
         self.ensure_indexes(resource_name, &indexes)
             .await
-            .map_err(tonic::Status::internal)
+            .map_err(|err| mongodb_internal_status("ensure_resource_indexes", err))
     }
     async fn drop_resource(&self, resource_name: &str) -> Result<(), tonic::Status> {
         #[cfg(feature = "mongodb-native")]
@@ -1301,7 +1530,7 @@ impl ResourceAdminExecutor for MongoDbExecutor {
         self.run_command(json!({ "drop": resource_name }))
             .await
             .map(|_| ())
-            .map_err(tonic::Status::internal)
+            .map_err(|err| mongodb_internal_status("drop_resource", err))
     }
     async fn list_resources(&self) -> Result<Vec<String>, tonic::Status> {
         #[cfg(feature = "mongodb-native")]
@@ -1315,7 +1544,7 @@ impl ResourceAdminExecutor for MongoDbExecutor {
         let resp = self
             .run_command(json!({ "listCollections": 1, "nameOnly": true }))
             .await
-            .map_err(tonic::Status::internal)?;
+            .map_err(|err| mongodb_internal_status("list_resources", err))?;
         let names = resp
             .get("document")
             .and_then(|d| d.get("cursor"))
@@ -1336,23 +1565,31 @@ impl BackendExecutor for MongoDbExecutor {
     async fn transaction(&self, _request_json: &str) -> Result<String, tonic::Status> {
         #[cfg(feature = "mongodb-native")]
         if let MongoDbTransport::Native(native) = &self.transport {
-            let spec: Json = serde_json::from_str(_request_json).map_err(|err| {
-                tonic::Status::invalid_argument(format!("invalid request json: {err}"))
-            })?;
+            let spec: Json =
+                serde_json::from_str(_request_json).map_err(invalid_mongodb_request_json_status)?;
             let operations = spec
                 .get("operations")
                 .and_then(Json::as_array)
-                .ok_or_else(|| tonic::Status::invalid_argument("operations must be an array"))?;
+                .ok_or_else(|| {
+                    mongodb_required_field_status(
+                        "operations",
+                        "operations must be an array",
+                        "operations must be an array",
+                    )
+                })?;
             let affected = native
                 .execute_transaction(operations)
                 .await
-                .map_err(tonic::Status::internal)?;
+                .map_err(|err| mongodb_internal_status("transaction", err))?;
             return Ok(
                 json!({ "affected_rows": affected, "transaction": "committed" }).to_string(),
             );
         }
 
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "mongodb",
+            "transaction",
+            "mongodb_native_transport",
             "MongoDB generic transactions require native transport via the mongodb-native feature",
         ))
     }
@@ -1369,33 +1606,87 @@ impl BackendExecutor for MongoDbExecutor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
     use crate::runtime::backend_context::{AppliedContext, BackendContextEnforcer, ContextEffect};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
 
-    #[test]
-    fn mongodb_executor_kind_and_name() {
-        let cfg = MongoDbConfig {
+    fn test_exec() -> MongoDbExecutor {
+        MongoDbExecutor::new(MongoDbConfig {
             api_base: "http://localhost:27017".to_string(),
             api_key: None,
             database: "testdb".to_string(),
             is_cloud: false,
             dev_mode: true,
             timeout_secs: 30,
-        };
-        let exec = MongoDbExecutor::new(cfg);
+        })
+    }
+
+    fn decode_detail(status: &tonic::Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_single_field(status: &tonic::Status, field: &str) {
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, field);
+    }
+
+    fn assert_internal_detail(status: &tonic::Status, operation: &str, message: &str) {
+        assert_eq!(status.code(), tonic::Code::Internal);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "mongodb");
+        assert_eq!(detail.operation, operation);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    #[test]
+    fn mongodb_internal_status_carries_typed_detail() {
+        struct FailingSerialize;
+
+        impl serde::Serialize for FailingSerialize {
+            fn serialize<S>(&self, _serializer: S) -> Result<S::Ok, S::Error>
+            where
+                S: serde::Serializer,
+            {
+                Err(serde::ser::Error::custom("encode broke"))
+            }
+        }
+
+        let status = mongodb_internal_status(
+            "aggregate_documents",
+            "MongoDB native aggregate failed: unavailable",
+        );
+        assert_internal_detail(
+            &status,
+            "aggregate_documents",
+            "MongoDB native aggregate failed: unavailable",
+        );
+
+        let status = encode_mongodb_response(&FailingSerialize, "query_response_encode")
+            .expect_err("failing serializer must surface typed internal detail");
+        assert_internal_detail(&status, "query_response_encode", "encode broke");
+    }
+
+    #[test]
+    fn mongodb_executor_kind_and_name() {
+        let exec = test_exec();
         assert_eq!(exec.kind(), BackendKind::Mongodb);
         assert_eq!(exec.name(), "MongoDB");
     }
 
     #[test]
     fn mongodb_generic_dispatch_context_is_advisory() {
-        let exec = MongoDbExecutor::new(MongoDbConfig {
-            api_base: "http://localhost:27017".to_string(),
-            api_key: None,
-            database: "testdb".to_string(),
-            is_cloud: false,
-            dev_mode: true,
-            timeout_secs: 30,
-        });
+        let exec = test_exec();
         let ctx = AppliedContext {
             tenant_id: "tenant-a".into(),
             project_id: "project-a".into(),
@@ -1413,14 +1704,7 @@ mod tests {
 
     #[tokio::test]
     async fn mongodb_backend_executor_rejects_unsupported_and_malformed() {
-        let exec = MongoDbExecutor::new(MongoDbConfig {
-            api_base: "http://localhost:27017".to_string(),
-            api_key: None,
-            database: "testdb".to_string(),
-            is_cloud: false,
-            dev_mode: true,
-            timeout_secs: 30,
-        });
+        let exec = test_exec();
         assert!(SearchExecutor::search(&exec, "{}").await.is_err());
         assert!(ObjectExecutor::get_object(&exec, "{}").await.is_err());
         assert!(BackendExecutor::transaction(&exec, "{}").await.is_err());
@@ -1432,6 +1716,107 @@ mod tests {
                 .await
                 .is_err()
         );
+    }
+
+    #[tokio::test]
+    async fn mongodb_query_validation_carries_field_violations() {
+        let exec = test_exec();
+
+        let invalid_json = QueryExecutor::query(&exec, "not json").await.unwrap_err();
+        assert_eq!(invalid_json.code(), tonic::Code::InvalidArgument);
+        assert!(invalid_json.message().starts_with("invalid request json:"));
+        assert_single_field(&invalid_json, "request_json");
+
+        let missing_collection = QueryExecutor::query(&exec, "{}").await.unwrap_err();
+        assert_eq!(
+            missing_collection.message(),
+            "missing required field 'collection'"
+        );
+        assert_single_field(&missing_collection, "collection");
+    }
+
+    #[tokio::test]
+    async fn mongodb_mutation_validation_carries_field_violations() {
+        let exec = test_exec();
+
+        let invalid_json = MutationExecutor::mutate(&exec, "not json")
+            .await
+            .unwrap_err();
+        assert_eq!(invalid_json.code(), tonic::Code::InvalidArgument);
+        assert!(invalid_json.message().starts_with("invalid request json:"));
+        assert_single_field(&invalid_json, "request_json");
+
+        let missing_collection = MutationExecutor::mutate(&exec, "{}").await.unwrap_err();
+        assert_eq!(
+            missing_collection.message(),
+            "missing required field 'collection'"
+        );
+        assert_single_field(&missing_collection, "collection");
+
+        let missing_operation = MutationExecutor::mutate(&exec, r#"{"collection":"c"}"#)
+            .await
+            .unwrap_err();
+        assert_eq!(
+            missing_operation.message(),
+            "missing required field 'operation'"
+        );
+        assert_single_field(&missing_operation, "operation");
+
+        let missing_document =
+            MutationExecutor::mutate(&exec, r#"{"collection":"c","operation":"insert"}"#)
+                .await
+                .unwrap_err();
+        assert_eq!(missing_document.message(), "document is required");
+        assert_single_field(&missing_document, "document");
+
+        let missing_documents =
+            MutationExecutor::mutate(&exec, r#"{"collection":"c","operation":"insert_many"}"#)
+                .await
+                .unwrap_err();
+        assert_eq!(missing_documents.message(), "documents must be an array");
+        assert_single_field(&missing_documents, "documents");
+
+        let missing_filter = MutationExecutor::mutate(
+            &exec,
+            r#"{"collection":"c","operation":"update","update":{"a":1}}"#,
+        )
+        .await
+        .unwrap_err();
+        assert_eq!(missing_filter.message(), "filter is required");
+        assert_single_field(&missing_filter, "filter");
+
+        let missing_update = MutationExecutor::mutate(
+            &exec,
+            r#"{"collection":"c","operation":"update","filter":{}}"#,
+        )
+        .await
+        .unwrap_err();
+        assert_eq!(missing_update.message(), "update is required");
+        assert_single_field(&missing_update, "update");
+
+        let missing_indexes =
+            MutationExecutor::mutate(&exec, r#"{"collection":"c","operation":"create_indexes"}"#)
+                .await
+                .unwrap_err();
+        assert_eq!(missing_indexes.message(), "indexes must be an array");
+        assert_single_field(&missing_indexes, "indexes");
+
+        let missing_name =
+            MutationExecutor::mutate(&exec, r#"{"collection":"c","operation":"drop_index"}"#)
+                .await
+                .unwrap_err();
+        assert_eq!(missing_name.message(), "index name is required");
+        assert_single_field(&missing_name, "name");
+
+        let unsupported =
+            MutationExecutor::mutate(&exec, r#"{"collection":"c","operation":"bogus"}"#)
+                .await
+                .unwrap_err();
+        assert_eq!(
+            unsupported.message(),
+            "unsupported MongoDB mutation operation 'bogus'"
+        );
+        assert_single_field(&unsupported, "operation");
     }
 
     #[test]

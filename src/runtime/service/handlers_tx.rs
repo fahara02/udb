@@ -58,7 +58,10 @@ impl DataBrokerService {
             return self.record_grpc(
                 "PublishCDC",
                 started,
-                Err(Status::unavailable(
+                Err(crate::runtime::executor_utils::capability_status(
+                    "cdc",
+                    "PublishCDC",
+                    "cdc_tailer",
                     "CDC tailer is not configured; set UDB_KAFKA_BROKERS to enable PublishCDC",
                 )),
             );

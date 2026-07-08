@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package udb.core.authn.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Authn.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/authn/entity/v1;authnv1";
+option java_package = "com.udb.core.authn.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Authn\\Entity\\V1";
+
+// ---------------------------------------------------------------------------
+// WebAuthnPolicy — per-tenant WebAuthn / passkey ceremony policy (masterplan 4.1).
+//
+// Migration order 25. One row per tenant. Gates passkey registration and
+// assertion on the authenticator's self-reported flags:
+//   * required_user_verification — required | preferred | discouraged (UV flag)
+//   * required_resident_key       — required | preferred | discouraged (credProps.rk)
+//   * allowed_attestation_conveyance — comma/space-separated subset of
+//     {none, indirect, direct, enterprise}; when the set omits "none" the RP
+//     demands a real attestation statement (fmt != "none").
+//
+// Enforcement is policy gating on data UDB has ALREADY parsed (no crypto). Full
+// attestation-statement signature-chain verification (packed/tpm/android-key/
+// fido-u2f) is a separate follow-up that requires OpenSSL and is NOT covered by
+// this entity — see authn/mod.rs `enforce_*_policy` for the documented boundary.
+// ---------------------------------------------------------------------------
+message WebAuthnPolicy {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "webauthn_policies"
+    schema_name: "udb_authn"
+    migration_order: 25
+    is_table: true
+    comment: "Per-tenant WebAuthn / passkey ceremony policy (UV / RK / attestation conveyance)"
+    soft_delete: false
+    audit_fields: false
+    enable_rls: false
+    replica_hint: "primary"
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "none"
+    retention_class: "authn.operational"
+    retention_days: 2555
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
+
+  string policy_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "policy_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(120)" not_null: true index: { index_name: "idx_webauthn_policies_tenant" index_type: "BTREE" unique: true } }];
+
+  string required_user_verification = 3 [(udb.core.common.v1.pg_column) = { column_name: "required_user_verification" sql_type: "VARCHAR(16)" not_null: true default_value: "'preferred'" comment: "required | preferred | discouraged — gates the assertion/registration UV flag" }];
+
+  string required_resident_key = 4 [(udb.core.common.v1.pg_column) = { column_name: "required_resident_key" sql_type: "VARCHAR(16)" not_null: true default_value: "'discouraged'" comment: "required | preferred | discouraged — gates credProps.rk at registration" }];
+
+  string allowed_attestation_conveyance = 5 [(udb.core.common.v1.pg_column) = { column_name: "allowed_attestation_conveyance" sql_type: "VARCHAR(64)" not_null: true default_value: "'none'" comment: "comma/space-separated subset of none,indirect,direct,enterprise; omitting none demands a real attestation fmt" }];
+
+  google.protobuf.Timestamp created_at = 6 [(udb.core.common.v1.pg_column) = { column_name: "created_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true exclude_from_update: true }];
+
+  google.protobuf.Timestamp updated_at = 7 [(udb.core.common.v1.pg_column) = { column_name: "updated_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" }];
+}

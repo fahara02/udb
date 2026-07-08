@@ -73,6 +73,10 @@ pub struct ParserOptionMetadata {
     pub description: &'static str,
     pub example: &'static str,
     pub accepted_keys: &'static [&'static str],
+    /// Subset of `accepted_keys` whose values are parsed as numbers (i32).
+    /// Single source of truth for `is_numeric_annotation_key` — keep these as
+    /// a slice of names that also appear in `accepted_keys`.
+    pub numeric_keys: &'static [&'static str],
 }
 
 const TABLE_KEYS: &[&str] = &[
@@ -297,6 +301,31 @@ const GENERIC_STORE_KEYS: &[&str] = &[
     "<backend-specific option>",
 ];
 
+// Numeric (i32-parsed) subsets of the key lists above. Each entry must also
+// appear in its option's `accepted_keys`; these slices are the single source
+// of truth consulted by `is_numeric_annotation_key`.
+const TABLE_NUMERIC_KEYS: &[&str] = &[
+    "migration_order",
+    "retention_days",
+    "partition_premake",
+    "partition_retention_months",
+];
+const VECTOR_NUMERIC_KEYS: &[&str] = &[
+    "dimension",
+    "shard_count",
+    "replica_count",
+    "hnsw_m",
+    "hnsw_ef_construction",
+];
+const DOCUMENT_NUMERIC_KEYS: &[&str] = &["ttl_seconds"];
+const TIMESERIES_NUMERIC_KEYS: &[&str] = &["retention_days"];
+const COLUMN_STORE_NUMERIC_KEYS: &[&str] = &["ttl_seconds"];
+const CACHE_NUMERIC_KEYS: &[&str] = &["ttl_seconds"];
+const STORAGE_NUMERIC_KEYS: &[&str] = &["presigned_ttl_seconds"];
+const SECURITY_NUMERIC_KEYS: &[&str] = &["retention_days"];
+const TABLE_SECURITY_NUMERIC_KEYS: &[&str] = &["retention_days"];
+const NO_NUMERIC_KEYS: &[&str] = &[];
+
 const DOCUMENTED_OPTION_METADATA: &[ParserOptionMetadata] = &[
     ParserOptionMetadata {
         option_name: "udb.core.common.v1.pg_table",
@@ -308,6 +337,7 @@ const DOCUMENTED_OPTION_METADATA: &[ParserOptionMetadata] = &[
         description: "Marks a proto message as a mapped relational table.",
         example: r#"option (udb.core.common.v1.pg_table) = { table_name: "users" schema_name: "app" is_table: true };"#,
         accepted_keys: TABLE_KEYS,
+        numeric_keys: TABLE_NUMERIC_KEYS,
     },
     ParserOptionMetadata {
         option_name: "udb.core.common.v1.pg_column",
@@ -319,6 +349,7 @@ const DOCUMENTED_OPTION_METADATA: &[ParserOptionMetadata] = &[
         description: "Maps a proto field to a SQL column.",
         example: r#"string email = 2 [(udb.core.common.v1.pg_column) = { column_name: "email" sql_type: "TEXT" }];"#,
         accepted_keys: COLUMN_KEYS,
+        numeric_keys: NO_NUMERIC_KEYS,
     },
     ParserOptionMetadata {
         option_name: "udb.core.common.v1.vector_store",
@@ -330,6 +361,7 @@ const DOCUMENTED_OPTION_METADATA: &[ParserOptionMetadata] = &[
         description: "Projects a message into a vector store.",
         example: r#"option (udb.core.common.v1.vector_store) = { backend: VECTOR_BACKEND_QDRANT collection_name: "users" dimension: 1536 };"#,
         accepted_keys: VECTOR_KEYS,
+        numeric_keys: VECTOR_NUMERIC_KEYS,
     },
     ParserOptionMetadata {
         option_name: "udb.core.common.v1.graph_store",
@@ -341,6 +373,7 @@ const DOCUMENTED_OPTION_METADATA: &[ParserOptionMetadata] = &[
         description: "Projects a message into a graph store.",
         example: r#"option (udb.core.common.v1.graph_store) = { backend: GRAPH_BACKEND_NEO4J node_label: "User" id_field: "id" };"#,
         accepted_keys: GRAPH_KEYS,
+        numeric_keys: NO_NUMERIC_KEYS,
     },
     ParserOptionMetadata {
         option_name: "udb.core.common.v1.document_store",
@@ -352,6 +385,7 @@ const DOCUMENTED_OPTION_METADATA: &[ParserOptionMetadata] = &[
         description: "Projects a message into a document store.",
         example: r#"option (udb.core.common.v1.document_store) = { backend: NOSQL_BACKEND_MONGODB collection_name: "users" id_field: "id" };"#,
         accepted_keys: DOCUMENT_KEYS,
+        numeric_keys: DOCUMENT_NUMERIC_KEYS,
     },
     ParserOptionMetadata {
         option_name: "udb.core.common.v1.nosql_store",
@@ -363,6 +397,7 @@ const DOCUMENTED_OPTION_METADATA: &[ParserOptionMetadata] = &[
         description: "Declares a generic NoSQL store binding.",
         example: r#"option (udb.core.common.v1.nosql_store) = { backend: "mongodb" collection_name: "users" };"#,
         accepted_keys: GENERIC_STORE_KEYS,
+        numeric_keys: NO_NUMERIC_KEYS,
     },
     ParserOptionMetadata {
         option_name: "udb.core.common.v1.sql_store",
@@ -374,6 +409,7 @@ const DOCUMENTED_OPTION_METADATA: &[ParserOptionMetadata] = &[
         description: "Declares a generic SQL store binding.",
         example: r#"option (udb.core.common.v1.sql_store) = { backend: "postgres" table_name: "users" };"#,
         accepted_keys: GENERIC_STORE_KEYS,
+        numeric_keys: NO_NUMERIC_KEYS,
     },
     ParserOptionMetadata {
         option_name: "udb.core.common.v1.timeseries_store",
@@ -385,6 +421,7 @@ const DOCUMENTED_OPTION_METADATA: &[ParserOptionMetadata] = &[
         description: "Projects a message into a time-series store.",
         example: r#"option (udb.core.common.v1.timeseries_store) = { backend: TIMESERIES_BACKEND_TIMESCALEDB measurement_name: "usage" time_field: "created_at" };"#,
         accepted_keys: TIMESERIES_KEYS,
+        numeric_keys: TIMESERIES_NUMERIC_KEYS,
     },
     ParserOptionMetadata {
         option_name: "udb.core.common.v1.column_store",
@@ -396,6 +433,7 @@ const DOCUMENTED_OPTION_METADATA: &[ParserOptionMetadata] = &[
         description: "Projects a message into a column-oriented store.",
         example: r#"option (udb.core.common.v1.column_store) = { backend: COLUMN_BACKEND_CLICKHOUSE table_name: "events" partition_key: "tenant_id" };"#,
         accepted_keys: COLUMN_STORE_KEYS,
+        numeric_keys: COLUMN_STORE_NUMERIC_KEYS,
     },
     ParserOptionMetadata {
         option_name: "udb.core.common.v1.cache",
@@ -407,6 +445,7 @@ const DOCUMENTED_OPTION_METADATA: &[ParserOptionMetadata] = &[
         description: "Declares cache projection metadata for a message.",
         example: r#"option (udb.core.common.v1.cache) = { backend: CACHE_BACKEND_REDIS key_pattern: "user:{id}" ttl_seconds: 300 };"#,
         accepted_keys: CACHE_KEYS,
+        numeric_keys: CACHE_NUMERIC_KEYS,
     },
     ParserOptionMetadata {
         option_name: "udb.core.common.v1.storage",
@@ -418,6 +457,7 @@ const DOCUMENTED_OPTION_METADATA: &[ParserOptionMetadata] = &[
         description: "Marks a field as an object-storage key or URI.",
         example: r#"string object_key = 5 [(udb.core.common.v1.storage) = { backend: STORAGE_BACKEND_S3 bucket_env_key: "UDB_BUCKET" }];"#,
         accepted_keys: STORAGE_KEYS,
+        numeric_keys: STORAGE_NUMERIC_KEYS,
     },
     ParserOptionMetadata {
         option_name: "udb.core.common.v1.object_store",
@@ -429,6 +469,7 @@ const DOCUMENTED_OPTION_METADATA: &[ParserOptionMetadata] = &[
         description: "Declares a generic object-store binding.",
         example: r#"option (udb.core.common.v1.object_store) = { backend: "s3" bucket: "artifacts" };"#,
         accepted_keys: GENERIC_STORE_KEYS,
+        numeric_keys: NO_NUMERIC_KEYS,
     },
     ParserOptionMetadata {
         option_name: "udb.core.common.v1.model_registry",
@@ -440,6 +481,7 @@ const DOCUMENTED_OPTION_METADATA: &[ParserOptionMetadata] = &[
         description: "Declares model registry or artifact repository metadata.",
         example: r#"option (udb.core.common.v1.model_registry) = { backend: MODEL_BACKEND_MLFLOW experiment_name: "ranking" };"#,
         accepted_keys: MODEL_REGISTRY_KEYS,
+        numeric_keys: NO_NUMERIC_KEYS,
     },
     ParserOptionMetadata {
         option_name: "udb.core.common.v1.security",
@@ -451,6 +493,7 @@ const DOCUMENTED_OPTION_METADATA: &[ParserOptionMetadata] = &[
         description: "Attaches message-level security metadata.",
         example: r#"option (udb.core.common.v1.security) = { classification_level: "internal" audit_reads: true };"#,
         accepted_keys: SECURITY_KEYS,
+        numeric_keys: SECURITY_NUMERIC_KEYS,
     },
     ParserOptionMetadata {
         option_name: "udb.core.common.v1.column_security",
@@ -462,6 +505,7 @@ const DOCUMENTED_OPTION_METADATA: &[ParserOptionMetadata] = &[
         description: "Attaches structured field redaction and secret handling metadata.",
         example: r#"string password_hash = 3 [(udb.core.common.v1.column_security) = { secret_classification: SECRET_CLASSIFICATION_CREDENTIAL output_view: OUTPUT_VIEW_STORAGE_ONLY }];"#,
         accepted_keys: DB_COLUMN_SECURITY_KEYS,
+        numeric_keys: NO_NUMERIC_KEYS,
     },
     ParserOptionMetadata {
         option_name: "udb.core.common.v1.db_table_security",
@@ -473,6 +517,7 @@ const DOCUMENTED_OPTION_METADATA: &[ParserOptionMetadata] = &[
         description: "Attaches enterprise table isolation and retention metadata.",
         example: r#"option (udb.core.common.v1.db_table_security) = { tenant_column: "tenant_id" tenant_isolation_mode: "tenant" };"#,
         accepted_keys: TABLE_SECURITY_KEYS,
+        numeric_keys: TABLE_SECURITY_NUMERIC_KEYS,
     },
     ParserOptionMetadata {
         option_name: "udb.core.common.v1.db_column_security",
@@ -484,6 +529,7 @@ const DOCUMENTED_OPTION_METADATA: &[ParserOptionMetadata] = &[
         description: "Attaches enterprise column redaction and secret handling metadata.",
         example: r#"string password_hash = 3 [(udb.core.common.v1.db_column_security) = { secret_classification: SECRET_CLASSIFICATION_CREDENTIAL output_view: OUTPUT_VIEW_STORAGE_ONLY }];"#,
         accepted_keys: DB_COLUMN_SECURITY_KEYS,
+        numeric_keys: NO_NUMERIC_KEYS,
     },
     ParserOptionMetadata {
         option_name: "udb.core.common.v1.pii",
@@ -495,6 +541,7 @@ const DOCUMENTED_OPTION_METADATA: &[ParserOptionMetadata] = &[
         description: "Marks a field as personally identifiable information.",
         example: r#"string email = 2 [(udb.core.common.v1.pii) = true];"#,
         accepted_keys: FIELD_SECURITY_SCALAR_KEYS,
+        numeric_keys: NO_NUMERIC_KEYS,
     },
     ParserOptionMetadata {
         option_name: "udb.core.common.v1.encrypted_security",
@@ -506,6 +553,7 @@ const DOCUMENTED_OPTION_METADATA: &[ParserOptionMetadata] = &[
         description: "Marks a field as encrypted for security metadata.",
         example: r#"string token = 3 [(udb.core.common.v1.encrypted_security) = true];"#,
         accepted_keys: FIELD_SECURITY_SCALAR_KEYS,
+        numeric_keys: NO_NUMERIC_KEYS,
     },
     ParserOptionMetadata {
         option_name: "udb.core.common.v1.log_masked",
@@ -517,6 +565,7 @@ const DOCUMENTED_OPTION_METADATA: &[ParserOptionMetadata] = &[
         description: "Masks a field in log output.",
         example: r#"string email = 2 [(udb.core.common.v1.log_masked) = true];"#,
         accepted_keys: FIELD_SECURITY_SCALAR_KEYS,
+        numeric_keys: NO_NUMERIC_KEYS,
     },
     ParserOptionMetadata {
         option_name: "udb.core.common.v1.log_redacted",
@@ -528,6 +577,7 @@ const DOCUMENTED_OPTION_METADATA: &[ParserOptionMetadata] = &[
         description: "Redacts a field in log output.",
         example: r#"string token = 3 [(udb.core.common.v1.log_redacted) = true];"#,
         accepted_keys: FIELD_SECURITY_SCALAR_KEYS,
+        numeric_keys: NO_NUMERIC_KEYS,
     },
     ParserOptionMetadata {
         option_name: "udb.core.common.v1.sensitive",
@@ -539,6 +589,7 @@ const DOCUMENTED_OPTION_METADATA: &[ParserOptionMetadata] = &[
         description: "Marks a field as sensitive and log-masked.",
         example: r#"string token = 3 [(udb.core.common.v1.sensitive) = true];"#,
         accepted_keys: FIELD_SECURITY_SCALAR_KEYS,
+        numeric_keys: NO_NUMERIC_KEYS,
     },
     ParserOptionMetadata {
         option_name: "udb.core.common.v1.requires_consent",
@@ -550,6 +601,7 @@ const DOCUMENTED_OPTION_METADATA: &[ParserOptionMetadata] = &[
         description: "Marks a field as requiring consent.",
         example: r#"string email = 2 [(udb.core.common.v1.requires_consent) = true];"#,
         accepted_keys: FIELD_SECURITY_SCALAR_KEYS,
+        numeric_keys: NO_NUMERIC_KEYS,
     },
     ParserOptionMetadata {
         option_name: "udb.core.common.v1.data_purpose",
@@ -561,6 +613,7 @@ const DOCUMENTED_OPTION_METADATA: &[ParserOptionMetadata] = &[
         description: "Records the purpose attached to a field.",
         example: r#"string email = 2 [(udb.core.common.v1.data_purpose) = "login"];"#,
         accepted_keys: FIELD_SECURITY_SCALAR_KEYS,
+        numeric_keys: NO_NUMERIC_KEYS,
     },
     ParserOptionMetadata {
         option_name: "udb.core.common.v1.retention_days",
@@ -572,6 +625,7 @@ const DOCUMENTED_OPTION_METADATA: &[ParserOptionMetadata] = &[
         description: "Sets field-level retention metadata in days.",
         example: r#"string email = 2 [(udb.core.common.v1.retention_days) = 30];"#,
         accepted_keys: FIELD_SECURITY_SCALAR_KEYS,
+        numeric_keys: NO_NUMERIC_KEYS,
     },
     ParserOptionMetadata {
         option_name: "udb.core.common.v1.tokenized",
@@ -583,6 +637,7 @@ const DOCUMENTED_OPTION_METADATA: &[ParserOptionMetadata] = &[
         description: "Marks a field as tokenized or blind-indexed.",
         example: r#"string account_number = 4 [(udb.core.common.v1.tokenized) = true];"#,
         accepted_keys: FIELD_SECURITY_SCALAR_KEYS,
+        numeric_keys: NO_NUMERIC_KEYS,
     },
     ParserOptionMetadata {
         option_name: "udb.core.common.v1.security_classification",
@@ -594,6 +649,7 @@ const DOCUMENTED_OPTION_METADATA: &[ParserOptionMetadata] = &[
         description: "Sets field-level security classification metadata.",
         example: r#"string token = 3 [(udb.core.common.v1.security_classification) = SECRET_CLASSIFICATION_TOKEN];"#,
         accepted_keys: FIELD_SECURITY_SCALAR_KEYS,
+        numeric_keys: NO_NUMERIC_KEYS,
     },
     ParserOptionMetadata {
         option_name: "udb.core.common.v1.data_category",
@@ -605,6 +661,7 @@ const DOCUMENTED_OPTION_METADATA: &[ParserOptionMetadata] = &[
         description: "Sets field-level data category metadata.",
         example: r#"string email = 2 [(udb.core.common.v1.data_category) = DATA_CATEGORY_CONTACT];"#,
         accepted_keys: FIELD_SECURITY_SCALAR_KEYS,
+        numeric_keys: NO_NUMERIC_KEYS,
     },
     ParserOptionMetadata {
         option_name: "udb.core.common.v1.data_store",
@@ -616,6 +673,7 @@ const DOCUMENTED_OPTION_METADATA: &[ParserOptionMetadata] = &[
         description: "Declares a generic external data-store binding.",
         example: r#"option (udb.core.common.v1.data_store) = { store_kind: "search" backend: "opensearch" resource_name: "users" };"#,
         accepted_keys: GENERIC_STORE_KEYS,
+        numeric_keys: NO_NUMERIC_KEYS,
     },
 ];
 
@@ -734,20 +792,13 @@ fn normalize_option_name(option_name: &str) -> String {
 
 pub(super) fn is_numeric_annotation_key(key: &str) -> bool {
     let key = key.trim().to_ascii_lowercase();
-    matches!(
-        key.as_str(),
-        "dimension"
-            | "hnsw_ef_construction"
-            | "hnsw_m"
-            | "migration_order"
-            | "partition_premake"
-            | "partition_retention_months"
-            | "presigned_ttl_seconds"
-            | "replica_count"
-            | "retention_days"
-            | "shard_count"
-            | "ttl_seconds"
-    )
+    // Single-sourced from the metadata table: a key is numeric iff some
+    // documented option lists it among its `numeric_keys`. This cannot drift
+    // from the metadata because there is no separate hand-maintained list.
+    DOCUMENTED_OPTION_METADATA
+        .iter()
+        .flat_map(|meta| meta.numeric_keys.iter())
+        .any(|numeric| *numeric == key)
 }
 
 /// Declarative scalar-option applier.
@@ -1513,4 +1564,97 @@ fn scalar_entries(values: &HashMap<String, Vec<OptionValue>>) -> Vec<(String, St
         }
     }
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::BTreeSet;
+
+    /// The canonical set of numeric annotation keys. `is_numeric_annotation_key`
+    /// must agree exactly with this set, and so must the per-option
+    /// `numeric_keys` slices in `DOCUMENTED_OPTION_METADATA`. Neither side can
+    /// drift without failing one of the assertions below.
+    const EXPECTED_NUMERIC_KEYS: &[&str] = &[
+        "dimension",
+        "hnsw_ef_construction",
+        "hnsw_m",
+        "migration_order",
+        "partition_premake",
+        "partition_retention_months",
+        "presigned_ttl_seconds",
+        "replica_count",
+        "retention_days",
+        "shard_count",
+        "ttl_seconds",
+    ];
+
+    #[test]
+    fn numeric_keys_derived_from_metadata_match_documented_eleven() {
+        // Set built from the metadata table (what `is_numeric_annotation_key`
+        // consults) must equal exactly the documented 11 keys.
+        let derived: BTreeSet<&str> = DOCUMENTED_OPTION_METADATA
+            .iter()
+            .flat_map(|meta| meta.numeric_keys.iter().copied())
+            .collect();
+        let expected: BTreeSet<&str> = EXPECTED_NUMERIC_KEYS.iter().copied().collect();
+
+        assert_eq!(
+            derived, expected,
+            "metadata-derived numeric keys drifted from the documented 11"
+        );
+        assert_eq!(expected.len(), 11, "expected exactly 11 numeric keys");
+
+        // The public predicate is consistent with the same set, and every
+        // key it marks numeric is genuinely parsed as a number (same i32
+        // contract the parser's numeric-value lint enforces, via parse_i32).
+        for key in &expected {
+            assert!(
+                is_numeric_annotation_key(key),
+                "`{key}` should be recognized as numeric"
+            );
+            assert_eq!(
+                parse_i32("42"),
+                42,
+                "numeric key `{key}` must parse its value as i32"
+            );
+            assert!(
+                "42".trim().parse::<i32>().is_ok(),
+                "numeric key `{key}` value must satisfy the i32 lint contract"
+            );
+        }
+    }
+
+    #[test]
+    fn metadata_numeric_keys_are_subset_of_accepted_keys() {
+        // A numeric key must also be an accepted key of its own option, so the
+        // numeric flag describes a real parsed key rather than a typo.
+        for meta in DOCUMENTED_OPTION_METADATA {
+            for numeric in meta.numeric_keys {
+                assert!(
+                    meta.accepted_keys.contains(numeric),
+                    "numeric key `{}` is not in accepted_keys of `{}`",
+                    numeric,
+                    meta.option_name
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn non_numeric_keys_are_not_treated_as_numeric() {
+        for key in [
+            "table_name",
+            "backend",
+            "collection_name",
+            "tenant_column",
+            "ttl",
+            "",
+        ] {
+            assert!(
+                !is_numeric_annotation_key(key),
+                "`{key}` must not be numeric"
+            );
+        }
+    }
 }

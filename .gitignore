@@ -219,3 +219,6 @@ Thumbs.db
 # HL7v2 parser websuite downloads are regenerated from the tracked manifest.
 /tests/fixtures/hl7v2/websuite/generated/
 /tests/fixtures/hl7v2/websuite/report.json
+
+# Local ffmpeg binary cache; GitHub rejects this Windows executable (>100 MB).
+/third_party/ffmpeg/bin/windows/ffmpeg.exe

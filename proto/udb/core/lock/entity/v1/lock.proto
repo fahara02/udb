@@ -1,0 +1,98 @@
+syntax = "proto3";
+
+package udb.core.lock.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Lock.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/lock/entity/v1;lockv1";
+option java_package = "com.udb.core.lock.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Lock\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Lock\\Entity\\V1";
+
+// ---------------------------------------------------------------------------
+// Lock — durable bookkeeping row for a distributed application lock
+// (master-plan 9.2). The actual mutual-exclusion primitive is the portable
+// `udb_advisory_leases` row taken atomically at the SQL layer
+// (CanonicalStore::try_acquire_advisory_lease); THIS table is the auditable,
+// tenant-scoped record of who holds the lock and the monotone fencing token
+// that was handed out, so a slow/partitioned holder can be fenced off by a
+// stale token. RLS scopes rows to the current tenant.
+// ---------------------------------------------------------------------------
+message Lock {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "locks"
+    schema_name: "udb_lock"
+    migration_order: 1
+    is_table: true
+    comment: "Distributed application locks with fencing tokens (master-plan 9.2)"
+    soft_delete: false
+    audit_fields: true
+    enable_rls: true
+    rls_policies: {
+      policy_name: "tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text)"
+      permissive: true
+    }
+    indexes: {
+      index_name: "idx_locks_tenant_name_unique"
+      index_type: "BTREE"
+      unique: true
+      columns: "tenant_id"
+      columns: "lock_name"
+    }
+    indexes: {
+      index_name: "idx_locks_tenant_status"
+      index_type: "BTREE"
+      columns: "tenant_id"
+      columns: "status"
+    }
+    cdc_topic: "udb.lock.locks.cdc"
+    required_scope: "lock:read"
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "none"
+    retention_class: "lock.operational"
+    retention_days: 90
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
+
+  string lock_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "lock_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(64)" not_null: true index: { index_name: "idx_locks_tenant" index_type: "BTREE" } }];
+
+  // Application-supplied logical lock name (un-prefixed). The mutual-exclusion
+  // lease name is `tenant_id`-prefixed at acquisition so two tenants can hold
+  // the same logical name without colliding.
+  string lock_name = 3 [(udb.core.common.v1.pg_column) = { column_name: "lock_name" sql_type: "VARCHAR(255)" not_null: true }];
+
+  // Caller-chosen holder identity (instance id / worker id). Renew and Release
+  // require the same owner to present a non-stale fencing token.
+  string owner_id = 4 [(udb.core.common.v1.pg_column) = { column_name: "owner_id" sql_type: "VARCHAR(255)" not_null: true }];
+
+  // Monotonically increasing fencing token handed out on each grant. A holder
+  // presenting a token lower than the stored one has been fenced off and is
+  // rejected (failed_precondition). Sourced from the canonical outbox
+  // high-water mark (the same monotone counter write receipts advance).
+  int64 fencing_token = 5 [(udb.core.common.v1.pg_column) = { column_name: "fencing_token" sql_type: "BIGINT" not_null: true default_value: "0" }];
+
+  int32 lease_ttl_seconds = 6 [(udb.core.common.v1.pg_column) = { column_name: "lease_ttl_seconds" sql_type: "INTEGER" not_null: true default_value: "30" }];
+
+  // HELD | RELEASED — operational state for quota counting and audit.
+  string status = 7 [(udb.core.common.v1.pg_column) = { column_name: "status" sql_type: "VARCHAR(20)" not_null: true default_value: "'HELD'" index: { index_name: "idx_locks_status" index_type: "BTREE" } }];
+
+  google.protobuf.Timestamp acquired_at = 8 [(udb.core.common.v1.pg_column) = { column_name: "acquired_at" sql_type: "TIMESTAMPTZ" comment: "When the current holder acquired the lease" }];
+
+  google.protobuf.Timestamp expires_at = 9 [(udb.core.common.v1.pg_column) = { column_name: "expires_at" sql_type: "TIMESTAMPTZ" comment: "Lease expiry; a different owner may take over after this" }];
+
+  string metadata_json = 10 [(udb.core.common.v1.pg_column) = { column_name: "metadata_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'{}'::jsonb" comment: "Non-secret holder metadata for audit and routing" }];
+}

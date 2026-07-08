@@ -7855,6 +7855,7 @@ dependencies = [
  "memchr",
  "mongodb",
  "openidconnect",
+ "openssl",
  "openssl-sys",
  "opentelemetry",
  "opentelemetry-otlp",
@@ -7919,6 +7920,7 @@ dependencies = [
  "serde_json",
  "sha2 0.10.9",
  "tracing",
+ "uuid",
 ]
 
 [[package]]

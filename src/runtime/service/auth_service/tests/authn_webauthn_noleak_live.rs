@@ -5,7 +5,7 @@
 //! (the table's primary key). A duplicate `challenge_id` is a unique violation
 //! (`23505`), which the raw-sqlx fallback now classifies through
 //! `executor_utils::sqlx_error_to_status` instead of wrapping the raw error in
-//! `Status::internal`. This test forces that exact duplicate write against the
+//! a plain INTERNAL status. This test forces that exact duplicate write against the
 //! proto-derived `WebAuthnChallenge` table and asserts the classified status is
 //! `AlreadyExists` and carries NO raw DB text (no "duplicate key" / "23505" /
 //! "constraint" leak).

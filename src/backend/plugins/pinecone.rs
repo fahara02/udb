@@ -30,9 +30,12 @@ impl crate::runtime::executors::handle::DispatchFactory for PineconePlugin {
         let client = runtime
             .pinecone_for_instance(instance_name)
             .ok_or_else(|| {
-                tonic::Status::failed_precondition(format!(
-                    "Pinecone instance '{instance_name}' not configured (set UDB_PINECONE_DSN)"
-                ))
+                super::dispatch_instance_not_configured_status(
+                    "pinecone",
+                    format!(
+                        "Pinecone instance '{instance_name}' not configured (set UDB_PINECONE_DSN)"
+                    ),
+                )
             })?
             .clone();
         Ok(

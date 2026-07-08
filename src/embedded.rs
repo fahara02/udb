@@ -12,6 +12,7 @@ use crate::proto::{
 };
 use crate::runtime::config::UdbConfig;
 use crate::runtime::core::DataBrokerRuntime;
+use crate::runtime::executor_utils::invalid_argument_fields;
 use crate::runtime::metrics::PrometheusMetrics;
 use crate::runtime::service::DataBrokerService;
 use crate::security::AbacPolicy;
@@ -170,8 +171,12 @@ fn insert_ascii(
     if value.trim().is_empty() {
         return Ok(());
     }
-    let value = tonic::metadata::MetadataValue::try_from(value)
-        .map_err(|_| Status::invalid_argument(format!("{key} is not valid ASCII metadata")))?;
+    let value = tonic::metadata::MetadataValue::try_from(value).map_err(|_| {
+        invalid_argument_fields(
+            format!("{key} is not valid ASCII metadata"),
+            [(key, "must be valid ASCII gRPC metadata")],
+        )
+    })?;
     metadata.insert(key, value);
     Ok(())
 }
@@ -179,6 +184,17 @@ fn insert_ascii(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
+
+    fn decode_detail(status: &Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
 
     #[tokio::test]
     async fn embedded_runtime_serves_health_without_binding_port() {
@@ -221,6 +237,15 @@ mod tests {
         )
         .expect_err("newlines are invalid gRPC metadata");
         assert_eq!(err.code(), tonic::Code::InvalidArgument);
+        assert_eq!(err.message(), "x-tenant-id is not valid ASCII metadata");
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, "x-tenant-id");
+        assert_eq!(
+            detail.field_violations[0].description,
+            "must be valid ASCII gRPC metadata"
+        );
     }
 
     #[test]

@@ -34,7 +34,8 @@ use crate::runtime::core::{
     set_request_local_settings, validate_pg_mutation_sql, validate_pg_read_sql,
 };
 use crate::runtime::executor_utils::{
-    build_probe, json_required_str, sqlx_error_to_status, with_executor_timeout,
+    build_probe, capability_status, invalid_argument_fields, json_required_str,
+    sqlx_error_to_status, with_executor_timeout,
 };
 use crate::runtime::executors::{
     BackendExecutor, BackendHealth, BackendProbe, MutationExecutor, ObjectExecutor, QueryExecutor,
@@ -103,6 +104,31 @@ impl BackendHealth for PostgresExecutor {
     }
 }
 
+fn invalid_postgres_request_json_status(err: serde_json::Error) -> tonic::Status {
+    invalid_argument_fields(
+        format!("invalid request json: {err}"),
+        [(
+            "request_json",
+            "must be valid JSON for PostgreSQL generic dispatch",
+        )],
+    )
+}
+
+fn postgres_executor_internal_status(
+    operation: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    crate::runtime::executor_utils::internal_status("postgres", operation, message)
+}
+
+fn encode_postgres_response(
+    operation: &'static str,
+    value: &JsonValue,
+) -> Result<String, tonic::Status> {
+    serde_json::to_string(value)
+        .map_err(|e| postgres_executor_internal_status(operation, e.to_string()))
+}
+
 impl QueryExecutor for PostgresExecutor {
     /// `{"sql":"SELECT ...","params":[...]}` — read-only single statement.
     ///
@@ -112,9 +138,8 @@ impl QueryExecutor for PostgresExecutor {
     /// the SQL runs directly on the pool (probe/internal callers).
     async fn query(&self, request_json: &str) -> Result<String, tonic::Status> {
         with_executor_timeout("PostgreSQL", "query", async {
-            let spec: JsonValue = serde_json::from_str(request_json).map_err(|e| {
-                tonic::Status::invalid_argument(format!("invalid request json: {e}"))
-            })?;
+            let spec: JsonValue =
+                serde_json::from_str(request_json).map_err(invalid_postgres_request_json_status)?;
             let sql = json_required_str(&spec, "sql")?;
             validate_pg_read_sql(sql)?;
             let params = dispatch_params(&spec)?;
@@ -122,7 +147,10 @@ impl QueryExecutor for PostgresExecutor {
 
             let rows = if let Some(ctx) = &self.context {
                 let mut tx = self.pool.begin().await.map_err(|err| {
-                    tonic::Status::internal(format!("PostgreSQL transaction start failed: {err}"))
+                    postgres_executor_internal_status(
+                        "query_transaction_start",
+                        format!("PostgreSQL transaction start failed: {err}"),
+                    )
                 })?;
                 set_request_local_settings(&mut tx, ctx).await?;
                 let rows = bind_typed_generic_pg_params(
@@ -133,10 +161,16 @@ impl QueryExecutor for PostgresExecutor {
                 .fetch_all(&mut *tx)
                 .await
                 .map_err(|err| {
-                    tonic::Status::internal(format!("PostgreSQL generic query failed: {err}"))
+                    postgres_executor_internal_status(
+                        "query",
+                        format!("PostgreSQL generic query failed: {err}"),
+                    )
                 })?;
                 tx.commit().await.map_err(|err| {
-                    tonic::Status::internal(format!("PostgreSQL transaction commit failed: {err}"))
+                    postgres_executor_internal_status(
+                        "query_transaction_commit",
+                        format!("PostgreSQL transaction commit failed: {err}"),
+                    )
                 })?;
                 rows
             } else {
@@ -144,11 +178,14 @@ impl QueryExecutor for PostgresExecutor {
                     .fetch_all(&self.pool)
                     .await
                     .map_err(|err| {
-                        tonic::Status::internal(format!("PostgreSQL generic query failed: {err}"))
+                        postgres_executor_internal_status(
+                            "query",
+                            format!("PostgreSQL generic query failed: {err}"),
+                        )
                     })?
             };
-            let rows_json = pg_rows_to_json(rows)?;
-            serde_json::to_string(&rows_json).map_err(|e| tonic::Status::internal(e.to_string()))
+            let rows_json = JsonValue::Array(pg_rows_to_json(rows)?);
+            encode_postgres_response("query_response_encode", &rows_json)
         })
         .await
     }
@@ -163,9 +200,8 @@ impl MutationExecutor for PostgresExecutor {
     /// tenant/project/purpose values as the typed Upsert RPC.
     async fn mutate(&self, request_json: &str) -> Result<String, tonic::Status> {
         with_executor_timeout("PostgreSQL", "mutate", async {
-            let spec: JsonValue = serde_json::from_str(request_json).map_err(|e| {
-                tonic::Status::invalid_argument(format!("invalid request json: {e}"))
-            })?;
+            let spec: JsonValue =
+                serde_json::from_str(request_json).map_err(invalid_postgres_request_json_status)?;
             let sql = json_required_str(&spec, "sql")?;
             validate_pg_mutation_sql(sql)?;
             let params = dispatch_params(&spec)?;
@@ -177,7 +213,10 @@ impl MutationExecutor for PostgresExecutor {
 
             if let Some(ctx) = &self.context {
                 let mut tx = self.pool.begin().await.map_err(|err| {
-                    tonic::Status::internal(format!("PostgreSQL transaction start failed: {err}"))
+                    postgres_executor_internal_status(
+                        "mutate_transaction_start",
+                        format!("PostgreSQL transaction start failed: {err}"),
+                    )
                 })?;
                 set_request_local_settings(&mut tx, ctx).await?;
                 let result = if return_rows {
@@ -211,7 +250,10 @@ impl MutationExecutor for PostgresExecutor {
                     serde_json::json!({ "affected_rows": result.rows_affected() }).to_string()
                 };
                 tx.commit().await.map_err(|err| {
-                    tonic::Status::internal(format!("PostgreSQL transaction commit failed: {err}"))
+                    postgres_executor_internal_status(
+                        "mutate_transaction_commit",
+                        format!("PostgreSQL transaction commit failed: {err}"),
+                    )
                 })?;
                 return Ok(result);
             }
@@ -247,7 +289,10 @@ impl MutationExecutor for PostgresExecutor {
 
 impl SearchExecutor for PostgresExecutor {
     async fn search(&self, _request_json: &str) -> Result<String, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "postgres",
+            "search",
+            "vector_search",
             "postgres does not support vector search; use query",
         ))
     }
@@ -255,7 +300,10 @@ impl SearchExecutor for PostgresExecutor {
 
 impl ObjectExecutor for PostgresExecutor {
     async fn get_object(&self, _request_json: &str) -> Result<Vec<u8>, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "postgres",
+            "get_object",
+            "object_store",
             "postgres is not an object store",
         ))
     }
@@ -264,7 +312,10 @@ impl ObjectExecutor for PostgresExecutor {
         _request_json: &str,
         _bytes: Vec<u8>,
     ) -> Result<String, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "postgres",
+            "put_object",
+            "object_store",
             "postgres is not an object store",
         ))
     }
@@ -278,17 +329,26 @@ impl ResourceAdminExecutor for PostgresExecutor {
         _resource_name: &str,
         _spec_json: &str,
     ) -> Result<(), tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "postgres",
+            "ensure_resource",
+            "resource_lifecycle",
             "postgres resource lifecycle is managed via catalog migrations",
         ))
     }
     async fn drop_resource(&self, _resource_name: &str) -> Result<(), tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "postgres",
+            "drop_resource",
+            "resource_lifecycle",
             "postgres resource lifecycle is managed via catalog migrations",
         ))
     }
     async fn list_resources(&self) -> Result<Vec<String>, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "postgres",
+            "list_resources",
+            "resource_lifecycle",
             "postgres resource lifecycle is managed via catalog migrations",
         ))
     }
@@ -299,7 +359,10 @@ impl BackendExecutor for PostgresExecutor {
     // (saga/outbox + the typed transaction RPC); the generic-dispatch executor
     // does not expose a bespoke transaction here.
     async fn transaction(&self, _request_json: &str) -> Result<String, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "postgres",
+            "transaction",
+            "typed_transaction_rpc",
             "use the typed transaction RPC for relational transactions",
         ))
     }
@@ -308,5 +371,57 @@ impl BackendExecutor for PostgresExecutor {
             "postgres",
             <Self as BackendHealth>::ping(self).await,
         ))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
+
+    fn decode_detail(status: &tonic::Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_internal_detail(status: &tonic::Status, operation: &str, message: &str) {
+        assert_eq!(status.code(), tonic::Code::Internal);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "postgres");
+        assert_eq!(detail.operation, operation);
+        assert!(!detail.retryable);
+    }
+
+    #[test]
+    fn postgres_executor_internal_status_carries_typed_detail() {
+        let status = postgres_executor_internal_status(
+            "query_response_encode",
+            "PostgreSQL response encode failed",
+        );
+        assert_internal_detail(
+            &status,
+            "query_response_encode",
+            "PostgreSQL response encode failed",
+        );
+    }
+
+    #[test]
+    fn request_json_validation_carries_field_violation() {
+        let err = serde_json::from_str::<JsonValue>("{")
+            .map_err(invalid_postgres_request_json_status)
+            .unwrap_err();
+        assert_eq!(err.code(), tonic::Code::InvalidArgument);
+        assert!(err.message().starts_with("invalid request json:"));
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, "request_json");
     }
 }

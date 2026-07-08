@@ -1119,7 +1119,7 @@ fn broker_runtime_contracts_plan_sql_cache_vector_object_and_dispatch() {
         },
     );
     assert!(delete.passed(), "{:?}", delete.errors);
-    assert_eq!(delete.parameter_columns, vec!["job_id", "tenant_id"]);
+    assert_eq!(delete.parameter_columns, vec!["tenant_id", "job_id"]);
     assert!(
         delete
             .sql

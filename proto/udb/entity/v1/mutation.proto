@@ -9,6 +9,7 @@ option php_namespace = "Udb\\Entity\\V1";
 option php_metadata_namespace = "Udb\\GPBMetadata\\Entity\\V1";
 
 import "udb/entity/v1/operation.proto";
+import "udb/entity/v1/consistency.proto";
 
 message MutationResponse {
   string mutation_id = 1;
@@ -22,4 +23,7 @@ message MutationResponse {
   string resource_version = 8;
   map<string, string> metadata = 9;
   repeated OperationWarning warnings = 10;
+  // Typed write receipt. Kept in lockstep with write_receipt_json for clients
+  // that can consume protobuf messages directly.
+  WriteReceipt write_receipt = 11;
 }

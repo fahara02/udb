@@ -287,6 +287,46 @@ message GetDeliveryStatsResponse {
   repeated ChannelStats by_channel = 5;
 }
 
+// ── Delivery reporting (master-plan 9.13) ───────────────────────────────────
+
+// ReportDelivery — an internal/SDK seam. An authenticated caller (the leader
+// delivery worker) or a provider webhook bridge reports the terminal per-channel
+// delivery outcome for a previously-sent NotificationLog. The handler upserts the
+// matching NotificationDeliveryAttempt row and emits
+// `udb.notification.delivery.<status>.v1` to the outbox.
+message ReportDeliveryRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "notification"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string log_id = 2; // The NotificationLog (intent) this outcome is for.
+  udb.core.notification.entity.v1.NotificationChannel channel = 3;
+  string provider = 4; // SES | SMTP | TWILIO | FCM | …
+  udb.core.notification.entity.v1.NotificationStatus status = 5; // queued|sent|delivered|failed
+  string provider_message_id = 6;
+  string error_message = 7;
+  udb.core.common.v1.RequestContext context = 8;
+}
+
+message ReportDeliveryResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "notification"
+    generate_minimal_example: true
+  };
+  udb.core.notification.entity.v1.NotificationDeliveryAttempt attempt = 1;
+}
+
 // ── User notification preferences ──────────────────────────────────────────
 
 message SetPreferenceRequest {

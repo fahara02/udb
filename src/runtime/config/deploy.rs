@@ -45,7 +45,7 @@ impl DeployMode {
 
 /// Connection profile that combines a raw DSN (or its components) with a
 /// deploy mode.  Used as the canonical input for building backend connections.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(default)]
 pub struct BackendDeployConfig {
     /// Deploy mode: `SelfHosted` or `Cloud`.
@@ -58,6 +58,41 @@ pub struct BackendDeployConfig {
     pub tls_override: Option<bool>,
     /// Optional display label (e.g. `"primary"`, `"qdrant-cloud-eu"`) for logs.
     pub label: String,
+}
+
+// Manual `Debug` redacting the raw `dsn`, which routinely embeds userinfo
+// credentials. Presence is preserved (`Some("[redacted]")`/`None`) for
+// debuggability without leaking the connection string.
+impl std::fmt::Debug for BackendDeployConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("BackendDeployConfig")
+            .field("mode", &self.mode)
+            .field("dsn", &self.dsn.as_ref().map(|_| "[redacted]"))
+            .field("tls_override", &self.tls_override)
+            .field("label", &self.label)
+            .finish()
+    }
+}
+
+#[cfg(test)]
+mod secret_no_leak {
+    use super::*;
+
+    #[test]
+    fn backend_deploy_config_debug_redacts_dsn() {
+        let canary = "udb-canary-SECRET";
+        let cfg = BackendDeployConfig {
+            dsn: Some(format!("postgres://u:{canary}@h/db")),
+            label: "primary".to_string(),
+            ..Default::default()
+        };
+        let dbg = format!("{cfg:?}");
+        assert!(
+            !dbg.contains(canary),
+            "BackendDeployConfig leaked a secret: {dbg}"
+        );
+        assert!(dbg.contains("primary"), "non-secret label was dropped");
+    }
 }
 
 impl BackendDeployConfig {

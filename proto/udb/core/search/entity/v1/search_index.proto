@@ -1,0 +1,110 @@
+syntax = "proto3";
+
+package udb.core.search.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Search.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/search/entity/v1;searchv1";
+option java_package = "com.udb.core.search.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Search\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Search\\Entity\\V1";
+
+// ---------------------------------------------------------------------------
+// SearchIndex — durable, tenant-scoped registration of a full-text / vector /
+// hybrid index over a source entity (master-plan 9.5 — "one search box over
+// everything"). THIS row is only the bookkeeping record: which source entity is
+// indexed, on which search backend, with what vector dimensionality, and the
+// resolved tenant column of the SOURCE table. The actual index lives in the
+// backing search engine (Qdrant collection / Elasticsearch index). A
+// SearchIndex is created ONLY when the source table resolves a tenant column,
+// so a Search can always inject a server-side tenant predicate (fail closed).
+// RLS scopes rows to the current tenant.
+// ---------------------------------------------------------------------------
+message SearchIndex {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "search_indexes"
+    schema_name: "udb_search"
+    migration_order: 1
+    is_table: true
+    comment: "Tenant-scoped full-text/vector/hybrid index registrations (master-plan 9.5)"
+    soft_delete: false
+    audit_fields: true
+    enable_rls: true
+    rls_policies: {
+      policy_name: "tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text)"
+      permissive: true
+    }
+    indexes: {
+      index_name: "idx_search_indexes_tenant_name_unique"
+      index_type: "BTREE"
+      unique: true
+      columns: "tenant_id"
+      columns: "index_name"
+    }
+    indexes: {
+      index_name: "idx_search_indexes_tenant_source"
+      index_type: "BTREE"
+      columns: "tenant_id"
+      columns: "source_message_type"
+    }
+    cdc_topic: "udb.search.search_indexes.cdc"
+    required_scope: "search:read"
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "none"
+    retention_class: "search.operational"
+    retention_days: 365
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
+
+  string index_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "index_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(64)" not_null: true index: { index_name: "idx_search_indexes_tenant" index_type: "BTREE" } }];
+
+  // Application-supplied logical index name, unique within a tenant.
+  string index_name = 3 [(udb.core.common.v1.pg_column) = { column_name: "index_name" sql_type: "VARCHAR(255)" not_null: true }];
+
+  // Fully-qualified proto message type of the source entity being indexed
+  // (e.g. "acme.crm.entity.v1.Contact"). Resolved against the embedded manifest
+  // at CreateIndex time so its tenant column can be recorded.
+  string source_message_type = 4 [(udb.core.common.v1.pg_column) = { column_name: "source_message_type" sql_type: "VARCHAR(512)" not_null: true }];
+
+  // Search backend that physically holds the index: "qdrant" | "elasticsearch".
+  string backend = 5 [(udb.core.common.v1.pg_column) = { column_name: "backend" sql_type: "VARCHAR(64)" not_null: true }];
+
+  // Backend resource name (Qdrant collection / Elasticsearch index) the engine
+  // queries. Defaults to the source entity collection when unset.
+  string resource_name = 6 [(udb.core.common.v1.pg_column) = { column_name: "resource_name" sql_type: "VARCHAR(255)" not_null: true default_value: "''" }];
+
+  // Dense-vector dimensionality (0 for a full-text-only index).
+  int32 vector_dims = 7 [(udb.core.common.v1.pg_column) = { column_name: "vector_dims" sql_type: "INTEGER" not_null: true default_value: "0" }];
+
+  // The SOURCE table's resolved tenant column, captured at create time via the
+  // shared catalog resolver. A SearchIndex cannot exist without it, so every
+  // Search has a server-side tenant predicate to inject (fail closed).
+  string tenant_column = 8 [(udb.core.common.v1.pg_column) = { column_name: "tenant_column" sql_type: "VARCHAR(255)" not_null: true }];
+
+  // The source entity's CDC topic; the per-index freshness consumer tails this
+  // tenant-scoped stream to keep the engine index fresh on change.
+  string source_cdc_topic = 9 [(udb.core.common.v1.pg_column) = { column_name: "source_cdc_topic" sql_type: "VARCHAR(255)" not_null: true default_value: "''" }];
+
+  // ACTIVE | REINDEXING | DELETED — operational state.
+  string status = 10 [(udb.core.common.v1.pg_column) = { column_name: "status" sql_type: "VARCHAR(20)" not_null: true default_value: "'ACTIVE'" index: { index_name: "idx_search_indexes_status" index_type: "BTREE" } }];
+
+  google.protobuf.Timestamp created_at = 11 [(udb.core.common.v1.pg_column) = { column_name: "created_at" sql_type: "TIMESTAMPTZ" comment: "When the index was registered" }];
+
+  google.protobuf.Timestamp updated_at = 12 [(udb.core.common.v1.pg_column) = { column_name: "updated_at" sql_type: "TIMESTAMPTZ" comment: "Last status/registration change" }];
+
+  string metadata_json = 13 [(udb.core.common.v1.pg_column) = { column_name: "metadata_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'{}'::jsonb" comment: "Non-secret index configuration metadata" }];
+}

@@ -1,0 +1,447 @@
+syntax = "proto3";
+
+package udb.core.workflow.services.v1;
+
+import "google/api/annotations.proto";
+import "udb/core/common/v1/dto.proto";
+import "udb/core/common/v1/security.proto";
+import "udb/core/workflow/entity/v1/workflow_instance.proto";
+
+option csharp_namespace = "udb.core.Workflow.Services.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/workflow/services/v1;workflowservicev1";
+option java_package = "com.udb.core.workflow.services.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Workflow\\Services\\V1";
+option php_namespace = "Udb\\Core\\Workflow\\Services\\V1";
+
+// WorkflowService (master-plan 9.12) — durable multi-step operations with
+// compensation, exposed as a first-class native service. A workflow is a durable,
+// tenant-scoped instance handed to the EXISTING saga engine (`runtime::saga`):
+// forward progress is driven by the leader-elected workflow tick
+// (`FOR UPDATE SKIP LOCKED`, one advancer cluster-wide, fires transition events
+// only), and cancellation reuses the established saga compensation (reverse-order)
+// machinery rather than reimplementing it. Every state transition emits one
+// versioned `udb.workflow.<state>.v1` outbox event.
+service WorkflowService {
+  option (udb.core.common.v1.native_service) = {
+    service_id: "workflow"
+    logical_service_id: "workflow"
+    proto_service_id: "workflow"
+    display_name: "Workflows"
+    category: "workflow"
+    default_enabled: true
+    requires_postgres: true
+    control_plane_listener_allowed: true
+    sdk_facade_name: "workflow"
+    cli_scaffold_group: "workflow"
+    health_check_ref: "workflow"
+    capability_ref: "native.workflow"
+  };
+  option (udb.core.common.v1.service_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "workflow"
+    generate_minimal_example: true
+  };
+  option (udb.core.common.v1.service_cli_scaffold) = {
+    scaffold_package: "workflow"
+    import_path: "udb/native/workflow"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+    generated_files: "udb.native.workflow.config"
+    required_native_services: "workflow"
+    secret_placeholders: "UDB_API_KEY"
+    smoke_test_command: "udb native lint"
+  };
+  option (udb.core.common.v1.service_dependency_contract) = {
+    required_native_services: "workflow"
+    required_backends: "postgres"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+  };
+
+  // Start a durable workflow instance and hand it to the saga engine. The instance
+  // is persisted before any forward step runs, so it survives a restart.
+  rpc StartWorkflow(StartWorkflowRequest) returns (StartWorkflowResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:workflow:start-workflow"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "workflow.StartWorkflow"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "start_workflow" rest_operation_id: "startWorkflow"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "workflow"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "workflow"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "workflow.StartWorkflow"
+      outbox_topic: "udb.workflow.started.v1"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/workflows:start"
+      body: "*"
+    };
+  }
+
+  // Fetch a single workflow instance by id (tenant-scoped).
+  rpc GetWorkflow(GetWorkflowRequest) returns (GetWorkflowResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:workflow:get-workflow"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "workflow.GetWorkflow"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "get_workflow" rest_operation_id: "getWorkflow"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "workflow"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "workflow"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      get: "/v1/workflows/{workflow_id}"
+    };
+  }
+
+  // List workflow instances for the verified tenant, optionally filtered by status.
+  rpc ListWorkflows(ListWorkflowsRequest) returns (ListWorkflowsResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:workflow:list-workflows"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "workflow.ListWorkflows"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "list_workflows" rest_operation_id: "listWorkflows"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "workflow"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "workflow"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      get: "/v1/workflows"
+    };
+  }
+
+  // Cancel a workflow and trigger the saga compensation path (reverse-order). The
+  // instance moves to COMPENSATING and the EXISTING recovery worker undoes the
+  // recorded side effects — this RPC never reimplements compensation.
+  rpc CancelWorkflow(CancelWorkflowRequest) returns (CancelWorkflowResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:workflow:cancel-workflow"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "workflow.CancelWorkflow"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "cancel_workflow" rest_operation_id: "cancelWorkflow"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "workflow"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "workflow"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "workflow.CancelWorkflow"
+      outbox_topic: "udb.workflow.cancelled.v1"
+      partition_key_field: "workflow_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/workflows/{workflow_id}:cancel"
+      body: "*"
+    };
+  }
+
+  // Deliver an external signal to a waiting workflow step, resuming forward
+  // progress (the durable equivalent of completing a blocked step).
+  rpc SignalWorkflow(SignalWorkflowRequest) returns (SignalWorkflowResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:workflow:signal-workflow"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "workflow.SignalWorkflow"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "signal_workflow" rest_operation_id: "signalWorkflow"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "workflow"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "workflow"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "workflow.SignalWorkflow"
+      outbox_topic: "udb.workflow.signaled.v1"
+      partition_key_field: "workflow_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/workflows/{workflow_id}:signal"
+      body: "*"
+    };
+  }
+}
+
+message StartWorkflowRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "workflow"
+    generate_minimal_example: true
+  };
+  // Verified against the bearer/claim tenant; cross-tenant values are rejected.
+  string tenant_id = 1;
+  string project_id = 2;
+  // Application workflow type (the discriminator).
+  string workflow_type = 3;
+  // Number of forward steps (clamped to the service's bounds).
+  int32 total_steps = 4;
+  // Opaque JSON payload delivered with every transition event.
+  string payload = 5;
+  // Reverse-order compensation payloads (JSON array) handed to the saga engine.
+  string compensations = 6;
+  string correlation_id = 7;
+}
+
+message StartWorkflowResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "workflow"
+    generate_minimal_example: true
+  };
+  string workflow_id = 1;
+  string message = 2;
+  udb.core.common.v1.ApiError error = 3;
+}
+
+message GetWorkflowRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "workflow"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string workflow_id = 2;
+}
+
+message GetWorkflowResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "workflow"
+    generate_minimal_example: true
+  };
+  udb.core.workflow.entity.v1.WorkflowInstance workflow = 1;
+  udb.core.common.v1.ApiError error = 2;
+}
+
+message ListWorkflowsRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "workflow"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  // Optional status filter (e.g. "RUNNING"); empty returns all non-deleted rows.
+  string status = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+  // Opaque pagination token returned by ListWorkflowsResponse.next_page_token.
+  string page_token = 5;
+}
+
+message ListWorkflowsResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "workflow"
+    generate_minimal_example: true
+  };
+  repeated udb.core.workflow.entity.v1.WorkflowInstance workflows = 1;
+  int32 total_count = 2;
+  udb.core.common.v1.ApiError error = 3;
+  // Opaque token for the next page; empty when no more workflows are available.
+  string next_page_token = 4;
+}
+
+message CancelWorkflowRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "workflow"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string workflow_id = 2;
+  string reason = 3;
+}
+
+message CancelWorkflowResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "workflow"
+    generate_minimal_example: true
+  };
+  string message = 1;
+  udb.core.common.v1.ApiError error = 2;
+}
+
+message SignalWorkflowRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "workflow"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string workflow_id = 2;
+  string signal_name = 3;
+  string signal_payload = 4;
+}
+
+message SignalWorkflowResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "workflow"
+    generate_minimal_example: true
+  };
+  string message = 1;
+  udb.core.common.v1.ApiError error = 2;
+}

@@ -17,8 +17,62 @@ use crate::generation::{CatalogManifest, ManifestColumn, ManifestTable};
 use crate::proto::{Mutation, SelectRequest, UpsertRequest};
 
 use super::executor_utils::{
-    json_f64, json_i64, json_scalar_to_string, qi_runtime, reject_plan, struct_to_json,
+    invalid_argument_fields, json_scalar_to_string, qi_runtime, reject_plan, struct_to_json,
 };
+
+fn postgres_invalid_field(
+    field: impl Into<String>,
+    description: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    invalid_argument_fields(message, [(field.into(), description.into())])
+}
+
+fn join_fusion_missing_tenant_column_status(table: &ManifestTable) -> tonic::Status {
+    crate::runtime::executor_utils::schema_status(
+        tonic::Code::FailedPrecondition,
+        "postgres",
+        "join_fusion",
+        "tenant_column_required",
+        format!(
+            "join fusion cannot safely select scoped table {}.{} without a tenant column",
+            table.schema, table.table
+        ),
+    )
+}
+
+fn postgres_internal_status(
+    operation: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    crate::runtime::executor_utils::internal_status("postgres", operation, message)
+}
+
+fn postgres_json_i64(field: &str, value: &JsonValue) -> Result<i64, tonic::Status> {
+    value
+        .as_i64()
+        .or_else(|| value.as_str()?.parse().ok())
+        .ok_or_else(|| {
+            postgres_invalid_field(
+                field,
+                "must be an integer or integer string",
+                format!("expected integer, got {value}"),
+            )
+        })
+}
+
+fn postgres_json_f64(field: &str, value: &JsonValue) -> Result<f64, tonic::Status> {
+    value
+        .as_f64()
+        .or_else(|| value.as_str()?.parse().ok())
+        .ok_or_else(|| {
+            postgres_invalid_field(
+                field,
+                "must be a number or numeric string",
+                format!("expected number, got {value}"),
+            )
+        })
+}
 
 // ── Transaction plan execution ────────────────────────────────────────────────
 
@@ -32,13 +86,20 @@ pub(crate) async fn execute_tx_plan(
     errors: &[String],
 ) -> Result<u64, tonic::Status> {
     reject_plan(errors)?;
-    let table = table_for_message(manifest, message_type)
-        .ok_or_else(|| tonic::Status::invalid_argument("unknown message_type"))?;
+    let table = table_for_message(manifest, message_type).ok_or_else(|| {
+        postgres_invalid_field(
+            "message_type",
+            "must match a manifest table message type",
+            "unknown message_type",
+        )
+    })?;
     let query = bind_values(sqlx::query(sql), table, columns, values)?;
-    let result = query
-        .execute(&mut **tx)
-        .await
-        .map_err(|err| tonic::Status::internal(format!("transaction mutation failed: {err}")))?;
+    let result = query.execute(&mut **tx).await.map_err(|err| {
+        postgres_internal_status(
+            "execute_tx_plan",
+            format!("transaction mutation failed: {err}"),
+        )
+    })?;
     Ok(result.rows_affected())
 }
 
@@ -56,13 +117,17 @@ pub(crate) fn build_join_fusion_sql(
     filter: &JsonValue,
 ) -> Result<JoinFusionPlan, tonic::Status> {
     if context.tenant_id.trim().is_empty() {
-        return Err(tonic::Status::invalid_argument(
+        return Err(postgres_invalid_field(
+            "tenant_id",
+            "must be non-empty for join fusion",
             "tenant_id is required for join fusion",
         ));
     }
     let message_types = split_join_message_types(&request.message_type);
     if message_types.len() < 2 {
-        return Err(tonic::Status::invalid_argument(
+        return Err(postgres_invalid_field(
+            "message_type",
+            "must contain at least two comma- or plus-separated message types",
             "join fusion requires at least two message types",
         ));
     }
@@ -70,7 +135,11 @@ pub(crate) fn build_join_fusion_sql(
         .iter()
         .map(|message_type| {
             table_for_message(manifest, message_type).ok_or_else(|| {
-                tonic::Status::invalid_argument(format!("unknown message_type {message_type}"))
+                postgres_invalid_field(
+                    "message_type",
+                    "must match a manifest table message type",
+                    format!("unknown message_type {message_type}"),
+                )
             })
         })
         .collect::<Result<Vec<_>, _>>()?;
@@ -93,10 +162,14 @@ pub(crate) fn build_join_fusion_sql(
             &aliases[idx],
         )
         .ok_or_else(|| {
-            tonic::Status::invalid_argument(format!(
-                "no foreign key path found for join fusion target {}",
-                message_types[idx]
-            ))
+            postgres_invalid_field(
+                "message_type",
+                "joined message types must have a foreign key path",
+                format!(
+                    "no foreign key path found for join fusion target {}",
+                    message_types[idx]
+                ),
+            )
         })?;
         sql.push_str(" JOIN ");
         sql.push_str(&format!(
@@ -113,10 +186,7 @@ pub(crate) fn build_join_fusion_sql(
     for (table_idx, table) in tables.iter().enumerate() {
         let Some(column) = tenant_column_ref(table) else {
             if table_requires_tenant_column(table) {
-                return Err(tonic::Status::failed_precondition(format!(
-                    "join fusion cannot safely select scoped table {}.{} without a tenant column",
-                    table.schema, table.table
-                )));
+                return Err(join_fusion_missing_tenant_column_status(table));
             }
             continue;
         };
@@ -131,7 +201,9 @@ pub(crate) fn build_join_fusion_sql(
     if let JsonValue::Object(map) = filter {
         for (field, value) in map {
             if field.starts_with('$') || value.is_object() || value.is_array() {
-                return Err(tonic::Status::invalid_argument(
+                return Err(postgres_invalid_field(
+                    "filter",
+                    "must contain only simple equality fields for join fusion",
                     "join fusion supports only simple equality filters",
                 ));
             }
@@ -141,7 +213,11 @@ pub(crate) fn build_join_fusion_sql(
                 .iter()
                 .find(|column| column.column_name == column_name)
                 .ok_or_else(|| {
-                    tonic::Status::invalid_argument(format!("unknown join filter field {field}"))
+                    postgres_invalid_field(
+                        "filter",
+                        "must reference a column from one of the joined tables",
+                        format!("unknown join filter field {field}"),
+                    )
                 })?;
             bindings.push((column.clone(), value.clone()));
             predicates.push(format!(
@@ -209,9 +285,11 @@ fn join_select_list(
                 .iter()
                 .any(|column| column.column_name == column_name)
             {
-                return Err(tonic::Status::invalid_argument(format!(
-                    "unknown join selected field {field}"
-                )));
+                return Err(postgres_invalid_field(
+                    "fields",
+                    "must reference columns from the joined tables",
+                    format!("unknown join selected field {field}"),
+                ));
             }
             Ok(format!(
                 "{}.{} AS {}",
@@ -232,7 +310,11 @@ fn parse_join_field(
             .iter()
             .position(|candidate| candidate.eq_ignore_ascii_case(message_type))
             .ok_or_else(|| {
-                tonic::Status::invalid_argument(format!("unknown join field prefix {message_type}"))
+                postgres_invalid_field(
+                    "field",
+                    "prefix must match one of the joined message types",
+                    format!("unknown join field prefix {message_type}"),
+                )
             })?;
         return Ok((idx, column.to_ascii_lowercase()));
     }
@@ -305,11 +387,15 @@ pub(crate) fn bind_values<'q>(
     values: &[JsonValue],
 ) -> Result<Query<'q, Postgres, PgArguments>, tonic::Status> {
     if columns.len() != values.len() {
-        return Err(tonic::Status::invalid_argument(format!(
-            "parameter mismatch: {} columns, {} values",
-            columns.len(),
-            values.len()
-        )));
+        return Err(postgres_invalid_field(
+            "values",
+            "number of values must match number of columns",
+            format!(
+                "parameter mismatch: {} columns, {} values",
+                columns.len(),
+                values.len()
+            ),
+        ));
     }
     for (column_name, value) in columns.iter().zip(values.iter()) {
         let column = table
@@ -343,11 +429,19 @@ pub(crate) fn bind_one<'q>(
                 let parsed = item
                     .as_str()
                     .ok_or_else(|| {
-                        tonic::Status::invalid_argument("UUID $in value must be a string")
+                        postgres_invalid_field(
+                            "value",
+                            "UUID $in array values must be strings",
+                            "UUID $in value must be a string",
+                        )
                     })?
                     .parse::<Uuid>()
                     .map_err(|err| {
-                        tonic::Status::invalid_argument(format!("invalid UUID in $in: {err}"))
+                        postgres_invalid_field(
+                            "value",
+                            "UUID $in array values must be valid UUID strings",
+                            format!("invalid UUID in $in: {err}"),
+                        )
                     })?;
                 arr.push(parsed);
             }
@@ -356,7 +450,7 @@ pub(crate) fn bind_one<'q>(
         if sql_type.contains("INT") || sql_type.contains("SERIAL") {
             let mut arr: Vec<i64> = Vec::with_capacity(items.len());
             for item in items {
-                arr.push(json_i64(item)?);
+                arr.push(postgres_json_i64("value", item)?);
             }
             return Ok(query.bind(arr));
         }
@@ -368,7 +462,7 @@ pub(crate) fn bind_one<'q>(
         {
             let mut arr: Vec<f64> = Vec::with_capacity(items.len());
             for item in items {
-                arr.push(json_f64(item)?);
+                arr.push(postgres_json_f64("value", item)?);
             }
             return Ok(query.bind(arr));
         }
@@ -406,11 +500,20 @@ pub(crate) fn bind_one<'q>(
         return match value {
             JsonValue::Null => Ok(query.bind(Option::<Uuid>::None)),
             JsonValue::String(raw) if raw.trim().is_empty() => Ok(query.bind(Option::<Uuid>::None)),
-            JsonValue::String(raw) => raw
-                .parse::<Uuid>()
-                .map(|uuid| query.bind(uuid))
-                .map_err(|err| tonic::Status::invalid_argument(format!("invalid UUID: {err}"))),
-            _ => Err(tonic::Status::invalid_argument(
+            JsonValue::String(raw) => {
+                raw.parse::<Uuid>()
+                    .map(|uuid| query.bind(uuid))
+                    .map_err(|err| {
+                        postgres_invalid_field(
+                            "value",
+                            "UUID value must be a valid UUID string",
+                            format!("invalid UUID: {err}"),
+                        )
+                    })
+            }
+            _ => Err(postgres_invalid_field(
+                "value",
+                "UUID value must be a string",
                 "UUID value must be a string",
             )),
         };
@@ -424,11 +527,15 @@ pub(crate) fn bind_one<'q>(
             JsonValue::String(raw) => chrono::DateTime::parse_from_rfc3339(raw)
                 .map(|dt| query.bind(dt.with_timezone(&chrono::Utc)))
                 .map_err(|err| {
-                    tonic::Status::invalid_argument(format!(
-                        "timestamptz value must be an RFC3339 string: {err}"
-                    ))
+                    postgres_invalid_field(
+                        "value",
+                        "timestamptz value must be an RFC3339 string",
+                        format!("timestamptz value must be an RFC3339 string: {err}"),
+                    )
                 }),
-            _ => Err(tonic::Status::invalid_argument(
+            _ => Err(postgres_invalid_field(
+                "value",
+                "timestamptz value must be a string or null",
                 "timestamptz value must be a string or null",
             )),
         };
@@ -442,11 +549,15 @@ pub(crate) fn bind_one<'q>(
             JsonValue::String(raw) => parse_naive_datetime(raw)
                 .map(|dt| query.bind(dt))
                 .ok_or_else(|| {
-                    tonic::Status::invalid_argument(
+                    postgres_invalid_field(
+                        "value",
+                        "timestamp value must be an ISO-8601 string or null",
                         "timestamp value must be an ISO-8601 string or null",
                     )
                 }),
-            _ => Err(tonic::Status::invalid_argument(
+            _ => Err(postgres_invalid_field(
+                "value",
+                "timestamp value must be a string or null",
                 "timestamp value must be a string or null",
             )),
         };
@@ -460,8 +571,16 @@ pub(crate) fn bind_one<'q>(
             JsonValue::String(raw) => raw
                 .parse::<chrono::NaiveDate>()
                 .map(|date| query.bind(date))
-                .map_err(|err| tonic::Status::invalid_argument(format!("invalid date: {err}"))),
-            _ => Err(tonic::Status::invalid_argument(
+                .map_err(|err| {
+                    postgres_invalid_field(
+                        "value",
+                        "date value must be a valid date string",
+                        format!("invalid date: {err}"),
+                    )
+                }),
+            _ => Err(postgres_invalid_field(
+                "value",
+                "date value must be a string or null",
                 "date value must be a string or null",
             )),
         };
@@ -492,7 +611,7 @@ pub(crate) fn bind_one<'q>(
         return Ok(query.bind(value.as_bool().unwrap_or(false)));
     }
     if sql_type.contains("INT") || sql_type.contains("BIGSERIAL") || sql_type.contains("SERIAL") {
-        return Ok(query.bind(json_i64(value)?));
+        return Ok(query.bind(postgres_json_i64("value", value)?));
     }
     if sql_type.contains("REAL")
         || sql_type.contains("DOUBLE")
@@ -500,7 +619,7 @@ pub(crate) fn bind_one<'q>(
         || sql_type.contains("NUMERIC")
         || sql_type.contains("DECIMAL")
     {
-        return Ok(query.bind(json_f64(value)?));
+        return Ok(query.bind(postgres_json_f64("value", value)?));
     }
     Ok(query.bind(strip_nul(&json_scalar_to_string(value))))
 }
@@ -555,10 +674,16 @@ pub(crate) fn upsert_record_json(request: &UpsertRequest) -> Result<JsonValue, t
     }
     if !request.record_json.is_empty() {
         return serde_json::from_slice(&request.record_json).map_err(|err| {
-            tonic::Status::invalid_argument(format!("record_json must be valid JSON: {err}"))
+            postgres_invalid_field(
+                "record_json",
+                "must contain valid JSON",
+                format!("record_json must be valid JSON: {err}"),
+            )
         });
     }
-    Err(tonic::Status::invalid_argument(
+    Err(postgres_invalid_field(
+        "payload",
+        "payload or record_json must be provided",
         "payload or record_json is required",
     ))
 }
@@ -569,10 +694,16 @@ pub(crate) fn mutation_record_json(mutation: &Mutation) -> Result<JsonValue, ton
     }
     if !mutation.record_json.is_empty() {
         return serde_json::from_slice(&mutation.record_json).map_err(|err| {
-            tonic::Status::invalid_argument(format!("record_json must be valid JSON: {err}"))
+            postgres_invalid_field(
+                "record_json",
+                "must contain valid JSON",
+                format!("record_json must be valid JSON: {err}"),
+            )
         });
     }
-    Err(tonic::Status::invalid_argument(
+    Err(postgres_invalid_field(
+        "payload",
+        "payload or record_json must be provided",
         "payload or record_json is required",
     ))
 }
@@ -581,9 +712,13 @@ pub(crate) fn record_values(
     record: &JsonValue,
     columns: &[String],
 ) -> Result<Vec<JsonValue>, tonic::Status> {
-    let object = record
-        .as_object()
-        .ok_or_else(|| tonic::Status::invalid_argument("record must be a JSON object"))?;
+    let object = record.as_object().ok_or_else(|| {
+        postgres_invalid_field(
+            "record",
+            "must be a JSON object",
+            "record must be a JSON object",
+        )
+    })?;
     Ok(columns
         .iter()
         .map(|column| object.get(column).cloned().unwrap_or(JsonValue::Null))
@@ -631,6 +766,70 @@ fn collect_filter_values(value: &JsonValue, out: &mut Vec<JsonValue>) {
 mod tests {
     use super::*;
     use crate::generation::{CatalogManifest, ManifestForeignKey, ManifestTableSecurity};
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
+
+    fn decode_detail(status: &tonic::Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed error detail trailer");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_single_field_violation(status: &tonic::Status, field: &str, description: &str) {
+        assert_eq!(status.code(), tonic::Code::InvalidArgument);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert!(!detail.retryable);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, field);
+        assert_eq!(detail.field_violations[0].description, description);
+    }
+
+    fn assert_schema_detail(
+        status: &tonic::Status,
+        backend: &str,
+        operation: &str,
+        schema_code: &str,
+        message: &str,
+    ) {
+        assert_eq!(status.code(), tonic::Code::FailedPrecondition);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Schema as i32);
+        assert_eq!(detail.backend, backend);
+        assert_eq!(detail.operation, operation);
+        assert_eq!(detail.capability_required, schema_code);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    fn assert_internal_detail(
+        status: &tonic::Status,
+        backend: &str,
+        operation: &str,
+        message: &str,
+    ) {
+        assert_eq!(status.code(), tonic::Code::Internal);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, backend);
+        assert_eq!(detail.operation, operation);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    fn expect_status<T>(result: Result<T, tonic::Status>) -> tonic::Status {
+        match result {
+            Ok(_) => panic!("expected validation status"),
+            Err(status) => status,
+        }
+    }
 
     fn ctx() -> RequestContext {
         RequestContext {
@@ -787,7 +986,119 @@ mod tests {
             .err()
             .expect("scoped table without tenant column must fail closed");
 
-        assert_eq!(err.code(), tonic::Code::FailedPrecondition);
-        assert!(err.message().contains("without a tenant column"));
+        assert_schema_detail(
+            &err,
+            "postgres",
+            "join_fusion",
+            "tenant_column_required",
+            "join fusion cannot safely select scoped table public.lefts without a tenant column",
+        );
+    }
+
+    #[test]
+    fn postgres_internal_status_carries_typed_detail() {
+        let status = postgres_internal_status("execute_tx_plan", "transaction mutation failed");
+
+        assert_internal_detail(
+            &status,
+            "postgres",
+            "execute_tx_plan",
+            "transaction mutation failed",
+        );
+    }
+
+    #[test]
+    fn join_fusion_validation_carries_field_violations() {
+        let mut request = join_request();
+        request.message_type = "Left".to_string();
+        let manifest = CatalogManifest::default();
+
+        let err = build_join_fusion_sql(&manifest, &request, &ctx(), &JsonValue::Null)
+            .err()
+            .expect("single message join must fail");
+
+        assert_single_field_violation(
+            &err,
+            "message_type",
+            "must contain at least two comma- or plus-separated message types",
+        );
+
+        request.message_type = "Left,Missing".to_string();
+        let manifest = CatalogManifest {
+            tables: vec![table("Left", "lefts", vec![col("id")])],
+            ..CatalogManifest::default()
+        };
+        let err = build_join_fusion_sql(&manifest, &request, &ctx(), &JsonValue::Null)
+            .err()
+            .expect("unknown message type must fail");
+
+        assert_single_field_violation(
+            &err,
+            "message_type",
+            "must match a manifest table message type",
+        );
+    }
+
+    #[test]
+    fn postgres_bind_validation_carries_field_violations() {
+        let table = table("Left", "lefts", vec![col("id")]);
+        let err = expect_status(bind_values(
+            sqlx::query("SELECT 1"),
+            &table,
+            &["id".to_string()],
+            &[],
+        ));
+
+        assert_single_field_violation(
+            &err,
+            "values",
+            "number of values must match number of columns",
+        );
+
+        let mut uuid_col = col("id");
+        uuid_col.sql_type = "UUID".to_string();
+        let err = expect_status(bind_one(
+            sqlx::query("SELECT $1"),
+            Some(&uuid_col),
+            &serde_json::json!([1]),
+        ));
+
+        assert_single_field_violation(&err, "value", "UUID $in array values must be strings");
+
+        let mut int_col = col("age");
+        int_col.sql_type = "BIGINT".to_string();
+        let err = expect_status(bind_one(
+            sqlx::query("SELECT $1"),
+            Some(&int_col),
+            &serde_json::json!("not-an-int"),
+        ));
+
+        assert_single_field_violation(&err, "value", "must be an integer or integer string");
+    }
+
+    #[test]
+    fn record_json_validation_carries_field_violations() {
+        let upsert = UpsertRequest {
+            record_json: b"{".to_vec(),
+            ..UpsertRequest::default()
+        };
+        let err = upsert_record_json(&upsert)
+            .err()
+            .expect("invalid record_json must fail");
+
+        assert_single_field_violation(&err, "record_json", "must contain valid JSON");
+
+        let mutation = Mutation::default();
+        let err = mutation_record_json(&mutation)
+            .err()
+            .expect("missing mutation payload must fail");
+
+        assert_single_field_violation(&err, "payload", "payload or record_json must be provided");
+
+        let err = record_values(&JsonValue::Array(Vec::new()), &["id".to_string()])
+            .err()
+            .expect("non-object record must fail");
+
+        assert_single_field_violation(&err, "record", "must be a JSON object");
     }
 }

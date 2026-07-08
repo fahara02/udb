@@ -18,14 +18,16 @@
 //!   so a freshly attached database works without rewrites.
 
 use crate::backend::BackendKind;
+use crate::generation::{CatalogManifest, ManifestTable};
 use crate::ir::filter::ComparisonOp;
 use crate::ir::operations::{
-    ConflictStrategy, LogicalAggregate, LogicalDelete, LogicalRead, LogicalResourceOp,
-    LogicalSearch, LogicalWrite, ResourceKind, ResourceOpKind,
+    ConflictStrategy, LogicalAggregate, LogicalDelete, LogicalInclude, LogicalRead,
+    LogicalResourceOp, LogicalSearch, LogicalWrite, ResourceKind, ResourceOpKind,
 };
 use crate::ir::value::LogicalValue;
 
 use super::sql_dialect::{SqlCompiler, SqlDialect};
+use super::util::resolve_include_relation;
 use super::{CompileContext, CompileError, CompiledRendering, Compiler};
 
 /// SQLite dialect marker for the generic [`SqlCompiler`]: double-quote
@@ -91,6 +93,10 @@ impl Compiler for SqliteCompiler {
         BackendKind::Sqlite
     }
 
+    fn supports_read_include(&self) -> bool {
+        true
+    }
+
     fn compile_read(
         &self,
         op: &LogicalRead,
@@ -99,7 +105,7 @@ impl Compiler for SqliteCompiler {
         let table = Sl::resolve_table(&op.message_type, ctx.manifest)?;
         let mut params: Vec<LogicalValue> = Vec::new();
 
-        let select = match &op.projection {
+        let mut select_items = match &op.projection {
             Some(p) if !p.is_select_all() => p
                 .fields
                 .iter()
@@ -107,10 +113,18 @@ impl Compiler for SqliteCompiler {
                     let col = Sl::column_for(table, f, &op.message_type)?;
                     Ok(format!("\"{col}\""))
                 })
-                .collect::<Result<Vec<_>, CompileError>>()?
-                .join(", "),
-            _ => "*".to_string(),
+                .collect::<Result<Vec<_>, CompileError>>()?,
+            _ => vec!["*".to_string()],
         };
+        for include in &op.include {
+            select_items.push(render_belongs_to_include(
+                table,
+                ctx.manifest,
+                include,
+                &op.message_type,
+            )?);
+        }
+        let select = select_items.join(", ");
 
         // SQLite: unqualified table name — see module doc.
         let mut sql = format!("SELECT {select} FROM \"{table}\"", table = table.table);
@@ -369,10 +383,20 @@ impl Compiler for SqliteCompiler {
             table = table.table,
         );
 
-        if let Some(filter) = &op.filter
-            && let Some(body) = Sl::render_where(filter, table, &op.message_type, &mut params)?
-        {
-            sql.push_str(&format!(" WHERE {body}"));
+        // WHERE — user filter first (parameter numbering), then the tenant/
+        // project context predicates: aggregate reads have no runtime RLS
+        // seam on this engine, so the compiler is the scoping layer (same A2
+        // posture as ClickHouse/Cassandra).
+        let user_body = match &op.filter {
+            Some(filter) => Sl::render_where(filter, table, &op.message_type, &mut params)?,
+            None => None,
+        };
+        let ctx_body = Sl::context_predicates(table, ctx, &mut params);
+        match (user_body, ctx_body) {
+            (Some(user), Some(scope)) => sql.push_str(&format!(" WHERE ({user}) AND {scope}")),
+            (Some(user), None) => sql.push_str(&format!(" WHERE {user}")),
+            (None, Some(scope)) => sql.push_str(&format!(" WHERE {scope}")),
+            (None, None) => {}
         }
 
         if !group_columns.is_empty() {
@@ -464,9 +488,7 @@ impl Compiler for SqliteCompiler {
         if let Some(filter) = &op.filter
             && let Some(body) = Sl::render_where(filter, table, &op.message_type, &mut params)?
         {
-            // The base-table columns are quoted via `t.<col>` for the
-            // join — re-render with a base alias.
-            sql.push_str(&format!(" AND {}", body.replace("\"", "t.\"")));
+            sql.push_str(&format!(" AND {}", qualify_sqlite_base_columns(&body)));
         }
 
         if let Some(threshold) = op.score_threshold {
@@ -617,10 +639,84 @@ impl Compiler for SqliteCompiler {
     }
 }
 
+fn render_belongs_to_include(
+    table: &ManifestTable,
+    manifest: &CatalogManifest,
+    include: &LogicalInclude,
+    message_type: &str,
+) -> Result<String, CompileError> {
+    let relation = resolve_include_relation(table, manifest, include, message_type)?;
+    let alias = format!("_udb_include_{}", relation.name);
+    let predicates = relation
+        .local_columns
+        .iter()
+        .zip(relation.target_columns.iter())
+        .map(|(local, target)| {
+            format!(
+                "\"{alias}\".\"{target}\" = \"{table}\".\"{local}\"",
+                table = table.table
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(" AND ");
+    let json_fields = relation
+        .target
+        .columns
+        .iter()
+        .map(|column| {
+            let key = if column.field_name.trim().is_empty() {
+                &column.column_name
+            } else {
+                &column.field_name
+            };
+            format!(
+                "'{}', \"{alias}\".\"{}\"",
+                key.replace('\'', "''"),
+                column.column_name
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(", ");
+    if relation.many {
+        Ok(format!(
+            "COALESCE((SELECT json_group_array(json_object({json_fields})) FROM \"{target_table}\" \"{alias}\" \
+             WHERE {predicates}), json('[]')) AS \"{name}\"",
+            target_table = relation.target.table,
+            name = relation.name,
+        ))
+    } else {
+        Ok(format!(
+            "(SELECT json_object({json_fields}) FROM \"{target_table}\" \"{alias}\" \
+             WHERE {predicates} LIMIT 1) AS \"{name}\"",
+            target_table = relation.target.table,
+            name = relation.name,
+        ))
+    }
+}
+
+fn qualify_sqlite_base_columns(body: &str) -> String {
+    let mut out = String::with_capacity(body.len() + 8);
+    let mut chars = body.chars().peekable();
+    while let Some(ch) = chars.next() {
+        if ch == '"' {
+            out.push_str("t.\"");
+            for inner in chars.by_ref() {
+                out.push(inner);
+                if inner == '"' {
+                    break;
+                }
+            }
+        } else {
+            out.push(ch);
+        }
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::generation::{CatalogManifest, ManifestColumn, ManifestTable};
+    use crate::generation::{CatalogManifest, ManifestColumn, ManifestForeignKey, ManifestTable};
     use crate::ir::filter::{ComparisonOp, LogicalFilter};
     use crate::ir::operations::{
         AggregateExpr, AggregateFunc, ConflictStrategy, LogicalAggregate, LogicalRead,
@@ -668,6 +764,71 @@ mod tests {
         }
     }
 
+    fn relation_fixture() -> CatalogManifest {
+        CatalogManifest {
+            tables: vec![
+                ManifestTable {
+                    message_name: "Invoice".into(),
+                    proto_package: "billing.v1".into(),
+                    schema: "main".into(),
+                    table: "invoices".into(),
+                    primary_key: vec!["invoice_id".into()],
+                    columns: vec![
+                        ManifestColumn {
+                            field_name: "invoice_id".into(),
+                            column_name: "invoice_id".into(),
+                            proto_type: "string".into(),
+                            sql_type: "TEXT".into(),
+                            is_primary: true,
+                            ..Default::default()
+                        },
+                        ManifestColumn {
+                            field_name: "customer_id".into(),
+                            column_name: "customer_id".into(),
+                            proto_type: "string".into(),
+                            sql_type: "TEXT".into(),
+                            ..Default::default()
+                        },
+                    ],
+                    foreign_keys: vec![ManifestForeignKey {
+                        name: "fk_invoice_customer".into(),
+                        columns: vec!["customer_id".into()],
+                        ref_table: "customers".into(),
+                        ref_columns: vec!["customer_id".into()],
+                        ..Default::default()
+                    }],
+                    ..Default::default()
+                },
+                ManifestTable {
+                    message_name: "Customer".into(),
+                    proto_package: "crm.v1".into(),
+                    schema: "main".into(),
+                    table: "customers".into(),
+                    primary_key: vec!["customer_id".into()],
+                    columns: vec![
+                        ManifestColumn {
+                            field_name: "customer_id".into(),
+                            column_name: "customer_id".into(),
+                            proto_type: "string".into(),
+                            sql_type: "TEXT".into(),
+                            is_primary: true,
+                            ..Default::default()
+                        },
+                        ManifestColumn {
+                            field_name: "name".into(),
+                            column_name: "name".into(),
+                            proto_type: "string".into(),
+                            sql_type: "TEXT".into(),
+                            ..Default::default()
+                        },
+                    ],
+                    ..Default::default()
+                },
+            ],
+            ..Default::default()
+        }
+    }
+
     fn sql(rendering: CompiledRendering) -> (String, Vec<LogicalValue>) {
         match rendering {
             CompiledRendering::Sql {
@@ -694,6 +855,26 @@ mod tests {
             "SELECT * FROM \"notes\" WHERE \"id\" = ? LIMIT 5"
         );
         assert_eq!(params, vec![LogicalValue::String("abc".into())]);
+    }
+
+    #[test]
+    fn include_lowers_fk_belongs_to_as_json_object_subselect() {
+        let m = relation_fixture();
+        let ctx = CompileContext::new(&m);
+        let read = LogicalRead::message("billing.v1.Invoice").with_include("customer");
+
+        let (statement, params) = sql(SqliteCompiler.compile_read(&read, &ctx).unwrap());
+
+        assert!(params.is_empty());
+        assert!(
+            statement.contains(
+                "(SELECT json_object('customer_id', \"_udb_include_customer\".\"customer_id\", \
+                 'name', \"_udb_include_customer\".\"name\") FROM \"customers\" \
+                 \"_udb_include_customer\" WHERE \"_udb_include_customer\".\"customer_id\" = \
+                 \"invoices\".\"customer_id\" LIMIT 1) AS \"customer\""
+            ),
+            "include must lower through the manifest FK; got: {statement}"
+        );
     }
 
     #[test]
@@ -782,6 +963,32 @@ mod tests {
         assert!(statement.contains("\"notes_fts\" MATCH ?"));
         assert!(statement.ends_with("ORDER BY bm25(\"notes_fts\") ASC LIMIT 10"));
         assert_eq!(params, vec![LogicalValue::String("hello world".into())]);
+    }
+
+    #[test]
+    fn search_filter_qualifies_base_table_columns_without_corrupting_quotes() {
+        let m = fixture();
+        let ctx = CompileContext::new(&m);
+        let search = LogicalSearch {
+            message_type: "acme.notes.v1.Note".into(),
+            vector: None,
+            text_query: Some("hello".into()),
+            filter: Some(LogicalFilter::Comparison {
+                field: "title".into(),
+                op: ComparisonOp::Eq,
+                value: LogicalValue::String("hello".into()),
+            }),
+            top_k: 10,
+            score_threshold: None,
+            require_hybrid: false,
+            with_vector: false,
+            with_payload: true,
+        };
+        let (statement, _) = sql(SqliteCompiler.compile_search(&search, &ctx).unwrap());
+        assert!(
+            statement.contains("AND t.\"title\" = ?"),
+            "search filter must qualify base columns exactly once; got: {statement}"
+        );
     }
 
     #[test]

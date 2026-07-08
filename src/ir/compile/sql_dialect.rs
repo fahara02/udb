@@ -148,6 +148,55 @@ impl<D: SqlDialect> SqlCompiler<D> {
         D::placeholder(params.len())
     }
 
+    /// Tenant/project context predicates AND'd into a statement WHERE for
+    /// compiler-layer scoping (the A2 posture already used by ClickHouse and
+    /// Cassandra via `util::append_context_predicates`): aggregate reads have
+    /// no runtime RLS seam on file/columnar engines, so the compiler is the
+    /// scoping layer. Renders through the dialect quote/placeholder hooks so
+    /// `$N` / `?` / `@PN` numbering stays consistent with earlier params.
+    /// Returns `None` when the context carries nothing to inject or the table
+    /// declares no tenant/project column.
+    pub(super) fn context_predicates(
+        table: &ManifestTable,
+        ctx: &super::CompileContext<'_>,
+        params: &mut Vec<LogicalValue>,
+    ) -> Option<String> {
+        let mut parts: Vec<String> = Vec::new();
+        if let Some(tid) = ctx.tenant_id
+            && !tid.is_empty()
+            && let Some(col_name) = super::util::resolve_tenant_column(table)
+        {
+            let col = table
+                .columns
+                .iter()
+                .find(|c| c.column_name == col_name || c.field_name.eq_ignore_ascii_case(col_name));
+            let placeholder = Self::push_param(params, LogicalValue::String(tid.to_string()));
+            let placeholder = col
+                .map(|c| D::cast_compare_placeholder(&c.sql_type, &placeholder))
+                .unwrap_or(placeholder);
+            parts.push(format!("{} = {placeholder}", D::quote(col_name)));
+        }
+        if let Some(pid) = ctx.project_id
+            && !pid.is_empty()
+            && let Some(col_name) = super::util::resolve_project_column(table)
+        {
+            let col = table
+                .columns
+                .iter()
+                .find(|c| c.column_name == col_name || c.field_name.eq_ignore_ascii_case(col_name));
+            let placeholder = Self::push_param(params, LogicalValue::String(pid.to_string()));
+            let placeholder = col
+                .map(|c| D::cast_compare_placeholder(&c.sql_type, &placeholder))
+                .unwrap_or(placeholder);
+            parts.push(format!("{} = {placeholder}", D::quote(col_name)));
+        }
+        if parts.is_empty() {
+            None
+        } else {
+            Some(parts.join(" AND "))
+        }
+    }
+
     /// Render the `WHERE ...` body. Returns `None` for an empty filter so
     /// the caller can decide whether to emit `WHERE` at all; an empty OR
     /// lowers to the dialect false-literal.

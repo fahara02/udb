@@ -919,4 +919,97 @@ mod tests {
             "system_store should be ok without a relational backend"
         );
     }
+
+    // ── SLO doc ↔ catalog staleness ─────────────────────────────────────────
+
+    /// Render `slo_catalog()` as the Markdown table published between the
+    /// `<!-- BEGIN/END GENERATED:slo -->` markers in `docs/slo.md`. This is the
+    /// ONLY place the doc table is authored — the numbers come straight from the
+    /// catalog, never hand-typed — and `scripts/bench_gate.py --absolute` parses
+    /// the same rendered table for its per-objective budgets.
+    fn render_slo_table() -> String {
+        // 0.999 → "99.9%", trimming trailing zeros; four decimals of a percent
+        // is enough for every objective in the catalog (99.99%).
+        fn pct(availability: f64) -> String {
+            let s = format!("{:.4}", availability * 100.0);
+            let s = s.trim_end_matches('0').trim_end_matches('.');
+            format!("{s}%")
+        }
+        // Budgets are whole milliseconds today; render integers without a
+        // decimal point, but degrade gracefully if a fractional budget is added.
+        fn fmt_ms(ms: f64) -> String {
+            if ms.fract().abs() < f64::EPSILON {
+                format!("{}", ms as i64)
+            } else {
+                let s = format!("{ms:.3}");
+                s.trim_end_matches('0').trim_end_matches('.').to_string()
+            }
+        }
+
+        let mut out = String::new();
+        out.push_str(
+            "| Objective | Operation | gRPC method | Latency target | Availability | Latency metric | Availability metric |\n",
+        );
+        out.push_str("|---|---|---|---|---|---|---|\n");
+        for slo in slo_catalog() {
+            let method = if slo.grpc_method.is_empty() {
+                "—".to_string()
+            } else {
+                format!("`{}`", slo.grpc_method)
+            };
+            let latency = match slo.latency {
+                Some((stat, ms)) => format!("{} ≤ {} ms", stat.as_str(), fmt_ms(ms)),
+                None => "—".to_string(),
+            };
+            out.push_str(&format!(
+                "| `{}` | {} | {} | {} | {} | `{}` | `{}` |\n",
+                slo.objective,
+                slo.operation,
+                method,
+                latency,
+                pct(slo.availability),
+                slo.latency_metric,
+                slo.availability_metric,
+            ));
+        }
+        out
+    }
+
+    /// The published `docs/slo.md` table must equal the table rendered from
+    /// `slo_catalog()`, so the enforced budgets in the doc (and the ones
+    /// `bench_gate.py --absolute` parses out of it) can never drift from the
+    /// code-defined catalog. Same pattern as the descriptor staleness tests.
+    #[test]
+    fn slo_doc_table_matches_catalog() {
+        let rendered = render_slo_table();
+
+        let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let doc = std::fs::read_to_string(root.join("docs/slo.md"))
+            .expect("docs/slo.md should be readable")
+            .replace("\r\n", "\n");
+
+        const BEGIN: &str = "<!-- BEGIN GENERATED:slo -->";
+        const END: &str = "<!-- END GENERATED:slo -->";
+        let begin = doc
+            .find(BEGIN)
+            .expect("docs/slo.md must contain the <!-- BEGIN GENERATED:slo --> marker");
+        let end = doc
+            .find(END)
+            .expect("docs/slo.md must contain the <!-- END GENERATED:slo --> marker");
+        assert!(
+            begin < end,
+            "docs/slo.md BEGIN GENERATED:slo marker must precede END"
+        );
+        // Compare on the rendered rows alone: drop the newline after BEGIN and
+        // the newline before END.
+        let block = doc[begin + BEGIN.len()..end].trim_matches('\n').to_string();
+
+        assert_eq!(
+            block,
+            rendered.trim_end_matches('\n'),
+            "docs/slo.md `SLO catalog` generated block is stale; regenerate it from slo_catalog() \
+             (run `cargo test -p udb slo_doc_table_matches_catalog` to see the expected table) and \
+             replace the text between the <!-- BEGIN/END GENERATED:slo --> markers"
+        );
+    }
 }

@@ -74,6 +74,15 @@ fn parse_args_recognizes_doctor_enterprise() {
 }
 
 #[test]
+fn parse_args_recognizes_doctor_fix() {
+    let args = vec!["doctor".to_string(), "--fix".to_string()];
+    let (command, proto_root, _, _) = parse_args(&args);
+    assert!(matches!(command, Command::Doctor { fix: true, .. }));
+    // `--fix` must be consumed as a flag, never leak into the positional proto root.
+    assert_ne!(proto_root, "--fix");
+}
+
+#[test]
 fn parse_args_recognizes_init_project() {
     let args = vec!["init-project".to_string()];
     let (command, _, _, _) = parse_args(&args);
@@ -150,6 +159,51 @@ fn parse_args_recognizes_sdk_init_language() {
             ..
         } if lang == "php"
     ));
+}
+
+#[test]
+fn parse_args_orm_scaffold_defaults_lang_all_no_entity() {
+    // master-plan 10.5: `udb orm scaffold` — lang defaults to `all`, entity optional.
+    let args = vec!["orm".to_string(), "scaffold".to_string()];
+    let (command, _, _, _) = parse_args(&args);
+    assert!(matches!(
+        command,
+        Command::Orm {
+            action: OrmAction::Scaffold,
+            ref lang,
+            entity: None,
+            ..
+        } if lang == "all"
+    ));
+}
+
+#[test]
+fn parse_args_orm_scaffold_lang_required_value_and_optional_entity() {
+    let args = vec![
+        "orm".to_string(),
+        "scaffold".to_string(),
+        "--lang".to_string(),
+        "typescript".to_string(),
+        "--entity".to_string(),
+        "myapp.v1.User".to_string(),
+    ];
+    let (command, _, _, _) = parse_args(&args);
+    assert!(matches!(
+        command,
+        Command::Orm {
+            action: OrmAction::Scaffold,
+            ref lang,
+            entity: Some(ref entity),
+            ..
+        } if lang == "typescript" && entity == "myapp.v1.User"
+    ));
+}
+
+#[test]
+fn parse_args_orm_unknown_action_is_invalid_usage() {
+    let args = vec!["orm".to_string(), "frobnicate".to_string()];
+    let (command, _, _, _) = parse_args(&args);
+    assert!(matches!(command, Command::InvalidUsage { .. }));
 }
 
 #[test]
@@ -702,7 +756,7 @@ fn baseline_cli_redacts_auth_secret_output_keys() {
 
 #[test]
 fn cli_redaction_covers_descriptor_sensitive_output_fields() {
-    let manifest = udb::runtime::descriptor_manifest::descriptor_contract_manifest();
+    let manifest = udb::runtime::descriptor_manifest::descriptor_contract_manifest_static();
     let mut map = serde_json::Map::new();
     for field in manifest.messages.iter().flat_map(|message| &message.fields) {
         let scalar = &field.scalar_security;
@@ -739,8 +793,8 @@ fn cli_redaction_covers_descriptor_sensitive_output_fields() {
 
 #[test]
 fn generated_native_contract_json_matches_embedded_descriptor() {
-    let manifest = udb::runtime::descriptor_manifest::descriptor_contract_manifest();
-    let rendered = native_manifest_json(&manifest);
+    let manifest = udb::runtime::descriptor_manifest::descriptor_contract_manifest_static();
+    let rendered = native_manifest_json(manifest);
     let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let committed: serde_json::Value = serde_json::from_str(
         &std::fs::read_to_string(root.join("docs/generated/udb-native-contract.json"))
@@ -776,8 +830,8 @@ fn generated_native_contract_json_matches_embedded_descriptor() {
 
 #[test]
 fn native_contract_lint_does_not_require_data_broker_endpoint_security() {
-    let manifest = udb::runtime::descriptor_manifest::descriptor_contract_manifest();
-    let findings = native_contract_findings(&manifest);
+    let manifest = udb::runtime::descriptor_manifest::descriptor_contract_manifest_static();
+    let findings = native_contract_findings(manifest);
     let data_broker_endpoint_errors: Vec<&serde_json::Value> = findings
         .iter()
         .filter(|finding| {
@@ -799,8 +853,8 @@ fn native_contract_lint_does_not_require_data_broker_endpoint_security() {
 
 #[test]
 fn generated_native_docs_match_embedded_descriptor() {
-    let manifest = udb::runtime::descriptor_manifest::descriptor_contract_manifest();
-    let rendered = native_docs_markdown(&manifest);
+    let manifest = udb::runtime::descriptor_manifest::descriptor_contract_manifest_static();
+    let rendered = native_docs_markdown(manifest);
     let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let committed = std::fs::read_to_string(root.join("docs/generated/native-services.md"))
         .expect("generated native-service docs should be readable")
@@ -812,9 +866,101 @@ fn generated_native_docs_match_embedded_descriptor() {
     );
 }
 
+/// Render the README "Current Surface" generated block straight from the
+/// embedded descriptor. This is the single source of truth for the
+/// hand-prone "N services, N RPCs" surface counts: the data-plane DataBroker
+/// RPC total, the native-control-plane service + RPC totals, and the
+/// per-service RPC breakdown. Kept byte-identical to the block fenced by the
+/// `<!-- BEGIN/END GENERATED:services -->` markers in `README.md` so the table
+/// can never silently drift from the descriptor.
+fn readme_services_block(
+    manifest: &udb::runtime::descriptor_manifest::DescriptorContractManifest,
+) -> String {
+    // Data plane: every RPC on the public DataBroker facade.
+    let data_plane_rpcs = manifest
+        .services
+        .iter()
+        .find(|service| service.full_name() == "udb.services.v1.DataBroker")
+        .map(|service| service.methods.len())
+        .expect("descriptor must expose the udb.services.v1.DataBroker facade");
+
+    // Native control plane: services carrying native_service options, keyed by
+    // canonical service id (the same id used by the generated docs/registry).
+    let mut native: Vec<(String, usize)> = manifest
+        .services
+        .iter()
+        .filter_map(|service| {
+            service.native_service.as_ref().map(|n| {
+                (
+                    udb::runtime::service::native_registry::canonical_service_id(&n.service_id),
+                    service.methods.len(),
+                )
+            })
+        })
+        .collect();
+    native.sort_by(|a, b| a.0.cmp(&b.0));
+    let native_service_count = native.len();
+    let native_rpc_count: usize = native.iter().map(|(_, count)| count).sum();
+
+    let mut out = String::new();
+    out.push_str("| Area | Surface |\n");
+    out.push_str("|---|---|\n");
+    out.push_str(&format!(
+        "| Data plane | {data_plane_rpcs} `DataBroker` RPCs |\n"
+    ));
+    out.push_str(&format!(
+        "| Native control plane | {native_service_count} services, {native_rpc_count} RPCs |\n"
+    ));
+    out.push('\n');
+    out.push_str("Per-service RPC counts (native control plane):\n");
+    out.push('\n');
+    out.push_str("| Service | RPCs |\n");
+    out.push_str("|---|---|\n");
+    for (id, count) in &native {
+        out.push_str(&format!("| `{id}` | {count} |\n"));
+    }
+    out
+}
+
+#[test]
+fn readme_services_block_matches_embedded_descriptor() {
+    let manifest = udb::runtime::descriptor_manifest::descriptor_contract_manifest_static();
+    let rendered = readme_services_block(manifest);
+
+    let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let readme = std::fs::read_to_string(root.join("README.md"))
+        .expect("README.md should be readable")
+        .replace("\r\n", "\n");
+
+    const BEGIN: &str = "<!-- BEGIN GENERATED:services -->";
+    const END: &str = "<!-- END GENERATED:services -->";
+    let begin = readme
+        .find(BEGIN)
+        .expect("README.md must contain the <!-- BEGIN GENERATED:services --> marker");
+    let end = readme
+        .find(END)
+        .expect("README.md must contain the <!-- END GENERATED:services --> marker");
+    assert!(
+        begin < end,
+        "README.md BEGIN GENERATED:services marker must precede END"
+    );
+    // Block is the text strictly between the marker lines: drop the newline that
+    // follows BEGIN and the newline that precedes END so the comparison is on
+    // the rendered rows alone.
+    let block = readme[begin + BEGIN.len()..end]
+        .trim_matches('\n')
+        .to_string();
+
+    assert_eq!(
+        block,
+        rendered.trim_end_matches('\n'),
+        "README.md `Current Surface` generated block is stale; run `udb native docs` and replace the text between the <!-- BEGIN/END GENERATED:services --> markers with the descriptor-derived output"
+    );
+}
+
 #[test]
 fn descriptor_native_services_reach_registry_health_sdk_and_docs() {
-    let manifest = udb::runtime::descriptor_manifest::descriptor_contract_manifest();
+    let manifest = udb::runtime::descriptor_manifest::descriptor_contract_manifest_static();
     let descriptor_ids: std::collections::BTreeSet<String> = manifest
         .services
         .iter()

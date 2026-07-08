@@ -1,9 +1,10 @@
-//! Qdrant-backed canonical `SystemStores`.
+//! Qdrant-backed gated canonical `SystemStores`.
 //!
 //! System records are persisted as points in one dedicated collection per UDB
 //! instance. Point IDs are deterministic UUIDs derived from logical record keys;
 //! payloads carry the typed system record JSON. Writes use `wait=true` and
-//! `ordering=strong`.
+//! `ordering=strong`, but full SystemStores registration still fails closed
+//! until a Qdrant-native conditional-write CAS path exists.
 
 use std::time::{Duration, Instant};
 
@@ -17,21 +18,21 @@ use uuid::Uuid;
 use crate::runtime::executors::qdrant::QdrantHttpClient;
 
 use super::system_store::{
-    AdminAuditChainReport, AdminAuditInsert, AdminAuditListFilter, AdminAuditRow, AdvisoryLeaseRow,
+    AdminAuditChainReport, AdminAuditInsert, AdminAuditListFilter, AdminAuditRow,
     CompensationStatus, DeadLetterGroup, JsonProjectionTaskAdapter, JsonSystemRecordAdapter,
     MigrationAuditStore, MigrationOpInsert, MigrationOpRow, MigrationRunInsert, MigrationRunRow,
     MigrationRunState, MigrationRunsFilter, OpLedgerStatus, PendingTaskMetric,
     ProjectionClaimFilter, ProjectionTaskFailurePolicy, ProjectionTaskInsert, ProjectionTaskRow,
     ProjectionTaskStatus, ProjectionTaskStore, ProjectionTaskSummary, SagaInsert, SagaListFilter,
     SagaRow, SagaStatus, SagaStore, SagaSummary, SystemStoreError, SystemStoreResult,
-    advisory_lease_can_acquire, advisory_lease_is_owned_by, append_json_admin_audit,
-    claim_json_projection_tasks, claim_json_recoverable_sagas, enqueue_json_projection_task,
-    get_json_migration_run, get_json_saga, increment_json_saga_recovery_attempts,
-    latest_json_admin_audit_hash, list_json_admin_audit, list_json_migration_ops,
-    list_json_migration_runs, list_json_sagas, mark_json_projection_task_completed,
-    mark_json_projection_task_failed, mark_json_stale_sagas_indeterminate, new_advisory_lease_row,
-    pending_json_projection_task_count, pending_projection_task_metrics,
-    projection_dead_letter_groups, record_json_saga, requeue_json_dead_letter_by_source,
+    append_json_admin_audit, claim_json_projection_tasks, claim_json_recoverable_sagas,
+    enqueue_json_projection_task, get_json_migration_run, get_json_saga,
+    increment_json_saga_recovery_attempts, latest_json_admin_audit_hash, list_json_admin_audit,
+    list_json_migration_ops, list_json_migration_runs, list_json_sagas,
+    mark_json_projection_task_completed, mark_json_projection_task_failed,
+    mark_json_stale_sagas_indeterminate, pending_json_projection_task_count,
+    pending_projection_task_metrics, projection_dead_letter_groups, record_json_saga,
+    request_json_saga_recompensation, requeue_json_dead_letter_by_source,
     requeue_json_dead_letter_tasks, reset_stale_json_in_progress_tasks, start_json_migration_run,
     summarize_json_sagas, summarize_projection_tasks, update_json_saga_status,
     verify_json_admin_audit_chain,
@@ -139,6 +140,13 @@ impl QdrantCanonicalStore {
             Err(err) if err.contains("409") || err.contains("already exists") => Ok(()),
             Err(err) => Err(err),
         }
+    }
+
+    fn cas_unsupported(&self, op: &str) -> String {
+        format!(
+            "qdrant canonical SystemStores require real multi-process CAS for {op}; \
+             this backend path is not HA-canonical until a Qdrant-native conditional write is wired"
+        )
     }
 
     async fn get_json<T>(&self, key: &str) -> SystemStoreResult<Option<T>>
@@ -400,11 +408,13 @@ impl CanonicalStore for QdrantCanonicalStore {
     }
 
     async fn ensure_system_tables(&self) -> Result<(), String> {
-        self.ensure_collection().await
+        self.ensure_collection().await?;
+        Err(self.cas_unsupported("system state"))
     }
 
     async fn ensure_advisory_lease_table(&self) -> Result<(), String> {
-        self.ensure_system_tables().await
+        self.ensure_collection().await?;
+        Err(self.cas_unsupported("advisory leases"))
     }
 
     async fn try_acquire_advisory_lease(
@@ -413,29 +423,13 @@ impl CanonicalStore for QdrantCanonicalStore {
         owner_id: &str,
         ttl: Duration,
     ) -> Result<bool, String> {
-        let _guard = self.op_lock.lock().await;
-        let key = self.point_key(&format!("lease:{lease_name}"));
-        let now = Utc::now().timestamp_millis();
-        let current: Option<AdvisoryLeaseRow> =
-            self.get_json(&key).await.map_err(|err| err.to_string())?;
-        if !advisory_lease_can_acquire(current.as_ref(), owner_id, now) {
-            return Ok(false);
-        }
-        self.set_json(&key, &new_advisory_lease_row(owner_id, now, ttl))
-            .await
-            .map_err(|err| err.to_string())?;
-        Ok(true)
+        let _ = (lease_name, owner_id, ttl);
+        Err(self.cas_unsupported("advisory leases"))
     }
 
     async fn release_advisory_lease(&self, lease_name: &str, owner_id: &str) -> Result<(), String> {
-        let _guard = self.op_lock.lock().await;
-        let key = self.point_key(&format!("lease:{lease_name}"));
-        let current: Option<AdvisoryLeaseRow> =
-            self.get_json(&key).await.map_err(|err| err.to_string())?;
-        if advisory_lease_is_owned_by(current.as_ref(), owner_id) {
-            self.delete_key(&key).await.map_err(|err| err.to_string())?;
-        }
-        Ok(())
+        let _ = (lease_name, owner_id);
+        Err(self.cas_unsupported("advisory lease release"))
     }
 }
 
@@ -734,26 +728,7 @@ impl SagaStore for QdrantCanonicalStore {
 
     async fn request_saga_recompensation(&self, saga_id: Uuid) -> SystemStoreResult<()> {
         let _guard = self.op_lock.lock().await;
-        let key = self.saga_key(saga_id);
-        let Some(mut row) = self.get_json::<SagaRow>(&key).await? else {
-            return Ok(());
-        };
-        if !matches!(
-            row.status,
-            SagaStatus::FailedCompensation | SagaStatus::ManualReview
-        ) {
-            return Err(SystemStoreError::InvalidInput(format!(
-                "saga {saga_id} is not eligible for recompensation"
-            )));
-        }
-        // Mirror the PG transition: move the saga to `indeterminate` so the
-        // recovery worker re-drives it AND a second recompensation request is
-        // refused (indeterminate is not an eligible source state).
-        row.status = SagaStatus::Indeterminate;
-        row.last_error = String::new();
-        row.compensation_status = CompensationStatus::RetryRequested;
-        row.updated_at = Utc::now();
-        self.set_json(&key, &row).await
+        request_json_saga_recompensation(self, saga_id).await
     }
 
     async fn increment_recovery_attempts(
@@ -903,5 +878,36 @@ impl MigrationAuditStore for QdrantCanonicalStore {
         filter: &MigrationRunsFilter,
     ) -> SystemStoreResult<Vec<MigrationRunRow>> {
         list_json_migration_runs(self, filter).await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::Duration;
+
+    use super::*;
+    use crate::runtime::executors::http::HttpClientSpec;
+
+    #[tokio::test]
+    async fn advisory_lease_fails_closed_until_qdrant_native_cas_exists() {
+        let store = QdrantCanonicalStore::new(
+            QdrantHttpClient {
+                base_url: "http://127.0.0.1:6333".to_string(),
+                api_key: None,
+                http: HttpClientSpec::with_timeout(Duration::from_millis(1)).build(),
+            },
+            "unit",
+        );
+
+        let err = CanonicalStore::try_acquire_advisory_lease(
+            &store,
+            "worker",
+            "owner",
+            Duration::from_secs(1),
+        )
+        .await
+        .expect_err("Qdrant canonical leases must fail closed without native CAS");
+        assert!(err.contains("real multi-process CAS"));
+        assert!(err.contains("Qdrant-native conditional write"));
     }
 }

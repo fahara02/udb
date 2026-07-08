@@ -1,0 +1,16 @@
+{
+  "layout": "third_party/ffmpeg/bin/<platform>/ffmpeg(.exe)",
+  "platforms": {
+    "windows": {
+      "path": "third_party\\ffmpeg\\bin\\windows\\ffmpeg.exe",
+      "sha256": "95aee5e6cb047c87a60f01a0968207d6e2bd5819f20bc41c8261c3aceff941ec",
+      "size": 143411712,
+      "version": "ffmpeg version N-125444-g6d72600a30-20260703 Copyright (c) 2000-2026 the FFmpeg developers"
+    }
+  },
+  "runtime_env": {
+    "bin": "UDB_FFMPEG_BIN",
+    "root": "UDB_FFMPEG_ROOT"
+  },
+  "schema": "udb.vendored-ffmpeg.v1"
+}

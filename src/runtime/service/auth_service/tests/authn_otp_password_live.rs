@@ -2,8 +2,21 @@ use super::support::*;
 use crate::proto::udb::core::authn::entity::v1 as authn_entity_pb;
 use crate::proto::udb::core::authn::services::v1 as authn_pb;
 use crate::proto::udb::core::authn::services::v1::authn_service_server::AuthnService;
+use crate::proto::{ErrorDetail, ErrorKind};
+use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+use prost::Message as _;
 use tonic::Request;
 use uuid::Uuid;
+
+fn decode_detail(status: &tonic::Status) -> ErrorDetail {
+    let raw = status
+        .metadata()
+        .get_bin(ERROR_DETAIL_METADATA_KEY)
+        .expect("error-detail trailer present")
+        .to_bytes()
+        .expect("trailer decodes to bytes");
+    crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+}
 
 #[tokio::test]
 #[ignore = "requires live Postgres; run with UDB_LIVE_AUTH_TESTS=1 cargo test --lib live_postgres_authn_otp_password_lifecycle -- --ignored --nocapture"]
@@ -117,6 +130,12 @@ async fn live_postgres_authn_otp_cooldown() {
         .await
         .expect_err("second OTP within cooldown must be rejected");
     assert_eq!(throttled.code(), tonic::Code::ResourceExhausted);
+    let detail = decode_detail(&throttled);
+    assert_eq!(detail.kind, ErrorKind::Quota as i32);
+    assert!(detail.retryable);
+    assert_eq!(detail.backend, "authn");
+    assert_eq!(detail.operation, "otp cooldown");
+    assert!(detail.retry_after_ms > 0);
 
     cleanup_native_auth_db(&pool).await;
 }

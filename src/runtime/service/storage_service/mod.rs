@@ -36,8 +36,9 @@ pub use crate::proto::udb::core::storage::services::v1::storage_service_server::
 use super::DataBrokerService;
 use super::native_helpers::{
     DEFAULT_OBJECT_BACKEND, DEFAULT_OBJECT_BUCKET, admit_on as native_admit_on, emit_payload_event,
-    native_service_context, storage_object_defaults, validate_request_scope,
-    validate_request_tenant,
+    native_next_page_token_for_total, native_offset_page_window, storage_object_defaults,
+    tenant_only_native_service_context, update_mask_allows, update_mask_path_set,
+    validate_request_scope, validate_request_tenant,
 };
 
 const FILE_MSG: &str = "udb.core.storage.entity.v1.File";
@@ -77,6 +78,59 @@ fn status_with_reason(mut status: Status, reason: &'static str) -> Status {
         tonic::metadata::MetadataValue::from_static(reason),
     );
     status
+}
+
+fn storage_policy_status_with_reason(
+    operation: &'static str,
+    policy_decision_id: &'static str,
+    message: impl Into<String>,
+    reason: &'static str,
+) -> Status {
+    status_with_reason(
+        crate::runtime::executor_utils::policy_status(operation, policy_decision_id, message),
+        reason,
+    )
+}
+
+fn upload_already_finalized_status() -> Status {
+    storage_policy_status_with_reason(
+        "finalize_upload",
+        "upload_already_finalized",
+        "upload already finalized",
+        ALREADY_FINALIZED,
+    )
+}
+
+fn uploaded_object_missing_status() -> Status {
+    storage_policy_status_with_reason(
+        "finalize_upload",
+        "uploaded_object_present",
+        "uploaded object is not present in the configured object store",
+        OBJECT_NOT_PRESENT,
+    )
+}
+
+fn upload_etag_mismatch_status() -> Status {
+    status_with_reason(
+        crate::runtime::executor_utils::failed_precondition_fields(
+            "uploaded object etag does not match",
+            [("etag", "must match the uploaded object's store ETag")],
+        ),
+        UPLOAD_SIZE_MISMATCH,
+    )
+}
+
+fn upload_size_mismatch_status(head_size: i64, declared_size: i64) -> Status {
+    status_with_reason(
+        crate::runtime::executor_utils::failed_precondition_fields(
+            format!("uploaded object size {head_size} does not match declared {declared_size}"),
+            [(
+                "size_bytes",
+                "must match the uploaded object's store content length",
+            )],
+        ),
+        UPLOAD_SIZE_MISMATCH,
+    )
 }
 
 /// Build an `ApiError` carrying `UPLOAD_URL_UNAVAILABLE` for the degraded/failed
@@ -143,6 +197,72 @@ pub struct StorageServiceImpl {
     object_backend: String,
     object_bucket: String,
     metrics: Arc<dyn MetricsRecorder>,
+}
+
+fn storage_capability_status(
+    operation: &'static str,
+    capability_required: &'static str,
+    message: &'static str,
+) -> Status {
+    crate::runtime::executor_utils::capability_status(
+        "storage",
+        operation,
+        capability_required,
+        message,
+    )
+}
+
+fn storage_capability_status_with_reason(
+    operation: &'static str,
+    capability_required: &'static str,
+    message: &'static str,
+    reason: &'static str,
+) -> Status {
+    status_with_reason(
+        storage_capability_status(operation, capability_required, message),
+        reason,
+    )
+}
+
+fn storage_file_not_found_status(operation: &'static str) -> Status {
+    crate::runtime::executor_utils::schema_status(
+        tonic::Code::NotFound,
+        "storage",
+        operation,
+        "file_not_found",
+        "file not found",
+    )
+}
+
+fn storage_internal_status(operation: impl Into<String>, message: impl Into<String>) -> Status {
+    crate::runtime::executor_utils::internal_status("storage", operation, message)
+}
+
+fn object_stream_requires_store_status() -> Status {
+    storage_capability_status_with_reason(
+        "object_stream",
+        "object_store",
+        "object byte streaming requires a configured object store",
+        UNSUPPORTED_OBJECT_BACKEND,
+    )
+}
+
+fn file_object_bytes_missing_status() -> Status {
+    storage_policy_status_with_reason(
+        "download_file",
+        "file_object_bytes_present",
+        "file has no object bytes",
+        OBJECT_NOT_PRESENT,
+    )
+}
+
+fn object_store_bytes_missing_status() -> Status {
+    storage_policy_status_with_reason(
+        "download_file",
+        "object_store_bytes_present",
+        "object is not present in the configured object store",
+        OBJECT_NOT_PRESENT,
+    )
 }
 
 impl StorageServiceImpl {
@@ -279,7 +399,11 @@ impl StorageServiceImpl {
     /// closed when no runtime is wired (bare metadata-only/test construction).
     fn require_runtime(&self) -> Result<&DataBrokerRuntime, Status> {
         self.runtime.as_deref().ok_or_else(|| {
-            Status::failed_precondition("storage service requires runtime native entity dispatch")
+            storage_capability_status(
+                "native_entity_dispatch",
+                "runtime_native_entity_dispatch",
+                "storage service requires runtime native entity dispatch",
+            )
         })
     }
 
@@ -305,7 +429,10 @@ impl StorageServiceImpl {
             }
             tokio::time::sleep(Duration::from_millis(100)).await;
         }
-        Err(Status::unavailable(
+        Err(crate::runtime::executor_utils::retryable_status(
+            "storage",
+            "quota_lock",
+            crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
             "storage quota lock contended; retry shortly",
         ))
     }
@@ -352,6 +479,57 @@ impl StorageServiceImpl {
     }
 
     /// Read the per-tenant byte quota from the environment. `0` = unlimited.
+    /// Sum this tenant's active (non-deleted) file bytes for quota enforcement.
+    /// `udb_storage.files` is RLS-scoped by `app.current_tenant_id`; the generic
+    /// aggregate dispatch does not install that GUC on its read connection, so the
+    /// quota SUM under-reported as 0 (quota never enforced). Install the tenant
+    /// scope in a read transaction, then SUM the active rows in the same tx (mirrors
+    /// the metering QueryUsage fix).
+    async fn tenant_scoped_size_sum(&self, tenant_id: &str) -> Result<i64, Status> {
+        let Some(pool) = self.pg_pool.as_ref() else {
+            return Err(storage_capability_status(
+                "tenant_size_sum",
+                "postgres_store",
+                "storage usage pool is not configured",
+            ));
+        };
+        let mut tx = pool.begin().await.map_err(|err| {
+            storage_internal_status(
+                "tenant_size_sum_begin",
+                format!("storage usage tx begin failed: {err}"),
+            )
+        })?;
+        sqlx::query("SELECT set_config('app.current_tenant_id', $1, true)")
+            .bind(tenant_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|err| {
+                storage_internal_status(
+                    "tenant_size_sum_tenant_scope",
+                    format!("storage tenant scope set failed: {err}"),
+                )
+            })?;
+        let total: i64 = sqlx::query_scalar(
+            "SELECT COALESCE(SUM(size_bytes), 0)::bigint FROM udb_storage.files              WHERE tenant_id::text = $1 AND deleted_at IS NULL",
+        )
+        .bind(tenant_id)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(|err| {
+            storage_internal_status(
+                "tenant_size_sum_aggregate",
+                format!("storage usage aggregate failed: {err}"),
+            )
+        })?;
+        tx.commit().await.map_err(|err| {
+            storage_internal_status(
+                "tenant_size_sum_commit",
+                format!("storage usage tx commit failed: {err}"),
+            )
+        })?;
+        Ok(total)
+    }
+
     fn tenant_quota_bytes() -> i64 {
         std::env::var("UDB_STORAGE_TENANT_QUOTA_BYTES")
             .ok()
@@ -429,6 +607,7 @@ impl StorageServiceImpl {
                 direction: SortDirection::Asc,
                 nulls: NullOrder::Default,
             }],
+            include: Vec::new(),
             pagination: Some(LogicalPagination::limit(batch_size as u32)),
         };
         let doomed: Vec<storage_entity_pb::File> = runtime
@@ -504,6 +683,15 @@ fn file_status_from_db(value: &str) -> i32 {
 /// silently overflows VARCHAR(20) or reads back as Unspecified. Storing the
 /// short form keeps every value within VARCHAR(20) and makes write/read/filter
 /// round-trip.
+fn storage_field_violation<F, D, M>(field: F, description: D, message: M) -> Status
+where
+    F: Into<String>,
+    D: Into<String>,
+    M: Into<String>,
+{
+    crate::runtime::executor_utils::invalid_argument_fields(message, [(field, description)])
+}
+
 fn file_type_to_db(value: &str, default: &str) -> Result<String, Status> {
     let v = value.trim();
     if v.is_empty() {
@@ -518,9 +706,11 @@ fn file_type_to_db(value: &str, default: &str) -> Result<String, Status> {
         "ARCHIVE" | "FILE_TYPE_ARCHIVE" => "ARCHIVE",
         "OTHER" | "FILE_TYPE_OTHER" => "OTHER",
         other => {
-            return Err(Status::invalid_argument(format!(
-                "unknown file type: {other}"
-            )));
+            return Err(storage_field_violation(
+                "file_type",
+                "must be a supported FileType enum value",
+                format!("unknown file type: {other}"),
+            ));
         }
     };
     Ok(short.to_string())
@@ -540,9 +730,11 @@ fn file_status_to_db(value: &str, default: &str) -> Result<String, Status> {
         "ACTIVE" | "FILE_STATUS_ACTIVE" => "ACTIVE",
         "DELETED" | "FILE_STATUS_DELETED" => "DELETED",
         other => {
-            return Err(Status::invalid_argument(format!(
-                "unknown file status: {other}"
-            )));
+            return Err(storage_field_violation(
+                "status",
+                "must be a supported FileStatus enum value",
+                format!("unknown file status: {other}"),
+            ));
         }
     };
     Ok(short.to_string())
@@ -605,11 +797,19 @@ fn file_eq(field: &str, value: &str) -> LogicalFilter {
     }
 }
 
+fn file_uuid_eq(field: &str, value: &str) -> LogicalFilter {
+    LogicalFilter::Comparison {
+        field: field.to_string(),
+        op: ComparisonOp::Eq,
+        value: logical_uuid_or_null(value),
+    }
+}
+
 /// A single live (non-soft-deleted) file scoped to its tenant.
 fn file_active_by_id_filter(tenant_id: &str, file_id: &str) -> LogicalFilter {
     LogicalFilter::And(vec![
-        file_eq("tenant_id", tenant_id),
-        file_eq("file_id", file_id),
+        file_uuid_eq("tenant_id", tenant_id),
+        file_uuid_eq("file_id", file_id),
         LogicalFilter::IsNull("deleted_at".to_string()),
     ])
 }
@@ -617,7 +817,7 @@ fn file_active_by_id_filter(tenant_id: &str, file_id: &str) -> LogicalFilter {
 /// All live files for a tenant — quota usage scan and the `list_files` base set.
 fn file_tenant_active_filter(tenant_id: &str) -> LogicalFilter {
     LogicalFilter::And(vec![
-        file_eq("tenant_id", tenant_id),
+        file_uuid_eq("tenant_id", tenant_id),
         LogicalFilter::IsNull("deleted_at".to_string()),
     ])
 }
@@ -632,20 +832,20 @@ fn file_list_filter(
     uploaded_by: &str,
 ) -> LogicalFilter {
     let mut filters = vec![
-        file_eq("tenant_id", tenant_id),
+        file_uuid_eq("tenant_id", tenant_id),
         LogicalFilter::IsNull("deleted_at".to_string()),
     ];
     if !file_type.is_empty() {
         filters.push(file_eq("file_type", file_type));
     }
     if !reference_id.trim().is_empty() {
-        filters.push(file_eq("reference_id", reference_id.trim()));
+        filters.push(file_uuid_eq("reference_id", reference_id.trim()));
     }
     if !reference_type.trim().is_empty() {
         filters.push(file_eq("reference_type", reference_type.trim()));
     }
     if !uploaded_by.trim().is_empty() {
-        filters.push(file_eq("uploaded_by", uploaded_by.trim()));
+        filters.push(file_uuid_eq("uploaded_by", uploaded_by.trim()));
     }
     LogicalFilter::And(filters)
 }
@@ -684,6 +884,7 @@ fn file_read_by_id(tenant_id: &str, file_id: &str) -> LogicalRead {
         filter: Some(file_active_by_id_filter(tenant_id, file_id)),
         projection: Some(file_projection()),
         sort: Vec::new(),
+        include: Vec::new(),
         pagination: Some(LogicalPagination::limit(1)),
     }
 }
@@ -901,6 +1102,23 @@ fn file_full_record(file: &storage_entity_pb::File) -> LogicalRecord {
     record
 }
 
+fn validate_register_upload_required_fields(tenant_id: &str, filename: &str) -> Result<(), Status> {
+    let mut fields = Vec::new();
+    if tenant_id.trim().is_empty() {
+        fields.push(("tenant_id", "must be a non-empty tenant id"));
+    }
+    if filename.trim().is_empty() {
+        fields.push(("filename", "must be a non-empty filename"));
+    }
+    if !fields.is_empty() {
+        return Err(crate::runtime::executor_utils::invalid_argument_fields(
+            "tenant_id and filename are required",
+            fields,
+        ));
+    }
+    Ok(())
+}
+
 #[tonic::async_trait]
 impl StorageService for StorageServiceImpl {
     /// Register a new upload's metadata row in `PENDING` state and mint the
@@ -916,16 +1134,12 @@ impl StorageService for StorageServiceImpl {
         let metadata = request.metadata().clone();
         let req = request.into_inner();
         validate_request_scope(&metadata, &req.tenant_id, &req.project_id)?;
-        if req.tenant_id.trim().is_empty() || req.filename.trim().is_empty() {
-            return Err(Status::invalid_argument(
-                "tenant_id and filename are required",
-            ));
-        }
+        validate_register_upload_required_fields(&req.tenant_id, &req.filename)?;
         // Per-tenant fair admission (held for the whole RPC) — one tenant's
         // upload flood can't starve shared object capacity.
         let _admit = self.admit(&req.tenant_id, &req.project_id).await?;
         let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
-        let context = native_service_context(&metadata, &tenant_id, "");
+        let context = tenant_only_native_service_context(&metadata, &tenant_id);
         let runtime = self.require_runtime()?;
         let file_id = Uuid::new_v4().to_string();
         // file_type column is nullable: stored NULL when the caller omits it.
@@ -947,20 +1161,16 @@ impl StorageService for StorageServiceImpl {
         };
         let write = async {
             if quota > 0 {
-                let used = runtime
-                    .native_entity_sum_i64_for_service(
-                        "storage",
-                        &context,
-                        FILE_MSG,
-                        Some(file_tenant_active_filter(&tenant_id)),
-                        "size_bytes",
-                    )
-                    .await?;
+                let used = self.tenant_scoped_size_sum(&tenant_id).await?;
                 if used + declared_size > quota {
                     return Err(status_with_reason(
-                        Status::resource_exhausted(format!(
-                            "tenant storage quota exceeded: {used}+{declared_size} > {quota}"
-                        )),
+                        crate::runtime::executor_utils::quota_refusal_status(
+                            "storage",
+                            "tenant storage quota",
+                            format!(
+                                "tenant storage quota exceeded: {used}+{declared_size} > {quota}"
+                            ),
+                        ),
                         STORAGE_QUOTA_EXCEEDED,
                     ));
                 }
@@ -1072,7 +1282,7 @@ impl StorageService for StorageServiceImpl {
         let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
         let file_id = parse_uuid("file_id", &req.file_id)?.to_string();
         let file_type = file_type_to_db(&req.file_type, "")?;
-        let context = native_service_context(&metadata, &tenant_id, "");
+        let context = tenant_only_native_service_context(&metadata, &tenant_id);
         let runtime = self.require_runtime()?;
 
         // Load the current row: confirms existence, gives the object_key/project to
@@ -1086,16 +1296,13 @@ impl StorageService for StorageServiceImpl {
             .await?;
         let prior = match prior_rows.first() {
             Some(row) => file_from_json(row),
-            None => return Err(Status::not_found("file not found")),
+            None => return Err(storage_file_not_found_status("finalize_upload")),
         };
         // Reject re-finalize of an already-ACTIVE row (zero extra round-trip —
         // `prior` is in hand). Fail-closed lifecycle guard: avoids silently
         // re-running the ACTIVE-transition upsert on a double finalize.
         if file_status_to_short(prior.status) == "ACTIVE" {
-            return Err(status_with_reason(
-                Status::failed_precondition("upload already finalized"),
-                ALREADY_FINALIZED,
-            ));
+            return Err(upload_already_finalized_status());
         }
         // Confirm the bytes landed and, when the client supplies them, verify the
         // object's HEAD size/etag — fail-closed on a missing object or a
@@ -1105,12 +1312,7 @@ impl StorageService for StorageServiceImpl {
         let presence = self.object_exists(&prior).await?;
         match &presence {
             ObjectCheck::Absent => {
-                return Err(status_with_reason(
-                    Status::failed_precondition(
-                        "uploaded object is not present in the configured object store",
-                    ),
-                    OBJECT_NOT_PRESENT,
-                ));
+                return Err(uploaded_object_missing_status());
             }
             ObjectCheck::Present {
                 size: head_size,
@@ -1118,10 +1320,7 @@ impl StorageService for StorageServiceImpl {
             } => {
                 if let Some(etag) = req.etag.as_deref().map(str::trim).filter(|e| !e.is_empty()) {
                     if normalize_etag(etag) != normalize_etag(head_etag) {
-                        return Err(status_with_reason(
-                            Status::failed_precondition("uploaded object etag does not match"),
-                            UPLOAD_SIZE_MISMATCH,
-                        ));
+                        return Err(upload_etag_mismatch_status());
                     }
                 }
                 if Self::tenant_quota_bytes() > 0
@@ -1129,13 +1328,7 @@ impl StorageService for StorageServiceImpl {
                     && *head_size >= 0
                     && req.size_bytes != *head_size
                 {
-                    return Err(status_with_reason(
-                        Status::failed_precondition(format!(
-                            "uploaded object size {head_size} does not match declared {}",
-                            req.size_bytes
-                        )),
-                        UPLOAD_SIZE_MISMATCH,
-                    ));
+                    return Err(upload_size_mismatch_status(*head_size, req.size_bytes));
                 }
             }
             ObjectCheck::Unchecked => {}
@@ -1210,20 +1403,14 @@ impl StorageService for StorageServiceImpl {
         };
         let apply = async {
             if quota > 0 && delta > 0 {
-                let used = runtime
-                    .native_entity_sum_i64_for_service(
-                        "storage",
-                        &context,
-                        FILE_MSG,
-                        Some(file_tenant_active_filter(&tenant_id)),
-                        "size_bytes",
-                    )
-                    .await?;
+                let used = self.tenant_scoped_size_sum(&tenant_id).await?;
                 if used + delta > quota {
                     return Err(status_with_reason(
-                        Status::resource_exhausted(format!(
-                            "tenant storage quota exceeded: {used}+{delta} > {quota}"
-                        )),
+                        crate::runtime::executor_utils::quota_refusal_status(
+                            "storage",
+                            "tenant storage quota",
+                            format!("tenant storage quota exceeded: {used}+{delta} > {quota}"),
+                        ),
                         STORAGE_QUOTA_EXCEEDED,
                     ));
                 }
@@ -1299,7 +1486,7 @@ impl StorageService for StorageServiceImpl {
         let _admit = self.admit(&req.tenant_id, "").await?;
         let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
         let file_id = parse_uuid("file_id", &req.file_id)?.to_string();
-        let context = native_service_context(&metadata, &tenant_id, "");
+        let context = tenant_only_native_service_context(&metadata, &tenant_id);
         let runtime = self.require_runtime()?;
         let rows = runtime
             .native_entity_read_for_service(
@@ -1309,7 +1496,7 @@ impl StorageService for StorageServiceImpl {
             )
             .await?;
         let Some(file) = rows.first().map(file_from_json) else {
-            return Err(Status::not_found("file not found"));
+            return Err(storage_file_not_found_status("get_download_url"));
         };
         let object_key = file.object_key;
         let project_id = file.project_id;
@@ -1381,7 +1568,7 @@ impl StorageService for StorageServiceImpl {
         let _admit = self.admit(&req.tenant_id, "").await?;
         let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
         let file_id = parse_uuid("file_id", &req.file_id)?.to_string();
-        let context = native_service_context(&metadata, &tenant_id, "");
+        let context = tenant_only_native_service_context(&metadata, &tenant_id);
         let runtime = self.require_runtime()?;
         // Resolve the live file row scoped to the verified tenant (cross-tenant
         // file_id → not-found, fail-closed).
@@ -1393,13 +1580,10 @@ impl StorageService for StorageServiceImpl {
             )
             .await?;
         let Some(file) = rows.first().map(file_from_json) else {
-            return Err(Status::not_found("file not found"));
+            return Err(storage_file_not_found_status("download_file"));
         };
         if file.object_key.trim().is_empty() {
-            return Err(status_with_reason(
-                Status::failed_precondition("file has no object bytes"),
-                OBJECT_NOT_PRESENT,
-            ));
+            return Err(file_object_bytes_missing_status());
         }
         // Confirm the bytes are present (and capture first-chunk metadata) via the
         // SAME HEAD primitive finalize uses. Metadata-only mode (no runtime/object
@@ -1407,20 +1591,10 @@ impl StorageService for StorageServiceImpl {
         let (head_size, head_etag) = match self.object_exists(&file).await? {
             ObjectCheck::Present { size, etag } => (size, etag),
             ObjectCheck::Absent => {
-                return Err(status_with_reason(
-                    Status::failed_precondition(
-                        "object is not present in the configured object store",
-                    ),
-                    OBJECT_NOT_PRESENT,
-                ));
+                return Err(object_store_bytes_missing_status());
             }
             ObjectCheck::Unchecked => {
-                return Err(status_with_reason(
-                    Status::failed_precondition(
-                        "object byte streaming requires a configured object store",
-                    ),
-                    UNSUPPORTED_OBJECT_BACKEND,
-                ));
+                return Err(object_stream_requires_store_status());
             }
         };
         // Resolve the backend/bucket the file's bytes live in (same fallbacks as
@@ -1441,10 +1615,13 @@ impl StorageService for StorageServiceImpl {
             &file.object_key,
             "",
         );
-        let runtime = self
-            .runtime
-            .clone()
-            .ok_or_else(|| Status::failed_precondition("storage service requires runtime"))?;
+        let runtime = self.runtime.clone().ok_or_else(|| {
+            storage_capability_status(
+                "object_stream",
+                "runtime_native_entity_dispatch",
+                "storage service requires runtime",
+            )
+        })?;
         // Bounded-memory byte stream from the object store (executor streams in
         // its own frames; the broker never buffers the whole object).
         let byte_stream = runtime
@@ -1521,7 +1698,7 @@ impl StorageService for StorageServiceImpl {
         let _admit = self.admit_read(&req.tenant_id).await?;
         let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
         let file_id = parse_uuid("file_id", &req.file_id)?.to_string();
-        let context = native_service_context(&metadata, &tenant_id, "");
+        let context = tenant_only_native_service_context(&metadata, &tenant_id);
         let runtime = self.require_runtime()?;
         let rows = runtime
             .native_entity_read_for_service(
@@ -1532,7 +1709,7 @@ impl StorageService for StorageServiceImpl {
             .await?;
         let file = rows.first().map(file_from_json);
         if file.is_none() {
-            return Err(Status::not_found("file not found"));
+            return Err(storage_file_not_found_status("get_file"));
         }
         Ok(Response::new(storage_pb::GetFileResponse {
             file,
@@ -1553,7 +1730,31 @@ impl StorageService for StorageServiceImpl {
         let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
         let file_id = parse_uuid("file_id", &req.file_id)?.to_string();
         let file_type = file_type_to_db(&req.file_type, "")?;
-        let context = native_service_context(&metadata, &tenant_id, "");
+        let update_mask = update_mask_path_set(
+            req.update_mask.as_ref(),
+            &[
+                "filename",
+                "content_type",
+                "file_type",
+                "reference_id",
+                "reference_type",
+                "is_public",
+            ],
+        )?;
+        if update_mask
+            .as_ref()
+            .is_some_and(|paths| paths.contains("is_public"))
+            && req.is_public.is_none()
+        {
+            return Err(crate::runtime::executor_utils::invalid_argument_fields(
+                "is_public is required when present in update_mask",
+                [(
+                    "is_public",
+                    "must be supplied when update_mask includes is_public",
+                )],
+            ));
+        }
+        let context = tenant_only_native_service_context(&metadata, &tenant_id);
         let runtime = self.require_runtime()?;
         let rows = runtime
             .native_entity_read_for_service(
@@ -1564,44 +1765,59 @@ impl StorageService for StorageServiceImpl {
             .await?;
         let prior = match rows.first() {
             Some(row) => file_from_json(row),
-            None => return Err(Status::not_found("file not found")),
+            None => return Err(storage_file_not_found_status("update_file")),
         };
         // Partial update onto a full record (NOT-NULL-safe upsert): only the
         // fields the caller supplied are changed (mirrors the old COALESCE/NULLIF
         // guards).
         let mut record = file_full_record(&prior);
         let mut fields = Vec::new();
-        if !req.filename.trim().is_empty() {
+        if update_mask_allows(&update_mask, "filename", !req.filename.trim().is_empty()) {
             record.insert("filename".to_string(), logical_string(req.filename.clone()));
             fields.push("filename".to_string());
         }
-        if !req.content_type.trim().is_empty() {
+        if update_mask_allows(
+            &update_mask,
+            "content_type",
+            !req.content_type.trim().is_empty(),
+        ) {
             record.insert(
                 "content_type".to_string(),
                 logical_string(req.content_type.clone()),
             );
             fields.push("content_type".to_string());
         }
-        if !file_type.is_empty() {
+        if update_mask_allows(&update_mask, "file_type", !file_type.is_empty()) {
             record.insert("file_type".to_string(), logical_text_or_null(&file_type));
             fields.push("file_type".to_string());
         }
-        if !req.reference_id.trim().is_empty() {
+        if update_mask_allows(
+            &update_mask,
+            "reference_id",
+            !req.reference_id.trim().is_empty(),
+        ) {
             record.insert(
                 "reference_id".to_string(),
                 logical_uuid_or_null(&req.reference_id),
             );
             fields.push("reference_id".to_string());
         }
-        if !req.reference_type.trim().is_empty() {
+        if update_mask_allows(
+            &update_mask,
+            "reference_type",
+            !req.reference_type.trim().is_empty(),
+        ) {
             record.insert(
                 "reference_type".to_string(),
                 logical_string(req.reference_type.clone()),
             );
             fields.push("reference_type".to_string());
         }
-        if let Some(is_public) = req.is_public {
-            record.insert("is_public".to_string(), LogicalValue::Bool(is_public));
+        if update_mask_allows(&update_mask, "is_public", req.is_public.is_some()) {
+            record.insert(
+                "is_public".to_string(),
+                LogicalValue::Bool(req.is_public.unwrap_or(false)),
+            );
             fields.push("is_public".to_string());
         }
         if !fields.is_empty() {
@@ -1651,7 +1867,7 @@ impl StorageService for StorageServiceImpl {
         let _admit = self.admit(&req.tenant_id, "").await?;
         let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
         let file_id = parse_uuid("file_id", &req.file_id)?.to_string();
-        let context = native_service_context(&metadata, &tenant_id, "");
+        let context = tenant_only_native_service_context(&metadata, &tenant_id);
         let runtime = self.require_runtime()?;
         // Load the live row first: confirms existence (and not already deleted) and
         // recovers the object_key/project so the bytes can be removed too.
@@ -1664,7 +1880,7 @@ impl StorageService for StorageServiceImpl {
             .await?;
         let prior = match rows.first() {
             Some(row) => file_from_json(row),
-            None => return Err(Status::not_found("file not found")),
+            None => return Err(storage_file_not_found_status("delete_file")),
         };
         // Soft-delete the metadata (keeps it auditable) on a full record.
         let mut record = file_full_record(&prior);
@@ -1719,10 +1935,8 @@ impl StorageService for StorageServiceImpl {
         let _admit = self.admit_read(&req.tenant_id).await?;
         let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
         let type_filter = file_type_to_db(&req.file_type, "")?;
-        let page_size = (if req.page_size > 0 { req.page_size } else { 50 }).min(500);
-        let page = if req.page > 0 { req.page } else { 1 };
-        let offset = (page as u64 - 1) * page_size as u64;
-        let context = native_service_context(&metadata, &tenant_id, "");
+        let page_window = native_offset_page_window(req.page, req.page_size, &req.page_token, 50);
+        let context = tenant_only_native_service_context(&metadata, &tenant_id);
         let runtime = self.require_runtime()?;
         let filter = file_list_filter(
             &tenant_id,
@@ -1746,7 +1960,11 @@ impl StorageService for StorageServiceImpl {
                 direction: SortDirection::Asc,
                 nulls: NullOrder::Default,
             }],
-            pagination: Some(LogicalPagination::page(offset, page_size as u32)),
+            include: Vec::new(),
+            pagination: Some(LogicalPagination::page(
+                page_window.offset as u64,
+                page_window.limit as u32,
+            )),
         };
         let rows = runtime
             .native_entity_read_for_service("storage", &context, read)
@@ -1756,6 +1974,11 @@ impl StorageService for StorageServiceImpl {
             files,
             total_count: total as i32,
             error: None,
+            next_page_token: native_next_page_token_for_total(
+                page_window.offset,
+                page_window.limit,
+                total as i64,
+            ),
         }))
     }
 }
@@ -1827,7 +2050,128 @@ impl DataBrokerService {
 #[cfg(test)]
 mod tenant_scope_tests {
     use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
     use tonic::metadata::MetadataValue;
+
+    fn decode_detail(status: &Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("error-detail trailer present")
+            .to_bytes()
+            .expect("trailer decodes to bytes");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_single_field_violation(status: &Status, field: &str, description: &str) {
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, field);
+        assert_eq!(detail.field_violations[0].description, description);
+    }
+
+    fn assert_policy_detail_with_reason(
+        status: &Status,
+        operation: &str,
+        policy_decision_id: &str,
+        reason: &'static str,
+        message: &str,
+    ) {
+        assert_eq!(status.code(), tonic::Code::FailedPrecondition);
+        assert_eq!(status.message(), message);
+        assert_eq!(
+            status
+                .metadata()
+                .get("error-reason")
+                .and_then(|value| value.to_str().ok()),
+            Some(reason)
+        );
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Policy as i32);
+        assert_eq!(detail.operation, operation);
+        assert_eq!(detail.policy_decision_id, policy_decision_id);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+    }
+
+    fn assert_capability_detail_with_reason(
+        status: &Status,
+        operation: &str,
+        capability_required: &str,
+        reason: &'static str,
+        message: &str,
+    ) {
+        assert_eq!(status.code(), tonic::Code::FailedPrecondition);
+        assert_eq!(status.message(), message);
+        assert_eq!(
+            status
+                .metadata()
+                .get("error-reason")
+                .and_then(|value| value.to_str().ok()),
+            Some(reason)
+        );
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Capability as i32);
+        assert_eq!(detail.backend, "storage");
+        assert_eq!(detail.operation, operation);
+        assert_eq!(detail.capability_required, capability_required);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+    }
+
+    fn assert_schema_detail(status: &Status, operation: &str, schema_code: &str, message: &str) {
+        assert_eq!(status.code(), tonic::Code::NotFound);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Schema as i32);
+        assert_eq!(detail.backend, "storage");
+        assert_eq!(detail.operation, operation);
+        assert_eq!(detail.capability_required, schema_code);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+    }
+
+    fn assert_internal_detail(status: &Status, operation: &str, message: &str) {
+        assert_eq!(status.code(), tonic::Code::Internal);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "storage");
+        assert_eq!(detail.operation, operation);
+        assert!(detail.capability_required.is_empty());
+        assert!(detail.policy_decision_id.is_empty());
+        assert!(detail.field_violations.is_empty());
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+    }
+
+    fn assert_validation_detail_with_reason(
+        status: &Status,
+        field: &str,
+        description: &str,
+        reason: &'static str,
+        message: &str,
+    ) {
+        assert_eq!(status.code(), tonic::Code::FailedPrecondition);
+        assert_eq!(status.message(), message);
+        assert_eq!(
+            status
+                .metadata()
+                .get("error-reason")
+                .and_then(|value| value.to_str().ok()),
+            Some(reason)
+        );
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, field);
+        assert_eq!(detail.field_violations[0].description, description);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+    }
 
     /// A caller scoped to tenant-a (x-tenant-id) must not operate on tenant-b by
     /// putting a foreign tenant_id in the request BODY. The scope guard rejects
@@ -1848,6 +2192,178 @@ mod tenant_scope_tests {
             .await
             .expect_err("cross-tenant body must be rejected");
         assert_eq!(err.code(), tonic::Code::PermissionDenied);
+    }
+
+    #[test]
+    fn storage_file_not_found_statuses_carry_schema_detail() {
+        for operation in [
+            "finalize_upload",
+            "get_download_url",
+            "download_file",
+            "get_file",
+            "update_file",
+            "delete_file",
+        ] {
+            assert_schema_detail(
+                &storage_file_not_found_status(operation),
+                operation,
+                "file_not_found",
+                "file not found",
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn register_upload_missing_filename_carries_field_violation() {
+        let svc = StorageServiceImpl::new(); // no runtime, no channels (admit no-op)
+        let mut request = Request::new(storage_pb::RegisterUploadRequest {
+            tenant_id: "tenant-a".to_string(),
+            filename: "  ".to_string(),
+            ..Default::default()
+        });
+        request
+            .metadata_mut()
+            .insert("x-tenant-id", MetadataValue::from_static("tenant-a"));
+        let err = svc
+            .register_upload(request)
+            .await
+            .expect_err("missing filename must be rejected before runtime access");
+        assert_eq!(err.code(), tonic::Code::InvalidArgument);
+        assert_eq!(err.message(), "tenant_id and filename are required");
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, "filename");
+        assert_eq!(
+            detail.field_violations[0].description,
+            "must be a non-empty filename"
+        );
+    }
+
+    #[test]
+    fn file_type_and_status_validation_carry_field_violations() {
+        let file_type =
+            file_type_to_db("directory", "OTHER").expect_err("unknown file type must be rejected");
+        assert_eq!(file_type.code(), tonic::Code::InvalidArgument);
+        assert_eq!(file_type.message(), "unknown file type: DIRECTORY");
+        assert_single_field_violation(
+            &file_type,
+            "file_type",
+            "must be a supported FileType enum value",
+        );
+
+        let status = file_status_to_db("archived", "PENDING")
+            .expect_err("unknown file status must be rejected");
+        assert_eq!(status.code(), tonic::Code::InvalidArgument);
+        assert_eq!(status.message(), "unknown file status: ARCHIVED");
+        assert_single_field_violation(
+            &status,
+            "status",
+            "must be a supported FileStatus enum value",
+        );
+    }
+
+    #[test]
+    fn upload_already_finalized_carries_policy_detail_and_reason() {
+        assert_policy_detail_with_reason(
+            &upload_already_finalized_status(),
+            "finalize_upload",
+            "upload_already_finalized",
+            ALREADY_FINALIZED,
+            "upload already finalized",
+        );
+    }
+
+    #[test]
+    fn upload_presence_denial_carries_policy_detail_and_reason() {
+        assert_policy_detail_with_reason(
+            &uploaded_object_missing_status(),
+            "finalize_upload",
+            "uploaded_object_present",
+            OBJECT_NOT_PRESENT,
+            "uploaded object is not present in the configured object store",
+        );
+    }
+
+    #[test]
+    fn upload_head_mismatches_carry_validation_detail_and_reason() {
+        assert_validation_detail_with_reason(
+            &upload_etag_mismatch_status(),
+            "etag",
+            "must match the uploaded object's store ETag",
+            UPLOAD_SIZE_MISMATCH,
+            "uploaded object etag does not match",
+        );
+        assert_validation_detail_with_reason(
+            &upload_size_mismatch_status(12, 9),
+            "size_bytes",
+            "must match the uploaded object's store content length",
+            UPLOAD_SIZE_MISMATCH,
+            "uploaded object size 12 does not match declared 9",
+        );
+    }
+
+    #[test]
+    fn object_stream_requires_store_carries_capability_detail_and_reason() {
+        assert_capability_detail_with_reason(
+            &object_stream_requires_store_status(),
+            "object_stream",
+            "object_store",
+            UNSUPPORTED_OBJECT_BACKEND,
+            "object byte streaming requires a configured object store",
+        );
+    }
+
+    #[test]
+    fn download_object_absence_carries_policy_detail_and_reason() {
+        assert_policy_detail_with_reason(
+            &file_object_bytes_missing_status(),
+            "download_file",
+            "file_object_bytes_present",
+            OBJECT_NOT_PRESENT,
+            "file has no object bytes",
+        );
+        assert_policy_detail_with_reason(
+            &object_store_bytes_missing_status(),
+            "download_file",
+            "object_store_bytes_present",
+            OBJECT_NOT_PRESENT,
+            "object is not present in the configured object store",
+        );
+    }
+
+    #[test]
+    fn storage_missing_runtime_capabilities_carry_typed_detail() {
+        for (operation, message) in [
+            (
+                "native_entity_dispatch",
+                "storage service requires runtime native entity dispatch",
+            ),
+            ("object_stream", "storage service requires runtime"),
+        ] {
+            let err =
+                storage_capability_status(operation, "runtime_native_entity_dispatch", message);
+            assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+            assert_eq!(err.message(), message);
+            let detail = decode_detail(&err);
+            assert_eq!(detail.kind, ErrorKind::Capability as i32);
+            assert_eq!(detail.backend, "storage");
+            assert_eq!(detail.operation, operation);
+            assert_eq!(detail.capability_required, "runtime_native_entity_dispatch");
+            assert!(!detail.retryable);
+        }
+    }
+
+    #[test]
+    fn storage_internal_status_carries_typed_detail() {
+        assert_internal_detail(
+            &storage_internal_status(
+                "tenant_size_sum_aggregate",
+                "storage usage aggregate failed: database is unavailable",
+            ),
+            "tenant_size_sum_aggregate",
+            "storage usage aggregate failed: database is unavailable",
+        );
     }
 }
 

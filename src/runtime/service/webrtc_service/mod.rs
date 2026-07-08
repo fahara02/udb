@@ -25,8 +25,9 @@ use tonic::{Request, Response, Status};
 use uuid::Uuid;
 
 use super::native_helpers::{
-    MAX_LIST_ROWS, admit_on as native_admit_on, emit_payload_event, native_service_context,
-    validate_request_tenant,
+    admit_on as native_admit_on, emit_payload_event, native_next_page_token,
+    native_next_page_token_for_total, native_offset_page_window, native_service_context,
+    update_mask_allows, update_mask_path_set, validate_request_tenant,
 };
 use crate::ir::{
     ComparisonOp, ConflictStrategy, LogicalFilter, LogicalPagination, LogicalProjection,
@@ -55,6 +56,124 @@ use super::DataBrokerService;
 
 #[cfg(feature = "webrtc")]
 mod sfu;
+#[cfg(feature = "webrtc")]
+mod sfu_livekit;
+
+#[cfg(feature = "webrtc")]
+#[async_trait::async_trait]
+pub(crate) trait SfuBridge: Send + Sync {
+    async fn accept_offer(
+        &self,
+        room_id: &str,
+        peer_id: &str,
+        offer_sdp: &str,
+    ) -> Result<String, String>;
+
+    async fn mint_join_token(
+        &self,
+        tenant_id: &str,
+        room_id: &str,
+        peer_id: &str,
+        ttl_seconds: i64,
+        now_unix: i64,
+    ) -> Result<Option<SfuJoinToken>, String>;
+
+    async fn register_published_track(
+        &self,
+        room_id: &str,
+        peer_id: &str,
+        track_id: &str,
+        kind: &str,
+    ) -> Result<(), String>;
+
+    async fn unregister_track(&self, track_id: &str) -> Result<(), String>;
+
+    async fn kick_peer(&self, tenant_id: &str, room_id: &str, peer_id: &str) -> Result<(), String>;
+
+    async fn close_room_hook(&self, room_id: &str) -> Result<(), String>;
+}
+
+#[cfg(feature = "webrtc")]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct SfuJoinToken {
+    pub(crate) url: String,
+    pub(crate) token: String,
+    pub(crate) expires_at: i64,
+}
+
+#[cfg(feature = "webrtc")]
+#[derive(Clone, Debug)]
+struct UnavailableSfuBridge {
+    reason: String,
+}
+
+#[cfg(feature = "webrtc")]
+#[async_trait::async_trait]
+impl SfuBridge for UnavailableSfuBridge {
+    async fn accept_offer(
+        &self,
+        _room_id: &str,
+        _peer_id: &str,
+        _offer_sdp: &str,
+    ) -> Result<String, String> {
+        Err(self.reason.clone())
+    }
+
+    async fn mint_join_token(
+        &self,
+        _tenant_id: &str,
+        _room_id: &str,
+        _peer_id: &str,
+        _ttl_seconds: i64,
+        _now_unix: i64,
+    ) -> Result<Option<SfuJoinToken>, String> {
+        Err(self.reason.clone())
+    }
+
+    async fn register_published_track(
+        &self,
+        _room_id: &str,
+        _peer_id: &str,
+        _track_id: &str,
+        _kind: &str,
+    ) -> Result<(), String> {
+        Err(self.reason.clone())
+    }
+
+    async fn unregister_track(&self, _track_id: &str) -> Result<(), String> {
+        Err(self.reason.clone())
+    }
+
+    async fn kick_peer(
+        &self,
+        _tenant_id: &str,
+        _room_id: &str,
+        _peer_id: &str,
+    ) -> Result<(), String> {
+        Err(self.reason.clone())
+    }
+
+    async fn close_room_hook(&self, _room_id: &str) -> Result<(), String> {
+        Err(self.reason.clone())
+    }
+}
+
+#[cfg(feature = "webrtc")]
+fn resolve_sfu_bridge() -> Option<Arc<dyn SfuBridge>> {
+    match sfu_livekit::LiveKitSfuBridge::from_env() {
+        Ok(Some(bridge)) => return Some(Arc::new(bridge)),
+        Ok(None) => {}
+        Err(err) => {
+            tracing::warn!(error = %err, "LiveKit SFU bridge mounted degraded by invalid configuration");
+            return Some(Arc::new(UnavailableSfuBridge { reason: err }));
+        }
+    }
+    if sfu::EmbeddedSfu::enabled_from_env() {
+        Some(Arc::new(sfu::EmbeddedSfu::default()))
+    } else {
+        None
+    }
+}
 
 const ROOM_MSG: &str = "udb.core.webrtc.entity.v1.Room";
 const PEER_MSG: &str = "udb.core.webrtc.entity.v1.Peer";
@@ -100,18 +219,153 @@ const ROOM_CLOSED: &str = "ROOM_CLOSED";
 const PEER_NOT_ACTIVE: &str = "PEER_NOT_ACTIVE";
 /// No TURN secret configured; credentials cannot be minted.
 const TURN_NOT_CONFIGURED: &str = "TURN_NOT_CONFIGURED";
+const TURN_NOT_CONFIGURED_MESSAGE: &str =
+    "TURN secret not configured; set UDB_TURN_SECRET to issue credentials";
+/// SFU backend configured but unable to mint/control a join.
+#[cfg(feature = "webrtc")]
+const SFU_BACKEND_UNAVAILABLE: &str = "SFU_BACKEND_UNAVAILABLE";
+/// Egress requested but the operator has not enabled it (`UDB_WEBRTC_EGRESS_ENABLED` unset).
+const EGRESS_NOT_ENABLED: &str = "EGRESS_NOT_ENABLED";
+const EGRESS_NOT_ENABLED_MESSAGE: &str =
+    "webrtc egress is not enabled; set UDB_WEBRTC_EGRESS_ENABLED=1 and wire an egress backend";
+/// Egress enabled but no recording/egress backend is wired (mounted but degraded).
+const EGRESS_BACKEND_UNAVAILABLE: &str = "EGRESS_BACKEND_UNAVAILABLE";
+const EGRESS_BACKEND_UNAVAILABLE_MESSAGE: &str =
+    "webrtc egress is enabled but no egress backend is wired (mounted but degraded)";
+/// Egress id belongs to a different tenant than the authenticated request.
+const EGRESS_TENANT_SCOPE_MISMATCH: &str = "EGRESS_TENANT_SCOPE_MISMATCH";
+const EGRESS_TENANT_SCOPE_MISMATCH_MESSAGE: &str =
+    "egress_id is not scoped to the authenticated tenant";
 
-/// Build a `FailedPrecondition` status carrying a stable, machine-readable
-/// `reason` in the `error-reason` response trailer. Same status code and
-/// fail-closed semantics as `Status::failed_precondition`; the reason is purely
-/// additive metadata for SDK callers.
-fn failed_precondition_with_reason(reason: &'static str, message: impl Into<String>) -> Status {
-    let mut status = Status::failed_precondition(message.into());
+// ── Egress (master-plan 5.5) ─────────────────────────────────────────────────
+/// Egress outbox topics (dotted form, matching the `emits` contract on the
+/// RoomService egress RPCs in webrtc_service.proto). The CDC engine tails the
+/// outbox → Kafka under these exact names.
+const EGRESS_STARTED_TOPIC: &str = "udb.webrtc.egress.started.v1";
+const EGRESS_STOPPED_TOPIC: &str = "udb.webrtc.egress.stopped.v1";
+const EGRESS_FAILED_TOPIC: &str = "udb.webrtc.egress.failed.v1";
+/// Prefix that binds a server-derived egress id to its owning tenant.
+const EGRESS_ID_PREFIX: &str = "eg";
+
+/// Egress capability state, resolved ONCE at service construction so the gate is
+/// not re-read from the environment per request.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum EgressCapability {
+    /// `UDB_WEBRTC_EGRESS_ENABLED` unset/false — egress is off (fail closed).
+    Disabled,
+    /// Flag set, but no recording/egress backend is wired yet — the capability
+    /// is mounted but degraded; start/stop/list fail closed honestly.
+    EnabledNoBackend,
+}
+
+/// Resolve the egress capability once from the environment. Default (unset) is
+/// [`EgressCapability::Disabled`] — fail closed. A real backend would upgrade the
+/// returned state to a future `Ready` variant.
+fn resolve_egress_capability() -> EgressCapability {
+    let enabled = std::env::var("UDB_WEBRTC_EGRESS_ENABLED")
+        .ok()
+        .map(|v| {
+            matches!(
+                v.trim().to_ascii_lowercase().as_str(),
+                "1" | "true" | "yes" | "on"
+            )
+        })
+        .unwrap_or(false);
+    if enabled {
+        EgressCapability::EnabledNoBackend
+    } else {
+        EgressCapability::Disabled
+    }
+}
+
+/// Server-derived, tenant-scoped egress id. Encodes the verified tenant so a
+/// later Stop/List can reject an id that is not scoped to the caller's tenant
+/// (cross-tenant leak guard). The caller NEVER supplies an egress_id on start.
+fn new_egress_id(tenant_id: &str) -> String {
+    format!("{EGRESS_ID_PREFIX}-{}-{}", tenant_id.trim(), Uuid::new_v4())
+}
+
+/// True iff `egress_id` was minted for `tenant_id` (see [`new_egress_id`]): it
+/// must carry the `eg-<tenant>-` prefix and a parseable UUID suffix.
+fn egress_id_is_tenant_scoped(egress_id: &str, tenant_id: &str) -> bool {
+    let want = format!("{EGRESS_ID_PREFIX}-{}-", tenant_id.trim());
+    egress_id
+        .strip_prefix(&want)
+        .map(|rest| Uuid::parse_str(rest).is_ok())
+        .unwrap_or(false)
+}
+
+fn webrtc_policy_status_with_reason(
+    operation: &'static str,
+    policy_decision_id: &'static str,
+    message: impl Into<String>,
+    reason: &'static str,
+) -> Status {
+    webrtc_policy_status_with_code_and_reason(
+        tonic::Code::FailedPrecondition,
+        operation,
+        policy_decision_id,
+        message,
+        reason,
+    )
+}
+
+fn webrtc_policy_status_with_code_and_reason(
+    code: tonic::Code,
+    operation: &'static str,
+    policy_decision_id: &'static str,
+    message: impl Into<String>,
+    reason: &'static str,
+) -> Status {
+    let mut status = crate::runtime::executor_utils::policy_status_with_code(
+        code,
+        operation,
+        policy_decision_id,
+        message,
+    );
     status.metadata_mut().insert(
         "error-reason",
         tonic::metadata::MetadataValue::from_static(reason),
     );
     status
+}
+
+fn peer_not_active_status() -> Status {
+    webrtc_policy_status_with_reason(
+        "require_active_peer_membership",
+        "peer_not_active",
+        "peer is not an active member of this room",
+        PEER_NOT_ACTIVE,
+    )
+}
+
+fn peer_not_active_permission_status() -> Status {
+    webrtc_policy_status_with_code_and_reason(
+        tonic::Code::PermissionDenied,
+        "signal_peer_membership",
+        "peer_not_active",
+        "peer is not an active member of this room",
+        PEER_NOT_ACTIVE,
+    )
+}
+
+fn room_not_joinable_status() -> Status {
+    webrtc_policy_status_with_reason(
+        "join_room",
+        "room_not_joinable",
+        "room not found, closed, or at capacity",
+        ROOM_FULL,
+    )
+}
+
+fn egress_tenant_scope_mismatch_status() -> Status {
+    webrtc_policy_status_with_code_and_reason(
+        tonic::Code::PermissionDenied,
+        "stop_egress",
+        "egress_tenant_scope_mismatch",
+        EGRESS_TENANT_SCOPE_MISMATCH_MESSAGE,
+        EGRESS_TENANT_SCOPE_MISMATCH,
+    )
 }
 
 /// TURN (coturn) configuration, read from the environment once at build time.
@@ -265,7 +519,9 @@ pub struct WebrtcServiceImpl {
     turn: TurnConfig,
     signaling: Arc<SignalingHub>,
     #[cfg(feature = "webrtc")]
-    sfu: Arc<sfu::EmbeddedSfu>,
+    /// Optional SFU bridge. Resolved once from deployment config; `None` keeps
+    /// the default mesh signaling path without per-request env reads.
+    sfu_bridge: Option<Arc<dyn SfuBridge>>,
     /// Schema-qualified outbox table (`udb_system.outbox_events`) the CDC engine
     /// tails → Apache Kafka → consumers. `None` = no domain-event emission.
     outbox_relation: Option<String>,
@@ -276,6 +532,91 @@ pub struct WebrtcServiceImpl {
     /// runtime wired) — `build_webrtc_service` always wires it in production.
     channels: Option<ChannelManager>,
     metrics: Arc<dyn MetricsRecorder>,
+    /// Recording/egress capability, resolved ONCE at construction from
+    /// `UDB_WEBRTC_EGRESS_ENABLED` (master-plan 5.5). Default = disabled.
+    egress: EgressCapability,
+}
+
+fn webrtc_capability_status(
+    operation: &'static str,
+    capability_required: &'static str,
+    message: impl Into<String>,
+) -> Status {
+    crate::runtime::executor_utils::capability_status(
+        "webrtc",
+        operation,
+        capability_required,
+        message,
+    )
+}
+
+fn webrtc_internal_status(operation: impl Into<String>, message: impl Into<String>) -> Status {
+    crate::runtime::executor_utils::internal_status("webrtc", operation, message)
+}
+
+fn webrtc_capability_status_with_reason(
+    operation: &'static str,
+    capability_required: &'static str,
+    message: impl Into<String>,
+    reason: &'static str,
+) -> Status {
+    let mut status = webrtc_capability_status(operation, capability_required, message);
+    status.metadata_mut().insert(
+        "error-reason",
+        tonic::metadata::MetadataValue::from_static(reason),
+    );
+    status
+}
+
+fn webrtc_schema_not_found_status(
+    operation: &'static str,
+    schema_code: &'static str,
+    message: &'static str,
+) -> Status {
+    crate::runtime::executor_utils::schema_status(
+        tonic::Code::NotFound,
+        "webrtc",
+        operation,
+        schema_code,
+        message,
+    )
+}
+
+#[cfg(feature = "webrtc")]
+fn sfu_backend_unavailable_status(err: impl std::fmt::Display) -> Status {
+    webrtc_capability_status_with_reason(
+        "sfu_join_token",
+        "sfu_backend",
+        format!("SFU backend unavailable: {err}"),
+        SFU_BACKEND_UNAVAILABLE,
+    )
+}
+
+fn turn_secret_not_configured_status(operation: &'static str) -> Status {
+    webrtc_capability_status_with_reason(
+        operation,
+        "turn_secret",
+        TURN_NOT_CONFIGURED_MESSAGE,
+        TURN_NOT_CONFIGURED,
+    )
+}
+
+fn egress_not_enabled_status(operation: &'static str) -> Status {
+    webrtc_capability_status_with_reason(
+        operation,
+        "webrtc_egress_enabled",
+        EGRESS_NOT_ENABLED_MESSAGE,
+        EGRESS_NOT_ENABLED,
+    )
+}
+
+fn egress_backend_unavailable_status(operation: &'static str) -> Status {
+    webrtc_capability_status_with_reason(
+        operation,
+        "webrtc_egress_backend",
+        EGRESS_BACKEND_UNAVAILABLE_MESSAGE,
+        EGRESS_BACKEND_UNAVAILABLE,
+    )
 }
 
 impl WebrtcServiceImpl {
@@ -286,11 +627,18 @@ impl WebrtcServiceImpl {
             turn: TurnConfig::from_env(),
             signaling: Arc::new(SignalingHub::default()),
             #[cfg(feature = "webrtc")]
-            sfu: Arc::new(sfu::EmbeddedSfu::default()),
+            sfu_bridge: resolve_sfu_bridge(),
             outbox_relation: None,
             channels: None,
             metrics: Arc::new(NoopMetrics),
+            egress: resolve_egress_capability(),
         }
+    }
+
+    #[cfg(feature = "webrtc")]
+    pub(crate) fn with_sfu_bridge(mut self, bridge: Option<Arc<dyn SfuBridge>>) -> Self {
+        self.sfu_bridge = bridge;
+        self
     }
 
     /// Wire the shared per-tenant fair-admission manager (same one the data plane
@@ -359,7 +707,11 @@ impl WebrtcServiceImpl {
     /// The typed-path runtime; fail closed when absent (bare test construction).
     fn require_runtime(&self) -> Result<&DataBrokerRuntime, Status> {
         self.runtime.as_deref().ok_or_else(|| {
-            Status::failed_precondition("webrtc service requires runtime native entity dispatch")
+            webrtc_capability_status(
+                "native_entity_dispatch",
+                "runtime_native_entity_dispatch",
+                "webrtc service requires runtime native entity dispatch",
+            )
         })
     }
 
@@ -374,10 +726,153 @@ impl WebrtcServiceImpl {
     /// Room/peer/track CRUD is durable-only: fail closed without a Postgres pool.
     fn require_pool(&self) -> Result<&PgPool, Status> {
         self.pg_pool.as_ref().ok_or_else(|| {
-            Status::failed_precondition(
+            webrtc_capability_status(
+                "postgres_store",
+                "postgres_store",
                 "webrtc service requires a Postgres-backed store (no PG pool configured)",
             )
         })
+    }
+
+    // ── Egress capability (master-plan 5.5) ──────────────────────────────────
+
+    /// Honest egress capability label for health/capabilities reporting:
+    /// `"disabled"` (flag unset) or `"degraded"` (flag set but no egress backend
+    /// wired — mounted but degraded). Becomes `"ready"` once a backend exists.
+    pub(crate) fn egress_capability_label(&self) -> &'static str {
+        match self.egress {
+            EgressCapability::Disabled => "disabled",
+            EgressCapability::EnabledNoBackend => "degraded",
+        }
+    }
+
+    /// Flag gate: fail closed with `FAILED_PRECONDITION`/`EGRESS_NOT_ENABLED`
+    /// when the operator has not enabled egress. NEVER `UNIMPLEMENTED` (the
+    /// capability-lie / retry-storm guard).
+    fn require_egress_enabled(&self, operation: &'static str) -> Result<(), Status> {
+        match self.egress {
+            EgressCapability::Disabled => Err(egress_not_enabled_status(operation)),
+            EgressCapability::EnabledNoBackend => Ok(()),
+        }
+    }
+
+    /// `FAILED_PRECONDITION`/`EGRESS_BACKEND_UNAVAILABLE` — egress is enabled but
+    /// no recording/egress backend is wired (mounted but degraded).
+    fn egress_backend_unavailable(operation: &'static str) -> Status {
+        egress_backend_unavailable_status(operation)
+    }
+
+    /// Backend seam: start a recording/egress job. Returns the lifecycle status
+    /// (`EgressStatus::Starting`) once a real backend is wired; until then it is
+    /// the mounted-but-degraded fail-closed path.
+    async fn start_egress_backend(
+        &self,
+        _egress_id: &str,
+        _room_id: &str,
+        _track_id: Option<&str>,
+        operation: &'static str,
+        _kind: &str,
+    ) -> Result<i32, Status> {
+        Err(Self::egress_backend_unavailable(operation))
+    }
+
+    /// Backend seam: stop a running egress job. Returns `EgressStatus::Stopping`
+    /// once a real backend is wired.
+    async fn stop_egress_backend(
+        &self,
+        _egress_id: &str,
+        operation: &'static str,
+    ) -> Result<i32, Status> {
+        Err(Self::egress_backend_unavailable(operation))
+    }
+
+    /// Backend seam: list the tenant's egress jobs. Returns the live jobs once a
+    /// real backend is wired; until then it fails closed (degraded).
+    async fn list_egress_backend(
+        &self,
+        _tenant_id: &str,
+        _room_id: &str,
+        operation: &'static str,
+    ) -> Result<Vec<webrtc_pb::EgressInfo>, Status> {
+        Err(Self::egress_backend_unavailable(operation))
+    }
+
+    /// Emit the `EgressStarted` outbox event (partition by room).
+    async fn emit_egress_started(
+        &self,
+        pool: &PgPool,
+        egress_id: &str,
+        tenant_id: &str,
+        room_id: &str,
+        track_id: Option<&str>,
+        kind: &str,
+    ) {
+        emit_payload_event(
+            pool,
+            self.outbox_relation.as_deref(),
+            EGRESS_STARTED_TOPIC,
+            room_id,
+            serde_json::json!({
+                "egress_id": egress_id,
+                "tenant_id": tenant_id,
+                "room_id": room_id,
+                "track_id": track_id.unwrap_or(""),
+                "kind": kind,
+            }),
+            Some(&self.metrics),
+        )
+        .await;
+    }
+
+    /// Emit the `EgressStopped` outbox event (partition by tenant).
+    async fn emit_egress_stopped(
+        &self,
+        pool: &PgPool,
+        egress_id: &str,
+        tenant_id: &str,
+        room_id: &str,
+    ) {
+        emit_payload_event(
+            pool,
+            self.outbox_relation.as_deref(),
+            EGRESS_STOPPED_TOPIC,
+            tenant_id,
+            serde_json::json!({
+                "egress_id": egress_id,
+                "tenant_id": tenant_id,
+                "room_id": room_id,
+            }),
+            Some(&self.metrics),
+        )
+        .await;
+    }
+
+    /// Emit the `EgressFailed` outbox event (partition by tenant). Records a
+    /// real failed transition — including the mounted-but-degraded case where the
+    /// operator enabled egress but no backend is wired — so the failure is
+    /// observable on the event stream, not just a per-request error.
+    async fn emit_egress_failed(
+        &self,
+        pool: &PgPool,
+        egress_id: &str,
+        tenant_id: &str,
+        room_id: &str,
+        reason: &str,
+    ) {
+        emit_payload_event(
+            pool,
+            self.outbox_relation.as_deref(),
+            EGRESS_FAILED_TOPIC,
+            tenant_id,
+            serde_json::json!({
+                "egress_id": egress_id,
+                "tenant_id": tenant_id,
+                "room_id": room_id,
+                "reason": reason,
+            }),
+            Some(&self.metrics),
+        )
+        .await;
     }
 
     async fn require_active_peer_membership(
@@ -416,12 +911,14 @@ impl WebrtcServiceImpl {
         .bind(tenant_id)
         .fetch_optional(pool)
         .await
-        .map_err(|err| Status::internal(format!("verify peer membership failed: {err}")))?;
+        .map_err(|err| {
+            webrtc_internal_status(
+                "require_active_peer_membership",
+                format!("verify peer membership failed: {err}"),
+            )
+        })?;
         if member.is_none() {
-            return Err(failed_precondition_with_reason(
-                PEER_NOT_ACTIVE,
-                "peer is not an active member of this room",
-            ));
+            return Err(peer_not_active_status());
         }
         Ok(())
     }
@@ -472,12 +969,11 @@ impl WebrtcServiceImpl {
         .bind(tenant_id)
         .execute(pool)
         .await
-        .map_err(|err| Status::internal(format!("claim room slot failed: {err}")))?;
+        .map_err(|err| {
+            webrtc_internal_status("join_room", format!("claim room slot failed: {err}"))
+        })?;
         if claimed.rows_affected() == 0 {
-            return Err(failed_precondition_with_reason(
-                ROOM_FULL,
-                "room not found, closed, or at capacity",
-            ));
+            return Err(room_not_joinable_status());
         }
 
         // Insert the peer; release the claimed slot on failure.
@@ -514,7 +1010,10 @@ impl WebrtcServiceImpl {
             .bind(room_id)
             .execute(pool)
             .await;
-            return Err(Status::internal(format!("join room failed: {err}")));
+            return Err(webrtc_internal_status(
+                "join_room",
+                format!("join room failed: {err}"),
+            ));
         }
 
         // Fetch the freshly-created peer + the other peers already in the room.
@@ -526,7 +1025,7 @@ impl WebrtcServiceImpl {
         .bind(parse_uuid("peer_id", &peer_id)?)
         .fetch_one(pool)
         .await
-        .map_err(|err| Status::internal(format!("reload peer failed: {err}")))?;
+        .map_err(|err| webrtc_internal_status("join_room", format!("reload peer failed: {err}")))?;
         let peer = peer_from_row(&self_row)?;
 
         let other_rows = sqlx::query(&format!(
@@ -544,7 +1043,9 @@ impl WebrtcServiceImpl {
         .bind(parse_uuid("peer_id", &peer_id)?)
         .fetch_all(pool)
         .await
-        .map_err(|err| Status::internal(format!("list existing peers failed: {err}")))?;
+        .map_err(|err| {
+            webrtc_internal_status("join_room", format!("list existing peers failed: {err}"))
+        })?;
         let mut existing_peers = Vec::with_capacity(other_rows.len());
         for row in &other_rows {
             existing_peers.push(peer_from_row(row)?);
@@ -583,18 +1084,21 @@ impl WebrtcServiceImpl {
         let bound_peer = req.peer_id.trim().to_string();
         let bound_tenant = req.tenant_id.trim().to_string();
         if bound_room.is_empty() {
-            return Err(Status::invalid_argument(
+            return Err(crate::runtime::executor_utils::invalid_argument_fields(
                 "room_id is required on the first signaling message",
+                [("room_id", "must be a non-empty signaling room id")],
             ));
         }
         if bound_peer.is_empty() {
-            return Err(Status::invalid_argument(
+            return Err(crate::runtime::executor_utils::invalid_argument_fields(
                 "peer_id is required on the first signaling message",
+                [("peer_id", "must be a non-empty signaling peer id")],
             ));
         }
         if bound_tenant.is_empty() {
-            return Err(Status::invalid_argument(
+            return Err(crate::runtime::executor_utils::invalid_argument_fields(
                 "tenant_id is required on the first signaling message",
+                [("tenant_id", "must be a non-empty signaling tenant id")],
             ));
         }
         let tenant_uuid = parse_uuid("tenant_id", &bound_tenant)?;
@@ -605,7 +1109,7 @@ impl WebrtcServiceImpl {
             .await
             .map_err(|err| {
                 if err.code() == tonic::Code::FailedPrecondition {
-                    Status::permission_denied(err.message().to_string())
+                    peer_not_active_permission_status()
                 } else {
                     err
                 }
@@ -619,15 +1123,12 @@ impl WebrtcServiceImpl {
         req: &webrtc_pb::SignalRequest,
         offer_sdp: &str,
     ) -> Option<webrtc_pb::SignalResponse> {
-        if !sfu::EmbeddedSfu::enabled_from_env() {
-            return None;
-        }
+        let bridge = self.sfu_bridge.as_ref()?;
         if req.room_id.trim().is_empty() || req.peer_id.trim().is_empty() {
-            tracing::warn!("embedded SFU offer ignored: room_id and peer_id are required");
+            tracing::warn!("SFU offer ignored: room_id and peer_id are required");
             return None;
         }
-        match self
-            .sfu
+        match bridge
             .accept_offer(&req.room_id, &req.peer_id, offer_sdp)
             .await
         {
@@ -639,11 +1140,96 @@ impl WebrtcServiceImpl {
                     room_id = %req.room_id,
                     peer_id = %req.peer_id,
                     error = %err,
-                    "embedded SFU failed to accept offer; falling back to mesh relay"
+                    "SFU bridge failed to accept offer; falling back to mesh relay"
                 );
                 None
             }
         }
+    }
+
+    #[cfg(feature = "webrtc")]
+    async fn sfu_kick_peer(&self, tenant_id: &str, room_id: &str, peer_id: &str) {
+        if let Some(bridge) = self.sfu_bridge.as_ref() {
+            if let Err(err) = bridge.kick_peer(tenant_id, room_id, peer_id).await {
+                tracing::warn!(tenant_id, room_id, peer_id, error = %err, "SFU bridge peer kick failed");
+            }
+        }
+    }
+
+    #[cfg(feature = "webrtc")]
+    async fn sfu_close_room(&self, room_id: &str) {
+        if let Some(bridge) = self.sfu_bridge.as_ref() {
+            if let Err(err) = bridge.close_room_hook(room_id).await {
+                tracing::warn!(room_id, error = %err, "SFU bridge room close hook failed");
+            }
+        }
+    }
+
+    #[cfg(feature = "webrtc")]
+    async fn sfu_register_track(&self, room_id: &str, peer_id: &str, track_id: &str, kind: &str) {
+        if let Some(bridge) = self.sfu_bridge.as_ref() {
+            if let Err(err) = bridge
+                .register_published_track(room_id, peer_id, track_id, kind)
+                .await
+            {
+                tracing::warn!(room_id, peer_id, track_id, error = %err, "SFU bridge track register failed");
+            }
+        }
+    }
+
+    #[cfg(feature = "webrtc")]
+    async fn sfu_unregister_track(&self, track_id: &str) {
+        if let Some(bridge) = self.sfu_bridge.as_ref() {
+            if let Err(err) = bridge.unregister_track(track_id).await {
+                tracing::warn!(track_id, error = %err, "SFU bridge track unregister failed");
+            }
+        }
+    }
+
+    #[cfg(feature = "webrtc")]
+    async fn sfu_join_token(
+        &self,
+        tenant_id: &str,
+        room_id: &str,
+        peer_id: &str,
+        ttl_seconds: i64,
+        now_unix: i64,
+    ) -> Result<Option<SfuJoinToken>, Status> {
+        let Some(bridge) = self.sfu_bridge.as_ref() else {
+            return Ok(None);
+        };
+        bridge
+            .mint_join_token(tenant_id, room_id, peer_id, ttl_seconds, now_unix)
+            .await
+            .map_err(sfu_backend_unavailable_status)
+    }
+
+    #[cfg(feature = "webrtc")]
+    fn attach_sfu_join_metadata<T>(
+        response: &mut Response<T>,
+        token: SfuJoinToken,
+    ) -> Result<(), Status> {
+        fn value(
+            v: &str,
+        ) -> Result<tonic::metadata::MetadataValue<tonic::metadata::Ascii>, Status> {
+            tonic::metadata::MetadataValue::try_from(v).map_err(|err| {
+                webrtc_internal_status(
+                    "sfu_join_metadata",
+                    format!("SFU metadata value is invalid: {err}"),
+                )
+            })
+        }
+        response
+            .metadata_mut()
+            .insert("x-udb-sfu-url", value(&token.url)?);
+        response
+            .metadata_mut()
+            .insert("x-udb-sfu-join-token", value(&token.token)?);
+        response.metadata_mut().insert(
+            "x-udb-sfu-expires-at",
+            value(&token.expires_at.to_string())?,
+        );
+        Ok(())
     }
 
     async fn signal_response_for(
@@ -674,7 +1260,10 @@ impl WebrtcServiceImpl {
         let pm = peer_model();
         let rm = room_model();
         let mut tx = pool.begin().await.map_err(|err| {
-            Status::internal(format!("disconnect peer transaction failed: {err}"))
+            webrtc_internal_status(
+                "disconnect_bound_peer",
+                format!("disconnect peer transaction failed: {err}"),
+            )
         })?;
         let result = sqlx::query(&disconnect_peer_sql(&pm))
             .bind(peer_id)
@@ -682,7 +1271,12 @@ impl WebrtcServiceImpl {
             .bind(tenant_id)
             .execute(&mut *tx)
             .await
-            .map_err(|err| Status::internal(format!("disconnect peer failed: {err}")))?;
+            .map_err(|err| {
+                webrtc_internal_status(
+                    "disconnect_bound_peer",
+                    format!("disconnect peer failed: {err}"),
+                )
+            })?;
         let disconnected = result.rows_affected() > 0;
         if disconnected {
             sqlx::query(&decrement_participant_count_sql(&rm))
@@ -690,12 +1284,18 @@ impl WebrtcServiceImpl {
                 .execute(&mut *tx)
                 .await
                 .map_err(|err| {
-                    Status::internal(format!("release room participant failed: {err}"))
+                    webrtc_internal_status(
+                        "disconnect_bound_peer",
+                        format!("release room participant failed: {err}"),
+                    )
                 })?;
         }
-        tx.commit()
-            .await
-            .map_err(|err| Status::internal(format!("commit disconnect peer failed: {err}")))?;
+        tx.commit().await.map_err(|err| {
+            webrtc_internal_status(
+                "disconnect_bound_peer",
+                format!("commit disconnect peer failed: {err}"),
+            )
+        })?;
 
         if disconnected {
             let tenant_id = tenant_id.to_string();
@@ -716,7 +1316,7 @@ impl WebrtcServiceImpl {
             )
             .await;
             #[cfg(feature = "webrtc")]
-            self.sfu.close_peer(&room_id, &peer_id).await;
+            self.sfu_kick_peer(&tenant_id, &room_id, &peer_id).await;
         }
         Ok(disconnected)
     }
@@ -739,7 +1339,12 @@ impl WebrtcServiceImpl {
             .bind(tenant_id)
             .execute(pool)
             .await
-            .map_err(|err| Status::internal(format!("refresh peer heartbeat failed: {err}")))?;
+            .map_err(|err| {
+                webrtc_internal_status(
+                    "touch_bound_peer_membership",
+                    format!("refresh peer heartbeat failed: {err}"),
+                )
+            })?;
         Ok(result.rows_affected() > 0)
     }
 
@@ -755,14 +1360,22 @@ impl WebrtcServiceImpl {
         let pm = peer_model();
         let rm = room_model();
         let mut tx = pool.begin().await.map_err(|err| {
-            Status::internal(format!("stale peer reaper transaction failed: {err}"))
+            webrtc_internal_status(
+                "reap_stale_peers",
+                format!("stale peer reaper transaction failed: {err}"),
+            )
         })?;
         let rows = sqlx::query(&stale_peer_reap_sql(&pm))
             .bind(stale_after_secs as f64)
             .bind(batch_size)
             .fetch_all(&mut *tx)
             .await
-            .map_err(|err| Status::internal(format!("stale peer reaper failed: {err}")))?;
+            .map_err(|err| {
+                webrtc_internal_status(
+                    "reap_stale_peers",
+                    format!("stale peer reaper failed: {err}"),
+                )
+            })?;
         for row in &rows {
             let room_id = row
                 .try_get::<String, _>("room_id")
@@ -774,15 +1387,19 @@ impl WebrtcServiceImpl {
                     .execute(&mut *tx)
                     .await
                     .map_err(|err| {
-                        Status::internal(format!(
-                            "release stale peer room participant failed: {err}"
-                        ))
+                        webrtc_internal_status(
+                            "reap_stale_peers",
+                            format!("release stale peer room participant failed: {err}"),
+                        )
                     })?;
             }
         }
-        tx.commit()
-            .await
-            .map_err(|err| Status::internal(format!("commit stale peer reaper failed: {err}")))?;
+        tx.commit().await.map_err(|err| {
+            webrtc_internal_status(
+                "reap_stale_peers",
+                format!("commit stale peer reaper failed: {err}"),
+            )
+        })?;
 
         for row in &rows {
             let peer_id = row.try_get::<String, _>("peer_id").unwrap_or_default();
@@ -804,7 +1421,7 @@ impl WebrtcServiceImpl {
                 )
                 .await;
                 #[cfg(feature = "webrtc")]
-                self.sfu.close_peer(&room_id, &peer_id).await;
+                self.sfu_kick_peer(&tenant_id, &room_id, &peer_id).await;
             }
         }
 
@@ -972,6 +1589,15 @@ use super::native_helpers::{non_empty_json, parse_uuid};
 
 // ── enum<->db (VARCHAR(20), short token via the proto_enum serializer) ─────────
 
+fn webrtc_validation_fields<I, F, D>(message: impl Into<String>, fields: I) -> Status
+where
+    I: IntoIterator<Item = (F, D)>,
+    F: Into<String>,
+    D: Into<String>,
+{
+    crate::runtime::executor_utils::invalid_argument_fields(message, fields)
+}
+
 fn room_state_from_db(value: &str) -> i32 {
     use webrtc_entity_pb::RoomState as S;
     match value {
@@ -992,9 +1618,10 @@ fn room_state_to_db(value: &str, default: &str) -> Result<String, Status> {
         "IDLE" | "ROOM_STATE_IDLE" => "IDLE",
         "CLOSED" | "ROOM_STATE_CLOSED" => "CLOSED",
         other => {
-            return Err(Status::invalid_argument(format!(
-                "unknown room state: {other}"
-            )));
+            return Err(webrtc_validation_fields(
+                format!("unknown room state: {other}"),
+                [("state", "must be ACTIVE, IDLE, or CLOSED")],
+            ));
         }
     };
     Ok(short.to_string())
@@ -1026,9 +1653,10 @@ fn peer_state_to_db(value: &str, default: &str) -> Result<String, Status> {
         "FAILED" | "PEER_STATE_FAILED" => "FAILED",
         "CLOSED" | "PEER_STATE_CLOSED" => "CLOSED",
         other => {
-            return Err(Status::invalid_argument(format!(
-                "unknown peer state: {other}"
-            )));
+            return Err(webrtc_validation_fields(
+                format!("unknown peer state: {other}"),
+                [("state", "must be a known peer state")],
+            ));
         }
     };
     Ok(short.to_string())
@@ -1056,9 +1684,10 @@ fn track_kind_to_db(value: &str, default: &str) -> Result<String, Status> {
         "SCREEN" | "TRACK_KIND_SCREEN" => "SCREEN",
         "DATA" | "TRACK_KIND_DATA" => "DATA",
         other => {
-            return Err(Status::invalid_argument(format!(
-                "unknown track kind: {other}"
-            )));
+            return Err(webrtc_validation_fields(
+                format!("unknown track kind: {other}"),
+                [("kind", "must be AUDIO, VIDEO, SCREEN, or DATA")],
+            ));
         }
     };
     Ok(short.to_string())
@@ -1091,7 +1720,8 @@ fn room_select_projection(m: &NativeModel) -> String {
 }
 
 fn room_from_row(row: &sqlx::postgres::PgRow) -> Result<webrtc_entity_pb::Room, Status> {
-    let map = |e: sqlx::Error| Status::internal(format!("decode room failed: {e}"));
+    let map =
+        |e: sqlx::Error| webrtc_internal_status("decode_room", format!("decode room failed: {e}"));
     Ok(webrtc_entity_pb::Room {
         room_id: row.try_get("room_id").map_err(map)?,
         tenant_id: row.try_get("tenant_id").map_err(map)?,
@@ -1119,7 +1749,8 @@ fn peer_select_projection(m: &NativeModel) -> String {
 }
 
 fn peer_from_row(row: &sqlx::postgres::PgRow) -> Result<webrtc_entity_pb::Peer, Status> {
-    let map = |e: sqlx::Error| Status::internal(format!("decode peer failed: {e}"));
+    let map =
+        |e: sqlx::Error| webrtc_internal_status("decode_peer", format!("decode peer failed: {e}"));
     Ok(webrtc_entity_pb::Peer {
         peer_id: row.try_get("peer_id").map_err(map)?,
         room_id: row.try_get("room_id").map_err(map)?,
@@ -1215,6 +1846,7 @@ fn room_read_by_id(room_id: &str, tenant_id: &str) -> LogicalRead {
         ])),
         projection: Some(room_projection()),
         sort: Vec::new(),
+        include: Vec::new(),
         pagination: Some(LogicalPagination::limit(1)),
     }
 }
@@ -1259,11 +1891,18 @@ fn peer_read_by_id(peer_id: &str, tenant_id: &str) -> LogicalRead {
         ])),
         projection: Some(peer_projection()),
         sort: Vec::new(),
+        include: Vec::new(),
         pagination: Some(LogicalPagination::limit(1)),
     }
 }
 
-fn peer_list_read(tenant_id: &str, room_id: &str, state_filter: &str) -> LogicalRead {
+fn peer_list_read(
+    tenant_id: &str,
+    room_id: &str,
+    state_filter: &str,
+    offset: u64,
+    limit: u32,
+) -> LogicalRead {
     let mut clauses = vec![
         wv_eq("tenant_id", tenant_id),
         wv_eq("room_id", room_id),
@@ -1277,7 +1916,8 @@ fn peer_list_read(tenant_id: &str, room_id: &str, state_filter: &str) -> Logical
         filter: Some(LogicalFilter::And(clauses)),
         projection: Some(peer_projection()),
         sort: vec![wv_asc("display_name")],
-        pagination: Some(LogicalPagination::limit(MAX_LIST_ROWS as u32)),
+        include: Vec::new(),
+        pagination: Some(LogicalPagination::page(offset, limit)),
     }
 }
 
@@ -1317,6 +1957,8 @@ fn track_list_read(
     room_id: &str,
     kind_filter: &str,
     peer_filter: &str,
+    offset: u64,
+    limit: u32,
 ) -> LogicalRead {
     let mut clauses = vec![wv_eq("tenant_id", tenant_id), wv_eq("room_id", room_id)];
     if !kind_filter.trim().is_empty() {
@@ -1330,7 +1972,8 @@ fn track_list_read(
         filter: Some(LogicalFilter::And(clauses)),
         projection: Some(track_projection()),
         sort: vec![wv_asc("label")],
-        pagination: Some(LogicalPagination::limit(MAX_LIST_ROWS as u32)),
+        include: Vec::new(),
+        pagination: Some(LogicalPagination::page(offset, limit)),
     }
 }
 
@@ -1374,7 +2017,12 @@ fn wv_uuid_or_null(value: &str) -> LogicalValue {
 fn wv_json(value: &str) -> Result<LogicalValue, Status> {
     serde_json::from_str::<serde_json::Value>(value)
         .map(LogicalValue::Json)
-        .map_err(|err| Status::invalid_argument(format!("webrtc JSON field is invalid: {err}")))
+        .map_err(|err| {
+            webrtc_validation_fields(
+                format!("webrtc JSON field is invalid: {err}"),
+                [("json", "must be valid JSON")],
+            )
+        })
 }
 
 fn room_create_record(
@@ -1463,7 +2111,10 @@ impl RoomService for WebrtcServiceImpl {
         let req = request.into_inner();
         validate_request_tenant(&metadata, &req.tenant_id)?;
         if req.tenant_id.trim().is_empty() || req.name.trim().is_empty() {
-            return Err(Status::invalid_argument("tenant_id and name are required"));
+            return Err(crate::runtime::executor_utils::invalid_argument_fields(
+                "tenant_id and name are required",
+                [("name", "must be a non-empty room name")],
+            ));
         }
         // Per-tenant fair admission (held for the whole RPC).
         let _admit = self.admit(&req.tenant_id).await?;
@@ -1527,7 +2178,13 @@ impl RoomService for WebrtcServiceImpl {
             .await?
             .first()
             .map(room_from_json)
-            .ok_or_else(|| Status::not_found("room not found"))?;
+            .ok_or_else(|| {
+                webrtc_schema_not_found_status(
+                    "get_room",
+                    "webrtc_room_not_found",
+                    "room not found",
+                )
+            })?;
         Ok(Response::new(webrtc_pb::GetRoomResponse {
             room: Some(room),
             error: None,
@@ -1544,15 +2201,21 @@ impl RoomService for WebrtcServiceImpl {
         let _admit = self.admit(&req.tenant_id).await?;
         let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?;
         let room_id = parse_uuid("room_id", &req.room_id)?;
+        let update_mask =
+            update_mask_path_set(req.update_mask.as_ref(), &["name", "state", "config"])?;
+        let update_name = update_mask_allows(&update_mask, "name", !req.name.trim().is_empty());
+        let update_state = update_mask_allows(&update_mask, "state", !req.state.trim().is_empty());
+        let update_config =
+            update_mask_allows(&update_mask, "config", !req.config.trim().is_empty());
+        let state = room_state_to_db(&req.state, "")?;
         let pool = self.require_pool()?;
         let m = room_model();
         let rel = m.relation.clone();
-        let state = room_state_to_db(&req.state, "")?;
         let result = sqlx::query(&format!(
             "UPDATE {rel} SET \
-               {name} = COALESCE(NULLIF($3, ''), {name}), \
-               {state} = COALESCE(NULLIF($4, ''), {state}), \
-               {config} = CASE WHEN $5 = '' THEN {config} ELSE $5::JSONB END \
+               {name} = CASE WHEN $3 THEN $4 ELSE {name} END, \
+               {state} = CASE WHEN $5 THEN $6 ELSE {state} END, \
+               {config} = CASE WHEN $7 THEN $8::JSONB ELSE {config} END \
              WHERE {room_id} = $1::UUID AND {tenant_id} = $2::UUID AND {deleted} IS NULL",
             name = m.q("name"),
             state = m.q("state"),
@@ -1563,14 +2226,23 @@ impl RoomService for WebrtcServiceImpl {
         ))
         .bind(room_id)
         .bind(tenant_id)
+        .bind(update_name)
         .bind(&req.name)
+        .bind(update_state)
         .bind(&state)
+        .bind(update_config)
         .bind(req.config.trim())
         .execute(pool)
         .await
-        .map_err(|err| Status::internal(format!("update room failed: {err}")))?;
+        .map_err(|err| {
+            webrtc_internal_status("update_room", format!("update room failed: {err}"))
+        })?;
         if result.rows_affected() == 0 {
-            return Err(Status::not_found("room not found"));
+            return Err(webrtc_schema_not_found_status(
+                "update_room",
+                "webrtc_room_not_found",
+                "room not found",
+            ));
         }
         Ok(Response::new(webrtc_pb::UpdateRoomResponse {
             message: "room updated".to_string(),
@@ -1595,10 +2267,12 @@ impl RoomService for WebrtcServiceImpl {
         // Transitional P4 gate: close_room is a multi-entity transactional state
         // transition plus event fan-out. It must stay on a backend that can
         // express the room/peer/track updates atomically.
-        let mut tx = pool
-            .begin()
-            .await
-            .map_err(|err| Status::internal(format!("close room transaction failed: {err}")))?;
+        let mut tx = pool.begin().await.map_err(|err| {
+            webrtc_internal_status(
+                "close_room",
+                format!("close room transaction failed: {err}"),
+            )
+        })?;
         let peer_rows = sqlx::query(&format!(
             "SELECT {peer_id}::TEXT AS peer_id FROM {rel} \
              WHERE {room_id} = $1::UUID AND {tenant_id} = $2::UUID \
@@ -1615,7 +2289,9 @@ impl RoomService for WebrtcServiceImpl {
         .bind(tenant_id)
         .fetch_all(&mut *tx)
         .await
-        .map_err(|err| Status::internal(format!("list room peers failed: {err}")))?;
+        .map_err(|err| {
+            webrtc_internal_status("close_room", format!("list room peers failed: {err}"))
+        })?;
         let track_rows = sqlx::query(&format!(
             "SELECT {track_id}::TEXT AS track_id FROM {rel} \
              WHERE {room_id} = $1::UUID AND {tenant_id} = $2::UUID AND {state} <> 'ENDED' \
@@ -1630,7 +2306,9 @@ impl RoomService for WebrtcServiceImpl {
         .bind(tenant_id)
         .fetch_all(&mut *tx)
         .await
-        .map_err(|err| Status::internal(format!("list room tracks failed: {err}")))?;
+        .map_err(|err| {
+            webrtc_internal_status("close_room", format!("list room tracks failed: {err}"))
+        })?;
         let result = sqlx::query(&format!(
             "UPDATE {rel} SET {state} = 'CLOSED', {count} = 0 \
              WHERE {room_id} = $1::UUID AND {tenant_id} = $2::UUID AND {deleted} IS NULL",
@@ -1645,9 +2323,13 @@ impl RoomService for WebrtcServiceImpl {
         .bind(tenant_id)
         .execute(&mut *tx)
         .await
-        .map_err(|err| Status::internal(format!("close room failed: {err}")))?;
+        .map_err(|err| webrtc_internal_status("close_room", format!("close room failed: {err}")))?;
         if result.rows_affected() == 0 {
-            return Err(Status::not_found("room not found"));
+            return Err(webrtc_schema_not_found_status(
+                "close_room",
+                "webrtc_room_not_found",
+                "room not found",
+            ));
         }
         sqlx::query(&format!(
             "UPDATE {rel} SET {state} = 'CLOSED', {left_at} = COALESCE({left_at}, CURRENT_TIMESTAMP), \
@@ -1665,7 +2347,9 @@ impl RoomService for WebrtcServiceImpl {
         .bind(tenant_id)
         .execute(&mut *tx)
         .await
-        .map_err(|err| Status::internal(format!("close room peers failed: {err}")))?;
+        .map_err(|err| {
+            webrtc_internal_status("close_room", format!("close room peers failed: {err}"))
+        })?;
         sqlx::query(&format!(
             "UPDATE {rel} SET {state} = 'ENDED' \
              WHERE {room_id} = $1::UUID AND {tenant_id} = $2::UUID AND {state} <> 'ENDED'",
@@ -1678,10 +2362,12 @@ impl RoomService for WebrtcServiceImpl {
         .bind(tenant_id)
         .execute(&mut *tx)
         .await
-        .map_err(|err| Status::internal(format!("end room tracks failed: {err}")))?;
-        tx.commit()
-            .await
-            .map_err(|err| Status::internal(format!("commit close room failed: {err}")))?;
+        .map_err(|err| {
+            webrtc_internal_status("close_room", format!("end room tracks failed: {err}"))
+        })?;
+        tx.commit().await.map_err(|err| {
+            webrtc_internal_status("close_room", format!("commit close room failed: {err}"))
+        })?;
         let peer_ids = peer_rows
             .iter()
             .filter_map(|row| row.try_get::<String, _>("peer_id").ok())
@@ -1711,8 +2397,6 @@ impl RoomService for WebrtcServiceImpl {
                 Some(&self.metrics),
             )
             .await;
-            #[cfg(feature = "webrtc")]
-            self.sfu.close_peer(&req.room_id, peer_id).await;
         }
         for track_id in &track_ids {
             emit_payload_event(
@@ -1729,9 +2413,9 @@ impl RoomService for WebrtcServiceImpl {
                 Some(&self.metrics),
             )
             .await;
-            #[cfg(feature = "webrtc")]
-            self.sfu.unregister_track(track_id).await;
         }
+        #[cfg(feature = "webrtc")]
+        self.sfu_close_room(&req.room_id).await;
         emit_payload_event(
             pool,
             self.outbox_relation.as_deref(),
@@ -1768,9 +2452,7 @@ impl RoomService for WebrtcServiceImpl {
         let rel = m.relation.clone();
         let projection = room_select_projection(&m);
         let state_filter = room_state_to_db(&req.state, "")?;
-        let page_size = if req.page_size > 0 { req.page_size } else { 50 }.min(500) as i64;
-        let page = if req.page > 0 { req.page } else { 1 } as i64;
-        let offset = (page - 1) * page_size;
+        let page_window = native_offset_page_window(req.page, req.page_size, &req.page_token, 50);
         let where_clause = format!(
             "WHERE {tenant_id} = $1::UUID AND {deleted} IS NULL AND ($2 = '' OR {state} = $2)",
             tenant_id = m.q("tenant_id"),
@@ -1785,18 +2467,20 @@ impl RoomService for WebrtcServiceImpl {
             .bind(&state_filter)
             .fetch_one(pool)
             .await
-            .map_err(|err| Status::internal(format!("count rooms failed: {err}")))?;
+            .map_err(|err| {
+                webrtc_internal_status("list_rooms", format!("count rooms failed: {err}"))
+            })?;
         let rows = sqlx::query(&format!(
             "SELECT {projection} FROM {rel} {where_clause} ORDER BY {name} LIMIT $3 OFFSET $4",
             name = m.q("name"),
         ))
         .bind(tenant_id)
         .bind(&state_filter)
-        .bind(page_size)
-        .bind(offset)
+        .bind(page_window.limit_i64())
+        .bind(page_window.offset_i64())
         .fetch_all(pool)
         .await
-        .map_err(|err| Status::internal(format!("list rooms failed: {err}")))?;
+        .map_err(|err| webrtc_internal_status("list_rooms", format!("list rooms failed: {err}")))?;
         let mut rooms = Vec::with_capacity(rows.len());
         for row in &rows {
             rooms.push(room_from_row(row)?);
@@ -1804,6 +2488,210 @@ impl RoomService for WebrtcServiceImpl {
         Ok(Response::new(webrtc_pb::ListRoomsResponse {
             rooms,
             total_count: total as i32,
+            error: None,
+            next_page_token: native_next_page_token_for_total(
+                page_window.offset,
+                page_window.limit,
+                total,
+            ),
+        }))
+    }
+
+    // ── Recording / egress (master-plan 5.5) ─────────────────────────────────
+    // Proto-first, fail-closed handlers. Gated ONCE at construction on
+    // `UDB_WEBRTC_EGRESS_ENABLED` (default unset = disabled). Disabled →
+    // FAILED_PRECONDITION/EGRESS_NOT_ENABLED; enabled-but-no-backend →
+    // FAILED_PRECONDITION/EGRESS_BACKEND_UNAVAILABLE (mounted-but-degraded
+    // honesty). NEVER UNIMPLEMENTED — the capability-lie / retry-storm guard.
+    // The code after each gate is the real wiring point and activates the moment
+    // a backend makes the `*_egress_backend` seam return Ok.
+
+    async fn start_room_composite(
+        &self,
+        request: Request<webrtc_pb::StartRoomCompositeRequest>,
+    ) -> Result<Response<webrtc_pb::StartRoomCompositeResponse>, Status> {
+        let metadata = request.metadata().clone();
+        let req = request.into_inner();
+        validate_request_tenant(&metadata, &req.tenant_id)?;
+        let _admit = self.admit(&req.tenant_id).await?;
+        // Validate the room reference; tenant comes only from the validated input.
+        let _room_id = parse_uuid("room_id", &req.room_id)?;
+        // Fail closed unless the operator has enabled egress.
+        self.require_egress_enabled("start_room_composite")?;
+        // egress_id is SERVER-derived and bound to the verified tenant so it can
+        // never reference another tenant's session (cross-tenant leak guard).
+        let egress_id = new_egress_id(&req.tenant_id);
+        let pool = self.require_pool()?;
+        match self
+            .start_egress_backend(
+                &egress_id,
+                &req.room_id,
+                None,
+                "start_room_composite",
+                "room_composite",
+            )
+            .await
+        {
+            Ok(status) => {
+                self.emit_egress_started(
+                    pool,
+                    &egress_id,
+                    &req.tenant_id,
+                    &req.room_id,
+                    None,
+                    "room_composite",
+                )
+                .await;
+                Ok(Response::new(webrtc_pb::StartRoomCompositeResponse {
+                    egress_id,
+                    status,
+                    message: "egress starting".to_string(),
+                    error: None,
+                }))
+            }
+            Err(status) => {
+                self.emit_egress_failed(
+                    pool,
+                    &egress_id,
+                    &req.tenant_id,
+                    &req.room_id,
+                    &status.message().to_string(),
+                )
+                .await;
+                Err(status)
+            }
+        }
+    }
+
+    async fn start_track_egress(
+        &self,
+        request: Request<webrtc_pb::StartTrackEgressRequest>,
+    ) -> Result<Response<webrtc_pb::StartTrackEgressResponse>, Status> {
+        let metadata = request.metadata().clone();
+        let req = request.into_inner();
+        validate_request_tenant(&metadata, &req.tenant_id)?;
+        let _admit = self.admit(&req.tenant_id).await?;
+        let _room_id = parse_uuid("room_id", &req.room_id)?;
+        let _track_id = parse_uuid("track_id", &req.track_id)?;
+        self.require_egress_enabled("start_track_egress")?;
+        let egress_id = new_egress_id(&req.tenant_id);
+        let pool = self.require_pool()?;
+        match self
+            .start_egress_backend(
+                &egress_id,
+                &req.room_id,
+                Some(req.track_id.as_str()),
+                "start_track_egress",
+                "track",
+            )
+            .await
+        {
+            Ok(status) => {
+                self.emit_egress_started(
+                    pool,
+                    &egress_id,
+                    &req.tenant_id,
+                    &req.room_id,
+                    Some(req.track_id.as_str()),
+                    "track",
+                )
+                .await;
+                Ok(Response::new(webrtc_pb::StartTrackEgressResponse {
+                    egress_id,
+                    status,
+                    message: "egress starting".to_string(),
+                    error: None,
+                }))
+            }
+            Err(status) => {
+                self.emit_egress_failed(
+                    pool,
+                    &egress_id,
+                    &req.tenant_id,
+                    &req.room_id,
+                    &status.message().to_string(),
+                )
+                .await;
+                Err(status)
+            }
+        }
+    }
+
+    async fn stop_egress(
+        &self,
+        request: Request<webrtc_pb::StopEgressRequest>,
+    ) -> Result<Response<webrtc_pb::StopEgressResponse>, Status> {
+        let metadata = request.metadata().clone();
+        let req = request.into_inner();
+        validate_request_tenant(&metadata, &req.tenant_id)?;
+        let _admit = self.admit(&req.tenant_id).await?;
+        // Cross-tenant guard: the egress_id MUST be one minted for this tenant
+        // (see `new_egress_id`). Reject an id scoped to a different tenant before
+        // touching any backend — a tenant can never stop another's egress.
+        if !egress_id_is_tenant_scoped(&req.egress_id, &req.tenant_id) {
+            return Err(egress_tenant_scope_mismatch_status());
+        }
+        self.require_egress_enabled("stop_egress")?;
+        let pool = self.require_pool()?;
+        match self
+            .stop_egress_backend(&req.egress_id, "stop_egress")
+            .await
+        {
+            Ok(status) => {
+                self.emit_egress_stopped(pool, &req.egress_id, &req.tenant_id, "")
+                    .await;
+                Ok(Response::new(webrtc_pb::StopEgressResponse {
+                    egress_id: req.egress_id,
+                    status,
+                    message: "egress stopped".to_string(),
+                    error: None,
+                }))
+            }
+            Err(status) => {
+                self.emit_egress_failed(
+                    pool,
+                    &req.egress_id,
+                    &req.tenant_id,
+                    "",
+                    &status.message().to_string(),
+                )
+                .await;
+                Err(status)
+            }
+        }
+    }
+
+    async fn list_egress(
+        &self,
+        request: Request<webrtc_pb::ListEgressRequest>,
+    ) -> Result<Response<webrtc_pb::ListEgressResponse>, Status> {
+        let metadata = request.metadata().clone();
+        let req = request.into_inner();
+        validate_request_tenant(&metadata, &req.tenant_id)?;
+        let _admit = self.admit_read(&req.tenant_id).await?;
+        // Fail closed both when egress is disabled (EGRESS_NOT_ENABLED) and when
+        // it is enabled but no backend is wired (EGRESS_BACKEND_UNAVAILABLE) —
+        // a read must not silently advertise an empty list as "no jobs" while
+        // the subsystem is degraded.
+        self.require_egress_enabled("list_egress")?;
+        let page_window = native_offset_page_window(1, req.page_size, &req.page_token, 50);
+        let egresses = self
+            .list_egress_backend(&req.tenant_id, &req.room_id, "list_egress")
+            .await?;
+        let total_count = egresses.len() as i32;
+        let egresses = egresses
+            .into_iter()
+            .skip(page_window.offset)
+            .take(page_window.limit)
+            .collect::<Vec<_>>();
+        Ok(Response::new(webrtc_pb::ListEgressResponse {
+            next_page_token: native_next_page_token_for_total(
+                page_window.offset,
+                page_window.limit,
+                total_count as i64,
+            ),
+            egresses,
+            total_count,
             error: None,
         }))
     }
@@ -1884,12 +2772,11 @@ impl PeerService for WebrtcServiceImpl {
         );
         // Fail closed when no TURN secret is configured rather than minting
         // against a well-known dev secret.
-        let secret = self.turn.secret.as_deref().ok_or_else(|| {
-            failed_precondition_with_reason(
-                TURN_NOT_CONFIGURED,
-                "TURN secret not configured; set UDB_TURN_SECRET to issue credentials",
-            )
-        })?;
+        let secret = self
+            .turn
+            .secret
+            .as_deref()
+            .ok_or_else(|| turn_secret_not_configured_status("join_session"))?;
         let (username, credential) =
             crate::runtime::security::turn_rest_credential(secret, &principal, expiry);
         let ice = webrtc_pb::IceServer {
@@ -1898,7 +2785,12 @@ impl PeerService for WebrtcServiceImpl {
             credential,
         };
 
-        Ok(Response::new(webrtc_pb::JoinSessionResponse {
+        #[cfg(feature = "webrtc")]
+        let sfu_join = self
+            .sfu_join_token(&req.tenant_id, &req.room_id, peer_id.trim(), ttl, now)
+            .await?;
+
+        let response = Response::new(webrtc_pb::JoinSessionResponse {
             peer: Some(peer),
             existing_peers,
             ice_servers: vec![ice],
@@ -1907,7 +2799,19 @@ impl PeerService for WebrtcServiceImpl {
                 nanos: 0,
             }),
             error: None,
-        }))
+        });
+        #[cfg(feature = "webrtc")]
+        {
+            let mut response = response;
+            if let Some(token) = sfu_join {
+                Self::attach_sfu_join_metadata(&mut response, token)?;
+            }
+            Ok(response)
+        }
+        #[cfg(not(feature = "webrtc"))]
+        {
+            Ok(response)
+        }
     }
 
     async fn leave_room(
@@ -1944,7 +2848,7 @@ impl PeerService for WebrtcServiceImpl {
         .bind(tenant_id)
         .execute(pool)
         .await
-        .map_err(|err| Status::internal(format!("leave room failed: {err}")))?;
+        .map_err(|err| webrtc_internal_status("leave_room", format!("leave room failed: {err}")))?;
         if result.rows_affected() == 0 {
             return Ok(Response::new(webrtc_pb::LeaveRoomResponse {
                 success: false,
@@ -1991,9 +2895,12 @@ impl PeerService for WebrtcServiceImpl {
         self.signaling.close_peer(&req.room_id, &req.peer_id).await;
         self.signaling.prune_if_idle(&req.room_id).await;
         #[cfg(feature = "webrtc")]
-        self.sfu
-            .close_peer(&room_id.to_string(), &peer_id.to_string())
-            .await;
+        self.sfu_kick_peer(
+            &tenant_id.to_string(),
+            &room_id.to_string(),
+            &peer_id.to_string(),
+        )
+        .await;
 
         Ok(Response::new(webrtc_pb::LeaveRoomResponse {
             success: true,
@@ -2022,7 +2929,13 @@ impl PeerService for WebrtcServiceImpl {
             .await?
             .first()
             .map(peer_from_json)
-            .ok_or_else(|| Status::not_found("peer not found"))?;
+            .ok_or_else(|| {
+                webrtc_schema_not_found_status(
+                    "get_peer",
+                    "webrtc_peer_not_found",
+                    "peer not found",
+                )
+            })?;
         Ok(Response::new(webrtc_pb::GetPeerResponse {
             peer: Some(peer),
             error: None,
@@ -2043,18 +2956,30 @@ impl PeerService for WebrtcServiceImpl {
         // filter ("" = no state filter), preserving the raw path's semantics.
         let state_filter = peer_state_to_db(&req.state, "")?;
         let context = native_service_context(&metadata, &tenant_id, "");
+        let page_window = native_offset_page_window(1, req.page_size, &req.page_token, 50);
         let peers = self
             .require_runtime()?
             .native_entity_read_for_service(
                 "webrtc.room",
                 &context,
-                peer_list_read(&tenant_id, &room_id, &state_filter),
+                peer_list_read(
+                    &tenant_id,
+                    &room_id,
+                    &state_filter,
+                    page_window.offset as u64,
+                    page_window.limit as u32,
+                ),
             )
             .await?
             .iter()
             .map(peer_from_json)
-            .collect();
+            .collect::<Vec<_>>();
         Ok(Response::new(webrtc_pb::ListPeersResponse {
+            next_page_token: native_next_page_token(
+                page_window.offset,
+                page_window.limit,
+                peers.len(),
+            ),
             peers,
             error: None,
         }))
@@ -2127,8 +3052,7 @@ impl TrackService for WebrtcServiceImpl {
             )),
         });
         #[cfg(feature = "webrtc")]
-        self.sfu
-            .register_published_track(&req.room_id, &req.peer_id, &track_id, &kind)
+        self.sfu_register_track(&req.room_id, &req.peer_id, &track_id, &kind)
             .await;
 
         Ok(Response::new(webrtc_pb::PublishTrackResponse {
@@ -2162,10 +3086,12 @@ impl TrackService for WebrtcServiceImpl {
         .bind(tenant_id)
         .execute(pool)
         .await
-        .map_err(|err| Status::internal(format!("unpublish track failed: {err}")))?;
+        .map_err(|err| {
+            webrtc_internal_status("unpublish_track", format!("unpublish track failed: {err}"))
+        })?;
         #[cfg(feature = "webrtc")]
         if result.rows_affected() > 0 {
-            self.sfu.unregister_track(&req.track_id).await;
+            self.sfu_unregister_track(&req.track_id).await;
         }
         Ok(Response::new(webrtc_pb::UnpublishTrackResponse {
             success: result.rows_affected() > 0,
@@ -2199,9 +3125,13 @@ impl TrackService for WebrtcServiceImpl {
         .bind(new_state)
         .execute(pool)
         .await
-        .map_err(|err| Status::internal(format!("mute track failed: {err}")))?;
+        .map_err(|err| webrtc_internal_status("mute_track", format!("mute track failed: {err}")))?;
         if result.rows_affected() == 0 {
-            return Err(Status::not_found("track not found or ended"));
+            return Err(webrtc_schema_not_found_status(
+                "mute_track",
+                "webrtc_track_not_found_or_ended",
+                "track not found or ended",
+            ));
         }
         Ok(Response::new(webrtc_pb::MuteTrackResponse {
             message: format!("track {new_state}"),
@@ -2225,18 +3155,31 @@ impl TrackService for WebrtcServiceImpl {
         let kind_filter = track_kind_to_db(&req.kind, "")?;
         let peer_filter = req.peer_id.trim().to_string();
         let context = native_service_context(&metadata, &tenant_id, "");
+        let page_window = native_offset_page_window(1, req.page_size, &req.page_token, 50);
         let tracks = self
             .require_runtime()?
             .native_entity_read_for_service(
                 "webrtc.room",
                 &context,
-                track_list_read(&tenant_id, &room_id, &kind_filter, &peer_filter),
+                track_list_read(
+                    &tenant_id,
+                    &room_id,
+                    &kind_filter,
+                    &peer_filter,
+                    page_window.offset as u64,
+                    page_window.limit as u32,
+                ),
             )
             .await?
             .iter()
             .map(track_from_json)
-            .collect();
+            .collect::<Vec<_>>();
         Ok(Response::new(webrtc_pb::ListTracksResponse {
+            next_page_token: native_next_page_token(
+                page_window.offset,
+                page_window.limit,
+                tracks.len(),
+            ),
             tracks,
             error: None,
         }))
@@ -2280,12 +3223,11 @@ impl TurnService for WebrtcServiceImpl {
         );
         // Fail closed when no TURN secret is configured (production with no
         // UDB_TURN_SECRET) rather than minting against a well-known dev secret.
-        let secret = self.turn.secret.as_deref().ok_or_else(|| {
-            failed_precondition_with_reason(
-                TURN_NOT_CONFIGURED,
-                "TURN secret not configured; set UDB_TURN_SECRET to issue credentials",
-            )
-        })?;
+        let secret = self
+            .turn
+            .secret
+            .as_deref()
+            .ok_or_else(|| turn_secret_not_configured_status("issue_credentials"))?;
         let (username, credential) =
             crate::runtime::security::turn_rest_credential(secret, &principal, expiry);
         let ice = webrtc_pb::IceServer {
@@ -2293,7 +3235,12 @@ impl TurnService for WebrtcServiceImpl {
             username: username.clone(),
             credential: credential.clone(),
         };
-        Ok(Response::new(webrtc_pb::IssueCredentialsResponse {
+        #[cfg(feature = "webrtc")]
+        let sfu_join = self
+            .sfu_join_token(&req.tenant_id, &req.room_id, &req.peer_id, ttl, now)
+            .await?;
+
+        let response = Response::new(webrtc_pb::IssueCredentialsResponse {
             ice_servers: vec![ice],
             username,
             credential,
@@ -2304,7 +3251,19 @@ impl TurnService for WebrtcServiceImpl {
             }),
             allowed_action: TURN_RELAY_ACTION.to_string(),
             error: None,
-        }))
+        });
+        #[cfg(feature = "webrtc")]
+        {
+            let mut response = response;
+            if let Some(token) = sfu_join {
+                Self::attach_sfu_join_metadata(&mut response, token)?;
+            }
+            Ok(response)
+        }
+        #[cfg(not(feature = "webrtc"))]
+        {
+            Ok(response)
+        }
     }
 }
 
@@ -2324,6 +3283,13 @@ fn signal_to_response(req: &webrtc_pb::SignalRequest) -> Option<webrtc_pb::Signa
         In::Ping(_) => Out::Pong(true),
     };
     Some(webrtc_pb::SignalResponse { payload: Some(out) })
+}
+
+fn empty_signaling_stream_status() -> Status {
+    webrtc_validation_fields(
+        "empty signaling stream",
+        [("stream", "must include an initial signaling message")],
+    )
 }
 
 /// What the outbound pump does with one received hub frame.
@@ -2364,8 +3330,8 @@ impl SignalingService for WebrtcServiceImpl {
         let first = inbound
             .message()
             .await
-            .map_err(|e| Status::internal(format!("signaling stream error: {e}")))?
-            .ok_or_else(|| Status::invalid_argument("empty signaling stream"))?;
+            .map_err(|e| webrtc_internal_status("signal", format!("signaling stream error: {e}")))?
+            .ok_or_else(empty_signaling_stream_status)?;
         validate_request_tenant(&metadata, &first.tenant_id)?;
         // Per-tenant fair admission at stream ENTRY only: bound the RATE of new
         // signaling connections a single tenant can open so one tenant can't
@@ -2385,9 +3351,7 @@ impl SignalingService for WebrtcServiceImpl {
             .touch_bound_peer_membership(&pool, bound_tenant_uuid, bound_room_uuid, bound_peer_uuid)
             .await?
         {
-            return Err(Status::permission_denied(
-                "peer is not an active member of this room",
-            ));
+            return Err(peer_not_active_permission_status());
         }
         drop(_admit); // release the entry permit; do NOT hold it across the stream
         let tx = self.signaling.channel(&bound_room).await;
@@ -2576,7 +3540,220 @@ impl SignalingService for WebrtcServiceImpl {
 #[cfg(test)]
 mod tenant_scope_tests {
     use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
     use tonic::metadata::MetadataValue;
+
+    fn decode_detail(status: &Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_validation_field(status: &Status, field: &str, description: &str) {
+        assert_eq!(status.code(), tonic::Code::InvalidArgument);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, field);
+        assert_eq!(detail.field_violations[0].description, description);
+    }
+
+    fn assert_schema_not_found_detail(
+        status: &Status,
+        operation: &str,
+        schema_code: &str,
+        message: &str,
+    ) {
+        assert_eq!(status.code(), tonic::Code::NotFound);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Schema as i32);
+        assert_eq!(detail.backend, "webrtc");
+        assert_eq!(detail.operation, operation);
+        assert_eq!(detail.capability_required, schema_code);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+    }
+
+    fn assert_internal_detail(status: &Status, operation: &str, message: &str) {
+        assert_eq!(status.code(), tonic::Code::Internal);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "webrtc");
+        assert_eq!(detail.operation, operation);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    #[test]
+    fn webrtc_internal_status_carries_typed_detail() {
+        assert_internal_detail(
+            &webrtc_internal_status("join_room", "claim room slot failed: unavailable"),
+            "join_room",
+            "claim room slot failed: unavailable",
+        );
+    }
+
+    #[cfg(feature = "webrtc")]
+    #[derive(Default)]
+    struct RecordingSfuBridge {
+        offers: Mutex<Vec<(String, String, String)>>,
+    }
+
+    #[cfg(feature = "webrtc")]
+    #[async_trait::async_trait]
+    impl SfuBridge for RecordingSfuBridge {
+        async fn accept_offer(
+            &self,
+            room_id: &str,
+            peer_id: &str,
+            offer_sdp: &str,
+        ) -> Result<String, String> {
+            self.offers.lock().await.push((
+                room_id.to_string(),
+                peer_id.to_string(),
+                offer_sdp.to_string(),
+            ));
+            Ok("sfu-answer".to_string())
+        }
+
+        async fn register_published_track(
+            &self,
+            _room_id: &str,
+            _peer_id: &str,
+            _track_id: &str,
+            _kind: &str,
+        ) -> Result<(), String> {
+            Ok(())
+        }
+
+        async fn unregister_track(&self, _track_id: &str) -> Result<(), String> {
+            Ok(())
+        }
+
+        async fn kick_peer(
+            &self,
+            _tenant_id: &str,
+            _room_id: &str,
+            _peer_id: &str,
+        ) -> Result<(), String> {
+            Ok(())
+        }
+
+        async fn close_room_hook(&self, _room_id: &str) -> Result<(), String> {
+            Ok(())
+        }
+
+        async fn mint_join_token(
+            &self,
+            _tenant_id: &str,
+            _room_id: &str,
+            _peer_id: &str,
+            _ttl_seconds: i64,
+            _now_unix: i64,
+        ) -> Result<Option<SfuJoinToken>, String> {
+            Ok(None)
+        }
+    }
+
+    #[cfg(feature = "webrtc")]
+    #[tokio::test]
+    async fn signal_offer_uses_injected_sfu_bridge() {
+        let bridge = Arc::new(RecordingSfuBridge::default());
+        let bridge_for_service: Arc<dyn SfuBridge> = bridge.clone();
+        let svc = WebrtcServiceImpl::new().with_sfu_bridge(Some(bridge_for_service));
+        let response = svc
+            .signal_response_for(&webrtc_pb::SignalRequest {
+                room_id: "room-a".to_string(),
+                peer_id: "peer-a".to_string(),
+                payload: Some(webrtc_pb::signal_request::Payload::OfferSdp(
+                    "client-offer".to_string(),
+                )),
+                ..Default::default()
+            })
+            .await
+            .expect("injected SFU bridge should return an answer");
+
+        assert_eq!(
+            response.payload,
+            Some(webrtc_pb::signal_response::Payload::AnswerSdp(
+                "sfu-answer".to_string()
+            ))
+        );
+        assert_eq!(
+            bridge.offers.lock().await.as_slice(),
+            [(
+                "room-a".to_string(),
+                "peer-a".to_string(),
+                "client-offer".to_string()
+            )]
+        );
+    }
+
+    #[cfg(feature = "webrtc")]
+    #[test]
+    fn sfu_join_metadata_uses_public_header_contract() {
+        let mut response = Response::new(());
+        WebrtcServiceImpl::attach_sfu_join_metadata(
+            &mut response,
+            SfuJoinToken {
+                url: "wss://livekit.example".to_string(),
+                token: "header.payload.signature".to_string(),
+                expires_at: 1_700_000_060,
+            },
+        )
+        .expect("valid SFU metadata");
+
+        assert_eq!(
+            response
+                .metadata()
+                .get("x-udb-sfu-url")
+                .and_then(|value| value.to_str().ok()),
+            Some("wss://livekit.example")
+        );
+        assert_eq!(
+            response
+                .metadata()
+                .get("x-udb-sfu-join-token")
+                .and_then(|value| value.to_str().ok()),
+            Some("header.payload.signature")
+        );
+        assert_eq!(
+            response
+                .metadata()
+                .get("x-udb-sfu-expires-at")
+                .and_then(|value| value.to_str().ok()),
+            Some("1700000060")
+        );
+    }
+
+    #[test]
+    fn webrtc_not_found_statuses_carry_schema_detail() {
+        for (operation, schema_code, message) in [
+            ("get_room", "webrtc_room_not_found", "room not found"),
+            ("update_room", "webrtc_room_not_found", "room not found"),
+            ("close_room", "webrtc_room_not_found", "room not found"),
+            ("get_peer", "webrtc_peer_not_found", "peer not found"),
+            (
+                "mute_track",
+                "webrtc_track_not_found_or_ended",
+                "track not found or ended",
+            ),
+        ] {
+            assert_schema_not_found_detail(
+                &webrtc_schema_not_found_status(operation, schema_code, message),
+                operation,
+                schema_code,
+                message,
+            );
+        }
+    }
 
     #[tokio::test]
     async fn signaling_hub_close_broadcasts_terminal_frame_and_removes_room() {
@@ -2664,17 +3841,11 @@ mod tenant_scope_tests {
         ));
     }
 
-    /// FIX-42: stream-death cleanup — when a signaling pump ends without a
-    /// LeaveRoom RPC, `disconnect_bound_peer` (the REAL cleanup function both
-    /// pump halves call) must mark the peer DISCONNECTED, release exactly one
-    /// participant slot, and stay idempotent when the racing inbound/outbound
-    /// halves both invoke it. Needs live Postgres (the function is one SQL
-    /// transaction), so this follows the `live_tests` env-gated pattern: same
-    /// DSN env chain as `live_tests::support::live_pg_dsn`, idempotent
-    /// proto-generated DDL (`CREATE … IF NOT EXISTS`).
-    #[tokio::test]
-    #[ignore = "requires live Postgres; run with cargo test --lib live_postgres_webrtc_stream_death_cleanup_disconnects_peer -- --ignored --nocapture"]
-    async fn live_postgres_webrtc_stream_death_cleanup_disconnects_peer() {
+    /// Shared live fixture for WebRTC fault oracles: same DSN env chain as
+    /// `live_tests::support::live_pg_dsn`, idempotent proto-generated DDL
+    /// (`CREATE … IF NOT EXISTS`), and the served WebRTC service bound to the
+    /// same Postgres runtime.
+    async fn live_postgres_webrtc_fixture() -> (sqlx::PgPool, WebrtcServiceImpl) {
         let dsn = std::env::var("UDB_LIVE_NATIVE_PG_DSN")
             .or_else(|_| std::env::var("UDB_LIVE_AUTH_PG_DSN"))
             .or_else(|_| std::env::var("UDB_INTEGRATION_PG_DSN"))
@@ -2698,6 +3869,18 @@ mod tenant_scope_tests {
             DataBrokerRuntime::from_config(config).await,
         )
         .build_webrtc_service();
+        (pool, svc)
+    }
+
+    /// FIX-42: stream-death cleanup — when a signaling pump ends without a
+    /// LeaveRoom RPC, `disconnect_bound_peer` (the REAL cleanup function both
+    /// pump halves call) must mark the peer DISCONNECTED, release exactly one
+    /// participant slot, and stay idempotent when the racing inbound/outbound
+    /// halves both invoke it.
+    #[tokio::test]
+    #[ignore = "requires live Postgres; run with cargo test --lib live_postgres_webrtc_stream_death_cleanup_disconnects_peer -- --ignored --nocapture"]
+    async fn live_postgres_webrtc_stream_death_cleanup_disconnects_peer() {
+        let (pool, svc) = live_postgres_webrtc_fixture().await;
         let tenant_id = Uuid::new_v4().to_string();
 
         let room = svc
@@ -2782,6 +3965,122 @@ mod tenant_scope_tests {
         );
     }
 
+    /// Fault-injection oracle for the leader-owned stale-peer worker: expire more
+    /// CONNECTED peers than one batch can sweep, then call the real reaper body
+    /// until convergence. The served join/get paths prove room counters and peer
+    /// state converge without double-releasing fresh or already-reaped peers.
+    #[tokio::test]
+    #[ignore = "requires live Postgres; run with cargo test --lib live_postgres_webrtc_stale_peer_reaper_converges -- --ignored --nocapture"]
+    async fn live_postgres_webrtc_stale_peer_reaper_converges() {
+        let (pool, svc) = live_postgres_webrtc_fixture().await;
+        let tenant_id = Uuid::new_v4().to_string();
+        let room = svc
+            .create_room(Request::new(webrtc_pb::CreateRoomRequest {
+                tenant_id: tenant_id.clone(),
+                name: "stale-peer-reaper".to_string(),
+                max_participants: 10,
+                ..Default::default()
+            }))
+            .await
+            .expect("create_room")
+            .into_inner();
+
+        let mut peers = Vec::new();
+        for display_name in [
+            "stale-a", "stale-b", "stale-c", "stale-d", "stale-e", "fresh-f",
+        ] {
+            let join = svc
+                .join_room(Request::new(webrtc_pb::JoinRoomRequest {
+                    tenant_id: tenant_id.clone(),
+                    room_id: room.room_id.clone(),
+                    display_name: display_name.to_string(),
+                    ..Default::default()
+                }))
+                .await
+                .expect("join_room")
+                .into_inner();
+            peers.push(join.peer.expect("peer"));
+        }
+
+        let pm = peer_model();
+        let age_peer_sql = format!(
+            "UPDATE {rel} SET {updated} = NOW() - make_interval(secs => $1::DOUBLE PRECISION) \
+             WHERE {peer_id} = $2::UUID",
+            rel = pm.relation,
+            updated = pm.q("updated_at"),
+            peer_id = pm.q("peer_id"),
+        );
+        for peer in peers.iter().take(5) {
+            sqlx::query(&age_peer_sql)
+                .bind(60.0)
+                .bind(&peer.peer_id)
+                .execute(&pool)
+                .await
+                .unwrap_or_else(|err| panic!("age stale peer {}: {err}", peer.peer_id));
+        }
+
+        assert_eq!(svc.reap_stale_peers(10, 2).await.expect("first reap"), 2);
+        assert_eq!(svc.reap_stale_peers(10, 2).await.expect("second reap"), 2);
+        assert_eq!(svc.reap_stale_peers(10, 2).await.expect("third reap"), 1);
+        assert_eq!(
+            svc.reap_stale_peers(10, 2).await.expect("idempotent reap"),
+            0
+        );
+
+        for peer in peers.iter().take(5) {
+            let got_peer = svc
+                .get_peer(Request::new(webrtc_pb::GetPeerRequest {
+                    tenant_id: tenant_id.clone(),
+                    peer_id: peer.peer_id.clone(),
+                    ..Default::default()
+                }))
+                .await
+                .expect("get stale peer")
+                .into_inner()
+                .peer
+                .expect("stale peer");
+            assert_eq!(
+                got_peer.state,
+                webrtc_entity_pb::PeerState::Disconnected as i32,
+                "stale peer {} must be disconnected",
+                peer.peer_id
+            );
+        }
+
+        let fresh_peer = peers.last().expect("fresh peer");
+        let got_fresh = svc
+            .get_peer(Request::new(webrtc_pb::GetPeerRequest {
+                tenant_id: tenant_id.clone(),
+                peer_id: fresh_peer.peer_id.clone(),
+                ..Default::default()
+            }))
+            .await
+            .expect("get fresh peer")
+            .into_inner()
+            .peer
+            .expect("fresh peer");
+        assert_eq!(
+            got_fresh.state,
+            webrtc_entity_pb::PeerState::Connected as i32,
+            "fresh peer must not be reaped"
+        );
+
+        let got_room = svc
+            .get_room(Request::new(webrtc_pb::GetRoomRequest {
+                tenant_id,
+                room_id: room.room_id,
+            }))
+            .await
+            .expect("get_room")
+            .into_inner()
+            .room
+            .expect("room");
+        assert_eq!(
+            got_room.participant_count, 1,
+            "batched stale reaper must release exactly the five expired slots"
+        );
+    }
+
     #[test]
     fn disconnect_sql_is_connected_only_and_updates_last_seen_fields() {
         let pm = peer_model();
@@ -2833,6 +4132,421 @@ mod tenant_scope_tests {
             .expect_err("cross-tenant body must be rejected");
         assert_eq!(err.code(), tonic::Code::PermissionDenied);
     }
+
+    #[tokio::test]
+    async fn create_room_missing_name_carries_field_violation() {
+        let svc = WebrtcServiceImpl::new(); // no pool, no channels (admit no-op)
+        let err = svc
+            .create_room(Request::new(webrtc_pb::CreateRoomRequest {
+                tenant_id: "tenant-a".to_string(),
+                name: "  ".to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect_err("missing room name must fail before runtime access");
+
+        assert_eq!(err.code(), tonic::Code::InvalidArgument);
+        assert_eq!(err.message(), "tenant_id and name are required");
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, "name");
+        assert_eq!(
+            detail.field_violations[0].description,
+            "must be a non-empty room name"
+        );
+    }
+
+    #[tokio::test]
+    async fn signaling_first_message_missing_room_id_carries_field_violation() {
+        let svc = WebrtcServiceImpl::new();
+        let err = svc
+            .require_active_signal_membership(&webrtc_pb::SignalRequest {
+                tenant_id: "tenant-a".to_string(),
+                peer_id: "00000000-0000-0000-0000-000000000002".to_string(),
+                ..Default::default()
+            })
+            .await
+            .expect_err("missing first-frame room id must fail before pool access");
+
+        assert_eq!(err.code(), tonic::Code::InvalidArgument);
+        assert_eq!(
+            err.message(),
+            "room_id is required on the first signaling message"
+        );
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, "room_id");
+        assert_eq!(
+            detail.field_violations[0].description,
+            "must be a non-empty signaling room id"
+        );
+    }
+
+    #[tokio::test]
+    async fn signaling_first_message_missing_peer_id_carries_field_violation() {
+        let svc = WebrtcServiceImpl::new();
+        let err = svc
+            .require_active_signal_membership(&webrtc_pb::SignalRequest {
+                tenant_id: "tenant-a".to_string(),
+                room_id: "00000000-0000-0000-0000-000000000001".to_string(),
+                ..Default::default()
+            })
+            .await
+            .expect_err("missing first-frame peer id must fail before pool access");
+
+        assert_eq!(err.code(), tonic::Code::InvalidArgument);
+        assert_eq!(
+            err.message(),
+            "peer_id is required on the first signaling message"
+        );
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, "peer_id");
+        assert_eq!(
+            detail.field_violations[0].description,
+            "must be a non-empty signaling peer id"
+        );
+    }
+
+    #[tokio::test]
+    async fn signaling_first_message_missing_tenant_id_carries_field_violation() {
+        let svc = WebrtcServiceImpl::new();
+        let err = svc
+            .require_active_signal_membership(&webrtc_pb::SignalRequest {
+                room_id: "00000000-0000-0000-0000-000000000001".to_string(),
+                peer_id: "00000000-0000-0000-0000-000000000002".to_string(),
+                ..Default::default()
+            })
+            .await
+            .expect_err("missing first-frame tenant id must fail before pool access");
+
+        assert_eq!(err.code(), tonic::Code::InvalidArgument);
+        assert_eq!(
+            err.message(),
+            "tenant_id is required on the first signaling message"
+        );
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, "tenant_id");
+        assert_eq!(
+            detail.field_violations[0].description,
+            "must be a non-empty signaling tenant id"
+        );
+    }
+
+    #[test]
+    fn webrtc_enum_helpers_carry_field_violations() {
+        let room = room_state_to_db("BROKEN", "").expect_err("unknown room state must be rejected");
+        assert_eq!(room.message(), "unknown room state: BROKEN");
+        assert_validation_field(&room, "state", "must be ACTIVE, IDLE, or CLOSED");
+
+        let peer = peer_state_to_db("BROKEN", "").expect_err("unknown peer state must be rejected");
+        assert_eq!(peer.message(), "unknown peer state: BROKEN");
+        assert_validation_field(&peer, "state", "must be a known peer state");
+
+        let track =
+            track_kind_to_db("BROKEN", "").expect_err("unknown track kind must be rejected");
+        assert_eq!(track.message(), "unknown track kind: BROKEN");
+        assert_validation_field(&track, "kind", "must be AUDIO, VIDEO, SCREEN, or DATA");
+    }
+
+    #[test]
+    fn webrtc_json_helper_carries_field_violation() {
+        let err = wv_json("{not-json").expect_err("invalid JSON must be rejected");
+        assert!(
+            err.message().starts_with("webrtc JSON field is invalid:"),
+            "human message should preserve parse context"
+        );
+        assert_validation_field(&err, "json", "must be valid JSON");
+    }
+
+    #[test]
+    fn empty_signaling_stream_carries_field_violation() {
+        let err = empty_signaling_stream_status();
+        assert_eq!(err.message(), "empty signaling stream");
+        assert_validation_field(&err, "stream", "must include an initial signaling message");
+    }
+
+    #[test]
+    fn webrtc_missing_setup_capabilities_carry_typed_detail() {
+        for (operation, capability, message) in [
+            (
+                "native_entity_dispatch",
+                "runtime_native_entity_dispatch",
+                "webrtc service requires runtime native entity dispatch",
+            ),
+            (
+                "postgres_store",
+                "postgres_store",
+                "webrtc service requires a Postgres-backed store (no PG pool configured)",
+            ),
+        ] {
+            let err = webrtc_capability_status(operation, capability, message);
+            assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+            assert_eq!(err.message(), message);
+            let detail = decode_detail(&err);
+            assert_eq!(detail.kind, ErrorKind::Capability as i32);
+            assert_eq!(detail.backend, "webrtc");
+            assert_eq!(detail.operation, operation);
+            assert_eq!(detail.capability_required, capability);
+            assert!(!detail.retryable);
+        }
+    }
+
+    #[test]
+    fn webrtc_state_denials_preserve_reason_and_policy_detail() {
+        for (err, message, reason, operation, decision) in [
+            (
+                peer_not_active_status(),
+                "peer is not an active member of this room",
+                PEER_NOT_ACTIVE,
+                "require_active_peer_membership",
+                "peer_not_active",
+            ),
+            (
+                room_not_joinable_status(),
+                "room not found, closed, or at capacity",
+                ROOM_FULL,
+                "join_room",
+                "room_not_joinable",
+            ),
+        ] {
+            assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+            assert_eq!(err.message(), message);
+            assert_eq!(
+                err.metadata()
+                    .get("error-reason")
+                    .map(|value| value.to_str().unwrap()),
+                Some(reason)
+            );
+            let detail = decode_detail(&err);
+            assert_eq!(detail.kind, ErrorKind::Policy as i32);
+            assert_eq!(detail.operation, operation);
+            assert_eq!(detail.policy_decision_id, decision);
+            assert!(!detail.retryable);
+        }
+    }
+
+    #[test]
+    fn webrtc_permission_denials_preserve_reason_and_policy_detail() {
+        for (err, message, reason, operation, decision) in [
+            (
+                peer_not_active_permission_status(),
+                "peer is not an active member of this room",
+                PEER_NOT_ACTIVE,
+                "signal_peer_membership",
+                "peer_not_active",
+            ),
+            (
+                egress_tenant_scope_mismatch_status(),
+                EGRESS_TENANT_SCOPE_MISMATCH_MESSAGE,
+                EGRESS_TENANT_SCOPE_MISMATCH,
+                "stop_egress",
+                "egress_tenant_scope_mismatch",
+            ),
+        ] {
+            assert_eq!(err.code(), tonic::Code::PermissionDenied);
+            assert_eq!(err.message(), message);
+            assert_eq!(
+                err.metadata()
+                    .get("error-reason")
+                    .map(|value| value.to_str().unwrap()),
+                Some(reason)
+            );
+            let detail = decode_detail(&err);
+            assert_eq!(detail.kind, ErrorKind::Policy as i32);
+            assert_eq!(detail.operation, operation);
+            assert_eq!(detail.policy_decision_id, decision);
+            assert!(!detail.retryable);
+        }
+    }
+
+    #[cfg(feature = "webrtc")]
+    #[test]
+    fn sfu_backend_unavailable_preserves_reason_and_capability_detail() {
+        let err = sfu_backend_unavailable_status("join-token mint failed");
+        assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+        assert_eq!(
+            err.message(),
+            "SFU backend unavailable: join-token mint failed"
+        );
+        assert_eq!(
+            err.metadata()
+                .get("error-reason")
+                .map(|value| value.to_str().unwrap()),
+            Some(SFU_BACKEND_UNAVAILABLE)
+        );
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::Capability as i32);
+        assert_eq!(detail.backend, "webrtc");
+        assert_eq!(detail.operation, "sfu_join_token");
+        assert_eq!(detail.capability_required, "sfu_backend");
+        assert!(!detail.retryable);
+    }
+
+    #[test]
+    fn turn_secret_setup_capability_preserves_reason_and_typed_detail() {
+        for operation in ["join_session", "issue_credentials"] {
+            let err = turn_secret_not_configured_status(operation);
+            assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+            assert_eq!(err.message(), TURN_NOT_CONFIGURED_MESSAGE);
+            assert_eq!(
+                err.metadata()
+                    .get("error-reason")
+                    .map(|value| value.to_str().unwrap()),
+                Some(TURN_NOT_CONFIGURED)
+            );
+            let detail = decode_detail(&err);
+            assert_eq!(detail.kind, ErrorKind::Capability as i32);
+            assert_eq!(detail.backend, "webrtc");
+            assert_eq!(detail.operation, operation);
+            assert_eq!(detail.capability_required, "turn_secret");
+            assert!(!detail.retryable);
+        }
+    }
+
+    // ── Egress (master-plan 5.5) ─────────────────────────────────────────────
+
+    /// Disabled flag (the default) ⇒ `FAILED_PRECONDITION`/`EGRESS_NOT_ENABLED`,
+    /// NOT `UNIMPLEMENTED` (the capability-lie / retry-storm guard). No pool is
+    /// needed because the gate fires before any backend/DB access.
+    #[tokio::test]
+    async fn egress_disabled_returns_failed_precondition_not_unimplemented() {
+        let mut svc = WebrtcServiceImpl::new();
+        svc.egress = EgressCapability::Disabled; // pin (don't depend on process env)
+        let mut request = Request::new(webrtc_pb::StartRoomCompositeRequest {
+            tenant_id: "tenant-a".to_string(),
+            room_id: "00000000-0000-0000-0000-000000000001".to_string(),
+            ..Default::default()
+        });
+        request
+            .metadata_mut()
+            .insert("x-tenant-id", MetadataValue::from_static("tenant-a"));
+        let err = svc
+            .start_room_composite(request)
+            .await
+            .expect_err("disabled egress must fail closed");
+        assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+        assert_ne!(err.code(), tonic::Code::Unimplemented);
+        assert_eq!(err.message(), EGRESS_NOT_ENABLED_MESSAGE);
+        assert_eq!(
+            err.metadata()
+                .get("error-reason")
+                .map(|v| v.to_str().unwrap()),
+            Some(EGRESS_NOT_ENABLED)
+        );
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::Capability as i32);
+        assert_eq!(detail.backend, "webrtc");
+        assert_eq!(detail.operation, "start_room_composite");
+        assert_eq!(detail.capability_required, "webrtc_egress_enabled");
+        assert!(!detail.retryable);
+    }
+
+    #[tokio::test]
+    async fn egress_enabled_without_backend_carries_capability_detail() {
+        let mut svc = WebrtcServiceImpl::new();
+        svc.egress = EgressCapability::EnabledNoBackend;
+        let mut request = Request::new(webrtc_pb::ListEgressRequest {
+            tenant_id: "tenant-a".to_string(),
+            room_id: "room-a".to_string(),
+            ..Default::default()
+        });
+        request
+            .metadata_mut()
+            .insert("x-tenant-id", MetadataValue::from_static("tenant-a"));
+        let err = svc
+            .list_egress(request)
+            .await
+            .expect_err("enabled egress without backend must fail closed");
+        assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+        assert_ne!(err.code(), tonic::Code::Unimplemented);
+        assert_eq!(err.message(), EGRESS_BACKEND_UNAVAILABLE_MESSAGE);
+        assert_eq!(
+            err.metadata()
+                .get("error-reason")
+                .map(|v| v.to_str().unwrap()),
+            Some(EGRESS_BACKEND_UNAVAILABLE)
+        );
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::Capability as i32);
+        assert_eq!(detail.backend, "webrtc");
+        assert_eq!(detail.operation, "list_egress");
+        assert_eq!(detail.capability_required, "webrtc_egress_backend");
+        assert!(!detail.retryable);
+    }
+
+    /// A cross-tenant egress BODY (foreign tenant_id vs the scoped metadata
+    /// tenant) is rejected by the scope guard before any egress work.
+    #[tokio::test]
+    async fn start_room_composite_rejects_cross_tenant_body() {
+        let svc = WebrtcServiceImpl::new();
+        let mut request = Request::new(webrtc_pb::StartRoomCompositeRequest {
+            tenant_id: "tenant-b".to_string(),
+            room_id: "00000000-0000-0000-0000-000000000001".to_string(),
+            ..Default::default()
+        });
+        request
+            .metadata_mut()
+            .insert("x-tenant-id", MetadataValue::from_static("tenant-a"));
+        let err = svc
+            .start_room_composite(request)
+            .await
+            .expect_err("cross-tenant body must be rejected");
+        assert_eq!(err.code(), tonic::Code::PermissionDenied);
+    }
+
+    /// StopEgress with an `egress_id` minted for ANOTHER tenant is rejected
+    /// (`PermissionDenied`) even when egress is enabled — a tenant can never stop
+    /// another tenant's egress (cross-tenant leak guard).
+    #[tokio::test]
+    async fn stop_egress_rejects_cross_tenant_egress_id() {
+        let mut svc = WebrtcServiceImpl::new();
+        svc.egress = EgressCapability::EnabledNoBackend;
+        let foreign_id = new_egress_id("tenant-b");
+        let mut request = Request::new(webrtc_pb::StopEgressRequest {
+            tenant_id: "tenant-a".to_string(),
+            egress_id: foreign_id,
+        });
+        request
+            .metadata_mut()
+            .insert("x-tenant-id", MetadataValue::from_static("tenant-a"));
+        let err = svc
+            .stop_egress(request)
+            .await
+            .expect_err("foreign-tenant egress_id must be rejected");
+        assert_eq!(err.code(), tonic::Code::PermissionDenied);
+        assert_eq!(err.message(), EGRESS_TENANT_SCOPE_MISMATCH_MESSAGE);
+        assert_eq!(
+            err.metadata()
+                .get("error-reason")
+                .map(|value| value.to_str().unwrap()),
+            Some(EGRESS_TENANT_SCOPE_MISMATCH)
+        );
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::Policy as i32);
+        assert_eq!(detail.operation, "stop_egress");
+        assert_eq!(detail.policy_decision_id, "egress_tenant_scope_mismatch");
+    }
+
+    /// The emit-topic constants must match the dotted `emits` contract declared
+    /// on the RoomService egress RPCs in webrtc_service.proto, and a minted
+    /// egress_id must be scoped to its owning tenant only.
+    #[test]
+    fn egress_topics_and_id_scoping_match_contract() {
+        assert_eq!(EGRESS_STARTED_TOPIC, "udb.webrtc.egress.started.v1");
+        assert_eq!(EGRESS_STOPPED_TOPIC, "udb.webrtc.egress.stopped.v1");
+        assert_eq!(EGRESS_FAILED_TOPIC, "udb.webrtc.egress.failed.v1");
+
+        let id = new_egress_id("tenant-a");
+        assert!(egress_id_is_tenant_scoped(&id, "tenant-a"));
+        assert!(!egress_id_is_tenant_scoped(&id, "tenant-b"));
+        assert!(!egress_id_is_tenant_scoped("not-an-egress-id", "tenant-a"));
+    }
 }
 
 impl DataBrokerService {
@@ -2853,6 +4567,14 @@ impl DataBrokerService {
             .with_outbox(Some(outbox))
             .with_channels(channels)
             .with_metrics(self.metrics.clone());
+
+        // Report the recording/egress capability honestly at mount time
+        // (master-plan 5.5): "disabled" when the flag is unset, "degraded" when
+        // it is set but no egress backend is wired (mounted but degraded).
+        tracing::info!(
+            egress = svc.egress_capability_label(),
+            "webrtc egress capability"
+        );
 
         let interval_secs = std::env::var("UDB_WEBRTC_REAP_INTERVAL_SECS")
             .ok()

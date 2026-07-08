@@ -1,0 +1,1023 @@
+syntax = "proto3";
+
+package udb.core.vault.services.v1;
+
+import "google/api/annotations.proto";
+import "udb/core/common/v1/dto.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Vault.Services.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/vault/services/v1;vaultservicev1";
+option java_package = "com.udb.core.vault.services.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Vault\\Services\\V1";
+option php_namespace = "Udb\\Core\\Vault\\Services\\V1";
+
+// VaultService (master-plan 9.1, flagship) — secrets management built into the
+// broker. Three engines, one crypto stack (the broker AES-256-GCM-SIV envelope,
+// reused from `runtime::encryption`):
+//   * KV       — versioned, envelope-encrypted secrets at hierarchical paths
+//                with compare-and-swap, soft delete, and crypto-shred destroy.
+//   * Transit  — encrypt/decrypt/sign/verify/hmac by key NAME; key material is
+//                never exported; versioned keys with ACTIVE/VERIFYING rotation.
+//   * Seal     — every handler fails closed (failed_precondition) when the
+//                master key is unavailable; SealStatus reports the seal state.
+// The sensitive reads (GetSecret, Decrypt) are audited via the outbox compliance
+// envelope. Dynamic database credentials are a declared follow-up.
+service VaultService {
+  option (udb.core.common.v1.native_service) = {
+    service_id: "vault"
+    logical_service_id: "vault"
+    proto_service_id: "vault"
+    display_name: "Vault"
+    category: "vault"
+    default_enabled: true
+    requires_postgres: true
+    control_plane_listener_allowed: true
+    sdk_facade_name: "vault"
+    cli_scaffold_group: "vault"
+    health_check_ref: "vault"
+    capability_ref: "native.vault"
+  };
+  option (udb.core.common.v1.service_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "vault"
+    generate_minimal_example: true
+  };
+  option (udb.core.common.v1.service_cli_scaffold) = {
+    scaffold_package: "vault"
+    import_path: "udb/native/vault"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+    generated_files: "udb.native.vault.config"
+    required_native_services: "vault"
+    secret_placeholders: "UDB_API_KEY"
+    smoke_test_command: "udb native lint"
+  };
+  option (udb.core.common.v1.service_dependency_contract) = {
+    required_native_services: "vault"
+    required_backends: "postgres"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+  };
+
+  // ── KV engine ─────────────────────────────────────────────────────────────
+
+  // Write a new secret version. Compare-and-swap: `expected_version` must equal
+  // the current latest version (0 for a brand-new path) or the write is rejected.
+  rpc PutSecret(PutSecretRequest) returns (PutSecretResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:vault:put-secret"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "vault.PutSecret"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "put_secret" rest_operation_id: "putSecret"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "vault"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "vault"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "vault.PutSecret"
+      outbox_topic: "udb.vault.secret.put.v1"
+      partition_key_field: "secret_path"
+      payload_redaction_profile: "strict"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/vault/secrets:put"
+      body: "*"
+    };
+  }
+
+  // Read the secret value (latest active version, or a specific version). This
+  // is the sensitive vault read: it is AUDITED via the outbox compliance envelope.
+  rpc GetSecret(GetSecretRequest) returns (GetSecretResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:vault:get-secret"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "vault.GetSecret"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "get_secret" rest_operation_id: "getSecret"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "vault"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "vault"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "vault.GetSecret"
+      outbox_topic: "udb.vault.secret.accessed.v1"
+      partition_key_field: "secret_path"
+      payload_redaction_profile: "strict"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/vault/secrets/{secret_path=**}"};
+  }
+
+  // List secret paths under an optional prefix. Returns metadata only — NEVER
+  // any secret value.
+  rpc ListSecrets(ListSecretsRequest) returns (ListSecretsResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:vault:list-secrets"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "vault.ListSecrets"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "list_secrets" rest_operation_id: "listSecrets"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "vault"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "vault"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "vault.ListSecrets"
+      outbox_topic: "udb.vault.secret.listed.v1"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/vault/secrets"};
+  }
+
+  // Soft-delete the latest version (recoverable bookkeeping state). The ciphertext
+  // is retained; use DestroySecret to crypto-shred.
+  rpc DeleteSecret(DeleteSecretRequest) returns (DeleteSecretResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:vault:delete-secret"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "vault.DeleteSecret"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "delete_secret" rest_operation_id: "deleteSecret"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "vault"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "vault"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "vault.DeleteSecret"
+      outbox_topic: "udb.vault.secret.deleted.v1"
+      partition_key_field: "secret_path"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {post: "/v1/vault/secrets:delete" body: "*"};
+  }
+
+  // Crypto-shred every version of a secret: clears the wrapped DEK + ciphertext
+  // so the value is irrecoverable. DESTRUCTIVE + irreversible — a confirmation
+  // token is required and an empty token fails closed.
+  rpc DestroySecret(DestroySecretRequest) returns (DestroySecretResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:vault:destroy-secret"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "vault.DestroySecret"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "destroy_secret" rest_operation_id: "destroySecret"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "vault"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "vault"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "vault.DestroySecret"
+      outbox_topic: "udb.vault.secret.destroyed.v1"
+      partition_key_field: "secret_path"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {post: "/v1/vault/secrets:destroy" body: "*"};
+  }
+
+  // ── Transit engine ────────────────────────────────────────────────────────
+
+  // Create a named transit key (version 1, ACTIVE). Key material is generated
+  // server-side and never returned.
+  rpc CreateTransitKey(CreateTransitKeyRequest) returns (CreateTransitKeyResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:vault:create-transit-key"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "vault.CreateTransitKey"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "create_transit_key" rest_operation_id: "createTransitKey"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "vault"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "vault"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "vault.CreateTransitKey"
+      outbox_topic: "udb.vault.transit_key.created.v1"
+      partition_key_field: "key_name"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {post: "/v1/vault/transit/keys" body: "*"};
+  }
+
+  // Rotate a named transit key: the current ACTIVE version is demoted to
+  // VERIFYING (still decrypts/verifies during the overlap) and a fresh ACTIVE
+  // version is generated. New encryptions/signatures use the new version.
+  rpc RotateTransitKey(RotateTransitKeyRequest) returns (RotateTransitKeyResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:vault:rotate-transit-key"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "vault.RotateTransitKey"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "rotate_transit_key" rest_operation_id: "rotateTransitKey"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "vault"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "vault"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "vault.RotateTransitKey"
+      outbox_topic: "udb.vault.transit_key.rotated.v1"
+      partition_key_field: "key_name"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {post: "/v1/vault/transit/keys:rotate" body: "*"};
+  }
+
+  // Encrypt plaintext under the ACTIVE version of a named key. Returns a
+  // versioned ciphertext envelope; the key material is never returned.
+  rpc Encrypt(EncryptRequest) returns (EncryptResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:vault:encrypt"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "vault.Encrypt"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "encrypt" rest_operation_id: "vaultEncrypt"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "vault"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "vault"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {post: "/v1/vault/transit:encrypt" body: "*"};
+  }
+
+  // Decrypt a transit ciphertext envelope. The version is read from the envelope
+  // and ACTIVE or VERIFYING versions are accepted. This is a sensitive read and is
+  // AUDITED via the outbox compliance envelope.
+  rpc Decrypt(DecryptRequest) returns (DecryptResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:vault:decrypt"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "vault.Decrypt"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "decrypt" rest_operation_id: "vaultDecrypt"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "vault"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "vault"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "vault.Decrypt"
+      outbox_topic: "udb.vault.transit.decrypted.v1"
+      partition_key_field: "key_name"
+      payload_redaction_profile: "strict"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {post: "/v1/vault/transit:decrypt" body: "*"};
+  }
+
+  // Produce a detached MAC ("signature") over the input under the ACTIVE key
+  // version. Implemented as HMAC-SHA256 from the version DEK (symmetric);
+  // asymmetric signing is a follow-up. Key material is never returned.
+  rpc Sign(SignRequest) returns (SignResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:vault:sign"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "vault.Sign"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "sign" rest_operation_id: "vaultSign"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "vault"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "vault"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {post: "/v1/vault/transit:sign" body: "*"};
+  }
+
+  // Verify a MAC/signature over the input. The version is read from the
+  // signature and ACTIVE or VERIFYING versions are accepted; comparison is
+  // constant-time.
+  rpc Verify(VerifyRequest) returns (VerifyResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:vault:verify"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "vault.Verify"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "verify" rest_operation_id: "vaultVerify"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "vault"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "vault"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {post: "/v1/vault/transit:verify" body: "*"};
+  }
+
+  // Compute an HMAC-SHA256 over the input under the ACTIVE key version. Key
+  // material is never returned.
+  rpc Hmac(HmacRequest) returns (HmacResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:vault:hmac"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "vault.Hmac"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "hmac" rest_operation_id: "vaultHmac"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "vault"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "vault"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {post: "/v1/vault/transit:hmac" body: "*"};
+  }
+
+  // ── Seal engine ───────────────────────────────────────────────────────────
+
+  // Report whether the vault is sealed (master key unavailable). Always answers,
+  // even when sealed, so operators can diagnose a sealed vault.
+  rpc SealStatus(SealStatusRequest) returns (SealStatusResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:vault:seal-status"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "vault.SealStatus"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "seal_status" rest_operation_id: "vaultSealStatus"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "vault"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "vault"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/vault/seal-status"};
+  }
+
+  // ── Dynamic database credentials ──────────────────────────────────────────
+
+  // Mint short-lived, per-request Postgres credentials with a durable lease.
+  // The requested role_name is an operator-configured alias resolved from
+  // UDB_VAULT_DB_ROLES_JSON; arbitrary request-supplied role grants fail closed.
+  // WORKER_VAULT_LEASE_REAPER revokes and drops expired generated login roles.
+  rpc GenerateDatabaseCredentials(GenerateDatabaseCredentialsRequest) returns (GenerateDatabaseCredentialsResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:vault:generate-db-credentials"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "vault.GenerateDatabaseCredentials"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "generate_database_credentials" rest_operation_id: "generateDatabaseCredentials"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "vault"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "vault"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {post: "/v1/vault/database/credentials" body: "*"};
+  }
+}
+
+// ── KV messages ─────────────────────────────────────────────────────────────
+
+message PutSecretRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 3 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  // Verified against the bearer/claim tenant; cross-tenant values are rejected.
+  string tenant_id = 1;
+  // Application-relative path, e.g. "app/db/password".
+  string secret_path = 2;
+  // The plaintext secret value. Sealed under a fresh DEK before storage; never
+  // logged (redacting markers) and never returned by List.
+  string secret_value = 3 [(udb.core.common.v1.sensitive) = true, (udb.core.common.v1.log_redacted) = true, (udb.core.common.v1.db_column_security) = { secret_classification: SECRET_CLASSIFICATION_TOKEN output_view: OUTPUT_VIEW_NEVER redaction_strategy: REDACTION_STRATEGY_REDACT encryption_key_class: "vault-data" uniqueness_scope: "tenant" }];
+  // Compare-and-swap guard: must equal the current latest version (0 for a new
+  // path). A mismatch is rejected (aborted) so concurrent writers cannot clobber.
+  int32 expected_version = 4;
+  string metadata_json = 5; // JSON
+}
+
+message PutSecretResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 3 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  string secret_path = 1;
+  int32 version = 2;
+  string message = 3;
+  udb.core.common.v1.ApiError error = 4;
+}
+
+message GetSecretRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 3 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string secret_path = 2;
+  // 0 ⇒ latest active version; otherwise the specific version.
+  int32 version = 3;
+}
+
+message GetSecretResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 3 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  string secret_path = 1;
+  int32 version = 2;
+  string secret_value = 3 [(udb.core.common.v1.sensitive) = true, (udb.core.common.v1.log_redacted) = true, (udb.core.common.v1.db_column_security) = { secret_classification: SECRET_CLASSIFICATION_TOKEN output_view: OUTPUT_VIEW_SELF redaction_strategy: REDACTION_STRATEGY_REDACT encryption_key_class: "vault-data" uniqueness_scope: "tenant" }];
+  string metadata_json = 4;
+  string message = 5;
+  udb.core.common.v1.ApiError error = 6;
+}
+
+message ListSecretsRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 3 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string path_prefix = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+  // Opaque pagination token returned by ListSecretsResponse.next_page_token.
+  string page_token = 5;
+}
+
+// One secret path summary — metadata only, NEVER a value.
+message SecretSummary {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 3 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  // Canonical public resource name for the secret within the tenant vault.
+  string secret_path = 1;
+  int32 latest_version = 2;
+  string state = 3;
+}
+
+message ListSecretsResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 3 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  repeated SecretSummary secrets = 1;
+  int32 total_count = 2;
+  udb.core.common.v1.ApiError error = 3;
+  // Opaque token for the next page; empty when no more secret paths are available.
+  string next_page_token = 4;
+}
+
+message DeleteSecretRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 3 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string secret_path = 2;
+}
+
+message DeleteSecretResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 3 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  string message = 1;
+  udb.core.common.v1.ApiError error = 2;
+}
+
+message DestroySecretRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 3 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string secret_path = 2;
+  // Required confirmation; crypto-shred is irreversible and an empty token fails
+  // closed (DESTRUCTIVE).
+  string confirmation_token = 3;
+}
+
+message DestroySecretResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 3 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  uint32 destroyed_versions = 1;
+  string message = 2;
+  udb.core.common.v1.ApiError error = 3;
+}
+
+// ── Transit messages ──────────────────────────────────────────────────────
+
+message CreateTransitKeyRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 3 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string key_name = 2;
+  string algorithm = 3; // default aes256-gcm-siv
+}
+
+message CreateTransitKeyResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 3 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  string key_name = 1;
+  int32 version = 2;
+  string message = 3;
+  udb.core.common.v1.ApiError error = 4;
+}
+
+message RotateTransitKeyRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 3 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string key_name = 2;
+}
+
+message RotateTransitKeyResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 3 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  string key_name = 1;
+  int32 version = 2;
+  string message = 3;
+  udb.core.common.v1.ApiError error = 4;
+}
+
+message EncryptRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 3 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string key_name = 2;
+  string plaintext = 3 [(udb.core.common.v1.sensitive) = true, (udb.core.common.v1.log_redacted) = true, (udb.core.common.v1.db_column_security) = { secret_classification: SECRET_CLASSIFICATION_TOKEN output_view: OUTPUT_VIEW_NEVER redaction_strategy: REDACTION_STRATEGY_REDACT encryption_key_class: "vault-transit" uniqueness_scope: "tenant" }];
+}
+
+message EncryptResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 3 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  string ciphertext = 1;
+  int32 key_version = 2;
+  string message = 3;
+  udb.core.common.v1.ApiError error = 4;
+}
+
+message DecryptRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 3 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string key_name = 2;
+  string ciphertext = 3;
+}
+
+message DecryptResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 3 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  string plaintext = 1 [(udb.core.common.v1.sensitive) = true, (udb.core.common.v1.log_redacted) = true, (udb.core.common.v1.db_column_security) = { secret_classification: SECRET_CLASSIFICATION_TOKEN output_view: OUTPUT_VIEW_SELF redaction_strategy: REDACTION_STRATEGY_REDACT encryption_key_class: "vault-transit" uniqueness_scope: "tenant" }];
+  int32 key_version = 2;
+  string message = 3;
+  udb.core.common.v1.ApiError error = 4;
+}
+
+message SignRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 3 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string key_name = 2;
+  string input = 3;
+}
+
+message SignResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 3 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  string signature = 1;
+  int32 key_version = 2;
+  string message = 3;
+  udb.core.common.v1.ApiError error = 4;
+}
+
+message VerifyRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 3 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string key_name = 2;
+  string input = 3;
+  string signature = 4;
+}
+
+message VerifyResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 3 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  bool valid = 1;
+  string message = 2;
+  udb.core.common.v1.ApiError error = 3;
+}
+
+message HmacRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 3 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string key_name = 2;
+  string input = 3;
+}
+
+message HmacResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 3 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  string hmac = 1;
+  int32 key_version = 2;
+  string message = 3;
+  udb.core.common.v1.ApiError error = 4;
+}
+
+// ── Seal messages ─────────────────────────────────────────────────────────
+
+message SealStatusRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 3 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  string tenant_id = 1;
+}
+
+message SealStatusResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 3 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  // True when the master key is unavailable; every other RPC fails closed.
+  bool sealed = 1;
+  // True when a real master KEK is configured (vs dev passthrough).
+  bool kek_configured = 2;
+  string message = 3;
+  udb.core.common.v1.ApiError error = 4;
+}
+
+// ── Dynamic DB credentials messages (deferred) ────────────────────────────
+
+message GenerateDatabaseCredentialsRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 3 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string role_name = 2;
+  int32 ttl_seconds = 3;
+}
+
+message GenerateDatabaseCredentialsResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 3 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  string username = 1;
+  string password = 2 [(udb.core.common.v1.sensitive) = true, (udb.core.common.v1.log_redacted) = true, (udb.core.common.v1.db_column_security) = { secret_classification: SECRET_CLASSIFICATION_CREDENTIAL output_view: OUTPUT_VIEW_SELF redaction_strategy: REDACTION_STRATEGY_REDACT encryption_key_class: "vault-db" uniqueness_scope: "tenant" }];
+  string lease_id = 3;
+  int32 lease_ttl_seconds = 4;
+  string message = 5;
+  udb.core.common.v1.ApiError error = 6;
+}

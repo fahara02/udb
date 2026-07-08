@@ -13,7 +13,30 @@
 //!   - clickhouse query        → bare array of rows;    mutate → {"affected_rows"}
 
 use super::*;
-use crate::runtime::executor_utils::{json_into_struct, struct_to_json};
+use crate::runtime::executor_utils::{invalid_argument_fields, json_into_struct, struct_to_json};
+
+fn store_rpc_invalid_fields<I, F, D>(message: impl Into<String>, fields: I) -> Status
+where
+    I: IntoIterator<Item = (F, D)>,
+    F: Into<String>,
+    D: Into<String>,
+{
+    invalid_argument_fields(message, fields)
+}
+
+fn require_resource_backend(
+    resource: Option<&crate::proto::StoreResource>,
+) -> Result<String, Status> {
+    resource
+        .map(|r| r.backend.clone())
+        .filter(|b| !b.trim().is_empty())
+        .ok_or_else(|| {
+            store_rpc_invalid_fields(
+                "resource.backend is required",
+                [("resource.backend", "must be a non-empty backend name")],
+            )
+        })
+}
 
 impl DataBrokerService {
     /// Adapter over the shared dispatch core: pull the backend out of the typed
@@ -29,10 +52,7 @@ impl DataBrokerService {
         method: &str,
         spec: serde_json::Value,
     ) -> Result<String, Status> {
-        let backend = resource
-            .map(|r| r.backend.clone())
-            .filter(|b| !b.trim().is_empty())
-            .ok_or_else(|| Status::invalid_argument("resource.backend is required"))?;
+        let backend = require_resource_backend(resource)?;
         let resource_name = resource
             .map(|r| r.resource_name.clone())
             .unwrap_or_default();
@@ -583,8 +603,18 @@ fn collection_of(resource: &Option<crate::proto::StoreResource>) -> String {
 /// are not gated here.
 fn require_collection(resource: &Option<crate::proto::StoreResource>) -> Result<(), Status> {
     if collection_of(resource).trim().is_empty() {
-        return Err(Status::invalid_argument(
+        return Err(store_rpc_invalid_fields(
             "resource.resource_name (or resource.message_type) is required",
+            [
+                (
+                    "resource.resource_name",
+                    "must be non-empty when resource.message_type is empty",
+                ),
+                (
+                    "resource.message_type",
+                    "must be non-empty when resource.resource_name is empty",
+                ),
+            ],
         ));
     }
     Ok(())
@@ -658,4 +688,75 @@ fn structs_from_result(json: &str) -> Vec<prost_types::Struct> {
     array
         .map(|items| items.into_iter().filter_map(json_into_struct).collect())
         .unwrap_or_default()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
+    use tonic::{Code, Status};
+
+    fn decode_detail(status: &Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_validation_fields(status: &Status, expected: &[(&str, &str)]) {
+        assert_eq!(status.code(), Code::InvalidArgument);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert_eq!(detail.field_violations.len(), expected.len());
+        for (actual, (field, description)) in detail.field_violations.iter().zip(expected) {
+            assert_eq!(actual.field, *field);
+            assert_eq!(actual.description, *description);
+        }
+    }
+
+    #[test]
+    fn store_rpc_missing_backend_carries_field_violation() {
+        let err = require_resource_backend(Some(&crate::proto::StoreResource {
+            backend: " ".to_string(),
+            ..Default::default()
+        }))
+        .expect_err("missing resource.backend must fail before backend dispatch");
+
+        assert_eq!(err.message(), "resource.backend is required");
+        assert_validation_fields(
+            &err,
+            &[("resource.backend", "must be a non-empty backend name")],
+        );
+    }
+
+    #[test]
+    fn store_rpc_missing_collection_carries_field_violations() {
+        let err = require_collection(&Some(crate::proto::StoreResource {
+            resource_name: " ".to_string(),
+            message_type: " ".to_string(),
+            ..Default::default()
+        }))
+        .expect_err("missing collection identifier must fail before backend dispatch");
+
+        assert_eq!(
+            err.message(),
+            "resource.resource_name (or resource.message_type) is required"
+        );
+        assert_validation_fields(
+            &err,
+            &[
+                (
+                    "resource.resource_name",
+                    "must be non-empty when resource.message_type is empty",
+                ),
+                (
+                    "resource.message_type",
+                    "must be non-empty when resource.resource_name is empty",
+                ),
+            ],
+        );
+    }
 }

@@ -77,6 +77,63 @@ message PeerLeft {
   google.protobuf.Timestamp timestamp = 5;
 }
 
+// Emitted when a recording/egress job starts (master-plan 5.5).
+message EgressStarted {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.webrtc.events.v1.EgressStarted"
+    outbox_topic: "udb.webrtc.egress_started.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
+  string event_id = 1;
+  string egress_id = 2;
+  string room_id = 3;
+  // Empty for a room composite; set for a single-track egress.
+  string track_id = 4;
+  string tenant_id = 5;
+  // "room_composite" | "track".
+  string kind = 6;
+  google.protobuf.Timestamp timestamp = 7;
+}
+
+// Emitted when a recording/egress job stops cleanly (master-plan 5.5).
+message EgressStopped {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.webrtc.events.v1.EgressStopped"
+    outbox_topic: "udb.webrtc.egress_stopped.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
+  string event_id = 1;
+  string egress_id = 2;
+  string room_id = 3;
+  string tenant_id = 4;
+  google.protobuf.Timestamp timestamp = 5;
+}
+
+// Emitted when a recording/egress job fails to start or aborts (master-plan 5.5).
+message EgressFailed {
+  option (udb.core.common.v1.message_event_contract) = {
+    event_type: "udb.core.webrtc.events.v1.EgressFailed"
+    outbox_topic: "udb.webrtc.egress_failed.v1"
+    partition_key_field: "tenant_id"
+    payload_redaction_profile: "standard"
+    delivery_guarantee: "at_least_once"
+    replay_compatibility: "stable"
+  };
+  string event_id = 1;
+  string egress_id = 2;
+  string room_id = 3;
+  string tenant_id = 4;
+  // Machine-readable failure reason (e.g. EGRESS_BACKEND_UNAVAILABLE).
+  string reason = 5;
+  google.protobuf.Timestamp timestamp = 6;
+}
+
 // Emitted when a track is published.
 message TrackPublished {
   option (udb.core.common.v1.message_event_contract) = {

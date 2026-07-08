@@ -1,0 +1,198 @@
+syntax = "proto3";
+
+package udb.core.livequery.services.v1;
+
+import "google/api/annotations.proto";
+import "udb/core/common/v1/dto.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.LiveQuery.Services.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/livequery/services/v1;livequeryservicev1";
+option java_package = "com.udb.core.livequery.services.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Livequery\\Services\\V1";
+option php_namespace = "Udb\\Core\\Livequery\\Services\\V1";
+
+// LiveQueryService (master-plan 9.7) — query results that update themselves. A
+// client subscribes to a tenant-scoped query over a source entity and receives
+// an initial Snapshot (the current matching rows) followed by an open stream of
+// Change deltas (insert / update / delete) as the underlying data mutates.
+//
+// Tenant isolation is the whole point: the snapshot is produced ONLY through the
+// mediated IR read path with the tenant predicate injected server-side from the
+// verified claim (never a raw query), and EVERY delta event is re-checked, fail
+// closed, against the subscriber's tenant scope before it is yielded — a CDC
+// event with a missing or foreign tenant_id is dropped, never streamed. The
+// subscription filter is an IR-expressible predicate set, not a raw query
+// string, so no caller-supplied SQL ever reaches a backend.
+service LiveQueryService {
+  option (udb.core.common.v1.native_service) = {
+    service_id: "livequery"
+    logical_service_id: "livequery"
+    proto_service_id: "livequery"
+    display_name: "Live Query"
+    category: "livequery"
+    default_enabled: true
+    requires_postgres: true
+    control_plane_listener_allowed: true
+    sdk_facade_name: "livequery"
+    cli_scaffold_group: "livequery"
+    health_check_ref: "livequery"
+    capability_ref: "native.livequery"
+  };
+  option (udb.core.common.v1.service_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "livequery"
+    generate_minimal_example: true
+  };
+  option (udb.core.common.v1.service_cli_scaffold) = {
+    scaffold_package: "livequery"
+    import_path: "udb/native/livequery"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+    generated_files: "udb.native.livequery.config"
+    required_native_services: "livequery"
+    secret_placeholders: "UDB_API_KEY"
+    smoke_test_command: "udb native lint"
+  };
+  option (udb.core.common.v1.service_dependency_contract) = {
+    required_native_services: "livequery"
+    required_backends: "postgres"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+  };
+
+  // Subscribe to a tenant-scoped live query. SERVER-STREAMING: the first message
+  // carries the initial Snapshot (the current rows matching the IR filter, read
+  // through the mediated path with the tenant predicate injected server-side);
+  // every subsequent message carries a single Change delta. Fails closed
+  // (failed_precondition) when the source entity has no resolvable tenant column.
+  rpc Subscribe(SubscribeRequest) returns (stream SubscribeResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:livequery:subscribe"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "livequery.Subscribe"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "subscribe" rest_operation_id: "liveQuerySubscribe"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "livequery"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "livequery"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/livequery:subscribe"
+      body: "*"
+    };
+  }
+}
+
+// Comparison operator for a live-query predicate. Maps 1:1 onto the neutral IR
+// `ComparisonOp`; only the scalar relational operators are exposed (the live
+// single-row evaluator and the mediated snapshot read share the same set).
+enum LiveQueryComparison {
+  LIVE_QUERY_COMPARISON_UNSPECIFIED = 0;
+  LIVE_QUERY_COMPARISON_EQ = 1;
+  LIVE_QUERY_COMPARISON_NE = 2;
+  LIVE_QUERY_COMPARISON_LT = 3;
+  LIVE_QUERY_COMPARISON_LE = 4;
+  LIVE_QUERY_COMPARISON_GT = 5;
+  LIVE_QUERY_COMPARISON_GE = 6;
+}
+
+// The kind of change a delta represents.
+enum LiveQueryChangeOp {
+  LIVE_QUERY_CHANGE_OP_UNSPECIFIED = 0;
+  LIVE_QUERY_CHANGE_OP_INSERT = 1;
+  LIVE_QUERY_CHANGE_OP_UPDATE = 2;
+  LIVE_QUERY_CHANGE_OP_DELETE = 3;
+}
+
+// One AND-ed predicate of the subscription filter. The value is carried as a
+// string and compared as a number when both sides parse numerically, else as a
+// string — keeping the wire contract simple while staying IR-expressible.
+message LiveQueryPredicate {
+  // Proto logical field name on the source entity (dotted paths allowed).
+  string field = 1;
+  LiveQueryComparison op = 2;
+  string value = 3;
+}
+
+message SubscribeRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "livequery"
+    generate_minimal_example: true
+  };
+  // Verified against the bearer/claim tenant; cross-tenant values are rejected.
+  string tenant_id = 1;
+  // Fully-qualified source proto message type, e.g.
+  // "udb.core.lock.entity.v1.Lock". Must declare a tenant-isolation column.
+  string message_type = 2;
+  // IR-expressible filter: the predicates are AND-ed together. The server-side
+  // tenant predicate is always injected on top of these.
+  repeated LiveQueryPredicate filters = 3;
+  // Optional project scope; further narrows the tenant predicate.
+  string project_id = 4;
+  // Upper bound on rows returned in the initial snapshot (clamped server-side).
+  int32 snapshot_limit = 5;
+}
+
+// One streamed frame: either the initial snapshot or a single change delta.
+message SubscribeResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "livequery"
+    generate_minimal_example: true
+  };
+  oneof payload {
+    LiveQuerySnapshot snapshot = 1;
+    LiveQueryChange change = 2;
+  }
+  // Error information if the stream is terminating abnormally.
+  udb.core.common.v1.ApiError error = 3;
+}
+
+message LiveQuerySnapshot {
+  // Each matching row encoded as a JSON object string.
+  repeated string rows_json = 1;
+  int64 row_count = 2;
+}
+
+message LiveQueryChange {
+  LiveQueryChangeOp op = 1;
+  // The changed row encoded as a JSON object string.
+  string row_json = 2;
+  // Source CDC event id (for client-side de-duplication / resume).
+  string event_id = 3;
+}

@@ -11,6 +11,113 @@ use super::*;
 use crate::proto::udb::core::authz::entity::v1 as authz_entity_pb;
 use crate::proto::udb::core::authz::services::v1 as authz_pb;
 
+fn activation_required_field(
+    field: &'static str,
+    description: &'static str,
+    message: &'static str,
+) -> Status {
+    crate::runtime::executor_utils::invalid_argument_fields(message, [(field, description)])
+}
+
+fn activation_field_violation(
+    field: &'static str,
+    description: impl Into<String>,
+    message: impl Into<String>,
+) -> Status {
+    crate::runtime::executor_utils::invalid_argument_fields(
+        message,
+        [(field.to_string(), description.into())],
+    )
+}
+
+fn activation_policy_status(
+    operation: &'static str,
+    policy_decision_id: &'static str,
+    message: impl Into<String>,
+) -> Status {
+    crate::runtime::executor_utils::policy_status(operation, policy_decision_id, message)
+}
+
+fn activation_internal_status(operation: impl Into<String>, message: impl Into<String>) -> Status {
+    crate::runtime::executor_utils::internal_status("authz", operation, message)
+}
+
+fn policy_version_not_activatable_status(state: authz_entity_pb::PolicyVersionState) -> Status {
+    activation_policy_status(
+        "policy_version_activate",
+        "policy_version_not_activatable",
+        format!(
+            "only an approved (or previously-active) version may be activated; version is {state:?}"
+        ),
+    )
+}
+
+fn rollback_target_required_status() -> Status {
+    activation_policy_status(
+        "policy_version_rollback",
+        "rollback_target_required",
+        "no rollback target: supply target_version_id or activate a second version first",
+    )
+}
+
+fn policy_version_not_canariable_status(state: authz_entity_pb::PolicyVersionState) -> Status {
+    activation_policy_status(
+        "policy_canary_activate",
+        "policy_version_not_canariable",
+        format!(
+            "only an approved (or previously-active) version may be canaried; version is {state:?}"
+        ),
+    )
+}
+
+fn canary_not_active_status(state: authz_entity_pb::CanaryState) -> Status {
+    activation_policy_status(
+        "policy_canary_promote",
+        "canary_not_active",
+        format!("only an ACTIVE canary can be promoted; canary is {state:?}"),
+    )
+}
+
+fn canary_not_promote_eligible_status() -> Status {
+    activation_policy_status(
+        "policy_canary_promote",
+        "canary_not_promote_eligible",
+        "canary is not promote-eligible yet: its success window has not elapsed",
+    )
+}
+
+fn validate_unique_document_policy_ids(document: &PolicyDocument) -> Result<(), Status> {
+    let mut seen_policy_ids = std::collections::HashSet::new();
+    for p in &document.policies {
+        if !p.id.trim().is_empty() && !seen_policy_ids.insert(p.id.as_str()) {
+            return Err(activation_field_violation(
+                "policies.id",
+                format!("duplicate policy id {}", p.id),
+                format!("duplicate policy id in version document: {}", p.id),
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn validate_canary_scope(scope: &CanaryScope) -> Result<(), Status> {
+    match scope {
+        CanaryScope::Nodes(ids) | CanaryScope::Tenants(ids) if ids.is_empty() => {
+            Err(activation_field_violation(
+                "scope_values",
+                "must be non-empty for NODE or TENANT canary scope",
+                "canary scope_values must be non-empty for NODE/TENANT scope",
+            ))
+        }
+        CanaryScope::Percent(0) => Err(activation_field_violation(
+            "scope_percent",
+            "must be in the range 1..=100",
+            "canary PERCENT scope must be 1..=100 (0 includes nobody)",
+        )),
+        _ => Ok(()),
+    }
+}
+
 impl AuthzServiceImpl {
     pub(super) async fn activate_policy_version_impl(
         &self,
@@ -28,7 +135,11 @@ impl AuthzServiceImpl {
             )
             .await?;
         if req.policy_version_id.trim().is_empty() {
-            return Err(Status::invalid_argument("policy_version_id is required"));
+            return Err(activation_required_field(
+                "policy_version_id",
+                "must be a non-empty policy version id",
+                "policy_version_id is required",
+            ));
         }
         let version = self.load_version(&req.policy_version_id).await?;
         let state =
@@ -39,13 +150,14 @@ impl AuthzServiceImpl {
                 | authz_entity_pb::PolicyVersionState::Superseded
                 | authz_entity_pb::PolicyVersionState::RolledBack
         ) {
-            return Err(Status::failed_precondition(format!(
-                "only an approved (or previously-active) version may be activated; version is {state:?}"
-            )));
+            return Err(policy_version_not_activatable_status(state));
         }
         // Optimistic concurrency over the version's own revision.
         if req.expected_revision != 0 && req.expected_revision != version.revision {
-            return Err(Status::aborted(
+            return Err(crate::runtime::executor_utils::retryable_aborted_status(
+                "authz",
+                "policy version expected revision",
+                0,
                 "policy version changed concurrently (expected_revision mismatch)",
             ));
         }
@@ -54,13 +166,19 @@ impl AuthzServiceImpl {
             .current_authz_revision(&version.tenant_id, &version.project_id)
             .await?;
         if req.expected_policy_revision != 0 && req.expected_policy_revision != cur_policy {
-            return Err(Status::aborted(
+            return Err(crate::runtime::executor_utils::retryable_aborted_status(
+                "authz",
+                "live policy revision",
+                0,
                 "live authz policy revision changed concurrently",
             ));
         }
         if req.expected_relationship_revision != 0 && req.expected_relationship_revision != cur_rel
         {
-            return Err(Status::aborted(
+            return Err(crate::runtime::executor_utils::retryable_aborted_status(
+                "authz",
+                "live relationship revision",
+                0,
                 "live authz relationship revision changed concurrently",
             ));
         }
@@ -123,12 +241,22 @@ impl AuthzServiceImpl {
             )
             .await?;
         if req.policy_set_id.trim().is_empty() {
-            return Err(Status::invalid_argument("policy_set_id is required"));
+            return Err(activation_required_field(
+                "policy_set_id",
+                "must be a non-empty policy set id",
+                "policy_set_id is required",
+            ));
         }
         let policy_set = self
             .load_policy_set(&req.policy_set_id)
             .await?
-            .ok_or_else(|| Status::not_found("policy set not found"))?;
+            .ok_or_else(|| {
+                authz_not_found_status(
+                    "load_policy_set",
+                    "policy_set_not_found",
+                    "policy set not found",
+                )
+            })?;
         // Target = explicit target, else the set's recorded rollback_version_id.
         let target_id = if req.target_version_id.trim().is_empty() {
             policy_set.rollback_version_id.clone()
@@ -136,9 +264,7 @@ impl AuthzServiceImpl {
             req.target_version_id.clone()
         };
         if target_id.trim().is_empty() {
-            return Err(Status::failed_precondition(
-                "no rollback target: supply target_version_id or activate a second version first",
-            ));
+            return Err(rollback_target_required_status());
         }
         let target = self.load_version(&target_id).await?;
         let document = self.load_version_document(&target_id).await?;
@@ -211,10 +337,12 @@ impl AuthzServiceImpl {
             .policy_set_active_version(&version.policy_set_id)
             .await?;
 
-        let mut tx = pool
-            .begin()
-            .await
-            .map_err(|err| Status::internal(format!("activation tx begin failed: {err}")))?;
+        let mut tx = pool.begin().await.map_err(|err| {
+            activation_internal_status(
+                "activation_tx_begin",
+                format!("activation tx begin failed: {err}"),
+            )
+        })?;
         // P6.10 carve-out: install request-local tenant/project context as the FIRST
         // tx statement so the replace-all legs run with the same RLS/audit context the
         // typed path would set (defense-in-depth — the legs are already explicitly
@@ -242,19 +370,13 @@ impl AuthzServiceImpl {
         .bind(&project)
         .execute(&mut *tx)
         .await
-        .map_err(|err| Status::internal(format!("clear policies failed: {err}")))?;
+        .map_err(|err| {
+            activation_internal_status("clear_policies", format!("clear policies failed: {err}"))
+        })?;
         // Fail closed on duplicate non-empty policy ids within the document: each
         // policy's own id is bound on re-insert (below), so two policies sharing
         // a non-empty id would collide on the primary key / lose identity.
-        let mut seen_policy_ids = std::collections::HashSet::new();
-        for p in &document.policies {
-            if !p.id.trim().is_empty() && !seen_policy_ids.insert(p.id.as_str()) {
-                return Err(Status::invalid_argument(format!(
-                    "duplicate policy id in version document: {}",
-                    p.id
-                )));
-            }
-        }
+        validate_unique_document_policy_ids(document)?;
         // NOTE: the atomic DELETE-all above is load-bearing and intentionally
         // retained — it preserves the "live set == version document" invariant, so
         // a manual rule NOT present in the activated document is still (correctly)
@@ -313,7 +435,12 @@ impl AuthzServiceImpl {
             .bind(serde_json::Value::Object(attrs))
             .execute(&mut *tx)
             .await
-            .map_err(|err| Status::internal(format!("insert policy failed: {err}")))?;
+            .map_err(|err| {
+                activation_internal_status(
+                    "insert_policy",
+                    format!("insert policy failed: {err}"),
+                )
+            })?;
         }
 
         // 2. Replace relationship/grouping tuples for this tenant/project.
@@ -328,7 +455,9 @@ impl AuthzServiceImpl {
         .bind(&project)
         .execute(&mut *tx)
         .await
-        .map_err(|err| Status::internal(format!("clear tuples failed: {err}")))?;
+        .map_err(|err| {
+            activation_internal_status("clear_tuples", format!("clear tuples failed: {err}"))
+        })?;
         for b in &document.role_bindings {
             let scope_tenant = if b.tenant.trim().is_empty() {
                 &tenant
@@ -356,7 +485,12 @@ impl AuthzServiceImpl {
             .bind(if b.project.trim().is_empty() { &project } else { &b.project })
             .execute(&mut *tx)
             .await
-            .map_err(|err| Status::internal(format!("insert grouping tuple failed: {err}")))?;
+            .map_err(|err| {
+                activation_internal_status(
+                    "insert_grouping_tuple",
+                    format!("insert grouping tuple failed: {err}"),
+                )
+            })?;
         }
         for t in &document.tuples {
             let scope_tenant = if t.tenant.trim().is_empty() {
@@ -386,7 +520,12 @@ impl AuthzServiceImpl {
             .bind(if t.project.trim().is_empty() { &project } else { &t.project })
             .execute(&mut *tx)
             .await
-            .map_err(|err| Status::internal(format!("insert relationship tuple failed: {err}")))?;
+            .map_err(|err| {
+                activation_internal_status(
+                    "insert_relationship_tuple",
+                    format!("insert relationship tuple failed: {err}"),
+                )
+            })?;
         }
 
         // 3. Version state bookkeeping: supersede the previously-active version,
@@ -404,7 +543,12 @@ impl AuthzServiceImpl {
                 .bind(prior)
                 .execute(&mut *tx)
                 .await
-                .map_err(|err| Status::internal(format!("supersede prior version failed: {err}")))?;
+                .map_err(|err| {
+                    activation_internal_status(
+                        "supersede_prior_version",
+                        format!("supersede prior version failed: {err}"),
+                    )
+                })?;
             }
         }
         let new_state = if is_rollback {
@@ -434,7 +578,12 @@ impl AuthzServiceImpl {
         .bind(prior_active.as_deref())
         .execute(&mut *tx)
         .await
-        .map_err(|err| Status::internal(format!("activate version failed: {err}")))?;
+        .map_err(|err| {
+            activation_internal_status(
+                "activate_version",
+                format!("activate version failed: {err}"),
+            )
+        })?;
 
         // 4. PolicySet pointers: active = this version, rollback = prior active.
         let sm = self.policy_sets_model();
@@ -450,11 +599,19 @@ impl AuthzServiceImpl {
         .bind(prior_active.as_deref())
         .execute(&mut *tx)
         .await
-        .map_err(|err| Status::internal(format!("update policy set pointers failed: {err}")))?;
+        .map_err(|err| {
+            activation_internal_status(
+                "update_policy_set_pointers",
+                format!("update policy set pointers failed: {err}"),
+            )
+        })?;
 
-        tx.commit()
-            .await
-            .map_err(|err| Status::internal(format!("activation tx commit failed: {err}")))?;
+        tx.commit().await.map_err(|err| {
+            activation_internal_status(
+                "activation_tx_commit",
+                format!("activation tx commit failed: {err}"),
+            )
+        })?;
 
         // 5. Bump the durable authz revision (covers policy + tuples) and force
         //    a local snapshot reload so this node enforces immediately.
@@ -492,7 +649,12 @@ impl AuthzServiceImpl {
         .bind(policy_set_id)
         .fetch_optional(pool)
         .await
-        .map_err(|err| Status::internal(format!("read active version failed: {err}")))?;
+        .map_err(|err| {
+            activation_internal_status(
+                "read_active_version",
+                format!("read active version failed: {err}"),
+            )
+        })?;
         Ok(row
             .and_then(|r| r.try_get::<String, _>("active").ok())
             .filter(|s| !s.trim().is_empty()))
@@ -598,7 +760,11 @@ impl AuthzServiceImpl {
             )
             .await?;
         if req.policy_version_id.trim().is_empty() {
-            return Err(Status::invalid_argument("policy_version_id is required"));
+            return Err(activation_required_field(
+                "policy_version_id",
+                "must be a non-empty policy version id",
+                "policy_version_id is required",
+            ));
         }
         let version = self.load_version(&req.policy_version_id).await?;
         let state =
@@ -609,12 +775,13 @@ impl AuthzServiceImpl {
                 | authz_entity_pb::PolicyVersionState::Superseded
                 | authz_entity_pb::PolicyVersionState::RolledBack
         ) {
-            return Err(Status::failed_precondition(format!(
-                "only an approved (or previously-active) version may be canaried; version is {state:?}"
-            )));
+            return Err(policy_version_not_canariable_status(state));
         }
         if req.expected_revision != 0 && req.expected_revision != version.revision {
-            return Err(Status::aborted(
+            return Err(crate::runtime::executor_utils::retryable_aborted_status(
+                "authz",
+                "canary policy version expected revision",
+                0,
                 "policy version changed concurrently (expected_revision mismatch)",
             ));
         }
@@ -624,19 +791,7 @@ impl AuthzServiceImpl {
         let scope_kind = authz_entity_pb::CanaryScopeKind::try_from(req.scope_kind)
             .unwrap_or(authz_entity_pb::CanaryScopeKind::Unspecified);
         let scope = CanaryScope::from_row(scope_kind, &req.scope_values);
-        match &scope {
-            CanaryScope::Nodes(ids) | CanaryScope::Tenants(ids) if ids.is_empty() => {
-                return Err(Status::invalid_argument(
-                    "canary scope_values must be non-empty for NODE/TENANT scope",
-                ));
-            }
-            CanaryScope::Percent(0) => {
-                return Err(Status::invalid_argument(
-                    "canary PERCENT scope must be 1..=100 (0 includes nobody)",
-                ));
-            }
-            _ => {}
-        }
+        validate_canary_scope(&scope)?;
 
         // The version a breach rolls back to = the policy set's current active
         // version (the prior good state). May be empty for a first-ever activation.
@@ -703,9 +858,16 @@ impl AuthzServiceImpl {
         })
         .fetch_one(pool)
         .await
-        .map_err(|err| Status::internal(format!("create canary failed: {err}")))?
+        .map_err(|err| {
+            activation_internal_status("create_canary", format!("create canary failed: {err}"))
+        })?
         .try_get("canary_id")
-        .map_err(|err| Status::internal(format!("create canary returned no id: {err}")))?;
+        .map_err(|err| {
+            activation_internal_status(
+                "create_canary_id_decode",
+                format!("create canary returned no id: {err}"),
+            )
+        })?;
 
         let canary = self.load_canary(&canary_id).await?;
         self.emit_canary_event(
@@ -745,24 +907,27 @@ impl AuthzServiceImpl {
             )
             .await?;
         if req.canary_id.trim().is_empty() {
-            return Err(Status::invalid_argument("canary_id is required"));
+            return Err(activation_required_field(
+                "canary_id",
+                "must be a non-empty policy canary id",
+                "canary_id is required",
+            ));
         }
         let canary = self.load_canary(&req.canary_id).await?;
         if req.expected_revision != 0 && req.expected_revision != canary.revision {
-            return Err(Status::aborted(
+            return Err(crate::runtime::executor_utils::retryable_aborted_status(
+                "authz",
+                "canary expected revision",
+                0,
                 "canary changed concurrently (expected_revision mismatch)",
             ));
         }
         if canary.state != authz_entity_pb::CanaryState::Active as i32 {
             let st = authz_entity_pb::CanaryState::try_from(canary.state).unwrap_or_default();
-            return Err(Status::failed_precondition(format!(
-                "only an ACTIVE canary can be promoted; canary is {st:?}"
-            )));
+            return Err(canary_not_active_status(st));
         }
         if !canarylib::promote_eligible(&canary, now) {
-            return Err(Status::failed_precondition(
-                "canary is not promote-eligible yet: its success window has not elapsed",
-            ));
+            return Err(canary_not_promote_eligible_status());
         }
 
         // Promote = the real Phase-K fleet-wide activation of the canaried
@@ -831,7 +996,11 @@ impl AuthzServiceImpl {
         )
         .await?;
         if req.canary_id.trim().is_empty() {
-            return Err(Status::invalid_argument("canary_id is required"));
+            return Err(activation_required_field(
+                "canary_id",
+                "must be a non-empty policy canary id",
+                "canary_id is required",
+            ));
         }
         let canary = self.load_canary(&req.canary_id).await?;
         let promote_eligible = canarylib::promote_eligible(&canary, now);
@@ -884,8 +1053,16 @@ impl AuthzServiceImpl {
         .bind(canary_id)
         .fetch_optional(pool)
         .await
-        .map_err(|err| Status::internal(format!("load canary failed: {err}")))?
-        .ok_or_else(|| Status::not_found("canary not found"))?;
+        .map_err(|err| {
+            activation_internal_status("load_canary", format!("load canary failed: {err}"))
+        })?
+        .ok_or_else(|| {
+            authz_not_found_status(
+                "load_canary",
+                "policy_canary_not_found",
+                "canary not found",
+            )
+        })?;
         Ok(canary_from_row(&row))
     }
 
@@ -927,7 +1104,12 @@ impl AuthzServiceImpl {
         .bind(canary_state_to_db(authz_entity_pb::CanaryState::Active))
         .fetch_all(pool)
         .await
-        .map_err(|err| Status::internal(format!("list active canaries failed: {err}")))?;
+        .map_err(|err| {
+            activation_internal_status(
+                "list_active_canaries",
+                format!("list active canaries failed: {err}"),
+            )
+        })?;
         Ok(rows.iter().map(canary_from_row).collect())
     }
 
@@ -941,7 +1123,11 @@ impl AuthzServiceImpl {
         reason: &str,
     ) -> Result<bool, Status> {
         let runtime = self.runtime.as_ref().ok_or_else(|| {
-            Status::failed_precondition("native authz requires runtime-backed canary persistence")
+            authz_capability_status(
+                "canary_persistence",
+                "runtime_native_entity_dispatch",
+                "native authz requires runtime-backed canary persistence",
+            )
         })?;
         // P6.10 Wave 1: typed conditional UPDATE (was raw). `state=$4` (ACTIVE) guard
         // keeps the single-transition semantic; revision bumps via Increment.
@@ -991,7 +1177,12 @@ impl AuthzServiceImpl {
                 },
             )
             .await
-            .map_err(|err| Status::internal(format!("update canary state failed: {err}")))?;
+            .map_err(|err| {
+                activation_internal_status(
+                    "update_canary_state",
+                    format!("update canary state failed: {err}"),
+                )
+            })?;
         Ok(affected > 0)
     }
 
@@ -1222,7 +1413,12 @@ impl NackRateMetricSource {
         ))
         .fetch_all(&self.pool)
         .await
-        .map_err(|err| Status::internal(format!("read node-state ledger failed: {err}")))?;
+        .map_err(|err| {
+            activation_internal_status(
+                "read_node_state_ledger",
+                format!("read node-state ledger failed: {err}"),
+            )
+        })?;
 
         let mut samples = 0i64;
         let mut nacked = 0i64;
@@ -1324,4 +1520,257 @@ fn canary_scope_kind_from_db(value: &str) -> i32 {
         _ => K::Unspecified,
     };
     v as i32
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::governance::SCOPE_AUTHZ_ADMIN;
+    use super::*;
+    use crate::proto::udb::core::authz::services::v1::authz_service_server::AuthzService;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::authz::{AuthzPolicy, AuthzSnapshot};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
+    use tonic::{Code, Request, Status};
+
+    fn decode_detail(status: &Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_validation_field(status: &Status, field: &str, description: &str) {
+        assert_eq!(status.code(), Code::InvalidArgument);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, field);
+        assert_eq!(detail.field_violations[0].description, description);
+    }
+
+    fn assert_policy_detail(
+        status: &Status,
+        operation: &str,
+        policy_decision_id: &str,
+        message: &str,
+    ) {
+        assert_eq!(status.code(), Code::FailedPrecondition);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Policy as i32);
+        assert_eq!(detail.operation, operation);
+        assert_eq!(detail.policy_decision_id, policy_decision_id);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+    }
+
+    fn assert_internal_detail(status: &Status, operation: &str, message: &str) {
+        assert_eq!(status.code(), Code::Internal);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "authz");
+        assert_eq!(detail.operation, operation);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    fn admin_actor() -> authz_pb::GovernanceActor {
+        authz_pb::GovernanceActor {
+            subject: "policy-admin".to_string(),
+            tenant_id: "tenant-a".to_string(),
+            scopes: vec![SCOPE_AUTHZ_ADMIN.to_string()],
+            ..Default::default()
+        }
+    }
+
+    fn svc() -> AuthzServiceImpl {
+        AuthzServiceImpl::new(AuthzSnapshot::default())
+    }
+
+    #[test]
+    fn activation_internal_status_carries_typed_detail() {
+        let status =
+            activation_internal_status("activate_version", "activate version failed: store closed");
+        assert_internal_detail(
+            &status,
+            "activate_version",
+            "activate version failed: store closed",
+        );
+    }
+
+    #[tokio::test]
+    async fn activate_policy_version_missing_policy_version_id_carries_field_violation() {
+        let err = svc()
+            .activate_policy_version(Request::new(authz_pb::ActivatePolicyVersionRequest {
+                actor: Some(admin_actor()),
+                policy_version_id: " ".to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect_err("missing policy_version_id must fail before version loading");
+
+        assert_eq!(err.message(), "policy_version_id is required");
+        assert_validation_field(
+            &err,
+            "policy_version_id",
+            "must be a non-empty policy version id",
+        );
+    }
+
+    #[tokio::test]
+    async fn rollback_policy_version_missing_policy_set_id_carries_field_violation() {
+        let err = svc()
+            .rollback_policy_version(Request::new(authz_pb::RollbackPolicyVersionRequest {
+                actor: Some(admin_actor()),
+                policy_set_id: " ".to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect_err("missing policy_set_id must fail before policy-set loading");
+
+        assert_eq!(err.message(), "policy_set_id is required");
+        assert_validation_field(&err, "policy_set_id", "must be a non-empty policy set id");
+    }
+
+    #[tokio::test]
+    async fn activate_canary_missing_policy_version_id_carries_field_violation() {
+        let err = svc()
+            .activate_canary(Request::new(authz_pb::ActivateCanaryRequest {
+                actor: Some(admin_actor()),
+                policy_version_id: " ".to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect_err("missing policy_version_id must fail before version loading");
+
+        assert_eq!(err.message(), "policy_version_id is required");
+        assert_validation_field(
+            &err,
+            "policy_version_id",
+            "must be a non-empty policy version id",
+        );
+    }
+
+    #[tokio::test]
+    async fn promote_canary_missing_canary_id_carries_field_violation() {
+        let err = svc()
+            .promote_canary(Request::new(authz_pb::PromoteCanaryRequest {
+                actor: Some(admin_actor()),
+                canary_id: " ".to_string(),
+                ..Default::default()
+            }))
+            .await
+            .expect_err("missing canary_id must fail before canary loading");
+
+        assert_eq!(err.message(), "canary_id is required");
+        assert_validation_field(&err, "canary_id", "must be a non-empty policy canary id");
+    }
+
+    #[tokio::test]
+    async fn get_canary_status_missing_canary_id_carries_field_violation() {
+        let err = svc()
+            .get_canary_status(Request::new(authz_pb::GetCanaryStatusRequest {
+                actor: Some(admin_actor()),
+                canary_id: " ".to_string(),
+            }))
+            .await
+            .expect_err("missing canary_id must fail before canary loading");
+
+        assert_eq!(err.message(), "canary_id is required");
+        assert_validation_field(&err, "canary_id", "must be a non-empty policy canary id");
+    }
+
+    #[test]
+    fn activation_lifecycle_denials_carry_policy_detail() {
+        assert_policy_detail(
+            &policy_version_not_activatable_status(authz_entity_pb::PolicyVersionState::Draft),
+            "policy_version_activate",
+            "policy_version_not_activatable",
+            "only an approved (or previously-active) version may be activated; version is Draft",
+        );
+        assert_policy_detail(
+            &rollback_target_required_status(),
+            "policy_version_rollback",
+            "rollback_target_required",
+            "no rollback target: supply target_version_id or activate a second version first",
+        );
+        assert_policy_detail(
+            &policy_version_not_canariable_status(authz_entity_pb::PolicyVersionState::Rejected),
+            "policy_canary_activate",
+            "policy_version_not_canariable",
+            "only an approved (or previously-active) version may be canaried; version is Rejected",
+        );
+        assert_policy_detail(
+            &canary_not_active_status(authz_entity_pb::CanaryState::Paused),
+            "policy_canary_promote",
+            "canary_not_active",
+            "only an ACTIVE canary can be promoted; canary is Paused",
+        );
+        assert_policy_detail(
+            &canary_not_promote_eligible_status(),
+            "policy_canary_promote",
+            "canary_not_promote_eligible",
+            "canary is not promote-eligible yet: its success window has not elapsed",
+        );
+    }
+
+    #[test]
+    fn duplicate_policy_id_validation_carries_field_violation() {
+        let document = PolicyDocument {
+            policies: vec![
+                AuthzPolicy {
+                    id: "11111111-1111-1111-1111-111111111111".to_string(),
+                    ..Default::default()
+                },
+                AuthzPolicy {
+                    id: "11111111-1111-1111-1111-111111111111".to_string(),
+                    ..Default::default()
+                },
+            ],
+            ..Default::default()
+        };
+
+        let err = validate_unique_document_policy_ids(&document)
+            .expect_err("duplicate policy IDs must fail before activation writes");
+        assert_eq!(
+            err.message(),
+            "duplicate policy id in version document: 11111111-1111-1111-1111-111111111111"
+        );
+        assert_validation_field(
+            &err,
+            "policies.id",
+            "duplicate policy id 11111111-1111-1111-1111-111111111111",
+        );
+    }
+
+    #[test]
+    fn canary_scope_validation_carries_field_violations() {
+        let empty_nodes = validate_canary_scope(&CanaryScope::Nodes(Vec::new()))
+            .expect_err("empty node canary scope must fail");
+        assert_eq!(
+            empty_nodes.message(),
+            "canary scope_values must be non-empty for NODE/TENANT scope"
+        );
+        assert_validation_field(
+            &empty_nodes,
+            "scope_values",
+            "must be non-empty for NODE or TENANT canary scope",
+        );
+
+        let percent_zero = validate_canary_scope(&CanaryScope::Percent(0))
+            .expect_err("zero-percent canary scope must fail");
+        assert_eq!(
+            percent_zero.message(),
+            "canary PERCENT scope must be 1..=100 (0 includes nobody)"
+        );
+        assert_validation_field(
+            &percent_zero,
+            "scope_percent",
+            "must be in the range 1..=100",
+        );
+    }
 }

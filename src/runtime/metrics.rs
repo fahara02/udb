@@ -216,6 +216,15 @@ pub trait MetricsRecorder: Send + Sync + std::fmt::Debug {
     /// Set the native-service degraded gauge for `service` (1 = degraded /
     /// fail-closed, 0 = healthy). Driven by readiness/doctor (other lane).
     fn set_native_service_degraded(&self, _service: &str, _degraded: bool) {}
+    /// Set the per-tenant DB-connection budget starvation gauge for `_tenant`
+    /// (1 = the tenant is at its connection budget and QUEUEING for a slot,
+    /// 0 = it holds / just released a slot). Driven by the connection-pool
+    /// tiering admission path (`connection_manager::acquire_tenant_connection`),
+    /// which extends the channels.rs admission fairness down to the driver/pool
+    /// layer so one tenant at budget queues on a bounded deadline instead of
+    /// draining the shared pool. The tenant label is bounded so a noisy tenant
+    /// id cannot mint unbounded series.
+    fn set_tenant_connection_starved(&self, _tenant: &str, _starved: bool) {}
     /// Increment the compensation-failure counter (a saga/native compensation
     /// step that failed to undo its forward action). Distinct from
     /// `inc_saga_failed_compensations_total` so non-saga native compensations
@@ -229,6 +238,11 @@ pub trait MetricsRecorder: Send + Sync + std::fmt::Debug {
     /// A control-plane in-process reload was applied for `resource_type` (the
     /// subscriber detected a registry/world change and refreshed it).
     fn inc_control_reload_applied(&self, _resource_type: &str) {}
+    /// A control-plane node NACKed a pushed version for `resource_type` — it
+    /// rejected the distributed config and kept its last-good version (the
+    /// `store::record_nack` path: reject-without-silently-diverging). Default
+    /// no-op so `NoopMetrics` and custom recorders are unaffected.
+    fn inc_control_nack(&self, _resource_type: &str) {}
     /// Current depth of the control-plane node-push queue (in-flight pushes).
     fn set_control_push_queue_depth(&self, _depth: u64) {}
     /// A control-plane push was throttled by the concurrent-push semaphore.
@@ -241,6 +255,14 @@ pub trait MetricsRecorder: Send + Sync + std::fmt::Debug {
     fn record_canary_evaluation(&self, _breached: bool) {}
     /// Set whether any canary is currently ACTIVE (1) or none (0).
     fn set_canary_active(&self, _active: bool) {}
+
+    /// Increment the raw-dispatch counter, labelled by `backend` kind.
+    ///
+    /// Counts a generic-dispatch request that bypassed the neutral-IR compiler
+    /// (no `ir` envelope) for a *mediated* backend. In production this path is
+    /// gated off entirely; in dev it is permitted but counted here so drift away
+    /// from the mediated (tenant/predicate-injected) path stays observable.
+    fn inc_raw_dispatch_total(&self, _backend: &str) {}
 }
 
 use prometheus::Encoder;
@@ -449,16 +471,21 @@ pub struct PrometheusMetrics {
     revocation_lookup_failures: prometheus::IntCounter,
     outbox_enqueue_failures: prometheus::IntCounterVec,
     native_service_degraded: prometheus::IntGaugeVec,
+    connection_tenant_budget_starved: prometheus::IntGaugeVec,
     compensation_failures: prometheus::IntCounter,
     cdc_journal_failures: prometheus::IntCounter,
     // Phase 9 (control-plane policy distribution + canary) collectors
     control_reload_applied: prometheus::IntCounterVec,
+    control_nack: prometheus::IntCounterVec,
     control_push_queue_depth: prometheus::IntGauge,
     control_push_throttled: prometheus::IntCounter,
     control_debounce_coalesced: prometheus::IntCounter,
     canary_auto_rollback: prometheus::IntCounterVec,
     canary_evaluations: prometheus::IntCounterVec,
     canary_active: prometheus::IntGauge,
+    // IR mediated-by-default (item 2.1): raw generic-dispatch fall-throughs that
+    // bypassed the neutral-IR compiler for a mediated backend, by backend kind.
+    raw_dispatch: prometheus::IntCounterVec,
 }
 
 impl std::fmt::Debug for PrometheusMetrics {
@@ -790,6 +817,13 @@ impl PrometheusMetrics {
             ),
             &["service"],
         )?;
+        let connection_tenant_budget_starved = prometheus::IntGaugeVec::new(
+            prometheus::Opts::new(
+                "udb_connection_tenant_budget_starved",
+                "Per-tenant DB-connection budget starvation (1 = tenant at budget and queueing for a slot) by tenant",
+            ),
+            &["tenant"],
+        )?;
         let compensation_failures = prometheus::IntCounter::new(
             "udb_compensation_failures_total",
             "Saga/native compensation steps that failed to undo their forward action",
@@ -803,6 +837,13 @@ impl PrometheusMetrics {
             prometheus::Opts::new(
                 "udb_control_reload_applied_total",
                 "Control-plane in-process reloads applied by resource_type",
+            ),
+            &["resource_type"],
+        )?;
+        let control_nack = prometheus::IntCounterVec::new(
+            prometheus::Opts::new(
+                "udb_control_nack_total",
+                "Control-plane node NACKs (rejected pushed versions) by resource_type",
             ),
             &["resource_type"],
         )?;
@@ -835,6 +876,14 @@ impl PrometheusMetrics {
         let canary_active = prometheus::IntGauge::new(
             "udb_canary_active",
             "Whether any canary policy version is currently ACTIVE (1) or none (0)",
+        )?;
+        let raw_dispatch = prometheus::IntCounterVec::new(
+            prometheus::Opts::new(
+                "udb_raw_dispatch_total",
+                "Generic-dispatch requests that bypassed the neutral-IR compiler \
+                 (raw spec) for a mediated backend, by backend kind",
+            ),
+            &["backend"],
         )?;
 
         for collector in [
@@ -894,15 +943,18 @@ impl PrometheusMetrics {
             Box::new(revocation_lookup_failures.clone()),
             Box::new(outbox_enqueue_failures.clone()),
             Box::new(native_service_degraded.clone()),
+            Box::new(connection_tenant_budget_starved.clone()),
             Box::new(compensation_failures.clone()),
             Box::new(cdc_journal_failures.clone()),
             Box::new(control_reload_applied.clone()),
+            Box::new(control_nack.clone()),
             Box::new(control_push_queue_depth.clone()),
             Box::new(control_push_throttled.clone()),
             Box::new(control_debounce_coalesced.clone()),
             Box::new(canary_auto_rollback.clone()),
             Box::new(canary_evaluations.clone()),
             Box::new(canary_active.clone()),
+            Box::new(raw_dispatch.clone()),
         ] {
             registry.register(collector)?;
         }
@@ -965,15 +1017,18 @@ impl PrometheusMetrics {
             revocation_lookup_failures,
             outbox_enqueue_failures,
             native_service_degraded,
+            connection_tenant_budget_starved,
             compensation_failures,
             cdc_journal_failures,
             control_reload_applied,
+            control_nack,
             control_push_queue_depth,
             control_push_throttled,
             control_debounce_coalesced,
             canary_auto_rollback,
             canary_evaluations,
             canary_active,
+            raw_dispatch,
         })
     }
 
@@ -1460,6 +1515,13 @@ impl MetricsRecorder for PrometheusMetrics {
             .with_label_values(&[bounded_label("native_service", service).as_ref()])
             .set(i64::from(degraded));
     }
+    fn set_tenant_connection_starved(&self, tenant: &str, starved: bool) {
+        // Tenant id is operator/request-defined — bound its cardinality so a noisy
+        // tenant label cannot mint unbounded series.
+        self.connection_tenant_budget_starved
+            .with_label_values(&[bounded_label("connection_budget_tenant", tenant).as_ref()])
+            .set(i64::from(starved));
+    }
     fn inc_compensation_failures_total(&self) {
         self.compensation_failures.inc();
     }
@@ -1469,6 +1531,16 @@ impl MetricsRecorder for PrometheusMetrics {
     fn inc_control_reload_applied(&self, resource_type: &str) {
         self.control_reload_applied
             .with_label_values(&[resource_type])
+            .inc();
+    }
+    fn inc_control_nack(&self, resource_type: &str) {
+        // `resource_type` is a server-resolved enum token (the distributed
+        // resource kind), but bound it like the other labels so a malformed type
+        // string from the node's NACK frame can't mint unbounded series.
+        self.control_nack
+            .with_label_values(&[
+                bounded_label("control_nack_resource_type", resource_type).as_ref()
+            ])
             .inc();
     }
     fn set_control_push_queue_depth(&self, depth: u64) {
@@ -1490,6 +1562,13 @@ impl MetricsRecorder for PrometheusMetrics {
     }
     fn set_canary_active(&self, active: bool) {
         self.canary_active.set(if active { 1 } else { 0 });
+    }
+    fn inc_raw_dispatch_total(&self, backend: &str) {
+        // `backend` is a server-resolved backend-kind token, but bound it like the
+        // other backend labels so a malformed selector can't mint unbounded series.
+        self.raw_dispatch
+            .with_label_values(&[bounded_label("raw_dispatch_backend", backend).as_ref()])
+            .inc();
     }
 }
 
@@ -1743,6 +1822,70 @@ mod tests {
         assert!(
             text.contains("udb_compensation_failures_total 1"),
             "missing compensation-failures counter:\n{text}"
+        );
+    }
+
+    #[test]
+    fn control_plane_metrics_register_and_increment() {
+        // Phase 9 / item 6.2: the control-plane distribution counters must register
+        // and surface with the resource_type label the serving paths emit. This
+        // guards the writer the `apply_inbound` NACK branch and the reload
+        // subscriber depend on (a refactor dropping the field/registration reds
+        // here; the SQL serving paths themselves are PG-gated, exercised by the
+        // env-gated live conformance suite).
+        let m = PrometheusMetrics::new().expect("build PrometheusMetrics");
+        m.inc_control_reload_applied("RESOURCE_TYPE_ROUTING_POLICY");
+        m.inc_control_nack("RESOURCE_TYPE_RLS_TENANT_POLICY");
+        let text = m.gather_text("");
+        assert!(
+            text.contains(
+                "udb_control_reload_applied_total{resource_type=\"RESOURCE_TYPE_ROUTING_POLICY\"} 1"
+            ),
+            "missing control-reload-applied counter:\n{text}"
+        );
+        // Assert the family registered, incremented, and surfaced with count 1 —
+        // but do NOT pin the exact label value: `inc_control_nack` routes the
+        // resource_type through the PROCESS-GLOBAL `bounded_label` cap (keyed
+        // "control_nack_resource_type"), which the sibling
+        // `control_nack_label_is_cardinality_bounded` test legitimately saturates.
+        // Under concurrent test execution our value may land in the overflow
+        // bucket, so we assert the incremented series exists rather than its label.
+        assert!(
+            text.lines()
+                .any(|l| l.starts_with("udb_control_nack_total{") && l.ends_with(" 1")),
+            "control-nack counter did not register/increment/surface:\n{text}"
+        );
+    }
+
+    #[test]
+    fn control_nack_label_is_cardinality_bounded() {
+        // The NACK resource_type label is bounded so a node that NACKs with a
+        // malformed/attacker-controlled type string cannot mint unbounded series.
+        let m = PrometheusMetrics::new().expect("build PrometheusMetrics");
+        let cap = max_distinct_labels();
+        for i in 0..(cap * 2) {
+            m.inc_control_nack(&format!("bogus-type-{i}"));
+        }
+        let text = m.gather_text("");
+        let series = text
+            .lines()
+            .filter(|line| line.starts_with("udb_control_nack_total{"))
+            .count();
+        assert!(
+            series <= cap + 1,
+            "control_nack series must cap at {} (+overflow), got {series}",
+            cap
+        );
+    }
+
+    #[test]
+    fn raw_dispatch_metric_registers_and_increments() {
+        let m = PrometheusMetrics::new().expect("build PrometheusMetrics");
+        m.inc_raw_dispatch_total("postgres");
+        let text = m.gather_text("");
+        assert!(
+            text.contains("udb_raw_dispatch_total{backend=\"postgres\"} 1"),
+            "missing raw-dispatch counter:\n{text}"
         );
     }
 }

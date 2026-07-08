@@ -8,12 +8,12 @@
 use serde_json::{Value as Json, json};
 
 use super::{CompileContext, CompileError};
-use crate::generation::ManifestTable;
 use crate::generation::sql::{
     resolve_project_column as shared_resolve_project_column,
     resolve_tenant_column as shared_resolve_tenant_column,
 };
-use crate::ir::operations::AggregateExpr;
+use crate::generation::{CatalogManifest, ManifestForeignKey, ManifestTable};
+use crate::ir::operations::{AggregateExpr, LogicalInclude};
 use crate::ir::value::LogicalValue;
 
 /// Convert a `LogicalValue` to a JSON value the HTTP-shaped backends can
@@ -146,6 +146,26 @@ pub(super) fn project_system_field(table: &ManifestTable) -> &str {
     resolve_project_column(table).unwrap_or("_project_id")
 }
 
+/// The regconfig used when compiling text-search queries against a table's
+/// generated tsvector column: the first tsvector column's declared language
+/// with the SAME empty→`'simple'` default and unsafe-character fallback the
+/// DDL renderer applies (`generation::sql::render_ext`). Emitting the config
+/// explicitly keeps `plainto_tsquery` aligned with the indexed configuration
+/// instead of depending on the session `default_text_search_config` (which is
+/// commonly `english` and silently stems query terms into non-matching lexemes).
+pub(super) fn tsvector_query_language(table: &ManifestTable) -> &str {
+    let raw = table
+        .columns
+        .iter()
+        .find(|c| c.is_tsvector || c.sql_type.eq_ignore_ascii_case("tsvector"))
+        .map(|c| c.tsvector_language.trim())
+        .unwrap_or("");
+    if raw.is_empty() {
+        return "simple";
+    }
+    crate::generation::sql::safe_ts_language(raw).unwrap_or("simple")
+}
+
 /// Append tenant + project equality predicates to a WHERE/clause body for
 /// the compiler-layer-RLS backends. `quote` is the dialect's identifier
 /// quote char (`` ` `` for ClickHouse, `"` for Cassandra); each injected
@@ -182,4 +202,222 @@ pub(super) fn append_context_predicates(
     } else {
         Some(parts.join(" AND "))
     }
+}
+
+pub(super) struct IncludeRelation<'a> {
+    pub(super) name: String,
+    pub(super) target: &'a ManifestTable,
+    pub(super) local_columns: Vec<&'a str>,
+    pub(super) target_columns: Vec<&'a str>,
+    pub(super) many: bool,
+}
+
+pub(super) fn resolve_include_relation<'a>(
+    table: &'a ManifestTable,
+    manifest: &'a CatalogManifest,
+    include: &LogicalInclude,
+    message_type: &str,
+) -> Result<IncludeRelation<'a>, CompileError> {
+    let requested = include.relation.trim();
+    if !is_safe_relation_name(requested) {
+        return Err(CompileError::Malformed {
+            reason: format!(
+                "include relation '{}' on message '{}' is not a safe relation name",
+                include.relation, message_type
+            ),
+        });
+    }
+
+    let mut matches: Vec<IncludeRelation<'a>> = Vec::new();
+    for fk in &table.foreign_keys {
+        let Some(target) = target_table_for_fk(manifest, fk) else {
+            continue;
+        };
+        let relation_name = relation_name_for_fk(table, target, fk);
+        if relation_name != requested {
+            continue;
+        }
+        let target_columns = if fk.ref_columns.is_empty() {
+            target.primary_key.as_slice()
+        } else {
+            fk.ref_columns.as_slice()
+        };
+        if fk.columns.is_empty() || fk.columns.len() != target_columns.len() {
+            return Err(CompileError::Malformed {
+                reason: format!(
+                    "include relation '{requested}' on message '{message_type}' has invalid FK column mapping"
+                ),
+            });
+        }
+        let mut local = Vec::with_capacity(fk.columns.len());
+        let mut remote = Vec::with_capacity(target_columns.len());
+        for (local_column, target_column) in fk.columns.iter().zip(target_columns.iter()) {
+            local.push(resolve_physical_column(table, local_column, message_type)?);
+            remote.push(resolve_physical_column(
+                target,
+                target_column,
+                &manifest_message_type(target),
+            )?);
+        }
+        matches.push(IncludeRelation {
+            name: relation_name,
+            target,
+            local_columns: local,
+            target_columns: remote,
+            many: false,
+        });
+    }
+
+    for candidate in &manifest.tables {
+        for fk in &candidate.foreign_keys {
+            if fk.columns.is_empty() || fk.ref_table != table.table {
+                continue;
+            }
+            if !fk.ref_schema.trim().is_empty() && fk.ref_schema != table.schema {
+                continue;
+            }
+            let relation_name = has_many_relation_name(candidate);
+            if relation_name != requested {
+                continue;
+            }
+            let local_columns = if fk.ref_columns.is_empty() {
+                table.primary_key.as_slice()
+            } else {
+                fk.ref_columns.as_slice()
+            };
+            if local_columns.is_empty() || local_columns.len() != fk.columns.len() {
+                return Err(CompileError::Malformed {
+                    reason: format!(
+                        "include relation '{requested}' on message '{message_type}' has invalid inverse FK column mapping"
+                    ),
+                });
+            }
+            let mut local = Vec::with_capacity(local_columns.len());
+            let mut remote = Vec::with_capacity(fk.columns.len());
+            for (local_column, target_column) in local_columns.iter().zip(fk.columns.iter()) {
+                local.push(resolve_physical_column(table, local_column, message_type)?);
+                remote.push(resolve_physical_column(
+                    candidate,
+                    target_column,
+                    &manifest_message_type(candidate),
+                )?);
+            }
+            matches.push(IncludeRelation {
+                name: relation_name,
+                target: candidate,
+                local_columns: local,
+                target_columns: remote,
+                many: true,
+            });
+        }
+    }
+
+    match matches.len() {
+        1 => Ok(matches.remove(0)),
+        0 => Err(CompileError::Malformed {
+            reason: format!("unknown include relation '{requested}' on message '{message_type}'"),
+        }),
+        _ => Err(CompileError::Malformed {
+            reason: format!("ambiguous include relation '{requested}' on message '{message_type}'"),
+        }),
+    }
+}
+
+fn target_table_for_fk<'a>(
+    manifest: &'a CatalogManifest,
+    fk: &ManifestForeignKey,
+) -> Option<&'a ManifestTable> {
+    manifest.tables.iter().find(|candidate| {
+        candidate.table == fk.ref_table
+            && (fk.ref_schema.trim().is_empty() || candidate.schema == fk.ref_schema)
+    })
+}
+
+fn resolve_physical_column<'a>(
+    table: &'a ManifestTable,
+    column: &str,
+    message_type: &str,
+) -> Result<&'a str, CompileError> {
+    table
+        .columns
+        .iter()
+        .find(|candidate| candidate.column_name == column)
+        .map(|candidate| candidate.column_name.as_str())
+        .ok_or_else(|| CompileError::UnknownField {
+            message_type: message_type.to_string(),
+            field: column.to_string(),
+        })
+}
+
+fn relation_name_for_fk(
+    table: &ManifestTable,
+    target: &ManifestTable,
+    fk: &ManifestForeignKey,
+) -> String {
+    fk.columns
+        .first()
+        .and_then(|column| manifest_field_for_column(table, column))
+        .map(|field| {
+            field
+                .strip_suffix("_id")
+                .or_else(|| field.strip_suffix("_uuid"))
+                .unwrap_or(&field)
+                .to_string()
+        })
+        .filter(|name| !name.trim().is_empty())
+        .unwrap_or_else(|| alias_snake_case(&target.message_name))
+}
+
+fn has_many_relation_name(table: &ManifestTable) -> String {
+    let name = alias_snake_case(&table.table).trim_matches('_').to_string();
+    if !name.is_empty() {
+        return name;
+    }
+    let alias = alias_snake_case(&table.message_name);
+    if alias.ends_with('s') {
+        alias
+    } else if let Some(stem) = alias.strip_suffix('y') {
+        format!("{stem}ies")
+    } else {
+        format!("{alias}s")
+    }
+}
+
+fn manifest_field_for_column(table: &ManifestTable, column_name: &str) -> Option<String> {
+    table
+        .columns
+        .iter()
+        .find(|column| column.column_name == column_name)
+        .map(|column| column.field_name.clone())
+}
+
+fn manifest_message_type(table: &ManifestTable) -> String {
+    if table.proto_package.trim().is_empty() {
+        table.message_name.clone()
+    } else {
+        format!("{}.{}", table.proto_package, table.message_name)
+    }
+}
+
+fn alias_snake_case(value: &str) -> String {
+    let mut out = String::new();
+    for (idx, ch) in value.chars().enumerate() {
+        if ch.is_ascii_uppercase() {
+            if idx > 0 && !out.ends_with('_') {
+                out.push('_');
+            }
+            out.push(ch.to_ascii_lowercase());
+        } else if ch.is_ascii_alphanumeric() {
+            out.push(ch.to_ascii_lowercase());
+        } else if !out.ends_with('_') {
+            out.push('_');
+        }
+    }
+    out.trim_matches('_').to_string()
+}
+
+fn is_safe_relation_name(value: &str) -> bool {
+    let mut chars = value.chars();
+    matches!(chars.next(), Some(ch) if ch.is_ascii_alphabetic() || ch == '_')
+        && chars.all(|ch| ch.is_ascii_alphanumeric() || ch == '_')
 }

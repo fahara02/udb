@@ -20,7 +20,10 @@ use google_cloud_storage::http::objects::upload::{Media, UploadObjectRequest, Up
 use crate::runtime::backend_context::{
     AppliedContext, BackendContextEnforcer, ContextEffect, enforce_with_mechanism,
 };
-use crate::runtime::executor_utils::{build_probe, parse_object_dispatch, reject_oversized_object};
+use crate::runtime::executor_utils::{
+    backend_transport_status, build_probe, capability_status, invalid_argument_fields,
+    parse_object_dispatch, reject_oversized_object,
+};
 use crate::runtime::executors::{
     BackendExecutor, BackendHealth, BackendProbe, ExecutorByteStream, MutationExecutor,
     ObjectExecutor, QueryExecutor, ResourceAdminExecutor, SearchExecutor,
@@ -119,9 +122,26 @@ fn parse_dispatch(req: &str) -> Result<(String, String, String, Option<String>),
     parse_object_dispatch(req, &["bucket", "container"], &["key", "object"], "bucket")
 }
 
+fn object_op_mismatch_status(
+    method: &'static str,
+    expected: &'static str,
+    actual: &str,
+) -> tonic::Status {
+    invalid_argument_fields(
+        format!("{method} expects op=\"{expected}\", got '{actual}'"),
+        [(
+            "op",
+            format!("must be \"{expected}\" when calling {method}"),
+        )],
+    )
+}
+
 impl QueryExecutor for GcsExecutor {
     async fn query(&self, _: &str) -> Result<String, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "gcs",
+            "query",
+            "generic_query",
             "UDB_UNSUPPORTED_OPERATION: GCS has no query surface; use get_object",
         ))
     }
@@ -129,7 +149,10 @@ impl QueryExecutor for GcsExecutor {
 
 impl MutationExecutor for GcsExecutor {
     async fn mutate(&self, _: &str) -> Result<String, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "gcs",
+            "mutate",
+            "object_dispatch",
             "UDB_UNSUPPORTED_OPERATION: GCS has no mutation surface; use put_object",
         ))
     }
@@ -137,7 +160,10 @@ impl MutationExecutor for GcsExecutor {
 
 impl SearchExecutor for GcsExecutor {
     async fn search(&self, _: &str) -> Result<String, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "gcs",
+            "search",
+            "search",
             "UDB_UNSUPPORTED_OPERATION: GCS is not searchable",
         ))
     }
@@ -147,9 +173,7 @@ impl ObjectExecutor for GcsExecutor {
     async fn get_object(&self, request_json: &str) -> Result<Vec<u8>, tonic::Status> {
         let (op, bucket, object, _) = parse_dispatch(request_json)?;
         if op != "get" {
-            return Err(tonic::Status::invalid_argument(format!(
-                "get_object expects op=\"get\", got '{op}'"
-            )));
+            return Err(object_op_mismatch_status("get_object", "get", &op));
         }
         let req = GetObjectRequest {
             bucket: bucket.clone(),
@@ -161,7 +185,7 @@ impl ObjectExecutor for GcsExecutor {
             .inner
             .download_object(&req, &Range::default())
             .await
-            .map_err(|e| tonic::Status::internal(format!("gcs download failed: {e}")))?;
+            .map_err(|e| backend_transport_status("gcs", "download", e))?;
         Ok(data)
     }
 
@@ -172,9 +196,7 @@ impl ObjectExecutor for GcsExecutor {
     ) -> Result<String, tonic::Status> {
         let (op, bucket, object, content_type) = parse_dispatch(request_json)?;
         if op != "put" {
-            return Err(tonic::Status::invalid_argument(format!(
-                "put_object expects op=\"put\", got '{op}'"
-            )));
+            return Err(object_op_mismatch_status("put_object", "put", &op));
         }
         reject_oversized_object(bytes.len())?;
         let upload_req = UploadObjectRequest {
@@ -190,7 +212,7 @@ impl ObjectExecutor for GcsExecutor {
             .inner
             .upload_object(&upload_req, bytes, &upload_type)
             .await
-            .map_err(|e| tonic::Status::internal(format!("gcs upload failed: {e}")))?;
+            .map_err(|e| backend_transport_status("gcs", "upload", e))?;
         Ok(serde_json::json!({ "ok": true, "bucket": bucket, "object": object }).to_string())
     }
 
@@ -211,13 +233,13 @@ impl ObjectExecutor for GcsExecutor {
             .inner
             .download_streamed_object(&req, &Range::default())
             .await
-            .map_err(|e| tonic::Status::internal(format!("gcs streamed download failed: {e}")))?;
+            .map_err(|e| backend_transport_status("gcs", "streamed download", e))?;
         let mapped = async_stream::try_stream! {
             use futures::StreamExt as _;
             let mut source = source;
             while let Some(item) = source.next().await {
                 let bytes = item.map_err(|e| {
-                    tonic::Status::internal(format!("gcs download chunk failed: {e}"))
+                    backend_transport_status("gcs", "download chunk", e)
                 })?;
                 yield bytes;
             }
@@ -265,7 +287,7 @@ impl ObjectExecutor for GcsExecutor {
                 &upload_type,
             )
             .await
-            .map_err(|e| tonic::Status::internal(format!("gcs streamed upload failed: {e}")))?;
+            .map_err(|e| backend_transport_status("gcs", "streamed upload", e))?;
         Ok(serde_json::json!({ "ok": true, "bucket": bucket, "object": object }).to_string())
     }
 
@@ -281,7 +303,7 @@ impl ObjectExecutor for GcsExecutor {
             .delete_object(&req)
             .await
             .map(|_| ())
-            .map_err(|e| tonic::Status::internal(format!("gcs delete failed: {e}")))
+            .map_err(|e| backend_transport_status("gcs", "delete", e))
     }
 }
 
@@ -304,9 +326,7 @@ impl ResourceAdminExecutor for GcsExecutor {
             Err(e) if e.to_string().contains("conflict") || e.to_string().contains("already") => {
                 Ok(())
             }
-            Err(e) => Err(tonic::Status::internal(format!(
-                "gcs create bucket failed: {e}"
-            ))),
+            Err(e) => Err(backend_transport_status("gcs", "create bucket", e)),
         }
     }
     async fn drop_resource(&self, resource_name: &str) -> Result<(), tonic::Status> {
@@ -318,7 +338,7 @@ impl ResourceAdminExecutor for GcsExecutor {
             .inner
             .delete_bucket(&req)
             .await
-            .map_err(|e| tonic::Status::internal(format!("gcs drop bucket: {e}")))?;
+            .map_err(|e| backend_transport_status("gcs", "drop bucket", e))?;
         Ok(())
     }
     async fn list_resources(&self) -> Result<Vec<String>, tonic::Status> {
@@ -330,14 +350,17 @@ impl ResourceAdminExecutor for GcsExecutor {
                 ..Default::default()
             })
             .await
-            .map_err(|e| tonic::Status::internal(format!("gcs list: {e}")))?;
+            .map_err(|e| backend_transport_status("gcs", "list buckets", e))?;
         Ok(resp.items.into_iter().map(|b| b.name).collect())
     }
 }
 
 impl BackendExecutor for GcsExecutor {
     async fn transaction(&self, _: &str) -> Result<String, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "gcs",
+            "transaction",
+            "transactions",
             "UDB_UNSUPPORTED_OPERATION: GCS has no transaction primitive",
         ))
     }
@@ -349,6 +372,31 @@ impl BackendExecutor for GcsExecutor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
+
+    fn decode_detail(status: &tonic::Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_op_violation(status: &tonic::Status, expected_method: &str) {
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, "op");
+        assert!(
+            detail.field_violations[0]
+                .description
+                .contains(expected_method),
+            "{:?}",
+            detail.field_violations[0]
+        );
+    }
 
     #[test]
     fn parse_dispatch_extracts_fields() {
@@ -366,5 +414,16 @@ mod tests {
         assert_eq!(bucket, "b");
         assert_eq!(object, "k");
         assert_eq!(ct.as_deref(), Some("text/plain"));
+    }
+
+    #[test]
+    fn object_operation_mismatch_carries_field_violation() {
+        let get = object_op_mismatch_status("get_object", "get", "put");
+        assert_eq!(get.message(), "get_object expects op=\"get\", got 'put'");
+        assert_op_violation(&get, "get_object");
+
+        let put = object_op_mismatch_status("put_object", "put", "get");
+        assert_eq!(put.message(), "put_object expects op=\"put\", got 'get'");
+        assert_op_violation(&put, "put_object");
     }
 }

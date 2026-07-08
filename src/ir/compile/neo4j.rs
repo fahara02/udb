@@ -565,20 +565,33 @@ impl Compiler for Neo4jCompiler {
                  YIELD node, score \
                  WITH node AS n, score AS _score"
             );
+            let mut where_parts = Vec::new();
             if let Some(threshold) = op.score_threshold {
                 let t_bound = bind.push(&LogicalValue::Float(threshold as f64));
-                cypher.push_str(&format!(" WHERE _score >= {t_bound}"));
+                where_parts.push(format!("_score >= {t_bound}"));
+            }
+            if let Some(tid) = ctx.tenant_id
+                && !tid.is_empty()
+                && let Some(column) = Some(super::util::tenant_system_field(table))
+            {
+                let p = bind.push(&LogicalValue::String(tid.to_string()));
+                where_parts.push(format!("n.`{column}` = {p}"));
+            }
+            if let Some(pid) = ctx.project_id
+                && !pid.is_empty()
+                && let Some(column) = Some(super::util::project_system_field(table))
+            {
+                let p = bind.push(&LogicalValue::String(pid.to_string()));
+                where_parts.push(format!("n.`{column}` = {p}"));
             }
             if let Some(filter) = &op.filter {
                 let body = self.render_filter(filter, table, &op.message_type, &mut bind)?;
                 if body != "true" {
-                    let connector = if op.score_threshold.is_some() {
-                        " AND"
-                    } else {
-                        " WHERE"
-                    };
-                    cypher.push_str(&format!("{connector} {body}"));
+                    where_parts.push(body);
                 }
+            }
+            if !where_parts.is_empty() {
+                cypher.push_str(&format!(" WHERE {}", where_parts.join(" AND ")));
             }
             cypher.push_str(" RETURN n, _score ORDER BY _score DESC");
             return Ok(Self::render_cypher(cypher, bind));
@@ -602,20 +615,33 @@ impl Compiler for Neo4jCompiler {
              YIELD node, score \
              WITH node AS n, score AS _score"
         );
+        let mut where_parts = Vec::new();
         if let Some(threshold) = op.score_threshold {
             let t_bound = bind.push(&LogicalValue::Float(threshold as f64));
-            cypher.push_str(&format!(" WHERE _score >= {t_bound}"));
+            where_parts.push(format!("_score >= {t_bound}"));
+        }
+        if let Some(tid) = ctx.tenant_id
+            && !tid.is_empty()
+            && let Some(column) = Some(super::util::tenant_system_field(table))
+        {
+            let p = bind.push(&LogicalValue::String(tid.to_string()));
+            where_parts.push(format!("n.`{column}` = {p}"));
+        }
+        if let Some(pid) = ctx.project_id
+            && !pid.is_empty()
+            && let Some(column) = Some(super::util::project_system_field(table))
+        {
+            let p = bind.push(&LogicalValue::String(pid.to_string()));
+            where_parts.push(format!("n.`{column}` = {p}"));
         }
         if let Some(filter) = &op.filter {
             let body = self.render_filter(filter, table, &op.message_type, &mut bind)?;
             if body != "true" {
-                let connector = if op.score_threshold.is_some() {
-                    " AND"
-                } else {
-                    " WHERE"
-                };
-                cypher.push_str(&format!("{connector} {body}"));
+                where_parts.push(body);
             }
+        }
+        if !where_parts.is_empty() {
+            cypher.push_str(&format!(" WHERE {}", where_parts.join(" AND ")));
         }
         cypher.push_str(&format!(
             " RETURN n, _score ORDER BY _score DESC LIMIT {}",
@@ -1078,5 +1104,27 @@ mod tests {
         ));
         assert_eq!(params["p1"], "acme");
         assert_eq!(params["p2"], "p1");
+    }
+
+    #[test]
+    fn search_with_tenant_context_filters_fulltext_nodes() {
+        let m = fixture();
+        let ctx = CompileContext::new(&m).with_tenant("tenant-a");
+        let search = LogicalSearch {
+            message_type: "acme.billing.v1.Customer".into(),
+            vector: None,
+            text_query: Some("Alice".into()),
+            filter: None,
+            top_k: 10,
+            score_threshold: None,
+            require_hybrid: false,
+            with_vector: false,
+            with_payload: true,
+        };
+        let (statement, params) = cypher(Neo4jCompiler.compile_search(&search, &ctx).unwrap());
+        assert!(statement.contains("db.index.fulltext.queryNodes('Customer_fulltext'"));
+        assert!(statement.contains("WHERE n.`_tenant_id` = $p1"));
+        assert_eq!(params["p0"], "Alice");
+        assert_eq!(params["p1"], "tenant-a");
     }
 }

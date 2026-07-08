@@ -14,6 +14,8 @@ use webrtc_rs::peer_connection::RTCPeerConnection;
 use webrtc_rs::peer_connection::configuration::RTCConfiguration;
 use webrtc_rs::peer_connection::sdp::session_description::RTCSessionDescription;
 
+use super::{SfuBridge, SfuJoinToken};
+
 #[derive(Default)]
 pub(crate) struct EmbeddedSfu {
     peers: Mutex<HashMap<String, Arc<RTCPeerConnection>>>,
@@ -110,6 +112,10 @@ impl EmbeddedSfu {
     }
 
     pub(crate) async fn close_peer(&self, room_id: &str, peer_id: &str) {
+        self.tracks
+            .lock()
+            .await
+            .retain(|_, track| !(track.room_id == room_id && track.peer_id == peer_id));
         if let Some(pc) = self
             .peers
             .lock()
@@ -120,5 +126,83 @@ impl EmbeddedSfu {
                 tracing::warn!(room_id, peer_id, error = %err, "embedded SFU peer close failed");
             }
         }
+    }
+
+    pub(crate) async fn close_room(&self, room_id: &str) {
+        let prefix = format!("{room_id}:");
+        let peers = {
+            let mut peers = self.peers.lock().await;
+            let keys = peers
+                .keys()
+                .filter(|key| key.starts_with(&prefix))
+                .cloned()
+                .collect::<Vec<_>>();
+            keys.into_iter()
+                .filter_map(|key| peers.remove(&key))
+                .collect::<Vec<_>>()
+        };
+        self.tracks
+            .lock()
+            .await
+            .retain(|_, track| track.room_id != room_id);
+        for pc in peers {
+            if let Err(err) = pc.close().await {
+                tracing::warn!(room_id, error = %err, "embedded SFU room peer close failed");
+            }
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl SfuBridge for EmbeddedSfu {
+    async fn accept_offer(
+        &self,
+        room_id: &str,
+        peer_id: &str,
+        offer_sdp: &str,
+    ) -> Result<String, String> {
+        EmbeddedSfu::accept_offer(self, room_id, peer_id, offer_sdp).await
+    }
+
+    async fn register_published_track(
+        &self,
+        room_id: &str,
+        peer_id: &str,
+        track_id: &str,
+        kind: &str,
+    ) -> Result<(), String> {
+        EmbeddedSfu::register_published_track(self, room_id, peer_id, track_id, kind).await;
+        Ok(())
+    }
+
+    async fn unregister_track(&self, track_id: &str) -> Result<(), String> {
+        EmbeddedSfu::unregister_track(self, track_id).await;
+        Ok(())
+    }
+
+    async fn kick_peer(
+        &self,
+        _tenant_id: &str,
+        room_id: &str,
+        peer_id: &str,
+    ) -> Result<(), String> {
+        EmbeddedSfu::close_peer(self, room_id, peer_id).await;
+        Ok(())
+    }
+
+    async fn close_room_hook(&self, room_id: &str) -> Result<(), String> {
+        EmbeddedSfu::close_room(self, room_id).await;
+        Ok(())
+    }
+
+    async fn mint_join_token(
+        &self,
+        _tenant_id: &str,
+        _room_id: &str,
+        _peer_id: &str,
+        _ttl_seconds: i64,
+        _now_unix: i64,
+    ) -> Result<Option<SfuJoinToken>, String> {
+        Ok(None)
     }
 }

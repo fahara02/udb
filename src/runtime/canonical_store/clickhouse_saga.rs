@@ -9,11 +9,10 @@
 //! row is observed. A raw (non-`FINAL`) read would leak stale, superseded rows
 //! and break correctness.
 //!
-//! The recovery-attempts counter and the claim/stale flips are the versioned-CAS
-//! read-insert-reread emulation (read FINAL → INSERT version+1 → re-read FINAL).
-//! SINGLE-WRITER CAVEAT (see `clickhouse.rs` module docs): the read-modify-write
-//! is not atomic; the conformance run is single-threaded so the monotone-counter
-//! and claim contracts hold. Every such site is commented.
+//! The recovery-attempts counter and the claim/stale flips are the versioned
+//! read-insert-reread emulation (read FINAL → INSERT version+1 → re-read FINAL)
+//! under a KeeperMap-backed saga mutation lease, so monotone counters and stale
+//! flips are serialized across broker processes.
 //!
 //! ## Schema (mirrors the logical PG `udb_sagas`; ClickHouse types)
 //!
@@ -36,6 +35,8 @@ use super::system_store::{
     SystemStoreError, SystemStoreResult,
 };
 use uuid::Uuid;
+
+const CLICKHOUSE_SAGA_MUTATION_LOCK: &str = "__udb_clickhouse_sagas";
 
 /// Canonical saga SELECT column order. Pinned next to the mapper.
 const SAGA_COLS: &str = "saga_id, tx_id, tenant_id, correlation_id, status, backend_instance, \
@@ -135,6 +136,20 @@ impl ClickHouseCanonicalStore {
             .await
             .map_err(|e| ch_err("insert_saga_version", e))
     }
+
+    async fn acquire_saga_mutation_lock(&self, op: &str) -> SystemStoreResult<String> {
+        let owner = format!("{op}:{}", Uuid::new_v4());
+        self.acquire_system_mutation_lease(CLICKHOUSE_SAGA_MUTATION_LOCK, &owner, op)
+            .await
+            .map_err(|err| ch_err(op, err))?;
+        Ok(owner)
+    }
+
+    async fn release_saga_mutation_lock(&self, owner: &str, op: &str) -> SystemStoreResult<()> {
+        self.release_system_mutation_lease(CLICKHOUSE_SAGA_MUTATION_LOCK, owner, op)
+            .await
+            .map_err(|err| ch_err(op, err))
+    }
 }
 
 #[async_trait]
@@ -174,31 +189,38 @@ impl SagaStore for ClickHouseCanonicalStore {
     }
 
     async fn record_saga(&self, saga: &SagaInsert) -> SystemStoreResult<Uuid> {
-        let saga_id = Uuid::new_v4();
-        let now = Self::now_unix_ms();
-        let now_dt = DateTime::<Utc>::from_timestamp_millis(now).unwrap_or_else(Utc::now);
-        // Fresh saga: version 1, current_step / retry_count / recovery_attempts 0,
-        // compensation_status none.
-        let row = SagaRow {
-            saga_id,
-            tx_id: saga.tx_id.clone(),
-            tenant_id: saga.tenant_id.clone(),
-            correlation_id: saga.correlation_id.clone(),
-            status: saga.status,
-            backend_instance: saga.backend_instance.clone(),
-            operation: saga.operation.clone(),
-            current_step: 0,
-            retry_count: 0,
-            recovery_attempts: 0,
-            compensation_status: CompensationStatus::None,
-            steps: saga.steps.clone(),
-            compensations: saga.compensations.clone(),
-            last_error: String::new(),
-            created_at: now_dt,
-            updated_at: now_dt,
-        };
-        self.insert_saga_version(&row, 1).await?;
-        Ok(saga_id)
+        let owner = self.acquire_saga_mutation_lock("record_saga").await?;
+        let result = async {
+            let saga_id = Uuid::new_v4();
+            let now = Self::now_unix_ms();
+            let now_dt = DateTime::<Utc>::from_timestamp_millis(now).unwrap_or_else(Utc::now);
+            // Fresh saga: version 1, current_step / retry_count / recovery_attempts 0,
+            // compensation_status none.
+            let row = SagaRow {
+                saga_id,
+                tx_id: saga.tx_id.clone(),
+                tenant_id: saga.tenant_id.clone(),
+                correlation_id: saga.correlation_id.clone(),
+                status: saga.status,
+                backend_instance: saga.backend_instance.clone(),
+                operation: saga.operation.clone(),
+                current_step: 0,
+                retry_count: 0,
+                recovery_attempts: 0,
+                compensation_status: CompensationStatus::None,
+                steps: saga.steps.clone(),
+                compensations: saga.compensations.clone(),
+                last_error: String::new(),
+                created_at: now_dt,
+                updated_at: now_dt,
+            };
+            self.insert_saga_version(&row, 1).await?;
+            Ok(saga_id)
+        }
+        .await;
+        self.release_saga_mutation_lock(&owner, "record_saga")
+            .await?;
+        result
     }
 
     async fn get_saga(&self, saga_id: Uuid) -> SystemStoreResult<Option<SagaRow>> {
@@ -253,61 +275,87 @@ impl SagaStore for ClickHouseCanonicalStore {
         status: SagaStatus,
         compensation_status: CompensationStatus,
     ) -> SystemStoreResult<()> {
-        // Read FINAL, INSERT version+1 with the new status. A missing saga is an
-        // error (PG returns rows_affected == 0 → InvalidInput).
-        let Some((mut saga, version)) = self.read_saga_versioned(saga_id).await? else {
-            return Err(SystemStoreError::InvalidInput(format!(
-                "saga {saga_id} not found for update_saga_status"
-            )));
-        };
-        saga.status = status;
-        saga.compensation_status = compensation_status;
-        saga.updated_at =
-            DateTime::<Utc>::from_timestamp_millis(Self::now_unix_ms()).unwrap_or_else(Utc::now);
-        self.insert_saga_version(&saga, version.saturating_add(1).max(1))
-            .await
+        let owner = self
+            .acquire_saga_mutation_lock("update_saga_status")
+            .await?;
+        let result = async {
+            // Read FINAL, INSERT version+1 with the new status. A missing saga is an
+            // error (PG returns rows_affected == 0 → InvalidInput).
+            let Some((mut saga, version)) = self.read_saga_versioned(saga_id).await? else {
+                return Err(SystemStoreError::InvalidInput(format!(
+                    "saga {saga_id} not found for update_saga_status"
+                )));
+            };
+            saga.status = status;
+            saga.compensation_status = compensation_status;
+            saga.updated_at = DateTime::<Utc>::from_timestamp_millis(Self::now_unix_ms())
+                .unwrap_or_else(Utc::now);
+            self.insert_saga_version(&saga, version.saturating_add(1).max(1))
+                .await
+        }
+        .await;
+        self.release_saga_mutation_lock(&owner, "update_saga_status")
+            .await?;
+        result
     }
 
     async fn mark_saga_manual_review(&self, saga_id: Uuid) -> SystemStoreResult<()> {
-        let Some((mut saga, version)) = self.read_saga_versioned(saga_id).await? else {
-            return Err(SystemStoreError::InvalidInput(format!(
-                "saga {saga_id} not found"
-            )));
-        };
-        saga.status = SagaStatus::ManualReview;
-        saga.updated_at =
-            DateTime::<Utc>::from_timestamp_millis(Self::now_unix_ms()).unwrap_or_else(Utc::now);
-        self.insert_saga_version(&saga, version.saturating_add(1).max(1))
-            .await
+        let owner = self
+            .acquire_saga_mutation_lock("mark_saga_manual_review")
+            .await?;
+        let result = async {
+            let Some((mut saga, version)) = self.read_saga_versioned(saga_id).await? else {
+                return Err(SystemStoreError::InvalidInput(format!(
+                    "saga {saga_id} not found"
+                )));
+            };
+            saga.status = SagaStatus::ManualReview;
+            saga.updated_at = DateTime::<Utc>::from_timestamp_millis(Self::now_unix_ms())
+                .unwrap_or_else(Utc::now);
+            self.insert_saga_version(&saga, version.saturating_add(1).max(1))
+                .await
+        }
+        .await;
+        self.release_saga_mutation_lock(&owner, "mark_saga_manual_review")
+            .await?;
+        result
     }
 
     async fn request_saga_recompensation(&self, saga_id: Uuid) -> SystemStoreResult<()> {
-        // PG: conditional update WHERE status IN ('failed_compensation',
-        // 'manual_review'), bumping retry_count and resetting to indeterminate.
-        // Read FINAL, validate the guard, INSERT version+1. SINGLE-WRITER CAVEAT
-        // (see clickhouse.rs module docs): no atomic CAS, but the conformance
-        // recovery path is single-threaded.
-        let Some((mut saga, version)) = self.read_saga_versioned(saga_id).await? else {
-            return Err(SystemStoreError::InvalidInput(format!(
-                "saga {saga_id} is not in a retryable state (must be failed_compensation or manual_review)"
-            )));
-        };
-        if !matches!(
-            saga.status,
-            SagaStatus::FailedCompensation | SagaStatus::ManualReview
-        ) {
-            return Err(SystemStoreError::InvalidInput(format!(
-                "saga {saga_id} is not in a retryable state (must be failed_compensation or manual_review)"
-            )));
+        let owner = self
+            .acquire_saga_mutation_lock("request_saga_recompensation")
+            .await?;
+        let result = async {
+            // PG: conditional update WHERE status IN ('failed_compensation',
+            // 'manual_review'), bumping retry_count and resetting to indeterminate.
+            // The KeeperMap mutation lease serializes read FINAL → validate guard →
+            // INSERT version+1 across broker processes.
+            let Some((mut saga, version)) = self.read_saga_versioned(saga_id).await? else {
+                return Err(SystemStoreError::InvalidInput(format!(
+                    "saga {saga_id} is not in a retryable state (must be failed_compensation or manual_review)"
+                )));
+            };
+            if !matches!(
+                saga.status,
+                SagaStatus::FailedCompensation | SagaStatus::ManualReview
+            ) {
+                return Err(SystemStoreError::InvalidInput(format!(
+                    "saga {saga_id} is not in a retryable state (must be failed_compensation or manual_review)"
+                )));
+            }
+            saga.status = SagaStatus::Indeterminate;
+            saga.last_error = String::new();
+            saga.retry_count += 1;
+            saga.compensation_status = CompensationStatus::RetryRequested;
+            saga.updated_at =
+                DateTime::<Utc>::from_timestamp_millis(Self::now_unix_ms()).unwrap_or_else(Utc::now);
+            self.insert_saga_version(&saga, version.saturating_add(1).max(1))
+                .await
         }
-        saga.status = SagaStatus::Indeterminate;
-        saga.last_error = String::new();
-        saga.retry_count += 1;
-        saga.compensation_status = CompensationStatus::RetryRequested;
-        saga.updated_at =
-            DateTime::<Utc>::from_timestamp_millis(Self::now_unix_ms()).unwrap_or_else(Utc::now);
-        self.insert_saga_version(&saga, version.saturating_add(1).max(1))
-            .await
+        .await;
+        self.release_saga_mutation_lock(&owner, "request_saga_recompensation")
+            .await?;
+        result
     }
 
     async fn increment_recovery_attempts(
@@ -315,24 +363,31 @@ impl SagaStore for ClickHouseCanonicalStore {
         saga_id: Uuid,
         error: &str,
     ) -> SystemStoreResult<i64> {
-        // PG: `recovery_attempts = recovery_attempts + 1 … RETURNING`. Read FINAL,
-        // INSERT version+1 with count+1, return the new count. SINGLE-WRITER
-        // CAVEAT (see clickhouse.rs module docs): no atomic CAS — under a single
-        // writer the returned counter is the value we wrote (the monotone-counter
-        // contract); the conformance run is single-threaded.
-        let Some((mut saga, version)) = self.read_saga_versioned(saga_id).await? else {
-            return Err(SystemStoreError::InvalidInput(format!(
-                "saga {saga_id} not found for increment_recovery_attempts"
-            )));
-        };
-        let next = saga.recovery_attempts + 1;
-        saga.recovery_attempts = next;
-        saga.last_error = error.to_string();
-        saga.updated_at =
-            DateTime::<Utc>::from_timestamp_millis(Self::now_unix_ms()).unwrap_or_else(Utc::now);
-        self.insert_saga_version(&saga, version.saturating_add(1).max(1))
+        let owner = self
+            .acquire_saga_mutation_lock("increment_recovery_attempts")
             .await?;
-        Ok(next as i64)
+        let result = async {
+            // PG: `recovery_attempts = recovery_attempts + 1 … RETURNING`. The
+            // KeeperMap mutation lease serializes read FINAL → INSERT version+1 with
+            // count+1, preserving the monotone-counter contract across processes.
+            let Some((mut saga, version)) = self.read_saga_versioned(saga_id).await? else {
+                return Err(SystemStoreError::InvalidInput(format!(
+                    "saga {saga_id} not found for increment_recovery_attempts"
+                )));
+            };
+            let next = saga.recovery_attempts + 1;
+            saga.recovery_attempts = next;
+            saga.last_error = error.to_string();
+            saga.updated_at = DateTime::<Utc>::from_timestamp_millis(Self::now_unix_ms())
+                .unwrap_or_else(Utc::now);
+            self.insert_saga_version(&saga, version.saturating_add(1).max(1))
+                .await?;
+            Ok(next as i64)
+        }
+        .await;
+        self.release_saga_mutation_lock(&owner, "increment_recovery_attempts")
+            .await?;
+        result
     }
 
     async fn claim_recoverable_sagas(
@@ -340,83 +395,98 @@ impl SagaStore for ClickHouseCanonicalStore {
         stale_after: Duration,
         limit: i64,
     ) -> SystemStoreResult<Vec<SagaRow>> {
-        let tbl = self.saga_table()?;
-        // FINAL scan for recoverable candidates: indeterminate / in_doubt always,
-        // plus stale in_progress (updated_at older than the cutoff). Like Neo4j,
-        // the indeterminate/in_doubt rows are READ as-is (the contract asserts an
-        // indeterminate saga stays indeterminate); only stale in_progress rows are
-        // flipped to indeterminate via versioned-CAS.
-        let scan = format!("SELECT {SAGA_COLS}, version FROM {tbl} FINAL");
-        let rows = self
-            .executor()
-            .select_rows(&scan)
-            .await
-            .map_err(|e| ch_err("claim_recoverable_sagas scan", e))?;
-        let cutoff = Utc::now()
-            - chrono::Duration::from_std(stale_after).unwrap_or_else(|_| chrono::Duration::zero());
-        let mut candidates: Vec<(SagaRow, u64)> = Vec::new();
-        for row in &rows {
-            let saga = row_to_saga(row)?;
-            let recoverable =
-                matches!(saga.status, SagaStatus::Indeterminate | SagaStatus::InDoubt)
-                    || (saga.status == SagaStatus::InProgress && saga.updated_at < cutoff);
-            if recoverable {
-                candidates.push((saga, ch_u64(row, "version")));
+        let owner = self
+            .acquire_saga_mutation_lock("claim_recoverable_sagas")
+            .await?;
+        let result = async {
+            let tbl = self.saga_table()?;
+            // FINAL scan for recoverable candidates: indeterminate / in_doubt always,
+            // plus stale in_progress (updated_at older than the cutoff). Like Neo4j,
+            // the indeterminate/in_doubt rows are READ as-is (the contract asserts an
+            // indeterminate saga stays indeterminate); only stale in_progress rows are
+            // flipped to indeterminate under the KeeperMap mutation lease.
+            let scan = format!("SELECT {SAGA_COLS}, version FROM {tbl} FINAL");
+            let rows = self
+                .executor()
+                .select_rows(&scan)
+                .await
+                .map_err(|e| ch_err("claim_recoverable_sagas scan", e))?;
+            let cutoff = Utc::now()
+                - chrono::Duration::from_std(stale_after)
+                    .unwrap_or_else(|_| chrono::Duration::zero());
+            let mut candidates: Vec<(SagaRow, u64)> = Vec::new();
+            for row in &rows {
+                let saga = row_to_saga(row)?;
+                let recoverable =
+                    matches!(saga.status, SagaStatus::Indeterminate | SagaStatus::InDoubt)
+                        || (saga.status == SagaStatus::InProgress && saga.updated_at < cutoff);
+                if recoverable {
+                    candidates.push((saga, ch_u64(row, "version")));
+                }
             }
-        }
-        candidates.sort_by_key(|(s, _)| s.updated_at);
-        candidates.truncate(limit.max(1) as usize);
+            candidates.sort_by_key(|(s, _)| s.updated_at);
+            candidates.truncate(limit.max(1) as usize);
 
-        let mut out = Vec::with_capacity(candidates.len());
-        for (mut saga, version) in candidates {
-            if saga.status == SagaStatus::InProgress {
-                // Versioned-CAS flip stale in_progress → indeterminate. SINGLE-WRITER
-                // CAVEAT (see clickhouse.rs module docs): no atomic CAS; conformance
-                // run is single-threaded.
-                let now_dt = DateTime::<Utc>::from_timestamp_millis(Self::now_unix_ms())
-                    .unwrap_or_else(Utc::now);
-                saga.status = SagaStatus::Indeterminate;
-                saga.last_error = "stale in-progress reconciled at recovery claim".to_string();
-                saga.updated_at = now_dt;
-                self.insert_saga_version(&saga, version.saturating_add(1).max(1))
-                    .await?;
+            let mut out = Vec::with_capacity(candidates.len());
+            for (mut saga, version) in candidates {
+                if saga.status == SagaStatus::InProgress {
+                    let now_dt = DateTime::<Utc>::from_timestamp_millis(Self::now_unix_ms())
+                        .unwrap_or_else(Utc::now);
+                    saga.status = SagaStatus::Indeterminate;
+                    saga.last_error = "stale in-progress reconciled at recovery claim".to_string();
+                    saga.updated_at = now_dt;
+                    self.insert_saga_version(&saga, version.saturating_add(1).max(1))
+                        .await?;
+                }
+                out.push(saga);
             }
-            out.push(saga);
+            Ok(out)
         }
-        Ok(out)
+        .await;
+        self.release_saga_mutation_lock(&owner, "claim_recoverable_sagas")
+            .await?;
+        result
     }
 
     async fn mark_stale_in_progress_indeterminate(
         &self,
         stale_after: Duration,
     ) -> SystemStoreResult<i64> {
-        let tbl = self.saga_table()?;
-        let scan = format!("SELECT {SAGA_COLS}, version FROM {tbl} FINAL");
-        let rows = self
-            .executor()
-            .select_rows(&scan)
-            .await
-            .map_err(|e| ch_err("mark_stale_in_progress_indeterminate scan", e))?;
-        let cutoff = Utc::now()
-            - chrono::Duration::from_std(stale_after).unwrap_or_else(|_| chrono::Duration::zero());
-        let mut n = 0i64;
-        for row in &rows {
-            let mut saga = row_to_saga(row)?;
-            if saga.status != SagaStatus::InProgress || saga.updated_at >= cutoff {
-                continue;
+        let owner = self
+            .acquire_saga_mutation_lock("mark_stale_in_progress_indeterminate")
+            .await?;
+        let result = async {
+            let tbl = self.saga_table()?;
+            let scan = format!("SELECT {SAGA_COLS}, version FROM {tbl} FINAL");
+            let rows = self
+                .executor()
+                .select_rows(&scan)
+                .await
+                .map_err(|e| ch_err("mark_stale_in_progress_indeterminate scan", e))?;
+            let cutoff = Utc::now()
+                - chrono::Duration::from_std(stale_after)
+                    .unwrap_or_else(|_| chrono::Duration::zero());
+            let mut n = 0i64;
+            for row in &rows {
+                let mut saga = row_to_saga(row)?;
+                if saga.status != SagaStatus::InProgress || saga.updated_at >= cutoff {
+                    continue;
+                }
+                let version = ch_u64(row, "version");
+                saga.status = SagaStatus::Indeterminate;
+                saga.last_error = "stale in-progress reconciled at startup".to_string();
+                saga.updated_at = DateTime::<Utc>::from_timestamp_millis(Self::now_unix_ms())
+                    .unwrap_or_else(Utc::now);
+                self.insert_saga_version(&saga, version.saturating_add(1).max(1))
+                    .await?;
+                n += 1;
             }
-            let version = ch_u64(row, "version");
-            // Versioned-CAS flip. SINGLE-WRITER CAVEAT (see clickhouse.rs module
-            // docs): no atomic CAS; conformance run is single-threaded.
-            saga.status = SagaStatus::Indeterminate;
-            saga.last_error = "stale in-progress reconciled at startup".to_string();
-            saga.updated_at = DateTime::<Utc>::from_timestamp_millis(Self::now_unix_ms())
-                .unwrap_or_else(Utc::now);
-            self.insert_saga_version(&saga, version.saturating_add(1).max(1))
-                .await?;
-            n += 1;
+            Ok(n)
         }
-        Ok(n)
+        .await;
+        self.release_saga_mutation_lock(&owner, "mark_stale_in_progress_indeterminate")
+            .await?;
+        result
     }
 
     async fn saga_summary(&self) -> SystemStoreResult<SagaSummary> {

@@ -599,6 +599,19 @@ pub(crate) fn render_jsonb_gin_indexes(table: &ManifestTable) -> String {
 /// Emit FTS expression indexes for `is_tsvector` columns and pg_trgm GIN indexes
 /// for `trigram_index` columns.  These require the `pg_trgm` extension to be
 /// already installed (declare it in the proto extensions block).
+/// Validate a tsvector language token for direct embedding inside a quoted
+/// regconfig literal: PostgreSQL regconfig identifiers are plain alphanumeric
+/// plus underscores, so anything else is rejected (SQL-injection guard shared
+/// by the DDL renderer and the IR search compiler — both sides MUST apply the
+/// same rule or the query-time config diverges from the indexed one).
+pub(crate) fn safe_ts_language(raw: &str) -> Option<&str> {
+    if !raw.is_empty() && raw.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
+        Some(raw)
+    } else {
+        None
+    }
+}
+
 pub(crate) fn render_tsvector_indexes(table: &ManifestTable) -> String {
     let mut out = String::new();
     for column in &table.columns {
@@ -613,20 +626,18 @@ pub(crate) fn render_tsvector_indexes(table: &ManifestTable) -> String {
             } else {
                 column.tsvector_language.as_str()
             };
-            let lang = if raw_lang
-                .chars()
-                .all(|c| c.is_ascii_alphanumeric() || c == '_')
-            {
-                raw_lang
-            } else {
-                tracing::warn!(
-                    schema = %table.schema,
-                    table = %table.table,
-                    column = %column.column_name,
-                    lang = %raw_lang,
-                    "tsvector_language contains unsafe characters — falling back to 'simple'"
-                );
-                "simple"
+            let lang = match safe_ts_language(raw_lang) {
+                Some(lang) => lang,
+                None => {
+                    tracing::warn!(
+                        schema = %table.schema,
+                        table = %table.table,
+                        column = %column.column_name,
+                        lang = %raw_lang,
+                        "tsvector_language contains unsafe characters — falling back to 'simple'"
+                    );
+                    "simple"
+                }
             };
             let concat = column
                 .tsvector_source_columns

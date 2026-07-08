@@ -1,0 +1,308 @@
+syntax = "proto3";
+
+package udb.core.lock.services.v1;
+
+import "google/api/annotations.proto";
+import "udb/core/common/v1/dto.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Lock.Services.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/lock/services/v1;lockservicev1";
+option java_package = "com.udb.core.lock.services.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Lock\\Services\\V1";
+option php_namespace = "Udb\\Core\\Lock\\Services\\V1";
+
+// LockService (master-plan 9.2) — distributed locks for applications. Backed by
+// the portable `udb_advisory_leases` mutual-exclusion primitive, with a durable
+// tenant-scoped bookkeeping row and a monotone fencing token per grant so a
+// slow/partitioned holder can be safely fenced off.
+service LockService {
+  option (udb.core.common.v1.native_service) = {
+    service_id: "lock"
+    logical_service_id: "lock"
+    proto_service_id: "lock"
+    display_name: "Locks"
+    category: "lock"
+    default_enabled: true
+    requires_postgres: true
+    control_plane_listener_allowed: true
+    sdk_facade_name: "lock"
+    cli_scaffold_group: "lock"
+    health_check_ref: "lock"
+    capability_ref: "native.lock"
+  };
+  option (udb.core.common.v1.service_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "lock"
+    generate_minimal_example: true
+  };
+  option (udb.core.common.v1.service_cli_scaffold) = {
+    scaffold_package: "lock"
+    import_path: "udb/native/lock"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+    generated_files: "udb.native.lock.config"
+    required_native_services: "lock"
+    secret_placeholders: "UDB_API_KEY"
+    smoke_test_command: "udb native lint"
+  };
+  option (udb.core.common.v1.service_dependency_contract) = {
+    required_native_services: "lock"
+    required_backends: "postgres"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+  };
+
+  // Acquire a distributed lock. Quota-aware: a tenant cannot exceed its active
+  // lock budget. Returns the monotone fencing token the holder must present on
+  // Renew/Release.
+  rpc AcquireLock(AcquireLockRequest) returns (AcquireLockResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:lock:acquire-lock"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "lock.AcquireLock"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "acquire_lock" rest_operation_id: "acquireLock"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "lock"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "lock"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "lock.AcquireLock"
+      outbox_topic: "udb.lock.lock.acquired.v1"
+      partition_key_field: "lock_name"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/locks:acquire"
+      body: "*"
+    };
+  }
+
+  // Renew (extend the lease of) a lock the caller currently holds. The presented
+  // fencing token must not be stale; a lower token is rejected.
+  rpc RenewLock(RenewLockRequest) returns (RenewLockResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:lock:renew-lock"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "lock.RenewLock"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "renew_lock" rest_operation_id: "renewLock"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "lock"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "lock"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "lock.RenewLock"
+      outbox_topic: "udb.lock.lock.renewed.v1"
+      partition_key_field: "lock_name"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/locks:renew"
+      body: "*"
+    };
+  }
+
+  // Release a lock the caller currently holds. The presented fencing token must
+  // not be stale; a lower token is rejected.
+  rpc ReleaseLock(ReleaseLockRequest) returns (ReleaseLockResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:lock:release-lock"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "lock.ReleaseLock"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "release_lock" rest_operation_id: "releaseLock"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "lock"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "lock"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "lock.ReleaseLock"
+      outbox_topic: "udb.lock.lock.released.v1"
+      partition_key_field: "lock_name"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/locks:release"
+      body: "*"
+    };
+  }
+}
+
+message AcquireLockRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "lock"
+    generate_minimal_example: true
+  };
+  // Verified against the bearer/claim tenant; cross-tenant values are rejected.
+  string tenant_id = 1;
+  string lock_name = 2;
+  string owner_id = 3;
+  int32 lease_ttl_seconds = 4;
+  string metadata_json = 5; // JSON
+}
+
+message AcquireLockResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "lock"
+    generate_minimal_example: true
+  };
+  bool acquired = 1;
+  int64 fencing_token = 2;
+  string lock_name = 3;
+  int64 expires_at_unix = 4;
+  string message = 5;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 6;
+}
+
+message RenewLockRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "lock"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string lock_name = 2;
+  string owner_id = 3;
+  int64 fencing_token = 4;
+  int32 lease_ttl_seconds = 5;
+}
+
+message RenewLockResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "lock"
+    generate_minimal_example: true
+  };
+  bool renewed = 1;
+  int64 fencing_token = 2;
+  int64 expires_at_unix = 3;
+  string message = 4;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 5;
+}
+
+message ReleaseLockRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "lock"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string lock_name = 2;
+  string owner_id = 3;
+  int64 fencing_token = 4;
+}
+
+message ReleaseLockResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "lock"
+    generate_minimal_example: true
+  };
+  bool released = 1;
+  string message = 2;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 3;
+}

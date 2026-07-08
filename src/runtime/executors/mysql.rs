@@ -2,8 +2,8 @@
 //!
 //! Mirror of `PostgresExecutor` for MySQL. Implements the same
 //! executor traits (`BackendHealth`, `QueryExecutor`, `MutationExecutor`),
-//! returns typed `tonic::Status::failed_precondition` for Vector /
-//! Object / ResourceAdmin (MySQL is not a vector store or object
+//! returns typed capability details for Vector /
+//! Object refusals (MySQL is not a vector store or object
 //! store — these operations are honestly unsupported).
 //!
 //! ## Dispatch-JSON contract
@@ -51,8 +51,8 @@ use crate::runtime::backend_context::{
 };
 use crate::runtime::core::{validate_mutation_sql, validate_read_sql};
 use crate::runtime::executor_utils::{
-    apply_context_statements, bind_json_params, build_probe, parse_sql_dispatch, sqlx_row_to_json,
-    with_executor_timeout,
+    apply_context_statements, bind_json_params, build_probe, capability_status,
+    invalid_argument_fields, parse_sql_dispatch, sqlx_row_to_json, with_executor_timeout,
 };
 use crate::runtime::executors::{
     BackendExecutor, BackendHealth, BackendProbe, MutationExecutor, ObjectExecutor, QueryExecutor,
@@ -104,34 +104,86 @@ impl MysqlExecutor {
     }
 }
 
-fn validate_mysql_ident(value: &str) -> Result<(), tonic::Status> {
+fn mysql_invalid_field_status(
+    field: impl Into<String>,
+    description: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    invalid_argument_fields(message, [(field.into(), description.into())])
+}
+
+fn invalid_mysql_resource_spec_status(err: serde_json::Error) -> tonic::Status {
+    mysql_invalid_field_status(
+        "spec_json",
+        "must be valid JSON for MySQL table resource creation",
+        format!("invalid resource spec: {err}"),
+    )
+}
+
+fn invalid_mysql_tx_json_status(err: serde_json::Error) -> tonic::Status {
+    mysql_invalid_field_status(
+        "request_json",
+        "must be valid JSON for MySQL transaction dispatch",
+        format!("invalid tx JSON: {err}"),
+    )
+}
+
+fn mysql_required_field_status(field: &'static str, message: &'static str) -> tonic::Status {
+    mysql_invalid_field_status(field, format!("{field} is required"), message)
+}
+
+fn mysql_identifier_status(field: &'static str, message: String) -> tonic::Status {
+    mysql_invalid_field_status(field, "must be a valid MySQL identifier", message)
+}
+
+fn mysql_internal_status(
+    operation: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    crate::runtime::executor_utils::internal_status("mysql", operation, message)
+}
+
+fn encode_mysql_response(
+    value: &JsonValue,
+    operation: &'static str,
+) -> Result<String, tonic::Status> {
+    serde_json::to_string(value).map_err(|err| {
+        mysql_internal_status(operation, format!("response serialise failed: {err}"))
+    })
+}
+
+fn validate_mysql_ident(value: &str, field: &'static str) -> Result<(), tonic::Status> {
     if value.is_empty()
         || value.len() > 64
         || !value
             .chars()
             .all(|ch| ch.is_ascii_alphanumeric() || ch == '_')
     {
-        return Err(tonic::Status::invalid_argument(format!(
-            "invalid MySQL identifier '{value}'"
-        )));
+        return Err(mysql_identifier_status(
+            field,
+            format!("invalid MySQL identifier '{value}'"),
+        ));
     }
     Ok(())
 }
 
-fn quote_mysql_ident(value: &str) -> Result<String, tonic::Status> {
-    validate_mysql_ident(value)?;
+fn quote_mysql_ident(value: &str, field: &'static str) -> Result<String, tonic::Status> {
+    validate_mysql_ident(value, field)?;
     Ok(format!("`{value}`"))
 }
 
 fn mysql_create_table_sql(resource_name: &str, spec_json: &str) -> Result<String, tonic::Status> {
-    let spec: JsonValue = serde_json::from_str(spec_json)
-        .map_err(|e| tonic::Status::invalid_argument(format!("invalid resource spec: {e}")))?;
+    let spec: JsonValue =
+        serde_json::from_str(spec_json).map_err(invalid_mysql_resource_spec_status)?;
     let columns = spec
         .get("columns")
         .and_then(|v| v.as_array())
-        .ok_or_else(|| tonic::Status::invalid_argument("table resource spec requires columns"))?;
+        .ok_or_else(|| {
+            mysql_required_field_status("columns", "table resource spec requires columns")
+        })?;
     if columns.is_empty() {
-        return Err(tonic::Status::invalid_argument(
+        return Err(mysql_required_field_status(
+            "columns",
             "table resource spec requires at least one column",
         ));
     }
@@ -141,21 +193,23 @@ fn mysql_create_table_sql(resource_name: &str, spec_json: &str) -> Result<String
         let name = column
             .get("name")
             .and_then(|v| v.as_str())
-            .ok_or_else(|| tonic::Status::invalid_argument("column missing name"))?;
+            .ok_or_else(|| mysql_required_field_status("columns.name", "column missing name"))?;
         let ty = column
             .get("type")
             .and_then(|v| v.as_str())
             .filter(|v| !v.trim().is_empty())
-            .ok_or_else(|| tonic::Status::invalid_argument("column missing type"))?;
+            .ok_or_else(|| mysql_required_field_status("columns.type", "column missing type"))?;
         if !ty
             .chars()
             .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '(' | ')' | ',' | ' '))
         {
-            return Err(tonic::Status::invalid_argument(format!(
-                "invalid SQL type for column '{name}'"
-            )));
+            return Err(mysql_invalid_field_status(
+                "columns.type",
+                "must contain only MySQL type characters",
+                format!("invalid SQL type for column '{name}'"),
+            ));
         }
-        let quoted = quote_mysql_ident(name)?;
+        let quoted = quote_mysql_ident(name, "columns.name")?;
         if column
             .get("primary_key")
             .and_then(|v| v.as_bool())
@@ -182,10 +236,10 @@ fn mysql_create_table_sql(resource_name: &str, spec_json: &str) -> Result<String
         .and_then(|v| v.as_str())
         .filter(|v| !v.trim().is_empty())
         .unwrap_or("InnoDB");
-    validate_mysql_ident(engine)?;
+    validate_mysql_ident(engine, "engine")?;
     Ok(format!(
         "CREATE TABLE IF NOT EXISTS {} ({}) ENGINE={engine} DEFAULT CHARSET=utf8mb4",
-        quote_mysql_ident(resource_name)?,
+        quote_mysql_ident(resource_name, "resource_name")?,
         defs.join(", ")
     ))
 }
@@ -240,27 +294,31 @@ impl QueryExecutor for MysqlExecutor {
 
             let rows = if let Some(ctx) = &self.context {
                 let mut tx = self.pool.begin().await.map_err(|err| {
-                    tonic::Status::internal(format!("mysql transaction start failed: {err}"))
+                    mysql_internal_status(
+                        "query_transaction_start",
+                        format!("mysql transaction start failed: {err}"),
+                    )
                 })?;
                 Self::apply_session_vars(&mut tx, ctx).await?;
                 let q = bind_json_params(sqlx::query(&sql), &params);
-                let rows = q
-                    .fetch_all(&mut *tx)
-                    .await
-                    .map_err(|e| tonic::Status::internal(format!("mysql query failed: {e}")))?;
+                let rows = q.fetch_all(&mut *tx).await.map_err(|e| {
+                    mysql_internal_status("query", format!("mysql query failed: {e}"))
+                })?;
                 tx.commit().await.map_err(|err| {
-                    tonic::Status::internal(format!("mysql transaction commit failed: {err}"))
+                    mysql_internal_status(
+                        "query_transaction_commit",
+                        format!("mysql transaction commit failed: {err}"),
+                    )
                 })?;
                 rows
             } else {
                 let q = bind_json_params(sqlx::query(&sql), &params);
-                q.fetch_all(&self.pool)
-                    .await
-                    .map_err(|e| tonic::Status::internal(format!("mysql query failed: {e}")))?
+                q.fetch_all(&self.pool).await.map_err(|e| {
+                    mysql_internal_status("query", format!("mysql query failed: {e}"))
+                })?
             };
             let json: Vec<JsonValue> = rows.iter().map(sqlx_row_to_json).collect();
-            serde_json::to_string(&JsonValue::Array(json))
-                .map_err(|e| tonic::Status::internal(format!("response serialise failed: {e}")))
+            encode_mysql_response(&JsonValue::Array(json), "query_response_encode")
         })
         .await
     }
@@ -274,20 +332,25 @@ impl MutationExecutor for MysqlExecutor {
 
             if let Some(ctx) = &self.context {
                 let mut tx = self.pool.begin().await.map_err(|err| {
-                    tonic::Status::internal(format!("mysql transaction start failed: {err}"))
+                    mysql_internal_status(
+                        "mutate_transaction_start",
+                        format!("mysql transaction start failed: {err}"),
+                    )
                 })?;
                 Self::apply_session_vars(&mut tx, ctx).await?;
                 let q = bind_json_params(sqlx::query(&sql), &params);
-                let result = q
-                    .execute(&mut *tx)
-                    .await
-                    .map_err(|e| tonic::Status::internal(format!("mysql mutate failed: {e}")))?;
+                let result = q.execute(&mut *tx).await.map_err(|e| {
+                    mysql_internal_status("mutate", format!("mysql mutate failed: {e}"))
+                })?;
                 // last_insert_id captured before commit (sqlx zeros it on
                 // transaction close otherwise).
                 let last_insert_id = result.last_insert_id();
                 let rows_affected = result.rows_affected();
                 tx.commit().await.map_err(|err| {
-                    tonic::Status::internal(format!("mysql transaction commit failed: {err}"))
+                    mysql_internal_status(
+                        "mutate_transaction_commit",
+                        format!("mysql transaction commit failed: {err}"),
+                    )
                 })?;
                 Ok(serde_json::json!({
                     "rows_affected": rows_affected,
@@ -296,10 +359,9 @@ impl MutationExecutor for MysqlExecutor {
                 .to_string())
             } else {
                 let q = bind_json_params(sqlx::query(&sql), &params);
-                let result = q
-                    .execute(&self.pool)
-                    .await
-                    .map_err(|e| tonic::Status::internal(format!("mysql mutate failed: {e}")))?;
+                let result = q.execute(&self.pool).await.map_err(|e| {
+                    mysql_internal_status("mutate", format!("mysql mutate failed: {e}"))
+                })?;
                 Ok(serde_json::json!({
                     "rows_affected": result.rows_affected(),
                     "last_insert_id": result.last_insert_id(),
@@ -313,7 +375,10 @@ impl MutationExecutor for MysqlExecutor {
 
 impl SearchExecutor for MysqlExecutor {
     async fn search(&self, _request_json: &str) -> Result<String, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "mysql",
+            "search",
+            "vector_search",
             "UDB_UNSUPPORTED_OPERATION: MySQL backend does not provide native vector search; \
              use `query` with FULLTEXT or route through a vector backend (Qdrant)",
         ))
@@ -322,7 +387,10 @@ impl SearchExecutor for MysqlExecutor {
 
 impl ObjectExecutor for MysqlExecutor {
     async fn get_object(&self, _request_json: &str) -> Result<Vec<u8>, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "mysql",
+            "get_object",
+            "object_store",
             "UDB_UNSUPPORTED_OPERATION: MySQL backend is not an object store; route to S3/MinIO",
         ))
     }
@@ -331,7 +399,10 @@ impl ObjectExecutor for MysqlExecutor {
         _request_json: &str,
         _bytes: Vec<u8>,
     ) -> Result<String, tonic::Status> {
-        Err(tonic::Status::failed_precondition(
+        Err(capability_status(
+            "mysql",
+            "put_object",
+            "object_store",
             "UDB_UNSUPPORTED_OPERATION: MySQL backend is not an object store; route to S3/MinIO",
         ))
     }
@@ -344,25 +415,31 @@ impl ResourceAdminExecutor for MysqlExecutor {
         spec_json: &str,
     ) -> Result<(), tonic::Status> {
         let ddl = mysql_create_table_sql(resource_name, spec_json)?;
-        sqlx::query(&ddl)
-            .execute(&self.pool)
-            .await
-            .map_err(|e| tonic::Status::internal(format!("mysql ensure_resource failed: {e}")))?;
+        sqlx::query(&ddl).execute(&self.pool).await.map_err(|e| {
+            mysql_internal_status(
+                "ensure_resource",
+                format!("mysql ensure_resource failed: {e}"),
+            )
+        })?;
         Ok(())
     }
     async fn drop_resource(&self, resource_name: &str) -> Result<(), tonic::Status> {
-        let ddl = format!("DROP TABLE IF EXISTS {}", quote_mysql_ident(resource_name)?);
-        sqlx::query(&ddl)
-            .execute(&self.pool)
-            .await
-            .map_err(|e| tonic::Status::internal(format!("mysql drop_resource failed: {e}")))?;
+        let ddl = format!(
+            "DROP TABLE IF EXISTS {}",
+            quote_mysql_ident(resource_name, "resource_name")?
+        );
+        sqlx::query(&ddl).execute(&self.pool).await.map_err(|e| {
+            mysql_internal_status("drop_resource", format!("mysql drop_resource failed: {e}"))
+        })?;
         Ok(())
     }
     async fn list_resources(&self) -> Result<Vec<String>, tonic::Status> {
         let rows = sqlx::query("SHOW TABLES")
             .fetch_all(&self.pool)
             .await
-            .map_err(|e| tonic::Status::internal(format!("SHOW TABLES failed: {e}")))?;
+            .map_err(|e| {
+                mysql_internal_status("list_resources", format!("SHOW TABLES failed: {e}"))
+            })?;
         let names: Vec<String> = rows
             .iter()
             .filter_map(|row| row.try_get::<String, _>(0).ok())
@@ -376,45 +453,191 @@ impl BackendExecutor for MysqlExecutor {
         // Minimal transaction support: BEGIN, run the list of
         // statements, COMMIT. The request shape is
         // `{"statements": [{"sql": "...", "params": [...]}, ...]}`.
-        let value: JsonValue = serde_json::from_str(request_json)
-            .map_err(|e| tonic::Status::invalid_argument(format!("invalid tx JSON: {e}")))?;
+        let value: JsonValue =
+            serde_json::from_str(request_json).map_err(invalid_mysql_tx_json_status)?;
         let stmts = value
             .get("statements")
             .and_then(|v| v.as_array())
             .ok_or_else(|| {
-                tonic::Status::invalid_argument("missing `statements` array in tx request")
+                mysql_required_field_status(
+                    "statements",
+                    "missing `statements` array in tx request",
+                )
             })?
             .clone();
-        let mut tx = self
-            .pool
-            .begin()
-            .await
-            .map_err(|e| tonic::Status::internal(format!("BEGIN failed: {e}")))?;
+        for stmt in &stmts {
+            let _ = stmt.get("sql").and_then(|v| v.as_str()).ok_or_else(|| {
+                mysql_required_field_status("statements.sql", "tx statement missing `sql`")
+            })?;
+        }
+        let mut tx = self.pool.begin().await.map_err(|e| {
+            mysql_internal_status("transaction_begin", format!("BEGIN failed: {e}"))
+        })?;
         let mut total_affected: u64 = 0;
         for stmt in &stmts {
-            let sql = stmt
-                .get("sql")
-                .and_then(|v| v.as_str())
-                .ok_or_else(|| tonic::Status::invalid_argument("tx statement missing `sql`"))?;
+            let sql = stmt.get("sql").and_then(|v| v.as_str()).ok_or_else(|| {
+                mysql_required_field_status("statements.sql", "tx statement missing `sql`")
+            })?;
             let params = stmt
                 .get("params")
                 .and_then(|v| v.as_array())
                 .cloned()
                 .unwrap_or_default();
             let q = bind_json_params(sqlx::query(sql), &params);
-            let r = q
-                .execute(&mut *tx)
-                .await
-                .map_err(|e| tonic::Status::internal(format!("tx statement failed: {e}")))?;
+            let r = q.execute(&mut *tx).await.map_err(|e| {
+                mysql_internal_status("transaction_statement", format!("tx statement failed: {e}"))
+            })?;
             total_affected += r.rows_affected();
         }
-        tx.commit()
-            .await
-            .map_err(|e| tonic::Status::internal(format!("COMMIT failed: {e}")))?;
+        tx.commit().await.map_err(|e| {
+            mysql_internal_status("transaction_commit", format!("COMMIT failed: {e}"))
+        })?;
         Ok(serde_json::json!({"rows_affected": total_affected}).to_string())
     }
 
     async fn probe(&self) -> Result<BackendProbe, tonic::Status> {
         Ok(build_probe("mysql", self.ping().await))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use prost::Message as _;
+    use sqlx::mysql::MySqlPoolOptions;
+
+    fn lazy_pool() -> MySqlPool {
+        MySqlPoolOptions::new()
+            .max_connections(1)
+            .connect_lazy("mysql://root:password@localhost:3306/udb_test")
+            .expect("lazy mysql pool")
+    }
+
+    fn decode_detail(status: &tonic::Status) -> ErrorDetail {
+        let raw = status
+            .metadata()
+            .get_bin(ERROR_DETAIL_METADATA_KEY)
+            .expect("typed detail trailer is present");
+        crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    fn assert_single_field(status: &tonic::Status, field: &str) {
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, field);
+    }
+
+    fn assert_internal_detail(status: &tonic::Status, operation: &str, message: &str) {
+        assert_eq!(status.code(), tonic::Code::Internal);
+        assert_eq!(status.message(), message);
+        let detail = decode_detail(status);
+        assert_eq!(detail.kind, ErrorKind::Internal as i32);
+        assert_eq!(detail.backend, "mysql");
+        assert_eq!(detail.operation, operation);
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+        assert!(detail.field_violations.is_empty());
+    }
+
+    #[test]
+    fn mysql_internal_status_carries_typed_detail() {
+        let status = mysql_internal_status(
+            "query_transaction_start",
+            "mysql transaction start failed: unavailable",
+        );
+        assert_internal_detail(
+            &status,
+            "query_transaction_start",
+            "mysql transaction start failed: unavailable",
+        );
+
+        let status = mysql_internal_status("transaction_commit", "COMMIT failed: closed");
+        assert_internal_detail(&status, "transaction_commit", "COMMIT failed: closed");
+    }
+
+    #[test]
+    fn mysql_resource_validation_carries_field_violations() {
+        let invalid_json = mysql_create_table_sql("items", "{").unwrap_err();
+        assert_eq!(invalid_json.code(), tonic::Code::InvalidArgument);
+        assert!(invalid_json.message().starts_with("invalid resource spec:"));
+        assert_single_field(&invalid_json, "spec_json");
+
+        let missing_columns = mysql_create_table_sql("items", "{}").unwrap_err();
+        assert_eq!(
+            missing_columns.message(),
+            "table resource spec requires columns"
+        );
+        assert_single_field(&missing_columns, "columns");
+
+        let empty_columns = mysql_create_table_sql("items", r#"{"columns":[]}"#).unwrap_err();
+        assert_eq!(
+            empty_columns.message(),
+            "table resource spec requires at least one column"
+        );
+        assert_single_field(&empty_columns, "columns");
+
+        let missing_name =
+            mysql_create_table_sql("items", r#"{"columns":[{"type":"TEXT"}]}"#).unwrap_err();
+        assert_eq!(missing_name.message(), "column missing name");
+        assert_single_field(&missing_name, "columns.name");
+
+        let missing_type =
+            mysql_create_table_sql("items", r#"{"columns":[{"name":"name"}]}"#).unwrap_err();
+        assert_eq!(missing_type.message(), "column missing type");
+        assert_single_field(&missing_type, "columns.type");
+
+        let invalid_type = mysql_create_table_sql(
+            "items",
+            r#"{"columns":[{"name":"name","type":"TEXT;DROP"}]}"#,
+        )
+        .unwrap_err();
+        assert_eq!(invalid_type.message(), "invalid SQL type for column 'name'");
+        assert_single_field(&invalid_type, "columns.type");
+
+        let invalid_engine = mysql_create_table_sql(
+            "items",
+            r#"{"engine":"bad-engine","columns":[{"name":"name","type":"TEXT"}]}"#,
+        )
+        .unwrap_err();
+        assert_eq!(
+            invalid_engine.message(),
+            "invalid MySQL identifier 'bad-engine'"
+        );
+        assert_single_field(&invalid_engine, "engine");
+
+        let invalid_identifier =
+            mysql_create_table_sql("bad-name", r#"{"columns":[{"name":"name","type":"TEXT"}]}"#)
+                .unwrap_err();
+        assert_eq!(
+            invalid_identifier.message(),
+            "invalid MySQL identifier 'bad-name'"
+        );
+        assert_single_field(&invalid_identifier, "resource_name");
+    }
+
+    #[tokio::test]
+    async fn mysql_transaction_validation_carries_field_violations() {
+        let exec = MysqlExecutor::with_pool(lazy_pool());
+
+        let invalid_json = BackendExecutor::transaction(&exec, "{").await.unwrap_err();
+        assert_eq!(invalid_json.code(), tonic::Code::InvalidArgument);
+        assert!(invalid_json.message().starts_with("invalid tx JSON:"));
+        assert_single_field(&invalid_json, "request_json");
+
+        let missing_statements = BackendExecutor::transaction(&exec, "{}").await.unwrap_err();
+        assert_eq!(
+            missing_statements.message(),
+            "missing `statements` array in tx request"
+        );
+        assert_single_field(&missing_statements, "statements");
+
+        let missing_sql = BackendExecutor::transaction(&exec, r#"{"statements":[{}]}"#)
+            .await
+            .unwrap_err();
+        assert_eq!(missing_sql.message(), "tx statement missing `sql`");
+        assert_single_field(&missing_sql, "statements.sql");
     }
 }

@@ -112,6 +112,66 @@ pub(crate) const DEFAULT_CDC_PRODUCER_BATCH_MESSAGES: u64 = 10_000;
 pub(crate) const DEFAULT_CDC_PUBLISH_FAIL_LOG_COOLDOWN_SECS: u64 = 30;
 pub(crate) const DEFAULT_CDC_IDEMPOTENCY_KEY_PREFIX: &str = "idempotency:udb";
 
+/// CDC scale-out (master-plan 6.5) — producer-epoch fold layout.
+///
+/// The durable fence is a single `producer_epoch BIGINT` column. To give each
+/// tailer shard epoch-fenced ownership of its slice WITHOUT a schema change, the
+/// shard ordinal is folded into the high bits of that i64 and the operator's
+/// monotonic epoch keeps the low [`CDC_EPOCH_FOLD_BITS`]. The two never overlap,
+/// so within a shard the folded value is still strictly monotonic in the epoch
+/// (the fence is preserved) and across shards the value ranges are disjoint (one
+/// writer per slice on takeover). With `shard_count == 1` the fold is skipped
+/// entirely, so the column carries the raw operator epoch exactly as before.
+pub(crate) const CDC_EPOCH_FOLD_BITS: u32 = 48;
+/// Low-bit mask carrying the operator epoch: `2^48 - 1` (~2.8e14 bumps).
+pub(crate) const CDC_EPOCH_FOLD_MASK: i64 = (1i64 << CDC_EPOCH_FOLD_BITS) - 1;
+/// Shard ordinals occupy bits 48..63 (15 bits), leaving the sign bit clear so a
+/// folded epoch is always non-negative. Caps the shard count to keep the fold
+/// total within the positive i64 range.
+pub(crate) const MAX_CDC_SHARDS: u32 = (1u32 << (63 - CDC_EPOCH_FOLD_BITS)) - 1;
+
+/// Fold a shard ordinal into the operator's `producer_epoch` to produce the
+/// durable per-shard fence written to `producer_epoch` columns and matched in the
+/// in-doubt recovery WHERE clauses.
+///
+/// CRITICAL invariant (master-plan 6.5): when `shard_count <= 1` (the unsharded
+/// default) this returns `producer_epoch` UNCHANGED — bit-identical to the
+/// pre-shard behavior, a true no-op. Only when `shard_count > 1` is the ordinal
+/// folded into the high bits.
+///
+/// Properties for `shard_count > 1`:
+/// - **Monotonic per shard:** for a fixed shard, the result increases strictly
+///   with `producer_epoch` (while the epoch fits in [`CDC_EPOCH_FOLD_BITS`]), so
+///   `producer_epoch < current` still detects a prior epoch of the SAME shard.
+/// - **Disjoint across shards:** distinct ordinals land in disjoint high-bit
+///   bands ([`CdcConfig::shard_epoch_band`]), so no two shards' fences collide.
+pub(crate) fn fence_producer_epoch(producer_epoch: i64, shard_id: u32, shard_count: u32) -> i64 {
+    if shard_count <= 1 {
+        // Unsharded: no fold. The fence is the raw operator epoch, exactly as the
+        // pre-6.5 code wrote it.
+        return producer_epoch;
+    }
+    // Defensive mask to the 15 ordinal bits (the ordinal is already clamped
+    // `< shard_count <= MAX_CDC_SHARDS` by `normalize`).
+    let shard = (shard_id as i64) & (MAX_CDC_SHARDS as i64);
+    (shard << CDC_EPOCH_FOLD_BITS) | (producer_epoch & CDC_EPOCH_FOLD_MASK)
+}
+
+/// Stable FNV-1a 64-bit hash used for CDC shard partition assignment. Chosen over
+/// `std::hash::DefaultHasher` (whose output is intentionally unstable across
+/// builds) so every shard process computes the SAME owner for a given key with no
+/// coordination.
+pub(crate) fn fnv1a_64(bytes: &[u8]) -> u64 {
+    const OFFSET: u64 = 0xcbf2_9ce4_8422_2325;
+    const PRIME: u64 = 0x0000_0100_0000_01b3;
+    let mut hash = OFFSET;
+    for &byte in bytes {
+        hash ^= byte as u64;
+        hash = hash.wrapping_mul(PRIME);
+    }
+    hash
+}
+
 /// Whether CDC change-event delivery is enabled. This gates BOTH the
 /// transactional outbox WRITE (in each mutation's tx) AND the Kafka tailer /
 /// storage-finalized consumer that drain it — so `UDB_CDC_ENABLED=false` is a
@@ -160,6 +220,19 @@ pub struct CdcConfig {
     pub exactly_once_mode: CdcExactlyOnceMode,
     pub transactional_id_prefix: String,
     pub producer_epoch: i64,
+    /// CDC scale-out (master-plan 6.5): number of tailer shards configured for
+    /// this source. `1` (the default) is the single, unsharded tailer — exactly
+    /// today's behavior. `> 1` partitions outbox ownership across N processes,
+    /// each claiming a deterministic, disjoint slice (see [`Self::owns_partition`])
+    /// and fencing its slice with a shard-folded producer epoch (see
+    /// [`fence_producer_epoch`]). Resolved ONCE from `UDB_CDC_SHARD_COUNT`; never
+    /// read per event.
+    pub shard_count: u32,
+    /// This process's shard ordinal in `[0, shard_count)`. Default `0`. With
+    /// `shard_count == 1` the ordinal is forced to `0` and the epoch fold is a
+    /// no-op, so the single-shard path is bit-identical to the pre-shard code.
+    /// Resolved ONCE from `UDB_CDC_SHARD_ID`.
+    pub shard_id: u32,
     pub kafka_tx_timeout_secs: u64,
     pub redaction_mode: CdcRedactionMode,
     pub redaction_version: u32,
@@ -297,6 +370,8 @@ impl Default for CdcConfig {
             exactly_once_mode: CdcExactlyOnceMode::default(),
             transactional_id_prefix: "udb-cdc".to_string(),
             producer_epoch: 0,
+            shard_count: 1,
+            shard_id: 0,
             kafka_tx_timeout_secs: 30,
             redaction_mode: CdcRedactionMode::default(),
             redaction_version: 1,
@@ -396,6 +471,14 @@ impl CdcConfig {
                 .ok()
                 .and_then(|value| value.parse::<i64>().ok())
                 .unwrap_or(defaults.producer_epoch),
+            shard_count: std::env::var("UDB_CDC_SHARD_COUNT")
+                .ok()
+                .and_then(|value| value.trim().parse::<u32>().ok())
+                .unwrap_or(defaults.shard_count),
+            shard_id: std::env::var("UDB_CDC_SHARD_ID")
+                .ok()
+                .and_then(|value| value.trim().parse::<u32>().ok())
+                .unwrap_or(defaults.shard_id),
             kafka_tx_timeout_secs: std::env::var("UDB_CDC_KAFKA_TX_TIMEOUT_SECS")
                 .ok()
                 .and_then(|value| value.parse::<u64>().ok())
@@ -521,6 +604,16 @@ impl CdcConfig {
         {
             self.producer_epoch = parsed;
         }
+        if let Ok(value) = std::env::var("UDB_CDC_SHARD_COUNT")
+            && let Ok(parsed) = value.trim().parse::<u32>()
+        {
+            self.shard_count = parsed;
+        }
+        if let Ok(value) = std::env::var("UDB_CDC_SHARD_ID")
+            && let Ok(parsed) = value.trim().parse::<u32>()
+        {
+            self.shard_id = parsed;
+        }
         if let Ok(value) = std::env::var("UDB_CDC_KAFKA_TX_TIMEOUT_SECS")
             && let Ok(parsed) = value.parse::<u64>()
         {
@@ -585,6 +678,25 @@ impl CdcConfig {
         }
         if self.kafka_tx_timeout_secs == 0 {
             self.kafka_tx_timeout_secs = Self::default().kafka_tx_timeout_secs;
+        }
+        // CDC scale-out (6.5): a shard count of 0 is meaningless — clamp to the
+        // single-shard default. The ordinal must be a valid index into the shard
+        // set; an out-of-range ordinal (incl. any non-zero value while unsharded)
+        // is clamped to 0 so the single-shard path stays bit-identical and a
+        // mis-set ordinal can never silently disown every partition.
+        if self.shard_count == 0 {
+            self.shard_count = 1;
+        }
+        if self.shard_count > MAX_CDC_SHARDS {
+            self.shard_count = MAX_CDC_SHARDS;
+        }
+        if self.shard_id >= self.shard_count {
+            warn!(
+                "[cdc] UDB_CDC_SHARD_ID={} is out of range for UDB_CDC_SHARD_COUNT={}; \
+                 clamping ordinal to 0",
+                self.shard_id, self.shard_count
+            );
+            self.shard_id = 0;
         }
         if self.idempotency_ttl_secs == 0 {
             self.idempotency_ttl_secs = Self::default().idempotency_ttl_secs;
@@ -660,6 +772,54 @@ impl CdcConfig {
 
     pub fn transactional_id(&self) -> String {
         format!("{}-{}", self.transactional_id_prefix, self.slot_name)
+    }
+
+    /// CDC scale-out (6.5): the durable producer-epoch fence this process writes
+    /// to `producer_epoch` columns and matches in in-doubt recovery. Folds this
+    /// process's shard ordinal into [`Self::producer_epoch`]; for the unsharded
+    /// default (`shard_count == 1`) this is the raw epoch — BIT-IDENTICAL to the
+    /// pre-shard fence — so every UPSERT/recovery bind is unchanged when N=1.
+    pub fn fenced_producer_epoch(&self) -> i64 {
+        fence_producer_epoch(self.producer_epoch, self.shard_id, self.shard_count)
+    }
+
+    /// Whether more than one tailer shard is configured. When `false`, the entire
+    /// sharding apparatus (epoch fold, ownership filter, recovery banding) is a
+    /// no-op and behavior is exactly the pre-6.5 single tailer.
+    pub fn is_sharded(&self) -> bool {
+        self.shard_count > 1
+    }
+
+    /// Inclusive `[lo, hi]` band of folded `producer_epoch` values owned by THIS
+    /// shard, or `None` when unsharded. In-doubt recovery uses it to scope its
+    /// sweep to this shard's own rows so two shards never reset each other's
+    /// in-flight publishes (disjoint ownership under takeover). `None` keeps the
+    /// recovery SQL bit-identical to the pre-shard path.
+    pub fn shard_epoch_band(&self) -> Option<(i64, i64)> {
+        if !self.is_sharded() {
+            return None;
+        }
+        let base = (self.shard_id as i64 & MAX_CDC_SHARDS as i64) << CDC_EPOCH_FOLD_BITS;
+        Some((base, base | CDC_EPOCH_FOLD_MASK))
+    }
+
+    /// Deterministic shard ordinal that OWNS a given partition key. The key space
+    /// is partitioned by an FNV-1a hash modulo `shard_count`, so every key maps to
+    /// exactly one shard and the shards' slices are disjoint by construction. The
+    /// hash is content-only (no process/version state), so all shards agree on the
+    /// owner without coordination.
+    pub fn partition_owner(&self, partition_key: &str) -> u32 {
+        if self.shard_count <= 1 {
+            return 0;
+        }
+        (fnv1a_64(partition_key.as_bytes()) % self.shard_count as u64) as u32
+    }
+
+    /// Whether THIS shard owns `partition_key`. Always `true` when unsharded, so
+    /// the single tailer claims every row exactly as before; when sharded, each
+    /// row is claimed by exactly one shard ([`Self::partition_owner`]).
+    pub fn owns_partition(&self, partition_key: &str) -> bool {
+        self.shard_count <= 1 || self.partition_owner(partition_key) == self.shard_id
     }
 
     #[cfg(feature = "kafka")]
@@ -1519,6 +1679,167 @@ mod tests {
         );
         assert!(dropped["payload"].get("email").is_none());
         assert_eq!(dropped["payload"]["age"], 42);
+    }
+
+    #[test]
+    fn cdc_shard_fence_n1_is_bit_identical_to_unsharded_epoch() {
+        // CRITICAL (master-plan 6.5): with a single shard the fold is a NO-OP —
+        // the fence equals the operator's raw producer_epoch, byte-for-byte what
+        // the pre-shard code wrote. Holds for every epoch; and because
+        // shard_count==1 short-circuits, even a stray shard_id is ignored.
+        for epoch in [
+            0i64,
+            1,
+            7,
+            100,
+            4096,
+            1 << 20,
+            (1i64 << 47) - 1,
+            i64::from(u32::MAX),
+        ] {
+            assert_eq!(fence_producer_epoch(epoch, 0, 1), epoch);
+            assert_eq!(fence_producer_epoch(epoch, 9, 1), epoch);
+            let cfg = CdcConfig {
+                producer_epoch: epoch,
+                shard_count: 1,
+                shard_id: 0,
+                ..CdcConfig::default()
+            };
+            assert_eq!(cfg.fenced_producer_epoch(), epoch);
+            assert_eq!(cfg.shard_epoch_band(), None);
+            assert!(!cfg.is_sharded());
+        }
+    }
+
+    #[test]
+    fn cdc_shard_fence_partitions_epoch_space_disjointly() {
+        // N>1: distinct shards land in disjoint high-bit bands so two shards'
+        // fences never collide; the low bits still carry the operator epoch.
+        let shard_count = 4u32;
+        let epoch = 42i64;
+        let mut seen = std::collections::HashSet::new();
+        for shard_id in 0..shard_count {
+            let fenced = fence_producer_epoch(epoch, shard_id, shard_count);
+            assert!(fenced >= 0, "fold must stay non-negative");
+            assert_eq!(
+                fenced & CDC_EPOCH_FOLD_MASK,
+                epoch,
+                "low bits carry the epoch"
+            );
+            assert_eq!(
+                fenced >> CDC_EPOCH_FOLD_BITS,
+                shard_id as i64,
+                "high bits encode the shard ordinal"
+            );
+            assert!(seen.insert(fenced), "shard fences must be distinct");
+            let cfg = CdcConfig {
+                producer_epoch: epoch,
+                shard_count,
+                shard_id,
+                ..CdcConfig::default()
+            };
+            let (lo, hi) = cfg.shard_epoch_band().expect("sharded band");
+            assert!(
+                lo <= fenced && fenced <= hi,
+                "fence must lie in its own band"
+            );
+        }
+    }
+
+    #[test]
+    fn cdc_shard_fence_is_monotonic_per_shard() {
+        // The takeover fence stays monotonic within a shard: a higher operator
+        // epoch yields a strictly higher fenced value for the SAME shard, so the
+        // in-doubt sweep's `producer_epoch < current` still detects a prior epoch.
+        let shard_count = 8u32;
+        for shard_id in [0u32, 3, 7] {
+            let mut prev = i64::MIN;
+            for epoch in [0i64, 1, 2, 50, 1000, 1 << 30, 1i64 << 47] {
+                let fenced = fence_producer_epoch(epoch, shard_id, shard_count);
+                assert!(
+                    fenced > prev,
+                    "epoch {epoch} on shard {shard_id} broke monotonicity"
+                );
+                prev = fenced;
+            }
+        }
+    }
+
+    #[test]
+    fn cdc_shard_partition_assignment_is_disjoint_and_total() {
+        // Each partition key is owned by EXACTLY one shard (disjoint + total),
+        // so two shards never both claim the same outbox row.
+        let shard_count = 3u32;
+        let shards: Vec<CdcConfig> = (0..shard_count)
+            .map(|shard_id| CdcConfig {
+                shard_count,
+                shard_id,
+                ..CdcConfig::default()
+            })
+            .collect();
+        for key in [
+            "tenant-a:1",
+            "tenant-b:2",
+            "order-42",
+            "",
+            "x",
+            "a-very-long-partition-key-0xfeed",
+        ] {
+            let owners: Vec<u32> = shards
+                .iter()
+                .filter(|c| c.owns_partition(key))
+                .map(|c| c.shard_id)
+                .collect();
+            assert_eq!(
+                owners.len(),
+                1,
+                "key {key:?} must be owned by exactly one shard, got {owners:?}"
+            );
+            assert_eq!(owners[0], shards[0].partition_owner(key));
+        }
+    }
+
+    #[test]
+    fn cdc_single_shard_owns_every_partition() {
+        // N=1: the lone tailer claims every row exactly as the pre-shard code did.
+        let cfg = CdcConfig::default();
+        assert_eq!(cfg.shard_count, 1);
+        for key in ["a", "b", "anything", ""] {
+            assert!(cfg.owns_partition(key));
+            assert_eq!(cfg.partition_owner(key), 0);
+        }
+    }
+
+    #[test]
+    fn cdc_shard_config_normalizes_out_of_range_ordinal() {
+        // A zero shard count collapses to the single-shard default; an ordinal
+        // outside [0, count) is clamped to 0 so a misconfig never disowns every
+        // partition (and the single-shard path stays bit-identical).
+        let mut zero = CdcConfig {
+            shard_count: 0,
+            shard_id: 5,
+            ..CdcConfig::default()
+        };
+        zero.normalize();
+        assert_eq!(zero.shard_count, 1);
+        assert_eq!(zero.shard_id, 0);
+        assert!(!zero.is_sharded());
+
+        let mut oob = CdcConfig {
+            shard_count: 3,
+            shard_id: 9,
+            ..CdcConfig::default()
+        };
+        oob.normalize();
+        assert_eq!(oob.shard_id, 0);
+
+        let mut ok = CdcConfig {
+            shard_count: 4,
+            shard_id: 2,
+            ..CdcConfig::default()
+        };
+        ok.normalize();
+        assert_eq!((ok.shard_count, ok.shard_id), (4, 2));
     }
 
     fn restore_env(key: &str, value: Option<String>) {

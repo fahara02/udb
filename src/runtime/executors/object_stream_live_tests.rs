@@ -24,7 +24,7 @@ use super::{ExecutorByteStream, ObjectExecutor, ResourceAdminExecutor};
 ///   * path style — `UDB_LIVE_S3_PATH_STYLE` (default on for MinIO; set `0`/`false`
 ///                  for virtual-hosted AWS S3)
 #[cfg(feature = "s3")]
-fn s3_executor_from_env() -> S3Executor {
+pub(crate) fn s3_executor_from_env() -> S3Executor {
     use aws_sdk_s3::config::{Credentials, Region};
 
     fn var_chain(keys: &[&str], default: &str) -> String {

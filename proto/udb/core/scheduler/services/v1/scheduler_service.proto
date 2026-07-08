@@ -1,0 +1,594 @@
+syntax = "proto3";
+
+package udb.core.scheduler.services.v1;
+
+import "google/api/annotations.proto";
+import "udb/core/common/v1/dto.proto";
+import "udb/core/common/v1/security.proto";
+import "udb/core/scheduler/entity/v1/scheduled_job.proto";
+
+option csharp_namespace = "udb.core.Scheduler.Services.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/scheduler/services/v1;schedulerservicev1";
+option java_package = "com.udb.core.scheduler.services.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Scheduler\\Services\\V1";
+option php_namespace = "Udb\\Core\\Scheduler\\Services\\V1";
+
+// SchedulerService — durable cron and one-shot jobs as a native service.
+// Mutations persist to the canonical store, tenant-scoped by the verified claim,
+// and emit one outbox event each. The leader-elected scheduler tick fires DUE
+// jobs as outbox events only (consumers do the work).
+service SchedulerService {
+  option (udb.core.common.v1.native_service) = {
+    service_id: "scheduler"
+    logical_service_id: "scheduler"
+    proto_service_id: "scheduler"
+    display_name: "Scheduler"
+    category: "scheduler"
+    default_enabled: true
+    requires_postgres: true
+    control_plane_listener_allowed: true
+    sdk_facade_name: "scheduler"
+    cli_scaffold_group: "scheduler"
+    health_check_ref: "scheduler"
+    capability_ref: "native.scheduler"
+  };
+  option (udb.core.common.v1.service_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "scheduler"
+    generate_minimal_example: true
+  };
+  option (udb.core.common.v1.service_cli_scaffold) = {
+    scaffold_package: "scheduler"
+    import_path: "udb/native/scheduler"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+    generated_files: "udb.native.scheduler.config"
+    required_native_services: "scheduler"
+    secret_placeholders: "UDB_API_KEY"
+    smoke_test_command: "udb native lint"
+  };
+  option (udb.core.common.v1.service_dependency_contract) = {
+    required_native_services: "scheduler"
+    required_backends: "postgres"
+    required_env: "UDB_NATIVE_SERVICES_ENABLED"
+    required_env: "UDB_GRPC_TARGET"
+  };
+
+  // Create a cron or one-shot job.
+  rpc CreateJob(CreateJobRequest) returns (CreateJobResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:scheduler:create-job"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "scheduler.CreateJob"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "create_job" rest_operation_id: "createJob"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "scheduler"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "scheduler"
+      import_path: "udb/native/scheduler"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.scheduler.create_job.boilerplate"
+      route_name: "create_job"
+      middleware_name: "udb_scheduler"
+      required_native_services: "scheduler"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "scheduler"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "scheduler.CreateJob"
+      outbox_topic: "scheduler.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/scheduler/jobs"
+      body: "*"
+    };
+  }
+
+  // Get a job by id.
+  rpc GetJob(GetJobRequest) returns (GetJobResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:scheduler:get-job"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "scheduler.GetJob"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "get_job" rest_operation_id: "getJob"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "scheduler"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "scheduler"
+      import_path: "udb/native/scheduler"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.scheduler.get_job.boilerplate"
+      route_name: "get_job"
+      middleware_name: "udb_scheduler"
+      required_native_services: "scheduler"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "scheduler"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "scheduler.GetJob"
+      outbox_topic: "scheduler.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/scheduler/jobs/{job_id}"};
+  }
+
+  // List jobs for the caller's tenant.
+  rpc ListJobs(ListJobsRequest) returns (ListJobsResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:scheduler:list-jobs"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "scheduler.ListJobs"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "list_jobs" rest_operation_id: "listJobs"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "scheduler"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "scheduler"
+      import_path: "udb/native/scheduler"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.scheduler.list_jobs.boilerplate"
+      route_name: "list_jobs"
+      middleware_name: "udb_scheduler"
+      required_native_services: "scheduler"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "scheduler"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "scheduler.ListJobs"
+      outbox_topic: "scheduler.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/scheduler/jobs"};
+  }
+
+  // Delete (soft-delete) a job.
+  rpc DeleteJob(DeleteJobRequest) returns (DeleteJobResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:scheduler:delete-job"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "scheduler.DeleteJob"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "delete_job" rest_operation_id: "deleteJob"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "scheduler"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "scheduler"
+      import_path: "udb/native/scheduler"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.scheduler.delete_job.boilerplate"
+      route_name: "delete_job"
+      middleware_name: "udb_scheduler"
+      required_native_services: "scheduler"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "scheduler"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "scheduler.DeleteJob"
+      outbox_topic: "scheduler.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {delete: "/v1/scheduler/jobs/{job_id}"};
+  }
+
+  // Pause a job so the tick stops claiming it.
+  rpc PauseJob(PauseJobRequest) returns (PauseJobResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:scheduler:pause-job"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "scheduler.PauseJob"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "pause_job" rest_operation_id: "pauseJob"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "scheduler"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "scheduler"
+      import_path: "udb/native/scheduler"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.scheduler.pause_job.boilerplate"
+      route_name: "pause_job"
+      middleware_name: "udb_scheduler"
+      required_native_services: "scheduler"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "scheduler"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "scheduler.PauseJob"
+      outbox_topic: "scheduler.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/scheduler/jobs/{job_id}:pause"
+      body: "*"
+    };
+  }
+
+  // Resume a paused job.
+  rpc ResumeJob(ResumeJobRequest) returns (ResumeJobResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:scheduler:resume-job"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "scheduler.ResumeJob"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "resume_job" rest_operation_id: "resumeJob"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "scheduler"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "scheduler"
+      import_path: "udb/native/scheduler"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.scheduler.resume_job.boilerplate"
+      route_name: "resume_job"
+      middleware_name: "udb_scheduler"
+      required_native_services: "scheduler"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "scheduler"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "scheduler.ResumeJob"
+      outbox_topic: "scheduler.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/scheduler/jobs/{job_id}:resume"
+      body: "*"
+    };
+  }
+}
+
+message CreateJobRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "scheduler"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string project_id = 2;
+  string name = 3;
+  // "CRON" or "ONE_SHOT".
+  string schedule_type = 4;
+  // Cron expression (required for CRON jobs).
+  string cron_expression = 5;
+  // RFC3339 first/only fire time (required for ONE_SHOT jobs; optional CRON seed).
+  string next_fire_at = 6;
+  // Opaque JSON payload delivered with each fired event.
+  string payload = 7;
+  string target_topic = 8;
+  int32 max_attempts = 9;
+  int32 backoff_seconds = 10;
+}
+
+message CreateJobResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "scheduler"
+    generate_minimal_example: true
+  };
+  string job_id = 1;
+  string message = 2;
+  udb.core.common.v1.ApiError error = 3;
+}
+
+message GetJobRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "scheduler"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string job_id = 2;
+}
+
+message GetJobResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "scheduler"
+    generate_minimal_example: true
+  };
+  entity.v1.ScheduledJob job = 1;
+  udb.core.common.v1.ApiError error = 2;
+}
+
+message ListJobsRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "scheduler"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  // Optional status filter ("ACTIVE"/"PAUSED"/"COMPLETED"/"DEAD"); blank = all.
+  string status = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+  // Opaque pagination token returned by ListJobsResponse.next_page_token.
+  string page_token = 5;
+}
+
+message ListJobsResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "scheduler"
+    generate_minimal_example: true
+  };
+  repeated entity.v1.ScheduledJob jobs = 1;
+  int32 total_count = 2;
+  udb.core.common.v1.ApiError error = 3;
+  // Opaque token for the next page; empty when no more jobs are available.
+  string next_page_token = 4;
+}
+
+message DeleteJobRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "scheduler"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string job_id = 2;
+}
+
+message DeleteJobResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "scheduler"
+    generate_minimal_example: true
+  };
+  string message = 1;
+  udb.core.common.v1.ApiError error = 2;
+}
+
+message PauseJobRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "scheduler"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string job_id = 2;
+}
+
+message PauseJobResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "scheduler"
+    generate_minimal_example: true
+  };
+  string message = 1;
+  udb.core.common.v1.ApiError error = 2;
+}
+
+message ResumeJobRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "scheduler"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string job_id = 2;
+}
+
+message ResumeJobResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "scheduler"
+    generate_minimal_example: true
+  };
+  string message = 1;
+  udb.core.common.v1.ApiError error = 2;
+}

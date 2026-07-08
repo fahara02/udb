@@ -1,3 +1,41 @@
+x-udb-broker-env: &udb-broker-env
+  UDB_PG_DSN: postgres://udb:udb@postgres:5432/udb
+  UDB_REDIS_DSN: redis://redis:6379/0
+  UDB_QDRANT_URL: http://qdrant:6333
+  UDB_MINIO_ENDPOINT: http://minio:9000
+  UDB_MINIO_ACCESS_KEY: minio
+  UDB_MINIO_SECRET_KEY: minio123
+  UDB_KAFKA_BROKERS: kafka:9092
+  UDB_ABAC_DEFAULT_ALLOW: "true"
+  RUST_LOG: info
+
+x-udb-broker-depends: &udb-broker-depends
+  postgres:
+    condition: service_healthy
+  redis:
+    condition: service_healthy
+  qdrant:
+    condition: service_healthy
+  minio:
+    condition: service_healthy
+  kafka:
+    condition: service_healthy
+
+x-udb-broker-healthcheck: &udb-broker-healthcheck
+  test: ["CMD", "/usr/local/bin/grpc_health_probe", "-addr=127.0.0.1:50051"]
+  interval: 10s
+  timeout: 5s
+  start_period: 30s
+  retries: 6
+
+x-udb-broker-base: &udb-broker-base
+  build:
+    context: .
+    dockerfile: Dockerfile
+  environment: *udb-broker-env
+  depends_on: *udb-broker-depends
+  healthcheck: *udb-broker-healthcheck
+
 services:
   postgres:
     build:
@@ -12,6 +50,8 @@ services:
       - max_replication_slots=10
       - -c
       - max_wal_senders=10
+      - -c
+      - max_prepared_transactions=32
     environment:
       POSTGRES_USER: udb
       POSTGRES_PASSWORD: udb
@@ -70,24 +110,35 @@ services:
       timeout: 3s
       retries: 20
 
+  memcached:
+    image: memcached:1.6-alpine
+    command: ["memcached", "-m", "64", "-I", "4m"]
+    ports:
+      - "51122:11211"
+
   udb:
+    <<: *udb-broker-base
     profiles: ["broker"]
-    build:
-      context: .
-      dockerfile: Dockerfile
-    environment:
-      UDB_PG_DSN: postgres://udb:udb@postgres:5432/udb
-      UDB_REDIS_DSN: redis://redis:6379/0
-      UDB_QDRANT_URL: http://qdrant:6333
-      UDB_MINIO_ENDPOINT: http://minio:9000
-      UDB_MINIO_ACCESS_KEY: minio
-      UDB_MINIO_SECRET_KEY: minio123
-      UDB_KAFKA_BROKERS: kafka:9092
-      UDB_ABAC_DEFAULT_ALLOW: "true"
-      RUST_LOG: info
     ports:
       - "50051:50051"
       - "50052:50052"
+
+  udb-livekit:
+    <<: *udb-broker-base
+    profiles: ["sfu"]
+    environment:
+      <<: *udb-broker-env
+      UDB_TURN_SECRET: local-turn-secret
+      UDB_TURN_URLS: turn:coturn:3478?transport=udp,turn:coturn:3478?transport=tcp
+      UDB_LIVEKIT_URL: ws://livekit:7880
+      UDB_LIVEKIT_API_KEY: devkey
+      UDB_LIVEKIT_API_SECRET: secret
+      UDB_LIVEKIT_ALLOW_INSECURE: "1"
+      UDB_SESSION_ENABLED: "true"
+      UDB_SESSION_HASH_SECRET: local-sfu-session-secret
+      UDB_PASSWORD_HASH_SECRET: local-sfu-password-secret
+      UDB_JWT_PRIVATE_KEY: src/runtime/testdata/jwt_rs256_private.pem
+      UDB_JWT_PUBLIC_KEY: src/runtime/testdata/jwt_rs256_public.pem
     depends_on:
       postgres:
         condition: service_healthy
@@ -99,12 +150,106 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
+      livekit:
+        condition: service_started
+      coturn:
+        condition: service_started
+    ports:
+      - "50081:50051"
+      - "50082:50052"
+
+  notify-sidecar:
+    profiles: ["notify"]
+    build:
+      context: ./sidecars/notify
+      dockerfile: Dockerfile
+    environment:
+      UDB_NOTIFY_PROVIDER: smtp
+      UDB_NOTIFY_DRY_RUN: "1"
+    ports:
+      - "58080:8080"
     healthcheck:
-      test: ["CMD", "/usr/local/bin/grpc_health_probe", "-addr=127.0.0.1:50051"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import json,urllib.request; data=json.load(urllib.request.urlopen('http://127.0.0.1:8080/healthz', timeout=2)); raise SystemExit(0 if data.get('ok') else 1)",
+        ]
       interval: 10s
-      timeout: 5s
-      start_period: 30s
+      timeout: 3s
       retries: 6
+
+  embedding-sidecar:
+    profiles: ["embedding"]
+    build:
+      context: ./sidecars/embedding
+      dockerfile: Dockerfile
+    environment:
+      UDB_EMBED_PROVIDER: deterministic
+      UDB_EMBED_DIMS: "16"
+    ports:
+      - "58090:8080"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import json,urllib.request; data=json.load(urllib.request.urlopen('http://127.0.0.1:8080/healthz', timeout=2)); raise SystemExit(0 if data.get('ok') else 1)",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+
+  udb-ha-a:
+    <<: *udb-broker-base
+    profiles: ["broker-ha"]
+    hostname: udb-ha-a
+    environment:
+      <<: *udb-broker-env
+      UDB_PROJECTION_ENABLED: "true"
+    ports:
+      - "50061:50051"
+      - "50062:50052"
+
+  udb-ha-b:
+    <<: *udb-broker-base
+    profiles: ["broker-ha"]
+    hostname: udb-ha-b
+    environment:
+      <<: *udb-broker-env
+      UDB_PROJECTION_ENABLED: "true"
+    ports:
+      - "50071:50051"
+      - "50072:50052"
+
+  livekit:
+    profiles: ["sfu"]
+    image: livekit/livekit-server:v1.8.4
+    command: ["--dev", "--bind", "0.0.0.0"]
+    ports:
+      - "57880:7880"
+      - "57881:7881"
+      - "57882:7882/udp"
+
+  coturn:
+    profiles: ["sfu"]
+    image: coturn/coturn:4.6.2
+    command:
+      - --no-cli
+      - --fingerprint
+      - --lt-cred-mech
+      - --use-auth-secret
+      - --static-auth-secret=local-turn-secret
+      - --realm=udb.local
+      - --listening-port=3478
+      - --min-port=49160
+      - --max-port=49200
+    ports:
+      - "53478:3478"
+      - "53478:3478/udp"
+      - "49160-49200:49160-49200/udp"
 
   qdrant:
     image: qdrant/qdrant:v1.13.4
