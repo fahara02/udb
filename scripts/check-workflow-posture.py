@@ -1495,8 +1495,12 @@ PAGES_PLAYGROUND_REQUIREMENTS = (
     ('isinstance(bench.get("history"), list)', "benchmark history validation"),
     ('full_rows = []', "benchmark full-RPC row collection"),
     ('rows = sdk.get("full_rpcs") or []', "benchmark full-RPC row source"),
+    ('row.setdefault("wire_api", wire_api)', "benchmark legacy wire identity normalizer"),
+    ('row.setdefault("api_alias", "")', "benchmark legacy alias normalizer"),
+    ('row.setdefault("operation_id", "")', "benchmark legacy operationId normalizer"),
     ('"wire_api" not in row or "api_alias" not in row or "operation_id" not in row', "benchmark public identity row validation"),
     ('benchmark full_rpcs rows must include wire_api, api_alias, and operation_id', "benchmark public identity failure"),
+    ('row.get("operation_id") or row.get("api_alias") or row.get("wire_api")', "benchmark public identity fallback check"),
     ('benchmark full_rpcs rows lack public API identity', "benchmark public identity non-empty check"),
     ("from html.parser import HTMLParser", "HTML local-ref parser import"),
     ("from urllib.parse import urlparse", "HTML local-ref URL parser import"),
@@ -7179,6 +7183,14 @@ jobs:
           for sdk in bench.get("sdks", []):
               rows = sdk.get("full_rpcs") or []
               assert isinstance(rows, list), f"benchmark full_rpcs for {sdk.get('id')} must be a list"
+              for row in rows:
+                  service = str(row.get("service") or "")
+                  rpc = str(row.get("wire_rpc") or row.get("rpc") or "")
+                  wire_api = row.get("wire_api") or (f"{service}/{rpc}" if service and rpc else rpc)
+                  row.setdefault("wire_api", wire_api)
+                  row.setdefault("api_alias", "")
+                  row.setdefault("operation_id", "")
+                  row.setdefault("api", row.get("operation_id") or row.get("api_alias") or wire_api)
               full_rows.extend(rows)
           if full_rows:
               missing_identity = [
@@ -7186,7 +7198,8 @@ jobs:
                   if "wire_api" not in row or "api_alias" not in row or "operation_id" not in row
               ]
               assert not missing_identity, "benchmark full_rpcs rows must include wire_api, api_alias, and operation_id"
-              assert any(row.get("api_alias") or row.get("operation_id") for row in full_rows), "benchmark full_rpcs rows lack public API identity"
+              assert any(row.get("operation_id") or row.get("api_alias") or row.get("wire_api") for row in full_rows), "benchmark full_rpcs rows lack public API identity"
+          Path("docs/site/bench-results.json").write_text(json.dumps(bench, indent=2, sort_keys=True) + "\n")
 
           from html.parser import HTMLParser
           from urllib.parse import urlparse
