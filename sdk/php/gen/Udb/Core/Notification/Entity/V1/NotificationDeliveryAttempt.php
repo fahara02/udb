@@ -12,7 +12,6 @@ use Google\Protobuf\RepeatedField;
 /**
  * ---------------------------------------------------------------------------
  * NotificationDeliveryAttempt — master-plan 9.13 delivery-status record.
- *
  * The broker records each notification SEND as a PENDING NotificationLog
  * (intent). A leader-elected delivery worker, or a provider webhook bridge that
  * calls NotificationService.ReportDelivery, then drives the terminal per-channel
