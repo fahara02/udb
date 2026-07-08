@@ -1979,18 +1979,20 @@ mod conversion_tests {
 
 #[cfg(test)]
 mod error_detail_tests {
+    #[cfg(any(feature = "pinecone", feature = "weaviate", feature = "elasticsearch"))]
+    use super::http_status_to_tonic;
     #[cfg(feature = "qdrant")]
     use super::qdrant_status;
     use super::{
         ERROR_DETAIL_METADATA_KEY, HTTP_RETRYABLE_BACKOFF_MS, INLINE_OBJECT_LIMIT_BYTES,
         STATUS_TAG_PREFIX, backend_transport_status, capability_status, compile_error_status,
-        deadline_exceeded_status, failed_precondition_fields, http_status_to_tonic,
-        internal_status, invalid_argument_fields, json_f64, json_i64, json_required_f32_vec,
-        json_required_str, object_bytes_from_json, parse_sql_dispatch, policy_status,
-        policy_status_with_code, prefix_status, quota_refusal_status, quota_status,
-        referential_constraint_status, reject_oversized_object, reject_plan,
-        retryable_aborted_status, retryable_status, schema_status, sqlx_error_to_status,
-        status_from_store_string, status_with_error_detail, validate_identifier,
+        deadline_exceeded_status, failed_precondition_fields, internal_status,
+        invalid_argument_fields, json_f64, json_i64, json_required_f32_vec, json_required_str,
+        object_bytes_from_json, parse_sql_dispatch, policy_status, policy_status_with_code,
+        prefix_status, quota_refusal_status, quota_status, referential_constraint_status,
+        reject_oversized_object, reject_plan, retryable_aborted_status, retryable_status,
+        schema_status, sqlx_error_to_status, status_from_store_string, status_with_error_detail,
+        validate_identifier,
     };
     use crate::proto::{ErrorDetail, ErrorKind};
     use prost::Message as _;
