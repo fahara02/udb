@@ -1,0 +1,89 @@
+name: REST gateway boundary smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Enabled REST/gateway base URL, for example https://udb.example.com"
+        required: true
+        type: string
+      success_route:
+        description: "Successful unary route as METHOD /path or METHOD:/path"
+        required: true
+        type: string
+      error_route:
+        description: "Failing unary route as METHOD /path or METHOD:/path"
+        required: true
+        type: string
+      error_code:
+        description: "Expected ApiError.code from the failing route"
+        required: true
+        type: string
+      header:
+        description: "Optional extra request header as Name: Value"
+        required: false
+        default: ""
+        type: string
+      timeout_seconds:
+        description: "Per-request timeout in seconds"
+        required: false
+        default: "10"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rest-gateway-smoke-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  rest-gateway-boundary:
+    name: REST boundary content/status proof
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run REST route source guards
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/rest_route_gateway_smoke.py --selftest
+          python3 scripts/rest_route_gateway_smoke.py --check-openapi
+
+      - name: Run live REST boundary smoke
+        shell: bash
+        env:
+          BASE_URL: ${{ inputs.base_url }}
+          SUCCESS_ROUTE: ${{ inputs.success_route }}
+          ERROR_ROUTE: ${{ inputs.error_route }}
+          ERROR_CODE: ${{ inputs.error_code }}
+          HEADER: ${{ inputs.header }}
+          TIMEOUT_SECONDS: ${{ inputs.timeout_seconds }}
+        run: |
+          set -euo pipefail
+          mkdir -p rest-gateway-evidence
+          args=(
+            --base-url "$BASE_URL"
+            --require-route-family-proof
+            --require-boundary-proof
+            --boundary-success "$SUCCESS_ROUTE"
+            --boundary-error "$ERROR_ROUTE"
+            --boundary-error-code "$ERROR_CODE"
+            --timeout "$TIMEOUT_SECONDS"
+            --evidence-out rest-gateway-evidence/evidence.json
+          )
+          if [ -n "$HEADER" ]; then
+            args+=(--header "$HEADER")
+          fi
+          python3 scripts/rest_route_gateway_smoke.py "${args[@]}"
+
+      - name: Upload REST gateway evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rest-gateway-evidence
+          path: rest-gateway-evidence/evidence.json
+          if-no-files-found: ignore
+          retention-days: 14

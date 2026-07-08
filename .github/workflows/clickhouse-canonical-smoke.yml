@@ -1,0 +1,68 @@
+name: ClickHouse canonical smoke
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: clickhouse-canonical-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  clickhouse-canonical:
+    name: KeeperMap canonical contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-rust
+        with:
+          cache-key: clickhouse-canonical-smoke
+
+      - name: Docker environment
+        run: |
+          docker version
+          docker compose version
+
+      - name: Start Keeper-enabled ClickHouse
+        run: docker compose -f docker-compose.canonical.yml up -d --wait clickhouse
+
+      - name: ClickHouse canonical conformance
+        env:
+          UDB_COLUMN_DSN: http://127.0.0.1:58123/udb
+          UDB_CLICKHOUSE_DSN: http://127.0.0.1:58123/udb
+          UDB_COLUMN_USER: udb
+          UDB_COLUMN_PASSWORD: udb
+          UDB_COLUMN_DATABASE: udb
+        run: >-
+          cargo test --locked --lib --features clickhouse
+          clickhouse_canonical_store_satisfies_all_contracts_live
+          -- --nocapture
+
+      - name: Collect ClickHouse diagnostics
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          mkdir -p clickhouse-canonical-logs
+          docker ps -a > clickhouse-canonical-logs/docker-ps.txt 2>&1
+          docker compose -f docker-compose.canonical.yml ps \
+            > clickhouse-canonical-logs/clickhouse-ps.txt 2>&1
+          docker compose -f docker-compose.canonical.yml logs --no-color clickhouse \
+            > clickhouse-canonical-logs/clickhouse.log 2>&1
+
+      - name: Upload ClickHouse diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: clickhouse-canonical-logs
+          path: clickhouse-canonical-logs
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Tear down ClickHouse
+        if: always()
+        run: docker compose -f docker-compose.canonical.yml down -v --remove-orphans

@@ -1,0 +1,889 @@
+#!/usr/bin/env python3
+"""Fail CI if Chapter 05 durable idempotency-dedup posture regresses."""
+
+from __future__ import annotations
+
+import argparse
+import shutil
+import sys
+import tempfile
+from dataclasses import dataclass
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+@dataclass(frozen=True)
+class SourceCheck:
+    label: str
+    path: str
+    required: tuple[str, ...]
+
+
+CHECKS: tuple[SourceCheck, ...] = (
+    SourceCheck(
+        "system catalog idempotency table",
+        "src/runtime/system.rs",
+        (
+            "pub idempotency_keys_table: String",
+            'env_identifier(\n                "UDB_IDEMPOTENCY_KEYS_TABLE",\n                "udb_idempotency_keys"',
+            "pub(crate) fn idempotency_keys_relation(&self) -> String",
+            'expected_relation(\n            "idempotency_keys"',
+            "CREATE TABLE IF NOT EXISTS {} (\n                dedup_key TEXT PRIMARY KEY",
+            "response_json JSONB NOT NULL DEFAULT '{{}}'::jsonb",
+            "CREATE INDEX IF NOT EXISTS {} ON {} (tenant_id, project_id, created_at)",
+        ),
+    ),
+    SourceCheck(
+        "same-tx idempotency helpers",
+        "src/runtime/core/setup_data.rs",
+        (
+            "struct IdempotencyClaim",
+            "struct IdempotencyPersistContext",
+            "fn idempotency_dedup_key(",
+            '"{tenant_id}\\0{project_id}\\0{message_type}\\0{operation}\\0{key}"',
+            "distinct operations must not collide",
+            "caller key bytes must not be trim-normalized",
+            "fn idempotency_key_for_dedup(key: &str) -> Result<Option<&str>, tonic::Status>",
+            "ch.is_whitespace() || ch.is_control()",
+            "idempotency_key must be empty or contain no whitespace or control characters",
+            "idempotency_key_for_dedup_rejects_whitespace_and_control_tokens",
+            "async fn claim_idempotency_key_in_tx(",
+            "tx: &mut sqlx::Transaction<'_, sqlx::Postgres>",
+            "fn idempotency_claim_sql(rel: &str) -> String",
+            "ON CONFLICT (dedup_key) DO NOTHING",
+            "SELECT false AS inserted, response_json\n         FROM {rel}",
+            "AND NOT EXISTS (SELECT 1 FROM ins)",
+            "AND tenant_id = $2",
+            "AND project_id = $3",
+            "AND message_type = $4",
+            "AND operation = $5",
+            ".fetch_optional(&mut **tx)",
+            "idempotency dedup claim returned no row for matching scope",
+            "fn idempotency_dedup_claim_status(",
+            "crate::runtime::executor_utils::retryable_status(\n        \"postgres\",\n        \"idempotency_dedup_claim\"",
+            "idempotency dedup claim failed: dedup store unavailable (fail-closed)",
+            "idempotency_dedup_claim_status_is_retryable_unavailable",
+            "idempotency_claim_sql_suppresses_replay_arm_after_insert",
+            "fn mutation_response_idempotency_json(\n    response: &MutationResponse,\n) -> Result<JsonValue, tonic::Status>",
+            "fn mutation_response_idempotency_json_for_claim(",
+            '"tenant_id".to_string(),\n        JsonValue::String(tenant_id.to_string())',
+            '"project_id".to_string(),\n        JsonValue::String(project_id.to_string())',
+            '"message_type".to_string(),\n        JsonValue::String(message_type.to_string())',
+            "fn idempotency_response_write_receipt_lockstep(",
+            "idempotency_response_write_receipt_lockstep(response, &summary)?",
+            "idempotency response summary requires typed write_receipt before persist",
+            "idempotency response summary typed write_receipt must match write_receipt_json before persist",
+            "mutation_response_from_idempotency_json(&summary)?",
+            "fn mutation_response_resource_uri(",
+            "fn mutation_response_resource_uri_or_fallback(",
+            "require_data_plane_uri: bool",
+            "Err(err) if require_data_plane_uri => Err(err)",
+            "mutation_response_resource_uri_fallback_is_keyless_only",
+            "keyless bulk delete may keep planner resource URI",
+            "keyed first-writer summary must require data-plane resource URI",
+            'Ok(format!("udb://{tenant}/{message}/{resource_id}"))',
+            "fn mutation_resource_id_from_json(",
+            "fn mutation_resource_id_eq_value(value: &JsonValue) -> Option<&JsonValue>",
+            "map.get(\"$eq\").or_else(|| map.get(\"=\"))",
+            "mutation response resource_uri {label} must be a scalar equality value",
+            "primary key equality filter should build data-plane URI",
+            'for key in ["$and", "and"]',
+            "primary key equality inside AND filter should build data-plane URI",
+            "fn mutation_identity_field_from_json",
+            "fn mutation_collect_identity_field",
+            "mutation response resource_uri identity field is ambiguous",
+            "identity field inside AND filter should build data-plane URI",
+            '{"account_id": "acct-1"}',
+            'serde_json::json!({"or": [{"invoice_id": "inv-1"}, {"invoice_id": "inv-2"}]})',
+            "mutation response resource_uri requires a scalar primary key or identity field",
+            "mutation_response_resource_uri_uses_data_plane_identity",
+            "mutation_response_resource_uri_falls_back_to_identity_fields",
+            "mutation_response_resource_uri_rejects_ambiguous_identity_tokens",
+            "fn write_receipt_json_or_status(",
+            "write receipt JSON serialization failed",
+            "write_receipt_json_serialization_is_not_silent_default",
+            "fn returned_record_json_or_status(",
+            "PostgreSQL upsert RETURNING row decoded without record_json",
+            "return_record_json_decode_is_not_silent_default",
+            "fn idempotency_response_persist_sql(rel: &str) -> String",
+            "async fn persist_idempotency_response_in_tx(",
+            "let summary = mutation_response_idempotency_json_for_claim(",
+            "WHERE dedup_key = $2\n           AND tenant_id = $3\n           AND project_id = $4\n           AND message_type = $5\n           AND operation = $6",
+            ".bind(&dedup_ctx.tenant_id)",
+            ".bind(&dedup_ctx.project_id)",
+            ".bind(&dedup_ctx.message_type)",
+            ".bind(dedup_ctx.operation)",
+            "idempotency_response_persist_row_count_status(result.rows_affected())?",
+            "idempotency_response_persist_requires_exactly_one_row",
+            "idempotency_response_persist_update_is_scope_bound",
+            "fn mutation_response_from_idempotency_json(",
+            "Result<MutationResponse, tonic::Status>",
+            "idempotency replay response invalid",
+            "negative integer field {field}",
+            "negative stored affected_rows must fail closed",
+            "fn idempotency_replay_mutation_id(prior: &JsonValue) -> Result<String, tonic::Status>",
+            "invalid mutation_id",
+            "let parsed = Uuid::parse_str(&mutation_id)",
+            "parsed.to_string() != mutation_id",
+            "mutation_id must be a canonical lowercase UUID",
+            "malformed stored mutation_id must fail closed",
+            "uppercase stored mutation_id must fail closed",
+            "compact stored mutation_id must fail closed",
+            "fn idempotency_replay_checksum(prior: &JsonValue) -> Result<String, tonic::Status>",
+            "fn validate_idempotency_sha256_token(",
+            'validate_idempotency_sha256_token("checksum_sha256", &checksum, true)?',
+            "checksum_sha256 must be empty or start with sha256:",
+            "checksum_sha256 must be empty or sha256:<64 lowercase hex>",
+            "malformed stored checksum_sha256 must fail closed",
+            "short stored checksum_sha256 must fail closed",
+            "uppercase stored checksum_sha256 must fail closed",
+            "fn idempotency_replay_resource_uri(prior: &JsonValue) -> Result<String, tonic::Status>",
+            "fn idempotency_replay_resource_uri_scope(",
+            "fn idempotency_replay_resource_uri_matches_claim(",
+            "fn idempotency_replay_project_matches_claim(",
+            "fn idempotency_replay_scope_matches_claim(",
+            "tenant_id must match idempotency claim tenant_id",
+            "project_id must match idempotency claim project_id",
+            "message_type must match idempotency claim message_type",
+            "resource_uri authority must match idempotency claim tenant_id",
+            "resource_uri message type must match idempotency claim message_type",
+            "resource_uri must start with udb://",
+            "resource_uri must include non-empty authority and path",
+            "resource_uri path must include message type and resource id",
+            "resource_uri must not include whitespace",
+            "resource_uri must not contain control characters",
+            "mutation response resource_uri {label} must not contain control characters",
+            "malformed stored resource_uri must fail closed",
+            "stored resource_uri without path must fail closed",
+            "stored resource_uri without resource id must fail closed",
+            "stored resource_uri empty resource id must fail closed",
+            "stored resource_uri extra segment must fail closed",
+            "stored resource_uri whitespace must fail closed",
+            "stored resource_uri control character must fail closed",
+            "struct IdempotencyJsonNoDuplicateKeys",
+            "fn validate_idempotency_json_no_duplicate_keys(",
+            "must not contain duplicate JSON key",
+            "fn idempotency_replay_record_json(prior: &JsonValue) -> Result<Vec<u8>, tonic::Status>",
+            'validate_idempotency_json_no_duplicate_keys("record_json", &record_json)?',
+            "record_json must be a valid JSON object",
+            "record_json must be a JSON object",
+            "record_json must be a non-empty JSON object",
+            "stored record_json duplicate key must fail closed",
+            "stored record_json non-JSON payload must fail closed",
+            "stored record_json array payload must fail closed",
+            "stored record_json empty object payload must fail closed",
+            "fn validate_idempotency_replay_write_receipt(",
+            "write_receipt_json source_lsn must be non-empty",
+            "write_receipt_json source_lsn must not include whitespace",
+            "write_receipt_json source_lsn must not contain control characters",
+            "write_receipt_json written_at_unix_ms must be positive",
+            "write_receipt_json manifest_checksum must not include surrounding whitespace",
+            'validate_idempotency_sha256_token(\n        "write_receipt_json manifest_checksum"',
+            "write_receipt_json manifest_checksum must start with sha256:",
+            "write_receipt_json manifest_checksum must be sha256:<64 lowercase hex>",
+            "write_receipt_json projection_task_ids[{index}] must be non-empty and contain no whitespace",
+            "write_receipt_json projection_task_ids[{index}] must not contain control characters",
+            "const IDEMPOTENCY_WRITE_RECEIPT_FIELDS: [&str; 5]",
+            "fn validate_idempotency_replay_write_receipt_object(",
+            "write_receipt_json must be a JSON object",
+            "write_receipt_json missing field {field}",
+            "write_receipt_json unexpected field {field}",
+            "fn idempotency_replay_write_receipt(",
+            'validate_idempotency_json_no_duplicate_keys(\n        "write_receipt_json",\n        write_receipt_json.as_bytes(),\n    )?',
+            "validate_idempotency_replay_write_receipt_object(&write_receipt_json)?",
+            "write_receipt_json must not include surrounding whitespace",
+            "stored write_receipt_json duplicate key must fail closed",
+            "stored write_receipt_json missing field must fail closed",
+            "stored write_receipt_json unexpected field must fail closed",
+            "stored write_receipt_json padding must fail closed",
+            "stored write_receipt_json timestamp must fail closed",
+            "stored write_receipt_json empty source_lsn must fail closed",
+            "stored write_receipt_json source_lsn whitespace must fail closed",
+            "stored write_receipt_json source_lsn control character must fail closed",
+            "stored write_receipt_json manifest checksum padding must fail closed",
+            "stored write_receipt_json manifest checksum prefix must fail closed",
+            "stored write_receipt_json manifest checksum shape must fail closed",
+            "stored write_receipt_json manifest checksum case must fail closed",
+            "stored write_receipt_json task id padding must fail closed",
+            "stored write_receipt_json task id whitespace must fail closed",
+            "stored write_receipt_json task id control character must fail closed",
+            "was_duplicate: true",
+            "fn mutation_response_from_idempotency_json_for_claim(",
+            "idempotency_replay_scope_matches_claim(prior, tenant_id, project_id, message_type)?",
+            "idempotency_dedup_key_is_tenant_and_project_scoped",
+            "idempotency_replay_response_restores_first_writer_summary",
+            "idempotency_replay_response_is_claim_scoped",
+            "idempotency_replay_response_rejects_corrupt_summary",
+            "idempotency_response_json_roundtrips_full_mutation_response",
+            "idempotency_response_json_must_be_replay_decodable_before_persist",
+            "idempotency response summary must be replay-decodable before persist",
+            "idempotency_response_json_requires_typed_receipt_lockstep_before_persist",
+            "typed write_receipt must be present before persist",
+            "typed write_receipt must match write_receipt_json before persist",
+        ),
+    ),
+    SourceCheck(
+        "upsert keyed replay path",
+        "src/runtime/core/setup_data.rs",
+        (
+            "pub async fn upsert(",
+            "let key = idempotency_key_for_dedup(&request.idempotency_key)?;",
+            "if let Some(key) = key",
+            "&request.message_type,\n                    \"upsert\",\n                    key,",
+            "if !claim.fresh",
+            "return mutation_response_from_idempotency_json_for_claim(",
+            "&context.tenant_id,\n                        &context.project_id,\n                        &request.message_type,",
+            "operation: \"upsert\"",
+            "returned_record_json_or_status(&record_set.records_json)?",
+            "let write_receipt_json = write_receipt_json_or_status(&receipt)?;",
+            "mutation_response_resource_uri_or_fallback(",
+            "dedup_ctx.is_some()",
+            "persist_idempotency_response_in_tx(&mut tx, dedup_ctx, &response).await?",
+            "Fresh path only",
+            "was_duplicate: false",
+        ),
+    ),
+    SourceCheck(
+        "delete key plumbing and keyed replay path",
+        "src/runtime/core/setup_data.rs",
+        (
+            "pub async fn delete(",
+            "idempotency_key: String",
+            "let key = idempotency_key_for_dedup(&idempotency_key)?;",
+            "if let Some(key) = key",
+            "message_type,\n                    \"delete\",\n                    key,",
+            "if !claim.fresh",
+            "return mutation_response_from_idempotency_json_for_claim(",
+            "&context.tenant_id,\n                        &context.project_id,\n                        message_type,",
+            "operation: \"delete\"",
+            "let write_receipt_json = write_receipt_json_or_status(&receipt)?;",
+            "mutation_response_resource_uri_or_fallback(",
+            "dedup_ctx.is_some()",
+            "persist_idempotency_response_in_tx(&mut tx, dedup_ctx, &response).await?",
+            "was_duplicate: false",
+        ),
+    ),
+    SourceCheck(
+        "handler delete passes idempotency key",
+        "src/runtime/service/handlers_data.rs",
+        (
+            "let idempotency_key = req.idempotency_key.clone();",
+            ".delete(manifest, &message_type, filter, context, idempotency_key)",
+        ),
+    ),
+    SourceCheck(
+        "batch upsert reuses per-item upsert path",
+        "src/runtime/service/handlers_data.rs",
+        (
+            "while let Some(item) = stream.message().await?",
+            "DataBrokerService::authorize_message_item(",
+            "&item.message_type,\n                    \"Upsert\",",
+            "security_for_stream.request_context_with_decision(&item_decision_id)",
+            "super::native_helpers::execute_stream_batch_item(",
+            "crate::runtime::channels::OperationChannel::Write",
+            "runtime.upsert(&manifest, item, item_context)",
+            "BatchUpsert",
+        ),
+    ),
+    SourceCheck(
+        "outbox keyed idempotency is fail-closed/observable",
+        "src/runtime/core/probe_dispatch.rs",
+        (
+            "Redis unavailable for idempotency check; refusing keyed enqueue (fail-closed)",
+            "crate::runtime::executor_utils::retryable_status",
+            '"idempotency_dedup_check"',
+            "idempotency dedup store unavailable; keyed enqueue refused (fail-closed)",
+            "let store_result: redis::RedisResult<()> = conn",
+            "failed to persist idempotency guard after enqueue; key is now untracked",
+        ),
+    ),
+    SourceCheck(
+        "outbox proto documents fail-closed keyed enqueue",
+        "proto/udb/entity/v1/outbox.proto",
+        (
+            "If the dedup store is unavailable, a keyed enqueue is refused (UNAVAILABLE)",
+            "rather than risking a duplicate (fail-closed).",
+        ),
+    ),
+    SourceCheck(
+        "DataBroker Upsert/Delete replay-safe contract",
+        "proto/udb/services/v1/data_broker.proto",
+        (
+            "rpc Upsert(udb.entity.v1.UpsertRequest) returns (udb.entity.v1.MutationResponse)",
+            "rpc Delete(udb.entity.v1.DeleteRequest) returns (udb.entity.v1.MutationResponse)",
+            "option (udb.core.common.v1.method_idempotency_contract) = {",
+            'request_key_field: "idempotency_key"',
+            'duplicate_response_field: "was_duplicate"',
+            "replay_safe: true",
+        ),
+    ),
+    SourceCheck(
+        "served idempotency proof requires full live evidence set",
+        "scripts/idempotency_served_replay_smoke.py",
+        (
+            "REQUIRED_LIVE_PROOF_INPUTS",
+            'FAIL_CLOSED_STATUS = "UNAVAILABLE"',
+            'UPSERT_METHOD = "/udb.services.v1.DataBroker/Upsert"',
+            'BATCH_UPSERT_METHOD = "/udb.services.v1.DataBroker/BatchUpsert"',
+            '("upsert_json", "keyed Upsert replay")',
+            '("tenant2_upsert_json", "tenant/project key isolation")',
+            '"--tenant2-header"',
+            "tenant2_metadata = _parse_headers(args.tenant2_header) if args.tenant2_header else metadata",
+            "check_tenant_isolation(stub, upsert, tenant2, tenant2_metadata, timeout)",
+            '("batch_upsert_json", "BatchUpsert duplicate replay")',
+            '("fail_closed_upsert_json", "dedup-store-down keyed fail-closed")',
+            '("fail_closed_select_json", "dedup-store-down no-write select")',
+            '("keyless_upsert_json", "dedup-store-down keyless fresh path")',
+            'SELECT_METHOD = "/udb.services.v1.DataBroker/Select"',
+            "def validate_fail_closed_no_write_select(",
+            "filter must exactly match keyed fail-closed identity fields",
+            "def _assert_no_rows(",
+            "expected no records_json rows",
+            "def missing_required_live_proofs(",
+            "def validate_live_proof_inputs(",
+            "def validate_fail_closed_requests(",
+            "def validate_fail_closed_freshness_scope(",
+            "def validate_fail_closed_status(",
+            "def validate_upsert_request_message(",
+            "from udb.services.v1 import data_broker_pb2",
+            "def assert_databroker_method_request(",
+            "data_broker_pb2.DESCRIPTOR.services_by_name.get(\"DataBroker\")",
+            "request_descriptor = getattr(request, \"DESCRIPTOR\", None)",
+            "method_descriptor.input_type.full_name",
+            "does not match RPC input",
+            "DataBroker generated descriptor has no method",
+            "expected_code = validate_fail_closed_status(code)",
+            "def validate_message_type_token(",
+            "def validate_upsert_payload(",
+            "object_pairs_hook=_reject_duplicate_json_keys",
+            "parse_constant=_reject_non_finite_json_constant",
+            "proof JSON must not contain non-standard constant",
+            "GRPC_METADATA_NAME_CHARS",
+            "gRPC metadata header name must contain only lowercase letters",
+            "gRPC metadata header name must not start with grpc-",
+            "def _contains_control_character(",
+            "def validate_grpc_target(",
+            "gRPC target must be a host:port authority, not a URL or path",
+            "gRPC target must not include control characters",
+            "gRPC target port must be an integer from 1 to 65535",
+            "MAX_LIVE_TIMEOUT_SECONDS = 120.0",
+            "TIMEOUT_DECIMAL_PATTERN",
+            "def normalize_timeout_seconds(",
+            "def validate_timeout_seconds(",
+            "def validate_runtime_metadata(",
+            "def validate_runtime_timeout_seconds(",
+            "def validate_runtime_transport_inputs(",
+            "def validate_runtime_stub_method(",
+            "runtime stub must expose callable",
+            "def validate_runtime_mutation_response(",
+            "runtime response must be a MutationResponse",
+            "def call_runtime_mutation(",
+            "allow_rpc_error: bool = False",
+            "allow_rpc_error=True",
+            "runtime call raised error",
+            "runtime call raised unexpected gRPC error",
+            "timeout must be a finite number of seconds",
+            "timeout must not include surrounding whitespace",
+            "timeout must be a positive decimal number of seconds",
+            "timeout must be greater than 0 seconds",
+            "timeout must be <= 120 seconds",
+            "MAX_PROOF_INPUT_BYTES = 1_048_576",
+            "MAX_FAIL_CLOSED_ERROR_MESSAGE_BYTES = 8_192",
+            "def _read_proof_text(",
+            "proof file must exist and be a regular file",
+            "proof file must be <=",
+            "def _assert_restored_summary(",
+            "def _assert_fresh_request_summary(",
+            "def _assert_typed_write_receipt_lockstep(",
+            "MANIFEST_CHECKSUM_PATTERN = re.compile",
+            "manifest_checksum must be sha256:<64 lowercase hex>",
+            "def _read_rpc_status_code(",
+            "gRPC status code must be readable",
+            "gRPC status code could not be read",
+            "gRPC status code must be a grpc.StatusCode",
+            "_read_rpc_status_code(\"fail-closed keyed Upsert\", error).name",
+            "def _assert_rpc_error_message(",
+            "gRPC error message must be readable",
+            "gRPC error message must be a string",
+            "gRPC error message must be non-empty",
+            "gRPC error message must not include surrounding whitespace",
+            "gRPC error message must not contain control characters",
+            "gRPC error message must be <=",
+            "gRPC error message must identify idempotency dedup",
+            "message_type must be non-empty",
+            "message_type must not include surrounding whitespace",
+            "message_type must not include whitespace",
+            "must not contain control characters",
+            "record_json must be non-empty",
+            "record_json must be a valid JSON object",
+            "record_json must not contain non-standard JSON constants",
+            "record_json must be a JSON object",
+            "record_json must be a non-empty JSON object",
+            "must use only one of record_json, record_json_object, or record_json_text",
+            "proof JSON must not contain duplicate key",
+            "keyed Upsert non-finite payload input",
+            "non-finite Upsert proof JSON input",
+            'validate_keyed_upsert("keyed Upsert replay proof", request)',
+            "keyed Upsert runtime empty-key regression was not caught",
+            "keyed Upsert idempotency_key control-character input",
+            "idempotency runtime request-message validation regression was not caught",
+            "idempotency runtime metadata validation regression was not caught",
+            "idempotency runtime timeout validation regression was not caught",
+            "idempotency runtime Upsert stub validation regression was not caught",
+            "idempotency runtime Upsert response-message validation regression was not caught",
+            "idempotency runtime Upsert call-error validation regression was not caught",
+            "idempotency runtime Upsert unexpected-RpcError validation regression was not caught",
+            "idempotency method/request descriptor mismatch regression was not caught",
+            "idempotency missing method descriptor regression was not caught",
+            "tenant/project key isolation proof requires --upsert-json",
+            "def validate_tenant_isolation_requests(",
+            "payload = validate_tenant_isolation_requests(baseline, request)",
+            "keyed Upsert replay proof idempotency_key must be non-empty",
+            "tenant/project key isolation proof must reuse the --upsert-json idempotency_key",
+            "tenant/project key isolation proof must reuse the --upsert-json message_type",
+            "tenant/project key isolation proof must use a different tenant_id",
+            "tenant/project key isolation proof must use a different project_id",
+            "def _validate_payload_scope(",
+            "def _shared_non_scope_payload_fields(",
+            "tenant/project key isolation proof must use scope-correct record_json, not an exact reused payload",
+            "tenant/project key isolation proof must share at least one non-scope record_json field/value",
+            "second tenant/project keyed Upsert replay",
+            "tenant/project replay regression was not caught",
+            "tenant/project runtime baseline regression was not caught",
+            "tenant/project runtime empty-key regression was not caught",
+            "tenant/project record_json request binding regression was not caught",
+            "tenant/project fresh duplicate-flag regression was not caught",
+            "tenant/project missing write_receipt_json regression was not caught",
+            "fresh response affected_rows must be positive",
+            "fresh affected_rows regression was not caught",
+            "fresh duplicate-flag regression was not caught",
+            "MUTATION_ID_PATTERN = re.compile(",
+            "def _assert_mutation_id(",
+            '_assert_mutation_id(label, first, "first response")',
+            '_assert_mutation_id(label, second, "duplicate response")',
+            "first response mutation_id must be non-empty",
+            "duplicate response mutation_id must be non-empty",
+            "first response mutation_id must be a lowercase UUID",
+            "second.mutation_id != first.mutation_id",
+            "duplicate response mutation_id differs from first response",
+            "mutation_id replay regression was not caught",
+            "added mutation_id replay regression was not caught",
+            "invalid mutation_id replay regression was not caught",
+            "duplicate response affected_rows differs from first response",
+            "affected_rows replay regression was not caught",
+            "first response must include at least one replay summary field",
+            "first response resource_uri authority must equal request tenant_id",
+            "first response resource_uri path must start with request message_type",
+            "first response resource_uri path must include request message_type and resource id",
+            "first response resource_uri must be present for request identity proof",
+            "first response resource_uri id must match an identity request field value",
+            "resource_uri id proof identity field value must not include surrounding whitespace",
+            "resource_uri id proof identity field value must not include whitespace",
+            "resource_uri id proof requires at least one scalar identity request field",
+            "keyed Upsert missing identity field regression was not caught",
+            "duplicate response record_json was absent from first response",
+            "duplicate response write_receipt_json differs from first response",
+            "typed write_receipt must be present when write_receipt_json is present",
+            "typed write_receipt must match write_receipt_json",
+            "empty replay summary regression was not caught",
+            "missing resource_uri identity proof regression was not caught",
+            "missing write_receipt_json replay proof regression was not caught",
+            "non-finite record_json replay summary regression was not caught",
+            "wrong-tenant resource_uri replay summary regression was not caught",
+            "wrong-message resource_uri replay summary regression was not caught",
+            "short-path resource_uri replay summary regression was not caught",
+            "wrong-id resource_uri replay summary regression was not caught",
+            "non-identity scalar resource_uri replay summary regression was not caught",
+            "padded identity resource_uri replay summary regression was not caught",
+            "embedded-space identity resource_uri replay summary regression was not caught",
+            "added replay summary regression was not caught",
+            "dropped replay summary regression was not caught",
+            "missing typed write_receipt replay summary regression was not caught",
+            "mismatched typed write_receipt replay summary regression was not caught",
+            "def validate_batch_upsert_requests(",
+            "first_payload, _second_payload = validate_batch_upsert_requests(requests)",
+            "assert_databroker_method_request(BATCH_UPSERT_METHOD, requests[0], \"BatchUpsert\")",
+            "BatchUpsert proof first two requests must share idempotency_key",
+            "BatchUpsert proof requires exactly two request objects",
+            'validate_upsert_payload("BatchUpsert proof first request", first)',
+            'validate_upsert_payload("BatchUpsert proof second request", second)',
+            "BatchUpsert proof second request must carry semantically different record_json to prove first-writer replay",
+            "BatchUpsert proof first two requests must share at least one identity record_json field/value",
+            "BatchUpsert malformed JSON payload input",
+            "BatchUpsert array JSON payload input",
+            "BatchUpsert runtime input validation regression was not caught",
+            "BatchUpsert runtime request-message validation regression was not caught",
+            "BatchUpsert runtime stub validation regression was not caught",
+            "BatchUpsert proof runtime response stream must be iterable",
+            "BatchUpsert runtime response-stream validation regression was not caught",
+            "BatchUpsert proof runtime response stream iterator could not be opened",
+            "BatchUpsert runtime response-stream iterator regression was not caught",
+            "BatchUpsert proof runtime response stream iterator raised unexpected gRPC error",
+            "BatchUpsert runtime response-stream iterator unexpected-RpcError regression was not caught",
+            "BatchUpsert proof runtime response stream raised unexpected gRPC error",
+            "BatchUpsert runtime response-stream unexpected-RpcError regression was not caught",
+            "BatchUpsert proof runtime response stream iteration raised error",
+            "BatchUpsert runtime response-stream iteration regression was not caught",
+            "BatchUpsert runtime response-message validation regression was not caught",
+            "BatchUpsert returned more than 2 responses, want exactly 2",
+            "BatchUpsert extra runtime response validation regression was not caught",
+            "BatchUpsert runtime call-error validation regression was not caught",
+            "BatchUpsert proof runtime call raised unexpected gRPC error",
+            "BatchUpsert runtime unexpected-RpcError validation regression was not caught",
+            "class _CountingRequestIterator",
+            "BatchUpsert proof runtime consumed",
+            "BatchUpsert request-stream consumption regression was not caught",
+            '_assert_fresh_request_summary("BatchUpsert first item", responses[0], requests[0])',
+            "BatchUpsert fresh item summary regression was not caught",
+            "BatchUpsert fresh item affected_rows regression was not caught",
+            "BatchUpsert fresh item duplicate-flag regression was not caught",
+            "BatchUpsert fresh item receipt regression was not caught",
+            "BatchUpsert fresh item malformed receipt regression was not caught",
+            "BatchUpsert fresh item duplicate-key receipt regression was not caught",
+            "BatchUpsert fresh item missing-fields receipt regression was not caught",
+            "first response write_receipt_json unexpected fields",
+            "unexpected-field write_receipt_json replay summary regression was not caught",
+            "BatchUpsert fresh item unexpected-field receipt regression was not caught",
+            "BatchUpsert fresh item invalid projection-tasks receipt regression was not caught",
+            "BatchUpsert fresh item invalid projection-task-id receipt regression was not caught",
+            "first response write_receipt_json projection_task_ids[{index}] must not include whitespace",
+            "BatchUpsert fresh item whitespace projection-task-id receipt regression was not caught",
+            "first response write_receipt_json projection_task_ids[{index}] must not contain control characters",
+            "BatchUpsert fresh item control-character projection-task-id receipt regression was not caught",
+            "BatchUpsert fresh item invalid timestamp receipt regression was not caught",
+            "BatchUpsert fresh item boolean timestamp receipt regression was not caught",
+            "BatchUpsert fresh item invalid outbox-seq receipt regression was not caught",
+            "BatchUpsert fresh item boolean outbox-seq receipt regression was not caught",
+            "BatchUpsert fresh item invalid source-lsn receipt regression was not caught",
+            "first response write_receipt_json source_lsn must be non-empty",
+            "first response write_receipt_json source_lsn must not include whitespace",
+            "BatchUpsert fresh item empty source-lsn receipt regression was not caught",
+            "BatchUpsert fresh item padded source-lsn receipt regression was not caught",
+            "BatchUpsert fresh item whitespace source-lsn receipt regression was not caught",
+            "first response write_receipt_json source_lsn must not contain control characters",
+            "BatchUpsert fresh item control-character source-lsn receipt regression was not caught",
+            "BatchUpsert fresh item empty manifest-checksum receipt regression was not caught",
+            "BatchUpsert fresh item padded manifest-checksum receipt regression was not caught",
+            "BatchUpsert fresh item malformed manifest-checksum receipt regression was not caught",
+            "BatchUpsert fresh item bad-prefix manifest-checksum receipt regression was not caught",
+            "BatchUpsert fresh item uppercase manifest-checksum receipt regression was not caught",
+            "BatchUpsert fresh item typed receipt regression was not caught",
+            "BatchUpsert fresh item mismatched typed receipt regression was not caught",
+            "BatchUpsert duplicate item",
+            "BatchUpsert duplicate flag regression was not caught",
+            "BatchUpsert duplicate affected_rows regression was not caught",
+            "BatchUpsert duplicate item: first response mutation_id must be non-empty",
+            "BatchUpsert duplicate item: duplicate response mutation_id must be non-empty",
+            "BatchUpsert duplicate item: first response mutation_id must be a lowercase UUID",
+            "BatchUpsert duplicate missing mutation_id regression was not caught",
+            "BatchUpsert duplicate mutation_id regression was not caught",
+            "BatchUpsert duplicate added mutation_id regression was not caught",
+            "BatchUpsert duplicate invalid mutation_id regression was not caught",
+            "BatchUpsert duplicate missing record_json regression was not caught",
+            "BatchUpsert duplicate record_json regression was not caught",
+            "BatchUpsert duplicate missing resource_uri regression was not caught",
+            "BatchUpsert duplicate resource_uri regression was not caught",
+            "BatchUpsert duplicate missing write_receipt_json regression was not caught",
+            "BatchUpsert duplicate write_receipt_json regression was not caught",
+            "BatchUpsert duplicate missing typed write_receipt regression was not caught",
+            "BatchUpsert duplicate typed write_receipt regression was not caught",
+            "BatchUpsert resource_uri scope regression was not caught",
+            "def _assert_summary_record_json_matches_request(",
+            "first response record_json must include request field/value",
+            "keyed Upsert record_json request binding regression was not caught",
+            "BatchUpsert record_json request binding regression was not caught",
+            "BatchUpsert duplicate-key record_json regression was not caught",
+            "ambiguous record_json encoding input",
+            "missing Upsert proof file",
+            "missing BatchUpsert proof file",
+            "oversized Upsert proof file",
+            "oversized BatchUpsert proof file",
+            "duplicate-key Upsert proof JSON input",
+            "duplicate-key BatchUpsert array proof JSON input",
+            "duplicate-key BatchUpsert JSONL proof input",
+            "keyless fail-closed freshness proof must not set idempotency_key",
+            "keyless fail-closed freshness proof must share tenant_id, project_id, and message_type",
+            "fresh response resource_uri must be present for request identity proof",
+            "fresh response record_json must be present for request payload proof",
+            "fresh response write_receipt_json must be present for write receipt proof",
+            "bare keyless fail-closed freshness regression was not caught",
+            "missing-receipt keyless fail-closed freshness regression was not caught",
+            "keyless fail-closed freshness duplicate-flag regression was not caught",
+            "dedup-store-down fail-closed proof must expect UNAVAILABLE",
+            "dedup-store-down fail-closed proof status must be non-empty",
+            "keyless proof with unrelated scope input",
+            "tenant isolation same-tenant input",
+            "tenant isolation same-project input",
+            "tenant isolation stale-scope payload input",
+            "tenant isolation unrelated-payload input",
+            "fail-closed status weakened",
+            "empty fail-closed status regression was not caught",
+            "empty runtime fail-closed status regression was not caught",
+            "fail-closed runtime keyed-input regression was not caught",
+            "fail-closed runtime keyless-input regression was not caught",
+            "missing fail-closed gRPC status-code reader regression was not caught",
+            "unreadable fail-closed gRPC status-code regression was not caught",
+            "non-StatusCode fail-closed gRPC status-code regression was not caught",
+            "empty fail-closed error message regression was not caught",
+            "missing fail-closed error message reader regression was not caught",
+            "unreadable fail-closed error message regression was not caught",
+            "padded fail-closed error message regression was not caught",
+            "control-character fail-closed error message regression was not caught",
+            "non-string fail-closed error message regression was not caught",
+            "oversized fail-closed error message regression was not caught",
+            "generic fail-closed error message regression was not caught",
+            "keyed Upsert missing message_type input",
+            "keyless proof missing message_type input",
+            "keyed Upsert message_type surrounding whitespace input",
+            "keyed Upsert message_type embedded whitespace input",
+            "keyed Upsert empty payload input",
+            "keyed Upsert malformed JSON payload input",
+            "keyed Upsert array JSON payload input",
+            "keyed Upsert empty JSON object input",
+            "BatchUpsert extra item input",
+            "BatchUpsert identical duplicate payload input",
+            "BatchUpsert semantically identical duplicate payload input",
+            "URL-shaped gRPC target regression was not caught",
+            "whitespace gRPC target regression was not caught",
+            "control-character gRPC target regression was not caught",
+            "missing-port gRPC target regression was not caught",
+            "malformed gRPC header name regression was not caught",
+            "reserved gRPC header name regression was not caught",
+            "canonical timeout string was rejected",
+            "padded timeout regression was not caught",
+            "non-decimal timeout regression was not caught",
+            "non-positive timeout regression was not caught",
+            "infinite timeout regression was not caught",
+            "excessive timeout regression was not caught",
+            "live proof input validation selftest",
+            "--require-all-proofs",
+            "missing required idempotency live proof inputs",
+        ),
+    ),
+    SourceCheck(
+        "served idempotency proof has auditable GitHub evidence path",
+        "scripts/check-ci-runner-evidence.mjs",
+        (
+            'idempotencyServed: "idempotency-served-smoke.yml"',
+            'idempotencyServed: ["DataBroker idempotency served replay proof"]',
+            "async function auditIdempotencyServed(",
+            '"--idempotency-served-smoke"',
+            '"--idempotency-run-id"',
+            '"--idempotency-served-budget-minutes"',
+            "idempotency served evidence passed:",
+            "idempotency served lookup did not request workflow_dispatch branch main",
+            "idempotency served missing proof job regression was not caught",
+        ),
+    ),
+    SourceCheck(
+        "served idempotency workflow runs complete proof gate",
+        ".github/workflows/idempotency-served-smoke.yml",
+        (
+            "idempotency-served-replay:",
+            "--require-all-proofs",
+            "fail_closed_code:",
+            "tenant2_header:",
+            'TENANT2_HEADER: ${{ inputs.tenant2_header }}',
+            "append_headers()",
+            'append_headers --header "$HEADER"',
+            'append_headers --tenant2-header "$TENANT2_HEADER"',
+            '--tenant2-header "$TENANT2_HEADER"',
+            "--fail-closed-code \"$FAIL_CLOSED_CODE\"",
+            "--upsert-json smoke-input/upsert.json",
+            "--tenant2-upsert-json smoke-input/tenant2-upsert.json",
+            "--batch-upsert-json smoke-input/batch-upsert.json",
+            "--fail-closed-upsert-json smoke-input/fail-closed-upsert.json",
+            "--fail-closed-select-json smoke-input/fail-closed-select.json",
+            "--keyless-upsert-json smoke-input/keyless-upsert.json",
+        ),
+    ),
+)
+
+FORBIDDEN_CHECKS: tuple[SourceCheck, ...] = (
+    SourceCheck(
+        "silent write receipt serialization fallback",
+        "src/runtime/core/setup_data.rs",
+        (
+            "serde_json::to_string(&receipt).unwrap_or_default()",
+        ),
+    ),
+    SourceCheck(
+        "silent returned record_json fallback",
+        "src/runtime/core/setup_data.rs",
+        (
+            "record_set.records_json.first().cloned().unwrap_or_default()",
+        ),
+    ),
+    SourceCheck(
+        "whitespace idempotency key treated as keyless",
+        "src/runtime/core/setup_data.rs",
+        (
+            "key.trim().is_empty()",
+        ),
+    ),
+)
+
+
+def read(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return ""
+
+
+def check_repo(root: Path) -> list[str]:
+    errors: list[str] = []
+    for check in CHECKS:
+        path = root / check.path
+        text = read(path)
+        if not text:
+            errors.append(f"{check.label}: missing {check.path}")
+            continue
+        for token in check.required:
+            if token not in text:
+                errors.append(f"{check.label}: missing token {token!r} in {check.path}")
+    for check in FORBIDDEN_CHECKS:
+        path = root / check.path
+        text = read(path)
+        if not text:
+            continue
+        for token in check.required:
+            if token in text:
+                errors.append(f"{check.label}: forbidden token {token!r} in {check.path}")
+    return errors
+
+
+def write(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+
+
+def make_good_fixture(root: Path) -> None:
+    by_path: dict[str, list[str]] = {}
+    for check in CHECKS:
+        by_path.setdefault(check.path, []).extend(check.required)
+    for path, tokens in by_path.items():
+        write(root / path, "\n".join(tokens) + "\n")
+
+
+def expect_failure(root: Path, label: str, path: str, needle: str) -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        fixture = Path(tmp) / "repo"
+        shutil.copytree(root, fixture)
+        target = fixture / path
+        write(target, read(target).replace(needle, ""))
+        errors = check_repo(fixture)
+        if not errors:
+            raise AssertionError(f"selftest regression was not caught: {label}")
+
+
+def expect_forbidden_failure(root: Path, label: str, path: str, token: str) -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        fixture = Path(tmp) / "repo"
+        shutil.copytree(root, fixture)
+        target = fixture / path
+        write(target, read(target) + f"\n{token}\n")
+        errors = check_repo(fixture)
+        if not any("forbidden token" in error for error in errors):
+            raise AssertionError(f"selftest forbidden regression was not caught: {label}")
+
+
+def run_selftest() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp) / "repo"
+        make_good_fixture(root)
+        errors = check_repo(root)
+        if errors:
+            raise AssertionError("good fixture failed:\n" + "\n".join(errors))
+        expect_failure(
+            root,
+            "missing idempotency table DDL",
+            "src/runtime/system.rs",
+            "CREATE TABLE IF NOT EXISTS {} (\n                dedup_key TEXT PRIMARY KEY",
+        )
+        expect_failure(
+            root,
+            "missing same-tx claim",
+            "src/runtime/core/setup_data.rs",
+            "async fn claim_idempotency_key_in_tx(",
+        )
+        expect_failure(
+            root,
+            "delete no longer receives idempotency key",
+            "src/runtime/service/handlers_data.rs",
+            ".delete(manifest, &message_type, filter, context, idempotency_key)",
+        )
+        expect_failure(
+            root,
+            "batch upsert no longer reuses the per-item upsert served path",
+            "src/runtime/service/handlers_data.rs",
+            "runtime.upsert(&manifest, item, item_context)",
+        )
+        expect_failure(
+            root,
+            "outbox Redis failure no longer fails closed",
+            "src/runtime/core/probe_dispatch.rs",
+            "idempotency dedup store unavailable; keyed enqueue refused (fail-closed)",
+        )
+        expect_failure(
+            root,
+            "DataBroker replay-safe contract missing duplicate field",
+            "proto/udb/services/v1/data_broker.proto",
+            'duplicate_response_field: "was_duplicate"',
+        )
+        expect_failure(
+            root,
+            "served idempotency workflow no longer requires the full proof set",
+            ".github/workflows/idempotency-served-smoke.yml",
+            "--require-all-proofs",
+        )
+        expect_failure(
+            root,
+            "served idempotency smoke no longer validates BatchUpsert payload JSON",
+            "scripts/idempotency_served_replay_smoke.py",
+            'validate_upsert_payload("BatchUpsert proof first request", first)',
+        )
+        expect_forbidden_failure(
+            root,
+            "write receipt serialization fell back to default",
+            "src/runtime/core/setup_data.rs",
+            "serde_json::to_string(&receipt).unwrap_or_default()",
+        )
+        expect_forbidden_failure(
+            root,
+            "returned record_json decode fell back to default",
+            "src/runtime/core/setup_data.rs",
+            "record_set.records_json.first().cloned().unwrap_or_default()",
+        )
+        expect_forbidden_failure(
+            root,
+            "whitespace idempotency key became keyless",
+            "src/runtime/core/setup_data.rs",
+            "key.trim().is_empty()",
+        )
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--selftest", action="store_true", help="run built-in regression fixtures")
+    parser.add_argument("--root", type=Path, default=ROOT, help="repository root")
+    args = parser.parse_args(argv)
+
+    if args.selftest:
+        run_selftest()
+        print("idempotency dedup posture selftest passed")
+        return 0
+
+    errors = check_repo(args.root.resolve())
+    if errors:
+        for error in errors:
+            print(f"ERROR: {error}", file=sys.stderr)
+        return 1
+    print("idempotency dedup posture OK")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

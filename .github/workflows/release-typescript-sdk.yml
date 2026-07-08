@@ -9,11 +9,6 @@ on:
       NPM_TOKEN:
         description: npm automation token used by `npm publish`.
         required: false
-  workflow_dispatch:
-    inputs:
-      version:
-        description: "Expected UDB release version, for example 0.2.0"
-        required: true
 
 permissions:
   contents: read
@@ -40,7 +35,6 @@ jobs:
       - uses: ./.github/actions/version-guard
         with:
           component: sdk-typescript
-          dispatch-version: ${{ github.event.inputs.version }}
 
       - name: Install dependencies
         working-directory: sdk/typescript
@@ -59,11 +53,6 @@ jobs:
           else
             echo "exists=false" >> "${GITHUB_OUTPUT}"
           fi
-
-      - name: Type check
-        if: github.event_name == 'workflow_dispatch'
-        working-directory: sdk/typescript
-        run: npm run typecheck
 
       # `build` bundles the runtime proto assets into the package (bundle-proto)
       # and emits dist/*.js + *.d.ts. The committed `gen/` tree is hard-verified

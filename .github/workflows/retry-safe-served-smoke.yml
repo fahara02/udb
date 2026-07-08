@@ -1,0 +1,76 @@
+name: Retry-safe served smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Live broker gRPC target, for example host:50051"
+        required: true
+        type: string
+      tls:
+        description: "Use TLS for the broker connection"
+        required: false
+        default: false
+        type: boolean
+      header:
+        description: "Optional metadata header as Name: Value"
+        required: false
+        default: ""
+        type: string
+      upsert_json:
+        description: "Keyed UpsertRequest JSON for retry-safe metadata + served replay proof"
+        required: true
+        type: string
+      delete_json:
+        description: "Keyed DeleteRequest JSON for retry-safe metadata + served replay proof"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: retry-safe-served-smoke-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  retry-safe-served:
+    name: Retry-safe mutation metadata served proof
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python SDK runtime deps
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install -e sdk/python
+
+      - name: Run retry-safe smoke selftest
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/retry_safe_served_smoke.py --selftest
+
+      - name: Run live retry-safe served replay smoke
+        shell: bash
+        env:
+          TARGET: ${{ inputs.target }}
+          TLS: ${{ inputs.tls }}
+          HEADER: ${{ inputs.header }}
+          UPSERT_JSON: ${{ inputs.upsert_json }}
+          DELETE_JSON: ${{ inputs.delete_json }}
+        run: |
+          set -euo pipefail
+          mkdir -p smoke-input
+          printf '%s' "$UPSERT_JSON" > smoke-input/upsert.json
+          printf '%s' "$DELETE_JSON" > smoke-input/delete.json
+          args=(--target "$TARGET" --require-all-proofs --upsert-json smoke-input/upsert.json --delete-json smoke-input/delete.json)
+          if [ "$TLS" = "true" ]; then args+=(--tls); fi
+          if [ -n "$HEADER" ]; then args+=(--header "$HEADER"); fi
+          python scripts/retry_safe_served_smoke.py "${args[@]}"

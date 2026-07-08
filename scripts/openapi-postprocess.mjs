@@ -31,6 +31,19 @@ const TITLE = 'UDB Control-Plane API';
 const DESCRIPTION =
   'HTTP/JSON (gRPC-gateway) surface for UDB control-plane services. ' +
   'The core DataBroker data-plane RPCs are gRPC-native and are not represented here.';
+const API_ERROR_REF = '#/definitions/v1ApiError';
+const REST_ERROR_STATUS_RESPONSES = {
+  400: ['INVALID_ARGUMENT', 'FAILED_PRECONDITION'],
+  401: ['UNAUTHENTICATED'],
+  403: ['PERMISSION_DENIED'],
+  404: ['NOT_FOUND'],
+  409: ['ALREADY_EXISTS', 'ABORTED'],
+  429: ['RESOURCE_EXHAUSTED'],
+  500: ['UNKNOWN', 'INTERNAL', 'DATA_LOSS'],
+  501: ['UNIMPLEMENTED'],
+  503: ['UNAVAILABLE'],
+  504: ['DEADLINE_EXCEEDED'],
+};
 
 const versions = JSON.parse(readFileSync(versionsPath, 'utf8'));
 const udbVersion = versions?.components?.udb?.version;
@@ -116,6 +129,31 @@ function buildOperationMetadata() {
   return { byGeneratedId, byRoute };
 }
 
+function apiErrorResponse(status, grpcCodes) {
+  const codes = grpcCodes.join('/');
+  return {
+    description: `gRPC ${codes} mapped to HTTP ${status}. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.`,
+    schema: {
+      $ref: API_ERROR_REF,
+    },
+    'x-udb-grpc-codes': grpcCodes,
+  };
+}
+
+function applyRestErrorBoundary(operation) {
+  operation.responses = operation.responses || {};
+  for (const [status, grpcCodes] of Object.entries(REST_ERROR_STATUS_RESPONSES)) {
+    operation.responses[status] = apiErrorResponse(status, grpcCodes);
+  }
+  operation.responses.default = {
+    description: 'Unexpected gRPC error response. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.',
+    schema: {
+      $ref: API_ERROR_REF,
+    },
+    'x-udb-grpc-codes': ['UNKNOWN'],
+  };
+}
+
 // Replace the `info.title` value (first occurrence, inside the info block).
 text = text.replace(
   /("info":\s*\{\s*"title":\s*)"(?:[^"\\]|\\.)*"/,
@@ -198,6 +236,7 @@ for (const [path, pathItem] of Object.entries(swagger.paths || {})) {
     if (!['get', 'put', 'post', 'patch', 'delete'].includes(verb) || !operation) {
       continue;
     }
+    applyRestErrorBoundary(operation);
     const routeKey = `${verb} ${normalizeSwaggerPath(path)}`;
     const metadata =
       operationMetadata.byGeneratedId.get(operation.operationId) ||

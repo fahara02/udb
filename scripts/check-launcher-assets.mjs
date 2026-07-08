@@ -9,6 +9,8 @@
 // broken schemes (2026-06-13) while CI stayed green. The published scheme is
 // owned by .github/workflows/release-binaries.yml; keep this in lockstep.
 import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
 const LAUNCHERS = [
   "sdk/go/cmd/udb/main.go",
@@ -43,35 +45,106 @@ const REQUIRED = [
   [/UDB_BIN_VARIANT/, "UDB_BIN_VARIANT tier support"],
 ];
 
-let failures = 0;
-for (const file of LAUNCHERS) {
-  if (!fs.existsSync(file)) {
-    console.error(`MISSING launcher: ${file}`);
-    failures++;
-    continue;
-  }
-  const src = fs.readFileSync(file, "utf8");
-  for (const [re, why] of FORBIDDEN) {
-    const m = src.match(re);
-    if (m) {
-      console.error(`STALE ASSET SCHEME  ${file}: ${why}  (matched ${JSON.stringify(m[0])})`);
-      failures++;
+function checkLaunchers(root = process.cwd()) {
+  const failures = [];
+  for (const file of LAUNCHERS) {
+    const fullPath = path.join(root, file);
+    if (!fs.existsSync(fullPath)) {
+      failures.push(`MISSING launcher: ${file}`);
+      continue;
+    }
+    const src = fs.readFileSync(fullPath, "utf8");
+    for (const [re, why] of FORBIDDEN) {
+      const m = src.match(re);
+      if (m) {
+        failures.push(`STALE ASSET SCHEME  ${file}: ${why}  (matched ${JSON.stringify(m[0])})`);
+      }
+    }
+    for (const [re, why] of REQUIRED) {
+      if (!re.test(src)) {
+        failures.push(`MISSING TOKEN       ${file}: expected ${why}`);
+      }
     }
   }
-  for (const [re, why] of REQUIRED) {
-    if (!re.test(src)) {
-      console.error(`MISSING TOKEN       ${file}: expected ${why}`);
-      failures++;
-    }
+  return failures;
+}
+
+function writeFixtureLauncher(root, file, body) {
+  const fullPath = path.join(root, file);
+  fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+  fs.writeFileSync(fullPath, body, "utf8");
+}
+
+function assert(condition, message) {
+  if (!condition) {
+    throw new Error(message);
   }
 }
 
-if (failures) {
-  console.error(
-    `\ncheck-launcher-assets: ${failures} problem(s). Every launcher must build ` +
-      `udb-<os>-<arch>[-<variant>][.exe] — see scripts/check-launcher-assets.mjs and ` +
-      `.github/workflows/release-binaries.yml.`,
-  );
-  process.exit(1);
+function runSelftest() {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "udb-launcher-assets-"));
+  try {
+    const goodLauncher = [
+      "const osName = platform === 'darwin' ? 'darwin' : platform === 'windows' ? 'windows' : 'linux';",
+      "const archName = arch === 'arm64' ? 'arm64' : 'amd64';",
+      "const variant = process.env.UDB_BIN_VARIANT ? `-${process.env.UDB_BIN_VARIANT}` : '';",
+      "const exe = osName === 'windows' ? '.exe' : '';",
+      "const asset = `udb-${osName}-${archName}${variant}${exe}`;",
+    ].join("\n");
+    for (const file of LAUNCHERS) {
+      writeFixtureLauncher(root, file, goodLauncher);
+    }
+    assert(checkLaunchers(root).length === 0, "good launcher fixture failed");
+
+    writeFixtureLauncher(root, LAUNCHERS[0], goodLauncher.replaceAll("UDB_BIN_VARIANT", "UDB_TIER"));
+    let failures = checkLaunchers(root);
+    assert(
+      failures.some((failure) => failure.includes("UDB_BIN_VARIANT tier support")),
+      "selftest failed to reject missing UDB_BIN_VARIANT support",
+    );
+    writeFixtureLauncher(root, LAUNCHERS[0], goodLauncher);
+
+    writeFixtureLauncher(root, LAUNCHERS[1], `${goodLauncher}\nconst stale = "x86_64-unknown-linux-gnu";\n`);
+    failures = checkLaunchers(root);
+    assert(
+      failures.some((failure) => failure.includes("Rust target triple")),
+      "selftest failed to reject Rust target triple asset scheme",
+    );
+    writeFixtureLauncher(root, LAUNCHERS[1], goodLauncher);
+
+    fs.rmSync(path.join(root, LAUNCHERS[2]));
+    failures = checkLaunchers(root);
+    assert(
+      failures.some((failure) => failure.includes(`MISSING launcher: ${LAUNCHERS[2]}`)),
+      "selftest failed to reject missing launcher path",
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 }
-console.log(`check-launcher-assets: all ${LAUNCHERS.length} launchers + templates conform to udb-<os>-<arch>[-<variant>][.exe].`);
+
+function main(argv) {
+  if (argv.includes("--selftest")) {
+    runSelftest();
+    console.log("check-launcher-assets selftest passed");
+    return;
+  }
+
+  const failures = checkLaunchers();
+  if (failures.length) {
+    for (const failure of failures) {
+      console.error(failure);
+    }
+    console.error(
+      `\ncheck-launcher-assets: ${failures.length} problem(s). Every launcher must build ` +
+        `udb-<os>-<arch>[-<variant>][.exe] — see scripts/check-launcher-assets.mjs and ` +
+        `.github/workflows/release-binaries.yml.`,
+    );
+    process.exit(1);
+  }
+  console.log(
+    `check-launcher-assets: all ${LAUNCHERS.length} launchers + templates conform to udb-<os>-<arch>[-<variant>][.exe].`,
+  );
+}
+
+main(process.argv.slice(2));

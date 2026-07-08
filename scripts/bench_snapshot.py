@@ -7,8 +7,20 @@ snapshot to `bench-history/bench-<UTC>.json`, then prints (and writes a `.md`) a
 comparison against the most recent prior snapshot — flagging improvements vs
 regressions. That's the before/after feedback loop for the D.3 / D.6 work.
 
+A snapshot may additionally be stamped with a RELEASE tag (`--tag v0.3.8`),
+recorded in the durable `tag` field. The regression gate (`bench_gate.py
+--relative`) compares the latest run against the most recent *tagged release*
+snapshot — not merely the previous run — so a slow drift across many untagged
+runs cannot launder a regression past the gate (P8.3).
+
+BENCH-INTEGRITY RULE: every number harvested here MUST come from a bench that
+exercises the SHIPPED runtime path (src/runtime/…). Never snapshot a bench-only
+helper or a micro-bench that bypasses the real code — a green that doesn't
+measure production is worse than no green.
+
 Usage (after running the benches):
     python scripts/bench_snapshot.py --label "D.3 borrowed body parse"
+    python scripts/bench_snapshot.py --tag v0.3.8 --label "v0.3.8 release baseline"
 """
 
 from __future__ import annotations
@@ -17,6 +29,7 @@ import argparse
 import datetime
 import json
 import os
+import re
 import subprocess
 import sys
 
@@ -42,7 +55,29 @@ def _cmd(args: list[str]) -> str | None:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--label", default="", help="free-text note (e.g. the optimization under test)")
+    ap.add_argument(
+        "--tag",
+        default="",
+        help="stamp this snapshot as a RELEASE baseline under this tag (e.g. v0.3.8); "
+        "use an immutable git tag. bench_gate.py --relative gates against the most "
+        "recent tagged snapshot, so a release baseline must be tagged here.",
+    )
     args = ap.parse_args()
+
+    # A release baseline must be stamped with a real, immutable git tag — never
+    # an invented string. When --tag is given we validate it is non-empty and
+    # tag-shaped (no whitespace / shell-hostile chars); absent --tag keeps the
+    # ordinary untagged-run behaviour unchanged.
+    if args.tag:
+        tag = args.tag.strip()
+        if not tag or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._/+-]*", tag):
+            print(
+                f"--tag {args.tag!r} does not look like a git tag (expected e.g. "
+                "v0.3.8); pass an immutable tag, not an invented label.",
+                file=sys.stderr,
+            )
+            return 2
+        args.tag = tag
 
     rows = collect()
     if not rows:
@@ -60,6 +95,9 @@ def main() -> int:
     snap = {
         "timestamp": ts,
         "label": args.label,
+        # RELEASE tag (empty for ordinary runs). The gate's `_snapshot_by_tag`
+        # reads exactly this field to resolve the last-release baseline.
+        "tag": args.tag,
         "git_commit": _cmd(["git", "rev-parse", "--short", "HEAD"]),
         "rustc": _cmd(["rustc", "--version"]),
         "os": sys.platform,
@@ -78,6 +116,7 @@ def main() -> int:
         "",
         f"- commit `{snap['git_commit']}` · {snap['rustc']} · os `{snap['os']}`",
         f"- label: {args.label or '(none)'}",
+        f"- release tag: {('`' + args.tag + '`') if args.tag else '(untagged run)'}",
         "",
     ]
     if prior:

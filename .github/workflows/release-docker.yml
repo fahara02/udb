@@ -23,7 +23,6 @@ name: Release · Docker image
 
 on:
   workflow_call:
-  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
@@ -55,19 +54,15 @@ jobs:
           component: udb
 
       # Single-artifact: pull the published release binary into the build context
-      # instead of recompiling. On manual dispatch with no tag, fall back to the
-      # `latest` release so the image can still be rebuilt from an existing asset.
+      # instead of recompiling. This workflow is only invoked by the tag-driven
+      # release orchestrator, so the tag is always the release tag being published.
       - name: Download release binary into build context
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
-            tag="${GITHUB_REF_NAME}"
-          else
-            tag="$(gh release view --json tagName --jq '.tagName')"
-          fi
+          tag="${GITHUB_REF_NAME}"
           echo "Downloading udb-linux-amd64-full from release ${tag}"
           gh release download "${tag}" --pattern 'udb-linux-amd64-full' --output udb
           chmod +x udb

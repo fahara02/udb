@@ -1,0 +1,149 @@
+name: Resilience smokes
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 3 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: resilience-smokes-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  ha-smokes:
+    name: Multi-process HA smokes
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      UDB_HA_PROJECT: udb-ha
+      UDB_HA_KEEP_STACK: "1"
+      UDB_HA_CDC_PROJECT: udb-ha-cdc
+      UDB_HA_CDC_KEEP_STACK: "1"
+      UDB_HA_XA_PROJECT: udb-ha-xa
+      UDB_HA_XA_KEEP_STACK: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Docker environment
+        run: |
+          docker version
+          docker compose version
+
+      - name: Lease failover smoke
+        run: bash scripts/ha_multinode_smoke.sh
+
+      - name: CDC no-duplicate smoke
+        run: bash scripts/ha_cdc_no_duplicate_smoke.sh
+
+      - name: XA recovery smoke
+        run: bash scripts/ha_xa_recovery_smoke.sh
+
+      - name: Collect HA diagnostics
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          mkdir -p ha-smoke-logs
+          docker ps -a > ha-smoke-logs/docker-ps.txt 2>&1
+
+          docker compose -p "$UDB_HA_PROJECT" \
+            -f docker-compose.integration.yml \
+            ps > ha-smoke-logs/lease-ps.txt 2>&1
+          docker compose -p "$UDB_HA_PROJECT" \
+            -f docker-compose.integration.yml \
+            logs --no-color > ha-smoke-logs/lease.log 2>&1
+
+          docker compose -p "$UDB_HA_CDC_PROJECT" \
+            -f docker-compose.integration.yml \
+            ps > ha-smoke-logs/cdc-ps.txt 2>&1
+          docker compose -p "$UDB_HA_CDC_PROJECT" \
+            -f docker-compose.integration.yml \
+            logs --no-color > ha-smoke-logs/cdc.log 2>&1
+
+          docker compose -p "$UDB_HA_XA_PROJECT" \
+            -f docker-compose.integration.yml \
+            -f docker-compose.canonical.yml \
+            -f docker-compose.xa-ha.yml \
+            ps > ha-smoke-logs/xa-ps.txt 2>&1
+          docker compose -p "$UDB_HA_XA_PROJECT" \
+            -f docker-compose.integration.yml \
+            -f docker-compose.canonical.yml \
+            -f docker-compose.xa-ha.yml \
+            logs --no-color > ha-smoke-logs/xa.log 2>&1
+
+      - name: Upload HA diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ha-smoke-logs
+          path: ha-smoke-logs
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Tear down HA stacks
+        if: always()
+        shell: bash
+        run: |
+          docker compose -p "$UDB_HA_PROJECT" \
+            -f docker-compose.integration.yml \
+            down -v --remove-orphans || true
+          docker compose -p "$UDB_HA_CDC_PROJECT" \
+            -f docker-compose.integration.yml \
+            down -v --remove-orphans || true
+          docker compose -p "$UDB_HA_XA_PROJECT" \
+            -f docker-compose.integration.yml \
+            -f docker-compose.canonical.yml \
+            -f docker-compose.xa-ha.yml \
+            down -v --remove-orphans || true
+
+  cdc-fault-smoke:
+    name: CDC fault smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      UDB_CDC_FAULT_PROJECT: udb-cdc-fault
+      UDB_CDC_FAULT_KEEP_STACK: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Docker environment
+        run: |
+          docker version
+          docker compose version
+
+      - name: CDC Kafka/network fault smoke
+        run: bash scripts/cdc_fault_smoke.sh
+
+      - name: Collect CDC fault diagnostics
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          mkdir -p cdc-fault-smoke-logs
+          docker ps -a > cdc-fault-smoke-logs/docker-ps.txt 2>&1
+          docker compose -p "$UDB_CDC_FAULT_PROJECT" \
+            -f docker-compose.integration.yml \
+            ps > cdc-fault-smoke-logs/cdc-fault-ps.txt 2>&1
+          docker compose -p "$UDB_CDC_FAULT_PROJECT" \
+            -f docker-compose.integration.yml \
+            logs --no-color > cdc-fault-smoke-logs/cdc-fault.log 2>&1
+
+      - name: Upload CDC fault diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cdc-fault-smoke-logs
+          path: cdc-fault-smoke-logs
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Tear down CDC fault stack
+        if: always()
+        shell: bash
+        run: |
+          docker compose -p "$UDB_CDC_FAULT_PROJECT" \
+            -f docker-compose.integration.yml \
+            down -v --remove-orphans || true

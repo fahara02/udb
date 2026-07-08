@@ -5,6 +5,10 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/benchmark-sdks.yml"
+      - ".github/workflows/_live-sdk-suite.yml"
+      - ".github/actions/setup-sdk-toolchains/**"
+      - ".github/actions/start-backends/**"
+      - ".github/actions/broker-env/**"
       - "proto/**"
       - "api/**"
       - "src/cli/sdk_gen.rs"
@@ -12,6 +16,7 @@ on:
       - "src/runtime/sdk_manifest.rs"
       - "sdk-templates/**"
       - "scripts/collect_sdk_bench_results.py"
+      - "scripts/gen-bench-bodies-skeleton.mjs"
       - "scripts/gen-bench-bodies-json.mjs"
       - "scripts/openapi-postprocess.mjs"
       - "docs/site/benchmarks.html"
@@ -79,6 +84,7 @@ jobs:
           set -euo pipefail
           node --check docs/site/benchmarks.js
           python -m py_compile scripts/collect_sdk_bench_results.py
+          python scripts/collect_sdk_bench_results.py --selftest
       - name: Validate benchmark JSON collection
         run: |
           set -euo pipefail

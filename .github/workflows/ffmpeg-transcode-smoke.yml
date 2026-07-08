@@ -1,0 +1,36 @@
+name: Vendored ffmpeg transcode smoke
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ffmpeg-transcode-smoke-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  ffmpeg-transcode-smoke:
+    name: Vendored ffmpeg binary smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Selftest vendored ffmpeg verifier
+        run: python scripts/check-vendored-ffmpeg.py --selftest
+      - name: Verify vendored ffmpeg manifest
+        run: python scripts/check-vendored-ffmpeg.py --verify-manifest --all-platforms
+      - name: Run vendored ffmpeg transcode smoke
+        run: python scripts/ffmpeg_transcode_smoke.py --artifact-dir ffmpeg-transcode-smoke
+      - name: Upload ffmpeg transcode smoke artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ffmpeg-transcode-smoke
+          path: ffmpeg-transcode-smoke
+          if-no-files-found: ignore
+          retention-days: 14

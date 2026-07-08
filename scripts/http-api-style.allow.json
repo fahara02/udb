@@ -1,0 +1,28 @@
+{
+  "allowedLiteralSegments": [
+    {
+      "pathPattern": "^/\\.well-known/jwks\\.json$",
+      "reason": "OIDC/JWKS well-known endpoint uses protocol-defined literal segments."
+    },
+    {
+      "pathPattern": "^/v1/auth/\\.well-known/jwks\\.json$",
+      "reason": "UDB exposes JWKS under the auth domain while preserving protocol-defined literal segments."
+    },
+    {
+      "pathPattern": "^/v1/idp/scim/[^/]+/(Users|Groups)(/.*)?$",
+      "reason": "SCIM uses protocol-defined Users and Groups resource names."
+    }
+  ],
+  "allowedDeepPaths": [
+    {
+      "pathPattern": "^/v1/auth/users/\\{[^/]+\\}/webauthn/credentials/\\{[^/]+\\}$",
+      "reason": "WebAuthn credential identity is scoped by the owning user."
+    }
+  ],
+  "allowedCommandEndpoints": [
+    {
+      "pathPattern": "^/v1/control(/.*)?$",
+      "reason": "Control-plane singleton/status resources are operational command surfaces."
+    }
+  ]
+}

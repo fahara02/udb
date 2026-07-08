@@ -1,0 +1,81 @@
+name: Postgres planner/IR merge smoke
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pg-merge-smoke-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  pg-merge-smoke:
+    name: Postgres data-plane planner vs bridged IR
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      UDB_PG_MERGE_PROJECT: udb-pg-merge-smoke
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Docker environment
+        run: |
+          docker version
+          docker compose version
+
+      - uses: ./.github/actions/setup-rust
+        with:
+          cache-key: pg-merge-smoke
+
+      - name: Start Postgres
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker compose -p "$UDB_PG_MERGE_PROJECT" \
+            -f docker-compose.integration.yml \
+            up -d --wait postgres
+
+      - name: Run planner/IR A-B oracle
+        shell: bash
+        env:
+          UDB_IR_LIVE_GOLDEN_TESTS: "1"
+          UDB_PG_DSN: postgres://udb:udb@127.0.0.1:55432/udb
+          DATABASE_URL: postgres://udb:udb@127.0.0.1:55432/udb
+          RUST_BACKTRACE: "1"
+        run: |
+          set -euo pipefail
+          cargo test --locked --lib postgres_data_plane_planner_and_bridged_ir_match_live_rows -- --ignored --nocapture --test-threads=1
+
+      - name: Collect Postgres diagnostics
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          mkdir -p pg-merge-smoke-logs
+          docker ps -a > pg-merge-smoke-logs/docker-ps.txt 2>&1
+          docker compose -p "$UDB_PG_MERGE_PROJECT" \
+            -f docker-compose.integration.yml \
+            ps > pg-merge-smoke-logs/postgres-ps.txt 2>&1
+          docker compose -p "$UDB_PG_MERGE_PROJECT" \
+            -f docker-compose.integration.yml \
+            logs --no-color postgres \
+            > pg-merge-smoke-logs/postgres.log 2>&1
+
+      - name: Upload Postgres diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pg-merge-smoke-logs
+          path: pg-merge-smoke-logs
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Tear down Postgres stack
+        if: always()
+        shell: bash
+        run: |
+          docker compose -p "$UDB_PG_MERGE_PROJECT" \
+            -f docker-compose.integration.yml \
+            down -v --remove-orphans || true

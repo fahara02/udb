@@ -26,6 +26,7 @@ on:
       - "src/schema/**"
       - "Cargo.toml"
       - "Cargo.lock"
+      - "scripts/playground_wasm_smoke.mjs"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
   # Re-publish the site (and refresh the benchmark dashboard) after a benchmark
@@ -94,22 +95,112 @@ jobs:
           rustup target add wasm32-unknown-unknown
           cargo build -p udb-wasm --release --target wasm32-unknown-unknown
           cp -v target/wasm32-unknown-unknown/release/udb_wasm.wasm docs/site/udb.wasm
+      - name: Verify playground parses current editor input
+        run: |
+          node scripts/playground_wasm_smoke.mjs docs/site/udb.wasm
       - name: Verify site artifact contract
         run: |
           test -f docs/site/index.html
           test -f docs/site/playground.html
+          test -f docs/site/architecture.html
+          test -f docs/site/data-plane.html
+          test -f docs/site/control-plane.html
+          test -f docs/site/security.html
+          test -f docs/site/enterprise.html
+          test -f docs/site/sdks.html
           test -f docs/site/styles.css
+          test -f docs/site/app.js
+          test -f docs/site/playground.js
           test -f docs/site/udb.wasm
           test -f docs/site/assets/udb_logo.svg
+          test -f docs/site/benchmarks.html
+          test -f docs/site/benchmarks.js
+          test -f docs/site/bench-results.json
           test -f docs/site/api.html
           test -f docs/site/api/udb-broker.swagger.json
           python3 - <<'PY'
           import json
+          import re
           from pathlib import Path
 
           swagger = json.loads(Path("docs/site/api/udb-broker.swagger.json").read_text())
           assert swagger.get("swagger") == "2.0", "published Swagger JSON is not Swagger 2.0"
           assert swagger.get("paths"), "published Swagger JSON has no API paths"
+          required_extensions = [
+              "x-udb-sdk-alias",
+              "x-udb-scope",
+              "x-udb-retry-safe",
+              "x-udb-idempotency",
+              "x-udb-resource",
+              "x-udb-operation-kind",
+          ]
+          operations = []
+          for api_path, path_item in swagger.get("paths", {}).items():
+              for verb, operation in (path_item or {}).items():
+                  if verb not in {"get", "put", "post", "patch", "delete"}:
+                      continue
+                  if not isinstance(operation, dict):
+                      continue
+                  operations.append((verb, api_path, operation))
+          assert operations, "published Swagger JSON has no operations"
+          for verb, api_path, operation in operations:
+              where = f"{verb.upper()} {api_path}"
+              operation_id = operation.get("operationId", "")
+              assert operation_id, f"{where} has no operationId"
+              assert not re.match(r"^[A-Za-z0-9]+Service_[A-Za-z0-9]+$", operation_id), f"{where} has generated operationId {operation_id}"
+              missing_extensions = [key for key in required_extensions if key not in operation]
+              assert not missing_extensions, f"{where} missing descriptor extensions: {missing_extensions}"
+          bench = json.loads(Path("docs/site/bench-results.json").read_text())
+          summary = bench.get("summary")
+          assert isinstance(summary, dict), "benchmark JSON has no summary object"
+          assert "failed_rpc_count" in summary, "benchmark JSON has no failed_rpc_count"
+          assert isinstance(bench.get("sdks"), list), "benchmark JSON sdks must be a list"
+          assert isinstance(bench.get("history"), list), "benchmark JSON history must be a list"
+          full_rows = []
+          for sdk in bench.get("sdks", []):
+              rows = sdk.get("full_rpcs") or []
+              assert isinstance(rows, list), f"benchmark full_rpcs for {sdk.get('id')} must be a list"
+              full_rows.extend(rows)
+          if full_rows:
+              missing_identity = [
+                  row for row in full_rows
+                  if "wire_api" not in row or "api_alias" not in row or "operation_id" not in row
+              ]
+              assert not missing_identity, "benchmark full_rpcs rows must include wire_api, api_alias, and operation_id"
+              assert any(row.get("api_alias") or row.get("operation_id") for row in full_rows), "benchmark full_rpcs rows lack public API identity"
+
+          from html.parser import HTMLParser
+          from urllib.parse import urlparse
+
+          site = Path("docs/site").resolve()
+
+          class LocalRefParser(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.refs = []
+
+              def handle_starttag(self, tag, attrs):
+                  for key, value in attrs:
+                      if key in {"href", "src"} and value:
+                          self.refs.append(value)
+
+          missing = []
+          for html in sorted(site.glob("*.html")):
+              parser = LocalRefParser()
+              parser.feed(html.read_text(encoding="utf-8"))
+              for ref in parser.refs:
+                  parsed = urlparse(ref)
+                  if parsed.scheme or parsed.netloc or ref.startswith(("#", "mailto:", "tel:")):
+                      continue
+                  target = parsed.path
+                  if not target or target.startswith("/"):
+                      continue
+                  path = (html.parent / target).resolve()
+                  if site != path and site not in path.parents:
+                      missing.append(f"{html.name}: escapes site root: {ref}")
+                  elif not path.exists():
+                      missing.append(f"{html.name}: missing local ref: {ref}")
+          assert not missing, "\n".join(missing)
           PY
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

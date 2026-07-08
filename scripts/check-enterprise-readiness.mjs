@@ -4,10 +4,10 @@
 // the CI hooks, runbooks, load harnesses, or conformance runner that make those
 // live checks repeatable.
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-const repo = process.cwd();
 const requiredFiles = [
   "sdk-conformance/run.mjs",
   "docs/operations.md",
@@ -18,7 +18,7 @@ const requiredFiles = [
 const requiredCiSnippets = [
   "name: Python SDK (pytest)",
   "name: SDK conformance (all languages)",
-  "node sdk-conformance/run.mjs typescript python go csharp java php",
+  "node sdk-conformance/run.mjs metadata error-details typescript python go csharp java php",
   "node scripts/check-enterprise-readiness.mjs",
 ];
 
@@ -98,50 +98,110 @@ const requiredCodeEvidence = [
   },
 ];
 
-const failures = [];
+function checkRepo(repo) {
+  const failures = [];
 
-for (const file of requiredFiles) {
-  if (!existsSync(join(repo, file))) {
-    failures.push(`missing required artifact: ${file}`);
-  }
-}
-
-const ciPath = join(repo, ".github", "workflows", "ci.yml");
-const ci = existsSync(ciPath) ? readFileSync(ciPath, "utf8") : "";
-for (const snippet of requiredCiSnippets) {
-  if (!ci.includes(snippet)) {
-    failures.push(`ci.yml missing gate: ${snippet}`);
-  }
-}
-
-const operationsPath = join(repo, "docs", "operations.md");
-const operations = existsSync(operationsPath) ? readFileSync(operationsPath, "utf8") : "";
-for (const term of requiredRunbookTerms) {
-  if (!operations.toLowerCase().includes(term.toLowerCase())) {
-    failures.push(`operations doc missing runbook section/term: ${term}`);
-  }
-}
-
-for (const term of ["sdk-conformance/run.mjs", "native-load-test", "multi-node", "compliance"]) {
-  if (!operations.toLowerCase().includes(term.toLowerCase())) {
-    failures.push(`operations doc missing readiness evidence term: ${term}`);
-  }
-}
-
-for (const check of requiredCodeEvidence) {
-  const path = join(repo, check.file);
-  if (!existsSync(path)) {
-    failures.push(`missing enterprise code evidence file: ${check.file}`);
-    continue;
-  }
-  const text = readFileSync(path, "utf8");
-  for (const snippet of check.snippets) {
-    if (!text.includes(snippet)) {
-      failures.push(`enterprise code evidence missing in ${check.file}: ${snippet}`);
+  for (const file of requiredFiles) {
+    if (!existsSync(join(repo, file))) {
+      failures.push(`missing required artifact: ${file}`);
     }
   }
+
+  const ciPath = join(repo, ".github", "workflows", "ci.yml");
+  const ci = existsSync(ciPath) ? readFileSync(ciPath, "utf8") : "";
+  for (const snippet of requiredCiSnippets) {
+    if (!ci.includes(snippet)) {
+      failures.push(`ci.yml missing gate: ${snippet}`);
+    }
+  }
+
+  const operationsPath = join(repo, "docs", "operations.md");
+  const operations = existsSync(operationsPath) ? readFileSync(operationsPath, "utf8") : "";
+  for (const term of requiredRunbookTerms) {
+    if (!operations.toLowerCase().includes(term.toLowerCase())) {
+      failures.push(`operations doc missing runbook section/term: ${term}`);
+    }
+  }
+
+  for (const term of ["sdk-conformance/run.mjs", "native-load-test", "multi-node", "compliance"]) {
+    if (!operations.toLowerCase().includes(term.toLowerCase())) {
+      failures.push(`operations doc missing readiness evidence term: ${term}`);
+    }
+  }
+
+  for (const check of requiredCodeEvidence) {
+    const path = join(repo, check.file);
+    if (!existsSync(path)) {
+      failures.push(`missing enterprise code evidence file: ${check.file}`);
+      continue;
+    }
+    const text = readFileSync(path, "utf8");
+    for (const snippet of check.snippets) {
+      if (!text.includes(snippet)) {
+        failures.push(`enterprise code evidence missing in ${check.file}: ${snippet}`);
+      }
+    }
+  }
+
+  return failures;
 }
 
+function writeFixtureFile(root, file, text) {
+  const path = join(root, file);
+  mkdirSync(join(path, ".."), { recursive: true });
+  writeFileSync(path, text, "utf8");
+}
+
+function buildFixture(root, overrides = {}) {
+  for (const file of requiredFiles) {
+    writeFixtureFile(root, file, `fixture for ${file}\n`);
+  }
+  writeFixtureFile(root, ".github/workflows/ci.yml", requiredCiSnippets.join("\n"));
+  writeFixtureFile(
+    root,
+    "docs/operations.md",
+    [...requiredRunbookTerms, "sdk-conformance/run.mjs", "native-load-test", "multi-node", "compliance"].join("\n"),
+  );
+  for (const check of requiredCodeEvidence) {
+    writeFixtureFile(root, check.file, check.snippets.join("\n"));
+  }
+  for (const [file, text] of Object.entries(overrides)) {
+    writeFixtureFile(root, file, text);
+  }
+}
+
+function runSelftest() {
+  const root = mkdtempSync(join(tmpdir(), "udb-enterprise-readiness-"));
+  try {
+    buildFixture(root);
+    let failures = checkRepo(root);
+    if (failures.length) {
+      throw new Error(`good fixture failed:\n${failures.join("\n")}`);
+    }
+
+    buildFixture(root, { "docs/operations.md": "CDC backlog\n" });
+    failures = checkRepo(root);
+    if (!failures.some((failure) => failure.includes("DLQ recovery"))) {
+      throw new Error(`missing runbook term was not caught:\n${failures.join("\n")}`);
+    }
+
+    buildFixture(root, { "src/runtime/service/native_helpers.rs": "validate_native_compliance(\n" });
+    failures = checkRepo(root);
+    if (!failures.some((failure) => failure.includes("enterprise_audit_mode()"))) {
+      throw new Error(`missing code evidence was not caught:\n${failures.join("\n")}`);
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+  console.log("enterprise readiness selftest passed");
+}
+
+if (process.argv.includes("--selftest")) {
+  runSelftest();
+  process.exit(0);
+}
+
+const failures = checkRepo(process.cwd());
 if (failures.length) {
   console.error("Enterprise-readiness gate failed:");
   for (const failure of failures) console.error(`- ${failure}`);

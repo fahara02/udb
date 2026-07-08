@@ -1,0 +1,157 @@
+name: CI runner evidence audit
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Integration branch to audit"
+        required: false
+        default: "main"
+        type: string
+      release_tag:
+        description: "Optional release tag to audit; latest successful v* release is used when empty"
+        required: false
+        default: ""
+        type: string
+      pr_run_id:
+        description: "Optional exact pull_request CI run id"
+        required: false
+        default: ""
+        type: string
+      integration_run_id:
+        description: "Optional exact push CI run id"
+        required: false
+        default: ""
+        type: string
+      release_run_id:
+        description: "Optional exact Release run id"
+        required: false
+        default: ""
+        type: string
+      release_dry_run_id:
+        description: "Optional exact release-binaries dry-run id"
+        required: false
+        default: ""
+        type: string
+      benchmark_run_id:
+        description: "Optional exact post-release Benchmark · SDKs run id"
+        required: false
+        default: ""
+        type: string
+      pages_run_id:
+        description: "Optional exact post-benchmark Pages deploy run id"
+        required: false
+        default: ""
+        type: string
+      lint_run_id:
+        description: "Optional exact Lint · Workflows run id"
+        required: false
+        default: ""
+        type: string
+      branch_protection_run_id:
+        description: "Optional exact Branch protection lockstep audit run id"
+        required: false
+        default: ""
+        type: string
+      idempotency_served_run_id:
+        description: "Optional exact Idempotency served replay smoke run id"
+        required: false
+        default: ""
+        type: string
+      error_detail_served_run_id:
+        description: "Optional exact ErrorDetail served smoke run id"
+        required: false
+        default: ""
+        type: string
+      retry_safe_served_run_id:
+        description: "Optional exact Retry-safe served smoke run id"
+        required: false
+        default: ""
+        type: string
+      rest_gateway_run_id:
+        description: "Optional exact REST gateway smoke run id"
+        required: false
+        default: ""
+        type: string
+      max_evidence_age_days:
+        description: "Reject completed runs older than this many days"
+        required: false
+        default: "14"
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: runner-evidence-audit-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  runner-evidence:
+    name: CI/release timing and parity evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run runner-evidence source selftest
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/check-ci-runner-evidence.mjs
+          node scripts/check-ci-runner-evidence.mjs --selftest
+
+      - name: Compare completed GitHub runs to Chapter 15 budgets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH_NAME: ${{ inputs.branch }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          PR_RUN_ID: ${{ inputs.pr_run_id }}
+          INTEGRATION_RUN_ID: ${{ inputs.integration_run_id }}
+          RELEASE_RUN_ID: ${{ inputs.release_run_id }}
+          RELEASE_DRY_RUN_ID: ${{ inputs.release_dry_run_id }}
+          BENCHMARK_RUN_ID: ${{ inputs.benchmark_run_id }}
+          PAGES_RUN_ID: ${{ inputs.pages_run_id }}
+          LINT_RUN_ID: ${{ inputs.lint_run_id }}
+          BRANCH_PROTECTION_RUN_ID: ${{ inputs.branch_protection_run_id }}
+          IDEMPOTENCY_SERVED_RUN_ID: ${{ inputs.idempotency_served_run_id }}
+          ERROR_DETAIL_SERVED_RUN_ID: ${{ inputs.error_detail_served_run_id }}
+          RETRY_SAFE_SERVED_RUN_ID: ${{ inputs.retry_safe_served_run_id }}
+          REST_GATEWAY_RUN_ID: ${{ inputs.rest_gateway_run_id }}
+          MAX_EVIDENCE_AGE_DAYS: ${{ inputs.max_evidence_age_days }}
+        run: |
+          set -euo pipefail
+          args=(
+            --repo "${GITHUB_REPOSITORY}"
+            --branch "${BRANCH_NAME}"
+            --all-evidence
+            --pr-budget-minutes 8
+            --integration-budget-minutes 30
+            --release-budget-minutes 40
+            --release-dry-run-budget-minutes 120
+            --benchmark-budget-minutes 120
+            --pages-budget-minutes 20
+            --lint-budget-minutes 10
+            --branch-protection-budget-minutes 10
+            --idempotency-served-budget-minutes 15
+            --error-detail-served-budget-minutes 15
+            --retry-safe-served-budget-minutes 15
+            --rest-gateway-budget-minutes 15
+            --max-evidence-age-days "${MAX_EVIDENCE_AGE_DAYS}"
+          )
+          if [ -n "$RELEASE_TAG" ]; then args+=(--release-tag "$RELEASE_TAG"); fi
+          if [ -n "$PR_RUN_ID" ]; then args+=(--pr-run-id "$PR_RUN_ID"); fi
+          if [ -n "$INTEGRATION_RUN_ID" ]; then args+=(--integration-run-id "$INTEGRATION_RUN_ID"); fi
+          if [ -n "$RELEASE_RUN_ID" ]; then args+=(--release-run-id "$RELEASE_RUN_ID"); fi
+          if [ -n "$RELEASE_DRY_RUN_ID" ]; then args+=(--release-dry-run-id "$RELEASE_DRY_RUN_ID"); fi
+          if [ -n "$BENCHMARK_RUN_ID" ]; then args+=(--benchmark-run-id "$BENCHMARK_RUN_ID"); fi
+          if [ -n "$PAGES_RUN_ID" ]; then args+=(--pages-run-id "$PAGES_RUN_ID"); fi
+          if [ -n "$LINT_RUN_ID" ]; then args+=(--lint-run-id "$LINT_RUN_ID"); fi
+          if [ -n "$BRANCH_PROTECTION_RUN_ID" ]; then args+=(--branch-protection-run-id "$BRANCH_PROTECTION_RUN_ID"); fi
+          if [ -n "$IDEMPOTENCY_SERVED_RUN_ID" ]; then args+=(--idempotency-run-id "$IDEMPOTENCY_SERVED_RUN_ID"); fi
+          if [ -n "$ERROR_DETAIL_SERVED_RUN_ID" ]; then args+=(--error-detail-run-id "$ERROR_DETAIL_SERVED_RUN_ID"); fi
+          if [ -n "$RETRY_SAFE_SERVED_RUN_ID" ]; then args+=(--retry-safe-run-id "$RETRY_SAFE_SERVED_RUN_ID"); fi
+          if [ -n "$REST_GATEWAY_RUN_ID" ]; then args+=(--rest-gateway-run-id "$REST_GATEWAY_RUN_ID"); fi
+          node scripts/check-ci-runner-evidence.mjs "${args[@]}"

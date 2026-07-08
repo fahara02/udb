@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
-const repoRoot = process.cwd();
 const ignoredDirs = new Set([
   ".git",
   "target",
@@ -13,6 +13,7 @@ const ignoredDirs = new Set([
   "venv",
   "dist",
   "build",
+  "private",
 ]);
 
 function walk(dir, out) {
@@ -62,40 +63,85 @@ function existsFrom(baseFile, rawTarget) {
   return fs.existsSync(resolved);
 }
 
+function stripFencedCodeBlocks(markdown) {
+  return markdown.replace(/^```[\s\S]*?^```/gm, "");
+}
+
 function collectLinks(markdown) {
   const links = [];
+  const searchable = stripFencedCodeBlocks(markdown);
 
   // Inline links/images: [text](target), ![alt](target).
   const inline = /!?\[[^\]\n]*\]\(([^)\n]+)\)/g;
-  for (const match of markdown.matchAll(inline)) {
+  for (const match of searchable.matchAll(inline)) {
     links.push(match[1]);
   }
 
   // Reference definitions: [id]: target
   const reference = /^\s*\[[^\]\n]+\]:\s*(\S+)/gm;
-  for (const match of markdown.matchAll(reference)) {
+  for (const match of searchable.matchAll(reference)) {
     links.push(match[1]);
   }
 
   return links;
 }
 
-const markdownFiles = [];
-walk(repoRoot, markdownFiles);
+function checkRepo(repoRoot) {
+  const markdownFiles = [];
+  walk(repoRoot, markdownFiles);
 
-const failures = [];
-for (const file of markdownFiles) {
-  const markdown = fs.readFileSync(file, "utf8");
-  for (const link of collectLinks(markdown)) {
-    if (!existsFrom(file, link)) {
-      failures.push({
-        file: path.relative(repoRoot, file).replaceAll(path.sep, "/"),
-        link,
-      });
+  const failures = [];
+  for (const file of markdownFiles) {
+    const markdown = fs.readFileSync(file, "utf8");
+    for (const link of collectLinks(markdown)) {
+      if (!existsFrom(file, link)) {
+        failures.push({
+          file: path.relative(repoRoot, file).replaceAll(path.sep, "/"),
+          link,
+        });
+      }
     }
   }
+
+  return { failures, checked: markdownFiles.length };
 }
 
+function writeFixture(root, rel, text) {
+  const target = path.join(root, rel);
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.writeFileSync(target, text, "utf8");
+}
+
+function runSelftest() {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "udb-markdown-links-"));
+  try {
+    writeFixture(root, "docs/target.md", "# Target\n");
+    writeFixture(root, "docs/good.md", "[target](./target.md)\n[external](https://example.com)\n[anchor](#local)\n");
+    writeFixture(root, "private/research/broken.md", "[missing](./copied-upstream.html)\n");
+    writeFixture(root, "docs/code.md", "```powershell\n[Environment]::SetEnvironmentVariable(\"CMAKE\",\n  \"C:/cmake.exe\",\n  \"User\")\n```\n");
+
+    let result = checkRepo(root);
+    if (result.failures.length) {
+      throw new Error(`good fixture failed:\n${JSON.stringify(result.failures, null, 2)}`);
+    }
+
+    writeFixture(root, "docs/broken.md", "[missing](./missing.md)\n");
+    result = checkRepo(root);
+    if (!result.failures.some((failure) => failure.file === "docs/broken.md" && failure.link === "./missing.md")) {
+      throw new Error(`missing local link was not caught:\n${JSON.stringify(result.failures, null, 2)}`);
+    }
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+  console.log("markdown link selftest passed");
+}
+
+if (process.argv.includes("--selftest")) {
+  runSelftest();
+  process.exit(0);
+}
+
+const { failures, checked } = checkRepo(process.cwd());
 if (failures.length > 0) {
   console.error("Broken local markdown links:");
   for (const failure of failures) {
@@ -104,4 +150,4 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log(`Checked ${markdownFiles.length} markdown files; local links are valid.`);
+console.log(`Checked ${checked} markdown files; local links are valid.`);

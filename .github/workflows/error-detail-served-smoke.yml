@@ -1,0 +1,141 @@
+name: ErrorDetail served smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Live broker gRPC target, for example host:50051"
+        required: true
+        type: string
+      tls:
+        description: "Use TLS for the broker connection"
+        required: false
+        default: false
+        type: boolean
+      header:
+        description: "Optional metadata header as Name: Value"
+        required: false
+        default: ""
+        type: string
+      validation_method:
+        description: "Full unary method path expected to return INVALID_ARGUMENT"
+        required: true
+        type: string
+      validation_request_module:
+        description: "Generated Python pb2 module for the validation request"
+        required: true
+        type: string
+      validation_request_message:
+        description: "Generated Python request message class for validation"
+        required: true
+        type: string
+      validation_request_json:
+        description: "Validation request JSON expected to produce field_violations"
+        required: true
+        type: string
+      validation_field:
+        description: "Expected ErrorDetail.field_violations field path"
+        required: true
+        type: string
+      quota_method:
+        description: "Full unary method path expected to return RESOURCE_EXHAUSTED"
+        required: true
+        type: string
+      quota_request_module:
+        description: "Generated Python pb2 module for the quota request"
+        required: true
+        type: string
+      quota_request_message:
+        description: "Generated Python request message class for quota"
+        required: true
+        type: string
+      quota_request_json:
+        description: "Quota request JSON expected to produce retry/backpressure detail"
+        required: true
+        type: string
+      quota_retry_after_min_ms:
+        description: "Minimum expected retry_after_ms for quota detail"
+        required: true
+        default: "200"
+        type: string
+      quota_backend:
+        description: "Expected ErrorDetail.backend for quota/backpressure detail"
+        required: true
+        type: string
+      quota_operation:
+        description: "Expected ErrorDetail.operation for quota/backpressure detail"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: error-detail-served-smoke-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  error-detail-served:
+    name: ErrorDetail served transport proof
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python SDK runtime deps
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install -e sdk/python
+
+      - name: Run ErrorDetail smoke selftest
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/error_detail_served_smoke.py --selftest
+
+      - name: Run live ErrorDetail served smoke
+        shell: bash
+        env:
+          TARGET: ${{ inputs.target }}
+          TLS: ${{ inputs.tls }}
+          HEADER: ${{ inputs.header }}
+          VALIDATION_METHOD: ${{ inputs.validation_method }}
+          VALIDATION_REQUEST_MODULE: ${{ inputs.validation_request_module }}
+          VALIDATION_REQUEST_MESSAGE: ${{ inputs.validation_request_message }}
+          VALIDATION_REQUEST_JSON: ${{ inputs.validation_request_json }}
+          VALIDATION_FIELD: ${{ inputs.validation_field }}
+          QUOTA_METHOD: ${{ inputs.quota_method }}
+          QUOTA_REQUEST_MODULE: ${{ inputs.quota_request_module }}
+          QUOTA_REQUEST_MESSAGE: ${{ inputs.quota_request_message }}
+          QUOTA_REQUEST_JSON: ${{ inputs.quota_request_json }}
+          QUOTA_RETRY_AFTER_MIN_MS: ${{ inputs.quota_retry_after_min_ms }}
+          QUOTA_BACKEND: ${{ inputs.quota_backend }}
+          QUOTA_OPERATION: ${{ inputs.quota_operation }}
+        run: |
+          set -euo pipefail
+          mkdir -p smoke-input
+          args=(--target "$TARGET")
+          if [ "$TLS" = "true" ]; then args+=(--tls); fi
+          if [ -n "$HEADER" ]; then args+=(--header "$HEADER"); fi
+          printf '%s' "$VALIDATION_REQUEST_JSON" > smoke-input/validation.json
+          printf '%s' "$QUOTA_REQUEST_JSON" > smoke-input/quota.json
+          args+=(
+            --validation-method "$VALIDATION_METHOD"
+            --validation-request-module "$VALIDATION_REQUEST_MODULE"
+            --validation-request-message "$VALIDATION_REQUEST_MESSAGE"
+            --validation-request-json smoke-input/validation.json
+            --validation-field "$VALIDATION_FIELD"
+            --quota-method "$QUOTA_METHOD"
+            --quota-request-module "$QUOTA_REQUEST_MODULE"
+            --quota-request-message "$QUOTA_REQUEST_MESSAGE"
+            --quota-request-json smoke-input/quota.json
+            --quota-retry-after-min-ms "$QUOTA_RETRY_AFTER_MIN_MS"
+            --quota-backend "$QUOTA_BACKEND"
+            --quota-operation "$QUOTA_OPERATION"
+          )
+          python scripts/error_detail_served_smoke.py --require-all-proofs "${args[@]}"

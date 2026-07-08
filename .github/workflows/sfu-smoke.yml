@@ -1,0 +1,134 @@
+name: LiveKit SFU smoke
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: livekit-sfu-smoke-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  livekit-sfu-smoke:
+    name: LiveKit served-path smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      UDB_SFU_PROJECT: udb-sfu-smoke
+      UDB_SFU_OPERATOR_USERNAME: sfu_smoke
+      UDB_SFU_OPERATOR_PASSWORD: CorrectHorse1!
+      UDB_SFU_OPERATOR_TENANT: sfu-smoke
+      UDB_SFU_OPERATOR_PROJECT: default
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Docker environment
+        run: |
+          docker version
+          docker compose version
+
+      - uses: ./.github/actions/setup-rust
+        with:
+          cache-key: livekit-sfu-smoke
+
+      - name: Run SFU feature canaries
+        shell: bash
+        env:
+          RUST_BACKTRACE: "1"
+        run: |
+          set -euo pipefail
+          cargo test --locked --lib --features webrtc livekit_join_token_binds_tenant_room_and_peer -- --nocapture
+          cargo test --locked --lib --features webrtc plaintext_livekit_url_requires_explicit_local_opt_in -- --nocapture
+          cargo test --locked --lib --features webrtc livekit_room_service_base_derives_http_endpoint -- --nocapture
+          cargo test --locked --lib --features webrtc sfu_join_metadata_uses_public_header_contract -- --nocapture
+          cargo test --locked --lib --features webrtc signal_offer_uses_injected_sfu_bridge -- --nocapture
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python SDK dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e "sdk/python"
+
+      - name: Selftest LiveKit SFU smoke harness
+        run: python scripts/livekit_sfu_smoke.py --selftest
+
+      - name: Start LiveKit SFU stack
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker compose -p "$UDB_SFU_PROJECT" \
+            -f docker-compose.integration.yml \
+            --profile sfu \
+            up -d --wait \
+            postgres redis qdrant minio kafka livekit coturn udb-livekit
+
+      - name: Bootstrap LiveKit SFU operator
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker compose -p "$UDB_SFU_PROJECT" \
+            -f docker-compose.integration.yml \
+            --profile sfu \
+            exec -T udb-livekit \
+            udb auth bootstrap user \
+              --username "$UDB_SFU_OPERATOR_USERNAME" \
+              --email "sfu-smoke@example.com" \
+              --password "$UDB_SFU_OPERATOR_PASSWORD" \
+              --tenant "$UDB_SFU_OPERATOR_TENANT" \
+              --project "$UDB_SFU_OPERATOR_PROJECT"
+
+      - name: Run LiveKit SFU smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/livekit_sfu_smoke.py \
+            --broker 127.0.0.1:50082 \
+            --auth-broker 127.0.0.1:50081 \
+            --username "$UDB_SFU_OPERATOR_USERNAME" \
+            --password "$UDB_SFU_OPERATOR_PASSWORD" \
+            --livekit-http http://127.0.0.1:57880 \
+            --livekit-url ws://livekit:7880 \
+            --api-key devkey \
+            --api-secret secret
+
+      - name: Collect LiveKit SFU diagnostics
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          mkdir -p livekit-sfu-smoke-logs
+          docker ps -a > livekit-sfu-smoke-logs/docker-ps.txt 2>&1
+          docker compose -p "$UDB_SFU_PROJECT" \
+            -f docker-compose.integration.yml \
+            --profile sfu \
+            ps > livekit-sfu-smoke-logs/sfu-ps.txt 2>&1
+          docker compose -p "$UDB_SFU_PROJECT" \
+            -f docker-compose.integration.yml \
+            --profile sfu \
+            logs --no-color \
+            postgres redis qdrant minio kafka livekit coturn udb-livekit \
+            > livekit-sfu-smoke-logs/sfu.log 2>&1
+
+      - name: Upload LiveKit SFU diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: livekit-sfu-smoke-logs
+          path: livekit-sfu-smoke-logs
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Tear down LiveKit SFU stack
+        if: always()
+        shell: bash
+        run: |
+          docker compose -p "$UDB_SFU_PROJECT" \
+            -f docker-compose.integration.yml \
+            --profile sfu \
+            down -v --remove-orphans || true

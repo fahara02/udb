@@ -440,26 +440,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python - <<'PY'
-          import json
-          from pathlib import Path
-
-          path = Path("docs/site/bench-results.json")
-          if not path.is_file():
-              raise SystemExit("benchmark results JSON was not produced")
-          data = json.loads(path.read_text(encoding="utf-8"))
-          summary = data.get("summary", {})
-          bad_sdks = [
-              s.get("name") or s.get("id")
-              for s in data.get("sdks", [])
-              if s.get("status") not in {"ok", "skipped"}
-          ]
-          failed_rpcs = int(summary.get("failed_rpc_count") or 0)
-          if bad_sdks or failed_rpcs:
-              print(f"Benchmark failures: bad_sdks={bad_sdks}, failed_rpc_count={failed_rpcs}")
-              raise SystemExit(1)
-          print("Benchmark gate passed: no failed SDKs and no failed RPCs.")
-          PY
+          python scripts/collect_sdk_bench_results.py --gate docs/site/bench-results.json
 
       # ── Always-run cleanup: stop broker(s) + docker ──────────────────
       - name: Stop broker and backends

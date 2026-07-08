@@ -15,6 +15,11 @@ Cargo.lock.bak
 *.profraw
 *.profdata
 
+# Vendored media toolchain. The generic `*.exe` ignore is correct for build
+# output, but the Windows ffmpeg binary is a deliberate third-party runtime
+# artifact for AssetService transcode.
+!third_party/ffmpeg/bin/windows/ffmpeg.exe
+
 # ── Generated / temporary test artifacts ─────────────────────────────────────
 tmp/
 temp/
@@ -107,6 +112,8 @@ docs/generated/*
 !docs/generated/authn-authz-rpc-inventory.md
 !docs/generated/authn-authz-sensitive-fields.md
 !docs/generated/codebase-map.md
+!docs/generated/http-api-style-exceptions.json
+!docs/generated/http-api-style-exceptions.md
 # Phase 3: committed contract baseline (breaking-change gate) + descriptor-generated native-service docs.
 !docs/generated/contract-baseline.bin
 !docs/generated/consistency-golden.json
@@ -207,6 +214,7 @@ Thumbs.db
 # runtime artifacts are ignored (logs already covered by *.log above).
 .bench-local/*.pid
 .bench-local/audit.jsonl
+.bench-local/idempotency-smoke/
 
 # HL7v2 parser websuite downloads are regenerated from the tracked manifest.
 /tests/fixtures/hl7v2/websuite/generated/

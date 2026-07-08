@@ -208,7 +208,7 @@ for (const [file, label] of asciiHeaderFiles) {
 processTriple("docs-logo badge line", "docs/assets/udb_markdown_logo.md", C.udb.version,
   /(UDB \| crate v)(\d+\.\d+\.\d+)( \| protocol v[\d.]+ \| policy-aware)/);
 processTriple("docs-native-services version", "docs/native-services.md", C.udb.version,
-  /(UDB )(\d+\.\d+\.\d+)( exposes \d+ native services)/);
+  /(UDB )(\d+\.\d+\.\d+)( includes a native control plane)/);
 processTriple("docs-readme intro", "docs/README.md", C.udb.version,
   /(public documentation for UDB )(\d+\.\d+\.\d+)(\. The guides)/);
 processTriple("readme release row", "README.md", C.udb.version,

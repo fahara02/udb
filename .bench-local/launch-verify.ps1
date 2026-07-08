@@ -1,9 +1,15 @@
 $ErrorActionPreference = "Stop"
 Set-Location "E:\Projects\udb"
+. (Join-Path $PSScriptRoot "bench-process.ps1")
+$UdbBenchBin = Resolve-UdbBenchBin
 
 # Bench broker for bug-fix verification — single process (no restart loop, so a
-# C1-style mid-run exit is observable), fresh udb_bench_local, explicit env (no
-# UDB_MYSQL_DSN -> avoids the canonical-store MySQL panic), full DDL sync.
+# C1-style mid-run exit is observable), fresh udb_bench_local, explicit env, full
+# DDL sync. These empty vars intentionally mask repo .env backend DSNs that are
+# not part of the local portable benchmark binary feature set.
+$env:UDB_MSSQL_DSN      = ""
+$env:UDB_CASSANDRA_DSN  = ""
+$env:UDB_MEMCACHED_DSN  = ""
 $env:UDB_GRPC_ADDR        = "0.0.0.0:51071"
 $env:UDB_GRPC_TARGET      = "127.0.0.1:51071"
 $env:UDB_AUTH_GRPC_ADDR   = "0.0.0.0:51081"
@@ -40,6 +46,13 @@ $env:UDB_ALLOW_DEGRADED_BACKENDS    = "true"
 # EnsureBaseline (DataBroker admin baseline seed) is guarded behind this flag and
 # fails closed when unset; the perf sweep exercises it, so enable it here.
 $env:UDB_ENABLE_ADMIN_SEED          = "1"
+# Notification retry perf uses a served, env-gated FAILED-log path; keep it off
+# outside harness launches.
+$env:UDB_NOTIFICATION_TEST_MODE     = "1"
+# Vault dynamic DB credentials are fail-closed unless the operator maps request
+# role aliases to existing database roles. The bench requests role "readonly";
+# map it to the local Postgres role used by the test database.
+$env:UDB_VAULT_DB_ROLES_JSON        = '[{"role_name":"readonly","parent_role":"udb","ttl_seconds_max":900}]'
 # CDC ON: the earlier "abort under CDC burst" was a harness kill-by-name artifact, not a
 # broker crash (harness_correction.md). PublishCDC needs the CDC tailer configured
 # (UDB_KAFKA_BROKERS below); enable it so PublishCDC runs its real publish path.
@@ -81,12 +94,14 @@ $env:UDB_SESSION_ENABLED           = "true"
 $env:UDB_SESSION_HASH_SECRET       = "ci-bench-session-hash-secret"
 $env:UDB_PASSWORD_HASH_SECRET      = "ci-bench-password-hash-secret"
 
+. (Join-Path $PSScriptRoot "bench-admission-headroom.ps1")
+
 # IMPORTANT: do NOT pipe the broker through Tee-Object — under the startup log burst the
 # broker aborts (exitcode=-1) when a stdout write to the stalled pipe fails (bug_report.md
 # §M). Use Start-Process with direct FILE redirection (stdout → verify-broker.log, which
 # carries the "UDB DataBroker is ready" marker the grind waits on).
 "=== broker start $(Get-Date -Format o) ===" | Out-File -FilePath "E:\Projects\udb\.bench-local\verify-broker.err.log"
-$broker = Start-Process -FilePath "E:\Projects\udb\target-verify\debug\udb.exe" `
+$broker = Start-Process -FilePath $UdbBenchBin `
     -ArgumentList 'serve proto "" 0.0.0.0:51071' `
     -WorkingDirectory "E:\Projects\udb" `
     -RedirectStandardOutput "E:\Projects\udb\.bench-local\verify-broker.log" `

@@ -7,6 +7,7 @@ name: Release · C# SDK (NuGet)
 #   Udb.Cli     — dotnet tool launcher (dotnet tool install --global Udb.Cli)
 #
 # Both packages follow the main UDB release version tracked in versions.json.
+# Expected UDB release version, for example 0.3.7"
 # The release flow mirrors the Python/TypeScript SDKs: version consistency is
 # verified, tests pass, then nuget push fires. Publishing uses NuGet trusted
 # publishing: the `production` environment is bound to the nuget.org trusted
@@ -15,11 +16,6 @@ name: Release · C# SDK (NuGet)
 
 on:
   workflow_call:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: "Expected UDB release version, for example 0.3.7"
-        required: true
 
 permissions:
   contents: read
@@ -49,7 +45,6 @@ jobs:
       - uses: ./.github/actions/version-guard
         with:
           component: sdk-csharp
-          dispatch-version: ${{ github.event.inputs.version }}
 
       # ── Restore + test ────────────────────────────────────────────────────
       - name: Restore dependencies
@@ -61,10 +56,6 @@ jobs:
         run: |
           dotnet build sdk/csharp/Udb.Client.Tests/Udb.Client.Tests.csproj --configuration Release --no-restore
           dotnet build sdk/csharp/Udb.Cli/Udb.Cli.csproj --configuration Release --no-restore
-
-      - name: Run tests
-        if: github.event_name == 'workflow_dispatch'
-        run: dotnet test sdk/csharp/Udb.Client.Tests/Udb.Client.Tests.csproj --configuration Release --no-build --verbosity normal
 
       # ── Check NuGet availability ──────────────────────────────────────────
       - name: Check Udb.Client availability on NuGet

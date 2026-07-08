@@ -28,7 +28,9 @@ lint prints the offending file:line and the served-RPC / bootstrap remediation.
 
 Exit code 0 = clean; 1 = a published helper violates the rule; 2 = usage/IO error.
 
-Run locally:  python scripts/check-no-internal-tables.py
+Run locally:
+  python scripts/check-no-internal-tables.py
+  python scripts/check-no-internal-tables.py --selftest
 CI wires this into the same Linux `rust` job as the other doc/coverage guards.
 """
 
@@ -36,6 +38,7 @@ from __future__ import annotations
 
 import re
 import sys
+import tempfile
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
@@ -68,8 +71,8 @@ RAW_BINDING_NAMES = {
 }
 
 
-def is_excluded(path: Path) -> bool:
-    rel = path.relative_to(REPO)
+def is_excluded(path: Path, root: Path = REPO) -> bool:
+    rel = path.relative_to(root)
     parts = rel.parts
     # Generated stubs, test trees, dist outputs, Live integration dirs.
     for part in parts:
@@ -89,17 +92,18 @@ def is_excluded(path: Path) -> bool:
     return False
 
 
-def candidate_files() -> list[Path]:
+def candidate_files(root: Path = REPO) -> list[Path]:
     files: list[Path] = []
-    if not SDK.is_dir():
-        print(f"error: SDK tree not found at {SDK}", file=sys.stderr)
+    sdk = root / "sdk"
+    if not sdk.is_dir():
+        print(f"error: SDK tree not found at {sdk}", file=sys.stderr)
         sys.exit(2)
-    for path in SDK.rglob("*"):
+    for path in sdk.rglob("*"):
         if not path.is_file():
             continue
         if path.suffix not in SOURCE_SUFFIXES:
             continue
-        if is_excluded(path):
+        if is_excluded(path, root):
             continue
         files.append(path)
     return sorted(files)
@@ -127,13 +131,77 @@ def violations_in(path: Path) -> list[tuple[int, str]]:
     return hits
 
 
-def main() -> int:
-    files = candidate_files()
+def scan(root: Path = REPO) -> list[str]:
+    files = candidate_files(root)
     failures: list[str] = []
     for path in files:
         for line_no, line_text in violations_in(path):
-            rel = path.relative_to(REPO)
+            rel = path.relative_to(root)
             failures.append(f"{rel}:{line_no}: {line_text}")
+    return failures
+
+
+def write_fixture(root: Path, rel_path: str, text: str) -> None:
+    target = root / rel_path
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(text, encoding="utf-8")
+
+
+def run_selftest() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        write_fixture(
+            root,
+            "sdk/typescript/project.ts",
+            "export function ok() { return 'served RPC only'; }\n",
+        )
+        write_fixture(
+            root,
+            "sdk/typescript/generatedClient.ts",
+            "const method = 'GenericDispatch';\nconst table = 'udb_system';\n",
+        )
+        write_fixture(
+            root,
+            "sdk/typescript/tests/helper.test.ts",
+            "GenericDispatch({ sql: 'select * from udb_authn.users' });\n",
+        )
+        failures = scan(root)
+        if failures:
+            raise AssertionError(f"selftest clean fixture failed: {failures}")
+
+        write_fixture(
+            root,
+            "sdk/typescript/project.ts",
+            "\n".join(
+                [
+                    "export function bad() {",
+                    "  const req = { sql: 'select * from udb_system.bootstrap_state' };",
+                    "  return GenericDispatch(req);",
+                    "}",
+                    "",
+                ]
+            ),
+        )
+        failures = scan(root)
+        normalized = [failure.replace("\\", "/") for failure in failures]
+        if not any("sdk/typescript/project.ts" in failure for failure in normalized):
+            raise AssertionError("selftest failed to catch internal GenericDispatch helper")
+
+
+def main(argv: list[str]) -> int:
+    if len(argv) > 2 or (len(argv) == 2 and argv[1] not in ("--selftest", "--help", "-h")):
+        print(f"unknown argument: {argv[1]}", file=sys.stderr)
+        return 2
+    if len(argv) == 2 and argv[1] in ("--help", "-h"):
+        print(__doc__)
+        return 0
+    if len(argv) == 2 and argv[1] == "--selftest":
+        run_selftest()
+        print("no-internal-tables guard selftest passed")
+        return 0
+
+    files = candidate_files()
+    failures = scan()
 
     if failures:
         print("::error::No-internal-tables rule violated: a published SDK helper")
@@ -159,4 +227,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv))

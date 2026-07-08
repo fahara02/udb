@@ -9,6 +9,7 @@ import json
 import os
 import re
 import subprocess
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -33,6 +34,25 @@ SDK_NAMES = {
 MISSING_HARNESS = {
     "csharp": "No live per-RPC benchmark harness exists yet; SDK build/unit conformance still runs in CI.",
     "java": "No live per-RPC benchmark harness exists yet; SDK compile/unit conformance still runs in CI.",
+}
+
+GRPC_STATUS_CODES = {
+    "CANCELLED",
+    "UNKNOWN",
+    "INVALID_ARGUMENT",
+    "DEADLINE_EXCEEDED",
+    "NOT_FOUND",
+    "ALREADY_EXISTS",
+    "PERMISSION_DENIED",
+    "RESOURCE_EXHAUSTED",
+    "FAILED_PRECONDITION",
+    "ABORTED",
+    "OUT_OF_RANGE",
+    "UNIMPLEMENTED",
+    "INTERNAL",
+    "UNAVAILABLE",
+    "DATA_LOSS",
+    "UNAUTHENTICATED",
 }
 
 
@@ -90,6 +110,21 @@ def _identity(service: str, rpc: str, api_alias: str = "", operation_id: str = "
     return operation_id or api_alias or wire_api, wire_api
 
 
+def _canonical_grpc_status(raw: str) -> str:
+    value = raw.strip().strip("`")
+    wrapped = re.fullmatch(r"(?:FAILED|ERROR)\s*\(([^)]+)\)", value, re.I)
+    if wrapped:
+        value = wrapped.group(1).strip()
+    value = value.split("::")[-1].split(".")[-1]
+    value = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", value)
+    token = re.sub(r"[\s-]+", "_", value).upper()
+    if token not in GRPC_STATUS_CODES:
+        raise ValueError(
+            f"benchmark report err token {raw!r} is not a canonical gRPC status"
+        )
+    return token
+
+
 def _parse_report(path: Path) -> dict[str, Any]:
     text = path.read_text(encoding="utf-8", errors="replace")
     lines = text.splitlines()
@@ -115,7 +150,7 @@ def _parse_report(path: Path) -> dict[str, Any]:
         raw = (value or "").strip()
         if raw in {"", "-", "OK", "ok"}:
             return None
-        return raw
+        return _canonical_grpc_status(raw)
 
     for line in lines:
         low = line.lower()
@@ -244,19 +279,37 @@ def _parse_report(path: Path) -> dict[str, Any]:
             })
 
     service_means = [s["mean_ms"] for s in services if isinstance(s.get("mean_ms"), (int, float))]
-    # Authoritative failure set = the Failures subsection, unioned (by rpc) with any
-    # failed rows that leaked into the slowest table. Backward compatible: an older
-    # report with neither a Failures section nor an err column yields 0 failures.
+    # Authoritative failure set = the Failures subsection, unioned with any failed
+    # row present in the slowest OR full per-RPC tables. Key by wire API, not bare
+    # method name, so same-named RPCs on different services cannot collapse.
+    # Backward compatible: an older report with no failure section and no err
+    # column yields 0 failures.
+    def failure_key(row: dict[str, Any]) -> str:
+        return str(row.get("wire_api") or row.get("api") or row.get("rpc") or "")
+
     failed_by_rpc: dict[str, dict[str, Any]] = {}
     for f in failures:
-        failed_by_rpc[f["rpc"]] = f
+        failed_by_rpc[failure_key(f)] = f
     for s in slowest:
-        if s.get("err_code") and s["rpc"] not in failed_by_rpc:
-            failed_by_rpc[s["rpc"]] = {
-                "rpc": s["rpc"], "kind": s.get("kind", ""), "err_code": s["err_code"],
+        key = failure_key(s)
+        if s.get("err_code") and key not in failed_by_rpc:
+            failed_by_rpc[key] = {
+                "rpc": s["rpc"], "service": s.get("service", ""), "wire_rpc": s.get("wire_rpc", ""),
+                "wire_api": s.get("wire_api", ""), "api": s.get("api", ""),
+                "kind": s.get("kind", ""), "err_code": s["err_code"],
                 "p99_ms": s.get("p99_ms"), "mean_ms": s.get("mean_ms"),
             }
-    failed_rpcs = sorted(failed_by_rpc.values(), key=lambda x: x["rpc"])
+    for r in full_rpcs:
+        key = failure_key(r)
+        if r.get("err_code") and key not in failed_by_rpc:
+            failed_by_rpc[key] = {
+                "rpc": r["rpc"], "service": r.get("service", ""), "wire_rpc": r.get("rpc", ""),
+                "wire_api": r.get("wire_api", ""), "api": r.get("api", ""),
+                "api_alias": r.get("api_alias", ""), "operation_id": r.get("operation_id", ""),
+                "kind": r.get("kind", ""), "err_code": r["err_code"],
+                "p99_ms": r.get("p99_ms"), "mean_ms": r.get("mean_ms"),
+            }
+    failed_rpcs = sorted(failed_by_rpc.values(), key=lambda x: x.get("wire_api") or x["rpc"])
 
     summary: dict[str, Any] = {
         "rpc_count": measured,
@@ -286,15 +339,157 @@ def _parse_report(path: Path) -> dict[str, Any]:
     return parsed
 
 
+def _benchmark_gate_failures(payload: dict[str, Any]) -> list[str]:
+    summary = payload.get("summary", {})
+    bad_sdks = [
+        s.get("name") or s.get("id")
+        for s in payload.get("sdks", [])
+        if s.get("status") not in {"ok", "skipped"}
+    ]
+    try:
+        failed_rpcs = int(summary.get("failed_rpc_count") or 0)
+    except (TypeError, ValueError):
+        failed_rpcs = 0
+
+    failures: list[str] = []
+    if bad_sdks:
+        failures.append(f"bad_sdks={bad_sdks}")
+    if failed_rpcs:
+        failures.append(f"failed_rpc_count={failed_rpcs}")
+    return failures
+
+
+def _gate_results(path: Path) -> int:
+    target = path if path.is_absolute() else ROOT / path
+    if not target.is_file():
+        print(f"ERROR: benchmark results JSON was not produced: {target}")
+        return 1
+    payload = json.loads(target.read_text(encoding="utf-8"))
+    failures = _benchmark_gate_failures(payload)
+    if failures:
+        print(f"Benchmark gate failed: {', '.join(failures)}")
+        return 1
+    print("Benchmark gate passed: no failed SDKs and no failed RPCs.")
+    return 0
+
+
+def _selftest() -> int:
+    with tempfile.TemporaryDirectory(prefix="udb-bench-collector-") as tmp:
+        path = Path(tmp) / "perf_report.md"
+
+        # Regression pin: even if a language harness forgets to render the
+        # Failures subsection, any full-table err != OK must still fail the
+        # aggregate Pages JSON and final workflow gate.
+        path.write_text(
+            """# UDB SDK Live Perf
+
+RPCs measured: 2
+
+## Full per-RPC table (sorted by service, then RPC)
+
+| Service | RPC | kind | err | p50 ms | p99 ms | mean ms | iters |
+|---|---|---|---|--:|--:|--:|--:|
+| DataBroker | Select | read_only | OK | 0.20 | 0.30 | 0.22 | 25 |
+| DataBroker | ApproveMigrationPlan | mutation | RESOURCE_EXHAUSTED | 0.25 | 0.25 | 0.25 | 1 |
+""",
+            encoding="utf-8",
+        )
+        parsed = _parse_report(path)
+        assert parsed["summary"]["failed_rpc_count"] == 1, parsed
+        assert parsed["failed_rpcs"][0]["wire_api"] == "DataBroker/ApproveMigrationPlan", parsed
+        assert parsed["failed_rpcs"][0]["err_code"] == "RESOURCE_EXHAUSTED", parsed
+
+        # Language harnesses report status names in different spellings. The
+        # collector owns the public Pages schema, so normalize them to gRPC's
+        # canonical UPPER_SNAKE tokens before the page or gate sees them.
+        path.write_text(
+            """# UDB SDK Live Perf
+
+RPCs measured: 2
+
+## Full per-RPC table (sorted by service, then RPC)
+
+| Service | RPC | kind | err | p50 ms | p99 ms | mean ms | iters |
+|---|---|---|---|--:|--:|--:|--:|
+| RoomService | GetRoom | read_only | ResourceExhausted | 0.20 | 0.30 | 0.22 | 1 |
+| TenantService | GetTenantConfig | read_only | FAILED (ResourceExhausted) | 0.20 | 0.30 | 0.22 | 1 |
+""",
+            encoding="utf-8",
+        )
+        parsed = _parse_report(path)
+        assert parsed["summary"]["failed_rpc_count"] == 2, parsed
+        assert {row["err_code"] for row in parsed["failed_rpcs"]} == {"RESOURCE_EXHAUSTED"}, parsed
+
+        path.write_text(
+            """# UDB SDK Live Perf
+
+RPCs measured: 1
+
+## Full per-RPC table (sorted by service, then RPC)
+
+| Service | RPC | kind | err | p50 ms | p99 ms | mean ms | iters |
+|---|---|---|---|--:|--:|--:|--:|
+| DataBroker | Select | read_only | ResrcExhausted | 0.20 | 0.30 | 0.22 | 1 |
+""",
+            encoding="utf-8",
+        )
+        try:
+            _parse_report(path)
+            raise AssertionError("unknown benchmark status token regression was not caught")
+        except ValueError as exc:
+            assert "not a canonical gRPC status" in str(exc), exc
+
+        # Bare RPC-name collisions across services must not collapse into one
+        # failure. This mirrors native services that share names such as List/Get.
+        path.write_text(
+            """# UDB SDK Live Perf
+
+RPCs measured: 2
+
+## Failures (2)
+
+| RPC | kind | err | p99 ms |
+|---|---|---|--:|
+| RoomService/GetRoom | read_only | RESOURCE_EXHAUSTED | 0.25 |
+| TenantService/GetRoom | read_only | FAILED_PRECONDITION | 0.30 |
+""",
+            encoding="utf-8",
+        )
+        parsed = _parse_report(path)
+        assert parsed["summary"]["failed_rpc_count"] == 2, parsed
+
+        assert _benchmark_gate_failures({
+            "summary": {"failed_rpc_count": 0},
+            "sdks": [{"name": "Go", "status": "ok"}, {"name": "Java", "status": "skipped"}],
+        }) == []
+        assert _benchmark_gate_failures({
+            "summary": {"failed_rpc_count": 3},
+            "sdks": [{"name": "Go", "status": "ok"}],
+        }) == ["failed_rpc_count=3"]
+        assert _benchmark_gate_failures({
+            "summary": {"failed_rpc_count": 0},
+            "sdks": [{"name": "PHP", "status": "failed"}],
+        }) == ["bad_sdks=['PHP']"]
+
+    print("collect_sdk_bench_results selftest passed")
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
+    ap.add_argument("--selftest", action="store_true", help="run parser/gate regression fixtures and exit")
     ap.add_argument("--out", default="docs/site/bench-results.json")
     ap.add_argument("--status-dir", default="bench-output/status")
     ap.add_argument("--release-tag", default=os.getenv("UDB_BENCH_RELEASE_TAG", ""))
     ap.add_argument("--release-asset", default=os.getenv("UDB_BENCH_RELEASE_ASSET", ""))
     ap.add_argument("--release-url", default=os.getenv("UDB_BENCH_RELEASE_URL", ""))
     ap.add_argument("--previous", default="", help="previous bench-results.json to append history from")
+    ap.add_argument("--gate", default="", help="fail if an existing bench-results.json has bad SDKs or failed RPCs")
     args = ap.parse_args()
+    if args.selftest:
+        return _selftest()
+    if args.gate:
+        return _gate_results(Path(args.gate))
 
     status_dir = (ROOT / args.status_dir).resolve()
     sdks: list[dict[str, Any]] = []
@@ -310,9 +505,27 @@ def main() -> int:
             "exit_code": exit_code,
         }
         if report_exists:
-            entry.update(_parse_report(path))
-            if entry.get("harness_error"):
-                entry["note"] = entry["harness_error"]
+            try:
+                entry.update(_parse_report(path))
+                if entry.get("harness_error"):
+                    entry["note"] = entry["harness_error"]
+            except ValueError as exc:
+                entry["status"] = "failed"
+                entry["note"] = f"Benchmark report parse failed: {exc}"
+                entry["summary"] = {
+                    "rpc_count": None,
+                    "service_count": 0,
+                    "slowest_count": 0,
+                    "failed_rpc_count": 0,
+                }
+                entry["services"] = []
+                entry["slowest"] = []
+                entry["failed_rpcs"] = []
+                entry["full_rpcs"] = []
+                try:
+                    entry["report_path"] = str(path.relative_to(ROOT)).replace("\\", "/")
+                except ValueError:
+                    entry["report_path"] = str(path)
         else:
             entry["status"] = "failed" if exit_code not in (None, 0) else "missing"
             entry["note"] = "Benchmark command did not produce a Markdown report."

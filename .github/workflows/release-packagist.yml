@@ -35,7 +35,6 @@ on:
       PACKAGIST_API_TOKEN:
         description: packagist.org API token for the update hook.
         required: false
-  workflow_dispatch:
 
 env:
   SATELLITE_REPO: git@github.com:fahara02/udb-laravel.git

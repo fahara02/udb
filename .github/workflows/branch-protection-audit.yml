@@ -1,0 +1,43 @@
+name: Branch protection lockstep audit
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Protected branch to audit"
+        required: false
+        default: "main"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: branch-protection-audit-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  branch-protection-lockstep:
+    name: Branch protection required checks match docs
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run branch-protection source selftest
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/check-branch-protection-lockstep.mjs
+          node scripts/check-branch-protection-lockstep.mjs --selftest
+
+      - name: Compare GitHub branch protection to docs
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.BRANCH_PROTECTION_TOKEN || github.token }}
+          BRANCH_NAME: ${{ inputs.branch }}
+        run: |
+          set -euo pipefail
+          node scripts/check-branch-protection-lockstep.mjs \
+            --repo "${GITHUB_REPOSITORY}" \
+            --branch "${BRANCH_NAME}"

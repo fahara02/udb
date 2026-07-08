@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "source": "scripts/native-load-test.sh smoke profile",
+  "load_profile": {
+    "concurrency": 2,
+    "total": 20
+  },
+  "threshold": {
+    "max_regression_percent": 15
+  },
+  "cases": {
+    "storage register upload": {
+      "p99_ms": 1000.0
+    },
+    "storage finalize upload": {
+      "p99_ms": 1000.0
+    },
+    "storage list objects (ListFiles)": {
+      "p99_ms": 1000.0
+    },
+    "asset list": {
+      "p99_ms": 1000.0
+    },
+    "asset start pipeline": {
+      "p99_ms": 1000.0
+    },
+    "asset complete step": {
+      "p99_ms": 1000.0
+    },
+    "webrtc list rooms": {
+      "p99_ms": 1000.0
+    },
+    "webrtc join room": {
+      "p99_ms": 1000.0
+    },
+    "webrtc signal fan-out": {
+      "p99_ms": 2000.0
+    },
+    "cdc stream admission": {
+      "p99_ms": 2000.0
+    },
+    "cdc dlq throughput (rejected events)": {
+      "p99_ms": 1000.0
+    },
+    "policy revision read": {
+      "p99_ms": 1000.0
+    },
+    "policy distribution push fan-out (StreamResources)": {
+      "p99_ms": 2000.0
+    }
+  }
+}

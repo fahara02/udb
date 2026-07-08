@@ -129,7 +129,7 @@ runs:
 
         # ---- Constants (dev posture, secrets, test-mode) ----
         # Postgres pool sizing
-        echo "UDB_PG_MAX_CONNECTIONS=40" >> "$env_file"
+        echo "UDB_PG_MAX_CONNECTIONS=80" >> "$env_file"
         echo "UDB_PG_MIN_CONNECTIONS=4" >> "$env_file"
         echo "UDB_PG_ACQUIRE_TIMEOUT=60" >> "$env_file"
 
@@ -165,6 +165,8 @@ runs:
         echo "UDB_SERVICE_IDENTITY_REQUIRED=false" >> "$env_file"
         # EnsureBaseline (DataBroker admin baseline seed) fails closed unless set.
         echo "UDB_ENABLE_ADMIN_SEED=1" >> "$env_file"
+        # Enables the served notification FAILED-log harness path used by SDK benchmarks.
+        echo "UDB_NOTIFICATION_TEST_MODE=1" >> "$env_file"
         # ABAC default allow for the dev/bench harness.
         echo "UDB_ABAC_DEFAULT_ALLOW=true" >> "$env_file"
 
@@ -174,16 +176,33 @@ runs:
         echo "UDB_SAGA_RECOVERY_ENABLED=false" >> "$env_file"
         echo "UDB_STARTUP_FORCE_SYNC=true" >> "$env_file"
 
-        # Admission headroom so rapid seed/measured calls don't become
-        # RESOURCE_EXHAUSTED artifacts.
+        # Admission headroom so the all-RPC benchmark measures served RPCs, not
+        # benchmark-harness throttle artifacts. Keep this bounded: real
+        # RESOURCE_EXHAUSTED responses still fail the benchmark after artifacts
+        # are uploaded.
+        echo "UDB_GRPC_MAX_CONCURRENT=512" >> "$env_file"
+        echo "UDB_READ_MAX_CONCURRENT=300" >> "$env_file"
+        echo "UDB_WRITE_MAX_CONCURRENT=100" >> "$env_file"
+        echo "UDB_TX_MAX_CONCURRENT=50" >> "$env_file"
         echo "UDB_MIGRATION_MAX_CONCURRENT=16" >> "$env_file"
-        echo "UDB_MIGRATION_QUEUE_TIMEOUT_MS=1000" >> "$env_file"
-        echo "UDB_FAIR_MIGRATION_TOKENS_PER_SEC=5000" >> "$env_file"
-        echo "UDB_FAIR_MIGRATION_BURST=10000" >> "$env_file"
-        echo "UDB_READ_MAX_CONCURRENT=16" >> "$env_file"
-        echo "UDB_READ_QUEUE_TIMEOUT_MS=1000" >> "$env_file"
-        echo "UDB_FAIR_READ_TOKENS_PER_SEC=5000" >> "$env_file"
-        echo "UDB_FAIR_READ_BURST=10000" >> "$env_file"
+        echo "UDB_CDC_MAX_CONCURRENT=32" >> "$env_file"
+        echo "UDB_ADMIN_MAX_CONCURRENT=64" >> "$env_file"
+        echo "UDB_VECTOR_MAX_CONCURRENT=80" >> "$env_file"
+        echo "UDB_OBJECT_MAX_CONCURRENT=80" >> "$env_file"
+        echo "UDB_GENERIC_MAX_CONCURRENT=50" >> "$env_file"
+        echo "UDB_READ_QUEUE_TIMEOUT_MS=5000" >> "$env_file"
+        echo "UDB_WRITE_QUEUE_TIMEOUT_MS=5000" >> "$env_file"
+        echo "UDB_TX_QUEUE_TIMEOUT_MS=5000" >> "$env_file"
+        echo "UDB_MIGRATION_QUEUE_TIMEOUT_MS=5000" >> "$env_file"
+        echo "UDB_CDC_QUEUE_TIMEOUT_MS=5000" >> "$env_file"
+        echo "UDB_ADMIN_QUEUE_TIMEOUT_MS=5000" >> "$env_file"
+        echo "UDB_VECTOR_QUEUE_TIMEOUT_MS=5000" >> "$env_file"
+        echo "UDB_OBJECT_QUEUE_TIMEOUT_MS=5000" >> "$env_file"
+        echo "UDB_GENERIC_QUEUE_TIMEOUT_MS=5000" >> "$env_file"
+        echo "UDB_TENANT_CONN_BUDGET_DEFAULT=80" >> "$env_file"
+        echo "UDB_TENANT_CONN_QUEUE_TIMEOUT_MS=5000" >> "$env_file"
+        echo "UDB_FAIR_TOKENS_PER_SEC=5000" >> "$env_file"
+        echo "UDB_FAIR_BURST=10000" >> "$env_file"
 
         # Audit sink + secrets (JWT/encryption/session/hash). Test fixtures only.
         echo "UDB_AUDIT_SINK_URL=file:///tmp/udb-bench-audit.jsonl" >> "$env_file"

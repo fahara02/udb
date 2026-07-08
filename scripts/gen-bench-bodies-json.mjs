@@ -8,7 +8,7 @@
 // col6=notes). This script parses every `| [ ... ]` data row across that corpus
 // and emits docs/generated/bench-bodies.json: a sorted array of entries
 //
-//   { file, rpc, op_kind, request_msg, body, notes }
+//   { file, rpc, service, wire_rpc, api_alias, operation_id, op_kind, request_msg, body, notes }
 //
 // `file` is the source markdown basename (e.g. "authn.md") — the Python consumer
 // keys on (file, rpc) to disambiguate per-service; Go/TS/PHP ignore it.
@@ -40,6 +40,39 @@ function currentAllRPCCount() {
   } catch {
     return null;
   }
+}
+
+function currentAllRPCMetadata() {
+  const generatedGo = join(repoRoot, "sdk", "go", "udbclient", "generated_client.go");
+  const text = readFileSync(generatedGo, "utf8");
+  const rows = [];
+  const re = /\{Service:\s*"([^"]+)",\s*ServicePkg:\s*"([^"]+)",\s*FullMethod:\s*"([^"]+)",\s*Name:\s*"([^"]+)",\s*APIAlias:\s*"([^"]*)",\s*OperationID:\s*"([^"]*)"/g;
+  for (const m of text.matchAll(re)) {
+    rows.push({
+      service: m[1],
+      service_pkg: m[2],
+      full_method: m[3],
+      name: m[4],
+      api_alias: m[5],
+      operation_id: m[6],
+    });
+  }
+  if (!rows.length) {
+    throw new Error("could not parse AllRPCs metadata from sdk/go/udbclient/generated_client.go");
+  }
+  return rows;
+}
+
+function metadataIndex(rows) {
+  const counts = new Map();
+  for (const row of rows) counts.set(row.name, (counts.get(row.name) || 0) + 1);
+  const byKey = new Map();
+  for (const row of rows) {
+    byKey.set(`${row.service}.${row.name}`, row);
+    byKey.set(`${row.service}/${row.name}`, row);
+    if (counts.get(row.name) === 1) byKey.set(row.name, row);
+  }
+  return byKey;
 }
 
 // parseBenchBodies walks docs/bench-bodies/*.md and returns the parsed rows.
@@ -81,14 +114,25 @@ export function parseBenchBodies(dir = benchDir) {
 // buildManifest shapes the public entry contract.
 export function buildManifest(dir = benchDir) {
   const rows = parseBenchBodies(dir);
-  return rows.map(({ file, rpc, op_kind, request_msg, body, notes }) => ({
-    file,
-    rpc,
-    op_kind,
-    request_msg,
-    body,
-    notes,
-  }));
+  const byRPC = metadataIndex(currentAllRPCMetadata());
+  return rows.map(({ file, rpc, op_kind, request_msg, body, notes }) => {
+    const meta = byRPC.get(rpc);
+    if (!meta) {
+      throw new Error(`bench-body row ${file}:${rpc} has no generated RPC metadata`);
+    }
+    return {
+      file,
+      rpc,
+      service: meta.service,
+      wire_rpc: `${meta.service}/${meta.name}`,
+      api_alias: meta.api_alias,
+      operation_id: meta.operation_id,
+      op_kind,
+      request_msg,
+      body,
+      notes,
+    };
+  });
 }
 
 function main() {

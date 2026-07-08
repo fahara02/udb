@@ -1,0 +1,127 @@
+name: Idempotency served replay smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Live broker gRPC target, for example host:50051"
+        required: true
+        type: string
+      tls:
+        description: "Use TLS for the broker connection"
+        required: false
+        default: false
+        type: boolean
+      header:
+        description: "Optional metadata headers as Name: Value, one per line"
+        required: false
+        default: ""
+        type: string
+      tenant2_header:
+        description: "Optional second-tenant metadata headers as Name: Value, one per line"
+        required: false
+        default: ""
+        type: string
+      upsert_json:
+        description: "Keyed UpsertRequest JSON for replay proof"
+        required: true
+        type: string
+      tenant2_upsert_json:
+        description: "Same idempotency key under another tenant/project; must be fresh"
+        required: true
+        type: string
+      batch_upsert_json:
+        description: "JSON array or JSONL UpsertRequest objects for BatchUpsert replay"
+        required: true
+        type: string
+      fail_closed_upsert_json:
+        description: "Keyed UpsertRequest JSON expected to fail with dedup store down"
+        required: true
+        type: string
+      fail_closed_select_json:
+        description: "SelectRequest JSON that must return no rows after the failed keyed Upsert"
+        required: true
+        type: string
+      keyless_upsert_json:
+        description: "Required keyless UpsertRequest JSON expected to succeed in fail-closed mode"
+        required: true
+        type: string
+      fail_closed_code:
+        description: "Expected gRPC code for fail-closed keyed Upsert"
+        required: false
+        default: "UNAVAILABLE"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: idempotency-served-smoke-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  idempotency-served-replay:
+    name: DataBroker idempotency served replay proof
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python SDK runtime deps
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install -e sdk/python
+
+      - name: Run idempotency smoke selftest
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/idempotency_served_replay_smoke.py --selftest
+
+      - name: Run live idempotency served replay smoke
+        shell: bash
+        env:
+          TARGET: ${{ inputs.target }}
+          TLS: ${{ inputs.tls }}
+          HEADER: ${{ inputs.header }}
+          TENANT2_HEADER: ${{ inputs.tenant2_header }}
+          UPSERT_JSON: ${{ inputs.upsert_json }}
+          TENANT2_UPSERT_JSON: ${{ inputs.tenant2_upsert_json }}
+          BATCH_UPSERT_JSON: ${{ inputs.batch_upsert_json }}
+          FAIL_CLOSED_UPSERT_JSON: ${{ inputs.fail_closed_upsert_json }}
+          FAIL_CLOSED_SELECT_JSON: ${{ inputs.fail_closed_select_json }}
+          KEYLESS_UPSERT_JSON: ${{ inputs.keyless_upsert_json }}
+          FAIL_CLOSED_CODE: ${{ inputs.fail_closed_code }}
+        run: |
+          set -euo pipefail
+          mkdir -p smoke-input
+          args=(--target "$TARGET" --fail-closed-code "$FAIL_CLOSED_CODE" --require-all-proofs)
+          if [ "$TLS" = "true" ]; then args+=(--tls); fi
+          append_headers() {
+            local opt="$1"
+            local raw="$2"
+            local line
+            while IFS= read -r line || [ -n "$line" ]; do
+              if [ -n "$line" ]; then args+=("$opt" "$line"); fi
+            done <<< "$raw"
+          }
+          append_headers --header "$HEADER"
+          append_headers --tenant2-header "$TENANT2_HEADER"
+          printf '%s' "$UPSERT_JSON" > smoke-input/upsert.json
+          printf '%s' "$TENANT2_UPSERT_JSON" > smoke-input/tenant2-upsert.json
+          printf '%s' "$BATCH_UPSERT_JSON" > smoke-input/batch-upsert.json
+          printf '%s' "$FAIL_CLOSED_UPSERT_JSON" > smoke-input/fail-closed-upsert.json
+          printf '%s' "$FAIL_CLOSED_SELECT_JSON" > smoke-input/fail-closed-select.json
+          printf '%s' "$KEYLESS_UPSERT_JSON" > smoke-input/keyless-upsert.json
+          args+=(--upsert-json smoke-input/upsert.json)
+          args+=(--tenant2-upsert-json smoke-input/tenant2-upsert.json)
+          args+=(--batch-upsert-json smoke-input/batch-upsert.json)
+          args+=(--fail-closed-upsert-json smoke-input/fail-closed-upsert.json)
+          args+=(--fail-closed-select-json smoke-input/fail-closed-select.json)
+          args+=(--keyless-upsert-json smoke-input/keyless-upsert.json)
+          python scripts/idempotency_served_replay_smoke.py "${args[@]}"

@@ -78,6 +78,108 @@ jobs:
         run: buf breaking --against ".git#branch=origin/main"
       - name: Version consistency
         run: node scripts/check-versions.mjs
+      - name: SDK service-coverage guard
+        run: |
+          python3 scripts/check-sdk-service-coverage.py --selftest
+          python3 scripts/check-sdk-service-coverage.py
+      - name: Vector canonical CAS posture guard
+        run: |
+          python3 scripts/check-vector-cas-posture.py --selftest
+          python3 scripts/check-vector-cas-posture.py
+      - name: ORM template posture guard
+        run: |
+          python3 scripts/check-orm-template-posture.py --selftest
+          python3 scripts/check-orm-template-posture.py
+      - name: Workflow service posture guard
+        run: |
+          python3 scripts/check-workflow-service-posture.py --selftest
+          python3 scripts/check-workflow-service-posture.py
+      - name: IR live-golden posture guard
+        run: |
+          python3 scripts/check-ir-live-golden-posture.py --selftest
+          python3 scripts/check-ir-live-golden-posture.py
+      - name: Scaffold posture guard
+        run: |
+          python3 scripts/check-scaffold-posture.py --selftest
+          python3 scripts/check-scaffold-posture.py
+      - name: SDK helper parity guard
+        run: |
+          python3 scripts/check-sdk-helper-parity.py --selftest
+          python3 scripts/check-sdk-helper-parity.py
+      - name: Todo-board status guard
+        run: |
+          python3 scripts/check-todo-board-status.py --selftest
+          python3 scripts/check-todo-board-status.py
+      - name: Gap-closure posture guard
+        run: |
+          python3 scripts/check-gap-closure-posture.py --selftest
+          python3 scripts/check-gap-closure-posture.py
+      - name: Bench harness posture guard
+        run: |
+          node --check scripts/gen-bench-bodies-skeleton.mjs
+          node scripts/gen-bench-bodies-skeleton.mjs --selftest
+          node scripts/gen-bench-bodies-skeleton.mjs --check
+          node --check scripts/gen-sdk-benchmark-docs.mjs
+          node scripts/gen-sdk-benchmark-docs.mjs --check
+          python3 scripts/check-bench-harness-posture.py --selftest
+          python3 scripts/check-bench-harness-posture.py
+      - name: Docs/CI freshness posture guard
+        run: |
+          python3 scripts/check-docs-ci-freshness-posture.py --selftest
+          python3 scripts/check-docs-ci-freshness-posture.py
+      - name: Go SDK posture guard
+        run: |
+          python3 scripts/check-go-sdk-posture.py --selftest
+          python3 scripts/check-go-sdk-posture.py
+      - name: TypeScript SDK posture guard
+        run: |
+          python3 scripts/check-ts-sdk-posture.py --selftest
+          python3 scripts/check-ts-sdk-posture.py
+      - name: Python/PHP SDK posture guard
+        run: |
+          python3 scripts/check-python-php-sdk-posture.py --selftest
+          python3 scripts/check-python-php-sdk-posture.py
+      - name: Java/C# SDK audit guard
+        run: |
+          python3 scripts/check-java-csharp-sdk-audit.py --selftest
+          python3 scripts/check-java-csharp-sdk-audit.py
+      - name: API/SDK alias posture guard
+        run: |
+          python3 scripts/check-api-sdk-alias-posture.py --selftest
+          python3 scripts/check-api-sdk-alias-posture.py
+      - name: OpenAPI operation-id posture guard
+        run: |
+          python3 scripts/check-openapi-operationid-posture.py --selftest
+          python3 scripts/check-openapi-operationid-posture.py
+      - name: Idempotency dedup posture guard
+        run: |
+          python3 scripts/check-idempotency-dedup-posture.py --selftest
+          python3 scripts/check-idempotency-dedup-posture.py
+      - name: Retry-safe mutation posture guard
+        run: |
+          python3 scripts/check-retry-safe-posture.py --selftest
+          python3 scripts/check-retry-safe-posture.py
+      - name: Error-detail posture guard
+        run: |
+          python3 scripts/check-error-detail-posture.py --selftest
+          python3 scripts/check-error-detail-posture.py
+      - name: HTTP API route-style guard
+        run: |
+          node --check scripts/check-http-api-style.mjs
+          node scripts/check-http-api-style.mjs --selftest
+          node scripts/check-http-api-style.mjs --source-only
+          node scripts/check-http-api-style.mjs --write-report
+          git diff --quiet -- docs/generated/http-api-style-exceptions.json docs/generated/http-api-style-exceptions.md
+          node scripts/check-http-api-style.mjs --advisory
+          node scripts/check-http-api-style.mjs --resource-identity-contract
+          node scripts/check-http-api-style.mjs --pagination-contract
+          node scripts/check-http-api-style.mjs --query-update-contract
+          python3 scripts/rest_route_gateway_smoke.py --selftest
+          python3 scripts/rest_route_gateway_smoke.py --check-openapi
+      - name: Beta versioning posture guard
+        run: |
+          python3 scripts/check-beta-versioning-posture.py --selftest
+          python3 scripts/check-beta-versioning-posture.py
       - name: Clippy (advisory for v0.1; promote to -D warnings post-cleanup)
         # 120 pre-existing clippy lints on the v0.1 baseline. Soft-fail so the
         # gate stays fast + green; flip to `-D warnings` once the count is zero.
@@ -140,14 +242,9 @@ jobs:
         # "6 services, 77 RPCs" while the contract had grown to 15/186). Runs on
         # the same Linux job that just regenerated the contract manifest.
         if: runner.os == 'Linux'
-        run: python3 scripts/check-doc-service-counts.py
-      - name: SDK service-coverage guard (urgent_fix #19)
-        # Every descriptor-known native service must have a generated robustness
-        # client in each shipped SDK language (Storage/Asset/IdP/WebRTC were missing
-        # from all six before). Fails if a present client omits a contract service —
-        # regenerate with `udb sdk generate`.
-        if: runner.os == 'Linux'
-        run: python3 scripts/check-sdk-service-coverage.py
+        run: |
+          python3 scripts/check-doc-service-counts.py --selftest
+          python3 scripts/check-doc-service-counts.py
       - name: No internal tables guard (masterplan §12)
         # Published SDK helpers must not use GenericDispatch to run SQL against
         # internal udb_* control-plane schemas. The legitimate raw binding
@@ -156,7 +253,9 @@ jobs:
         # FAILED-log, EnsureBaseline). Lands after those broker replacements so
         # it does not red the harness prematurely.
         if: runner.os == 'Linux'
-        run: python3 scripts/check-no-internal-tables.py
+        run: |
+          python3 scripts/check-no-internal-tables.py --selftest
+          python3 scripts/check-no-internal-tables.py
       - name: Codebase map freshness gate
         # docs/generated/codebase-map.md is the agent-facing module-dependency
         # graph + public-symbol index (consumed by the udb-coding skill).
@@ -205,7 +304,9 @@ jobs:
   # (15.6.3) grpc-reflection-smoke + load-smoke shared an identical broker +
   # postgres service + env + launch; they are now one job that downloads the
   # build-broker artifact and runs both probes against one launched broker.
-  # The load part is advisory (continue-on-error), the reflection part gates.
+  # Reflection gates the service surface; the load step gates p99 regression
+  # against the tracked native-load smoke baseline while still uploading raw
+  # ghz output on failure.
   smoke:
     name: smoke
     needs: build-broker
@@ -268,11 +369,11 @@ jobs:
           "$HOME/go/bin/grpcurl" -plaintext 127.0.0.1:50051 describe udb.services.v1.DataBroker | tee /tmp/grpcurl-describe.txt
           grep -q 'rpc GetHealthReport' /tmp/grpcurl-describe.txt
           grep -q 'rpc LookupMessageSchema' /tmp/grpcurl-describe.txt
-      - name: Run native load smoke (small N, advisory)
-        # Non-gating: exercises the write / fan-out / CDC RPCs the load scripts
-        # claim to cover against the REAL broker (urgent_fix.md #29). Numbers are
-        # advisory; placeholder-id fast-rejects never fail the build.
-        continue-on-error: true
+      - name: Run native load smoke + p99 regression gate
+        # Exercises the write / fan-out / CDC RPCs the load scripts claim to
+        # cover against the REAL broker (urgent_fix.md #29). Placeholder-id
+        # fast-reject exit codes are advisory, but missing measurements or
+        # >15% p99 regressions fail the build.
         shell: bash
         env:
           UDB_TARGET: 127.0.0.1:50051
@@ -282,8 +383,19 @@ jobs:
           UDB_LOAD_TENANT_ID: load-tenant
           UDB_LOAD_PROJECT_ID: load-project
         run: |
+          set -euo pipefail
           export PATH="$HOME/go/bin:$PATH"
-          bash scripts/native-load-test.sh | tee /tmp/native-load.txt || true
+          set +e
+          bash scripts/native-load-test.sh | tee /tmp/native-load.txt
+          load_status=${PIPESTATUS[0]}
+          set -e
+          if [ "$load_status" -ne 0 ]; then
+            echo "::warning::native-load-test.sh exited ${load_status}; p99 gate will fail if output is partial or unparsable"
+          fi
+          python scripts/native_load_gate.py \
+            --input /tmp/native-load.txt \
+            --baseline scripts/native_load_smoke_baseline.json \
+            --max-regression 15
       - name: Upload load summary
         if: always()
         uses: actions/upload-artifact@v4
@@ -573,6 +685,9 @@ jobs:
           # Deterministic OpenAPI metadata fixup (title/version/scope) so the
           # committed swagger matches generation output (TODO_PASS2 #144/#145).
           node scripts/openapi-postprocess.mjs
+          node --check scripts/check-openapi-api-rules.mjs
+          node scripts/check-openapi-api-rules.mjs --selftest
+          node scripts/check-openapi-api-rules.mjs
           node scripts/sdk-codegen-postprocess.mjs
           if ! git diff --quiet -- sdk/php/gen sdk/go/gen sdk/typescript/gen sdk/python/gen sdk/java/gen sdk/csharp/gen api; then
             echo "::error::Committed SDK stubs are stale. Run 'buf generate --include-imports' and commit the result."
@@ -718,7 +833,7 @@ jobs:
         working-directory: sdk/php
         run: composer install --no-interaction --no-progress --prefer-dist
       - name: Run SDK conformance parity
-        run: node sdk-conformance/run.mjs typescript python go csharp java php
+        run: node sdk-conformance/run.mjs metadata error-details typescript python go csharp java php
       - name: TypeScript facade sequence dependencies
         working-directory: sdk/typescript
         run: npm ci
@@ -730,6 +845,35 @@ jobs:
           ( cd sdk/go && go test ./udbclient -run 'Facade|UploadFile|Entity|BenchBodyManifest' -count=1 )
           ( cd sdk/typescript && npm run bundle-proto && npx tsc -p tsconfig.test.json && node --test dist-test/facade.test.js dist-test/sdkhelpers.test.js )
           ( cd sdk/python && python -m pytest tests/test_simple_client.py tests/test_media_facade.py -q )
+          ( cd sdk/php && vendor/bin/pest tests/Unit/MediaServiceWiringTest.php --filter 'StorageService uploadFile emits the shared RegisterUpload PUT FinalizeUpload sequence|shared workflow-sequences fixture pins' )
+          dotnet test sdk/csharp/Udb.Client.Tests/Udb.Client.Tests.csproj --no-restore --filter FullyQualifiedName~UdbMediaFacadeTests --nologo -v q
+          ( cd sdk/java && mvn -B -ntp -Dtest=UdbMediaFacadeTest#storageUploadFileEmitsSharedWorkflowSequence test )
+
+  # ── Generated project scaffold: all six emitted clients must compile ──────
+  scaffold-compiles:
+    name: Scaffold examples compile (six SDKs)
+    needs: build-broker
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-sdk-toolchains
+        with:
+          node: "true"
+          python: "true"
+          go: "true"
+          dotnet: "true"
+          java: "true"
+          php: "true"
+      - name: Download broker binary
+        uses: actions/download-artifact@v4
+        with:
+          name: udb-broker-debug
+          path: target/debug
+      - name: Mark broker executable
+        run: chmod +x target/debug/udb
+      - name: Compile generated scaffold examples
+        run: UDB_BIN=target/debug/udb bash scripts/check-scaffold-compiles.sh
 
   # ── Version consistency: every manifest + protocol constant matches ──
   # versions.json (the single source of truth). The base version check is in
@@ -749,7 +893,9 @@ jobs:
         # asset name udb-<os>-<arch>[-<variant>][.exe]; no Rust triple / version
         # in name / archive / `macos`. Guards against the silent drift that broke
         # all six launchers' auto-download. See scripts/check-launcher-assets.mjs.
-        run: node scripts/check-launcher-assets.mjs
+        run: |
+          node scripts/check-launcher-assets.mjs --selftest
+          node scripts/check-launcher-assets.mjs
 
   docs-links:
     name: Markdown local links + readiness artifacts
@@ -760,19 +906,25 @@ jobs:
       - uses: ./.github/actions/setup-sdk-toolchains
         with:
           node: "true"
+      - run: node --check scripts/check-markdown-links.mjs
+      - run: node scripts/check-markdown-links.mjs --selftest
       - run: node scripts/check-markdown-links.mjs
+      - run: node --check scripts/check-enterprise-readiness.mjs
+      - run: node scripts/check-enterprise-readiness.mjs --selftest
       - run: node scripts/check-enterprise-readiness.mjs
 
-  # ── Native control-plane live tests (Postgres + Kafka + Redis) ────
+  # ── Native control-plane live tests + canonical-store conformance ────
   # Brings up the integration compose stack and runs the live-DB tests
   # for the native authn/authz/apikey/tenant/notification/analytics
   # services plus the CDC→Kafka outbox pipeline. These are `#[ignore]`d
   # so the fast `rust` job skips them; this job is the only place they
   # run, gated on real infrastructure (no in-memory fakes).
   native-integration:
-    name: Native services (live Postgres + Kafka)
+    name: Native services + canonical stores (live)
+    if: github.event_name == 'push'
+    needs: quick-gate
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-rust
@@ -780,9 +932,43 @@ jobs:
           cache-key: native-integration
 
       - name: Start integration stack
-        # postgres/kafka/redis/qdrant/minio only — the `udb` and `spark`
+        # postgres/kafka/redis/memcached/qdrant/minio only — the `udb` and `spark`
         # services are profile-gated and not needed for the live tests.
-        run: docker compose -f docker-compose.integration.yml up -d --wait postgres kafka redis qdrant minio
+        run: docker compose -f docker-compose.integration.yml up -d --wait postgres kafka redis memcached qdrant minio
+
+      - name: Start canonical-store stack
+        # MySQL / SQL Server / MongoDB / Cassandra / Neo4j / ClickHouse /
+        # Elasticsearch / Weaviate are split
+        # from the integration stack so ordinary native-service tests stay lean.
+        # Bring them up here because the canonical conformance step below exports
+        # every live DSN; unset DSNs would silently skip those contracts.
+        run: docker compose -f docker-compose.canonical.yml up -d --wait mysql mssql mongodb cassandra neo4j clickhouse elasticsearch weaviate
+
+      - name: Wait for Weaviate readiness
+        run: |
+          for _ in {1..60}; do
+            if curl -fsS http://127.0.0.1:58080/v1/.well-known/ready >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose -f docker-compose.canonical.yml logs --no-color --tail=120 weaviate
+          exit 1
+
+      - name: Initialize MongoDB replica set
+        # MongoDB system-store conformance uses transactions, so the live test
+        # requires a replica-set or sharded topology. The compose service starts
+        # mongod with --replSet; this idempotently initiates rs0 for the host-side
+        # directConnection DSN used below.
+        run: |
+          docker compose -f docker-compose.canonical.yml exec -T mongodb \
+            mongosh --quiet --eval '
+              try {
+                rs.status().ok
+              } catch (e) {
+                rs.initiate({_id: "rs0", members: [{_id: 0, host: "localhost:27017"}]})
+              }
+            '
 
       - name: Create native-event Kafka topics
         # Auto-create is disabled on the broker; the event tests assert on
@@ -809,6 +995,39 @@ jobs:
           docker compose -f docker-compose.integration.yml exec -T minio \
             mc mb --ignore-existing local/udb-storage
 
+      - name: IR compiler live golden tests
+        # Runs the env-gated backend semantics oracles under the same provisioned
+        # stack used by canonical conformance. External-only backends without CI
+        # credentials (Azure Blob, GCS, Pinecone) keep their explicit
+        # env checks and skip honestly; provisioned backends must not self-skip.
+        env:
+          UDB_IR_LIVE_GOLDEN_TESTS: "1"
+          UDB_PG_DSN: postgres://udb:udb@localhost:55432/udb
+          UDB_MYSQL_DSN: mysql://udb:udb@127.0.0.1:53306/udb
+          UDB_MSSQL_DSN: Server=127.0.0.1,51433;User=sa;Password=Udb_Strong#2026;Database=udb;TrustServerCertificate=true
+          UDB_NOSQL_DSN: mongodb://127.0.0.1:57017/udb?directConnection=true
+          UDB_MONGODB_DSN: mongodb://127.0.0.1:57017/udb?directConnection=true
+          UDB_CASSANDRA_DSN: 127.0.0.1:59042
+          UDB_GRAPH_HTTP_URL: http://127.0.0.1:57474
+          UDB_GRAPH_USER: neo4j
+          UDB_GRAPH_PASSWORD: Udb_Strong#2026
+          UDB_CLICKHOUSE_DSN: http://127.0.0.1:58123/udb
+          UDB_CLICKHOUSE_USER: udb
+          UDB_CLICKHOUSE_PASSWORD: udb
+          UDB_CLICKHOUSE_DATABASE: udb
+          UDB_COLUMN_USER: udb
+          UDB_COLUMN_PASSWORD: udb
+          UDB_COLUMN_DATABASE: udb
+          UDB_ELASTIC_DSN: http://127.0.0.1:59200
+          UDB_WEAVIATE_DSN: http://127.0.0.1:58080
+          UDB_QDRANT_URL: http://localhost:56333
+          UDB_REDIS_DSN: redis://localhost:56379/0
+          UDB_MEMCACHED_DSN: memcache://127.0.0.1:51122
+          UDB_INTEGRATION_MINIO_ENDPOINT: http://localhost:59000
+          UDB_INTEGRATION_MINIO_ACCESS_KEY: minio
+          UDB_INTEGRATION_MINIO_SECRET_KEY: minio123
+        run: cargo test --locked --lib ir::compile::live_tests -- --ignored --nocapture --test-threads=1
+
       - name: Native service live tests
         # --test-threads=1: the live tests share Postgres schemas and
         # serialize their setup; run them serially to avoid cross-talk.
@@ -828,6 +1047,21 @@ jobs:
         env:
           UDB_PG_DSN: postgres://udb:udb@localhost:55432/udb
           UDB_REDIS_DSN: redis://localhost:56379/0
+          UDB_QDRANT_URL: http://localhost:56333
+          UDB_MYSQL_DSN: mysql://udb:udb@127.0.0.1:53306/udb
+          UDB_MSSQL_DSN: Server=127.0.0.1,51433;User=sa;Password=Udb_Strong#2026;Database=udb;TrustServerCertificate=true
+          UDB_MONGODB_DSN: mongodb://127.0.0.1:57017/udb?directConnection=true
+          UDB_NOSQL_DSN: mongodb://127.0.0.1:57017/udb?directConnection=true
+          UDB_CASSANDRA_DSN: 127.0.0.1:59042
+          UDB_NEO4J_DSN: http://127.0.0.1:57474
+          UDB_NEO4J_USER: neo4j
+          UDB_NEO4J_PASSWORD: Udb_Strong#2026
+          UDB_CLICKHOUSE_DSN: http://127.0.0.1:58123/udb
+          UDB_COLUMN_DSN: http://127.0.0.1:58123/udb
+          UDB_COLUMN_USER: udb
+          UDB_COLUMN_PASSWORD: udb
+          UDB_COLUMN_DATABASE: udb
+          UDB_ELASTIC_DSN: http://127.0.0.1:59200
         run: cargo test --locked --lib canonical_store::conformance_live_tests -- --nocapture
 
       - name: Integration harness (CDC, sagas, backends)
@@ -850,4 +1084,12 @@ jobs:
 
       - name: Dump stack logs on failure
         if: failure()
-        run: docker compose -f docker-compose.integration.yml logs --no-color --tail=200
+        run: |
+          docker compose -f docker-compose.integration.yml logs --no-color --tail=200
+          docker compose -f docker-compose.canonical.yml logs --no-color --tail=200
+
+      - name: Stop integration stacks
+        if: always()
+        run: |
+          docker compose -f docker-compose.integration.yml down -v --remove-orphans
+          docker compose -f docker-compose.canonical.yml down -v --remove-orphans

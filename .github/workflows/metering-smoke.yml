@@ -1,0 +1,80 @@
+name: Metering rollup smoke
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: metering-rollup-smoke-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  metering-rollup-smoke:
+    name: Metering rollup live oracle
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      UDB_METERING_PROJECT: udb-metering-smoke
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Docker environment
+        run: |
+          docker version
+          docker compose version
+
+      - uses: ./.github/actions/setup-rust
+        with:
+          cache-key: metering-rollup-smoke
+
+      - name: Start metering Postgres
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker compose -p "$UDB_METERING_PROJECT" \
+            -f docker-compose.integration.yml \
+            up -d --wait postgres
+
+      - name: Run metering rollup oracle
+        shell: bash
+        env:
+          UDB_INTEGRATION_PG_DSN: postgres://udb:udb@127.0.0.1:55432/udb
+          UDB_LIVE_NATIVE_PG_DSN: postgres://udb:udb@127.0.0.1:55432/udb
+          RUST_BACKTRACE: "1"
+        run: |
+          set -euo pipefail
+          cargo test --locked --lib live_postgres_metering_rollup_exports_closed_window_once -- --ignored --nocapture --test-threads=1
+
+      - name: Collect metering diagnostics
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          mkdir -p metering-smoke-logs
+          docker ps -a > metering-smoke-logs/docker-ps.txt 2>&1
+          docker compose -p "$UDB_METERING_PROJECT" \
+            -f docker-compose.integration.yml \
+            ps > metering-smoke-logs/postgres-ps.txt 2>&1
+          docker compose -p "$UDB_METERING_PROJECT" \
+            -f docker-compose.integration.yml \
+            logs --no-color postgres \
+            > metering-smoke-logs/postgres.log 2>&1
+
+      - name: Upload metering diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: metering-smoke-logs
+          path: metering-smoke-logs
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Tear down metering stack
+        if: always()
+        shell: bash
+        run: |
+          docker compose -p "$UDB_METERING_PROJECT" \
+            -f docker-compose.integration.yml \
+            down -v --remove-orphans || true

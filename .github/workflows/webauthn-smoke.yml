@@ -1,0 +1,31 @@
+name: WebAuthn OpenSSL smoke
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: webauthn-openssl-smoke-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  webauthn-openssl-smoke:
+    name: WebAuthn OpenSSL attestation proof
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup-rust
+        with:
+          cache-key: webauthn-openssl-smoke
+
+      - name: Run WebAuthn policy and attestation tests
+        shell: bash
+        env:
+          RUST_BACKTRACE: "1"
+        run: |
+          set -euo pipefail
+          cargo test --locked --lib --features webauthn webauthn_policy_tests -- --nocapture

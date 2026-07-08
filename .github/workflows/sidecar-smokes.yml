@@ -1,0 +1,164 @@
+name: Native sidecar smokes
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-sidecar-smokes-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  embedding-sidecar:
+    name: Embedding sidecar smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      UDB_EMBEDDING_PROJECT: udb-embedding-sidecar-smoke
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Docker environment
+        run: |
+          docker version
+          docker compose version
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate embedding round-trip harness
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/embedding_sidecar_roundtrip_smoke.py --selftest
+          python scripts/embedding_sidecar_smoke.py --selftest
+
+      - name: Start embedding sidecar
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker compose -p "$UDB_EMBEDDING_PROJECT" \
+            -f docker-compose.integration.yml \
+            --profile embedding \
+            up -d --wait embedding-sidecar
+
+      - name: Run embedding sidecar smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/embedding_sidecar_smoke.py --url http://127.0.0.1:58090
+
+      - name: Collect embedding diagnostics
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          mkdir -p embedding-sidecar-smoke-logs
+          docker ps -a > embedding-sidecar-smoke-logs/docker-ps.txt 2>&1
+          docker compose -p "$UDB_EMBEDDING_PROJECT" \
+            -f docker-compose.integration.yml \
+            --profile embedding \
+            ps > embedding-sidecar-smoke-logs/embedding-ps.txt 2>&1
+          docker compose -p "$UDB_EMBEDDING_PROJECT" \
+            -f docker-compose.integration.yml \
+            --profile embedding \
+            logs --no-color embedding-sidecar \
+            > embedding-sidecar-smoke-logs/embedding.log 2>&1
+
+      - name: Upload embedding diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: embedding-sidecar-smoke-logs
+          path: embedding-sidecar-smoke-logs
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Tear down embedding sidecar
+        if: always()
+        shell: bash
+        run: |
+          docker compose -p "$UDB_EMBEDDING_PROJECT" \
+            -f docker-compose.integration.yml \
+            --profile embedding \
+            down -v --remove-orphans || true
+
+  notify-sidecar:
+    name: Notification sidecar smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      UDB_NOTIFY_PROJECT: udb-notify-sidecar-smoke
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Docker environment
+        run: |
+          docker version
+          docker compose version
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate notification round-trip harness
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/notify_sidecar_roundtrip_smoke.py --selftest
+          python scripts/notify_sidecar_smoke.py --selftest
+
+      - name: Start notification sidecar
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker compose -p "$UDB_NOTIFY_PROJECT" \
+            -f docker-compose.integration.yml \
+            --profile notify \
+            up -d --wait notify-sidecar
+
+      - name: Run notification sidecar smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/notify_sidecar_smoke.py --url http://127.0.0.1:58080
+
+      - name: Collect notification diagnostics
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          mkdir -p notify-sidecar-smoke-logs
+          docker ps -a > notify-sidecar-smoke-logs/docker-ps.txt 2>&1
+          docker compose -p "$UDB_NOTIFY_PROJECT" \
+            -f docker-compose.integration.yml \
+            --profile notify \
+            ps > notify-sidecar-smoke-logs/notify-ps.txt 2>&1
+          docker compose -p "$UDB_NOTIFY_PROJECT" \
+            -f docker-compose.integration.yml \
+            --profile notify \
+            logs --no-color notify-sidecar \
+            > notify-sidecar-smoke-logs/notify.log 2>&1
+
+      - name: Upload notification diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: notify-sidecar-smoke-logs
+          path: notify-sidecar-smoke-logs
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Tear down notification sidecar
+        if: always()
+        shell: bash
+        run: |
+          docker compose -p "$UDB_NOTIFY_PROJECT" \
+            -f docker-compose.integration.yml \
+            --profile notify \
+            down -v --remove-orphans || true

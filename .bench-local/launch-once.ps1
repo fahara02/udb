@@ -1,5 +1,7 @@
 $ErrorActionPreference = "Stop"
 Set-Location "E:\Projects\udb"
+. (Join-Path $PSScriptRoot "bench-process.ps1")
+$UdbBenchBin = Resolve-UdbBenchBin
 # CRITICAL: clear any MSSQL/MySQL/Cassandra DSN inherited from .env / the parent shell.
 # The broker tries to connect to them at startup; MSSQL/MySQL not running → "Could not
 # fetch metadata: No connections in the pool" → the process EXITS (bug_report C4).
@@ -41,6 +43,10 @@ $env:UDB_ABAC_DEFAULT_ALLOW         = "true"
 $env:UDB_ALLOW_DEGRADED_BACKENDS    = "true"
 # EnsureBaseline (DataBroker admin baseline seed) is guarded; the sweep exercises it.
 $env:UDB_ENABLE_ADMIN_SEED          = "1"
+# Notification retry perf uses a served, env-gated FAILED-log path; keep it off
+# outside harness launches.
+$env:UDB_NOTIFICATION_TEST_MODE     = "1"
+$env:UDB_VAULT_DB_ROLES_JSON        = '[{"role_name":"readonly","parent_role":"udb","ttl_seconds_max":900}]'
 $env:UDB_CDC_ENABLED                = "true"   # PublishCDC needs the CDC tailer; §N abort was the kill-by-name artifact (harness_correction.md)
 $env:UDB_PROJECTION_WORKER_ENABLED  = "false"
 $env:UDB_RECONCILIATION_ENABLED     = "false"
@@ -80,6 +86,8 @@ $env:UDB_OBJECT_BUCKET             = "udb-storage"
 $env:UDB_STORAGE_OBJECT_BACKEND    = "minio"
 $env:UDB_STORAGE_BUCKET            = "udb-live-sdk"
 
+. (Join-Path $PSScriptRoot "bench-admission-headroom.ps1")
+
 # Capture the crash: full backtrace + DIRECT unbuffered file redirect (NOT Tee, which
 # buffers and loses the panic line before a panic=abort). bug_report.md C1/§H.
 $env:RUST_BACKTRACE = "full"
@@ -87,7 +95,7 @@ $env:RUST_LIB_BACKTRACE = "full"
 # OS-LEVEL file redirection via Start-Process (NOT the PowerShell `&`/`|` pipeline,
 # which buffers the broker's stdout and crashes it mid-run — confirmed: direct
 # redirection serves on all 3 ports with no crash). The child inherits this env.
-$p = Start-Process -FilePath "E:\Projects\udb\target-verify\debug\udb.exe" `
+$p = Start-Process -FilePath $UdbBenchBin `
     -ArgumentList 'serve', 'proto', '""', '0.0.0.0:50071' `
     -RedirectStandardOutput "E:\Projects\udb\.bench-local\once-broker.log" `
     -RedirectStandardError "E:\Projects\udb\.bench-local\once-stderr.log" `
