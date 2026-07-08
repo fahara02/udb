@@ -113,6 +113,10 @@ def chapter_files(root: Path) -> list[Path]:
     return sorted(path for path in todo_root.glob("*.md") if CHAPTER_RE.match(path.name))
 
 
+def private_board_available(root: Path) -> bool:
+    return (root / TODO_ROOT).is_dir()
+
+
 def scan_rows(root: Path) -> tuple[dict[str, tuple[str, str]], list[tuple[str, str]]]:
     rows: dict[str, tuple[str, str]] = {}
     unchecked: list[tuple[str, str]] = []
@@ -131,43 +135,47 @@ def scan_rows(root: Path) -> tuple[dict[str, tuple[str, str]], list[tuple[str, s
 
 def check(root: Path = ROOT) -> list[str]:
     failures: list[str] = []
+    has_private_board = private_board_available(root)
     rows, unchecked = scan_rows(root)
 
-    if unchecked:
-        formatted = ", ".join(f"{file}:{todo_id}" for file, todo_id in unchecked)
-        failures.append(f"numbered chapter files still have unchecked rows: {formatted}")
+    if has_private_board:
+        if unchecked:
+            formatted = ", ".join(f"{file}:{todo_id}" for file, todo_id in unchecked)
+            failures.append(f"numbered chapter files still have unchecked rows: {formatted}")
 
-    actual_open = {
-        todo_id: file for todo_id, (file, mark) in rows.items() if mark != "x"
-    }
-    expected_open = {
-        todo_id: file
-        for file, ids in EXPECTED_OPEN_BY_FILE.items()
-        for todo_id in ids
-    }
-    missing = sorted(set(expected_open) - set(actual_open))
-    extra = sorted(set(actual_open) - set(expected_open))
-    if missing:
-        failures.append(f"expected open rows are closed or missing: {', '.join(missing)}")
-    if extra:
-        failures.append(f"unexpected non-closed rows found: {', '.join(extra)}")
+        actual_open = {
+            todo_id: file for todo_id, (file, mark) in rows.items() if mark != "x"
+        }
+        expected_open = {
+            todo_id: file
+            for file, ids in EXPECTED_OPEN_BY_FILE.items()
+            for todo_id in ids
+        }
+        missing = sorted(set(expected_open) - set(actual_open))
+        extra = sorted(set(actual_open) - set(expected_open))
+        if missing:
+            failures.append(f"expected open rows are closed or missing: {', '.join(missing)}")
+        if extra:
+            failures.append(f"unexpected non-closed rows found: {', '.join(extra)}")
 
-    for todo_id, expected_file in sorted(expected_open.items()):
-        actual = rows.get(todo_id)
-        if not actual:
-            continue
-        actual_file, mark = actual
-        if actual_file != expected_file:
-            failures.append(f"{todo_id}: expected in {expected_file}, found in {actual_file}")
-        if mark != "~":
-            failures.append(f"{todo_id}: expected [~], found [{mark}]")
+        for todo_id, expected_file in sorted(expected_open.items()):
+            actual = rows.get(todo_id)
+            if not actual:
+                continue
+            actual_file, mark = actual
+            if actual_file != expected_file:
+                failures.append(f"{todo_id}: expected in {expected_file}, found in {actual_file}")
+            if mark != "~":
+                failures.append(f"{todo_id}: expected [~], found [{mark}]")
 
-    for file, expected_ids in EXPECTED_OPEN_BY_FILE.items():
-        actual_count = sum(1 for actual_file in actual_open.values() if actual_file == file)
-        if actual_count != len(expected_ids):
-            failures.append(f"{file}: expected {len(expected_ids)} open rows, found {actual_count}")
+        for file, expected_ids in EXPECTED_OPEN_BY_FILE.items():
+            actual_count = sum(1 for actual_file in actual_open.values() if actual_file == file)
+            if actual_count != len(expected_ids):
+                failures.append(f"{file}: expected {len(expected_ids)} open rows, found {actual_count}")
 
     for rel, needles in DOC_REQUIREMENTS.items():
+        if rel.startswith("private/") and not has_private_board:
+            continue
         path = root / rel
         if not path.is_file():
             failures.append(f"{rel}: file is missing")
@@ -178,7 +186,7 @@ def check(root: Path = ROOT) -> list[str]:
                 failures.append(f"{rel}: missing status text: {needle}")
 
     revised_path = root / "private/masterplan/revised_todo.md"
-    if revised_path.is_file():
+    if has_private_board and revised_path.is_file():
         revised_text = read_text(revised_path)
         for item in EXPECTED_R7_OPEN_ITEMS:
             marker = f"- [ ] {item}"
@@ -256,6 +264,17 @@ def run_selftest() -> int:
         failures = check(root)
         if not any("R7 item was closed without guard update" in failure for failure in failures):
             raise AssertionError(f"missing R7 closeout-item detection: {failures}")
+
+        public_root = Path(tmp) / "public-only"
+        public_root.mkdir()
+        write_file(
+            public_root,
+            "UDB_MASTERPLAN_2026.md",
+            "\n".join(DOC_REQUIREMENTS["UDB_MASTERPLAN_2026.md"]) + "\n",
+        )
+        failures = check(public_root)
+        if failures:
+            raise AssertionError(f"public-only fixture failed: {failures}")
 
     print("todo-board status guard selftest passed")
     return 0
