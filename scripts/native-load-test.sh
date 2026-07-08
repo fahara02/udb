@@ -24,10 +24,14 @@ PROJECT="${UDB_LOAD_PROJECT_ID:-load-project}"
 CONCURRENCY="${UDB_LOAD_CONCURRENCY:-8}"
 TOTAL="${UDB_LOAD_TOTAL:-200}"
 INSECURE="${UDB_INSECURE:-true}"
-AUTH_HEADER=()
-if [[ -n "${UDB_LOAD_BEARER:-}" ]]; then
-  AUTH_HEADER=(-m "authorization: Bearer ${UDB_LOAD_BEARER}")
-fi
+json_escape() {
+  local value="$1"
+  value="${value//\\/\\\\}"
+  value="${value//\"/\\\"}"
+  value="${value//$'\n'/\\n}"
+  value="${value//$'\r'/\\r}"
+  printf '%s' "$value"
+}
 
 # Import paths so protos that import sibling udb/** files and vendored google/api
 # annotations resolve (the control-plane + data_broker protos pull both in).
@@ -36,7 +40,12 @@ COMMON=(-c "$CONCURRENCY" -n "$TOTAL" --format summary "${IMPORTS[@]}" --call)
 if [[ "$INSECURE" == "true" || "$INSECURE" == "1" ]]; then
   COMMON=(--insecure "${COMMON[@]}")
 fi
-META=(-m "x-tenant-id: ${TENANT}" -m "x-udb-project-id: ${PROJECT}" "${AUTH_HEADER[@]}")
+METADATA_JSON="{\"x-tenant-id\":\"$(json_escape "$TENANT")\",\"x-udb-project-id\":\"$(json_escape "$PROJECT")\""
+if [[ -n "${UDB_LOAD_BEARER:-}" ]]; then
+  METADATA_JSON+=",\"authorization\":\"Bearer $(json_escape "$UDB_LOAD_BEARER")\""
+fi
+METADATA_JSON+="}"
+META=(-m "$METADATA_JSON")
 
 run_case() {
   local name="$1"; shift
@@ -58,7 +67,7 @@ PEER_ID="${UDB_LOAD_PEER_ID:-load-peer}"
 run_case "storage register upload" \
   udb.core.storage.services.v1.StorageService.RegisterUpload \
   --proto proto/udb/core/storage/services/v1/storage_service.proto \
-  -d "{\"tenant_id\":\"${TENANT}\",\"project_id\":\"${PROJECT}\",\"bucket\":\"load\",\"object_key\":\"phase13.bin\",\"content_type\":\"application/octet-stream\",\"size_bytes\":16}"
+  -d "{\"tenant_id\":\"${TENANT}\",\"project_id\":\"${PROJECT}\",\"filename\":\"phase13.bin\",\"content_type\":\"application/octet-stream\",\"file_type\":\"binary\",\"expires_in_minutes\":15,\"size_bytes\":16}"
 
 # WRITE: finalize an upload (commits an upload's metadata). Supply UDB_LOAD_FILE_ID
 # from a prior RegisterUpload for hits; otherwise this benches the finalize-path
@@ -78,7 +87,7 @@ run_case "storage list objects (ListFiles)" \
 run_case "asset list" \
   udb.core.asset.services.v1.AssetService.ListAssets \
   --proto proto/udb/core/asset/services/v1/asset_service.proto \
-  -d "{\"tenant_id\":\"${TENANT}\",\"project_id\":\"${PROJECT}\",\"page_size\":25}"
+  -d "{\"tenant_id\":\"${TENANT}\",\"page_size\":25}"
 
 # WRITE: start a processing pipeline for an asset (enqueues steps).
 run_case "asset start pipeline" \
@@ -100,7 +109,7 @@ run_case "webrtc list rooms" \
 
 # WRITE: join a room (allocates a peer / mints a session).
 run_case "webrtc join room" \
-  udb.core.webrtc.services.v1.RoomService.JoinRoom \
+  udb.core.webrtc.services.v1.PeerService.JoinRoom \
   --proto proto/udb/core/webrtc/services/v1/webrtc_service.proto \
   -d "{\"tenant_id\":\"${TENANT}\",\"room_id\":\"${ROOM_ID}\",\"display_name\":\"load\",\"metadata\":\"{}\",\"user_agent\":\"ghz\"}"
 

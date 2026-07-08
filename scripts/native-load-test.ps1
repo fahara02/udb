@@ -15,7 +15,7 @@ if (-not (Get-Command ghz -ErrorAction SilentlyContinue)) {
 
 # Import paths so protos that import sibling udb/** files and vendored google/api
 # annotations resolve (the control-plane + data_broker protos pull both in).
-$common = @("-c", "$Concurrency", "-n", "$Total", "--format", "summary", "-i", "proto", "-i", "third_party/googleapis")
+$common = @("-c", "$Concurrency", "-n", "$Total", "--format", "summary", "-i", "proto,third_party/googleapis")
 if (-not $Tls) {
     $common = @("--insecure") + $common
 }
@@ -30,10 +30,14 @@ $StepId = $(if ($env:UDB_LOAD_STEP_ID) { $env:UDB_LOAD_STEP_ID } else { "0000000
 $RoomId = $(if ($env:UDB_LOAD_ROOM_ID) { $env:UDB_LOAD_ROOM_ID } else { "00000000-0000-0000-0000-000000000005" })
 $PeerId = $(if ($env:UDB_LOAD_PEER_ID) { $env:UDB_LOAD_PEER_ID } else { "load-peer" })
 
-$metadata = @("-m", "x-tenant-id: $Tenant", "-m", "x-udb-project-id: $Project")
-if ($env:UDB_LOAD_BEARER) {
-    $metadata += @("-m", "authorization: Bearer $($env:UDB_LOAD_BEARER)")
+$metadataObject = [ordered]@{
+    "x-tenant-id" = $Tenant
+    "x-udb-project-id" = $Project
 }
+if ($env:UDB_LOAD_BEARER) {
+    $metadataObject["authorization"] = "Bearer $($env:UDB_LOAD_BEARER)"
+}
+$metadata = @("-m", ($metadataObject | ConvertTo-Json -Compress))
 
 function Invoke-GhzCase {
     param(
@@ -54,7 +58,7 @@ Invoke-GhzCase `
     -Name "storage register upload" `
     -Call "udb.core.storage.services.v1.StorageService.RegisterUpload" `
     -Proto "proto/udb/core/storage/services/v1/storage_service.proto" `
-    -Data "{`"tenant_id`":`"$Tenant`",`"project_id`":`"$Project`",`"bucket`":`"load`",`"object_key`":`"phase13.bin`",`"content_type`":`"application/octet-stream`",`"size_bytes`":16}"
+    -Data "{`"tenant_id`":`"$Tenant`",`"project_id`":`"$Project`",`"filename`":`"phase13.bin`",`"content_type`":`"application/octet-stream`",`"file_type`":`"binary`",`"expires_in_minutes`":15,`"size_bytes`":16}"
 
 # WRITE: finalize an upload. Supply UDB_LOAD_FILE_ID from a prior RegisterUpload for
 # hits; otherwise this benches the finalize-path admission/validation.
@@ -76,7 +80,7 @@ Invoke-GhzCase `
     -Name "asset list" `
     -Call "udb.core.asset.services.v1.AssetService.ListAssets" `
     -Proto "proto/udb/core/asset/services/v1/asset_service.proto" `
-    -Data "{`"tenant_id`":`"$Tenant`",`"project_id`":`"$Project`",`"page_size`":25}"
+    -Data "{`"tenant_id`":`"$Tenant`",`"page_size`":25}"
 
 # WRITE: start a processing pipeline for an asset (enqueues steps).
 Invoke-GhzCase `
@@ -102,7 +106,7 @@ Invoke-GhzCase `
 # WRITE: join a room (allocates a peer / mints a session).
 Invoke-GhzCase `
     -Name "webrtc join room" `
-    -Call "udb.core.webrtc.services.v1.RoomService.JoinRoom" `
+    -Call "udb.core.webrtc.services.v1.PeerService.JoinRoom" `
     -Proto "proto/udb/core/webrtc/services/v1/webrtc_service.proto" `
     -Data "{`"tenant_id`":`"$Tenant`",`"room_id`":`"$RoomId`",`"display_name`":`"load`",`"metadata`":`"{}`",`"user_agent`":`"ghz`"}"
 

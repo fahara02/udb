@@ -47,7 +47,7 @@ command -v ghz >/dev/null 2>&1 || { echo "ERROR: ghz not found on PATH — see h
 [ -d "$proto_root/udb" ] || { echo "ERROR: proto tree not found at $proto_root/udb"; exit 1; }
 
 ghz_flags=(--concurrency "$CONCURRENCY" --total "$TOTAL"
-  --import-paths "$proto_root" --import-paths "$third_party")
+  --import-paths "$proto_root,$third_party")
 [ "$INSECURE" = "1" ] && ghz_flags+=(--insecure)
 [ -n "$TOKEN" ] && ghz_flags+=(--metadata "{\"authorization\":\"Bearer $TOKEN\",\"x-tenant-id\":\"$TENANT\"}")
 
