@@ -86,6 +86,7 @@ const PR_REQUIRED_JOBS = [
 ];
 
 const PR_ADVISORY_JOBS = [
+  "Clippy advisory",
   "Rust (ubuntu-latest)",
   "Rust (windows-latest)",
   "Slim build (postgres-only)",
@@ -95,6 +96,7 @@ const PR_ADVISORY_JOBS = [
 ];
 
 const PR_EVIDENCE_JOBS = [...PR_REQUIRED_JOBS, ...PR_ADVISORY_JOBS];
+const PR_BUDGET_JOBS = [...new Set([...PR_REQUIRED_JOBS, "build-broker"])];
 
 const INTEGRATION_REQUIRED_JOBS = [
   "quick-gate",
@@ -416,12 +418,17 @@ function durationMinutes(run) {
 }
 
 function assertSuccessfulBudgetRun(run, label, budgetMinutes, { maxAgeDays, nowMs = Date.now() } = {}) {
-  if (run.status !== "completed") throw new Error(`${label} run ${run.id} is not completed: ${run.status}`);
-  if (run.conclusion !== "success") throw new Error(`${label} run ${run.id} did not succeed: ${run.conclusion}`);
+  assertSuccessfulEvidenceRun(run, label, { maxAgeDays, nowMs });
   const minutes = durationMinutes(run);
   if (minutes > budgetMinutes) {
     throw new Error(`${label} run ${run.id} took ${minutes.toFixed(2)} min, budget ${budgetMinutes} min`);
   }
+  return minutes;
+}
+
+function assertSuccessfulEvidenceRun(run, label, { maxAgeDays, nowMs = Date.now() } = {}) {
+  if (run.status !== "completed") throw new Error(`${label} run ${run.id} is not completed: ${run.status}`);
+  if (run.conclusion !== "success") throw new Error(`${label} run ${run.id} did not succeed: ${run.conclusion}`);
   if (maxAgeDays !== undefined) {
     const completedAt = parseActionsTimestampMs(run.completed_at || run.updated_at, `${label} run ${run.id} completion timestamp`);
     if (completedAt > nowMs + 5 * 60000) {
@@ -431,6 +438,33 @@ function assertSuccessfulBudgetRun(run, label, budgetMinutes, { maxAgeDays, nowM
     if (ageDays > maxAgeDays) {
       throw new Error(`${label} run ${run.id} is ${ageDays.toFixed(1)} days old, max evidence age ${maxAgeDays} days`);
     }
+  }
+}
+
+function jobWindowMinutes(jobs, label) {
+  if (!Array.isArray(jobs) || jobs.length === 0) {
+    throw new Error(`${label} budget jobs must be a non-empty array`);
+  }
+  let earliest = Number.POSITIVE_INFINITY;
+  let latest = Number.NEGATIVE_INFINITY;
+  for (const job of jobs) {
+    const jobName = assertJobEvidenceName(job, label);
+    const started = jobTimestampMs(job?.started_at, `${label} job ${jobName} started_at`);
+    const completed = jobTimestampMs(job?.completed_at, `${label} job ${jobName} completed_at`);
+    if (completed < started) {
+      throw new Error(`${label} job ${jobName} completed before it started`);
+    }
+    earliest = Math.min(earliest, started);
+    latest = Math.max(latest, completed);
+  }
+  return (latest - earliest) / 60000;
+}
+
+function assertSuccessfulJobWindowBudgetRun(run, jobs, label, budgetMinutes, evidenceOptions = {}) {
+  assertSuccessfulEvidenceRun(run, label, evidenceOptions);
+  const minutes = jobWindowMinutes(jobs, label);
+  if (minutes > budgetMinutes) {
+    throw new Error(`${label} run ${run.id} required lane took ${minutes.toFixed(2)} min, budget ${budgetMinutes} min`);
   }
   return minutes;
 }
@@ -1319,7 +1353,6 @@ function auditFixture(path, budgets, evidenceOptions = {}) {
   const summary = {
     releaseTag: auditedReleaseTag,
     lint: assertSuccessfulBudgetRun(fixture.runs.lint, "lint/actionlint", budgets.lint, evidenceOptions),
-    pr: assertSuccessfulBudgetRun(fixture.runs.pr, "PR CI", budgets.pr, evidenceOptions),
     integration: assertSuccessfulBudgetRun(fixture.runs.integration, "integration CI", budgets.integration, evidenceOptions),
     release: assertSuccessfulBudgetRun(fixture.runs.release, "release", budgets.release, evidenceOptions),
     releaseDryRun: assertSuccessfulBudgetRun(
@@ -1344,6 +1377,7 @@ function auditFixture(path, budgets, evidenceOptions = {}) {
   };
   const lintEvidenceJobs = assertRequiredJobs(fixture.jobs.lint || [], "lint/actionlint", REQUIRED_JOBS.lint);
   const prBrokerJob = assertPrBrokerCompileReduction(fixture.jobs.pr || []);
+  const prBudgetJobs = assertRequiredJobs(fixture.jobs.pr || [], "PR CI required gate", PR_BUDGET_JOBS);
   const prEvidenceJobs = [prBrokerJob, ...assertRequiredJobs(fixture.jobs.pr || [], "PR CI", PR_EVIDENCE_JOBS)];
   const integrationEvidenceJobs = assertRequiredJobs(
     fixture.jobs.integration || [],
@@ -1368,6 +1402,7 @@ function auditFixture(path, budgets, evidenceOptions = {}) {
     REQUIRED_JOBS.branchProtection,
   );
   assertJobsBelongToRun(lintEvidenceJobs, "lint/actionlint", fixture.runs.lint);
+  assertJobsBelongToRun(prBudgetJobs, "PR CI required gate", fixture.runs.pr);
   assertJobsBelongToRun(prEvidenceJobs, "PR CI", fixture.runs.pr);
   assertJobsBelongToRun(integrationEvidenceJobs, "integration CI", fixture.runs.integration);
   assertJobsBelongToRun(releaseEvidenceJobs, "release", fixture.runs.release);
@@ -1376,6 +1411,7 @@ function auditFixture(path, budgets, evidenceOptions = {}) {
   assertJobsBelongToRun(pagesEvidenceJobs, "post-benchmark Pages", fixture.runs.pages);
   assertJobsBelongToRun(branchProtectionEvidenceJobs, "branch-protection", fixture.runs.branchProtection);
   assertJobsWithinRunWindow(lintEvidenceJobs, "lint/actionlint", fixture.runs.lint);
+  assertJobsWithinRunWindow(prBudgetJobs, "PR CI required gate", fixture.runs.pr);
   assertJobsWithinRunWindow(prEvidenceJobs, "PR CI", fixture.runs.pr);
   assertJobsWithinRunWindow(integrationEvidenceJobs, "integration CI", fixture.runs.integration);
   assertJobsWithinRunWindow(releaseEvidenceJobs, "release", fixture.runs.release);
@@ -1383,6 +1419,13 @@ function auditFixture(path, budgets, evidenceOptions = {}) {
   assertJobsWithinRunWindow(benchmarkEvidenceJobs, "post-release benchmark", fixture.runs.benchmark);
   assertJobsWithinRunWindow(pagesEvidenceJobs, "post-benchmark Pages", fixture.runs.pages);
   assertJobsWithinRunWindow(branchProtectionEvidenceJobs, "branch-protection", fixture.runs.branchProtection);
+  summary.pr = assertSuccessfulJobWindowBudgetRun(
+    fixture.runs.pr,
+    prBudgetJobs,
+    "PR CI required gate",
+    budgets.pr,
+    evidenceOptions,
+  );
   return summary;
 }
 
@@ -1551,7 +1594,6 @@ async function auditLive(args, budgets, evidenceOptions = {}, fetcher = fetchJso
   const summary = {
     releaseTag: auditedReleaseTag,
     lint: assertSuccessfulBudgetRun(lintRun, "lint/actionlint", budgets.lint, evidenceOptions),
-    pr: assertSuccessfulBudgetRun(prRun, "PR CI", budgets.pr, evidenceOptions),
     integration: assertSuccessfulBudgetRun(integrationRun, "integration CI", budgets.integration, evidenceOptions),
     release: assertSuccessfulBudgetRun(releaseRun, "release", budgets.release, evidenceOptions),
     releaseDryRun: assertSuccessfulBudgetRun(releaseDryRunRun, "release dry-run", budgets.releaseDryRun, evidenceOptions),
@@ -1574,6 +1616,7 @@ async function auditLive(args, budgets, evidenceOptions = {}, fetcher = fetchJso
   const branchProtectionJobs = await fetchRunJobs(repo, token, branchProtectionRun.id, fetcher);
   const lintEvidenceJobs = assertRequiredJobs(lintJobs, "lint/actionlint", REQUIRED_JOBS.lint);
   const prBrokerJob = assertPrBrokerCompileReduction(prJobs);
+  const prBudgetJobs = assertRequiredJobs(prJobs, "PR CI required gate", PR_BUDGET_JOBS);
   const prEvidenceJobs = [prBrokerJob, ...assertRequiredJobs(prJobs, "PR CI", PR_EVIDENCE_JOBS)];
   const integrationEvidenceJobs = assertRequiredJobs(integrationJobs, "integration CI", REQUIRED_JOBS.integration);
   const releaseEvidenceJobs = assertRequiredJobs(releaseJobs, "release", REQUIRED_JOBS.release);
@@ -1586,6 +1629,7 @@ async function auditLive(args, budgets, evidenceOptions = {}, fetcher = fetchJso
     REQUIRED_JOBS.branchProtection,
   );
   assertJobsBelongToRun(lintEvidenceJobs, "lint/actionlint", lintRun);
+  assertJobsBelongToRun(prBudgetJobs, "PR CI required gate", prRun);
   assertJobsBelongToRun(prEvidenceJobs, "PR CI", prRun);
   assertJobsBelongToRun(integrationEvidenceJobs, "integration CI", integrationRun);
   assertJobsBelongToRun(releaseEvidenceJobs, "release", releaseRun);
@@ -1594,6 +1638,7 @@ async function auditLive(args, budgets, evidenceOptions = {}, fetcher = fetchJso
   assertJobsBelongToRun(pagesEvidenceJobs, "post-benchmark Pages", pagesRun);
   assertJobsBelongToRun(branchProtectionEvidenceJobs, "branch-protection", branchProtectionRun);
   assertJobsWithinRunWindow(lintEvidenceJobs, "lint/actionlint", lintRun);
+  assertJobsWithinRunWindow(prBudgetJobs, "PR CI required gate", prRun);
   assertJobsWithinRunWindow(prEvidenceJobs, "PR CI", prRun);
   assertJobsWithinRunWindow(integrationEvidenceJobs, "integration CI", integrationRun);
   assertJobsWithinRunWindow(releaseEvidenceJobs, "release", releaseRun);
@@ -1601,6 +1646,13 @@ async function auditLive(args, budgets, evidenceOptions = {}, fetcher = fetchJso
   assertJobsWithinRunWindow(benchmarkEvidenceJobs, "post-release benchmark", benchmarkRun);
   assertJobsWithinRunWindow(pagesEvidenceJobs, "post-benchmark Pages", pagesRun);
   assertJobsWithinRunWindow(branchProtectionEvidenceJobs, "branch-protection", branchProtectionRun);
+  summary.pr = assertSuccessfulJobWindowBudgetRun(
+    prRun,
+    prBudgetJobs,
+    "PR CI required gate",
+    budgets.pr,
+    evidenceOptions,
+  );
   return summary;
 }
 
@@ -1829,6 +1881,25 @@ async function runSelftest() {
     writeFileSync(goodPath, JSON.stringify(good));
     auditSelftestFixture(goodPath);
 
+    const slowOptionalPrJob = structuredClone(good);
+    slowOptionalPrJob.runs.pr = {
+      ...slowOptionalPrJob.runs.pr,
+      updated_at: "2026-07-01T00:20:00.000Z",
+      completed_at: "2026-07-01T00:20:00.000Z",
+    };
+    slowOptionalPrJob.jobs.pr = slowOptionalPrJob.jobs.pr.map((job) =>
+      job.name === "Rust (windows-latest)"
+        ? { ...job, completed_at: "2026-07-01T00:20:00.000Z" }
+        : job,
+    );
+    const slowOptionalPrJobPath = join(root, "slow-optional-pr-job.json");
+    writeFileSync(slowOptionalPrJobPath, JSON.stringify(slowOptionalPrJob));
+    try {
+      auditSelftestFixture(slowOptionalPrJobPath);
+    } catch (error) {
+      throw new Error(`optional PR job should not determine required gate budget: ${error.message}`);
+    }
+
     const customBranchEvidence = structuredClone(good);
     customBranchEvidence.runs.integration = {
       ...customBranchEvidence.runs.integration,
@@ -2031,18 +2102,23 @@ async function runSelftest() {
     }
 
     const slow = structuredClone(good);
-    slow.runs.pr = fixtureRun(5, 9, "success", {
-      path: ".github/workflows/ci.yml",
-      event: "pull_request",
-      head_branch: "feature/ci-proof",
-    });
+    slow.runs.pr = {
+      ...slow.runs.pr,
+      updated_at: "2026-07-01T00:09:00.000Z",
+      completed_at: "2026-07-01T00:09:00.000Z",
+    };
+    slow.jobs.pr = slow.jobs.pr.map((job) =>
+      job.name === "smoke" ? { ...job, completed_at: "2026-07-01T00:09:00.000Z" } : job,
+    );
     const slowPath = join(root, "slow.json");
     writeFileSync(slowPath, JSON.stringify(slow));
     try {
       auditSelftestFixture(slowPath);
       throw new Error("over-budget PR run regression was not caught");
     } catch (error) {
-      if (!String(error.message).includes("budget 8 min")) throw error;
+      if (!String(error.message).includes("PR CI required gate run 2 required lane took 9.00 min, budget 8 min")) {
+        throw error;
+      }
     }
 
     try {
@@ -2289,6 +2365,11 @@ async function runSelftest() {
       updated_at: "2026-06-01T00:08:00.000Z",
       completed_at: "2026-06-01T00:08:00.000Z",
     };
+    stale.jobs.pr = stale.jobs.pr.map((job) => ({
+      ...job,
+      started_at: "2026-06-01T00:00:00.000Z",
+      completed_at: "2026-06-01T00:07:30.000Z",
+    }));
     const stalePath = join(root, "stale.json");
     writeFileSync(stalePath, JSON.stringify(stale));
     try {
@@ -2299,10 +2380,10 @@ async function runSelftest() {
     }
 
     const lateCompletedAt = structuredClone(good);
-    lateCompletedAt.runs.pr = {
-      ...lateCompletedAt.runs.pr,
+    lateCompletedAt.runs.integration = {
+      ...lateCompletedAt.runs.integration,
       updated_at: "2026-07-01T00:07:30.000Z",
-      completed_at: "2026-07-01T00:09:00.000Z",
+      completed_at: "2026-07-01T00:31:00.000Z",
     };
     const lateCompletedAtPath = join(root, "late-completed-at.json");
     writeFileSync(lateCompletedAtPath, JSON.stringify(lateCompletedAt));
@@ -2310,7 +2391,7 @@ async function runSelftest() {
       auditSelftestFixture(lateCompletedAtPath);
       throw new Error("late completed_at budget regression was not caught");
     } catch (error) {
-      if (!String(error.message).includes("PR CI run 2 took 9.00 min, budget 8 min")) throw error;
+      if (!String(error.message).includes("integration CI run 3 took 31.00 min, budget 30 min")) throw error;
     }
 
     const paddedRunTimestamp = structuredClone(good);
@@ -2387,7 +2468,7 @@ async function runSelftest() {
       auditSelftestFixture(missingPrRequiredJobPath);
       throw new Error("missing PR required job regression was not caught");
     } catch (error) {
-      if (!String(error.message).includes("PR CI run is missing required jobs: Proto (buf)")) {
+      if (!String(error.message).includes("PR CI required gate run is missing required jobs: Proto (buf)")) {
         throw error;
       }
     }

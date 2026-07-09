@@ -7,7 +7,7 @@ name: CI
 #
 # Chapter 15 cutover (CI workflow consolidation): this file now implements the
 # PR-gate + Integration dependency graphs from docs/ci-architecture.md:
-#   - ONE fast `quick-gate` (fmt + clippy + buf-lint + buf-breaking + version)
+#   - ONE fast `quick-gate` (fmt + buf-lint + buf-breaking + version + source posture)
 #     is the single dependency of every EXPENSIVE job; cheap jobs stay
 #     dependency-free at t=0 and self-fail.
 #   - the broker is built ONCE (`build-broker`) and shared to the smoke job via
@@ -43,11 +43,11 @@ env:
 
 jobs:
   # ── Quick gate: the ONE fast dependency of every expensive job ─────
-  # fmt + clippy(advisory) + buf lint + buf breaking + version consistency.
+  # fmt + buf lint + buf breaking + version consistency + cheap source posture.
   # These are the cheapest + most-common failures; keep this < ~2 min so a
   # trivial mistake reports before any broker/feature compile starts. The
-  # full rust build/test, buf stub drift, and launcher-conformance checks stay
-  # in their own dependency-free jobs below.
+  # advisory clippy, full rust build/test, buf stub drift, and launcher-
+  # conformance checks stay in their own dependency-free jobs below.
   quick-gate:
     name: quick-gate
     runs-on: ubuntu-latest
@@ -180,9 +180,22 @@ jobs:
         run: |
           python3 scripts/check-beta-versioning-posture.py --selftest
           python3 scripts/check-beta-versioning-posture.py
+  # ── Clippy advisory: visible but not on the required quick-gate lane ─────
+  clippy-advisory:
+    name: Clippy advisory
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-rust
+        with:
+          components: clippy
+          install-build-deps: "false"
+          cache-key: clippy-advisory
       - name: Clippy (advisory for v0.1; promote to -D warnings post-cleanup)
         # 120 pre-existing clippy lints on the v0.1 baseline. Soft-fail so the
-        # gate stays fast + green; flip to `-D warnings` once the count is zero.
+        # required PR gate stays fast + green; flip to `-D warnings` once the
+        # count is zero.
         continue-on-error: true
         run: cargo clippy --locked --all-targets
 

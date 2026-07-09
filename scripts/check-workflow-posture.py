@@ -1077,6 +1077,7 @@ CI_TOPOLOGY_REQUIREMENTS = (
 
 CI_TOPOLOGY_DEPENDENCY_FREE_JOBS = (
     "quick-gate",
+    "clippy-advisory",
     "rust",
     "slim-build",
     "supply-chain",
@@ -2092,6 +2093,7 @@ CI_RUNNER_EVIDENCE_REQUIREMENTS = (
     ("const PR_REQUIRED_JOBS", "PR required check inventory"),
     ("const PR_ADVISORY_JOBS", "PR advisory/no-check-lost job inventory"),
     ("const PR_EVIDENCE_JOBS = [...PR_REQUIRED_JOBS, ...PR_ADVISORY_JOBS]", "complete PR runner evidence inventory"),
+    ("const PR_BUDGET_JOBS", "PR required-lane budget job inventory"),
     ("const INTEGRATION_REQUIRED_JOBS", "integration full CI required job inventory"),
     ("releaseDryRun: \"release-binaries.yml\"", "release dry-run workflow identity"),
     ("benchmark: \"benchmark-sdks.yml\"", "benchmark workflow identity"),
@@ -2196,6 +2198,8 @@ CI_RUNNER_EVIDENCE_REQUIREMENTS = (
     ("max evidence age", "stale runner evidence failure"),
     ("const start = runStartMs(run, \"budget\")", "budget duration uses canonical run start helper"),
     ("const end = runCompletedMs(run, \"budget\")", "budget duration uses canonical completion helper"),
+    ("function assertSuccessfulJobWindowBudgetRun", "PR required-lane budget assertion"),
+    ("PR CI required gate", "PR required-lane budget label"),
     ("--max-evidence-age-days", "runner evidence max-age CLI"),
     ("maxAgeDays: DEFAULT_MAX_EVIDENCE_AGE_DAYS", "runner evidence selftest max-age option"),
     ("function assertJobSucceeded(job, label)", "required job success assertion"),
@@ -2367,7 +2371,7 @@ CI_RUNNER_EVIDENCE_REQUIREMENTS = (
     ("exactly one build-broker job", "single build-broker failure"),
     ("PR CI run is missing required artifact-path job: quick-gate", "missing PR quick-gate assertion"),
     ("PR CI run has duplicate artifact-path job smoke; found 2", "duplicate PR smoke assertion"),
-    ("PR CI run is missing required jobs: Proto (buf)", "missing PR required job negative assertion"),
+    ("PR CI required gate run is missing required jobs: Proto (buf)", "missing PR required job negative assertion"),
     ("PR CI run is missing required jobs: Rust (ubuntu-latest)", "missing PR advisory job negative assertion"),
     ("missing PR advisory job regression was not caught", "missing PR advisory job negative selftest"),
     ("PHP SDK (pest)", "PR SDK static job evidence"),
@@ -2460,7 +2464,8 @@ CI_RUNNER_EVIDENCE_REQUIREMENTS = (
     ("lint/actionlint run 19 used branch feature/lint-proof, want main", "wrong lint branch negative assertion"),
     ("stale runner evidence regression was not caught", "stale runner evidence negative selftest"),
     ("late completed_at budget regression was not caught", "late completed_at budget negative selftest"),
-    ("PR CI run 2 took 9.00 min, budget 8 min", "late completed_at budget failure"),
+    ("PR CI required gate run 2 required lane took 9.00 min, budget 8 min", "required PR lane budget failure"),
+    ("integration CI run 3 took 31.00 min, budget 30 min", "late completed_at budget failure"),
     ("duplicate build-broker regression was not caught", "duplicate build-broker negative selftest"),
     ("duplicate PR smoke regression was not caught", "duplicate PR smoke negative selftest"),
     ("missing PR quick-gate regression was not caught", "missing PR quick-gate negative selftest"),
@@ -6533,6 +6538,10 @@ jobs:
         run: |
           python3 scripts/check-beta-versioning-posture.py --selftest
           python3 scripts/check-beta-versioning-posture.py
+  clippy-advisory:
+    runs-on: ubuntu-latest
+    steps:
+      - run: cargo clippy --locked --all-targets
   versions:
     runs-on: ubuntu-latest
     steps:
@@ -7489,6 +7498,7 @@ const PR_REQUIRED_JOBS = [
   "Scaffold examples compile (six SDKs)",
 ];
 const PR_ADVISORY_JOBS = [
+  "Clippy advisory",
   "Rust (ubuntu-latest)",
   "Rust (windows-latest)",
   "Slim build (postgres-only)",
@@ -7497,6 +7507,7 @@ const PR_ADVISORY_JOBS = [
   "Markdown local links + readiness artifacts",
 ];
 const PR_EVIDENCE_JOBS = [...PR_REQUIRED_JOBS, ...PR_ADVISORY_JOBS];
+const PR_BUDGET_JOBS = [...new Set([...PR_REQUIRED_JOBS, "build-broker"])];
 const INTEGRATION_REQUIRED_JOBS = [
   "quick-gate",
   "Rust (ubuntu-latest)",
@@ -7544,6 +7555,9 @@ const SERVED_SMOKE_AUDITS = {};
 function assertSuccessfulBudgetRun(run, label, budgetMinutes, { maxAgeDays, nowMs = Date.now() } = {}) {
   const completedAt = parseActionsTimestampMs(run.completed_at || run.updated_at, "run completion timestamp");
   throw new Error("max evidence age");
+}
+function assertSuccessfulJobWindowBudgetRun(run, jobs, label, budgetMinutes, evidenceOptions = {}) {
+  throw new Error("PR CI required gate run 2 required lane took 9.00 min, budget 8 min");
 }
 function boundedBudgetArg(args, name, fallback, max) {
   throw new Error("must be a positive decimal number");
@@ -7597,7 +7611,7 @@ function assertRequiredJobs(jobs, label, requiredNames) {
   assertRequiredJobInventory(label, requiredNames);
   const matchedJobs = [];
   const jobNames = jobs.map((job) => assertJobEvidenceName(job, label));
-  throw new Error("PR CI run is missing required jobs: Proto (buf)");
+  throw new Error("PR CI required gate run is missing required jobs: Proto (buf)");
   throw new Error("PR CI run is missing required jobs: Rust (ubuntu-latest)");
   throw new Error("release run is missing required jobs: publish-docker");
   throw new Error("release dry-run run is missing required jobs: build (udb-linux-amd64-full)");
@@ -7616,6 +7630,7 @@ function assertRequiredJobInventory(label, requiredNames) {
 throw new Error("duplicate required job inventory regression was not caught");
 const lintEvidenceJobs = assertRequiredJobs([], "lint/actionlint", []);
 const prBrokerJob = assertPrBrokerCompileReduction([]);
+const prBudgetJobs = assertRequiredJobs([], "PR CI required gate", PR_BUDGET_JOBS);
 const prEvidenceJobs = [prBrokerJob, ...assertRequiredJobs([], "PR CI", [])];
 function assertJobsBelongToRun(jobs, label, run) {
   assertRunEvidenceRunId(run, label);
@@ -7947,7 +7962,8 @@ function runSelftest() {
   throw new Error("lint/actionlint run 19 used branch feature/lint-proof, want main");
   throw new Error("stale runner evidence regression was not caught");
   throw new Error("late completed_at budget regression was not caught");
-  throw new Error("PR CI run 2 took 9.00 min, budget 8 min");
+  throw new Error("PR CI required gate run 2 required lane took 9.00 min, budget 8 min");
+  throw new Error("integration CI run 3 took 31.00 min, budget 30 min");
   throw new Error("padded run timestamp regression was not caught");
   throw new Error("offset job timestamp regression was not caught");
   throw new Error("duplicate build-broker regression was not caught");
