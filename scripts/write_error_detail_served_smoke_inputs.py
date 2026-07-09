@@ -15,6 +15,7 @@ import argparse
 import json
 import sys
 import uuid
+from dataclasses import dataclass
 from pathlib import Path
 
 
@@ -39,13 +40,20 @@ OTP_TYPE = authn_enums_pb2.OTP_TYPE_SENSITIVE_OPERATION
 PROOF_PURPOSE = "error-detail-served-smoke"
 
 
+@dataclass(frozen=True)
+class AuthProof:
+    tenant_id: str
+    project_id: str
+    bearer: str
+
+
 def _json_dump(path: Path, value: object) -> None:
     path.write_text(json.dumps(value, sort_keys=True, separators=(",", ":")) + "\n", encoding="utf-8")
 
 
-def authenticate(target: str, username: str, password: str, tenant: str, project: str) -> str:
+def authenticate(target: str, username: str, password: str, tenant_hint: str, project: str) -> AuthProof:
     metadata = Metadata(
-        tenant_id=tenant,
+        tenant_id=tenant_hint,
         project_id=project,
         purpose=PROOF_PURPOSE,
         correlation_id="error-detail-served-smoke-login",
@@ -55,17 +63,20 @@ def authenticate(target: str, username: str, password: str, tenant: str, project
     login = auth.login(username, password, device_name="error-detail-served-smoke")
     if not login.access_token:
         raise RuntimeError(f"login for {username!r} returned no access_token")
-    auth.authenticate_bearer(login.access_token)
-    return login.access_token
+    principal = auth.authenticate_bearer(login.access_token)
+    tenant_id = getattr(principal.principal, "tenant_id", "") or tenant_hint
+    if not tenant_id:
+        raise RuntimeError(f"authenticate_bearer for {username!r} returned no tenant_id")
+    return AuthProof(tenant_id=tenant_id, project_id=project, bearer=login.access_token)
 
 
-def write_inputs(out_dir: Path, auth_target: str, bearer: str, tenant: str, project: str) -> None:
+def write_inputs(out_dir: Path, auth_target: str, auth: AuthProof) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     nonce = uuid.uuid4().hex[:12]
     metadata = (
-        ("authorization", f"Bearer {bearer}"),
-        ("x-tenant-id", tenant),
-        ("x-udb-project-id", project),
+        ("authorization", f"Bearer {auth.bearer}"),
+        ("x-tenant-id", auth.tenant_id),
+        ("x-udb-project-id", auth.project_id),
         ("x-purpose", PROOF_PURPOSE),
         ("x-correlation-id", f"error-detail-served-smoke-{nonce}"),
         ("x-request-id", f"error-detail-served-smoke-{nonce}"),
@@ -79,8 +90,8 @@ def write_inputs(out_dir: Path, auth_target: str, bearer: str, tenant: str, proj
             username=username,
             email=f"{username}@example.com",
             password=PASSWORD,
-            tenant_id=tenant,
-            project_id=project,
+            tenant_id=auth.tenant_id,
+            project_id=auth.project_id,
             full_name="ErrorDetail Served Smoke",
         ),
         metadata=metadata,
@@ -91,7 +102,7 @@ def write_inputs(out_dir: Path, auth_target: str, bearer: str, tenant: str, proj
         raise RuntimeError("CreateUser returned no user_id")
 
     context = common_pb2.RequestContext(
-        tenant=common_pb2.TenantContext(tenant_id=tenant, project_id=project),
+        tenant=common_pb2.TenantContext(tenant_id=auth.tenant_id, project_id=auth.project_id),
         correlation_id=f"error-detail-otp-seed-{nonce}",
         purpose=PROOF_PURPOSE,
     )
@@ -109,7 +120,7 @@ def write_inputs(out_dir: Path, auth_target: str, bearer: str, tenant: str, proj
         raise RuntimeError("first SendOTP returned no otp_id")
 
     request_context = {
-        "tenant": {"tenant_id": tenant, "project_id": project},
+        "tenant": {"tenant_id": auth.tenant_id, "project_id": auth.project_id},
         "correlation_id": f"error-detail-proof-{nonce}",
         "purpose": PROOF_PURPOSE,
     }
@@ -131,9 +142,9 @@ def write_inputs(out_dir: Path, auth_target: str, bearer: str, tenant: str, proj
         },
     )
     (out_dir / "header.txt").write_text(
-        f"authorization: Bearer {bearer}\n"
-        f"x-tenant-id: {tenant}\n"
-        f"x-udb-project-id: {project}\n"
+        f"authorization: Bearer {auth.bearer}\n"
+        f"x-tenant-id: {auth.tenant_id}\n"
+        f"x-udb-project-id: {auth.project_id}\n"
         f"x-purpose: {PROOF_PURPOSE}\n"
         f"x-correlation-id: error-detail-served-smoke-{nonce}\n"
         f"x-request-id: error-detail-served-smoke-{nonce}\n"
@@ -153,8 +164,8 @@ def main() -> int:
     parser.add_argument("--project", default="default")
     args = parser.parse_args()
 
-    bearer = authenticate(args.auth_target, args.username, args.password, args.tenant, args.project)
-    write_inputs(args.out_dir, args.auth_target, bearer, args.tenant, args.project)
+    auth = authenticate(args.auth_target, args.username, args.password, args.tenant, args.project)
+    write_inputs(args.out_dir, args.auth_target, auth)
     print(f"wrote ErrorDetail served-smoke proof inputs to {args.out_dir}")
     return 0
 

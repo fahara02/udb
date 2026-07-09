@@ -68,6 +68,12 @@ inputs:
   live_s3_bucket:
     description: "S3 bucket the live harness uses (UDB_LIVE_S3_BUCKET)."
     default: "udb-live-sdk"
+  enable_column_backend:
+    description: "Export ClickHouse column backend env (UDB_COLUMN_*)."
+    default: "true"
+  enable_graph_backend:
+    description: "Export Neo4j graph backend env (UDB_GRAPH_*)."
+    default: "true"
 
 runs:
   using: "composite"
@@ -96,6 +102,8 @@ runs:
         STARTUP_DRY_RUN: ${{ inputs.startup_dry_run }}
         OBJECT_BACKEND: ${{ inputs.object_backend }}
         OBJECT_BUCKET: ${{ inputs.object_bucket }}
+        ENABLE_COLUMN_BACKEND: ${{ inputs.enable_column_backend }}
+        ENABLE_GRAPH_BACKEND: ${{ inputs.enable_graph_backend }}
       run: |
         # shellcheck disable=SC2129
         set -euo pipefail
@@ -144,15 +152,19 @@ runs:
         echo "UDB_QDRANT_URL=http://localhost:6333" >> "$env_file"
         echo "UDB_REDIS_DSN=redis://localhost:6379/0" >> "$env_file"
         # ClickHouse over HTTP; broker reads UDB_COLUMN_* labels, not DSN userinfo.
-        echo "UDB_COLUMN_DSN=http://localhost:8123" >> "$env_file"
+        if [ "${ENABLE_COLUMN_BACKEND}" = "true" ]; then
+          echo "UDB_COLUMN_DSN=http://localhost:8123" >> "$env_file"
+        fi
 
         # Graph backend (GraphMutate/GraphQuery) — neo4j HTTP tx API. Without
         # these the executor fails "backend executor 'neo4j:default' is not
         # registered" across all SDKs.
-        echo "UDB_GRAPH_DSN=http://localhost:7474" >> "$env_file"
-        echo "UDB_GRAPH_USER=neo4j" >> "$env_file"
-        echo "UDB_GRAPH_PASSWORD=test1234" >> "$env_file"
-        echo "UDB_GRAPH_DATABASE=neo4j" >> "$env_file"
+        if [ "${ENABLE_GRAPH_BACKEND}" = "true" ]; then
+          echo "UDB_GRAPH_DSN=http://localhost:7474" >> "$env_file"
+          echo "UDB_GRAPH_USER=neo4j" >> "$env_file"
+          echo "UDB_GRAPH_PASSWORD=test1234" >> "$env_file"
+          echo "UDB_GRAPH_DATABASE=neo4j" >> "$env_file"
+        fi
 
         # Don't abort broker startup if an optional backend is briefly unready.
         echo "UDB_ALLOW_DEGRADED_BACKENDS=true" >> "$env_file"
