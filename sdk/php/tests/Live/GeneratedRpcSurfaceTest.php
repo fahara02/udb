@@ -3163,6 +3163,7 @@ function perfSeedPhp(array $s): array
         foreach (['user_id', 'recipient_id', 'assigned_by', 'created_by', 'updated_by', 'revoked_by', 'deleted_by', 'approved_by', 'rejected_by'] as $k) {
             $fix->set($k, $uid);
         }
+        $fix->set('username', $uname);
         $fix->set('subject', "user:$uid");
         $login = $try('Login', fn () => $authGen->login((new \Udb\Core\Authn\Services\V1\LoginRequest())
             ->setUsername($uname)->setPassword('CorrectHorse1!')->setTenantHint($tenant)->setProjectHint($project)

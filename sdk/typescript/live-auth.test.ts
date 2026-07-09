@@ -484,13 +484,9 @@ function manifestJSONBody(serviceName: string, methodName: string, fixtures?: Pe
   if (!cell) return undefined;
   const jsonCell = strictManifestJSONCell(cell);
   if (!jsonCell) return undefined;
-  try {
-    const resolved = resolveManifestSeeds(jsonCell, fixtures);
-    if (!resolved) return undefined;
-    return JSON.parse(resolved);
-  } catch {
-    return undefined;
-  }
+  const resolved = resolveManifestSeeds(jsonCell, fixtures);
+  if (!resolved) return undefined;
+  return JSON.parse(resolved);
 }
 
 function fullSurfaceManifestFixtures(): PerfFixtures {
@@ -2447,6 +2443,24 @@ async function seedPerfFixtures(
       setTimeout(fin, 3000);
       try { s.write?.({ node_id: nodeId, resource_type: "RESOURCE_TYPE_BACKEND_TARGET_DEFINITION", context: { tenant: { tenant_id: tenantId, project_id: projectId } } }); } catch { fin(); }
     });
+  });
+
+  // ── BackupService: a policy row + a started backup id for read/restore RPCs ──
+  fix.set("restore_tenant_id", liveUuid());
+  await tryRun("PutBackupPolicy", async () => {
+    await gen.BackupService.put_backup_policy({
+      tenant_id: tenantId,
+      policy_name: "sdk-perf-default",
+      schedule_cron: "0 3 * * *",
+      retention_days: 7,
+      max_retained_backups: 3,
+      enabled: true,
+      metadata_json: "{}",
+    }, opts);
+  });
+  await tryRun("StartTenantBackup", async () => {
+    const backup = await gen.BackupService.start_tenant_backup({ tenant_id: tenantId }, opts);
+    fix.set("backup_id", backup.backup_id);
   });
 
   // Convenience free-text scalars commonly required by reflective populate.

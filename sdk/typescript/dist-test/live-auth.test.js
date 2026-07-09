@@ -485,15 +485,10 @@ function manifestJSONBody(serviceName, methodName, fixtures) {
     const jsonCell = strictManifestJSONCell(cell);
     if (!jsonCell)
         return undefined;
-    try {
-        const resolved = resolveManifestSeeds(jsonCell, fixtures);
-        if (!resolved)
-            return undefined;
-        return JSON.parse(resolved);
-    }
-    catch {
+    const resolved = resolveManifestSeeds(jsonCell, fixtures);
+    if (!resolved)
         return undefined;
-    }
+    return JSON.parse(resolved);
 }
 function fullSurfaceManifestFixtures() {
     const fixtures = new PerfFixtures();
@@ -2430,6 +2425,23 @@ async function seedPerfFixtures(gen, data, tenantId, projectId, uuidTenant) {
                 fin();
             }
         });
+    });
+    // ── BackupService: a policy row + a started backup id for read/restore RPCs ──
+    fix.set("restore_tenant_id", liveUuid());
+    await tryRun("PutBackupPolicy", async () => {
+        await gen.BackupService.put_backup_policy({
+            tenant_id: tenantId,
+            policy_name: "sdk-perf-default",
+            schedule_cron: "0 3 * * *",
+            retention_days: 7,
+            max_retained_backups: 3,
+            enabled: true,
+            metadata_json: "{}",
+        }, opts);
+    });
+    await tryRun("StartTenantBackup", async () => {
+        const backup = await gen.BackupService.start_tenant_backup({ tenant_id: tenantId }, opts);
+        fix.set("backup_id", backup.backup_id);
     });
     // Convenience free-text scalars commonly required by reflective populate.
     fix.set("name", `sdk-perf-${suffix}`);
