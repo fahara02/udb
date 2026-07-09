@@ -134,7 +134,7 @@ async fn live_postgres_authn_otp_cooldown() {
     assert_eq!(detail.kind, ErrorKind::Quota as i32);
     assert!(detail.retryable);
     assert_eq!(detail.backend, "authn");
-    assert_eq!(detail.operation, "otp cooldown");
+    assert_eq!(detail.operation, "otp_cooldown");
     assert!(detail.retry_after_ms > 0);
 
     cleanup_native_auth_db(&pool).await;

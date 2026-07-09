@@ -26,7 +26,7 @@ async fn stored_last_login_at_unix(pool: &sqlx::PgPool, user_id: &str) -> i64 {
     let last_login_col = users_model.column("last_login_at");
     sqlx::query_scalar(&format!(
         "SELECT COALESCE(EXTRACT(EPOCH FROM {last_login_col})::BIGINT, 0) \
-         FROM {users_rel} WHERE {user_id_col} = $1"
+         FROM {users_rel} WHERE {user_id_col} = $1::uuid"
     ))
     .bind(user_id)
     .fetch_one(pool)
