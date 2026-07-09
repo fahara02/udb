@@ -9,6 +9,11 @@ on:
       NPM_TOKEN:
         description: npm automation token used by `npm publish`.
         required: false
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Expected UDB release version, for example 0.4.0"
+        required: true
 
 permissions:
   contents: read
@@ -35,6 +40,7 @@ jobs:
       - uses: ./.github/actions/version-guard
         with:
           component: sdk-typescript
+          dispatch-version: ${{ github.event.inputs.version }}
 
       - name: Install dependencies
         working-directory: sdk/typescript

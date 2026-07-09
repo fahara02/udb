@@ -9,6 +9,11 @@ on:
       PYPI_API_TOKEN:
         description: PyPI API token used by `twine upload`.
         required: false
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Expected UDB release version, for example 0.4.0"
+        required: true
 
 permissions:
   contents: read
@@ -37,6 +42,7 @@ jobs:
       - uses: ./.github/actions/version-guard
         with:
           component: sdk-python
+          dispatch-version: ${{ github.event.inputs.version }}
 
       - name: Install dependencies
         working-directory: sdk/python

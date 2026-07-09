@@ -16,6 +16,11 @@ name: Release · C# SDK (NuGet)
 
 on:
   workflow_call:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Expected UDB release version, for example 0.4.0"
+        required: true
 
 permissions:
   contents: read
@@ -45,6 +50,7 @@ jobs:
       - uses: ./.github/actions/version-guard
         with:
           component: sdk-csharp
+          dispatch-version: ${{ github.event.inputs.version }}
 
       # ── Restore + test ────────────────────────────────────────────────────
       - name: Restore dependencies

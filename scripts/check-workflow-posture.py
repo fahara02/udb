@@ -1330,11 +1330,10 @@ CI_NATIVE_INTEGRATION_REQUIREMENTS = (
         "docker compose -f docker-compose.canonical.yml up -d --wait mysql mssql mongodb cassandra neo4j clickhouse elasticsearch weaviate",
         "canonical stack startup",
     ),
-    ("Start live stacks while compiling tests", "native integration overlap step"),
+    ("Start integration stack while compiling tests", "native integration overlap step"),
+    ("Start canonical-store stack", "canonical stack deferred startup step"),
     ("integration_stack_pid=$!", "integration stack background pid capture"),
-    ("canonical_stack_pid=$!", "canonical stack background pid capture"),
     ('wait "$integration_stack_pid"', "integration stack wait"),
-    ('wait "$canonical_stack_pid"', "canonical stack wait"),
     ("native/integration compile preflight failed", "compile preflight status check"),
     ("Initialize SQL Server database", "SQL Server database bootstrap step"),
     ("IF DB_ID(N'udb') IS NULL CREATE DATABASE [udb];", "SQL Server udb database bootstrap"),
@@ -4600,11 +4599,14 @@ def check_release_topology(root: Path = ROOT) -> list[str]:
             scoped.append("release leaf must not define its own push tag trigger")
         active_text = _non_comment_text(text)
         if name in RELEASE_PUBLISHER_WORKFLOWS and "workflow_dispatch:" in active_text:
-            scoped.append("release publisher leaf must not define standalone workflow_dispatch")
-        if name in RELEASE_PUBLISHER_WORKFLOWS and (
-            "github.event.inputs" in active_text or "dispatch-version:" in active_text
-        ):
-            scoped.append("release publisher leaf must not depend on dispatch inputs")
+            _require_workflow_dispatch_input_required(text, "version", scoped)
+            _require_workflow_dispatch_input_has_no_default(text, "version", scoped)
+            _require(
+                active_text,
+                "dispatch-version: ${{ github.event.inputs.version }}",
+                "manual release version guard",
+                scoped,
+            )
         failures.extend(f"{name}: {failure}" for failure in scoped)
     return failures
 
@@ -5428,8 +5430,9 @@ def check_ci_native_integration_gate(root: Path = ROOT) -> list[str]:
         _require(text, needle, label, scoped)
 
     anchors = (
-        "Start live stacks while compiling tests",
+        "Start integration stack while compiling tests",
         "Compile native + integration tests",
+        "Start canonical-store stack",
         "Initialize SQL Server database",
         "IR compiler live golden tests",
         "Native service live tests",
@@ -5442,7 +5445,7 @@ def check_ci_native_integration_gate(root: Path = ROOT) -> list[str]:
     if any(pos < 0 for pos in positions):
         scoped.append("missing native-integration ordering anchors")
     elif positions != sorted(positions):
-        scoped.append("native-integration must overlap stack startup with compile, initialize live dependencies, run live suites, dump diagnostics, then clean up")
+        scoped.append("native-integration must overlap the integration stack with compile, start the heavier canonical stack after compile, initialize live dependencies, run live suites, dump diagnostics, then clean up")
 
     cleanup_at = text.find("Stop integration stacks")
     cleanup_block = text[cleanup_at:] if cleanup_at >= 0 else ""
@@ -6795,17 +6798,16 @@ jobs:
       - uses: ./.github/actions/setup-rust
         with:
           cache-key: native-integration
-      - name: Start live stacks while compiling tests
+      - name: Start integration stack while compiling tests
         run: |
           docker compose -f docker-compose.integration.yml up -d --wait postgres kafka redis memcached qdrant minio &
           integration_stack_pid=$!
-          docker compose -f docker-compose.canonical.yml up -d --wait mysql mssql mongodb cassandra neo4j clickhouse elasticsearch weaviate &
-          canonical_stack_pid=$!
           # Compile native + integration tests while Docker services become healthy.
           cargo test --locked --no-run --lib --test integration_tests --test runtime_live_backends
           wait "$integration_stack_pid"
-          wait "$canonical_stack_pid"
           echo "::error::native/integration compile preflight failed"
+      - name: Start canonical-store stack
+        run: docker compose -f docker-compose.canonical.yml up -d --wait mysql mssql mongodb cassandra neo4j clickhouse elasticsearch weaviate
       - name: Initialize SQL Server database
         run: IF DB_ID(N'udb') IS NULL CREATE DATABASE [udb];
       - name: Wait for Weaviate readiness
@@ -10211,18 +10213,18 @@ jobs:
             encoding="utf-8",
         )
         failures = check_release_topology(root)
-        assert any("standalone workflow_dispatch" in failure for failure in failures), failures
+        assert any("workflow_dispatch input 'version' is missing" in failure for failure in failures), failures
         (wf / "release-python-sdk.yml").write_text(release_leaf_good, encoding="utf-8")
 
         (wf / "release-csharp-sdk.yml").write_text(
             release_leaf_good.replace(
-                "jobs:\n",
-                "jobs:\n  version:\n    steps:\n      - uses: ./.github/actions/version-guard\n        with:\n          dispatch-version: ${{ github.event.inputs.version }}\n",
+                "on:\n  workflow_call:\n",
+                "on:\n  workflow_call:\n  workflow_dispatch:\n    inputs:\n      version:\n        description: \"Expected UDB release version\"\n        required: true\n",
             ),
             encoding="utf-8",
         )
         failures = check_release_topology(root)
-        assert any("dispatch inputs" in failure for failure in failures), failures
+        assert any("manual release version guard" in failure for failure in failures), failures
         (wf / "release-csharp-sdk.yml").write_text(release_leaf_good, encoding="utf-8")
 
         (wf / "release.yml").write_text(

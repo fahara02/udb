@@ -35,6 +35,11 @@ on:
       PACKAGIST_API_TOKEN:
         description: packagist.org API token for the update hook.
         required: false
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Expected UDB release version, for example 0.4.0"
+        required: true
 
 env:
   SATELLITE_REPO: git@github.com:fahara02/udb-laravel.git
@@ -88,6 +93,7 @@ jobs:
       - uses: ./.github/actions/version-guard
         with:
           component: sdk-php
+          dispatch-version: ${{ github.event.inputs.version }}
         # version-guard reads scripts/check-versions.mjs + versions.json from the
         # repo root; `uses:` steps ignore `defaults.run.working-directory`.
 
@@ -134,7 +140,11 @@ jobs:
       - name: Extract tag name
         id: tag
         run: |
-          tag="${GITHUB_REF#refs/tags/}"
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            tag="${GITHUB_REF#refs/tags/}"
+          else
+            tag="v${{ github.event.inputs.version }}"
+          fi
           echo "name=$tag" >> "$GITHUB_OUTPUT"
           echo "Tag: $tag"
 
