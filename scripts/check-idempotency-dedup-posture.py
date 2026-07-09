@@ -856,9 +856,9 @@ def run_selftest() -> None:
         )
         expect_failure(
             root,
-            "served idempotency workflow no longer requires the full proof set",
+            "served idempotency workflow lost the fail-closed proof phase",
             ".github/workflows/idempotency-served-smoke.yml",
-            "--require-all-proofs",
+            "Run live idempotency fail-closed proof",
         )
         expect_failure(
             root,
