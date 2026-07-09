@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>UDB :: Universal Data Broker</strong><br>
-  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.3.7 | protocol v1.0.0</sub>
+  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.4.0 | protocol v1.0.0</sub>
 </p>
 
 UDB uses one product version for the crate, release binaries, Docker image, and
@@ -16,17 +16,17 @@ SDK packages, plus one separate wire-protocol version.
 
 | Item | Version |
 |---|---:|
-| UDB crate and CLI | `0.3.7` |
-| SDK packages | `0.3.7` |
+| UDB crate and CLI | `0.4.0` |
+| SDK packages | `0.4.0` |
 | Wire protocol | `1.0.0` |
-| Release tag | `v0.3.7` |
+| Release tag | `v0.4.0` |
 
 The source of truth is [versions.json](versions.json). Package manifests and SDK
 protocol constants are checked against it in CI.
 
-## 0.3.7 Release Gate Assumptions
+## 0.4.0 Release Gate Assumptions
 
-Before tagging 0.3.7, the staged tree should satisfy the gates that failed the
+Before tagging 0.4.0, the staged tree should satisfy the gates that failed the
 last two release attempts:
 
 - `node scripts/check-versions.mjs` must agree with [versions.json](versions.json).

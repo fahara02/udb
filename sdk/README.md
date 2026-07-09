@@ -12,7 +12,7 @@
 │    UNIVERSAL DATA BROKER                                                   │
 │    gRPC data plane | native control plane | tenant/project scope guard     │
 │                                                                            │
-│    crate v0.3.7 | protocol v1.0.0                                          │
+│    crate v0.4.0 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -20,7 +20,7 @@ UDB SDKs are language clients for a running UDB broker. They attach request
 metadata, expose common DataBroker helpers, provide native auth/authz clients,
 and include a version-matched `udb` CLI launcher.
 
-Current SDK release: `0.3.7`
+Current SDK release: `0.4.0`
 
 Current wire protocol: [`1.0.0`](UDB_PROTOCOL_VERSION)
 
@@ -50,11 +50,11 @@ The CI story has two layers:
 
 | Language | Package | Install |
 |---|---|---|
-| Go | `github.com/fahara02/udb/sdk/go` | `go get github.com/fahara02/udb/sdk/go@v0.3.7` |
-| Python | `udb-client` | `pip install udb-client==0.3.7` |
-| TypeScript / Node | `@udb_plus/sdk` | `npm i @udb_plus/sdk@0.3.7` |
-| PHP / Laravel | `fahara02/udb-laravel` | `composer require fahara02/udb-laravel:^0.3.7` |
-| C# | `Udb.Client` | `dotnet add package Udb.Client --version 0.3.7` |
+| Go | `github.com/fahara02/udb/sdk/go` | `go get github.com/fahara02/udb/sdk/go@v0.4.0` |
+| Python | `udb-client` | `pip install udb-client==0.4.0` |
+| TypeScript / Node | `@udb_plus/sdk` | `npm i @udb_plus/sdk@0.4.0` |
+| PHP / Laravel | `fahara02/udb-laravel` | `composer require fahara02/udb-laravel:^0.4.0` |
+| C# | `Udb.Client` | `dotnet add package Udb.Client --version 0.4.0` |
 | Java | `dev.udb:udb-java-client` | build from checkout until Maven Central publishing lands |
 
 ## What Every SDK Provides
@@ -156,7 +156,7 @@ udb sdk generate --lang all
 
 Generated code should stay tied to:
 
-- crate/package version `0.3.7`;
+- crate/package version `0.4.0`;
 - protocol version `1.0.0`;
 - descriptor-derived RPC and service metadata;
 - the shared metadata contract used by every SDK.
@@ -178,7 +178,7 @@ Release flow:
 Consumer install command:
 
 ```bash
-composer require fahara02/udb-laravel:^0.3.7
+composer require fahara02/udb-laravel:^0.4.0
 ```
 
 The monorepo remains the source of truth for generated PHP code, tests, and

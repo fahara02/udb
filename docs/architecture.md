@@ -13,7 +13,7 @@
 │    UNIVERSAL DATA BROKER                                                   │
 │    gRPC data plane | native control plane | tenant/project scope guard     │
 │                                                                            │
-│    crate v0.3.7 | protocol v1.0.0                                          │
+│    crate v0.4.0 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 UDB is a Rust gRPC broker that turns protobuf domain schemas into a runtime
