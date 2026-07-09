@@ -5588,7 +5588,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
             "decode_detail(&throttled)",
             "ErrorKind::Quota",
             'detail.backend, "authn"',
-            'detail.operation, "otp cooldown"',
+            'detail.operation, "otp_cooldown"',
             "detail.retry_after_ms > 0",
         ),
     ),
