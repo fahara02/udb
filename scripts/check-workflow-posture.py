@@ -270,34 +270,35 @@ TARGETED_PROOF_WORKFLOW_REQUIREMENTS = {
     ),
     "error-detail-served-smoke.yml": (
         ("error-detail-served:", "ErrorDetail served proof job"),
-        ("target:", "live broker target input"),
-        ("validation_method:", "validation method input"),
-        ("validation_request_module:", "validation request module input"),
-        ("validation_request_message:", "validation request message input"),
-        ("validation_request_json:", "validation request JSON input"),
-        ("validation_field:", "validation field input"),
-        ("quota_method:", "quota method input"),
-        ("quota_request_module:", "quota request module input"),
-        ("quota_request_message:", "quota request message input"),
-        ("quota_request_json:", "quota request JSON input"),
-        ("quota_retry_after_min_ms:", "quota retry-after input"),
-        ('default: "200"', "quota retry-after positive default"),
-        ("quota_backend:", "quota backend input"),
-        ("quota_operation:", "quota operation input"),
+        ("release_tag:", "served release-tag input"),
+        ("release_asset:", "served release-asset input"),
+        ("postgres:", "served Postgres service"),
+        ("mongodb:", "served MongoDB service"),
+        ("gh release download", "served release binary download"),
+        ("uses: ./.github/actions/start-backends", "served backend action reuse"),
+        ("uses: ./.github/actions/broker-env", "served broker env reuse"),
+        ("UDB_OTP_COOLDOWN_SECONDS=60", "ErrorDetail quota cooldown override"),
+        ("uses: ./.github/actions/launch-broker", "served broker launch action reuse"),
+        ("Bootstrap served-smoke user", "served smoke user bootstrap"),
+        ("scripts/write_error_detail_served_smoke_inputs.py", "ErrorDetail proof input generator"),
         ("python -m pip install -e sdk/python", "Python SDK runtime install"),
         ("python scripts/error_detail_served_smoke.py --selftest", "ErrorDetail smoke selftest"),
         ("--require-all-proofs", "complete Chapter 14.7 proof gate"),
-        (
-            'printf \'%s\' "$VALIDATION_REQUEST_JSON" > smoke-input/validation.json',
-            "validation unconditional input materialization",
-        ),
-        ('printf \'%s\' "$QUOTA_REQUEST_JSON" > smoke-input/quota.json', "quota unconditional input materialization"),
+        ('done < smoke-input/header.txt', "generated metadata handoff"),
+        ("--target \"${UDB_AUTH_GRPC_TARGET}\"", "auth listener target handoff"),
+        ("--validation-method /udb.core.authn.services.v1.AuthnService/SendPhoneVerification", "Authn validation method"),
+        ("--validation-request-module udb.core.authn.services.v1.core_pb2", "Authn validation request module"),
+        ("--validation-request-message SendPhoneVerificationRequest", "Authn validation request message"),
         ("--validation-request-json smoke-input/validation.json", "validation JSON handoff"),
-        ("--validation-field \"$VALIDATION_FIELD\"", "validation field handoff"),
+        ("--validation-field phone", "validation field handoff"),
+        ("--quota-method /udb.core.authn.services.v1.AuthnService/SendOTP", "Authn quota method"),
+        ("--quota-request-module udb.core.authn.services.v1.core_pb2", "Authn quota request module"),
+        ("--quota-request-message SendOTPRequest", "Authn quota request message"),
         ("--quota-request-json smoke-input/quota.json", "quota JSON handoff"),
-        ("--quota-retry-after-min-ms", "quota retry-after handoff"),
-        ("--quota-backend", "quota backend handoff"),
-        ("--quota-operation", "quota operation handoff"),
+        ("--quota-retry-after-min-ms 1000", "quota retry-after handoff"),
+        ("--quota-backend authn", "quota backend handoff"),
+        ("--quota-operation otp_cooldown", "quota operation handoff"),
+        ("error-detail-served-smoke-diagnostics", "ErrorDetail diagnostics artifact"),
     ),
     "idempotency-served-smoke.yml": (
         ("idempotency-served-replay:", "idempotency served replay job"),
@@ -499,19 +500,8 @@ TARGETED_PROOF_WORKFLOW_REQUIREMENTS = {
 
 REQUIRED_PROOF_WORKFLOW_INPUTS = {
     "error-detail-served-smoke.yml": (
-        "target",
-        "validation_method",
-        "validation_request_module",
-        "validation_request_message",
-        "validation_request_json",
-        "validation_field",
-        "quota_method",
-        "quota_request_module",
-        "quota_request_message",
-        "quota_request_json",
-        "quota_retry_after_min_ms",
-        "quota_backend",
-        "quota_operation",
+        "release_tag",
+        "release_asset",
     ),
     "idempotency-served-smoke.yml": (
         "release_tag",
@@ -530,20 +520,7 @@ REQUIRED_PROOF_WORKFLOW_INPUTS = {
 }
 
 NO_DEFAULT_PROOF_WORKFLOW_INPUTS = {
-    "error-detail-served-smoke.yml": (
-        "target",
-        "validation_method",
-        "validation_request_module",
-        "validation_request_message",
-        "validation_request_json",
-        "validation_field",
-        "quota_method",
-        "quota_request_module",
-        "quota_request_message",
-        "quota_request_json",
-        "quota_backend",
-        "quota_operation",
-    ),
+    "error-detail-served-smoke.yml": (),
     "idempotency-served-smoke.yml": (),
     "retry-safe-served-smoke.yml": (),
     "rest-gateway-smoke.yml": (
@@ -4147,6 +4124,7 @@ LINT_WORKFLOW_TRIGGER_PATHS = (
     ("scripts/check-openapi-operationid-posture.py", "OpenAPI operation-id posture guard"),
     ("scripts/check-idempotency-dedup-posture.py", "idempotency dedup posture guard"),
     ("scripts/error_detail_served_smoke.py", "ErrorDetail served smoke"),
+    ("scripts/write_error_detail_served_smoke_inputs.py", "ErrorDetail proof input generator"),
     ("scripts/idempotency_served_replay_smoke.py", "idempotency served replay smoke"),
     ("scripts/write_databroker_served_smoke_inputs.py", "DataBroker served-smoke proof input generator"),
     ("scripts/retry_safe_served_smoke.py", "retry-safe served smoke"),
@@ -8345,33 +8323,12 @@ jobs:
 on:
   workflow_dispatch:
     inputs:
-      target:
+      release_tag:
         required: true
-      validation_method:
+        default: latest
+      release_asset:
         required: true
-      validation_request_module:
-        required: true
-      validation_request_message:
-        required: true
-      validation_request_json:
-        required: true
-      validation_field:
-        required: true
-      quota_method:
-        required: true
-      quota_request_module:
-        required: true
-      quota_request_message:
-        required: true
-      quota_request_json:
-        required: true
-      quota_retry_after_min_ms:
-        required: true
-        default: "200"
-      quota_backend:
-        required: true
-      quota_operation:
-        required: true
+        default: udb-linux-amd64-full
 permissions:
   contents: read
 concurrency:
@@ -8379,14 +8336,31 @@ concurrency:
 jobs:
   error-detail-served:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+      mongodb:
+        image: mongo:7
     steps:
+      - run: gh release download
+      - uses: ./.github/actions/start-backends
+      - uses: ./.github/actions/broker-env
+      - run: echo "UDB_OTP_COOLDOWN_SECONDS=60" >> "$GITHUB_ENV"
+      - run: echo "Bootstrap served-smoke user"
+      - uses: ./.github/actions/launch-broker
       - run: python -m pip install -e sdk/python
+      - run: python scripts/write_error_detail_served_smoke_inputs.py --out-dir smoke-input
       - run: python scripts/error_detail_served_smoke.py --selftest
       - run: |
-          printf '%s' "$VALIDATION_REQUEST_JSON" > smoke-input/validation.json
-          printf '%s' "$QUOTA_REQUEST_JSON" > smoke-input/quota.json
-          python scripts/error_detail_served_smoke.py --require-all-proofs --validation-request-json smoke-input/validation.json --validation-field "$VALIDATION_FIELD" --quota-request-json smoke-input/quota.json --quota-retry-after-min-ms 200 --quota-backend admission --quota-operation fair_queue
+          args=(--target "${UDB_AUTH_GRPC_TARGET}" --require-all-proofs)
+          while IFS= read -r line || [ -n "$line" ]; do
+            [ -n "$line" ] && args+=(--header "$line")
+          done < smoke-input/header.txt
+          python scripts/error_detail_served_smoke.py "${args[@]}" --validation-method /udb.core.authn.services.v1.AuthnService/SendPhoneVerification --validation-request-module udb.core.authn.services.v1.core_pb2 --validation-request-message SendPhoneVerificationRequest --validation-request-json smoke-input/validation.json --validation-field phone --quota-method /udb.core.authn.services.v1.AuthnService/SendOTP --quota-request-module udb.core.authn.services.v1.core_pb2 --quota-request-message SendOTPRequest --quota-request-json smoke-input/quota.json --quota-retry-after-min-ms 1000 --quota-backend authn --quota-operation otp_cooldown
+      - uses: actions/upload-artifact@v4
+        with:
+          name: error-detail-served-smoke-diagnostics
 """
         idempotency_served_workflow_good = """name: Idempotency served replay smoke
 on:
@@ -8754,28 +8728,28 @@ jobs:
 
         (wf / "error-detail-served-smoke.yml").write_text(
             error_detail_served_workflow_good.replace(
-                "      validation_method:\n        required: true",
-                "      validation_method:\n        required: false",
+                "      release_tag:\n        required: true",
+                "      release_tag:\n        required: false",
             ),
             encoding="utf-8",
         )
         failures = check_targeted_proof_workflows(root)
-        assert any("validation_method" in failure and "must be required" in failure for failure in failures), failures
+        assert any("release_tag" in failure and "must be required" in failure for failure in failures), failures
         (wf / "error-detail-served-smoke.yml").write_text(error_detail_served_workflow_good, encoding="utf-8")
 
         (wf / "error-detail-served-smoke.yml").write_text(
             error_detail_served_workflow_good.replace(
-                '          printf \'%s\' "$VALIDATION_REQUEST_JSON" > smoke-input/validation.json\n',
-                "",
+                "scripts/write_error_detail_served_smoke_inputs.py",
+                "scripts/missing_error_detail_generator.py",
             ),
             encoding="utf-8",
         )
         failures = check_targeted_proof_workflows(root)
-        assert any("validation unconditional input materialization" in failure for failure in failures), failures
+        assert any("ErrorDetail proof input generator" in failure for failure in failures), failures
         (wf / "error-detail-served-smoke.yml").write_text(error_detail_served_workflow_good, encoding="utf-8")
 
         (wf / "error-detail-served-smoke.yml").write_text(
-            error_detail_served_workflow_good.replace('--validation-field "$VALIDATION_FIELD" ', ""),
+            error_detail_served_workflow_good.replace("--validation-field phone ", ""),
             encoding="utf-8",
         )
         failures = check_targeted_proof_workflows(root)
@@ -8784,13 +8758,13 @@ jobs:
 
         (wf / "error-detail-served-smoke.yml").write_text(
             error_detail_served_workflow_good.replace(
-                "      validation_request_json:\n        required: true",
-                '      validation_request_json:\n        required: true\n        default: "{}"',
+                '      - run: echo "UDB_OTP_COOLDOWN_SECONDS=60" >> "$GITHUB_ENV"',
+                '      - run: echo "UDB_OTP_COOLDOWN_SECONDS=0" >> "$GITHUB_ENV"',
             ),
             encoding="utf-8",
         )
         failures = check_targeted_proof_workflows(root)
-        assert any("validation_request_json" in failure and "must not define a default" in failure for failure in failures), failures
+        assert any("ErrorDetail quota cooldown override" in failure for failure in failures), failures
         (wf / "error-detail-served-smoke.yml").write_text(error_detail_served_workflow_good, encoding="utf-8")
 
         (wf / "idempotency-served-smoke.yml").write_text(
