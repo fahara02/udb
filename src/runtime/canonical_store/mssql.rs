@@ -35,6 +35,21 @@ use crate::runtime::executors::mssql::{MssqlClient, SqlParam};
 /// Poll interval used while waiting for the outbox high-water mark to advance.
 const MSSQL_DURABILITY_POLL_MS: u64 = 10;
 
+const MSSQL_ADVISORY_LEASE_ACQUIRE_SQL: &str = "\
+    DECLARE @result TABLE (owner_id NVARCHAR(255)); \
+    MERGE udb_advisory_leases WITH (HOLDLOCK) AS target \
+    USING (SELECT @P1 AS lease_name, @P2 AS owner_id, @P3 AS ttl) AS src \
+    ON target.lease_name = src.lease_name \
+    WHEN MATCHED AND (target.expires_at <= SYSUTCDATETIME() OR target.owner_id = src.owner_id) \
+        THEN UPDATE SET owner_id = src.owner_id, \
+                       expires_at = DATEADD(SECOND, src.ttl, SYSUTCDATETIME()) \
+    WHEN NOT MATCHED \
+        THEN INSERT (lease_name, owner_id, expires_at) \
+             VALUES (src.lease_name, src.owner_id, DATEADD(SECOND, src.ttl, SYSUTCDATETIME())) \
+    OUTPUT inserted.owner_id INTO @result; \
+    SELECT owner_id FROM @result; \
+";
+
 pub struct MssqlCanonicalStore {
     /// `pub(super)` so the sibling system-store impl files
     /// (`mssql_projection`, `mssql_saga`, `mssql_admin_audit`,
@@ -247,26 +262,15 @@ impl CanonicalStore for MssqlCanonicalStore {
         // DATEADD(SECOND, @ttl, SYSUTCDATETIME()) so a ttl=0 lease is born
         // already-expired and is taken over by the next acquirer.
         let ttl_secs = ttl.as_secs() as i64;
-        let sql = "\
-            DECLARE @result TABLE (owner_id NVARCHAR(255)); \
-            MERGE udb_advisory_leases WITH (HOLDLOCK) AS target \
-            USING (SELECT @P1 AS lease_name, @P2 AS owner_id, @P3 AS ttl) AS src \
-            ON target.lease_name = src.lease_name \
-            WHEN MATCHED AND (target.expires_at < SYSUTCDATETIME() OR target.owner_id = src.owner_id) \
-                THEN UPDATE SET owner_id = src.owner_id, \
-                               expires_at = DATEADD(SECOND, src.ttl, SYSUTCDATETIME()) \
-            WHEN NOT MATCHED \
-                THEN INSERT (lease_name, owner_id, expires_at) \
-                     VALUES (src.lease_name, src.owner_id, DATEADD(SECOND, src.ttl, SYSUTCDATETIME())) \
-            OUTPUT inserted.owner_id INTO @result; \
-            SELECT owner_id FROM @result; \
-        ";
         let params = [
             SqlParam::Str(lease_name.to_string()),
             SqlParam::Str(owner_id.to_string()),
             SqlParam::Int(ttl_secs),
         ];
-        let rows = self.client.fetch_rows(sql, &params).await?;
+        let rows = self
+            .client
+            .fetch_rows(MSSQL_ADVISORY_LEASE_ACQUIRE_SQL, &params)
+            .await?;
         // A denied merge produces no `inserted` row → empty result set →
         // the caller did not get the lease. A fired INSERT/UPDATE outputs
         // the post-merge owner; it equals the caller iff they hold it.
@@ -344,5 +348,13 @@ mod tests {
             .await
             .expect_err("must reject cross-backend token");
         assert!(err.contains("cannot wait on a 'postgres'"), "got: {err}");
+    }
+
+    #[test]
+    fn advisory_lease_sql_treats_exact_expiry_as_expired() {
+        assert!(
+            MSSQL_ADVISORY_LEASE_ACQUIRE_SQL.contains("target.expires_at <= SYSUTCDATETIME()"),
+            "zero-ttl leases must be immediately acquirable by a different owner"
+        );
     }
 }
