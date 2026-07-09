@@ -13,9 +13,15 @@ on:
         required: true
         default: udb-linux-amd64-full
         type: string
+      broker_artifact_run_id:
+        description: "Optional CI run id containing udb-broker-debug for current-main proof before release"
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: error-detail-served-smoke-${{ github.ref }}
@@ -68,28 +74,12 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -e sdk/python
 
-      - name: Resolve release binary
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          mkdir -p smoke-output/bin smoke-output/logs smoke-input
-          tag="${RELEASE_TAG}"
-          if [ -z "${tag}" ] || [ "${tag}" = "latest" ]; then
-            tag="$(gh release view --repo "${GITHUB_REPOSITORY}" --json tagName --jq .tagName)"
-          fi
-          if [[ ! "${tag}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
-            echo "::error::served smoke requires a released SemVer tag, got '${tag}'"
-            exit 1
-          fi
-          gh release view "${tag}" --repo "${GITHUB_REPOSITORY}" >/dev/null
-          gh release download "${tag}" --repo "${GITHUB_REPOSITORY}" --pattern "${RELEASE_ASSET}" --dir smoke-output/bin
-          chmod +x "smoke-output/bin/${RELEASE_ASSET}"
-          {
-            echo "UDB_SERVED_RELEASE_TAG=${tag}"
-            echo "UDB_SERVED_BIN=${GITHUB_WORKSPACE}/smoke-output/bin/${RELEASE_ASSET}"
-          } >> "$GITHUB_ENV"
+      - name: Resolve served binary
+        uses: ./.github/actions/resolve-served-binary
+        with:
+          release-tag: ${{ inputs.release_tag }}
+          release-asset: ${{ inputs.release_asset }}
+          broker-artifact-run-id: ${{ inputs.broker_artifact_run_id }}
 
       - name: Start backends
         uses: ./.github/actions/start-backends
