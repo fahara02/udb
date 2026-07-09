@@ -166,7 +166,7 @@ const REQUIRED_JOBS = {
     "build (udb-darwin-amd64)",
     "build (udb-linux-amd64-full)",
   ],
-  benchmark: ["Release binary + SDK live benchmarks"],
+  benchmark: ["Release binary + SDK live benchmarks / Live SDK benchmark"],
   pages: ["build", "deploy"],
   branchProtection: ["Branch protection required checks match docs"],
   idempotencyServed: ["DataBroker idempotency served replay proof"],
@@ -618,6 +618,10 @@ function assertJobsWithinRunWindow(jobs, label, run) {
   }
 }
 
+function workflowRunUsesDefaultBranch(workflow, run) {
+  return [WORKFLOWS.benchmark, WORKFLOWS.pages].includes(workflow) && run?.event === "workflow_run";
+}
+
 function assertRunEvidenceIdentity(run, label, { workflow, event, events, branch, releaseTag, repo } = {}) {
   assertRunEvidenceRunId(run, label);
   assertRunEvidenceAttempt(run, label);
@@ -639,12 +643,12 @@ function assertRunEvidenceIdentity(run, label, { workflow, event, events, branch
   if (releaseTag) {
     assertReleaseTag(releaseTag, `${label} expected release tag`);
   }
-  if (releaseTag && run.head_branch !== releaseTag) {
+  if (releaseTag && !workflowRunUsesDefaultBranch(workflow, run) && run.head_branch !== releaseTag) {
     throw new Error(`${label} run ${run.id} used release tag ${run.head_branch}, want ${releaseTag}`);
   }
   if (
     !releaseTag &&
-    [WORKFLOWS.release, WORKFLOWS.benchmark, WORKFLOWS.pages].includes(workflow) &&
+    workflow === WORKFLOWS.release &&
     !RELEASE_TAG_PATTERN.test(String(run.head_branch || ""))
   ) {
     throw new Error(`${label} run ${run.id} has invalid release tag ${run.head_branch || "(missing)"}; want vMAJOR.MINOR.PATCH`);
@@ -711,9 +715,12 @@ function assertReleaseChainTags({ release, benchmark, pages }) {
   }
   const releaseSha = assertGitSha(releaseShaText, "release chain");
   for (const [label, run] of Object.entries({ "post-release benchmark": benchmark, "post-benchmark Pages": pages })) {
-    const actual = String(run?.head_branch || "");
-    if (actual !== releaseTag) {
-      throw new Error(`${label} run ${run?.id || "(unknown)"} used release tag ${actual || "(missing)"}, want ${releaseTag}`);
+    const actualBranch = String(run?.head_branch || "");
+    if (run?.event === "workflow_run" && actualBranch !== DEFAULT_INTEGRATION_BRANCH) {
+      throw new Error(`${label} run ${run?.id || "(unknown)"} used branch ${actualBranch || "(missing)"}, want ${DEFAULT_INTEGRATION_BRANCH}`);
+    }
+    if (run?.event !== "workflow_run" && actualBranch !== releaseTag) {
+      throw new Error(`${label} run ${run?.id || "(unknown)"} used release tag ${actualBranch || "(missing)"}, want ${releaseTag}`);
     }
     const actualSha = String(run?.head_sha || "");
     if (!actualSha) {
@@ -1183,8 +1190,9 @@ async function fetchRunJobs(repo, token, runId, fetcher = fetchJson) {
   return jobs;
 }
 
-async function findLatestSuccessfulRun(repo, token, workflow, { event, branch, releaseTag } = {}, fetcher = fetchJson) {
+async function findLatestSuccessfulRun(repo, token, workflow, { event, branch, releaseTag, headSha } = {}, fetcher = fetchJson) {
   const events = Array.isArray(event) ? event : event ? [event] : [];
+  if (headSha) assertGitSha(headSha, `${workflow} lookup`);
   const params = new URLSearchParams({ status: "completed", per_page: String(MAX_GITHUB_WORKFLOW_RUN_CANDIDATES) });
   if (events.length === 1) params.set("event", events[0]);
   if (branch) params.set("branch", branch);
@@ -1204,13 +1212,14 @@ async function findLatestSuccessfulRun(repo, token, workflow, { event, branch, r
     if (candidate.status !== "completed") return false;
     if (candidate.conclusion !== "success") return false;
     if (events.length && !events.includes(candidate.event)) return false;
-    if (releaseTag && candidate.head_branch !== releaseTag) return false;
+    if (headSha && candidate.head_sha !== headSha) return false;
+    if (releaseTag && !headSha && candidate.head_branch !== releaseTag) return false;
     if (!releaseTag && workflow === WORKFLOWS.release && !String(candidate.head_branch || "").startsWith("v")) return false;
     return true;
   });
   if (!run) {
     throw new Error(
-      `no successful completed ${workflow} run found for ${JSON.stringify({ event: events.length ? events : undefined, branch, releaseTag })}`,
+      `no successful completed ${workflow} run found for ${JSON.stringify({ event: events.length ? events : undefined, branch, releaseTag, headSha })}`,
     );
   }
   return run;
@@ -1420,6 +1429,7 @@ async function auditLive(args, budgets, evidenceOptions = {}, fetcher = fetchJso
       : findLatestSuccessfulRun(repo, token, WORKFLOWS.release, { event: "push", releaseTag }, fetcher),
   );
   const expectedReleaseTag = releaseTag || String(releaseRun?.head_branch || "");
+  const expectedReleaseSha = releaseRun?.head_sha ? assertGitSha(releaseRun.head_sha, "release discovery") : "";
   const releaseDryRunRun = expectedReleaseTag
     ? await discoverRun("release dry-run", () =>
         releaseDryRunId
@@ -1437,6 +1447,7 @@ async function auditLive(args, budgets, evidenceOptions = {}, fetcher = fetchJso
           : findLatestSuccessfulRun(repo, token, WORKFLOWS.benchmark, {
               event: "workflow_run",
               releaseTag: expectedReleaseTag,
+              headSha: expectedReleaseSha,
             }, fetcher),
       )
     : (discoveryFailures.push("post-release benchmark: release tag is required because release discovery failed and --release-tag was not provided"), null);
@@ -1447,6 +1458,7 @@ async function auditLive(args, budgets, evidenceOptions = {}, fetcher = fetchJso
           : findLatestSuccessfulRun(repo, token, WORKFLOWS.pages, {
               event: "workflow_run",
               releaseTag: expectedReleaseTag,
+              headSha: expectedReleaseSha,
             }, fetcher),
       )
     : (discoveryFailures.push("post-benchmark Pages: release tag is required because release discovery failed and --release-tag was not provided"), null);
@@ -1765,7 +1777,7 @@ async function runSelftest() {
           updated_at: "2026-07-01T02:00:00Z",
           path: ".github/workflows/benchmark-sdks.yml",
           event: "workflow_run",
-          head_branch: "v0.3.7",
+          head_branch: "main",
           head_sha: releaseSha,
         }),
         pages: fixtureRun(13, 12, "success", {
@@ -1774,7 +1786,7 @@ async function runSelftest() {
           updated_at: "2026-07-01T02:13:00Z",
           path: ".github/workflows/pages.yml",
           event: "workflow_run",
-          head_branch: "v0.3.7",
+          head_branch: "main",
           head_sha: releaseSha,
         }),
         branchProtection: fixtureRun(10, 3, "success", {
@@ -2838,7 +2850,7 @@ async function runSelftest() {
     } catch (error) {
       if (
         !String(error.message).includes(
-          "post-release benchmark run is missing required jobs: Release binary + SDK live benchmarks",
+          "post-release benchmark run is missing required jobs: Release binary + SDK live benchmarks / Live SDK benchmark",
         )
       ) {
         throw error;
@@ -2849,7 +2861,8 @@ async function runSelftest() {
     wrongPagesBranch.runs.pages = fixtureRun(15, 5, "success", {
       path: ".github/workflows/pages.yml",
       event: "workflow_run",
-      head_branch: "main",
+      head_branch: "release/v0.3.7",
+      head_sha: releaseSha,
     });
     const wrongPagesBranchPath = join(root, "wrong-pages-branch.json");
     writeFileSync(wrongPagesBranchPath, JSON.stringify(wrongPagesBranch));
@@ -2857,7 +2870,7 @@ async function runSelftest() {
       auditSelftestFixture(wrongPagesBranchPath);
       throw new Error("wrong Pages release branch regression was not caught");
     } catch (error) {
-      if (!String(error.message).includes("post-benchmark Pages run 15 has invalid release tag main; want vMAJOR.MINOR.PATCH")) {
+      if (!String(error.message).includes("post-benchmark Pages run 15 used branch release/v0.3.7, want main")) {
         throw error;
       }
     }
@@ -2871,42 +2884,6 @@ async function runSelftest() {
       throw new Error("missing Pages deploy regression was not caught");
     } catch (error) {
       if (!String(error.message).includes("post-benchmark Pages run is missing required jobs: deploy")) {
-        throw error;
-      }
-    }
-
-    const wrongBenchmarkTag = structuredClone(good);
-    wrongBenchmarkTag.runs.benchmark = fixtureRun(16, 5, "success", {
-      path: ".github/workflows/benchmark-sdks.yml",
-      event: "workflow_run",
-      head_branch: "v0.3.8",
-      head_sha: benchmarkSha,
-    });
-    const wrongBenchmarkTagPath = join(root, "wrong-benchmark-tag.json");
-    writeFileSync(wrongBenchmarkTagPath, JSON.stringify(wrongBenchmarkTag));
-    try {
-      auditSelftestFixture(wrongBenchmarkTagPath);
-      throw new Error("wrong benchmark release tag regression was not caught");
-    } catch (error) {
-      if (!String(error.message).includes("post-release benchmark run 16 used release tag v0.3.8, want v0.3.7")) {
-        throw error;
-      }
-    }
-
-    const wrongPagesTag = structuredClone(good);
-    wrongPagesTag.runs.pages = fixtureRun(17, 5, "success", {
-      path: ".github/workflows/pages.yml",
-      event: "workflow_run",
-      head_branch: "v0.3.8",
-      head_sha: pagesSha,
-    });
-    const wrongPagesTagPath = join(root, "wrong-pages-tag.json");
-    writeFileSync(wrongPagesTagPath, JSON.stringify(wrongPagesTag));
-    try {
-      auditSelftestFixture(wrongPagesTagPath);
-      throw new Error("wrong Pages release tag regression was not caught");
-    } catch (error) {
-      if (!String(error.message).includes("post-benchmark Pages run 17 used release tag v0.3.8, want v0.3.7")) {
         throw error;
       }
     }
