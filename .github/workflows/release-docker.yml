@@ -79,10 +79,12 @@ jobs:
             echo "::error::Invalid SemVer version: ${version}" >&2
             exit 1
           fi
-          echo "version=${version}" >> "${GITHUB_OUTPUT}"
-          echo "major=${major}" >> "${GITHUB_OUTPUT}"
-          echo "major_minor=${major}.${minor}" >> "${GITHUB_OUTPUT}"
-          echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
+          {
+            echo "version=${version}"
+            echo "major=${major}"
+            echo "major_minor=${major}.${minor}"
+            echo "tag=${tag}"
+          } >> "${GITHUB_OUTPUT}"
 
       - name: Download release binary into build context
         env:
