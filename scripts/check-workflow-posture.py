@@ -2288,7 +2288,8 @@ CI_RUNNER_EVIDENCE_REQUIREMENTS = (
     ("uses repo ${repo}, want ${expectedRepo} from ${expectedLabel}", "runner evidence cross-repo fixture failure"),
     ("assertSharedRunInspectionRepo({", "runner evidence shared inspection repo wiring"),
     ("function assertReleaseChainTags({ release, benchmark, pages })", "release-chain tag assertion"),
-    ("used release tag ${actual || \"(missing)\"}, want ${releaseTag}", "release-chain tag mismatch failure"),
+    ("used branch ${actualBranch || \"(missing)\"}, want ${DEFAULT_INTEGRATION_BRANCH}", "release-chain workflow_run branch mismatch failure"),
+    ("used release tag ${actualBranch || \"(missing)\"}, want ${releaseTag}", "release-chain non-workflow_run tag mismatch failure"),
     ("release chain has missing release head_sha", "release-chain missing release SHA failure"),
     ("used head_sha ${actualSha}, want ${releaseSha}", "release-chain SHA mismatch failure"),
     ("function assertReleaseDryRunCommit({ release, releaseDryRun })", "release dry-run commit binding assertion"),
@@ -2421,7 +2422,7 @@ CI_RUNNER_EVIDENCE_REQUIREMENTS = (
     ("Release binary + SDK live benchmarks", "post-release benchmark job evidence"),
     ("post-release benchmark run 14 used event workflow_dispatch, want workflow_run", "wrong benchmark event negative assertion"),
     ("post-release benchmark run is missing required jobs: Release binary + SDK live benchmarks", "missing benchmark job negative assertion"),
-    ("post-benchmark Pages run 15 has invalid release tag main; want vMAJOR.MINOR.PATCH", "wrong Pages branch negative assertion"),
+    ("post-benchmark Pages run 15 used branch release/v0.3.7, want main", "wrong Pages branch negative assertion"),
     ("post-benchmark Pages run is missing required jobs: deploy", "missing Pages deploy negative assertion"),
     ("Branch protection required checks match docs", "branch-protection required job evidence"),
     ("Scaffold examples compile (six SDKs)", "scaffold artifact consumer assertion"),
@@ -2540,10 +2541,10 @@ CI_RUNNER_EVIDENCE_REQUIREMENTS = (
     ("missing benchmark job regression was not caught", "missing benchmark job negative selftest"),
     ("wrong Pages release branch regression was not caught", "wrong Pages branch negative selftest"),
     ("missing Pages deploy regression was not caught", "missing Pages deploy negative selftest"),
-    ("wrong benchmark release tag regression was not caught", "wrong benchmark tag negative selftest"),
-    ("post-release benchmark run 16 used release tag v0.3.8, want v0.3.7", "wrong benchmark tag negative assertion"),
-    ("wrong Pages release tag regression was not caught", "wrong Pages tag negative selftest"),
-    ("post-benchmark Pages run 17 used release tag v0.3.8, want v0.3.7", "wrong Pages tag negative assertion"),
+    ("wrong benchmark head_sha regression was not caught", "wrong benchmark SHA negative selftest"),
+    ("post-release benchmark run 12 used head_sha ${benchmarkSha}, want ${releaseSha}", "wrong benchmark SHA negative assertion"),
+    ("wrong Pages head_sha regression was not caught", "wrong Pages SHA negative selftest"),
+    ("post-benchmark Pages run 13 used head_sha ${pagesSha}, want ${releaseSha}", "wrong Pages SHA negative assertion"),
     ("missing release head_sha regression was not caught", "missing release SHA negative selftest"),
     ("padded release head_sha regression was not caught", "padded release SHA negative selftest"),
     ("uppercase release head_sha regression was not caught", "uppercase release SHA negative selftest"),
@@ -7696,7 +7697,7 @@ function assertRunEvidenceIdentity(run, label, options) {
   throw new Error("want .github/workflows/release.yml");
   throw new Error("release dry-run run 9 used event push, want workflow_dispatch");
   throw new Error("post-release benchmark run 14 used event workflow_dispatch, want workflow_run");
-  throw new Error("post-benchmark Pages run 15 has invalid release tag main; want vMAJOR.MINOR.PATCH");
+  throw new Error("post-benchmark Pages run 15 used branch release/v0.3.7, want main");
   throw new Error("branch-protection run 11 used event push, want workflow_dispatch");
 }
 function assertLintEvidenceBranch(run) {
@@ -7722,7 +7723,8 @@ function assertSharedRunInspectionRepo(runs) {
 }
 assertSharedRunInspectionRepo({});
 function assertReleaseChainTags({ release, benchmark, pages }) {
-  throw new Error("used release tag ${actual || \"(missing)\"}, want ${releaseTag}");
+  throw new Error("used branch ${actualBranch || \"(missing)\"}, want ${DEFAULT_INTEGRATION_BRANCH}");
+  throw new Error("used release tag ${actualBranch || \"(missing)\"}, want ${releaseTag}");
   throw new Error("release chain has missing release head_sha");
   throw new Error("used head_sha ${actualSha}, want ${releaseSha}");
 }
@@ -8020,10 +8022,10 @@ function runSelftest() {
   throw new Error("missing Pages deploy regression was not caught");
   throw new Error("post-benchmark Pages run is missing required jobs: deploy");
   throw new Error("malformed release tag regression was not caught");
-  throw new Error("wrong benchmark release tag regression was not caught");
-  throw new Error("post-release benchmark run 16 used release tag v0.3.8, want v0.3.7");
-  throw new Error("wrong Pages release tag regression was not caught");
-  throw new Error("post-benchmark Pages run 17 used release tag v0.3.8, want v0.3.7");
+  throw new Error("wrong benchmark head_sha regression was not caught");
+  throw new Error("post-release benchmark run 12 used head_sha ${benchmarkSha}, want ${releaseSha}");
+  throw new Error("wrong Pages head_sha regression was not caught");
+  throw new Error("post-benchmark Pages run 13 used head_sha ${pagesSha}, want ${releaseSha}");
   throw new Error("missing release head_sha regression was not caught");
   throw new Error("padded release head_sha regression was not caught");
   throw new Error("release run 4 has invalid head_sha  ${releaseSha}; want 40 hex characters");
