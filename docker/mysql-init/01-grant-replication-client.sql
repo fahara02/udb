@@ -8,6 +8,11 @@ GRANT REPLICATION CLIENT ON *.* TO 'udb'@'%';
 -- per-run isolation; allow the udb user to create/drop and fully use them.
 GRANT CREATE, DROP ON *.* TO 'udb'@'%';
 GRANT ALL PRIVILEGES ON `udb\_conf\_%`.* TO 'udb'@'%';
+-- IR live golden tests provision throwaway `udb_ir_live_<uuid>` and
+-- `udb_ir_include_<uuid>` databases, then create indexes and foreign keys
+-- inside them.
+GRANT ALL PRIVILEGES ON `udb\_ir\_live\_%`.* TO 'udb'@'%';
+GRANT ALL PRIVILEGES ON `udb\_ir\_include\_%`.* TO 'udb'@'%';
 -- XA live tests/smokes provision throwaway `udb_xa_<uuid>` databases and the
 -- recovery worker calls XA RECOVER through the same udb account.
 GRANT ALL PRIVILEGES ON `udb\_xa\_%`.* TO 'udb'@'%';

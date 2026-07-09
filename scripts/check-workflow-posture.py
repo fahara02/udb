@@ -1337,6 +1337,8 @@ CI_NATIVE_INTEGRATION_REQUIREMENTS = (
         "docker compose -f docker-compose.canonical.yml up -d --wait mysql mssql mongodb cassandra neo4j clickhouse elasticsearch weaviate",
         "canonical stack startup",
     ),
+    ("Initialize SQL Server database", "SQL Server database bootstrap step"),
+    ("IF DB_ID(N'udb') IS NULL CREATE DATABASE [udb];", "SQL Server udb database bootstrap"),
     ("curl -fsS http://127.0.0.1:58080/v1/.well-known/ready", "Weaviate readiness gate"),
     ("rs.initiate", "MongoDB replica-set init"),
     ("udb.authn.user.registered.v1 udb.notification.sent.v1", "native event topic precreate list"),
@@ -4441,6 +4443,8 @@ def check_compose_support_inputs(root: Path = ROOT) -> list[str]:
                 ("GRANT REPLICATION CLIENT", "MySQL binlog-position grant"),
                 ("GRANT CREATE, DROP ON *.* TO 'udb'@'%';", "MySQL live DB create/drop grant"),
                 ("GRANT ALL PRIVILEGES ON `udb\\_conf\\_%`.* TO 'udb'@'%';", "MySQL conformance DB grant"),
+                ("GRANT ALL PRIVILEGES ON `udb\\_ir\\_live\\_%`.* TO 'udb'@'%';", "MySQL IR live DB grant"),
+                ("GRANT ALL PRIVILEGES ON `udb\\_ir\\_include\\_%`.* TO 'udb'@'%';", "MySQL IR include DB grant"),
                 ("GRANT XA_RECOVER_ADMIN", "MySQL XA recover grant"),
             ),
         ),
@@ -5420,6 +5424,7 @@ def check_ci_native_integration_gate(root: Path = ROOT) -> list[str]:
     anchors = (
         "Start integration stack",
         "Start canonical-store stack",
+        "Initialize SQL Server database",
         "Compile native + integration tests",
         "IR compiler live golden tests",
         "Native service live tests",
@@ -6785,6 +6790,8 @@ jobs:
         run: docker compose -f docker-compose.integration.yml up -d --wait postgres kafka redis memcached qdrant minio
       - name: Start canonical-store stack
         run: docker compose -f docker-compose.canonical.yml up -d --wait mysql mssql mongodb cassandra neo4j clickhouse elasticsearch weaviate
+      - name: Initialize SQL Server database
+        run: IF DB_ID(N'udb') IS NULL CREATE DATABASE [udb];
       - name: Wait for Weaviate readiness
         run: curl -fsS http://127.0.0.1:58080/v1/.well-known/ready
       - name: Initialize MongoDB replica set
@@ -8245,6 +8252,8 @@ COPY --from=pg-partman-builder /usr/local/share/postgresql/extension/pg_partman*
         mysql_init_good = """GRANT REPLICATION CLIENT ON *.* TO 'udb'@'%';
 GRANT CREATE, DROP ON *.* TO 'udb'@'%';
 GRANT ALL PRIVILEGES ON `udb\\_conf\\_%`.* TO 'udb'@'%';
+GRANT ALL PRIVILEGES ON `udb\\_ir\\_live\\_%`.* TO 'udb'@'%';
+GRANT ALL PRIVILEGES ON `udb\\_ir\\_include\\_%`.* TO 'udb'@'%';
 GRANT XA_RECOVER_ADMIN ON *.* TO 'udb'@'%';
 """
         clickhouse_keeper_good = """<clickhouse>

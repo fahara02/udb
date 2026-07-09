@@ -257,14 +257,7 @@ impl Compiler for WeaviateCompiler {
             _ => {
                 // The pk is NOT a declared Weaviate property (it rides as the
                 // object id — `id` is reserved); select it via _additional.
-                let pk = table.primary_key.first().map(String::as_str);
-                table
-                    .columns
-                    .iter()
-                    .filter(|c| Some(c.field_name.as_str()) != pk)
-                    .map(|c| c.field_name.clone())
-                    .collect::<Vec<_>>()
-                    .join(" ")
+                graphql_selectable_fields(table).join(" ")
             }
         };
 
@@ -466,14 +459,7 @@ impl Compiler for WeaviateCompiler {
 
         // pk excluded: it is the object id (`id` is a reserved property and is
         // selected via `_additional { id }` below).
-        let pk = table.primary_key.first().map(String::as_str);
-        let fields = table
-            .columns
-            .iter()
-            .filter(|c| Some(c.field_name.as_str()) != pk)
-            .map(|c| c.field_name.clone())
-            .collect::<Vec<_>>()
-            .join(" ");
+        let fields = graphql_selectable_fields(table).join(" ");
 
         let query_str = format!(
             "{{ Get {{ {class}({args}) {{ {fields} _additional {{ id distance score }} }} }} }}",
@@ -619,6 +605,23 @@ fn value_to_weaviate_json(v: &LogicalValue) -> Json {
             Json::Array(values.iter().map(value_to_weaviate_json).collect())
         }
     }
+}
+
+fn graphql_selectable_fields(table: &ManifestTable) -> Vec<String> {
+    let pk = table.primary_key.first().map(String::as_str);
+    table
+        .columns
+        .iter()
+        .filter(|c| Some(c.field_name.as_str()) != pk)
+        .filter(|c| !is_sql_only_search_vector(c))
+        .map(|c| c.field_name.clone())
+        .collect()
+}
+
+fn is_sql_only_search_vector(column: &crate::generation::ManifestColumn) -> bool {
+    column.is_tsvector
+        || column.proto_type.eq_ignore_ascii_case("tsvector")
+        || column.sql_type.eq_ignore_ascii_case("tsvector")
 }
 
 /// Weaviate object ids MUST be UUIDs (and `id` is a reserved property name),
@@ -933,6 +936,35 @@ mod tests {
         // bm25 inlined as a GraphQL literal (no `variables` map).
         assert!(q.contains(r#"bm25: {query: "rust"}"#), "query: {q}");
         assert!(body.get("variables").is_none());
+    }
+
+    #[test]
+    fn search_projection_omits_sql_only_tsvector_columns() {
+        let mut m = fixture();
+        m.tables[0].columns.push(ManifestColumn {
+            field_name: "_search_tsv".into(),
+            column_name: "_search_tsv".into(),
+            proto_type: "tsvector".into(),
+            sql_type: "tsvector".into(),
+            ..Default::default()
+        });
+        let ctx = CompileContext::new(&m);
+        let search = LogicalSearch {
+            message_type: "acme.docs.v1.Document".into(),
+            vector: None,
+            text_query: Some("rust".into()),
+            filter: None,
+            top_k: 5,
+            score_threshold: None,
+            require_hybrid: false,
+            with_vector: false,
+            with_payload: true,
+        };
+
+        let (_, _, body) = extract_json(WeaviateCompiler.compile_search(&search, &ctx).unwrap());
+        let q = body["query"].as_str().unwrap();
+        assert!(q.contains("title"), "query: {q}");
+        assert!(!q.contains("_search_tsv"), "query: {q}");
     }
 
     #[test]

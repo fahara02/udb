@@ -944,6 +944,13 @@ jobs:
         # every live DSN; unset DSNs would silently skip those contracts.
         run: docker compose -f docker-compose.canonical.yml up -d --wait mysql mssql mongodb cassandra neo4j clickhouse elasticsearch weaviate
 
+      - name: Initialize SQL Server database
+        run: |
+          docker compose -f docker-compose.canonical.yml exec -T mssql \
+            /opt/mssql-tools18/bin/sqlcmd \
+            -S localhost -U sa -P 'Udb_Strong#2026' -C \
+            -Q "IF DB_ID(N'udb') IS NULL CREATE DATABASE [udb];"
+
       - name: Wait for Weaviate readiness
         run: |
           for _ in {1..60}; do
