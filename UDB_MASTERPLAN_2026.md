@@ -100,6 +100,22 @@ branch-protection plus idempotency/ErrorDetail/retry-safe/REST proof workflows
 are still not visible on `fahara02/udb`'s default branch from the local staged
 workflow state. The active count remains 10 `[~]` tails.
 
+2026-07-09 served-proof input repair: the first default-branch served-proof
+dispatch after the self-contained workflow landing exposed fixture bugs, not a
+hung build. Main CI run `28999064444` completed green. The failed idempotency
+run showed tenant/project isolation still used the primary project for tenant2,
+and the retry-safe run showed the DataBroker smoke headers were bearer-only and
+therefore missed required purpose metadata. The served-proof generator now emits
+SDK-equivalent metadata headers (`x-purpose`, tenant, project,
+request/correlation id, scopes, service identity) and accepts a distinct
+`--tenant2-project`; both DataBroker served workflows bootstrap tenant2 with
+that distinct project. The ErrorDetail generator now emits full metadata and an
+explicit blank `phone` field in the validation fixture. The remaining served
+evidence stays `[~]` until these workflow fixes land on `main` and green served
+dispatches are observed; the failed `v0.3.7` ErrorDetail validation dispatch
+also confirmed that release tag predates the newer typed
+`SendPhoneVerification` validation path.
+
 2026-07-09 active-tail source validation refresh: the no-cargo Chapter 14 guard
 batch is green after fixing two local drifts. The beta-versioning guard now
 requires version-independent beta/pre-1.0 wording instead of stale `0.3.6`

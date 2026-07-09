@@ -92,6 +92,7 @@ jobs:
             echo "UDB_TENANT2_USERNAME=${UDB_LIVE_USERNAME:-sdk-live-admin}-tenant2"
             echo "UDB_TENANT2_PASSWORD=SdkLive#2026PassTwo"
             echo "UDB_TENANT2_CODE=${UDB_LIVE_TENANT:-sdk-live}-tenant2"
+            echo "UDB_TENANT2_PROJECT=${UDB_LIVE_PROJECT:-default}-tenant2"
           } >> "$GITHUB_ENV"
 
       - name: Start backends
@@ -134,7 +135,7 @@ jobs:
             --email "${UDB_TENANT2_USERNAME}" \
             --password "${UDB_TENANT2_PASSWORD}" \
             --tenant "${UDB_TENANT2_CODE}" \
-            --project "${UDB_LIVE_PROJECT}"
+            --project "${UDB_TENANT2_PROJECT}"
 
       - name: Launch broker
         uses: ./.github/actions/launch-broker
@@ -158,7 +159,8 @@ jobs:
             --tenant2-username "${UDB_TENANT2_USERNAME}" \
             --tenant2-password "${UDB_TENANT2_PASSWORD}" \
             --tenant2 "${UDB_TENANT2_CODE}" \
-            --project "${UDB_LIVE_PROJECT}"
+            --project "${UDB_LIVE_PROJECT}" \
+            --tenant2-project "${UDB_TENANT2_PROJECT}"
 
       - name: Run idempotency smoke selftest
         shell: bash

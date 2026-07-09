@@ -36,6 +36,7 @@ from udb_client.metadata import Metadata  # noqa: E402
 
 PASSWORD = "ErrorDetail#2026Pass"
 OTP_TYPE = authn_enums_pb2.OTP_TYPE_SENSITIVE_OPERATION
+PROOF_PURPOSE = "error-detail-served-smoke"
 
 
 def _json_dump(path: Path, value: object) -> None:
@@ -46,9 +47,9 @@ def authenticate(target: str, username: str, password: str, tenant: str, project
     metadata = Metadata(
         tenant_id=tenant,
         project_id=project,
-        purpose="error-detail-served-smoke",
+        purpose=PROOF_PURPOSE,
         correlation_id="error-detail-served-smoke-login",
-        service_identity="error-detail-served-smoke",
+        service_identity=PROOF_PURPOSE,
     )
     auth = UdbAuthClient(target, metadata, timeout=15.0)
     login = auth.login(username, password, device_name="error-detail-served-smoke")
@@ -63,7 +64,13 @@ def write_inputs(out_dir: Path, auth_target: str, bearer: str, tenant: str, proj
     nonce = uuid.uuid4().hex[:12]
     metadata = (
         ("authorization", f"Bearer {bearer}"),
+        ("x-tenant-id", tenant),
+        ("x-udb-project-id", project),
+        ("x-purpose", PROOF_PURPOSE),
         ("x-correlation-id", f"error-detail-served-smoke-{nonce}"),
+        ("x-request-id", f"error-detail-served-smoke-{nonce}"),
+        ("x-scopes", "udb:admin"),
+        ("x-service-identity", PROOF_PURPOSE),
     )
     stub = authn_grpc.AuthnServiceStub(grpc.insecure_channel(auth_target))
     username = f"error-detail-{nonce}"
@@ -86,7 +93,7 @@ def write_inputs(out_dir: Path, auth_target: str, bearer: str, tenant: str, proj
     context = common_pb2.RequestContext(
         tenant=common_pb2.TenantContext(tenant_id=tenant, project_id=project),
         correlation_id=f"error-detail-otp-seed-{nonce}",
-        purpose="error-detail-served-smoke",
+        purpose=PROOF_PURPOSE,
     )
     seeded = stub.SendOTP(
         authn_pb2.SendOTPRequest(
@@ -104,12 +111,13 @@ def write_inputs(out_dir: Path, auth_target: str, bearer: str, tenant: str, proj
     request_context = {
         "tenant": {"tenant_id": tenant, "project_id": project},
         "correlation_id": f"error-detail-proof-{nonce}",
-        "purpose": "error-detail-served-smoke",
+        "purpose": PROOF_PURPOSE,
     }
     _json_dump(
         out_dir / "validation.json",
         {
             "user_id": user_id,
+            "phone": "",
             "context": request_context,
         },
     )
@@ -124,7 +132,13 @@ def write_inputs(out_dir: Path, auth_target: str, bearer: str, tenant: str, proj
     )
     (out_dir / "header.txt").write_text(
         f"authorization: Bearer {bearer}\n"
-        f"x-correlation-id: error-detail-served-smoke-{nonce}\n",
+        f"x-tenant-id: {tenant}\n"
+        f"x-udb-project-id: {project}\n"
+        f"x-purpose: {PROOF_PURPOSE}\n"
+        f"x-correlation-id: error-detail-served-smoke-{nonce}\n"
+        f"x-request-id: error-detail-served-smoke-{nonce}\n"
+        "x-scopes: udb:admin\n"
+        f"x-service-identity: {PROOF_PURPOSE}\n",
         encoding="utf-8",
     )
 
