@@ -1330,6 +1330,12 @@ CI_NATIVE_INTEGRATION_REQUIREMENTS = (
         "docker compose -f docker-compose.canonical.yml up -d --wait mysql mssql mongodb cassandra neo4j clickhouse elasticsearch weaviate",
         "canonical stack startup",
     ),
+    ("Start live stacks while compiling tests", "native integration overlap step"),
+    ("integration_stack_pid=$!", "integration stack background pid capture"),
+    ("canonical_stack_pid=$!", "canonical stack background pid capture"),
+    ('wait "$integration_stack_pid"', "integration stack wait"),
+    ('wait "$canonical_stack_pid"', "canonical stack wait"),
+    ("native/integration compile preflight failed", "compile preflight status check"),
     ("Initialize SQL Server database", "SQL Server database bootstrap step"),
     ("IF DB_ID(N'udb') IS NULL CREATE DATABASE [udb];", "SQL Server udb database bootstrap"),
     ("curl -fsS http://127.0.0.1:58080/v1/.well-known/ready", "Weaviate readiness gate"),
@@ -5422,10 +5428,9 @@ def check_ci_native_integration_gate(root: Path = ROOT) -> list[str]:
         _require(text, needle, label, scoped)
 
     anchors = (
-        "Start integration stack",
-        "Start canonical-store stack",
-        "Initialize SQL Server database",
+        "Start live stacks while compiling tests",
         "Compile native + integration tests",
+        "Initialize SQL Server database",
         "IR compiler live golden tests",
         "Native service live tests",
         "Canonical store live conformance",
@@ -5437,7 +5442,7 @@ def check_ci_native_integration_gate(root: Path = ROOT) -> list[str]:
     if any(pos < 0 for pos in positions):
         scoped.append("missing native-integration ordering anchors")
     elif positions != sorted(positions):
-        scoped.append("native-integration must start stacks, compile, run live suites, dump diagnostics, then clean up")
+        scoped.append("native-integration must overlap stack startup with compile, initialize live dependencies, run live suites, dump diagnostics, then clean up")
 
     cleanup_at = text.find("Stop integration stacks")
     cleanup_block = text[cleanup_at:] if cleanup_at >= 0 else ""
@@ -6790,10 +6795,17 @@ jobs:
       - uses: ./.github/actions/setup-rust
         with:
           cache-key: native-integration
-      - name: Start integration stack
-        run: docker compose -f docker-compose.integration.yml up -d --wait postgres kafka redis memcached qdrant minio
-      - name: Start canonical-store stack
-        run: docker compose -f docker-compose.canonical.yml up -d --wait mysql mssql mongodb cassandra neo4j clickhouse elasticsearch weaviate
+      - name: Start live stacks while compiling tests
+        run: |
+          docker compose -f docker-compose.integration.yml up -d --wait postgres kafka redis memcached qdrant minio &
+          integration_stack_pid=$!
+          docker compose -f docker-compose.canonical.yml up -d --wait mysql mssql mongodb cassandra neo4j clickhouse elasticsearch weaviate &
+          canonical_stack_pid=$!
+          # Compile native + integration tests while Docker services become healthy.
+          cargo test --locked --no-run --lib --test integration_tests --test runtime_live_backends
+          wait "$integration_stack_pid"
+          wait "$canonical_stack_pid"
+          echo "::error::native/integration compile preflight failed"
       - name: Initialize SQL Server database
         run: IF DB_ID(N'udb') IS NULL CREATE DATABASE [udb];
       - name: Wait for Weaviate readiness
@@ -6805,8 +6817,6 @@ jobs:
           for topic in udb.authn.user.registered.v1 udb.notification.sent.v1; do
             kafka-topics.sh --create --if-not-exists
           done
-      - name: Compile native + integration tests
-        run: cargo test --locked --no-run --lib --test integration_tests --test runtime_live_backends
       - name: Create MinIO storage bucket
         run: mc mb --ignore-existing local/udb-storage
       - name: IR compiler live golden tests

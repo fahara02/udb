@@ -944,18 +944,44 @@ jobs:
         with:
           cache-key: native-integration
 
-      - name: Start integration stack
-        # postgres/kafka/redis/memcached/qdrant/minio only — the `udb` and `spark`
-        # services are profile-gated and not needed for the live tests.
-        run: docker compose -f docker-compose.integration.yml up -d --wait postgres kafka redis memcached qdrant minio
-
-      - name: Start canonical-store stack
-        # MySQL / SQL Server / MongoDB / Cassandra / Neo4j / ClickHouse /
-        # Elasticsearch / Weaviate are split
-        # from the integration stack so ordinary native-service tests stay lean.
-        # Bring them up here because the canonical conformance step below exports
-        # every live DSN; unset DSNs would silently skip those contracts.
-        run: docker compose -f docker-compose.canonical.yml up -d --wait mysql mssql mongodb cassandra neo4j clickhouse elasticsearch weaviate
+      - name: Start live stacks while compiling tests
+        # Start integration stack: postgres/kafka/redis/memcached/qdrant/minio only —
+        # the `udb` and `spark` services are profile-gated and not needed for the
+        # live tests.
+        #
+        # Start canonical-store stack: MySQL / SQL Server / MongoDB / Cassandra /
+        # Neo4j / ClickHouse / Elasticsearch / Weaviate are split from the
+        # integration stack so ordinary native-service tests stay lean. Bring them
+        # up here because the canonical conformance step below exports every live
+        # DSN; unset DSNs would silently skip those contracts.
+        #
+        # Compile native + integration tests while Docker services become healthy.
+        # The compile preflight does not need live sockets, so overlapping it with
+        # stack startup preserves the same coverage and cuts integration wall time.
+        run: |
+          set +e
+          docker compose -f docker-compose.integration.yml up -d --wait postgres kafka redis memcached qdrant minio &
+          integration_stack_pid=$!
+          docker compose -f docker-compose.canonical.yml up -d --wait mysql mssql mongodb cassandra neo4j clickhouse elasticsearch weaviate &
+          canonical_stack_pid=$!
+          cargo test --locked --no-run --lib --test integration_tests --test runtime_live_backends
+          compile_status=$?
+          wait "$integration_stack_pid"
+          integration_status=$?
+          wait "$canonical_stack_pid"
+          canonical_status=$?
+          if [ "$integration_status" -ne 0 ]; then
+            echo "::error::integration stack startup failed"
+            exit "$integration_status"
+          fi
+          if [ "$canonical_status" -ne 0 ]; then
+            echo "::error::canonical-store stack startup failed"
+            exit "$canonical_status"
+          fi
+          if [ "$compile_status" -ne 0 ]; then
+            echo "::error::native/integration compile preflight failed"
+            exit "$compile_status"
+          fi
 
       - name: Initialize SQL Server database
         run: |
@@ -1000,9 +1026,6 @@ jobs:
               --bootstrap-server localhost:9092 \
               --topic "$topic" --partitions 1 --replication-factor 1
           done
-
-      - name: Compile native + integration tests
-        run: cargo test --locked --no-run --lib --test integration_tests --test runtime_live_backends
 
       - name: Create MinIO storage bucket
         # The storage/asset live tests PUT object bytes into the native
