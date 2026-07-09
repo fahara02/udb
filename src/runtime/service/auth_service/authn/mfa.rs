@@ -171,7 +171,7 @@ impl AuthnServiceImpl {
                 let retry_after_secs = ready_at - now;
                 return Err(crate::runtime::executor_utils::quota_status(
                     "authn",
-                    "otp cooldown",
+                    "otp_cooldown",
                     retry_after_secs as i64 * 1_000,
                     format!("OTP cooldown active; retry in {retry_after_secs} seconds"),
                 ));

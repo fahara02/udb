@@ -3,53 +3,15 @@ name: Idempotency served replay smoke
 on:
   workflow_dispatch:
     inputs:
-      target:
-        description: "Live broker gRPC target, for example host:50051"
+      release_tag:
+        description: "Release tag to prove, or 'latest'"
         required: true
+        default: latest
         type: string
-      tls:
-        description: "Use TLS for the broker connection"
-        required: false
-        default: false
-        type: boolean
-      header:
-        description: "Optional metadata headers as Name: Value, one per line"
-        required: false
-        default: ""
-        type: string
-      tenant2_header:
-        description: "Optional second-tenant metadata headers as Name: Value, one per line"
-        required: false
-        default: ""
-        type: string
-      upsert_json:
-        description: "Keyed UpsertRequest JSON for replay proof"
+      release_asset:
+        description: "Linux release asset name to download"
         required: true
-        type: string
-      tenant2_upsert_json:
-        description: "Same idempotency key under another tenant/project; must be fresh"
-        required: true
-        type: string
-      batch_upsert_json:
-        description: "JSON array or JSONL UpsertRequest objects for BatchUpsert replay"
-        required: true
-        type: string
-      fail_closed_upsert_json:
-        description: "Keyed UpsertRequest JSON expected to fail with dedup store down"
-        required: true
-        type: string
-      fail_closed_select_json:
-        description: "SelectRequest JSON that must return no rows after the failed keyed Upsert"
-        required: true
-        type: string
-      keyless_upsert_json:
-        description: "Required keyless UpsertRequest JSON expected to succeed in fail-closed mode"
-        required: true
-        type: string
-      fail_closed_code:
-        description: "Expected gRPC code for fail-closed keyed Upsert"
-        required: false
-        default: "UNAVAILABLE"
+        default: udb-linux-amd64-full
         type: string
 
 permissions:
@@ -63,19 +25,140 @@ jobs:
   idempotency-served-replay:
     name: DataBroker idempotency served replay proof
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+    env:
+      RELEASE_TAG: ${{ inputs.release_tag }}
+      RELEASE_ASSET: ${{ inputs.release_asset }}
+      UDB_LIVE_SDK_TESTS: "1"
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: udb_ci
+          POSTGRES_USER: udb
+          POSTGRES_PASSWORD: udb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U udb -d udb_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand({ ping: 1 }).ok'"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Set up SDK toolchains
+        uses: ./.github/actions/setup-sdk-toolchains
         with:
-          python-version: "3.12"
+          python: "true"
 
       - name: Install Python SDK runtime deps
         shell: bash
         run: |
           set -euo pipefail
+          python -m pip install --upgrade pip
           python -m pip install -e sdk/python
+
+      - name: Resolve release binary
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p smoke-output/bin smoke-output/logs smoke-input
+          tag="${RELEASE_TAG}"
+          if [ -z "${tag}" ] || [ "${tag}" = "latest" ]; then
+            tag="$(gh release view --repo "${GITHUB_REPOSITORY}" --json tagName --jq .tagName)"
+          fi
+          if [[ ! "${tag}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+            echo "::error::served smoke requires a released SemVer tag, got '${tag}'"
+            exit 1
+          fi
+          gh release view "${tag}" --repo "${GITHUB_REPOSITORY}" >/dev/null
+          gh release download "${tag}" --repo "${GITHUB_REPOSITORY}" --pattern "${RELEASE_ASSET}" --dir smoke-output/bin
+          chmod +x "smoke-output/bin/${RELEASE_ASSET}"
+          {
+            echo "UDB_SERVED_RELEASE_TAG=${tag}"
+            echo "UDB_SERVED_BIN=${GITHUB_WORKSPACE}/smoke-output/bin/${RELEASE_ASSET}"
+            echo "UDB_TENANT2_USERNAME=${UDB_LIVE_USERNAME:-sdk-live-admin}-tenant2"
+            echo "UDB_TENANT2_PASSWORD=SdkLive#2026PassTwo"
+            echo "UDB_TENANT2_CODE=${UDB_LIVE_TENANT:-sdk-live}-tenant2"
+          } >> "$GITHUB_ENV"
+
+      - name: Start backends
+        uses: ./.github/actions/start-backends
+        with:
+          minio: "true"
+          kafka: "true"
+          qdrant: "true"
+          redis: "true"
+          clickhouse: "true"
+          neo4j: "true"
+
+      - name: Write broker env
+        uses: ./.github/actions/broker-env
+        with:
+          pg_dsn: postgres://udb:udb@localhost:5432/udb_ci
+          nosql_dsn: mongodb://localhost:27017/udb_live_sdk?directConnection=true
+          mongodb_dsn: mongodb://localhost:27017/udb_live_sdk?directConnection=true
+          nosql_database: udb_live_sdk
+          grpc_addr: 127.0.0.1:50051
+          grpc_target: 127.0.0.1:50051
+          auth_grpc_addr: 127.0.0.1:50061
+          auth_grpc_target: 127.0.0.1:50061
+          cdc_enabled: "true"
+          startup_dry_run: "false"
+          object_bucket: udb-storage
+
+      - name: Bootstrap served-smoke users
+        shell: bash
+        run: |
+          set -euo pipefail
+          "${UDB_SERVED_BIN}" auth bootstrap user \
+            --username "${UDB_LIVE_USERNAME}" \
+            --email "${UDB_LIVE_USERNAME}" \
+            --password "${UDB_LIVE_PASSWORD}" \
+            --tenant "${UDB_LIVE_TENANT}" \
+            --project "${UDB_LIVE_PROJECT}"
+          "${UDB_SERVED_BIN}" auth bootstrap user \
+            --username "${UDB_TENANT2_USERNAME}" \
+            --email "${UDB_TENANT2_USERNAME}" \
+            --password "${UDB_TENANT2_PASSWORD}" \
+            --tenant "${UDB_TENANT2_CODE}" \
+            --project "${UDB_LIVE_PROJECT}"
+
+      - name: Launch broker
+        uses: ./.github/actions/launch-broker
+        with:
+          bin: ${{ env.UDB_SERVED_BIN }}
+          grpc-addr: 127.0.0.1:50051
+          bootstrap: "false"
+          ready-timeout-secs: "180"
+          log-file: /tmp/udb-idempotency-served.log
+
+      - name: Generate served proof inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/write_databroker_served_smoke_inputs.py \
+            --out-dir smoke-input \
+            --auth-target "${UDB_AUTH_GRPC_TARGET}" \
+            --username "${UDB_LIVE_USERNAME}" \
+            --password "${UDB_LIVE_PASSWORD}" \
+            --tenant "${UDB_LIVE_TENANT}" \
+            --tenant2-username "${UDB_TENANT2_USERNAME}" \
+            --tenant2-password "${UDB_TENANT2_PASSWORD}" \
+            --tenant2 "${UDB_TENANT2_CODE}" \
+            --project "${UDB_LIVE_PROJECT}"
 
       - name: Run idempotency smoke selftest
         shell: bash
@@ -83,45 +166,76 @@ jobs:
           set -euo pipefail
           python scripts/idempotency_served_replay_smoke.py --selftest
 
-      - name: Run live idempotency served replay smoke
+      - name: Run live idempotency replay proofs
         shell: bash
-        env:
-          TARGET: ${{ inputs.target }}
-          TLS: ${{ inputs.tls }}
-          HEADER: ${{ inputs.header }}
-          TENANT2_HEADER: ${{ inputs.tenant2_header }}
-          UPSERT_JSON: ${{ inputs.upsert_json }}
-          TENANT2_UPSERT_JSON: ${{ inputs.tenant2_upsert_json }}
-          BATCH_UPSERT_JSON: ${{ inputs.batch_upsert_json }}
-          FAIL_CLOSED_UPSERT_JSON: ${{ inputs.fail_closed_upsert_json }}
-          FAIL_CLOSED_SELECT_JSON: ${{ inputs.fail_closed_select_json }}
-          KEYLESS_UPSERT_JSON: ${{ inputs.keyless_upsert_json }}
-          FAIL_CLOSED_CODE: ${{ inputs.fail_closed_code }}
         run: |
           set -euo pipefail
-          mkdir -p smoke-input
-          args=(--target "$TARGET" --fail-closed-code "$FAIL_CLOSED_CODE" --require-all-proofs)
-          if [ "$TLS" = "true" ]; then args+=(--tls); fi
-          append_headers() {
-            local opt="$1"
-            local raw="$2"
-            local line
-            while IFS= read -r line || [ -n "$line" ]; do
-              if [ -n "$line" ]; then args+=("$opt" "$line"); fi
-            done <<< "$raw"
-          }
-          append_headers --header "$HEADER"
-          append_headers --tenant2-header "$TENANT2_HEADER"
-          printf '%s' "$UPSERT_JSON" > smoke-input/upsert.json
-          printf '%s' "$TENANT2_UPSERT_JSON" > smoke-input/tenant2-upsert.json
-          printf '%s' "$BATCH_UPSERT_JSON" > smoke-input/batch-upsert.json
-          printf '%s' "$FAIL_CLOSED_UPSERT_JSON" > smoke-input/fail-closed-upsert.json
-          printf '%s' "$FAIL_CLOSED_SELECT_JSON" > smoke-input/fail-closed-select.json
-          printf '%s' "$KEYLESS_UPSERT_JSON" > smoke-input/keyless-upsert.json
-          args+=(--upsert-json smoke-input/upsert.json)
-          args+=(--tenant2-upsert-json smoke-input/tenant2-upsert.json)
-          args+=(--batch-upsert-json smoke-input/batch-upsert.json)
-          args+=(--fail-closed-upsert-json smoke-input/fail-closed-upsert.json)
-          args+=(--fail-closed-select-json smoke-input/fail-closed-select.json)
-          args+=(--keyless-upsert-json smoke-input/keyless-upsert.json)
-          python scripts/idempotency_served_replay_smoke.py "${args[@]}"
+          args=(--target "${UDB_GRPC_TARGET}" --fail-closed-code UNAVAILABLE)
+          while IFS= read -r line || [ -n "$line" ]; do
+            [ -n "$line" ] && args+=(--header "$line")
+          done < smoke-input/header.txt
+          while IFS= read -r line || [ -n "$line" ]; do
+            [ -n "$line" ] && args+=(--tenant2-header "$line")
+          done < smoke-input/tenant2-header.txt
+          python scripts/idempotency_served_replay_smoke.py "${args[@]}" \
+            --upsert-json smoke-input/upsert.json \
+            --tenant2-upsert-json smoke-input/tenant2-upsert.json \
+            --batch-upsert-json smoke-input/batch-upsert.json
+
+      - name: Disable idempotency relation for fail-closed proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v psql >/dev/null 2>&1; then
+            export DEBIAN_FRONTEND=noninteractive
+            sudo timeout 120s apt-get -o DPkg::Lock::Timeout=60 update
+            sudo timeout 120s apt-get -o DPkg::Lock::Timeout=60 install -y postgresql-client
+          fi
+          export PGPASSWORD=udb
+          psql -h localhost -p 5432 -U udb -d udb_ci -v ON_ERROR_STOP=1 \
+            -c "ALTER TABLE IF EXISTS udb_system.udb_idempotency_keys RENAME TO udb_idempotency_keys_served_disabled;"
+
+      - name: Run live idempotency fail-closed proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(--target "${UDB_GRPC_TARGET}" --fail-closed-code UNAVAILABLE)
+          while IFS= read -r line || [ -n "$line" ]; do
+            [ -n "$line" ] && args+=(--header "$line")
+          done < smoke-input/header.txt
+          python scripts/idempotency_served_replay_smoke.py "${args[@]}" \
+            --fail-closed-upsert-json smoke-input/fail-closed-upsert.json \
+            --fail-closed-select-json smoke-input/fail-closed-select.json \
+            --keyless-upsert-json smoke-input/keyless-upsert.json
+
+      - name: Restore idempotency relation
+        if: always()
+        shell: bash
+        run: |
+          export PGPASSWORD=udb
+          psql -h localhost -p 5432 -U udb -d udb_ci \
+            -c "ALTER TABLE IF EXISTS udb_system.udb_idempotency_keys_served_disabled RENAME TO udb_idempotency_keys;" || true
+
+      - name: Upload served smoke diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: idempotency-served-smoke-diagnostics
+          path: |
+            smoke-input/*.json
+            smoke-output/logs/**
+            /tmp/udb-idempotency-served.log
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Stop broker and backends
+        if: always()
+        shell: bash
+        run: |
+          if [ -n "${UDB_BROKER_PID:-}" ]; then kill "${UDB_BROKER_PID}" 2>/dev/null || true; fi
+          docker rm -f udb-bench-minio 2>/dev/null || true
+          docker rm -f udb-bench-kafka 2>/dev/null || true
+          docker rm -f udb-bench-qdrant 2>/dev/null || true
+          docker rm -f udb-bench-redis 2>/dev/null || true
+          docker rm -f udb-bench-clickhouse 2>/dev/null || true
+          docker rm -f udb-bench-neo4j 2>/dev/null || true

@@ -44,6 +44,7 @@ const requiredActions = [
 
 const requiredCiJobs = [
   "quick-gate",
+  "clippy-advisory",
   "rust",
   "build-broker",
   "smoke",
@@ -100,6 +101,7 @@ const prJobTimeoutCeilings = {
 };
 
 const dependencyFreePrJobs = [
+  "clippy-advisory",
   "buf",
   "versions",
   "php-sdk",
@@ -124,6 +126,7 @@ const pipelineBudgetClaims = [
   "Required PR check jobs all declare timeout-minutes",
   "Required PR timeout ceilings are enforced by scripts/ci-inventory.mjs",
   "Critical PR artifact path: quick-gate -> build-broker -> {smoke, scaffold-compiles}",
+  "PR budget evidence measures the branch-protection-required lane",
   "Cheap PR checks stay dependency-free and start at t=0",
   "Timeout ceilings are source guardrails, not runner wall-clock evidence",
   "Runner wall-clock evidence is still required before marking 15.A.5 done",
@@ -540,6 +543,7 @@ Required PR timeout ceilings are enforced by scripts/ci-inventory.mjs.
 Critical PR artifact path: quick-gate -> build-broker -> {smoke, scaffold-compiles}.
 Cheap PR checks stay dependency-free and start at t=0.
 Timeout ceilings are source guardrails, not runner wall-clock evidence.
+PR budget evidence measures the branch-protection-required lane.
 PR broker compile count: 1 debug build in build-broker.
 Release graph: ci-green -> version-guard -> build-binaries -> parallel publishers.
 Post-release benchmark runs only after top-level Release success on a v* tag.

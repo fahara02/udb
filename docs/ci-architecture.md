@@ -24,7 +24,8 @@ coverage offline here: static SDK builds, mock-transport conformance, facade
 sequence gates, and generated scaffold compiles. Live all-SDK/all-RPC coverage is
 owned by the post-release benchmark, not by PR CI.
 ```
-t=0 parallel: quick-gate(fmt+clippy+buf-lint+buf-breaking+version)
+t=0 parallel: quick-gate(fmt+buf-lint+buf-breaking+version+source-posture)
+              clippy-advisory
               rust · buf(generate/drift) · supply-chain · docs-links · versions
               sdk-static[go|ts|py|php|c#|java] · sdk-conformance(mock)
 quick-gate ─needs→ build-broker(debug ×1) ─needs→ { smoke(merged) ‖ scaffold-compiles }
@@ -113,9 +114,10 @@ Runner budget duration uses the canonical run start timestamp and the canonical
 completion timestamp (`completed_at` before `updated_at`), matching freshness,
 ordering, and job-window proof.
 
-NOT required (advisory/slow/post-merge): `load-smoke`, advisory clippy/phpstan,
-`feature-matrix` (integration), `native-integration`, live SDK benchmark/perf,
-path-scoped `lint-workflows.yml`/`actionlint`, all release jobs.
+NOT required (advisory/slow/post-merge): `load-smoke`, `Clippy advisory`,
+advisory phpstan, `feature-matrix` (integration), `native-integration`, live
+SDK benchmark/perf, path-scoped `lint-workflows.yml`/`actionlint`, all release
+jobs.
 
 Notes:
 - Required checks must NOT be `paths:`-filtered (a filtered required check that
@@ -293,6 +295,10 @@ Current source evidence:
   The audit rejects reusing the same GitHub Actions run ID across evidence
   lanes, so lint, PR, integration, release, release dry-run, benchmark, Pages,
   and branch-protection proof must each come from their own run.
+- PR budget evidence measures the branch-protection-required lane, not the
+  entire `ci.yml` workflow duration; optional PR advisory jobs are still audited
+  for no-check-lost presence/success but cannot make the merge gate miss its
+  timing budget.
 - Runner wall-clock evidence is still required before marking 15.A.5 done; the
   audit workflow is the evidence collection path, not a recorded green run.
 

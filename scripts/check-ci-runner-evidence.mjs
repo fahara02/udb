@@ -86,6 +86,7 @@ const PR_REQUIRED_JOBS = [
 ];
 
 const PR_ADVISORY_JOBS = [
+  "Clippy advisory",
   "Rust (ubuntu-latest)",
   "Rust (windows-latest)",
   "Slim build (postgres-only)",
@@ -95,6 +96,7 @@ const PR_ADVISORY_JOBS = [
 ];
 
 const PR_EVIDENCE_JOBS = [...PR_REQUIRED_JOBS, ...PR_ADVISORY_JOBS];
+const PR_BUDGET_JOBS = [...new Set([...PR_REQUIRED_JOBS, "build-broker"])];
 
 const INTEGRATION_REQUIRED_JOBS = [
   "quick-gate",
@@ -166,7 +168,7 @@ const REQUIRED_JOBS = {
     "build (udb-darwin-amd64)",
     "build (udb-linux-amd64-full)",
   ],
-  benchmark: ["Release binary + SDK live benchmarks"],
+  benchmark: ["Release binary + SDK live benchmarks / Live SDK benchmark"],
   pages: ["build", "deploy"],
   branchProtection: ["Branch protection required checks match docs"],
   idempotencyServed: ["DataBroker idempotency served replay proof"],
@@ -416,12 +418,17 @@ function durationMinutes(run) {
 }
 
 function assertSuccessfulBudgetRun(run, label, budgetMinutes, { maxAgeDays, nowMs = Date.now() } = {}) {
-  if (run.status !== "completed") throw new Error(`${label} run ${run.id} is not completed: ${run.status}`);
-  if (run.conclusion !== "success") throw new Error(`${label} run ${run.id} did not succeed: ${run.conclusion}`);
+  assertSuccessfulEvidenceRun(run, label, { maxAgeDays, nowMs });
   const minutes = durationMinutes(run);
   if (minutes > budgetMinutes) {
     throw new Error(`${label} run ${run.id} took ${minutes.toFixed(2)} min, budget ${budgetMinutes} min`);
   }
+  return minutes;
+}
+
+function assertSuccessfulEvidenceRun(run, label, { maxAgeDays, nowMs = Date.now() } = {}) {
+  if (run.status !== "completed") throw new Error(`${label} run ${run.id} is not completed: ${run.status}`);
+  if (run.conclusion !== "success") throw new Error(`${label} run ${run.id} did not succeed: ${run.conclusion}`);
   if (maxAgeDays !== undefined) {
     const completedAt = parseActionsTimestampMs(run.completed_at || run.updated_at, `${label} run ${run.id} completion timestamp`);
     if (completedAt > nowMs + 5 * 60000) {
@@ -431,6 +438,33 @@ function assertSuccessfulBudgetRun(run, label, budgetMinutes, { maxAgeDays, nowM
     if (ageDays > maxAgeDays) {
       throw new Error(`${label} run ${run.id} is ${ageDays.toFixed(1)} days old, max evidence age ${maxAgeDays} days`);
     }
+  }
+}
+
+function jobWindowMinutes(jobs, label) {
+  if (!Array.isArray(jobs) || jobs.length === 0) {
+    throw new Error(`${label} budget jobs must be a non-empty array`);
+  }
+  let earliest = Number.POSITIVE_INFINITY;
+  let latest = Number.NEGATIVE_INFINITY;
+  for (const job of jobs) {
+    const jobName = assertJobEvidenceName(job, label);
+    const started = jobTimestampMs(job?.started_at, `${label} job ${jobName} started_at`);
+    const completed = jobTimestampMs(job?.completed_at, `${label} job ${jobName} completed_at`);
+    if (completed < started) {
+      throw new Error(`${label} job ${jobName} completed before it started`);
+    }
+    earliest = Math.min(earliest, started);
+    latest = Math.max(latest, completed);
+  }
+  return (latest - earliest) / 60000;
+}
+
+function assertSuccessfulJobWindowBudgetRun(run, jobs, label, budgetMinutes, evidenceOptions = {}) {
+  assertSuccessfulEvidenceRun(run, label, evidenceOptions);
+  const minutes = jobWindowMinutes(jobs, label);
+  if (minutes > budgetMinutes) {
+    throw new Error(`${label} run ${run.id} required lane took ${minutes.toFixed(2)} min, budget ${budgetMinutes} min`);
   }
   return minutes;
 }
@@ -618,6 +652,10 @@ function assertJobsWithinRunWindow(jobs, label, run) {
   }
 }
 
+function workflowRunUsesDefaultBranch(workflow, run) {
+  return [WORKFLOWS.benchmark, WORKFLOWS.pages].includes(workflow) && run?.event === "workflow_run";
+}
+
 function assertRunEvidenceIdentity(run, label, { workflow, event, events, branch, releaseTag, repo } = {}) {
   assertRunEvidenceRunId(run, label);
   assertRunEvidenceAttempt(run, label);
@@ -639,12 +677,12 @@ function assertRunEvidenceIdentity(run, label, { workflow, event, events, branch
   if (releaseTag) {
     assertReleaseTag(releaseTag, `${label} expected release tag`);
   }
-  if (releaseTag && run.head_branch !== releaseTag) {
+  if (releaseTag && !workflowRunUsesDefaultBranch(workflow, run) && run.head_branch !== releaseTag) {
     throw new Error(`${label} run ${run.id} used release tag ${run.head_branch}, want ${releaseTag}`);
   }
   if (
     !releaseTag &&
-    [WORKFLOWS.release, WORKFLOWS.benchmark, WORKFLOWS.pages].includes(workflow) &&
+    workflow === WORKFLOWS.release &&
     !RELEASE_TAG_PATTERN.test(String(run.head_branch || ""))
   ) {
     throw new Error(`${label} run ${run.id} has invalid release tag ${run.head_branch || "(missing)"}; want vMAJOR.MINOR.PATCH`);
@@ -711,9 +749,12 @@ function assertReleaseChainTags({ release, benchmark, pages }) {
   }
   const releaseSha = assertGitSha(releaseShaText, "release chain");
   for (const [label, run] of Object.entries({ "post-release benchmark": benchmark, "post-benchmark Pages": pages })) {
-    const actual = String(run?.head_branch || "");
-    if (actual !== releaseTag) {
-      throw new Error(`${label} run ${run?.id || "(unknown)"} used release tag ${actual || "(missing)"}, want ${releaseTag}`);
+    const actualBranch = String(run?.head_branch || "");
+    if (run?.event === "workflow_run" && actualBranch !== DEFAULT_INTEGRATION_BRANCH) {
+      throw new Error(`${label} run ${run?.id || "(unknown)"} used branch ${actualBranch || "(missing)"}, want ${DEFAULT_INTEGRATION_BRANCH}`);
+    }
+    if (run?.event !== "workflow_run" && actualBranch !== releaseTag) {
+      throw new Error(`${label} run ${run?.id || "(unknown)"} used release tag ${actualBranch || "(missing)"}, want ${releaseTag}`);
     }
     const actualSha = String(run?.head_sha || "");
     if (!actualSha) {
@@ -1183,8 +1224,9 @@ async function fetchRunJobs(repo, token, runId, fetcher = fetchJson) {
   return jobs;
 }
 
-async function findLatestSuccessfulRun(repo, token, workflow, { event, branch, releaseTag } = {}, fetcher = fetchJson) {
+async function findLatestSuccessfulRun(repo, token, workflow, { event, branch, releaseTag, headSha } = {}, fetcher = fetchJson) {
   const events = Array.isArray(event) ? event : event ? [event] : [];
+  if (headSha) assertGitSha(headSha, `${workflow} lookup`);
   const params = new URLSearchParams({ status: "completed", per_page: String(MAX_GITHUB_WORKFLOW_RUN_CANDIDATES) });
   if (events.length === 1) params.set("event", events[0]);
   if (branch) params.set("branch", branch);
@@ -1204,13 +1246,14 @@ async function findLatestSuccessfulRun(repo, token, workflow, { event, branch, r
     if (candidate.status !== "completed") return false;
     if (candidate.conclusion !== "success") return false;
     if (events.length && !events.includes(candidate.event)) return false;
-    if (releaseTag && candidate.head_branch !== releaseTag) return false;
+    if (headSha && candidate.head_sha !== headSha) return false;
+    if (releaseTag && !headSha && candidate.head_branch !== releaseTag) return false;
     if (!releaseTag && workflow === WORKFLOWS.release && !String(candidate.head_branch || "").startsWith("v")) return false;
     return true;
   });
   if (!run) {
     throw new Error(
-      `no successful completed ${workflow} run found for ${JSON.stringify({ event: events.length ? events : undefined, branch, releaseTag })}`,
+      `no successful completed ${workflow} run found for ${JSON.stringify({ event: events.length ? events : undefined, branch, releaseTag, headSha })}`,
     );
   }
   return run;
@@ -1310,7 +1353,6 @@ function auditFixture(path, budgets, evidenceOptions = {}) {
   const summary = {
     releaseTag: auditedReleaseTag,
     lint: assertSuccessfulBudgetRun(fixture.runs.lint, "lint/actionlint", budgets.lint, evidenceOptions),
-    pr: assertSuccessfulBudgetRun(fixture.runs.pr, "PR CI", budgets.pr, evidenceOptions),
     integration: assertSuccessfulBudgetRun(fixture.runs.integration, "integration CI", budgets.integration, evidenceOptions),
     release: assertSuccessfulBudgetRun(fixture.runs.release, "release", budgets.release, evidenceOptions),
     releaseDryRun: assertSuccessfulBudgetRun(
@@ -1335,6 +1377,7 @@ function auditFixture(path, budgets, evidenceOptions = {}) {
   };
   const lintEvidenceJobs = assertRequiredJobs(fixture.jobs.lint || [], "lint/actionlint", REQUIRED_JOBS.lint);
   const prBrokerJob = assertPrBrokerCompileReduction(fixture.jobs.pr || []);
+  const prBudgetJobs = assertRequiredJobs(fixture.jobs.pr || [], "PR CI required gate", PR_BUDGET_JOBS);
   const prEvidenceJobs = [prBrokerJob, ...assertRequiredJobs(fixture.jobs.pr || [], "PR CI", PR_EVIDENCE_JOBS)];
   const integrationEvidenceJobs = assertRequiredJobs(
     fixture.jobs.integration || [],
@@ -1359,6 +1402,7 @@ function auditFixture(path, budgets, evidenceOptions = {}) {
     REQUIRED_JOBS.branchProtection,
   );
   assertJobsBelongToRun(lintEvidenceJobs, "lint/actionlint", fixture.runs.lint);
+  assertJobsBelongToRun(prBudgetJobs, "PR CI required gate", fixture.runs.pr);
   assertJobsBelongToRun(prEvidenceJobs, "PR CI", fixture.runs.pr);
   assertJobsBelongToRun(integrationEvidenceJobs, "integration CI", fixture.runs.integration);
   assertJobsBelongToRun(releaseEvidenceJobs, "release", fixture.runs.release);
@@ -1367,6 +1411,7 @@ function auditFixture(path, budgets, evidenceOptions = {}) {
   assertJobsBelongToRun(pagesEvidenceJobs, "post-benchmark Pages", fixture.runs.pages);
   assertJobsBelongToRun(branchProtectionEvidenceJobs, "branch-protection", fixture.runs.branchProtection);
   assertJobsWithinRunWindow(lintEvidenceJobs, "lint/actionlint", fixture.runs.lint);
+  assertJobsWithinRunWindow(prBudgetJobs, "PR CI required gate", fixture.runs.pr);
   assertJobsWithinRunWindow(prEvidenceJobs, "PR CI", fixture.runs.pr);
   assertJobsWithinRunWindow(integrationEvidenceJobs, "integration CI", fixture.runs.integration);
   assertJobsWithinRunWindow(releaseEvidenceJobs, "release", fixture.runs.release);
@@ -1374,6 +1419,13 @@ function auditFixture(path, budgets, evidenceOptions = {}) {
   assertJobsWithinRunWindow(benchmarkEvidenceJobs, "post-release benchmark", fixture.runs.benchmark);
   assertJobsWithinRunWindow(pagesEvidenceJobs, "post-benchmark Pages", fixture.runs.pages);
   assertJobsWithinRunWindow(branchProtectionEvidenceJobs, "branch-protection", fixture.runs.branchProtection);
+  summary.pr = assertSuccessfulJobWindowBudgetRun(
+    fixture.runs.pr,
+    prBudgetJobs,
+    "PR CI required gate",
+    budgets.pr,
+    evidenceOptions,
+  );
   return summary;
 }
 
@@ -1420,6 +1472,7 @@ async function auditLive(args, budgets, evidenceOptions = {}, fetcher = fetchJso
       : findLatestSuccessfulRun(repo, token, WORKFLOWS.release, { event: "push", releaseTag }, fetcher),
   );
   const expectedReleaseTag = releaseTag || String(releaseRun?.head_branch || "");
+  const expectedReleaseSha = releaseRun?.head_sha ? assertGitSha(releaseRun.head_sha, "release discovery") : "";
   const releaseDryRunRun = expectedReleaseTag
     ? await discoverRun("release dry-run", () =>
         releaseDryRunId
@@ -1437,6 +1490,7 @@ async function auditLive(args, budgets, evidenceOptions = {}, fetcher = fetchJso
           : findLatestSuccessfulRun(repo, token, WORKFLOWS.benchmark, {
               event: "workflow_run",
               releaseTag: expectedReleaseTag,
+              headSha: expectedReleaseSha,
             }, fetcher),
       )
     : (discoveryFailures.push("post-release benchmark: release tag is required because release discovery failed and --release-tag was not provided"), null);
@@ -1447,6 +1501,7 @@ async function auditLive(args, budgets, evidenceOptions = {}, fetcher = fetchJso
           : findLatestSuccessfulRun(repo, token, WORKFLOWS.pages, {
               event: "workflow_run",
               releaseTag: expectedReleaseTag,
+              headSha: expectedReleaseSha,
             }, fetcher),
       )
     : (discoveryFailures.push("post-benchmark Pages: release tag is required because release discovery failed and --release-tag was not provided"), null);
@@ -1539,7 +1594,6 @@ async function auditLive(args, budgets, evidenceOptions = {}, fetcher = fetchJso
   const summary = {
     releaseTag: auditedReleaseTag,
     lint: assertSuccessfulBudgetRun(lintRun, "lint/actionlint", budgets.lint, evidenceOptions),
-    pr: assertSuccessfulBudgetRun(prRun, "PR CI", budgets.pr, evidenceOptions),
     integration: assertSuccessfulBudgetRun(integrationRun, "integration CI", budgets.integration, evidenceOptions),
     release: assertSuccessfulBudgetRun(releaseRun, "release", budgets.release, evidenceOptions),
     releaseDryRun: assertSuccessfulBudgetRun(releaseDryRunRun, "release dry-run", budgets.releaseDryRun, evidenceOptions),
@@ -1562,6 +1616,7 @@ async function auditLive(args, budgets, evidenceOptions = {}, fetcher = fetchJso
   const branchProtectionJobs = await fetchRunJobs(repo, token, branchProtectionRun.id, fetcher);
   const lintEvidenceJobs = assertRequiredJobs(lintJobs, "lint/actionlint", REQUIRED_JOBS.lint);
   const prBrokerJob = assertPrBrokerCompileReduction(prJobs);
+  const prBudgetJobs = assertRequiredJobs(prJobs, "PR CI required gate", PR_BUDGET_JOBS);
   const prEvidenceJobs = [prBrokerJob, ...assertRequiredJobs(prJobs, "PR CI", PR_EVIDENCE_JOBS)];
   const integrationEvidenceJobs = assertRequiredJobs(integrationJobs, "integration CI", REQUIRED_JOBS.integration);
   const releaseEvidenceJobs = assertRequiredJobs(releaseJobs, "release", REQUIRED_JOBS.release);
@@ -1574,6 +1629,7 @@ async function auditLive(args, budgets, evidenceOptions = {}, fetcher = fetchJso
     REQUIRED_JOBS.branchProtection,
   );
   assertJobsBelongToRun(lintEvidenceJobs, "lint/actionlint", lintRun);
+  assertJobsBelongToRun(prBudgetJobs, "PR CI required gate", prRun);
   assertJobsBelongToRun(prEvidenceJobs, "PR CI", prRun);
   assertJobsBelongToRun(integrationEvidenceJobs, "integration CI", integrationRun);
   assertJobsBelongToRun(releaseEvidenceJobs, "release", releaseRun);
@@ -1582,6 +1638,7 @@ async function auditLive(args, budgets, evidenceOptions = {}, fetcher = fetchJso
   assertJobsBelongToRun(pagesEvidenceJobs, "post-benchmark Pages", pagesRun);
   assertJobsBelongToRun(branchProtectionEvidenceJobs, "branch-protection", branchProtectionRun);
   assertJobsWithinRunWindow(lintEvidenceJobs, "lint/actionlint", lintRun);
+  assertJobsWithinRunWindow(prBudgetJobs, "PR CI required gate", prRun);
   assertJobsWithinRunWindow(prEvidenceJobs, "PR CI", prRun);
   assertJobsWithinRunWindow(integrationEvidenceJobs, "integration CI", integrationRun);
   assertJobsWithinRunWindow(releaseEvidenceJobs, "release", releaseRun);
@@ -1589,6 +1646,13 @@ async function auditLive(args, budgets, evidenceOptions = {}, fetcher = fetchJso
   assertJobsWithinRunWindow(benchmarkEvidenceJobs, "post-release benchmark", benchmarkRun);
   assertJobsWithinRunWindow(pagesEvidenceJobs, "post-benchmark Pages", pagesRun);
   assertJobsWithinRunWindow(branchProtectionEvidenceJobs, "branch-protection", branchProtectionRun);
+  summary.pr = assertSuccessfulJobWindowBudgetRun(
+    prRun,
+    prBudgetJobs,
+    "PR CI required gate",
+    budgets.pr,
+    evidenceOptions,
+  );
   return summary;
 }
 
@@ -1765,7 +1829,7 @@ async function runSelftest() {
           updated_at: "2026-07-01T02:00:00Z",
           path: ".github/workflows/benchmark-sdks.yml",
           event: "workflow_run",
-          head_branch: "v0.3.7",
+          head_branch: "main",
           head_sha: releaseSha,
         }),
         pages: fixtureRun(13, 12, "success", {
@@ -1774,7 +1838,7 @@ async function runSelftest() {
           updated_at: "2026-07-01T02:13:00Z",
           path: ".github/workflows/pages.yml",
           event: "workflow_run",
-          head_branch: "v0.3.7",
+          head_branch: "main",
           head_sha: releaseSha,
         }),
         branchProtection: fixtureRun(10, 3, "success", {
@@ -1816,6 +1880,25 @@ async function runSelftest() {
     const goodPath = join(root, "good.json");
     writeFileSync(goodPath, JSON.stringify(good));
     auditSelftestFixture(goodPath);
+
+    const slowOptionalPrJob = structuredClone(good);
+    slowOptionalPrJob.runs.pr = {
+      ...slowOptionalPrJob.runs.pr,
+      updated_at: "2026-07-01T00:20:00.000Z",
+      completed_at: "2026-07-01T00:20:00.000Z",
+    };
+    slowOptionalPrJob.jobs.pr = slowOptionalPrJob.jobs.pr.map((job) =>
+      job.name === "Rust (windows-latest)"
+        ? { ...job, completed_at: "2026-07-01T00:20:00.000Z" }
+        : job,
+    );
+    const slowOptionalPrJobPath = join(root, "slow-optional-pr-job.json");
+    writeFileSync(slowOptionalPrJobPath, JSON.stringify(slowOptionalPrJob));
+    try {
+      auditSelftestFixture(slowOptionalPrJobPath);
+    } catch (error) {
+      throw new Error(`optional PR job should not determine required gate budget: ${error.message}`);
+    }
 
     const customBranchEvidence = structuredClone(good);
     customBranchEvidence.runs.integration = {
@@ -2019,18 +2102,23 @@ async function runSelftest() {
     }
 
     const slow = structuredClone(good);
-    slow.runs.pr = fixtureRun(5, 9, "success", {
-      path: ".github/workflows/ci.yml",
-      event: "pull_request",
-      head_branch: "feature/ci-proof",
-    });
+    slow.runs.pr = {
+      ...slow.runs.pr,
+      updated_at: "2026-07-01T00:09:00.000Z",
+      completed_at: "2026-07-01T00:09:00.000Z",
+    };
+    slow.jobs.pr = slow.jobs.pr.map((job) =>
+      job.name === "smoke" ? { ...job, completed_at: "2026-07-01T00:09:00.000Z" } : job,
+    );
     const slowPath = join(root, "slow.json");
     writeFileSync(slowPath, JSON.stringify(slow));
     try {
       auditSelftestFixture(slowPath);
       throw new Error("over-budget PR run regression was not caught");
     } catch (error) {
-      if (!String(error.message).includes("budget 8 min")) throw error;
+      if (!String(error.message).includes("PR CI required gate run 2 required lane took 9.00 min, budget 8 min")) {
+        throw error;
+      }
     }
 
     try {
@@ -2277,6 +2365,11 @@ async function runSelftest() {
       updated_at: "2026-06-01T00:08:00.000Z",
       completed_at: "2026-06-01T00:08:00.000Z",
     };
+    stale.jobs.pr = stale.jobs.pr.map((job) => ({
+      ...job,
+      started_at: "2026-06-01T00:00:00.000Z",
+      completed_at: "2026-06-01T00:07:30.000Z",
+    }));
     const stalePath = join(root, "stale.json");
     writeFileSync(stalePath, JSON.stringify(stale));
     try {
@@ -2287,10 +2380,10 @@ async function runSelftest() {
     }
 
     const lateCompletedAt = structuredClone(good);
-    lateCompletedAt.runs.pr = {
-      ...lateCompletedAt.runs.pr,
+    lateCompletedAt.runs.integration = {
+      ...lateCompletedAt.runs.integration,
       updated_at: "2026-07-01T00:07:30.000Z",
-      completed_at: "2026-07-01T00:09:00.000Z",
+      completed_at: "2026-07-01T00:31:00.000Z",
     };
     const lateCompletedAtPath = join(root, "late-completed-at.json");
     writeFileSync(lateCompletedAtPath, JSON.stringify(lateCompletedAt));
@@ -2298,7 +2391,7 @@ async function runSelftest() {
       auditSelftestFixture(lateCompletedAtPath);
       throw new Error("late completed_at budget regression was not caught");
     } catch (error) {
-      if (!String(error.message).includes("PR CI run 2 took 9.00 min, budget 8 min")) throw error;
+      if (!String(error.message).includes("integration CI run 3 took 31.00 min, budget 30 min")) throw error;
     }
 
     const paddedRunTimestamp = structuredClone(good);
@@ -2375,7 +2468,7 @@ async function runSelftest() {
       auditSelftestFixture(missingPrRequiredJobPath);
       throw new Error("missing PR required job regression was not caught");
     } catch (error) {
-      if (!String(error.message).includes("PR CI run is missing required jobs: Proto (buf)")) {
+      if (!String(error.message).includes("PR CI required gate run is missing required jobs: Proto (buf)")) {
         throw error;
       }
     }
@@ -2838,7 +2931,7 @@ async function runSelftest() {
     } catch (error) {
       if (
         !String(error.message).includes(
-          "post-release benchmark run is missing required jobs: Release binary + SDK live benchmarks",
+          "post-release benchmark run is missing required jobs: Release binary + SDK live benchmarks / Live SDK benchmark",
         )
       ) {
         throw error;
@@ -2849,7 +2942,8 @@ async function runSelftest() {
     wrongPagesBranch.runs.pages = fixtureRun(15, 5, "success", {
       path: ".github/workflows/pages.yml",
       event: "workflow_run",
-      head_branch: "main",
+      head_branch: "release/v0.3.7",
+      head_sha: releaseSha,
     });
     const wrongPagesBranchPath = join(root, "wrong-pages-branch.json");
     writeFileSync(wrongPagesBranchPath, JSON.stringify(wrongPagesBranch));
@@ -2857,7 +2951,7 @@ async function runSelftest() {
       auditSelftestFixture(wrongPagesBranchPath);
       throw new Error("wrong Pages release branch regression was not caught");
     } catch (error) {
-      if (!String(error.message).includes("post-benchmark Pages run 15 has invalid release tag main; want vMAJOR.MINOR.PATCH")) {
+      if (!String(error.message).includes("post-benchmark Pages run 15 used branch release/v0.3.7, want main")) {
         throw error;
       }
     }
@@ -2871,42 +2965,6 @@ async function runSelftest() {
       throw new Error("missing Pages deploy regression was not caught");
     } catch (error) {
       if (!String(error.message).includes("post-benchmark Pages run is missing required jobs: deploy")) {
-        throw error;
-      }
-    }
-
-    const wrongBenchmarkTag = structuredClone(good);
-    wrongBenchmarkTag.runs.benchmark = fixtureRun(16, 5, "success", {
-      path: ".github/workflows/benchmark-sdks.yml",
-      event: "workflow_run",
-      head_branch: "v0.3.8",
-      head_sha: benchmarkSha,
-    });
-    const wrongBenchmarkTagPath = join(root, "wrong-benchmark-tag.json");
-    writeFileSync(wrongBenchmarkTagPath, JSON.stringify(wrongBenchmarkTag));
-    try {
-      auditSelftestFixture(wrongBenchmarkTagPath);
-      throw new Error("wrong benchmark release tag regression was not caught");
-    } catch (error) {
-      if (!String(error.message).includes("post-release benchmark run 16 used release tag v0.3.8, want v0.3.7")) {
-        throw error;
-      }
-    }
-
-    const wrongPagesTag = structuredClone(good);
-    wrongPagesTag.runs.pages = fixtureRun(17, 5, "success", {
-      path: ".github/workflows/pages.yml",
-      event: "workflow_run",
-      head_branch: "v0.3.8",
-      head_sha: pagesSha,
-    });
-    const wrongPagesTagPath = join(root, "wrong-pages-tag.json");
-    writeFileSync(wrongPagesTagPath, JSON.stringify(wrongPagesTag));
-    try {
-      auditSelftestFixture(wrongPagesTagPath);
-      throw new Error("wrong Pages release tag regression was not caught");
-    } catch (error) {
-      if (!String(error.message).includes("post-benchmark Pages run 17 used release tag v0.3.8, want v0.3.7")) {
         throw error;
       }
     }

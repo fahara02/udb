@@ -3,68 +3,15 @@ name: ErrorDetail served smoke
 on:
   workflow_dispatch:
     inputs:
-      target:
-        description: "Live broker gRPC target, for example host:50051"
+      release_tag:
+        description: "Release tag to prove, or 'latest'"
         required: true
+        default: latest
         type: string
-      tls:
-        description: "Use TLS for the broker connection"
-        required: false
-        default: false
-        type: boolean
-      header:
-        description: "Optional metadata header as Name: Value"
-        required: false
-        default: ""
-        type: string
-      validation_method:
-        description: "Full unary method path expected to return INVALID_ARGUMENT"
+      release_asset:
+        description: "Linux release asset name to download"
         required: true
-        type: string
-      validation_request_module:
-        description: "Generated Python pb2 module for the validation request"
-        required: true
-        type: string
-      validation_request_message:
-        description: "Generated Python request message class for validation"
-        required: true
-        type: string
-      validation_request_json:
-        description: "Validation request JSON expected to produce field_violations"
-        required: true
-        type: string
-      validation_field:
-        description: "Expected ErrorDetail.field_violations field path"
-        required: true
-        type: string
-      quota_method:
-        description: "Full unary method path expected to return RESOURCE_EXHAUSTED"
-        required: true
-        type: string
-      quota_request_module:
-        description: "Generated Python pb2 module for the quota request"
-        required: true
-        type: string
-      quota_request_message:
-        description: "Generated Python request message class for quota"
-        required: true
-        type: string
-      quota_request_json:
-        description: "Quota request JSON expected to produce retry/backpressure detail"
-        required: true
-        type: string
-      quota_retry_after_min_ms:
-        description: "Minimum expected retry_after_ms for quota detail"
-        required: true
-        default: "200"
-        type: string
-      quota_backend:
-        description: "Expected ErrorDetail.backend for quota/backpressure detail"
-        required: true
-        type: string
-      quota_operation:
-        description: "Expected ErrorDetail.operation for quota/backpressure detail"
-        required: true
+        default: udb-linux-amd64-full
         type: string
 
 permissions:
@@ -78,19 +25,134 @@ jobs:
   error-detail-served:
     name: ErrorDetail served transport proof
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+    env:
+      RELEASE_TAG: ${{ inputs.release_tag }}
+      RELEASE_ASSET: ${{ inputs.release_asset }}
+      UDB_LIVE_SDK_TESTS: "1"
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: udb_ci
+          POSTGRES_USER: udb
+          POSTGRES_PASSWORD: udb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U udb -d udb_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand({ ping: 1 }).ok'"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Set up SDK toolchains
+        uses: ./.github/actions/setup-sdk-toolchains
         with:
-          python-version: "3.12"
+          python: "true"
 
       - name: Install Python SDK runtime deps
         shell: bash
         run: |
           set -euo pipefail
+          python -m pip install --upgrade pip
           python -m pip install -e sdk/python
+
+      - name: Resolve release binary
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p smoke-output/bin smoke-output/logs smoke-input
+          tag="${RELEASE_TAG}"
+          if [ -z "${tag}" ] || [ "${tag}" = "latest" ]; then
+            tag="$(gh release view --repo "${GITHUB_REPOSITORY}" --json tagName --jq .tagName)"
+          fi
+          if [[ ! "${tag}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+            echo "::error::served smoke requires a released SemVer tag, got '${tag}'"
+            exit 1
+          fi
+          gh release view "${tag}" --repo "${GITHUB_REPOSITORY}" >/dev/null
+          gh release download "${tag}" --repo "${GITHUB_REPOSITORY}" --pattern "${RELEASE_ASSET}" --dir smoke-output/bin
+          chmod +x "smoke-output/bin/${RELEASE_ASSET}"
+          {
+            echo "UDB_SERVED_RELEASE_TAG=${tag}"
+            echo "UDB_SERVED_BIN=${GITHUB_WORKSPACE}/smoke-output/bin/${RELEASE_ASSET}"
+          } >> "$GITHUB_ENV"
+
+      - name: Start backends
+        uses: ./.github/actions/start-backends
+        with:
+          minio: "true"
+          kafka: "true"
+          qdrant: "true"
+          redis: "true"
+          clickhouse: "true"
+          neo4j: "true"
+
+      - name: Write broker env
+        uses: ./.github/actions/broker-env
+        with:
+          pg_dsn: postgres://udb:udb@localhost:5432/udb_ci
+          nosql_dsn: mongodb://localhost:27017/udb_live_sdk?directConnection=true
+          mongodb_dsn: mongodb://localhost:27017/udb_live_sdk?directConnection=true
+          nosql_database: udb_live_sdk
+          grpc_addr: 127.0.0.1:50051
+          grpc_target: 127.0.0.1:50051
+          auth_grpc_addr: 127.0.0.1:50061
+          auth_grpc_target: 127.0.0.1:50061
+          cdc_enabled: "true"
+          startup_dry_run: "false"
+          object_bucket: udb-storage
+
+      - name: Enable ErrorDetail quota proof cooldown
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "UDB_OTP_COOLDOWN_SECONDS=60" >> "$GITHUB_ENV"
+
+      - name: Bootstrap served-smoke user
+        shell: bash
+        run: |
+          set -euo pipefail
+          "${UDB_SERVED_BIN}" auth bootstrap user \
+            --username "${UDB_LIVE_USERNAME}" \
+            --email "${UDB_LIVE_USERNAME}" \
+            --password "${UDB_LIVE_PASSWORD}" \
+            --tenant "${UDB_LIVE_TENANT}" \
+            --project "${UDB_LIVE_PROJECT}"
+
+      - name: Launch broker
+        uses: ./.github/actions/launch-broker
+        with:
+          bin: ${{ env.UDB_SERVED_BIN }}
+          grpc-addr: 127.0.0.1:50051
+          bootstrap: "false"
+          ready-timeout-secs: "180"
+          log-file: /tmp/udb-error-detail-served.log
+
+      - name: Generate ErrorDetail served proof inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/write_error_detail_served_smoke_inputs.py \
+            --out-dir smoke-input \
+            --auth-target "${UDB_AUTH_GRPC_TARGET}" \
+            --username "${UDB_LIVE_USERNAME}" \
+            --password "${UDB_LIVE_PASSWORD}" \
+            --tenant "${UDB_LIVE_TENANT}" \
+            --project "${UDB_LIVE_PROJECT}"
 
       - name: Run ErrorDetail smoke selftest
         shell: bash
@@ -100,42 +162,48 @@ jobs:
 
       - name: Run live ErrorDetail served smoke
         shell: bash
-        env:
-          TARGET: ${{ inputs.target }}
-          TLS: ${{ inputs.tls }}
-          HEADER: ${{ inputs.header }}
-          VALIDATION_METHOD: ${{ inputs.validation_method }}
-          VALIDATION_REQUEST_MODULE: ${{ inputs.validation_request_module }}
-          VALIDATION_REQUEST_MESSAGE: ${{ inputs.validation_request_message }}
-          VALIDATION_REQUEST_JSON: ${{ inputs.validation_request_json }}
-          VALIDATION_FIELD: ${{ inputs.validation_field }}
-          QUOTA_METHOD: ${{ inputs.quota_method }}
-          QUOTA_REQUEST_MODULE: ${{ inputs.quota_request_module }}
-          QUOTA_REQUEST_MESSAGE: ${{ inputs.quota_request_message }}
-          QUOTA_REQUEST_JSON: ${{ inputs.quota_request_json }}
-          QUOTA_RETRY_AFTER_MIN_MS: ${{ inputs.quota_retry_after_min_ms }}
-          QUOTA_BACKEND: ${{ inputs.quota_backend }}
-          QUOTA_OPERATION: ${{ inputs.quota_operation }}
         run: |
           set -euo pipefail
-          mkdir -p smoke-input
-          args=(--target "$TARGET")
-          if [ "$TLS" = "true" ]; then args+=(--tls); fi
-          if [ -n "$HEADER" ]; then args+=(--header "$HEADER"); fi
-          printf '%s' "$VALIDATION_REQUEST_JSON" > smoke-input/validation.json
-          printf '%s' "$QUOTA_REQUEST_JSON" > smoke-input/quota.json
+          args=(--target "${UDB_AUTH_GRPC_TARGET}" --require-all-proofs)
+          while IFS= read -r line || [ -n "$line" ]; do
+            [ -n "$line" ] && args+=(--header "$line")
+          done < smoke-input/header.txt
           args+=(
-            --validation-method "$VALIDATION_METHOD"
-            --validation-request-module "$VALIDATION_REQUEST_MODULE"
-            --validation-request-message "$VALIDATION_REQUEST_MESSAGE"
+            --validation-method /udb.core.authn.services.v1.AuthnService/SendPhoneVerification
+            --validation-request-module udb.core.authn.services.v1.core_pb2
+            --validation-request-message SendPhoneVerificationRequest
             --validation-request-json smoke-input/validation.json
-            --validation-field "$VALIDATION_FIELD"
-            --quota-method "$QUOTA_METHOD"
-            --quota-request-module "$QUOTA_REQUEST_MODULE"
-            --quota-request-message "$QUOTA_REQUEST_MESSAGE"
+            --validation-field phone
+            --quota-method /udb.core.authn.services.v1.AuthnService/SendOTP
+            --quota-request-module udb.core.authn.services.v1.core_pb2
+            --quota-request-message SendOTPRequest
             --quota-request-json smoke-input/quota.json
-            --quota-retry-after-min-ms "$QUOTA_RETRY_AFTER_MIN_MS"
-            --quota-backend "$QUOTA_BACKEND"
-            --quota-operation "$QUOTA_OPERATION"
+            --quota-retry-after-min-ms 1000
+            --quota-backend authn
+            --quota-operation otp_cooldown
           )
-          python scripts/error_detail_served_smoke.py --require-all-proofs "${args[@]}"
+          python scripts/error_detail_served_smoke.py "${args[@]}"
+
+      - name: Upload served smoke diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: error-detail-served-smoke-diagnostics
+          path: |
+            smoke-input/*.json
+            smoke-output/logs/**
+            /tmp/udb-error-detail-served.log
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Stop broker and backends
+        if: always()
+        shell: bash
+        run: |
+          if [ -n "${UDB_BROKER_PID:-}" ]; then kill "${UDB_BROKER_PID}" 2>/dev/null || true; fi
+          docker rm -f udb-bench-minio 2>/dev/null || true
+          docker rm -f udb-bench-kafka 2>/dev/null || true
+          docker rm -f udb-bench-qdrant 2>/dev/null || true
+          docker rm -f udb-bench-redis 2>/dev/null || true
+          docker rm -f udb-bench-clickhouse 2>/dev/null || true
+          docker rm -f udb-bench-neo4j 2>/dev/null || true

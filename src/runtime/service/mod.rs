@@ -127,6 +127,9 @@ mod metering_service;
 // that joins active sources to the durable CDC journal.
 mod embedding_service;
 mod method_security;
+pub(crate) use method_security::{
+    build_registry as build_method_security_registry, method_security, method_security_registry,
+};
 pub(crate) mod native_entity_store;
 #[cfg(test)]
 mod native_entity_store_tests;
