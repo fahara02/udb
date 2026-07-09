@@ -60,7 +60,6 @@ def check_source(root: Path = ROOT) -> list[str]:
     ci = _read(root, ".github/workflows/ci.yml")
     script = _read(root, "scripts/check-scaffold-compiles.sh")
     scaffold = _read(root, "src/cli/scaffold.rs")
-    plan = _read(root, "UDB_MASTERPLAN_2026.md")
     job = _job_block(ci, "scaffold-compiles")
 
     _require(ci, "python3 scripts/check-scaffold-posture.py", "CI quick-gate scaffold posture guard", failures)
@@ -85,7 +84,6 @@ def check_source(root: Path = ROOT) -> list[str]:
         for token in language.compile_tokens:
             _require(script, token, f"{language.label} compile command", failures)
 
-    _require(plan, "scaffold posture guard", "masterplan scaffold guard note", failures)
     return failures
 
 
@@ -160,7 +158,6 @@ fn scaffold_emits_examples_for_all_six_sdks() {}
         (root / ".github/workflows/ci.yml").write_text(ci, encoding="utf-8")
         (root / "scripts/check-scaffold-compiles.sh").write_text(script, encoding="utf-8")
         (root / "src/cli/scaffold.rs").write_text(scaffold, encoding="utf-8")
-        (root / "UDB_MASTERPLAN_2026.md").write_text("scaffold posture guard\n", encoding="utf-8")
         failures = check_source(root)
         if failures:
             raise AssertionError(f"expected clean fixture, got {failures}")

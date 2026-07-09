@@ -131,10 +131,10 @@ idempotency, tenant binding, and typed errors stay explicit or broker-owned.
   coverage, MinIO-backed live SDK startup, the six-language `scaffold-compiles`
   job, and native-service live integration assumptions.
 
-### Since 0.3.7: Master Plan 2026 hardening
+### Since 0.3.7: hardening
 
-`UDB_MASTERPLAN_2026.md` re-grounded every tracked item in real v0.3.7 source and
-adversarially verified it against code anchors. The hardening wave (82 of the
+The private masterplan/todo board re-grounded every tracked item in real v0.3.7
+source and adversarially verified it against code anchors. The hardening wave (82 of the
 tracked items landed) includes:
 
 - **Verification depth** — live backend-by-backend conformance for all nine

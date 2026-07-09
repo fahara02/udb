@@ -1,7 +1,7 @@
 # UDB blocked & decision-gated items — explained simply
 
-This is the plain-English companion to `UDB_MASTERPLAN_2026.md`. The master plan
-has **6 items that cannot move until you make a call** — 5 marked `BLOCKED` and 1
+This is the plain-English companion to the private masterplan/todo board. The
+board has **6 items that cannot move until you make a call** — 5 marked `BLOCKED` and 1
 marked `DECISION-GATED`. None of them are stuck on hard code problems; they're stuck
 on a *decision* or a *machine/host* that only you can provide. This doc explains each
 one the way I'd explain it to a teammate: what it is, why it's stuck, the choices, my

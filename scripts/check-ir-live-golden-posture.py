@@ -67,7 +67,6 @@ def check_source(root: Path = ROOT) -> list[str]:
     ci = _read(root, ".github/workflows/ci.yml")
     mod_rs = _read(root, "src/ir/compile/live_tests/mod.rs")
     support = _read(root, "src/ir/compile/live_tests/support.rs")
-    plan = _read(root, "UDB_MASTERPLAN_2026.md")
 
     _require(
         ci,
@@ -128,7 +127,6 @@ def check_source(root: Path = ROOT) -> list[str]:
     _reject(ci, "UDB_AZUREBLOB_DSN:", "Azure Blob CI credential injection", failures)
     _reject(ci, "UDB_GCS_DSN:", "GCS CI credential injection", failures)
     _reject(ci, "UDB_PINECONE_DSN:", "Pinecone CI credential injection", failures)
-    _require(plan, "IR live-golden posture guard", "masterplan IR guard note", failures)
     return failures
 
 
@@ -194,10 +192,6 @@ env:
 run: cargo test --locked --lib ir::compile::live_tests -- --ignored --nocapture --test-threads=1
 """
         (root / ".github/workflows/ci.yml").write_text(ci, encoding="utf-8")
-        (root / "UDB_MASTERPLAN_2026.md").write_text(
-            "IR live-golden posture guard\n",
-            encoding="utf-8",
-        )
         failures = check_source(root)
         if failures:
             raise AssertionError(f"expected clean fixture, got {failures}")

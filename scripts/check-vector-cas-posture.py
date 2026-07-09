@@ -28,8 +28,6 @@ def reject(source: str, needle: str, label: str) -> None:
 def check_vector_cas_posture(root: Path) -> None:
     qdrant = read(root, "src/runtime/canonical_store/qdrant.rs")
     vector = read(root, "src/runtime/canonical_store/vector_system.rs")
-    plan = read(root, "UDB_MASTERPLAN_2026.md")
-
     reject(
         vector,
         "gives them a real canonical system-state plane",
@@ -98,12 +96,6 @@ def check_vector_cas_posture(root: Path) -> None:
         "non-ES vector fail-closed regression tests",
     )
 
-    require(
-        plan,
-        "Qdrant/Pinecone/Weaviate fail closed",
-        "masterplan 3.2 non-ES vector fail-closed status",
-    )
-
 
 def write_fixture(root: Path, path: str, body: str) -> None:
     target = root / path
@@ -137,11 +129,6 @@ fn next_seq_value() { Err(self.cas_unsupported("outbox sequence allocation")) }
 fn diagnostic() { "backend-native conditional write"; }
 mod vector_native_cas_fail_closed_tests {}
 """,
-        )
-        write_fixture(
-            root,
-            "UDB_MASTERPLAN_2026.md",
-            "P3.2: Qdrant/Pinecone/Weaviate fail closed until native CAS exists.\n",
         )
         check_vector_cas_posture(root)
 

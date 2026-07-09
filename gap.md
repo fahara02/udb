@@ -1,8 +1,8 @@
-# UDB_MASTERPLAN_2026 — Gap Analysis (plan claims vs. actual source)
+# UDB Gap Analysis (plan claims vs. actual source)
 
 **Date:** 2026-07-01
 **Method:** 12 file-partitioned verifier agents (one per phase) followed every tracked item's
-code anchors from `UDB_MASTERPLAN_2026.md` into the real `E:/Projects/udb` source tree,
+code anchors from the private masterplan into the real `E:/Projects/udb` source tree,
 classified each as CONFIRMED / OVERSTATED / WRONG / PENDING, and every non-CONFIRMED verdict
 was adversarially re-checked by a second agent (default = overturn unless the code clearly
 supports the gap).

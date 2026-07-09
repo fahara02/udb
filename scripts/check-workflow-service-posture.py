@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail CI if WorkflowService tick posture drifts from the masterplan."""
+"""Fail CI if WorkflowService tick posture drifts."""
 
 from __future__ import annotations
 
@@ -42,7 +42,6 @@ def check_source(root: Path = ROOT) -> list[str]:
     workflow = _read(root, "src/runtime/service/workflow_service/mod.rs")
     saga = _read(root, "src/runtime/saga.rs")
     ci = _read(root, ".github/workflows/ci.yml")
-    plan = _read(root, "UDB_MASTERPLAN_2026.md")
 
     _require(
         singleton,
@@ -171,12 +170,6 @@ def check_source(root: Path = ROOT) -> list[str]:
         "CI quick-gate workflow service posture guard",
         failures,
     )
-    _require(
-        plan,
-        "WorkflowService source posture guard",
-        "masterplan workflow service guard note",
-        failures,
-    )
     return failures
 
 
@@ -238,10 +231,6 @@ pub(crate) async fn run_workflow_tick_once() {
         )
         (root / ".github/workflows/ci.yml").write_text(
             "run: python3 scripts/check-workflow-service-posture.py\n",
-            encoding="utf-8",
-        )
-        (root / "UDB_MASTERPLAN_2026.md").write_text(
-            "WorkflowService source posture guard\n",
             encoding="utf-8",
         )
         failures = check_source(root)

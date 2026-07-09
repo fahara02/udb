@@ -5,10 +5,10 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
-## Unreleased - Master Plan 2026 hardening (from v0.3.7)
+## Unreleased - hardening (from v0.3.7)
 
-`UDB_MASTERPLAN_2026.md` re-grounded every tracked item in real v0.3.7 source,
-adversarially verified it against code anchors, and closed the majority of the
+The private masterplan/todo board re-grounded every tracked item in real v0.3.7
+source, adversarially verified it against code anchors, and closed the majority of the
 0.3.7 follow-up gates. This section records the source/proof work landed on top of
 the 0.3.7 baseline; it is not yet a new release tag.
 
@@ -133,5 +133,5 @@ the 0.3.7 baseline; it is not yet a new release tag.
 ### Outcome
 
 - Most v0.3.2 blockers were fixed before the codebase advanced to the v0.3.7
-  baseline. Remaining work moved into `UDB_MASTERPLAN_2026.md` as explicit
-  gates rather than being treated as closed release hygiene.
+  baseline. Remaining work moved into the private masterplan/todo board as
+  explicit gates rather than being treated as closed release hygiene.

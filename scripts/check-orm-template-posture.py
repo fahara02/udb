@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail CI if generated ORM template invariants drift from the source plan."""
+"""Fail CI if generated ORM template invariants drift."""
 
 from __future__ import annotations
 
@@ -139,14 +139,11 @@ def assert_template(template: TemplatePosture, root: Path = ROOT) -> list[str]:
     return failures
 
 
-def assert_plan_mentions_guard(root: Path = ROOT) -> list[str]:
-    plan = (root / "UDB_MASTERPLAN_2026.md").read_text(encoding="utf-8")
+def assert_ci_mentions_guard(root: Path = ROOT) -> list[str]:
     ci = (root / ".github/workflows/ci.yml").read_text(encoding="utf-8")
     failures: list[str] = []
     if "check-orm-template-posture.py" not in ci:
         failures.append("ci: quick-gate does not run check-orm-template-posture.py")
-    if "ORM template posture guard" not in plan:
-        failures.append("plan: missing ORM template posture guard note")
     return failures
 
 
@@ -186,7 +183,7 @@ def main(argv: list[str] | None = None) -> int:
     failures: list[str] = []
     for template in TEMPLATES:
         failures.extend(assert_template(template))
-    failures.extend(assert_plan_mentions_guard())
+    failures.extend(assert_ci_mentions_guard())
 
     if failures:
         for failure in failures:

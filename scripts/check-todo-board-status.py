@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Source guard for the active masterplan todo-board status.
+"""Source guard for the active private masterplan todo-board status.
 
 The active board intentionally has no unchecked numbered-chapter rows left.
 The only non-closed rows are the 10 current proof/source tails in Chapters
-14 and 15. This guard keeps README/PLAN/orchestration/root wording
-from drifting away from the chapter rows.
+14 and 15. This guard keeps README/PLAN/orchestration wording from drifting
+away from the chapter rows.
 """
 
 from __future__ import annotations
@@ -49,21 +49,6 @@ EXPECTED_R7_OPEN_ITEMS = (
 )
 
 DOC_REQUIREMENTS: dict[str, tuple[str, ...]] = {
-    "UDB_MASTERPLAN_2026.md": (
-        "What remains after the 2026-07-08 Chapter 05 served proof closeout",
-        "The active numbered chapter board has **10** non-closed rows",
-        "The root foundation tail is down to **0.2** remote CI green-run observation",
-        "Current active closeout after the 2026-07-08 Chapter 05 served proof closeout",
-        "chapter `[~]` proof tails remain (Chapter 14 ×8, Chapter 15 ×2)",
-        "The older",
-        "2026-07-01 body-marker tally is superseded for orchestration targeting",
-        "Active todo-board closeout tails are tracked alongside those cut-lines, not",
-        "Chapter 05 has no active numbered proof tail left after the 2026-07-08",
-        "local served replay and dedup-store-down fail-closed proofs",
-        "same-day current-source broker rebuild then passed the dedup-store-down",
-        "(`14.6.4`, `14.7.4`-`14.7.6`, `14.8.6`, `14.8.8`,",
-        "(`15.A.5`, `15.10.1`)",
-    ),
     "private/masterplan/todos/README.md": (
         "active non-closed atomic rows remain",
         "all marked `[~]` rather than unchecked",
@@ -89,8 +74,8 @@ DOC_REQUIREMENTS: dict[str, tuple[str, ...]] = {
         "The simple-client architecture is in place",
         "remaining work is evidence and",
         "2026-07-05 top-down todo audit",
-        "Root `UDB_MASTERPLAN_2026.md` still has only two foundation partials",
-        "`0.2` remote CI green-run observation and `0.3` closeout commit/tag/remote-CI",
+        "The public root master-plan artifact had",
+        "2026-07-09 update: both are CLOSED",
         "Chapter 05 has no active numbered proof tail left",
         "`05.2.3.1` BatchUpsert",
         "`05.6.1.1`",
@@ -264,17 +249,6 @@ def run_selftest() -> int:
         failures = check(root)
         if not any("R7 item was closed without guard update" in failure for failure in failures):
             raise AssertionError(f"missing R7 closeout-item detection: {failures}")
-
-        public_root = Path(tmp) / "public-only"
-        public_root.mkdir()
-        write_file(
-            public_root,
-            "UDB_MASTERPLAN_2026.md",
-            "\n".join(DOC_REQUIREMENTS["UDB_MASTERPLAN_2026.md"]) + "\n",
-        )
-        failures = check(public_root)
-        if failures:
-            raise AssertionError(f"public-only fixture failed: {failures}")
 
     print("todo-board status guard selftest passed")
     return 0
