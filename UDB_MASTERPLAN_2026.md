@@ -1565,6 +1565,13 @@ exactly what unblocks each:
   `--error-detail-served-smoke` to audit the eventual green workflow run;
   current authenticated lookup reports the local `error-detail-served-smoke.yml`
   workflow is not visible on `fahara02/udb`'s default branch.
+  A 2026-07-09 self-contained proof pass replaced operator-supplied
+  ErrorDetail workflow bodies with a real served Authn setup: the workflow
+  downloads the release binary, starts broker dependencies, enables OTP
+  cooldown, bootstraps and logs in, creates a throwaway user, seeds one OTP, and
+  then proves `SendPhoneVerification` `phone` validation plus `SendOTP`
+  `authn/otp_cooldown` quota detail through generated inputs. The remaining
+  evidence is still the green default-branch workflow run.
   A 2026-07-01 hardening pass added `--require-all-proofs`, so a green manual
   workflow must include validation and quota proof inputs together. A 2026-07-02
   hardening pass now rejects weakened proof expectations before dialing: live
