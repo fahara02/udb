@@ -383,9 +383,15 @@ mod tests {
         assert_eq!(decoded.claims.video["room"], "room-a");
         assert_eq!(decoded.claims.video["canPublish"], true);
         assert_eq!(decoded.claims.video["canSubscribe"], true);
+        let metadata: serde_json::Value =
+            serde_json::from_str(&decoded.claims.metadata).expect("metadata is valid JSON");
         assert_eq!(
-            decoded.claims.metadata,
-            r#"{"peer_id":"peer-a","room_id":"room-a","tenant_id":"tenant-a"}"#
+            metadata,
+            serde_json::json!({
+                "peer_id": "peer-a",
+                "room_id": "room-a",
+                "tenant_id": "tenant-a",
+            })
         );
     }
 

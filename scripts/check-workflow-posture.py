@@ -301,47 +301,32 @@ TARGETED_PROOF_WORKFLOW_REQUIREMENTS = {
     ),
     "idempotency-served-smoke.yml": (
         ("idempotency-served-replay:", "idempotency served replay job"),
-        ("target:", "live broker target input"),
-        ("tenant2_header:", "tenant isolation metadata input"),
-        ("upsert_json:", "Upsert replay JSON input"),
-        ("tenant2_upsert_json:", "tenant isolation JSON input"),
-        ("batch_upsert_json:", "BatchUpsert replay JSON input"),
-        ("fail_closed_upsert_json:", "fail-closed JSON input"),
-        ("fail_closed_select_json:", "fail-closed no-write Select input"),
-        ("keyless_upsert_json:", "keyless fail-closed JSON input"),
+        ("release_tag:", "served release-tag input"),
+        ("release_asset:", "served release-asset input"),
+        ("postgres:", "served Postgres service"),
+        ("mongodb:", "served MongoDB service"),
+        ("gh release download", "served release binary download"),
+        ("uses: ./.github/actions/start-backends", "served backend action reuse"),
+        ("uses: ./.github/actions/broker-env", "served broker env reuse"),
+        ("uses: ./.github/actions/launch-broker", "served broker launch action reuse"),
+        ("Bootstrap served-smoke users", "served smoke user bootstrap"),
+        ("scripts/write_databroker_served_smoke_inputs.py", "served proof input generator"),
+        ("--tenant2-username", "tenant2 auth fixture generation"),
         ("python -m pip install -e sdk/python", "Python SDK runtime install"),
         ("python scripts/idempotency_served_replay_smoke.py --selftest", "idempotency served smoke selftest"),
-        ("--require-all-proofs", "complete Chapter 05 proof gate"),
-        ("append_headers()", "newline-separated metadata expander"),
-        ('append_headers --header "$HEADER"', "baseline metadata list handoff"),
-        ('append_headers --tenant2-header "$TENANT2_HEADER"', "tenant isolation metadata list handoff"),
-        ('--tenant2-header "$TENANT2_HEADER"', "tenant isolation metadata handoff"),
-        ('printf \'%s\' "$UPSERT_JSON" > smoke-input/upsert.json', "Upsert replay unconditional input materialization"),
-        (
-            'printf \'%s\' "$TENANT2_UPSERT_JSON" > smoke-input/tenant2-upsert.json',
-            "tenant isolation unconditional input materialization",
-        ),
-        (
-            'printf \'%s\' "$BATCH_UPSERT_JSON" > smoke-input/batch-upsert.json',
-            "BatchUpsert unconditional input materialization",
-        ),
-        (
-            'printf \'%s\' "$FAIL_CLOSED_UPSERT_JSON" > smoke-input/fail-closed-upsert.json',
-            "fail-closed unconditional input materialization",
-        ),
-        (
-            'printf \'%s\' "$FAIL_CLOSED_SELECT_JSON" > smoke-input/fail-closed-select.json',
-            "fail-closed no-write Select unconditional input materialization",
-        ),
-        (
-            'printf \'%s\' "$KEYLESS_UPSERT_JSON" > smoke-input/keyless-upsert.json',
-            "keyless unconditional input materialization",
-        ),
+        ("Run live idempotency replay proofs", "healthy dedup replay phase"),
+        ("Run live idempotency fail-closed proof", "dedup-store-down proof phase"),
+        ("ALTER TABLE IF EXISTS udb_system.udb_idempotency_keys RENAME TO", "dedup relation disablement"),
+        ("Restore idempotency relation", "dedup relation restore"),
+        ('done < smoke-input/header.txt', "generated baseline metadata handoff"),
+        ('done < smoke-input/tenant2-header.txt', "generated tenant2 metadata handoff"),
         ("--upsert-json smoke-input/upsert.json", "Upsert replay handoff"),
         ("--tenant2-upsert-json smoke-input/tenant2-upsert.json", "tenant isolation handoff"),
         ("--batch-upsert-json smoke-input/batch-upsert.json", "BatchUpsert replay handoff"),
         ("--fail-closed-upsert-json smoke-input/fail-closed-upsert.json", "fail-closed handoff"),
+        ("--fail-closed-select-json smoke-input/fail-closed-select.json", "fail-closed no-write Select handoff"),
         ("--keyless-upsert-json smoke-input/keyless-upsert.json", "keyless handoff"),
+        ("idempotency-served-smoke-diagnostics", "idempotency diagnostics artifact"),
     ),
     "metering-smoke.yml": (
         ("metering-rollup-smoke:", "metering rollup job"),
@@ -412,17 +397,24 @@ TARGETED_PROOF_WORKFLOW_REQUIREMENTS = {
     ),
     "retry-safe-served-smoke.yml": (
         ("retry-safe-served:", "retry-safe served proof job"),
-        ("target:", "live broker target input"),
-        ("upsert_json:", "Upsert replay JSON input"),
-        ("delete_json:", "Delete replay JSON input"),
+        ("release_tag:", "served release-tag input"),
+        ("release_asset:", "served release-asset input"),
+        ("postgres:", "served Postgres service"),
+        ("mongodb:", "served MongoDB service"),
+        ("gh release download", "served release binary download"),
+        ("uses: ./.github/actions/start-backends", "served backend action reuse"),
+        ("uses: ./.github/actions/broker-env", "served broker env reuse"),
+        ("uses: ./.github/actions/launch-broker", "served broker launch action reuse"),
+        ("Bootstrap served-smoke users", "served smoke user bootstrap"),
+        ("scripts/write_databroker_served_smoke_inputs.py", "served proof input generator"),
         ("python -m pip install -e sdk/python", "Python SDK runtime install"),
         ("python scripts/retry_safe_served_smoke.py --selftest", "retry-safe smoke selftest"),
         ("--require-all-proofs", "complete retry-safe Upsert/Delete proof gate"),
-        ('printf \'%s\' "$UPSERT_JSON" > smoke-input/upsert.json', "retry-safe Upsert unconditional input materialization"),
-        ('printf \'%s\' "$DELETE_JSON" > smoke-input/delete.json', "retry-safe Delete unconditional input materialization"),
-        ("--upsert-json smoke-input/upsert.json", "Upsert replay handoff"),
-        ("--delete-json smoke-input/delete.json", "Delete replay handoff"),
+        ('done < smoke-input/header.txt', "generated metadata handoff"),
+        ("--upsert-json smoke-input/retry-upsert.json", "Upsert replay handoff"),
+        ("--delete-json smoke-input/retry-delete.json", "Delete replay handoff"),
         ("Retry-safe mutation metadata served proof", "served proof job name"),
+        ("retry-safe-served-smoke-diagnostics", "retry-safe diagnostics artifact"),
     ),
     "runner-evidence-audit.yml": (
         ("runner-evidence:", "runner-evidence audit job"),
@@ -522,18 +514,12 @@ REQUIRED_PROOF_WORKFLOW_INPUTS = {
         "quota_operation",
     ),
     "idempotency-served-smoke.yml": (
-        "target",
-        "upsert_json",
-        "tenant2_upsert_json",
-        "batch_upsert_json",
-        "fail_closed_upsert_json",
-        "fail_closed_select_json",
-        "keyless_upsert_json",
+        "release_tag",
+        "release_asset",
     ),
     "retry-safe-served-smoke.yml": (
-        "target",
-        "upsert_json",
-        "delete_json",
+        "release_tag",
+        "release_asset",
     ),
     "rest-gateway-smoke.yml": (
         "base_url",
@@ -558,20 +544,8 @@ NO_DEFAULT_PROOF_WORKFLOW_INPUTS = {
         "quota_backend",
         "quota_operation",
     ),
-    "idempotency-served-smoke.yml": (
-        "target",
-        "upsert_json",
-        "tenant2_upsert_json",
-        "batch_upsert_json",
-        "fail_closed_upsert_json",
-        "fail_closed_select_json",
-        "keyless_upsert_json",
-    ),
-    "retry-safe-served-smoke.yml": (
-        "target",
-        "upsert_json",
-        "delete_json",
-    ),
+    "idempotency-served-smoke.yml": (),
+    "retry-safe-served-smoke.yml": (),
     "rest-gateway-smoke.yml": (
         "base_url",
         "success_route",
@@ -4169,6 +4143,7 @@ LINT_WORKFLOW_TRIGGER_PATHS = (
     ("scripts/check-idempotency-dedup-posture.py", "idempotency dedup posture guard"),
     ("scripts/error_detail_served_smoke.py", "ErrorDetail served smoke"),
     ("scripts/idempotency_served_replay_smoke.py", "idempotency served replay smoke"),
+    ("scripts/write_databroker_served_smoke_inputs.py", "DataBroker served-smoke proof input generator"),
     ("scripts/retry_safe_served_smoke.py", "retry-safe served smoke"),
     ("scripts/check-retry-safe-posture.py", "retry-safe mutation posture guard"),
     ("scripts/check-error-detail-posture.py", "error-detail posture guard"),
@@ -8401,64 +8376,57 @@ jobs:
 on:
   workflow_dispatch:
     inputs:
-      target:
+      release_tag:
         required: true
-      tenant2_header:
-        default: ""
-      upsert_json:
+        default: latest
+      release_asset:
         required: true
-      tenant2_upsert_json:
-        required: true
-      batch_upsert_json:
-        required: true
-      fail_closed_upsert_json:
-        required: true
-      fail_closed_select_json:
-        required: true
-      keyless_upsert_json:
-        required: true
-      fail_closed_code:
-        default: "UNAVAILABLE"
+        default: udb-linux-amd64-full
 permissions:
   contents: read
 concurrency:
   group: idempotency-served-smoke-${{ github.ref }}
 jobs:
   idempotency-served-replay:
+    name: DataBroker idempotency served replay proof
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+    services:
+      postgres: {}
+      mongodb: {}
     steps:
+      - run: gh release download
+      - uses: ./.github/actions/start-backends
+      - uses: ./.github/actions/broker-env
+      - run: Bootstrap served-smoke users
+      - uses: ./.github/actions/launch-broker
+      - run: python scripts/write_databroker_served_smoke_inputs.py --tenant2-username x
       - run: python -m pip install -e sdk/python
       - run: python scripts/idempotency_served_replay_smoke.py --selftest
       - run: |
-          append_headers() {
-            local opt="$1"
-            local raw="$2"
-            local line
-            while IFS= read -r line || [ -n "$line" ]; do
-              if [ -n "$line" ]; then args+=("$opt" "$line"); fi
-            done <<< "$raw"
-          }
-          printf '%s' "$UPSERT_JSON" > smoke-input/upsert.json
-          printf '%s' "$TENANT2_UPSERT_JSON" > smoke-input/tenant2-upsert.json
-          printf '%s' "$BATCH_UPSERT_JSON" > smoke-input/batch-upsert.json
-          printf '%s' "$FAIL_CLOSED_UPSERT_JSON" > smoke-input/fail-closed-upsert.json
-          printf '%s' "$FAIL_CLOSED_SELECT_JSON" > smoke-input/fail-closed-select.json
-          printf '%s' "$KEYLESS_UPSERT_JSON" > smoke-input/keyless-upsert.json
-          append_headers --header "$HEADER"
-          append_headers --tenant2-header "$TENANT2_HEADER"
-          python scripts/idempotency_served_replay_smoke.py --require-all-proofs --fail-closed-code "$FAIL_CLOSED_CODE" --upsert-json smoke-input/upsert.json --tenant2-upsert-json smoke-input/tenant2-upsert.json --batch-upsert-json smoke-input/batch-upsert.json --fail-closed-upsert-json smoke-input/fail-closed-upsert.json --fail-closed-select-json smoke-input/fail-closed-select.json --keyless-upsert-json smoke-input/keyless-upsert.json
+          echo "Run live idempotency replay proofs"
+          done < smoke-input/header.txt
+          done < smoke-input/tenant2-header.txt
+          python scripts/idempotency_served_replay_smoke.py --fail-closed-code UNAVAILABLE --upsert-json smoke-input/upsert.json --tenant2-upsert-json smoke-input/tenant2-upsert.json --batch-upsert-json smoke-input/batch-upsert.json
+      - run: ALTER TABLE IF EXISTS udb_system.udb_idempotency_keys RENAME TO udb_idempotency_keys_served_disabled
+      - run: |
+          echo "Run live idempotency fail-closed proof"
+          python scripts/idempotency_served_replay_smoke.py --fail-closed-code UNAVAILABLE --fail-closed-upsert-json smoke-input/fail-closed-upsert.json --fail-closed-select-json smoke-input/fail-closed-select.json --keyless-upsert-json smoke-input/keyless-upsert.json
+      - run: Restore idempotency relation
+      - uses: actions/upload-artifact@v4
+        with:
+          name: idempotency-served-smoke-diagnostics
 """
         retry_safe_served_workflow_good = """name: Retry-safe served smoke
 on:
   workflow_dispatch:
     inputs:
-      target:
+      release_tag:
         required: true
-      upsert_json:
+        default: latest
+      release_asset:
         required: true
-      delete_json:
-        required: true
+        default: udb-linux-amd64-full
 permissions:
   contents: read
 concurrency:
@@ -8467,14 +8435,25 @@ jobs:
   retry-safe-served:
     name: Retry-safe mutation metadata served proof
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+    services:
+      postgres: {}
+      mongodb: {}
     steps:
+      - run: gh release download
+      - uses: ./.github/actions/start-backends
+      - uses: ./.github/actions/broker-env
+      - run: Bootstrap served-smoke users
+      - uses: ./.github/actions/launch-broker
+      - run: python scripts/write_databroker_served_smoke_inputs.py
       - run: python -m pip install -e sdk/python
       - run: python scripts/retry_safe_served_smoke.py --selftest
       - run: |
-          printf '%s' "$UPSERT_JSON" > smoke-input/upsert.json
-          printf '%s' "$DELETE_JSON" > smoke-input/delete.json
-          python scripts/retry_safe_served_smoke.py --require-all-proofs --upsert-json smoke-input/upsert.json --delete-json smoke-input/delete.json
+          done < smoke-input/header.txt
+          python scripts/retry_safe_served_smoke.py --require-all-proofs --upsert-json smoke-input/retry-upsert.json --delete-json smoke-input/retry-delete.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: retry-safe-served-smoke-diagnostics
 """
         runner_evidence_workflow_good = """name: CI runner evidence audit
 on:
@@ -8800,68 +8779,68 @@ jobs:
 
         (wf / "idempotency-served-smoke.yml").write_text(
             idempotency_served_workflow_good.replace(
-                "      batch_upsert_json:\n        required: true",
-                "      batch_upsert_json:\n        required: false",
+                "scripts/write_databroker_served_smoke_inputs.py",
+                "scripts/missing_generator.py",
             ),
             encoding="utf-8",
         )
         failures = check_targeted_proof_workflows(root)
-        assert any("batch_upsert_json" in failure and "must be required" in failure for failure in failures), failures
+        assert any("served proof input generator" in failure for failure in failures), failures
         (wf / "idempotency-served-smoke.yml").write_text(idempotency_served_workflow_good, encoding="utf-8")
 
         (wf / "idempotency-served-smoke.yml").write_text(
             idempotency_served_workflow_good.replace(
-                "      target:\n        required: true",
-                '      target:\n        required: true\n        default: "127.0.0.1:50051"',
+                "      release_tag:\n        required: true",
+                "      release_tag:\n        required: false",
             ),
             encoding="utf-8",
         )
         failures = check_targeted_proof_workflows(root)
-        assert any("target" in failure and "must not define a default" in failure for failure in failures), failures
+        assert any("release_tag" in failure and "must be required" in failure for failure in failures), failures
         (wf / "idempotency-served-smoke.yml").write_text(idempotency_served_workflow_good, encoding="utf-8")
 
         (wf / "idempotency-served-smoke.yml").write_text(
             idempotency_served_workflow_good.replace(
-                "      keyless_upsert_json:\n        required: true",
-                '      keyless_upsert_json:\n        description: "Optional keyless proof"\n        required: true',
+                "Run live idempotency fail-closed proof",
+                "Run live idempotency partial proof",
             ),
             encoding="utf-8",
         )
         failures = check_targeted_proof_workflows(root)
-        assert any("keyless_upsert_json" in failure and "must not be described as optional" in failure for failure in failures), failures
+        assert any("dedup-store-down proof phase" in failure for failure in failures), failures
         (wf / "idempotency-served-smoke.yml").write_text(idempotency_served_workflow_good, encoding="utf-8")
 
         (wf / "idempotency-served-smoke.yml").write_text(
             idempotency_served_workflow_good.replace(
-                '          printf \'%s\' "$KEYLESS_UPSERT_JSON" > smoke-input/keyless-upsert.json\n',
-                "",
+                "Restore idempotency relation",
+                "Skip idempotency relation restore",
             ),
             encoding="utf-8",
         )
         failures = check_targeted_proof_workflows(root)
-        assert any("keyless unconditional input materialization" in failure for failure in failures), failures
+        assert any("dedup relation restore" in failure for failure in failures), failures
         (wf / "idempotency-served-smoke.yml").write_text(idempotency_served_workflow_good, encoding="utf-8")
 
         (wf / "idempotency-served-smoke.yml").write_text(
             idempotency_served_workflow_good.replace(
-                "      upsert_json:\n        required: true",
-                '      upsert_json:\n        required: true\n        default: ""',
+                "ALTER TABLE IF EXISTS udb_system.udb_idempotency_keys RENAME TO",
+                "ALTER TABLE IF EXISTS udb_system.udb_idempotency_keys_ignored RENAME TO",
             ),
             encoding="utf-8",
         )
         failures = check_targeted_proof_workflows(root)
-        assert any("upsert_json" in failure and "must not define a default" in failure for failure in failures), failures
+        assert any("dedup relation disablement" in failure for failure in failures), failures
         (wf / "idempotency-served-smoke.yml").write_text(idempotency_served_workflow_good, encoding="utf-8")
 
         (wf / "retry-safe-served-smoke.yml").write_text(
             retry_safe_served_workflow_good.replace(
-                '          printf \'%s\' "$DELETE_JSON" > smoke-input/delete.json\n',
-                "",
+                "scripts/write_databroker_served_smoke_inputs.py",
+                "scripts/missing_generator.py",
             ),
             encoding="utf-8",
         )
         failures = check_targeted_proof_workflows(root)
-        assert any("retry-safe Delete unconditional input materialization" in failure for failure in failures), failures
+        assert any("served proof input generator" in failure for failure in failures), failures
         (wf / "retry-safe-served-smoke.yml").write_text(retry_safe_served_workflow_good, encoding="utf-8")
 
         (wf / "retry-safe-served-smoke.yml").write_text(
@@ -8874,13 +8853,13 @@ jobs:
 
         (wf / "retry-safe-served-smoke.yml").write_text(
             retry_safe_served_workflow_good.replace(
-                "      delete_json:\n        required: true",
-                '      delete_json:\n        required: true\n        default: "{}"',
+                "      release_asset:\n        required: true",
+                "      release_asset:\n        required: false",
             ),
             encoding="utf-8",
         )
         failures = check_targeted_proof_workflows(root)
-        assert any("delete_json" in failure and "must not define a default" in failure for failure in failures), failures
+        assert any("release_asset" in failure and "must be required" in failure for failure in failures), failures
         (wf / "retry-safe-served-smoke.yml").write_text(retry_safe_served_workflow_good, encoding="utf-8")
 
         (wf / "rest-gateway-smoke.yml").write_text(

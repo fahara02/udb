@@ -64,7 +64,7 @@ pub fn rebuild_authz_snapshot_from_abac(
 }
 
 pub fn rebuild_method_security_scope_registry() -> usize {
-    crate::runtime::service::method_security::build_registry()
+    crate::runtime::service::build_method_security_registry()
         .values()
         .map(|security| {
             security.scopes.len()
@@ -77,18 +77,17 @@ pub fn rebuild_method_security_scope_registry() -> usize {
 }
 
 pub fn method_security_scope_paths() -> Vec<String> {
-    let mut paths: Vec<String> =
-        crate::runtime::service::method_security::method_security_registry()
-            .iter()
-            .filter(|(_, security)| !security.scopes.is_empty())
-            .map(|(path, _)| path.clone())
-            .collect();
+    let mut paths: Vec<String> = crate::runtime::service::method_security_registry()
+        .iter()
+        .filter(|(_, security)| !security.scopes.is_empty())
+        .map(|(path, _)| path.clone())
+        .collect();
     paths.sort();
     paths
 }
 
 pub fn method_security_scope_count(path: &str) -> usize {
-    crate::runtime::service::method_security::method_security(path)
+    crate::runtime::service::method_security(path)
         .map(|security| security.scopes.len())
         .unwrap_or_default()
 }
