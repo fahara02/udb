@@ -116,6 +116,20 @@ dispatches are observed; the failed `v0.3.7` ErrorDetail validation dispatch
 also confirmed that release tag predates the newer typed
 `SendPhoneVerification` validation path.
 
+2026-07-09 current-artifact served-proof repair: rerunning idempotency and
+retry-safe served proofs against `v0.3.7` after the input repair reached the
+actual replay assertions, then failed because the old release binary returns
+legacy mutation `resource_uri` shapes while current source and posture guards
+require `udb://{tenant}/{message}/{id}` replay summaries. Cutting a public
+release is intentionally separate release evidence, so the served proof
+workflows now keep release-asset download as the default path and add an
+explicit `broker_artifact_run_id` path that downloads the current main CI
+`udb-broker-debug` artifact through the shared
+`.github/actions/resolve-served-binary` action. This lets Chapter 14/15 served
+proofs validate current main semantics before a new release tag exists, without
+weakening the release-binary proof path. The workflow posture guard now pins the
+shared resolver action, release path, and current-artifact handoff.
+
 2026-07-09 active-tail source validation refresh: the no-cargo Chapter 14 guard
 batch is green after fixing two local drifts. The beta-versioning guard now
 requires version-independent beta/pre-1.0 wording instead of stale `0.3.6`

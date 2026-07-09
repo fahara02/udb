@@ -1,0 +1,72 @@
+name: Resolve served smoke binary
+description: Download a served-smoke broker binary from a release asset or an explicit CI artifact run.
+
+inputs:
+  release-tag:
+    description: Release tag to prove, or latest when broker-artifact-run-id is empty.
+    required: true
+  release-asset:
+    description: Linux release asset name to download when broker-artifact-run-id is empty.
+    required: true
+  broker-artifact-run-id:
+    description: Optional CI run id containing the udb-broker-debug artifact to prove current main before release.
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve served smoke binary
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        RELEASE_TAG: ${{ inputs.release-tag }}
+        RELEASE_ASSET: ${{ inputs.release-asset }}
+        BROKER_ARTIFACT_RUN_ID: ${{ inputs.broker-artifact-run-id }}
+      run: |
+        set -euo pipefail
+        mkdir -p smoke-output/bin smoke-output/logs smoke-input
+
+        if [ -n "${BROKER_ARTIFACT_RUN_ID}" ]; then
+          if [[ ! "${BROKER_ARTIFACT_RUN_ID}" =~ ^[1-9][0-9]*$ ]]; then
+            echo "::error::broker-artifact-run-id must be a positive GitHub Actions run id"
+            exit 1
+          fi
+          rm -rf smoke-output/bin-artifact
+          mkdir -p smoke-output/bin-artifact
+          gh run download "${BROKER_ARTIFACT_RUN_ID}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --name udb-broker-debug \
+            --dir smoke-output/bin-artifact
+          bin_path="$(find smoke-output/bin-artifact -type f -name udb -print -quit)"
+          if [ -z "${bin_path}" ]; then
+            echo "::error::udb-broker-debug artifact from run ${BROKER_ARTIFACT_RUN_ID} did not contain a udb binary"
+            find smoke-output/bin-artifact -maxdepth 3 -type f -print || true
+            exit 1
+          fi
+          cp "${bin_path}" smoke-output/bin/udb-served-artifact
+          chmod +x smoke-output/bin/udb-served-artifact
+          {
+            echo "UDB_SERVED_RELEASE_TAG=ci-artifact-${BROKER_ARTIFACT_RUN_ID}"
+            echo "UDB_SERVED_BIN=${GITHUB_WORKSPACE}/smoke-output/bin/udb-served-artifact"
+            echo "UDB_SERVED_BINARY_SOURCE=ci-artifact"
+          } >> "${GITHUB_ENV}"
+          exit 0
+        fi
+
+        tag="${RELEASE_TAG}"
+        if [ -z "${tag}" ] || [ "${tag}" = "latest" ]; then
+          tag="$(gh release view --repo "${GITHUB_REPOSITORY}" --json tagName --jq .tagName)"
+        fi
+        if [[ ! "${tag}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+          echo "::error::served smoke requires a released SemVer tag, got '${tag}'"
+          exit 1
+        fi
+        gh release view "${tag}" --repo "${GITHUB_REPOSITORY}" >/dev/null
+        gh release download "${tag}" --repo "${GITHUB_REPOSITORY}" --pattern "${RELEASE_ASSET}" --dir smoke-output/bin
+        chmod +x "smoke-output/bin/${RELEASE_ASSET}"
+        {
+          echo "UDB_SERVED_RELEASE_TAG=${tag}"
+          echo "UDB_SERVED_BIN=${GITHUB_WORKSPACE}/smoke-output/bin/${RELEASE_ASSET}"
+          echo "UDB_SERVED_BINARY_SOURCE=release"
+        } >> "${GITHUB_ENV}"

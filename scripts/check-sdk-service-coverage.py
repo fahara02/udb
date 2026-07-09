@@ -15,6 +15,8 @@ outputs silently remain stale.
 from __future__ import annotations
 
 import argparse
+import contextlib
+import io
 import json
 import sys
 import tempfile
@@ -215,6 +217,13 @@ def write_minimal_sdk(root: Path, service: ContractService, *, omit: str | None 
 
 
 def run_selftest() -> int:
+    def checked(root: Path) -> int:
+        # Negative fixtures intentionally emit ::error:: markers. Keep those out
+        # of GitHub Actions logs so expected selftest failures are not surfaced as
+        # real check annotations.
+        with contextlib.redirect_stdout(io.StringIO()):
+            return check_service_coverage(root)
+
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         service = ContractService("udb.core.foo.services.v1", "FooService")
@@ -223,7 +232,7 @@ def run_selftest() -> int:
             json.dumps({"services": [{"service": service.full_name}]}) + "\n",
         )
         write_minimal_sdk(root, service)
-        assert check_service_coverage(root) == 0, "complete six-language fixture failed"
+        assert checked(root) == 0, "complete six-language fixture failed"
 
         missing = root / "missing"
         write(
@@ -231,7 +240,7 @@ def run_selftest() -> int:
             json.dumps({"services": [{"service": service.full_name}]}) + "\n",
         )
         write_minimal_sdk(missing, service, omit="python")
-        assert check_service_coverage(missing) == 1, "missing language should fail"
+        assert checked(missing) == 1, "missing language should fail"
 
         stale = root / "stale"
         write(
@@ -241,7 +250,7 @@ def run_selftest() -> int:
         write_minimal_sdk(stale, service)
         stale_stub = stale / "sdk/go/gen" / rel_package_path(service) / "foo.pb.go"
         stale_stub.write_text("func NewOtherServiceClient() {}\n", encoding="utf-8")
-        assert check_service_coverage(stale) == 1, "stale generated stub should fail"
+        assert checked(stale) == 1, "stale generated stub should fail"
 
     print("sdk service coverage selftest passed")
     return 0

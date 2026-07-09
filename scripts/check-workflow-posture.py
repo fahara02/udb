@@ -272,9 +272,12 @@ TARGETED_PROOF_WORKFLOW_REQUIREMENTS = {
         ("error-detail-served:", "ErrorDetail served proof job"),
         ("release_tag:", "served release-tag input"),
         ("release_asset:", "served release-asset input"),
+        ("broker_artifact_run_id:", "current broker artifact input"),
+        ("actions: read", "served binary artifact read permission"),
         ("postgres:", "served Postgres service"),
         ("mongodb:", "served MongoDB service"),
-        ("gh release download", "served release binary download"),
+        ("uses: ./.github/actions/resolve-served-binary", "shared served binary resolver"),
+        ("broker-artifact-run-id: ${{ inputs.broker_artifact_run_id }}", "current broker artifact handoff"),
         ("uses: ./.github/actions/start-backends", "served backend action reuse"),
         ("uses: ./.github/actions/broker-env", "served broker env reuse"),
         ("UDB_OTP_COOLDOWN_SECONDS=60", "ErrorDetail quota cooldown override"),
@@ -304,9 +307,12 @@ TARGETED_PROOF_WORKFLOW_REQUIREMENTS = {
         ("idempotency-served-replay:", "idempotency served replay job"),
         ("release_tag:", "served release-tag input"),
         ("release_asset:", "served release-asset input"),
+        ("broker_artifact_run_id:", "current broker artifact input"),
+        ("actions: read", "served binary artifact read permission"),
         ("postgres:", "served Postgres service"),
         ("mongodb:", "served MongoDB service"),
-        ("gh release download", "served release binary download"),
+        ("uses: ./.github/actions/resolve-served-binary", "shared served binary resolver"),
+        ("broker-artifact-run-id: ${{ inputs.broker_artifact_run_id }}", "current broker artifact handoff"),
         ("uses: ./.github/actions/start-backends", "served backend action reuse"),
         ("uses: ./.github/actions/broker-env", "served broker env reuse"),
         ("uses: ./.github/actions/launch-broker", "served broker launch action reuse"),
@@ -402,9 +408,12 @@ TARGETED_PROOF_WORKFLOW_REQUIREMENTS = {
         ("retry-safe-served:", "retry-safe served proof job"),
         ("release_tag:", "served release-tag input"),
         ("release_asset:", "served release-asset input"),
+        ("broker_artifact_run_id:", "current broker artifact input"),
+        ("actions: read", "served binary artifact read permission"),
         ("postgres:", "served Postgres service"),
         ("mongodb:", "served MongoDB service"),
-        ("gh release download", "served release binary download"),
+        ("uses: ./.github/actions/resolve-served-binary", "shared served binary resolver"),
+        ("broker-artifact-run-id: ${{ inputs.broker_artifact_run_id }}", "current broker artifact handoff"),
         ("uses: ./.github/actions/start-backends", "served backend action reuse"),
         ("uses: ./.github/actions/broker-env", "served broker env reuse"),
         ("uses: ./.github/actions/launch-broker", "served broker launch action reuse"),
@@ -733,6 +742,18 @@ COMPOSITE_ACTION_SOURCE_REQUIREMENTS = {
         ("tail -n 200 \"${LOG}\"", "failure log tail"),
         ("Broker not ready within", "timeout failure message"),
         ("exit 1", "fail-closed readiness timeout"),
+    ),
+    ".github/actions/resolve-served-binary/action.yml": (
+        ("broker-artifact-run-id:", "current CI artifact input"),
+        ("release-tag:", "release tag input"),
+        ("release-asset:", "release asset input"),
+        ("gh run download \"${BROKER_ARTIFACT_RUN_ID}\"", "current CI artifact download"),
+        ("--name udb-broker-debug", "single broker artifact name"),
+        ("find smoke-output/bin-artifact -type f -name udb", "artifact binary discovery"),
+        ("UDB_SERVED_RELEASE_TAG=ci-artifact-${BROKER_ARTIFACT_RUN_ID}", "artifact source marker"),
+        ("gh release download \"${tag}\"", "release binary download"),
+        ("UDB_SERVED_BINARY_SOURCE=release", "release source marker"),
+        ("UDB_SERVED_BIN=", "served binary env export"),
     ),
     ".github/actions/start-backends/action.yml": (
         ("docker run -d --name udb-bench-minio", "MinIO container name"),
@@ -8333,8 +8354,12 @@ on:
       release_asset:
         required: true
         default: udb-linux-amd64-full
+      broker_artifact_run_id:
+        required: false
+        default: ""
 permissions:
   contents: read
+  actions: read
 concurrency:
   group: error-detail-served-smoke-${{ github.ref }}
 jobs:
@@ -8347,7 +8372,11 @@ jobs:
       mongodb:
         image: mongo:7
     steps:
-      - run: gh release download
+      - uses: ./.github/actions/resolve-served-binary
+        with:
+          release-tag: ${{ inputs.release_tag }}
+          release-asset: ${{ inputs.release_asset }}
+          broker-artifact-run-id: ${{ inputs.broker_artifact_run_id }}
       - uses: ./.github/actions/start-backends
       - uses: ./.github/actions/broker-env
       - run: echo "UDB_OTP_COOLDOWN_SECONDS=60" >> "$GITHUB_ENV"
@@ -8376,8 +8405,12 @@ on:
       release_asset:
         required: true
         default: udb-linux-amd64-full
+      broker_artifact_run_id:
+        required: false
+        default: ""
 permissions:
   contents: read
+  actions: read
 concurrency:
   group: idempotency-served-smoke-${{ github.ref }}
 jobs:
@@ -8389,7 +8422,11 @@ jobs:
       postgres: {}
       mongodb: {}
     steps:
-      - run: gh release download
+      - uses: ./.github/actions/resolve-served-binary
+        with:
+          release-tag: ${{ inputs.release_tag }}
+          release-asset: ${{ inputs.release_asset }}
+          broker-artifact-run-id: ${{ inputs.broker_artifact_run_id }}
       - uses: ./.github/actions/start-backends
       - uses: ./.github/actions/broker-env
       - run: Bootstrap served-smoke users
@@ -8422,8 +8459,12 @@ on:
       release_asset:
         required: true
         default: udb-linux-amd64-full
+      broker_artifact_run_id:
+        required: false
+        default: ""
 permissions:
   contents: read
+  actions: read
 concurrency:
   group: retry-safe-served-smoke-${{ github.ref }}
 jobs:
@@ -8435,7 +8476,11 @@ jobs:
       postgres: {}
       mongodb: {}
     steps:
-      - run: gh release download
+      - uses: ./.github/actions/resolve-served-binary
+        with:
+          release-tag: ${{ inputs.release_tag }}
+          release-asset: ${{ inputs.release_asset }}
+          broker-artifact-run-id: ${{ inputs.broker_artifact_run_id }}
       - uses: ./.github/actions/start-backends
       - uses: ./.github/actions/broker-env
       - run: Bootstrap served-smoke users
