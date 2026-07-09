@@ -279,7 +279,11 @@ TARGETED_PROOF_WORKFLOW_REQUIREMENTS = {
         ("uses: ./.github/actions/resolve-served-binary", "shared served binary resolver"),
         ("broker-artifact-run-id: ${{ inputs.broker_artifact_run_id }}", "current broker artifact handoff"),
         ("uses: ./.github/actions/start-backends", "served backend action reuse"),
+        ('clickhouse: "false"', "served proof skips unsupported ClickHouse for slim artifacts"),
+        ('neo4j: "false"', "served proof skips unsupported Neo4j for slim artifacts"),
         ("uses: ./.github/actions/broker-env", "served broker env reuse"),
+        ('enable_column_backend: "false"', "served proof skips ClickHouse env export"),
+        ('enable_graph_backend: "false"', "served proof skips Neo4j env export"),
         ("UDB_OTP_COOLDOWN_SECONDS=60", "ErrorDetail quota cooldown override"),
         ("uses: ./.github/actions/launch-broker", "served broker launch action reuse"),
         ("Bootstrap served-smoke user", "served smoke user bootstrap"),
@@ -314,7 +318,11 @@ TARGETED_PROOF_WORKFLOW_REQUIREMENTS = {
         ("uses: ./.github/actions/resolve-served-binary", "shared served binary resolver"),
         ("broker-artifact-run-id: ${{ inputs.broker_artifact_run_id }}", "current broker artifact handoff"),
         ("uses: ./.github/actions/start-backends", "served backend action reuse"),
+        ('clickhouse: "false"', "served proof skips unsupported ClickHouse for slim artifacts"),
+        ('neo4j: "false"', "served proof skips unsupported Neo4j for slim artifacts"),
         ("uses: ./.github/actions/broker-env", "served broker env reuse"),
+        ('enable_column_backend: "false"', "served proof skips ClickHouse env export"),
+        ('enable_graph_backend: "false"', "served proof skips Neo4j env export"),
         ("uses: ./.github/actions/launch-broker", "served broker launch action reuse"),
         ("Bootstrap served-smoke users", "served smoke user bootstrap"),
         ("scripts/write_databroker_served_smoke_inputs.py", "served proof input generator"),
@@ -415,7 +423,11 @@ TARGETED_PROOF_WORKFLOW_REQUIREMENTS = {
         ("uses: ./.github/actions/resolve-served-binary", "shared served binary resolver"),
         ("broker-artifact-run-id: ${{ inputs.broker_artifact_run_id }}", "current broker artifact handoff"),
         ("uses: ./.github/actions/start-backends", "served backend action reuse"),
+        ('clickhouse: "false"', "served proof skips unsupported ClickHouse for slim artifacts"),
+        ('neo4j: "false"', "served proof skips unsupported Neo4j for slim artifacts"),
         ("uses: ./.github/actions/broker-env", "served broker env reuse"),
+        ('enable_column_backend: "false"', "served proof skips ClickHouse env export"),
+        ('enable_graph_backend: "false"', "served proof skips Neo4j env export"),
         ("uses: ./.github/actions/launch-broker", "served broker launch action reuse"),
         ("Bootstrap served-smoke users", "served smoke user bootstrap"),
         ("scripts/write_databroker_served_smoke_inputs.py", "served proof input generator"),
@@ -690,6 +702,10 @@ COMPOSITE_ACTION_SOURCE_REQUIREMENTS = {
         ("echo \"UDB_KAFKA_BROKERS=localhost:59192\"", "Kafka broker env"),
         ("echo \"UDB_QDRANT_URL=http://localhost:6333\"", "Qdrant URL env"),
         ("echo \"UDB_REDIS_DSN=redis://localhost:6379/0\"", "Redis DSN env"),
+        ("enable_column_backend:", "ClickHouse env toggle input"),
+        ("enable_graph_backend:", "Neo4j env toggle input"),
+        ('if [ "${ENABLE_COLUMN_BACKEND}" = "true" ]; then', "ClickHouse env conditional"),
+        ('if [ "${ENABLE_GRAPH_BACKEND}" = "true" ]; then', "Neo4j env conditional"),
         ("echo \"UDB_COLUMN_DSN=http://localhost:8123\"", "ClickHouse HTTP env"),
         ("echo \"UDB_GRAPH_DSN=http://localhost:7474\"", "Neo4j HTTP env"),
         ("echo \"UDB_ALLOW_DEGRADED_BACKENDS=true\"", "degraded optional backend posture"),
@@ -8378,7 +8394,13 @@ jobs:
           release-asset: ${{ inputs.release_asset }}
           broker-artifact-run-id: ${{ inputs.broker_artifact_run_id }}
       - uses: ./.github/actions/start-backends
+        with:
+          clickhouse: "false"
+          neo4j: "false"
       - uses: ./.github/actions/broker-env
+        with:
+          enable_column_backend: "false"
+          enable_graph_backend: "false"
       - run: echo "UDB_OTP_COOLDOWN_SECONDS=60" >> "$GITHUB_ENV"
       - run: echo "Bootstrap served-smoke user"
       - uses: ./.github/actions/launch-broker
@@ -8428,7 +8450,13 @@ jobs:
           release-asset: ${{ inputs.release_asset }}
           broker-artifact-run-id: ${{ inputs.broker_artifact_run_id }}
       - uses: ./.github/actions/start-backends
+        with:
+          clickhouse: "false"
+          neo4j: "false"
       - uses: ./.github/actions/broker-env
+        with:
+          enable_column_backend: "false"
+          enable_graph_backend: "false"
       - run: Bootstrap served-smoke users
       - run: echo "UDB_TENANT2_PROJECT=default-tenant2"
       - uses: ./.github/actions/launch-broker
@@ -8482,7 +8510,13 @@ jobs:
           release-asset: ${{ inputs.release_asset }}
           broker-artifact-run-id: ${{ inputs.broker_artifact_run_id }}
       - uses: ./.github/actions/start-backends
+        with:
+          clickhouse: "false"
+          neo4j: "false"
       - uses: ./.github/actions/broker-env
+        with:
+          enable_column_backend: "false"
+          enable_graph_backend: "false"
       - run: Bootstrap served-smoke users
       - run: echo "UDB_TENANT2_PROJECT=default-tenant2"
       - uses: ./.github/actions/launch-broker

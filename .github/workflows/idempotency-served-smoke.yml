@@ -99,8 +99,8 @@ jobs:
           kafka: "true"
           qdrant: "true"
           redis: "true"
-          clickhouse: "true"
-          neo4j: "true"
+          clickhouse: "false"
+          neo4j: "false"
 
       - name: Write broker env
         uses: ./.github/actions/broker-env
@@ -116,6 +116,8 @@ jobs:
           cdc_enabled: "true"
           startup_dry_run: "false"
           object_bucket: udb-storage
+          enable_column_backend: "false"
+          enable_graph_backend: "false"
 
       - name: Bootstrap served-smoke users
         shell: bash
