@@ -29,6 +29,8 @@ from udb_client.metadata import Metadata  # noqa: E402
 
 
 MESSAGE_TYPE = "udb.sdk.live.v1.SdkLiveRecord"
+PROOF_PURPOSE = "served-smoke-proof"
+PROOF_SCOPES = "udb:admin"
 
 
 @dataclass(frozen=True)
@@ -46,8 +48,8 @@ def _context(tenant_id: str, project_id: str) -> dict[str, object]:
     return {
         "tenant_id": tenant_id,
         "project_id": project_id,
-        "purpose": "served-smoke-proof",
-        "scopes": ["udb:admin"],
+        "purpose": PROOF_PURPOSE,
+        "scopes": [PROOF_SCOPES],
     }
 
 
@@ -172,8 +174,21 @@ def write_inputs(out_dir: Path, primary: AuthProof, tenant2: AuthProof) -> None:
         out_dir / "retry-delete.json",
         _delete(primary.tenant_id, primary.project_id, retry_record, idempotency_key=f"retry-{nonce}"),
     )
-    (out_dir / "header.txt").write_text(f"authorization: Bearer {primary.bearer}\n", encoding="utf-8")
-    (out_dir / "tenant2-header.txt").write_text(f"authorization: Bearer {tenant2.bearer}\n", encoding="utf-8")
+    (out_dir / "header.txt").write_text(_headers(primary, "databroker-served-smoke-primary"), encoding="utf-8")
+    (out_dir / "tenant2-header.txt").write_text(_headers(tenant2, "databroker-served-smoke-tenant2"), encoding="utf-8")
+
+
+def _headers(proof: AuthProof, correlation_id: str) -> str:
+    return (
+        f"authorization: Bearer {proof.bearer}\n"
+        f"x-tenant-id: {proof.tenant_id}\n"
+        f"x-udb-project-id: {proof.project_id}\n"
+        f"x-purpose: {PROOF_PURPOSE}\n"
+        f"x-correlation-id: {correlation_id}\n"
+        f"x-request-id: {correlation_id}\n"
+        f"x-scopes: {PROOF_SCOPES}\n"
+        "x-service-identity: databroker-served-smoke\n"
+    )
 
 
 def main() -> int:
@@ -187,7 +202,9 @@ def main() -> int:
     parser.add_argument("--tenant2-password", required=True)
     parser.add_argument("--tenant2", required=True)
     parser.add_argument("--project", default="default")
+    parser.add_argument("--tenant2-project")
     args = parser.parse_args()
+    tenant2_project = args.tenant2_project or f"{args.project}-tenant2"
 
     primary = authenticate(
         args.auth_target,
@@ -202,7 +219,7 @@ def main() -> int:
         args.tenant2_username,
         args.tenant2_password,
         args.tenant2,
-        args.project,
+        tenant2_project,
         purpose="databroker-served-smoke-tenant2",
     )
     write_inputs(args.out_dir, primary, tenant2)

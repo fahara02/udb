@@ -313,6 +313,8 @@ TARGETED_PROOF_WORKFLOW_REQUIREMENTS = {
         ("Bootstrap served-smoke users", "served smoke user bootstrap"),
         ("scripts/write_databroker_served_smoke_inputs.py", "served proof input generator"),
         ("--tenant2-username", "tenant2 auth fixture generation"),
+        ("UDB_TENANT2_PROJECT", "tenant2 project fixture generation"),
+        ("--tenant2-project", "tenant2 project generator handoff"),
         ("python -m pip install -e sdk/python", "Python SDK runtime install"),
         ("python scripts/idempotency_served_replay_smoke.py --selftest", "idempotency served smoke selftest"),
         ("Run live idempotency replay proofs", "healthy dedup replay phase"),
@@ -408,6 +410,8 @@ TARGETED_PROOF_WORKFLOW_REQUIREMENTS = {
         ("uses: ./.github/actions/launch-broker", "served broker launch action reuse"),
         ("Bootstrap served-smoke users", "served smoke user bootstrap"),
         ("scripts/write_databroker_served_smoke_inputs.py", "served proof input generator"),
+        ("UDB_TENANT2_PROJECT", "tenant2 project fixture generation"),
+        ("--tenant2-project", "tenant2 project generator handoff"),
         ("python -m pip install -e sdk/python", "Python SDK runtime install"),
         ("python scripts/retry_safe_served_smoke.py --selftest", "retry-safe smoke selftest"),
         ("--require-all-proofs", "complete retry-safe Upsert/Delete proof gate"),
@@ -8389,8 +8393,9 @@ jobs:
       - uses: ./.github/actions/start-backends
       - uses: ./.github/actions/broker-env
       - run: Bootstrap served-smoke users
+      - run: echo "UDB_TENANT2_PROJECT=default-tenant2"
       - uses: ./.github/actions/launch-broker
-      - run: python scripts/write_databroker_served_smoke_inputs.py --tenant2-username x
+      - run: python scripts/write_databroker_served_smoke_inputs.py --tenant2-username x --tenant2-project "${UDB_TENANT2_PROJECT}"
       - run: python -m pip install -e sdk/python
       - run: python scripts/idempotency_served_replay_smoke.py --selftest
       - run: |
@@ -8434,8 +8439,9 @@ jobs:
       - uses: ./.github/actions/start-backends
       - uses: ./.github/actions/broker-env
       - run: Bootstrap served-smoke users
+      - run: echo "UDB_TENANT2_PROJECT=default-tenant2"
       - uses: ./.github/actions/launch-broker
-      - run: python scripts/write_databroker_served_smoke_inputs.py
+      - run: python scripts/write_databroker_served_smoke_inputs.py --tenant2-project "${UDB_TENANT2_PROJECT}"
       - run: python -m pip install -e sdk/python
       - run: python scripts/retry_safe_served_smoke.py --selftest
       - run: |

@@ -8089,6 +8089,20 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
         ),
     ),
     TokenCheck(
+        "served ErrorDetail input generator emits full proof metadata",
+        "scripts/write_error_detail_served_smoke_inputs.py",
+        (
+            'PROOF_PURPOSE = "error-detail-served-smoke"',
+            '("x-purpose", PROOF_PURPOSE)',
+            '("x-request-id", f"error-detail-served-smoke-{nonce}")',
+            '("x-scopes", "udb:admin")',
+            '"phone": ""',
+            "x-purpose: {PROOF_PURPOSE}",
+            "x-request-id: error-detail-served-smoke-{nonce}",
+            "x-scopes: udb:admin",
+        ),
+    ),
+    TokenCheck(
         "cross-language SDK ErrorDetail fixtures assert canonical validation and quota shapes",
         "sdk/go/udbclient/errordetail_test.go",
         (
