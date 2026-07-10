@@ -693,7 +693,6 @@ mod tests {
     use super::*;
     use crate::proto::{ErrorDetail, ErrorKind};
     use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
-    use prost::Message as _;
     use serde_json::json;
 
     fn decode_detail(status: &tonic::Status) -> ErrorDetail {
@@ -882,7 +881,6 @@ mod b5_lifecycle_capability_tests {
     use crate::proto::{ErrorDetail, ErrorKind};
     use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
     use crate::runtime::executors::ResourceAdminExecutor;
-    use prost::Message as _;
 
     /// Decode the prost `ErrorDetail` from the binary trailer the way an SDK
     /// would — same pattern as `executor_utils::error_detail_tests`.

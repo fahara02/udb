@@ -16,11 +16,12 @@ packages wrap this content verbatim.
 
 UDB is a **proto-driven multi-database broker** in Rust (tonic/prost gRPC, sqlx).
 Developers declare entities as annotated protobuf messages; from that ONE
-contract UDB derives DB schema (DDL), runtime security enforcement, ~17 native
-services / 260+ RPCs, six language SDKs, CLI scaffolds and docs. Three planes:
-Current product/SDK baseline is **0.3.7** with wire protocol **1.0.0**; version
-strings must continue to derive from manifests/`env!("CARGO_PKG_VERSION")`, not
-hand-coded literals.
+contract UDB derives DB schema (DDL), runtime security enforcement, **27 native
+services / 344 RPCs (77 DataBroker + 267 native)**, six language SDKs, CLI
+scaffolds and docs. Three planes:
+Current product/SDK baseline is **0.4.0** with wire protocol **1.0.0**.
+Version strings must continue to derive from
+manifests/`env!("CARGO_PKG_VERSION")`, not hand-coded literals.
 
 1. **Data plane** — the `DataBroker` gRPC service (`Select`/`Upsert`/`Delete`,
    typed cache/document/graph/timeseries RPCs, batch streams, GenericDispatch)
@@ -28,9 +29,12 @@ hand-coded literals.
    cassandra, clickhouse, neo4j, redis, memcached, elasticsearch, qdrant,
    pinecone, weaviate, s3/minio, …(see `src/backend/mod.rs::BackendKind`).
 2. **Native control plane** — first-class services (authn, authz, apikey, idp,
-   tenant, notification, analytics, storage, asset, webrtc room/peer/track/turn,
-   control-plane) mounted on a SEPARATE listener (default loopback, broker
-   port+10) — the public broker listener serves only health/reflection/DataBroker.
+   tenant, notification, analytics, storage, asset, webrtc room/peer/track/turn/
+   signaling, control-plane, plus the platform wave: vault, metering, scheduler,
+   search, webhook, workflow, lock, livequery, config, backup, embedding, cache)
+   mounted on a SEPARATE listener (default loopback, broker port+10) — the
+   public broker listener serves only health/reflection/DataBroker. A third
+   listener (port+20) serves the WebRTC peer plane.
 3. **Event plane** — transactional outbox → CDC tailer → Kafka, with journal,
    DLQ, idempotency and tenant-scoped subscriber streams.
 
@@ -54,11 +58,13 @@ the generic Rust/SQL/engine knowledge you already have):
   gRPC status-code conventions, redacting Debug, the test harness).
 - **`backends.md`** (`shared/udb-coding-backends.md`) — per-engine quirks for
   all 18 backends: RLS/tenant posture, canonical-store tier, and the exact
-  live-DB + audit traps (MSSQL `@read_only` pooled-connection break, Neo4j MERGE
-  lease race, Redis Lua-only lease refresh, ClickHouse/Mongo "Enforced"-but-raw
-  cross-tenant lies, MySQL 8.4 replication syntax, vector stores are
-  projection-only). Read the row before touching any `executors/<b>.rs`,
-  `ir/compile/<b>.rs`, or `canonical_store/<b>*.rs`.
+  live-DB + audit traps (MSSQL `@read_only` pooled-connection break + EXEC()
+  deferred compilation, Neo4j MERGE lease race, Redis Lua-only lease refresh,
+  ClickHouse/Mongo "Enforced"-but-raw cross-tenant lies, ClickHouse Keeper-only
+  leases, MySQL 8.4 replication syntax + `XA RECOVER` text-protocol, PG
+  promoted-primary fence + aggregate-RLS-GUC, ES-only vector CAS with
+  Qdrant/Weaviate/Pinecone fail-closed). Read the row before touching any
+  `executors/<b>.rs`, `ir/compile/<b>.rs`, or `canonical_store/<b>*.rs`.
 
 ## 2. The proto→runtime pipeline (the spine — understand this first)
 
@@ -128,9 +134,23 @@ Rust array, you are probably violating the pipeline (derive it instead).
    `backend_context.rs` (e.g. MSSQL `sp_set_session_context` — no `@read_only`,
    connections are pooled); each executor's `enforce()` reports its RLS posture
    (Enforced/Advisory) and MUST tell the truth per path.
-7. **Receipts/fences** — write receipts embed the canonical store's
-   `outbox_max_seq`; read fences use per-backend durability tokens
-   (`wait_for_token`) for bounded staleness.
+7. **Receipts/fences/consistency** — mutations return a typed
+   `MutationResponse.write_receipt` (`WriteReceipt`: source_lsn, outbox_seq,
+   projection_task_ids, manifest_checksum) kept in lockstep with the legacy
+   `write_receipt_json`; reads may carry `RequestContext.read_fence` and/or
+   `consistency_mode` (`ConsistencyMode` enum — wire tokens pinned in
+   `src/runtime/consistency.rs::as_str`, honored from both the typed field and
+   the `x-udb-consistency` header). Fences use per-backend durability tokens
+   (`wait_for_token`) — PG's must gate on `pg_is_in_recovery()` (a PROMOTED
+   primary retains a stale non-null replay LSN; that bug shipped).
+8. **Durable idempotency** — a keyed replay-safe Upsert/Delete claims a
+   tenant/project/message-type/operation-scoped dedup row IN THE SAME
+   transaction as the write and persists the first-writer response; a replay
+   returns it with `was_duplicate=true` (never re-runs the write); the Redis
+   pre-check fails CLOSED when the dedup store is down. SDK retry gating: a
+   mutation is auto-retried ONLY when proto `replay_safe` AND a caller key is
+   present — keyless replay-safe mutations are deliberately NOT retried (a
+   tested contract in all six SDK retry suites; do not "fix" it with auto-keys).
 
 **0.3.7 operator-facing guardrails:** `src/cli/help.rs` answers `udb --help`,
 `udb help <cmd>`, command `--help`, and `udb --version` before expensive startup
@@ -170,7 +190,19 @@ pool → `enqueue_outbox_event` (versioned dot topic `udb.<svc>.<entity>.<verb>.
 | `notification_service/` | preferences (`is_opted_out` → SUPPRESSED rows excluded from emit; `channel_send_decision`), tenant-bound template selection (`template_selection_sql`), `retry_notification` re-emits with retry flag |
 | `storage_service/` | register/finalize/update (presence-guarded `is_public` binds — proto3 `optional` + COALESCE), presigned URLs, quota, GC + `WORKER_STORAGE_ORPHAN_REAPER` |
 | `asset_service/` | pipelines + `AssetStepExecutor` (EMBED→Qdrant), `spawn_storage_finalized_consumer` (Kafka earliest + manual commit AFTER success — the at-least-once consumer template) |
-| `webrtc_service/` | rooms/peers/tracks/TURN(fail-closed); `SignalingHub` broadcast: `HubFrame::{Signal,RoomClosed,PeerClosed}`, `dispose_hub_frame` (PeerClosed ends only that peer), `disconnect_bound_peer` on stream death, periodic membership recheck, stale-peer reaper |
+| `webrtc_service/` | rooms/peers/tracks/TURN(fail-closed); `SignalingHub` broadcast: `HubFrame::{Signal,RoomClosed,PeerClosed}`, `dispose_hub_frame` (PeerClosed ends only that peer), `disconnect_bound_peer` on stream death, periodic membership recheck, stale-peer reaper; egress via `SfuBridge` seam (LiveKit token backend binds {tenant,room,peer}; disabled ⇒ `failed_precondition`) |
+| `vault_service/` | 3 engines, 1 crypto stack (AES-256-GCM-SIV envelope reused from `runtime/encryption.rs`): versioned KV (CAS, soft-delete, crypto-shred destroy), transit (encrypt/decrypt/sign/verify/hmac by key NAME; material never exported), seal — `check_seal` gates EVERY handler `failed_precondition` when the master key is unavailable; destroyed-version reaper worker |
+| `lock_service/` | advisory locks over the canonical-store lease trait; **monotonic fencing tokens**, stale token ⇒ `failed_precondition` |
+| `scheduler_service/` | cron + one-shot jobs; claim via `FOR UPDATE SKIP LOCKED`; leader `WORKER_SCHEDULER_TICK` |
+| `webhook_service/` | endpoint CRUD + delivery worker; **SSRF guard is deny-by-default** (loopback/private/link-local/CGNAT/unspecified/IPv4-mapped) AND re-resolves DNS at delivery time (fail-closed) |
+| `search_service/` | index lifecycle + query; pure `reciprocal_rank_fusion`; tenant filter derived from the VERIFIED claim, injected server-side |
+| `cache_service/` | Redis-backed namespaces; sweep uses `SCAN` (never `KEYS`); per-tenant byte budget ⇒ `resource_exhausted` |
+| `livequery_service/` | `Subscribe` server-stream; bounded buffer (`LIVEQUERY_BUFFER_EVENTS`) — overflow CLOSES the stream `resource_exhausted`, never grows; tenant-filtered fail-closed |
+| `config_service/` | feature flags; deterministic FNV-1a percentage rollout; OnceLock'd TTL |
+| `metering_service/` | usage + quotas; **the RLS-GUC rule:** the windowed aggregate read opens a tx and installs `app.current_tenant_id` BEFORE the SUM (a bare pool read matches 0 rows under RLS — this shipped as a real under-report bug); regression test pins it |
+| `backup_service/` | tenant-scoped backup/restore; `validate_tenant_movement_scope` + restore only into a FRESH target |
+| `embedding_service/` | sources + `ReportEmbedding` + vector `Retrieve`; leader backfill work-emitter — its served select MUST carry the project column (`resolve_project_column`) and any `udb_cdc_event_journal` reader MUST `COALESCE(top, payload->'payload')` because the CDC tailer envelope-nests emit fields (three real bugs shipped here) |
+| `workflow_service/` | workflows/sagas (`SagaKind::Workflow`), signal/cancel + compensation, `FOR UPDATE SKIP LOCKED` claim, tick worker |
 | `native_helpers.rs` | THE shared kit: `admit_on`, `emit_event`, `enqueue_outbox_event`, `validate_request_scope`, `MAX_LIST_ROWS`, `DEFAULT_OBJECT_BUCKET`, `execute_stream_batch_item`, pagination |
 
 **Background workers** are leader-elected: consts `WORKER_*` +

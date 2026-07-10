@@ -950,7 +950,8 @@ impl SearchService for SearchServiceImpl {
         .await?;
         let runtime = self.require_runtime()?;
         let catalog = self.require_catalog()?;
-        let context = native_service_context(&metadata, &tenant_id, "");
+        let mut context = native_service_context(&metadata, &tenant_id, "");
+        context.scopes.push("udb:vector:read".to_string());
         let top_k = resolve_top_k(req.top_k);
 
         // Resolve the target index(es): a single named index, or all of the
@@ -1222,7 +1223,6 @@ mod search_scope_tests {
     use super::*;
     use crate::proto::{ErrorDetail, ErrorKind};
     use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
-    use prost::Message as _;
     use tonic::metadata::MetadataValue;
 
     fn decode_detail(status: &Status) -> ErrorDetail {

@@ -333,7 +333,6 @@ mod tests {
     use crate::proto::{ErrorDetail, ErrorKind};
     use crate::runtime::authz::AuthzSnapshot;
     use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
-    use prost::Message as _;
     use tonic::{Code, Request};
 
     fn svc() -> AuthzServiceImpl {

@@ -40,7 +40,7 @@ use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
 use sha2::{Digest, Sha256};
-use sqlx::PgPool;
+use sqlx::{PgPool, Row};
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
 
@@ -391,6 +391,17 @@ fn restored_unique_value(
     value
 }
 
+fn can_remap_unique_value(column: Option<&ManifestColumn>) -> bool {
+    let sql_type = column
+        .map(|column| column.sql_type.as_str())
+        .unwrap_or_default()
+        .to_ascii_lowercase();
+    sql_type.contains("uuid")
+        || sql_type.contains("char")
+        || sql_type.contains("text")
+        || sql_type.is_empty()
+}
+
 fn varchar_limit(sql_type: &str) -> Option<usize> {
     let open = sql_type.find('(')?;
     let close = sql_type[open + 1..].find(')')? + open + 1;
@@ -426,11 +437,26 @@ fn apply_cross_tenant_restore_remaps(
     tenant_column: &str,
     target_tenant_id: &str,
     remaps: &mut RestoreValueRemaps,
+    extra_unique_columns: &[String],
 ) {
-    for column in unique_restore_columns(table, tenant_column) {
+    let mut columns = unique_restore_columns(table, tenant_column);
+    let mut seen: HashSet<String> = columns.iter().cloned().collect();
+    for column in extra_unique_columns {
+        if seen.insert(column.clone()) {
+            columns.push(column.clone());
+        }
+    }
+    for column in columns {
         let Some(serde_json::Value::String(old_value)) = row.get(&column) else {
             continue;
         };
+        if old_value.is_empty() {
+            continue;
+        }
+        let column_meta = manifest_column(table, &column);
+        if !can_remap_unique_value(column_meta) {
+            continue;
+        }
         let key = RestoreColumnKey {
             schema: table.schema.clone(),
             table: table.table.clone(),
@@ -439,12 +465,72 @@ fn apply_cross_tenant_restore_remaps(
         let values = remaps.entry(key).or_default();
         let new_value = values
             .entry(old_value.clone())
-            .or_insert_with(|| {
-                restored_unique_value(manifest_column(table, &column), target_tenant_id, old_value)
-            })
+            .or_insert_with(|| restored_unique_value(column_meta, target_tenant_id, old_value))
             .clone();
         row.insert(column, serde_json::Value::String(new_value));
     }
+}
+
+async fn postgres_unique_restore_columns(
+    pool: &PgPool,
+    schema: &str,
+    table: &str,
+    tenant_column: &str,
+    table_meta: &ManifestTable,
+) -> Result<Vec<String>, Status> {
+    let fk_columns: HashSet<&str> = table_meta
+        .foreign_keys
+        .iter()
+        .flat_map(|fk| fk.columns.iter().map(String::as_str))
+        .collect();
+    let sql = r#"
+        SELECT cols
+        FROM (
+          SELECT i.indexrelid, array_agg(a.attname::text ORDER BY k.ordinality) AS cols
+          FROM pg_catalog.pg_index i
+          JOIN pg_catalog.pg_class c ON c.oid = i.indrelid
+          JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+          JOIN unnest(i.indkey) WITH ORDINALITY AS k(attnum, ordinality) ON true
+          JOIN pg_catalog.pg_attribute a ON a.attrelid = c.oid AND a.attnum = k.attnum
+          WHERE i.indisunique
+            AND n.nspname = $1
+            AND c.relname = $2
+            AND k.attnum > 0
+          GROUP BY i.indexrelid
+        ) unique_indexes
+        WHERE NOT ($3 = ANY(cols))
+    "#;
+    let rows = sqlx::query(sql)
+        .bind(schema)
+        .bind(table)
+        .bind(tenant_column)
+        .fetch_all(pool)
+        .await
+        .map_err(|err| {
+            backup_internal_status(
+                "restore_unique_index_probe",
+                format!("restore unique-index probe failed for {schema}.{table}: {err}"),
+            )
+        })?;
+    let mut columns = Vec::new();
+    let mut seen = HashSet::new();
+    for row in rows {
+        let cols: Vec<String> = row.try_get("cols").map_err(|err| {
+            backup_internal_status(
+                "restore_unique_index_probe",
+                format!("restore unique-index row decode failed for {schema}.{table}: {err}"),
+            )
+        })?;
+        for column in cols {
+            if column != tenant_column
+                && !fk_columns.contains(column.as_str())
+                && seen.insert(column.clone())
+            {
+                columns.push(column);
+            }
+        }
+    }
+    Ok(columns)
 }
 
 fn sha256_hex(bytes: &[u8]) -> String {
@@ -1273,6 +1359,23 @@ impl BackupService for BackupServiceImpl {
                 continue;
             }
             let manifest_table = manifest_table_by_relation(manifest, schema, table);
+            let db_unique_restore_columns = if cross_tenant_restore {
+                match manifest_table {
+                    Some(table_meta) => {
+                        postgres_unique_restore_columns(
+                            pool,
+                            schema,
+                            table,
+                            tenant_column,
+                            table_meta,
+                        )
+                        .await?
+                    }
+                    None => Vec::new(),
+                }
+            } else {
+                Vec::new()
+            };
             let get_req = crate::runtime::core::setup_data::object_request_json(
                 "get",
                 &object_bucket,
@@ -1340,6 +1443,7 @@ impl BackupService for BackupServiceImpl {
                             tenant_column,
                             &target_tenant_id,
                             &mut restore_remaps,
+                            &db_unique_restore_columns,
                         );
                     }
                 }
@@ -1864,7 +1968,6 @@ mod backup_tests {
     use crate::generation::{CatalogManifest, ManifestColumn, ManifestTable};
     use crate::proto::{ErrorDetail, ErrorKind};
     use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
-    use prost::Message as _;
     use tonic::metadata::MetadataValue;
 
     fn decode_detail(status: &Status) -> ErrorDetail {

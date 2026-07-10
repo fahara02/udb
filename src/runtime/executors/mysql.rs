@@ -505,7 +505,6 @@ mod tests {
     use super::*;
     use crate::proto::{ErrorDetail, ErrorKind};
     use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
-    use prost::Message as _;
     use sqlx::mysql::MySqlPoolOptions;
 
     fn lazy_pool() -> MySqlPool {

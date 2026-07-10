@@ -5,7 +5,6 @@ use crate::proto::{ErrorDetail, ErrorKind};
 use crate::runtime::config::UdbConfig;
 use crate::runtime::core::DataBrokerRuntime;
 use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
-use prost::Message as _;
 use serde_json::json;
 use std::sync::Arc;
 use tonic::Status;

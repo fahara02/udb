@@ -2,6 +2,12 @@
 use super::*;
 use crate::control::tracker::DEFAULT_LEDGER_SCHEMA;
 
+// Serving callers live in the `#[cfg(not(feature = "qdrant"))]` arms of
+// ensure/verify_qdrant_store; the unconditional pin test
+// `catalog_feature_disabled_statuses_carry_capability_detail` keeps the
+// disabled-path ErrorDetail contract alive in qdrant-on builds — hence
+// allow(dead_code) only there, so qdrant-off builds still detect rot.
+#[cfg_attr(feature = "qdrant", allow(dead_code))]
 fn qdrant_feature_disabled_status(operation: &'static str) -> tonic::Status {
     crate::runtime::executor_utils::capability_status(
         "qdrant",
@@ -11,6 +17,9 @@ fn qdrant_feature_disabled_status(operation: &'static str) -> tonic::Status {
     )
 }
 
+// Serving callers live in `#[cfg(not(feature = "s3"))]` arms; pin-tested (see
+// above) so s3-on builds keep the disabled-path contract compiled.
+#[cfg_attr(feature = "s3", allow(dead_code))]
 fn s3_feature_disabled_status(operation: &'static str) -> tonic::Status {
     crate::runtime::executor_utils::capability_status(
         "s3",
@@ -2037,7 +2046,6 @@ mod tests {
     use super::*;
     use crate::proto::{ErrorDetail, ErrorKind};
     use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
-    use prost::Message as _;
 
     fn decode_detail(status: &tonic::Status) -> ErrorDetail {
         let raw = status

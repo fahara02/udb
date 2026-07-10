@@ -1995,7 +1995,6 @@ mod error_detail_tests {
         validate_identifier,
     };
     use crate::proto::{ErrorDetail, ErrorKind};
-    use prost::Message as _;
     use serde_json::json;
 
     /// Decode the prost `ErrorDetail` from the binary trailer the way an SDK

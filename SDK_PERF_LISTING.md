@@ -1,4 +1,13 @@
-# Cross-SDK per-service latency listing (all 4 SDKs, 262 RPCs each, localhost)
+# Cross-SDK per-service latency listing — HISTORICAL SNAPSHOT (262-RPC era)
+
+> **Historical snapshot.** These numbers were measured against the old 262-RPC
+> surface. The current generated benchmark surface is **344 RPCs across 28
+> services** (see the generated
+> [`sdk/SDK_PERF_LISTING.md`](sdk/SDK_PERF_LISTING.md) and
+> `docs/generated/bench-bodies.json`); all four live bench harnesses now drive
+> the full current surface, including the platform services (Vault, Metering,
+> Scheduler, Search, Webhook, Workflow, Lock, LiveQuery, Config, Backup,
+> Embedding). Fresh numbers replace this table on the next full bench run.
 
 Mean ms per service (mean of per-RPC means). Source: `perf_report_{go,python,ts,php}.md`.
 Numbers are localhost dev-box runs (loaded machine → ±, but the shape is consistent).

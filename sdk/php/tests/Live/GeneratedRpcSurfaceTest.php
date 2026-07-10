@@ -9,6 +9,37 @@ use Udb\Core\Authn\Services\V1\LoginRequest;
 use Udb\Core\Authn\Services\V1\RefreshTokenRequest;
 use Udb\Entity\V1\CapabilitiesRequest;
 
+if (! function_exists('Google\\Protobuf\\Internal\\bccomp')) {
+    eval(<<<'PHP'
+namespace Google\Protobuf\Internal {
+    function bccomp(string|int|float $left, string|int|float $right, int $scale = 0): int
+    {
+        $normalize = static function (string|int|float $value): array {
+            $s = trim((string) $value);
+            $negative = str_starts_with($s, '-');
+            if ($negative) {
+                $s = substr($s, 1);
+            }
+            $s = preg_replace('/\..*$/', '', $s) ?? '0';
+            $s = ltrim($s, '0');
+            return [$negative, $s === '' ? '0' : $s];
+        };
+        [$ln, $lv] = $normalize($left);
+        [$rn, $rv] = $normalize($right);
+        if ($ln !== $rn) {
+            return $ln ? -1 : 1;
+        }
+        if (strlen($lv) !== strlen($rv)) {
+            $cmp = strlen($lv) <=> strlen($rv);
+            return $ln ? -$cmp : $cmp;
+        }
+        $cmp = $lv <=> $rv;
+        return $ln ? -$cmp : $cmp;
+    }
+}
+PHP);
+}
+
 if (getenv('UDB_LIVE_SDK_TESTS') !== '1') {
     test('live generated RPC surface')->skip('requires live UDB broker');
     return;
@@ -574,8 +605,12 @@ function shouldPopulatePhp(string $name, string $service = ''): bool
 
 function operationKindPhp(string $name, string $service = ''): string
 {
-    $kinds = \Fahara02\UdbLaravel\Generated\GeneratedClient::OPERATION_KIND;
     $key = $service !== '' ? "{$service}/{$name}" : $name;
+    $byRpc = \Fahara02\UdbLaravel\Generated\GeneratedClient::OPERATION_KIND_BY_RPC ?? [];
+    if (array_key_exists($key, $byRpc)) {
+        return $byRpc[$key];
+    }
+    $kinds = \Fahara02\UdbLaravel\Generated\GeneratedClient::OPERATION_KIND;
     if (array_key_exists($key, $kinds)) {
         return $kinds[$key];
     }
@@ -1533,7 +1568,12 @@ function phpManifestJsonBody(string $name, PerfFixturesPhp $fix, string $tenant,
         throw new RuntimeException("PHP bench manifest request class missing: {$entry['request_msg']}");
     }
     $request = new $class();
-    $request->mergeFromJsonString(phpResolveManifestSeeds($json, $fix, $tenant, $project));
+    $json = preg_replace(
+        '/"timestamp"\s*:\s*\{\s*"seconds"\s*:\s*1767225600\s*,\s*"nanos"\s*:\s*0\s*\}/',
+        '"timestamp": "2026-01-01T00:00:00Z"',
+        phpResolveManifestSeeds($json, $fix, $tenant, $project),
+    ) ?? phpResolveManifestSeeds($json, $fix, $tenant, $project);
+    $request->mergeFromJsonString($json);
 
     return $request;
 }
@@ -1614,7 +1654,7 @@ function phpManifestFixtureValue(string $key): string
     return match ($key) {
         'catalog_manifest_b64' => base64_encode('{"resources":[]}'),
         'ds_policy_id' => '42',
-        'fencing_token' => '17',
+        'fencing_token', 'renew_fencing_token', 'release_fencing_token' => '17',
         'gov_exp' => (string) (time() + 900),
         'plain_key' => 'udb_live_key_test',
         'tenant_id', 'tenant' => 'tenant-php',
@@ -3067,6 +3107,42 @@ function grpcStatusNamePhp(int $code): string
     return $names[$code] ?? "CODE_$code";
 }
 
+function isCapabilitySkipPhp(string $service, string $name, string $err, string $detail): bool
+{
+    $rpc = "{$service}/{$name}";
+    $detail = strtolower($detail);
+    if (in_array($rpc, [
+        'RoomService/StartRoomComposite',
+        'RoomService/StartTrackEgress',
+        'RoomService/StopEgress',
+        'PeerService/CreateDataChannel',
+        'RoomService/ListEgress',
+    ], true)) {
+        return in_array($err, ['FAILED_PRECONDITION', 'RESOURCE_EXHAUSTED', 'UNAVAILABLE', 'UNIMPLEMENTED'], true)
+            || str_contains($detail, 'egress')
+            || str_contains($detail, 'capability')
+            || str_contains($detail, 'not configured')
+            || str_contains($detail, 'unavailable');
+    }
+
+    return false;
+}
+
+function sdkBenchMethodPhp(string $service, string $name, string $apiAlias): string
+{
+    if ($service === 'CacheService') {
+        return match ($name) {
+            'Delete' => 'cacheServiceDelete',
+            'Get' => 'cacheServiceGet',
+            'Scan' => 'cacheServiceScan',
+            'Set' => 'cacheServiceSet',
+            default => \Fahara02\UdbLaravel\Generated\GeneratedClient::METHOD_ALIASES[$apiAlias] ?? $apiAlias,
+        };
+    }
+
+    return \Fahara02\UdbLaravel\Generated\GeneratedClient::METHOD_ALIASES[$apiAlias] ?? $apiAlias;
+}
+
 // --- Per-RPC performance (gated on UDB_LIVE_PERF=1) ---------------------------
 // Times every RPC over multiple iterations and writes perf_report_php.md — the
 // PHP counterpart of the Go/Python/TS perf harness. read_only RPCs are timed
@@ -3142,6 +3218,38 @@ function phpUniquifyPerfBody(object $request, string $name, ?string $serviceName
         }
     } elseif ($rpc === 'assetservice.create_pipeline_definition' && method_exists($request, 'setName')) {
         $request->setName("thumbnail-pipeline-$suffix");
+    } elseif ($rpc === 'authzservice.create_role') {
+        if (method_exists($request, 'setName')) {
+            $request->setName("SDK Perf Role $suffix");
+        }
+        if (method_exists($request, 'setRoleCode')) {
+            $request->setRoleCode("php_perf_role_$suffix");
+        }
+    } elseif ($rpc === 'authzservice.create_policy_rule') {
+        if (method_exists($request, 'setObject')) {
+            $request->setObject("ledger-$suffix");
+        }
+        if (method_exists($request, 'setAction')) {
+            $request->setAction("data.perf.$suffix");
+        }
+    } elseif ($rpc === 'authzservice.create_policy_draft') {
+        if (method_exists($request, 'setTitle')) {
+            $request->setTitle("sdk perf draft $suffix");
+        }
+        if (method_exists($request, 'setPolicySetName')) {
+            $request->setPolicySetName("sdk-perf-set-$suffix");
+        }
+    } elseif ($rpc === 'storageservice.register_upload') {
+        if (method_exists($request, 'setFilename')) {
+            $request->setFilename("perf-$suffix.txt");
+        }
+        if (method_exists($request, 'setReferenceId')) {
+            $request->setReferenceId(liveUuidV4());
+        }
+    } elseif ($rpc === 'identityproviderservice.scim_create_group') {
+        if (method_exists($request, 'setScimGroupJson')) {
+            $request->setScimGroupJson(json_encode(['displayName' => 'sdk-perf-group', 'members' => []]));
+        }
     }
 }
 
@@ -3171,6 +3279,12 @@ function perfSeedPhp(array $s): array
         'tenant_code' => "sdk-perf-tenant-$suffix",
         'name' => "sdk-perf-$suffix", 'filename' => "sdk-perf-$suffix.txt", 'content_type' => 'text/plain',
         'file_type' => 'DOCUMENT', 'kind' => 'audio',
+        'bucket' => liveEnv('UDB_LIVE_S3_BUCKET', 'udb-live-sdk'),
+        'object_key' => "php-perf/$suffix.txt",
+        'egress_id' => "eg-$tenant-$suffix",
+        'mongo_collection' => "sdk_perf_docs_$suffix",
+        'document_id' => "php-doc-$suffix",
+        'resource_name' => 'postgres:default',
     ] as $k => $v) {
         $fix->set($k, $v);
     }
@@ -3193,6 +3307,9 @@ function perfSeedPhp(array $s): array
         ->setRecordJson(liveRecordJson($recordId, $tenant, $project, "php-perf-lk-$suffix", 'perf-seed', 1))
         ->setConflictFields(['record_id']), $meta));
     $fix->set('record_id', $recordId);
+    $try('SeedBrokerCache', fn () => $data->cache_set((new \Udb\Entity\V1\CacheSetRequest())
+        ->setContext($rc)->setResource((new \Udb\Entity\V1\StoreResource())->setBackend('redis'))
+        ->setKey((string) $fix->lookup('object_key'))->setValue('perf')->setContentType('text/plain')->setTtlSeconds(300), $meta));
 
     // AuthnService: a real user (reused everywhere a user_id is needed) + login + codes.
     $uname = "sdk-perf-$suffix";
@@ -3299,10 +3416,10 @@ function perfSeedPhp(array $s): array
         if ($lt) { $fix->set('token', $lt->getAccessToken()); $fix->set('csrf_token', $lt->getCsrfToken()); }
         $lr = $try('FreshLoginRefresh', fn () => $authGen->login((new \Udb\Core\Authn\Services\V1\LoginRequest())
             ->setUsername($adminU)->setPassword($adminP)->setTenantHint($tenant)->setProjectHint($project)->setDeviceName('php-perf-refresh'), $meta));
-        if ($lr) { $fix->set('refresh_token', $lr->getRefreshToken()); }
+        if ($lr) { $fix->set('refresh_token', $lr->getRefreshToken()); $fix->set('refresh_token_session_id', $lr->getSessionId()); }
         $ls = $try('FreshLoginSession', fn () => $authGen->login((new \Udb\Core\Authn\Services\V1\LoginRequest())
             ->setUsername($adminU)->setPassword($adminP)->setTenantHint($tenant)->setProjectHint($project)->setDeviceName('php-perf-session'), $meta));
-        if ($ls) { $fix->set('session_id', $ls->getSessionId()); }
+        if ($ls) { $fix->set('session_id', $ls->getSessionId()); $fix->set('refresh_session_id', $ls->getSessionId()); }
     }
 
     // AuthzService: role + assignment + policy rule + relationship.
@@ -3385,16 +3502,30 @@ function perfSeedPhp(array $s): array
     // IdentityProviderService: a real OIDC provider -> provider_id (24 IdP RPCs read it).
     $ctxC = (new \Udb\Core\Common\V1\RequestContext())->setTenant((new \Udb\Core\Common\V1\TenantContext())->setTenantId($tenant)->setProjectId($project));
     $prov = $try('CreateProvider', fn () => $authGen->create_provider((new \Udb\Core\Idp\Services\V1\CreateProviderRequest())
-        ->setTenantId($tenant)->setKind(2)->setDisplayName("SDK Perf OIDC $suffix")->setIssuer('https://idp.example.com')
-        ->setJwksUrl('https://idp.example.com/jwks')->setClientIds(['client-1'])->setAudiences(['udb'])
+        ->setTenantId($tenant)->setKind(2)->setDisplayName("SDK Perf OIDC $suffix")->setIssuer("https://idp.example.com/$suffix")
+        ->setJwksUrl("https://idp.example.com/$suffix/jwks")->setClientIds(['client-1'])->setAudiences(['udb'])
         ->setClaimMappingJson('{}')->setGroupMappingJson('{"sdk-perf-group":"admin"}')->setJitPolicyJson('{"require_verified_email":false}')->setAccountLinkingPolicy('explicit')
         ->setEnabled(true)->setCreatedBy($uid !== '' ? $uid : liveUuidV4())->setContext($ctxC), $meta));
     if ($prov) {
         $pid = method_exists($prov, 'getProvider') && $prov->getProvider() ? $prov->getProvider()->getProviderId() : '';
         if ($pid !== '') {
+            $groupMappingJson = '{"sdk-perf-group":"admin"}';
+            $storedGroupMapping = '';
+            $gp = $try('GetProviderGroupMapping', fn () => $authGen->get_provider((new \Udb\Core\Idp\Services\V1\GetProviderRequest())
+                ->setProviderId($pid)->setTenantId($tenant), $meta));
+            if ($gp && method_exists($gp, 'getProvider') && $gp->getProvider()) {
+                $storedGroupMapping = $gp->getProvider()->getGroupMappingJson();
+            }
+            if (!str_contains($storedGroupMapping, 'sdk-perf-group')) {
+                $try('UpdateProviderGroupMapping', fn () => $authGen->update_provider((new \Udb\Core\Idp\Services\V1\UpdateProviderRequest())
+                    ->setProviderId($pid)->setTenantId($tenant)->setGroupMappingJson($groupMappingJson)
+                    ->setUpdatedBy($uid !== '' ? $uid : liveUuidV4())->setContext($ctxC), $meta));
+            }
             $fix->set('provider_id', $pid);
             $cleanups[] = fn () => $try('DisableProvider', fn () => $authGen->disable_provider((new \Udb\Core\Idp\Services\V1\DisableProviderRequest())
                 ->setProviderId($pid)->setTenantId($tenant)->setUpdatedBy($uid !== '' ? $uid : liveUuidV4())->setContext($ctxC), $meta));
+            $try('ScimCreateGroupSeed', fn () => $authGen->scim_create_group((new \Udb\Core\Idp\Services\V1\ScimCreateGroupRequest())
+                ->setTenantId($tenant)->setProviderId($pid)->setScimGroupJson(json_encode(['displayName' => 'sdk-perf-group', 'members' => []]))->setContext($ctxC), $meta));
             // SCIM: JIT-provision users. The broker resolves Scim Get/Patch/Replace/Delete by
             // the SCIM user_id == the userName/subject; external_identity_id = the returned id.
             $scimUserName = "scim-$suffix@x.com";
@@ -3590,6 +3721,16 @@ function perfSeedPhp(array $s): array
     $tsOk = $try('EnsureTsTable', fn () => $data->ensure_resource((new \Udb\Entity\V1\ResourceAdminRequest())
         ->setContext($rcSeed)->setBackend('clickhouse')->setResourceName('sdk_perf_ts')->setSpecJson('{}'), $meta));
     $fix->set('ts_table', 'sdk_perf_ts');
+    // MongoDB: a real collection + document for the document RPC family.
+    $mongoCollection = (string) $fix->lookup('mongo_collection');
+    $documentId = (string) $fix->lookup('document_id');
+    $try('EnsureMongoCollection', fn () => $data->ensure_resource((new \Udb\Entity\V1\ResourceAdminRequest())
+        ->setContext($rcSeed)->setBackend('mongodb')->setResourceName($mongoCollection)->setSpecJson(json_encode(['collection' => $mongoCollection])), $meta));
+    $doc = new \Google\Protobuf\Struct();
+    $doc->mergeFromJsonString('{"name":"x"}');
+    $try('SeedMongoDocument', fn () => $data->document_upsert((new \Udb\Entity\V1\DocumentUpsertRequest())
+        ->setContext($rcSeed)->setResource((new \Udb\Entity\V1\StoreResource())->setBackend('mongodb')->setResourceName($mongoCollection))
+        ->setDocumentId($documentId)->setDocument($doc), $meta));
 
     // Capture the live catalog manifest (READ-ONLY) so the measured StageCatalog has a valid
     // CatalogManifest (the new binary doesn't bump the active version on stage). K2 catalog
@@ -3635,13 +3776,29 @@ function perfSeedPhp(array $s): array
     $fix->set('node_id', $nodeId);
     // Open a StreamResources session so a node-state row exists for (node_id, BACKEND_TARGET=5);
     // AckStatus 404s without it.
-    $try('SeedNodeState', function () use ($authGen, $nodeId, $tenant, $project, $meta) {
+    $try('SeedNodeState', function () use ($authGen, $nodeId, $tenant, $project, $meta, $fix) {
         $cpCtx = (new \Udb\Core\Common\V1\RequestContext())->setTenant((new \Udb\Core\Common\V1\TenantContext())->setTenantId($tenant)->setProjectId($project));
         $stream = $authGen->stream_resources($meta);
         $stream->write((new \Udb\Core\Control\Services\V1\DiscoveryRequest())->setNodeId($nodeId)->setResourceType(5)->setContext($cpCtx));
-        $stream->read();
+        $resp = $stream->read();
+        if ($resp && method_exists($resp, 'getVersionInfo') && $resp->getVersionInfo() !== '') {
+            $fix->set('rollback_resource_version', $resp->getVersionInfo());
+        }
+        if ($resp && method_exists($resp, 'getResources') && count($resp->getResources()) > 0 && $resp->getResources()[0]->getName() !== '') {
+            $fix->set('resource_name', $resp->getResources()[0]->getName());
+        }
         $stream->cancel();
     });
+    if (($fix->lookup('rollback_resource_version') ?? '') === '') {
+        $gr = $try('SeedControlGetResources', fn () => $authGen->get_resources((new \Udb\Core\Control\Services\V1\GetResourcesRequest())
+            ->setResourceType(5)->setTenantId($tenant)->setResourceNames([])->setContext((new \Udb\Core\Common\V1\RequestContext())->setTenant((new \Udb\Core\Common\V1\TenantContext())->setTenantId($tenant)->setProjectId($project))), $meta));
+        if ($gr && method_exists($gr, 'getVersionInfo') && $gr->getVersionInfo() !== '') {
+            $fix->set('rollback_resource_version', $gr->getVersionInfo());
+        }
+        if ($gr && method_exists($gr, 'getResources') && count($gr->getResources()) > 0 && $gr->getResources()[0]->getName() !== '') {
+            $fix->set('resource_name', $gr->getResources()[0]->getName());
+        }
+    }
     // Saga + DLQ rows: create recovery state through the served, admin-gated
     // EnsureBaseline RPC instead of raw udb_system inserts. Each mutating RPC gets
     // its own disposable row because the op transitions status.
@@ -3881,7 +4038,7 @@ function perfSeedPhp(array $s): array
     $fix->set('vault_put_secret_path', "app/put-$suffix");
     $fix->set('vault_delete_secret_path', "app/delete-$suffix");
     $fix->set('vault_destroy_secret_path', "app/destroy-$suffix");
-    $fix->set('vault_db_role', "sdk-perf-db-role-$suffix");
+    $fix->set('vault_db_role', 'readonly');
     // Fallbacks so the Decrypt/Verify bodies always resolve even if Encrypt/Sign fail.
     $fix->set('vault_ciphertext', base64_encode('perf'));
     $fix->set('vault_signature', base64_encode('perf'));
@@ -4015,7 +4172,7 @@ it('measures per-RPC latency', function () {
     // Returns [elapsed_ms, err] where err is the gRPC status code NAME on a non-OK
     // status, else "OK" — so a failing RPC is recorded as a FAILURE, never a silent
     // latency sample (BENCH_RPC_BODIES.md #1/#3).
-    $timeUnary = function (GeneratedClient $sdkClient, string $rpcName, $stub, ReflectionMethod $method, $hasRequest, $probeRequest) use ($invoke, $authedMeta): array {
+    $timeUnary = function (GeneratedClient $sdkClient, string $sdkMethodName, $stub, ReflectionMethod $method, $hasRequest, $probeRequest) use ($invoke, $authedMeta): array {
         $start = microtime(true);
         $err = 'OK';
         $detail = '';
@@ -4024,8 +4181,8 @@ it('measures per-RPC latency', function () {
             // The wrapper is where metadata binding, deadline, retry gating, and typed
             // error mapping live. Raw stubs are retained only as a fallback for unusual
             // signatures and for the streaming probe below.
-            if ($hasRequest && method_exists($sdkClient, $rpcName)) {
-                $sdkClient->{$rpcName}($probeRequest, $authedMeta);
+            if ($hasRequest && method_exists($sdkClient, $sdkMethodName)) {
+                $sdkClient->{$sdkMethodName}($probeRequest, $authedMeta);
             } else {
                 $call = $invoke($stub, $method, $hasRequest, $probeRequest);
                 if (method_exists($call, 'wait')) {
@@ -4084,6 +4241,7 @@ it('measures per-RPC latency', function () {
         $nm = rpcSnake($u['name']);
         if ($u['svc'] === 'AuthnService' && in_array($nm, $PHASE1_AUTHN, true)) { return 1; }
         if ($u['svc'] === 'AuthnService' && in_array($nm, $PHASE3_AUTHN, true)) { return 3; }
+        if ($u['svc'] === 'TenantService' && $nm === 'purge_tenant') { return 4; }
         return 2;
     };
     usort($units, function (array $a, array $b) use ($phaseOf, $PHASE1_AUTHN, $okRank, $kindOf): int {
@@ -4098,6 +4256,24 @@ it('measures per-RPC latency', function () {
             $stub = $u['stub']; $sdkClient = $u['client']; $svc = $u['svc']; $method = $u['method'];
             $name = $method->getName();
             $rpcName = rpcSnake($name);
+            $apiAlias = $aliasOf($svc, $name);
+            $sdkMethodName = sdkBenchMethodPhp($svc, $name, $apiAlias);
+            if ($svc === 'IdentityProviderService' && in_array($name, ['ScimCreateGroup', 'ScimGetGroup', 'ScimPatchGroup', 'ScimDeleteGroup'], true)) {
+                $pid = $fix->lookup('provider_id');
+                if ($pid !== null && $pid !== '') {
+                    $ctxC = (new \Udb\Core\Common\V1\RequestContext())->setTenant(
+                        (new \Udb\Core\Common\V1\TenantContext())->setTenantId($authedMeta->tenantId)->setProjectId($authedMeta->projectId),
+                    );
+                    try {
+                        $s['authGenerated']->update_provider((new \Udb\Core\Idp\Services\V1\UpdateProviderRequest())
+                            ->setProviderId($pid)->setTenantId($authedMeta->tenantId)
+                            ->setGroupMappingJson('{"sdk-perf-group":"admin"}')
+                            ->setUpdatedBy($fix->lookup('user_id') ?? liveUuidV4())->setContext($ctxC), $authedMeta);
+                        $fix->set('scim_group_id', 'sdk-perf-group');
+                    } catch (\Throwable $e) {
+                    }
+                }
+            }
             // put_object is CLIENT-STREAMING: drive it explicitly (open with metadata, WRITE the
             // seeded Chunk, then wait) — the reflective probe/timeUnary path binds the Chunk to the
             // metadata slot → empty stream. Mirrors the working SeedPutObject (which lands code=0).
@@ -4129,7 +4305,8 @@ it('measures per-RPC latency', function () {
                 sort($durs);
                 $pp = fn (int $p) => $durs[min(count($durs) - 1, intdiv($p * (count($durs) - 1), 100))];
                 $samples[] = [
-                    'service' => $svc, 'rpc' => $name, 'kind' => 'mutation', 'err' => $err,
+                    'service' => $svc, 'rpc' => $name, 'api_alias' => $aliasOf($svc, $name),
+                    'operation_id' => $operationIdOf($svc, $name), 'kind' => 'mutation', 'err' => $err,
                     'p50' => $pp(50), 'p99' => $pp(99), 'mean' => array_sum($durs) / count($durs),
                     'iters' => count($durs),
                 ];
@@ -4194,7 +4371,7 @@ it('measures per-RPC latency', function () {
             // Warm-up ONLY for idempotent reads — a warm-up on a non-idempotent mutation
             // CONSUMES the op (submit/approve a draft, rotate a token, revoke a key).
             if ($kind === 'read_only') {
-                $timeUnary($sdkClient, $rpcName, $stub, $method, $hasRequest, $mkBody ? $mkBody() : $probeRequest);
+                $timeUnary($sdkClient, $sdkMethodName, $stub, $method, $hasRequest, $mkBody ? $mkBody() : $probeRequest);
             }
             $allDurs = [];
             $okDurs = [];
@@ -4202,7 +4379,7 @@ it('measures per-RPC latency', function () {
             $firstErr = 'OK';
             $errDetail = '';
             for ($i = 0; $i < $iters; $i++) {
-                [$ms, $err, $detail] = $timeUnary($sdkClient, $rpcName, $stub, $method, $hasRequest, $mkBody ? $mkBody() : $probeRequest);
+                [$ms, $err, $detail] = $timeUnary($sdkClient, $sdkMethodName, $stub, $method, $hasRequest, $mkBody ? $mkBody() : $probeRequest);
                 $allDurs[] = $ms;
                 if ($err === 'OK') {
                     $anyOk = true;
@@ -4215,9 +4392,10 @@ it('measures per-RPC latency', function () {
             // An RPC that succeeds AT LEAST ONCE works: repeated-call failures on a
             // non-idempotent mutation (consumed token / duplicate / already-deleted) are a
             // measurement artifact, not an RPC failure (mirrors the Go harness).
-            $errCode = $anyOk ? 'OK' : $firstErr;
+            $capabilitySkipped = ! $anyOk && isCapabilitySkipPhp($svc, $name, $firstErr, $errDetail);
+            $errCode = $anyOk ? 'OK' : ($capabilitySkipped ? 'CAPABILITY_SKIPPED' : $firstErr);
             $durs = $anyOk ? $okDurs : $allDurs;
-            if ($errCode !== 'OK') {
+            if ($errCode !== 'OK' && $errCode !== 'CAPABILITY_SKIPPED') {
                 fwrite(STDERR, "FAILDETAIL $svc/$name [$errCode] ".substr($errDetail, 0, 200)."\n");
             }
             sort($durs);
@@ -4242,7 +4420,8 @@ it('measures per-RPC latency', function () {
     arsort($svcMean);
     // Failures section (BENCH_RPC_BODIES.md #1/#3): every RPC whose measured
     // status is non-OK is a FAILURE, not just a latency sample.
-    $failed = array_values(array_filter($samples, fn ($r) => ($r['err'] ?? 'OK') !== 'OK'));
+    $capabilitySkipped = array_values(array_filter($samples, fn ($r) => ($r['err'] ?? 'OK') === 'CAPABILITY_SKIPPED'));
+    $failed = array_values(array_filter($samples, fn ($r) => ($r['err'] ?? 'OK') !== 'OK' && ($r['err'] ?? 'OK') !== 'CAPABILITY_SKIPPED'));
     usort($failed, fn ($a, $b) => ($a['service'].'/'.$a['rpc']) <=> ($b['service'].'/'.$b['rpc']));
     $fixtureKeys = $fix->keys();
     $lines = ['# UDB SDK Live Perf — PHP (Docker → host)', '',
@@ -4261,6 +4440,16 @@ it('measures per-RPC latency', function () {
         '## Per-service mean latency', '', '| Service | RPCs | mean ms |', '|---|--:|--:|'];
     foreach ($svcMean as $svc => $mean) {
         $lines[] = sprintf('| %s | %d | %.2f |', $svc, count($bySvc[$svc]), $mean);
+    }
+    $lines = array_merge($lines, ['', '## Capability skips ('.count($capabilitySkipped).')', '']);
+    if (count($capabilitySkipped) === 0) {
+        $lines[] = 'No RPC was skipped for an optional server capability.';
+    } else {
+        $lines[] = '| RPC | api_alias | operation_id | kind | p99 ms |';
+        $lines[] = '|---|---|---|---|--:|';
+        foreach ($capabilitySkipped as $row) {
+            $lines[] = sprintf('| %s/%s | %s | %s | %s | %.2f |', $row['service'], $row['rpc'], $row['api_alias'], $row['operation_id'], $row['kind'], $row['p99']);
+        }
     }
     $lines = array_merge($lines, ['', '## Failures ('.count($failed).')', '']);
     if (count($failed) === 0) {

@@ -35,11 +35,12 @@ packages wrap this content verbatim.
 
 UDB is a **proto-driven multi-database broker** in Rust (tonic/prost gRPC, sqlx).
 Developers declare entities as annotated protobuf messages; from that ONE
-contract UDB derives DB schema (DDL), runtime security enforcement, ~17 native
-services / 260+ RPCs, six language SDKs, CLI scaffolds and docs. Three planes:
-Current product/SDK baseline is **0.3.7** with wire protocol **1.0.0**; version
-strings must continue to derive from manifests/`env!("CARGO_PKG_VERSION")`, not
-hand-coded literals.
+contract UDB derives DB schema (DDL), runtime security enforcement, **27 native
+services / 344 RPCs (77 DataBroker + 267 native)**, six language SDKs, CLI
+scaffolds and docs. Three planes:
+Current product/SDK baseline is **0.4.0** with wire protocol **1.0.0**.
+Version strings must continue to derive from
+manifests/`env!("CARGO_PKG_VERSION")`, not hand-coded literals.
 
 1. **Data plane** — the `DataBroker` gRPC service (`Select`/`Upsert`/`Delete`,
    typed cache/document/graph/timeseries RPCs, batch streams, GenericDispatch)
@@ -47,9 +48,12 @@ hand-coded literals.
    cassandra, clickhouse, neo4j, redis, memcached, elasticsearch, qdrant,
    pinecone, weaviate, s3/minio, …(see `src/backend/mod.rs::BackendKind`).
 2. **Native control plane** — first-class services (authn, authz, apikey, idp,
-   tenant, notification, analytics, storage, asset, webrtc room/peer/track/turn,
-   control-plane) mounted on a SEPARATE listener (default loopback, broker
-   port+10) — the public broker listener serves only health/reflection/DataBroker.
+   tenant, notification, analytics, storage, asset, webrtc room/peer/track/turn/
+   signaling, control-plane, plus the platform wave: vault, metering, scheduler,
+   search, webhook, workflow, lock, livequery, config, backup, embedding, cache)
+   mounted on a SEPARATE listener (default loopback, broker port+10) — the
+   public broker listener serves only health/reflection/DataBroker. A third
+   listener (port+20) serves the WebRTC peer plane.
 3. **Event plane** — transactional outbox → CDC tailer → Kafka, with journal,
    DLQ, idempotency and tenant-scoped subscriber streams.
 
@@ -73,11 +77,13 @@ the generic Rust/SQL/engine knowledge you already have):
   gRPC status-code conventions, redacting Debug, the test harness).
 - **`backends.md`** (`shared/udb-coding-backends.md`) — per-engine quirks for
   all 18 backends: RLS/tenant posture, canonical-store tier, and the exact
-  live-DB + audit traps (MSSQL `@read_only` pooled-connection break, Neo4j MERGE
-  lease race, Redis Lua-only lease refresh, ClickHouse/Mongo "Enforced"-but-raw
-  cross-tenant lies, MySQL 8.4 replication syntax, vector stores are
-  projection-only). Read the row before touching any `executors/<b>.rs`,
-  `ir/compile/<b>.rs`, or `canonical_store/<b>*.rs`.
+  live-DB + audit traps (MSSQL `@read_only` pooled-connection break + EXEC()
+  deferred compilation, Neo4j MERGE lease race, Redis Lua-only lease refresh,
+  ClickHouse/Mongo "Enforced"-but-raw cross-tenant lies, ClickHouse Keeper-only
+  leases, MySQL 8.4 replication syntax + `XA RECOVER` text-protocol, PG
+  promoted-primary fence + aggregate-RLS-GUC, ES-only vector CAS with
+  Qdrant/Weaviate/Pinecone fail-closed). Read the row before touching any
+  `executors/<b>.rs`, `ir/compile/<b>.rs`, or `canonical_store/<b>*.rs`.
 
 ## 2. The proto→runtime pipeline (the spine — understand this first)
 
@@ -147,9 +153,23 @@ Rust array, you are probably violating the pipeline (derive it instead).
    `backend_context.rs` (e.g. MSSQL `sp_set_session_context` — no `@read_only`,
    connections are pooled); each executor's `enforce()` reports its RLS posture
    (Enforced/Advisory) and MUST tell the truth per path.
-7. **Receipts/fences** — write receipts embed the canonical store's
-   `outbox_max_seq`; read fences use per-backend durability tokens
-   (`wait_for_token`) for bounded staleness.
+7. **Receipts/fences/consistency** — mutations return a typed
+   `MutationResponse.write_receipt` (`WriteReceipt`: source_lsn, outbox_seq,
+   projection_task_ids, manifest_checksum) kept in lockstep with the legacy
+   `write_receipt_json`; reads may carry `RequestContext.read_fence` and/or
+   `consistency_mode` (`ConsistencyMode` enum — wire tokens pinned in
+   `src/runtime/consistency.rs::as_str`, honored from both the typed field and
+   the `x-udb-consistency` header). Fences use per-backend durability tokens
+   (`wait_for_token`) — PG's must gate on `pg_is_in_recovery()` (a PROMOTED
+   primary retains a stale non-null replay LSN; that bug shipped).
+8. **Durable idempotency** — a keyed replay-safe Upsert/Delete claims a
+   tenant/project/message-type/operation-scoped dedup row IN THE SAME
+   transaction as the write and persists the first-writer response; a replay
+   returns it with `was_duplicate=true` (never re-runs the write); the Redis
+   pre-check fails CLOSED when the dedup store is down. SDK retry gating: a
+   mutation is auto-retried ONLY when proto `replay_safe` AND a caller key is
+   present — keyless replay-safe mutations are deliberately NOT retried (a
+   tested contract in all six SDK retry suites; do not "fix" it with auto-keys).
 
 **0.3.7 operator-facing guardrails:** `src/cli/help.rs` answers `udb --help`,
 `udb help <cmd>`, command `--help`, and `udb --version` before expensive startup
@@ -189,7 +209,19 @@ pool → `enqueue_outbox_event` (versioned dot topic `udb.<svc>.<entity>.<verb>.
 | `notification_service/` | preferences (`is_opted_out` → SUPPRESSED rows excluded from emit; `channel_send_decision`), tenant-bound template selection (`template_selection_sql`), `retry_notification` re-emits with retry flag |
 | `storage_service/` | register/finalize/update (presence-guarded `is_public` binds — proto3 `optional` + COALESCE), presigned URLs, quota, GC + `WORKER_STORAGE_ORPHAN_REAPER` |
 | `asset_service/` | pipelines + `AssetStepExecutor` (EMBED→Qdrant), `spawn_storage_finalized_consumer` (Kafka earliest + manual commit AFTER success — the at-least-once consumer template) |
-| `webrtc_service/` | rooms/peers/tracks/TURN(fail-closed); `SignalingHub` broadcast: `HubFrame::{Signal,RoomClosed,PeerClosed}`, `dispose_hub_frame` (PeerClosed ends only that peer), `disconnect_bound_peer` on stream death, periodic membership recheck, stale-peer reaper |
+| `webrtc_service/` | rooms/peers/tracks/TURN(fail-closed); `SignalingHub` broadcast: `HubFrame::{Signal,RoomClosed,PeerClosed}`, `dispose_hub_frame` (PeerClosed ends only that peer), `disconnect_bound_peer` on stream death, periodic membership recheck, stale-peer reaper; egress via `SfuBridge` seam (LiveKit token backend binds {tenant,room,peer}; disabled ⇒ `failed_precondition`) |
+| `vault_service/` | 3 engines, 1 crypto stack (AES-256-GCM-SIV envelope reused from `runtime/encryption.rs`): versioned KV (CAS, soft-delete, crypto-shred destroy), transit (encrypt/decrypt/sign/verify/hmac by key NAME; material never exported), seal — `check_seal` gates EVERY handler `failed_precondition` when the master key is unavailable; destroyed-version reaper worker |
+| `lock_service/` | advisory locks over the canonical-store lease trait; **monotonic fencing tokens**, stale token ⇒ `failed_precondition` |
+| `scheduler_service/` | cron + one-shot jobs; claim via `FOR UPDATE SKIP LOCKED`; leader `WORKER_SCHEDULER_TICK` |
+| `webhook_service/` | endpoint CRUD + delivery worker; **SSRF guard is deny-by-default** (loopback/private/link-local/CGNAT/unspecified/IPv4-mapped) AND re-resolves DNS at delivery time (fail-closed) |
+| `search_service/` | index lifecycle + query; pure `reciprocal_rank_fusion`; tenant filter derived from the VERIFIED claim, injected server-side |
+| `cache_service/` | Redis-backed namespaces; sweep uses `SCAN` (never `KEYS`); per-tenant byte budget ⇒ `resource_exhausted` |
+| `livequery_service/` | `Subscribe` server-stream; bounded buffer (`LIVEQUERY_BUFFER_EVENTS`) — overflow CLOSES the stream `resource_exhausted`, never grows; tenant-filtered fail-closed |
+| `config_service/` | feature flags; deterministic FNV-1a percentage rollout; OnceLock'd TTL |
+| `metering_service/` | usage + quotas; **the RLS-GUC rule:** the windowed aggregate read opens a tx and installs `app.current_tenant_id` BEFORE the SUM (a bare pool read matches 0 rows under RLS — this shipped as a real under-report bug); regression test pins it |
+| `backup_service/` | tenant-scoped backup/restore; `validate_tenant_movement_scope` + restore only into a FRESH target |
+| `embedding_service/` | sources + `ReportEmbedding` + vector `Retrieve`; leader backfill work-emitter — its served select MUST carry the project column (`resolve_project_column`) and any `udb_cdc_event_journal` reader MUST `COALESCE(top, payload->'payload')` because the CDC tailer envelope-nests emit fields (three real bugs shipped here) |
+| `workflow_service/` | workflows/sagas (`SagaKind::Workflow`), signal/cancel + compensation, `FOR UPDATE SKIP LOCKED` claim, tick worker |
 | `native_helpers.rs` | THE shared kit: `admit_on`, `emit_event`, `enqueue_outbox_event`, `validate_request_scope`, `MAX_LIST_ROWS`, `DEFAULT_OBJECT_BUCKET`, `execute_stream_batch_item`, pagination |
 
 **Background workers** are leader-elected: consts `WORKER_*` +
@@ -379,7 +411,6 @@ note `— DONE (date): <what> (file:line)` · out-of-fence edits reported, not
 made. An honest `[~]` beats a false `[x]`: completion claims are re-audited
 adversarially against source, and false completions ARE found.
 
-
 ---
 
 # UDB Rust stack — how THIS repo uses the toolchain (companion to udb-coding)
@@ -509,7 +540,6 @@ the repo's idioms for each, and the traps already hit here. Canonical copy:
 - The strongest test asks: "would reverting the fix make this fail?" — string
   asserts on SQL and enum checks usually can't say yes.
 
-
 ---
 
 # UDB backends — per-engine quirks an agent MUST know (companion to udb-coding)
@@ -534,9 +564,15 @@ first. Canonical copy: `udb-skill/shared/udb-coding-backends.md`.
   `HA-canonical`) must match reachable runtime behavior. Don't flip a flag true
   without a wired path + a test.
 - **Canonical-store leases/outbox-seq** must be cluster-atomic to be
-  `HA-canonical`. Process-local `tokio::Mutex` is NOT atomicity. Today only
-  Postgres is proven HA-canonical; vector/ClickHouse are Projection-role
-  (registration refused unless `UDB_ALLOW_PROJECTION_SYSTEM_STORE=1`).
+  `HA-canonical`. Process-local `tokio::Mutex` is NOT atomicity. Current tier
+  truth (maintainer decision — FULL-canonical, never projection-only, do not
+  re-litigate): Postgres is HA-canonical; **ClickHouse is full-canonical via
+  Keeper-backed KeeperMap leases** (fails CLOSED when Keeper is absent);
+  **Elasticsearch is full-canonical via native CAS**
+  (`if_seq_no`/`if_primary_term`); **Qdrant/Weaviate/Pinecone have NO usable
+  CAS primitive and fail closed** (`cas_unsupported`) for system-store roles —
+  their data-plane vector role is unaffected. All nine canonical stores run
+  live conformance (`conformance_live_tests.rs`) 9/9.
 - **Generic SQL executors** must gate raw SQL through
   `helpers::validate_read_sql`/`validate_mutation_sql` (single statement + verb
   allowlist). Any executor skipping this weakens the read/write guarantee.
@@ -555,7 +591,17 @@ first. Canonical copy: `udb-skill/shared/udb-coding-backends.md`.
   RLS GUCs absent ⇒ leak (fixed: wrap in `pool.begin()` + settings). `$like`
   ESCAPE must render a ONE-char escape under `standard_conforming_strings=on`
   (`ESCAPE '\'`, not `'\\'`). Outbox uuid casts and 2PC `COMMIT/ROLLBACK
-  PREPARED` semantics are PG-specific.
+  PREPARED` semantics are PG-specific. **Promoted-primary fence trap (fixed):**
+  `wait_for_token` read `pg_last_wal_replay_lsn()` via COALESCE — a PROMOTED
+  primary retains a stale non-null replay LSN, so the fence gated on garbage;
+  the durable-position read must branch on `pg_is_in_recovery()`. **Aggregate
+  RLS-GUC trap (fixed twice):** ANY aggregate/SUM read on an RLS table must run
+  in a tx that installs `app.current_tenant_id` first — a bare pool read
+  matches 0 rows and silently under-reports (shipped in metering QueryUsage and
+  the storage quota gate). **Typed-bind trap (fixed):** `bind_one`-style
+  helpers must bind uuid/timestamptz as their real types — PG has no implicit
+  text→uuid cast (42804), and a bind-type collision on a prepared statement
+  poisons the pooled connection.
 - 2PC: the live `XaCoordinator` participant; write-ahead ledger row precedes
   `COMMIT PREPARED`; presumed-abort sweep only aborts xids with NO ledger row.
 
@@ -567,6 +613,10 @@ first. Canonical copy: `udb-skill/shared/udb-coding-backends.md`.
   `MASTER_POS_WAIT`); these bit live conformance. XA: `XaMysqlParticipant` +
   `MysqlInDoubtParticipant` must be CONSTRUCTED/REGISTERED, not just defined —
   a capability lie shipped when `supports_xa: true` had no constructor.
+  **`XA RECOVER` protocol trap (fixed):** MySQL refuses `XA RECOVER` over the
+  prepared-statement protocol (err 1295 ER_UNSUPPORTED_PS) — it must run as a
+  text-protocol query (`pool.fetch_all("XA RECOVER")`, not `sqlx::query(...)`);
+  crash recovery silently never worked until this was fixed.
 
 ### SQLite (`executors/sqlite.rs`)
 - `dev/single-node` only. Generic SQL gated. Used heavily in tests — but test
@@ -582,13 +632,20 @@ first. Canonical copy: `udb-skill/shared/udb-coding-backends.md`.
   pool path.
 - Durability token: must be `MIN_ACTIVE_ROWVERSION()`/`@@DBTS`, not wall-clock
   (a wall-clock token makes `wait_for_token` return instantly ⇒ vacuous fence).
+- **Deferred-compilation trap (fixed):** SQL Server resolves column names at
+  COMPILE time, so a guarded backfill (`IF COL_LENGTH(...) IS NOT NULL UPDATE …
+  new_col …`) still fails code-207 when the column is absent — wrap the guarded
+  statement in `EXEC('…')` so compilation is deferred to execution.
 
 ### ClickHouse (`executors/clickhouse.rs`, `canonical_store/clickhouse.rs`,
 `ir/compile/clickhouse.rs`)
-- **Projection-role** — its lease CAS over ReplacingMergeTree is non-atomic
-  ("two acquirers can each believe they won", per its own module doc); not
-  HA-canonical without a Keeper-backed lock. Registration refused without the
-  opt-in flag.
+- **Full-canonical via ClickHouse Keeper.** Advisory leases live in a
+  **KeeperMap** table (`udb_keeper_advisory_leases`) — real distributed CAS;
+  `ensure_advisory_lease_table` FAILS CLOSED when Keeper is not configured
+  (the old ReplacingMergeTree lease CAS was non-atomic — "two acquirers can
+  each believe they won" — and is exactly why the Keeper lock exists).
+  Projection/saga/admin-audit/migration mutations are fenced under the same
+  Keeper leases. Never downgrade this to projection-only (maintainer decision).
 - **Trap (critical, fixed):** generic `query()` ran caller SQL verbatim with NO
   tenant predicate and NO SETTINGS while `enforce()` claimed Enforced. Either
   inject via `ir::compile::clickhouse` + per-query SETTINGS, or report Advisory.
@@ -630,9 +687,14 @@ first. Canonical copy: `udb-skill/shared/udb-coding-backends.md`.
 
 ### Vector stores: Qdrant / Pinecone / Weaviate / Elasticsearch
 (`canonical_store/qdrant.rs`, `vector_system.rs`)
-- **Projection-role, never HA-canonical** (no trustworthy CAS lease primitive).
-  Registration as a full SystemStore is refused without the opt-in flag; the
-  realistic stance is permanent projection-only.
+- **Full-canonical is the target posture (maintainer decision), with per-engine
+  honesty:** **Elasticsearch** has real native CAS
+  (`if_seq_no`/`if_primary_term` conditional writes; missing seq/term = hard
+  error) and hosts system state. **Qdrant** (1.16+ may change this) and
+  **Weaviate/Pinecone** (terminally) expose no usable CAS primitive — their
+  system-store CAS paths return `cas_unsupported` and FAIL CLOSED
+  (`try_acquire_advisory_lease` unconditionally errors; no last-write-wins
+  fallback, ever). The data-plane vector role (search/upsert) is unaffected.
 - Asset EMBED upserts and SearchService write here. Shared system-record logic
   lives in `system_store.rs` (`JsonSystemRecordAdapter`) — Qdrant/vector must
   DELEGATE, not re-copy (≈2,400 lines were triplicated; the audit flagged it).

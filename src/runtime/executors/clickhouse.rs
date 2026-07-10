@@ -824,7 +824,6 @@ mod tests {
     use crate::proto::{ErrorDetail, ErrorKind};
     use crate::runtime::backend_context::{AppliedContext, BackendContextEnforcer, ContextEffect};
     use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
-    use prost::Message as _;
 
     fn decode_detail(status: &tonic::Status) -> ErrorDetail {
         let raw = status

@@ -39,6 +39,10 @@ $container = "udb-php-live-grind-" + ([guid]::NewGuid().ToString("N"))
 $reportHost = Join-Path $ROOT "sdk\php\perf_report_php.md"
 try {
   & docker create --name $container --add-host=host.docker.internal:host-gateway `
+    -v "${ROOT}\sdk\php\tests:/sdk/tests:ro" `
+    -v "${ROOT}\sdk\php\src:/sdk/src:ro" `
+    -v "${ROOT}\sdk\php\gen:/sdk/gen:ro" `
+    -v "${ROOT}\docs:/docs:ro" `
     -e UDB_LIVE_SDK_TESTS=1 -e UDB_LIVE_PERF=1 `
     -e UDB_GRPC_TARGET=host.docker.internal:50071 -e UDB_AUTH_GRPC_TARGET=host.docker.internal:50081 `
     -e UDB_LIVE_USERNAME=sdk-live-admin -e "UDB_LIVE_PASSWORD=SdkLive#2026Pass" `

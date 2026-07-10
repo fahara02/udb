@@ -7,10 +7,10 @@ allowed-tools: Read, Grep, Glob, Bash
 # UDB Coding
 
 UDB is a **proto-driven multi-database broker** (Rust, tonic/prost, sqlx): one
-annotated proto contract derives DB schema, per-RPC security enforcement, ~17
-native services / 260+ RPCs across 18 backends, six SDKs, CLI and docs. This
-skill carries the codebase map AND the house doctrine for changing it safely.
-Current code/SDK baseline is **0.3.7** (wire protocol `1.0.0`).
+annotated proto contract derives DB schema, per-RPC security enforcement, **27
+native services / 344 RPCs (77 DataBroker + 267 native)** across 18 backends,
+six SDKs, CLI and docs. This skill carries the codebase map AND the house
+doctrine for changing it safely. Current code/SDK baseline is **0.4.0** (wire protocol `1.0.0`).
 
 **Full guide (read on demand): [references/udb-coding.md](references/udb-coding.md)** —
 the proto→runtime pipeline, both request lifecycles file-by-file, the CDC/

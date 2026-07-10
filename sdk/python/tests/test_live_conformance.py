@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+import base64
 import json
 import os
 import pkgutil
@@ -14,6 +15,7 @@ import grpc
 import pytest
 from google.protobuf import struct_pb2
 from google.protobuf.descriptor import FieldDescriptor as _FD
+from google.protobuf.json_format import ParseDict, ParseError
 from google.protobuf.message_factory import GetMessageClass
 
 from udb.services.v1 import data_broker_pb2, data_broker_pb2_grpc
@@ -47,6 +49,8 @@ from udb.core.embedding.services.v1 import embedding_service_pb2 as embedding_pb
 from udb.core.search.services.v1 import search_service_pb2 as search_pb
 from udb.core.metering.services.v1 import metering_service_pb2 as metering_pb
 from udb.core.config.services.v1 import config_service_pb2 as config_pb
+from udb.core.control.entity.v1 import enums_pb2 as control_enum_pb
+from udb.core.control.services.v1 import core_pb2 as control_pb
 
 from udb_client.auth import UdbAuthClient
 from udb_client.generated_client import (
@@ -1400,12 +1404,50 @@ class MissingExplicitPerfBody(RuntimeError):
     pass
 
 
+def _doc_body_json(body: str | None):
+    if body is None:
+        return None
+    raw = body.strip()
+    if raw.startswith("`") and raw.endswith("`"):
+        raw = raw[1:-1].strip()
+    if not raw:
+        return None
+    return json.loads(raw)
+
+
+def _resolve_doc_json_value(value, meta: Metadata, fix: "PerfFixtures"):
+    if isinstance(value, str):
+        def repl(match: re.Match[str]) -> str:
+            key = match.group(1)
+            if key in {"tenant_id", "tenant"}:
+                return meta.tenant_id
+            if key in {"project_id", "project"}:
+                return meta.project_id
+            seeded = fix.lookup(key)
+            if seeded:
+                return seeded
+            raise MissingExplicitPerfBody(f"no seeded value for <seed:{key}>")
+
+        return re.sub(r"<seed:([^>]+)>", repl, value)
+    if isinstance(value, list):
+        return [_resolve_doc_json_value(v, meta, fix) for v in value]
+    if isinstance(value, dict):
+        return {k: _resolve_doc_json_value(v, meta, fix) for k, v in value.items()}
+    return value
+
+
 def perf_real_body(client_cls, method, meta: Metadata, fix: "PerfFixtures"):
     """Build a request from the explicit row for this RPC in docs/bench-bodies."""
     body = doc_body_text(client_cls, method)
-    fields = doc_field_names(client_cls, method)
     request = GetMessageClass(method.input_type)()
-    apply_doc_fields(request, fields, body or "", meta, fix)
+    try:
+        parsed = _doc_body_json(body)
+        if parsed is None:
+            raise ValueError("empty doc body")
+        ParseDict(_resolve_doc_json_value(parsed, meta, fix), request, ignore_unknown_fields=False)
+    except (json.JSONDecodeError, ParseError, ValueError):
+        fields = doc_field_names(client_cls, method)
+        apply_doc_fields(request, fields, body or "", meta, fix)
     postprocess_perf_body(client_cls, method, request, meta, fix)
     return request
 
@@ -1454,7 +1496,7 @@ def postprocess_perf_body(client_cls, method, request, meta: Metadata, fix: "Per
         request.challenge_id = _fixture(fix, "auth_challenge_id", _fixture(fix, "challenge_id", request.challenge_id))
         request.public_key_credential_json = WEBAUTHN_TEST_CREDENTIAL
     elif client_cls is AuthnServiceClient and method.name == "RevokeDevice":
-        request.device_id = _fixture(fix, "device_id", request.device_id)
+        request.device_id = _fixture(fix, "revoke_device_id", _fixture(fix, "device_id", request.device_id))
     elif client_cls is AuthzServiceClient and method.name == "CreateRole":
         request.name = f"SDK Perf Role {suffix}"
         request.role_code = f"py_perf_role_{suffix}"
@@ -1527,6 +1569,11 @@ def postprocess_perf_body(client_cls, method, request, meta: Metadata, fix: "Per
         request.group_mapping_json = json.dumps({_fixture(fix, "scim_group_id", "sdk-perf-group"): "admin"})
     elif client_cls is IdentityProviderServiceClient and method.name == "StartSamlLogin":
         request.provider_id = _fixture(fix, "saml_provider_id", request.provider_id)
+    elif client_cls is IdentityProviderServiceClient and method.name == "SamlAcs":
+        request.provider_id = _fixture(fix, "saml_provider_id", request.provider_id)
+        request.tenant_id = meta.tenant_id
+        request.saml_response = SAML_TEST_SENTINEL
+        request.relay_state = "state-1"
     elif client_cls is IdentityProviderServiceClient and method.name == "ScimGetGroup":
         request.provider_id = _fixture(fix, "provider_id", request.provider_id)
         request.scim_group_id = _fixture(fix, "scim_group_id", request.scim_group_id)
@@ -1597,7 +1644,7 @@ def _doc_seed_key(field_name: str, body: str) -> str | None:
     # 80 chars" scan could steal a later field's seed tag, e.g. storage
     # content_type became <seed:file_id>.
     pattern = (
-        rf"(?<![a-z0-9_])`?{re.escape(field_name.lower())}`?(?![a-z0-9_])"
+        rf"(?<![a-z0-9_])[`\"]?{re.escape(field_name.lower())}[`\"]?(?![a-z0-9_])"
         rf"\s*(?::|=)\s*`?\"?<seed:([^>]+)>"
     )
     match = re.search(pattern, body.lower())
@@ -1608,7 +1655,7 @@ def _doc_seed_key(field_name: str, body: str) -> str | None:
 
 def _doc_literal_string(field_name: str, body: str) -> str | None:
     pattern = (
-        rf"(?<![a-z0-9_])`?{re.escape(field_name.lower())}`?(?![a-z0-9_])"
+        rf"(?<![a-z0-9_])[`\"]?{re.escape(field_name.lower())}[`\"]?(?![a-z0-9_])"
         rf"\s*(?::|=)\s*`?\"([^\"<`]*)\""
     )
     match = re.search(pattern, body, flags=re.IGNORECASE)
@@ -1619,7 +1666,7 @@ def _doc_literal_string(field_name: str, body: str) -> str | None:
 
 def _doc_explicit_empty(field_name: str, body: str) -> bool:
     pattern = (
-        rf"(?<![a-z0-9_])`?{re.escape(field_name.lower())}`?(?![a-z0-9_])"
+        rf"(?<![a-z0-9_])[`\"]?{re.escape(field_name.lower())}[`\"]?(?![a-z0-9_])"
         rf"\s*(?::|=)\s*(?:\[\]|\{{\}})"
     )
     return re.search(pattern, body.lower()) is not None
@@ -1627,7 +1674,7 @@ def _doc_explicit_empty(field_name: str, body: str) -> bool:
 
 def _doc_literal_bool(field_name: str, body: str) -> bool | None:
     pattern = (
-        rf"(?<![a-z0-9_])`?{re.escape(field_name.lower())}`?(?![a-z0-9_])"
+        rf"(?<![a-z0-9_])[`\"]?{re.escape(field_name.lower())}[`\"]?(?![a-z0-9_])"
         rf"\s*(?::|=)\s*(true|false)"
     )
     match = re.search(pattern, body.lower())
@@ -1638,7 +1685,7 @@ def _doc_literal_bool(field_name: str, body: str) -> bool | None:
 
 def _doc_literal_int(field_name: str, body: str) -> int | None:
     pattern = (
-        rf"(?<![a-z0-9_])`?{re.escape(field_name.lower())}`?(?![a-z0-9_])"
+        rf"(?<![a-z0-9_])[`\"]?{re.escape(field_name.lower())}[`\"]?(?![a-z0-9_])"
         rf"\s*(?::|=)\s*(-?\d+)"
     )
     match = re.search(pattern, body.lower())
@@ -1659,15 +1706,15 @@ def _field_seed(field_name: str, meta: Metadata, fix, body: str = "") -> str:
         doc_key = "device_id"
     elif name == "dlq_id" and doc_key == "record_id":
         doc_key = "dlq_id"
-    literal = _doc_literal_string(name, body)
-    if literal is not None and (literal == "" or name in {"status", "state", "type", "file_type", "media_type", "content_type", "reference_type"}):
-        return literal
     if name in {"created_by", "updated_by", "deleted_by", "assigned_by", "revoked_by", "approved_by", "rejected_by", "reviewer"}:
         return _fixture(fix, "user_id", "python-live-user")
     if doc_key:
         seeded = fix.lookup(doc_key)
         if seeded:
             return seeded
+    literal = _doc_literal_string(name, body)
+    if literal is not None:
+        return literal
     direct = fix.lookup(name)
     if direct:
         return direct
@@ -2193,6 +2240,8 @@ def perf_seed(clients: dict, meta: Metadata):
     fix.set("kind", "audio")
     fix.set("topic_pattern", "*")
     fix.set("migration_id", str(uuid.uuid4()))
+    fix.set("egress_id", f"eg-{tenant}-{suffix}")
+    fix.set("purge_tenant_id", tenant)
 
     # Recovery fixtures come from the served, admin-gated DataBroker path, not
     # raw udb_system inserts. Each mutating RPC gets a disposable row.
@@ -2468,6 +2517,65 @@ def perf_seed(clients: dict, meta: Metadata):
             fix.set("send_otp_user_id", send_otp_user.user.user_id)
         except (grpc.RpcError, AttributeError):
             pass
+        for seed_key, username_prefix in (
+            ("change_status_user_id", "status"),
+            ("admin_reset_password_user_id", "admin-rpw"),
+            ("disable_mfa_user_id", "disable-mfa"),
+            ("revoke_recovery_user_id", "revoke-recovery"),
+            ("admin_reset_mfa_user_id", "admin-mfa"),
+        ):
+            try:
+                disposable = authn.CreateUser(
+                    authn_pb2.CreateUserRequest(
+                        username=f"sdk-perf-{username_prefix}-{suffix}",
+                        email=f"sdk-perf-{username_prefix}-{suffix}@example.com",
+                        password=pw,
+                        tenant_id=tenant,
+                        project_id=project,
+                        full_name=f"SDK Perf {username_prefix} User",
+                    ),
+                    metadata=md, timeout=8.0,
+                )
+                disposable_id = disposable.user.user_id
+                fix.set(seed_key, disposable_id)
+                if seed_key == "revoke_recovery_user_id":
+                    try:
+                        authn.GenerateRecoveryCodes(
+                            authn_pb2.GenerateRecoveryCodesRequest(user_id=disposable_id, count=4),
+                            metadata=md, timeout=8.0,
+                        )
+                    except grpc.RpcError:
+                        pass
+            except (grpc.RpcError, AttributeError):
+                pass
+        try:
+            revoke_device_user = authn.CreateUser(
+                authn_pb2.CreateUserRequest(
+                    username=f"sdk-perf-revoke-device-{suffix}",
+                    email=f"sdk-perf-revoke-device-{suffix}@example.com",
+                    password=pw,
+                    tenant_id=tenant,
+                    project_id=project,
+                    full_name="SDK Perf Revoke Device User",
+                ),
+                metadata=md, timeout=8.0,
+            ).user
+            authn.Login(
+                authn_pb2.LoginRequest(
+                    username=revoke_device_user.username,
+                    password=pw,
+                    tenant_hint=tenant,
+                    project_hint=project,
+                    device_name="python-sdk-revoke-device",
+                    device_id=f"python-sdk-revoke-device-{suffix}",
+                ),
+                metadata=md, timeout=8.0,
+            )
+            devices = authn.ListDevices(authn_pb2.ListDevicesRequest(user_id=revoke_device_user.user_id), metadata=md, timeout=8.0)
+            if devices.devices:
+                fix.set("revoke_device_id", devices.devices[0].device_id)
+        except (grpc.RpcError, AttributeError):
+            pass
 
     # ── AuthzService: role + assignment + policies + relationship ─────────────────
     authz = clients[AuthzServiceClient].stub
@@ -2725,7 +2833,7 @@ def perf_seed(clients: dict, meta: Metadata):
                 audiences=["udb"],
                 claim_mapping_json="{}",
                 group_mapping_json='{"sdk-perf-group":"admin"}',
-                jit_policy_json="{}",
+                jit_policy_json='{"require_verified_email":false}',
                 account_linking_policy="explicit",
                 enabled=True,
                 created_by=uid,
@@ -2737,6 +2845,29 @@ def perf_seed(clients: dict, meta: Metadata):
         fix.set("provider_id", provider_id)
         fix.set("scim_group_id", "sdk-perf-group")
         scim_ctx = common_pb.RequestContext(tenant=common_pb.TenantContext(tenant_id=tenant, project_id=project))
+        try:
+            disposable_provider = idp.CreateProvider(
+                idp_pb.CreateProviderRequest(
+                    tenant_id=tenant,
+                    kind=idp_enum_pb.IDP_KIND_OIDC,
+                    display_name=f"SDK Perf OIDC Disposable {suffix}",
+                    issuer=f"https://idp-disposable.example.com/{suffix}",
+                    jwks_url="https://idp-disposable.example.com/jwks",
+                    client_ids=["perf-client-disposable"],
+                    audiences=["udb"],
+                    claim_mapping_json="{}",
+                    group_mapping_json="{}",
+                    jit_policy_json='{"require_verified_email":false}',
+                    account_linking_policy="explicit",
+                    enabled=True,
+                    created_by=uid,
+                    context=scim_ctx,
+                ),
+                metadata=md, timeout=8.0,
+            )
+            fix.set("disable_provider_id", disposable_provider.provider.provider_id)
+        except (grpc.RpcError, AttributeError):
+            pass
         try:
             group = idp.ScimCreateGroup(
                 idp_pb.ScimCreateGroupRequest(
@@ -2801,7 +2932,7 @@ def perf_seed(clients: dict, meta: Metadata):
                     audiences=["udb"],
                     claim_mapping_json="{}",
                     group_mapping_json="{}",
-                    jit_policy_json="{}",
+                    jit_policy_json='{"require_verified_email":false}',
                     account_linking_policy="explicit",
                     enabled=True,
                     created_by=uid,
@@ -3136,8 +3267,8 @@ def perf_seed(clients: dict, meta: Metadata):
     locks = clients[LockServiceClient].stub
     lock_owner = _fixture(fix, "user_id", f"sdk-perf-owner-{suffix}")
     for _lock_ref, _lock_name in (
-        ("renew_fencing_token", f"sdk-perf-renew-lock-{suffix}"),
-        ("release_fencing_token", f"sdk-perf-release-lock-{suffix}"),
+        ("renew_fencing_token", "sdk-perf-renew-lock"),
+        ("release_fencing_token", "sdk-perf-release-lock"),
     ):
         try:
             acquired = locks.AcquireLock(lock_pb.AcquireLockRequest(tenant_id=tenant, lock_name=_lock_name, owner_id=lock_owner, lease_ttl_seconds=60, metadata_json="{}"), metadata=md, timeout=8.0)
@@ -3210,6 +3341,34 @@ def perf_seed(clients: dict, meta: Metadata):
     except grpc.RpcError:
         pass
 
+    # ControlPlaneService: open a StreamResources session under node_id so a node
+    # state row exists and the control-plane perf bodies target served resources.
+    control = clients[ControlPlaneServiceClient].stub
+    node_id = f"sdk-perf-node-{suffix}"
+    fix.set("node_id", node_id)
+    try:
+        req = control_pb.DiscoveryRequest(
+            node_id=node_id,
+            resource_type=control_enum_pb.RESOURCE_TYPE_BACKEND_TARGET_DEFINITION,
+            context=common_pb.RequestContext(
+                tenant=common_pb.TenantContext(tenant_id=tenant, project_id=project),
+                purpose="python.live.perf.seed",
+            ),
+        )
+        stream = control.StreamResources(iter([req]), metadata=md, timeout=3.0)
+        first = next(iter(stream), None)
+        if first is not None:
+            if first.version_info:
+                fix.set("rollback_resource_version", first.version_info)
+            if first.resources:
+                fix.set("resource_name", first.resources[0].name)
+        try:
+            stream.cancel()
+        except Exception:
+            pass
+    except Exception:
+        pass
+
     # MeteringService: upsert the seeded quota so GetQuota/CheckQuota/QueryUsage read it.
     metering = clients[MeteringServiceClient].stub
     try:
@@ -3261,6 +3420,7 @@ def perf_seed(clients: dict, meta: Metadata):
         manifest = broker.GetCatalogManifest(admin_pb2.CatalogManifestRequest(context=rc, redact=False), metadata=md, timeout=8.0)
         if manifest.manifest_json:
             fix.set("catalog_manifest", manifest.manifest_json.decode("utf-8"))
+            fix.set("catalog_manifest_b64", base64.b64encode(manifest.manifest_json).decode("ascii"))
     except (grpc.RpcError, UnicodeDecodeError):
         pass
     try:
@@ -3363,6 +3523,23 @@ def time_first_recv(
                 pass
 
 
+WEBRTC_EGRESS_OPTIONAL_METHODS = {
+    "ListEgress",
+    "StartRoomComposite",
+    "StartTrackEgress",
+    "StopEgress",
+}
+
+
+def is_capability_skip(client_cls, method, err_code: str, err_detail: str = "") -> bool:
+    if err_code != "FAILED_PRECONDITION":
+        return False
+    if client_cls is not RoomServiceClient or method.name not in WEBRTC_EGRESS_OPTIONAL_METHODS:
+        return False
+    detail = (err_detail or "").lower()
+    return not detail or "webrtc egress" in detail or "egress is not enabled" in detail
+
+
 def write_python_perf_report(samples, fixtures, authed_meta: Metadata, error: Exception | None = None) -> None:
     svc = {}
     for s in samples:
@@ -3393,7 +3570,8 @@ def write_python_perf_report(samples, fixtures, authed_meta: Metadata, error: Ex
         lines.append(f"| {name} | {len(svc[name])} | {sum(svc[name]) / len(svc[name]):.2f} |")
     # Failures subsection: every RPC whose last iteration returned a non-OK gRPC status.
     # A failing RPC is a FAILURE with its code, never a silent latency sample.
-    failed = [s for s in samples if s["err"] != "OK"]
+    failed = [s for s in samples if s["err"] not in {"OK", "CAPABILITY_SKIPPED"}]
+    skipped = [s for s in samples if s["err"] == "CAPABILITY_SKIPPED"]
     lines += ["", f"## Failures ({len(failed)})", ""]
     if not failed:
         lines.append("No RPC returned a non-OK gRPC status.")
@@ -3403,6 +3581,15 @@ def write_python_perf_report(samples, fixtures, authed_meta: Metadata, error: Ex
         for s in sorted(failed, key=lambda x: (x["service"], x["rpc"])):
             detail = str(s.get("err_detail", "")).replace("\n", " ").replace("|", "\\|")
             lines.append(f"| {s['service']}/{s['rpc']} | {s['api_alias']} | {s['operation_id']} | {s['kind']} | {s['err']} | {detail} | {s['p99']:.2f} | {s['mean']:.2f} | {s['iters']} |")
+    lines += ["", f"## Capability Skips ({len(skipped)})", ""]
+    if not skipped:
+        lines.append("No optional service capability was skipped.")
+    else:
+        lines.append("These RPCs reached the served path but require an optional backend capability disabled in this local profile.")
+        lines += ["", "| RPC | api_alias | operation_id | kind | detail |", "|---|---|---|---|---|"]
+        for s in sorted(skipped, key=lambda x: (x["service"], x["rpc"])):
+            detail = str(s.get("err_detail", "")).replace("\n", " ").replace("|", "\\|")
+            lines.append(f"| {s['service']}/{s['rpc']} | {s['api_alias']} | {s['operation_id']} | {s['kind']} | {detail} |")
     lines += ["", "## Slowest 20 by p99", "", "| RPC | api_alias | operation_id | kind | err | p50 ms | p99 ms | mean ms |", "|---|---|---|---|---|--:|--:|--:|"]
     for s in sorted(samples, key=lambda x: -x["p99"])[:20]:
         lines.append(f"| {s['service']}/{s['rpc']} | {s['api_alias']} | {s['operation_id']} | {s['kind']} | {s['err']} | {s['p50']:.2f} | {s['p99']:.2f} | {s['mean']:.2f} |")
@@ -3579,7 +3766,7 @@ TERMINAL_PERF_METHODS = {
     "DisableProvider", "DismissDlqEvent", "DropResource", "LeaveRoom",
     "MuteTrack", "PromoteCanary", "QuarantineDlqEvent", "RejectPolicyDraft",
     "ReplayDlqEvent", "RevokeApiKey", "RevokeRole", "RollbackCatalog",
-    "RollbackPolicyVersion", "UnlinkIdentity", "UnpublishTrack",
+    "RollbackPolicyVersion", "PurgeTenant", "UnlinkIdentity", "UnpublishTrack",
 }
 
 SINGLE_CALL_PERF_METHODS = {
@@ -3591,6 +3778,8 @@ SINGLE_CALL_PERF_METHODS = {
 def perf_rpc_order_key(item):
     client_cls, method = item
     original_idx = RPC_ORDER_INDEX[(client_cls, method.name)]
+    if client_cls is TenantServiceClient and method.name == "PurgeTenant":
+        return (4, 0, original_idx)
     if client_cls is AuthnServiceClient and method.name in AUTH_FIRST_PERF_INDEX:
         return (0, AUTH_FIRST_PERF_INDEX[method.name])
     if client_cls is AuthnServiceClient and method.name in AUTH_LAST_PERF:
@@ -3783,6 +3972,8 @@ def test_live_perf():
                 err_code = time_first_recv(
                     rpc_callable, request, authed_meta, method.client_streaming, method.server_streaming
                 )
+                if is_capability_skip(client_cls, method, err_code):
+                    err_code = "CAPABILITY_SKIPPED"
                 return (time.perf_counter() - start) * 1000.0, err_code, err_detail
             try:
                 rpc_callable(request, metadata=authed_meta.to_grpc_metadata(), timeout=20.0)
@@ -3795,6 +3986,8 @@ def test_live_perf():
                     err_detail = exc.details() or ""
                 except Exception:
                     err_detail = str(exc)
+            if is_capability_skip(client_cls, method, err_code, err_detail):
+                err_code = "CAPABILITY_SKIPPED"
             if err_code == "OK" and client_cls is AuthnServiceClient and method.name == "PutMfaPolicy":
                 try:
                     reset = authn_pb2.PutMfaPolicyRequest()
@@ -3849,7 +4042,7 @@ def test_live_perf():
                 "err_detail": err_detail,
                 "p50": pct(50), "p99": pct(99), "mean": sum(durs) / len(durs),
             })
-            if err_code != "OK":
+            if err_code != "OK" and err_code != "CAPABILITY_SKIPPED":
                 print(f"[PERF-FAIL] {client_cls._SERVICE_FULL}/{method.name} => {err_code}: {err_detail}")
             else:
                 print(f"[PERF-OK] {client_cls._SERVICE_FULL}/{method.name}", flush=True)

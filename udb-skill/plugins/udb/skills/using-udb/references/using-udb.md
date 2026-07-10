@@ -18,9 +18,12 @@ model as annotated Protocol Buffers; UDB turns those into database schemas (DDL)
 and serves a uniform gRPC **DataBroker** API (`Select` / `Upsert` / `Delete` /
 typed stores / streaming) across 18 backends, plus a **native control plane** of
 first-class services (auth, authz, API keys, IdP, tenant, notification,
-analytics, storage, asset pipelines, WebRTC). Every request carries **metadata**
-(tenant, project, scopes, identity) that UDB enforces fail-closed. The proto is
-the source of truth; the SDK is a thin typed client.
+analytics, storage, asset pipelines, WebRTC — and the platform wave: vault
+secrets/transit-crypto, metering/quotas, scheduler, search, webhooks, workflows/
+sagas, distributed locks, live-query streams, feature flags, backup/restore,
+embeddings). Every request carries **metadata** (tenant, project, scopes,
+identity) that UDB enforces fail-closed. The proto is the source of truth; the
+SDK is a thin typed client.
 
 ## The mental model an agent must hold
 
@@ -69,12 +72,15 @@ the source of truth; the SDK is a thin typed client.
 
 Pick the developer's language. Default data target `localhost:50051` (plaintext
 in dev). **Set `authTarget` too whenever the app uses auth/native services.**
-Current release baseline is **UDB 0.3.7** with wire protocol **1.0.0**; keep the
-broker and SDK package on `0.3.7` unless deliberately testing compatibility.
+Current release baseline is **UDB 0.4.0** with wire protocol **1.0.0**; keep the
+broker and SDK package on the same product version unless deliberately testing
+compatibility. The platform-service wave (Vault, Metering, Scheduler, Search,
+Webhook, Workflow, Lock, LiveQuery, Config, Backup, Embedding) and the
+consistency/idempotency contract below ship in 0.4.0.
 
 ### TypeScript / Node — `@udb_plus/sdk`
 ```bash
-npm i @udb_plus/sdk@0.3.7
+npm i @udb_plus/sdk@0.4.0
 ```
 ```ts
 import { dataBrokerClient, metadata, UdbMetadata } from "@udb_plus/sdk/client";
@@ -95,7 +101,7 @@ Adapters for Express / Fastify / Next.js under `adapters/`.
 
 ### Python — `udb-client`
 ```bash
-pip install udb-client==0.3.7        # or: pip install "udb-client[pydantic]==0.3.7"
+pip install udb-client==0.4.0        # or: pip install "udb-client[pydantic]==0.4.0"
 ```
 ```python
 from udb_client import Metadata, UdbClient, decode_records
@@ -117,7 +123,7 @@ control-plane channel automatically.
 
 ### Go — `github.com/fahara02/udb/sdk/go`
 ```bash
-go get github.com/fahara02/udb/sdk/go@v0.3.7
+go get github.com/fahara02/udb/sdk/go@v0.4.0
 ```
 ```go
 cfg := udbclient.Config{Target: "localhost:50051", AuthTarget: "localhost:50061",
@@ -143,7 +149,7 @@ hot-swap.
 
 ### C# — `Udb.Client`
 ```bash
-dotnet add package Udb.Client --version 0.3.7
+dotnet add package Udb.Client --version 0.4.0
 ```
 ```csharp
 var meta = new UdbMetadata(TenantId:"acme", Purpose:"web.request",
@@ -155,7 +161,7 @@ var rows = await udb.SelectAsync(new SelectRequest { MessageType="shop.v1.Custom
 
 ### PHP / Laravel — `fahara02/udb-laravel`
 ```bash
-composer require fahara02/udb-laravel:^0.3.7   # needs PHP 8.1+, grpc PECL ext
+composer require fahara02/udb-laravel:^0.4.0   # needs PHP 8.1+, grpc PECL ext
 ```
 ```php
 $client = new UdbClient(['endpoint' => '127.0.0.1:50051', 'tls' => ['enabled' => false]]);
@@ -197,11 +203,18 @@ All data RPCs take `message_type` = the proto's fully-qualified name.
 - **Select**: `{ message_type, filter, limit, order_by }` → `RecordSet`.
   List/page sizes are server-capped (default max 500 rows per page) — paginate,
   don't ask for everything.
-- **Upsert**: `{ message_type, record/record_json, conflict_fields, return_record }`
-  — insert-or-update on the conflict key. **Always set `conflict_fields`** for
-  idempotency: SDKs auto-retry only *read-only* RPCs on `DEADLINE_EXCEEDED`;
-  mutations are NOT replayed, so timeouts on writes need an idempotent retry by
-  the app (which `conflict_fields` makes safe).
+- **Upsert**: `{ message_type, record/record_json, conflict_fields, return_record,
+  idempotency_key }` — insert-or-update on the conflict key. **Always set
+  `conflict_fields`**, and set `idempotency_key` on writes you may retry.
+  The retry contract: SDKs auto-retry *read-only* RPCs on transient errors;
+  a **replay-safe mutation (Upsert/Delete) is retried ONLY when it carries a
+  non-empty `idempotency_key`** — keyless mutations fail closed (no auto-retry)
+  rather than risk a double apply. A keyed mutation is **durably deduplicated
+  broker-side**: a replay (retry or duplicate send) returns the stored
+  first-writer response with `was_duplicate=true` instead of re-running the
+  write — check it via the SDK helper (`WasDuplicate` on the Go result,
+  `udb.metadata.wasDuplicate(resp)` in TS, `was_duplicate(resp)` in Python,
+  `wasReplay($resp)` in PHP, `MutationOutcome` in Java/C#).
 - **Delete**: `{ message_type, filter }`.
 - **Typed stores** (when the backend supports them): cache get/set/delete/scan,
   document get/find/upsert/delete, graph query/mutate, time-series write/query,
@@ -215,6 +228,25 @@ Records are JSON-shaped objects keyed by proto field names. Decode helpers
 (`decode_records` in Python, typed messages in Go/Java/C#) turn rows into
 language objects. **Sensitive fields never come back:** columns annotated
 storage-only/redacted (password hashes, key material) are blanked server-side.
+
+**Read-your-writes, receipts, fences, consistency modes.** A mutation response
+carries a **write receipt** (`MutationResponse.write_receipt`: source LSN,
+outbox sequence, projection task ids, manifest checksum). A follow-up read can
+carry a **read fence** built from that receipt so the broker waits until the
+write is visible, and/or an explicit **consistency mode**
+(`strong` / `read_your_writes` / `bounded_staleness` / `replica_bounded` /
+`eventual` / `projection_ok` / `cache_ok`). Every SDK packages this as
+`metadata.afterWrite(receipt)` (Go `udb.Metadata().AfterWrite(...)` or
+`Entity.WithConsistency(...)`, TS `udb.metadata.afterWrite/withConsistency`,
+Python `meta.after_write(receipt)` / `meta.with_consistency(ConsistencyMode.X)`,
+PHP `UdbMetadata->afterWrite(...)`, Java/C# `meta.afterWrite(receipt)`). Prefer
+a fence over a proof `Get` after every write.
+
+**Typed errors.** Failed RPCs carry a decodable `udb.entity.v1.ErrorDetail` in
+the `udb-error-detail-bin` trailer (kind, retryable, retry_after_ms,
+field_violations). Every SDK decodes it (`Error.Detail()` in Go,
+`UdbError.detail` in TS, `UdbDetailedError` in Python, Java/C# accessors) —
+read `retryable`/`retry_after_ms` instead of pattern-matching message strings.
 
 ---
 
@@ -271,7 +303,26 @@ storage-only/redacted (password hashes, key material) are blanked server-side.
 | **AnalyticsService** | usage/event queries |
 | **StorageService** | file uploads (flow below), presigned URLs, quotas, GC |
 | **AssetService** | processing pipelines over stored files (steps incl. vector EMBED); pipelines can auto-trigger on upload finalize |
-| **RoomService / WebRTC** | rooms, peers, tracks, TURN credentials, signaling (flow below) |
+| **RoomService / WebRTC** | rooms, peers, tracks, TURN credentials, signaling (flow below), egress |
+| **VaultService** | secrets (versioned KV, CAS, soft-delete/destroy), transit encrypt/decrypt/sign/verify/HMAC by key name, dynamic DB credential leases; **fail-closed when sealed** (`FAILED_PRECONDITION` until the master key is available) |
+| **MeteringService** | `RecordUsage`/`QueryUsage`, per-tenant quotas (`PutQuota`/`CheckQuota`) — quota refusals come back as typed `RESOURCE_EXHAUSTED` |
+| **SchedulerService** | durable cron / one-shot jobs: `CreateJob`/`PauseJob`/`ResumeJob`/`DeleteJob` |
+| **SearchService** | managed search indexes over app data: `CreateIndex`/`Reindex`/`Search` (rank fusion), tenant-filtered server-side |
+| **WebhookService** | outbound webhook endpoints + delivery logs; **SSRF-guarded** (private/loopback ranges denied, DNS re-checked at delivery time) |
+| **WorkflowService** | long-running workflows/sagas: `StartWorkflow`/`SignalWorkflow`/`CancelWorkflow` with compensation |
+| **LockService** | distributed advisory locks with **monotonic fencing tokens** (`AcquireLock`/`RenewLock`/`ReleaseLock`; stale token → `FAILED_PRECONDITION`) |
+| **LiveQueryService** | `Subscribe` server-stream of live data changes (tenant-scoped; saturated subscribers are closed with `RESOURCE_EXHAUSTED`, never buffered unboundedly) |
+| **ConfigService** | feature flags: `PutFlag`/`GetFlag`/`EvaluateFlags` (deterministic percentage rollout) |
+| **BackupService** | tenant-scoped backup/restore (`StartTenantBackup`/`RestoreTenant`; restore only into a fresh target) |
+| **EmbeddingService** | embedding sources, backfill enumeration, `ReportEmbedding`, vector `Retrieve` |
+
+The platform services (Vault → Embedding) have raw generated stubs in every SDK
+today; workflow facades come later — call them through the generated client
+(e.g. Python `GeneratedClient(...).VaultService.encrypt(...)`, TS
+`udb.generated.VaultService.encrypt({...})`, Go
+`udb.Generated.InvokeUnary(ctx, "/udb.core.vault.services.v1.VaultService/Encrypt", ...)`).
+The per-RPC list, retry class, and idempotency contract are in
+`docs/generated/udb-native-contract.json` (or `udb native docs`).
 
 **Storage upload flow:** `RegisterUpload` (name/type/size → file_id + presigned
 PUT URL) → client PUTs bytes directly to object storage → `FinalizeUpload`
@@ -378,7 +429,7 @@ unknown command or sub-action prints a "did you mean …?" suggestion.
 | gRPC status | Most likely cause |
 |---|---|
 | `UNIMPLEMENTED` | Native-service call sent to the **data target** — set `authTarget`/control-plane address. |
-| `UNAUTHENTICATED` | Missing/invalid bearer. On the DataBroker data plane, `x-api-key` alone is not accepted; log in for a JWT and send `authorization: Bearer <jwt>` or use mTLS. UDB 0.3.7 names this case explicitly. |
+| `UNAUTHENTICATED` | Missing/invalid bearer. On the DataBroker data plane, `x-api-key` alone is not accepted; log in for a JWT and send `authorization: Bearer <jwt>` or use mTLS. UDB names this case explicitly. |
 | `PERMISSION_DENIED` | Missing scope, tenant mismatch (metadata/body vs credential), revoked credential, or per-action policy deny. **On a data RPC with otherwise-valid scopes → no ABAC policy seeded** (default-deny snapshot, mental model #7): seed `UDB_ABAC_POLICIES_JSON` / the `udb_abac_policies` table, or `UDB_ABAC_DEFAULT_ALLOW=true` for dev. Seeding `policy_rules` does NOT fix this. |
 | `INVALID_ARGUMENT` "tenant isolation requires filter on tenant_id" | A tenant-scoped read/delete MUST include `tenant_id` (the canonical UUID, not the code) in the filter. |
 | `FAILED_PRECONDITION` | Service disabled/not mounted, wrong lifecycle state (e.g. apply before approve), feature requires config (TURN secret, media profile). |

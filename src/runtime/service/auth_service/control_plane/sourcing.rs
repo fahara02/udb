@@ -356,7 +356,6 @@ mod tests {
     use super::*;
     use crate::proto::{ErrorDetail, ErrorKind};
     use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
-    use prost::Message as _;
 
     fn decode_detail(status: &Status) -> ErrorDetail {
         let raw = status

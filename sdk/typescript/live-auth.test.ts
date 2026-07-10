@@ -264,11 +264,20 @@ function snakeToCamel(s: string): string {
   const pascal = snakeToPascal(s);
   return pascal.charAt(0).toLowerCase() + pascal.slice(1);
 }
+function rpcPathOf(serviceFull: string, methodSnake: string): string {
+  const direct = `/${serviceFull}/${snakeToPascal(methodSnake)}`;
+  if (RPC_OPERATION_KIND[direct]) return direct;
+  const servicePrefix = `/${serviceFull}/`;
+  const methodCamel = snakeToCamel(methodSnake);
+  for (const path of Object.keys(RPC_OPERATION_KIND)) {
+    if (!path.startsWith(servicePrefix)) continue;
+    if (RPC_API_ALIAS[path] === methodSnake) return path;
+    if (RPC_OPERATION_ID[path] === methodSnake || RPC_OPERATION_ID[path] === methodCamel) return path;
+  }
+  return direct;
+}
 function operationKindOf(serviceFull: string, methodSnake: string): string | undefined {
   return RPC_OPERATION_KIND[rpcPathOf(serviceFull, methodSnake)];
-}
-function rpcPathOf(serviceFull: string, methodSnake: string): string {
-  return `/${serviceFull}/${snakeToPascal(methodSnake)}`;
 }
 function apiAliasOf(serviceFull: string, methodSnake: string): string {
   return RPC_API_ALIAS[rpcPathOf(serviceFull, methodSnake)] || methodSnake;
@@ -461,23 +470,27 @@ test("bench-body manifest matches the generated RPC contract", () => {
 });
 
 function manifestBodyFor(serviceName: string, methodName: string): string | undefined {
-  const rows = loadBenchBodyRows();
   const method = snakeToPascal(methodName);
-  const candidates = [`${serviceName}.${method}`, method];
-  for (const key of candidates) {
-    const body = rows.get(key);
-    if (body !== undefined) return body;
-  }
+  // Prefer the generated service+alias metadata before ambiguous bare RPC names.
+  // Example: CacheService/cache_get must not hydrate from DataBroker/CacheGet.
   for (const entry of loadBenchBodyEntries()) {
     if (entry.service !== serviceName) continue;
     if (
       entry.api_alias === methodName ||
       entry.operation_id === methodName ||
+      entry.operation_id === snakeToCamel(methodName) ||
       entry.rpc === method ||
+      entry.rpc === `${serviceName}.${method}` ||
       entry.wire_rpc === `${serviceName}/${method}`
     ) {
       return entry.body ?? "";
     }
+  }
+  const rows = loadBenchBodyRows();
+  const candidates = [`${serviceName}.${method}`, method];
+  for (const key of candidates) {
+    const body = rows.get(key);
+    if (body !== undefined) return body;
   }
   return undefined;
 }
@@ -525,7 +538,7 @@ function fullSurfaceManifestFixtures(): PerfFixtures {
   const fixtures = new PerfFixtures();
   for (const [key, value] of Object.entries({
     tenant_id: "tenant-1", tenant: "tenant-1", project: "project-1", project_id: "project-1",
-    tenant_code: "tenant-code-1", purge_tenant_id: "tenant-purge-1",
+    tenant_code: "tenant-code-1", purge_tenant_id: "tenant-1",
     message_type: LIVE_MESSAGE_TYPE, record_id: "record-1", bucket: "bucket-1", object_key: "object-1",
     document_id: "document-1", mongo_collection: "collection_1", node_id: "node-1",
     user_id: "user-1", subject: "user:user-1", session_id: "session-1", token: "token-1",
@@ -541,7 +554,7 @@ function fullSurfaceManifestFixtures(): PerfFixtures {
     cancel_workflow_id: "cancel-workflow-1", catalog_manifest_b64: "e30=", challenge_id: "challenge-1",
     close_room_id: "close-room-1", delete_endpoint_id: "delete-endpoint-1", delete_file_id: "delete-file-1",
     device_id: "device-1", dismiss_dlq_id: "dismiss-dlq-1", dlq_id: "dlq-1",
-    ds_policy_id: "2", egress_id: "egress-1", endpoint_id: "endpoint-1", external_identity_id: "external-1",
+    ds_policy_id: "2", egress_id: "eg-tenant-1-00000000-0000-4000-8000-000000000001", endpoint_id: "endpoint-1", external_identity_id: "external-1",
     fencing_token: "1", finalize_file_id: "finalize-file-1", gov_exp: "1900000000", job_id: "job-1",
     join_session_room_id: "join-room-1", leave_peer_id: "leave-peer-1", mark_saga_id: "mark-saga-1",
     otp_code: "123456", otp_id: "otp-1", owner_id: "owner-1", quarantine_dlq_id: "quarantine-dlq-1",
@@ -557,6 +570,7 @@ function fullSurfaceManifestFixtures(): PerfFixtures {
     approve_draft_id: "approve-draft-1", canary_version_id: "canary-version-1",
     policy_version_id: "policy-version-1", reject_draft_id: "reject-draft-1",
     rollback_policy_set_id: "rollback-policy-set-1", rollback_target_version_id: "rollback-target-version-1",
+    rollback_resource_version: "rollback-resource-version-1",
     update_draft_id: "update-draft-1", release_fencing_token: "1", renew_fencing_token: "1",
     vault_create_key_name: "transit-create-key", vault_put_secret_path: "secret/put",
   })) {
@@ -594,7 +608,7 @@ test("manifest JSON body hydrates TenantService rows with seed refs", () => {
   const fixtures = new PerfFixtures();
   fixtures.set("tenant_id", "tenant-1");
   fixtures.set("tenant_code", "tenant-code-1");
-  fixtures.set("purge_tenant_id", "tenant-purge-1");
+  fixtures.set("purge_tenant_id", "tenant-1");
   const created = manifestJSONBody("TenantService", "create_tenant", fixtures);
   const tenant = manifestJSONBody("TenantService", "get_tenant", fixtures);
   const config = manifestJSONBody("TenantService", "get_tenant_config", fixtures);
@@ -608,7 +622,7 @@ test("manifest JSON body hydrates TenantService rows with seed refs", () => {
   assert.equal(tenant?.tenant_id, "tenant-1");
   assert.equal(config?.tenant_id, "tenant-1");
   assert.equal(list?.page_size, 20);
-  assert.equal(purged?.tenant_id, "tenant-purge-1");
+  assert.equal(purged?.tenant_id, "tenant-1");
   assert.equal(purged?.confirmation_token, "sdk-perf-confirm-purge");
   assert.equal(updated?.status, "active");
   assert.equal(updatedConfig?.config_key, "feature.flag");
@@ -852,7 +866,7 @@ test("manifest JSON body hydrates all remaining DataBroker rows", () => {
   assert.equal(rollback?.project_id, "project-1");
   assert.equal(stage?.manifest_json, "e30=");
   assert.equal(stage?.reason, "stage");
-  assert.equal(timeSeries?.points?.[0]?.timestamp, "2026-01-01T00:00:00Z");
+  assert.deepEqual(timeSeries?.points?.[0]?.timestamp, { seconds: 1767225600, nanos: 0 });
   assert.equal(timeSeries?.points?.[0]?.values?.cpu, 0.5);
   assert.equal(validate?.manifest_json, "e30=");
   assert.equal(validate?.reason, "validate");
@@ -1134,7 +1148,7 @@ test("manifest JSON body hydrates RoomService mutation rows", () => {
   fixtures.set("close_room_id", "close-room-1");
   fixtures.set("track_id", "track-1");
   fixtures.set("object_key", "object-1");
-  fixtures.set("egress_id", "egress-1");
+  fixtures.set("egress_id", "eg-tenant-1-00000000-0000-4000-8000-000000000001");
   fixtures.set("user_id", "user-1");
   const created = manifestJSONBody("RoomService", "create_room", fixtures);
   const updated = manifestJSONBody("RoomService", "update_room", fixtures);
@@ -1152,7 +1166,7 @@ test("manifest JSON body hydrates RoomService mutation rows", () => {
   assert.equal(composite?.options, "{}");
   assert.equal(trackEgress?.track_id, "track-1");
   assert.equal(trackEgress?.format, "mp4");
-  assert.equal(stopped?.egress_id, "egress-1");
+  assert.equal(stopped?.egress_id, "eg-tenant-1-00000000-0000-4000-8000-000000000001");
 });
 
 test("manifest JSON body hydrates PeerService mutation rows", () => {
@@ -1608,6 +1622,7 @@ test("manifest JSON body hydrates ControlPlaneService rows with seed refs", () =
   fixtures.set("project", "project-1");
   fixtures.set("node_id", "node-1");
   fixtures.set("resource_name", "backend-target-1");
+  fixtures.set("rollback_resource_version", "version-1");
   const ack = manifestJSONBody("ControlPlaneService", "ack_status", fixtures);
   const delta = manifestJSONBody("ControlPlaneService", "delta_resources", fixtures);
   const resources = manifestJSONBody("ControlPlaneService", "get_resources", fixtures);
@@ -1625,7 +1640,7 @@ test("manifest JSON body hydrates ControlPlaneService rows with seed refs", () =
   assert.equal(resources?.page?.page_size, 50);
   assert.equal(nodes?.resource_type, "RESOURCE_TYPE_UNSPECIFIED");
   assert.equal(nodes?.page?.page, 1);
-  assert.equal(rollback?.target_version, "");
+  assert.equal(rollback?.target_version, "version-1");
   assert.equal(rollback?.context?.tenant?.project_id, "project-1");
   assert.equal(stream?.node_id, "node-1");
   assert.deepEqual(stream?.resource_names, []);
@@ -1782,10 +1797,12 @@ async function seedPerfFixtures(
   projectId: string,
   uuidTenant: string,
 ): Promise<SeedResult> {
-  const fix = new PerfFixtures();
+  const fix = fullSurfaceManifestFixtures();
   const suffix = `${process.pid}${Date.now()}`;
   const opts = { deadlineMs: 8_000, noRetry: true };
   const ctx = requestContext(tenantId, projectId, "ts.live.perf.seed");
+  fix.set("purge_tenant_id", tenantId);
+  fix.set("egress_id", `eg-${tenantId}-${liveUuid()}`);
   const cleanups: Array<() => Promise<void>> = [];
   const addCleanup = (fn: () => Promise<void>) => cleanups.push(fn);
   const tryRun = async (label: string, fn: () => Promise<void>) => {
@@ -1970,7 +1987,7 @@ async function seedPerfFixtures(
     const adminP = process.env.UDB_LIVE_PASSWORD || pw;
     await tryRun("FreshLoginToken", async () => { const l = await gen.AuthnService.login({ username: adminU, password: adminP, tenant_hint: tenantId, project_hint: projectId, device_name: "ts-perf-token" }, opts); if (l.access_token) fix.set("token", l.access_token); if (l.csrf_token) fix.set("csrf_token", l.csrf_token); });
     await tryRun("FreshLoginRefresh", async () => { const l = await gen.AuthnService.login({ username: adminU, password: adminP, tenant_hint: tenantId, project_hint: projectId, device_name: "ts-perf-refresh" }, opts); if (l.refresh_token) fix.set("refresh_token", l.refresh_token); });
-    await tryRun("FreshLoginSession", async () => { const l = await gen.AuthnService.login({ username: adminU, password: adminP, tenant_hint: tenantId, project_hint: projectId, device_name: "ts-perf-session" }, opts); if (l.session_id) fix.set("session_id", l.session_id); });
+    await tryRun("FreshLoginSession", async () => { const l = await gen.AuthnService.login({ username: adminU, password: adminP, tenant_hint: tenantId, project_hint: projectId, device_name: "ts-perf-session" }, opts); if (l.session_id) { fix.set("session_id", l.session_id); fix.set("refresh_session_id", l.session_id); } });
   });
 
   // ── AuthzService: role + assignment + policies + relationship ──────────────────
@@ -2312,6 +2329,81 @@ async function seedPerfFixtures(
     });
   }
 
+  // ── CacheService: namespace + key for read/mutation rows ─────────────────────
+  await tryRun("CreateCacheNamespace", async () => {
+    await gen.CacheService.create_cache_namespace({ tenant_id: tenantId, namespace: "sdk-perf-cache", max_bytes: 1048576, default_ttl_seconds: 300 }, opts);
+  });
+  await tryRun("SeedCacheKey", async () => {
+    await gen.CacheService.cache_set({ tenant_id: tenantId, namespace: "sdk-perf-cache", key: objectKey, value: Buffer.from("perf", "utf8"), ttl_seconds: 300 }, opts);
+  });
+
+  // ── EmbeddingService: source + reported vector for retrieve/backfill rows ─────
+  await tryRun("RegisterEmbeddingSource", async () => {
+    await gen.EmbeddingService.register_source({ tenant_id: tenantId, source_name: "sdk_live_records", source_message_type: LIVE_MESSAGE_TYPE, text_fields: ["payload"], target_collection: "sdk_live_records", model_id: "text-embedding-3-small", metadata_json: "{}" }, opts);
+  });
+  await tryRun("ReportEmbedding", async () => {
+    await gen.EmbeddingService.report_embedding({ tenant_id: tenantId, source_name: "sdk_live_records", row_pk: recordId, vector: [0.1, 0.2, 0.3], model: "text-embedding-3-small", dims: 3 }, opts);
+  });
+
+  // ── LockService: separate held locks for renew and release ────────────────────
+  const lockOwner = fix.lookup("user_id") ?? liveUuid();
+  await tryRun("AcquireReleaseLock", async () => {
+    const held = await gen.LockService.acquire_lock({ tenant_id: tenantId, lock_name: "sdk-perf-release-lock", owner_id: lockOwner, lease_ttl_seconds: 60, metadata_json: "{}" }, opts);
+    if (held.fencing_token) fix.set("release_fencing_token", String(held.fencing_token));
+  });
+  await tryRun("AcquireRenewLock", async () => {
+    const held = await gen.LockService.acquire_lock({ tenant_id: tenantId, lock_name: "sdk-perf-renew-lock", owner_id: lockOwner, lease_ttl_seconds: 60, metadata_json: "{}" }, opts);
+    if (held.fencing_token) fix.set("renew_fencing_token", String(held.fencing_token));
+  });
+
+  // ── SchedulerService: durable jobs for read/pause/resume/delete rows ──────────
+  await tryRun("CreateSchedulerJob", async () => {
+    const job = await gen.SchedulerService.create_job({ tenant_id: tenantId, project_id: "", name: `sdk-perf-job-${suffix}`, schedule_type: "CRON", cron_expression: "*/5 * * * *", payload: "{}", target_topic: "sdk.perf.scheduler", max_attempts: 3, backoff_seconds: 30 }, opts);
+    if (job.job_id) fix.set("job_id", job.job_id);
+  });
+  await tryRun("CreateDeleteSchedulerJob", async () => {
+    const job = await gen.SchedulerService.create_job({ tenant_id: tenantId, project_id: "", name: `sdk-perf-delete-job-${suffix}`, schedule_type: "CRON", cron_expression: "*/5 * * * *", payload: "{}", target_topic: "sdk.perf.scheduler.delete", max_attempts: 3, backoff_seconds: 30 }, opts);
+    if (job.job_id) fix.set("delete_job_id", job.job_id);
+  });
+
+  // ── WebhookService: endpoints for read/update/delete rows ────────────────────
+  await tryRun("CreateWebhookEndpoint", async () => {
+    const endpoint = await gen.WebhookService.create_endpoint({ tenant_id: tenantId, url: "https://example.com/udb-webhook", topic_pattern: fix.lookup("topic_pattern") ?? "topic.*", description: "sdk perf webhook", max_attempts: 3, metadata_json: "{}" }, opts);
+    if (endpoint.endpoint_id) fix.set("endpoint_id", endpoint.endpoint_id);
+  });
+  await tryRun("CreateDeleteWebhookEndpoint", async () => {
+    const endpoint = await gen.WebhookService.create_endpoint({ tenant_id: tenantId, url: "https://example.com/udb-webhook-delete", topic_pattern: fix.lookup("topic_pattern") ?? "topic.*", description: "sdk perf webhook delete", max_attempts: 3, metadata_json: "{}" }, opts);
+    if (endpoint.endpoint_id) fix.set("delete_endpoint_id", endpoint.endpoint_id);
+  });
+
+  // ── WorkflowService: running instances for read/signal/cancel rows ────────────
+  await tryRun("StartWorkflow", async () => {
+    const workflow = await gen.WorkflowService.start_workflow({ tenant_id: tenantId, project_id: "", workflow_type: "sdk.perf.workflow", total_steps: 20, payload: "{}", compensations: "[]", correlation_id: recordId }, opts);
+    if (workflow.workflow_id) fix.set("workflow_id", workflow.workflow_id);
+  });
+  await tryRun("StartCancelWorkflow", async () => {
+    const workflow = await gen.WorkflowService.start_workflow({ tenant_id: tenantId, project_id: "", workflow_type: "sdk.perf.workflow.cancel", total_steps: 20, payload: "{}", compensations: "[]", correlation_id: `${recordId}-cancel` }, opts);
+    if (workflow.workflow_id) fix.set("cancel_workflow_id", workflow.workflow_id);
+  });
+
+  // ── VaultService: secret + transit key material for crypto/read rows ──────────
+  await tryRun("SeedVaultSecret", async () => {
+    await gen.VaultService.put_secret({ tenant_id: tenantId, secret_path: "secret/path", secret_value: "perf-secret", expected_version: 0, metadata_json: "{}" }, opts);
+  });
+  await tryRun("SeedVaultDeleteSecret", async () => {
+    await gen.VaultService.put_secret({ tenant_id: tenantId, secret_path: "secret/delete", secret_value: "perf-secret-delete", expected_version: 0, metadata_json: "{}" }, opts);
+  });
+  await tryRun("SeedVaultDestroySecret", async () => {
+    await gen.VaultService.put_secret({ tenant_id: tenantId, secret_path: "secret/destroy", secret_value: "perf-secret-destroy", expected_version: 0, metadata_json: "{}" }, opts);
+  });
+  await tryRun("SeedVaultTransit", async () => {
+    await gen.VaultService.create_transit_key({ tenant_id: tenantId, key_name: "transit-key", algorithm: "aes256-gcm-siv" }, opts);
+    const encrypted = await gen.VaultService.encrypt({ tenant_id: tenantId, key_name: "transit-key", plaintext: "perf" }, opts);
+    if (encrypted.ciphertext) fix.set("vault_ciphertext", encrypted.ciphertext);
+    const signed = await gen.VaultService.sign({ tenant_id: tenantId, key_name: "transit-key", input: "perf" }, opts);
+    if (signed.signature) fix.set("vault_signature", signed.signature);
+  });
+
   // ── StorageService (UUID tenant): a registered file → file_id ──────────────────
   let fileId = "";
   await tryRun("RegisterUpload", async () => {
@@ -2471,7 +2563,10 @@ async function seedPerfFixtures(
     await new Promise<void>((resolve) => {
       let done = false;
       const fin = () => { if (done) return; done = true; try { s.end?.(); } catch { /* */ } try { s.cancel?.(); } catch { /* */ } resolve(); };
-      s.once?.("data", fin);
+      s.once?.("data", (msg: any) => {
+        if (msg?.version_info) fix.set("rollback_resource_version", msg.version_info);
+        fin();
+      });
       s.once?.("error", fin);
       setTimeout(fin, 3000);
       try { s.write?.({ node_id: nodeId, resource_type: "RESOURCE_TYPE_BACKEND_TARGET_DEFINITION", context: { tenant: { tenant_id: tenantId, project_id: projectId } } }); } catch { fin(); }
@@ -2492,7 +2587,7 @@ async function seedPerfFixtures(
     }, opts);
   });
   await tryRun("StartTenantBackup", async () => {
-    const backup = await gen.BackupService.start_tenant_backup({ tenant_id: tenantId }, opts);
+    const backup = await gen.BackupService.start_tenant_backup({ tenant_id: tenantId }, { deadlineMs: 60_000, noRetry: true });
     fix.set("backup_id", backup.backup_id);
   });
 
@@ -3579,6 +3674,12 @@ test("live per-RPC perf", {
       try { await fn(request, { deadlineMs: 20_000, noRetry: true }); } catch (e: any) { err = codeNameOf(e); detail = (e?.details || e?.message || String(e)).slice(0, 200); }
       return { ms: performance.now() - start, err, detail };
     };
+    const isCapabilitySkip = (serviceName: string, methodName: string, err: string, detail?: string): boolean => {
+      if (err !== "FAILED_PRECONDITION") return false;
+      if (serviceName !== "RoomService") return false;
+      if (!new Set(["list_egress", "start_room_composite", "start_track_egress", "stop_egress"]).has(methodName)) return false;
+      return /webrtc_egress_(enabled|backend)/.test(detail ?? "");
+    };
 
     // Stream-open timer: create the streaming call and tear it down WITHOUT draining
     // responses. A subscription/upload stream emits a first message only on an event,
@@ -3783,10 +3884,11 @@ test("live per-RPC perf", {
       // non-idempotent mutation (consumed token / duplicate / already-deleted) are a
       // measurement artifact, not an RPC failure (mirrors the Go harness). Only an RPC
       // that NEVER succeeds is a real failure (its first-attempt status).
-      const errCode = anyOk ? "OK" : firstErr;
+      const capabilitySkipped = !anyOk && isCapabilitySkip(serviceName, methodName, firstErr, firstDetail);
+      const errCode = anyOk ? "OK" : capabilitySkipped ? "CAPABILITY_SKIPPED" : firstErr;
       const errDetail = anyOk ? undefined : firstDetail;
       const durs = (anyOk ? okDurs : allDurs);
-      if (errCode !== "OK") console.error(`FAILDETAIL ${serviceName}/${methodName} [${errCode}] ${errDetail ?? ""}`);
+      if (errCode !== "OK" && errCode !== "CAPABILITY_SKIPPED") console.error(`FAILDETAIL ${serviceName}/${methodName} [${errCode}] ${errDetail ?? ""}`);
       durs.sort((a, b) => a - b);
       const pct = (p: number) => durs[Math.min(durs.length - 1, Math.floor((p * (durs.length - 1)) / 100))];
       samples.push({
@@ -3795,7 +3897,7 @@ test("live per-RPC perf", {
         operationId: operationIdOf(api.serviceFull, methodName),
         kind, err: errCode,
         p50: pct(50), p99: pct(99), mean: durs.reduce((s, d) => s + d, 0) / durs.length,
-        note: kind === "destructive" ? "destructive: 1 real call against a seeded disposable target" : `${kind} (seeded success path)`,
+        note: capabilitySkipped ? `capability skipped: ${errDetail ?? "server reported unavailable capability"}` : kind === "destructive" ? "destructive: 1 real call against a seeded disposable target" : `${kind} (seeded success path)`,
       });
     };
 
@@ -3823,6 +3925,8 @@ test("live per-RPC perf", {
     const phase1: Unit[] = [];
     let phase2: Unit[] = [];
     const phase3: Unit[] = [];
+    const terminalDestructive: Unit[] = [];
+    const TERMINAL_DESTRUCTIVE = new Set(["TenantService/purge_tenant"]);
     const surfaces: Array<[string, any, readonly string[]]> = [
       ["authTarget", authGenerated, NATIVE_SERVICE_APIS],
       ["target", project.generated, ["DataBroker"]],
@@ -3839,7 +3943,9 @@ test("live per-RPC perf", {
           // names point to the same RPC function, otherwise the perf count doubles.
           if (!methodName.includes("_") && Object.entries(api).some(([otherName, otherFn]) => otherName.includes("_") && otherFn === fn)) continue;
           const unit: Unit = { serviceName, api, methodName, fn: fn as any };
-          if (serviceName === "AuthnService" && PHASE1_AUTHN_ORDER.includes(methodName)) phase1.push(unit);
+          const unitKey = `${serviceName}/${methodName}`;
+          if (TERMINAL_DESTRUCTIVE.has(unitKey)) terminalDestructive.push(unit);
+          else if (serviceName === "AuthnService" && PHASE1_AUTHN_ORDER.includes(methodName)) phase1.push(unit);
           else if (serviceName === "AuthnService" && PHASE3_AUTHN.has(methodName)) phase3.push(unit);
           else phase2.push(unit);
         }
@@ -3862,6 +3968,16 @@ test("live per-RPC perf", {
     // Phase 3: tear the session/credentials down LAST (disposable seeded targets;
     // the admin's own logout/revoke is effectively last).
     for (const u of phase3) await measureRpc(u.serviceName, u.api, u.methodName, u.fn);
+    // Terminal destructive RPCs can invalidate broad tenant state. Measure them
+    // after all session teardown so they cannot poison unrelated samples.
+    if (terminalDestructive.length > 0) {
+      const fresh = await project.login({ username, password, tenant_hint: tenantId, project_hint: projectId, device_name: "ts-sdk-perf-terminal" });
+      const freshWho = await project.auth.authenticateBearer(fresh.access_token);
+      tenantId = freshWho?.principal?.tenant_id || tenantId;
+      project.setTenant(tenantId);
+      fixtures.set("purge_tenant_id", tenantId);
+    }
+    for (const u of terminalDestructive) await measureRpc(u.serviceName, u.api, u.methodName, u.fn);
 
     const svc = new Map<string, number[]>();
     for (const s of samples) { (svc.get(s.service) ?? svc.set(s.service, []).get(s.service)!).push(s.mean); }
@@ -3892,8 +4008,10 @@ test("live per-RPC perf", {
     for (const name of [...svc.keys()].sort((a, b) => mean(svc.get(b)!) - mean(svc.get(a)!))) {
       lines.push(`| ${name} | ${svc.get(name)!.length} | ${mean(svc.get(name)!).toFixed(2)} |`);
     }
-    // Failures subsection: every RPC whose last iteration returned a non-OK gRPC status.
-    const failed = samples.filter((s) => s.err !== "OK");
+    // Failures subsection: every RPC whose last iteration returned a non-OK gRPC
+    // status, excluding explicit server-declared optional capability skips.
+    const failed = samples.filter((s) => s.err !== "OK" && s.err !== "CAPABILITY_SKIPPED");
+    const skipped = samples.filter((s) => s.err === "CAPABILITY_SKIPPED");
     lines.push("", `## Failures (${failed.length})`, "");
     if (failed.length === 0) {
       lines.push("No RPC returned a non-OK gRPC status.");
@@ -3902,6 +4020,15 @@ test("live per-RPC perf", {
       lines.push("", "| RPC | api_alias | operation_id | kind | err | p99 ms | mean ms |", "|---|---|---|---|---|--:|--:|");
       for (const s of [...failed].sort((a, b) => (a.service + a.rpc).localeCompare(b.service + b.rpc))) {
         lines.push(`| ${s.service}/${s.rpc} | ${s.apiAlias} | ${s.operationId} | ${s.kind} | ${s.err} | ${s.p99.toFixed(2)} | ${s.mean.toFixed(2)} |`);
+      }
+    }
+    lines.push("", `## Capability Skips (${skipped.length})`, "");
+    if (skipped.length === 0) {
+      lines.push("No RPC was skipped for an unavailable optional capability.");
+    } else {
+      lines.push("| RPC | api_alias | operation_id | kind | reason |", "|---|---|---|---|---|");
+      for (const s of [...skipped].sort((a, b) => (a.service + a.rpc).localeCompare(b.service + b.rpc))) {
+        lines.push(`| ${s.service}/${s.rpc} | ${s.apiAlias} | ${s.operationId} | ${s.kind} | ${s.note} |`);
       }
     }
     lines.push("", "## Slowest 20 by p99", "", "| RPC | api_alias | operation_id | kind | err | p50 ms | p99 ms | mean ms | note |", "|---|---|---|---|---|--:|--:|--:|---|");

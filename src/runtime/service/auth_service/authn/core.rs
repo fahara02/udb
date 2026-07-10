@@ -137,7 +137,6 @@ mod tests {
     use crate::proto::udb::core::authn::services::v1::authn_service_server::AuthnService;
     use crate::proto::{ErrorDetail, ErrorKind};
     use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
-    use prost::Message as _;
     use std::collections::BTreeSet;
 
     fn storage_only_field_names(message_full_name: &str) -> BTreeSet<String> {

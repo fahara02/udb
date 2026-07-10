@@ -791,7 +791,6 @@ mod tests {
     use crate::runtime::authn::AuthnConfig;
     use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
     use crate::runtime::security::SecurityConfig;
-    use prost::Message as _;
     use tonic::{Code, Request};
 
     fn svc() -> AuthnServiceImpl {

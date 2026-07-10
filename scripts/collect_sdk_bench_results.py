@@ -60,6 +60,10 @@ HARNESS_STATUS_CODES = {
     "SKIP_NO_BODY",
 }
 
+NON_FATAL_HARNESS_STATUS_CODES = {
+    "CAPABILITY_SKIPPED",
+}
+
 
 def _cmd(args: list[str]) -> str | None:
     try:
@@ -157,7 +161,10 @@ def _parse_report(path: Path) -> dict[str, Any]:
         raw = (value or "").strip()
         if raw in {"", "-", "OK", "ok"}:
             return None
-        return _canonical_grpc_status(raw)
+        status = _canonical_grpc_status(raw)
+        if status in NON_FATAL_HARNESS_STATUS_CODES:
+            return None
+        return status
 
     for line in lines:
         low = line.lower()
@@ -442,8 +449,8 @@ RPCs measured: 2
             encoding="utf-8",
         )
         parsed = _parse_report(path)
-        assert parsed["summary"]["failed_rpc_count"] == 2, parsed
-        assert {row["err_code"] for row in parsed["failed_rpcs"]} == {"CAPABILITY_SKIPPED", "SKIP_NO_BODY"}, parsed
+        assert parsed["summary"]["failed_rpc_count"] == 1, parsed
+        assert {row["err_code"] for row in parsed["failed_rpcs"]} == {"SKIP_NO_BODY"}, parsed
 
         path.write_text(
             """# UDB SDK Live Perf

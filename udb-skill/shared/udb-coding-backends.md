@@ -20,9 +20,15 @@ first. Canonical copy: `udb-skill/shared/udb-coding-backends.md`.
   `HA-canonical`) must match reachable runtime behavior. Don't flip a flag true
   without a wired path + a test.
 - **Canonical-store leases/outbox-seq** must be cluster-atomic to be
-  `HA-canonical`. Process-local `tokio::Mutex` is NOT atomicity. Today only
-  Postgres is proven HA-canonical; vector/ClickHouse are Projection-role
-  (registration refused unless `UDB_ALLOW_PROJECTION_SYSTEM_STORE=1`).
+  `HA-canonical`. Process-local `tokio::Mutex` is NOT atomicity. Current tier
+  truth (maintainer decision — FULL-canonical, never projection-only, do not
+  re-litigate): Postgres is HA-canonical; **ClickHouse is full-canonical via
+  Keeper-backed KeeperMap leases** (fails CLOSED when Keeper is absent);
+  **Elasticsearch is full-canonical via native CAS**
+  (`if_seq_no`/`if_primary_term`); **Qdrant/Weaviate/Pinecone have NO usable
+  CAS primitive and fail closed** (`cas_unsupported`) for system-store roles —
+  their data-plane vector role is unaffected. All nine canonical stores run
+  live conformance (`conformance_live_tests.rs`) 9/9.
 - **Generic SQL executors** must gate raw SQL through
   `helpers::validate_read_sql`/`validate_mutation_sql` (single statement + verb
   allowlist). Any executor skipping this weakens the read/write guarantee.
@@ -41,7 +47,17 @@ first. Canonical copy: `udb-skill/shared/udb-coding-backends.md`.
   RLS GUCs absent ⇒ leak (fixed: wrap in `pool.begin()` + settings). `$like`
   ESCAPE must render a ONE-char escape under `standard_conforming_strings=on`
   (`ESCAPE '\'`, not `'\\'`). Outbox uuid casts and 2PC `COMMIT/ROLLBACK
-  PREPARED` semantics are PG-specific.
+  PREPARED` semantics are PG-specific. **Promoted-primary fence trap (fixed):**
+  `wait_for_token` read `pg_last_wal_replay_lsn()` via COALESCE — a PROMOTED
+  primary retains a stale non-null replay LSN, so the fence gated on garbage;
+  the durable-position read must branch on `pg_is_in_recovery()`. **Aggregate
+  RLS-GUC trap (fixed twice):** ANY aggregate/SUM read on an RLS table must run
+  in a tx that installs `app.current_tenant_id` first — a bare pool read
+  matches 0 rows and silently under-reports (shipped in metering QueryUsage and
+  the storage quota gate). **Typed-bind trap (fixed):** `bind_one`-style
+  helpers must bind uuid/timestamptz as their real types — PG has no implicit
+  text→uuid cast (42804), and a bind-type collision on a prepared statement
+  poisons the pooled connection.
 - 2PC: the live `XaCoordinator` participant; write-ahead ledger row precedes
   `COMMIT PREPARED`; presumed-abort sweep only aborts xids with NO ledger row.
 
@@ -53,6 +69,10 @@ first. Canonical copy: `udb-skill/shared/udb-coding-backends.md`.
   `MASTER_POS_WAIT`); these bit live conformance. XA: `XaMysqlParticipant` +
   `MysqlInDoubtParticipant` must be CONSTRUCTED/REGISTERED, not just defined —
   a capability lie shipped when `supports_xa: true` had no constructor.
+  **`XA RECOVER` protocol trap (fixed):** MySQL refuses `XA RECOVER` over the
+  prepared-statement protocol (err 1295 ER_UNSUPPORTED_PS) — it must run as a
+  text-protocol query (`pool.fetch_all("XA RECOVER")`, not `sqlx::query(...)`);
+  crash recovery silently never worked until this was fixed.
 
 ### SQLite (`executors/sqlite.rs`)
 - `dev/single-node` only. Generic SQL gated. Used heavily in tests — but test
@@ -68,13 +88,20 @@ first. Canonical copy: `udb-skill/shared/udb-coding-backends.md`.
   pool path.
 - Durability token: must be `MIN_ACTIVE_ROWVERSION()`/`@@DBTS`, not wall-clock
   (a wall-clock token makes `wait_for_token` return instantly ⇒ vacuous fence).
+- **Deferred-compilation trap (fixed):** SQL Server resolves column names at
+  COMPILE time, so a guarded backfill (`IF COL_LENGTH(...) IS NOT NULL UPDATE …
+  new_col …`) still fails code-207 when the column is absent — wrap the guarded
+  statement in `EXEC('…')` so compilation is deferred to execution.
 
 ### ClickHouse (`executors/clickhouse.rs`, `canonical_store/clickhouse.rs`,
 `ir/compile/clickhouse.rs`)
-- **Projection-role** — its lease CAS over ReplacingMergeTree is non-atomic
-  ("two acquirers can each believe they won", per its own module doc); not
-  HA-canonical without a Keeper-backed lock. Registration refused without the
-  opt-in flag.
+- **Full-canonical via ClickHouse Keeper.** Advisory leases live in a
+  **KeeperMap** table (`udb_keeper_advisory_leases`) — real distributed CAS;
+  `ensure_advisory_lease_table` FAILS CLOSED when Keeper is not configured
+  (the old ReplacingMergeTree lease CAS was non-atomic — "two acquirers can
+  each believe they won" — and is exactly why the Keeper lock exists).
+  Projection/saga/admin-audit/migration mutations are fenced under the same
+  Keeper leases. Never downgrade this to projection-only (maintainer decision).
 - **Trap (critical, fixed):** generic `query()` ran caller SQL verbatim with NO
   tenant predicate and NO SETTINGS while `enforce()` claimed Enforced. Either
   inject via `ir::compile::clickhouse` + per-query SETTINGS, or report Advisory.
@@ -116,9 +143,14 @@ first. Canonical copy: `udb-skill/shared/udb-coding-backends.md`.
 
 ### Vector stores: Qdrant / Pinecone / Weaviate / Elasticsearch
 (`canonical_store/qdrant.rs`, `vector_system.rs`)
-- **Projection-role, never HA-canonical** (no trustworthy CAS lease primitive).
-  Registration as a full SystemStore is refused without the opt-in flag; the
-  realistic stance is permanent projection-only.
+- **Full-canonical is the target posture (maintainer decision), with per-engine
+  honesty:** **Elasticsearch** has real native CAS
+  (`if_seq_no`/`if_primary_term` conditional writes; missing seq/term = hard
+  error) and hosts system state. **Qdrant** (1.16+ may change this) and
+  **Weaviate/Pinecone** (terminally) expose no usable CAS primitive — their
+  system-store CAS paths return `cas_unsupported` and FAIL CLOSED
+  (`try_acquire_advisory_lease` unconditionally errors; no last-write-wins
+  fallback, ever). The data-plane vector role (search/upsert) is unaffected.
 - Asset EMBED upserts and SearchService write here. Shared system-record logic
   lives in `system_store.rs` (`JsonSystemRecordAdapter`) — Qdrant/vector must
   DELEGATE, not re-copy (≈2,400 lines were triplicated; the audit flagged it).

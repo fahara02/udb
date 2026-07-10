@@ -96,6 +96,13 @@ fn authn_capability_status(
     )
 }
 
+// The status constructors below with `cfg_attr(not(feature = "webauthn"),
+// allow(dead_code))` have all their SERVING callers inside `webauthn`-gated
+// handler regions, while unconditional typed-detail pin tests (mod tests,
+// ~:4033+) keep their ErrorDetail contracts compiled in webauthn-off builds.
+// The allowance is scoped to exactly that configuration so a webauthn-on
+// build still detects rot if a serving caller disappears.
+#[cfg_attr(not(feature = "webauthn"), allow(dead_code))]
 fn authn_policy_status(
     operation: &'static str,
     policy_decision_id: &'static str,
@@ -135,6 +142,7 @@ fn authn_schema_not_found_status(
     )
 }
 
+#[cfg_attr(not(feature = "webauthn"), allow(dead_code))]
 fn authn_schema_already_exists_status(
     operation: &'static str,
     schema_code: &'static str,
@@ -178,6 +186,7 @@ fn native_authz_denied_status(
     )
 }
 
+#[cfg_attr(not(feature = "webauthn"), allow(dead_code))]
 fn webauthn_config_capability_status(
     operation: &'static str,
     capability_required: &'static str,
@@ -222,6 +231,7 @@ fn webauthn_policy_status(
     authn_policy_status(operation, policy_decision_id, message)
 }
 
+#[cfg_attr(not(feature = "webauthn"), allow(dead_code))]
 fn webauthn_permission_policy_status(
     operation: &'static str,
     policy_decision_id: &'static str,
@@ -235,6 +245,7 @@ fn webauthn_permission_policy_status(
     )
 }
 
+#[cfg_attr(not(feature = "webauthn"), allow(dead_code))]
 fn webauthn_invalid_ceremony_status(operation: &'static str) -> Status {
     webauthn_permission_policy_status(
         operation,
@@ -243,6 +254,7 @@ fn webauthn_invalid_ceremony_status(operation: &'static str) -> Status {
     )
 }
 
+#[cfg_attr(not(feature = "webauthn"), allow(dead_code))]
 fn webauthn_user_tenant_mismatch_status(operation: &'static str) -> Status {
     webauthn_permission_policy_status(
         operation,
@@ -251,6 +263,7 @@ fn webauthn_user_tenant_mismatch_status(operation: &'static str) -> Status {
     )
 }
 
+#[cfg_attr(not(feature = "webauthn"), allow(dead_code))]
 fn webauthn_user_project_mismatch_status(operation: &'static str) -> Status {
     webauthn_permission_policy_status(
         operation,
@@ -268,6 +281,7 @@ fn webauthn_attestation_chain_untrusted_status() -> Status {
     )
 }
 
+#[cfg_attr(not(feature = "webauthn"), allow(dead_code))]
 fn oidc_provider_disabled_status() -> Status {
     authn_policy_status(
         "oidc_authenticate",
@@ -276,6 +290,7 @@ fn oidc_provider_disabled_status() -> Status {
     )
 }
 
+#[cfg_attr(not(feature = "webauthn"), allow(dead_code))]
 fn oidc_jwks_url_invalid_status(err: impl std::fmt::Display) -> Status {
     authn_capability_status(
         "oidc_provider_config",
@@ -284,6 +299,7 @@ fn oidc_jwks_url_invalid_status(err: impl std::fmt::Display) -> Status {
     )
 }
 
+#[cfg_attr(not(feature = "webauthn"), allow(dead_code))]
 fn webauthn_passkeys_required_status() -> Status {
     authn_policy_status(
         "webauthn_authentication",
@@ -4035,7 +4051,6 @@ mod authn_validation_tests {
     use super::*;
     use crate::proto::{ErrorDetail, ErrorKind};
     use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
-    use prost::Message as _;
 
     fn decode_detail(status: &Status) -> ErrorDetail {
         let raw = status
@@ -4538,7 +4553,6 @@ mod webauthn_policy_tests {
     use super::*;
     use crate::proto::{ErrorDetail, ErrorKind};
     use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
-    use prost::Message as _;
     use webauthn_rs::prelude::RegisterPublicKeyCredential;
 
     fn assert_attestation_field_violation(status: &Status, field: &str, description: &str) {

@@ -805,7 +805,6 @@ mod tests {
     #[cfg(feature = "sqlite")]
     use crate::runtime::canonical_store::system_store::SagaInsert;
     use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
-    use prost::Message as _;
     #[cfg(feature = "sqlite")]
     use sqlx::sqlite::SqlitePoolOptions;
 

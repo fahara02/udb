@@ -1693,7 +1693,6 @@ mod tests {
     use crate::generation::{ManifestColumn, ManifestTable};
     use crate::proto::{ErrorDetail, ErrorKind};
     use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
-    use prost::Message as _;
 
     fn fixture_manifest() -> CatalogManifest {
         CatalogManifest {

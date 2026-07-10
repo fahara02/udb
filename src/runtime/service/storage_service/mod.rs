@@ -805,21 +805,21 @@ fn file_uuid_eq(field: &str, value: &str) -> LogicalFilter {
     }
 }
 
-/// A single live (non-soft-deleted) file scoped to its tenant.
-fn file_active_by_id_filter(tenant_id: &str, file_id: &str) -> LogicalFilter {
-    LogicalFilter::And(vec![
+/// The base clauses every tenant-scoped live-file read shares: tenant match +
+/// not soft-deleted. Single source for `file_active_by_id_filter` and
+/// `file_list_filter` so the "live file" definition can never diverge.
+fn file_tenant_active_clauses(tenant_id: &str) -> Vec<LogicalFilter> {
+    vec![
         file_uuid_eq("tenant_id", tenant_id),
-        file_uuid_eq("file_id", file_id),
         LogicalFilter::IsNull("deleted_at".to_string()),
-    ])
+    ]
 }
 
-/// All live files for a tenant — quota usage scan and the `list_files` base set.
-fn file_tenant_active_filter(tenant_id: &str) -> LogicalFilter {
-    LogicalFilter::And(vec![
-        file_uuid_eq("tenant_id", tenant_id),
-        LogicalFilter::IsNull("deleted_at".to_string()),
-    ])
+/// A single live (non-soft-deleted) file scoped to its tenant.
+fn file_active_by_id_filter(tenant_id: &str, file_id: &str) -> LogicalFilter {
+    let mut clauses = file_tenant_active_clauses(tenant_id);
+    clauses.push(file_uuid_eq("file_id", file_id));
+    LogicalFilter::And(clauses)
 }
 
 /// `list_files` filter: tenant + live + optional metadata facets. Each facet is
@@ -831,10 +831,7 @@ fn file_list_filter(
     reference_type: &str,
     uploaded_by: &str,
 ) -> LogicalFilter {
-    let mut filters = vec![
-        file_uuid_eq("tenant_id", tenant_id),
-        LogicalFilter::IsNull("deleted_at".to_string()),
-    ];
+    let mut filters = file_tenant_active_clauses(tenant_id);
     if !file_type.is_empty() {
         filters.push(file_eq("file_type", file_type));
     }
@@ -2052,7 +2049,6 @@ mod tenant_scope_tests {
     use super::*;
     use crate::proto::{ErrorDetail, ErrorKind};
     use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
-    use prost::Message as _;
     use tonic::metadata::MetadataValue;
 
     fn decode_detail(status: &Status) -> ErrorDetail {

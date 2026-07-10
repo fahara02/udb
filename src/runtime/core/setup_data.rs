@@ -79,6 +79,12 @@ fn setup_data_internal_status(
     crate::runtime::executor_utils::internal_status("setup_data", operation, message)
 }
 
+// Serving callers live in the `#[cfg(not(feature = "qdrant"))]` vector arms;
+// the unconditional pin test `setup_data_vector_object_capability_refusals_
+// carry_detail` keeps the disabled-path ErrorDetail contract alive even in
+// qdrant-on builds — hence allow(dead_code) only there, so a qdrant-off build
+// still detects rot if the serving arm disappears.
+#[cfg_attr(feature = "qdrant", allow(dead_code))]
 fn qdrant_vector_feature_status(operation: &'static str) -> tonic::Status {
     setup_data_capability_status(
         "qdrant",
@@ -97,6 +103,12 @@ fn vector_hybrid_qdrant_only_status(backend: &str) -> tonic::Status {
     )
 }
 
+// Serving callers live in the `#[cfg(not(any(s3|gcs|azureblob)))]` object
+// arms; the pin test keeps the contract alive in object-enabled builds.
+#[cfg_attr(
+    any(feature = "s3", feature = "gcs", feature = "azureblob"),
+    allow(dead_code)
+)]
 fn no_object_store_feature_status(operation: &'static str) -> tonic::Status {
     setup_data_capability_status(
         "object_store",
@@ -106,6 +118,8 @@ fn no_object_store_feature_status(operation: &'static str) -> tonic::Status {
     )
 }
 
+// Serving callers live in `#[cfg(not(feature = "s3"))]` arms; pin-tested.
+#[cfg_attr(feature = "s3", allow(dead_code))]
 fn s3_object_feature_status(operation: &'static str) -> tonic::Status {
     setup_data_capability_status(
         "s3",
@@ -115,6 +129,10 @@ fn s3_object_feature_status(operation: &'static str) -> tonic::Status {
     )
 }
 
+// Only reachable from the `#[cfg(not(feature = "s3"))]` arms of the object
+// put/get dispatch — gate the definition the same way so the default (s3-on)
+// build doesn't carry a dead fn.
+#[cfg(not(feature = "s3"))]
 fn s3_minio_feature_status(operation: &'static str) -> tonic::Status {
     setup_data_capability_status(
         "s3",
@@ -124,6 +142,8 @@ fn s3_minio_feature_status(operation: &'static str) -> tonic::Status {
     )
 }
 
+// Serving callers live in `#[cfg(not(feature = "gcs"))]` arms; pin-tested.
+#[cfg_attr(feature = "gcs", allow(dead_code))]
 fn gcs_feature_status(operation: &'static str) -> tonic::Status {
     setup_data_capability_status(
         "gcs",
@@ -133,6 +153,9 @@ fn gcs_feature_status(operation: &'static str) -> tonic::Status {
     )
 }
 
+// Only reachable from the `#[cfg(not(feature = "azureblob"))]` object arms and
+// (unlike its siblings) not pin-tested — gate it exactly like its callers.
+#[cfg(not(feature = "azureblob"))]
 fn azureblob_feature_status(operation: &'static str) -> tonic::Status {
     setup_data_capability_status(
         "azureblob",
@@ -3029,11 +3052,10 @@ fn idempotency_replay_record_json(prior: &JsonValue) -> Result<Vec<u8>, tonic::S
 fn validate_idempotency_replay_write_receipt(
     receipt: &crate::runtime::consistency::WriteReceipt,
 ) -> Result<(), tonic::Status> {
-    if receipt.outbox_seq < 0 {
-        return Err(idempotency_replay_response_status(
-            "write_receipt_json outbox_seq must be non-negative",
-        ));
-    }
+    // `outbox_seq` is `u64`, so non-negativity is a type-level guarantee: the
+    // only path into this validator is `serde_json::from_str::<WriteReceipt>`
+    // (`idempotency_replay_write_receipt_from_raw`), which rejects a negative
+    // JSON integer at decode ("invalid write_receipt_json: invalid value").
     if receipt.written_at_unix_ms <= 0 {
         return Err(idempotency_replay_response_status(
             "write_receipt_json written_at_unix_ms must be positive",
@@ -3418,7 +3440,6 @@ mod setup_data_validation_tests {
     };
     use crate::proto::{ErrorDetail, ErrorKind, VectorPointMutation, VectorSearchRequest};
     use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
-    use prost::Message as _;
 
     fn decode_detail(status: &tonic::Status) -> ErrorDetail {
         let raw = status
@@ -3641,7 +3662,6 @@ mod setup_data_consistency_tests {
     use crate::runtime::config::{BackendInstance, BackendInstanceConfig, BackendInstanceRole};
     use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
     use base64::Engine as _;
-    use prost::Message as _;
 
     fn decode_error_detail(status: &tonic::Status) -> ErrorDetail {
         let raw = status

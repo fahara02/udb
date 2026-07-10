@@ -457,29 +457,6 @@ fn quota_list_read(tenant_id: &str, project_id: &str, offset: u64, limit: u32) -
     }
 }
 
-/// Windowed usage filter: tenant + metric (matched against `method`) +
-/// `occurred_at_unix >= window_start` (inclusive lower bound — same `>=`
-/// boundary as the `event_in_window` test predicate).
-fn usage_window_filter(tenant_id: &str, metric: &str, window_start: i64) -> LogicalFilter {
-    LogicalFilter::And(vec![
-        LogicalFilter::Comparison {
-            field: "tenant_id".to_string(),
-            op: ComparisonOp::Eq,
-            value: logical_string(tenant_id),
-        },
-        LogicalFilter::Comparison {
-            field: "method".to_string(),
-            op: ComparisonOp::Eq,
-            value: logical_string(metric),
-        },
-        LogicalFilter::Comparison {
-            field: "occurred_at_unix".to_string(),
-            op: ComparisonOp::Ge,
-            value: LogicalValue::Int(window_start),
-        },
-    ])
-}
-
 #[allow(clippy::too_many_arguments)]
 fn quota_record(
     quota_id: &str,
@@ -1326,7 +1303,6 @@ mod metering_tests {
     use super::*;
     use crate::proto::{ErrorDetail, ErrorKind};
     use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
-    use prost::Message as _;
     use tonic::metadata::MetadataValue;
 
     fn decode_detail(status: &Status) -> ErrorDetail {

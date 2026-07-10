@@ -71,6 +71,10 @@ fn record_encryption_key_missing_status(schema: &str, table: &str) -> tonic::Sta
     )
 }
 
+// Serving caller lives in the `#[cfg(not(feature = "s3"))]` put_tx_object arm;
+// the unconditional typed-detail pin test keeps the disabled-path contract
+// alive in s3-on builds.
+#[cfg_attr(feature = "s3", allow(dead_code))]
 fn s3_feature_disabled_status() -> tonic::Status {
     crate::runtime::executor_utils::capability_status(
         "s3",
@@ -1818,7 +1822,6 @@ mod materialized_view_refresh_tests {
     use crate::generation::ManifestMaterializedView;
     use crate::proto::{ErrorDetail, ErrorKind};
     use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
-    use prost::Message as _;
 
     fn decode_detail(status: &tonic::Status) -> ErrorDetail {
         let raw = status

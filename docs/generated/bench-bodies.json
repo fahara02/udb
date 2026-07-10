@@ -1676,8 +1676,8 @@
     "operation_id": "rollbackResources",
     "op_kind": "MUTATION",
     "request_msg": "RollbackResourcesRequest",
-    "body": "`{ \"node_id\": \"<seed:node_id>\", \"resource_type\": \"RESOURCE_TYPE_BACKEND_TARGET_DEFINITION\", \"target_version\": \"\", \"context\": { \"tenant\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\" }, \"purpose\": \"go.live.perf\" } }`",
-    "notes": "rollback one control-plane resource type."
+    "body": "`{ \"node_id\": \"<seed:node_id>\", \"resource_type\": \"RESOURCE_TYPE_BACKEND_TARGET_DEFINITION\", \"target_version\": \"<seed:rollback_resource_version>\", \"context\": { \"tenant\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\" }, \"purpose\": \"go.live.perf\" } }`",
+    "notes": "rollback one control-plane resource type to a retained served snapshot version captured by the stream seed."
   },
   {
     "file": "control_plane.md",
@@ -2528,7 +2528,7 @@
     "operation_id": "timeSeriesWrite",
     "op_kind": "MUTATION",
     "request_msg": "TimeSeriesWriteRequest",
-    "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\" }, \"resource\": { \"backend\": \"clickhouse\", \"resource_name\": \"<seed:ts_table>\" }, \"points\": [{ \"timestamp\": \"2026-01-01T00:00:00Z\", \"tags\": { \"host\": \"a\" }, \"values\": { \"cpu\": 0.5 } }] }`",
+    "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\" }, \"resource\": { \"backend\": \"clickhouse\", \"resource_name\": \"<seed:ts_table>\" }, \"points\": [{ \"timestamp\": { \"seconds\": 1767225600, \"nanos\": 0 }, \"tags\": { \"host\": \"a\" }, \"values\": { \"cpu\": 0.5 } }] }`",
     "notes": "TimeSeriesPoint = `{timestamp(Timestamp), tags<map str,str>, values<map str,double>, fields(Struct)}`. `idempotency_key` optional."
   },
   {
@@ -3561,7 +3561,7 @@
     "op_kind": "DESTRUCTIVE",
     "request_msg": "PurgeTenantRequest",
     "body": "`{ \"tenant_id\": \"<seed:purge_tenant_id>\", \"confirmation_token\": \"sdk-perf-confirm-purge\" }`",
-    "notes": "Destructive; target must be a disposable tenant."
+    "notes": "Destructive; target must match the authenticated tenant claim and the benchmark runs it last against the disposable benchmark tenant."
   },
   {
     "file": "tenant.md",

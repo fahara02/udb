@@ -30,7 +30,6 @@ use super::{
 use crate::proto::udb::core::idp::entity::v1::AssuranceLevel as A;
 use crate::proto::{ErrorDetail, ErrorKind};
 use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
-use prost::Message as _;
 use serde_json::json;
 use tonic::Status;
 

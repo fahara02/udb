@@ -1171,7 +1171,12 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 			NodeId: nodeID, ResourceType: controlentpb.ResourceType_RESOURCE_TYPE_BACKEND_TARGET_DEFINITION, Context: cpCtx,
 		})
 		// First server response confirms the node-state row was created; then close.
-		_, _ = cs.Recv()
+		if resp, err := cs.Recv(); err == nil && resp.GetVersionInfo() != "" {
+			fix.set("rollback_resource_version", resp.GetVersionInfo())
+			if len(resp.GetResources()) > 0 {
+				fix.set("resource_name", resp.GetResources()[0].GetName())
+			}
+		}
 		_ = cs.CloseSend()
 	}
 

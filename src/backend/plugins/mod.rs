@@ -118,9 +118,8 @@ pub fn all() -> Vec<&'static dyn Backend> {
 #[cfg(test)]
 mod tests {
     use super::dispatch_instance_not_configured_status;
-    use crate::proto::{ErrorDetail, ErrorKind};
+    use crate::proto::ErrorKind;
     use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
-    use prost::Message as _;
 
     #[test]
     fn dispatch_instance_not_configured_carries_capability_detail() {

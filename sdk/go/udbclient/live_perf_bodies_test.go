@@ -82,7 +82,7 @@ func TestLivePerfExplicitBodyCoverage(t *testing.T) {
 		"refresh_session_id": "refresh-session-1", "reg_challenge_id": "reg-challenge-1", "replay_dlq_id": "replay-dlq-1",
 		"reset_otp_code": "654321", "reset_otp_id": "reset-otp-1", "resource_name": "resource-1",
 		"restore_tenant_id": "restore-tenant-1", "retry_saga_id": "retry-saga-1", "revoke_key_id": "revoke-key-1",
-		"rollback_policy_set_id": "rollback-set-1", "rollback_target_version_id": "rollback-version-1",
+		"rollback_policy_set_id": "rollback-set-1", "rollback_resource_version": "control-version-1", "rollback_target_version_id": "rollback-version-1",
 		"release_fencing_token": "2", "renew_fencing_token": "1", "revoke_device_id": "revoke-device-1", "revoke_recovery_user_id": "revoke-recovery-user-1",
 		"saml_provider_id": "saml-provider-1", "scim_group_id": "sdk-perf-group", "scim_user_id": "scim-user-1", "delete_scim_user_id": "delete-scim-user-1",
 		"signal_peer_id": "signal-peer-1", "step_id": "step-1", "topic_pattern": "topic.*", "ts_table": "sdk_timeseries",
@@ -275,6 +275,7 @@ func buildManifestJSONBody(fullMethod string, fix *perfFixtures) (proto.Message,
 	if !ok {
 		return nil, nil, false
 	}
+	jsonBody = strings.ReplaceAll(jsonBody, `"timestamp": { "seconds": 1767225600, "nanos": 0 }`, `"timestamp": "2026-01-01T00:00:00Z"`)
 	md := resolveMethodDesc(fullMethod)
 	if md == nil {
 		return nil, nil, false
@@ -1834,8 +1835,8 @@ func TestBuildManifestJSONBodyUsesSharedManifest(t *testing.T) {
 	}
 	controlRollbackMsg := controlRollbackIn.ProtoReflect()
 	controlRollbackFields := controlRollbackMsg.Descriptor().Fields()
-	if got := controlRollbackMsg.Get(controlRollbackFields.ByName("target_version")).String(); got != "" {
-		t.Fatalf("control rollback target_version = %q, want empty", got)
+	if got := controlRollbackMsg.Get(controlRollbackFields.ByName("target_version")).String(); got != "control-version-1" {
+		t.Fatalf("control rollback target_version = %q, want control-version-1", got)
 	}
 	controlRollbackContext := controlRollbackMsg.Get(controlRollbackFields.ByName("context")).Message()
 	controlRollbackTenant := controlRollbackContext.Get(controlRollbackContext.Descriptor().Fields().ByName("tenant")).Message()

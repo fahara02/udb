@@ -1,6 +1,6 @@
 ---
 name: using-udb
-description: Help a developer USE a running UDB broker — connect a language SDK, authenticate with scopes/credentials, CRUD proto-defined entities over the gRPC DataBroker API, and use the native services (storage uploads, notifications, WebRTC rooms, events/CDC). Use when the user is building an app against UDB, asks about the UDB SDK (TypeScript/Python/Go/Java/C#/PHP), UDB metadata/tenant/scopes/auth, Select/Upsert/Delete, file upload/presigned URLs, UDB events/topics, defining UDB entity protos (table/column annotations), debugging UDB gRPC errors, or the `udb` CLI (serve, sdk generate, proto export, auth bootstrap, doctor).
+description: Help a developer USE a running UDB broker — connect a language SDK, authenticate with scopes/credentials, CRUD proto-defined entities over the gRPC DataBroker API, and use the native services (storage uploads, notifications, WebRTC rooms, events/CDC, vault secrets/transit crypto, metering/quotas, scheduler jobs, search indexes, webhooks, workflows/sagas, distributed locks, live-query streams, feature flags, backup/restore, embeddings). Use when the user is building an app against UDB, asks about the UDB SDK (TypeScript/Python/Go/Java/C#/PHP), UDB metadata/tenant/scopes/auth, Select/Upsert/Delete, idempotency keys/was_duplicate, write receipts/read fences/consistency modes, file upload/presigned URLs, UDB events/topics, defining UDB entity protos (table/column annotations), debugging UDB gRPC errors, or the `udb` CLI (serve, sdk generate, proto export, auth bootstrap, doctor).
 allowed-tools: Read, Grep, Bash, WebFetch
 ---
 
@@ -9,9 +9,10 @@ allowed-tools: Read, Grep, Bash, WebFetch
 UDB is a **proto-driven multi-database broker**. Developers declare their data
 model as annotated Protocol Buffers; UDB generates the DB schema and serves a
 uniform gRPC **DataBroker** API (`Select`/`Upsert`/`Delete`) plus a native
-control plane (auth/authz/api-keys/storage/asset/notification/webrtc). Every
-request carries **metadata** (tenant, project, scopes, identity) enforced
-fail-closed server-side.
+control plane (auth/authz/api-keys/storage/asset/notification/webrtc — and the
+platform wave: vault, metering, scheduler, search, webhook, workflow, lock,
+livequery, config flags, backup, embedding). Every request carries **metadata**
+(tenant, project, scopes, identity) enforced fail-closed server-side.
 
 **Full reference (read on demand): [references/using-udb.md](references/using-udb.md)** —
 per-language SDK install+connect snippets, the metadata header table, CRUD
@@ -30,8 +31,11 @@ table.
 3. **Every call carries metadata** (tenant/project/scopes + a credential);
    tenant isolation is enforced server-side on reads AND writes, and a body
    tenant can never override the credential's tenant.
-4. **Mutations are not auto-retried** (only read-only RPCs retry on
-   DEADLINE_EXCEEDED) — recommend `conflict_fields` idempotency on Upsert.
+4. **Mutation retry is keyed.** Read-only RPCs auto-retry; a replay-safe
+   mutation (Upsert/Delete) auto-retries ONLY with a non-empty
+   `idempotency_key` (broker dedups durably; a replay returns
+   `was_duplicate=true`). Keyless mutations fail closed — recommend
+   `conflict_fields` + an `idempotency_key` on writes.
 5. **Every mutation emits an event** (`udb.<svc>.<entity>.<verb>.v1`);
    CDC subscription streams are tenant-scoped with `since_event_id` replay.
 6. **TWO authz surfaces, different engines.** Data RPCs are gated by a **data-plane
@@ -46,11 +50,11 @@ table.
 - **Credential** — bearer/API key in hand, or bootstrap needed?
 
 ## Quick reference
-**Current baseline:** UDB `0.3.7`, wire protocol `1.0.0` (release tag
-`v0.3.7`). Pin SDKs to the same product version unless intentionally testing a
-mixed-client upgrade: TS `@udb_plus/sdk@0.3.7` · Python `udb-client==0.3.7` · Go
-`github.com/fahara02/udb/sdk/go@v0.3.7` · Java `dev.udb:udb-java-client`
-`0.3.7` · C# `Udb.Client` `0.3.7` · PHP `fahara02/udb-laravel:^0.3.7`.
+**Current baseline:** UDB `0.4.0`, wire protocol `1.0.0` (release tag
+`v0.4.0`). Pin SDKs to the same product version unless intentionally testing a
+mixed-client upgrade: TS `@udb_plus/sdk@0.4.0` · Python `udb-client==0.4.0` · Go
+`github.com/fahara02/udb/sdk/go@v0.4.0` · Java `dev.udb:udb-java-client`
+`0.4.0` · C# `Udb.Client` `0.4.0` · PHP `fahara02/udb-laravel:^0.4.0`.
 
 **Go SDK 0.3.7+ enterprise path:** for long-running services, use the SDK's
 native session helpers instead of hand-rolled bearer refresh. Dial with

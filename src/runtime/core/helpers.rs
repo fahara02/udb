@@ -1362,7 +1362,6 @@ mod generic_dispatch_validation_tests {
     use super::*;
     use crate::proto::{ErrorDetail, ErrorKind};
     use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
-    use prost::Message as _;
     use serde_json::json;
 
     fn decode_detail(status: &tonic::Status) -> ErrorDetail {

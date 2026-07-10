@@ -20,7 +20,6 @@ use crate::proto::udb::core::control::services::v1 as control_pb;
 use crate::proto::udb::core::control::services::v1::control_plane_service_server::ControlPlaneService;
 use crate::proto::{ErrorDetail, ErrorKind};
 use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
-use prost::Message as _;
 use tonic::{Code, Request, Status};
 
 /// Minimal mirror of one `ControlPlaneNodeState` row: the fields the ACK/NACK
