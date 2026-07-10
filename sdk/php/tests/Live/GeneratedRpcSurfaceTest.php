@@ -116,6 +116,20 @@ function stubAccessors(GeneratedClient $data, GeneratedClient $authGenerated): a
 // to the snake_case form used by the body builder + phase lists. No-op for snake input.
 function rpcSnake(string $name): string
 {
+    $known = [
+        'SendOTP' => 'send_otp',
+        'VerifyOTP' => 'verify_otp',
+        'ResendOTP' => 'resend_otp',
+        'ValidateCSRF' => 'validate_csrf',
+        'EnrollMFA' => 'enroll_mfa',
+        'ConfirmMFAEnrollment' => 'confirm_mfaenrollment',
+        'GetJWKS' => 'get_jwks',
+        'PublishCDC' => 'publish_cdc',
+        'SelectV2' => 'select_v_2',
+    ];
+    if (isset($known[$name])) {
+        return $known[$name];
+    }
     return strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $name));
 }
 
@@ -1363,11 +1377,14 @@ function phpBenchBodyEntriesByAlias(): array
         return $byAlias;
     }
     $byAlias = [];
+    $put = function (string $key, array $entry) use (&$byAlias): void {
+        $key = strtolower(trim($key));
+        if ($key !== '') {
+            $byAlias[$key] = $entry;
+        }
+    };
     foreach (phpBenchBodyEntries() as $e) {
         $alias = (string) ($e['api_alias'] ?? '');
-        if ($alias === '') {
-            continue;
-        }
         $entry = [
             'rpc' => (string) ($e['rpc'] ?? ''),
             'service' => (string) ($e['service'] ?? ''),
@@ -1375,10 +1392,17 @@ function phpBenchBodyEntriesByAlias(): array
             'body' => (string) ($e['body'] ?? ''),
             'api_alias' => $alias,
         ];
-        $byAlias[$alias] = $entry;
         $service = strtolower((string) ($e['service'] ?? ''));
-        if ($service !== '') {
-            $byAlias[$service.'.'.$alias] = $entry;
+        $rpc = (string) ($e['rpc'] ?? '');
+        $wireRpc = (string) ($e['wire_rpc'] ?? '');
+        foreach (array_filter([$alias, $rpc, rpcSnake($rpc)]) as $key) {
+            $put((string) $key, $entry);
+            if ($service !== '') {
+                $put($service.'.'.(string) $key, $entry);
+            }
+        }
+        if ($wireRpc !== '') {
+            $put(str_replace('/', '.', $wireRpc), $entry);
         }
     }
 
@@ -1490,7 +1514,7 @@ function phpRequestClassForManifestEntry(array $entry): ?string
 
 function phpManifestJsonBody(string $name, PerfFixturesPhp $fix, string $tenant, string $project, ?string $serviceName = null): ?object
 {
-    $n = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $name));
+    $n = strtolower(rpcSnake($name));
     $rows = phpBenchBodyEntriesByAlias();
     $entry = null;
     if ($serviceName !== null && $serviceName !== '') {
@@ -3097,11 +3121,28 @@ function perfBodyPhp(string $name, PerfFixturesPhp $fix, string $tenant, string 
 {
     $manifestBody = phpManifestJsonBody($name, $fix, $tenant, $project, $serviceName);
     if ($manifestBody !== null) {
+        phpUniquifyPerfBody($manifestBody, $name, $serviceName);
         return $manifestBody;
     }
 
     $label = ($serviceName !== null && $serviceName !== '') ? "{$serviceName}.{$name}" : $name;
     throw new RuntimeException("PHP bench manifest body missing or non-hydratable for {$label}");
+}
+
+function phpUniquifyPerfBody(object $request, string $name, ?string $serviceName): void
+{
+    $rpc = strtolower(($serviceName !== null && $serviceName !== '' ? $serviceName.'.' : '').rpcSnake($name));
+    $suffix = bin2hex(random_bytes(6));
+    if ($rpc === 'authnservice.create_user') {
+        if (method_exists($request, 'setUsername')) {
+            $request->setUsername("perf-u-$suffix");
+        }
+        if (method_exists($request, 'setEmail')) {
+            $request->setEmail("perf-u-$suffix@acme.test");
+        }
+    } elseif ($rpc === 'assetservice.create_pipeline_definition' && method_exists($request, 'setName')) {
+        $request->setName("thumbnail-pipeline-$suffix");
+    }
 }
 
 /**
@@ -4117,26 +4158,29 @@ it('measures per-RPC latency', function () {
             if ($rpcName === 'approve_migration_plan') {
                 $iters = 1;
             }
-            // Classify with one probe invoke — invoke() does not block; only
-            // responses()/wait() do. Streaming = a server-streaming (responses) or
-            // bidi (writesDone) call, no unary wait(), OR an invoke that throws because
-            // the method's streaming signature rejects the unary arg shape. Either way
-            // the RPC is MEASURED as stream-open latency (never dropped).
+            // Classify streaming by generated stub signature, not by invoking a
+            // probe call. A probe on a unary mutation is a real side effect
+            // (CreateUser/CreatePipelineDefinition/etc.) and can consume the only
+            // unique success path before the timed loop starts.
             $openStart = microtime(true);
-            $isStreaming = false;
-            try {
-                $probe = $invoke($stub, $method, $hasRequest, $probeRequest);
-                $isStreaming = method_exists($probe, 'responses') || method_exists($probe, 'writesDone') || ! method_exists($probe, 'wait');
-                if (method_exists($probe, 'cancel')) {
-                    try {
-                        $probe->cancel();
-                    } catch (\Throwable $e) {
-                    }
-                }
-            } catch (\Throwable $e) {
-                $isStreaming = true;
-            }
+            $doc = (string) ($method->getDocComment() ?: '');
+            $isStreaming = str_contains($doc, 'ServerStreamingCall')
+                || str_contains($doc, 'ClientStreamingCall')
+                || str_contains($doc, 'BidiStreamingCall');
             if ($isStreaming) {
+                try {
+                    $probe = $invoke($stub, $method, $hasRequest, $probeRequest);
+                    if (method_exists($probe, 'cancel')) {
+                        try {
+                            $probe->cancel();
+                        } catch (\Throwable $e) {
+                        }
+                    }
+                } catch (\Throwable $e) {
+                    // Signature-level streaming coverage is still reported as a
+                    // stream-open sample; unary failures are handled below by
+                    // timeUnary(), never hidden here.
+                }
                 // Stream-open latency (initiate + cancel, no response drain).
                 $openMs = (microtime(true) - $openStart) * 1000.0;
                 $samples[] = [

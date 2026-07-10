@@ -55,6 +55,11 @@ GRPC_STATUS_CODES = {
     "UNAUTHENTICATED",
 }
 
+HARNESS_STATUS_CODES = {
+    "CAPABILITY_SKIPPED",
+    "SKIP_NO_BODY",
+}
+
 
 def _cmd(args: list[str]) -> str | None:
     try:
@@ -118,6 +123,8 @@ def _canonical_grpc_status(raw: str) -> str:
     value = value.split("::")[-1].split(".")[-1]
     value = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", value)
     token = re.sub(r"[\s-]+", "_", value).upper()
+    if token in HARNESS_STATUS_CODES:
+        return token
     if token not in GRPC_STATUS_CODES:
         raise ValueError(
             f"benchmark report err token {raw!r} is not a canonical gRPC status"
@@ -419,6 +426,24 @@ RPCs measured: 2
         parsed = _parse_report(path)
         assert parsed["summary"]["failed_rpc_count"] == 2, parsed
         assert {row["err_code"] for row in parsed["failed_rpcs"]} == {"RESOURCE_EXHAUSTED"}, parsed
+
+        path.write_text(
+            """# UDB SDK Live Perf
+
+RPCs measured: 2
+
+## Full per-RPC table (sorted by service, then RPC)
+
+| Service | RPC | kind | err | p50 ms | p99 ms | mean ms | iters |
+|---|---|---|---|--:|--:|--:|--:|
+| RoomService | StartRoomComposite | mutation | CAPABILITY_SKIPPED | 0.20 | 0.30 | 0.22 | 1 |
+| VaultService | Encrypt | mutation | SKIP_NO_BODY | 0.20 | 0.30 | 0.22 | 1 |
+""",
+            encoding="utf-8",
+        )
+        parsed = _parse_report(path)
+        assert parsed["summary"]["failed_rpc_count"] == 2, parsed
+        assert {row["err_code"] for row in parsed["failed_rpcs"]} == {"CAPABILITY_SKIPPED", "SKIP_NO_BODY"}, parsed
 
         path.write_text(
             """# UDB SDK Live Perf

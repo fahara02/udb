@@ -323,6 +323,10 @@ function benchBodiesJSONPath(): string {
 
 interface BenchBodyEntry {
   rpc: string;
+  service?: string;
+  wire_rpc?: string;
+  api_alias?: string;
+  operation_id?: string;
   op_kind: string;
   request_msg: string;
   body: string;
@@ -358,10 +362,14 @@ function manifestRpcKey(rpc: string): string {
   return rpc;
 }
 
+function loadBenchBodyEntries(): BenchBodyEntry[] {
+  return JSON.parse(readFileSync(benchBodiesJSONPath(), "utf8")) as BenchBodyEntry[];
+}
+
 // Map of RPC manifest key → body cell, read from the generated JSON manifest.
 // Unique RPC names use the bare method name; duplicated names use Service.Method.
 function loadBenchBodyRows(): Map<string, string> {
-  const entries = JSON.parse(readFileSync(benchBodiesJSONPath(), "utf8")) as BenchBodyEntry[];
+  const entries = loadBenchBodyEntries();
   const rows = new Map<string, string>();
   for (const e of entries) {
     if (!e.rpc) continue;
@@ -460,6 +468,17 @@ function manifestBodyFor(serviceName: string, methodName: string): string | unde
     const body = rows.get(key);
     if (body !== undefined) return body;
   }
+  for (const entry of loadBenchBodyEntries()) {
+    if (entry.service !== serviceName) continue;
+    if (
+      entry.api_alias === methodName ||
+      entry.operation_id === methodName ||
+      entry.rpc === method ||
+      entry.wire_rpc === `${serviceName}/${method}`
+    ) {
+      return entry.body ?? "";
+    }
+  }
   return undefined;
 }
 
@@ -487,6 +506,19 @@ function manifestJSONBody(serviceName: string, methodName: string, fixtures?: Pe
   const resolved = resolveManifestSeeds(jsonCell, fixtures);
   if (!resolved) return undefined;
   return JSON.parse(resolved);
+}
+
+function uniquifyPerfBody(serviceName: string, methodName: string, body: any): any {
+  if (!body || typeof body !== "object") return body;
+  const rpc = `${serviceName}.${snakeToPascal(methodName)}`;
+  const suffix = `${process.pid}${Date.now()}${Math.floor(Math.random() * 1_000_000)}`;
+  if (rpc === "AuthnService.CreateUser") {
+    body.username = `perf-u-${suffix}`;
+    body.email = `perf-u-${suffix}@acme.test`;
+  } else if (rpc === "AssetService.CreatePipelineDefinition") {
+    body.name = `thumbnail-pipeline-${suffix}`;
+  }
+  return body;
 }
 
 function fullSurfaceManifestFixtures(): PerfFixtures {
@@ -1693,7 +1725,8 @@ function perfRealBody(
   _projectId: string,
   fixtures?: PerfFixtures,
 ): any | undefined {
-  return manifestJSONBody(serviceName, methodName, fixtures);
+  const body = manifestJSONBody(serviceName, methodName, fixtures);
+  return uniquifyPerfBody(serviceName, methodName, body);
 }
 // ── Perf SEED phase + fixture map (mirrors the Go harness) ─────────────────────
 //
