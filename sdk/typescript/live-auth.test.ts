@@ -543,6 +543,14 @@ function fullSurfaceManifestFixtures(): PerfFixtures {
     document_id: "document-1", mongo_collection: "collection_1", node_id: "node-1",
     user_id: "user-1", subject: "user:user-1", session_id: "session-1", token: "token-1",
     refresh_token: "refresh-1", csrf_token: "csrf-1", code: "123456", role_id: "role-1",
+    admin_reset_mfa_user_id: "admin-reset-mfa-user-1",
+    admin_reset_password_user_id: "admin-reset-password-user-1",
+    change_password_user_id: "change-password-user-1",
+    change_status_user_id: "change-status-user-1",
+    disable_mfa_user_id: "disable-mfa-user-1",
+    revoke_recovery_user_id: "revoke-recovery-user-1",
+    revoke_device_user_id: "revoke-device-user-1",
+    revoke_device_id: "revoke-device-1",
     role: "reader", role_code: "reader", user_role_id: "user-role-1", policy_id: "1",
     policy_draft_id: "draft-1", relation: "member", object: "group:bench", resource: "invoice",
     action: "data.select", key_id: "key-1", plain_key: "udbk_key", stage_name: "stage-1",
@@ -932,6 +940,13 @@ test("manifest JSON body hydrates AuthnService read-only rows with seed refs", (
   const fixtures = new PerfFixtures();
   fixtures.set("tenant_id", "tenant-1");
   fixtures.set("user_id", "user-1");
+  fixtures.set("admin_reset_mfa_user_id", "admin-reset-mfa-user-1");
+  fixtures.set("admin_reset_password_user_id", "admin-reset-password-user-1");
+  fixtures.set("change_password_user_id", "change-password-user-1");
+  fixtures.set("change_status_user_id", "change-status-user-1");
+  fixtures.set("disable_mfa_user_id", "disable-mfa-user-1");
+  fixtures.set("revoke_recovery_user_id", "revoke-recovery-user-1");
+  fixtures.set("revoke_device_id", "revoke-device-1");
   fixtures.set("session_id", "session-1");
   fixtures.set("token", "token-1");
   fixtures.set("csrf_token", "csrf-1");
@@ -1011,6 +1026,13 @@ test("manifest JSON body hydrates AuthnService terminal and WebAuthn rows", () =
   const fixtures = new PerfFixtures();
   fixtures.set("tenant_id", "tenant-1");
   fixtures.set("user_id", "user-1");
+  fixtures.set("admin_reset_mfa_user_id", "admin-reset-mfa-user-1");
+  fixtures.set("admin_reset_password_user_id", "admin-reset-password-user-1");
+  fixtures.set("change_password_user_id", "change-password-user-1");
+  fixtures.set("change_status_user_id", "change-status-user-1");
+  fixtures.set("disable_mfa_user_id", "disable-mfa-user-1");
+  fixtures.set("revoke_recovery_user_id", "revoke-recovery-user-1");
+  fixtures.set("revoke_device_id", "revoke-device-1");
   fixtures.set("session_id", "session-1");
   fixtures.set("subject", "subject-1");
   fixtures.set("code", "code-1");
@@ -1047,17 +1069,21 @@ test("manifest JSON body hydrates AuthnService terminal and WebAuthn rows", () =
   assert.equal(adminAllUsers?.user_id, "user-1");
   assert.equal(adminAllTenant?.tenant_id, "tenant-1");
   assert.equal(emergency?.principal_id, "subject-1");
+  assert.equal(changedPassword?.user_id, "change-password-user-1");
   assert.equal(changedPassword?.current_password, "CorrectHorse1!");
   assert.equal(changedPassword?.otp_id, undefined);
   assert.equal(resetPassword?.code, "135790");
+  assert.equal(changedStatus?.user_id, "change-status-user-1");
   assert.equal(changedStatus?.new_status, "USER_STATUS_SUSPENDED");
-  assert.equal(adminResetPassword?.user_id, "user-1");
+  assert.equal(adminResetPassword?.user_id, "admin-reset-password-user-1");
   assert.equal(confirmedMfa?.otp_id, "code-1");
+  assert.equal(disabledMfa?.user_id, "disable-mfa-user-1");
   assert.equal(disabledMfa?.factor_kind, "AUTH_FACTOR_KIND_TOTP");
   assert.equal(renamed?.new_label, "perf-key2");
-  assert.equal(revokedRecovery?.user_id, "user-1");
+  assert.equal(revokedRecovery?.user_id, "revoke-recovery-user-1");
+  assert.equal(adminResetMfa?.user_id, "admin-reset-mfa-user-1");
   assert.equal(adminResetMfa?.reason, "perf");
-  assert.equal(revokedDevice?.device_id, "device-1");
+  assert.equal(revokedDevice?.device_id, "revoke-device-1");
   assert.equal(deletedWebAuthn?.credential_id, "credential-1");
   assert.equal(startedReg?.label, "perf-key");
   assert.equal(finishedReg?.challenge_id, "reg-challenge-1");
@@ -1782,6 +1808,12 @@ class PerfFixtures {
 
 interface SeedResult {
   fixtures: PerfFixtures;
+  terminalTenantLogin?: {
+    username: string;
+    password: string;
+    tenantId: string;
+    projectId: string;
+  };
   cleanup: () => Promise<void>;
 }
 
@@ -1801,7 +1833,7 @@ async function seedPerfFixtures(
   const suffix = `${process.pid}${Date.now()}`;
   const opts = { deadlineMs: 8_000, noRetry: true };
   const ctx = requestContext(tenantId, projectId, "ts.live.perf.seed");
-  fix.set("purge_tenant_id", tenantId);
+  const pw = "CorrectHorse1!";
   fix.set("egress_id", `eg-${tenantId}-${liveUuid()}`);
   const cleanups: Array<() => Promise<void>> = [];
   const addCleanup = (fn: () => Promise<void>) => cleanups.push(fn);
@@ -1821,6 +1853,38 @@ async function seedPerfFixtures(
   fix.set("domain", tenantId);
   fix.set("message_type", LIVE_MESSAGE_TYPE);
   fix.set("tenant_code", `sdk-perf-tenant-${suffix}`);
+
+  let terminalTenantLogin: SeedResult["terminalTenantLogin"];
+  await tryRun("PurgeTenant disposable tenant/user", async () => {
+    const purgeCode = `sdk-perf-purge-${suffix}`;
+    const createdTenant = await gen.TenantService.create_tenant(
+      { code: purgeCode, name: "SDK Perf Purge Tenant", type: "WORKSPACE", config: "{}", branding: "{}" },
+      opts,
+    );
+    const purgeTenantId = createdTenant?.tenant_id || createdTenant?.tenant?.tenant_id;
+    if (!purgeTenantId) throw new Error("CreateTenant did not return tenant_id for purge seed");
+    const purgeUsername = `sdk-perf-purge-user-${suffix}`;
+    const purgeUser = (await gen.AuthnService.create_user({
+      username: purgeUsername,
+      email: `${purgeUsername}@example.com`,
+      password: pw,
+      tenant_id: purgeTenantId,
+      project_id: projectId,
+      full_name: "SDK Perf Purge User",
+    }, opts)).user;
+    if (purgeUser?.user_id) {
+      await tryRun("Activate purge tenant user", async () => {
+        await gen.AuthnService.change_user_status({
+          user_id: purgeUser.user_id,
+          new_status: "USER_STATUS_ACTIVE",
+          reason: "perf seed activate purge user",
+          context: { tenant: { tenant_id: purgeTenantId, project_id: projectId } },
+        }, opts);
+      });
+    }
+    fix.set("purge_tenant_id", purgeTenantId);
+    terminalTenantLogin = { username: purgeUsername, password: pw, tenantId: purgeTenantId, projectId };
+  });
 
   // ── DataBroker: a real SdkLiveRecord row (drives Upsert/Select/Delete + CDC) ──
   const recordId = `ts-perf-${suffix}`;
@@ -1883,7 +1947,6 @@ async function seedPerfFixtures(
   fix.set("mongo_collection", collection);
 
   // ── AuthnService: a real user (id reused everywhere a user_id is needed) ───────
-  const pw = "CorrectHorse1!";
   const uname = `sdk-perf-${suffix}`;
   await tryRun("CreateUser", async () => {
     const created = (await gen.AuthnService.create_user({ username: uname, email: `${uname}@example.com`, password: pw, tenant_id: tenantId, project_id: projectId, full_name: "SDK Perf User" }, opts)).user;
@@ -1950,6 +2013,56 @@ async function seedPerfFixtures(
       await gen.AuthnService.login({ username: uname, password: pw, tenant_hint: tenantId, project_hint: projectId, device_id: `ts-perf-fp-${suffix}`, device_name: "ts-perf-device", ip_address: "127.0.0.1" }, opts);
       const dl = await gen.AuthnService.list_devices({ user_id: uid }, opts);
       if ((dl.devices ?? []).length > 0) fix.set("device_id", dl.devices[0].device_id);
+    });
+    const seedAuthnUser = async (key: string, label: string): Promise<string> => {
+      const username = `sdk-perf-${label}-${suffix}`;
+      const disposable = (await gen.AuthnService.create_user({
+        username,
+        email: `${username}@example.com`,
+        password: pw,
+        tenant_id: tenantId,
+        project_id: projectId,
+        full_name: `SDK Perf ${label} User`,
+      }, opts)).user;
+      const disposableId = disposable?.user_id;
+      if (!disposableId) throw new Error(`CreateUser(${key}) did not return user_id`);
+      fix.set(key, disposableId);
+      await tryRun(`Activate ${key}`, async () => {
+        await gen.AuthnService.change_user_status({
+          user_id: disposableId,
+          new_status: "USER_STATUS_ACTIVE",
+          reason: `perf seed activate ${label}`,
+          context: { tenant: { tenant_id: tenantId, project_id: projectId } },
+        }, opts);
+      });
+      return disposableId;
+    };
+    await tryRun("Authn disposable users", async () => {
+      await seedAuthnUser("admin_reset_mfa_user_id", "admin-reset-mfa");
+      await seedAuthnUser("admin_reset_password_user_id", "admin-reset-password");
+      await seedAuthnUser("change_password_user_id", "change-password");
+      await seedAuthnUser("change_status_user_id", "change-status");
+      await seedAuthnUser("disable_mfa_user_id", "disable-mfa");
+      const recoveryUserId = await seedAuthnUser("revoke_recovery_user_id", "revoke-recovery");
+      await tryRun("GenerateRecoveryCodes revoke_recovery_user_id", async () => {
+        await gen.AuthnService.generate_recovery_codes({ user_id: recoveryUserId, count: 4 }, opts);
+      });
+    });
+    await tryRun("RevokeDevice disposable user", async () => {
+      const revokeUserId = await seedAuthnUser("revoke_device_user_id", "revoke-device");
+      const revokeUsername = `sdk-perf-revoke-device-${suffix}`;
+      await gen.AuthnService.login({
+        username: revokeUsername,
+        password: pw,
+        tenant_hint: tenantId,
+        project_hint: projectId,
+        device_id: `ts-perf-revoke-fp-${suffix}`,
+        device_name: "ts-perf-revoke-device",
+        ip_address: "127.0.0.1",
+      }, opts);
+      const dl = await gen.AuthnService.list_devices({ user_id: revokeUserId }, opts);
+      if ((dl.devices ?? []).length > 0) fix.set("revoke_device_id", dl.devices[0].device_id);
+      else fix.set("revoke_device_id", `ts-perf-revoke-fp-${suffix}`);
     });
     // WebAuthn dev soft-authenticator (UDB_WEBAUTHN_TEST_MODE=1): register a passkey so
     // StartWebAuthnAuthentication has one. The dev authenticator is deterministic
@@ -2600,6 +2713,7 @@ async function seedPerfFixtures(
 
   return {
     fixtures: fix,
+    terminalTenantLogin,
     cleanup: async () => {
       for (let i = cleanups.length - 1; i >= 0; i--) await cleanups[i]();
     },
@@ -3910,10 +4024,9 @@ test("live per-RPC perf", {
       "validate_token", "introspect_token", "refresh_token", "get_jwks",
     ];
     // Phase 3 (LAST): AuthnService RPCs that end a session / invalidate a principal
-    // or credentials. These target the seeded DISPOSABLE user / its session (the
-    // manifest bodies point at <seed:user_id>/<seed:session_id>, and the
-    // tenant-wide / emergency ones target throwaway non-admin targets), so the
-    // admin's own bearer/session stays live until the very end.
+    // or credentials. Dedicated manifest seeds target disposable users for the
+    // terminal user-mutating rows, so the admin's bearer/session stays live until
+    // the final tenant purge login below.
     const PHASE3_AUTHN = new Set([
       "logout", "revoke_session", "admin_revoke_session", "admin_revoke_all_user_sessions",
       "admin_revoke_all_tenant_sessions", "emergency_revoke", "change_password",
@@ -3965,17 +4078,28 @@ test("live per-RPC perf", {
     for (const u of phase1) await measureRpc(u.serviceName, u.api, u.methodName, u.fn);
     // Phase 2: measure everything else under the live session.
     for (const u of phase2) await measureRpc(u.serviceName, u.api, u.methodName, u.fn);
-    // Phase 3: tear the session/credentials down LAST (disposable seeded targets;
-    // the admin's own logout/revoke is effectively last).
+    // Phase 3: tear the session/credentials down LAST against disposable seeded
+    // targets. Some rows intentionally deactivate/revoke the current tenant's
+    // authn state, so no later measurement may depend on that principal.
     for (const u of phase3) await measureRpc(u.serviceName, u.api, u.methodName, u.fn);
-    // Terminal destructive RPCs can invalidate broad tenant state. Measure them
-    // after all session teardown so they cannot poison unrelated samples.
+    // Terminal destructive RPCs can invalidate broad tenant state. PurgeTenant
+    // must run with a bearer whose tenant claim matches the body tenant_id, so
+    // switch to the seeded purge tenant/user only for these final samples.
     if (terminalDestructive.length > 0) {
-      const fresh = await project.login({ username, password, tenant_hint: tenantId, project_hint: projectId, device_name: "ts-sdk-perf-terminal" });
+      if (!seed.terminalTenantLogin) {
+        throw new Error("missing terminal tenant login seed for TenantService/purge_tenant");
+      }
+      const fresh = await project.login({
+        username: seed.terminalTenantLogin.username,
+        password: seed.terminalTenantLogin.password,
+        tenant_hint: seed.terminalTenantLogin.tenantId,
+        project_hint: seed.terminalTenantLogin.projectId,
+        device_name: "ts-sdk-perf-terminal",
+      });
       const freshWho = await project.auth.authenticateBearer(fresh.access_token);
-      tenantId = freshWho?.principal?.tenant_id || tenantId;
-      project.setTenant(tenantId);
-      fixtures.set("purge_tenant_id", tenantId);
+      const purgeTenantId = freshWho?.principal?.tenant_id || seed.terminalTenantLogin.tenantId;
+      project.setTenant(purgeTenantId);
+      fixtures.set("purge_tenant_id", purgeTenantId);
     }
     for (const u of terminalDestructive) await measureRpc(u.serviceName, u.api, u.methodName, u.fn);
 
@@ -3997,11 +4121,13 @@ test("live per-RPC perf", {
       + "the harness subscribes, fires a real seeded Upsert that flows outbox→CDC→Kafka, and times the "
       + "first delivered event.", "",
       "RPCs run on the AUTH ROUTE in three phases (BENCH_RPC_BODIES.md \"Execution order\"): Phase 1 "
-      + "establishes the session (AuthnService login → refresh_token → refresh_session → authenticate → "
+      + "establishes the session (AuthnService login -> refresh_session -> authenticate -> "
       + "validate_token → introspect_token → get_jwks), then the seed phase; Phase 2 measures everything "
       + "else; Phase 3 LAST runs the session/credential-teardown AuthnService RPCs (logout, revoke_*, "
       + "change/reset password, admin_reset_mfa, disable_mfa_factor, …) against the seeded DISPOSABLE "
-      + "user/session so the admin's own session is never killed mid-run.", "",
+      + "user/session so the admin's own session is never killed mid-run. The final terminal destructive "
+      + "tenant purge logs into a seeded disposable tenant/user whose bearer tenant claim matches the "
+      + "PurgeTenant body.", "",
       "## Seeded fixtures", "",
       `Captured semantic field → seeded value keys used to resolve request fields: ${fkeys.join(", ")}`, "",
       "## Per-service mean latency", "", "| Service | RPCs | mean ms |", "|---|--:|--:|"];
