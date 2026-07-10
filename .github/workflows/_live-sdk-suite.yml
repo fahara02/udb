@@ -55,7 +55,7 @@ jobs:
       UDB_LIVE_SDK_TESTS: "1"
       # Dynamic Vault DB credentials are part of the measured SDK surface. The
       # reset script creates this parent Postgres role before each broker start.
-      UDB_VAULT_DB_ROLES_JSON: '[{"role_name":"sdk-readonly","parent_role":"udb_vault_sdk_readonly","ttl_seconds_max":3600}]'
+      UDB_VAULT_DB_ROLES_JSON: '[{"role_name":"readonly","parent_role":"udb_vault_sdk_readonly","ttl_seconds_max":3600},{"role_name":"sdk-readonly","parent_role":"udb_vault_sdk_readonly","ttl_seconds_max":3600}]'
     services:
       postgres:
         image: postgres:16-alpine

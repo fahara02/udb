@@ -4043,23 +4043,10 @@ test("live per-RPC perf", {
     // targets. Some rows intentionally deactivate/revoke the current tenant's
     // authn state, so no later measurement may depend on that principal.
     for (const u of phase3) await measureRpc(u.serviceName, u.api, u.methodName, u.fn);
-    // Terminal destructive RPCs can invalidate broad tenant state. PurgeTenant
-    // must run with a bearer whose tenant claim matches the body tenant_id and
-    // has admin scope, so fresh-login the bootstrap admin and purge its
-    // benchmark tenant as the final sample.
-    if (terminalDestructive.length > 0) {
-      const fresh = await project.login({
-        username,
-        password,
-        tenant_hint: tenantId,
-        project_hint: projectId,
-        device_name: "ts-sdk-perf-terminal",
-      });
-      const freshWho = await project.auth.authenticateBearer(fresh.access_token);
-      tenantId = freshWho?.principal?.tenant_id || tenantId;
-      project.setTenant(tenantId);
-      fixtures.set("purge_tenant_id", tenantId);
-    }
+    // Terminal destructive RPCs can invalidate broad tenant state. Keep them
+    // after Authn teardown, using the same verified tenant-scoped credential as
+    // the other SDK harnesses instead of performing another login after
+    // tenant-wide session revocation has run.
     for (const u of terminalDestructive) await measureRpc(u.serviceName, u.api, u.methodName, u.fn);
 
     const svc = new Map<string, number[]>();
@@ -4085,8 +4072,7 @@ test("live per-RPC perf", {
       + "else; Phase 3 LAST runs the session/credential-teardown AuthnService RPCs (logout, revoke_*, "
       + "change/reset password, admin_reset_mfa, disable_mfa_factor, …) against the seeded DISPOSABLE "
       + "user/session so the admin's own session is never killed mid-run. The final terminal destructive "
-      + "tenant purge fresh-logins the bootstrap admin so the bearer tenant claim and admin scope match "
-      + "the PurgeTenant body.", "",
+      + "tenant purge uses the verified tenant-scoped benchmark credential, matching the other SDK harnesses.", "",
       "## Seeded fixtures", "",
       `Captured semantic field → seeded value keys used to resolve request fields: ${fkeys.join(", ")}`, "",
       "## Per-service mean latency", "", "| Service | RPCs | mean ms |", "|---|--:|--:|"];
