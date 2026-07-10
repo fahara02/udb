@@ -940,6 +940,18 @@ jobs:
     timeout-minutes: 75
     steps:
       - uses: actions/checkout@v4
+      - name: Reclaim runner disk for live backend stack
+        # This job starts Qdrant, Elasticsearch, SQL Server, Cassandra,
+        # ClickHouse, Weaviate, Kafka, MinIO, and Rust test artifacts on one
+        # GitHub runner. Remove hosted-toolcache payloads unrelated to UDB
+        # before Docker allocates backend storage; otherwise Qdrant can fail
+        # its WAL preflight with ENOSPC and cascade into live IR failures.
+        run: |
+          set -euxo pipefail
+          df -h
+          sudo rm -rf /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL || true
+          docker system prune -af --volumes || true
+          df -h
       - uses: ./.github/actions/setup-rust
         with:
           cache-key: native-integration

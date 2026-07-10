@@ -1321,6 +1321,8 @@ NATIVE_LOAD_CASE_RE = re.compile(r'^\s*run_case\s+"([^"]+)"', re.MULTILINE)
 CI_NATIVE_INTEGRATION_REQUIREMENTS = (
     ("native-integration:", "native-integration job"),
     ("timeout-minutes: 75", "native-integration timeout"),
+    ("Reclaim runner disk for live backend stack", "native-integration runner disk reclaim step"),
+    ("docker system prune -af --volumes", "native-integration Docker storage prune"),
     ("cache-key: native-integration", "native-integration Rust cache key"),
     (
         "docker compose -f docker-compose.integration.yml up -d --wait postgres kafka redis memcached qdrant minio",
@@ -6795,6 +6797,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 75
     steps:
+      - name: Reclaim runner disk for live backend stack
+        run: |
+          df -h
+          docker system prune -af --volumes || true
+          df -h
       - uses: ./.github/actions/setup-rust
         with:
           cache-key: native-integration
