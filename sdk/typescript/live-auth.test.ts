@@ -1847,6 +1847,7 @@ async function seedPerfFixtures(
   fix.set("domain", tenantId);
   fix.set("message_type", LIVE_MESSAGE_TYPE);
   fix.set("tenant_code", `sdk-perf-tenant-${suffix}`);
+  fix.set("purge_tenant_id", tenantId);
 
   // ── DataBroker: a real SdkLiveRecord row (drives Upsert/Select/Delete + CDC) ──
   const recordId = `ts-perf-${suffix}`;
@@ -4047,6 +4048,10 @@ test("live per-RPC perf", {
     // after Authn teardown, using the same verified tenant-scoped credential as
     // the other SDK harnesses instead of performing another login after
     // tenant-wide session revocation has run.
+    if (terminalDestructive.length > 0) {
+      tenantId = fixtures.lookup("purge_tenant_id") || tenantId;
+      project.setTenant(tenantId);
+    }
     for (const u of terminalDestructive) await measureRpc(u.serviceName, u.api, u.methodName, u.fn);
 
     const svc = new Map<string, number[]>();
