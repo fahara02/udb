@@ -1829,6 +1829,7 @@ func TestBuildManifestJSONBodyUsesSharedManifest(t *testing.T) {
 	if got := deltaMsg.Get(deltaFields.ByName("initial_resource_versions")).Map().Len(); got != 0 {
 		t.Fatalf("control delta initial_resource_versions len = %d, want 0", got)
 	}
+	fix.set("rollback_resource_version", "control-version-1")
 	controlRollbackIn, _, ok := buildManifestJSONBody("/udb.core.control.services.v1.ControlPlaneService/RollbackResources", fix)
 	if !ok {
 		t.Fatalf("ControlPlaneService RollbackResources manifest JSON body was not hydrated")
