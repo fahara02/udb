@@ -53,6 +53,9 @@ jobs:
       RELEASE_ASSET: ${{ inputs.release-asset }}
       # Live tests are always opted-in here; perf adds the perf opt-in below.
       UDB_LIVE_SDK_TESTS: "1"
+      # Dynamic Vault DB credentials are part of the measured SDK surface. The
+      # reset script creates this parent Postgres role before each broker start.
+      UDB_VAULT_DB_ROLES_JSON: '[{"role_name":"sdk-readonly","parent_role":"udb_vault_sdk_readonly","ttl_seconds_max":3600}]'
     services:
       postgres:
         image: postgres:16-alpine
@@ -206,6 +209,7 @@ jobs:
           for i in $(seq 1 10); do (echo > /dev/tcp/127.0.0.1/50051) 2>/dev/null || break; sleep 1; done
           psql -h localhost -p 5432 -U udb -d postgres -c "DROP DATABASE IF EXISTS udb_ci WITH (FORCE);"
           psql -h localhost -p 5432 -U udb -d postgres -c "CREATE DATABASE udb_ci;"
+          psql -h localhost -p 5432 -U udb -d postgres -v ON_ERROR_STOP=1 -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'udb_vault_sdk_readonly') THEN CREATE ROLE udb_vault_sdk_readonly NOLOGIN; END IF; END \$\$;"
           "${UDB_BENCH_BIN}" auth bootstrap user --username "${UDB_LIVE_USERNAME}" --password "${UDB_LIVE_PASSWORD}" --tenant "${UDB_LIVE_TENANT}" --project "${UDB_LIVE_PROJECT}"
           "${UDB_BENCH_BIN}" serve proto "" 127.0.0.1:50051 > /tmp/udb-bench.log 2>&1 &
           echo $! > /tmp/udb-bench.pid

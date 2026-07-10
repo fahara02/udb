@@ -1783,35 +1783,6 @@ async function seedPerfFixtures(gen, data, tenantId, projectId, uuidTenant) {
     fix.set("domain", tenantId);
     fix.set("message_type", LIVE_MESSAGE_TYPE);
     fix.set("tenant_code", `sdk-perf-tenant-${suffix}`);
-    let terminalTenantLogin;
-    await tryRun("PurgeTenant disposable tenant/user", async () => {
-        const purgeCode = `sdk-perf-purge-${suffix}`;
-        const createdTenant = await gen.TenantService.create_tenant({ code: purgeCode, name: "SDK Perf Purge Tenant", type: "WORKSPACE", config: "{}", branding: "{}" }, opts);
-        const purgeTenantId = createdTenant?.tenant_id || createdTenant?.tenant?.tenant_id;
-        if (!purgeTenantId)
-            throw new Error("CreateTenant did not return tenant_id for purge seed");
-        const purgeUsername = `sdk-perf-purge-user-${suffix}`;
-        const purgeUser = (await gen.AuthnService.create_user({
-            username: purgeUsername,
-            email: `${purgeUsername}@example.com`,
-            password: pw,
-            tenant_id: purgeTenantId,
-            project_id: projectId,
-            full_name: "SDK Perf Purge User",
-        }, opts)).user;
-        if (purgeUser?.user_id) {
-            await tryRun("Activate purge tenant user", async () => {
-                await gen.AuthnService.change_user_status({
-                    user_id: purgeUser.user_id,
-                    new_status: "USER_STATUS_ACTIVE",
-                    reason: "perf seed activate purge user",
-                    context: { tenant: { tenant_id: purgeTenantId, project_id: projectId } },
-                }, opts);
-            });
-        }
-        fix.set("purge_tenant_id", purgeTenantId);
-        terminalTenantLogin = { username: purgeUsername, password: pw, tenantId: purgeTenantId, projectId };
-    });
     // ── DataBroker: a real SdkLiveRecord row (drives Upsert/Select/Delete + CDC) ──
     const recordId = `ts-perf-${suffix}`;
     await tryRun("SdkLiveRecord upsert", async () => {
@@ -2691,7 +2662,6 @@ async function seedPerfFixtures(gen, data, tenantId, projectId, uuidTenant) {
     fix.set("kind", "audio");
     return {
         fixtures: fix,
-        terminalTenantLogin,
         cleanup: async () => {
             for (let i = cleanups.length - 1; i >= 0; i--)
                 await cleanups[i]();
@@ -4088,23 +4058,21 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
         for (const u of phase3)
             await measureRpc(u.serviceName, u.api, u.methodName, u.fn);
         // Terminal destructive RPCs can invalidate broad tenant state. PurgeTenant
-        // must run with a bearer whose tenant claim matches the body tenant_id, so
-        // switch to the seeded purge tenant/user only for these final samples.
+        // must run with a bearer whose tenant claim matches the body tenant_id and
+        // has admin scope, so fresh-login the bootstrap admin and purge its
+        // benchmark tenant as the final sample.
         if (terminalDestructive.length > 0) {
-            if (!seed.terminalTenantLogin) {
-                throw new Error("missing terminal tenant login seed for TenantService/purge_tenant");
-            }
             const fresh = await project.login({
-                username: seed.terminalTenantLogin.username,
-                password: seed.terminalTenantLogin.password,
-                tenant_hint: seed.terminalTenantLogin.tenantId,
-                project_hint: seed.terminalTenantLogin.projectId,
+                username,
+                password,
+                tenant_hint: tenantId,
+                project_hint: projectId,
                 device_name: "ts-sdk-perf-terminal",
             });
             const freshWho = await project.auth.authenticateBearer(fresh.access_token);
-            const purgeTenantId = freshWho?.principal?.tenant_id || seed.terminalTenantLogin.tenantId;
-            project.setTenant(purgeTenantId);
-            fixtures.set("purge_tenant_id", purgeTenantId);
+            tenantId = freshWho?.principal?.tenant_id || tenantId;
+            project.setTenant(tenantId);
+            fixtures.set("purge_tenant_id", tenantId);
         }
         for (const u of terminalDestructive)
             await measureRpc(u.serviceName, u.api, u.methodName, u.fn);
@@ -4133,8 +4101,8 @@ async function runLiveNativeServiceE2E(project, uuidProject, tenantId, projectId
                 + "else; Phase 3 LAST runs the session/credential-teardown AuthnService RPCs (logout, revoke_*, "
                 + "change/reset password, admin_reset_mfa, disable_mfa_factor, …) against the seeded DISPOSABLE "
                 + "user/session so the admin's own session is never killed mid-run. The final terminal destructive "
-                + "tenant purge logs into a seeded disposable tenant/user whose bearer tenant claim matches the "
-                + "PurgeTenant body.", "",
+                + "tenant purge fresh-logins the bootstrap admin so the bearer tenant claim and admin scope match "
+                + "the PurgeTenant body.", "",
             "## Seeded fixtures", "",
             `Captured semantic field → seeded value keys used to resolve request fields: ${fkeys.join(", ")}`, "",
             "## Per-service mean latency", "", "| Service | RPCs | mean ms |", "|---|--:|--:|"];
