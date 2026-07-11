@@ -2387,7 +2387,7 @@ CI_RUNNER_EVIDENCE_REQUIREMENTS = (
     ("const expectedReleaseTag = releaseTag || String(releaseRun?.head_branch || \"\")", "live release tag handoff"),
     ("is missing workflow path", "missing workflow path failure"),
     ("want .github/workflows/release.yml", "wrong release workflow negative assertion"),
-    ("release run is missing required jobs: publish-docker", "missing release job negative assertion"),
+    ("release run is missing required jobs: ${RELEASE_SELFTEST_JOB}", "missing release job negative assertion"),
     (
         "release dry-run run is missing required jobs: build (udb-linux-amd64-full)",
         "missing release dry-run job negative assertion",
@@ -2419,7 +2419,7 @@ CI_RUNNER_EVIDENCE_REQUIREMENTS = (
         "integration CI run is missing required jobs: Native services + canonical stores (live)",
         "missing integration display-name job negative assertion",
     ),
-    ("publish-docker", "release required job evidence"),
+    ("publish-docker / publish ghcr.io/fahara02/udb", "release required job evidence"),
     ("Vendored ffmpeg guard", "release dry-run ffmpeg gate evidence"),
     ("build (udb-linux-amd64-full)", "release dry-run full asset job evidence"),
     ("Release binary + SDK live benchmarks", "post-release benchmark job evidence"),
@@ -2504,7 +2504,7 @@ CI_RUNNER_EVIDENCE_REQUIREMENTS = (
     ("padded distinct run id regression was not caught", "padded distinct run id negative selftest"),
     ("second evidence run id has invalid value  2; want positive integer", "padded distinct run id negative assertion"),
     ("wrong job run_id regression was not caught", "wrong job run_id negative selftest"),
-    ("release job publish-docker belongs to run 999, want 4", "wrong job run_id negative assertion"),
+    ("release job ${RELEASE_SELFTEST_JOB} belongs to run 999, want 4", "wrong job run_id negative assertion"),
     ("padded job run_id regression was not caught", "padded job run_id negative selftest"),
     ("missing job id regression was not caught", "missing job id negative selftest"),
     ("padded job id regression was not caught", "padded job id negative selftest"),
@@ -2517,11 +2517,17 @@ CI_RUNNER_EVIDENCE_REQUIREMENTS = (
     ("wrong run html_url regression was not caught", "wrong run inspection URL negative selftest"),
     ("cross-repo run html_url regression was not caught", "cross-repo run inspection URL negative selftest"),
     ("wrong job run_attempt regression was not caught", "wrong job run_attempt negative selftest"),
-    ("release job publish-docker belongs to run attempt 1, want 2", "wrong job run_attempt negative assertion"),
+    (
+        "release job ${RELEASE_SELFTEST_JOB} belongs to run attempt 1, want 2",
+        "wrong job run_attempt negative assertion",
+    ),
     ("padded job run_attempt regression was not caught", "padded job run_attempt negative selftest"),
     ("non-required job timestamp scope regression", "non-required job timestamp scope selftest"),
     ("impossible job timestamp regression was not caught", "impossible job timestamp negative selftest"),
-    ("release job publish-docker completed before it started", "impossible job timestamp negative assertion"),
+    (
+        "release job ${RELEASE_SELFTEST_JOB} completed before it started",
+        "impossible job timestamp negative assertion",
+    ),
     ("padded run timestamp regression was not caught", "padded run timestamp negative selftest"),
     ("offset job timestamp regression was not caught", "offset job timestamp negative selftest"),
     ("wrong integration branch evidence regression was not caught", "wrong integration branch negative selftest"),
@@ -2578,9 +2584,12 @@ CI_RUNNER_EVIDENCE_REQUIREMENTS = (
     ("branch-protection run 10 used head_sha ${benchmarkSha}, want ${integrationSha}", "wrong branch-protection SHA negative assertion"),
     ("function fixtureJob(name, conclusion = \"success\"", "runner evidence selftest job fixture"),
     ("skipped release job regression was not caught", "skipped release job negative selftest"),
-    ("release job publish-docker did not succeed: skipped", "skipped release job negative assertion"),
+    ("release job ${RELEASE_SELFTEST_JOB} did not succeed: skipped", "skipped release job negative assertion"),
     ("duplicate release job regression was not caught", "duplicate required job negative selftest"),
-    ("release run has duplicate required job publish-docker; found 2", "duplicate required job negative assertion"),
+    (
+        "release run has duplicate required job ${RELEASE_SELFTEST_JOB}; found 2",
+        "duplicate required job negative assertion",
+    ),
     ("paginated jobs regression was not caught", "jobs pagination negative selftest"),
     ("truncated jobs pagination regression was not caught", "jobs pagination truncation negative selftest"),
     ("overreported jobs pagination regression was not caught", "jobs pagination over-count negative selftest"),
@@ -7579,7 +7588,26 @@ const REQUIRED_JOBS = {
   lint: ["actionlint"],
   pr: PR_EVIDENCE_JOBS,
   integration: INTEGRATION_REQUIRED_JOBS,
-  release: ["ci-green", "version-guard", "build-binaries", "publish-docker"],
+  release: [
+    "ci-green",
+    "version-guard",
+    "build-binaries / Version guard",
+    "build-binaries / Vendored ffmpeg guard",
+    "build-binaries / build (udb-linux-amd64)",
+    "build-binaries / build (udb-windows-amd64.exe)",
+    "build-binaries / build (udb-darwin-arm64)",
+    "build-binaries / build (udb-darwin-amd64)",
+    "build-binaries / build (udb-linux-amd64-full)",
+    "build-binaries / Release manifest",
+    "publish-crates / cargo publish",
+    "publish-docker / publish ghcr.io/fahara02/udb",
+    "publish-ts / Build and publish @udb_plus/sdk",
+    "publish-py / Build and publish udb-client",
+    "publish-csharp / Build and publish Udb.Client + Udb.Cli",
+    "publish-packagist / composer validate",
+    "publish-packagist / Split + push to udb-laravel satellite",
+    "publish-packagist / Notify Packagist",
+  ],
   releaseDryRun: ["Version guard", "Vendored ffmpeg guard", "build (udb-linux-amd64-full)"],
   benchmark: ["Release binary + SDK live benchmarks"],
   pages: ["build", "deploy"],
@@ -7589,6 +7617,7 @@ const REQUIRED_JOBS = {
   retrySafeServed: ["Retry-safe mutation metadata served proof"],
   restGateway: ["REST boundary content/status proof"],
 };
+const RELEASE_SELFTEST_JOB = "publish-docker / publish ghcr.io/fahara02/udb";
 const SERVED_SMOKE_AUDITS = {};
 function assertSuccessfulBudgetRun(run, label, budgetMinutes, { maxAgeDays, nowMs = Date.now() } = {}) {
   const completedAt = parseActionsTimestampMs(run.completed_at || run.updated_at, "run completion timestamp");
@@ -7632,7 +7661,7 @@ function parseActionsTimestampMs(value, label) {
 function assertJobSucceeded(job, label) {
   throw new Error("job ${jobName} is not completed");
   throw new Error("job ${jobName} did not succeed");
-  throw new Error("release job publish-docker did not succeed: skipped");
+  throw new Error("release job ${RELEASE_SELFTEST_JOB} did not succeed: skipped");
 }
 function assertJobEvidenceName(job, label) {
   throw new Error("job name must be a string");
@@ -7651,12 +7680,12 @@ function assertRequiredJobs(jobs, label, requiredNames) {
   const jobNames = jobs.map((job) => assertJobEvidenceName(job, label));
   throw new Error("PR CI required gate run is missing required jobs: Proto (buf)");
   throw new Error("PR CI run is missing required jobs: Rust (ubuntu-latest)");
-  throw new Error("release run is missing required jobs: publish-docker");
+  throw new Error("release run is missing required jobs: ${RELEASE_SELFTEST_JOB}");
   throw new Error("release dry-run run is missing required jobs: build (udb-linux-amd64-full)");
   throw new Error("branch-protection run is missing required jobs: Branch protection required checks match docs");
   throw new Error("integration CI run is missing required jobs: Native services + canonical stores (live)");
   throw new Error("integration CI run is missing required jobs: Proto (buf)");
-  throw new Error("release run has duplicate required job publish-docker; found 2");
+  throw new Error("release run has duplicate required job ${RELEASE_SELFTEST_JOB}; found 2");
   return matchedJobs;
 }
 function assertRequiredJobInventory(label, requiredNames) {
@@ -7677,10 +7706,10 @@ function assertJobsBelongToRun(jobs, label, run) {
   throw new Error("reuses job id ${jobId} already used by ${previousJobName}");
   throw new Error("`${label} job ${jobName} run_id`");
   throw new Error("belongs to run ${actualRunId}, want ${expectedRunId}");
-  throw new Error("release job publish-docker belongs to run 999, want 4");
+  throw new Error("release job ${RELEASE_SELFTEST_JOB} belongs to run 999, want 4");
   throw new Error("`${label} job ${jobName} run_attempt`");
   throw new Error("belongs to run attempt ${actualAttempt}, want ${expectedAttempt}");
-  throw new Error("release job publish-docker belongs to run attempt 1, want 2");
+  throw new Error("release job ${RELEASE_SELFTEST_JOB} belongs to run attempt 1, want 2");
 }
 function assertJobEvidenceId(job, label) {
   throw new Error("`${label} job ${assertJobEvidenceName(job, label)} id`");
@@ -7711,8 +7740,8 @@ function durationMinutes(run) {
   const end = runCompletedMs(run, "budget");
 }
 function assertJobsWithinRunWindow(jobs, label, run) {
-  throw new Error("release job publish-docker completed before it started");
-  throw new Error("release job publish-docker started_at must be a GitHub Actions UTC timestamp");
+  throw new Error("release job ${RELEASE_SELFTEST_JOB} completed before it started");
+  throw new Error("release job ${RELEASE_SELFTEST_JOB} started_at must be a GitHub Actions UTC timestamp");
   throw new Error("completed before it started");
   throw new Error("completed after parent run");
 }

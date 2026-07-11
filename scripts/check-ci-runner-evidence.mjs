@@ -151,13 +151,22 @@ const REQUIRED_JOBS = {
   release: [
     "ci-green",
     "version-guard",
-    "build-binaries",
-    "publish-crates",
-    "publish-docker",
-    "publish-ts",
-    "publish-py",
-    "publish-csharp",
-    "publish-packagist",
+    "build-binaries / Version guard",
+    "build-binaries / Vendored ffmpeg guard",
+    "build-binaries / build (udb-linux-amd64)",
+    "build-binaries / build (udb-windows-amd64.exe)",
+    "build-binaries / build (udb-darwin-arm64)",
+    "build-binaries / build (udb-darwin-amd64)",
+    "build-binaries / build (udb-linux-amd64-full)",
+    "build-binaries / Release manifest",
+    "publish-crates / cargo publish",
+    "publish-docker / publish ghcr.io/fahara02/udb",
+    "publish-ts / Build and publish @udb_plus/sdk",
+    "publish-py / Build and publish udb-client",
+    "publish-csharp / Build and publish Udb.Client + Udb.Cli",
+    "publish-packagist / composer validate",
+    "publish-packagist / Split + push to udb-laravel satellite",
+    "publish-packagist / Notify Packagist",
   ],
   releaseDryRun: [
     "Version guard",
@@ -176,6 +185,19 @@ const REQUIRED_JOBS = {
   retrySafeServed: ["Retry-safe mutation metadata served proof"],
   restGateway: ["REST boundary content/status proof"],
 };
+
+const RELEASE_PUBLISH_BUDGET_JOBS = [
+  "publish-crates / cargo publish",
+  "publish-docker / publish ghcr.io/fahara02/udb",
+  "publish-ts / Build and publish @udb_plus/sdk",
+  "publish-py / Build and publish udb-client",
+  "publish-csharp / Build and publish Udb.Client + Udb.Cli",
+  "publish-packagist / composer validate",
+  "publish-packagist / Split + push to udb-laravel satellite",
+  "publish-packagist / Notify Packagist",
+];
+
+const RELEASE_SELFTEST_JOB = "publish-docker / publish ghcr.io/fahara02/udb";
 
 const SERVED_SMOKE_AUDITS = {
   idempotencyServed: {
@@ -1595,7 +1617,6 @@ async function auditLive(args, budgets, evidenceOptions = {}, fetcher = fetchJso
     releaseTag: auditedReleaseTag,
     lint: assertSuccessfulBudgetRun(lintRun, "lint/actionlint", budgets.lint, evidenceOptions),
     integration: assertSuccessfulBudgetRun(integrationRun, "integration CI", budgets.integration, evidenceOptions),
-    release: assertSuccessfulBudgetRun(releaseRun, "release", budgets.release, evidenceOptions),
     releaseDryRun: assertSuccessfulBudgetRun(releaseDryRunRun, "release dry-run", budgets.releaseDryRun, evidenceOptions),
     benchmark: assertSuccessfulBudgetRun(benchmarkRun, "post-release benchmark", budgets.benchmark, evidenceOptions),
     pages: assertSuccessfulBudgetRun(pagesRun, "post-benchmark Pages", budgets.pages, evidenceOptions),
@@ -1620,6 +1641,7 @@ async function auditLive(args, budgets, evidenceOptions = {}, fetcher = fetchJso
   const prEvidenceJobs = [prBrokerJob, ...assertRequiredJobs(prJobs, "PR CI", PR_EVIDENCE_JOBS)];
   const integrationEvidenceJobs = assertRequiredJobs(integrationJobs, "integration CI", REQUIRED_JOBS.integration);
   const releaseEvidenceJobs = assertRequiredJobs(releaseJobs, "release", REQUIRED_JOBS.release);
+  const releasePublishBudgetJobs = assertRequiredJobs(releaseJobs, "release publish fanout", RELEASE_PUBLISH_BUDGET_JOBS);
   const releaseDryRunEvidenceJobs = assertRequiredJobs(releaseDryRunJobs, "release dry-run", REQUIRED_JOBS.releaseDryRun);
   const benchmarkEvidenceJobs = assertRequiredJobs(benchmarkJobs, "post-release benchmark", REQUIRED_JOBS.benchmark);
   const pagesEvidenceJobs = assertRequiredJobs(pagesJobs, "post-benchmark Pages", REQUIRED_JOBS.pages);
@@ -1633,6 +1655,7 @@ async function auditLive(args, budgets, evidenceOptions = {}, fetcher = fetchJso
   assertJobsBelongToRun(prEvidenceJobs, "PR CI", prRun);
   assertJobsBelongToRun(integrationEvidenceJobs, "integration CI", integrationRun);
   assertJobsBelongToRun(releaseEvidenceJobs, "release", releaseRun);
+  assertJobsBelongToRun(releasePublishBudgetJobs, "release publish fanout", releaseRun);
   assertJobsBelongToRun(releaseDryRunEvidenceJobs, "release dry-run", releaseDryRunRun);
   assertJobsBelongToRun(benchmarkEvidenceJobs, "post-release benchmark", benchmarkRun);
   assertJobsBelongToRun(pagesEvidenceJobs, "post-benchmark Pages", pagesRun);
@@ -1642,6 +1665,7 @@ async function auditLive(args, budgets, evidenceOptions = {}, fetcher = fetchJso
   assertJobsWithinRunWindow(prEvidenceJobs, "PR CI", prRun);
   assertJobsWithinRunWindow(integrationEvidenceJobs, "integration CI", integrationRun);
   assertJobsWithinRunWindow(releaseEvidenceJobs, "release", releaseRun);
+  assertJobsWithinRunWindow(releasePublishBudgetJobs, "release publish fanout", releaseRun);
   assertJobsWithinRunWindow(releaseDryRunEvidenceJobs, "release dry-run", releaseDryRunRun);
   assertJobsWithinRunWindow(benchmarkEvidenceJobs, "post-release benchmark", benchmarkRun);
   assertJobsWithinRunWindow(pagesEvidenceJobs, "post-benchmark Pages", pagesRun);
@@ -1651,6 +1675,13 @@ async function auditLive(args, budgets, evidenceOptions = {}, fetcher = fetchJso
     prBudgetJobs,
     "PR CI required gate",
     budgets.pr,
+    evidenceOptions,
+  );
+  summary.release = assertSuccessfulJobWindowBudgetRun(
+    releaseRun,
+    releasePublishBudgetJobs,
+    "release publish fanout",
+    budgets.release,
     evidenceOptions,
   );
   return summary;
@@ -1852,17 +1883,7 @@ async function runSelftest() {
         lint: [fixtureJob("actionlint")],
         pr: [...PR_EVIDENCE_JOBS.map((name) => fixtureJob(name)), fixtureJob("build-broker")],
         integration: INTEGRATION_REQUIRED_JOBS.map((name) => fixtureJob(name)),
-        release: [
-          fixtureJob("ci-green"),
-          fixtureJob("version-guard"),
-          fixtureJob("build-binaries"),
-          fixtureJob("publish-crates"),
-          fixtureJob("publish-docker"),
-          fixtureJob("publish-ts"),
-          fixtureJob("publish-py"),
-          fixtureJob("publish-csharp"),
-          fixtureJob("publish-packagist"),
-        ],
+        release: REQUIRED_JOBS.release.map((name) => fixtureJob(name)),
         releaseDryRun: REQUIRED_JOBS.releaseDryRun.map((name) => fixtureJob(name)),
         benchmark: REQUIRED_JOBS.benchmark.map((name) => fixtureJob(name)),
         pages: REQUIRED_JOBS.pages.map((name) => fixtureJob(name)),
@@ -2006,7 +2027,7 @@ async function runSelftest() {
 
     const malformedJobFixture = structuredClone(good);
     malformedJobFixture.jobs.release = malformedJobFixture.jobs.release.map((job) =>
-      job.name === "publish-docker" ? "publish-docker" : job,
+      job.name === RELEASE_SELFTEST_JOB ? RELEASE_SELFTEST_JOB : job,
     );
     const malformedJobFixturePath = join(root, "malformed-job-fixture.json");
     writeFileSync(malformedJobFixturePath, JSON.stringify(malformedJobFixture));
@@ -2014,7 +2035,7 @@ async function runSelftest() {
       auditSelftestFixture(malformedJobFixturePath);
       throw new Error("malformed fixture job regression was not caught");
     } catch (error) {
-      if (!String(error.message).includes("fixture jobs.release[4] must be a JSON object")) throw error;
+      if (!String(error.message).includes("fixture jobs.release[") || !String(error.message).includes("must be a JSON object")) throw error;
     }
 
     const malformedRunId = structuredClone(good);
@@ -2410,7 +2431,7 @@ async function runSelftest() {
 
     const offsetJobTimestamp = structuredClone(good);
     offsetJobTimestamp.jobs.release = offsetJobTimestamp.jobs.release.map((job) =>
-      job.name === "publish-docker" ? { ...job, started_at: "2026-07-01T00:00:00+00:00" } : job,
+      job.name === RELEASE_SELFTEST_JOB ? { ...job, started_at: "2026-07-01T00:00:00+00:00" } : job,
     );
     const offsetJobTimestampPath = join(root, "offset-job-timestamp.json");
     writeFileSync(offsetJobTimestampPath, JSON.stringify(offsetJobTimestamp));
@@ -2418,7 +2439,7 @@ async function runSelftest() {
       auditSelftestFixture(offsetJobTimestampPath);
       throw new Error("offset job timestamp regression was not caught");
     } catch (error) {
-      if (!String(error.message).includes("release job publish-docker started_at must be a GitHub Actions UTC timestamp")) {
+      if (!String(error.message).includes(`release job ${RELEASE_SELFTEST_JOB} started_at must be a GitHub Actions UTC timestamp`)) {
         throw error;
       }
     }
@@ -2570,7 +2591,7 @@ async function runSelftest() {
 
     const wrongJobRun = structuredClone(good);
     wrongJobRun.jobs.release = wrongJobRun.jobs.release.map((job) =>
-      job.name === "publish-docker" ? { ...job, run_id: 999 } : job,
+      job.name === RELEASE_SELFTEST_JOB ? { ...job, run_id: 999 } : job,
     );
     const wrongJobRunPath = join(root, "wrong-job-run.json");
     writeFileSync(wrongJobRunPath, JSON.stringify(wrongJobRun));
@@ -2578,14 +2599,14 @@ async function runSelftest() {
       auditSelftestFixture(wrongJobRunPath);
       throw new Error("wrong job run_id regression was not caught");
     } catch (error) {
-      if (!String(error.message).includes("release job publish-docker belongs to run 999, want 4")) {
+      if (!String(error.message).includes(`release job ${RELEASE_SELFTEST_JOB} belongs to run 999, want 4`)) {
         throw error;
       }
     }
 
     const paddedJobRunId = structuredClone(good);
     paddedJobRunId.jobs.release = paddedJobRunId.jobs.release.map((job) =>
-      job.name === "publish-docker" ? { ...job, run_id: " 4" } : job,
+      job.name === RELEASE_SELFTEST_JOB ? { ...job, run_id: " 4" } : job,
     );
     const paddedJobRunIdPath = join(root, "padded-job-run-id.json");
     writeFileSync(paddedJobRunIdPath, JSON.stringify(paddedJobRunId));
@@ -2593,14 +2614,14 @@ async function runSelftest() {
       auditSelftestFixture(paddedJobRunIdPath);
       throw new Error("padded job run_id regression was not caught");
     } catch (error) {
-      if (!String(error.message).includes("release job publish-docker run_id has invalid value  4; want positive integer")) {
+      if (!String(error.message).includes(`release job ${RELEASE_SELFTEST_JOB} run_id has invalid value  4; want positive integer`)) {
         throw error;
       }
     }
 
     const missingJobId = structuredClone(good);
     missingJobId.jobs.release = missingJobId.jobs.release.map((job) => {
-      if (job.name !== "publish-docker") return job;
+      if (job.name !== RELEASE_SELFTEST_JOB) return job;
       const { id: _id, ...withoutId } = job;
       return withoutId;
     });
@@ -2610,14 +2631,14 @@ async function runSelftest() {
       auditSelftestFixture(missingJobIdPath);
       throw new Error("missing job id regression was not caught");
     } catch (error) {
-      if (!String(error.message).includes("release job publish-docker id has invalid value (missing); want positive integer")) {
+      if (!String(error.message).includes(`release job ${RELEASE_SELFTEST_JOB} id has invalid value (missing); want positive integer`)) {
         throw error;
       }
     }
 
     const paddedJobId = structuredClone(good);
     paddedJobId.jobs.release = paddedJobId.jobs.release.map((job) =>
-      job.name === "publish-docker" ? { ...job, id: " 42" } : job,
+      job.name === RELEASE_SELFTEST_JOB ? { ...job, id: " 42" } : job,
     );
     const paddedJobIdPath = join(root, "padded-job-id.json");
     writeFileSync(paddedJobIdPath, JSON.stringify(paddedJobId));
@@ -2625,13 +2646,13 @@ async function runSelftest() {
       auditSelftestFixture(paddedJobIdPath);
       throw new Error("padded job id regression was not caught");
     } catch (error) {
-      if (!String(error.message).includes("release job publish-docker id has invalid value  42; want positive integer")) {
+      if (!String(error.message).includes(`release job ${RELEASE_SELFTEST_JOB} id has invalid value  42; want positive integer`)) {
         throw error;
       }
     }
 
     const duplicateJobId = structuredClone(good);
-    const reusedJobId = duplicateJobId.jobs.release.find((job) => job.name === "publish-docker").id;
+    const reusedJobId = duplicateJobId.jobs.release.find((job) => job.name === RELEASE_SELFTEST_JOB).id;
     duplicateJobId.jobs.release = duplicateJobId.jobs.release.map((job) =>
       job.name === "ci-green" ? { ...job, id: reusedJobId } : job,
     );
@@ -2641,7 +2662,7 @@ async function runSelftest() {
       auditSelftestFixture(duplicateJobIdPath);
       throw new Error("duplicate job id regression was not caught");
     } catch (error) {
-      if (!String(error.message).includes(`release job publish-docker reuses job id ${reusedJobId} already used by ci-green`)) {
+      if (!String(error.message).includes(`release job ${RELEASE_SELFTEST_JOB} reuses job id ${reusedJobId} already used by ci-green`)) {
         throw error;
       }
     }
@@ -2662,7 +2683,7 @@ async function runSelftest() {
     const wrongJobAttempt = structuredClone(good);
     wrongJobAttempt.runs.release = { ...wrongJobAttempt.runs.release, run_attempt: 2 };
     wrongJobAttempt.jobs.release = wrongJobAttempt.jobs.release.map((job) =>
-      job.name === "publish-docker" ? { ...job, run_attempt: 1 } : { ...job, run_attempt: 2 },
+      job.name === RELEASE_SELFTEST_JOB ? { ...job, run_attempt: 1 } : { ...job, run_attempt: 2 },
     );
     const wrongJobAttemptPath = join(root, "wrong-job-attempt.json");
     writeFileSync(wrongJobAttemptPath, JSON.stringify(wrongJobAttempt));
@@ -2670,7 +2691,7 @@ async function runSelftest() {
       auditSelftestFixture(wrongJobAttemptPath);
       throw new Error("wrong job run_attempt regression was not caught");
     } catch (error) {
-      if (!String(error.message).includes("release job publish-docker belongs to run attempt 1, want 2")) {
+      if (!String(error.message).includes(`release job ${RELEASE_SELFTEST_JOB} belongs to run attempt 1, want 2`)) {
         throw error;
       }
     }
@@ -2678,7 +2699,7 @@ async function runSelftest() {
     const paddedJobAttempt = structuredClone(good);
     paddedJobAttempt.runs.release = { ...paddedJobAttempt.runs.release, run_attempt: 2 };
     paddedJobAttempt.jobs.release = paddedJobAttempt.jobs.release.map((job) =>
-      job.name === "publish-docker" ? { ...job, run_attempt: " 2" } : { ...job, run_attempt: 2 },
+      job.name === RELEASE_SELFTEST_JOB ? { ...job, run_attempt: " 2" } : { ...job, run_attempt: 2 },
     );
     const paddedJobAttemptPath = join(root, "padded-job-attempt.json");
     writeFileSync(paddedJobAttemptPath, JSON.stringify(paddedJobAttempt));
@@ -2688,7 +2709,7 @@ async function runSelftest() {
     } catch (error) {
       if (
         !String(error.message).includes(
-          "release job publish-docker run_attempt has invalid value  2; want positive integer",
+          `release job ${RELEASE_SELFTEST_JOB} run_attempt has invalid value  2; want positive integer`,
         )
       ) {
         throw error;
@@ -2697,7 +2718,7 @@ async function runSelftest() {
 
     const impossibleJobWindow = structuredClone(good);
     impossibleJobWindow.jobs.release = impossibleJobWindow.jobs.release.map((job) =>
-      job.name === "publish-docker"
+      job.name === RELEASE_SELFTEST_JOB
         ? { ...job, started_at: "2026-07-01T00:25:00.000Z", completed_at: "2026-07-01T00:20:00.000Z" }
         : job,
     );
@@ -2707,7 +2728,7 @@ async function runSelftest() {
       auditSelftestFixture(impossibleJobWindowPath);
       throw new Error("impossible job timestamp regression was not caught");
     } catch (error) {
-      if (!String(error.message).includes("release job publish-docker completed before it started")) {
+      if (!String(error.message).includes(`release job ${RELEASE_SELFTEST_JOB} completed before it started`)) {
         throw error;
       }
     }
@@ -2763,28 +2784,28 @@ async function runSelftest() {
     }
 
     const missingReleaseJob = structuredClone(good);
-    missingReleaseJob.jobs.release = missingReleaseJob.jobs.release.filter((job) => job.name !== "publish-docker");
+    missingReleaseJob.jobs.release = missingReleaseJob.jobs.release.filter((job) => job.name !== RELEASE_SELFTEST_JOB);
     const missingReleaseJobPath = join(root, "missing-release-job.json");
     writeFileSync(missingReleaseJobPath, JSON.stringify(missingReleaseJob));
     try {
       auditSelftestFixture(missingReleaseJobPath);
       throw new Error("missing release job regression was not caught");
     } catch (error) {
-      if (!String(error.message).includes("release run is missing required jobs: publish-docker")) throw error;
+      if (!String(error.message).includes(`release run is missing required jobs: ${RELEASE_SELFTEST_JOB}`)) throw error;
     }
 
     try {
-      assertRequiredJobs([fixtureJob("publish-docker")], "release", ["publish-docker", "publish-docker"]);
+      assertRequiredJobs([fixtureJob(RELEASE_SELFTEST_JOB)], "release", [RELEASE_SELFTEST_JOB, RELEASE_SELFTEST_JOB]);
       throw new Error("duplicate required job inventory regression was not caught");
     } catch (error) {
-      if (!String(error.message).includes("release required job inventory duplicates publish-docker")) {
+      if (!String(error.message).includes(`release required job inventory duplicates ${RELEASE_SELFTEST_JOB}`)) {
         throw error;
       }
     }
 
     const paddedReleaseJobName = structuredClone(good);
     paddedReleaseJobName.jobs.release = paddedReleaseJobName.jobs.release.map((job) =>
-      job.name === "publish-docker" ? { ...job, name: " publish-docker " } : job,
+      job.name === RELEASE_SELFTEST_JOB ? { ...job, name: " publish-docker " } : job,
     );
     const paddedReleaseJobNamePath = join(root, "padded-release-job-name.json");
     writeFileSync(paddedReleaseJobNamePath, JSON.stringify(paddedReleaseJobName));
@@ -2799,7 +2820,7 @@ async function runSelftest() {
 
     const nonStringReleaseJobName = structuredClone(good);
     nonStringReleaseJobName.jobs.release = nonStringReleaseJobName.jobs.release.map((job) =>
-      job.name === "publish-docker" ? { ...job, name: 42 } : job,
+      job.name === RELEASE_SELFTEST_JOB ? { ...job, name: 42 } : job,
     );
     const nonStringReleaseJobNamePath = join(root, "non-string-release-job-name.json");
     writeFileSync(nonStringReleaseJobNamePath, JSON.stringify(nonStringReleaseJobName));
@@ -2814,7 +2835,7 @@ async function runSelftest() {
 
     const skippedReleaseJob = structuredClone(good);
     skippedReleaseJob.jobs.release = skippedReleaseJob.jobs.release.map((job) =>
-      job.name === "publish-docker" ? { ...job, conclusion: "skipped" } : job,
+      job.name === RELEASE_SELFTEST_JOB ? { ...job, conclusion: "skipped" } : job,
     );
     const skippedReleaseJobPath = join(root, "skipped-release-job.json");
     writeFileSync(skippedReleaseJobPath, JSON.stringify(skippedReleaseJob));
@@ -2822,18 +2843,18 @@ async function runSelftest() {
       auditSelftestFixture(skippedReleaseJobPath);
       throw new Error("skipped release job regression was not caught");
     } catch (error) {
-      if (!String(error.message).includes("release job publish-docker did not succeed: skipped")) throw error;
+      if (!String(error.message).includes(`release job ${RELEASE_SELFTEST_JOB} did not succeed: skipped`)) throw error;
     }
 
     const duplicateReleaseJob = structuredClone(good);
-    duplicateReleaseJob.jobs.release.push(fixtureJob("publish-docker"));
+    duplicateReleaseJob.jobs.release.push(fixtureJob(RELEASE_SELFTEST_JOB));
     const duplicateReleaseJobPath = join(root, "duplicate-release-job.json");
     writeFileSync(duplicateReleaseJobPath, JSON.stringify(duplicateReleaseJob));
     try {
       auditSelftestFixture(duplicateReleaseJobPath);
       throw new Error("duplicate release job regression was not caught");
     } catch (error) {
-      if (!String(error.message).includes("release run has duplicate required job publish-docker; found 2")) throw error;
+      if (!String(error.message).includes(`release run has duplicate required job ${RELEASE_SELFTEST_JOB}; found 2`)) throw error;
     }
 
     const wrongReleaseDryRunEvent = structuredClone(good);

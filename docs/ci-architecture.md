@@ -166,7 +166,7 @@ Current source evidence:
   `pull_request`, or `push` run, or from an exact supplied run id; non-PR lint
   evidence must be on `main`. It runs
   `scripts/check-ci-runner-evidence.mjs`, checks success conclusions, enforces
-  PR <= 8 min / integration <= 30 min / release <= 40 min /
+  PR <= 8 min / integration <= 30 min / release publish fanout <= 40 min /
   release-binary dry-run <= 120 min / post-release benchmark <= 120 min /
   post-benchmark Pages deploy <= 20 min / branch-protection audit <= 10 min /
   lint <= 10 min, rejects any CLI budget override above those ceilings, requires
