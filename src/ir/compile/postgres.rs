@@ -99,6 +99,18 @@ impl SqlDialect for Postgres {
             // `COALESCE($1::JSONB, j)` type-check; a value already bound as jsonb
             // casts to itself (no-op). bug_report.md A4.
             format!("{placeholder}::JSONB")
+        } else if {
+            // PostGIS spatial types: the column is declared e.g.
+            // `GEOGRAPHY(POINT,4326)` / `GEOMETRY(...)`. A text-bound placeholder
+            // (hex EWKB) has no implicit text->geography/geometry cast, so an
+            // INSERT/UPDATE supplying the column fails to plan (SQLSTATE 42804).
+            // Cast to the base spatial type — PostGIS's input parser accepts hex
+            // EWKB text and the column typmod (Point/SRID) is checked on assignment.
+            let base = ty.split('(').next().unwrap_or(ty).trim();
+            base.eq_ignore_ascii_case("geography") || base.eq_ignore_ascii_case("geometry")
+        } {
+            let base = ty.split('(').next().unwrap_or(ty).trim().to_ascii_uppercase();
+            format!("{placeholder}::{base}")
         } else {
             placeholder.to_string()
         }
@@ -1441,6 +1453,28 @@ mod tests {
         assert!(
             sql.contains("WHERE \"created_at\" < $1::TIMESTAMPTZ"),
             "timestamptz-column comparison must cast the placeholder; got: {sql}"
+        );
+    }
+
+    #[test]
+    fn geography_and_geometry_columns_cast_the_placeholder() {
+        // PostGIS has no implicit text->geography/geometry cast, so a text-bound
+        // (hex EWKB) value for a GEOGRAPHY(POINT,4326)/GEOMETRY(...) column MUST be
+        // cast `$N::GEOGRAPHY` / `$N::GEOMETRY` or the INSERT/UPDATE fails to plan
+        // (SQLSTATE 42804). Base type only — the column typmod (Point/SRID) is
+        // checked on assignment. (bug_report 2026-07-16 #1a)
+        assert_eq!(
+            <Postgres as SqlDialect>::cast_compare_placeholder("GEOGRAPHY(POINT,4326)", "$1"),
+            "$1::GEOGRAPHY"
+        );
+        assert_eq!(
+            <Postgres as SqlDialect>::cast_compare_placeholder("geometry(LineString,4326)", "$2"),
+            "$2::GEOMETRY"
+        );
+        // Plain text/varchar columns are still NOT cast — byte-identical to before.
+        assert_eq!(
+            <Postgres as SqlDialect>::cast_compare_placeholder("VARCHAR(255)", "$3"),
+            "$3"
         );
     }
 

@@ -2376,7 +2376,16 @@ fn decrypt_record_value(
 
 fn row_value_to_json(row: &PgRow, idx: usize, type_name: &str) -> Result<JsonValue, tonic::Status> {
     let type_name = type_name.to_ascii_uppercase();
-    if type_name.contains("INT2") || type_name.contains("INT4") {
+    // INT2/SMALLINT MUST decode via i16 — sqlx's i32 decoder rejects the INT2 OID
+    // with a type-mismatch, which the NULL fallback would otherwise swallow into a
+    // silent NULL for a non-null column (bug_report 2026-07-16 #3).
+    if type_name.contains("INT2") || type_name == "SMALLINT" {
+        return Ok(row
+            .try_get::<Option<i16>, _>(idx)
+            .map(|value| value.map(JsonValue::from).unwrap_or(JsonValue::Null))
+            .unwrap_or(JsonValue::Null));
+    }
+    if type_name.contains("INT4") || type_name == "INTEGER" || type_name == "INT" {
         return Ok(row
             .try_get::<Option<i32>, _>(idx)
             .map(|value| value.map(JsonValue::from).unwrap_or(JsonValue::Null))
@@ -2483,10 +2492,36 @@ fn row_value_to_json(row: &PgRow, idx: usize, type_name: &str) -> Result<JsonVal
             arr.into_iter().map(JsonValue::String).collect(),
         ));
     }
-    // GAP 10: INET, CIDR, MACADDR, TSVECTOR — all have sensible text representations.
-    // Fall through to the string catch-all below which handles these correctly.
-    Ok(row
-        .try_get::<Option<String>, _>(idx)
-        .map(|value| value.map(JsonValue::from).unwrap_or(JsonValue::Null))
-        .unwrap_or(JsonValue::Null))
+    // GAP 10: INET, CIDR, MACADDR, TSVECTOR — all have sensible text representations
+    // handled by the String catch-all. An unknown/user-defined OID (e.g. PostGIS
+    // `geography`/`geometry`) makes sqlx's String decoder REJECT the value; the old
+    // `.unwrap_or(JsonValue::Null)` then swallowed that decode error into a silent
+    // NULL for a NOT-NULL column (bug_report 2026-07-16 #1b — silent data loss).
+    // Fall back to the RAW value and preserve it as a string: PostGIS emits binary
+    // EWKB, which we hex-encode into the exact hex-EWKB form clients also supply on
+    // write (a symmetric round-trip); an already-text payload passes through.
+    match row.try_get::<Option<String>, _>(idx) {
+        Ok(value) => Ok(value.map(JsonValue::from).unwrap_or(JsonValue::Null)),
+        Err(_) => {
+            use sqlx::ValueRef as _;
+            let raw = row
+                .try_get_raw(idx)
+                .map_err(|err| core_internal_status("read_column", format!("row decode failed: {err}")))?;
+            if raw.is_null() {
+                return Ok(JsonValue::Null);
+            }
+            let format = raw.format();
+            let bytes = raw.as_bytes().map_err(|err| {
+                core_internal_status("read_column", format!("raw column read failed: {err}"))
+            })?;
+            match format {
+                sqlx::postgres::PgValueFormat::Binary => {
+                    Ok(JsonValue::String(bytes.iter().map(|b| format!("{b:02X}")).collect()))
+                }
+                sqlx::postgres::PgValueFormat::Text => {
+                    Ok(JsonValue::String(String::from_utf8_lossy(bytes).into_owned()))
+                }
+            }
+        }
+    }
 }

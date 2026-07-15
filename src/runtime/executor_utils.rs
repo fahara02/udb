@@ -622,6 +622,25 @@ pub(crate) fn sqlx_error_to_status(context: &str, err: &sqlx::Error) -> tonic::S
                         "invalid identifier format (a parameter must be a valid UUID/value)",
                     );
                 }
+                "42804" => {
+                    // datatype_mismatch — a bound value's type does not match the
+                    // target column (e.g. a text param meeting a typed column with
+                    // no cast). Surface a clear client-facing InvalidArgument naming
+                    // the column when the driver message exposes it, instead of an
+                    // opaque Internal. (bug_report 2026-07-16 minor-obs #5)
+                    let column = not_null_column(db.message());
+                    let msg = match &column {
+                        Some(c) => format!("value type does not match column '{c}'"),
+                        None => {
+                            "a value's type does not match the target column type".to_string()
+                        }
+                    };
+                    return executor_utils_invalid_field(
+                        column.unwrap_or_else(|| "parameter".to_string()),
+                        "value type must match the target column type",
+                        msg,
+                    );
+                }
                 "23503" => {
                     return referential_constraint_status();
                 }
