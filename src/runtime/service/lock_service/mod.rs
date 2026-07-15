@@ -13,12 +13,18 @@
 //! tenant (never the request body), per-tenant active-lock quota is enforced,
 //! admission is fair (`native_helpers::admit_on`), state is durable in the
 //! canonical store, and every mutation emits a versioned dot-topic outbox event.
+//!
+//! Lifecycle (16.5.1): the leader-elected expiry reaper ([`run_lock_expiry_once`],
+//! spawned under `WORKER_LOCK_EXPIRY_REAPER`) flips lapsed `HELD` rows to
+//! `EXPIRED` and emits `udb.lock.lock.expired.v1` per lock, transactionally with
+//! the flip; independently, the acquire-time quota count excludes lapsed rows so
+//! an un-released lock never exhausts the tenant budget between sweeps.
 
 use std::sync::Arc;
 use std::time::Duration;
 
 use chrono::{DateTime, Utc};
-use sqlx::PgPool;
+use sqlx::{PgPool, Row};
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
 
@@ -31,10 +37,12 @@ use crate::proto::udb::core::lock::services::v1 as lock_pb;
 use crate::proto::udb::core::lock::services::v1::lock_service_server::LockService;
 use crate::runtime::DataBrokerRuntime;
 use crate::runtime::channels::{ChannelManager, OperationChannel};
+use crate::runtime::native_catalog::{NativeModel, native_model};
 
 pub use crate::proto::udb::core::lock::services::v1::lock_service_server::LockServiceServer;
 
 use super::DataBrokerService;
+use super::auth_service::events::{ComplianceEnvelope, build_native_compliance_envelope};
 use super::native_helpers::{
     NativeEventContext, admit_on as native_admit_on, enqueue_outbox_event_with_context,
     native_service_context, non_empty_json, validate_request_tenant,
@@ -45,9 +53,16 @@ const LOCK_MSG: &str = "udb.core.lock.entity.v1.Lock";
 const TOPIC_ACQUIRED: &str = "udb.lock.lock.acquired.v1";
 const TOPIC_RENEWED: &str = "udb.lock.lock.renewed.v1";
 const TOPIC_RELEASED: &str = "udb.lock.lock.released.v1";
+/// Emitted by the leader-elected expiry reaper when a lapsed HELD row is flipped
+/// to EXPIRED (16.5.1).
+const TOPIC_EXPIRED: &str = "udb.lock.lock.expired.v1";
 
 const STATUS_HELD: &str = "HELD";
 const STATUS_RELEASED: &str = "RELEASED";
+/// Terminal state stamped by the expiry reaper on a HELD row whose lease lapsed
+/// without a release. The `status` column is a VARCHAR(20); the entity-proto
+/// comment currently enumerates only `HELD | RELEASED` (out-of-fence follow-up).
+const STATUS_EXPIRED: &str = "EXPIRED";
 
 /// Default lease TTL when the caller does not specify one.
 const DEFAULT_LEASE_TTL_SECONDS: i64 = 30;
@@ -56,6 +71,29 @@ const MAX_LEASE_TTL_SECONDS: i64 = 3600;
 /// Per-tenant active-lock budget. Bounds the durable lock table so one tenant
 /// cannot exhaust the shared store; a new acquire beyond this fails closed.
 const MAX_ACTIVE_LOCKS_PER_TENANT: usize = 256;
+/// Upper bound on rows one expiry-reaper pass claims — bounds the sweep
+/// transaction the same way `SCHEDULER_TICK_BATCH` bounds the scheduler tick.
+/// `pub(crate)` so the leader spawn site passes the named const (16.11.3).
+pub(crate) const LOCK_EXPIRY_SWEEP_BATCH: i64 = 200;
+/// Default reaper cadence; overridable via [`LOCK_EXPIRY_INTERVAL_ENV`].
+const DEFAULT_LOCK_EXPIRY_INTERVAL_SECS: u64 = 30;
+const LOCK_EXPIRY_INTERVAL_ENV: &str = "UDB_LOCK_EXPIRY_INTERVAL_SECS";
+
+/// Reaper cadence for the leader spawn site — env resolved once at spawn,
+/// mirroring `cache_service::cache_invalidation_interval`.
+pub(crate) fn lock_expiry_interval() -> std::time::Duration {
+    // Resolved ONCE via OnceLock (worker-spawn cadence knob), never per-request —
+    // matches the sibling native-service startup-config reads.
+    static SECS: std::sync::OnceLock<u64> = std::sync::OnceLock::new();
+    let secs = *SECS.get_or_init(|| {
+        std::env::var(LOCK_EXPIRY_INTERVAL_ENV)
+            .ok()
+            .and_then(|v| v.parse::<u64>().ok())
+            .filter(|v| *v > 0)
+            .unwrap_or(DEFAULT_LOCK_EXPIRY_INTERVAL_SECS)
+    });
+    std::time::Duration::from_secs(secs)
+}
 
 /// Postgres-backed `LockService` handler.
 pub struct LockServiceImpl {
@@ -64,7 +102,8 @@ pub struct LockServiceImpl {
     /// Runtime handle for the advisory-lease primitive, the monotone fencing-token
     /// source (canonical outbox high-water mark), and typed native-entity dispatch.
     runtime: Option<Arc<DataBrokerRuntime>>,
-    /// Configured outbox relation; `None` disables event emission (best-effort).
+    /// Configured outbox relation; `None` drops events LOUDLY (error log +
+    /// `udb_outbox_enqueue_failures_total`) — see [`Self::emit_lock_event`].
     outbox_relation: Option<String>,
     /// Shared per-tenant fair-admission manager (same one the data plane uses).
     channels: Option<ChannelManager>,
@@ -81,6 +120,24 @@ fn lock_capability_status(
         operation,
         capability_required,
         message,
+    )
+}
+
+fn lock_internal_status(operation: impl Into<String>, message: impl Into<String>) -> Status {
+    crate::runtime::executor_utils::internal_status("lock", operation, message)
+}
+
+/// Fail-closed refusal when the monotone fencing-token source is unavailable
+/// (no canonical store registered, or the counter read failed). Wall-clock
+/// seconds are NOT an acceptable fallback: they collide within a second and
+/// regress across clock steps, so a time-derived token could duplicate or
+/// undercut an already-issued token and let a fenced-off holder write again.
+fn fencing_token_unavailable_status() -> Status {
+    lock_capability_status(
+        "lock_fencing",
+        "canonical_store_monotone_counter",
+        "lock fencing requires the canonical-store monotone token source; \
+         refusing to mint a wall-clock fencing token",
     )
 }
 
@@ -306,10 +363,23 @@ fn lock_read_by_name(tenant_id: &str, lock_name: &str) -> LogicalRead {
     }
 }
 
-fn held_locks_read(tenant_id: &str, limit: u32) -> LogicalRead {
+/// Quota-count read: HELD rows whose lease has NOT lapsed. A lock past its
+/// `expires_at` no longer excludes other holders (the advisory lease is gone),
+/// so it must not exhaust `MAX_ACTIVE_LOCKS_PER_TENANT` between reaper sweeps
+/// (16.5.1). The mediated PG path binds `LogicalValue::Timestamp` with a
+/// `$N::TIMESTAMPTZ` cast, so the time comparison is expressible in the filter —
+/// no in-memory post-filtering needed.
+fn held_locks_read(tenant_id: &str, limit: u32, now: DateTime<Utc>) -> LogicalRead {
     LogicalRead {
         message_type: LOCK_MSG.to_string(),
-        filter: Some(lock_filter(tenant_id, None, Some(STATUS_HELD))),
+        filter: Some(LogicalFilter::And(vec![
+            lock_filter(tenant_id, None, Some(STATUS_HELD)),
+            LogicalFilter::Comparison {
+                field: "expires_at".to_string(),
+                op: ComparisonOp::Gt,
+                value: LogicalValue::Timestamp(now),
+            },
+        ])),
         projection: Some(LogicalProjection::fields(["lock_id".to_string()])),
         sort: Vec::new(),
         include: Vec::new(),
@@ -418,42 +488,94 @@ fn stored_lock_from_json(row: &serde_json::Value) -> StoredLock {
     }
 }
 
+/// The domain payload every `udb.lock.*` event carries — shared between the
+/// RPC emit path ([`LockServiceImpl::emit_lock_event`]) and the expiry reaper
+/// ([`run_lock_expiry_once`]) so the two lanes never drift.
+fn lock_event_payload(
+    tenant_id: &str,
+    project_id: &str,
+    lock_name: &str,
+    owner_id: &str,
+    fencing_token: i64,
+) -> serde_json::Value {
+    serde_json::json!({
+        "tenant_id": tenant_id,
+        "project_id": project_id,
+        "lock_name": lock_name,
+        "owner_id": owner_id,
+        "fencing_token": fencing_token,
+    })
+}
+
 impl LockServiceImpl {
     /// Source the next monotone fencing token from the canonical outbox high-water
     /// mark (the same counter write receipts advance), so each successive grant —
     /// including a takeover after the prior holder's lease expired — receives a
-    /// strictly greater token. Falls back to a wall-clock seconds value when no
-    /// canonical store is registered (slim deployments), which is still monotone.
-    async fn next_fencing_token(&self, runtime: &DataBrokerRuntime) -> i64 {
-        if let Some(store) = runtime.default_system_stores() {
-            if let Ok(seq) = store.outbox_max_seq().await {
-                return seq.saturating_add(1);
+    /// strictly greater token. Fail closed when no canonical store is registered
+    /// or the counter read fails (16.5.2): the old wall-clock fallback collided
+    /// within a second and regressed across clock steps, breaking the fencing
+    /// guarantee the token exists to provide.
+    async fn next_fencing_token(&self, runtime: &DataBrokerRuntime) -> Result<i64, Status> {
+        let Some(store) = runtime.default_system_stores() else {
+            return Err(fencing_token_unavailable_status());
+        };
+        match store.outbox_max_seq().await {
+            Ok(seq) => Ok(seq.saturating_add(1)),
+            Err(err) => {
+                tracing::error!(
+                    error = %err,
+                    "lock fencing-token source read failed; refusing to grant"
+                );
+                Err(fencing_token_unavailable_status())
             }
         }
-        now_unix()
     }
 
-    /// Emit a per-mutation versioned dot-topic outbox event (best-effort).
+    /// Emit a per-mutation versioned dot-topic outbox event.
+    ///
+    /// Delivery contract — at-least-once-minus (16.5.3): the durable lock row has
+    /// already committed when this runs and the outbox insert is a SEPARATE
+    /// statement, so a crash (or a missing pool/relation) between the two loses
+    /// the event while keeping the state change. Drops are never silent: both
+    /// local drop paths log at error level with the lock id/topic and count in
+    /// `udb_outbox_enqueue_failures_total{path="native"}`; an insert failure
+    /// inside the shared enqueue helper records the same counter (it does not
+    /// surface a `Result` to this call site). A true transactional outbox for
+    /// mediated entity writes is follow-up 16.12.4.
+    #[allow(clippy::too_many_arguments)]
     async fn emit_lock_event(
         &self,
         topic: &str,
         partition_key: &str,
         tenant_id: &str,
         project_id: &str,
+        lock_id: &str,
         lock_name: &str,
         owner_id: &str,
         fencing_token: i64,
     ) {
         let Some(pool) = self.pg_pool.as_ref() else {
+            tracing::error!(
+                topic,
+                lock_id,
+                lock_name,
+                tenant_id,
+                "lock event dropped: no outbox Postgres pool configured for the lock native store"
+            );
+            self.metrics.inc_outbox_enqueue_failures_total("native");
             return;
         };
-        let payload = serde_json::json!({
-            "tenant_id": tenant_id,
-            "project_id": project_id,
-            "lock_name": lock_name,
-            "owner_id": owner_id,
-            "fencing_token": fencing_token,
-        });
+        if self.outbox_relation.is_none() {
+            tracing::error!(
+                topic,
+                lock_id,
+                lock_name,
+                tenant_id,
+                "lock event dropped: no outbox relation configured"
+            );
+            self.metrics.inc_outbox_enqueue_failures_total("native");
+            return;
+        }
         enqueue_outbox_event_with_context(
             pool,
             self.outbox_relation.as_deref(),
@@ -461,7 +583,7 @@ impl LockServiceImpl {
             partition_key,
             tenant_id,
             project_id,
-            payload,
+            lock_event_payload(tenant_id, project_id, lock_name, owner_id, fencing_token),
             NativeEventContext {
                 target_resource: lock_name.to_string(),
                 ..NativeEventContext::default()
@@ -517,7 +639,11 @@ impl LockService for LockServiceImpl {
                 .native_entity_read_for_service(
                     "lock",
                     &context,
-                    held_locks_read(&tenant_id, (MAX_ACTIVE_LOCKS_PER_TENANT as u32) + 1),
+                    held_locks_read(
+                        &tenant_id,
+                        (MAX_ACTIVE_LOCKS_PER_TENANT as u32) + 1,
+                        Utc::now(),
+                    ),
                 )
                 .await?;
             if held.len() >= MAX_ACTIVE_LOCKS_PER_TENANT {
@@ -539,7 +665,7 @@ impl LockService for LockServiceImpl {
             return Err(lock_already_held_status());
         }
 
-        let fencing_token = self.next_fencing_token(runtime).await;
+        let fencing_token = self.next_fencing_token(runtime).await?;
         let lock_id = existing
             .as_ref()
             .map(|row| row.lock_id.clone())
@@ -575,6 +701,7 @@ impl LockService for LockServiceImpl {
             &lease,
             &tenant_id,
             &context.project_id,
+            &lock_id,
             &lock_name,
             &owner_id,
             fencing_token,
@@ -668,6 +795,7 @@ impl LockService for LockServiceImpl {
             &lease,
             &tenant_id,
             &context.project_id,
+            &stored.lock_id,
             &lock_name,
             &owner_id,
             stored.fencing_token,
@@ -756,6 +884,7 @@ impl LockService for LockServiceImpl {
             &lease,
             &tenant_id,
             &context.project_id,
+            &stored.lock_id,
             &lock_name,
             &owner_id,
             stored.fencing_token,
@@ -768,6 +897,201 @@ impl LockService for LockServiceImpl {
             error: None,
         }))
     }
+}
+
+// ── leader-elected expiry reaper (16.5.1) ─────────────────────────────────────
+
+/// Manifest-derived model for the durable lock table, so the reaper SQL below
+/// follows the same single-source-of-truth rule as the scheduler tick (no
+/// hand-maintained schema copies).
+fn lock_model() -> NativeModel {
+    native_model(
+        LOCK_MSG,
+        &[
+            "lock_id",
+            "tenant_id",
+            "lock_name",
+            "owner_id",
+            "fencing_token",
+            "status",
+            "expires_at",
+        ],
+    )
+}
+
+/// The claim-and-flip statement the expiry reaper runs: lapsed HELD rows are
+/// claimed with `FOR UPDATE SKIP LOCKED` (two leaders can never double-expire
+/// the same row) and flipped to EXPIRED in the same statement, returning the
+/// identifying columns the `udb.lock.lock.expired.v1` event needs. Bind order:
+/// `$1` = EXPIRED (flip target), `$2` = HELD (claim filter), `$3` = batch bound.
+/// Exposed (and unit-tested) so the no-double-expire contract is asserted on
+/// the rendered SQL, mirroring `scheduler_service::due_jobs_claim_sql`.
+pub(crate) fn expired_locks_claim_sql(m: &NativeModel) -> String {
+    format!(
+        "UPDATE {rel} SET {status} = $1 \
+         WHERE {lock_id} IN ( \
+            SELECT {lock_id} FROM {rel} \
+            WHERE {status} = $2 AND {expires_at} < NOW() \
+            ORDER BY {expires_at} \
+            LIMIT $3 \
+            FOR UPDATE SKIP LOCKED) \
+         RETURNING {lock_id}::text AS lock_id, {tenant_id}::text AS tenant_id, \
+            {lock_name} AS lock_name, {owner_id} AS owner_id, \
+            {fencing_token} AS fencing_token",
+        rel = m.relation,
+        lock_id = m.q("lock_id"),
+        tenant_id = m.q("tenant_id"),
+        lock_name = m.q("lock_name"),
+        owner_id = m.q("owner_id"),
+        fencing_token = m.q("fencing_token"),
+        status = m.q("status"),
+        expires_at = m.q("expires_at"),
+    )
+}
+
+/// Insert ONE `udb.lock.lock.expired.v1` outbox row inside the sweep transaction
+/// (transactional outbox — the flip and its declared event commit atomically),
+/// using the SAME shared compliance envelope the auth/native lanes emit so the
+/// CDC tailer decodes it identically. The actor is the lock reaper (a system
+/// principal), not an end user. Mirrors `scheduler_service::insert_tick_outbox`.
+async fn insert_lock_expired_outbox(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    relation: &str,
+    lock_id: &str,
+    tenant_id: &str,
+    lock_name: &str,
+    owner_id: &str,
+    fencing_token: i64,
+) -> Result<(), Status> {
+    let env = ComplianceEnvelope {
+        actor: "udb:lock".to_string(),
+        operation: "expired".to_string(),
+        outcome: "success".to_string(),
+        auth_method: "system".to_string(),
+        target_resource: lock_name.to_string(),
+        ..ComplianceEnvelope::default()
+    };
+    let event_id = Uuid::new_v4();
+    // Same partition key the RPC-side lock events use, so per-lock ordering holds
+    // across acquire/renew/release/expire.
+    let partition_key = lease_name(tenant_id, lock_name);
+    let envelope = build_native_compliance_envelope(
+        &event_id.to_string(),
+        TOPIC_EXPIRED,
+        &partition_key,
+        tenant_id,
+        "", // locks carry no project binding
+        &env,
+        lock_id, // correlation id
+        "none",
+        1,
+        &[],
+        lock_event_payload(tenant_id, "", lock_name, owner_id, fencing_token),
+    );
+    crate::runtime::cdc::insert_outbox_row(
+        &mut **tx,
+        relation,
+        event_id,
+        TOPIC_EXPIRED,
+        &partition_key,
+        &envelope,
+    )
+    .await
+    .map_err(|err| {
+        lock_internal_status(
+            "lock_expiry_outbox_insert",
+            format!("lock expiry outbox insert failed: {err}"),
+        )
+    })
+}
+
+/// One expiry-reaper pass (leader-elected by the caller — 16.11.3 spawns it
+/// under `WORKER_LOCK_EXPIRY_REAPER`). Flips up to `batch_size` lapsed HELD rows
+/// to EXPIRED and — within the SAME transaction — durably enqueues one
+/// `udb.lock.lock.expired.v1` outbox row per expired lock, so a lapsed lock can
+/// never permanently exhaust `MAX_ACTIVE_LOCKS_PER_TENANT` and every expiry is
+/// at-least-once via the outbox→CDC pipeline. The advisory-lease primitive needs
+/// no sweep of its own: a lapsed lease is superseded atomically at acquire time.
+///
+/// The sweep is intentionally cross-tenant system work: the native-store pool
+/// connects as the table owner, which `enable_rls` (not FORCE) exempts from the
+/// tenant RLS policy — the same posture as the scheduler tick.
+///
+/// Returns the number of locks expired. Fail closed: a missing outbox relation
+/// yields `Ok(0)` (nothing flips) rather than expiring without the declared
+/// event; an outbox insert failure rolls back the whole batch.
+pub(crate) async fn run_lock_expiry_once(
+    pool: &PgPool,
+    outbox_relation: Option<&str>,
+    batch_size: i64,
+) -> Result<i64, Status> {
+    let Some(outbox_rel) = outbox_relation else {
+        tracing::warn!("lock expiry: no outbox relation configured; cannot expire locks");
+        return Ok(0);
+    };
+    let m = lock_model();
+    let claim_sql = expired_locks_claim_sql(&m);
+    let batch = batch_size.clamp(1, LOCK_EXPIRY_SWEEP_BATCH);
+
+    let mut tx = pool.begin().await.map_err(|err| {
+        lock_internal_status(
+            "lock_expiry_begin",
+            format!("lock expiry begin failed: {err}"),
+        )
+    })?;
+    let rows = sqlx::query(&claim_sql)
+        .bind(STATUS_EXPIRED)
+        .bind(STATUS_HELD)
+        .bind(batch)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(|err| {
+            lock_internal_status(
+                "lock_expiry_claim",
+                format!("lock expiry claim failed: {err}"),
+            )
+        })?;
+
+    let mut expired = 0i64;
+    for row in &rows {
+        let get = |c: &str| -> Result<String, Status> {
+            row.try_get::<String, _>(c).map_err(|e| {
+                lock_internal_status(
+                    "lock_expiry_decode",
+                    format!("lock expiry decode {c} failed: {e}"),
+                )
+            })
+        };
+        let lock_id = get("lock_id")?;
+        let tenant_id = get("tenant_id")?;
+        let lock_name = get("lock_name")?;
+        let owner_id = get("owner_id")?;
+        let fencing_token: i64 = row.try_get("fencing_token").map_err(|e| {
+            lock_internal_status(
+                "lock_expiry_decode",
+                format!("lock expiry decode fencing_token: {e}"),
+            )
+        })?;
+        insert_lock_expired_outbox(
+            &mut tx,
+            outbox_rel,
+            &lock_id,
+            &tenant_id,
+            &lock_name,
+            &owner_id,
+            fencing_token,
+        )
+        .await?;
+        expired += 1;
+    }
+
+    tx.commit().await.map_err(|err| {
+        lock_internal_status(
+            "lock_expiry_commit",
+            format!("lock expiry commit failed: {err}"),
+        )
+    })?;
+    Ok(expired)
 }
 
 #[cfg(test)]
@@ -915,6 +1239,81 @@ mod lock_scope_tests {
         assert_eq!(detail.capability_required, "lock_already_held");
         assert!(!detail.retryable);
         assert_eq!(detail.retry_after_ms, 0);
+    }
+
+    /// 16.5.1a — the quota-count read must exclude rows whose lease already
+    /// lapsed: a lapsed lock no longer excludes anyone, so counting it toward
+    /// `MAX_ACTIVE_LOCKS_PER_TENANT` would lock the tenant out between sweeps.
+    /// Pure filter-shape assertion (no PG).
+    #[test]
+    fn held_locks_quota_read_excludes_expired_rows() {
+        let now = Utc::now();
+        let read = held_locks_read("tenant-a", (MAX_ACTIVE_LOCKS_PER_TENANT as u32) + 1, now);
+        let expected = LogicalFilter::And(vec![
+            lock_filter("tenant-a", None, Some(STATUS_HELD)),
+            LogicalFilter::Comparison {
+                field: "expires_at".to_string(),
+                op: ComparisonOp::Gt,
+                value: LogicalValue::Timestamp(now),
+            },
+        ]);
+        assert_eq!(read.filter, Some(expected));
+    }
+
+    /// 16.5.2 — with no canonical store (or a failed counter read) the fencing
+    /// path must return this typed capability refusal, never a wall-clock token:
+    /// `next_fencing_token`'s only non-store exit is
+    /// `fencing_token_unavailable_status()` (the `now_unix()` fallback is gone).
+    #[test]
+    fn missing_fencing_token_source_returns_typed_refusal_not_a_token() {
+        let err = fencing_token_unavailable_status();
+        assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::Capability as i32);
+        assert_eq!(detail.backend, "lock");
+        assert_eq!(detail.operation, "lock_fencing");
+        assert_eq!(
+            detail.capability_required,
+            "canonical_store_monotone_counter"
+        );
+        assert!(!detail.retryable);
+        assert_eq!(detail.retry_after_ms, 0);
+    }
+
+    /// 16.5.1b — the expiry-claim SQL must claim with `FOR UPDATE SKIP LOCKED`
+    /// (two leaders never double-expire the same row), flip only lapsed HELD
+    /// rows, bound the batch, and return the columns the expired event needs.
+    #[test]
+    fn expired_locks_claim_sql_shape() {
+        let sql = expired_locks_claim_sql(&lock_model());
+        assert!(
+            sql.starts_with("UPDATE"),
+            "flip and claim in one statement: {sql}"
+        );
+        assert!(
+            sql.contains("FOR UPDATE SKIP LOCKED"),
+            "no-double-expire: {sql}"
+        );
+        assert!(sql.contains("\"status\" = $1"), "flip target bind: {sql}");
+        assert!(
+            sql.contains("\"status\" = $2"),
+            "HELD claim filter bind: {sql}"
+        );
+        assert!(
+            sql.contains("\"expires_at\" < NOW()"),
+            "lapsed-only filter: {sql}"
+        );
+        assert!(sql.contains("LIMIT $3"), "bounded batch: {sql}");
+        for column in [
+            "RETURNING",
+            "lock_id",
+            "tenant_id",
+            "lock_name",
+            "owner_id",
+            "fencing_token",
+        ] {
+            assert!(sql.contains(column), "event needs {column}: {sql}");
+        }
     }
 
     #[test]

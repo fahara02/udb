@@ -78,6 +78,31 @@ pub const WORKER_WORKFLOW_TICK: &str = "udb:workflow:tick";
 /// redelivery is made safe by the handler's idempotency (correlation_id = file_id),
 /// not single-ownership. The consumer body is `asset_service::run_trigger_consumer`.
 pub const WORKER_ASSET_TRIGGER_MANAGER: &str = "udb:asset:trigger-manager";
+/// Leader-elected analytics percentile rollup (depth lane 16.1.5). Only the
+/// lease holder recomputes p50/p95/p99 per (tenant, stage, hour) over the
+/// trailing window into `pipeline_metric_snapshot` rows, so every replica
+/// serves the same percentile columns instead of racing redundant UPDATEs.
+/// The pass body is `service::analytics_service::run_analytics_rollup_once`.
+pub const WORKER_ANALYTICS_ROLLUP: &str = "udb:analytics:rollup";
+/// Leader-elected search index-freshness consumer (depth lane 16.2.1). Only the
+/// lease holder joins published CDC-journal source changes to ACTIVE search
+/// indexes and re-upserts changed rows through the mediated vector seam, deduped
+/// by an applied-marker per source event. The pass body is
+/// `service::search_service::run_index_freshness_consumer`.
+pub const WORKER_SEARCH_FRESHNESS: &str = "udb:search:freshness";
+/// Leader-elected search reindex/teardown worker (depth lane 16.2.2/16.2.3).
+/// Only the lease holder consumes `reindex.requested` jobs (mediated source
+/// re-read, engine re-upsert, `REINDEXING -> ACTIVE` writeback) and
+/// `index.deleted` teardown jobs (engine point purge), so an index is rebuilt
+/// exactly once cluster-wide. The pass body is
+/// `service::search_service::run_search_reindex_once`.
+pub const WORKER_SEARCH_REINDEX: &str = "udb:search:reindex";
+/// Leader-elected lock expiry reaper (depth lane 16.5.1). Only the lease holder
+/// flips lapsed `HELD` locks to `EXPIRED` (FOR UPDATE SKIP LOCKED) with the
+/// `udb.lock.lock.expired.v1` event in the same transaction, so expired leases
+/// stop counting against tenant quotas without double-expiring across replicas.
+/// The pass body is `service::lock_service::run_lock_expiry_once`.
+pub const WORKER_LOCK_EXPIRY_REAPER: &str = "udb:lock:expiry-reaper";
 
 const MIN_LEASE_TTL_SECS: u64 = 5;
 pub const WORKER_SINGLETON_LEASE_TTL: Duration = Duration::from_secs(30);

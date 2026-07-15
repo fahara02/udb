@@ -17,6 +17,12 @@
 //!     `resource_exhausted` (the pure check is [`would_exceed_budget`]).
 //!   - Prefix sweeps use Redis `SCAN` ([`SWEEP_COMMAND`]), NEVER `KEYS`, so a large
 //!     keyspace never blocks the server.
+//!   - Redis TTL expiry deletes entries WITHOUT running the `DECRBY` bookkeeping,
+//!     so the `__bytes__` counter only ever drifts upward. The invalidation worker
+//!     therefore runs a bounded byte-counter reconciliation pass each tick
+//!     (rotating namespace subset, SCAN + STRLEN, never KEYS) that resets each
+//!     visited counter to ground truth — see
+//!     [`run_cache_invalidation_worker_once`].
 //!   - The leader-elected CDC invalidation worker
 //!     ([`run_cache_invalidation_once`], gated by `singleton::WORKER_CACHE_INVALIDATOR`)
 //!     maps a source-table change to a namespace sweep and emits
@@ -62,8 +68,30 @@ pub(crate) const KEY_ROOT: &str = "udb:cache";
 pub(crate) const SWEEP_COMMAND: &str = "SCAN";
 
 /// `COUNT` hint per SCAN round-trip (matches `core/tx_object::cache_delete_pattern`).
-#[cfg(feature = "redis")]
-const SWEEP_COUNT: u32 = 500;
+/// Also the `Scan` default page size when the caller sends no positive `limit`.
+pub(crate) const SWEEP_COUNT: u32 = 500;
+
+/// Hard cap on a caller-supplied `Scan` page `limit` (it becomes the SCAN `COUNT`
+/// hint). Without the clamp a caller could push an arbitrarily large COUNT into
+/// the cursor walk and turn SCAN into a KEYS-shaped stall — see
+/// [`clamped_scan_count`], the pure gate `redis_engine::scan` applies.
+pub(crate) const MAX_SCAN_PAGE_LIMIT: u32 = 1_000;
+
+/// Byte-counter reconciliation bounds (the worker pass that heals TTL-expiry
+/// drift — see `redis_engine::reconcile_bytes_counters_once`): at most this many
+/// namespaces have their counter recomputed per worker pass (a rotating subset,
+/// resumed via [`reconcile_cursor_key`]).
+pub(crate) const RECONCILE_NAMESPACES_PER_PASS: usize = 16;
+
+/// At most this many SCAN round-trips per pass while DISCOVERING namespace meta
+/// keys, so discovery stays bounded even on a huge, meta-sparse keyspace.
+pub(crate) const RECONCILE_DISCOVERY_MAX_ROUNDS: u32 = 32;
+
+/// A namespace holding more data keys than this is SKIPPED for the pass instead
+/// of being SET from a partial sum — a partial sum would UNDER-count usage and
+/// quietly widen the byte budget (fail-open); skipping keeps the stale counter,
+/// which only over-counts (fail-closed).
+pub(crate) const RECONCILE_MAX_KEYS_PER_NAMESPACE: usize = 5_000;
 
 /// Service-default per-namespace byte budget when a namespace declares none
 /// (`max_bytes <= 0`). Bounds the shared Redis so one tenant/namespace cannot
@@ -113,9 +141,63 @@ pub(crate) fn bytes_counter_key(tenant: &str, namespace: &str) -> String {
     format!("{KEY_ROOT}:{tenant}:{namespace}:__bytes__")
 }
 
+/// Reserved suffix of the per-namespace meta blob key (single definition so the
+/// key builder, the reconciliation discovery pattern, and the parser never drift).
+pub(crate) const META_SUFFIX: &str = "__meta__";
+
 /// The per-namespace meta key (JSON: `max_bytes`, `default_ttl_seconds`).
 pub(crate) fn meta_key(tenant: &str, namespace: &str) -> String {
-    format!("{KEY_ROOT}:{tenant}:{namespace}:__meta__")
+    format!("{KEY_ROOT}:{tenant}:{namespace}:{META_SUFFIX}")
+}
+
+/// The SCAN `MATCH` pattern for EVERY namespace meta key across tenants. Used
+/// ONLY by the leader-elected reconciliation pass, which re-derives the tenant
+/// from each matched key itself — no caller-supplied value ever reaches this
+/// pattern, so it cannot be steered cross-tenant.
+pub(crate) fn meta_match_all() -> String {
+    format!("{KEY_ROOT}:*:{META_SUFFIX}")
+}
+
+/// The bookkeeping key persisting the reconciliation rotation cursor across
+/// worker passes. Lives directly under [`KEY_ROOT`] with a reserved segment and
+/// NO namespace shape, so it never matches a data-key/meta SCAN pattern and no
+/// tenant sweep can reach it.
+pub(crate) fn reconcile_cursor_key() -> String {
+    format!("{KEY_ROOT}:__reconcile__:cursor")
+}
+
+/// Recover `(tenant, namespace)` from a full meta key
+/// (`udb:cache:<tenant>:<ns>:__meta__`). [`validate_namespace`] rejects `:` in a
+/// namespace, so the namespace is always the LAST segment before the suffix and
+/// everything in between belongs to the tenant. `None` for anything that is not
+/// a well-formed meta key (data keys, counters, the rotation cursor).
+pub(crate) fn parse_meta_key(full_key: &str) -> Option<(String, String)> {
+    let rest = full_key.strip_prefix(&format!("{KEY_ROOT}:"))?;
+    let rest = rest.strip_suffix(&format!(":{META_SUFFIX}"))?;
+    let (tenant, namespace) = rest.rsplit_once(':')?;
+    (!tenant.trim().is_empty() && !namespace.trim().is_empty())
+        .then(|| (tenant.to_string(), namespace.to_string()))
+}
+
+/// Pure reconciliation math: the recomputed namespace usage is the saturating
+/// sum of the (non-negative) `STRLEN` of every live data key the bounded SCAN
+/// observed. Defensive: a bogus negative length never subtracts real usage, and
+/// adversarially huge values saturate instead of wrapping.
+pub(crate) fn reconciled_sum(lengths: &[i64]) -> i64 {
+    lengths
+        .iter()
+        .fold(0i64, |acc, len| acc.saturating_add((*len).max(0)))
+}
+
+/// Clamp a caller-supplied `Scan` page limit into the SCAN `COUNT` hint: a
+/// non-positive limit falls back to [`SWEEP_COUNT`]; a positive limit is capped
+/// at [`MAX_SCAN_PAGE_LIMIT`] — never a raw pass-through.
+pub(crate) fn clamped_scan_count(limit: i32) -> u32 {
+    if limit > 0 {
+        (limit as u32).min(MAX_SCAN_PAGE_LIMIT)
+    } else {
+        SWEEP_COUNT
+    }
 }
 
 /// Recover the namespace-local key from a full data key (strip the
@@ -329,11 +411,15 @@ impl CacheService for CacheServiceImpl {
         let tenant = req.tenant_id.trim().to_string();
         let namespace = validate_namespace(&req.namespace)?;
         let key = require_field("key", &req.key)?;
+        // Set is an ordinary data mutation, so it shares the Write admission lane
+        // with the sibling mutation RPCs (config/metering/notification writes and
+        // the data-plane upsert handlers) — the Admin lane is reserved for
+        // control-plane operations like namespace lifecycle.
         let _admit = native_admit_on(
             self.channels.as_ref(),
             &self.metrics,
             "cache",
-            OperationChannel::Admin,
+            OperationChannel::Write,
             &tenant,
             None,
         )
@@ -863,6 +949,17 @@ pub(crate) async fn run_cache_invalidation_once(
     Ok(total)
 }
 
+/// One full worker tick: CDC-driven namespace invalidation, then a bounded
+/// byte-counter reconciliation pass.
+///
+/// Reconciliation exists because Redis TTL expiry deletes data keys WITHOUT
+/// running the `DECRBY` bookkeeping that `delete` performs, so `__bytes__` only
+/// ever drifts UPWARD until a namespace hits false `resource_exhausted`. Each
+/// tick recomputes a rotating subset of namespaces from ground truth
+/// (SCAN + STRLEN) and SETs the counter to the recomputed absolute sum — see
+/// `redis_engine::reconcile_bytes_counters_once` for the bounds. Best-effort:
+/// a failed reconciliation never aborts the invalidation result, because a
+/// stale counter only over-counts, which fails CLOSED toward refusing writes.
 #[cfg(feature = "redis")]
 pub(crate) async fn run_cache_invalidation_worker_once(
     redis: &redis::Client,
@@ -878,6 +975,22 @@ pub(crate) async fn run_cache_invalidation_worker_once(
     let invalidated =
         run_cache_invalidation_once(redis, outbox_pool, Some(outbox_relation), &events, metrics)
             .await?;
+    match redis_engine::reconcile_bytes_counters_once(redis).await {
+        Ok(reconciled) if reconciled > 0 => {
+            tracing::debug!(
+                namespaces = reconciled,
+                "cache byte-counter reconciliation pass completed"
+            );
+        }
+        Ok(_) => {}
+        Err(err) => {
+            tracing::warn!(
+                error = %err,
+                "cache byte-counter reconciliation pass failed; counters stay \
+                 eventually consistent until the next pass"
+            );
+        }
+    }
     Ok(i64::try_from(invalidated).unwrap_or(i64::MAX))
 }
 
@@ -1085,7 +1198,9 @@ mod redis_engine {
         let mut conn = connect(client).await?;
         let pattern = data_match(tenant, namespace, key_prefix);
         let cursor: u64 = page_token.parse().unwrap_or(0);
-        let count = if limit > 0 { limit as u32 } else { SWEEP_COUNT };
+        // Named clamp: the caller limit is capped at MAX_SCAN_PAGE_LIMIT, never
+        // passed through raw as the SCAN COUNT hint.
+        let count = clamped_scan_count(limit);
         // SCAN, never KEYS: cursor-paged so a large keyspace never blocks Redis.
         let (next, keys): (u64, Vec<String>) = redis::cmd(SWEEP_COMMAND)
             .arg(cursor)
@@ -1231,6 +1346,157 @@ mod redis_engine {
             max_bytes: effective_max_bytes(meta.max_bytes),
             item_count,
         })
+    }
+
+    /// One bounded byte-counter reconciliation pass (leader-elected; called from
+    /// [`run_cache_invalidation_worker_once`]). Returns how many namespaces had
+    /// their counter recomputed.
+    ///
+    /// Design + bounds:
+    ///   - Namespaces are DISCOVERED by SCANning meta keys ([`meta_match_all`],
+    ///     SCAN never KEYS) from a rotation cursor persisted under
+    ///     [`reconcile_cursor_key`], so every namespace is eventually visited
+    ///     round-robin across passes. Per pass: at most
+    ///     [`RECONCILE_DISCOVERY_MAX_ROUNDS`] discovery SCAN round-trips and
+    ///     [`RECONCILE_NAMESPACES_PER_PASS`] namespaces recomputed, each capped
+    ///     at [`RECONCILE_MAX_KEYS_PER_NAMESPACE`] data keys.
+    ///   - A cursor persisted across passes is still a valid SCAN cursor (Redis
+    ///     cursors are stateless reverse-binary-iteration positions); a
+    ///     concurrent keyspace resize can at worst skip or duplicate a namespace
+    ///     within ONE rotation — the next rotation covers it, and the pass is
+    ///     idempotent (it SETs an absolute recomputed value), so duplicates are
+    ///     harmless.
+    ///   - Eventual-consistency window: a namespace's counter is exact only at
+    ///     the moment it is reconciled. Between visits, TTL expiries inflate it
+    ///     (over-count = fails CLOSED toward `resource_exhausted`), and a
+    ///     Set/Delete racing the recompute can leave the written sum stale by
+    ///     that in-flight delta until the namespace's next turn. Both converge
+    ///     on re-run.
+    pub(super) async fn reconcile_bytes_counters_once(
+        client: &redis::Client,
+    ) -> Result<u64, Status> {
+        let mut conn = connect(client).await?;
+        // Resume the rotation where the previous pass stopped (0 = keyspace start).
+        let stored: Option<String> = redis::cmd("GET")
+            .arg(reconcile_cursor_key())
+            .query_async(&mut conn)
+            .await
+            .map_err(|err| map_err("GET reconcile cursor", err))?;
+        let mut cursor: u64 = stored.and_then(|v| v.parse().ok()).unwrap_or(0);
+        let pattern = meta_match_all();
+        let mut namespaces: Vec<(String, String)> = Vec::new();
+        for _ in 0..RECONCILE_DISCOVERY_MAX_ROUNDS {
+            // SCAN, never KEYS.
+            let (next, keys): (u64, Vec<String>) = redis::cmd(SWEEP_COMMAND)
+                .arg(cursor)
+                .arg("MATCH")
+                .arg(&pattern)
+                .arg("COUNT")
+                .arg(SWEEP_COUNT)
+                .query_async(&mut conn)
+                .await
+                .map_err(|err| map_err("SCAN meta", err))?;
+            namespaces.extend(keys.iter().filter_map(|key| parse_meta_key(key)));
+            cursor = next;
+            if cursor == 0 || namespaces.len() >= RECONCILE_NAMESPACES_PER_PASS {
+                break;
+            }
+        }
+        // SCAN may surface the same key more than once within an iteration; the
+        // recompute is idempotent, but dedupe anyway so the per-pass namespace
+        // budget is spent on DISTINCT namespaces.
+        namespaces.sort();
+        namespaces.dedup();
+        namespaces.truncate(RECONCILE_NAMESPACES_PER_PASS);
+        // Persist the rotation position so the NEXT pass continues from here.
+        redis::cmd("SET")
+            .arg(reconcile_cursor_key())
+            .arg(cursor.to_string())
+            .query_async::<()>(&mut conn)
+            .await
+            .map_err(|err| map_err("SET reconcile cursor", err))?;
+
+        let mut reconciled: u64 = 0;
+        for (tenant, namespace) in &namespaces {
+            if reconcile_namespace_bytes(&mut conn, tenant, namespace)
+                .await?
+                .is_some()
+            {
+                reconciled = reconciled.saturating_add(1);
+            }
+        }
+        Ok(reconciled)
+    }
+
+    /// Recompute ONE namespace's `__bytes__` counter from ground truth: SCAN the
+    /// namespace's data keys (only `:k:` keys — bookkeeping is excluded by the
+    /// pattern), STRLEN each, and SET the counter to the saturating sum
+    /// ([`reconciled_sum`]). Returns `Ok(None)` — counter left untouched — when
+    /// the namespace exceeds [`RECONCILE_MAX_KEYS_PER_NAMESPACE`]: a partial sum
+    /// would UNDER-count and fail open, whereas the stale counter only
+    /// over-counts. A key expiring between SCAN and STRLEN reads as length 0,
+    /// which is exactly its live usage.
+    async fn reconcile_namespace_bytes(
+        conn: &mut redis::aio::MultiplexedConnection,
+        tenant: &str,
+        namespace: &str,
+    ) -> Result<Option<i64>, Status> {
+        let pattern = data_match(tenant, namespace, "");
+        let mut cursor: u64 = 0;
+        let mut lengths: Vec<i64> = Vec::new();
+        loop {
+            // SCAN, never KEYS.
+            let (next, keys): (u64, Vec<String>) = redis::cmd(SWEEP_COMMAND)
+                .arg(cursor)
+                .arg("MATCH")
+                .arg(&pattern)
+                .arg("COUNT")
+                .arg(SWEEP_COUNT)
+                .query_async(&mut *conn)
+                .await
+                .map_err(|err| map_err("SCAN reconcile", err))?;
+            for full in &keys {
+                if strip_data_prefix(full, tenant, namespace).is_none() {
+                    continue;
+                }
+                if lengths.len() >= RECONCILE_MAX_KEYS_PER_NAMESPACE {
+                    tracing::debug!(
+                        tenant = %tenant,
+                        namespace = %namespace,
+                        cap = RECONCILE_MAX_KEYS_PER_NAMESPACE,
+                        "cache byte-counter reconciliation: namespace over the \
+                         per-pass key cap; skipping (stale counter fails closed)"
+                    );
+                    return Ok(None);
+                }
+                let len: i64 = redis::cmd("STRLEN")
+                    .arg(full)
+                    .query_async(&mut *conn)
+                    .await
+                    .map_err(|err| map_err("STRLEN reconcile", err))?;
+                lengths.push(len);
+            }
+            if next == 0 {
+                break;
+            }
+            cursor = next;
+        }
+        let sum = reconciled_sum(&lengths);
+        let current = read_counter(conn, tenant, namespace).await?;
+        if lengths.is_empty() && current == 0 {
+            // Nothing stored and no drift recorded: leave no ghost counter key
+            // behind (e.g. right after a namespace flush swept the counter).
+            return Ok(Some(0));
+        }
+        if current != sum {
+            redis::cmd("SET")
+                .arg(bytes_counter_key(tenant, namespace))
+                .arg(sum)
+                .query_async::<()>(&mut *conn)
+                .await
+                .map_err(|err| map_err("SET reconcile counter", err))?;
+        }
+        Ok(Some(sum))
     }
 }
 
@@ -1381,6 +1647,64 @@ mod cache_scope_tests {
         let pattern = data_match("tenant-a", "sessions", "u");
         assert_eq!(pattern, "udb:cache:tenant-a:sessions:k:u*");
         assert!(pattern.ends_with('*'));
+    }
+
+    /// Byte-counter reconciliation math: TTL expiry never runs the DECRBY
+    /// bookkeeping, so the worker recomputes usage from ground truth — the
+    /// counter is SET to the saturating sum of observed live data-key lengths,
+    /// and the stale counter value plays NO part in the math.
+    #[test]
+    fn reconciliation_sum_math() {
+        assert_eq!(reconciled_sum(&[]), 0);
+        assert_eq!(reconciled_sum(&[128, 64, 8]), 200);
+        // Expired-between-SCAN-and-STRLEN keys read as length 0: a no-op term.
+        assert_eq!(reconciled_sum(&[100, 0, 50]), 150);
+        // Defensive: a bogus negative length never subtracts real usage.
+        assert_eq!(reconciled_sum(&[-16, 32]), 32);
+        // Adversarially huge values saturate instead of wrapping.
+        assert_eq!(reconciled_sum(&[i64::MAX, 1]), i64::MAX);
+    }
+
+    /// Reconciliation namespace discovery parses `(tenant, namespace)` back out
+    /// of the meta key. The namespace (colon-free by validation) is always the
+    /// LAST segment; data keys, counters, and the rotation cursor never parse as
+    /// namespaces, so the pass can never recompute (or create) bookkeeping for a
+    /// non-namespace key.
+    #[test]
+    fn reconciliation_meta_key_round_trip() {
+        assert_eq!(
+            parse_meta_key(&meta_key("tenant-a", "sessions")),
+            Some(("tenant-a".to_string(), "sessions".to_string()))
+        );
+        // A ':' inside the tenant segment stays with the tenant.
+        assert_eq!(
+            parse_meta_key("udb:cache:ten:ant:sessions:__meta__"),
+            Some(("ten:ant".to_string(), "sessions".to_string()))
+        );
+        assert_eq!(parse_meta_key(&data_key("t", "ns", "k1")), None);
+        assert_eq!(parse_meta_key(&bytes_counter_key("t", "ns")), None);
+        assert_eq!(parse_meta_key(&reconcile_cursor_key()), None);
+        assert_eq!(parse_meta_key("udb:cache::__meta__"), None);
+        assert_eq!(parse_meta_key("udb:cache:only-one-segment:__meta__"), None);
+        // The discovery pattern targets ONLY meta keys.
+        assert_eq!(meta_match_all(), "udb:cache:*:__meta__");
+        assert!(meta_match_all().ends_with(META_SUFFIX));
+    }
+
+    /// The `Scan` page limit is clamped to the named cap: a caller can never
+    /// push an unbounded COUNT hint into the SCAN cursor walk, and a
+    /// non-positive limit falls back to the default page size.
+    #[test]
+    fn scan_limit_is_clamped() {
+        assert_eq!(clamped_scan_count(0), SWEEP_COUNT);
+        assert_eq!(clamped_scan_count(-1), SWEEP_COUNT);
+        assert_eq!(clamped_scan_count(10), 10);
+        assert_eq!(
+            clamped_scan_count(MAX_SCAN_PAGE_LIMIT as i32),
+            MAX_SCAN_PAGE_LIMIT
+        );
+        assert_eq!(clamped_scan_count(i32::MAX), MAX_SCAN_PAGE_LIMIT);
+        assert!(SWEEP_COUNT <= MAX_SCAN_PAGE_LIMIT);
     }
 
     /// CDC invalidation is tenant-scoped fail-closed: a tenant-less event yields no

@@ -69,10 +69,18 @@ const TOPIC_SOURCE_REGISTERED: &str = "udb.embedding.source.registered.v1";
 const TOPIC_SOURCE_DELETED: &str = "udb.embedding.source.deleted.v1";
 const TOPIC_BACKFILL_REQUESTED: &str = "udb.embedding.backfill.requested.v1";
 const TOPIC_BACKFILL_COMPLETED: &str = "udb.embedding.backfill.completed.v1";
+/// Completion marker for a deleted source's vector teardown, keyed by
+/// `teardown_event_id` (the journal event id of the source-deleted event) so the
+/// leader pass never re-runs a finished teardown (mirrors the backfill
+/// requested/completed pairing).
+const TOPIC_SOURCE_TEARDOWN_COMPLETED: &str = "udb.embedding.source.teardown.completed.v1";
 
 const STATUS_ACTIVE: &str = "ACTIVE";
 const STATUS_DELETED: &str = "DELETED";
 pub(crate) const EMBEDDING_WORK_EMITTER_BATCH: i64 = 200;
+/// Page size for enumerating (and deleting) a deleted source's point ids during
+/// vector teardown — bounds each journal scan and each vector-seam delete call.
+const EMBEDDING_TEARDOWN_DELETE_BATCH: i64 = 200;
 const EMBEDDING_BACKFILL_PAGE_LIMIT: i32 = 200;
 const DEFAULT_EMBEDDING_WORK_EMITTER_INTERVAL_SECS: u64 = 30;
 const EMBEDDING_WORK_EMITTER_INTERVAL_ENV: &str = "UDB_EMBEDDING_WORK_EMITTER_INTERVAL_SECS";
@@ -287,6 +295,32 @@ fn validate_report_embedding_required_fields(
     Ok(())
 }
 
+/// Reported-vector shape gate: an empty vector, or a `dims` claim that
+/// contradicts the actual vector length, is rejected with an
+/// `invalid_argument` field violation BEFORE any admission, store read, or
+/// vector-seam call — a mis-declared dimension would otherwise poison the
+/// collection's dimension at ensure-time. Pure — unit-tested.
+fn validate_reported_vector(dims: i32, vector: &[f32]) -> Result<(), Status> {
+    if vector.is_empty() {
+        return Err(embedding_required_field(
+            "vector",
+            "must contain at least one embedding dimension",
+            "vector is required",
+        ));
+    }
+    if dims > 0 && dims as usize != vector.len() {
+        return Err(embedding_field_violation(
+            "dims",
+            "must equal the reported vector length when set",
+            format!(
+                "dims ({dims}) does not match the reported vector length ({})",
+                vector.len()
+            ),
+        ));
+    }
+    Ok(())
+}
+
 /// The fail-closed source-tenant-column gate (mirrors `search_service`). An
 /// EmbeddingSource MUST be scoped by the source table's tenant column; if the
 /// shared catalog resolver returns none, the source is not tenant-isolated and we
@@ -376,6 +410,26 @@ fn build_embedding_point(
         vector,
         payload,
     })
+}
+
+/// Serialize a retrieved point's payload for a `RetrieveHit`: the internal
+/// `_tenant_id` write-stamp is stripped (it only mirrors the verified claim the
+/// caller already holds — never expose the isolation key), and the remaining
+/// user payload is serialized as JSON. No payload, a non-object payload, or a
+/// tag-only payload all yield an empty string. Pure — unit-tested.
+fn retrieve_hit_payload_json(payload: Option<&prost_types::Struct>) -> String {
+    let Some(payload) = payload else {
+        return String::new();
+    };
+    let mut json = crate::runtime::executor_utils::struct_to_json(payload);
+    let Some(object) = json.as_object_mut() else {
+        return String::new();
+    };
+    object.remove("_tenant_id");
+    if object.is_empty() {
+        return String::new();
+    }
+    serde_json::Value::Object(std::mem::take(object)).to_string()
 }
 
 /// Parse a gRPC `grpc-timeout` header value (`<digits><unit>`, units
@@ -718,7 +772,7 @@ impl EmbeddingServiceImpl {
     /// change handler and the leader-spawned backfill worker both call). The
     /// payload is the no-credential [`build_work_event_payload`]; the partition key
     /// is the row pk so a sidecar pool fans out by row.
-    #[allow(dead_code)] // called by the leader-spawned work emitter (follow-up)
+    #[allow(dead_code)] // called by the injected-event test seam `run_embedding_work_emitter`
     async fn emit_work_event(
         &self,
         tenant_id: &str,
@@ -855,6 +909,9 @@ impl EmbeddingServiceImpl {
         vector: Vec<f32>,
         dims: i32,
     ) -> Result<(), Status> {
+        // Dimension truth gate: empty vectors and a `dims` claim contradicting
+        // the actual vector length are rejected before any backend call.
+        validate_reported_vector(dims, &vector)?;
         let runtime = self.require_runtime()?;
         let dim = if dims > 0 { dims } else { vector.len() as i32 };
         // Fail closed + tenant-tag (mirrors search's `_tenant_id` write stamp).
@@ -874,20 +931,42 @@ impl EmbeddingServiceImpl {
             .await
     }
 
+    /// Batch point deletion through the SHARED vector seam — the exact path
+    /// `asset_service::delete_embedding` wraps (`vector_delete_backend_target`),
+    /// never a second vector client. Errors are RETURNED (not swallowed) so the
+    /// source-teardown pass can withhold its completion marker and retry;
+    /// a missing runtime fails closed with a typed capability detail.
+    async fn delete_embedding_points(
+        &self,
+        project_id: &str,
+        collection: &str,
+        point_ids: Vec<String>,
+    ) -> Result<(), Status> {
+        let Some(runtime) = self.runtime.as_ref() else {
+            return Err(embedding_capability_status(
+                "embedding_vector_delete",
+                "runtime_vector_seam",
+                "embedding vector delete requires the runtime vector seam (no runtime configured)",
+            ));
+        };
+        if point_ids.is_empty() {
+            return Ok(());
+        }
+        runtime
+            .vector_delete_backend_target(None, project_id, collection, point_ids)
+            .await
+    }
+
     /// Best-effort: remove a source row's embedding (point id = row pk) through the
     /// SHARED vector seam — the path `asset_service::delete_embedding` wraps. Used
-    /// by the CDC work emitter on a row delete so a deleted row leaves no orphan
-    /// vector. Never fails the caller.
-    #[allow(dead_code)] // called by the leader-spawned work emitter (follow-up)
+    /// by the leader work-emitter pass on a row delete so a deleted row leaves no
+    /// orphan vector. Never fails the caller (logs and continues).
     async fn delete_embedding_point(&self, project_id: &str, collection: &str, row_pk: &str) {
-        let Some(runtime) = self.runtime.as_ref() else {
-            return;
-        };
         if row_pk.trim().is_empty() {
             return;
         }
-        if let Err(err) = runtime
-            .vector_delete_backend_target(None, project_id, collection, vec![row_pk.to_string()])
+        if let Err(err) = self
+            .delete_embedding_points(project_id, collection, vec![row_pk.to_string()])
             .await
         {
             tracing::warn!(error = %err, collection, row_pk, "embedding vector delete failed");
@@ -1032,11 +1111,13 @@ impl EmbeddingService for EmbeddingServiceImpl {
         let req = request.into_inner();
         validate_request_tenant(&metadata, &req.tenant_id)?;
         let tenant_id = req.tenant_id.trim().to_string();
+        // READ_ONLY RPC ⇒ the shared Read admission lane (like sibling list
+        // RPCs), not Admin — listing must never contend with control mutations.
         let _admit = native_admit_on(
             self.channels.as_ref(),
             &self.metrics,
             "embedding",
-            OperationChannel::Admin,
+            OperationChannel::Read,
             &tenant_id,
             None,
         )
@@ -1152,9 +1233,11 @@ impl EmbeddingService for EmbeddingServiceImpl {
             )
             .await?;
 
-        // The per-row vector teardown of the source's collection runs on the
-        // follow-up worker (it enumerates the source's point ids and calls
-        // `delete_embedding_point`); a row-delete CDC event already calls it.
+        // Vector teardown runs on the leader work-emitter pass: it consumes this
+        // source-deleted event from the durable journal, enumerates the source's
+        // emitted work-event point ids, and deletes them per collection through
+        // the shared vector seam, then marks the event done with a
+        // `teardown.completed` marker (see `process_embedding_teardown_job`).
         self.emit_source_event(
             TOPIC_SOURCE_DELETED,
             &tenant_id,
@@ -1251,13 +1334,8 @@ impl EmbeddingService for EmbeddingServiceImpl {
         let source_name = req.source_name.trim().to_string();
         let row_pk = req.row_pk.trim().to_string();
         validate_report_embedding_required_fields(&source_name, &row_pk)?;
-        if req.vector.is_empty() {
-            return Err(embedding_required_field(
-                "vector",
-                "must contain at least one embedding dimension",
-                "vector is required",
-            ));
-        }
+        // Dimension truth: empty vector / contradictory `dims` rejected up front.
+        validate_reported_vector(req.dims, &req.vector)?;
         let _admit = native_admit_on(
             self.channels.as_ref(),
             &self.metrics,
@@ -1384,7 +1462,9 @@ impl EmbeddingService for EmbeddingServiceImpl {
                 filter: tenant_filter,
                 limit: top_k,
                 fusion_weights: Vec::new(),
-                with_payload: false,
+                // Hits carry the stored user payload (minus the internal
+                // `_tenant_id` write-stamp, stripped in the hit mapping below).
+                with_payload: true,
             };
             let fut = runtime.vector_hybrid_search(manifest, search, context.clone());
             match remaining {
@@ -1406,7 +1486,9 @@ impl EmbeddingService for EmbeddingServiceImpl {
                 filter: tenant_filter,
                 limit: top_k,
                 score_threshold: 0.0,
-                with_payload: false,
+                // Hits carry the stored user payload (minus the internal
+                // `_tenant_id` write-stamp, stripped in the hit mapping below).
+                with_payload: true,
             };
             let fut = runtime.vector_search(manifest, search, context.clone());
             match remaining {
@@ -1427,9 +1509,9 @@ impl EmbeddingService for EmbeddingServiceImpl {
             .into_iter()
             .take(top_k as usize)
             .map(|point| embedding_pb::RetrieveHit {
+                payload_json: retrieve_hit_payload_json(point.payload.as_ref()),
                 id: point.id,
                 score: f64::from(point.score),
-                payload_json: String::new(),
             })
             .collect::<Vec<_>>();
 
@@ -1457,16 +1539,32 @@ struct EmbeddingBackfillJob {
     backfill_id: String,
 }
 
-async fn load_embedding_work_jobs(
-    pool: &PgPool,
-    journal_relation: &str,
-    outbox_relation: &str,
-    batch: i64,
-) -> Result<Vec<EmbeddingWorkJob>, String> {
+/// One `udb.embedding.source.deleted.v1` journal event still awaiting vector
+/// teardown (no `teardown.completed` marker keyed by its event id yet).
+struct EmbeddingTeardownJob {
+    event_id: String,
+    tenant_id: String,
+    project_id: String,
+    source_name: String,
+    /// The collection recorded on the source-deleted event (may be empty for a
+    /// legacy row; the processor falls back to [`DEFAULT_VECTOR_COLLECTION`]).
+    target_collection: String,
+    /// CURRENT status of the (tenant, source_name) source row, if any — a source
+    /// re-registered ACTIVE after the delete supersedes the teardown (deleting
+    /// then would wipe fresh vectors).
+    source_status: String,
+}
+
+/// SQL for one change-driven work-emitter journal pass. Every journal/outbox
+/// payload key is read with the `COALESCE(payload->>k, payload->'payload'->>k)`
+/// nesting fallback because the CDC journal ENVELOPE-nests emitted payloads
+/// under `payload.payload` — the same lesson already applied to the backfill
+/// loader; a top-level-only read matches zero real rows. Pure so the SQL shape
+/// is unit-asserted.
+fn embedding_work_jobs_sql(journal_relation: &str, outbox_relation: &str) -> String {
     let source = embedding_source_model();
     let source_rel = source.relation.clone();
-    let limit = batch.max(1);
-    let rows = sqlx::query(&format!(
+    format!(
         "SELECT \
             s.{source_id}::TEXT AS source_id, \
             s.{tenant_id}::TEXT AS source_tenant_id, \
@@ -1479,27 +1577,27 @@ async fn load_embedding_work_jobs(
             s.{source_cdc_topic}::TEXT AS source_cdc_topic, \
             s.{status}::TEXT AS status, \
             j.event_id::TEXT AS event_id, \
-            COALESCE(j.payload->>'tenant_id', '') AS event_tenant_id, \
-            COALESCE(j.payload->>'project_id', '') AS project_id, \
+            COALESCE(j.payload->>'tenant_id', j.payload->'payload'->>'tenant_id', '') AS event_tenant_id, \
+            COALESCE(j.payload->>'project_id', j.payload->'payload'->>'project_id', '') AS project_id, \
             j.payload::TEXT AS payload_json \
          FROM {journal_relation} j \
          JOIN {source_rel} s \
-           ON s.{tenant_id}::TEXT = COALESCE(j.payload->>'tenant_id', '') \
+           ON s.{tenant_id}::TEXT = COALESCE(j.payload->>'tenant_id', j.payload->'payload'->>'tenant_id', '') \
           AND s.{status} = $1 \
           AND COALESCE(s.{source_cdc_topic}::TEXT, '') <> '' \
           AND s.{source_cdc_topic} = j.topic \
          WHERE j.delivery_state IN ('published', 'acked') \
-           AND COALESCE(j.payload->>'tenant_id', '') <> '' \
+           AND COALESCE(j.payload->>'tenant_id', j.payload->'payload'->>'tenant_id', '') <> '' \
            AND j.topic <> $2 \
            AND NOT EXISTS ( \
                SELECT 1 FROM {outbox_relation} o \
                WHERE o.topic = $2 \
-                 AND o.payload->>'source_event_id' = j.event_id::TEXT \
+                 AND COALESCE(o.payload->>'source_event_id', o.payload->'payload'->>'source_event_id') = j.event_id::TEXT \
            ) \
            AND NOT EXISTS ( \
                SELECT 1 FROM {journal_relation} done \
                WHERE done.topic = $2 \
-                 AND done.payload->>'source_event_id' = j.event_id::TEXT \
+                 AND COALESCE(done.payload->>'source_event_id', done.payload->'payload'->>'source_event_id') = j.event_id::TEXT \
            ) \
          ORDER BY j.published_at ASC, j.event_id ASC \
          LIMIT $3",
@@ -1513,13 +1611,23 @@ async fn load_embedding_work_jobs(
         tenant_column = source.q("tenant_column"),
         source_cdc_topic = source.q("source_cdc_topic"),
         status = source.q("status"),
-    ))
-    .bind(STATUS_ACTIVE)
-    .bind(TOPIC_WORK)
-    .bind(limit)
-    .fetch_all(pool)
-    .await
-    .map_err(|err| format!("load embedding work jobs failed: {err}"))?;
+    )
+}
+
+async fn load_embedding_work_jobs(
+    pool: &PgPool,
+    journal_relation: &str,
+    outbox_relation: &str,
+    batch: i64,
+) -> Result<Vec<EmbeddingWorkJob>, String> {
+    let limit = batch.max(1);
+    let rows = sqlx::query(&embedding_work_jobs_sql(journal_relation, outbox_relation))
+        .bind(STATUS_ACTIVE)
+        .bind(TOPIC_WORK)
+        .bind(limit)
+        .fetch_all(pool)
+        .await
+        .map_err(|err| format!("load embedding work jobs failed: {err}"))?;
 
     let mut jobs = Vec::with_capacity(rows.len());
     for row in rows {
@@ -1691,6 +1799,251 @@ async fn load_embedding_backfill_jobs(
         });
     }
     Ok(jobs)
+}
+
+/// SQL loading `udb.embedding.source.deleted.v1` journal events that have not
+/// yet emitted a teardown-completed marker (checked in BOTH the pending outbox
+/// and the replay journal, keyed by `teardown_event_id` — the dedup shape the
+/// backfill loader uses). Payload keys use the nested-envelope COALESCE
+/// fallback (see [`embedding_work_jobs_sql`]). The LEFT JOIN surfaces the
+/// source row's CURRENT status so a re-registered (ACTIVE-again) source is
+/// never torn down. Pure so the SQL shape is unit-asserted.
+fn embedding_teardown_jobs_sql(journal_relation: &str, outbox_relation: &str) -> String {
+    let source = embedding_source_model();
+    let source_rel = source.relation.clone();
+    format!(
+        "SELECT \
+            j.event_id::TEXT AS event_id, \
+            COALESCE(j.payload->>'tenant_id', j.payload->'payload'->>'tenant_id', '') AS event_tenant_id, \
+            COALESCE(j.payload->>'project_id', j.payload->'payload'->>'project_id', '') AS project_id, \
+            COALESCE(j.payload->>'source', j.payload->'payload'->>'source', '') AS source_name, \
+            COALESCE(j.payload->>'target_collection', j.payload->'payload'->>'target_collection', '') AS target_collection, \
+            COALESCE(s.{status}::TEXT, '') AS source_status \
+         FROM {journal_relation} j \
+         LEFT JOIN {source_rel} s \
+           ON s.{tenant_id}::TEXT = COALESCE(j.payload->>'tenant_id', j.payload->'payload'->>'tenant_id', '') \
+          AND s.{source_name}::TEXT = COALESCE(j.payload->>'source', j.payload->'payload'->>'source', '') \
+         WHERE j.delivery_state IN ('published', 'acked') \
+           AND j.topic = $1 \
+           AND COALESCE(j.payload->>'tenant_id', j.payload->'payload'->>'tenant_id', '') <> '' \
+           AND COALESCE(j.payload->>'source', j.payload->'payload'->>'source', '') <> '' \
+           AND NOT EXISTS ( \
+               SELECT 1 FROM {outbox_relation} o \
+               WHERE o.topic = $2 \
+                 AND COALESCE(o.payload->>'teardown_event_id', o.payload->'payload'->>'teardown_event_id') = j.event_id::TEXT \
+           ) \
+           AND NOT EXISTS ( \
+               SELECT 1 FROM {journal_relation} done \
+               WHERE done.topic = $2 \
+                 AND COALESCE(done.payload->>'teardown_event_id', done.payload->'payload'->>'teardown_event_id') = j.event_id::TEXT \
+           ) \
+         ORDER BY j.published_at ASC, j.event_id ASC \
+         LIMIT $3",
+        status = source.q("status"),
+        tenant_id = source.q("tenant_id"),
+        source_name = source.q("source_name"),
+    )
+}
+
+/// SQL enumerating a deleted source's emitted point ids: DISTINCT
+/// `(target_collection, row_pk)` pairs from `udb.embedding.work.v1` events in
+/// the replay journal UNION the pending outbox, tenant+source scoped, with the
+/// nested-envelope COALESCE fallback on every key, keyset-paginated on the pair
+/// so each pass is bounded. Pure so the SQL shape is unit-asserted.
+fn embedding_teardown_point_ids_sql(journal_relation: &str, outbox_relation: &str) -> String {
+    format!(
+        "SELECT ids.target_collection, ids.row_pk FROM ( \
+            SELECT \
+                COALESCE(j.payload->>'target_collection', j.payload->'payload'->>'target_collection', '') AS target_collection, \
+                COALESCE(j.payload->>'row_pk', j.payload->'payload'->>'row_pk', '') AS row_pk \
+            FROM {journal_relation} j \
+            WHERE j.topic = $1 \
+              AND COALESCE(j.payload->>'tenant_id', j.payload->'payload'->>'tenant_id', '') = $2 \
+              AND COALESCE(j.payload->>'source', j.payload->'payload'->>'source', '') = $3 \
+            UNION \
+            SELECT \
+                COALESCE(o.payload->>'target_collection', o.payload->'payload'->>'target_collection', ''), \
+                COALESCE(o.payload->>'row_pk', o.payload->'payload'->>'row_pk', '') \
+            FROM {outbox_relation} o \
+            WHERE o.topic = $1 \
+              AND COALESCE(o.payload->>'tenant_id', o.payload->'payload'->>'tenant_id', '') = $2 \
+              AND COALESCE(o.payload->>'source', o.payload->'payload'->>'source', '') = $3 \
+         ) ids \
+         WHERE ids.row_pk <> '' \
+           AND (ids.target_collection, ids.row_pk) > ($4, $5) \
+         ORDER BY ids.target_collection ASC, ids.row_pk ASC \
+         LIMIT $6"
+    )
+}
+
+async fn load_embedding_source_teardown_jobs(
+    pool: &PgPool,
+    journal_relation: &str,
+    outbox_relation: &str,
+    batch: i64,
+) -> Result<Vec<EmbeddingTeardownJob>, String> {
+    let limit = batch.max(1);
+    let rows = sqlx::query(&embedding_teardown_jobs_sql(
+        journal_relation,
+        outbox_relation,
+    ))
+    .bind(TOPIC_SOURCE_DELETED)
+    .bind(TOPIC_SOURCE_TEARDOWN_COMPLETED)
+    .bind(limit)
+    .fetch_all(pool)
+    .await
+    .map_err(|err| format!("load embedding teardown jobs failed: {err}"))?;
+    let mut jobs = Vec::with_capacity(rows.len());
+    for row in rows {
+        jobs.push(EmbeddingTeardownJob {
+            event_id: row
+                .try_get("event_id")
+                .map_err(|err| format!("decode embedding teardown event id failed: {err}"))?,
+            tenant_id: row
+                .try_get("event_tenant_id")
+                .map_err(|err| format!("decode embedding teardown tenant failed: {err}"))?,
+            project_id: row
+                .try_get("project_id")
+                .map_err(|err| format!("decode embedding teardown project failed: {err}"))?,
+            source_name: row
+                .try_get("source_name")
+                .map_err(|err| format!("decode embedding teardown source failed: {err}"))?,
+            target_collection: row
+                .try_get("target_collection")
+                .map_err(|err| format!("decode embedding teardown collection failed: {err}"))?,
+            source_status: row
+                .try_get("source_status")
+                .map_err(|err| format!("decode embedding teardown source status failed: {err}"))?,
+        });
+    }
+    Ok(jobs)
+}
+
+/// Tear down a deleted source's vectors. Point ids are enumerated from the
+/// source's emitted `udb.embedding.work.v1` events (replay journal + pending
+/// outbox), grouped per target collection, and deleted through the SHARED
+/// vector seam in [`EMBEDDING_TEARDOWN_DELETE_BATCH`]-bounded batches; only
+/// after every batch succeeds is the `teardown.completed` marker emitted (a
+/// delete failure leaves the job pending so the next leader pass retries —
+/// fail closed, no false completion). A source re-registered ACTIVE after the
+/// delete supersedes the teardown: it is marked completed WITHOUT deleting.
+///
+/// LIMITATION (best-effort, deliberate): the runtime exposes only a
+/// per-point-id vector delete (`vector_delete_backend_target`) — no
+/// tenant+source filter-delete seam — so teardown can only remove points whose
+/// work events are still present in the journal/outbox. A point whose work
+/// event was purged by journal retention, or that a sidecar reported for a row
+/// that never produced a work event, is not enumerable here and survives until
+/// a runtime filter-delete seam exists.
+async fn process_embedding_teardown_job(
+    service: &EmbeddingServiceImpl,
+    pool: &PgPool,
+    journal_relation: &str,
+    outbox_relation: &str,
+    job: &EmbeddingTeardownJob,
+) -> Result<i64, String> {
+    if job.source_status == STATUS_ACTIVE {
+        // Superseded by a re-registration: mark the delete event handled without
+        // touching the store (deleting now would wipe the fresh source's vectors).
+        service
+            .emit_source_event(
+                TOPIC_SOURCE_TEARDOWN_COMPLETED,
+                &job.tenant_id,
+                &job.project_id,
+                &job.source_name,
+                serde_json::json!({
+                    "teardown_event_id": job.event_id,
+                    "deleted": 0,
+                    "superseded": true,
+                }),
+            )
+            .await;
+        return Ok(0);
+    }
+    let fallback_collection = if job.target_collection.trim().is_empty() {
+        DEFAULT_VECTOR_COLLECTION.to_string()
+    } else {
+        job.target_collection.clone()
+    };
+    let mut deleted = 0i64;
+    let mut cursor_collection = String::new();
+    let mut cursor_pk = String::new();
+    loop {
+        let rows = sqlx::query(&embedding_teardown_point_ids_sql(
+            journal_relation,
+            outbox_relation,
+        ))
+        .bind(TOPIC_WORK)
+        .bind(&job.tenant_id)
+        .bind(&job.source_name)
+        .bind(&cursor_collection)
+        .bind(&cursor_pk)
+        .bind(EMBEDDING_TEARDOWN_DELETE_BATCH)
+        .fetch_all(pool)
+        .await
+        .map_err(|err| format!("enumerate embedding teardown points failed: {err}"))?;
+        if rows.is_empty() {
+            break;
+        }
+        let mut points = Vec::with_capacity(rows.len());
+        for row in &rows {
+            let collection: String = row.try_get("target_collection").map_err(|err| {
+                format!("decode embedding teardown point collection failed: {err}")
+            })?;
+            let row_pk: String = row
+                .try_get("row_pk")
+                .map_err(|err| format!("decode embedding teardown point pk failed: {err}"))?;
+            points.push((collection, row_pk));
+        }
+        if let Some((last_collection, last_pk)) = points.last() {
+            cursor_collection = last_collection.clone();
+            cursor_pk = last_pk.clone();
+        }
+        // Rows arrive ordered by collection, so consecutive runs form one
+        // bounded seam call per collection.
+        let mut index = 0usize;
+        while index < points.len() {
+            let group_collection = points[index].0.clone();
+            let mut ids = Vec::new();
+            while index < points.len() && points[index].0 == group_collection {
+                ids.push(points[index].1.clone());
+                index += 1;
+            }
+            let effective_collection = if group_collection.trim().is_empty() {
+                fallback_collection.clone()
+            } else {
+                group_collection
+            };
+            let count = ids.len() as i64;
+            service
+                .delete_embedding_points(&job.project_id, &effective_collection, ids)
+                .await
+                .map_err(|err| {
+                    format!(
+                        "embedding teardown vector delete failed (collection \
+                         {effective_collection}): {err}"
+                    )
+                })?;
+            deleted = deleted.saturating_add(count);
+        }
+        if points.len() < EMBEDDING_TEARDOWN_DELETE_BATCH as usize {
+            break;
+        }
+    }
+    service
+        .emit_source_event(
+            TOPIC_SOURCE_TEARDOWN_COMPLETED,
+            &job.tenant_id,
+            &job.project_id,
+            &job.source_name,
+            serde_json::json!({
+                "teardown_event_id": job.event_id,
+                "target_collection": job.target_collection,
+                "deleted": deleted,
+            }),
+        )
+        .await;
+    Ok(deleted)
 }
 
 fn backfill_read_context(tenant_id: &str, project_id: &str) -> crate::RequestContext {
@@ -1987,10 +2340,14 @@ async fn process_embedding_work_job(
     true
 }
 
-/// Run one leader-owned pass over the durable CDC journal. Active embedding
-/// sources are joined by `(tenant_id, source_cdc_topic)` to published source
-/// changes, and source events that already produced `udb.embedding.work.v1` are
-/// skipped by `source_event_id` in both the outbox and replay journal.
+/// Run one leader-owned pass over the durable CDC journal, in three stages:
+/// (1) active embedding sources are joined by `(tenant_id, source_cdc_topic)`
+/// to published source changes — source events that already produced
+/// `udb.embedding.work.v1` are skipped by `source_event_id` in both the outbox
+/// and replay journal; (2) requested backfills enumerate their source rows via
+/// the served SELECT path and emit per-row work; (3) `source.deleted` events
+/// tear down the deleted source's vectors through the shared vector seam,
+/// deduplicated by a `teardown.completed` marker.
 pub(crate) async fn run_embedding_work_emitter_once(
     service: Arc<EmbeddingServiceImpl>,
     journal_relation: &str,
@@ -2015,6 +2372,14 @@ pub(crate) async fn run_embedding_work_emitter_once(
         load_embedding_backfill_jobs(pool, journal_relation, outbox_relation, batch).await?;
     for job in &backfills {
         acted = acted.saturating_add(process_embedding_backfill_job(&service, job).await?);
+    }
+    let teardowns =
+        load_embedding_source_teardown_jobs(pool, journal_relation, outbox_relation, batch).await?;
+    for job in &teardowns {
+        acted = acted.saturating_add(
+            process_embedding_teardown_job(&service, pool, journal_relation, outbox_relation, job)
+                .await?,
+        );
     }
     Ok(acted)
 }
@@ -2589,6 +2954,155 @@ mod embedding_scope_tests {
         assert_eq!(context.purpose, "embedding_backfill");
         assert_eq!(context.scopes, vec!["udb:read".to_string()]);
         assert_eq!(context.service_identity, "udb.embedding.backfill");
+    }
+
+    /// Dimension truth (16.6.2 shape gate): an empty vector and a `dims` claim
+    /// contradicting the actual vector length are both rejected with typed
+    /// field violations; an unset (non-positive) or matching `dims` passes.
+    #[test]
+    fn reported_vector_shape_gate_rejects_empty_and_mismatched_dims() {
+        let err = validate_reported_vector(0, &[]).expect_err("empty vector must fail");
+        assert_eq!(err.code(), tonic::Code::InvalidArgument);
+        assert_eq!(err.message(), "vector is required");
+        assert_single_field_violation(
+            &err,
+            "vector",
+            "must contain at least one embedding dimension",
+        );
+
+        let err =
+            validate_reported_vector(5, &[0.1, 0.2, 0.3]).expect_err("dims mismatch must fail");
+        assert_eq!(err.code(), tonic::Code::InvalidArgument);
+        assert_eq!(
+            err.message(),
+            "dims (5) does not match the reported vector length (3)"
+        );
+        assert_single_field_violation(
+            &err,
+            "dims",
+            "must equal the reported vector length when set",
+        );
+
+        validate_reported_vector(0, &[0.1]).expect("unset dims must pass");
+        validate_reported_vector(-1, &[0.1]).expect("negative dims treated as unset");
+        validate_reported_vector(3, &[0.1, 0.2, 0.3]).expect("matching dims must pass");
+    }
+
+    /// The RPC surface enforces the shape gate before admission/store/vector
+    /// access: a mismatched `dims` is refused on a bare service (no runtime).
+    #[tokio::test]
+    async fn report_embedding_dims_mismatch_carries_field_violation() {
+        let svc = EmbeddingServiceImpl::new(); // no runtime/catalog; validation runs first
+        let mut request = Request::new(embedding_pb::ReportEmbeddingRequest {
+            tenant_id: "tenant-a".to_string(),
+            source_name: "contacts".to_string(),
+            row_pk: "row-1".to_string(),
+            vector: vec![0.1, 0.2, 0.3],
+            model: "m".to_string(),
+            dims: 5,
+        });
+        request
+            .metadata_mut()
+            .insert("x-tenant-id", MetadataValue::from_static("tenant-a"));
+        let err = svc
+            .report_embedding(request)
+            .await
+            .expect_err("dims mismatch must be rejected");
+        assert_eq!(err.code(), tonic::Code::InvalidArgument);
+        assert_single_field_violation(
+            &err,
+            "dims",
+            "must equal the reported vector length when set",
+        );
+    }
+
+    /// Loader parity (16.6.3): the change-driven work loader reads every journal
+    /// payload key with the SAME `COALESCE(top-level, payload->'payload'->>…)`
+    /// nesting fallback the backfill loader uses — the CDC journal ENVELOPE-nests
+    /// emitted payloads, so a top-level-only read matches zero real rows.
+    #[test]
+    fn work_loader_sql_reads_nested_journal_envelope() {
+        let sql = embedding_work_jobs_sql("udb_cdc_event_journal", "udb_outbox");
+        for fragment in [
+            "COALESCE(j.payload->>'tenant_id', j.payload->'payload'->>'tenant_id', '')",
+            "COALESCE(j.payload->>'project_id', j.payload->'payload'->>'project_id', '')",
+            "COALESCE(o.payload->>'source_event_id', o.payload->'payload'->>'source_event_id')",
+            "COALESCE(done.payload->>'source_event_id', done.payload->'payload'->>'source_event_id')",
+        ] {
+            assert!(
+                sql.contains(fragment),
+                "work loader SQL lost the nested-envelope fallback: missing {fragment}"
+            );
+        }
+        // No key may still be read top-level-only.
+        assert!(
+            !sql.contains("COALESCE(j.payload->>'tenant_id', '')"),
+            "work loader SQL still reads tenant_id top-level only"
+        );
+    }
+
+    /// Source teardown reads its journal keys with the same nested-envelope
+    /// fallback, and dedups by `teardown_event_id` in both outbox and journal.
+    #[test]
+    fn teardown_sqls_read_nested_journal_envelope() {
+        let jobs_sql = embedding_teardown_jobs_sql("udb_cdc_event_journal", "udb_outbox");
+        for fragment in [
+            "COALESCE(j.payload->>'tenant_id', j.payload->'payload'->>'tenant_id', '')",
+            "COALESCE(j.payload->>'source', j.payload->'payload'->>'source', '')",
+            "COALESCE(j.payload->>'target_collection', j.payload->'payload'->>'target_collection', '')",
+            "COALESCE(o.payload->>'teardown_event_id', o.payload->'payload'->>'teardown_event_id')",
+            "COALESCE(done.payload->>'teardown_event_id', done.payload->'payload'->>'teardown_event_id')",
+        ] {
+            assert!(
+                jobs_sql.contains(fragment),
+                "teardown loader SQL missing nested-envelope fallback: {fragment}"
+            );
+        }
+        let ids_sql = embedding_teardown_point_ids_sql("udb_cdc_event_journal", "udb_outbox");
+        for fragment in [
+            "COALESCE(j.payload->>'row_pk', j.payload->'payload'->>'row_pk', '')",
+            "COALESCE(o.payload->>'row_pk', o.payload->'payload'->>'row_pk', '')",
+            "COALESCE(j.payload->>'tenant_id', j.payload->'payload'->>'tenant_id', '')",
+            "COALESCE(o.payload->>'source', o.payload->'payload'->>'source', '')",
+        ] {
+            assert!(
+                ids_sql.contains(fragment),
+                "teardown point-id SQL missing nested-envelope fallback: {fragment}"
+            );
+        }
+        // Bounded, keyset-paginated enumeration — never an unbounded scan.
+        assert!(ids_sql.contains("LIMIT $6"));
+        assert!(ids_sql.contains("(ids.target_collection, ids.row_pk) > ($4, $5)"));
+    }
+
+    /// Retrieve hits carry the stored user payload with the internal
+    /// `_tenant_id` write-stamp stripped; tag-only or absent payloads stay "".
+    #[test]
+    fn retrieve_hit_payload_strips_internal_tenant_tag() {
+        let payload = crate::runtime::executor_utils::json_to_struct(&serde_json::json!({
+            "_tenant_id": "acme",
+            "title": "Q3 report",
+            "chunk": 4,
+        }))
+        .expect("struct payload");
+        let json = retrieve_hit_payload_json(Some(&payload));
+        let value: serde_json::Value =
+            serde_json::from_str(&json).expect("payload_json is valid JSON");
+        assert_eq!(value["title"], "Q3 report");
+        assert_eq!(value["chunk"], 4.0);
+        assert!(
+            value.get("_tenant_id").is_none(),
+            "internal tenant tag leaked into RetrieveHit payload_json"
+        );
+
+        // A payload that is ONLY the internal tag serializes to the empty
+        // sentinel, and no payload stays empty too.
+        let tag_only = crate::runtime::executor_utils::json_to_struct(&serde_json::json!({
+            "_tenant_id": "acme",
+        }))
+        .expect("struct payload");
+        assert_eq!(retrieve_hit_payload_json(Some(&tag_only)), "");
+        assert_eq!(retrieve_hit_payload_json(None), "");
     }
 }
 

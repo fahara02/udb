@@ -8,14 +8,20 @@
 //! There is no separate raw-observation table in the proto contract, so
 //! `RecordPipelineMetric` performs **online aggregation**: it upserts directly
 //! into the hourly snapshot keyed by the table's real unique key
-//! `(snapshot_hour, stage_name)`, maintaining running counts, a running mean
-//! latency, error rate, and throughput. Latency percentiles (p50/p95/p99)
-//! cannot be derived online from a single observation, so they are populated by
-//! a separate batch/percentile job (left untouched here). Because aggregation is
-//! online, `TriggerSnapshot` reports the current hour's snapshot rows rather than
-//! re-aggregating a raw stream.
+//! `(snapshot_hour, stage_name, tenant_id)`, maintaining running counts, a
+//! running mean latency, error rate, and throughput. Latency percentiles
+//! (p50/p95/p99) cannot be derived online from a single observation; they are
+//! filled in by the rollup pass ([`run_analytics_rollup_once`], the seam the
+//! leader-elected worker drives), which `TriggerSnapshot` also runs inline
+//! (tenant-scoped) so its `snapshots_written` reports rows genuinely written.
+//! The accumulator keeps only per-hour counts and a running mean — raw
+//! per-request latencies are never stored — so the pass computes
+//! `percentile_cont` over the trailing window of HOURLY MEAN latencies per
+//! (tenant, stage). That is an honest, documented approximation (percentiles of
+//! hourly means), NOT per-request latency percentiles; deriving true request
+//! percentiles would require a raw-observation store the contract doesn't have.
 
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 use chrono::{DateTime, NaiveDate, Utc};
 use sqlx::{PgPool, Row};
@@ -25,26 +31,40 @@ use crate::ir::{
     AggregateExpr, AggregateFunc, ComparisonOp, LogicalAggregate, LogicalFilter, LogicalPagination,
     LogicalProjection, LogicalRead, LogicalSort, LogicalValue, NullOrder, SortDirection,
 };
+use crate::metrics::{MetricsRecorder, NoopMetrics};
 use crate::proto::udb::core::analytics::entity::v1 as ana_entity_pb;
 use crate::proto::udb::core::analytics::services::v1 as ana_pb;
 use crate::proto::udb::core::analytics::services::v1::analytics_service_server::AnalyticsService;
 use crate::runtime::DataBrokerRuntime;
+use crate::runtime::channels::{ChannelManager, OperationChannel};
 use crate::runtime::native_catalog::{NativeModel, native_model};
 
 pub use crate::proto::udb::core::analytics::services::v1::analytics_service_server::AnalyticsServiceServer;
 
 use super::DataBrokerService;
 use super::native_helpers::{
-    metadata_tenant_id, native_page_response, native_page_window, native_service_context,
+    NativeEventContext, admit_on as native_admit_on, enqueue_outbox_event_with_context,
+    metadata_project_id, metadata_tenant_id, native_page_response, native_page_window,
+    native_service_context,
 };
 
 const PMS_MSG: &str = "udb.core.analytics.entity.v1.PipelineMetricSnapshot";
 const EPS_MSG: &str = "udb.core.analytics.entity.v1.ExecutorPerformanceSummary";
 const RAS_MSG: &str = "udb.core.analytics.entity.v1.ReconciliationAnalyticsSummary";
 
+/// Outbox topic + event types exactly as the proto `method_event_contract`
+/// declares them on the two mutating RPCs (`analytics_service.proto`); the
+/// contract this service must actually fulfil.
+const TOPIC_ANALYTICS_EVENTS: &str = "analytics.events";
+const EVENT_TYPE_PIPELINE_METRIC_RECORDED: &str = "analytics.RecordPipelineMetric";
+const EVENT_TYPE_SNAPSHOT_TRIGGERED: &str = "analytics.TriggerSnapshot";
+
 pub struct AnalyticsServiceImpl {
     pg_pool: Option<PgPool>,
     runtime: Option<Arc<DataBrokerRuntime>>,
+    outbox_relation: Option<String>,
+    channels: Option<ChannelManager>,
+    metrics: Arc<dyn MetricsRecorder>,
 }
 
 fn analytics_capability_status(
@@ -69,6 +89,9 @@ impl AnalyticsServiceImpl {
         Self {
             pg_pool: None,
             runtime: None,
+            outbox_relation: None,
+            channels: None,
+            metrics: Arc::new(NoopMetrics),
         }
     }
 
@@ -79,6 +102,21 @@ impl AnalyticsServiceImpl {
 
     pub(crate) fn with_runtime(mut self, runtime: Option<Arc<DataBrokerRuntime>>) -> Self {
         self.runtime = runtime;
+        self
+    }
+
+    pub(crate) fn with_outbox(mut self, relation: Option<String>) -> Self {
+        self.outbox_relation = relation;
+        self
+    }
+
+    pub(crate) fn with_channels(mut self, channels: Option<ChannelManager>) -> Self {
+        self.channels = channels;
+        self
+    }
+
+    pub(crate) fn with_metrics(mut self, metrics: Arc<dyn MetricsRecorder>) -> Self {
+        self.metrics = metrics;
         self
     }
 
@@ -94,6 +132,40 @@ impl AnalyticsServiceImpl {
 
     fn runtime(&self) -> Option<&DataBrokerRuntime> {
         self.runtime.as_deref()
+    }
+
+    /// Emit one proto-declared `analytics.events` outbox event (best-effort; the
+    /// durable write already succeeded). Mirrors `config_service::emit_flag_changed`:
+    /// partition key = tenant (the contract's `partition_key_field`), actor = the
+    /// verified claim subject (auto-filled from the method-security principal when
+    /// no claim context is installed).
+    async fn emit_analytics_event(
+        &self,
+        event_type: &'static str,
+        tenant_id: &str,
+        project_id: &str,
+        stage_name: &str,
+        payload: serde_json::Value,
+    ) {
+        let Some(pool) = self.pg_pool.as_ref() else {
+            return;
+        };
+        enqueue_outbox_event_with_context(
+            pool,
+            self.outbox_relation.as_deref(),
+            TOPIC_ANALYTICS_EVENTS,
+            tenant_id,
+            tenant_id,
+            project_id,
+            payload,
+            NativeEventContext {
+                operation: event_type.to_string(),
+                target_resource: stage_name.to_string(),
+                ..NativeEventContext::default()
+            },
+            Some(&self.metrics),
+        )
+        .await;
     }
 }
 
@@ -184,6 +256,60 @@ fn analytics_required_field(
     message: &'static str,
 ) -> Status {
     crate::runtime::executor_utils::invalid_argument_fields(message, [(field, description)])
+}
+
+/// Pure admin gate for the two system-global reads. `executor_performance_summaries`
+/// and `reconciliation_analytics_summaries` have NO tenant column (system-global
+/// operational tables), so a WHERE predicate cannot scope them — only a genuine
+/// cross-tenant / platform-admin identity may read them. Reuses the ONE existing
+/// admin classifier ([`VerifiedClaimContext::is_cross_tenant_admin`], the same set
+/// the apikey lane and the native RLS `app.platform_admin` escape hatch honor).
+fn platform_admin_guard(
+    claim: &crate::runtime::service::method_security::VerifiedClaimContext,
+    operation: &'static str,
+) -> Result<(), Status> {
+    if claim.is_cross_tenant_admin() {
+        Ok(())
+    } else {
+        Err(crate::runtime::executor_utils::policy_status_with_code(
+            tonic::Code::PermissionDenied,
+            operation,
+            "analytics_platform_admin_required",
+            "system-global analytics require a platform/cross-tenant admin identity",
+        ))
+    }
+}
+
+/// Enforce [`platform_admin_guard`] against the request's verified claim. Mirrors
+/// the D1/D2 handler doctrine in `method_security`: enforcement is skipped ONLY
+/// when no claim context is installed at all (in-process / trusted internal
+/// caller — the tower gate ALWAYS installs one for transport requests), so an
+/// over-the-wire caller can never dodge the gate.
+fn require_platform_admin(operation: &'static str) -> Result<(), Status> {
+    if !crate::runtime::service::method_security::claim_context_present() {
+        return Ok(());
+    }
+    let claim = crate::runtime::service::method_security::current_claim_context();
+    platform_admin_guard(&claim, operation)
+}
+
+/// Pure payload builder for the `analytics.events` outbox events (unit-tested
+/// SDK-visible shape). `snapshots_written` is present only on TriggerSnapshot.
+fn analytics_event_payload(
+    event_type: &str,
+    stage_name: &str,
+    tenant_id: &str,
+    snapshots_written: Option<i64>,
+) -> serde_json::Value {
+    let mut payload = serde_json::json!({
+        "event_type": event_type,
+        "stage_name": stage_name,
+        "tenant_id": tenant_id,
+    });
+    if let (Some(written), Some(map)) = (snapshots_written, payload.as_object_mut()) {
+        map.insert("snapshots_written".to_string(), serde_json::json!(written));
+    }
+    payload
 }
 
 fn maybe_string_filter(field: &str, value: &str) -> Option<LogicalFilter> {
@@ -345,10 +471,17 @@ fn throughput_aggregate(req: &ana_pb::GetThroughputRequest) -> LogicalAggregate 
     }
 }
 
-fn sla_compliance_read(req: &ana_pb::GetSlaComplianceRequest) -> LogicalRead {
+/// SLA read over the PMS table. `tenant_id` is the VERIFIED claim tenant: the
+/// PMS `tenant_id` column is nullable (`NULL` = system-wide aggregate row), so a
+/// tenant caller gets an explicit equality predicate — which also excludes the
+/// NULL system-wide rows — and never sees another tenant's snapshots.
+fn sla_compliance_read(req: &ana_pb::GetSlaComplianceRequest, tenant_id: &str) -> LogicalRead {
     LogicalRead {
         message_type: PMS_MSG.to_string(),
-        filter: read_filter(vec![maybe_string_filter("stage_name", &req.stage_name)]),
+        filter: read_filter(vec![
+            maybe_string_filter("stage_name", &req.stage_name),
+            maybe_string_filter("tenant_id", tenant_id),
+        ]),
         projection: Some(projection(&[
             "snapshot_hour",
             "stage_name",
@@ -365,6 +498,31 @@ fn sla_compliance_read(req: &ana_pb::GetSlaComplianceRequest) -> LogicalRead {
     }
 }
 
+/// Raw-SQL twin of [`sla_compliance_read`] for date-windowed reads. All values
+/// are bound ($1 stage, $2/$3 date window, $4 verified claim tenant, $5 row
+/// cap); `{tenant} = $4` both isolates tenants and excludes the NULL-tenant
+/// system-wide aggregate rows for tenant callers.
+fn sla_compliance_sql(m: &NativeModel) -> String {
+    format!(
+        "SELECT {stage}::TEXT AS stage_name, \
+                to_char({hour} AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:00:00\"Z\"') AS period, \
+                COALESCE({p99},0) AS p99_latency_ms, \
+                COALESCE({err},0) AS error_rate \
+         FROM {rel} \
+         WHERE ($1 = '' OR {stage} = $1) \
+           AND ($2 = '' OR {hour} >= $2::date) \
+           AND ($3 = '' OR {hour} < ($3::date + 1)) \
+           AND ($4 = '' OR {tenant} = $4) \
+         ORDER BY {hour} DESC LIMIT $5",
+        rel = m.relation,
+        stage = m.q("stage_name"),
+        hour = m.q("snapshot_hour"),
+        p99 = m.q("p99_latency_ms"),
+        err = m.q("error_rate"),
+        tenant = m.q("tenant_id"),
+    )
+}
+
 fn timestamp_hour_period(ts: Option<&prost_types::Timestamp>) -> String {
     ts.and_then(|ts| DateTime::<Utc>::from_timestamp(ts.seconds, ts.nanos.max(0) as u32))
         .map(|dt| dt.format("%Y-%m-%dT%H:00:00Z").to_string())
@@ -372,6 +530,38 @@ fn timestamp_hour_period(ts: Option<&prost_types::Timestamp>) -> String {
 }
 
 const MAX_ANALYTICS_READ_ROWS: u32 = 10_000;
+
+/// Denominator for the online `throughput_rps` derivation (requests per hourly
+/// bucket).
+const SECONDS_PER_HOUR: i64 = 3_600;
+
+/// Default page size for pipeline-summary listings.
+const PIPELINE_SUMMARY_PAGE_SIZE: i32 = 50;
+
+/// Trailing window (hours) the percentile rollup pass scans. Overridable once
+/// via `UDB_ANALYTICS_ROLLUP_WINDOW_HOURS` (OnceLock — never a per-request env
+/// read).
+const DEFAULT_ROLLUP_WINDOW_HOURS: i32 = 24;
+
+fn rollup_window_hours() -> i32 {
+    static HOURS: OnceLock<i32> = OnceLock::new();
+    *HOURS.get_or_init(|| {
+        std::env::var("UDB_ANALYTICS_ROLLUP_WINDOW_HOURS")
+            .ok()
+            .and_then(|v| v.trim().parse::<i32>().ok())
+            .filter(|v| *v > 0)
+            .unwrap_or(DEFAULT_ROLLUP_WINDOW_HOURS)
+    })
+}
+
+/// Install the per-transaction tenant GUC the native RLS policies key on, so
+/// raw-SQL reads over the RLS-enabled PMS table are row-scoped even on a raw
+/// pooled connection (mirrors `metering_service`'s read-path pattern:
+/// `set_config(..., is_local = true)` inside the read transaction, in addition
+/// to the explicit bound WHERE predicate).
+fn install_analytics_tenant_scope_sql() -> &'static str {
+    "SELECT set_config('app.current_tenant_id', $1, true)"
+}
 
 fn row_object(row: &serde_json::Value) -> &serde_json::Map<String, serde_json::Value> {
     row.get("n")
@@ -604,6 +794,15 @@ impl AnalyticsService for AnalyticsServiceImpl {
                 "stage_name is required",
             ));
         }
+        let _admit = native_admit_on(
+            self.channels.as_ref(),
+            &self.metrics,
+            "analytics",
+            OperationChannel::Write,
+            &req.tenant_id,
+            None,
+        )
+        .await?;
         let pool = self.require_pool()?;
         let m = pms_model();
         let rel = m.relation.clone();
@@ -617,9 +816,10 @@ impl AnalyticsService for AnalyticsServiceImpl {
             (0i64, 1i64)
         };
         // Online aggregation into the hourly bucket. ON CONFLICT targets the real
-        // unique key (snapshot_hour, stage_name); the running mean latency and
-        // derived error_rate/throughput are recomputed from the post-increment
-        // total. Percentiles are out of scope for online aggregation.
+        // unique key (snapshot_hour, stage_name, tenant_id); the running mean
+        // latency and derived error_rate/throughput are recomputed from the
+        // post-increment total. Percentiles are out of scope for online
+        // aggregation — the rollup pass fills them (see module docs).
         // In ON CONFLICT DO UPDATE, bare column refs on the RHS are the EXISTING
         // row's pre-update values (all SET RHS see the old row), and EXCLUDED.* is
         // the would-be-inserted row — so the running mean / rate / rps below are
@@ -628,15 +828,16 @@ impl AnalyticsService for AnalyticsServiceImpl {
             "INSERT INTO {rel} AS existing \
                ({hour}, {stage}, {tenant}, {total}, {succ_c}, {fail_c}, {avg}, {err}, {rps}) \
              VALUES (date_trunc('hour', now()), $1, $2, 1, $3, $4, $5, \
-                     $4::float8 / 1, 1::float8 / 3600) \
+                     $4::float8 / 1, 1::float8 / {secs_per_hour}) \
              ON CONFLICT ({hour}, {stage}, {tenant}) DO UPDATE SET \
                {total} = {existing_total} + 1, \
                {succ_c} = {existing_successful} + EXCLUDED.{succ_c}, \
                {fail_c} = {existing_failed} + EXCLUDED.{fail_c}, \
                {avg} = (COALESCE({existing_avg},0) * {existing_total} + $5) / ({existing_total} + 1), \
                {err} = ({existing_failed} + EXCLUDED.{fail_c})::float8 / ({existing_total} + 1), \
-               {rps} = ({existing_total} + 1)::float8 / 3600",
+               {rps} = ({existing_total} + 1)::float8 / {secs_per_hour}",
             rel = rel,
+            secs_per_hour = SECONDS_PER_HOUR,
             hour = m.q("snapshot_hour"),
             stage = m.q("stage_name"),
             tenant = m.q("tenant_id"),
@@ -664,6 +865,21 @@ impl AnalyticsService for AnalyticsServiceImpl {
                 &err,
             )
         })?;
+        // Fulfil the proto-declared `method_event_contract`: one outbox event per
+        // durable mutation (topic `analytics.events`, at-least-once via CDC).
+        self.emit_analytics_event(
+            EVENT_TYPE_PIPELINE_METRIC_RECORDED,
+            &req.tenant_id,
+            &metadata_project_id(&metadata).unwrap_or_default(),
+            &req.stage_name,
+            analytics_event_payload(
+                EVENT_TYPE_PIPELINE_METRIC_RECORDED,
+                &req.stage_name,
+                &req.tenant_id,
+                None,
+            ),
+        )
+        .await;
         Ok(Response::new(ana_pb::RecordPipelineMetricResponse {
             accepted: true,
         }))
@@ -674,8 +890,24 @@ impl AnalyticsService for AnalyticsServiceImpl {
         request: Request<ana_pb::GetPipelineSummaryRequest>,
     ) -> Result<Response<ana_pb::GetPipelineSummaryResponse>, Status> {
         let metadata = request.metadata().clone();
-        let req = request.into_inner();
-        let page = native_page_window(req.page.as_ref(), 50);
+        let mut req = request.into_inner();
+        // B12 sibling: read under the SAME canonical (validated bearer/header)
+        // tenant RecordPipelineMetric persists under, so a tenant caller can
+        // neither read foreign rows nor the NULL-tenant system-wide aggregates
+        // by leaving the body tenant empty.
+        if let Some(canonical) = metadata_tenant_id(&metadata) {
+            req.tenant_id = canonical;
+        }
+        let page = native_page_window(req.page.as_ref(), PIPELINE_SUMMARY_PAGE_SIZE);
+        let _admit = native_admit_on(
+            self.channels.as_ref(),
+            &self.metrics,
+            "analytics",
+            OperationChannel::Read,
+            &req.tenant_id,
+            None,
+        )
+        .await?;
         if req.hour_from.trim().is_empty()
             && req.hour_to.trim().is_empty()
             && let Some(runtime) = self.runtime()
@@ -695,7 +927,11 @@ impl AnalyticsService for AnalyticsServiceImpl {
             let snapshots = rows.iter().map(pms_from_json).collect();
             return Ok(Response::new(ana_pb::GetPipelineSummaryResponse {
                 snapshots,
-                page: Some(native_page_response(req.page.as_ref(), total, 50)),
+                page: Some(native_page_response(
+                    req.page.as_ref(),
+                    total,
+                    PIPELINE_SUMMARY_PAGE_SIZE,
+                )),
             }));
         }
         let pool = self.require_pool()?;
@@ -738,7 +974,11 @@ impl AnalyticsService for AnalyticsServiceImpl {
         let snapshots = rows.iter().map(pms_from_row).collect();
         Ok(Response::new(ana_pb::GetPipelineSummaryResponse {
             snapshots,
-            page: Some(native_page_response(req.page.as_ref(), total, 50)),
+            page: Some(native_page_response(
+                req.page.as_ref(),
+                total,
+                PIPELINE_SUMMARY_PAGE_SIZE,
+            )),
         }))
     }
 
@@ -748,6 +988,18 @@ impl AnalyticsService for AnalyticsServiceImpl {
     ) -> Result<Response<ana_pb::GetExecutorPerformanceResponse>, Status> {
         let metadata = request.metadata().clone();
         let req = request.into_inner();
+        // `executor_performance_summaries` is a system-global operational table
+        // (no tenant column) — gate it behind the platform-admin identity.
+        require_platform_admin("get_executor_performance")?;
+        let _admit = native_admit_on(
+            self.channels.as_ref(),
+            &self.metrics,
+            "analytics",
+            OperationChannel::Read,
+            &metadata_tenant_id(&metadata).unwrap_or_default(),
+            None,
+        )
+        .await?;
         if req.date_from.trim().is_empty()
             && req.date_to.trim().is_empty()
             && let Some(runtime) = self.runtime()
@@ -796,7 +1048,7 @@ impl AnalyticsService for AnalyticsServiceImpl {
                AND ($2 = '' OR {workload} = $2) \
                AND ($3 = '' OR {date} >= $3::date) \
                AND ($4 = '' OR {date} <= $4::date) \
-             ORDER BY {date} DESC, {exec}",
+             ORDER BY {date} DESC, {exec} LIMIT $5",
             exec = m.q("executor_identity"),
             workload = m.q("workload_kind"),
             date = m.q("summary_date"),
@@ -805,6 +1057,7 @@ impl AnalyticsService for AnalyticsServiceImpl {
         .bind(&req.workload_kind)
         .bind(&req.date_from)
         .bind(&req.date_to)
+        .bind(i64::from(MAX_ANALYTICS_READ_ROWS))
         .fetch_all(pool)
         .await
         .map_err(|err| {
@@ -825,6 +1078,18 @@ impl AnalyticsService for AnalyticsServiceImpl {
     ) -> Result<Response<ana_pb::GetReconciliationAnalyticsResponse>, Status> {
         let metadata = request.metadata().clone();
         let req = request.into_inner();
+        // `reconciliation_analytics_summaries` is a system-global operational
+        // table (no tenant column) — gate it behind the platform-admin identity.
+        require_platform_admin("get_reconciliation_analytics")?;
+        let _admit = native_admit_on(
+            self.channels.as_ref(),
+            &self.metrics,
+            "analytics",
+            OperationChannel::Read,
+            &metadata_tenant_id(&metadata).unwrap_or_default(),
+            None,
+        )
+        .await?;
         if req.date_from.trim().is_empty()
             && req.date_to.trim().is_empty()
             && let Some(runtime) = self.runtime()
@@ -885,11 +1150,12 @@ impl AnalyticsService for AnalyticsServiceImpl {
         let rows = sqlx::query(&format!(
             "SELECT {projection} FROM {rel} \
              WHERE ($1 = '' OR {date} >= $1::date) AND ($2 = '' OR {date} <= $2::date) \
-             ORDER BY {date} DESC",
+             ORDER BY {date} DESC LIMIT $3",
             date = m.q("summary_date"),
         ))
         .bind(&req.date_from)
         .bind(&req.date_to)
+        .bind(i64::from(MAX_ANALYTICS_READ_ROWS))
         .fetch_all(pool)
         .await
         .map_err(|err| {
@@ -938,6 +1204,15 @@ impl AnalyticsService for AnalyticsServiceImpl {
         if let Some(canonical) = metadata_tenant_id(&metadata) {
             req.tenant_id = canonical;
         }
+        let _admit = native_admit_on(
+            self.channels.as_ref(),
+            &self.metrics,
+            "analytics",
+            OperationChannel::Read,
+            &req.tenant_id,
+            None,
+        )
+        .await?;
         // B12: the typed `LogicalAggregate` dispatch returns 0 here at runtime even
         // though the identical raw SQL (and the typed READ over the same table+tenant
         // via GetPipelineSummary) returns the real sum — a defect in the typed
@@ -998,13 +1273,30 @@ impl AnalyticsService for AnalyticsServiceImpl {
         let req = request.into_inner();
         let p99_threshold = req.p99_threshold_ms;
         let err_threshold = req.error_rate_threshold;
+        // The request body carries no tenant field; scope to the VERIFIED
+        // claim/header tenant so a tenant caller never sees foreign-tenant or
+        // NULL-tenant (system-wide aggregate) PMS rows.
+        let tenant_id = metadata_tenant_id(&metadata).unwrap_or_default();
+        let _admit = native_admit_on(
+            self.channels.as_ref(),
+            &self.metrics,
+            "analytics",
+            OperationChannel::Read,
+            &tenant_id,
+            None,
+        )
+        .await?;
         if req.date_from.trim().is_empty()
             && req.date_to.trim().is_empty()
             && let Some(runtime) = self.runtime()
         {
-            let context = native_service_context(&metadata, "", "");
+            let context = native_service_context(&metadata, &tenant_id, "");
             let rows = runtime
-                .native_entity_read_for_service("analytics", &context, sla_compliance_read(&req))
+                .native_entity_read_for_service(
+                    "analytics",
+                    &context,
+                    sla_compliance_read(&req, &tenant_id),
+                )
                 .await?;
             let mut entries = Vec::with_capacity(rows.len());
             let (mut p99_met, mut err_met) = (0i64, 0i64);
@@ -1037,34 +1329,47 @@ impl AnalyticsService for AnalyticsServiceImpl {
         }
         let pool = self.require_pool()?;
         let m = pms_model();
-        let rel = m.relation.clone();
         // Transitional: SLA periods need backend date formatting plus service-side
         // compliance rollup for date windows. The no-window row read uses native
-        // entity dispatch above.
-        let rows = sqlx::query(&format!(
-            "SELECT {stage}::TEXT AS stage_name, \
-                    to_char({hour} AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:00:00\"Z\"') AS period, \
-                    COALESCE({p99},0) AS p99_latency_ms, \
-                    COALESCE({err},0) AS error_rate \
-             FROM {rel} \
-             WHERE ($1 = '' OR {stage} = $1) \
-               AND ($2 = '' OR {hour} >= $2::date) \
-               AND ($3 = '' OR {hour} < ($3::date + 1)) \
-             ORDER BY {hour} DESC",
-            stage = m.q("stage_name"),
-            hour = m.q("snapshot_hour"),
-            p99 = m.q("p99_latency_ms"),
-            err = m.q("error_rate"),
-        ))
-        .bind(&req.stage_name)
-        .bind(&req.date_from)
-        .bind(&req.date_to)
-        .fetch_all(pool)
-        .await
-        .map_err(|err| {
+        // entity dispatch above. The read runs in a transaction that first installs
+        // the tenant RLS GUC (metering's read-path pattern) so the raw pooled
+        // connection is row-scoped in addition to the explicit bound predicate.
+        let mut tx = pool.begin().await.map_err(|err| {
             analytics_internal_status(
                 "get_sla_compliance",
-                format!("get sla compliance failed: {err}"),
+                format!("get sla compliance transaction failed: {err}"),
+            )
+        })?;
+        if !tenant_id.trim().is_empty() {
+            sqlx::query(install_analytics_tenant_scope_sql())
+                .bind(&tenant_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|err| {
+                    analytics_internal_status(
+                        "get_sla_compliance",
+                        format!("get sla compliance tenant scope failed: {err}"),
+                    )
+                })?;
+        }
+        let rows = sqlx::query(&sla_compliance_sql(&m))
+            .bind(&req.stage_name)
+            .bind(&req.date_from)
+            .bind(&req.date_to)
+            .bind(&tenant_id)
+            .bind(i64::from(MAX_ANALYTICS_READ_ROWS))
+            .fetch_all(&mut *tx)
+            .await
+            .map_err(|err| {
+                analytics_internal_status(
+                    "get_sla_compliance",
+                    format!("get sla compliance failed: {err}"),
+                )
+            })?;
+        tx.commit().await.map_err(|err| {
+            analytics_internal_status(
+                "get_sla_compliance",
+                format!("get sla compliance transaction commit failed: {err}"),
             )
         })?;
 
@@ -1104,38 +1409,148 @@ impl AnalyticsService for AnalyticsServiceImpl {
         &self,
         request: Request<ana_pb::TriggerSnapshotRequest>,
     ) -> Result<Response<ana_pb::TriggerSnapshotResponse>, Status> {
+        let metadata = request.metadata().clone();
         let req = request.into_inner();
+        // Scope the pass to the VERIFIED claim/header tenant: a tenant caller
+        // rolls up only its own PMS rows (never the NULL-tenant system-wide
+        // aggregates or foreign tenants); the leader-elected worker runs the
+        // same pass unscoped.
+        let tenant_id = metadata_tenant_id(&metadata).unwrap_or_default();
+        let _admit = native_admit_on(
+            self.channels.as_ref(),
+            &self.metrics,
+            "analytics",
+            OperationChannel::Write,
+            &tenant_id,
+            None,
+        )
+        .await?;
         let pool = self.require_pool()?;
-        let m = pms_model();
-        let rel = m.relation.clone();
-        // Aggregation is online (see module docs), so snapshots are already
-        // current. Report how many snapshot rows exist for the targeted hour and
-        // stage filter. `hour` empty defaults to the CURRENT hour — that is where
-        // `record_pipeline_metric` writes, so a trigger right after recording sees
-        // the rows it just produced.
-        // Transitional: this is a count/window capability, not entity CRUD/list.
-        let row = sqlx::query(&format!(
-            "SELECT COUNT(*)::bigint AS n FROM {rel} \
-             WHERE ($1 = '' OR {stage} = $1) \
-               AND {hour} = COALESCE(NULLIF($2,'')::timestamptz, date_trunc('hour', now()))",
-            stage = m.q("stage_name"),
-            hour = m.q("snapshot_hour"),
-        ))
-        .bind(&req.stage_name)
-        .bind(&req.hour)
-        .fetch_one(pool)
+        // Counts/means are aggregated online (see module docs); the percentile
+        // columns are what a snapshot pass genuinely has to write. Run the SAME
+        // rollup the worker seam runs and report rows actually updated — not a
+        // COUNT(*) of pre-existing rows.
+        let written =
+            run_analytics_rollup_scoped(pool, &tenant_id, &req.stage_name, &req.hour).await?;
+        // Fulfil the proto-declared `method_event_contract` for this mutation.
+        self.emit_analytics_event(
+            EVENT_TYPE_SNAPSHOT_TRIGGERED,
+            &tenant_id,
+            &metadata_project_id(&metadata).unwrap_or_default(),
+            &req.stage_name,
+            analytics_event_payload(
+                EVENT_TYPE_SNAPSHOT_TRIGGERED,
+                &req.stage_name,
+                &tenant_id,
+                Some(written as i64),
+            ),
+        )
+        .await;
+        Ok(Response::new(ana_pb::TriggerSnapshotResponse {
+            snapshots_written: written as i32,
+        }))
+    }
+}
+
+/// The percentile-rollup UPDATE. The online accumulator keeps only per-hour
+/// counts and a running mean (`avg_latency_ms`) — raw per-request latencies are
+/// never stored — so true request-latency percentiles are IMPOSSIBLE from the
+/// stored data. The honest derivable statistic is `percentile_cont` over the
+/// trailing window's HOURLY MEAN latencies per (tenant, stage); every windowed
+/// row of the group receives the group's p50/p95/p99 of hourly means. All
+/// values are bound ($1 tenant, $2 stage, $3 window hours, $4 target hour);
+/// `IS NOT DISTINCT FROM` keeps NULL-tenant (system-wide) groups joinable for
+/// the unscoped worker pass while `$1` scoping excludes them for tenant callers.
+fn analytics_rollup_sql(m: &NativeModel) -> String {
+    format!(
+        "WITH pct AS ( \
+           SELECT {tenant} AS tenant_key, {stage} AS stage_key, \
+                  percentile_cont(0.5)  WITHIN GROUP (ORDER BY {avg}) AS p50, \
+                  percentile_cont(0.95) WITHIN GROUP (ORDER BY {avg}) AS p95, \
+                  percentile_cont(0.99) WITHIN GROUP (ORDER BY {avg}) AS p99 \
+           FROM {rel} \
+           WHERE {hour} >= date_trunc('hour', now()) - make_interval(hours => $3::int) \
+             AND ($1 = '' OR {tenant} = $1) \
+             AND ($2 = '' OR {stage} = $2) \
+           GROUP BY {tenant}, {stage} \
+         ) \
+         UPDATE {rel} AS snap SET \
+           {p50} = pct.p50, {p95} = pct.p95, {p99} = pct.p99 \
+         FROM pct \
+         WHERE snap.{tenant} IS NOT DISTINCT FROM pct.tenant_key \
+           AND snap.{stage} = pct.stage_key \
+           AND snap.{hour} >= date_trunc('hour', now()) - make_interval(hours => $3::int) \
+           AND ($4 = '' OR snap.{hour} = $4::timestamptz)",
+        rel = m.relation,
+        tenant = m.q("tenant_id"),
+        stage = m.q("stage_name"),
+        hour = m.q("snapshot_hour"),
+        avg = m.q("avg_latency_ms"),
+        p50 = m.q("p50_latency_ms"),
+        p95 = m.q("p95_latency_ms"),
+        p99 = m.q("p99_latency_ms"),
+    )
+}
+
+/// One scoped percentile-rollup pass (see [`analytics_rollup_sql`] for the
+/// statistic and its documented limitation). Empty `tenant_id`/`stage_name`/
+/// `hour` mean "unscoped" on that axis. Runs in a transaction that installs the
+/// tenant RLS GUC first (metering's pattern) when tenant-scoped. Returns the
+/// number of snapshot rows genuinely written.
+async fn run_analytics_rollup_scoped(
+    pool: &PgPool,
+    tenant_id: &str,
+    stage_name: &str,
+    hour: &str,
+) -> Result<u64, Status> {
+    let m = pms_model();
+    let mut tx = pool.begin().await.map_err(|err| {
+        analytics_internal_status(
+            "analytics_rollup",
+            format!("analytics rollup transaction failed: {err}"),
+        )
+    })?;
+    if !tenant_id.trim().is_empty() {
+        sqlx::query(install_analytics_tenant_scope_sql())
+            .bind(tenant_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|err| {
+                analytics_internal_status(
+                    "analytics_rollup",
+                    format!("analytics rollup tenant scope failed: {err}"),
+                )
+            })?;
+    }
+    let written = sqlx::query(&analytics_rollup_sql(&m))
+        .bind(tenant_id)
+        .bind(stage_name)
+        .bind(rollup_window_hours())
+        .bind(hour)
+        .execute(&mut *tx)
         .await
         .map_err(|err| {
             analytics_internal_status(
-                "trigger_snapshot",
-                format!("trigger snapshot failed: {err}"),
+                "analytics_rollup",
+                format!("analytics rollup failed: {err}"),
             )
-        })?;
-        let n: i64 = row.try_get("n").unwrap_or(0);
-        Ok(Response::new(ana_pb::TriggerSnapshotResponse {
-            snapshots_written: n as i32,
-        }))
-    }
+        })?
+        .rows_affected();
+    tx.commit().await.map_err(|err| {
+        analytics_internal_status(
+            "analytics_rollup",
+            format!("analytics rollup transaction commit failed: {err}"),
+        )
+    })?;
+    Ok(written)
+}
+
+/// One unscoped rollup pass — the seam the leader wires under
+/// `WORKER_ANALYTICS_ROLLUP` via `run_while_leader` (leader-only wiring in
+/// `service/mod.rs`/`singleton.rs`, mirroring `run_scheduler_tick_once`).
+/// Returns the number of snapshot rows written this pass.
+pub(crate) async fn run_analytics_rollup_once(pool: &PgPool) -> Result<u64, Status> {
+    run_analytics_rollup_scoped(pool, "", "", "").await
 }
 
 #[cfg(test)]
@@ -1222,6 +1637,160 @@ mod analytics_tests {
             "get pipeline summary failed: database is unavailable",
         );
     }
+
+    fn filter_has_eq(filter: &LogicalFilter, field: &str, value: &str) -> bool {
+        match filter {
+            LogicalFilter::Comparison {
+                field: f,
+                op: ComparisonOp::Eq,
+                value: LogicalValue::String(v),
+            } => f == field && v == value,
+            LogicalFilter::And(filters) => filters.iter().any(|f| filter_has_eq(f, field, value)),
+            _ => false,
+        }
+    }
+
+    #[test]
+    fn sla_compliance_read_scopes_to_verified_tenant() {
+        let req = ana_pb::GetSlaComplianceRequest {
+            stage_name: "parse".to_string(),
+            ..Default::default()
+        };
+        let read = sla_compliance_read(&req, "tenant-a");
+        let filter = read.filter.expect("tenant-scoped read must carry a filter");
+        assert!(
+            filter_has_eq(&filter, "tenant_id", "tenant-a"),
+            "sla_compliance_read must bind the verified claim tenant"
+        );
+        assert!(filter_has_eq(&filter, "stage_name", "parse"));
+    }
+
+    #[test]
+    fn sla_raw_sql_scopes_tenant_and_caps_rows() {
+        let sql = sla_compliance_sql(&pms_model());
+        assert!(
+            sql.contains("= $4"),
+            "raw SLA SQL must carry the bound tenant predicate"
+        );
+        assert!(sql.contains("LIMIT $5"), "raw SLA SQL must cap rows");
+        assert!(
+            !sql.contains("set_config("),
+            "the RLS GUC install runs as its own statement in the read tx, not inline"
+        );
+        assert!(
+            install_analytics_tenant_scope_sql()
+                .contains("set_config('app.current_tenant_id', $1, true)"),
+            "tenant RLS scope must be installed before the raw scan"
+        );
+    }
+
+    #[test]
+    fn platform_admin_guard_denies_tenant_caller_with_policy_detail() {
+        let claim = crate::runtime::service::method_security::VerifiedClaimContext {
+            subject: "user-1".to_string(),
+            tenant_id: "tenant-a".to_string(),
+            scopes: vec!["udb:analytics:get-executor-performance".to_string()],
+            authenticated: true,
+            ..Default::default()
+        };
+        let err = platform_admin_guard(&claim, "get_executor_performance")
+            .expect_err("non-admin tenant claim must be refused");
+        assert_eq!(err.code(), tonic::Code::PermissionDenied);
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::Policy as i32);
+        assert_eq!(detail.operation, "get_executor_performance");
+        assert_eq!(
+            detail.policy_decision_id,
+            "analytics_platform_admin_required"
+        );
+        assert!(!detail.retryable);
+    }
+
+    #[test]
+    fn platform_admin_guard_accepts_admin_scope_and_role() {
+        let scope_admin = crate::runtime::service::method_security::VerifiedClaimContext {
+            subject: "op-1".to_string(),
+            scopes: vec!["udb:admin".to_string()],
+            authenticated: true,
+            ..Default::default()
+        };
+        platform_admin_guard(&scope_admin, "get_executor_performance")
+            .expect("udb:admin scope must pass");
+        let role_admin = crate::runtime::service::method_security::VerifiedClaimContext {
+            subject: "op-2".to_string(),
+            roles: vec!["platform_admin".to_string()],
+            authenticated: true,
+            ..Default::default()
+        };
+        platform_admin_guard(&role_admin, "get_reconciliation_analytics")
+            .expect("platform_admin role must pass");
+        // Fail closed: an unauthenticated (public-bootstrap) context is never admin.
+        let unauthenticated = crate::runtime::service::method_security::VerifiedClaimContext {
+            scopes: vec!["udb:admin".to_string()],
+            ..Default::default()
+        };
+        platform_admin_guard(&unauthenticated, "get_executor_performance")
+            .expect_err("unauthenticated context must be refused");
+    }
+
+    #[test]
+    fn analytics_events_match_proto_method_event_contract() {
+        // Exact strings from `analytics_service.proto` `method_event_contract`.
+        assert_eq!(TOPIC_ANALYTICS_EVENTS, "analytics.events");
+        assert_eq!(
+            EVENT_TYPE_PIPELINE_METRIC_RECORDED,
+            "analytics.RecordPipelineMetric"
+        );
+        assert_eq!(EVENT_TYPE_SNAPSHOT_TRIGGERED, "analytics.TriggerSnapshot");
+        let payload =
+            analytics_event_payload(EVENT_TYPE_SNAPSHOT_TRIGGERED, "parse", "tenant-a", Some(7));
+        assert_eq!(
+            payload.get("event_type").and_then(|v| v.as_str()),
+            Some(EVENT_TYPE_SNAPSHOT_TRIGGERED)
+        );
+        assert_eq!(
+            payload.get("stage_name").and_then(|v| v.as_str()),
+            Some("parse")
+        );
+        assert_eq!(
+            payload.get("tenant_id").and_then(|v| v.as_str()),
+            Some("tenant-a")
+        );
+        assert_eq!(
+            payload.get("snapshots_written").and_then(|v| v.as_i64()),
+            Some(7)
+        );
+        let record = analytics_event_payload(
+            EVENT_TYPE_PIPELINE_METRIC_RECORDED,
+            "parse",
+            "tenant-a",
+            None,
+        );
+        assert!(record.get("snapshots_written").is_none());
+    }
+
+    #[test]
+    fn rollup_sql_computes_percentiles_over_bound_scope() {
+        let sql = analytics_rollup_sql(&pms_model());
+        for pct in ["0.5", "0.95", "0.99"] {
+            assert!(
+                sql.contains(&format!("percentile_cont({pct})")),
+                "rollup must compute p{pct} via percentile_cont"
+            );
+        }
+        // Tenant/stage/window/hour all arrive as binds — never formatted in.
+        for bind in ["$1", "$2", "$3", "$4"] {
+            assert!(sql.contains(bind), "rollup must bind {bind}");
+        }
+        assert!(
+            sql.contains("IS NOT DISTINCT FROM"),
+            "NULL-tenant (system-wide) groups must stay joinable for the worker pass"
+        );
+        assert!(
+            !sql.contains("COUNT(*)"),
+            "snapshots_written must report rows written, not a row count"
+        );
+    }
 }
 
 impl DataBrokerService {
@@ -1234,8 +1803,13 @@ impl DataBrokerService {
         let pg_pool = runtime
             .native_store_pool_for_service("analytics", true, "")
             .ok();
+        let outbox = runtime.config().cdc.outbox_relation();
+        let channels = Some(runtime.channels().clone());
         AnalyticsServiceImpl::new()
             .with_postgres(pg_pool)
             .with_runtime(Some(runtime))
+            .with_outbox(Some(outbox))
+            .with_channels(channels)
+            .with_metrics(self.metrics.clone())
     }
 }

@@ -24,6 +24,9 @@ use crate::proto::udb::core::tenant::services::v1::tenant_service_server::Tenant
 use crate::runtime::DataBrokerRuntime;
 use crate::runtime::channels::{ChannelManager, OperationChannel};
 use crate::runtime::native_catalog::{NativeModel, native_model};
+use crate::runtime::service::method_security::{
+    VerifiedClaimContext, claim_context_present, current_claim_context,
+};
 use crate::runtime::tenant_movement::{
     TenantMovementOperation, TenantMovementRequest, tenant_movement_policy_status,
     validate_tenant_movement_scope,
@@ -42,6 +45,30 @@ use super::native_helpers::{
 const TENANT_MSG: &str = "udb.core.tenant.entity.v1.Tenant";
 const TENANT_CONFIG_MSG: &str = "udb.core.tenant.entity.v1.TenantConfig";
 const TOPIC_TENANT_PURGED: &str = "udb.tenant.purged.v1";
+/// Versioned runtime outbox topics for the tenant lifecycle mutations. Each RPC
+/// below declares a `method_event_contract` in `tenant_service.proto`
+/// (CreateTenant / UpdateTenant / UpdateTenantConfig, partition key
+/// `tenant_id`); these are their canonical versioned dot topics, following the
+/// same runtime event model as [`TOPIC_TENANT_PURGED`].
+const TOPIC_TENANT_CREATED: &str = "udb.tenant.created.v1";
+const TOPIC_TENANT_UPDATED: &str = "udb.tenant.updated.v1";
+const TOPIC_TENANT_CONFIG_UPDATED: &str = "udb.tenant.config-updated.v1";
+/// Proto-declared `method_event_contract.event_type` strings, threaded into the
+/// compliance envelope `operation` so every emitted event is traceable to the
+/// exact RPC contract that declared it (never invented at the emit site).
+const EVENT_TYPE_TENANT_CREATED: &str = "tenant.CreateTenant";
+const EVENT_TYPE_TENANT_UPDATED: &str = "tenant.UpdateTenant";
+const EVENT_TYPE_TENANT_CONFIG_UPDATED: &str = "tenant.UpdateTenantConfig";
+/// Operation recorded on the purge audit event (pre-existing envelope shape;
+/// kept byte-stable for downstream audit consumers).
+const EVENT_OP_TENANT_PURGE: &str = "tenant.purge";
+/// Stored tenant type when `CreateTenant` supplies none (short DB token).
+const DEFAULT_TENANT_TYPE_DB: &str = "ORGANIZATION";
+/// Canonical stored ACTIVE status token — matches the entity proto column
+/// default (`status ... default_value: "'ACTIVE'"`) and `tenant_status_to_db`.
+const TENANT_STATUS_ACTIVE_DB: &str = "ACTIVE";
+/// Default `ListTenants` page size when the request supplies none.
+const DEFAULT_TENANT_LIST_PAGE_SIZE: i32 = 50;
 
 /// Postgres-backed `TenantService` handler.
 pub struct TenantServiceImpl {
@@ -186,9 +213,16 @@ impl TenantServiceImpl {
         })
     }
 
+    /// Best-effort tenant-event emission into the shared transactional outbox
+    /// (`→ CDC → Kafka`). `operation` is the contract-declared event type for the
+    /// emitting RPC (e.g. [`EVENT_TYPE_TENANT_CREATED`]); it lands in the
+    /// compliance envelope so the durable row is traceable to its RPC contract.
+    /// No-op when no PG pool / outbox relation is configured (mirrors the other
+    /// native services' best-effort emit posture).
     async fn emit_event(
         &self,
         topic: &str,
+        operation: &str,
         partition_key: &str,
         tenant_id: &str,
         payload: serde_json::Value,
@@ -205,7 +239,7 @@ impl TenantServiceImpl {
             "",
             payload,
             NativeEventContext {
-                operation: "tenant.purge".to_string(),
+                operation: operation.to_string(),
                 target_resource: tenant_id.to_string(),
                 ..NativeEventContext::default()
             },
@@ -389,6 +423,89 @@ fn validate_create_tenant_required_fields(code: &str, name: &str) -> Result<(), 
         ));
     }
     Ok(())
+}
+
+/// Lifecycle event payload for tenant create/update: identifiers + status ONLY.
+/// Deliberately excludes `config`/`branding` bodies and any credential material —
+/// the outbox payload must never carry tenant secrets.
+fn tenant_lifecycle_event_payload(tenant_id: &str, code: &str, status: &str) -> serde_json::Value {
+    serde_json::json!({
+        "tenant_id": tenant_id,
+        "code": code,
+        "status": status,
+    })
+}
+
+/// Config-update event payload: tenant + config KEY only. The config VALUE is
+/// deliberately omitted (it may carry secrets; same no-secrets rule as above).
+fn tenant_config_event_payload(tenant_id: &str, config_key: &str) -> serde_json::Value {
+    serde_json::json!({
+        "tenant_id": tenant_id,
+        "config_key": config_key,
+    })
+}
+
+/// Resolved listing scope for `ListTenants`.
+#[derive(Debug)]
+struct ListTenantsScope {
+    /// Tenant used for fair admission — the caller's VALIDATED claim tenant
+    /// (empty only for in-process callers with no claim context installed).
+    admit_tenant: String,
+    /// `Some(claim_tenant)` when the caller is NOT a cross-tenant admin: the
+    /// listing is restricted to the caller's own row plus direct children
+    /// (`tenant_id = claim OR parent_tenant_id = claim`).
+    subtree_of: Option<String>,
+}
+
+/// Derive the `ListTenants` scope from the validated claim context (the SAME
+/// method-security task-local the D1/D2 handler guards read — never from
+/// request-supplied metadata). Fail-closed rules:
+/// - no claim context installed → not an over-the-wire request (in-process /
+///   trusted caller, see `claim_context_present`): historical unscoped list;
+/// - genuine cross-tenant admin (`VerifiedClaimContext::is_cross_tenant_admin`,
+///   the same helper the auth lane and native RLS escape hatch use) → unscoped
+///   platform enumeration (current behavior), admitted on the claim tenant;
+/// - non-admin with a tenant-bound claim → own-subtree listing, admitted on the
+///   claim tenant;
+/// - non-admin WITHOUT a tenant-bound claim → DENY (nothing to anchor on; a
+///   tenant-less token must not enumerate the platform).
+fn list_tenants_scope(
+    claim_present: bool,
+    claim: &VerifiedClaimContext,
+) -> Result<ListTenantsScope, Status> {
+    if !claim_present {
+        return Ok(ListTenantsScope {
+            admit_tenant: String::new(),
+            subtree_of: None,
+        });
+    }
+    let claim_tenant = claim.tenant_id.trim().to_string();
+    if claim.is_cross_tenant_admin() {
+        return Ok(ListTenantsScope {
+            admit_tenant: claim_tenant,
+            subtree_of: None,
+        });
+    }
+    if claim_tenant.is_empty() {
+        return Err(crate::runtime::executor_utils::policy_status_with_code(
+            tonic::Code::PermissionDenied,
+            "native_request_scope",
+            "tenant_list_scope_required",
+            "ListTenants requires a tenant-scoped bearer token or a cross-tenant admin role",
+        ));
+    }
+    Ok(ListTenantsScope {
+        admit_tenant: claim_tenant.clone(),
+        subtree_of: Some(claim_tenant),
+    })
+}
+
+/// The non-admin `ListTenants` subtree predicate: the caller's own tenant row
+/// plus its direct children. Compared as TEXT so a malformed (non-UUID) claim
+/// tenant matches zero rows instead of aborting the whole query on a UUID cast
+/// error (fail closed, never fail open).
+fn list_tenants_subtree_predicate(tenant_col: &str, parent_col: &str, bind: &str) -> String {
+    format!("({tenant_col}::text = {bind} OR {parent_col}::text = {bind})")
 }
 
 fn active_tenant_filter(tenant_id: &str) -> LogicalFilter {
@@ -613,7 +730,7 @@ impl TenantService for TenantServiceImpl {
         let m = tenant_model();
         let rel = m.relation.clone();
         let tenant_id = Uuid::new_v4().to_string();
-        let kind = tenant_type_to_db(&req.r#type, "ORGANIZATION")?;
+        let kind = tenant_type_to_db(&req.r#type, DEFAULT_TENANT_TYPE_DB)?;
         let config = non_empty_json(&req.config);
         let branding = non_empty_json(&req.branding);
         // Idempotent on the unique `code`: a repeated CreateTenant with the same
@@ -629,8 +746,9 @@ impl TenantService for TenantServiceImpl {
         sqlx::query(&format!(
             "INSERT INTO {rel} \
              ({tenant_id}, {code}, {name}, {type_col}, {status}, {parent}, {config}, {branding}) \
-             VALUES ($1::UUID, $2, $3, $4, 'ACTIVE', NULLIF($5, '')::UUID, $6::JSONB, $7::JSONB) \
+             VALUES ($1::UUID, $2, $3, $4, '{status_active}', NULLIF($5, '')::UUID, $6::JSONB, $7::JSONB) \
              ON CONFLICT ({code}) DO NOTHING",
+            status_active = TENANT_STATUS_ACTIVE_DB,
             tenant_id = m.q("tenant_id"),
             code = m.q("code"),
             name = m.q("name"),
@@ -652,10 +770,14 @@ impl TenantService for TenantServiceImpl {
         .map_err(|err| {
             tenant_internal_status("create_tenant", format!("create tenant failed: {err}"))
         })?;
-        // Re-resolve by code so a conflict returns the surviving row's canonical id.
-        let canonical_id: String = sqlx::query_scalar(&format!(
-            "SELECT {tenant_id}::text FROM {rel} WHERE {code} = $1 AND {deleted_at} IS NULL",
+        // Re-resolve by code so a conflict returns the surviving row's canonical id
+        // (and its REAL status: an idempotent re-create of a suspended tenant must
+        // not report it as ACTIVE in the emitted event).
+        let resolved = sqlx::query(&format!(
+            "SELECT {tenant_id}::text AS tenant_id, {status} AS status \
+             FROM {rel} WHERE {code} = $1 AND {deleted_at} IS NULL",
             tenant_id = m.q("tenant_id"),
+            status = m.q("status"),
             code = m.q("code"),
             deleted_at = m.q("deleted_at"),
         ))
@@ -668,6 +790,25 @@ impl TenantService for TenantServiceImpl {
                 format!("resolve tenant after create failed: {err}"),
             )
         })?;
+        let decode = |e: sqlx::Error| {
+            tenant_internal_status(
+                "resolve_tenant_after_create",
+                format!("decode tenant after create failed: {e}"),
+            )
+        };
+        let canonical_id: String = resolved.try_get("tenant_id").map_err(decode)?;
+        let canonical_status: String = resolved.try_get("status").map_err(decode)?;
+        // Contract-declared tenant event (tenant_service.proto CreateTenant
+        // method_event_contract, partition key = tenant_id). Same emit shape as
+        // PurgeTenant; payload carries identifiers + status only (no secrets).
+        self.emit_event(
+            TOPIC_TENANT_CREATED,
+            EVENT_TYPE_TENANT_CREATED,
+            &canonical_id,
+            &canonical_id,
+            tenant_lifecycle_event_payload(&canonical_id, &req.code, &canonical_status),
+        )
+        .await;
         Ok(Response::new(tenant_pb::CreateTenantResponse {
             tenant_id: canonical_id,
             message: "tenant created".to_string(),
@@ -777,6 +918,7 @@ impl TenantService for TenantServiceImpl {
             .collect::<Vec<_>>();
         self.emit_event(
             TOPIC_TENANT_PURGED,
+            EVENT_OP_TENANT_PURGE,
             &tenant_id,
             &tenant_id,
             serde_json::json!({
@@ -855,14 +997,18 @@ impl TenantService for TenantServiceImpl {
         request: Request<tenant_pb::ListTenantsRequest>,
     ) -> Result<Response<tenant_pb::ListTenantsResponse>, Status> {
         let req = request.into_inner();
-        // Platform-scope listing (no body tenant to spoof); bound it on the shared
-        // base Read budget so a list flood can't starve the control plane.
+        // Scope the listing to the VALIDATED claim identity (there is no body
+        // tenant to spoof): a cross-tenant admin keeps the unscoped platform list;
+        // every other caller sees only its own tenant row + direct children, and
+        // admission is charged to the caller's real claim tenant (never "").
+        let claim = current_claim_context();
+        let scope = list_tenants_scope(claim_context_present(), &claim)?;
         let _admit = native_admit_on(
             self.channels.as_ref(),
             &self.metrics,
             "tenant",
             OperationChannel::Read,
-            "",
+            &scope.admit_tenant,
             None,
         )
         .await?;
@@ -872,39 +1018,63 @@ impl TenantService for TenantServiceImpl {
         let projection = tenant_select_projection(&m);
         let type_filter = tenant_type_to_db(&req.r#type, "")?;
         let status_filter = tenant_status_to_db(&req.status, "")?;
-        let page_window = native_offset_page_window(req.page, req.page_size, &req.page_token, 50);
+        let page_window = native_offset_page_window(
+            req.page,
+            req.page_size,
+            &req.page_token,
+            DEFAULT_TENANT_LIST_PAGE_SIZE,
+        );
         // P4 transitional path: `ListTenants` returns an exact `total_count`.
         // The service helper currently exposes typed `LogicalRead`, not aggregate
         // count, so keep the existing SQL list/count path rather than deriving an
         // approximate count from the current page.
-        let where_clause = format!(
+        let mut where_clause = format!(
             "WHERE {deleted} IS NULL AND ($1 = '' OR {type_col} = $1) AND ($2 = '' OR {status} = $2)",
             deleted = m.q("deleted_at"),
             type_col = m.q("type"),
             status = m.q("status"),
         );
-        let total: i64 = sqlx::query_scalar(&format!("SELECT COUNT(*) FROM {rel} {where_clause}"))
+        if scope.subtree_of.is_some() {
+            where_clause.push_str(&format!(
+                " AND {}",
+                list_tenants_subtree_predicate(&m.q("tenant_id"), &m.q("parent_tenant_id"), "$3")
+            ));
+        }
+        let count_sql = format!("SELECT COUNT(*) FROM {rel} {where_clause}");
+        let mut count_query = sqlx::query_scalar(&count_sql)
             .bind(&type_filter)
-            .bind(&status_filter)
-            .fetch_one(pool)
+            .bind(&status_filter);
+        if let Some(subtree) = scope.subtree_of.as_ref() {
+            count_query = count_query.bind(subtree);
+        }
+        let total: i64 = count_query.fetch_one(pool).await.map_err(|err| {
+            tenant_internal_status("list_tenants_count", format!("count tenants failed: {err}"))
+        })?;
+        // The subtree bind shifts LIMIT/OFFSET one placeholder to the right.
+        let (limit_bind, offset_bind) = if scope.subtree_of.is_some() {
+            ("$4", "$5")
+        } else {
+            ("$3", "$4")
+        };
+        let list_sql = format!(
+            "SELECT {projection} FROM {rel} {where_clause} \
+             ORDER BY {code} LIMIT {limit_bind} OFFSET {offset_bind}",
+            code = m.q("code"),
+        );
+        let mut list_query = sqlx::query(&list_sql)
+            .bind(&type_filter)
+            .bind(&status_filter);
+        if let Some(subtree) = scope.subtree_of.as_ref() {
+            list_query = list_query.bind(subtree);
+        }
+        let rows = list_query
+            .bind(page_window.limit_i64())
+            .bind(page_window.offset_i64())
+            .fetch_all(pool)
             .await
             .map_err(|err| {
-                tenant_internal_status("list_tenants_count", format!("count tenants failed: {err}"))
+                tenant_internal_status("list_tenants", format!("list tenants failed: {err}"))
             })?;
-        let rows = sqlx::query(&format!(
-            "SELECT {projection} FROM {rel} {where_clause} \
-             ORDER BY {code} LIMIT $3 OFFSET $4",
-            code = m.q("code"),
-        ))
-        .bind(&type_filter)
-        .bind(&status_filter)
-        .bind(page_window.limit_i64())
-        .bind(page_window.offset_i64())
-        .fetch_all(pool)
-        .await
-        .map_err(|err| {
-            tenant_internal_status("list_tenants", format!("list tenants failed: {err}"))
-        })?;
         let mut tenants = Vec::with_capacity(rows.len());
         for row in &rows {
             tenants.push(tenant_from_row(row)?);
@@ -957,19 +1127,23 @@ impl TenantService for TenantServiceImpl {
         // while this RPC is update-only and must not create or revive a deleted row.
         // Keep the predicate-bearing SQL until the IR/service helper can express an
         // update with `WHERE tenant_id = ? AND deleted_at IS NULL`.
-        let result = sqlx::query(&format!(
+        // RETURNING the post-update code/status feeds the contract-declared event
+        // below with the row's REAL values (no extra roundtrip, no guessed status).
+        let updated = sqlx::query(&format!(
             "UPDATE {rel} SET \
                {name} = CASE WHEN $2 THEN $3 ELSE {name} END, \
                {status} = CASE WHEN $4 THEN $5 ELSE {status} END, \
                {config} = CASE WHEN $6 THEN $7::JSONB ELSE {config} END, \
                {branding} = CASE WHEN $8 THEN $9::JSONB ELSE {branding} END \
-             WHERE {tenant_id} = $1::UUID AND {deleted} IS NULL",
+             WHERE {tenant_id} = $1::UUID AND {deleted} IS NULL \
+             RETURNING {code} AS code, {status} AS status",
             name = m.q("name"),
             status = m.q("status"),
             config = m.q("config"),
             branding = m.q("branding"),
             tenant_id = m.q("tenant_id"),
             deleted = m.q("deleted_at"),
+            code = m.q("code"),
         ))
         .bind(tenant_id)
         .bind(update_name)
@@ -980,14 +1154,34 @@ impl TenantService for TenantServiceImpl {
         .bind(req.config.trim())
         .bind(update_branding)
         .bind(req.branding.trim())
-        .execute(pool)
+        .fetch_optional(pool)
         .await
         .map_err(|err| {
             tenant_internal_status("update_tenant", format!("update tenant failed: {err}"))
         })?;
-        if result.rows_affected() == 0 {
+        let Some(updated) = updated else {
             return Err(tenant_not_found_status("update_tenant"));
-        }
+        };
+        let decode = |e: sqlx::Error| {
+            tenant_internal_status(
+                "update_tenant",
+                format!("decode updated tenant failed: {e}"),
+            )
+        };
+        let code: String = updated.try_get("code").map_err(decode)?;
+        let stored_status: String = updated.try_get("status").map_err(decode)?;
+        let tenant_id = tenant_id.to_string();
+        // Contract-declared tenant event (tenant_service.proto UpdateTenant
+        // method_event_contract, partition key = tenant_id). Identifiers + status
+        // only — never the config/branding bodies.
+        self.emit_event(
+            TOPIC_TENANT_UPDATED,
+            EVENT_TYPE_TENANT_UPDATED,
+            &tenant_id,
+            &tenant_id,
+            tenant_lifecycle_event_payload(&tenant_id, &code, &stored_status),
+        )
+        .await;
         Ok(Response::new(tenant_pb::UpdateTenantResponse {
             message: "tenant updated".to_string(),
             error: None,
@@ -1085,6 +1279,17 @@ impl TenantService for TenantServiceImpl {
                 ]),
             )
             .await?;
+        // Contract-declared tenant event (tenant_service.proto UpdateTenantConfig
+        // method_event_contract, partition key = tenant_id). Payload carries the
+        // config KEY only — the value may hold secrets and never reaches the outbox.
+        self.emit_event(
+            TOPIC_TENANT_CONFIG_UPDATED,
+            EVENT_TYPE_TENANT_CONFIG_UPDATED,
+            &tenant_id,
+            &tenant_id,
+            tenant_config_event_payload(&tenant_id, req.config_key.trim()),
+        )
+        .await;
         Ok(Response::new(tenant_pb::UpdateTenantConfigResponse {
             message: "tenant config updated".to_string(),
             error: None,
@@ -1343,6 +1548,164 @@ mod tenant_scope_tests {
             "resolve_tenant_after_create",
             "resolve tenant after create failed: database is unavailable",
         );
+    }
+
+    /// The three lifecycle emits use the versioned runtime topics paired with the
+    /// EXACT proto-declared `method_event_contract.event_type` strings
+    /// (tenant_service.proto) — the topic/type pairing is load-bearing for audit
+    /// traceability, so pin both sides byte-for-byte.
+    #[test]
+    fn tenant_event_topic_and_type_pairs_follow_the_declared_contract() {
+        let pairs = [
+            (TOPIC_TENANT_CREATED, EVENT_TYPE_TENANT_CREATED),
+            (TOPIC_TENANT_UPDATED, EVENT_TYPE_TENANT_UPDATED),
+            (
+                TOPIC_TENANT_CONFIG_UPDATED,
+                EVENT_TYPE_TENANT_CONFIG_UPDATED,
+            ),
+        ];
+        for (topic, event_type) in pairs {
+            // Versioned dot topic in the tenant namespace (tenant-scoped + covered
+            // by the security-sensitive `udb.tenant.` compliance prefix).
+            assert!(topic.starts_with("udb.tenant."), "topic {topic}");
+            assert!(topic.ends_with(".v1"), "topic {topic}");
+            assert!(
+                crate::runtime::cdc::tenant_scoped_topic(topic),
+                "topic {topic}"
+            );
+            // Proto-declared event type, never invented at the emit site.
+            assert!(event_type.starts_with("tenant."), "event type {event_type}");
+        }
+        assert_eq!(TOPIC_TENANT_CREATED, "udb.tenant.created.v1");
+        assert_eq!(TOPIC_TENANT_UPDATED, "udb.tenant.updated.v1");
+        assert_eq!(TOPIC_TENANT_CONFIG_UPDATED, "udb.tenant.config-updated.v1");
+        assert_eq!(EVENT_TYPE_TENANT_CREATED, "tenant.CreateTenant");
+        assert_eq!(EVENT_TYPE_TENANT_UPDATED, "tenant.UpdateTenant");
+        assert_eq!(
+            EVENT_TYPE_TENANT_CONFIG_UPDATED,
+            "tenant.UpdateTenantConfig"
+        );
+    }
+
+    /// Event payloads carry identifiers + status (config: the key) ONLY — no
+    /// config/branding bodies and no config VALUE (it may hold secrets).
+    #[test]
+    fn tenant_event_payloads_carry_identifiers_only() {
+        let lifecycle = tenant_lifecycle_event_payload("tenant-1", "acme", "ACTIVE");
+        let mut keys: Vec<&str> = lifecycle
+            .as_object()
+            .expect("lifecycle payload is an object")
+            .keys()
+            .map(String::as_str)
+            .collect();
+        keys.sort_unstable();
+        assert_eq!(keys, ["code", "status", "tenant_id"]);
+        assert_eq!(lifecycle["tenant_id"], "tenant-1");
+        assert_eq!(lifecycle["code"], "acme");
+        assert_eq!(lifecycle["status"], "ACTIVE");
+
+        let config = tenant_config_event_payload("tenant-1", "features.beta");
+        let mut keys: Vec<&str> = config
+            .as_object()
+            .expect("config payload is an object")
+            .keys()
+            .map(String::as_str)
+            .collect();
+        keys.sort_unstable();
+        assert_eq!(keys, ["config_key", "tenant_id"]);
+        assert!(
+            config.get("config_value").is_none(),
+            "config VALUE must never reach the outbox payload"
+        );
+    }
+
+    /// The non-admin ListTenants filter restricts to the caller's own row plus
+    /// direct children, text-compared so a malformed claim tenant matches nothing.
+    #[test]
+    fn non_admin_list_filter_includes_subtree_predicate() {
+        let predicate =
+            list_tenants_subtree_predicate("\"tenant_id\"", "\"parent_tenant_id\"", "$3");
+        assert_eq!(
+            predicate,
+            "(\"tenant_id\"::text = $3 OR \"parent_tenant_id\"::text = $3)"
+        );
+    }
+
+    #[test]
+    fn list_tenants_scope_restricts_non_admin_to_own_subtree() {
+        let ctx = crate::runtime::service::method_security::test_claim_context(
+            "user-1",
+            "tenant-a",
+            "",
+            &["udb:read"],
+            &["member"],
+        );
+        let scope = list_tenants_scope(true, &ctx).expect("tenant-bound non-admin may list");
+        // Admission is charged to the caller's REAL claim tenant, not "".
+        assert_eq!(scope.admit_tenant, "tenant-a");
+        // And the row set is anchored on the same claim tenant.
+        assert_eq!(scope.subtree_of.as_deref(), Some("tenant-a"));
+    }
+
+    #[test]
+    fn list_tenants_scope_keeps_cross_tenant_admin_unscoped() {
+        // Broad admin scope.
+        let ctx = crate::runtime::service::method_security::test_claim_context(
+            "op-1",
+            "tenant-root",
+            "",
+            &["udb:admin"],
+            &[],
+        );
+        let scope = list_tenants_scope(true, &ctx).expect("admin may list");
+        assert_eq!(scope.admit_tenant, "tenant-root");
+        assert!(scope.subtree_of.is_none(), "admin list stays unscoped");
+        // Platform-admin role, tenant-less claim.
+        let ctx = crate::runtime::service::method_security::test_claim_context(
+            "op-2",
+            "",
+            "",
+            &[],
+            &["platform_admin"],
+        );
+        let scope = list_tenants_scope(true, &ctx).expect("platform admin may list");
+        assert_eq!(scope.admit_tenant, "");
+        assert!(scope.subtree_of.is_none());
+    }
+
+    #[test]
+    fn list_tenants_scope_fails_closed_for_tenantless_non_admin() {
+        let ctx = crate::runtime::service::method_security::test_claim_context(
+            "user-1",
+            "  ",
+            "",
+            &["udb:read"],
+            &[],
+        );
+        let err = list_tenants_scope(true, &ctx)
+            .expect_err("tenant-less non-admin must not enumerate the platform");
+        assert_eq!(err.code(), tonic::Code::PermissionDenied);
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::Policy as i32);
+        assert_eq!(detail.policy_decision_id, "tenant_list_scope_required");
+    }
+
+    #[test]
+    fn list_tenants_scope_without_claim_context_stays_unscoped() {
+        // No claim context installed = in-process/trusted caller (the tower layer
+        // ALWAYS installs one for over-the-wire requests): historical behavior.
+        let scope = list_tenants_scope(false, &VerifiedClaimContext::default())
+            .expect("in-process caller keeps the unscoped list");
+        assert_eq!(scope.admit_tenant, "");
+        assert!(scope.subtree_of.is_none());
+    }
+
+    /// 16.4 audit hardcodes → named consts, with the SAME values (no behavior change).
+    #[test]
+    fn tenant_named_defaults_preserve_prior_literals() {
+        assert_eq!(DEFAULT_TENANT_TYPE_DB, "ORGANIZATION");
+        assert_eq!(TENANT_STATUS_ACTIVE_DB, "ACTIVE");
+        assert_eq!(DEFAULT_TENANT_LIST_PAGE_SIZE, 50);
     }
 }
 

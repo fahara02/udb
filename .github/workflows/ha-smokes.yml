@@ -49,26 +49,30 @@ jobs:
           mkdir -p ha-smoke-logs
           docker ps -a > ha-smoke-logs/docker-ps.txt 2>&1
 
-          docker compose -p "$UDB_HA_PROJECT" \
+          # The broker services are profile-gated (started with
+          # `--profile broker-ha`), so the diagnostic `ps`/`logs` calls MUST pass
+          # the same profile or Compose silently omits the very containers whose
+          # crash we are trying to capture.
+          docker compose -p "$UDB_HA_PROJECT" --profile broker-ha \
             -f docker-compose.integration.yml \
             ps > ha-smoke-logs/lease-ps.txt 2>&1
-          docker compose -p "$UDB_HA_PROJECT" \
+          docker compose -p "$UDB_HA_PROJECT" --profile broker-ha \
             -f docker-compose.integration.yml \
             logs --no-color > ha-smoke-logs/lease.log 2>&1
 
-          docker compose -p "$UDB_HA_CDC_PROJECT" \
+          docker compose -p "$UDB_HA_CDC_PROJECT" --profile broker-ha \
             -f docker-compose.integration.yml \
             ps > ha-smoke-logs/cdc-ps.txt 2>&1
-          docker compose -p "$UDB_HA_CDC_PROJECT" \
+          docker compose -p "$UDB_HA_CDC_PROJECT" --profile broker-ha \
             -f docker-compose.integration.yml \
             logs --no-color > ha-smoke-logs/cdc.log 2>&1
 
-          docker compose -p "$UDB_HA_XA_PROJECT" \
+          docker compose -p "$UDB_HA_XA_PROJECT" --profile broker-xa-ha \
             -f docker-compose.integration.yml \
             -f docker-compose.canonical.yml \
             -f docker-compose.xa-ha.yml \
             ps > ha-smoke-logs/xa-ps.txt 2>&1
-          docker compose -p "$UDB_HA_XA_PROJECT" \
+          docker compose -p "$UDB_HA_XA_PROJECT" --profile broker-xa-ha \
             -f docker-compose.integration.yml \
             -f docker-compose.canonical.yml \
             -f docker-compose.xa-ha.yml \
@@ -124,10 +128,12 @@ jobs:
           set +e
           mkdir -p cdc-fault-smoke-logs
           docker ps -a > cdc-fault-smoke-logs/docker-ps.txt 2>&1
-          docker compose -p "$UDB_CDC_FAULT_PROJECT" \
+          # The broker is profile-gated (`--profile broker`); pass the same
+          # profile so its logs are actually captured (see the HA job note).
+          docker compose -p "$UDB_CDC_FAULT_PROJECT" --profile broker \
             -f docker-compose.integration.yml \
             ps > cdc-fault-smoke-logs/cdc-fault-ps.txt 2>&1
-          docker compose -p "$UDB_CDC_FAULT_PROJECT" \
+          docker compose -p "$UDB_CDC_FAULT_PROJECT" --profile broker \
             -f docker-compose.integration.yml \
             logs --no-color > cdc-fault-smoke-logs/cdc-fault.log 2>&1
 

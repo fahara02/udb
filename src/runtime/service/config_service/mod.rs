@@ -56,7 +56,9 @@ const VALUE_TYPE_JSON: &str = "JSON";
 /// via `UDB_CONFIG_EVAL_TTL_SECONDS`, resolved through a `OnceLock` — never read
 /// per request.
 const DEFAULT_EVAL_TTL_SECONDS: i64 = 30;
-/// Cap on scope rows scanned per key during evaluation (env/project/tenant arms).
+/// Cap on scope rows scanned per key during evaluation (env/project/tenant
+/// arms). The batched `EvaluateFlags` read multiplies this by the key count for
+/// its overall row cap (see [`flag_candidates_batch_read`]).
 const MAX_FLAGS_PER_KEY_SCAN: u32 = 64;
 /// List defaults/caps so one tenant cannot scan an unbounded table.
 const DEFAULT_LIST_LIMIT: u32 = 100;
@@ -394,14 +396,34 @@ fn flag_read_exact(
     }
 }
 
-fn flag_candidates_read(tenant_id: &str, flag_key: &str) -> LogicalRead {
+/// ONE tenant-scoped candidate read for ALL evaluated keys (the batched
+/// `EvaluateFlags` path — replaces the previous read-per-key loop):
+/// `tenant_id = ? AND flag_key IN (keys)`. The row cap is
+/// `keys.len() × MAX_FLAGS_PER_KEY_SCAN`: each key still has at most
+/// [`MAX_FLAGS_PER_KEY_SCAN`] scope rows (env/project/tenant arms, one row per
+/// scope under the unique scope index), so the batched read carries the same
+/// overall bound the per-key loop enforced — collapsed into a single mediated
+/// read. Combined with [`MAX_EVALUATE_KEYS`] the absolute ceiling is
+/// 256 × 64 = 16 384 rows.
+fn flag_candidates_batch_read(tenant_id: &str, flag_keys: &[String]) -> LogicalRead {
     LogicalRead {
         message_type: CONFIG_MSG.to_string(),
-        filter: Some(flag_filter(tenant_id, None, None, Some(flag_key))),
+        filter: Some(LogicalFilter::And(vec![
+            eq("tenant_id", tenant_id),
+            LogicalFilter::InList {
+                field: "flag_key".to_string(),
+                values: flag_keys
+                    .iter()
+                    .map(|key| logical_string(key.as_str()))
+                    .collect(),
+            },
+        ])),
         projection: Some(flag_projection()),
         sort: Vec::new(),
         include: Vec::new(),
-        pagination: Some(LogicalPagination::limit(MAX_FLAGS_PER_KEY_SCAN)),
+        pagination: Some(LogicalPagination::limit(
+            (flag_keys.len() as u32).saturating_mul(MAX_FLAGS_PER_KEY_SCAN),
+        )),
     }
 }
 
@@ -984,27 +1006,52 @@ impl ConfigService for ConfigServiceImpl {
         let runtime = self.require_runtime()?;
         let context = native_service_context(&metadata, &tenant_id, &eval_ctx.project_id);
 
-        let mut values: HashMap<String, config_pb::FlagValue> = HashMap::new();
-        let mut config_revision: i64 = 0;
+        // Trimmed, non-empty, de-duplicated keys — preserves the previous
+        // per-key loop's semantics (blank keys skipped; a duplicate key would
+        // evaluate identically, so it is read and resolved once). The key count
+        // is already gated by `ensure_evaluate_key_limit` above.
+        let mut keys: Vec<String> = Vec::with_capacity(req.keys.len());
         for key in &req.keys {
             let key = key.trim();
-            if key.is_empty() {
+            if key.is_empty() || keys.iter().any(|seen| seen == key) {
                 continue;
             }
-            let candidates: Vec<EvalFlag> = runtime
+            keys.push(key.to_string());
+        }
+
+        let mut values: HashMap<String, config_pb::FlagValue> = HashMap::new();
+        let mut config_revision: i64 = 0;
+        if !keys.is_empty() {
+            // ONE tenant-scoped mediated read for every requested key (was one
+            // read per key — up to MAX_EVALUATE_KEYS sequential round-trips).
+            let rows = runtime
                 .native_entity_read_for_service(
                     "config",
                     &context,
-                    flag_candidates_read(&tenant_id, key),
+                    flag_candidates_batch_read(&tenant_id, &keys),
                 )
-                .await?
-                .iter()
-                .map(eval_flag_from_json)
-                .collect();
-            if let Some(flag) = resolve_flag(&candidates, &eval_ctx) {
-                config_revision = config_revision.max(flag.revision);
-                let resolved = evaluate_flag(flag, &eval_ctx);
-                values.insert(key.to_string(), flag_val_to_proto(&resolved));
+                .await?;
+            // Bucket candidates per key, then resolve in memory through the
+            // same PURE core (`resolve_flag` scope precedence + `evaluate_flag`
+            // rollout hashing) the per-key loop used — semantics unchanged.
+            let mut candidates_by_key: HashMap<String, Vec<EvalFlag>> =
+                HashMap::with_capacity(keys.len());
+            for row in &rows {
+                let flag = eval_flag_from_json(row);
+                candidates_by_key
+                    .entry(flag.flag_key.clone())
+                    .or_default()
+                    .push(flag);
+            }
+            for key in &keys {
+                let Some(candidates) = candidates_by_key.get(key.as_str()) else {
+                    continue;
+                };
+                if let Some(flag) = resolve_flag(candidates, &eval_ctx) {
+                    config_revision = config_revision.max(flag.revision);
+                    let resolved = evaluate_flag(flag, &eval_ctx);
+                    values.insert(key.clone(), flag_val_to_proto(&resolved));
+                }
             }
         }
 
@@ -1020,12 +1067,8 @@ impl ConfigService for ConfigServiceImpl {
 
 impl DataBrokerService {
     /// Build the native `ConfigService`, wired to the broker's Postgres pool, the
-    /// native-entity dispatch runtime, and the shared outbox.
-    ///
-    /// `allow(dead_code)` until the leader wires it in `serve()` (see the module
-    /// doc-comment in `service/mod.rs`); removing the attribute is the maintainer's
-    /// one-line follow-up alongside the `add_service` call.
-    #[allow(dead_code)]
+    /// native-entity dispatch runtime, and the shared outbox. Served in `serve()`
+    /// via `add_service(ConfigServiceServer::new(...))`.
     pub(crate) fn build_config_service(&self) -> ConfigServiceImpl {
         let runtime = self.runtime.load_full();
         let pg_pool = runtime
@@ -1360,6 +1403,51 @@ mod config_eval_tests {
         assert_eq!(detail.operation, "native_entity_dispatch");
         assert_eq!(detail.capability_required, "runtime_native_entity_dispatch");
         assert!(!detail.retryable);
+    }
+
+    /// The batched EvaluateFlags path issues ONE read whose filter ANDs the
+    /// tenant scope with a single `flag_key IN (keys)` list, capped at
+    /// `keys × MAX_FLAGS_PER_KEY_SCAN` rows — never one read per key.
+    #[test]
+    fn evaluate_batch_read_builds_single_in_list_filter() {
+        let keys = vec![
+            "feature.a".to_string(),
+            "feature.b".to_string(),
+            "feature.c".to_string(),
+        ];
+        let read = flag_candidates_batch_read("tenant-a", &keys);
+        assert_eq!(read.message_type, CONFIG_MSG);
+
+        let Some(LogicalFilter::And(branches)) = read.filter else {
+            panic!("batched read must AND the tenant scope with the key In-list");
+        };
+        assert_eq!(branches.len(), 2, "exactly tenant scope + one In-list");
+        assert_eq!(
+            branches[0],
+            LogicalFilter::Comparison {
+                field: "tenant_id".to_string(),
+                op: ComparisonOp::Eq,
+                value: LogicalValue::String("tenant-a".to_string()),
+            },
+            "the tenant predicate must always be present",
+        );
+        assert_eq!(
+            branches[1],
+            LogicalFilter::InList {
+                field: "flag_key".to_string(),
+                values: keys
+                    .iter()
+                    .map(|key| LogicalValue::String(key.clone()))
+                    .collect(),
+            },
+            "all keys must ride ONE In-list filter",
+        );
+
+        // Overall row cap = keys × per-key scope cap (documented bound).
+        assert_eq!(
+            read.pagination,
+            Some(LogicalPagination::limit(3 * MAX_FLAGS_PER_KEY_SCAN)),
+        );
     }
 
     /// Round-trip the typed value oneof through storage encoding and back.

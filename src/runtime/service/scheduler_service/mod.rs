@@ -58,6 +58,69 @@ const TOPIC_JOB_DEAD: &str = "udb.scheduler.job.dead.v1";
 /// transaction.
 pub(crate) const SCHEDULER_TICK_BATCH: i64 = 200;
 
+/// Per-tenant scheduled-job budget (non-deleted rows). Bounds the durable table
+/// so one tenant cannot exhaust the shared store; a new job beyond this fails
+/// closed with the typed quota detail. Overridable once via
+/// `UDB_MAX_JOBS_PER_TENANT`, resolved through a `OnceLock` — never read per
+/// request. Mirrors `search_service`'s `MAX_INDEXES_PER_TENANT` gate.
+const DEFAULT_MAX_JOBS_PER_TENANT: i64 = 1000;
+
+/// Safety cap on the missed-run counting loop: bounds how many elapsed cron
+/// occurrences one fire will enumerate, so a job that slept for months cannot
+/// spin the tick. A count equal to the cap means "at least this many".
+const MAX_MISSED_RUNS_COUNTED: i64 = 1000;
+
+/// Resolve the per-tenant job budget exactly once (no per-request env reads).
+/// A non-positive / unparsable override falls back to the default so the gate
+/// is always a real bound.
+fn max_jobs_per_tenant() -> i64 {
+    static BUDGET: std::sync::OnceLock<i64> = std::sync::OnceLock::new();
+    *BUDGET.get_or_init(|| {
+        std::env::var("UDB_MAX_JOBS_PER_TENANT")
+            .ok()
+            .and_then(|v| v.trim().parse::<i64>().ok())
+            .filter(|v| *v > 0)
+            .unwrap_or(DEFAULT_MAX_JOBS_PER_TENANT)
+    })
+}
+
+/// PURE quota gate: refuse when the tenant's non-deleted job count has reached
+/// the budget. `ResourceExhausted` + `kind = QUOTA` via the shared
+/// `quota_refusal_status` typed detail (same shape as the search-index gate).
+fn enforce_job_quota(active_jobs: i64, budget: i64) -> Result<(), Status> {
+    if active_jobs >= budget {
+        return Err(crate::runtime::executor_utils::quota_refusal_status(
+            "scheduler",
+            // Operation identifiers are normalized to underscore form on the wire
+            // (matches the `tenant_storage_quota` convention); pass it explicitly.
+            "tenant_scheduled-job_quota",
+            format!("tenant scheduled-job quota exhausted ({budget})"),
+        ));
+    }
+    Ok(())
+}
+
+/// PURE missed-run accounting: count the cron occurrences that elapsed strictly
+/// after the stored due time (`due_at`, the occurrence being fired now) up to
+/// and including `now` — i.e. the windows this single fire collapses. An
+/// on-time fire (next occurrence still in the future) yields 0. The loop is
+/// bounded by [`MAX_MISSED_RUNS_COUNTED`] so an ancient due time cannot spin;
+/// hitting the cap means "at least this many missed".
+fn missed_cron_occurrences(cron: &str, due_at: DateTime<Utc>, now: DateTime<Utc>) -> i64 {
+    let mut missed = 0i64;
+    let mut cursor = due_at;
+    while missed < MAX_MISSED_RUNS_COUNTED {
+        match next_cron_after(cron, cursor) {
+            Some(next) if next <= now => {
+                missed += 1;
+                cursor = next;
+            }
+            _ => break,
+        }
+    }
+    missed
+}
+
 /// Postgres-backed `SchedulerService` handler.
 pub struct SchedulerServiceImpl {
     pg_pool: Option<PgPool>,
@@ -304,6 +367,15 @@ fn job_from_row(row: &sqlx::postgres::PgRow) -> Result<job_pb::ScheduledJob, Sta
 
 #[tonic::async_trait]
 impl SchedulerService for SchedulerServiceImpl {
+    /// Create a scheduled job. FIRE-ONLY SEMANTICS: when the job is due, the
+    /// scheduler durably emits one `udb.scheduler.job.fired.v1` event
+    /// (at-least-once via the outbox→CDC pipeline) — it never executes the
+    /// payload and never observes whether a consumer succeeded. Consequently
+    /// `max_attempts`/`backoff_seconds` do NOT govern delivery/execution
+    /// retries: they only bound the scheduling-side retry of a job whose cron
+    /// expression can no longer be advanced (a stuck job is backed off and
+    /// eventually dead-lettered). Consumer execution feedback (ack/nack
+    /// re-arming) is a separate contract — follow-up 16.12.5.
     async fn create_job(
         &self,
         request: Request<scheduler_pb::CreateJobRequest>,
@@ -356,6 +428,24 @@ impl SchedulerService for SchedulerServiceImpl {
         let pool = self.require_pool()?;
         let m = scheduled_job_model();
         let rel = m.relation.clone();
+        // Per-tenant job quota: COUNT the tenant's non-deleted jobs and refuse
+        // over budget with the typed quota detail (fail closed; mirrors the
+        // search-index gate).
+        let active_jobs: i64 = sqlx::query_scalar(&format!(
+            "SELECT COUNT(*) FROM {rel} WHERE {tenant_id} = $1::UUID AND {deleted} IS NULL",
+            tenant_id = m.q("tenant_id"),
+            deleted = m.q("deleted_at"),
+        ))
+        .bind(&tenant_id)
+        .fetch_one(pool)
+        .await
+        .map_err(|err| {
+            scheduler_internal_status(
+                "count_scheduled_jobs_quota",
+                format!("count scheduled jobs for quota failed: {err}"),
+            )
+        })?;
+        enforce_job_quota(active_jobs, max_jobs_per_tenant())?;
         let job_id = Uuid::new_v4().to_string();
         let payload = non_empty_json(&req.payload);
         let max_attempts = if req.max_attempts > 0 {
@@ -777,7 +867,8 @@ pub(crate) fn due_jobs_claim_sql(m: &NativeModel) -> String {
             {schedule_type} AS schedule_type, COALESCE({cron}, '') AS cron_expression, \
             COALESCE({payload}::text, '') AS payload, COALESCE({target_topic}, '') AS target_topic, \
             {attempt_count} AS attempt_count, {max_attempts} AS max_attempts, \
-            {backoff} AS backoff_seconds \
+            {backoff} AS backoff_seconds, \
+            EXTRACT(EPOCH FROM {next_fire_at})::BIGINT AS next_fire_at_epoch \
          FROM {rel} \
          WHERE {status} = 'ACTIVE' AND {deleted} IS NULL \
            AND {next_fire_at} IS NOT NULL AND {next_fire_at} <= NOW() \
@@ -807,6 +898,15 @@ pub(crate) fn due_jobs_claim_sql(m: &NativeModel) -> String {
 /// advances the job's schedule. Because the advance and the outbox insert commit
 /// atomically, a job is never double-fired and every fire is at-least-once via the
 /// outbox→CDC pipeline. The tick FIRES EVENTS ONLY; it never runs a payload.
+///
+/// HONEST RETRY SEMANTICS: there is NO delivery/execution retry here. The
+/// proto's `max_attempts`/`backoff_seconds` are scheduling-side only — they
+/// bound the retry of a CRON job whose expression can no longer be advanced
+/// (backoff, then dead-letter). Whether a consumer ever executed a fired event
+/// is invisible to this tick; ack/nack execution feedback that re-arms
+/// `next_fire_at` is follow-up 16.12.5. Missed windows are not replayed
+/// one-by-one: a late fire collapses them into ONE event carrying
+/// `missed_count` (see [`missed_cron_occurrences`]).
 ///
 /// Returns the number of jobs acted on (fired + dead-lettered). Fail closed: a
 /// missing outbox relation yields `Ok(0)` (nothing fired) rather than firing
@@ -877,6 +977,14 @@ pub(crate) async fn run_scheduler_tick_once(
             scheduler_internal_status(
                 "scheduler_tick_decode",
                 format!("scheduler tick decode backoff_seconds: {e}"),
+            )
+        })?;
+        // Stored due time of THIS fire (the claim filters `next_fire_at <= NOW()`,
+        // so it is non-null for claimed rows); used for missed-run accounting.
+        let due_at_epoch: Option<i64> = row.try_get("next_fire_at_epoch").map_err(|e| {
+            scheduler_internal_status(
+                "scheduler_tick_decode",
+                format!("scheduler tick decode next_fire_at_epoch: {e}"),
             )
         })?;
 
@@ -960,6 +1068,18 @@ pub(crate) async fn run_scheduler_tick_once(
         // Normal path: FIRE the job, then advance its schedule (reset attempts).
         let payload_json: serde_json::Value =
             serde_json::from_str(&payload).unwrap_or(serde_json::Value::Null);
+        // Missed-run accounting: a late fire collapses the elapsed cron windows
+        // into this ONE event; stamp how many were collapsed instead of hiding
+        // them. Zero for an on-time fire and for one-shots (which fire once by
+        // contract, however late).
+        let missed_count = if is_cron {
+            due_at_epoch
+                .and_then(|epoch| DateTime::<Utc>::from_timestamp(epoch, 0))
+                .map(|due_at| missed_cron_occurrences(&cron, due_at, now))
+                .unwrap_or(0)
+        } else {
+            0
+        };
         // Build the payload first (cloning the owned fields) so the borrows passed
         // to `insert_tick_outbox` below stay valid.
         let fired_payload = serde_json::json!({
@@ -971,6 +1091,7 @@ pub(crate) async fn run_scheduler_tick_once(
             "target_topic": target_topic.clone(),
             "payload": payload_json,
             "fired_at": now.to_rfc3339(),
+            "missed_count": missed_count,
         });
         insert_tick_outbox(
             &mut tx,
@@ -1475,6 +1596,65 @@ mod scheduler_tests {
             sql.contains("<= NOW()"),
             "claim must only take jobs whose next_fire_at is due"
         );
+        assert!(
+            sql.contains("AS next_fire_at_epoch"),
+            "claim must expose the stored due time for missed-run accounting: {sql}"
+        );
+    }
+
+    /// The per-tenant job budget refuses at/over budget with the shared typed
+    /// quota detail (ResourceExhausted + kind QUOTA, not retryable) and admits
+    /// under-budget creates — same shape as the search-index gate.
+    #[test]
+    fn job_quota_gate_refuses_over_budget_with_typed_detail() {
+        enforce_job_quota(0, DEFAULT_MAX_JOBS_PER_TENANT).expect("empty tenant admitted");
+        enforce_job_quota(DEFAULT_MAX_JOBS_PER_TENANT - 1, DEFAULT_MAX_JOBS_PER_TENANT)
+            .expect("under-budget create admitted");
+        for count in [DEFAULT_MAX_JOBS_PER_TENANT, DEFAULT_MAX_JOBS_PER_TENANT + 7] {
+            let err = enforce_job_quota(count, DEFAULT_MAX_JOBS_PER_TENANT)
+                .expect_err("at/over-budget create must be refused");
+            assert_eq!(err.code(), tonic::Code::ResourceExhausted);
+            assert_eq!(
+                err.message(),
+                format!("tenant scheduled-job quota exhausted ({DEFAULT_MAX_JOBS_PER_TENANT})")
+            );
+            let detail = decode_detail(&err);
+            assert_eq!(detail.kind, ErrorKind::Quota as i32);
+            assert_eq!(detail.backend, "scheduler");
+            assert_eq!(detail.operation, "tenant_scheduled-job_quota");
+            assert!(!detail.retryable);
+            assert_eq!(detail.retry_after_ms, 0);
+        }
+    }
+
+    /// Missed-run accounting: an on-time fire stamps 0; a late fire counts the
+    /// cron occurrences that elapsed between the stored due time and now; the
+    /// counting loop is bounded by the safety cap; an unparseable expression
+    /// fails closed to 0 (no phantom missed windows).
+    #[test]
+    fn missed_count_counts_elapsed_cron_windows() {
+        // 2026-06-26 12:00:00 UTC — the stored (due) fire time of an hourly job.
+        let due = chrono::DateTime::parse_from_rfc3339("2026-06-26T12:00:00Z")
+            .unwrap()
+            .with_timezone(&Utc);
+        // On time (fired within the due minute): nothing collapsed.
+        let now = due + ChronoDuration::seconds(30);
+        assert_eq!(missed_cron_occurrences("0 * * * *", due, now), 0);
+        // Fired 3h late: the 13:00, 14:00 and 15:00 windows collapse into one event.
+        let now = due + ChronoDuration::hours(3);
+        assert_eq!(missed_cron_occurrences("0 * * * *", due, now), 3);
+        // Macro form agrees with its 5-field expansion.
+        let now = due + ChronoDuration::days(3);
+        assert_eq!(missed_cron_occurrences("@daily", due, now), 3);
+        // An every-minute job asleep for two days hits the safety cap — the loop
+        // is bounded, and the cap reads as "at least this many".
+        let now = due + ChronoDuration::days(2);
+        assert_eq!(
+            missed_cron_occurrences("* * * * *", due, now),
+            MAX_MISSED_RUNS_COUNTED
+        );
+        // Invalid expression: fail closed to zero.
+        assert_eq!(missed_cron_occurrences("not a cron", due, now), 0);
     }
 
     #[test]

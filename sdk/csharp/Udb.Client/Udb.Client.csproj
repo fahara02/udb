@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <!-- Package version — single source of truth is /versions.json.
          Every SDK follows the main UDB release version; CI enforces the match. -->
-    <Version>0.4.0</Version>
+    <Version>0.4.1</Version>
     <PackageId>Udb.Client</PackageId>
     <Authors>fahara02</Authors>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>

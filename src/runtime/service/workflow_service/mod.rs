@@ -11,19 +11,26 @@
 //!     EXISTING [`crate::runtime::saga::start_workflow_saga`] seam (which calls
 //!     `SagaStore::record_saga`) tagged with [`SagaKind::Workflow`]. The instance
 //!     is the durable state that survives a restart / leader change.
-//!   * `CancelWorkflow` flips that linked saga into the recoverable state, so the
-//!     EXISTING [`crate::runtime::saga::SagaRecoveryWorker`] performs the
-//!     reverse-order compensation — this service never reimplements compensation.
+//!   * `CancelWorkflow` flips that linked saga into the recoverable state (the
+//!     saga engine keeps owning the saga ROW's lifecycle) and moves the instance
+//!     to COMPENSATING. The INSTANCE terminal state is owned by the tick's
+//!     compensation driver: workflow steps are application-level, so the
+//!     data-plane `CompensatorRegistry` can never undo them — instead the tick
+//!     emits one `udb.workflow.compensate.step.v1` event per completed step in
+//!     REVERSE order (application-driven undo) and settles the instance
+//!     COMPENSATING → COMPENSATED, atomically with the events.
 //!   * `SignalWorkflow` delivers an external signal to a waiting step, resuming it.
 //!   * The leader-elected tick fires transition events ONLY (it never executes a
-//!     payload in-process), exactly like the scheduler tick.
+//!     payload in-process), exactly like the scheduler tick. It also sweeps
+//!     RUNNING instances whose last transition exceeded the step timeout to
+//!     FAILED (`udb.workflow.failed.v1`).
 //!
 //! Every state transition emits one versioned dot-topic outbox event
 //! (`udb.workflow.<state>.v1`). Tenant identity always comes from the VERIFIED
 //! claim (never the request body); state is durable; the service fails closed on a
 //! missing pool, runtime, or outbox relation.
 
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 use chrono::Utc;
 use sqlx::{PgPool, Row};
@@ -44,11 +51,14 @@ use crate::runtime::saga::{self, SagaKind};
 pub use crate::proto::udb::core::workflow::services::v1::workflow_service_server::WorkflowServiceServer;
 
 use super::DataBrokerService;
-use super::auth_service::events::{ComplianceEnvelope, build_native_compliance_envelope};
+use super::auth_service::events::{
+    ComplianceEnvelope, build_native_compliance_envelope, enterprise_audit_mode,
+    validate_native_compliance,
+};
 use super::native_helpers::{
-    MAX_LIST_ROWS, NativeEventContext, admit_on as native_admit_on,
-    enqueue_outbox_event_with_context, native_next_page_token_for_total, native_offset_page_window,
-    non_empty_json, parse_uuid, validate_request_scope,
+    MAX_LIST_ROWS, admit_on as native_admit_on, metadata_project_id,
+    native_next_page_token_for_total, native_offset_page_window, non_empty_json, parse_uuid,
+    validate_request_scope,
 };
 
 const WORKFLOW_MSG: &str = "udb.core.workflow.entity.v1.WorkflowInstance";
@@ -59,12 +69,17 @@ const TOPIC_STEP_ADVANCED: &str = "udb.workflow.step.advanced.v1";
 const TOPIC_COMPLETED: &str = "udb.workflow.completed.v1";
 const TOPIC_SIGNALED: &str = "udb.workflow.signaled.v1";
 const TOPIC_CANCELLED: &str = "udb.workflow.cancelled.v1";
+const TOPIC_COMPENSATE_STEP: &str = "udb.workflow.compensate.step.v1";
+const TOPIC_COMPENSATED: &str = "udb.workflow.compensated.v1";
+const TOPIC_FAILED: &str = "udb.workflow.failed.v1";
 
 // ── stored status tokens (VARCHAR, short form) ─────────────────────────────────
-// RUNNING/COMPLETED are written as SQL literals in the tick UPDATEs; only the two
-// cancel-path targets need named constants here.
+// RUNNING/COMPLETED are written as SQL literals in the tick's forward UPDATEs;
+// the cancel-path and tick-writeback targets are named constants.
 const STATUS_COMPENSATING: &str = "COMPENSATING";
 const STATUS_CANCELLED: &str = "CANCELLED";
+const STATUS_COMPENSATED: &str = "COMPENSATED";
+const STATUS_FAILED: &str = "FAILED";
 
 /// Upper bound on forward steps per workflow (master-plan 9.12: ≤20 steps). A
 /// request beyond this is clamped down rather than rejected.
@@ -74,6 +89,29 @@ const MAX_WORKFLOW_STEPS: i32 = 20;
 const MAX_PAYLOAD_BYTES: usize = 8 * 1024;
 /// Same bound on the compensation list handed to the saga engine.
 const MAX_COMPENSATIONS_BYTES: usize = 8 * 1024;
+
+/// Default upper bound (seconds) a RUNNING instance may sit without a state
+/// transition before the tick's timeout sweep (16.3.4) fails it. Overridable via
+/// `UDB_WORKFLOW_STEP_TIMEOUT_SECS`, resolved ONCE through
+/// [`workflow_step_timeout_secs`] — never a per-tick env read.
+const WORKFLOW_STEP_TIMEOUT_SECS: i64 = 3600;
+
+/// Payload key stamping how many `compensate.step` events have already been
+/// emitted for a COMPENSATING instance, so a re-tick never re-emits (16.3.2
+/// exactly-once guard; belt-and-braces on top of the atomic emit+transition).
+const COMPENSATE_EMITTED_KEY: &str = "compensate_emitted_steps";
+
+/// Resolve the step timeout exactly once (no per-tick env reads).
+fn workflow_step_timeout_secs() -> i64 {
+    static SECS: OnceLock<i64> = OnceLock::new();
+    *SECS.get_or_init(|| {
+        std::env::var("UDB_WORKFLOW_STEP_TIMEOUT_SECS")
+            .ok()
+            .and_then(|v| v.trim().parse::<i64>().ok())
+            .filter(|v| *v > 0)
+            .unwrap_or(WORKFLOW_STEP_TIMEOUT_SECS)
+    })
+}
 
 /// Default batch the tick advances per pass — a named constant (no per-request env
 /// reads). Bounds how many DUE instances one tick advances so a backlog can't
@@ -183,6 +221,35 @@ impl WorkflowServiceImpl {
     /// empty `saga_id` rather than failing the create.
     fn system_stores(&self) -> Option<Arc<dyn SystemStores>> {
         self.runtime.as_ref()?.default_system_stores()
+    }
+
+    /// Compensating settle for a saga recorded ahead of a workflow-row INSERT that
+    /// then failed (16.3.3): the saga is cross-store, so it cannot join the row's
+    /// PG transaction, and the canonical saga API exposes no delete — the orphan
+    /// is settled terminal instead (`Compensated`/`Completed`: zero forward steps
+    /// ran, so nothing stands and the recovery worker must never pick it up).
+    /// Best-effort — the RPC has already failed; this only keeps the saga queue
+    /// consistent.
+    async fn settle_orphan_saga(&self, saga_id: &str) {
+        if saga_id.is_empty() {
+            return;
+        }
+        let Some(store) = self.system_stores() else {
+            return;
+        };
+        let Ok(saga_uuid) = saga_id.parse::<Uuid>() else {
+            return;
+        };
+        if let Err(err) = SagaStore::update_saga_status(
+            store.as_ref(),
+            saga_uuid,
+            SagaStatus::Compensated,
+            CompensationStatus::Completed,
+        )
+        .await
+        {
+            tracing::warn!(error = %err, saga_id, "workflow start: orphan saga settle failed");
+        }
     }
 }
 
@@ -305,6 +372,61 @@ fn advance_event_topic(to_completed: bool) -> &'static str {
     }
 }
 
+/// Read the exactly-once emission marker from an instance payload. Absent or
+/// malformed ⇒ 0 (nothing emitted yet). Pure.
+fn compensate_emitted_from_payload(payload: &serde_json::Value) -> i32 {
+    payload
+        .get(COMPENSATE_EMITTED_KEY)
+        .and_then(serde_json::Value::as_i64)
+        .and_then(|v| i32::try_from(v).ok())
+        .unwrap_or(0)
+        .max(0)
+}
+
+/// Best-effort human step name for a `compensate.step` event: the recorded
+/// compensation entry's `name`/`step`/`type` string when the compensations array
+/// carries one at that index, else the positional `step_<index>`. Names only —
+/// the compensation payload CONTENTS (application data, possibly sensitive) are
+/// never copied into the event. Pure.
+fn compensation_step_name(compensations: &serde_json::Value, index: i32) -> String {
+    let named = usize::try_from(index)
+        .ok()
+        .and_then(|i| compensations.as_array().and_then(|arr| arr.get(i)))
+        .and_then(|entry| {
+            entry
+                .get("name")
+                .or_else(|| entry.get("step"))
+                .or_else(|| entry.get("type"))
+                .and_then(serde_json::Value::as_str)
+        })
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
+    match named {
+        Some(name) => name.to_string(),
+        None => format!("step_{index}"),
+    }
+}
+
+/// The reverse-order `compensate.step` emission plan for a COMPENSATING instance:
+/// one `(step_index, step_name)` per completed forward step (indices
+/// `0..completed_steps`), LAST completed step first, skipping the
+/// `already_emitted` newest entries a previous pass already enqueued — so a
+/// re-tick never re-emits. Pure — unit-tested without Postgres.
+fn compensation_steps_to_emit(
+    compensations: &serde_json::Value,
+    completed_steps: i32,
+    already_emitted: i32,
+) -> Vec<(i32, String)> {
+    let completed = completed_steps.max(0);
+    let emitted = already_emitted.clamp(0, completed);
+    (0..(completed - emitted))
+        .map(|offset| {
+            let index = completed - emitted - 1 - offset;
+            (index, compensation_step_name(compensations, index))
+        })
+        .collect()
+}
+
 fn clamp_total_steps(requested: i32) -> i32 {
     requested.clamp(1, MAX_WORKFLOW_STEPS)
 }
@@ -326,6 +448,23 @@ fn epoch_to_ts(epoch: Option<i64>) -> Option<prost_types::Timestamp> {
 }
 
 // ── projection + row mapping ────────────────────────────────────────────────────
+
+/// Tenant + project scope predicate shared by get/list/cancel/signal (16.3.1).
+/// An empty `project_bind` value keeps the query tenant-wide — the same
+/// backward-compatible `($n = '' OR col = $n)` semantic the api-key list uses —
+/// while a non-empty project (resolved from request metadata / the verified
+/// claim; the request protos carry no project field) restricts to rows in that
+/// exact project, so a project-scoped caller can never read or mutate another
+/// project's (or a project-less) instance. `NULLIF(..)::UUID` keeps the empty
+/// bind castable against the UUID column.
+fn workflow_scope_predicate(m: &NativeModel, tenant_bind: &str, project_bind: &str) -> String {
+    format!(
+        "{tenant_id} = {tenant_bind}::UUID AND \
+         ({project_bind} = '' OR {project_id} = NULLIF({project_bind}, '')::UUID)",
+        tenant_id = m.q("tenant_id"),
+        project_id = m.q("project_id"),
+    )
+}
 
 fn workflow_select_projection(m: &NativeModel) -> String {
     [
@@ -467,7 +606,19 @@ impl WorkflowService for WorkflowServiceImpl {
             String::new()
         };
 
-        sqlx::query(&format!(
+        // 16.3.3 — the instance INSERT and its `started` outbox event commit in ONE
+        // transaction: no dual-write window where a durable workflow exists without
+        // its event (or vice versa). The saga record above is cross-store and cannot
+        // join this PG transaction; on any failure past it, the orphan saga is
+        // settled terminal so the recovery queue never carries a saga whose
+        // workflow row never became durable.
+        let mut tx = pool.begin().await.map_err(|err| {
+            workflow_internal_status(
+                "start_workflow_begin",
+                format!("start workflow begin failed: {err}"),
+            )
+        })?;
+        if let Err(err) = sqlx::query(&format!(
             "INSERT INTO {rel} \
                ({workflow_id}, {tenant_id}, {project_id}, {workflow_type}, {status}, \
                 {current_step}, {total_steps}, {payload}, {compensations}, {correlation_id}, \
@@ -498,19 +649,27 @@ impl WorkflowService for WorkflowServiceImpl {
         .bind(&compensations)
         .bind(&correlation_id)
         .bind(&saga_id)
-        .execute(pool)
+        .execute(&mut *tx)
         .await
-        .map_err(|err| {
-            workflow_internal_status("start_workflow", format!("start workflow failed: {err}"))
-        })?;
+        {
+            self.settle_orphan_saga(&saga_id).await;
+            return Err(workflow_internal_status(
+                "start_workflow",
+                format!("start workflow failed: {err}"),
+            ));
+        }
 
-        enqueue_outbox_event_with_context(
-            pool,
+        if let Err(status) = insert_rpc_outbox(
+            &mut tx,
             self.outbox_relation.as_deref(),
             TOPIC_STARTED,
-            &tenant_id,
+            &tenant_id, // partition key = tenant_id (proto method_event_contract)
             &tenant_id,
             &req.project_id,
+            &correlation_id,
+            "started",
+            &workflow_id,
+            "start_workflow",
             serde_json::json!({
                 "workflow_id": workflow_id.clone(),
                 "tenant_id": tenant_id.clone(),
@@ -519,14 +678,20 @@ impl WorkflowService for WorkflowServiceImpl {
                 "total_steps": total_steps,
                 "saga_id": saga_id.clone(),
             }),
-            NativeEventContext {
-                target_resource: workflow_id.clone(),
-                correlation_id: correlation_id.clone(),
-                ..NativeEventContext::default()
-            },
-            Some(&self.metrics),
         )
-        .await;
+        .await
+        {
+            self.settle_orphan_saga(&saga_id).await;
+            return Err(status);
+        }
+
+        if let Err(err) = tx.commit().await {
+            self.settle_orphan_saga(&saga_id).await;
+            return Err(workflow_internal_status(
+                "start_workflow_commit",
+                format!("start workflow commit failed: {err}"),
+            ));
+        }
 
         Ok(Response::new(workflow_pb::StartWorkflowResponse {
             workflow_id,
@@ -541,14 +706,18 @@ impl WorkflowService for WorkflowServiceImpl {
     ) -> Result<Response<workflow_pb::GetWorkflowResponse>, Status> {
         let metadata = request.metadata().clone();
         let req = request.into_inner();
-        validate_request_scope(&metadata, &req.tenant_id, "")?;
+        // 16.3.1 — GetWorkflowRequest carries no project field (proto verified), so
+        // the project scope is resolved from request metadata / the verified claim
+        // and bound into both the scope validation and the row predicate.
+        let project_id = metadata_project_id(&metadata).unwrap_or_default();
+        validate_request_scope(&metadata, &req.tenant_id, &project_id)?;
         let _admit = native_admit_on(
             self.channels.as_ref(),
             &self.metrics,
             "workflow",
             OperationChannel::Read,
             &req.tenant_id,
-            None,
+            Some(project_id.as_str()),
         )
         .await?;
         let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
@@ -559,13 +728,14 @@ impl WorkflowService for WorkflowServiceImpl {
         let projection = workflow_select_projection(&m);
         let row = sqlx::query(&format!(
             "SELECT {projection} FROM {rel} \
-             WHERE {workflow_id} = $1::UUID AND {tenant_id} = $2::UUID AND {deleted} IS NULL",
+             WHERE {workflow_id} = $1::UUID AND {scope} AND {deleted} IS NULL",
             workflow_id = m.q("workflow_id"),
-            tenant_id = m.q("tenant_id"),
+            scope = workflow_scope_predicate(&m, "$2", "$3"),
             deleted = m.q("deleted_at"),
         ))
         .bind(&workflow_id)
         .bind(&tenant_id)
+        .bind(&project_id)
         .fetch_optional(pool)
         .await
         .map_err(|err| {
@@ -588,14 +758,17 @@ impl WorkflowService for WorkflowServiceImpl {
     ) -> Result<Response<workflow_pb::ListWorkflowsResponse>, Status> {
         let metadata = request.metadata().clone();
         let req = request.into_inner();
-        validate_request_scope(&metadata, &req.tenant_id, "")?;
+        // 16.3.1 — ListWorkflowsRequest carries no project field (proto verified);
+        // resolve the project scope from metadata / the verified claim.
+        let project_id = metadata_project_id(&metadata).unwrap_or_default();
+        validate_request_scope(&metadata, &req.tenant_id, &project_id)?;
         let _admit = native_admit_on(
             self.channels.as_ref(),
             &self.metrics,
             "workflow",
             OperationChannel::Read,
             &req.tenant_id,
-            None,
+            Some(project_id.as_str()),
         )
         .await?;
         let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
@@ -606,14 +779,15 @@ impl WorkflowService for WorkflowServiceImpl {
         let projection = workflow_select_projection(&m);
         let page_window = native_offset_page_window(req.page, req.page_size, &req.page_token, 50);
         let where_clause = format!(
-            "WHERE {tenant_id} = $1::UUID AND {deleted} IS NULL AND ($2 = '' OR {status} = $2)",
-            tenant_id = m.q("tenant_id"),
+            "WHERE {scope} AND {deleted} IS NULL AND ($2 = '' OR {status} = $2)",
+            scope = workflow_scope_predicate(&m, "$1", "$3"),
             deleted = m.q("deleted_at"),
             status = m.q("status"),
         );
         let total: i64 = sqlx::query_scalar(&format!("SELECT COUNT(*) FROM {rel} {where_clause}"))
             .bind(&tenant_id)
             .bind(&status_filter)
+            .bind(&project_id)
             .fetch_one(pool)
             .await
             .map_err(|err| {
@@ -624,12 +798,13 @@ impl WorkflowService for WorkflowServiceImpl {
             })?;
         let rows = sqlx::query(&format!(
             "SELECT {projection} FROM {rel} {where_clause} \
-             ORDER BY {next_run_at} DESC NULLS LAST, {workflow_id} LIMIT $3 OFFSET $4",
+             ORDER BY {next_run_at} DESC NULLS LAST, {workflow_id} LIMIT $4 OFFSET $5",
             next_run_at = m.q("next_run_at"),
             workflow_id = m.q("workflow_id"),
         ))
         .bind(&tenant_id)
         .bind(&status_filter)
+        .bind(&project_id)
         .bind(page_window.limit_i64())
         .bind(page_window.offset_i64())
         .fetch_all(pool)
@@ -659,14 +834,18 @@ impl WorkflowService for WorkflowServiceImpl {
     ) -> Result<Response<workflow_pb::CancelWorkflowResponse>, Status> {
         let metadata = request.metadata().clone();
         let req = request.into_inner();
-        validate_request_scope(&metadata, &req.tenant_id, "")?;
+        // 16.3.1 — CancelWorkflowRequest carries no project field (proto verified);
+        // resolve the project scope from metadata / the verified claim and bind it
+        // into both queries so a project-scoped caller cannot cancel across projects.
+        let project_id = metadata_project_id(&metadata).unwrap_or_default();
+        validate_request_scope(&metadata, &req.tenant_id, &project_id)?;
         let _admit = native_admit_on(
             self.channels.as_ref(),
             &self.metrics,
             "workflow",
             OperationChannel::Admin,
             &req.tenant_id,
-            None,
+            Some(project_id.as_str()),
         )
         .await?;
         let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
@@ -679,15 +858,16 @@ impl WorkflowService for WorkflowServiceImpl {
         let row = sqlx::query(&format!(
             "SELECT {status} AS status, COALESCE({saga_id}::TEXT, '') AS saga_id \
              FROM {rel} \
-             WHERE {workflow_id} = $1::UUID AND {tenant_id} = $2::UUID AND {deleted} IS NULL",
+             WHERE {workflow_id} = $1::UUID AND {scope} AND {deleted} IS NULL",
             status = m.q("status"),
             saga_id = m.q("saga_id"),
             workflow_id = m.q("workflow_id"),
-            tenant_id = m.q("tenant_id"),
+            scope = workflow_scope_predicate(&m, "$2", "$3"),
             deleted = m.q("deleted_at"),
         ))
         .bind(&workflow_id)
         .bind(&tenant_id)
+        .bind(&project_id)
         .fetch_optional(pool)
         .await
         .map_err(|err| {
@@ -708,7 +888,7 @@ impl WorkflowService for WorkflowServiceImpl {
         // already-cancelled/compensated workflow is an idempotent no-op.
         if is_terminal_status(&status) {
             return match status.as_str() {
-                STATUS_CANCELLED | "COMPENSATED" => {
+                STATUS_CANCELLED | STATUS_COMPENSATED => {
                     Ok(Response::new(workflow_pb::CancelWorkflowResponse {
                         message: "workflow already cancelled".to_string(),
                         error: None,
@@ -718,10 +898,13 @@ impl WorkflowService for WorkflowServiceImpl {
             };
         }
 
-        // REUSE the saga compensation path: flip the linked saga to Indeterminate
-        // so the EXISTING SagaRecoveryWorker runs its reverse-order compensations.
-        // The instance moves to COMPENSATING; with no linked saga there is nothing
-        // to compensate, so it goes straight to CANCELLED.
+        // Keep marking the linked saga (its ROW lifecycle stays with the saga
+        // engine: Indeterminate makes the SagaRecoveryWorker settle the saga
+        // record). The INSTANCE moves to COMPENSATING and its terminal state is
+        // owned by the workflow tick's compensation driver (16.3.2), which emits
+        // the reverse-order `compensate.step` events and settles COMPENSATED.
+        // With no linked saga there is nothing recorded to undo, so the instance
+        // goes straight to CANCELLED.
         let mut new_status = STATUS_CANCELLED;
         if !saga_id.is_empty()
             && let Some(store) = self.system_stores()
@@ -742,49 +925,64 @@ impl WorkflowService for WorkflowServiceImpl {
             }
         }
 
+        // 16.3.3 — the status flip and its outbox event commit in ONE transaction
+        // (no dual-write window between the durable state and the event stream).
+        let mut tx = pool.begin().await.map_err(|err| {
+            workflow_internal_status(
+                "cancel_workflow_begin",
+                format!("cancel workflow begin failed: {err}"),
+            )
+        })?;
         sqlx::query(&format!(
-            "UPDATE {rel} SET {status} = $3, {next_run_at} = NULL, {last_error} = $4, \
+            "UPDATE {rel} SET {status} = $4, {next_run_at} = NULL, {last_error} = $5, \
                 {last_transition_at} = NOW() \
-             WHERE {workflow_id} = $1::UUID AND {tenant_id} = $2::UUID AND {deleted} IS NULL",
+             WHERE {workflow_id} = $1::UUID AND {scope} AND {deleted} IS NULL",
             status = m.q("status"),
             next_run_at = m.q("next_run_at"),
             last_error = m.q("last_error"),
             last_transition_at = m.q("last_transition_at"),
             workflow_id = m.q("workflow_id"),
-            tenant_id = m.q("tenant_id"),
+            scope = workflow_scope_predicate(&m, "$2", "$3"),
             deleted = m.q("deleted_at"),
         ))
         .bind(&workflow_id)
         .bind(&tenant_id)
+        .bind(&project_id)
         .bind(new_status)
         .bind(req.reason.trim())
-        .execute(pool)
+        .execute(&mut *tx)
         .await
         .map_err(|err| {
             workflow_internal_status("cancel_workflow", format!("cancel workflow failed: {err}"))
         })?;
 
-        enqueue_outbox_event_with_context(
-            pool,
+        insert_rpc_outbox(
+            &mut tx,
             self.outbox_relation.as_deref(),
             TOPIC_CANCELLED,
-            &workflow_id,
+            &workflow_id, // partition key = workflow_id (proto method_event_contract)
             &tenant_id,
-            "",
+            &project_id,
+            &workflow_id,
+            "cancelled",
+            &workflow_id,
+            "cancel_workflow",
             serde_json::json!({
                 "workflow_id": workflow_id.clone(),
                 "tenant_id": tenant_id.clone(),
+                "project_id": project_id.clone(),
                 "status": new_status,
                 "saga_id": saga_id.clone(),
                 "reason": req.reason.clone(),
             }),
-            NativeEventContext {
-                target_resource: workflow_id.clone(),
-                ..NativeEventContext::default()
-            },
-            Some(&self.metrics),
         )
-        .await;
+        .await?;
+        tx.commit().await.map_err(|err| {
+            workflow_internal_status(
+                "cancel_workflow_commit",
+                format!("cancel workflow commit failed: {err}"),
+            )
+        })?;
 
         Ok(Response::new(workflow_pb::CancelWorkflowResponse {
             message: "workflow cancellation requested".to_string(),
@@ -798,7 +996,11 @@ impl WorkflowService for WorkflowServiceImpl {
     ) -> Result<Response<workflow_pb::SignalWorkflowResponse>, Status> {
         let metadata = request.metadata().clone();
         let req = request.into_inner();
-        validate_request_scope(&metadata, &req.tenant_id, "")?;
+        // 16.3.1 — SignalWorkflowRequest carries no project field (proto verified);
+        // resolve the project scope from metadata / the verified claim and bind it
+        // into both queries so a project-scoped caller cannot signal across projects.
+        let project_id = metadata_project_id(&metadata).unwrap_or_default();
+        validate_request_scope(&metadata, &req.tenant_id, &project_id)?;
         if req.signal_name.trim().is_empty() {
             return Err(workflow_required_field(
                 "signal_name",
@@ -812,7 +1014,7 @@ impl WorkflowService for WorkflowServiceImpl {
             "workflow",
             OperationChannel::Admin,
             &req.tenant_id,
-            None,
+            Some(project_id.as_str()),
         )
         .await?;
         let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
@@ -824,15 +1026,16 @@ impl WorkflowService for WorkflowServiceImpl {
         let row = sqlx::query(&format!(
             "SELECT {status} AS status, COALESCE({payload}::TEXT, '') AS payload \
              FROM {rel} \
-             WHERE {workflow_id} = $1::UUID AND {tenant_id} = $2::UUID AND {deleted} IS NULL",
+             WHERE {workflow_id} = $1::UUID AND {scope} AND {deleted} IS NULL",
             status = m.q("status"),
             payload = m.q("payload"),
             workflow_id = m.q("workflow_id"),
-            tenant_id = m.q("tenant_id"),
+            scope = workflow_scope_predicate(&m, "$2", "$3"),
             deleted = m.q("deleted_at"),
         ))
         .bind(&workflow_id)
         .bind(&tenant_id)
+        .bind(&project_id)
         .fetch_optional(pool)
         .await
         .map_err(|err| {
@@ -875,47 +1078,62 @@ impl WorkflowService for WorkflowServiceImpl {
         }
         let updated_payload = payload_json.to_string();
 
+        // 16.3.3 — the signal writeback and its outbox event commit in ONE
+        // transaction (no dual-write window).
+        let mut tx = pool.begin().await.map_err(|err| {
+            workflow_internal_status(
+                "signal_workflow_begin",
+                format!("signal workflow begin failed: {err}"),
+            )
+        })?;
         sqlx::query(&format!(
             "UPDATE {rel} SET {status} = 'RUNNING', {pending_signal} = NULL, \
-                {payload} = $3::JSONB, {next_run_at} = NOW(), {last_transition_at} = NOW() \
-             WHERE {workflow_id} = $1::UUID AND {tenant_id} = $2::UUID AND {deleted} IS NULL",
+                {payload} = $4::JSONB, {next_run_at} = NOW(), {last_transition_at} = NOW() \
+             WHERE {workflow_id} = $1::UUID AND {scope} AND {deleted} IS NULL",
             status = m.q("status"),
             pending_signal = m.q("pending_signal"),
             payload = m.q("payload"),
             next_run_at = m.q("next_run_at"),
             last_transition_at = m.q("last_transition_at"),
             workflow_id = m.q("workflow_id"),
-            tenant_id = m.q("tenant_id"),
+            scope = workflow_scope_predicate(&m, "$2", "$3"),
             deleted = m.q("deleted_at"),
         ))
         .bind(&workflow_id)
         .bind(&tenant_id)
+        .bind(&project_id)
         .bind(&updated_payload)
-        .execute(pool)
+        .execute(&mut *tx)
         .await
         .map_err(|err| {
             workflow_internal_status("signal_workflow", format!("signal workflow failed: {err}"))
         })?;
 
-        enqueue_outbox_event_with_context(
-            pool,
+        insert_rpc_outbox(
+            &mut tx,
             self.outbox_relation.as_deref(),
             TOPIC_SIGNALED,
-            &workflow_id,
+            &workflow_id, // partition key = workflow_id (proto method_event_contract)
             &tenant_id,
-            "",
+            &project_id,
+            &workflow_id,
+            "signaled",
+            &workflow_id,
+            "signal_workflow",
             serde_json::json!({
                 "workflow_id": workflow_id.clone(),
                 "tenant_id": tenant_id.clone(),
+                "project_id": project_id.clone(),
                 "signal_name": req.signal_name.clone(),
             }),
-            NativeEventContext {
-                target_resource: workflow_id.clone(),
-                ..NativeEventContext::default()
-            },
-            Some(&self.metrics),
         )
-        .await;
+        .await?;
+        tx.commit().await.map_err(|err| {
+            workflow_internal_status(
+                "signal_workflow_commit",
+                format!("signal workflow commit failed: {err}"),
+            )
+        })?;
 
         Ok(Response::new(workflow_pb::SignalWorkflowResponse {
             message: "signal delivered".to_string(),
@@ -957,19 +1175,123 @@ pub(crate) fn due_workflows_claim_sql(m: &NativeModel) -> String {
     )
 }
 
-/// One workflow-tick pass (leader-elected by the caller). Claims up to `batch_size`
-/// DUE RUNNING instances with `FOR UPDATE SKIP LOCKED`, then — within the SAME
-/// transaction — advances each instance's `current_step` and durably enqueues a
-/// transition outbox row (`step.advanced`, or `completed` on the terminal step).
-/// Because the advance and the outbox insert commit atomically, an instance is
-/// never double-advanced and every transition is at-least-once via the outbox→CDC
-/// pipeline. The tick FIRES EVENTS ONLY; it never runs a payload in-process — it is
-/// the workflow counterpart of the scheduler tick and adds no second orchestration
-/// loop (compensation remains the EXISTING SagaRecoveryWorker path).
+/// The claim statement for the tick's compensation driver (16.3.2): COMPENSATING
+/// instances, same `FOR UPDATE SKIP LOCKED` discipline as the forward claim so
+/// two leaders can never double-emit compensate events. The cancel path clears
+/// `next_run_at`, so the claim is keyed on status alone. Exposed for the SQL-shape
+/// unit test.
+pub(crate) fn compensating_workflows_claim_sql(m: &NativeModel) -> String {
+    let rel = m.relation.clone();
+    format!(
+        "SELECT {workflow_id}::text AS workflow_id, {tenant_id}::text AS tenant_id, \
+            COALESCE({project_id}::text, '') AS project_id, {workflow_type} AS workflow_type, \
+            COALESCE({payload}::text, '') AS payload, \
+            COALESCE({compensations}::text, '') AS compensations, \
+            COALESCE({saga_id}::text, '') AS saga_id, \
+            {current_step} AS current_step, {total_steps} AS total_steps \
+         FROM {rel} \
+         WHERE {status} = '{compensating}' AND {deleted} IS NULL \
+         ORDER BY {last_transition_at} \
+         LIMIT $1 \
+         FOR UPDATE SKIP LOCKED",
+        workflow_id = m.q("workflow_id"),
+        tenant_id = m.q("tenant_id"),
+        project_id = m.q("project_id"),
+        workflow_type = m.q("workflow_type"),
+        payload = m.q("payload"),
+        compensations = m.q("compensations"),
+        saga_id = m.q("saga_id"),
+        current_step = m.q("current_step"),
+        total_steps = m.q("total_steps"),
+        status = m.q("status"),
+        compensating = STATUS_COMPENSATING,
+        deleted = m.q("deleted_at"),
+        last_transition_at = m.q("last_transition_at"),
+    )
+}
+
+/// The claim statement for the tick's timeout sweep (16.3.4): RUNNING instances
+/// whose last state transition is older than the step timeout (`$2`, seconds —
+/// env-resolved once via [`workflow_step_timeout_secs`]). The table's transition
+/// stamp is `last_transition_at` (there is no `updated_at` column). Same
+/// `FOR UPDATE SKIP LOCKED` shape as the forward claim; rows the SAME tick
+/// transaction just advanced carry a fresh `last_transition_at` and are naturally
+/// excluded. Exposed for the SQL-shape unit test.
+pub(crate) fn timed_out_workflows_claim_sql(m: &NativeModel) -> String {
+    let rel = m.relation.clone();
+    format!(
+        "SELECT {workflow_id}::text AS workflow_id, {tenant_id}::text AS tenant_id, \
+            COALESCE({project_id}::text, '') AS project_id, {workflow_type} AS workflow_type, \
+            COALESCE({saga_id}::text, '') AS saga_id, \
+            {current_step} AS current_step, {total_steps} AS total_steps \
+         FROM {rel} \
+         WHERE {status} = 'RUNNING' AND {deleted} IS NULL \
+           AND {last_transition_at} < NOW() - make_interval(secs => $2::DOUBLE PRECISION) \
+         ORDER BY {last_transition_at} \
+         LIMIT $1 \
+         FOR UPDATE SKIP LOCKED",
+        workflow_id = m.q("workflow_id"),
+        tenant_id = m.q("tenant_id"),
+        project_id = m.q("project_id"),
+        workflow_type = m.q("workflow_type"),
+        saga_id = m.q("saga_id"),
+        current_step = m.q("current_step"),
+        total_steps = m.q("total_steps"),
+        status = m.q("status"),
+        deleted = m.q("deleted_at"),
+        last_transition_at = m.q("last_transition_at"),
+    )
+}
+
+/// Decode one text column of a claimed tick row (shared by the forward,
+/// compensation, and timeout passes).
+fn tick_row_text(row: &sqlx::postgres::PgRow, column: &str) -> Result<String, Status> {
+    row.try_get::<String, _>(column).map_err(|e| {
+        workflow_internal_status(
+            "workflow_tick_decode",
+            format!("workflow tick decode {column} failed: {e}"),
+        )
+    })
+}
+
+/// Decode one i32 column of a claimed tick row.
+fn tick_row_i32(row: &sqlx::postgres::PgRow, column: &str) -> Result<i32, Status> {
+    row.try_get::<i32, _>(column).map_err(|e| {
+        workflow_internal_status(
+            "workflow_tick_decode",
+            format!("workflow tick decode {column} failed: {e}"),
+        )
+    })
+}
+
+/// One workflow-tick pass (leader-elected by the caller), three sub-passes in ONE
+/// transaction so state changes and their outbox rows always commit atomically:
 ///
-/// After commit, the saga rows of completed workflows are marked `Committed`
-/// (terminal) on the saga engine — best-effort, cross-store, so it cannot fail the
-/// durable advance. Fail closed: a missing outbox relation yields `Ok(0)`.
+/// 1. **Forward advance** — claims up to `batch_size` DUE RUNNING instances with
+///    `FOR UPDATE SKIP LOCKED` and advances `current_step`, enqueuing
+///    `step.advanced` (or `completed` on the terminal step). Never double-advances;
+///    every transition is at-least-once via the outbox→CDC pipeline.
+/// 2. **Compensation driver (16.3.2)** — for COMPENSATING instances, emits one
+///    `udb.workflow.compensate.step.v1` event per completed step in REVERSE order
+///    (application-driven undo; the data-plane `CompensatorRegistry` cannot undo
+///    application workflow steps, so they are never routed through it), stamps the
+///    emission marker into the instance payload, then settles
+///    COMPENSATING → COMPENSATED and emits `udb.workflow.compensated.v1`.
+///    Exactly-once on re-tick: the terminal transition commits with the events,
+///    and the payload marker skips any already-emitted steps.
+/// 3. **Timeout sweep (16.3.4)** — RUNNING instances whose `last_transition_at`
+///    exceeds the step timeout move to FAILED and emit `udb.workflow.failed.v1`.
+///    Step ADVANCE itself stays timer-driven (`next_run_at`) this wave — a full
+///    step-ack contract needs proto surface (follow-up 16.12.3).
+///
+/// The tick FIRES EVENTS ONLY; it never runs a payload in-process — it is the
+/// workflow counterpart of the scheduler tick and adds no second orchestration
+/// loop.
+///
+/// After commit, the linked saga rows are settled on the saga engine (completed →
+/// `Committed`, compensated → `Compensated`, timed-out → `Failed`) — best-effort,
+/// cross-store, so it cannot fail the durable transition. Fail closed: a missing
+/// outbox relation yields `Ok(0)`.
 pub(crate) async fn run_workflow_tick_once(
     pool: &PgPool,
     outbox_relation: Option<&str>,
@@ -1006,32 +1328,14 @@ pub(crate) async fn run_workflow_tick_once(
     let mut acted = 0i64;
     let mut completed_sagas: Vec<Uuid> = Vec::new();
     for row in &rows {
-        let get = |c: &str| -> Result<String, Status> {
-            row.try_get::<String, _>(c).map_err(|e| {
-                workflow_internal_status(
-                    "workflow_tick_decode",
-                    format!("workflow tick decode {c} failed: {e}"),
-                )
-            })
-        };
-        let workflow_id = get("workflow_id")?;
-        let tenant_id = get("tenant_id")?;
-        let project_id = get("project_id")?;
-        let workflow_type = get("workflow_type")?;
-        let payload = get("payload")?;
-        let saga_id = get("saga_id")?;
-        let current_step: i32 = row.try_get("current_step").map_err(|e| {
-            workflow_internal_status(
-                "workflow_tick_decode",
-                format!("workflow tick decode current_step: {e}"),
-            )
-        })?;
-        let total_steps: i32 = row.try_get("total_steps").map_err(|e| {
-            workflow_internal_status(
-                "workflow_tick_decode",
-                format!("workflow tick decode total_steps: {e}"),
-            )
-        })?;
+        let workflow_id = tick_row_text(row, "workflow_id")?;
+        let tenant_id = tick_row_text(row, "tenant_id")?;
+        let project_id = tick_row_text(row, "project_id")?;
+        let workflow_type = tick_row_text(row, "workflow_type")?;
+        let payload = tick_row_text(row, "payload")?;
+        let saga_id = tick_row_text(row, "saga_id")?;
+        let current_step = tick_row_i32(row, "current_step")?;
+        let total_steps = tick_row_i32(row, "total_steps")?;
 
         let new_step = current_step.saturating_add(1);
         let completed = new_step >= total_steps;
@@ -1107,6 +1411,194 @@ pub(crate) async fn run_workflow_tick_once(
         acted += 1;
     }
 
+    // ── 16.3.2 — compensation driver: COMPENSATING → COMPENSATED ────────────────
+    // Application steps cannot be undone by the data-plane CompensatorRegistry, so
+    // undo is application-driven: one `compensate.step` event per completed forward
+    // step, in REVERSE order, then the terminal `compensated` transition — all in
+    // this same transaction, so the events and the terminal state commit
+    // atomically. Event payloads carry ids + step name/index only, never the
+    // instance payload or the compensation payload contents (no credentials).
+    let mut compensated_sagas: Vec<Uuid> = Vec::new();
+    let comp_rows = sqlx::query(&compensating_workflows_claim_sql(&m))
+        .bind(batch)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(|err| {
+            workflow_internal_status(
+                "workflow_tick_compensate_claim",
+                format!("workflow tick compensate claim failed: {err}"),
+            )
+        })?;
+    for row in &comp_rows {
+        let workflow_id = tick_row_text(row, "workflow_id")?;
+        let tenant_id = tick_row_text(row, "tenant_id")?;
+        let project_id = tick_row_text(row, "project_id")?;
+        let workflow_type = tick_row_text(row, "workflow_type")?;
+        let payload = tick_row_text(row, "payload")?;
+        let compensations_text = tick_row_text(row, "compensations")?;
+        let saga_id = tick_row_text(row, "saga_id")?;
+        let current_step = tick_row_i32(row, "current_step")?;
+        let total_steps = tick_row_i32(row, "total_steps")?;
+
+        let mut payload_json: serde_json::Value =
+            serde_json::from_str(&payload).unwrap_or_else(|_| serde_json::json!({}));
+        if !payload_json.is_object() {
+            payload_json = serde_json::json!({});
+        }
+        let already_emitted = compensate_emitted_from_payload(&payload_json);
+        let compensations: serde_json::Value =
+            serde_json::from_str(&compensations_text).unwrap_or_else(|_| serde_json::json!([]));
+        for (step_index, step_name) in
+            compensation_steps_to_emit(&compensations, current_step, already_emitted)
+        {
+            insert_tick_outbox(
+                &mut tx,
+                outbox_rel,
+                TOPIC_COMPENSATE_STEP,
+                &tenant_id,
+                &project_id,
+                &workflow_id,
+                serde_json::json!({
+                    "workflow_id": workflow_id.clone(),
+                    "tenant_id": tenant_id.clone(),
+                    "project_id": project_id.clone(),
+                    "workflow_type": workflow_type.clone(),
+                    "step_index": step_index,
+                    "step_name": step_name,
+                    "total_steps": total_steps,
+                    "requested_at": now.to_rfc3339(),
+                }),
+                "compensate_step",
+            )
+            .await?;
+        }
+        // Stamp the exactly-once marker and settle the terminal state in the SAME
+        // transaction as the events above.
+        if let Some(obj) = payload_json.as_object_mut() {
+            obj.insert(
+                COMPENSATE_EMITTED_KEY.to_string(),
+                serde_json::json!(current_step.max(0)),
+            );
+        }
+        sqlx::query(&format!(
+            "UPDATE {wf_rel} SET {status} = $2, {payload} = $3::JSONB, {next_run_at} = NULL, \
+                {last_transition_at} = NOW() WHERE {workflow_id} = $1::UUID",
+            status = m.q("status"),
+            payload = m.q("payload"),
+            next_run_at = m.q("next_run_at"),
+            last_transition_at = m.q("last_transition_at"),
+            workflow_id = m.q("workflow_id"),
+        ))
+        .bind(&workflow_id)
+        .bind(STATUS_COMPENSATED)
+        .bind(payload_json.to_string())
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| {
+            workflow_internal_status(
+                "workflow_tick_compensated_update",
+                format!("workflow tick compensated update failed: {e}"),
+            )
+        })?;
+        insert_tick_outbox(
+            &mut tx,
+            outbox_rel,
+            TOPIC_COMPENSATED,
+            &tenant_id,
+            &project_id,
+            &workflow_id,
+            serde_json::json!({
+                "workflow_id": workflow_id.clone(),
+                "tenant_id": tenant_id.clone(),
+                "project_id": project_id.clone(),
+                "workflow_type": workflow_type.clone(),
+                "compensated_steps": current_step.max(0),
+                "compensated_at": now.to_rfc3339(),
+            }),
+            "compensated",
+        )
+        .await?;
+        if let Ok(saga_uuid) = saga_id.parse::<Uuid>() {
+            compensated_sagas.push(saga_uuid);
+        }
+        acted += 1;
+    }
+
+    // ── 16.3.4 — step-timeout sweep: RUNNING → FAILED ───────────────────────────
+    // Guards against instances that stopped transitioning entirely. Step ADVANCE
+    // itself remains event/timer-driven (`next_run_at`) this wave — a full
+    // step-ack contract needs proto surface (follow-up 16.12.3).
+    let timeout_secs = workflow_step_timeout_secs();
+    let mut failed_sagas: Vec<Uuid> = Vec::new();
+    let stale_rows = sqlx::query(&timed_out_workflows_claim_sql(&m))
+        .bind(batch)
+        .bind(timeout_secs)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(|err| {
+            workflow_internal_status(
+                "workflow_tick_timeout_claim",
+                format!("workflow tick timeout claim failed: {err}"),
+            )
+        })?;
+    for row in &stale_rows {
+        let workflow_id = tick_row_text(row, "workflow_id")?;
+        let tenant_id = tick_row_text(row, "tenant_id")?;
+        let project_id = tick_row_text(row, "project_id")?;
+        let workflow_type = tick_row_text(row, "workflow_type")?;
+        let saga_id = tick_row_text(row, "saga_id")?;
+        let current_step = tick_row_i32(row, "current_step")?;
+        let total_steps = tick_row_i32(row, "total_steps")?;
+
+        sqlx::query(&format!(
+            "UPDATE {wf_rel} SET {status} = $2, {next_run_at} = NULL, {last_error} = $3, \
+                {last_transition_at} = NOW() WHERE {workflow_id} = $1::UUID",
+            status = m.q("status"),
+            next_run_at = m.q("next_run_at"),
+            last_error = m.q("last_error"),
+            last_transition_at = m.q("last_transition_at"),
+            workflow_id = m.q("workflow_id"),
+        ))
+        .bind(&workflow_id)
+        .bind(STATUS_FAILED)
+        .bind(format!(
+            "workflow step timed out after {timeout_secs}s without a transition"
+        ))
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| {
+            workflow_internal_status(
+                "workflow_tick_timeout_update",
+                format!("workflow tick timeout update failed: {e}"),
+            )
+        })?;
+        insert_tick_outbox(
+            &mut tx,
+            outbox_rel,
+            TOPIC_FAILED,
+            &tenant_id,
+            &project_id,
+            &workflow_id,
+            serde_json::json!({
+                "workflow_id": workflow_id.clone(),
+                "tenant_id": tenant_id.clone(),
+                "project_id": project_id.clone(),
+                "workflow_type": workflow_type.clone(),
+                "current_step": current_step,
+                "total_steps": total_steps,
+                "reason": "step_timeout",
+                "timeout_secs": timeout_secs,
+                "failed_at": now.to_rfc3339(),
+            }),
+            "failed",
+        )
+        .await?;
+        if let Ok(saga_uuid) = saga_id.parse::<Uuid>() {
+            failed_sagas.push(saga_uuid);
+        }
+        acted += 1;
+    }
+
     tx.commit().await.map_err(|err| {
         workflow_internal_status(
             "workflow_tick_commit",
@@ -1114,20 +1606,33 @@ pub(crate) async fn run_workflow_tick_once(
         )
     })?;
 
-    // Best-effort, cross-store: settle the saga rows of completed workflows to the
-    // terminal `Committed` state on the EXISTING saga engine so they are not left in
-    // the `Pending` queue. A failure here never undoes the durable advance above.
+    // Best-effort, cross-store: settle the linked saga rows on the EXISTING saga
+    // engine so they are not left in the `Pending`/`Indeterminate` queues
+    // (completed → Committed, compensated → Compensated, timed-out → Failed;
+    // Failed is NOT recoverable, so no spurious data-plane compensation fires for
+    // steps that never ran). A failure here never undoes the durable transitions
+    // committed above.
     if let Some(store) = stores {
-        for saga_uuid in completed_sagas {
-            if let Err(err) = SagaStore::update_saga_status(
-                store.as_ref(),
-                saga_uuid,
+        for (saga_ids, status, comp_status) in [
+            (
+                completed_sagas,
                 SagaStatus::Committed,
                 CompensationStatus::None,
-            )
-            .await
-            {
-                tracing::debug!(error = %err, saga_id = %saga_uuid, "workflow tick: saga commit settle failed");
+            ),
+            (
+                compensated_sagas,
+                SagaStatus::Compensated,
+                CompensationStatus::Completed,
+            ),
+            (failed_sagas, SagaStatus::Failed, CompensationStatus::None),
+        ] {
+            for saga_uuid in saga_ids {
+                if let Err(err) =
+                    SagaStore::update_saga_status(store.as_ref(), saga_uuid, status, comp_status)
+                        .await
+                {
+                    tracing::debug!(error = %err, saga_id = %saga_uuid, "workflow tick: saga settle failed");
+                }
             }
         }
     }
@@ -1179,6 +1684,99 @@ async fn insert_tick_outbox(
             format!("workflow tick outbox insert failed: {e}"),
         )
     })
+}
+
+/// Insert ONE RPC outbox row inside the SAME transaction as the row mutation it
+/// announces (16.3.3 — the generalized, caller-supplied-tx sibling of
+/// [`insert_tick_outbox`]): both commit or neither does, closing the dual-write
+/// window the pool-scoped `enqueue_outbox_event_with_context` path leaves open.
+/// Envelope parity with that path: actor/auth_method/decision/policy/trace come
+/// from the ambient method-security + OTel request context, and in enterprise
+/// audit mode a non-compliant event FAILS the transaction (fail closed) instead
+/// of being silently dropped. A missing outbox relation keeps the established
+/// slim-deployment semantic: the mutation commits without an event (there is no
+/// outbox to write), logged at warn level.
+#[allow(clippy::too_many_arguments)]
+async fn insert_rpc_outbox(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    relation: Option<&str>,
+    topic: &str,
+    partition_key: &str,
+    tenant_id: &str,
+    project_id: &str,
+    correlation_id: &str,
+    operation: &str,
+    target_resource: &str,
+    rpc: &'static str,
+    payload: serde_json::Value,
+) -> Result<(), Status> {
+    let Some(relation) = relation else {
+        tracing::warn!(
+            topic,
+            rpc,
+            "workflow: no outbox relation configured; committing mutation without event"
+        );
+        return Ok(());
+    };
+    let trace = crate::runtime::otel::current_trace_context();
+    let correlation = if !correlation_id.trim().is_empty() {
+        correlation_id.to_string()
+    } else if !trace.correlation_id.trim().is_empty() {
+        trace.correlation_id.clone()
+    } else {
+        partition_key.to_string()
+    };
+    let env = ComplianceEnvelope {
+        actor: crate::runtime::otel::current_actor(),
+        operation: operation.to_string(),
+        outcome: "success".to_string(),
+        auth_method: crate::runtime::otel::current_auth_method(),
+        decision_id: crate::runtime::otel::current_decision_id(),
+        policy_version: crate::runtime::otel::current_policy_revision(),
+        trace_id: trace.trace_id.clone(),
+        span_id: trace.span_id.clone(),
+        target_resource: target_resource.to_string(),
+        ..ComplianceEnvelope::default()
+    };
+    if enterprise_audit_mode()
+        && let Err(missing) = validate_native_compliance(
+            topic,
+            tenant_id,
+            &env.actor,
+            &env.operation,
+            &correlation,
+            true,
+        )
+    {
+        return Err(workflow_internal_status(
+            rpc,
+            format!("refusing non-compliant native event (enterprise audit mode): {missing}"),
+        ));
+    }
+    let event_id = Uuid::new_v4();
+    let envelope = build_native_compliance_envelope(
+        &event_id.to_string(),
+        topic,
+        partition_key,
+        tenant_id,
+        project_id,
+        &env,
+        &correlation,
+        "none",
+        1,
+        &[],
+        payload,
+    );
+    crate::runtime::cdc::insert_outbox_row(
+        &mut **tx,
+        relation,
+        event_id,
+        topic,
+        partition_key,
+        &envelope,
+    )
+    .await
+    .map_err(|e| workflow_internal_status(rpc, format!("workflow outbox insert failed: {e}")))
 }
 
 impl DataBrokerService {
@@ -1494,5 +2092,147 @@ mod workflow_tests {
         assert!(workflow_status_filter_to_db("bogus").is_err());
         assert!(is_terminal_status("COMPLETED"));
         assert!(!is_terminal_status("RUNNING"));
+    }
+
+    /// 16.3.2 — the compensation driver emits one event per completed step in
+    /// REVERSE order (last completed step first), naming steps from the recorded
+    /// compensations array when possible, positionally otherwise. Pure — no PG.
+    #[test]
+    fn compensation_steps_emit_in_reverse_order() {
+        let comps = serde_json::json!([
+            {"name": "reserve_inventory"},
+            {"name": "charge_card"},
+            {"name": "ship_order"},
+        ]);
+        assert_eq!(
+            compensation_steps_to_emit(&comps, 3, 0),
+            vec![
+                (2, "ship_order".to_string()),
+                (1, "charge_card".to_string()),
+                (0, "reserve_inventory".to_string()),
+            ]
+        );
+        // No names recorded → positional fallback, never the payload contents.
+        assert_eq!(
+            compensation_steps_to_emit(&serde_json::json!([]), 2, 0),
+            vec![(1, "step_1".to_string()), (0, "step_0".to_string())]
+        );
+    }
+
+    /// 16.3.2 — the payload emission marker makes re-ticks exactly-once: steps a
+    /// previous pass already enqueued are skipped, an over-stamped or complete
+    /// marker emits nothing, and zero completed steps mean nothing to undo.
+    #[test]
+    fn compensation_emission_marker_is_exactly_once() {
+        let comps = serde_json::json!([]);
+        assert_eq!(
+            compensation_steps_to_emit(&comps, 3, 2),
+            vec![(0, "step_0".to_string())]
+        );
+        assert!(compensation_steps_to_emit(&comps, 3, 3).is_empty());
+        assert!(compensation_steps_to_emit(&comps, 3, 7).is_empty());
+        assert!(compensation_steps_to_emit(&comps, 0, 0).is_empty());
+
+        // Marker decode: absent / malformed / negative all read as 0.
+        assert_eq!(COMPENSATE_EMITTED_KEY, "compensate_emitted_steps");
+        assert_eq!(compensate_emitted_from_payload(&serde_json::json!({})), 0);
+        assert_eq!(
+            compensate_emitted_from_payload(&serde_json::json!({"compensate_emitted_steps": 2})),
+            2
+        );
+        assert_eq!(
+            compensate_emitted_from_payload(&serde_json::json!({"compensate_emitted_steps": "x"})),
+            0
+        );
+        assert_eq!(
+            compensate_emitted_from_payload(&serde_json::json!({"compensate_emitted_steps": -4})),
+            0
+        );
+    }
+
+    /// 16.3.2 — the compensation claim mirrors the forward claim's no-double-emit
+    /// contract: SKIP LOCKED, COMPENSATING-only, non-deleted rows.
+    #[test]
+    fn compensating_claim_sql_shape() {
+        let sql = compensating_workflows_claim_sql(&workflow_model());
+        assert!(
+            sql.contains("FOR UPDATE SKIP LOCKED"),
+            "compensation claim must skip locked rows: {sql}"
+        );
+        assert!(
+            sql.contains("'COMPENSATING'"),
+            "claim must only take COMPENSATING instances: {sql}"
+        );
+        assert!(
+            sql.contains("IS NULL"),
+            "claim must exclude soft-deleted rows: {sql}"
+        );
+    }
+
+    /// 16.3.4 — the timeout sweep claims RUNNING rows whose last transition is
+    /// older than the bound timeout, with the same SKIP LOCKED discipline (mirrors
+    /// `due_claim_sql_uses_skip_locked`).
+    #[test]
+    fn timed_out_claim_sql_shape() {
+        let sql = timed_out_workflows_claim_sql(&workflow_model());
+        assert!(
+            sql.contains("FOR UPDATE SKIP LOCKED"),
+            "timeout claim must skip locked rows: {sql}"
+        );
+        assert!(
+            sql.contains("'RUNNING'"),
+            "sweep must only take RUNNING instances: {sql}"
+        );
+        assert!(
+            sql.contains("IS NULL"),
+            "sweep must exclude soft-deleted rows: {sql}"
+        );
+        assert!(
+            sql.contains("make_interval(secs => $2::DOUBLE PRECISION)"),
+            "sweep must bind the env-resolved timeout, never inline it: {sql}"
+        );
+        assert!(
+            sql.contains("< NOW() -"),
+            "sweep must compare the transition stamp against the timeout window: {sql}"
+        );
+    }
+
+    /// The env-overridable timeout resolves to a positive number of seconds (the
+    /// named default when the env override is absent/invalid).
+    #[test]
+    fn workflow_step_timeout_resolves_once_positive() {
+        let secs = workflow_step_timeout_secs();
+        assert!(secs > 0);
+        assert_eq!(WORKFLOW_STEP_TIMEOUT_SECS, 3600);
+    }
+
+    /// 16.3.1 — the shared scope predicate used by get/list/cancel/signal binds the
+    /// tenant AND a project arm: empty project stays tenant-wide (backward
+    /// compatible, the api-key list semantic), a non-empty project restricts to
+    /// exactly that project's rows.
+    #[test]
+    fn scope_predicate_binds_tenant_and_project() {
+        let scope = workflow_scope_predicate(&workflow_model(), "$2", "$3");
+        assert!(
+            scope.contains("= $2::UUID"),
+            "scope must bind the tenant: {scope}"
+        );
+        assert!(
+            scope.contains("$3 = ''"),
+            "empty project must stay tenant-wide (backward compatible): {scope}"
+        );
+        assert!(
+            scope.contains("= NULLIF($3, '')::UUID"),
+            "non-empty project must bind a project equality predicate: {scope}"
+        );
+    }
+
+    /// The compensation/failure lifecycle topics are versioned dot-topics matching
+    /// the 16.3 contract.
+    #[test]
+    fn compensation_and_failure_topics_are_versioned() {
+        assert_eq!(TOPIC_COMPENSATE_STEP, "udb.workflow.compensate.step.v1");
+        assert_eq!(TOPIC_COMPENSATED, "udb.workflow.compensated.v1");
+        assert_eq!(TOPIC_FAILED, "udb.workflow.failed.v1");
     }
 }

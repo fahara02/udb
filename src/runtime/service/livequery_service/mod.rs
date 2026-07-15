@@ -25,8 +25,9 @@
 //! is too slow to drain the channel, the stream is CLOSED with
 //! `resource_exhausted` rather than buffering without bound.
 
+use std::collections::HashMap;
 use std::pin::Pin;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex, OnceLock};
 
 use tokio::sync::{broadcast, mpsc};
 use tokio_stream::Stream;
@@ -74,6 +75,92 @@ fn buffer_events() -> usize {
             .and_then(|value| value.trim().parse::<usize>().ok())
             .filter(|value| *value > 0)
             .unwrap_or(DEFAULT_BUFFER_EVENTS)
+    })
+}
+
+/// Default per-tenant budget of CONCURRENT long-lived subscription streams.
+/// The fair-admission permit taken at `subscribe` entry only rate-bounds
+/// subscription SETUP (it is dropped immediately, by design, so a long-lived
+/// stream never pins an admission slot); this budget is what bounds how many
+/// open streams one tenant can hold at once.
+const DEFAULT_MAX_STREAMS_PER_TENANT: usize = 64;
+
+/// Resolve the per-tenant concurrent-stream budget from
+/// `UDB_LIVEQUERY_MAX_STREAMS_PER_TENANT`, falling back to
+/// [`DEFAULT_MAX_STREAMS_PER_TENANT`]. A non-positive / unparsable value uses
+/// the default so the budget is always finite. Resolved exactly once (no
+/// per-subscribe env reads): the budget is process-static config.
+fn max_streams_per_tenant() -> usize {
+    static BUDGET: OnceLock<usize> = OnceLock::new();
+    *BUDGET.get_or_init(|| {
+        std::env::var("UDB_LIVEQUERY_MAX_STREAMS_PER_TENANT")
+            .ok()
+            .and_then(|value| value.trim().parse::<usize>().ok())
+            .filter(|value| *value > 0)
+            .unwrap_or(DEFAULT_MAX_STREAMS_PER_TENANT)
+    })
+}
+
+/// Per-tenant ACTIVE live-query stream counter. Process-local by design — this
+/// is a limiter over in-process resources (spawned forwarder tasks + bounded
+/// channels), not a data store, exactly like the `channels.rs` fair-admission
+/// semaphores. Poisoning is recovered (`PoisonError::into_inner`, the
+/// `channels.rs` idiom) so a panicked holder can never wedge the limiter.
+fn active_streams() -> &'static Mutex<HashMap<String, usize>> {
+    static ACTIVE: OnceLock<Mutex<HashMap<String, usize>>> = OnceLock::new();
+    ACTIVE.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+/// Typed hard refusal for an over-budget tenant: `ResourceExhausted` with the
+/// QUOTA `ErrorDetail` (not retryable by itself — the caller must close an
+/// existing stream to free a slot).
+fn livequery_stream_budget_status(budget: usize) -> Status {
+    crate::runtime::executor_utils::quota_refusal_status(
+        "livequery",
+        "tenant_stream_budget",
+        format!("tenant live-query stream budget exhausted ({budget} concurrent streams)"),
+    )
+}
+
+/// RAII slot on the per-tenant active-stream budget. Constructed only by
+/// [`try_acquire_stream_slot`]; the count is decremented on `Drop`, so the slot
+/// is released on EVERY exit path of whoever owns it — normal stream end,
+/// error close, or task abort/panic. Owned by the spawned delta forwarder for
+/// the lifetime of the live stream.
+struct StreamSlot {
+    tenant_id: String,
+}
+
+impl Drop for StreamSlot {
+    fn drop(&mut self) {
+        let mut map = active_streams()
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        match map.get_mut(&self.tenant_id) {
+            Some(count) if *count > 1 => *count -= 1,
+            // Last slot for this tenant: remove the entry so the limiter map
+            // never accumulates dead tenants.
+            _ => {
+                map.remove(&self.tenant_id);
+            }
+        }
+    }
+}
+
+/// Claim one active-stream slot for `tenant_id`, failing CLOSED with the typed
+/// quota refusal when the tenant is already at [`max_streams_per_tenant`].
+fn try_acquire_stream_slot(tenant_id: &str) -> Result<StreamSlot, Status> {
+    let budget = max_streams_per_tenant();
+    let mut map = active_streams()
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let count = map.entry(tenant_id.to_string()).or_insert(0);
+    if *count >= budget {
+        return Err(livequery_stream_budget_status(budget));
+    }
+    *count += 1;
+    Ok(StreamSlot {
+        tenant_id: tenant_id.to_string(),
     })
 }
 
@@ -510,9 +597,20 @@ async fn run_delta_forward(
     project_id: String,
     cdc_topic: String,
     user_filter: Option<LogicalFilter>,
+    // Owned for the lifetime of the live stream; dropping it (on ANY exit path
+    // of this task — normal break, error close, abort) releases this
+    // subscription's per-tenant active-stream budget slot.
+    _stream_slot: StreamSlot,
 ) {
     loop {
-        match rx.recv().await {
+        // Wake on subscriber hang-up too: without `tx.closed()` a disconnected
+        // client whose source entity never mutates would park this task (and
+        // pin its budget slot) on the broadcast feed indefinitely.
+        let received = tokio::select! {
+            _ = tx.closed() => break,
+            received = rx.recv() => received,
+        };
+        match received {
             Ok(envelope) => {
                 if !topic_matches_source(&envelope.topic, &cdc_topic) {
                     continue;
@@ -602,6 +700,12 @@ impl LiveQueryService for LiveQueryServiceImpl {
         )
         .await?;
 
+        // Concurrency budget (distinct from the rate bound above): cap the
+        // tenant's ACTIVE long-lived streams before any read/stream resources
+        // are committed. The slot is released by the guard's Drop when the
+        // stream ends, on every path.
+        let stream_slot = try_acquire_stream_slot(&tenant_id)?;
+
         let runtime = self.require_runtime()?;
         let context = native_service_context(&metadata, &tenant_id, &project_id);
 
@@ -652,7 +756,10 @@ impl LiveQueryService for LiveQueryServiceImpl {
         let _ = tx.try_send(Ok(snapshot));
 
         // Spawn the bounded delta forwarder when a live CDC feed exists; otherwise
-        // drop the sender so the stream ends cleanly after the snapshot.
+        // drop the sender so the stream ends cleanly after the snapshot. The
+        // budget slot travels with the forwarder task (released when the task
+        // exits); without a live feed the stream is snapshot-only and ends
+        // immediately, so the slot is released right here.
         if let Some(rx_delta) = delta_rx {
             tokio::spawn(run_delta_forward(
                 rx_delta,
@@ -661,9 +768,11 @@ impl LiveQueryService for LiveQueryServiceImpl {
                 project_id,
                 source.cdc_topic,
                 user_filter,
+                stream_slot,
             ));
         } else {
             drop(tx);
+            drop(stream_slot);
         }
 
         let stream = async_stream::try_stream! {
@@ -905,6 +1014,52 @@ mod livequery_tests {
         assert_eq!(detail.retry_after_ms, 0);
         assert_eq!(detail.backend, "livequery");
         assert_eq!(detail.operation, "subscriber_channel");
+    }
+
+    /// The per-tenant concurrent-stream budget: the N+1th subscribe slot is
+    /// refused with the typed quota refusal, a freed slot is immediately
+    /// reusable, and another tenant is unaffected. Pure logic on the counter
+    /// helper — tenant ids are unique to this test because the limiter map is
+    /// deliberately process-wide.
+    #[test]
+    fn stream_budget_refuses_over_budget_and_reuses_freed_slot() {
+        let tenant = "tenant-stream-budget-a";
+        let other_tenant = "tenant-stream-budget-b";
+        let budget = max_streams_per_tenant();
+
+        // Fill the budget.
+        let mut slots = Vec::with_capacity(budget);
+        for _ in 0..budget {
+            slots.push(try_acquire_stream_slot(tenant).expect("within budget"));
+        }
+
+        // The N+1th stream is refused with the typed quota refusal.
+        let err = try_acquire_stream_slot(tenant)
+            .err()
+            .expect("over-budget subscribe must be refused");
+        assert_eq!(err.code(), tonic::Code::ResourceExhausted);
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::Quota as i32);
+        assert_eq!(detail.backend, "livequery");
+        assert_eq!(detail.operation, "tenant_stream_budget");
+        assert!(!detail.retryable);
+
+        // The budget is PER TENANT: a saturated tenant never starves another.
+        let other_slot = try_acquire_stream_slot(other_tenant).expect("other tenant unaffected");
+        drop(other_slot);
+
+        // Ending one stream (guard drop) frees a slot that is reusable.
+        drop(slots.pop());
+        let reacquired = try_acquire_stream_slot(tenant).expect("freed slot must be reusable");
+        drop(reacquired);
+
+        // Draining every stream removes the tenant's limiter entry entirely.
+        drop(slots);
+        let map = active_streams()
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        assert!(!map.contains_key(tenant));
+        assert!(!map.contains_key(other_tenant));
     }
 
     #[test]
