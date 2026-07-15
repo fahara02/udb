@@ -2504,9 +2504,9 @@ fn row_value_to_json(row: &PgRow, idx: usize, type_name: &str) -> Result<JsonVal
         Ok(value) => Ok(value.map(JsonValue::from).unwrap_or(JsonValue::Null)),
         Err(_) => {
             use sqlx::ValueRef as _;
-            let raw = row
-                .try_get_raw(idx)
-                .map_err(|err| core_internal_status("read_column", format!("row decode failed: {err}")))?;
+            let raw = row.try_get_raw(idx).map_err(|err| {
+                core_internal_status("read_column", format!("row decode failed: {err}"))
+            })?;
             if raw.is_null() {
                 return Ok(JsonValue::Null);
             }
@@ -2515,12 +2515,12 @@ fn row_value_to_json(row: &PgRow, idx: usize, type_name: &str) -> Result<JsonVal
                 core_internal_status("read_column", format!("raw column read failed: {err}"))
             })?;
             match format {
-                sqlx::postgres::PgValueFormat::Binary => {
-                    Ok(JsonValue::String(bytes.iter().map(|b| format!("{b:02X}")).collect()))
-                }
-                sqlx::postgres::PgValueFormat::Text => {
-                    Ok(JsonValue::String(String::from_utf8_lossy(bytes).into_owned()))
-                }
+                sqlx::postgres::PgValueFormat::Binary => Ok(JsonValue::String(
+                    bytes.iter().map(|b| format!("{b:02X}")).collect(),
+                )),
+                sqlx::postgres::PgValueFormat::Text => Ok(JsonValue::String(
+                    String::from_utf8_lossy(bytes).into_owned(),
+                )),
             }
         }
     }

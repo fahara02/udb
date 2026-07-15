@@ -631,9 +631,7 @@ pub(crate) fn sqlx_error_to_status(context: &str, err: &sqlx::Error) -> tonic::S
                     let column = not_null_column(db.message());
                     let msg = match &column {
                         Some(c) => format!("value type does not match column '{c}'"),
-                        None => {
-                            "a value's type does not match the target column type".to_string()
-                        }
+                        None => "a value's type does not match the target column type".to_string(),
                     };
                     return executor_utils_invalid_field(
                         column.unwrap_or_else(|| "parameter".to_string()),

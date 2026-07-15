@@ -109,7 +109,12 @@ impl SqlDialect for Postgres {
             let base = ty.split('(').next().unwrap_or(ty).trim();
             base.eq_ignore_ascii_case("geography") || base.eq_ignore_ascii_case("geometry")
         } {
-            let base = ty.split('(').next().unwrap_or(ty).trim().to_ascii_uppercase();
+            let base = ty
+                .split('(')
+                .next()
+                .unwrap_or(ty)
+                .trim()
+                .to_ascii_uppercase();
             format!("{placeholder}::{base}")
         } else {
             placeholder.to_string()
