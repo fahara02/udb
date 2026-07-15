@@ -1430,8 +1430,17 @@ impl AnalyticsService for AnalyticsServiceImpl {
         // columns are what a snapshot pass genuinely has to write. Run the SAME
         // rollup the worker seam runs and report rows actually updated — not a
         // COUNT(*) of pre-existing rows.
-        let written =
-            run_analytics_rollup_scoped(pool, &tenant_id, &req.stage_name, &req.hour).await?;
+        let written = run_analytics_rollup_scoped(pool, &tenant_id, &req.stage_name, &req.hour)
+            .await
+            .map_err(|status| {
+                // Re-tag the rollup failure under this RPC's operation so the
+                // served TriggerSnapshot path carries a `trigger_snapshot` typed
+                // internal detail (the worker seam keeps `analytics_rollup`).
+                analytics_internal_status(
+                    "trigger_snapshot",
+                    format!("trigger snapshot rollup failed: {}", status.message()),
+                )
+            })?;
         // Fulfil the proto-declared `method_event_contract` for this mutation.
         self.emit_analytics_event(
             EVENT_TYPE_SNAPSHOT_TRIGGERED,
