@@ -7,7 +7,7 @@ Inputs:
 - `sdk/go/udbclient/generated_client.go`
 - `docs/site/bench-results.json`
 
-Current generated RPC surface: 344 RPCs across 28 services.
+Current generated RPC surface: 346 RPCs across 28 services.
 
 The benchmark body manifest is checked against generated SDK metadata before this
 file is written. A missing row, extra row, alias drift, operationId drift, or
@@ -45,7 +45,7 @@ do not yet publish per-RPC live benchmark results.
 | EmbeddingService | 6 | 2 | 3 | 1 | 0 |
 | IdentityProviderService | 27 | 6 | 21 | 0 | 0 |
 | LiveQueryService | 1 | 1 | 0 | 0 | 0 |
-| LockService | 3 | 0 | 3 | 0 | 0 |
+| LockService | 5 | 2 | 3 | 0 | 0 |
 | MeteringService | 6 | 4 | 2 | 0 | 0 |
 | NotificationService | 12 | 7 | 5 | 0 | 0 |
 | PeerService | 5 | 2 | 3 | 0 | 0 |
@@ -321,6 +321,8 @@ benchmark harnesses.
 | IdentityProviderService | `IdentityProviderService/UpdateProvider` | `update_provider` | `updateProvider` | MUTATION | idp.md |
 | LiveQueryService | `LiveQueryService/Subscribe` | `subscribe` | `liveQuerySubscribe` | READ_ONLY | livequery.md |
 | LockService | `LockService/AcquireLock` | `acquire_lock` | `acquireLock` | MUTATION | lock.md |
+| LockService | `LockService/GetLock` | `get_lock` | `getLock` | READ_ONLY | lock.md |
+| LockService | `LockService/ListLocks` | `list_locks` | `listLocks` | READ_ONLY | lock.md |
 | LockService | `LockService/ReleaseLock` | `release_lock` | `releaseLock` | MUTATION | lock.md |
 | LockService | `LockService/RenewLock` | `renew_lock` | `renewLock` | MUTATION | lock.md |
 | MeteringService | `MeteringService/CheckQuota` | `check_quota` | `checkQuota` | READ_ONLY | metering.md |

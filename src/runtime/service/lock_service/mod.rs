@@ -1034,12 +1034,8 @@ impl LockService for LockServiceImpl {
         let tenant_id = req.tenant_id.trim().to_string();
         let status_filter = req.status_filter.trim().to_string();
         let status = (!status_filter.is_empty()).then_some(status_filter.as_str());
-        let window = native_offset_page_window(
-            1,
-            req.page_size,
-            &req.page_token,
-            DEFAULT_LOCK_LIST_LIMIT,
-        );
+        let window =
+            native_offset_page_window(1, req.page_size, &req.page_token, DEFAULT_LOCK_LIST_LIMIT);
         let _admit = native_admit_on(
             self.channels.as_ref(),
             &self.metrics,
@@ -1567,7 +1563,10 @@ mod lock_scope_tests {
         assert_eq!(err.code(), tonic::Code::InvalidArgument);
         let detail = decode_detail(&err);
         assert!(
-            detail.field_violations.iter().any(|f| f.field == "lock_name"),
+            detail
+                .field_violations
+                .iter()
+                .any(|f| f.field == "lock_name"),
             "expected a lock_name field violation"
         );
     }
@@ -1609,8 +1608,14 @@ mod lock_scope_tests {
         assert_eq!(pg.offset, Some(100));
         // The status filter is threaded into the tenant-scoped predicate.
         let rendered = format!("{:?}", read.filter);
-        assert!(rendered.contains("HELD"), "status filter must be present: {rendered}");
-        assert!(rendered.contains("tenant-a"), "tenant filter must be present");
+        assert!(
+            rendered.contains("HELD"),
+            "status filter must be present: {rendered}"
+        );
+        assert!(
+            rendered.contains("tenant-a"),
+            "tenant filter must be present"
+        );
     }
 }
 

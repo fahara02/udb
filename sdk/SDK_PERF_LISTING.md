@@ -6,7 +6,7 @@ Inputs:
 - `docs/generated/bench-bodies.json`
 - `docs/site/bench-results.json`
 
-Current generated RPC surface: 344 RPCs across 28 services.
+Current generated RPC surface: 346 RPCs across 28 services.
 
 Published benchmark artifact: not committed yet.
 Release tag: -.
@@ -57,7 +57,7 @@ Generated at: -.
 | EmbeddingService | 6 | 2 | 3 | 1 | 0 |
 | IdentityProviderService | 27 | 6 | 21 | 0 | 0 |
 | LiveQueryService | 1 | 1 | 0 | 0 | 0 |
-| LockService | 3 | 0 | 3 | 0 | 0 |
+| LockService | 5 | 2 | 3 | 0 | 0 |
 | MeteringService | 6 | 4 | 2 | 0 | 0 |
 | NotificationService | 12 | 7 | 5 | 0 | 0 |
 | PeerService | 5 | 2 | 3 | 0 | 0 |
@@ -334,6 +334,8 @@ identity surface available to benchmark reports.
 | `IdentityProviderService/UpdateProvider` | `update_provider` | `updateProvider` | MUTATION |
 | `LiveQueryService/Subscribe` | `subscribe` | `liveQuerySubscribe` | READ_ONLY |
 | `LockService/AcquireLock` | `acquire_lock` | `acquireLock` | MUTATION |
+| `LockService/GetLock` | `get_lock` | `getLock` | READ_ONLY |
+| `LockService/ListLocks` | `list_locks` | `listLocks` | READ_ONLY |
 | `LockService/ReleaseLock` | `release_lock` | `releaseLock` | MUTATION |
 | `LockService/RenewLock` | `renew_lock` | `renewLock` | MUTATION |
 | `MeteringService/CheckQuota` | `check_quota` | `checkQuota` | READ_ONLY |

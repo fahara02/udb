@@ -762,7 +762,13 @@ fn full_service_descriptor_surface_snapshot() {
         ),
         (
             "udb.core.lock.services.v1.LockService",
-            &["AcquireLock", "GetLock", "ListLocks", "ReleaseLock", "RenewLock"],
+            &[
+                "AcquireLock",
+                "GetLock",
+                "ListLocks",
+                "ReleaseLock",
+                "RenewLock",
+            ],
         ),
         (
             "udb.core.metering.services.v1.MeteringService",

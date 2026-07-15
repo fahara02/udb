@@ -3037,6 +3037,30 @@
   },
   {
     "file": "lock.md",
+    "rpc": "GetLock",
+    "service": "LockService",
+    "wire_rpc": "LockService/GetLock",
+    "api_alias": "get_lock",
+    "operation_id": "getLock",
+    "op_kind": "READ_ONLY",
+    "request_msg": "GetLockRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"lock_name\": \"sdk-perf-acquire-lock\" }`",
+    "notes": "reads back a single lock by name within the seeded tenant (found=false when absent)."
+  },
+  {
+    "file": "lock.md",
+    "rpc": "ListLocks",
+    "service": "LockService",
+    "wire_rpc": "LockService/ListLocks",
+    "api_alias": "list_locks",
+    "operation_id": "listLocks",
+    "op_kind": "READ_ONLY",
+    "request_msg": "ListLocksRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"status_filter\": \"HELD\", \"page_size\": 50 }`",
+    "notes": "lists the seeded tenant's HELD locks, first page."
+  },
+  {
+    "file": "lock.md",
     "rpc": "ReleaseLock",
     "service": "LockService",
     "wire_rpc": "LockService/ReleaseLock",

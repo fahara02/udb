@@ -28242,7 +28242,7 @@
     "/v1/locks": {
       "get": {
         "summary": "List the caller tenant's locks, optionally narrowed by status. Paginated\n(page_size + opaque page_token). Read-only.",
-        "operationId": "LockService_ListLocks",
+        "operationId": "listLocks",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -28385,13 +28385,26 @@
         ],
         "tags": [
           "LockService"
-        ]
+        ],
+        "x-udb-sdk-alias": "list_locks",
+        "x-udb-scope": [
+          "udb:lock:list-locks"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "locks",
+        "x-udb-operation-kind": "read_only"
       }
     },
     "/v1/locks/{lockName}": {
       "get": {
         "summary": "Fetch a single lock by name within the caller's tenant. Read-only; an absent\nlock returns found=false (not an error) — a tenant-scoped read miss is normal.",
-        "operationId": "LockService_GetLock",
+        "operationId": "getLock",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -28520,7 +28533,20 @@
         ],
         "tags": [
           "LockService"
-        ]
+        ],
+        "x-udb-sdk-alias": "get_lock",
+        "x-udb-scope": [
+          "udb:lock:get-lock"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "locks",
+        "x-udb-operation-kind": "read_only"
       }
     },
     "/v1/locks:acquire": {
