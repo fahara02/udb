@@ -18,7 +18,7 @@ Contract version `4.0.0` · 27 native services.
 | `embedding` | Embeddings | embedding | yes | postgres | 6 | control-plane |
 | `idp` | Identity Providers | auth | yes | postgres | 27 | control-plane |
 | `livequery` | Live Query | livequery | yes | postgres | 1 | control-plane |
-| `lock` | Locks | lock | yes | postgres | 3 | control-plane |
+| `lock` | Locks | lock | yes | postgres | 5 | control-plane |
 | `metering` | Metering | metering | yes | postgres | 6 | control-plane |
 | `notification` | Notifications | messaging | yes | postgres, kafka | 12 | control-plane |
 | `scheduler` | Scheduler | scheduler | yes | postgres | 6 | control-plane |

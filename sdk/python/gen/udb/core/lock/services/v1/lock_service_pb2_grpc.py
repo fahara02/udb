@@ -33,6 +33,16 @@ class LockServiceStub(object):
                 request_serializer=udb_dot_core_dot_lock_dot_services_dot_v1_dot_lock__service__pb2.ReleaseLockRequest.SerializeToString,
                 response_deserializer=udb_dot_core_dot_lock_dot_services_dot_v1_dot_lock__service__pb2.ReleaseLockResponse.FromString,
                 _registered_method=True)
+        self.GetLock = channel.unary_unary(
+                '/udb.core.lock.services.v1.LockService/GetLock',
+                request_serializer=udb_dot_core_dot_lock_dot_services_dot_v1_dot_lock__service__pb2.GetLockRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_lock_dot_services_dot_v1_dot_lock__service__pb2.GetLockResponse.FromString,
+                _registered_method=True)
+        self.ListLocks = channel.unary_unary(
+                '/udb.core.lock.services.v1.LockService/ListLocks',
+                request_serializer=udb_dot_core_dot_lock_dot_services_dot_v1_dot_lock__service__pb2.ListLocksRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_lock_dot_services_dot_v1_dot_lock__service__pb2.ListLocksResponse.FromString,
+                _registered_method=True)
 
 
 class LockServiceServicer(object):
@@ -67,6 +77,22 @@ class LockServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def GetLock(self, request, context):
+        """Fetch a single lock by name within the caller's tenant. Read-only; an absent
+        lock returns found=false (not an error) — a tenant-scoped read miss is normal.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ListLocks(self, request, context):
+        """List the caller tenant's locks, optionally narrowed by status. Paginated
+        (page_size + opaque page_token). Read-only.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_LockServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -84,6 +110,16 @@ def add_LockServiceServicer_to_server(servicer, server):
                     servicer.ReleaseLock,
                     request_deserializer=udb_dot_core_dot_lock_dot_services_dot_v1_dot_lock__service__pb2.ReleaseLockRequest.FromString,
                     response_serializer=udb_dot_core_dot_lock_dot_services_dot_v1_dot_lock__service__pb2.ReleaseLockResponse.SerializeToString,
+            ),
+            'GetLock': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetLock,
+                    request_deserializer=udb_dot_core_dot_lock_dot_services_dot_v1_dot_lock__service__pb2.GetLockRequest.FromString,
+                    response_serializer=udb_dot_core_dot_lock_dot_services_dot_v1_dot_lock__service__pb2.GetLockResponse.SerializeToString,
+            ),
+            'ListLocks': grpc.unary_unary_rpc_method_handler(
+                    servicer.ListLocks,
+                    request_deserializer=udb_dot_core_dot_lock_dot_services_dot_v1_dot_lock__service__pb2.ListLocksRequest.FromString,
+                    response_serializer=udb_dot_core_dot_lock_dot_services_dot_v1_dot_lock__service__pb2.ListLocksResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -171,6 +207,60 @@ class LockService(object):
             '/udb.core.lock.services.v1.LockService/ReleaseLock',
             udb_dot_core_dot_lock_dot_services_dot_v1_dot_lock__service__pb2.ReleaseLockRequest.SerializeToString,
             udb_dot_core_dot_lock_dot_services_dot_v1_dot_lock__service__pb2.ReleaseLockResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetLock(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.lock.services.v1.LockService/GetLock',
+            udb_dot_core_dot_lock_dot_services_dot_v1_dot_lock__service__pb2.GetLockRequest.SerializeToString,
+            udb_dot_core_dot_lock_dot_services_dot_v1_dot_lock__service__pb2.GetLockResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ListLocks(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.lock.services.v1.LockService/ListLocks',
+            udb_dot_core_dot_lock_dot_services_dot_v1_dot_lock__service__pb2.ListLocksRequest.SerializeToString,
+            udb_dot_core_dot_lock_dot_services_dot_v1_dot_lock__service__pb2.ListLocksResponse.FromString,
             options,
             channel_credentials,
             insecure,

@@ -3,10 +3,10 @@
 //
 // UDB C# SDK — generated robustness/forwarding layer.
 //   Language:         csharp
-//   UDB version:      0.4.1
+//   UDB version:      0.4.2
 //   Protocol version: 1.0.0
 //   Services:         28
-//   RPCs:             344
+//   RPCs:             346
 //
 // This file is RENDERED by `udb sdk generate` from
 //   sdk-templates/csharp/Udb.Client/GeneratedClient.cs.tmpl
@@ -239,6 +239,8 @@ public static class GeneratedRpcIdentities
         map["/udb.core.idp.services.v1.IdentityProviderService/UpdateProvider"] = new RpcIdentity("/udb.core.idp.services.v1.IdentityProviderService/UpdateProvider", "IdentityProviderService", "UpdateProvider", "update_provider", "updateProvider", "mutation", "patch", "/v1/idp/providers/{provider_id}");
         map["/udb.core.livequery.services.v1.LiveQueryService/Subscribe"] = new RpcIdentity("/udb.core.livequery.services.v1.LiveQueryService/Subscribe", "LiveQueryService", "Subscribe", "subscribe", "liveQuerySubscribe", "read_only", "post", "/v1/livequery:subscribe");
         map["/udb.core.lock.services.v1.LockService/AcquireLock"] = new RpcIdentity("/udb.core.lock.services.v1.LockService/AcquireLock", "LockService", "AcquireLock", "acquire_lock", "acquireLock", "mutation", "post", "/v1/locks:acquire");
+        map["/udb.core.lock.services.v1.LockService/GetLock"] = new RpcIdentity("/udb.core.lock.services.v1.LockService/GetLock", "LockService", "GetLock", "get_lock", "getLock", "read_only", "get", "/v1/locks/{lock_name}");
+        map["/udb.core.lock.services.v1.LockService/ListLocks"] = new RpcIdentity("/udb.core.lock.services.v1.LockService/ListLocks", "LockService", "ListLocks", "list_locks", "listLocks", "read_only", "get", "/v1/locks");
         map["/udb.core.lock.services.v1.LockService/ReleaseLock"] = new RpcIdentity("/udb.core.lock.services.v1.LockService/ReleaseLock", "LockService", "ReleaseLock", "release_lock", "releaseLock", "mutation", "post", "/v1/locks:release");
         map["/udb.core.lock.services.v1.LockService/RenewLock"] = new RpcIdentity("/udb.core.lock.services.v1.LockService/RenewLock", "LockService", "RenewLock", "renew_lock", "renewLock", "mutation", "post", "/v1/locks:renew");
         map["/udb.core.metering.services.v1.MeteringService/CheckQuota"] = new RpcIdentity("/udb.core.metering.services.v1.MeteringService/CheckQuota", "MeteringService", "CheckQuota", "check_quota", "checkQuota", "read_only", "post", "/v1/metering/quotas:check");
@@ -743,7 +745,7 @@ public sealed partial class GeneratedLiveQueryServiceClient : GeneratedServiceBa
 }
 /// <summary>
 /// Robustness wrapper for the <c>udb.core.lock.services.v1.LockService</c> service
-/// (3 RPCs). Forwards to the buf-generated
+/// (5 RPCs). Forwards to the buf-generated
 /// <c>LockServiceClient</c> stub.
 /// </summary>
 public sealed partial class GeneratedLockServiceClient : GeneratedServiceBase
@@ -5150,6 +5152,52 @@ public sealed partial class GeneratedLockServiceClient
             deadline,
             cancellationToken,
             "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedLockServiceClient
+{
+    /// <summary>
+    /// <c>get_lock</c> (unary) — forwards to <c>LockServiceClient.GetLockAsync</c>.
+    /// gRPC path: <c>/udb.core.lock.services.v1.LockService/GetLock</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> GetLockAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.GetLockAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.lock.services.v1.LockService/GetLock",
+            co => (object)_stub.GetLockAsync(request, co),
+            deadline,
+            cancellationToken,
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedLockServiceClient
+{
+    /// <summary>
+    /// <c>list_locks</c> (unary) — forwards to <c>LockServiceClient.ListLocksAsync</c>.
+    /// gRPC path: <c>/udb.core.lock.services.v1.LockService/ListLocks</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> ListLocksAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.ListLocksAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.lock.services.v1.LockService/ListLocks",
+            co => (object)_stub.ListLocksAsync(request, co),
+            deadline,
+            cancellationToken,
+            "read_only" == "read_only",
             "false" == "true",
             (object)request);
     }

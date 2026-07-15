@@ -18,10 +18,10 @@ use Grpc\ChannelCredentials;
  * the embedded proto descriptor set by `udb sdk generate`, so its surface can
  * never drift from the wire contract.
  *
- *   UDB version ...... 0.4.1
+ *   UDB version ...... 0.4.2
  *   Protocol version . 1.0.0
  *   Services ......... 28
- *   RPCs ............. 344
+ *   RPCs ............. 346
  *
  * This class COMPOSES WITH the hand-written layer; it does not replace it:
  *   - it reuses {@see UdbMetadata} for the eight broker headers,
@@ -238,6 +238,8 @@ final class GeneratedClient
         "UpdateProvider" => "mutation",
         "Subscribe" => "read_only",
         "AcquireLock" => "mutation",
+        "GetLock" => "read_only",
+        "ListLocks" => "read_only",
         "ReleaseLock" => "mutation",
         "RenewLock" => "mutation",
         "CheckQuota" => "read_only",
@@ -591,6 +593,8 @@ final class GeneratedClient
         "IdentityProviderService/UpdateProvider" => "mutation",
         "LiveQueryService/Subscribe" => "read_only",
         "LockService/AcquireLock" => "mutation",
+        "LockService/GetLock" => "read_only",
+        "LockService/ListLocks" => "read_only",
         "LockService/ReleaseLock" => "mutation",
         "LockService/RenewLock" => "mutation",
         "MeteringService/CheckQuota" => "read_only",
@@ -944,6 +948,8 @@ final class GeneratedClient
         "IdentityProviderService/UpdateProvider" => "update_provider",
         "LiveQueryService/Subscribe" => "subscribe",
         "LockService/AcquireLock" => "acquire_lock",
+        "LockService/GetLock" => "get_lock",
+        "LockService/ListLocks" => "list_locks",
         "LockService/ReleaseLock" => "release_lock",
         "LockService/RenewLock" => "renew_lock",
         "MeteringService/CheckQuota" => "check_quota",
@@ -1296,6 +1302,8 @@ final class GeneratedClient
         "IdentityProviderService/UpdateProvider" => "updateProvider",
         "LiveQueryService/Subscribe" => "liveQuerySubscribe",
         "LockService/AcquireLock" => "acquireLock",
+        "LockService/GetLock" => "getLock",
+        "LockService/ListLocks" => "listLocks",
         "LockService/ReleaseLock" => "releaseLock",
         "LockService/RenewLock" => "renewLock",
         "MeteringService/CheckQuota" => "checkQuota",
@@ -1648,6 +1656,8 @@ final class GeneratedClient
         "IdentityProviderService/UpdateProvider" => "patch",
         "LiveQueryService/Subscribe" => "post",
         "LockService/AcquireLock" => "post",
+        "LockService/GetLock" => "get",
+        "LockService/ListLocks" => "get",
         "LockService/ReleaseLock" => "post",
         "LockService/RenewLock" => "post",
         "MeteringService/CheckQuota" => "post",
@@ -2000,6 +2010,8 @@ final class GeneratedClient
         "IdentityProviderService/UpdateProvider" => "/v1/idp/providers/{provider_id}",
         "LiveQueryService/Subscribe" => "/v1/livequery:subscribe",
         "LockService/AcquireLock" => "/v1/locks:acquire",
+        "LockService/GetLock" => "/v1/locks/{lock_name}",
+        "LockService/ListLocks" => "/v1/locks",
         "LockService/ReleaseLock" => "/v1/locks:release",
         "LockService/RenewLock" => "/v1/locks:renew",
         "MeteringService/CheckQuota" => "/v1/metering/quotas:check",
@@ -2448,6 +2460,8 @@ final class GeneratedClient
         "update_provider" => "updateProvider",
         "subscribe" => "subscribe",
         "acquire_lock" => "acquireLock",
+        "get_lock" => "getLock",
+        "list_locks" => "listLocks",
         "release_lock" => "releaseLock",
         "renew_lock" => "renewLock",
         "check_quota" => "checkQuota",
@@ -6334,6 +6348,48 @@ final class GeneratedClient
         );
     }
     /**
+     * udb.core.lock.services.v1.LockService / GetLock (unary), public alias get_lock.
+     *
+     * Forwards to {@see stubFor()}->GetLock(); retries transient codes.
+     * Path: /udb.core.lock.services.v1.LockService/GetLock
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded GetLockResponse
+     */
+    public function getLock($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'GetLock',
+            'LockService',
+            'udb.core.lock.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->GetLock($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.lock.services.v1.LockService / ListLocks (unary), public alias list_locks.
+     *
+     * Forwards to {@see stubFor()}->ListLocks(); retries transient codes.
+     * Path: /udb.core.lock.services.v1.LockService/ListLocks
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ListLocksResponse
+     */
+    public function listLocks($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ListLocks',
+            'LockService',
+            'udb.core.lock.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ListLocks($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
      * udb.core.lock.services.v1.LockService / ReleaseLock (unary), public alias release_lock.
      *
      * Forwards to {@see stubFor()}->ReleaseLock(); retries transient codes.
@@ -9956,7 +10012,7 @@ final class GeneratedClient
         return $this->stubFor('LiveQueryService', 'udb.core.livequery.services.v1');
     }
     /**
-     * Underlying buf-generated stub for udb.core.lock.services.v1.LockService (3 RPC(s)).
+     * Underlying buf-generated stub for udb.core.lock.services.v1.LockService (5 RPC(s)).
      * Channel is shared with every other service stub on this client.
      *
      * @return BaseStub  a LockServiceClient

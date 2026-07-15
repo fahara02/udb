@@ -22,6 +22,8 @@ const (
 	LockService_AcquireLock_FullMethodName = "/udb.core.lock.services.v1.LockService/AcquireLock"
 	LockService_RenewLock_FullMethodName   = "/udb.core.lock.services.v1.LockService/RenewLock"
 	LockService_ReleaseLock_FullMethodName = "/udb.core.lock.services.v1.LockService/ReleaseLock"
+	LockService_GetLock_FullMethodName     = "/udb.core.lock.services.v1.LockService/GetLock"
+	LockService_ListLocks_FullMethodName   = "/udb.core.lock.services.v1.LockService/ListLocks"
 )
 
 // LockServiceClient is the client API for LockService service.
@@ -43,6 +45,12 @@ type LockServiceClient interface {
 	// Release a lock the caller currently holds. The presented fencing token must
 	// not be stale; a lower token is rejected.
 	ReleaseLock(ctx context.Context, in *ReleaseLockRequest, opts ...grpc.CallOption) (*ReleaseLockResponse, error)
+	// Fetch a single lock by name within the caller's tenant. Read-only; an absent
+	// lock returns found=false (not an error) — a tenant-scoped read miss is normal.
+	GetLock(ctx context.Context, in *GetLockRequest, opts ...grpc.CallOption) (*GetLockResponse, error)
+	// List the caller tenant's locks, optionally narrowed by status. Paginated
+	// (page_size + opaque page_token). Read-only.
+	ListLocks(ctx context.Context, in *ListLocksRequest, opts ...grpc.CallOption) (*ListLocksResponse, error)
 }
 
 type lockServiceClient struct {
@@ -83,6 +91,26 @@ func (c *lockServiceClient) ReleaseLock(ctx context.Context, in *ReleaseLockRequ
 	return out, nil
 }
 
+func (c *lockServiceClient) GetLock(ctx context.Context, in *GetLockRequest, opts ...grpc.CallOption) (*GetLockResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetLockResponse)
+	err := c.cc.Invoke(ctx, LockService_GetLock_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *lockServiceClient) ListLocks(ctx context.Context, in *ListLocksRequest, opts ...grpc.CallOption) (*ListLocksResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListLocksResponse)
+	err := c.cc.Invoke(ctx, LockService_ListLocks_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // LockServiceServer is the server API for LockService service.
 // All implementations should embed UnimplementedLockServiceServer
 // for forward compatibility.
@@ -102,6 +130,12 @@ type LockServiceServer interface {
 	// Release a lock the caller currently holds. The presented fencing token must
 	// not be stale; a lower token is rejected.
 	ReleaseLock(context.Context, *ReleaseLockRequest) (*ReleaseLockResponse, error)
+	// Fetch a single lock by name within the caller's tenant. Read-only; an absent
+	// lock returns found=false (not an error) — a tenant-scoped read miss is normal.
+	GetLock(context.Context, *GetLockRequest) (*GetLockResponse, error)
+	// List the caller tenant's locks, optionally narrowed by status. Paginated
+	// (page_size + opaque page_token). Read-only.
+	ListLocks(context.Context, *ListLocksRequest) (*ListLocksResponse, error)
 }
 
 // UnimplementedLockServiceServer should be embedded to have
@@ -119,6 +153,12 @@ func (UnimplementedLockServiceServer) RenewLock(context.Context, *RenewLockReque
 }
 func (UnimplementedLockServiceServer) ReleaseLock(context.Context, *ReleaseLockRequest) (*ReleaseLockResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ReleaseLock not implemented")
+}
+func (UnimplementedLockServiceServer) GetLock(context.Context, *GetLockRequest) (*GetLockResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetLock not implemented")
+}
+func (UnimplementedLockServiceServer) ListLocks(context.Context, *ListLocksRequest) (*ListLocksResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListLocks not implemented")
 }
 func (UnimplementedLockServiceServer) testEmbeddedByValue() {}
 
@@ -194,6 +234,42 @@ func _LockService_ReleaseLock_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _LockService_GetLock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetLockRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LockServiceServer).GetLock(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LockService_GetLock_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LockServiceServer).GetLock(ctx, req.(*GetLockRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _LockService_ListLocks_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListLocksRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LockServiceServer).ListLocks(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LockService_ListLocks_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LockServiceServer).ListLocks(ctx, req.(*ListLocksRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // LockService_ServiceDesc is the grpc.ServiceDesc for LockService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -212,6 +288,14 @@ var LockService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ReleaseLock",
 			Handler:    _LockService_ReleaseLock_Handler,
+		},
+		{
+			MethodName: "GetLock",
+			Handler:    _LockService_GetLock_Handler,
+		},
+		{
+			MethodName: "ListLocks",
+			Handler:    _LockService_ListLocks_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

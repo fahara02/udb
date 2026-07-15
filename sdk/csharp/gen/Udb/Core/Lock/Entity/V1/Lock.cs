@@ -232,7 +232,8 @@ namespace udb.core.Lock.Entity.V1 {
     public const int StatusFieldNumber = 7;
     private string status_ = "";
     /// <summary>
-    /// HELD | RELEASED — operational state for quota counting and audit.
+    /// HELD | RELEASED | EXPIRED — operational state for quota counting and audit
+    /// (EXPIRED is stamped by the leader-elected expiry reaper, ch16 16.5.1).
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]

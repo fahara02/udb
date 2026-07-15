@@ -467,6 +467,388 @@ func (x *ReleaseLockResponse) GetError() *v1.ApiError {
 	return nil
 }
 
+type GetLockRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Verified against the bearer/claim tenant; cross-tenant values are rejected.
+	TenantId      string `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	LockName      string `protobuf:"bytes,2,opt,name=lock_name,json=lockName,proto3" json:"lock_name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetLockRequest) Reset() {
+	*x = GetLockRequest{}
+	mi := &file_udb_core_lock_services_v1_lock_service_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetLockRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetLockRequest) ProtoMessage() {}
+
+func (x *GetLockRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_lock_services_v1_lock_service_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetLockRequest.ProtoReflect.Descriptor instead.
+func (*GetLockRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_lock_services_v1_lock_service_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *GetLockRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *GetLockRequest) GetLockName() string {
+	if x != nil {
+		return x.LockName
+	}
+	return ""
+}
+
+type GetLockResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Populated only when found=true.
+	Lock    *Lock  `protobuf:"bytes,1,opt,name=lock,proto3" json:"lock,omitempty"`
+	Found   bool   `protobuf:"varint,2,opt,name=found,proto3" json:"found,omitempty"`
+	Message string `protobuf:"bytes,3,opt,name=message,proto3" json:"message,omitempty"`
+	// Error information if operation failed
+	Error         *v1.ApiError `protobuf:"bytes,4,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetLockResponse) Reset() {
+	*x = GetLockResponse{}
+	mi := &file_udb_core_lock_services_v1_lock_service_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetLockResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetLockResponse) ProtoMessage() {}
+
+func (x *GetLockResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_lock_services_v1_lock_service_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetLockResponse.ProtoReflect.Descriptor instead.
+func (*GetLockResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_lock_services_v1_lock_service_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *GetLockResponse) GetLock() *Lock {
+	if x != nil {
+		return x.Lock
+	}
+	return nil
+}
+
+func (x *GetLockResponse) GetFound() bool {
+	if x != nil {
+		return x.Found
+	}
+	return false
+}
+
+func (x *GetLockResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *GetLockResponse) GetError() *v1.ApiError {
+	if x != nil {
+		return x.Error
+	}
+	return nil
+}
+
+type ListLocksRequest struct {
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	TenantId string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	// Optional exact status filter (e.g. HELD, RELEASED, EXPIRED); empty = all.
+	StatusFilter string `protobuf:"bytes,2,opt,name=status_filter,json=statusFilter,proto3" json:"status_filter,omitempty"`
+	PageSize     int32  `protobuf:"varint,3,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// Opaque pagination token returned by ListLocksResponse.next_page_token.
+	PageToken     string `protobuf:"bytes,4,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListLocksRequest) Reset() {
+	*x = ListLocksRequest{}
+	mi := &file_udb_core_lock_services_v1_lock_service_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListLocksRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListLocksRequest) ProtoMessage() {}
+
+func (x *ListLocksRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_lock_services_v1_lock_service_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListLocksRequest.ProtoReflect.Descriptor instead.
+func (*ListLocksRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_lock_services_v1_lock_service_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *ListLocksRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *ListLocksRequest) GetStatusFilter() string {
+	if x != nil {
+		return x.StatusFilter
+	}
+	return ""
+}
+
+func (x *ListLocksRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListLocksRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
+type ListLocksResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Locks []*Lock                `protobuf:"bytes,1,rep,name=locks,proto3" json:"locks,omitempty"`
+	// Empty when the last page has been returned.
+	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	Message       string `protobuf:"bytes,3,opt,name=message,proto3" json:"message,omitempty"`
+	// Error information if operation failed
+	Error         *v1.ApiError `protobuf:"bytes,4,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListLocksResponse) Reset() {
+	*x = ListLocksResponse{}
+	mi := &file_udb_core_lock_services_v1_lock_service_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListLocksResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListLocksResponse) ProtoMessage() {}
+
+func (x *ListLocksResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_lock_services_v1_lock_service_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListLocksResponse.ProtoReflect.Descriptor instead.
+func (*ListLocksResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_lock_services_v1_lock_service_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *ListLocksResponse) GetLocks() []*Lock {
+	if x != nil {
+		return x.Locks
+	}
+	return nil
+}
+
+func (x *ListLocksResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
+func (x *ListLocksResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *ListLocksResponse) GetError() *v1.ApiError {
+	if x != nil {
+		return x.Error
+	}
+	return nil
+}
+
+// Read-only projection of a durable `udb_lock.locks` row for GetLock/ListLocks.
+// Timestamps are unix seconds (SDK-friendly, no well-known-type import in the
+// services surface). metadata_json is the declared non-secret holder metadata.
+type Lock struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	LockId          string                 `protobuf:"bytes,1,opt,name=lock_id,json=lockId,proto3" json:"lock_id,omitempty"`
+	TenantId        string                 `protobuf:"bytes,2,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	LockName        string                 `protobuf:"bytes,3,opt,name=lock_name,json=lockName,proto3" json:"lock_name,omitempty"`
+	OwnerId         string                 `protobuf:"bytes,4,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
+	FencingToken    int64                  `protobuf:"varint,5,opt,name=fencing_token,json=fencingToken,proto3" json:"fencing_token,omitempty"`
+	LeaseTtlSeconds int32                  `protobuf:"varint,6,opt,name=lease_ttl_seconds,json=leaseTtlSeconds,proto3" json:"lease_ttl_seconds,omitempty"`
+	Status          string                 `protobuf:"bytes,7,opt,name=status,proto3" json:"status,omitempty"`
+	AcquiredAtUnix  int64                  `protobuf:"varint,8,opt,name=acquired_at_unix,json=acquiredAtUnix,proto3" json:"acquired_at_unix,omitempty"`
+	ExpiresAtUnix   int64                  `protobuf:"varint,9,opt,name=expires_at_unix,json=expiresAtUnix,proto3" json:"expires_at_unix,omitempty"`
+	MetadataJson    string                 `protobuf:"bytes,10,opt,name=metadata_json,json=metadataJson,proto3" json:"metadata_json,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *Lock) Reset() {
+	*x = Lock{}
+	mi := &file_udb_core_lock_services_v1_lock_service_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Lock) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Lock) ProtoMessage() {}
+
+func (x *Lock) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_lock_services_v1_lock_service_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Lock.ProtoReflect.Descriptor instead.
+func (*Lock) Descriptor() ([]byte, []int) {
+	return file_udb_core_lock_services_v1_lock_service_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *Lock) GetLockId() string {
+	if x != nil {
+		return x.LockId
+	}
+	return ""
+}
+
+func (x *Lock) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *Lock) GetLockName() string {
+	if x != nil {
+		return x.LockName
+	}
+	return ""
+}
+
+func (x *Lock) GetOwnerId() string {
+	if x != nil {
+		return x.OwnerId
+	}
+	return ""
+}
+
+func (x *Lock) GetFencingToken() int64 {
+	if x != nil {
+		return x.FencingToken
+	}
+	return 0
+}
+
+func (x *Lock) GetLeaseTtlSeconds() int32 {
+	if x != nil {
+		return x.LeaseTtlSeconds
+	}
+	return 0
+}
+
+func (x *Lock) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *Lock) GetAcquiredAtUnix() int64 {
+	if x != nil {
+		return x.AcquiredAtUnix
+	}
+	return 0
+}
+
+func (x *Lock) GetExpiresAtUnix() int64 {
+	if x != nil {
+		return x.ExpiresAtUnix
+	}
+	return 0
+}
+
+func (x *Lock) GetMetadataJson() string {
+	if x != nil {
+		return x.MetadataJson
+	}
+	return ""
+}
+
 var File_udb_core_lock_services_v1_lock_service_proto protoreflect.FileDescriptor
 
 const file_udb_core_lock_services_v1_lock_service_proto_rawDesc = "" +
@@ -505,7 +887,38 @@ const file_udb_core_lock_services_v1_lock_service_proto_rawDesc = "" +
 	"\x13ReleaseLockResponse\x12\x1a\n" +
 	"\breleased\x18\x01 \x01(\bR\breleased\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x122\n" +
-	"\x05error\x18\x03 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1b\x9a\xb2\x19\x17\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04lockP\x012\xa6\f\n" +
+	"\x05error\x18\x03 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1b\x9a\xb2\x19\x17\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04lockP\x01\"g\n" +
+	"\x0eGetLockRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1b\n" +
+	"\tlock_name\x18\x02 \x01(\tR\blockName:\x1b\x9a\xb2\x19\x17\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04lockP\x01\"\xc7\x01\n" +
+	"\x0fGetLockResponse\x123\n" +
+	"\x04lock\x18\x01 \x01(\v2\x1f.udb.core.lock.services.v1.LockR\x04lock\x12\x14\n" +
+	"\x05found\x18\x02 \x01(\bR\x05found\x12\x18\n" +
+	"\amessage\x18\x03 \x01(\tR\amessage\x122\n" +
+	"\x05error\x18\x04 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1b\x9a\xb2\x19\x17\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04lockP\x01\"\xad\x01\n" +
+	"\x10ListLocksRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12#\n" +
+	"\rstatus_filter\x18\x02 \x01(\tR\fstatusFilter\x12\x1b\n" +
+	"\tpage_size\x18\x03 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x04 \x01(\tR\tpageToken:\x1b\x9a\xb2\x19\x17\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04lockP\x01\"\xdd\x01\n" +
+	"\x11ListLocksResponse\x125\n" +
+	"\x05locks\x18\x01 \x03(\v2\x1f.udb.core.lock.services.v1.LockR\x05locks\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12\x18\n" +
+	"\amessage\x18\x03 \x01(\tR\amessage\x122\n" +
+	"\x05error\x18\x04 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1b\x9a\xb2\x19\x17\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04lockP\x01\"\xf1\x02\n" +
+	"\x04Lock\x12\x17\n" +
+	"\alock_id\x18\x01 \x01(\tR\x06lockId\x12\x1b\n" +
+	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12\x1b\n" +
+	"\tlock_name\x18\x03 \x01(\tR\blockName\x12\x19\n" +
+	"\bowner_id\x18\x04 \x01(\tR\aownerId\x12#\n" +
+	"\rfencing_token\x18\x05 \x01(\x03R\ffencingToken\x12*\n" +
+	"\x11lease_ttl_seconds\x18\x06 \x01(\x05R\x0fleaseTtlSeconds\x12\x16\n" +
+	"\x06status\x18\a \x01(\tR\x06status\x12(\n" +
+	"\x10acquired_at_unix\x18\b \x01(\x03R\x0eacquiredAtUnix\x12&\n" +
+	"\x0fexpires_at_unix\x18\t \x01(\x03R\rexpiresAtUnix\x12#\n" +
+	"\rmetadata_json\x18\n" +
+	" \x01(\tR\fmetadataJson:\x1b\x9a\xb2\x19\x17\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04lockP\x012\x8a\x11\n" +
 	"\vLockService\x12\xa6\x03\n" +
 	"\vAcquireLock\x12-.udb.core.lock.services.v1.AcquireLockRequest\x1a..udb.core.lock.services.v1.AcquireLockResponse\"\xb7\x02\xca\xf3\x184\b\x02\x1a\x15udb:lock:acquire-lock \x01J\x02\x01\x02j\x10lock.AcquireLock\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x182\b\x01\x12\facquire_lock\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04lockP\x01Z\vacquireLock\xea\xf3\x18Y\n" +
 	"\x10lock.AcquireLock\x12\x19udb.lock.lock.acquired.v1\x1a\tlock_name\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18>\n" +
@@ -516,7 +929,12 @@ const file_udb_core_lock_services_v1_lock_service_proto_rawDesc = "" +
 	"\x04lock\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02\x14:\x01*\"\x0f/v1/locks:renew\x12\xa6\x03\n" +
 	"\vReleaseLock\x12-.udb.core.lock.services.v1.ReleaseLockRequest\x1a..udb.core.lock.services.v1.ReleaseLockResponse\"\xb7\x02\xca\xf3\x184\b\x02\x1a\x15udb:lock:release-lock \x01J\x02\x01\x02j\x10lock.ReleaseLock\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x182\b\x01\x12\frelease_lock\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04lockP\x01Z\vreleaseLock\xea\xf3\x18Y\n" +
 	"\x10lock.ReleaseLock\x12\x19udb.lock.lock.released.v1\x1a\tlock_name\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18>\n" +
-	"\x04lock\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02\x16:\x01*\"\x11/v1/locks:release\x1a\xae\x02\xca\xf0\x19G\n" +
+	"\x04lock\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02\x16:\x01*\"\x11/v1/locks:release\x12\xae\x02\n" +
+	"\aGetLock\x12).udb.core.lock.services.v1.GetLockRequest\x1a*.udb.core.lock.services.v1.GetLockResponse\"\xcb\x01\xca\xf3\x18,\b\x02\x1a\x11udb:lock:get-lock \x01J\x02\x01\x02j\flock.GetLock\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18*\b\x01\x12\bget_lock\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04lockP\x01Z\agetLock\xf2\xf3\x18>\n" +
+	"\x04lock\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02\x17\x12\x15/v1/locks/{lock_name}\x12\xb0\x02\n" +
+	"\tListLocks\x12+.udb.core.lock.services.v1.ListLocksRequest\x1a,.udb.core.lock.services.v1.ListLocksResponse\"\xc7\x01\xca\xf3\x180\b\x02\x1a\x13udb:lock:list-locks \x01J\x02\x01\x02j\x0elock.ListLocks\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18.\b\x01\x12\n" +
+	"list_locks\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04lockP\x01Z\tlistLocks\xf2\xf3\x18>\n" +
+	"\x04lock\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02\v\x12\t/v1/locks\x1a\xae\x02\xca\xf0\x19G\n" +
 	"\x04lock\x12\x04lock\x1a\x04lock\"\x05Locks*\x04lock0\x018\x01h\x01z\x04lock\x82\x01\x04lock\x8a\x01\x04lock\x92\x01\vnative.lock\xd2\xf0\x19\x17\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04lockP\x01\xda\xf0\x19\x81\x01\n" +
 	"\x04lock\x12\x0fudb/native/lock\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"\x16udb.native.lock.config:\x04lockJ\vUDB_API_KEYZ\x0fudb native lint\xe2\xf0\x19>\n" +
 	"\x04lock\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGETB\x83\x02\n" +
@@ -534,7 +952,7 @@ func file_udb_core_lock_services_v1_lock_service_proto_rawDescGZIP() []byte {
 	return file_udb_core_lock_services_v1_lock_service_proto_rawDescData
 }
 
-var file_udb_core_lock_services_v1_lock_service_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_udb_core_lock_services_v1_lock_service_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_udb_core_lock_services_v1_lock_service_proto_goTypes = []any{
 	(*AcquireLockRequest)(nil),  // 0: udb.core.lock.services.v1.AcquireLockRequest
 	(*AcquireLockResponse)(nil), // 1: udb.core.lock.services.v1.AcquireLockResponse
@@ -542,23 +960,36 @@ var file_udb_core_lock_services_v1_lock_service_proto_goTypes = []any{
 	(*RenewLockResponse)(nil),   // 3: udb.core.lock.services.v1.RenewLockResponse
 	(*ReleaseLockRequest)(nil),  // 4: udb.core.lock.services.v1.ReleaseLockRequest
 	(*ReleaseLockResponse)(nil), // 5: udb.core.lock.services.v1.ReleaseLockResponse
-	(*v1.ApiError)(nil),         // 6: udb.core.common.v1.ApiError
+	(*GetLockRequest)(nil),      // 6: udb.core.lock.services.v1.GetLockRequest
+	(*GetLockResponse)(nil),     // 7: udb.core.lock.services.v1.GetLockResponse
+	(*ListLocksRequest)(nil),    // 8: udb.core.lock.services.v1.ListLocksRequest
+	(*ListLocksResponse)(nil),   // 9: udb.core.lock.services.v1.ListLocksResponse
+	(*Lock)(nil),                // 10: udb.core.lock.services.v1.Lock
+	(*v1.ApiError)(nil),         // 11: udb.core.common.v1.ApiError
 }
 var file_udb_core_lock_services_v1_lock_service_proto_depIdxs = []int32{
-	6, // 0: udb.core.lock.services.v1.AcquireLockResponse.error:type_name -> udb.core.common.v1.ApiError
-	6, // 1: udb.core.lock.services.v1.RenewLockResponse.error:type_name -> udb.core.common.v1.ApiError
-	6, // 2: udb.core.lock.services.v1.ReleaseLockResponse.error:type_name -> udb.core.common.v1.ApiError
-	0, // 3: udb.core.lock.services.v1.LockService.AcquireLock:input_type -> udb.core.lock.services.v1.AcquireLockRequest
-	2, // 4: udb.core.lock.services.v1.LockService.RenewLock:input_type -> udb.core.lock.services.v1.RenewLockRequest
-	4, // 5: udb.core.lock.services.v1.LockService.ReleaseLock:input_type -> udb.core.lock.services.v1.ReleaseLockRequest
-	1, // 6: udb.core.lock.services.v1.LockService.AcquireLock:output_type -> udb.core.lock.services.v1.AcquireLockResponse
-	3, // 7: udb.core.lock.services.v1.LockService.RenewLock:output_type -> udb.core.lock.services.v1.RenewLockResponse
-	5, // 8: udb.core.lock.services.v1.LockService.ReleaseLock:output_type -> udb.core.lock.services.v1.ReleaseLockResponse
-	6, // [6:9] is the sub-list for method output_type
-	3, // [3:6] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	11, // 0: udb.core.lock.services.v1.AcquireLockResponse.error:type_name -> udb.core.common.v1.ApiError
+	11, // 1: udb.core.lock.services.v1.RenewLockResponse.error:type_name -> udb.core.common.v1.ApiError
+	11, // 2: udb.core.lock.services.v1.ReleaseLockResponse.error:type_name -> udb.core.common.v1.ApiError
+	10, // 3: udb.core.lock.services.v1.GetLockResponse.lock:type_name -> udb.core.lock.services.v1.Lock
+	11, // 4: udb.core.lock.services.v1.GetLockResponse.error:type_name -> udb.core.common.v1.ApiError
+	10, // 5: udb.core.lock.services.v1.ListLocksResponse.locks:type_name -> udb.core.lock.services.v1.Lock
+	11, // 6: udb.core.lock.services.v1.ListLocksResponse.error:type_name -> udb.core.common.v1.ApiError
+	0,  // 7: udb.core.lock.services.v1.LockService.AcquireLock:input_type -> udb.core.lock.services.v1.AcquireLockRequest
+	2,  // 8: udb.core.lock.services.v1.LockService.RenewLock:input_type -> udb.core.lock.services.v1.RenewLockRequest
+	4,  // 9: udb.core.lock.services.v1.LockService.ReleaseLock:input_type -> udb.core.lock.services.v1.ReleaseLockRequest
+	6,  // 10: udb.core.lock.services.v1.LockService.GetLock:input_type -> udb.core.lock.services.v1.GetLockRequest
+	8,  // 11: udb.core.lock.services.v1.LockService.ListLocks:input_type -> udb.core.lock.services.v1.ListLocksRequest
+	1,  // 12: udb.core.lock.services.v1.LockService.AcquireLock:output_type -> udb.core.lock.services.v1.AcquireLockResponse
+	3,  // 13: udb.core.lock.services.v1.LockService.RenewLock:output_type -> udb.core.lock.services.v1.RenewLockResponse
+	5,  // 14: udb.core.lock.services.v1.LockService.ReleaseLock:output_type -> udb.core.lock.services.v1.ReleaseLockResponse
+	7,  // 15: udb.core.lock.services.v1.LockService.GetLock:output_type -> udb.core.lock.services.v1.GetLockResponse
+	9,  // 16: udb.core.lock.services.v1.LockService.ListLocks:output_type -> udb.core.lock.services.v1.ListLocksResponse
+	12, // [12:17] is the sub-list for method output_type
+	7,  // [7:12] is the sub-list for method input_type
+	7,  // [7:7] is the sub-list for extension type_name
+	7,  // [7:7] is the sub-list for extension extendee
+	0,  // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_udb_core_lock_services_v1_lock_service_proto_init() }
@@ -572,7 +1003,7 @@ func file_udb_core_lock_services_v1_lock_service_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_udb_core_lock_services_v1_lock_service_proto_rawDesc), len(file_udb_core_lock_services_v1_lock_service_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

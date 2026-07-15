@@ -111,6 +111,68 @@ public final class LockServiceGrpc {
     return getReleaseLockMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.lock.services.v1.GetLockRequest,
+      com.udb.core.lock.services.v1.GetLockResponse> getGetLockMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "GetLock",
+      requestType = com.udb.core.lock.services.v1.GetLockRequest.class,
+      responseType = com.udb.core.lock.services.v1.GetLockResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.lock.services.v1.GetLockRequest,
+      com.udb.core.lock.services.v1.GetLockResponse> getGetLockMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.lock.services.v1.GetLockRequest, com.udb.core.lock.services.v1.GetLockResponse> getGetLockMethod;
+    if ((getGetLockMethod = LockServiceGrpc.getGetLockMethod) == null) {
+      synchronized (LockServiceGrpc.class) {
+        if ((getGetLockMethod = LockServiceGrpc.getGetLockMethod) == null) {
+          LockServiceGrpc.getGetLockMethod = getGetLockMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.lock.services.v1.GetLockRequest, com.udb.core.lock.services.v1.GetLockResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "GetLock"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.lock.services.v1.GetLockRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.lock.services.v1.GetLockResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new LockServiceMethodDescriptorSupplier("GetLock"))
+              .build();
+        }
+      }
+    }
+    return getGetLockMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.lock.services.v1.ListLocksRequest,
+      com.udb.core.lock.services.v1.ListLocksResponse> getListLocksMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "ListLocks",
+      requestType = com.udb.core.lock.services.v1.ListLocksRequest.class,
+      responseType = com.udb.core.lock.services.v1.ListLocksResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.lock.services.v1.ListLocksRequest,
+      com.udb.core.lock.services.v1.ListLocksResponse> getListLocksMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.lock.services.v1.ListLocksRequest, com.udb.core.lock.services.v1.ListLocksResponse> getListLocksMethod;
+    if ((getListLocksMethod = LockServiceGrpc.getListLocksMethod) == null) {
+      synchronized (LockServiceGrpc.class) {
+        if ((getListLocksMethod = LockServiceGrpc.getListLocksMethod) == null) {
+          LockServiceGrpc.getListLocksMethod = getListLocksMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.lock.services.v1.ListLocksRequest, com.udb.core.lock.services.v1.ListLocksResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "ListLocks"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.lock.services.v1.ListLocksRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.lock.services.v1.ListLocksResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new LockServiceMethodDescriptorSupplier("ListLocks"))
+              .build();
+        }
+      }
+    }
+    return getListLocksMethod;
+  }
+
   /**
    * Creates a new async stub that supports all call types for the service
    */
@@ -213,6 +275,28 @@ public final class LockServiceGrpc {
         io.grpc.stub.StreamObserver<com.udb.core.lock.services.v1.ReleaseLockResponse> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getReleaseLockMethod(), responseObserver);
     }
+
+    /**
+     * <pre>
+     * Fetch a single lock by name within the caller's tenant. Read-only; an absent
+     * lock returns found=false (not an error) — a tenant-scoped read miss is normal.
+     * </pre>
+     */
+    default void getLock(com.udb.core.lock.services.v1.GetLockRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.lock.services.v1.GetLockResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getGetLockMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * List the caller tenant's locks, optionally narrowed by status. Paginated
+     * (page_size + opaque page_token). Read-only.
+     * </pre>
+     */
+    default void listLocks(com.udb.core.lock.services.v1.ListLocksRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.lock.services.v1.ListLocksResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getListLocksMethod(), responseObserver);
+    }
   }
 
   /**
@@ -290,6 +374,30 @@ public final class LockServiceGrpc {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getReleaseLockMethod(), getCallOptions()), request, responseObserver);
     }
+
+    /**
+     * <pre>
+     * Fetch a single lock by name within the caller's tenant. Read-only; an absent
+     * lock returns found=false (not an error) — a tenant-scoped read miss is normal.
+     * </pre>
+     */
+    public void getLock(com.udb.core.lock.services.v1.GetLockRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.lock.services.v1.GetLockResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getGetLockMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * List the caller tenant's locks, optionally narrowed by status. Paginated
+     * (page_size + opaque page_token). Read-only.
+     * </pre>
+     */
+    public void listLocks(com.udb.core.lock.services.v1.ListLocksRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.lock.services.v1.ListLocksResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getListLocksMethod(), getCallOptions()), request, responseObserver);
+    }
   }
 
   /**
@@ -347,6 +455,28 @@ public final class LockServiceGrpc {
       return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
           getChannel(), getReleaseLockMethod(), getCallOptions(), request);
     }
+
+    /**
+     * <pre>
+     * Fetch a single lock by name within the caller's tenant. Read-only; an absent
+     * lock returns found=false (not an error) — a tenant-scoped read miss is normal.
+     * </pre>
+     */
+    public com.udb.core.lock.services.v1.GetLockResponse getLock(com.udb.core.lock.services.v1.GetLockRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getGetLockMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * List the caller tenant's locks, optionally narrowed by status. Paginated
+     * (page_size + opaque page_token). Read-only.
+     * </pre>
+     */
+    public com.udb.core.lock.services.v1.ListLocksResponse listLocks(com.udb.core.lock.services.v1.ListLocksRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getListLocksMethod(), getCallOptions(), request);
+    }
   }
 
   /**
@@ -403,6 +533,28 @@ public final class LockServiceGrpc {
     public com.udb.core.lock.services.v1.ReleaseLockResponse releaseLock(com.udb.core.lock.services.v1.ReleaseLockRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getReleaseLockMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Fetch a single lock by name within the caller's tenant. Read-only; an absent
+     * lock returns found=false (not an error) — a tenant-scoped read miss is normal.
+     * </pre>
+     */
+    public com.udb.core.lock.services.v1.GetLockResponse getLock(com.udb.core.lock.services.v1.GetLockRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getGetLockMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * List the caller tenant's locks, optionally narrowed by status. Paginated
+     * (page_size + opaque page_token). Read-only.
+     * </pre>
+     */
+    public com.udb.core.lock.services.v1.ListLocksResponse listLocks(com.udb.core.lock.services.v1.ListLocksRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getListLocksMethod(), getCallOptions(), request);
     }
   }
 
@@ -464,11 +616,37 @@ public final class LockServiceGrpc {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getReleaseLockMethod(), getCallOptions()), request);
     }
+
+    /**
+     * <pre>
+     * Fetch a single lock by name within the caller's tenant. Read-only; an absent
+     * lock returns found=false (not an error) — a tenant-scoped read miss is normal.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.lock.services.v1.GetLockResponse> getLock(
+        com.udb.core.lock.services.v1.GetLockRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getGetLockMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * List the caller tenant's locks, optionally narrowed by status. Paginated
+     * (page_size + opaque page_token). Read-only.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.lock.services.v1.ListLocksResponse> listLocks(
+        com.udb.core.lock.services.v1.ListLocksRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getListLocksMethod(), getCallOptions()), request);
+    }
   }
 
   private static final int METHODID_ACQUIRE_LOCK = 0;
   private static final int METHODID_RENEW_LOCK = 1;
   private static final int METHODID_RELEASE_LOCK = 2;
+  private static final int METHODID_GET_LOCK = 3;
+  private static final int METHODID_LIST_LOCKS = 4;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -498,6 +676,14 @@ public final class LockServiceGrpc {
         case METHODID_RELEASE_LOCK:
           serviceImpl.releaseLock((com.udb.core.lock.services.v1.ReleaseLockRequest) request,
               (io.grpc.stub.StreamObserver<com.udb.core.lock.services.v1.ReleaseLockResponse>) responseObserver);
+          break;
+        case METHODID_GET_LOCK:
+          serviceImpl.getLock((com.udb.core.lock.services.v1.GetLockRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.lock.services.v1.GetLockResponse>) responseObserver);
+          break;
+        case METHODID_LIST_LOCKS:
+          serviceImpl.listLocks((com.udb.core.lock.services.v1.ListLocksRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.lock.services.v1.ListLocksResponse>) responseObserver);
           break;
         default:
           throw new AssertionError();
@@ -538,6 +724,20 @@ public final class LockServiceGrpc {
               com.udb.core.lock.services.v1.ReleaseLockRequest,
               com.udb.core.lock.services.v1.ReleaseLockResponse>(
                 service, METHODID_RELEASE_LOCK)))
+        .addMethod(
+          getGetLockMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.lock.services.v1.GetLockRequest,
+              com.udb.core.lock.services.v1.GetLockResponse>(
+                service, METHODID_GET_LOCK)))
+        .addMethod(
+          getListLocksMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.lock.services.v1.ListLocksRequest,
+              com.udb.core.lock.services.v1.ListLocksResponse>(
+                service, METHODID_LIST_LOCKS)))
         .build();
   }
 
@@ -589,6 +789,8 @@ public final class LockServiceGrpc {
               .addMethod(getAcquireLockMethod())
               .addMethod(getRenewLockMethod())
               .addMethod(getReleaseLockMethod())
+              .addMethod(getGetLockMethod())
+              .addMethod(getListLocksMethod())
               .build();
         }
       }

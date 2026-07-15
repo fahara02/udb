@@ -274,7 +274,8 @@ private static final long serialVersionUID = 0L;
   private volatile java.lang.Object status_ = "";
   /**
    * <pre>
-   * HELD | RELEASED — operational state for quota counting and audit.
+   * HELD | RELEASED | EXPIRED — operational state for quota counting and audit
+   * (EXPIRED is stamped by the leader-elected expiry reaper, ch16 16.5.1).
    * </pre>
    *
    * <code>string status = 7 [json_name = "status", (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -295,7 +296,8 @@ private static final long serialVersionUID = 0L;
   }
   /**
    * <pre>
-   * HELD | RELEASED — operational state for quota counting and audit.
+   * HELD | RELEASED | EXPIRED — operational state for quota counting and audit
+   * (EXPIRED is stamped by the leader-elected expiry reaper, ch16 16.5.1).
    * </pre>
    *
    * <code>string status = 7 [json_name = "status", (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -1394,7 +1396,8 @@ private static final long serialVersionUID = 0L;
     private java.lang.Object status_ = "";
     /**
      * <pre>
-     * HELD | RELEASED — operational state for quota counting and audit.
+     * HELD | RELEASED | EXPIRED — operational state for quota counting and audit
+     * (EXPIRED is stamped by the leader-elected expiry reaper, ch16 16.5.1).
      * </pre>
      *
      * <code>string status = 7 [json_name = "status", (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -1414,7 +1417,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * HELD | RELEASED — operational state for quota counting and audit.
+     * HELD | RELEASED | EXPIRED — operational state for quota counting and audit
+     * (EXPIRED is stamped by the leader-elected expiry reaper, ch16 16.5.1).
      * </pre>
      *
      * <code>string status = 7 [json_name = "status", (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -1435,7 +1439,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * HELD | RELEASED — operational state for quota counting and audit.
+     * HELD | RELEASED | EXPIRED — operational state for quota counting and audit
+     * (EXPIRED is stamped by the leader-elected expiry reaper, ch16 16.5.1).
      * </pre>
      *
      * <code>string status = 7 [json_name = "status", (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -1452,7 +1457,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * HELD | RELEASED — operational state for quota counting and audit.
+     * HELD | RELEASED | EXPIRED — operational state for quota counting and audit
+     * (EXPIRED is stamped by the leader-elected expiry reaper, ch16 16.5.1).
      * </pre>
      *
      * <code>string status = 7 [json_name = "status", (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -1466,7 +1472,8 @@ private static final long serialVersionUID = 0L;
     }
     /**
      * <pre>
-     * HELD | RELEASED — operational state for quota counting and audit.
+     * HELD | RELEASED | EXPIRED — operational state for quota counting and audit
+     * (EXPIRED is stamped by the leader-elected expiry reaper, ch16 16.5.1).
      * </pre>
      *
      * <code>string status = 7 [json_name = "status", (.udb.core.common.v1.pg_column) = { ... }</code>

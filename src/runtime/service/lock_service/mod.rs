@@ -45,8 +45,12 @@ use super::DataBrokerService;
 use super::auth_service::events::{ComplianceEnvelope, build_native_compliance_envelope};
 use super::native_helpers::{
     NativeEventContext, admit_on as native_admit_on, enqueue_outbox_event_with_context,
-    native_service_context, non_empty_json, validate_request_tenant,
+    native_next_page_token, native_offset_page_window, native_service_context, non_empty_json,
+    validate_request_tenant,
 };
+
+/// Default page size for `ListLocks` when the caller does not specify one.
+const DEFAULT_LOCK_LIST_LIMIT: i32 = 100;
 
 const LOCK_MSG: &str = "udb.core.lock.entity.v1.Lock";
 
@@ -384,6 +388,81 @@ fn held_locks_read(tenant_id: &str, limit: u32, now: DateTime<Utc>) -> LogicalRe
         sort: Vec::new(),
         include: Vec::new(),
         pagination: Some(LogicalPagination::limit(limit)),
+    }
+}
+
+/// Full-projection tenant-scoped read for the inventory RPCs (GetLock/ListLocks).
+/// `lock_name` narrows to one row; `status` narrows by operational state; newest
+/// acquisitions first. `offset`/`limit` drive opaque pagination for ListLocks
+/// (GetLock passes offset 0, limit 1).
+fn lock_inventory_read(
+    tenant_id: &str,
+    lock_name: Option<&str>,
+    status: Option<&str>,
+    offset: u64,
+    limit: u32,
+) -> LogicalRead {
+    let mut pagination = LogicalPagination::limit(limit);
+    pagination.offset = (offset > 0).then_some(offset);
+    LogicalRead {
+        message_type: LOCK_MSG.to_string(),
+        filter: Some(lock_filter(tenant_id, lock_name, status)),
+        projection: Some(LogicalProjection::fields([
+            "lock_id".to_string(),
+            "tenant_id".to_string(),
+            "lock_name".to_string(),
+            "owner_id".to_string(),
+            "fencing_token".to_string(),
+            "lease_ttl_seconds".to_string(),
+            "status".to_string(),
+            "acquired_at".to_string(),
+            "expires_at".to_string(),
+            "metadata_json".to_string(),
+        ])),
+        sort: vec![crate::ir::LogicalSort {
+            field: "acquired_at".to_string(),
+            direction: crate::ir::SortDirection::Desc,
+            nulls: crate::ir::NullOrder::Default,
+        }],
+        include: Vec::new(),
+        pagination: Some(pagination),
+    }
+}
+
+/// Parse a JSON timestamp value (RFC3339 string, as TIMESTAMPTZ comes back from
+/// the mediated read) to unix seconds; 0 when absent/null/unparseable.
+fn json_unix(map: &serde_json::Map<String, serde_json::Value>, key: &str) -> i64 {
+    map.get(key)
+        .and_then(|v| v.as_str())
+        .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
+        .map(|dt| dt.timestamp())
+        .unwrap_or(0)
+}
+
+/// Read a JSONB column back as a compact JSON string (it arrives as a nested
+/// object); an already-string value passes through, absent → `{}`.
+fn json_object_str(map: &serde_json::Map<String, serde_json::Value>, key: &str) -> String {
+    match map.get(key) {
+        Some(serde_json::Value::String(s)) => s.clone(),
+        Some(v) => serde_json::to_string(v).unwrap_or_else(|_| "{}".to_string()),
+        None => "{}".to_string(),
+    }
+}
+
+/// Map a mediated read row into the `Lock` inventory DTO.
+fn lock_dto_from_json(row: &serde_json::Value) -> lock_pb::Lock {
+    let map = lock_json_object(row);
+    lock_pb::Lock {
+        lock_id: json_str(map, "lock_id"),
+        tenant_id: json_str(map, "tenant_id"),
+        lock_name: json_str(map, "lock_name"),
+        owner_id: json_str(map, "owner_id"),
+        fencing_token: json_i64(map, "fencing_token"),
+        lease_ttl_seconds: json_i64(map, "lease_ttl_seconds") as i32,
+        status: json_str(map, "status"),
+        acquired_at_unix: json_unix(map, "acquired_at"),
+        expires_at_unix: json_unix(map, "expires_at"),
+        metadata_json: json_object_str(map, "metadata_json"),
     }
 }
 
@@ -897,6 +976,105 @@ impl LockService for LockServiceImpl {
             error: None,
         }))
     }
+
+    // ── inventory reads (ch17 / 16.12.1) ──────────────────────────────────────
+    // Read-only introspection. Tenant is bound to the VERIFIED claim (never the
+    // body); an absent lock is a normal empty read (found=false), not an error.
+
+    async fn get_lock(
+        &self,
+        request: Request<lock_pb::GetLockRequest>,
+    ) -> Result<Response<lock_pb::GetLockResponse>, Status> {
+        let metadata = request.metadata().clone();
+        let req = request.into_inner();
+        validate_request_tenant(&metadata, &req.tenant_id)?;
+        let tenant_id = req.tenant_id.trim().to_string();
+        let lock_name = req.lock_name.trim().to_string();
+        if lock_name.is_empty() {
+            return Err(crate::runtime::executor_utils::invalid_argument_fields(
+                "lock_name is required",
+                vec![("lock_name", "must be a non-empty lock name")],
+            ));
+        }
+        let _admit = native_admit_on(
+            self.channels.as_ref(),
+            &self.metrics,
+            "lock",
+            OperationChannel::Read,
+            &tenant_id,
+            None,
+        )
+        .await?;
+        let runtime = self.require_runtime()?;
+        let context = native_service_context(&metadata, &tenant_id, "");
+        let lock = runtime
+            .native_entity_read_for_service(
+                "lock",
+                &context,
+                lock_inventory_read(&tenant_id, Some(&lock_name), None, 0, 1),
+            )
+            .await?
+            .first()
+            .map(lock_dto_from_json);
+        Ok(Response::new(lock_pb::GetLockResponse {
+            found: lock.is_some(),
+            lock,
+            message: String::new(),
+            error: None,
+        }))
+    }
+
+    async fn list_locks(
+        &self,
+        request: Request<lock_pb::ListLocksRequest>,
+    ) -> Result<Response<lock_pb::ListLocksResponse>, Status> {
+        let metadata = request.metadata().clone();
+        let req = request.into_inner();
+        validate_request_tenant(&metadata, &req.tenant_id)?;
+        let tenant_id = req.tenant_id.trim().to_string();
+        let status_filter = req.status_filter.trim().to_string();
+        let status = (!status_filter.is_empty()).then_some(status_filter.as_str());
+        let window = native_offset_page_window(
+            1,
+            req.page_size,
+            &req.page_token,
+            DEFAULT_LOCK_LIST_LIMIT,
+        );
+        let _admit = native_admit_on(
+            self.channels.as_ref(),
+            &self.metrics,
+            "lock",
+            OperationChannel::Read,
+            &tenant_id,
+            None,
+        )
+        .await?;
+        let runtime = self.require_runtime()?;
+        let context = native_service_context(&metadata, &tenant_id, "");
+        let locks = runtime
+            .native_entity_read_for_service(
+                "lock",
+                &context,
+                lock_inventory_read(
+                    &tenant_id,
+                    None,
+                    status,
+                    window.offset as u64,
+                    window.limit as u32,
+                ),
+            )
+            .await?
+            .iter()
+            .map(lock_dto_from_json)
+            .collect::<Vec<_>>();
+        let next_page_token = native_next_page_token(window.offset, window.limit, locks.len());
+        Ok(Response::new(lock_pb::ListLocksResponse {
+            locks,
+            next_page_token,
+            message: String::new(),
+            error: None,
+        }))
+    }
 }
 
 // ── leader-elected expiry reaper (16.5.1) ─────────────────────────────────────
@@ -1334,6 +1512,105 @@ mod lock_scope_tests {
         assert_eq!(detail.operation, "native_entity_dispatch");
         assert_eq!(detail.capability_required, "runtime_native_entity_dispatch");
         assert!(!detail.retryable);
+    }
+
+    // ── ch17 inventory reads (GetLock / ListLocks) ────────────────────────────
+
+    #[tokio::test]
+    async fn get_lock_rejects_cross_tenant_body() {
+        let svc = LockServiceImpl::new();
+        let mut request = Request::new(lock_pb::GetLockRequest {
+            tenant_id: "tenant-b".to_string(),
+            lock_name: "orders".to_string(),
+        });
+        request
+            .metadata_mut()
+            .insert("x-tenant-id", MetadataValue::from_static("tenant-a"));
+        let err = svc
+            .get_lock(request)
+            .await
+            .expect_err("cross-tenant body must be rejected");
+        assert_eq!(err.code(), tonic::Code::PermissionDenied);
+    }
+
+    #[tokio::test]
+    async fn list_locks_rejects_cross_tenant_body() {
+        let svc = LockServiceImpl::new();
+        let mut request = Request::new(lock_pb::ListLocksRequest {
+            tenant_id: "tenant-b".to_string(),
+            ..Default::default()
+        });
+        request
+            .metadata_mut()
+            .insert("x-tenant-id", MetadataValue::from_static("tenant-a"));
+        let err = svc
+            .list_locks(request)
+            .await
+            .expect_err("cross-tenant body must be rejected");
+        assert_eq!(err.code(), tonic::Code::PermissionDenied);
+    }
+
+    #[tokio::test]
+    async fn get_lock_empty_name_is_field_violation() {
+        let svc = LockServiceImpl::new();
+        let mut request = Request::new(lock_pb::GetLockRequest {
+            tenant_id: "tenant-a".to_string(),
+            lock_name: "   ".to_string(),
+        });
+        request
+            .metadata_mut()
+            .insert("x-tenant-id", MetadataValue::from_static("tenant-a"));
+        let err = svc
+            .get_lock(request)
+            .await
+            .expect_err("empty lock_name must be rejected");
+        assert_eq!(err.code(), tonic::Code::InvalidArgument);
+        let detail = decode_detail(&err);
+        assert!(
+            detail.field_violations.iter().any(|f| f.field == "lock_name"),
+            "expected a lock_name field violation"
+        );
+    }
+
+    #[test]
+    fn lock_dto_from_json_maps_all_fields() {
+        let row = serde_json::json!({
+            "lock_id": "11111111-1111-1111-1111-111111111111",
+            "tenant_id": "tenant-a",
+            "lock_name": "orders",
+            "owner_id": "worker-1",
+            "fencing_token": 42,
+            "lease_ttl_seconds": 30,
+            "status": "HELD",
+            "acquired_at": "2026-07-16T00:00:00Z",
+            "expires_at": "2026-07-16T00:00:30Z",
+            "metadata_json": { "region": "eu" },
+        });
+        let dto = lock_dto_from_json(&row);
+        assert_eq!(dto.lock_name, "orders");
+        assert_eq!(dto.owner_id, "worker-1");
+        assert_eq!(dto.fencing_token, 42);
+        assert_eq!(dto.lease_ttl_seconds, 30);
+        assert_eq!(dto.status, "HELD");
+        assert_eq!(dto.acquired_at_unix, 1_784_160_000);
+        assert_eq!(dto.expires_at_unix, 1_784_160_030);
+        // JSONB round-trips as a compact JSON string, never the empty default.
+        assert_eq!(dto.metadata_json, "{\"region\":\"eu\"}");
+    }
+
+    #[test]
+    fn lock_inventory_read_applies_status_filter_sort_and_pagination() {
+        let read = lock_inventory_read("tenant-a", None, Some("HELD"), 100, 50);
+        // Newest first + bounded page window.
+        assert_eq!(read.sort.len(), 1);
+        assert_eq!(read.sort[0].field, "acquired_at");
+        let pg = read.pagination.expect("pagination present");
+        assert_eq!(pg.limit, Some(50));
+        assert_eq!(pg.offset, Some(100));
+        // The status filter is threaded into the tenant-scoped predicate.
+        let rendered = format!("{:?}", read.filter);
+        assert!(rendered.contains("HELD"), "status filter must be present: {rendered}");
+        assert!(rendered.contains("tenant-a"), "tenant filter must be present");
     }
 }
 

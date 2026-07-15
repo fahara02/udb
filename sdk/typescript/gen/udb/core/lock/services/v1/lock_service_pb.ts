@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file udb/core/lock/services/v1/lock_service.proto.
  */
 export const file_udb_core_lock_services_v1_lock_service: GenFile = /*@__PURE__*/
-  fileDesc("Cix1ZGIvY29yZS9sb2NrL3NlcnZpY2VzL3YxL2xvY2tfc2VydmljZS5wcm90bxIZdWRiLmNvcmUubG9jay5zZXJ2aWNlcy52MSKbAQoSQWNxdWlyZUxvY2tSZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoCRIRCglsb2NrX25hbWUYAiABKAkSEAoIb3duZXJfaWQYAyABKAkSGQoRbGVhc2VfdHRsX3NlY29uZHMYBCABKAUSFQoNbWV0YWRhdGFfanNvbhgFIAEoCTobmrIZFwgBGgN1ZGIosOoBMANAAUoEbG9ja1ABIsUBChNBY3F1aXJlTG9ja1Jlc3BvbnNlEhAKCGFjcXVpcmVkGAEgASgIEhUKDWZlbmNpbmdfdG9rZW4YAiABKAMSEQoJbG9ja19uYW1lGAMgASgJEhcKD2V4cGlyZXNfYXRfdW5peBgEIAEoAxIPCgdtZXNzYWdlGAUgASgJEisKBWVycm9yGAYgASgLMhwudWRiLmNvcmUuY29tbW9uLnYxLkFwaUVycm9yOhuashkXCAEaA3VkYiiw6gEwA0ABSgRsb2NrUAEimQEKEFJlbmV3TG9ja1JlcXVlc3QSEQoJdGVuYW50X2lkGAEgASgJEhEKCWxvY2tfbmFtZRgCIAEoCRIQCghvd25lcl9pZBgDIAEoCRIVCg1mZW5jaW5nX3Rva2VuGAQgASgDEhkKEWxlYXNlX3R0bF9zZWNvbmRzGAUgASgFOhuashkXCAEaA3VkYiiw6gEwA0ABSgRsb2NrUAEirwEKEVJlbmV3TG9ja1Jlc3BvbnNlEg8KB3JlbmV3ZWQYASABKAgSFQoNZmVuY2luZ190b2tlbhgCIAEoAxIXCg9leHBpcmVzX2F0X3VuaXgYAyABKAMSDwoHbWVzc2FnZRgEIAEoCRIrCgVlcnJvchgFIAEoCzIcLnVkYi5jb3JlLmNvbW1vbi52MS5BcGlFcnJvcjobmrIZFwgBGgN1ZGIosOoBMANAAUoEbG9ja1ABIoABChJSZWxlYXNlTG9ja1JlcXVlc3QSEQoJdGVuYW50X2lkGAEgASgJEhEKCWxvY2tfbmFtZRgCIAEoCRIQCghvd25lcl9pZBgDIAEoCRIVCg1mZW5jaW5nX3Rva2VuGAQgASgDOhuashkXCAEaA3VkYiiw6gEwA0ABSgRsb2NrUAEiggEKE1JlbGVhc2VMb2NrUmVzcG9uc2USEAoIcmVsZWFzZWQYASABKAgSDwoHbWVzc2FnZRgCIAEoCRIrCgVlcnJvchgDIAEoCzIcLnVkYi5jb3JlLmNvbW1vbi52MS5BcGlFcnJvcjobmrIZFwgBGgN1ZGIosOoBMANAAUoEbG9ja1ABMqYMCgtMb2NrU2VydmljZRKmAwoLQWNxdWlyZUxvY2sSLS51ZGIuY29yZS5sb2NrLnNlcnZpY2VzLnYxLkFjcXVpcmVMb2NrUmVxdWVzdBouLnVkYi5jb3JlLmxvY2suc2VydmljZXMudjEuQWNxdWlyZUxvY2tSZXNwb25zZSK3AsrzGDQIAhoVdWRiOmxvY2s6YWNxdWlyZS1sb2NrIAFKAgECahBsb2NrLkFjcXVpcmVMb2NrkAEB0vMYBggBEAEgAdrzGDIIARIMYWNxdWlyZV9sb2NrGgN1ZGIosOoBMANAAUoEbG9ja1ABWgthY3F1aXJlTG9ja+rzGFkKEGxvY2suQWNxdWlyZUxvY2sSGXVkYi5sb2NrLmxvY2suYWNxdWlyZWQudjEaCWxvY2tfbmFtZSIIc3RhbmRhcmQqDWF0X2xlYXN0X29uY2UyBnN0YWJsZfLzGD4KBGxvY2saCHBvc3RncmVzMhtVREJfTkFUSVZFX1NFUlZJQ0VTX0VOQUJMRUQyD1VEQl9HUlBDX1RBUkdFVPjzGAKC0+STAhY6ASoiES92MS9sb2NrczphY3F1aXJlEpMDCglSZW5ld0xvY2sSKy51ZGIuY29yZS5sb2NrLnNlcnZpY2VzLnYxLlJlbmV3TG9ja1JlcXVlc3QaLC51ZGIuY29yZS5sb2NrLnNlcnZpY2VzLnYxLlJlbmV3TG9ja1Jlc3BvbnNlIqoCyvMYMAgCGhN1ZGI6bG9jazpyZW5ldy1sb2NrIAFKAgECag5sb2NrLlJlbmV3TG9ja5ABAdLzGAYIARABIAHa8xguCAESCnJlbmV3X2xvY2saA3VkYiiw6gEwA0ABSgRsb2NrUAFaCXJlbmV3TG9ja+rzGFYKDmxvY2suUmVuZXdMb2NrEhh1ZGIubG9jay5sb2NrLnJlbmV3ZWQudjEaCWxvY2tfbmFtZSIIc3RhbmRhcmQqDWF0X2xlYXN0X29uY2UyBnN0YWJsZfLzGD4KBGxvY2saCHBvc3RncmVzMhtVREJfTkFUSVZFX1NFUlZJQ0VTX0VOQUJMRUQyD1VEQl9HUlBDX1RBUkdFVPjzGAKC0+STAhQ6ASoiDy92MS9sb2NrczpyZW5ldxKmAwoLUmVsZWFzZUxvY2sSLS51ZGIuY29yZS5sb2NrLnNlcnZpY2VzLnYxLlJlbGVhc2VMb2NrUmVxdWVzdBouLnVkYi5jb3JlLmxvY2suc2VydmljZXMudjEuUmVsZWFzZUxvY2tSZXNwb25zZSK3AsrzGDQIAhoVdWRiOmxvY2s6cmVsZWFzZS1sb2NrIAFKAgECahBsb2NrLlJlbGVhc2VMb2NrkAEB0vMYBggBEAEgAdrzGDIIARIMcmVsZWFzZV9sb2NrGgN1ZGIosOoBMANAAUoEbG9ja1ABWgtyZWxlYXNlTG9ja+rzGFkKEGxvY2suUmVsZWFzZUxvY2sSGXVkYi5sb2NrLmxvY2sucmVsZWFzZWQudjEaCWxvY2tfbmFtZSIIc3RhbmRhcmQqDWF0X2xlYXN0X29uY2UyBnN0YWJsZfLzGD4KBGxvY2saCHBvc3RncmVzMhtVREJfTkFUSVZFX1NFUlZJQ0VTX0VOQUJMRUQyD1VEQl9HUlBDX1RBUkdFVPjzGAKC0+STAhY6ASoiES92MS9sb2NrczpyZWxlYXNlGq4CyvAZRwoEbG9jaxIEbG9jaxoEbG9jayIFTG9ja3MqBGxvY2swATgBaAF6BGxvY2uCAQRsb2NrigEEbG9ja5IBC25hdGl2ZS5sb2Nr0vAZFwgBGgN1ZGIosOoBMANAAUoEbG9ja1AB2vAZgQEKBGxvY2sSD3VkYi9uYXRpdmUvbG9jaxobVURCX05BVElWRV9TRVJWSUNFU19FTkFCTEVEGg9VREJfR1JQQ19UQVJHRVQiFnVkYi5uYXRpdmUubG9jay5jb25maWc6BGxvY2tKC1VEQl9BUElfS0VZWg91ZGIgbmF0aXZlIGxpbnTi8Bk+CgRsb2NrGghwb3N0Z3JlczIbVURCX05BVElWRV9TRVJWSUNFU19FTkFCTEVEMg9VREJfR1JQQ19UQVJHRVRCgwIKHWNvbS51ZGIuY29yZS5sb2NrLnNlcnZpY2VzLnYxQhBMb2NrU2VydmljZVByb3RvUAFaR2dpdGh1Yi5jb20vZmFoYXJhMDIvdWRiL3Nkay9nby9nZW4vdWRiL2NvcmUvbG9jay9zZXJ2aWNlcy92MTtzZXJ2aWNlc3YxogIEVUNMU6oCGXVkYi5jb3JlLkxvY2suU2VydmljZXMuVjHKAhlVZGJcQ29yZVxMb2NrXFNlcnZpY2VzXFYx4gIlVWRiXEdQQk1ldGFkYXRhXENvcmVcTG9ja1xTZXJ2aWNlc1xWMeoCHVVkYjo6Q29yZTo6TG9jazo6U2VydmljZXM6OlYxYgZwcm90bzM", [file_google_api_annotations, file_udb_core_common_v1_dto, file_udb_core_common_v1_security]);
+  fileDesc("Cix1ZGIvY29yZS9sb2NrL3NlcnZpY2VzL3YxL2xvY2tfc2VydmljZS5wcm90bxIZdWRiLmNvcmUubG9jay5zZXJ2aWNlcy52MSKbAQoSQWNxdWlyZUxvY2tSZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoCRIRCglsb2NrX25hbWUYAiABKAkSEAoIb3duZXJfaWQYAyABKAkSGQoRbGVhc2VfdHRsX3NlY29uZHMYBCABKAUSFQoNbWV0YWRhdGFfanNvbhgFIAEoCTobmrIZFwgBGgN1ZGIosOoBMANAAUoEbG9ja1ABIsUBChNBY3F1aXJlTG9ja1Jlc3BvbnNlEhAKCGFjcXVpcmVkGAEgASgIEhUKDWZlbmNpbmdfdG9rZW4YAiABKAMSEQoJbG9ja19uYW1lGAMgASgJEhcKD2V4cGlyZXNfYXRfdW5peBgEIAEoAxIPCgdtZXNzYWdlGAUgASgJEisKBWVycm9yGAYgASgLMhwudWRiLmNvcmUuY29tbW9uLnYxLkFwaUVycm9yOhuashkXCAEaA3VkYiiw6gEwA0ABSgRsb2NrUAEimQEKEFJlbmV3TG9ja1JlcXVlc3QSEQoJdGVuYW50X2lkGAEgASgJEhEKCWxvY2tfbmFtZRgCIAEoCRIQCghvd25lcl9pZBgDIAEoCRIVCg1mZW5jaW5nX3Rva2VuGAQgASgDEhkKEWxlYXNlX3R0bF9zZWNvbmRzGAUgASgFOhuashkXCAEaA3VkYiiw6gEwA0ABSgRsb2NrUAEirwEKEVJlbmV3TG9ja1Jlc3BvbnNlEg8KB3JlbmV3ZWQYASABKAgSFQoNZmVuY2luZ190b2tlbhgCIAEoAxIXCg9leHBpcmVzX2F0X3VuaXgYAyABKAMSDwoHbWVzc2FnZRgEIAEoCRIrCgVlcnJvchgFIAEoCzIcLnVkYi5jb3JlLmNvbW1vbi52MS5BcGlFcnJvcjobmrIZFwgBGgN1ZGIosOoBMANAAUoEbG9ja1ABIoABChJSZWxlYXNlTG9ja1JlcXVlc3QSEQoJdGVuYW50X2lkGAEgASgJEhEKCWxvY2tfbmFtZRgCIAEoCRIQCghvd25lcl9pZBgDIAEoCRIVCg1mZW5jaW5nX3Rva2VuGAQgASgDOhuashkXCAEaA3VkYiiw6gEwA0ABSgRsb2NrUAEiggEKE1JlbGVhc2VMb2NrUmVzcG9uc2USEAoIcmVsZWFzZWQYASABKAgSDwoHbWVzc2FnZRgCIAEoCRIrCgVlcnJvchgDIAEoCzIcLnVkYi5jb3JlLmNvbW1vbi52MS5BcGlFcnJvcjobmrIZFwgBGgN1ZGIosOoBMANAAUoEbG9ja1ABIlMKDkdldExvY2tSZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoCRIRCglsb2NrX25hbWUYAiABKAk6G5qyGRcIARoDdWRiKLDqATADQAFKBGxvY2tQASKqAQoPR2V0TG9ja1Jlc3BvbnNlEi0KBGxvY2sYASABKAsyHy51ZGIuY29yZS5sb2NrLnNlcnZpY2VzLnYxLkxvY2sSDQoFZm91bmQYAiABKAgSDwoHbWVzc2FnZRgDIAEoCRIrCgVlcnJvchgEIAEoCzIcLnVkYi5jb3JlLmNvbW1vbi52MS5BcGlFcnJvcjobmrIZFwgBGgN1ZGIosOoBMANAAUoEbG9ja1ABIoABChBMaXN0TG9ja3NSZXF1ZXN0EhEKCXRlbmFudF9pZBgBIAEoCRIVCg1zdGF0dXNfZmlsdGVyGAIgASgJEhEKCXBhZ2Vfc2l6ZRgDIAEoBRISCgpwYWdlX3Rva2VuGAQgASgJOhuashkXCAEaA3VkYiiw6gEwA0ABSgRsb2NrUAEitwEKEUxpc3RMb2Nrc1Jlc3BvbnNlEi4KBWxvY2tzGAEgAygLMh8udWRiLmNvcmUubG9jay5zZXJ2aWNlcy52MS5Mb2NrEhcKD25leHRfcGFnZV90b2tlbhgCIAEoCRIPCgdtZXNzYWdlGAMgASgJEisKBWVycm9yGAQgASgLMhwudWRiLmNvcmUuY29tbW9uLnYxLkFwaUVycm9yOhuashkXCAEaA3VkYiiw6gEwA0ABSgRsb2NrUAEi+AEKBExvY2sSDwoHbG9ja19pZBgBIAEoCRIRCgl0ZW5hbnRfaWQYAiABKAkSEQoJbG9ja19uYW1lGAMgASgJEhAKCG93bmVyX2lkGAQgASgJEhUKDWZlbmNpbmdfdG9rZW4YBSABKAMSGQoRbGVhc2VfdHRsX3NlY29uZHMYBiABKAUSDgoGc3RhdHVzGAcgASgJEhgKEGFjcXVpcmVkX2F0X3VuaXgYCCABKAMSFwoPZXhwaXJlc19hdF91bml4GAkgASgDEhUKDW1ldGFkYXRhX2pzb24YCiABKAk6G5qyGRcIARoDdWRiKLDqATADQAFKBGxvY2tQATKKEQoLTG9ja1NlcnZpY2USpgMKC0FjcXVpcmVMb2NrEi0udWRiLmNvcmUubG9jay5zZXJ2aWNlcy52MS5BY3F1aXJlTG9ja1JlcXVlc3QaLi51ZGIuY29yZS5sb2NrLnNlcnZpY2VzLnYxLkFjcXVpcmVMb2NrUmVzcG9uc2UitwLK8xg0CAIaFXVkYjpsb2NrOmFjcXVpcmUtbG9jayABSgIBAmoQbG9jay5BY3F1aXJlTG9ja5ABAdLzGAYIARABIAHa8xgyCAESDGFjcXVpcmVfbG9jaxoDdWRiKLDqATADQAFKBGxvY2tQAVoLYWNxdWlyZUxvY2vq8xhZChBsb2NrLkFjcXVpcmVMb2NrEhl1ZGIubG9jay5sb2NrLmFjcXVpcmVkLnYxGglsb2NrX25hbWUiCHN0YW5kYXJkKg1hdF9sZWFzdF9vbmNlMgZzdGFibGXy8xg+CgRsb2NrGghwb3N0Z3JlczIbVURCX05BVElWRV9TRVJWSUNFU19FTkFCTEVEMg9VREJfR1JQQ19UQVJHRVT48xgCgtPkkwIWOgEqIhEvdjEvbG9ja3M6YWNxdWlyZRKTAwoJUmVuZXdMb2NrEisudWRiLmNvcmUubG9jay5zZXJ2aWNlcy52MS5SZW5ld0xvY2tSZXF1ZXN0GiwudWRiLmNvcmUubG9jay5zZXJ2aWNlcy52MS5SZW5ld0xvY2tSZXNwb25zZSKqAsrzGDAIAhoTdWRiOmxvY2s6cmVuZXctbG9jayABSgIBAmoObG9jay5SZW5ld0xvY2uQAQHS8xgGCAEQASAB2vMYLggBEgpyZW5ld19sb2NrGgN1ZGIosOoBMANAAUoEbG9ja1ABWglyZW5ld0xvY2vq8xhWCg5sb2NrLlJlbmV3TG9jaxIYdWRiLmxvY2subG9jay5yZW5ld2VkLnYxGglsb2NrX25hbWUiCHN0YW5kYXJkKg1hdF9sZWFzdF9vbmNlMgZzdGFibGXy8xg+CgRsb2NrGghwb3N0Z3JlczIbVURCX05BVElWRV9TRVJWSUNFU19FTkFCTEVEMg9VREJfR1JQQ19UQVJHRVT48xgCgtPkkwIUOgEqIg8vdjEvbG9ja3M6cmVuZXcSpgMKC1JlbGVhc2VMb2NrEi0udWRiLmNvcmUubG9jay5zZXJ2aWNlcy52MS5SZWxlYXNlTG9ja1JlcXVlc3QaLi51ZGIuY29yZS5sb2NrLnNlcnZpY2VzLnYxLlJlbGVhc2VMb2NrUmVzcG9uc2UitwLK8xg0CAIaFXVkYjpsb2NrOnJlbGVhc2UtbG9jayABSgIBAmoQbG9jay5SZWxlYXNlTG9ja5ABAdLzGAYIARABIAHa8xgyCAESDHJlbGVhc2VfbG9jaxoDdWRiKLDqATADQAFKBGxvY2tQAVoLcmVsZWFzZUxvY2vq8xhZChBsb2NrLlJlbGVhc2VMb2NrEhl1ZGIubG9jay5sb2NrLnJlbGVhc2VkLnYxGglsb2NrX25hbWUiCHN0YW5kYXJkKg1hdF9sZWFzdF9vbmNlMgZzdGFibGXy8xg+CgRsb2NrGghwb3N0Z3JlczIbVURCX05BVElWRV9TRVJWSUNFU19FTkFCTEVEMg9VREJfR1JQQ19UQVJHRVT48xgCgtPkkwIWOgEqIhEvdjEvbG9ja3M6cmVsZWFzZRKuAgoHR2V0TG9jaxIpLnVkYi5jb3JlLmxvY2suc2VydmljZXMudjEuR2V0TG9ja1JlcXVlc3QaKi51ZGIuY29yZS5sb2NrLnNlcnZpY2VzLnYxLkdldExvY2tSZXNwb25zZSLLAcrzGCwIAhoRdWRiOmxvY2s6Z2V0LWxvY2sgAUoCAQJqDGxvY2suR2V0TG9ja5ABAdLzGAYIARABIAHa8xgqCAESCGdldF9sb2NrGgN1ZGIosOoBMANAAUoEbG9ja1ABWgdnZXRMb2Nr8vMYPgoEbG9jaxoIcG9zdGdyZXMyG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRDIPVURCX0dSUENfVEFSR0VU+PMYAYLT5JMCFxIVL3YxL2xvY2tzL3tsb2NrX25hbWV9ErACCglMaXN0TG9ja3MSKy51ZGIuY29yZS5sb2NrLnNlcnZpY2VzLnYxLkxpc3RMb2Nrc1JlcXVlc3QaLC51ZGIuY29yZS5sb2NrLnNlcnZpY2VzLnYxLkxpc3RMb2Nrc1Jlc3BvbnNlIscByvMYMAgCGhN1ZGI6bG9jazpsaXN0LWxvY2tzIAFKAgECag5sb2NrLkxpc3RMb2Nrc5ABAdLzGAYIARABIAHa8xguCAESCmxpc3RfbG9ja3MaA3VkYiiw6gEwA0ABSgRsb2NrUAFaCWxpc3RMb2Nrc/LzGD4KBGxvY2saCHBvc3RncmVzMhtVREJfTkFUSVZFX1NFUlZJQ0VTX0VOQUJMRUQyD1VEQl9HUlBDX1RBUkdFVPjzGAGC0+STAgsSCS92MS9sb2NrcxquAsrwGUcKBGxvY2sSBGxvY2saBGxvY2siBUxvY2tzKgRsb2NrMAE4AWgBegRsb2NrggEEbG9ja4oBBGxvY2uSAQtuYXRpdmUubG9ja9LwGRcIARoDdWRiKLDqATADQAFKBGxvY2tQAdrwGYEBCgRsb2NrEg91ZGIvbmF0aXZlL2xvY2saG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRBoPVURCX0dSUENfVEFSR0VUIhZ1ZGIubmF0aXZlLmxvY2suY29uZmlnOgRsb2NrSgtVREJfQVBJX0tFWVoPdWRiIG5hdGl2ZSBsaW504vAZPgoEbG9jaxoIcG9zdGdyZXMyG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRDIPVURCX0dSUENfVEFSR0VUQoMCCh1jb20udWRiLmNvcmUubG9jay5zZXJ2aWNlcy52MUIQTG9ja1NlcnZpY2VQcm90b1ABWkdnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9jb3JlL2xvY2svc2VydmljZXMvdjE7c2VydmljZXN2MaICBFVDTFOqAhl1ZGIuY29yZS5Mb2NrLlNlcnZpY2VzLlYxygIZVWRiXENvcmVcTG9ja1xTZXJ2aWNlc1xWMeICJVVkYlxHUEJNZXRhZGF0YVxDb3JlXExvY2tcU2VydmljZXNcVjHqAh1VZGI6OkNvcmU6OkxvY2s6OlNlcnZpY2VzOjpWMWIGcHJvdG8z", [file_google_api_annotations, file_udb_core_common_v1_dto, file_udb_core_common_v1_security]);
 
 /**
  * @generated from message udb.core.lock.services.v1.AcquireLockRequest
@@ -239,6 +239,204 @@ export const ReleaseLockResponseSchema: GenMessage<ReleaseLockResponse> = /*@__P
   messageDesc(file_udb_core_lock_services_v1_lock_service, 5);
 
 /**
+ * @generated from message udb.core.lock.services.v1.GetLockRequest
+ */
+export type GetLockRequest = Message<"udb.core.lock.services.v1.GetLockRequest"> & {
+  /**
+   * Verified against the bearer/claim tenant; cross-tenant values are rejected.
+   *
+   * @generated from field: string tenant_id = 1;
+   */
+  tenantId: string;
+
+  /**
+   * @generated from field: string lock_name = 2;
+   */
+  lockName: string;
+};
+
+/**
+ * Describes the message udb.core.lock.services.v1.GetLockRequest.
+ * Use `create(GetLockRequestSchema)` to create a new message.
+ */
+export const GetLockRequestSchema: GenMessage<GetLockRequest> = /*@__PURE__*/
+  messageDesc(file_udb_core_lock_services_v1_lock_service, 6);
+
+/**
+ * @generated from message udb.core.lock.services.v1.GetLockResponse
+ */
+export type GetLockResponse = Message<"udb.core.lock.services.v1.GetLockResponse"> & {
+  /**
+   * Populated only when found=true.
+   *
+   * @generated from field: udb.core.lock.services.v1.Lock lock = 1;
+   */
+  lock?: Lock | undefined;
+
+  /**
+   * @generated from field: bool found = 2;
+   */
+  found: boolean;
+
+  /**
+   * @generated from field: string message = 3;
+   */
+  message: string;
+
+  /**
+   * Error information if operation failed
+   *
+   * @generated from field: udb.core.common.v1.ApiError error = 4;
+   */
+  error?: ApiError | undefined;
+};
+
+/**
+ * Describes the message udb.core.lock.services.v1.GetLockResponse.
+ * Use `create(GetLockResponseSchema)` to create a new message.
+ */
+export const GetLockResponseSchema: GenMessage<GetLockResponse> = /*@__PURE__*/
+  messageDesc(file_udb_core_lock_services_v1_lock_service, 7);
+
+/**
+ * @generated from message udb.core.lock.services.v1.ListLocksRequest
+ */
+export type ListLocksRequest = Message<"udb.core.lock.services.v1.ListLocksRequest"> & {
+  /**
+   * @generated from field: string tenant_id = 1;
+   */
+  tenantId: string;
+
+  /**
+   * Optional exact status filter (e.g. HELD, RELEASED, EXPIRED); empty = all.
+   *
+   * @generated from field: string status_filter = 2;
+   */
+  statusFilter: string;
+
+  /**
+   * @generated from field: int32 page_size = 3;
+   */
+  pageSize: number;
+
+  /**
+   * Opaque pagination token returned by ListLocksResponse.next_page_token.
+   *
+   * @generated from field: string page_token = 4;
+   */
+  pageToken: string;
+};
+
+/**
+ * Describes the message udb.core.lock.services.v1.ListLocksRequest.
+ * Use `create(ListLocksRequestSchema)` to create a new message.
+ */
+export const ListLocksRequestSchema: GenMessage<ListLocksRequest> = /*@__PURE__*/
+  messageDesc(file_udb_core_lock_services_v1_lock_service, 8);
+
+/**
+ * @generated from message udb.core.lock.services.v1.ListLocksResponse
+ */
+export type ListLocksResponse = Message<"udb.core.lock.services.v1.ListLocksResponse"> & {
+  /**
+   * @generated from field: repeated udb.core.lock.services.v1.Lock locks = 1;
+   */
+  locks: Lock[];
+
+  /**
+   * Empty when the last page has been returned.
+   *
+   * @generated from field: string next_page_token = 2;
+   */
+  nextPageToken: string;
+
+  /**
+   * @generated from field: string message = 3;
+   */
+  message: string;
+
+  /**
+   * Error information if operation failed
+   *
+   * @generated from field: udb.core.common.v1.ApiError error = 4;
+   */
+  error?: ApiError | undefined;
+};
+
+/**
+ * Describes the message udb.core.lock.services.v1.ListLocksResponse.
+ * Use `create(ListLocksResponseSchema)` to create a new message.
+ */
+export const ListLocksResponseSchema: GenMessage<ListLocksResponse> = /*@__PURE__*/
+  messageDesc(file_udb_core_lock_services_v1_lock_service, 9);
+
+/**
+ * Read-only projection of a durable `udb_lock.locks` row for GetLock/ListLocks.
+ * Timestamps are unix seconds (SDK-friendly, no well-known-type import in the
+ * services surface). metadata_json is the declared non-secret holder metadata.
+ *
+ * @generated from message udb.core.lock.services.v1.Lock
+ */
+export type Lock = Message<"udb.core.lock.services.v1.Lock"> & {
+  /**
+   * @generated from field: string lock_id = 1;
+   */
+  lockId: string;
+
+  /**
+   * @generated from field: string tenant_id = 2;
+   */
+  tenantId: string;
+
+  /**
+   * @generated from field: string lock_name = 3;
+   */
+  lockName: string;
+
+  /**
+   * @generated from field: string owner_id = 4;
+   */
+  ownerId: string;
+
+  /**
+   * @generated from field: int64 fencing_token = 5;
+   */
+  fencingToken: bigint;
+
+  /**
+   * @generated from field: int32 lease_ttl_seconds = 6;
+   */
+  leaseTtlSeconds: number;
+
+  /**
+   * @generated from field: string status = 7;
+   */
+  status: string;
+
+  /**
+   * @generated from field: int64 acquired_at_unix = 8;
+   */
+  acquiredAtUnix: bigint;
+
+  /**
+   * @generated from field: int64 expires_at_unix = 9;
+   */
+  expiresAtUnix: bigint;
+
+  /**
+   * @generated from field: string metadata_json = 10;
+   */
+  metadataJson: string;
+};
+
+/**
+ * Describes the message udb.core.lock.services.v1.Lock.
+ * Use `create(LockSchema)` to create a new message.
+ */
+export const LockSchema: GenMessage<Lock> = /*@__PURE__*/
+  messageDesc(file_udb_core_lock_services_v1_lock_service, 10);
+
+/**
  * LockService (master-plan 9.2) — distributed locks for applications. Backed by
  * the portable `udb_advisory_leases` mutual-exclusion primitive, with a durable
  * tenant-scoped bookkeeping row and a monotone fencing token per grant so a
@@ -280,6 +478,28 @@ export const LockService: GenService<{
     methodKind: "unary";
     input: typeof ReleaseLockRequestSchema;
     output: typeof ReleaseLockResponseSchema;
+  },
+  /**
+   * Fetch a single lock by name within the caller's tenant. Read-only; an absent
+   * lock returns found=false (not an error) — a tenant-scoped read miss is normal.
+   *
+   * @generated from rpc udb.core.lock.services.v1.LockService.GetLock
+   */
+  getLock: {
+    methodKind: "unary";
+    input: typeof GetLockRequestSchema;
+    output: typeof GetLockResponseSchema;
+  },
+  /**
+   * List the caller tenant's locks, optionally narrowed by status. Paginated
+   * (page_size + opaque page_token). Read-only.
+   *
+   * @generated from rpc udb.core.lock.services.v1.LockService.ListLocks
+   */
+  listLocks: {
+    methodKind: "unary";
+    input: typeof ListLocksRequestSchema;
+    output: typeof ListLocksResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_udb_core_lock_services_v1_lock_service, 0);
