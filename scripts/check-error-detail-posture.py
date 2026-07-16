@@ -10755,7 +10755,14 @@ def run_selftest() -> None:
         assert not any("native entity store" in failure and "Internal" in failure for failure in failures), failures
 
         write_fixture(root)
-        metering_internal = root / METERING_INTERNAL_STATUS_PATH
+        metering_internal_dir = root / METERING_INTERNAL_STATUS_PATH
+        # The scan path may name a modularized service DIRECTORY; mutate a `.rs`
+        # file inside it (write_text on a directory raises IsADirectoryError).
+        metering_internal = (
+            metering_internal_dir / "mod.rs"
+            if metering_internal_dir.is_dir()
+            else metering_internal_dir
+        )
         metering_internal_good = read(metering_internal)
         metering_internal.write_text(
             metering_internal_good + '\nfn bad() { tonic::Status::internal("metering db failed"); }\n',
@@ -10778,7 +10785,13 @@ def run_selftest() -> None:
         assert not any("MeteringService" in failure and "Internal" in failure for failure in failures), failures
 
         write_fixture(root)
-        scheduler_internal = root / SCHEDULER_INTERNAL_STATUS_PATH
+        scheduler_internal_dir = root / SCHEDULER_INTERNAL_STATUS_PATH
+        # See the metering note above: mutate a `.rs` file inside a service dir.
+        scheduler_internal = (
+            scheduler_internal_dir / "mod.rs"
+            if scheduler_internal_dir.is_dir()
+            else scheduler_internal_dir
+        )
         scheduler_internal_good = read(scheduler_internal)
         scheduler_internal.write_text(
             scheduler_internal_good + '\nfn bad() { tonic::Status::internal("scheduler db failed"); }\n',
