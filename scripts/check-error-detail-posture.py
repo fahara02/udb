@@ -623,7 +623,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "ConfigService missing runtime capability uses typed capability detail",
-        "src/runtime/service/config_service/mod.rs",
+        "src/runtime/service/config_service",
         (
             "config_capability_status",
             "capability_status",
@@ -636,7 +636,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "SchedulerService missing store capability uses typed capability detail",
-        "src/runtime/service/scheduler_service/mod.rs",
+        "src/runtime/service/scheduler_service",
         (
             "scheduler_capability_status",
             "capability_status",
@@ -648,7 +648,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "SchedulerService not-found denials use typed schema detail",
-        "src/runtime/service/scheduler_service/mod.rs",
+        "src/runtime/service/scheduler_service",
         (
             "fn scheduler_not_found_status(",
             "crate::runtime::executor_utils::schema_status",
@@ -669,7 +669,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "SchedulerService internal failures use typed internal detail",
-        "src/runtime/service/scheduler_service/mod.rs",
+        "src/runtime/service/scheduler_service",
         (
             "fn scheduler_internal_status(operation: impl Into<String>, message: impl Into<String>) -> Status",
             'crate::runtime::executor_utils::internal_status("scheduler", operation, message)',
@@ -1466,7 +1466,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "MeteringService missing runtime capability uses typed capability detail",
-        "src/runtime/service/metering_service/mod.rs",
+        "src/runtime/service/metering_service",
         (
             "metering_capability_status",
             "capability_status",
@@ -1479,7 +1479,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "MeteringService internal failures use typed internal detail",
-        "src/runtime/service/metering_service/mod.rs",
+        "src/runtime/service/metering_service",
         (
             "fn metering_internal_status(operation: impl Into<String>, message: impl Into<String>) -> Status",
             'crate::runtime::executor_utils::internal_status("metering", operation, message)',
@@ -6585,7 +6585,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "metering quota aggregate unavailable uses typed retryable detail",
-        "src/runtime/service/metering_service/mod.rs",
+        "src/runtime/service/metering_service",
         (
             "crate::runtime::executor_utils::retryable_status",
             "crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS",
@@ -6738,7 +6738,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "config request validation uses typed field violations",
-        "src/runtime/service/config_service/mod.rs",
+        "src/runtime/service/config_service",
         (
             "crate::runtime::executor_utils::invalid_argument_fields",
             "fn require_flag_key(",
@@ -6939,7 +6939,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "scheduler create-job validation uses typed field violations",
-        "src/runtime/service/scheduler_service/mod.rs",
+        "src/runtime/service/scheduler_service",
         (
             "crate::runtime::executor_utils::invalid_argument_fields",
             "fn scheduler_required_field(",
@@ -7020,7 +7020,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "metering request validation uses typed field violations",
-        "src/runtime/service/metering_service/mod.rs",
+        "src/runtime/service/metering_service",
         (
             "crate::runtime::executor_utils::invalid_argument_fields",
             "fn metering_required_field(",
@@ -8496,7 +8496,7 @@ ELASTICSEARCH_INTERNAL_STATUS_PATH = "src/runtime/executors/elasticsearch.rs"
 IDP_INTERNAL_STATUS_PATH = "src/runtime/service/auth_service/idp/mod.rs"
 IDP_STORE_INTERNAL_STATUS_PATH = "src/runtime/service/auth_service/idp/store.rs"
 MEMCACHED_INTERNAL_STATUS_PATH = "src/runtime/executors/memcached.rs"
-METERING_INTERNAL_STATUS_PATH = "src/runtime/service/metering_service/mod.rs"
+METERING_INTERNAL_STATUS_PATH = "src/runtime/service/metering_service"
 MONGODB_INTERNAL_STATUS_PATH = "src/runtime/executors/mongodb.rs"
 MYSQL_INTERNAL_STATUS_PATH = "src/runtime/executors/mysql.rs"
 MSSQL_INTERNAL_STATUS_PATH = "src/runtime/executors/mssql.rs"
@@ -8510,7 +8510,7 @@ PROBE_DISPATCH_INTERNAL_STATUS_PATH = "src/runtime/core/probe_dispatch.rs"
 QDRANT_INTERNAL_STATUS_PATH = "src/runtime/executors/qdrant.rs"
 SAGA_INTERNAL_STATUS_PATH = "src/runtime/saga.rs"
 S3_INTERNAL_STATUS_PATH = "src/runtime/executors/s3.rs"
-SCHEDULER_INTERNAL_STATUS_PATH = "src/runtime/service/scheduler_service/mod.rs"
+SCHEDULER_INTERNAL_STATUS_PATH = "src/runtime/service/scheduler_service"
 SETUP_DATA_INTERNAL_STATUS_PATH = "src/runtime/core/setup_data.rs"
 SQLITE_INTERNAL_STATUS_PATH = "src/runtime/executors/sqlite.rs"
 STORAGE_INTERNAL_STATUS_PATH = "src/runtime/service/storage_service/mod.rs"
