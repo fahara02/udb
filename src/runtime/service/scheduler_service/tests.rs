@@ -8,6 +8,7 @@ use tonic::metadata::MetadataValue;
 use tonic::{Request, Status};
 
 use crate::proto::udb::core::scheduler::services::v1 as scheduler_pb;
+use crate::proto::udb::core::scheduler::services::v1::scheduler_service_server::SchedulerService;
 use crate::proto::{ErrorDetail, ErrorKind};
 use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
 
