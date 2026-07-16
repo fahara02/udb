@@ -600,9 +600,16 @@ graph LR
 - **src/runtime/service/live_tests/support.rs** — fns: `live_pg_dsn`, `live_native_service_db_lock`, `live_pg_pool`, `cleanup_native_service_db`, `migrate_native_service_db`, `live_runtime`, `storage_service`, `asset_service`, `webrtc_service`, `put_storage_object`, `seed_storage_file`, `assert_create_then_get`, `assert_native_table_columns`
 - **src/runtime/service/live_tests/webrtc_live.rs** — (no public items)
 
-### runtime/service/livequery_service  (1 files)
+### runtime/service/livequery_service  (8 files)
 
-- **src/runtime/service/livequery_service/mod.rs** — Native `LiveQueryService` (master-plan 9.7) — query results that update themselves. A client subscribes to a tenant-scoped query over a source proto entity and receives an initial `Snapshot` (the rows currently matchi… · types: `LiveQueryServiceImpl` · fns: `new`, `with_runtime`, `with_cdc_engine`, `with_channels`, `with_metrics`
+- **src/runtime/service/livequery_service/budget.rs** — Per-tenant CONCURRENT-stream budget: a process-local limiter over in-process resources (spawned forwarder tasks + bounded channels), not a data store — exactly like the `channels.rs` fair-admission semaphores. An RAII… · types: `StreamSlot` · fns: `active_streams`, `livequery_stream_budget_status`, `try_acquire_stream_slot`
+- **src/runtime/service/livequery_service/config.rs** — LiveQueryService process-static configuration — named consts and env knobs resolved exactly once (never per-subscribe). · fns: `buffer_events`, `max_streams_per_tenant` · consts: `SERVICE_ID`, `DEFAULT_SNAPSHOT_LIMIT`, `MAX_SNAPSHOT_LIMIT`
+- **src/runtime/service/livequery_service/errors.rs** — Typed `Status` constructors for LiveQueryService — all carry an `ErrorDetail` trailer via the shared `executor_utils` helpers. · fns: `livequery_capability_status`, `livequery_required_field`, `livequery_backpressure_status`
+- **src/runtime/service/livequery_service/handlers.rs** — The `Subscribe` RPC handler — tenant-scoped initial snapshot (mediated IR read) followed by the bounded delta stream. Extracted from the trait impl; `mod.rs` delegates one line to it. · fns: `subscribe`
+- **src/runtime/service/livequery_service/mod.rs** — Native `LiveQueryService` (master-plan 9.7) — query results that update themselves. A client subscribes to a tenant-scoped query over a source proto entity and receives an initial `Snapshot` (the rows currently matchi…
+- **src/runtime/service/livequery_service/predicate.rs** — Source-entity resolution, IR filter construction, the single-row IR predicate evaluator (`ir::eval` scoped to 9.7), and CDC change-payload parsing. · types: `SourceBinding` · fns: `resolve_source`, `map_comparison`, `build_user_filter`, `snapshot_filter`, `row_object`, `change_row`, `topic_matches_source`, `event_matches_tenant_scope`, `filter_matches_row`, `change_frame`
+- **src/runtime/service/livequery_service/stream.rs** — The bounded delta forwarder: the spawned task that filters CDC events against the subscriber's tenant scope (fail closed) and IR predicate, forwarding survivors as `Change` frames over a BOUNDED channel and closing th… · types: `LiveQueryStream` · fns: `run_delta_forward`
+- **src/runtime/service/livequery_service/tests.rs** — LiveQueryService unit tests — cross-tenant rejection, field validation, the per-event tenant-scope guard (the cross-tenant-leak boundary), the concurrent stream budget, and the single-row IR evaluator. Pure/validation…
 
 ### runtime/service/lock_service  (1 files)
 

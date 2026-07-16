@@ -1453,7 +1453,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "LiveQueryService missing runtime capability uses typed capability detail",
-        "src/runtime/service/livequery_service/mod.rs",
+        "src/runtime/service/livequery_service",
         (
             "livequery_capability_status",
             "capability_status",
@@ -5594,7 +5594,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "LiveQuery streaming backpressure uses typed quota detail",
-        "src/runtime/service/livequery_service/mod.rs",
+        "src/runtime/service/livequery_service",
         (
             "livequery_backpressure_status",
             "crate::runtime::executor_utils::quota_status",
@@ -5608,7 +5608,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "LiveQuery request validation uses typed field violations",
-        "src/runtime/service/livequery_service/mod.rs",
+        "src/runtime/service/livequery_service",
         (
             "crate::runtime::executor_utils::invalid_argument_fields",
             "fn livequery_required_field(",
@@ -8540,7 +8540,14 @@ def read(path: Path) -> str:
     if _READ_CACHE is not None and path in _READ_CACHE:
         return _READ_CACHE[path]
     try:
-        text = path.read_text(encoding="utf-8")
+        if path.is_dir():
+            # A TokenCheck path may name a modularized service DIRECTORY; read all
+            # its `.rs` files concatenated so tokens split across submodules
+            # (handlers/errors/predicate/tests/…) are still found after a
+            # god-file → module-tree refactor.
+            text = "\n".join(p.read_text(encoding="utf-8") for p in sorted(path.rglob("*.rs")))
+        else:
+            text = path.read_text(encoding="utf-8")
     except FileNotFoundError:
         text = ""
     if _READ_CACHE is not None:
@@ -9939,8 +9946,12 @@ def write_fixture(root: Path) -> None:
         consts = [f'const {reason}: &str = "{reason}";' for reason in reasons]
         fixture_text_by_path.setdefault(path, []).extend(consts)
     for path, lines in fixture_text_by_path.items():
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        # A suffix-less TokenCheck path names a service DIRECTORY (read as the
+        # concatenation of its `.rs` files); the fixture writes the tokens into a
+        # `mod.rs` under it so the good-fixture selftest still passes.
+        target = path if path.suffix else path / "mod.rs"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def run_selftest() -> None:
