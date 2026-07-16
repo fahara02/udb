@@ -18,7 +18,7 @@ Keep it plain text, emoji-free, and under 78 columns.
 │    UNIVERSAL DATA BROKER                                                   │
 │    gRPC data plane | native control plane | tenant/project scope guard     │
 │                                                                            │
-│    crate v0.4.4 | protocol v1.0.0                                          │
+│    crate v0.4.8 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -32,7 +32,7 @@ gRPC data plane | native control plane | tenant/project scope guard
 ## Badge Line
 
 ```text
-UDB | crate v0.4.4 | protocol v1.0.0 | policy-aware data routing
+UDB | crate v0.4.8 | protocol v1.0.0 | policy-aware data routing
 ```
 
 ## README Placement

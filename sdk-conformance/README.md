@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>UDB :: Universal Data Broker</strong><br>
-  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.4.4 | protocol v1.0.0</sub>
+  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.4.8 | protocol v1.0.0</sub>
 </p>
 
 The SDK conformance suite keeps Go, Python, TypeScript, Java, C#, and PHP aligned
