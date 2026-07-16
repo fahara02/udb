@@ -2374,6 +2374,86 @@ fn decrypt_record_value(
     }
 }
 
+/// Decode the PostgreSQL binary wire format of an `inet`/`cidr` value to its
+/// canonical text form. Layout: `[family, netmask_bits, is_cidr, addr_len, addr…]`
+/// (family 2 = IPv4, 3 = IPv6). A host `inet` (full mask, non-cidr) renders without
+/// the mask ("10.1.2.3"), matching PostgreSQL's own `::text`; a `cidr` or masked
+/// `inet` renders "addr/bits". Returns `None` on a malformed buffer.
+fn pg_inet_to_text(bytes: &[u8]) -> Option<String> {
+    if bytes.len() < 4 {
+        return None;
+    }
+    let family = bytes[0];
+    let bits = bytes[1];
+    let is_cidr = bytes[2] != 0;
+    let addr_len = bytes[3] as usize;
+    let addr = bytes.get(4..4 + addr_len)?;
+    let (ip, full_bits) = match family {
+        2 if addr_len == 4 => (
+            format!("{}.{}.{}.{}", addr[0], addr[1], addr[2], addr[3]),
+            32u8,
+        ),
+        3 if addr_len == 16 => {
+            let segments: Vec<String> = (0..8)
+                .map(|i| format!("{:x}", u16::from_be_bytes([addr[2 * i], addr[2 * i + 1]])))
+                .collect();
+            (segments.join(":"), 128u8)
+        }
+        _ => return None,
+    };
+    if is_cidr || bits != full_bits {
+        Some(format!("{ip}/{bits}"))
+    } else {
+        Some(ip)
+    }
+}
+
+/// Decode the PostgreSQL binary wire format of a `macaddr` (6 bytes) / `macaddr8`
+/// (8 bytes) value to canonical colon-separated hex ("08:00:2b:01:02:03").
+fn pg_macaddr_to_text(bytes: &[u8]) -> Option<String> {
+    if bytes.len() != 6 && bytes.len() != 8 {
+        return None;
+    }
+    Some(
+        bytes
+            .iter()
+            .map(|b| format!("{b:02x}"))
+            .collect::<Vec<_>>()
+            .join(":"),
+    )
+}
+
+#[cfg(test)]
+mod inet_decode_tests {
+    use super::{pg_inet_to_text, pg_macaddr_to_text};
+
+    #[test]
+    fn inet_binary_decodes_to_canonical_text() {
+        // The exact bytes from the bug report: `022000040A010203` = 10.1.2.3.
+        // family=2(v4) bits=0x20(32) is_cidr=0 len=4 addr=10.1.2.3 → host, no mask.
+        assert_eq!(
+            pg_inet_to_text(&[0x02, 0x20, 0x00, 0x04, 0x0A, 0x01, 0x02, 0x03]),
+            Some("10.1.2.3".to_string())
+        );
+        // A masked/cidr value keeps the /bits suffix.
+        assert_eq!(
+            pg_inet_to_text(&[0x02, 0x18, 0x01, 0x04, 0x0A, 0x01, 0x02, 0x00]),
+            Some("10.1.2.0/24".to_string())
+        );
+        // Malformed buffers decode to None (→ NULL, never a panic).
+        assert_eq!(pg_inet_to_text(&[0x02, 0x20]), None);
+    }
+
+    #[test]
+    fn macaddr_binary_decodes_to_colon_hex() {
+        assert_eq!(
+            pg_macaddr_to_text(&[0x08, 0x00, 0x2b, 0x01, 0x02, 0x03]),
+            Some("08:00:2b:01:02:03".to_string())
+        );
+        assert_eq!(pg_macaddr_to_text(&[0x08, 0x00]), None);
+    }
+}
+
 fn row_value_to_json(row: &PgRow, idx: usize, type_name: &str) -> Result<JsonValue, tonic::Status> {
     let type_name = type_name.to_ascii_uppercase();
     // INT2/SMALLINT MUST decode via i16 — sqlx's i32 decoder rejects the INT2 OID
@@ -2492,14 +2572,47 @@ fn row_value_to_json(row: &PgRow, idx: usize, type_name: &str) -> Result<JsonVal
             arr.into_iter().map(JsonValue::String).collect(),
         ));
     }
-    // GAP 10: INET, CIDR, MACADDR, TSVECTOR — all have sensible text representations
-    // handled by the String catch-all. An unknown/user-defined OID (e.g. PostGIS
-    // `geography`/`geometry`) makes sqlx's String decoder REJECT the value; the old
-    // `.unwrap_or(JsonValue::Null)` then swallowed that decode error into a silent
-    // NULL for a NOT-NULL column (bug_report 2026-07-16 #1b — silent data loss).
-    // Fall back to the RAW value and preserve it as a string: PostGIS emits binary
-    // EWKB, which we hex-encode into the exact hex-EWKB form clients also supply on
-    // write (a symmetric round-trip); an already-text payload passes through.
+    // INET / CIDR / MACADDR: sqlx's String decoder is TEXT-family-only and REJECTS
+    // these OIDs, and the generic hex-of-binary fallback below would return the raw
+    // PG binary wire form (e.g. `022000040A010203`), which is asymmetric — feeding
+    // it back on a write fails 22P02. Decode the binary wire format to its canonical
+    // TEXT form ("10.1.2.3", "10.1.2.3/24", "08:00:2b:01:02:03") so the value
+    // round-trips symmetrically with the `$n::INET`/`::MACADDR` write cast.
+    // (bug_report 2026-07-16 #1c — the old "GAP 10 falls through to the string
+    // catch-all which handles these correctly" claim was wrong.)
+    if type_name.contains("INET") || type_name.contains("CIDR") || type_name.contains("MACADDR") {
+        use sqlx::ValueRef as _;
+        let raw = row.try_get_raw(idx).map_err(|err| {
+            core_internal_status("read_column", format!("row decode failed: {err}"))
+        })?;
+        if raw.is_null() {
+            return Ok(JsonValue::Null);
+        }
+        let bytes = raw.as_bytes().map_err(|err| {
+            core_internal_status("read_column", format!("raw column read failed: {err}"))
+        })?;
+        let text = match raw.format() {
+            sqlx::postgres::PgValueFormat::Binary => {
+                if type_name.contains("MACADDR") {
+                    pg_macaddr_to_text(bytes)
+                } else {
+                    pg_inet_to_text(bytes)
+                }
+            }
+            sqlx::postgres::PgValueFormat::Text => {
+                Some(String::from_utf8_lossy(bytes).into_owned())
+            }
+        };
+        return Ok(text.map(JsonValue::String).unwrap_or(JsonValue::Null));
+    }
+    // TSVECTOR and other text-representable types: handled by the String catch-all.
+    // An unknown/user-defined OID (e.g. PostGIS `geography`/`geometry`) makes sqlx's
+    // String decoder REJECT the value; the old `.unwrap_or(JsonValue::Null)` then
+    // swallowed that decode error into a silent NULL for a NOT-NULL column
+    // (bug_report 2026-07-16 #1b — silent data loss). Fall back to the RAW value and
+    // preserve it as a string: PostGIS emits binary EWKB, which we hex-encode into
+    // the exact hex-EWKB form clients also supply on write (a symmetric round-trip);
+    // an already-text payload passes through.
     match row.try_get::<Option<String>, _>(idx) {
         Ok(value) => Ok(value.map(JsonValue::from).unwrap_or(JsonValue::Null)),
         Err(_) => {

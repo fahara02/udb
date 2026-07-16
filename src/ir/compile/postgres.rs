@@ -100,14 +100,20 @@ impl SqlDialect for Postgres {
             // casts to itself (no-op). bug_report.md A4.
             format!("{placeholder}::JSONB")
         } else if {
-            // PostGIS spatial types: the column is declared e.g.
-            // `GEOGRAPHY(POINT,4326)` / `GEOMETRY(...)`. A text-bound placeholder
-            // (hex EWKB) has no implicit text->geography/geometry cast, so an
-            // INSERT/UPDATE supplying the column fails to plan (SQLSTATE 42804).
-            // Cast to the base spatial type — PostGIS's input parser accepts hex
-            // EWKB text and the column typmod (Point/SRID) is checked on assignment.
+            // Column types with a canonical TEXT input form but NO implicit
+            // assignment cast from a bound `text` parameter, so an INSERT/UPDATE
+            // supplying the column fails to plan (SQLSTATE 42804): PostGIS
+            // spatial (`GEOGRAPHY(POINT,4326)`/`GEOMETRY(...)`, input = hex EWKB),
+            // network address (`inet`/`cidr`/`macaddr`/`macaddr8`), and `date`.
+            // Casting the placeholder to the column's base type makes the text
+            // input (hex EWKB, "10.1.2.3", "2026-07-16") type-check; the column
+            // typmod is still checked on assignment. (bug_report 2026-07-16
+            // #1a geography, #1c inet, #1d date — same class as the B8 uuid fix.)
             let base = ty.split('(').next().unwrap_or(ty).trim();
-            base.eq_ignore_ascii_case("geography") || base.eq_ignore_ascii_case("geometry")
+            matches!(
+                base.to_ascii_lowercase().as_str(),
+                "geography" | "geometry" | "inet" | "cidr" | "macaddr" | "macaddr8" | "date"
+            )
         } {
             let base = ty
                 .split('(')
@@ -1481,6 +1487,25 @@ mod tests {
             <Postgres as SqlDialect>::cast_compare_placeholder("VARCHAR(255)", "$3"),
             "$3"
         );
+    }
+
+    #[test]
+    fn network_and_date_columns_cast_the_placeholder() {
+        // inet/cidr/macaddr/date have a canonical TEXT input but no implicit
+        // assignment cast from a bound text parameter (SQLSTATE 42804). Cast the
+        // placeholder to the base type. (bug_report 2026-07-16 #1c inet, #1d date)
+        for (ty, ph, want) in [
+            ("inet", "$1", "$1::INET"),
+            ("cidr", "$2", "$2::CIDR"),
+            ("macaddr", "$3", "$3::MACADDR"),
+            ("date", "$4", "$4::DATE"),
+        ] {
+            assert_eq!(
+                <Postgres as SqlDialect>::cast_compare_placeholder(ty, ph),
+                want,
+                "{ty} column must cast the placeholder"
+            );
+        }
     }
 
     #[test]
