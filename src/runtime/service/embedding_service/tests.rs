@@ -19,6 +19,7 @@ use crate::proto::{ErrorDetail, ErrorKind};
 use crate::runtime::catalog::CatalogManager;
 use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
 
+use super::EmbeddingServiceImpl;
 use super::config::{EMBEDDING_BACKFILL_PAGE_LIMIT, STATUS_ACTIVE};
 use super::errors::{
     embedding_capability_status, embedding_source_not_found_status, require_source_tenant_column,
@@ -26,13 +27,12 @@ use super::errors::{
 };
 use super::events::{bound_embedding_text, build_work_event_payload};
 use super::handlers::{parse_grpc_timeout, remaining_before_deadline, retrieve_hit_payload_json};
-use super::model::{build_embedding_point, merge_retrieve_filter, StoredSource};
+use super::model::{StoredSource, build_embedding_point, merge_retrieve_filter};
 use super::workers::{
     backfill_read_context, backfill_select_request, embedding_teardown_jobs_sql,
     embedding_teardown_point_ids_sql, embedding_work_jobs_sql, extract_source_text,
     parse_source_text_fields, source_change_is_delete, source_change_row, source_change_row_pk,
 };
-use super::EmbeddingServiceImpl;
 
 fn decode_detail(status: &Status) -> ErrorDetail {
     let raw = status
@@ -403,11 +403,13 @@ fn retrieve_filter_merges_under_authoritative_tenant_clause() {
         .is_err(),
         "must reject an attempt to override the tenant clause"
     );
-    assert!(merge_retrieve_filter(
-        "t1",
-        r#"{"must":[{"key":"_project","match":{"value":"p"}}]}"#
-    )
-    .is_err());
+    assert!(
+        merge_retrieve_filter(
+            "t1",
+            r#"{"must":[{"key":"_project","match":{"value":"p"}}]}"#
+        )
+        .is_err()
+    );
     assert!(
         merge_retrieve_filter(
             "t1",
@@ -471,9 +473,11 @@ fn retrieve_past_deadline_returns_deadline_exceeded() {
         .expect("some remaining budget");
     assert!(remaining > Duration::from_secs(20));
     // No deadline ⇒ unbounded (None).
-    assert!(remaining_before_deadline(None, base)
-        .expect("no deadline ok")
-        .is_none());
+    assert!(
+        remaining_before_deadline(None, base)
+            .expect("no deadline ok")
+            .is_none()
+    );
 }
 
 /// The gRPC timeout header parser handles the standard unit suffixes.

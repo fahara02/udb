@@ -6,9 +6,9 @@
 //! `EmbeddingServiceImpl` (they use `self`), shared between the RPC handlers and
 //! the leader-owned background passes.
 
-use super::super::native_helpers::{enqueue_outbox_event_with_context, NativeEventContext};
-use super::config::TOPIC_WORK;
+use super::super::native_helpers::{NativeEventContext, enqueue_outbox_event_with_context};
 use super::EmbeddingServiceImpl;
+use super::config::TOPIC_WORK;
 
 /// Bound an over-long embedding input to `max_chars`, preferring to cut at the
 /// last whitespace within the bound so a word is not split. Char-based, so it

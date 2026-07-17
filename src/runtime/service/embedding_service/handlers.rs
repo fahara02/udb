@@ -22,10 +22,11 @@ use super::super::native_helpers::{
     admit_on as native_admit_on, native_next_page_token, native_offset_page_window,
     native_service_context, non_empty_json, validate_request_tenant,
 };
+use super::EmbeddingServiceImpl;
 use super::config::{
-    resolve_top_k, retrieve_fusion_weights, retrieve_score_threshold, EMBEDDING_SOURCE_MSG,
-    MAX_SOURCES_PER_TENANT, STATUS_ACTIVE, STATUS_DELETED, TOPIC_BACKFILL_REQUESTED,
-    TOPIC_SOURCE_DELETED, TOPIC_SOURCE_REGISTERED,
+    EMBEDDING_SOURCE_MSG, MAX_SOURCES_PER_TENANT, STATUS_ACTIVE, STATUS_DELETED,
+    TOPIC_BACKFILL_REQUESTED, TOPIC_SOURCE_DELETED, TOPIC_SOURCE_REGISTERED, resolve_top_k,
+    retrieve_fusion_weights, retrieve_score_threshold,
 };
 use super::errors::{
     embedding_field_violation, embedding_required_field, embedding_source_not_found_status,
@@ -34,7 +35,6 @@ use super::errors::{
 };
 use super::model::{build_embedding_point, merge_retrieve_filter, stored_source_from_json};
 use super::store::{active_sources_read, source_conflict, source_read_by_name, source_record};
-use super::EmbeddingServiceImpl;
 
 impl EmbeddingServiceImpl {
     /// Resolve the SOURCE entity's tenant column through the project-active
