@@ -209,44 +209,60 @@ with UdbClient("127.0.0.1:50051", meta) as udb:
 
 ## Quick Start
 
-Install the CLI from a release binary, through an SDK launcher, or from source:
+The whole idea: **you describe your data model in protobuf, and UDB turns it into
+a running, multi-tenant, RLS-protected API over your database — no ORM, no
+hand-written SQL, no schema migrations to babysit.** Here's the path from an empty
+folder to querying your own tables.
+
+**1. Get the `udb` CLI** — from a release binary, an SDK launcher, or source:
 
 ```bash
 cargo install --path .
 ```
 
-Export UDB's shared protos into an application project:
+**2. Pull in UDB's shared protobuf annotations** so your own protos can use them:
 
 ```bash
-udb proto export --fmt
+udb proto export --fmt      # writes udb/core/common/v1/*.proto into your project
 ```
 
-Write app-owned protos that import UDB annotations:
+**3. Describe your data model.** Write normal protos and annotate the fields UDB
+should turn into tables/columns — that annotation file is the one you just
+exported:
 
 ```proto
-import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/db.proto";   // gives you pg_table / pg_column, RLS, tenancy
 ```
 
-Inspect the catalog and generated SQL:
+**4. See exactly what UDB will build** before you run anything — the catalog, the
+SQL it generates, and a human-readable lint of your model:
 
 ```bash
-udb catalog proto
-udb sql proto
-udb lint proto --human
+udb catalog proto            # the tables/columns UDB derived from your protos
+udb sql proto                # the DDL it will run
+udb lint proto --human       # plain-English warnings (missing tenant column, etc.)
 ```
 
-Start a local broker:
+**5. Start the broker.** It generates the schema and serves your model over gRPC:
 
 ```bash
 udb serve proto "" 0.0.0.0:50051
 ```
 
-Check runtime readiness:
+**6. Confirm it's healthy:**
 
 ```bash
-udb doctor --human
-udb compat-matrix
+udb doctor --human           # readiness in plain English
+udb compat-matrix            # which backends/features are live
 ```
+
+**7. Connect your application.** Now point an SDK at the broker, authenticate, and
+do tenant-scoped CRUD. The shortest correct path — including the tenant-code →
+canonical-UUID handling that trips up most first integrations — is in
+[`examples/go_enterprise`](examples/go_enterprise) (Go), with equivalents in
+[`examples/python_enterprise`](examples/python_enterprise) and
+[`examples/ts_enterprise`](examples/ts_enterprise). Start there rather than
+wiring the raw gRPC clients yourself.
 
 ## CLI
 
