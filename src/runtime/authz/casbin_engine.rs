@@ -171,11 +171,13 @@ impl AuthzSnapshot {
                 deny_reason: if allowed {
                     String::new()
                 } else {
-                    // Actionable hint: the live decision engine reads the ABAC
-                    // snapshot (not the `udb_authz.policy_rules` governance table),
-                    // so seed ABAC policies or flip the coarse dev escape hatch.
-                    "no authz policy (default deny); seed ABAC policies or set \
-                     UDB_ABAC_DEFAULT_ALLOW=true"
+                    // Actionable hint: the live decision engine reads the PG-warmed
+                    // Casbin snapshot sourced from the `udb_authz.policy_rules`
+                    // governance table, so configure authorization through the
+                    // AuthzService (CreatePolicyRule / PutAuthzPolicy) — or flip the
+                    // dev escape hatch for local bootstrap.
+                    "no authz policy (default deny); configure authorization via the \
+                     AuthzService (policy_rules) or set UDB_ABAC_DEFAULT_ALLOW=true for dev"
                         .to_string()
                 },
                 policy_version: self.version.clone(),

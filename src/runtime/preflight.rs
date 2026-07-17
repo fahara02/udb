@@ -147,7 +147,7 @@ pub fn evaluate(config: &UdbConfig, public_addr: SocketAddr) -> Vec<PreflightFin
                      policies are seeded (note: the live engine reads ABAC policies, NOT the \
                      udb_authz.policy_rules governance table)"
                 .to_string(),
-            fix: "seed ABAC policies, or set UDB_ABAC_DEFAULT_ALLOW=true for dev/bootstrap",
+            fix: "configure policies via the AuthzService (policy_rules), or set UDB_ABAC_DEFAULT_ALLOW=true for dev/bootstrap",
         });
     }
 

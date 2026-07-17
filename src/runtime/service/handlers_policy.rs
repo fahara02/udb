@@ -187,11 +187,14 @@ impl DataBrokerService {
         if let Err(err) = require_admin_scope(&security) {
             return self.record_grpc("ReloadPolicies", started, Err(err));
         }
-        // Load fresh policies from DB, then atomically swap into the live policy set
-        // so that all subsequent authorize() calls use the new policies without restart.
-        let fresh = self.runtime_snapshot().load_abac_policies().await;
-        let count = fresh.len();
-        self.replace_abac_policies(fresh);
+        // Authorization policy is sourced exclusively from the Casbin governance
+        // table (`udb_authz.policy_rules`) via the AuthzService, and the shared authz
+        // snapshot auto-refreshes on the authz revision fence: every policy mutation
+        // invalidates the cache and a background warmer reloads it, so subsequent
+        // authorize() calls already see the latest active policy set without a manual
+        // reload. This RPC remains as an explicit, audited acknowledgement that the
+        // live policy set tracks the governance table.
+        let count = self.current_authz_snapshot().policies.len();
         let _ = self
             .runtime_snapshot()
             .write_audit_log(
@@ -698,11 +701,9 @@ impl DataBrokerService {
         }
 
         // ── Policy count ──────────────────────────────────────────────────────
-        let active_policy_count = self
-            .abac_policies
-            .read()
-            .map(|p| p.len() as i32)
-            .unwrap_or(0);
+        // The live active policy set is the shared Casbin snapshot (PG-warmed from
+        // `udb_authz.policy_rules`), not a separate env-JSON ABAC vector.
+        let active_policy_count = self.current_authz_snapshot().policies.len() as i32;
 
         let snapshot_at_unix_ms = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)

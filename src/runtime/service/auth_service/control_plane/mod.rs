@@ -792,14 +792,10 @@ impl DataBrokerService {
             // resources) still flips the change signal and triggers a fleet
             // push — this is exactly the gap the subscriber exists to close
             // (`udb.authz.policy.bundle.invalidated.v1` emitted, no node reloads).
-            let abac_cell = self.abac_snapshot();
+            let authz_cell = self.authz_snapshot();
             let authz_version: subscriber::AuthzVersionFn = Arc::new(move || {
-                abac_cell
-                    .read()
-                    .map(|snapshot| {
-                        format!("{}:{}", snapshot.version, snapshot.relationship_version)
-                    })
-                    .unwrap_or_default()
+                let snapshot = authz_cell.load();
+                format!("{}:{}", snapshot.version, snapshot.relationship_version)
             });
             let handle = subscriber::SubscriberHandle::new(pool, config)
                 .with_metrics(self.metrics.clone())

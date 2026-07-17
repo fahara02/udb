@@ -184,7 +184,7 @@ impl DataBrokerService {
         // "VectorBatchUpsert", not each streamed item's target collection.
         // Casbin-only per-item authz (see batch_select_inner): capture the
         // cloneable snapshot and decide each item via `casbin_authorize`.
-        let abac_snapshot = self.current_abac_snapshot();
+        let abac_snapshot = self.current_authz_snapshot();
         let out = async_stream::try_stream! {
             while let Some(item) = stream.message().await? {
                 metrics.inc_vector_op(&item.collection, "batch_upsert");
