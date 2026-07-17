@@ -21,18 +21,6 @@ managed:
     # ("Udb.Core.Authn..."), diverging from the namespaces the proto authors
     # declared and the handwritten C# client (UdbAuthClient.cs) consumes.
     - file_option: csharp_namespace
-    # Do NOT let the go_package_prefix override below rewrite the vendored
-    # google/api protos (annotations/http/field_behavior): otherwise buf emits a
-    # PRIVATE copy at sdk/go/gen/google/api and every generated stub blank-imports
-    # it, so any Go consumer that also links canonical genproto
-    # (google.golang.org/genproto/googleapis/api) — e.g. one serving
-    # google.api.http-annotated gRPC or linking the Firebase/FCM client —
-    # panics at package-init on a duplicate "google/api/http.proto" registration.
-    # Disabling managed mode for this PATH preserves google/api's own go_package
-    # (which points at genproto), so the stubs import genproto and there is a
-    # single registrant. NOTE: this must filter by `path:` — a `module:` filter
-    # does NOT match these dependency files in this workspace (verified).
-    - path: google/api
   override:
     - file_option: go_package_prefix
       value: github.com/fahara02/udb/sdk/go/gen
