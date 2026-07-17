@@ -140,3 +140,79 @@ function bareProject(opts) {
     node_assert_1.strict.equal(refreshCalls, 0, "no refresh while fresh");
     node_assert_1.strict.equal(core.calls.length, 0, "no credential swap while fresh");
 });
+// Background refresher fail-closed parity with the Go enterprise session: an
+// EXPIRED token whose refresh fails poisons the session and clears the bearer on
+// every channel, so the next call can't go out with a dead credential.
+(0, node_test_1.test)("background refresh fails CLOSED: expired token + failing refresh clears the bearer", async () => {
+    const auth = {
+        ...credSpy(),
+        refreshToken: async () => {
+            throw new Error("refresh token revoked");
+        },
+    };
+    const core = credSpy();
+    const webrtcCore = credSpy();
+    const store = memoryStore({
+        accessToken: "token-1",
+        refreshToken: "refresh-1",
+        expiresAt: Date.now() - 1000, // expired
+    });
+    const project = bareProject({ store, auth, core, webrtcCore });
+    project.closed = true; // keep scheduleRefresh from arming a real timer in the test
+    await project.backgroundRefreshTick();
+    node_assert_1.strict.ok(project.poisoned, "expired token + failed refresh must poison the session");
+    node_assert_1.strict.ok(project.refreshError(), "refreshError() must expose the failure");
+    for (const [label, spy] of [
+        ["data core", core],
+        ["auth client", auth],
+        ["webrtc core", webrtcCore],
+    ]) {
+        const last = spy.calls.at(-1);
+        node_assert_1.strict.ok(last, `${label} setCredentials was not called`);
+        node_assert_1.strict.equal(last.bearerToken, undefined, `${label} still holds a bearer (not failed closed)`);
+        node_assert_1.strict.equal(last.apiKey, "key-1", `${label} dropped the configured API key`);
+    }
+});
+// A transient refresh blip while the token is STILL valid must NOT fail closed.
+(0, node_test_1.test)("background refresh does NOT fail closed on a blip while the token is still valid", async () => {
+    const auth = {
+        ...credSpy(),
+        refreshToken: async () => {
+            throw new Error("network blip");
+        },
+    };
+    const core = credSpy();
+    const store = memoryStore({
+        accessToken: "token-1",
+        refreshToken: "refresh-1",
+        expiresAt: Date.now() + 30_000, // valid, but within skew → refresh is attempted (and fails)
+    });
+    const project = bareProject({ store, auth, core });
+    project.poisoned = false; // real constructor inits this; Object.create skips field initializers
+    project.closed = true;
+    await project.backgroundRefreshTick();
+    node_assert_1.strict.equal(project.poisoned, false, "must not poison while the token is still valid");
+    const cleared = core.calls.some((c) => c.bearerToken === undefined);
+    node_assert_1.strict.equal(cleared, false, "must not clear a still-valid bearer");
+});
+// A successful background refresh recovers a previously-poisoned session.
+(0, node_test_1.test)("background refresh recovers: a successful refresh clears poison", async () => {
+    const auth = {
+        ...credSpy(),
+        refreshToken: async () => ({ access_token: "token-2", access_token_expires_in: 3600 }),
+    };
+    const core = credSpy();
+    const store = memoryStore({
+        accessToken: "token-1",
+        refreshToken: "refresh-1",
+        expiresAt: Date.now() - 1000, // expired → refresh runs
+    });
+    const project = bareProject({ store, auth, core });
+    project.poisoned = true;
+    project.lastRefreshError = new Error("prev");
+    project.closed = true;
+    await project.backgroundRefreshTick();
+    node_assert_1.strict.equal(project.poisoned, false, "poison cleared after a successful refresh");
+    node_assert_1.strict.equal(project.refreshError(), null, "refreshError() cleared after success");
+    node_assert_1.strict.equal(store.current()?.accessToken, "token-2", "refreshed token persisted");
+});
