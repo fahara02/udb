@@ -24,7 +24,7 @@ use super::errors::{
     embedding_capability_status, embedding_source_not_found_status, require_source_tenant_column,
     validate_reported_vector,
 };
-use super::events::build_work_event_payload;
+use super::events::{bound_embedding_text, build_work_event_payload};
 use super::handlers::{parse_grpc_timeout, remaining_before_deadline, retrieve_hit_payload_json};
 use super::model::{build_embedding_point, merge_retrieve_filter, StoredSource};
 use super::workers::{
@@ -73,6 +73,7 @@ fn work_event_payload_has_no_credentials() {
         "Ada Lovelace, London",
         "text-embedding-3-small",
         "acme_contacts_vectors",
+        8000,
     );
     let object = payload.as_object().expect("object payload");
     // The intended non-secret routing keys are present.
@@ -108,6 +109,41 @@ fn work_event_payload_has_no_credentials() {
             "work payload leaked credential-shaped key {forbidden}"
         );
     }
+}
+
+/// Over-long source text is bounded before it enters a work event: within the
+/// limit it is unchanged; over the limit it is cut (preferring a whitespace
+/// boundary so a word is not split) to at most `max_chars`, char-based so a
+/// multi-byte boundary never panics.
+#[test]
+fn work_event_text_is_bounded() {
+    // Within bound ⇒ byte-for-byte unchanged.
+    assert_eq!(bound_embedding_text("hello world", 100), "hello world");
+    assert_eq!(bound_embedding_text("abcde", 5), "abcde");
+    // Over bound with whitespace ⇒ cut at the last word boundary, no mid-word split.
+    assert_eq!(
+        bound_embedding_text("alpha beta gamma delta", 12),
+        "alpha beta"
+    );
+    // Over bound with no whitespace ⇒ hard cut at exactly max chars.
+    let hard = bound_embedding_text("abcdefghijklmno", 5);
+    assert_eq!(hard, "abcde");
+    assert_eq!(hard.chars().count(), 5);
+    // Multi-byte safety: char-based, never panics, stays within the char bound.
+    assert!(
+        bound_embedding_text("café ☕ ambulance 🚑 dispatch", 8)
+            .chars()
+            .count()
+            <= 8
+    );
+    assert_eq!(bound_embedding_text("ééééééé", 3).chars().count(), 3);
+    // A zero bound yields empty; a bounded work-event text carries the cut value.
+    assert_eq!(bound_embedding_text("anything", 0), "");
+    let payload = build_work_event_payload("t", "s", "r", "alpha beta gamma delta", "m", "c", 12);
+    assert_eq!(
+        payload.get("text").and_then(|v| v.as_str()),
+        Some("alpha beta")
+    );
 }
 
 /// A sidecar callback scoped to tenant-a must not report a vector for tenant-b

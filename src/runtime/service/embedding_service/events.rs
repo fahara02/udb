@@ -6,14 +6,44 @@
 //! `EmbeddingServiceImpl` (they use `self`), shared between the RPC handlers and
 //! the leader-owned background passes.
 
-use super::super::native_helpers::{NativeEventContext, enqueue_outbox_event_with_context};
-use super::EmbeddingServiceImpl;
+use super::super::native_helpers::{enqueue_outbox_event_with_context, NativeEventContext};
 use super::config::TOPIC_WORK;
+use super::EmbeddingServiceImpl;
+
+/// Bound an over-long embedding input to `max_chars`, preferring to cut at the
+/// last whitespace within the bound so a word is not split. Char-based, so it
+/// never panics on a multi-byte boundary; `<= max_chars` returns the text
+/// unchanged. Pure.
+pub(crate) fn bound_embedding_text(text: &str, max_chars: usize) -> String {
+    if max_chars == 0 {
+        return String::new();
+    }
+    let mut char_count = 0usize;
+    let mut cut_byte = None;
+    let mut last_ws_byte = None;
+    for (index, ch) in text.char_indices() {
+        if char_count == max_chars {
+            cut_byte = Some(index);
+            break;
+        }
+        if ch.is_whitespace() {
+            last_ws_byte = Some(index);
+        }
+        char_count += 1;
+    }
+    let Some(cut) = cut_byte else {
+        return text.to_string();
+    };
+    let end = last_ws_byte.unwrap_or(cut);
+    text[..end].trim_end().to_string()
+}
 
 /// Build the `udb.embedding.work.v1` payload the sidecar pool consumes. Pure so
 /// the no-credential invariant is unit-asserted: it carries ONLY the row pk +
 /// text + non-secret routing. There is NO credential/API-key field here — model
-/// credentials live exclusively in the sidecar (architecture guard 9.11).
+/// credentials live exclusively in the sidecar (architecture guard 9.11). The
+/// text is bounded to `max_chars` (see [`bound_embedding_text`]) so a
+/// pathologically long row cannot exceed the embedding model's input limit.
 pub(crate) fn build_work_event_payload(
     tenant_id: &str,
     source_name: &str,
@@ -21,12 +51,13 @@ pub(crate) fn build_work_event_payload(
     text: &str,
     model_id: &str,
     target_collection: &str,
+    max_chars: usize,
 ) -> serde_json::Value {
     serde_json::json!({
         "tenant_id": tenant_id,
         "source": source_name,
         "row_pk": row_pk,
-        "text": text,
+        "text": bound_embedding_text(text, max_chars),
         "model_id": model_id,
         "target_collection": target_collection,
     })
@@ -123,6 +154,7 @@ impl EmbeddingServiceImpl {
             text,
             model_id,
             target_collection,
+            super::config::max_embedding_text_chars(),
         );
         if let Some(object) = payload.as_object_mut() {
             object.insert(
@@ -174,6 +206,7 @@ impl EmbeddingServiceImpl {
             text,
             model_id,
             target_collection,
+            super::config::max_embedding_text_chars(),
         );
         if let (Some(event_id), Some(object)) = (source_event_id, payload.as_object_mut()) {
             object.insert(

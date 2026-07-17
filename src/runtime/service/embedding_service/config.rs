@@ -46,6 +46,15 @@ const EMBEDDING_RETRIEVE_SCORE_THRESHOLD_ENV: &str = "UDB_EMBEDDING_RETRIEVE_SCO
 /// fusion weighting (was a hardcoded empty vec).
 const EMBEDDING_RETRIEVE_FUSION_WEIGHTS_ENV: &str = "UDB_EMBEDDING_RETRIEVE_FUSION_WEIGHTS";
 
+/// Maximum characters of source text carried in a single `udb.embedding.work.v1`
+/// event. Embedding models cap their input (roughly a few thousand tokens); an
+/// unbounded row would make the sidecar's provider call fail, and — since a
+/// failed embedding is never reported back — the row would silently stay
+/// un-embedded. Bounding the text here keeps the request within a safe envelope.
+/// Operator-tunable; a `<= 0`/malformed override falls back to the default.
+const DEFAULT_EMBEDDING_MAX_TEXT_CHARS: usize = 8000;
+const EMBEDDING_MAX_TEXT_CHARS_ENV: &str = "UDB_EMBEDDING_MAX_TEXT_CHARS";
+
 /// Fallback vector collection when a source row somehow carries no target (mirrors
 /// `asset_service::DEFAULT_VECTOR_COLLECTION`; a source normally always specifies
 /// its own `target_collection`, validated non-empty at register time).
@@ -122,4 +131,17 @@ pub(crate) fn retrieve_fusion_weights() -> Vec<f32> {
                 .unwrap_or_default()
         })
         .clone()
+}
+
+/// Maximum source-text characters per work event, resolved once. A `<= 0` or
+/// malformed override is ignored so the bound is always a real, sane limit.
+pub(crate) fn max_embedding_text_chars() -> usize {
+    static MAX_CHARS: OnceLock<usize> = OnceLock::new();
+    *MAX_CHARS.get_or_init(|| {
+        std::env::var(EMBEDDING_MAX_TEXT_CHARS_ENV)
+            .ok()
+            .and_then(|v| v.trim().parse::<usize>().ok())
+            .filter(|v| *v > 0)
+            .unwrap_or(DEFAULT_EMBEDDING_MAX_TEXT_CHARS)
+    })
 }
