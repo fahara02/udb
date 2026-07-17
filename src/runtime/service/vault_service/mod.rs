@@ -311,6 +311,20 @@ impl VaultService for VaultServiceImpl {
         handlers::decrypt(self, request).await
     }
 
+    async fn generate_data_key(
+        &self,
+        request: Request<vault_pb::GenerateDataKeyRequest>,
+    ) -> Result<Response<vault_pb::GenerateDataKeyResponse>, Status> {
+        handlers::generate_data_key(self, request).await
+    }
+
+    async fn rewrap(
+        &self,
+        request: Request<vault_pb::RewrapRequest>,
+    ) -> Result<Response<vault_pb::RewrapResponse>, Status> {
+        handlers::rewrap(self, request).await
+    }
+
     async fn sign(
         &self,
         request: Request<vault_pb::SignRequest>,

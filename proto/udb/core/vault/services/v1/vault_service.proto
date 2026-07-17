@@ -663,6 +663,84 @@ service VaultService {
     };
     option (google.api.http) = {post: "/v1/vault/database/credentials" body: "*"};
   }
+
+  // Generate a fresh 256-bit data key, returned BOTH plaintext (for the caller to
+  // encrypt data locally) AND wrapped under the named transit key (store this and
+  // Decrypt/Rewrap it later). Envelope-encryption without exposing the transit
+  // key. Reuses the transit seal path; AUDITED via the outbox compliance envelope.
+  rpc GenerateDataKey(GenerateDataKeyRequest) returns (GenerateDataKeyResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:vault:generate-data-key"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "vault.GenerateDataKey"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "generate_data_key" rest_operation_id: "vaultGenerateDataKey"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "vault"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "vault"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {post: "/v1/vault/transit:generate-data-key" body: "*"};
+  }
+
+  // Re-wrap a transit ciphertext under the key's CURRENT active version: decrypt
+  // with the version embedded in the envelope, then re-seal with the active
+  // version. The post-rotation migration primitive (no plaintext leaves the
+  // broker). AUDITED via the outbox compliance envelope.
+  rpc Rewrap(RewrapRequest) returns (RewrapResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:vault:rewrap"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "vault.Rewrap"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "rewrap" rest_operation_id: "vaultRewrap"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "vault"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "vault"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {post: "/v1/vault/transit:rewrap" body: "*"};
+  }
 }
 
 // ── KV messages ─────────────────────────────────────────────────────────────
@@ -896,6 +974,55 @@ message DecryptResponse {
     boilerplate_recipe_tags: "vault" generate_minimal_example: true
   };
   string plaintext = 1 [(udb.core.common.v1.sensitive) = true, (udb.core.common.v1.log_redacted) = true, (udb.core.common.v1.db_column_security) = { secret_classification: SECRET_CLASSIFICATION_TOKEN output_view: OUTPUT_VIEW_SELF redaction_strategy: REDACTION_STRATEGY_REDACT encryption_key_class: "vault-transit" uniqueness_scope: "tenant" }];
+  int32 key_version = 2;
+  string message = 3;
+  udb.core.common.v1.ApiError error = 4;
+}
+
+message GenerateDataKeyRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 3 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string key_name = 2;
+}
+
+message GenerateDataKeyResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 3 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  // The plaintext data key (base64). SENSITIVE — use it to encrypt data locally
+  // and DO NOT persist it; store `ciphertext` instead.
+  string plaintext = 1 [(udb.core.common.v1.sensitive) = true, (udb.core.common.v1.log_redacted) = true, (udb.core.common.v1.db_column_security) = { secret_classification: SECRET_CLASSIFICATION_TOKEN output_view: OUTPUT_VIEW_SELF redaction_strategy: REDACTION_STRATEGY_REDACT encryption_key_class: "vault-transit" uniqueness_scope: "tenant" }];
+  // The data key wrapped under the transit key — persist THIS; Decrypt/Rewrap later.
+  string ciphertext = 2;
+  int32 key_version = 3;
+  string message = 4;
+  udb.core.common.v1.ApiError error = 5;
+}
+
+message RewrapRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 3 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string key_name = 2;
+  string ciphertext = 3;
+}
+
+message RewrapResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 3 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  string ciphertext = 1;
   int32 key_version = 2;
   string message = 3;
   udb.core.common.v1.ApiError error = 4;

@@ -54,7 +54,7 @@ impl DataKey {
         DataKey(bytes)
     }
 
-    fn to_b64(&self) -> String {
+    pub(crate) fn to_b64(&self) -> String {
         BASE64_STANDARD.encode(self.0)
     }
 

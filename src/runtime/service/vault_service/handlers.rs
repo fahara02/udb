@@ -798,6 +798,150 @@ pub(crate) async fn decrypt(
     }))
 }
 
+pub(crate) async fn generate_data_key(
+    svc: &VaultServiceImpl,
+    request: Request<vault_pb::GenerateDataKeyRequest>,
+) -> Result<Response<vault_pb::GenerateDataKeyResponse>, Status> {
+    let metadata = request.metadata().clone();
+    let req = request.into_inner();
+    svc.check_seal()?;
+    validate_request_tenant(&metadata, &req.tenant_id)?;
+    let tenant_id = req.tenant_id.trim().to_string();
+    let key_name = req.key_name.trim().to_string();
+    if key_name.is_empty() {
+        return Err(vault_required_key_name());
+    }
+    let _admit = native_admit_on(
+        svc.channels.as_ref(),
+        &svc.metrics,
+        "vault",
+        OperationChannel::Admin,
+        &tenant_id,
+        None,
+    )
+    .await?;
+    let runtime = svc.require_runtime()?;
+    let context = native_service_context(&metadata, &tenant_id, "");
+
+    let versions = svc
+        .read_transit_versions(runtime, &context, &tenant_id, &key_name)
+        .await?;
+    let active = active_transit(&versions).ok_or_else(|| {
+        vault_schema_not_found_status(
+            "generate_data_key",
+            "vault_transit_active_key_not_found",
+            "transit key not found or has no active version",
+        )
+    })?;
+    // Envelope encryption: mint a fresh random 256-bit DEK, wrap it under the
+    // transit key (same seal path as Encrypt). The plaintext DEK is returned ONCE
+    // for the caller's local use and is never persisted broker-side.
+    let transit_dek = unwrap_dek(runtime, &active.wrapped_key_material)?;
+    let new_dek = DataKey::generate();
+    let ciphertext = dek_seal(&transit_dek, active.version, &new_dek.0)?;
+    let plaintext = new_dek.to_b64();
+
+    // Audit the key generation (no key material — only tenant/key/version).
+    svc.emit(
+        TOPIC_TRANSIT_ENCRYPTED,
+        &key_name,
+        &tenant_id,
+        &context.project_id,
+        "generate_data_key",
+        &key_name,
+        serde_json::json!({"tenant_id": tenant_id, "key_name": key_name, "key_version": active.version}),
+    )
+    .await;
+
+    Ok(Response::new(vault_pb::GenerateDataKeyResponse {
+        plaintext,
+        ciphertext,
+        key_version: active.version as i32,
+        message: "ok".to_string(),
+        error: None,
+    }))
+}
+
+pub(crate) async fn rewrap(
+    svc: &VaultServiceImpl,
+    request: Request<vault_pb::RewrapRequest>,
+) -> Result<Response<vault_pb::RewrapResponse>, Status> {
+    let metadata = request.metadata().clone();
+    let req = request.into_inner();
+    svc.check_seal()?;
+    validate_request_tenant(&metadata, &req.tenant_id)?;
+    let tenant_id = req.tenant_id.trim().to_string();
+    let key_name = req.key_name.trim().to_string();
+    if key_name.is_empty() {
+        return Err(vault_required_key_name());
+    }
+    let (version, encoded) = parse_transit_envelope(&req.ciphertext).ok_or_else(|| {
+        vault_field_violation(
+            "ciphertext",
+            "must match udb-vault:v<version>:<base64>",
+            "not a vault transit ciphertext envelope",
+        )
+    })?;
+    let _admit = native_admit_on(
+        svc.channels.as_ref(),
+        &svc.metrics,
+        "vault",
+        OperationChannel::Admin,
+        &tenant_id,
+        None,
+    )
+    .await?;
+    let runtime = svc.require_runtime()?;
+    let context = native_service_context(&metadata, &tenant_id, "");
+
+    let versions = svc
+        .read_transit_versions(runtime, &context, &tenant_id, &key_name)
+        .await?;
+    // Open with the version embedded in the envelope (ACTIVE + VERIFYING during a
+    // rotation overlap), then re-seal under the CURRENT active version — the
+    // post-rotation migration primitive. Operate on raw bytes: a rewrapped payload
+    // may be a binary data key, not UTF-8.
+    let old_key = transit_version(&versions, version, &[KEY_STATE_ACTIVE, KEY_STATE_VERIFYING])
+        .ok_or_else(|| {
+            vault_schema_not_found_status(
+                "rewrap",
+                "vault_transit_key_version_not_found",
+                "transit key version not found or retired",
+            )
+        })?;
+    let old_dek = unwrap_dek(runtime, &old_key.wrapped_key_material)?;
+    let raw = dek_open(&old_dek, encoded)?;
+
+    let active = active_transit(&versions).ok_or_else(|| {
+        vault_schema_not_found_status(
+            "rewrap",
+            "vault_transit_active_key_not_found",
+            "transit key not found or has no active version",
+        )
+    })?;
+    let active_dek = unwrap_dek(runtime, &active.wrapped_key_material)?;
+    let ciphertext = dek_seal(&active_dek, active.version, &raw)?;
+
+    // Audit the rewrap (no key material — only tenant/key/old+new version).
+    svc.emit(
+        TOPIC_TRANSIT_ENCRYPTED,
+        &key_name,
+        &tenant_id,
+        &context.project_id,
+        "rewrap",
+        &key_name,
+        serde_json::json!({"tenant_id": tenant_id, "key_name": key_name, "from_version": version, "key_version": active.version}),
+    )
+    .await;
+
+    Ok(Response::new(vault_pb::RewrapResponse {
+        ciphertext,
+        key_version: active.version as i32,
+        message: "ok".to_string(),
+        error: None,
+    }))
+}
+
 pub(crate) async fn sign(
     svc: &VaultServiceImpl,
     request: Request<vault_pb::SignRequest>,
