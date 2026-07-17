@@ -3524,7 +3524,7 @@
     "operation_id": "reissueUploadUrl",
     "op_kind": "READ_ONLY",
     "request_msg": "ReissueUploadUrlRequest",
-    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"file_id\": \"<seed:file_id>\", \"expires_in_minutes\": 15 }`",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"file_id\": \"<seed:reissue_file_id>\", \"expires_in_minutes\": 15 }`",
     "notes": "fields: tenant_id(str), file_id(str), expires_in_minutes(int32). Requires a seeded PENDING (not finalized) upload — a non-PENDING file is rejected."
   },
   {
@@ -3752,7 +3752,7 @@
     "operation_id": "vaultGetTransitPublicKey",
     "op_kind": "READ_ONLY",
     "request_msg": "GetTransitPublicKeyRequest",
-    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"key_name\": \"<seed:vault_key_name>\" }`",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"key_name\": \"<seed:vault_signing_key_name>\" }`",
     "notes": "exports the ed25519 public key(s) for external signature verification; requires a seeded key created with the ed25519 signing algorithm (non-ed25519 keys are rejected)."
   },
   {

@@ -574,7 +574,7 @@ function fullSurfaceManifestFixtures(): PerfFixtures {
     unpublish_track_id: "unpublish-track-1", update_key_id: "update-key-1", username: "perf-u",
     vault_ciphertext: "vault-ciphertext-1", vault_db_role: "readonly", vault_delete_secret_path: "secret/delete",
     vault_destroy_secret_path: "secret/destroy", vault_key_name: "transit-key", vault_secret_path: "secret/path",
-    vault_signature: "vault-signature-1", workflow_id: "workflow-1",
+    vault_signature: "vault-signature-1", vault_signing_key_name: "transit-signing-key", reissue_file_id: "reissue-file-1", workflow_id: "workflow-1",
     approve_draft_id: "approve-draft-1", canary_version_id: "canary-version-1",
     policy_version_id: "policy-version-1", reject_draft_id: "reject-draft-1",
     rollback_policy_set_id: "rollback-policy-set-1", rollback_target_version_id: "rollback-target-version-1",
@@ -2423,12 +2423,15 @@ async function seedPerfFixtures(
 
   // ── LockService: separate held locks for renew and release ────────────────────
   const lockOwner = fix.lookup("user_id") ?? liveUuid();
+  // Lease long enough to outlive the whole measured run: the perf surface takes
+  // well over a minute to reach the measured RenewLock/ReleaseLock, and a short
+  // lease would expire first → "lock_not_held".
   await tryRun("AcquireReleaseLock", async () => {
-    const held = await gen.LockService.acquire_lock({ tenant_id: tenantId, lock_name: "sdk-perf-release-lock", owner_id: lockOwner, lease_ttl_seconds: 60, metadata_json: "{}" }, opts);
+    const held = await gen.LockService.acquire_lock({ tenant_id: tenantId, lock_name: "sdk-perf-release-lock", owner_id: lockOwner, lease_ttl_seconds: 3600, metadata_json: "{}" }, opts);
     if (held.fencing_token) fix.set("release_fencing_token", String(held.fencing_token));
   });
   await tryRun("AcquireRenewLock", async () => {
-    const held = await gen.LockService.acquire_lock({ tenant_id: tenantId, lock_name: "sdk-perf-renew-lock", owner_id: lockOwner, lease_ttl_seconds: 60, metadata_json: "{}" }, opts);
+    const held = await gen.LockService.acquire_lock({ tenant_id: tenantId, lock_name: "sdk-perf-renew-lock", owner_id: lockOwner, lease_ttl_seconds: 3600, metadata_json: "{}" }, opts);
     if (held.fencing_token) fix.set("renew_fencing_token", String(held.fencing_token));
   });
 
@@ -2478,6 +2481,9 @@ async function seedPerfFixtures(
     if (encrypted.ciphertext) fix.set("vault_ciphertext", encrypted.ciphertext);
     const signed = await gen.VaultService.sign({ tenant_id: tenantId, key_name: "transit-key", input: "perf" }, opts);
     if (signed.signature) fix.set("vault_signature", signed.signature);
+    // A dedicated ed25519 SIGNING key so GetTransitPublicKey exports a real public
+    // key — the aes256-gcm-siv key above has no exportable public half.
+    await gen.VaultService.create_transit_key({ tenant_id: tenantId, key_name: "transit-signing-key", algorithm: "ed25519" }, opts);
   });
 
   // ── StorageService (UUID tenant): a registered file → file_id ──────────────────
@@ -2545,6 +2551,17 @@ async function seedPerfFixtures(
       put.stream.end();
       await put.response;
     }
+  });
+  // A registered-but-PENDING upload (never uploaded, never finalized) for the
+  // measured ReissueUploadUrl — it resumes a PENDING upload and rejects any
+  // non-PENDING (finalized/ACTIVE) file, so it needs its own PENDING target.
+  await tryRun("RegisterReissueFile", async () => {
+    const rreg = await gen.StorageService.register_upload({ tenant_id: uuidTenant, project_id: "", filename: `perf-reissue-${suffix}.txt`, content_type: "text/plain", file_type: "DOCUMENT", reference_id: liveUuid(), reference_type: "sdk.perf", size_bytes: 64, expires_in_minutes: 30 }, opts);
+    const rfid = rreg.file_id;
+    fix.set("reissue_file_id", rfid);
+    addCleanup(async () => {
+      try { await gen.StorageService.delete_file({ tenant_id: uuidTenant, file_id: rfid }, opts); } catch { /* best-effort */ }
+    });
   });
 
   // ── AssetService: pipeline definition + asset + a started instance ─────────────

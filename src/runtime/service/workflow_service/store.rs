@@ -3,6 +3,25 @@
 //! column identifiers stay single-sourced.
 
 use crate::runtime::native_catalog::NativeModel;
+use uuid::Uuid;
+
+/// Normalize a project scope value before it is bound into the UUID-typed
+/// `project_id` predicate. The workflow schema stores `project_id` as a UUID, but
+/// the scope is resolved from request metadata / the verified claim, which may
+/// carry a human project CODE (e.g. `default`) rather than a UUID. A non-UUID code
+/// can never equal a stored UUID, so binding it verbatim makes Postgres reject the
+/// whole query with `invalid input syntax for type uuid`. Treat any non-UUID (or
+/// empty) scope as tenant-wide — the `($n = '' OR ...)` branch the predicate
+/// already supports — so the tenant boundary still gates the read/mutation while a
+/// non-resolvable project code degrades to unscoped instead of a 500.
+pub(crate) fn workflow_project_bind(project_id: &str) -> String {
+    let trimmed = project_id.trim();
+    if trimmed.is_empty() || Uuid::parse_str(trimmed).is_err() {
+        String::new()
+    } else {
+        trimmed.to_string()
+    }
+}
 
 /// Tenant + project scope predicate shared by get/list/cancel/signal (16.3.1).
 /// An empty `project_bind` value keeps the query tenant-wide — the same

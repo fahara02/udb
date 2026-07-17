@@ -32,7 +32,7 @@ use super::model::{
     clamp_total_steps, is_terminal_status, non_empty_json_array, workflow_from_row, workflow_model,
     workflow_status_filter_to_db,
 };
-use super::store::{workflow_scope_predicate, workflow_select_projection};
+use super::store::{workflow_project_bind, workflow_scope_predicate, workflow_select_projection};
 
 pub(crate) async fn start_workflow(
     svc: &WorkflowServiceImpl,
@@ -215,7 +215,10 @@ pub(crate) async fn get_workflow(
     // 16.3.1 — GetWorkflowRequest carries no project field (proto verified), so
     // the project scope is resolved from request metadata / the verified claim
     // and bound into both the scope validation and the row predicate.
-    let project_id = metadata_project_id(&metadata).unwrap_or_default();
+    // Normalize the metadata/claim-resolved scope: the workflow schema stores
+    // project_id as a UUID, so a non-UUID project CODE (e.g. "default") degrades to
+    // tenant-wide instead of erroring "invalid input syntax for type uuid".
+    let project_id = workflow_project_bind(&metadata_project_id(&metadata).unwrap_or_default());
     validate_request_scope(&metadata, &req.tenant_id, &project_id)?;
     let _admit = native_admit_on(
         svc.channels.as_ref(),
@@ -266,7 +269,10 @@ pub(crate) async fn list_workflows(
     let req = request.into_inner();
     // 16.3.1 — ListWorkflowsRequest carries no project field (proto verified);
     // resolve the project scope from metadata / the verified claim.
-    let project_id = metadata_project_id(&metadata).unwrap_or_default();
+    // Normalize the metadata/claim-resolved scope: the workflow schema stores
+    // project_id as a UUID, so a non-UUID project CODE (e.g. "default") degrades to
+    // tenant-wide instead of erroring "invalid input syntax for type uuid".
+    let project_id = workflow_project_bind(&metadata_project_id(&metadata).unwrap_or_default());
     validate_request_scope(&metadata, &req.tenant_id, &project_id)?;
     let _admit = native_admit_on(
         svc.channels.as_ref(),
@@ -343,7 +349,10 @@ pub(crate) async fn cancel_workflow(
     // 16.3.1 — CancelWorkflowRequest carries no project field (proto verified);
     // resolve the project scope from metadata / the verified claim and bind it
     // into both queries so a project-scoped caller cannot cancel across projects.
-    let project_id = metadata_project_id(&metadata).unwrap_or_default();
+    // Normalize the metadata/claim-resolved scope: the workflow schema stores
+    // project_id as a UUID, so a non-UUID project CODE (e.g. "default") degrades to
+    // tenant-wide instead of erroring "invalid input syntax for type uuid".
+    let project_id = workflow_project_bind(&metadata_project_id(&metadata).unwrap_or_default());
     validate_request_scope(&metadata, &req.tenant_id, &project_id)?;
     let _admit = native_admit_on(
         svc.channels.as_ref(),
@@ -505,7 +514,10 @@ pub(crate) async fn signal_workflow(
     // 16.3.1 — SignalWorkflowRequest carries no project field (proto verified);
     // resolve the project scope from metadata / the verified claim and bind it
     // into both queries so a project-scoped caller cannot signal across projects.
-    let project_id = metadata_project_id(&metadata).unwrap_or_default();
+    // Normalize the metadata/claim-resolved scope: the workflow schema stores
+    // project_id as a UUID, so a non-UUID project CODE (e.g. "default") degrades to
+    // tenant-wide instead of erroring "invalid input syntax for type uuid".
+    let project_id = workflow_project_bind(&metadata_project_id(&metadata).unwrap_or_default());
     validate_request_scope(&metadata, &req.tenant_id, &project_id)?;
     if req.signal_name.trim().is_empty() {
         return Err(workflow_required_field(
