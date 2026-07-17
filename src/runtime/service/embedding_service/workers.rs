@@ -555,7 +555,7 @@ async fn process_embedding_teardown_job(
     Ok(deleted)
 }
 
-fn backfill_read_context(tenant_id: &str, project_id: &str) -> crate::RequestContext {
+pub(crate) fn backfill_read_context(tenant_id: &str, project_id: &str) -> crate::RequestContext {
     crate::RequestContext {
         tenant_id: tenant_id.to_string(),
         project_id: project_id.to_string(),
@@ -753,7 +753,7 @@ fn json_string_field(payload: &serde_json::Value, key: &str) -> Option<String> {
         .map(str::to_string)
 }
 
-fn source_change_row(payload: &serde_json::Value) -> Option<&serde_json::Value> {
+pub(crate) fn source_change_row(payload: &serde_json::Value) -> Option<&serde_json::Value> {
     payload
         .get("after")
         .or_else(|| payload.get("payload").and_then(|inner| inner.get("after")))

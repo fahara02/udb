@@ -290,7 +290,7 @@ pub(crate) async fn list_secrets(
                 state,
             },
         )
-        .collect();
+        .collect::<Vec<_>>();
     let returned_count = secrets.len() as i64;
 
     // Fulfil the declared `udb.vault.secret.listed.v1` event contract (was
