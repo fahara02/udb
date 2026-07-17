@@ -85,6 +85,18 @@ const EMBEDDING_BACKFILL_PAGE_LIMIT: i32 = 200;
 const DEFAULT_EMBEDDING_WORK_EMITTER_INTERVAL_SECS: u64 = 30;
 const EMBEDDING_WORK_EMITTER_INTERVAL_ENV: &str = "UDB_EMBEDDING_WORK_EMITTER_INTERVAL_SECS";
 
+/// Minimum similarity score a vector hit must clear to be returned by `Retrieve`.
+/// Operator-tunable (was a hardcoded `0.0`); resolved once via a `OnceLock`. `0.0`
+/// keeps the historical "return everything the engine ranks" behavior by default.
+/// A `RetrieveRequest.score_threshold` proto field (Part B.2.3) will later let a
+/// caller raise this per query; until then this is the server-side floor.
+const DEFAULT_EMBEDDING_RETRIEVE_SCORE_THRESHOLD: f32 = 0.0;
+const EMBEDDING_RETRIEVE_SCORE_THRESHOLD_ENV: &str = "UDB_EMBEDDING_RETRIEVE_SCORE_THRESHOLD";
+/// Comma-separated `lexical,vector` weights for hybrid-search fusion, e.g.
+/// `"0.4,0.6"`. Empty (the default) preserves the delegated engine's built-in
+/// fusion weighting (was a hardcoded empty vec).
+const EMBEDDING_RETRIEVE_FUSION_WEIGHTS_ENV: &str = "UDB_EMBEDDING_RETRIEVE_FUSION_WEIGHTS";
+
 /// Fallback vector collection when a source row somehow carries no target (mirrors
 /// `asset_service::DEFAULT_VECTOR_COLLECTION`; a source normally always specifies
 /// its own `target_collection`, validated non-empty at register time).
@@ -609,6 +621,49 @@ pub(crate) fn embedding_work_emitter_interval() -> Duration {
                 .unwrap_or(DEFAULT_EMBEDDING_WORK_EMITTER_INTERVAL_SECS),
         )
     })
+}
+
+/// Server-side minimum-score floor applied to every mediated `Retrieve`. Resolved
+/// once (no per-request env read); a non-finite or negative override is ignored so
+/// the floor is always a real, sane bound.
+fn retrieve_score_threshold() -> f32 {
+    static THRESHOLD: OnceLock<f32> = OnceLock::new();
+    *THRESHOLD.get_or_init(|| {
+        std::env::var(EMBEDDING_RETRIEVE_SCORE_THRESHOLD_ENV)
+            .ok()
+            .and_then(|v| v.trim().parse::<f32>().ok())
+            .filter(|v| v.is_finite() && *v >= 0.0)
+            .unwrap_or(DEFAULT_EMBEDDING_RETRIEVE_SCORE_THRESHOLD)
+    })
+}
+
+/// Hybrid-search fusion weights, parsed once from a comma-separated list. Empty
+/// (the default, and the fallback for any malformed/negative entry) hands fusion
+/// weighting back to the delegated engine — identical to the previous hardcoded
+/// `Vec::new()`.
+fn retrieve_fusion_weights() -> Vec<f32> {
+    static WEIGHTS: OnceLock<Vec<f32>> = OnceLock::new();
+    WEIGHTS
+        .get_or_init(|| {
+            let Ok(raw) = std::env::var(EMBEDDING_RETRIEVE_FUSION_WEIGHTS_ENV) else {
+                return Vec::new();
+            };
+            let parsed: Option<Vec<f32>> = raw
+                .split(',')
+                .map(|part| {
+                    part.trim()
+                        .parse::<f32>()
+                        .ok()
+                        .filter(|v| v.is_finite() && *v >= 0.0)
+                })
+                .collect();
+            // ALL entries must parse to a valid non-negative weight, else fall back
+            // to engine-default fusion rather than apply a half-parsed weighting.
+            parsed
+                .filter(|weights| !weights.is_empty())
+                .unwrap_or_default()
+        })
+        .clone()
 }
 
 fn source_read_by_name(tenant_id: &str, source_name: &str) -> LogicalRead {
@@ -1461,7 +1516,7 @@ impl EmbeddingService for EmbeddingServiceImpl {
                 text_query: req.query_text.clone(),
                 filter: tenant_filter,
                 limit: top_k,
-                fusion_weights: Vec::new(),
+                fusion_weights: retrieve_fusion_weights(),
                 // Hits carry the stored user payload (minus the internal
                 // `_tenant_id` write-stamp, stripped in the hit mapping below).
                 with_payload: true,
@@ -1485,7 +1540,7 @@ impl EmbeddingService for EmbeddingServiceImpl {
                 vector: req.query_vector.clone(),
                 filter: tenant_filter,
                 limit: top_k,
-                score_threshold: 0.0,
+                score_threshold: retrieve_score_threshold(),
                 // Hits carry the stored user payload (minus the internal
                 // `_tenant_id` write-stamp, stripped in the hit mapping below).
                 with_payload: true,
