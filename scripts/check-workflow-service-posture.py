@@ -13,7 +13,13 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def _read(root: Path, path: str) -> str:
-    return (root / path).read_text(encoding="utf-8")
+    p = root / path
+    if p.is_dir():
+        # A path may name a modularized service DIRECTORY; read all its `.rs`
+        # files concatenated so tokens split across submodules (tick/events/…)
+        # are still found after a god-file → module-tree refactor.
+        return "\n".join(f.read_text(encoding="utf-8") for f in sorted(p.rglob("*.rs")))
+    return p.read_text(encoding="utf-8")
 
 
 def _require(text: str, needle: str, label: str, failures: list[str]) -> None:
@@ -39,7 +45,7 @@ def check_source(root: Path = ROOT) -> list[str]:
     failures: list[str] = []
     singleton = _read(root, "src/runtime/singleton.rs")
     service_mod = _read(root, "src/runtime/service/mod.rs")
-    workflow = _read(root, "src/runtime/service/workflow_service/mod.rs")
+    workflow = _read(root, "src/runtime/service/workflow_service")
     saga = _read(root, "src/runtime/saga.rs")
     ci = _read(root, ".github/workflows/ci.yml")
 
