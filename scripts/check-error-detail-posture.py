@@ -754,7 +754,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "TenantService missing setup capability uses typed capability detail",
-        "src/runtime/service/tenant_service/mod.rs",
+        "src/runtime/service/tenant_service",
         (
             "tenant_capability_status",
             "capability_status",
@@ -772,7 +772,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "TenantService not-found denials use typed schema detail",
-        "src/runtime/service/tenant_service/mod.rs",
+        "src/runtime/service/tenant_service",
         (
             "fn tenant_not_found_status(operation: &'static str) -> Status",
             "crate::runtime::executor_utils::schema_status",
@@ -788,7 +788,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "TenantService internal failures use typed internal detail",
-        "src/runtime/service/tenant_service/mod.rs",
+        "src/runtime/service/tenant_service",
         (
             "fn tenant_internal_status(operation: impl Into<String>, message: impl Into<String>) -> Status",
             'crate::runtime::executor_utils::internal_status("tenant", operation, message)',
@@ -6885,7 +6885,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "tenant purge routes movement denials through typed policy detail",
-        "src/runtime/service/tenant_service/mod.rs",
+        "src/runtime/service/tenant_service",
         (
             "tenant_movement_policy_status",
             "validate_tenant_movement_scope(&movement)",
@@ -7044,7 +7044,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "tenant request validation uses typed field violations",
-        "src/runtime/service/tenant_service/mod.rs",
+        "src/runtime/service/tenant_service",
         (
             "crate::runtime::executor_utils::invalid_argument_fields",
             "fn tenant_required_field(",
@@ -8516,7 +8516,7 @@ SQLITE_INTERNAL_STATUS_PATH = "src/runtime/executors/sqlite.rs"
 STORAGE_INTERNAL_STATUS_PATH = "src/runtime/service/storage_service/mod.rs"
 SYSTEM_CATALOG_INTERNAL_STATUS_PATH = "src/runtime/system.rs"
 TENANT_PURGE_INTERNAL_STATUS_PATH = "src/runtime/core/tenant_purge.rs"
-TENANT_INTERNAL_STATUS_PATH = "src/runtime/service/tenant_service/mod.rs"
+TENANT_INTERNAL_STATUS_PATH = "src/runtime/service/tenant_service"
 TX_OBJECT_INTERNAL_STATUS_PATH = "src/runtime/core/tx_object.rs"
 VAULT_INTERNAL_STATUS_PATH = "src/runtime/service/vault_service/mod.rs"
 WEBHOOK_INTERNAL_STATUS_PATH = "src/runtime/service/webhook_service/mod.rs"
@@ -11389,7 +11389,13 @@ def run_selftest() -> None:
         assert not any("VaultService" in failure and "Internal" in failure for failure in failures), failures
 
         write_fixture(root)
-        tenant_internal = root / TENANT_INTERNAL_STATUS_PATH
+        tenant_internal_dir = root / TENANT_INTERNAL_STATUS_PATH
+        # See the metering note above: mutate a `.rs` file inside a service dir.
+        tenant_internal = (
+            tenant_internal_dir / "mod.rs"
+            if tenant_internal_dir.is_dir()
+            else tenant_internal_dir
+        )
         tenant_internal_good = read(tenant_internal)
         tenant_internal.write_text(
             tenant_internal_good + '\nfn bad() { tonic::Status::internal("tenant db failed"); }\n',
