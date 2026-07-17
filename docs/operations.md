@@ -13,7 +13,7 @@
 │    UNIVERSAL DATA BROKER                                                   │
 │    gRPC data plane | native control plane | tenant/project scope guard     │
 │                                                                            │
-│    crate v0.4.11 | protocol v1.0.0                                          │
+│    crate v0.4.12 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 This page covers day-to-day operation, production readiness, SLOs, runbooks,
@@ -263,7 +263,7 @@ suite covers CPU hot paths and live backend execution paths:
 python data/gen_bench_data.py --target-mb 512
 cargo bench --features bench-internals --bench hotpath_bench
 UDB_BENCH_LIVE=1 cargo bench --features bench-internals --bench live_backends_bench
-python scripts/bench_snapshot.py --label "release-0.4.11"
+python scripts/bench_snapshot.py --label "release-0.4.12"
 ```
 
 Durable benchmark history lives under `bench-history/` when snapshots are

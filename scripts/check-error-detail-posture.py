@@ -691,7 +691,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "WorkflowService missing store capability uses typed capability detail",
-        "src/runtime/service/workflow_service/mod.rs",
+        "src/runtime/service/workflow_service",
         (
             "workflow_capability_status",
             "capability_status",
@@ -703,7 +703,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "WebhookService missing store capability uses typed capability detail",
-        "src/runtime/service/webhook_service/mod.rs",
+        "src/runtime/service/webhook_service",
         (
             "webhook_capability_status",
             "capability_status",
@@ -715,7 +715,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "WebhookService not-found denials use typed schema detail",
-        "src/runtime/service/webhook_service/mod.rs",
+        "src/runtime/service/webhook_service",
         (
             "fn webhook_endpoint_not_found_status(operation: &'static str) -> Status",
             "crate::runtime::executor_utils::schema_status",
@@ -732,7 +732,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "WebhookService internal failures use typed internal detail",
-        "src/runtime/service/webhook_service/mod.rs",
+        "src/runtime/service/webhook_service",
         (
             "fn webhook_internal_status(operation: impl Into<String>, message: impl Into<String>) -> Status",
             'crate::runtime::executor_utils::internal_status("webhook", operation, message)',
@@ -7085,7 +7085,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "webhook request validation uses typed field violations",
-        "src/runtime/service/webhook_service/mod.rs",
+        "src/runtime/service/webhook_service",
         (
             "crate::runtime::executor_utils::invalid_argument_fields",
             "fn webhook_required_field(",
@@ -7112,7 +7112,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "webhook delivery-time SSRF denials use typed policy detail",
-        "src/runtime/service/webhook_service/mod.rs",
+        "src/runtime/service/webhook_service",
         (
             "fn webhook_policy_status(",
             "crate::runtime::executor_utils::policy_status",
@@ -7212,7 +7212,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "workflow request validation uses typed field violations",
-        "src/runtime/service/workflow_service/mod.rs",
+        "src/runtime/service/workflow_service",
         (
             "crate::runtime::executor_utils::invalid_argument_fields",
             "fn workflow_required_field(",
@@ -7240,7 +7240,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "workflow terminal state denials use typed policy detail",
-        "src/runtime/service/workflow_service/mod.rs",
+        "src/runtime/service/workflow_service",
         (
             "fn workflow_policy_status(",
             "crate::runtime::executor_utils::policy_status",
@@ -7260,7 +7260,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "workflow not-found denials use typed schema detail",
-        "src/runtime/service/workflow_service/mod.rs",
+        "src/runtime/service/workflow_service",
         (
             "fn workflow_not_found_status(operation: &'static str) -> Status",
             "crate::runtime::executor_utils::schema_status",
@@ -7277,7 +7277,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "WorkflowService internal failures use typed internal detail",
-        "src/runtime/service/workflow_service/mod.rs",
+        "src/runtime/service/workflow_service",
         (
             "fn workflow_internal_status(operation: impl Into<String>, message: impl Into<String>) -> Status",
             'crate::runtime::executor_utils::internal_status("workflow", operation, message)',
@@ -8519,10 +8519,10 @@ TENANT_PURGE_INTERNAL_STATUS_PATH = "src/runtime/core/tenant_purge.rs"
 TENANT_INTERNAL_STATUS_PATH = "src/runtime/service/tenant_service"
 TX_OBJECT_INTERNAL_STATUS_PATH = "src/runtime/core/tx_object.rs"
 VAULT_INTERNAL_STATUS_PATH = "src/runtime/service/vault_service/mod.rs"
-WEBHOOK_INTERNAL_STATUS_PATH = "src/runtime/service/webhook_service/mod.rs"
+WEBHOOK_INTERNAL_STATUS_PATH = "src/runtime/service/webhook_service"
 WEAVIATE_INTERNAL_STATUS_PATH = "src/runtime/executors/weaviate.rs"
 WEBRTC_INTERNAL_STATUS_PATH = "src/runtime/service/webrtc_service/mod.rs"
-WORKFLOW_INTERNAL_STATUS_PATH = "src/runtime/service/workflow_service/mod.rs"
+WORKFLOW_INTERNAL_STATUS_PATH = "src/runtime/service/workflow_service"
 
 DIRECT_INTERNAL_PATTERNS = (
     "Status::internal",
@@ -11424,7 +11424,13 @@ def run_selftest() -> None:
         assert not any("TenantService" in failure and "Internal" in failure for failure in failures), failures
 
         write_fixture(root)
-        webhook_internal = root / WEBHOOK_INTERNAL_STATUS_PATH
+        webhook_internal_dir = root / WEBHOOK_INTERNAL_STATUS_PATH
+        # See the metering note above: mutate a `.rs` file inside a service dir.
+        webhook_internal = (
+            webhook_internal_dir / "mod.rs"
+            if webhook_internal_dir.is_dir()
+            else webhook_internal_dir
+        )
         webhook_internal_good = read(webhook_internal)
         webhook_internal.write_text(
             webhook_internal_good + '\nfn bad() { tonic::Status::internal("webhook db failed"); }\n',
@@ -11470,7 +11476,13 @@ def run_selftest() -> None:
         assert not any("WebrtcService" in failure and "Internal" in failure for failure in failures), failures
 
         write_fixture(root)
-        workflow_internal = root / WORKFLOW_INTERNAL_STATUS_PATH
+        workflow_internal_dir = root / WORKFLOW_INTERNAL_STATUS_PATH
+        # See the metering note above: mutate a `.rs` file inside a service dir.
+        workflow_internal = (
+            workflow_internal_dir / "mod.rs"
+            if workflow_internal_dir.is_dir()
+            else workflow_internal_dir
+        )
         workflow_internal_good = read(workflow_internal)
         workflow_internal.write_text(
             workflow_internal_good + '\nfn bad() { tonic::Status::internal("workflow db failed"); }\n',
