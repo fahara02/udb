@@ -643,6 +643,7 @@ fn full_service_descriptor_surface_snapshot() {
                 "GetFile",
                 "ListFiles",
                 "RegisterUpload",
+                "ReissueUploadUrl",
                 "UpdateFile",
             ],
         ),

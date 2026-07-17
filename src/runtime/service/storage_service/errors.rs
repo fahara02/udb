@@ -9,8 +9,8 @@ use tonic::Status;
 use crate::proto::udb::core::common::v1 as common_pb;
 
 use super::config::{
-    ALREADY_FINALIZED, OBJECT_NOT_PRESENT, UNSUPPORTED_OBJECT_BACKEND, UPLOAD_SIZE_MISMATCH,
-    UPLOAD_URL_UNAVAILABLE,
+    ALREADY_FINALIZED, OBJECT_NOT_PRESENT, REISSUE_REQUIRES_PENDING, UNSUPPORTED_OBJECT_BACKEND,
+    UPLOAD_SIZE_MISMATCH, UPLOAD_URL_UNAVAILABLE,
 };
 
 /// Attach a stable machine-readable `reason` to a non-OK gRPC `Status` via the
@@ -41,6 +41,21 @@ pub(crate) fn upload_already_finalized_status() -> Status {
         "upload_already_finalized",
         "upload already finalized",
         ALREADY_FINALIZED,
+    )
+}
+
+/// Only a PENDING upload can have its presigned PUT URL reissued: an ACTIVE
+/// (finalized) or removed file is not resumable. Fail closed so a reissue never
+/// hands out a fresh upload URL for an object that is not awaiting bytes.
+pub(crate) fn reissue_requires_pending_status(current_status: &str) -> Status {
+    storage_policy_status_with_reason(
+        "reissue_upload_url",
+        "reissue_requires_pending",
+        format!(
+            "cannot reissue an upload URL for a {current_status} file; only a PENDING upload can \
+             be resumed"
+        ),
+        REISSUE_REQUIRES_PENDING,
     )
 }
 

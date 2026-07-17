@@ -22,6 +22,7 @@ pub(crate) const UPLOAD_URL_UNAVAILABLE: &str = "UPLOAD_URL_UNAVAILABLE";
 pub(crate) const OBJECT_NOT_PRESENT: &str = "OBJECT_NOT_PRESENT";
 pub(crate) const UPLOAD_SIZE_MISMATCH: &str = "UPLOAD_SIZE_MISMATCH";
 pub(crate) const ALREADY_FINALIZED: &str = "ALREADY_FINALIZED";
+pub(crate) const REISSUE_REQUIRES_PENDING: &str = "REISSUE_REQUIRES_PENDING";
 /// Soft-delete warn path only (bytes orphaned after a metadata delete) — emitted
 /// on the warn log, NOT part of the RPC error catalog.
 pub(crate) const OBJECT_DELETE_ORPHANED: &str = "OBJECT_DELETE_ORPHANED";

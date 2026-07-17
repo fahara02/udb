@@ -215,6 +215,13 @@ impl StorageService for StorageServiceImpl {
         handlers::get_download_url(self, request).await
     }
 
+    async fn reissue_upload_url(
+        &self,
+        request: Request<storage_pb::ReissueUploadUrlRequest>,
+    ) -> Result<Response<storage_pb::ReissueUploadUrlResponse>, Status> {
+        handlers::reissue_upload_url(self, request).await
+    }
+
     type DownloadFileStream = handlers::DownloadFileStream;
 
     async fn download_file(

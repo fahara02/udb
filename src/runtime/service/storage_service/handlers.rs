@@ -1,5 +1,5 @@
-//! The eight `StorageService` RPC handlers (register/finalize/download/get/
-//! update/delete/list) extracted from the trait impl as free
+//! The nine `StorageService` RPC handlers (register/reissue-upload-url/finalize/
+//! download/get/update/delete/list) extracted from the trait impl as free
 //! `pub(crate) async fn`s taking `svc` where the trait method took `&self`.
 //! `mod.rs` delegates one line to each. Bodies are verbatim — the same scope
 //! guard, per-tenant admission, quota lease, presign/HEAD verification, typed
@@ -26,9 +26,10 @@ use super::config::{
 };
 use super::errors::{
     api_error_upload_url_unavailable, file_object_bytes_missing_status,
-    object_store_bytes_missing_status, object_stream_requires_store_status, status_with_reason,
-    storage_capability_status, storage_file_not_found_status, upload_already_finalized_status,
-    upload_etag_mismatch_status, upload_size_mismatch_status, uploaded_object_missing_status,
+    object_store_bytes_missing_status, object_stream_requires_store_status,
+    reissue_requires_pending_status, status_with_reason, storage_capability_status,
+    storage_file_not_found_status, upload_already_finalized_status, upload_etag_mismatch_status,
+    upload_size_mismatch_status, uploaded_object_missing_status,
     validate_register_upload_required_fields,
 };
 use super::model::{file_from_json, file_status_to_short, file_type_to_db, normalize_etag};
@@ -447,6 +448,80 @@ pub(crate) async fn get_download_url(
         download_url,
         expires_at: Some(expires_at),
         error: None,
+    }))
+}
+
+/// Reissue a presigned PUT URL for an existing PENDING upload — the resume path
+/// when a `RegisterUpload` response was lost in flight (the client kept the
+/// `file_id` but not the secret upload URL). The File row + `object_key` are
+/// unchanged; only a fresh short-lived upload URL is minted. Fails closed for a
+/// non-PENDING (finalized / removed) file so it never hands out an upload URL for
+/// an object that is not awaiting bytes. Mirrors `get_download_url` (look up the
+/// tenant-scoped file, then presign) for the PUT direction.
+pub(crate) async fn reissue_upload_url(
+    svc: &StorageServiceImpl,
+    request: Request<storage_pb::ReissueUploadUrlRequest>,
+) -> Result<Response<storage_pb::ReissueUploadUrlResponse>, Status> {
+    let metadata = request.metadata().clone();
+    let req = request.into_inner();
+    validate_request_tenant(&metadata, &req.tenant_id)?;
+    let _admit = svc.admit(&req.tenant_id, "").await?;
+    let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
+    let file_id = parse_uuid("file_id", &req.file_id)?.to_string();
+    let context = tenant_only_native_service_context(&metadata, &tenant_id);
+    let runtime = svc.require_runtime()?;
+    let rows = runtime
+        .native_entity_read_for_service("storage", &context, file_read_by_id(&tenant_id, &file_id))
+        .await?;
+    let Some(file) = rows.first().map(file_from_json) else {
+        return Err(storage_file_not_found_status("reissue_upload_url"));
+    };
+    let status = file_status_to_short(file.status);
+    if status != "PENDING" {
+        return Err(reissue_requires_pending_status(status));
+    }
+    let minutes = if req.expires_in_minutes > 0 {
+        req.expires_in_minutes
+    } else {
+        15
+    };
+    let object_key = file.object_key.clone();
+    // Re-mint the presigned PUT URL for the SAME object_key — an exact resume of
+    // the interrupted upload, via the same presign path RegisterUpload uses.
+    let (upload_url, expires_at, error) = match svc
+        .presign(
+            &file.project_id,
+            &object_key,
+            "PUT",
+            &file.content_type,
+            minutes,
+        )
+        .await
+    {
+        PresignOutcome::Url { url, expires_at } => (url, expires_at, None),
+        PresignOutcome::Degraded => (
+            String::new(),
+            0,
+            Some(api_error_upload_url_unavailable(
+                "object store not configured (metadata-only mode); use the public object RPCs",
+                false,
+            )),
+        ),
+        PresignOutcome::Failed(reason) => (
+            String::new(),
+            0,
+            Some(api_error_upload_url_unavailable(
+                format!("presign failed: {reason}"),
+                true,
+            )),
+        ),
+    };
+    Ok(Response::new(storage_pb::ReissueUploadUrlResponse {
+        file_id: file.file_id,
+        upload_url,
+        object_key,
+        error,
+        expires_at,
     }))
 }
 
