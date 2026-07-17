@@ -79,6 +79,17 @@ const TOPIC_KEY_CREATED: &str = "udb.vault.transit_key.created.v1";
 const TOPIC_KEY_ROTATED: &str = "udb.vault.transit_key.rotated.v1";
 const TOPIC_TRANSIT_DECRYPTED: &str = "udb.vault.transit.decrypted.v1";
 const TOPIC_DB_CREDENTIAL_ISSUED: &str = "udb.vault.db_credential.issued.v1";
+// Audit-coverage topics. `secret.listed` fulfils the ListSecrets event contract
+// declared in the proto (`method_event_contract`); the transit.* audit topics
+// give the previously-unaudited crypto RPCs (Encrypt/Sign/Hmac/Verify) the same
+// tenant-bound outbox audit trail the Decrypt read already emits. Every payload
+// carries only tenant/key/version metadata — NEVER plaintext, ciphertext, or key
+// material (vault's redaction doctrine).
+const TOPIC_SECRET_LISTED: &str = "udb.vault.secret.listed.v1";
+const TOPIC_TRANSIT_ENCRYPTED: &str = "udb.vault.transit.encrypted.v1";
+const TOPIC_TRANSIT_SIGNED: &str = "udb.vault.transit.signed.v1";
+const TOPIC_TRANSIT_HMAC: &str = "udb.vault.transit.hmac.v1";
+const TOPIC_TRANSIT_VERIFIED: &str = "udb.vault.transit.verified.v1";
 
 // KV secret version states.
 const STATE_ACTIVE: &str = "ACTIVE";
@@ -92,6 +103,12 @@ const KEY_STATE_ACTIVE: &str = "ACTIVE";
 const KEY_STATE_VERIFYING: &str = "VERIFYING";
 
 const DEFAULT_TRANSIT_ALGORITHM: &str = "aes256-gcm-siv";
+/// The transit algorithms the crypto stack actually implements. Only the
+/// AES-256-GCM-SIV envelope primitive exists today, so this is the sole accepted
+/// value; an unknown `algorithm` on CreateTransitKey is rejected up front instead
+/// of being silently coerced to the default (a latent capability lie). Extend this
+/// set only when a new primitive is genuinely wired into the seal/open path.
+const SUPPORTED_TRANSIT_ALGORITHMS: &[&str] = &[DEFAULT_TRANSIT_ALGORITHM];
 
 /// Transit ciphertext envelope tag: `udb-vault:v<keyver>:<b64(nonce||ct)>`.
 /// Distinct from the broker's `udb-aead:` master-key envelope so the two layers
@@ -1173,6 +1190,30 @@ fn vault_required_key_name() -> Status {
     )
 }
 
+/// Resolve and validate the requested transit `algorithm`. An empty value takes
+/// the default; a recognized value is canonicalized to its supported spelling; an
+/// unknown value is rejected with a typed field violation naming `algorithm`
+/// (rather than being silently treated as the default). Purely a validation guard
+/// — it never changes which crypto primitive the seal/open path uses.
+fn validate_transit_algorithm(requested: &str) -> Result<String, Status> {
+    let trimmed = requested.trim();
+    if trimmed.is_empty() {
+        return Ok(DEFAULT_TRANSIT_ALGORITHM.to_string());
+    }
+    if let Some(canonical) = SUPPORTED_TRANSIT_ALGORITHMS
+        .iter()
+        .find(|alg| trimmed.eq_ignore_ascii_case(alg))
+    {
+        return Ok((*canonical).to_string());
+    }
+    let supported = SUPPORTED_TRANSIT_ALGORITHMS.join(", ");
+    Err(vault_field_violation(
+        "algorithm",
+        format!("must be one of the supported transit algorithms: {supported}"),
+        format!("unsupported transit key algorithm '{trimmed}'; supported: {supported}"),
+    ))
+}
+
 #[tonic::async_trait]
 impl VaultService for VaultServiceImpl {
     // ── KV engine ─────────────────────────────────────────────────────────────
@@ -1414,6 +1455,26 @@ impl VaultService for VaultServiceImpl {
                 },
             )
             .collect();
+        let returned_count = secrets.len() as i64;
+
+        // Fulfil the declared `udb.vault.secret.listed.v1` event contract (was
+        // declared in the proto but never emitted). Metadata only — counts and the
+        // requested prefix; NEVER any secret path value or secret material.
+        self.emit(
+            TOPIC_SECRET_LISTED,
+            &tenant_id,
+            &tenant_id,
+            &context.project_id,
+            "list",
+            req.path_prefix.trim(),
+            serde_json::json!({
+                "tenant_id": tenant_id,
+                "path_prefix": req.path_prefix.trim(),
+                "returned_count": returned_count,
+                "total_count": total_count,
+            }),
+        )
+        .await;
 
         Ok(Response::new(vault_pb::ListSecretsResponse {
             secrets,
@@ -1601,11 +1662,10 @@ impl VaultService for VaultServiceImpl {
         if key_name.is_empty() {
             return Err(vault_required_key_name());
         }
-        let algorithm = if req.algorithm.trim().is_empty() {
-            DEFAULT_TRANSIT_ALGORITHM.to_string()
-        } else {
-            req.algorithm.trim().to_string()
-        };
+        // Honor the requested algorithm: accept only primitives the crypto stack
+        // actually implements; reject anything else instead of silently coercing
+        // it to the default. Does not alter primitive selection.
+        let algorithm = validate_transit_algorithm(&req.algorithm)?;
         let _admit = native_admit_on(
             self.channels.as_ref(),
             &self.metrics,
@@ -1808,6 +1868,19 @@ impl VaultService for VaultServiceImpl {
         let plaintext = PlaintextSecret(req.plaintext);
         let ciphertext = dek_seal(&dek, active.version, plaintext.0.as_bytes())?;
 
+        // Audit the crypto operation (no plaintext/ciphertext/key material — only
+        // the tenant/key/version metadata).
+        self.emit(
+            TOPIC_TRANSIT_ENCRYPTED,
+            &key_name,
+            &tenant_id,
+            &context.project_id,
+            "encrypt",
+            &key_name,
+            serde_json::json!({"tenant_id": tenant_id, "key_name": key_name, "key_version": active.version}),
+        )
+        .await;
+
         Ok(Response::new(vault_pb::EncryptResponse {
             ciphertext,
             key_version: active.version as i32,
@@ -1932,6 +2005,19 @@ impl VaultService for VaultServiceImpl {
             BASE64_STANDARD.encode(mac)
         );
 
+        // Audit the crypto operation (no input/signature/key material — only the
+        // tenant/key/version metadata).
+        self.emit(
+            TOPIC_TRANSIT_SIGNED,
+            &key_name,
+            &tenant_id,
+            &context.project_id,
+            "sign",
+            &key_name,
+            serde_json::json!({"tenant_id": tenant_id, "key_name": key_name, "key_version": active.version}),
+        )
+        .await;
+
         Ok(Response::new(vault_pb::SignResponse {
             signature,
             key_version: active.version as i32,
@@ -1988,6 +2074,19 @@ impl VaultService for VaultServiceImpl {
         let provided = BASE64_STANDARD.decode(mac_b64).unwrap_or_default();
         let valid = constant_time_eq(&expected, &provided);
 
+        // Audit the verification (no input/signature/key material — only the
+        // tenant/key/version metadata and the boolean outcome).
+        self.emit(
+            TOPIC_TRANSIT_VERIFIED,
+            &key_name,
+            &tenant_id,
+            &context.project_id,
+            "verify",
+            &key_name,
+            serde_json::json!({"tenant_id": tenant_id, "key_name": key_name, "key_version": version, "valid": valid}),
+        )
+        .await;
+
         Ok(Response::new(vault_pb::VerifyResponse {
             valid,
             message: if valid { "valid" } else { "invalid" }.to_string(),
@@ -2037,6 +2136,19 @@ impl VaultService for VaultServiceImpl {
             active.version,
             BASE64_STANDARD.encode(mac)
         );
+
+        // Audit the crypto operation (no input/MAC/key material — only the
+        // tenant/key/version metadata).
+        self.emit(
+            TOPIC_TRANSIT_HMAC,
+            &key_name,
+            &tenant_id,
+            &context.project_id,
+            "hmac",
+            &key_name,
+            serde_json::json!({"tenant_id": tenant_id, "key_name": key_name, "key_version": active.version}),
+        )
+        .await;
 
         Ok(Response::new(vault_pb::HmacResponse {
             hmac: hmac_value,
@@ -2558,6 +2670,31 @@ mod vault_tests {
         let min_ttl_description =
             format!("must be 0/default or at least {MIN_DB_CREDENTIAL_TTL_SECONDS}");
         assert_single_field_violation(&ttl, "ttl_seconds", &min_ttl_description);
+    }
+
+    #[test]
+    fn transit_algorithm_validation_accepts_supported_and_rejects_unknown() {
+        // Empty ⇒ the default primitive.
+        assert_eq!(
+            validate_transit_algorithm("  ").expect("empty resolves to the default"),
+            DEFAULT_TRANSIT_ALGORITHM
+        );
+        // A supported value is accepted case-insensitively and canonicalized.
+        assert_eq!(
+            validate_transit_algorithm("AES256-GCM-SIV").expect("supported value accepted"),
+            DEFAULT_TRANSIT_ALGORITHM
+        );
+        // An unknown value is rejected up front with a typed field violation that
+        // names `algorithm` (no longer silently coerced to the default).
+        let err =
+            validate_transit_algorithm("rsa-4096").expect_err("unknown algorithm must be rejected");
+        assert_eq!(err.code(), tonic::Code::InvalidArgument);
+        assert!(err.message().contains("rsa-4096"));
+        assert_single_field_violation(
+            &err,
+            "algorithm",
+            "must be one of the supported transit algorithms: aes256-gcm-siv",
+        );
     }
 
     /// The seal gate fails closed: when the master key is unavailable, an
