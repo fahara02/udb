@@ -3,6 +3,8 @@ _proto: core/vault/services/v1/vault_service.proto_
 
 | done | RPC | op_kind | request msg | valid body | seed refs / notes |
 | --- | --- | --- | --- | --- | --- |
+| [ ] | BatchDecrypt | MUTATION | BatchDecryptRequest | `{ "tenant_id": "<seed:tenant_id>", "key_name": "<seed:vault_key_name>", "ciphertexts": ["<seed:vault_ciphertext>"] }` | decrypts a batch of transit ciphertexts under the seeded key in one call. |
+| [ ] | BatchEncrypt | MUTATION | BatchEncryptRequest | `{ "tenant_id": "<seed:tenant_id>", "key_name": "<seed:vault_key_name>", "plaintexts": ["perf-a", "perf-b"] }` | encrypts a batch of plaintexts under the seeded key (one key-unwrap amortized over the batch). |
 | [ ] | CreateTransitKey | MUTATION | CreateTransitKeyRequest | `{ "tenant_id": "<seed:tenant_id>", "key_name": "<seed:vault_create_key_name>", "algorithm": "aes256-gcm-siv" }` | creates a disposable transit key; the read/crypto fixtures use `<seed:vault_key_name>` so this mutation does not collide with the preseeded key. |
 | [ ] | Decrypt | READ_ONLY | DecryptRequest | `{ "tenant_id": "<seed:tenant_id>", "key_name": "<seed:vault_key_name>", "ciphertext": "<seed:vault_ciphertext>" }` | decrypts the seeded transit ciphertext envelope. |
 | [ ] | DeleteSecret | MUTATION | DeleteSecretRequest | `{ "tenant_id": "<seed:tenant_id>", "secret_path": "<seed:vault_delete_secret_path>" }` | soft-deletes the seeded disposable secret path. |

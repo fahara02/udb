@@ -827,6 +827,81 @@ service VaultService {
     };
     option (google.api.http) = {post: "/v1/vault/transit:public-key" body: "*"};
   }
+
+  // Encrypt MANY plaintexts under one transit key in a single call: the key is
+  // unwrapped ONCE and each plaintext sealed with the active version, amortizing
+  // the master-key unwrap over the batch. Order-preserving. AUDITED.
+  rpc BatchEncrypt(BatchEncryptRequest) returns (BatchEncryptResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:vault:encrypt"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "vault.BatchEncrypt"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "batch_encrypt" rest_operation_id: "vaultBatchEncrypt"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "vault"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "vault"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {post: "/v1/vault/transit:batch-encrypt" body: "*"};
+  }
+
+  // Decrypt MANY transit ciphertexts under one key in a single call; each
+  // ciphertext carries its own key version in the envelope. Order-preserving.
+  rpc BatchDecrypt(BatchDecryptRequest) returns (BatchDecryptResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:vault:decrypt"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "vault.BatchDecrypt"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "batch_decrypt" rest_operation_id: "vaultBatchDecrypt"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "vault"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "vault"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {post: "/v1/vault/transit:batch-decrypt" body: "*"};
+  }
 }
 
 // ── KV messages ─────────────────────────────────────────────────────────────
@@ -1164,6 +1239,51 @@ message GetTransitPublicKeyResponse {
   repeated TransitPublicKey public_keys = 3;
   string message = 4;
   udb.core.common.v1.ApiError error = 5;
+}
+
+message BatchEncryptRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 3 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string key_name = 2;
+  repeated string plaintexts = 3 [(udb.core.common.v1.sensitive) = true, (udb.core.common.v1.log_redacted) = true, (udb.core.common.v1.db_column_security) = { secret_classification: SECRET_CLASSIFICATION_TOKEN output_view: OUTPUT_VIEW_NEVER redaction_strategy: REDACTION_STRATEGY_REDACT encryption_key_class: "vault-transit" uniqueness_scope: "tenant" }];
+}
+
+message BatchEncryptResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 3 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  repeated string ciphertexts = 1;
+  int32 key_version = 2;
+  string message = 3;
+  udb.core.common.v1.ApiError error = 4;
+}
+
+message BatchDecryptRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 3 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string key_name = 2;
+  repeated string ciphertexts = 3;
+}
+
+message BatchDecryptResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 3 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  repeated string plaintexts = 1 [(udb.core.common.v1.sensitive) = true, (udb.core.common.v1.log_redacted) = true, (udb.core.common.v1.db_column_security) = { secret_classification: SECRET_CLASSIFICATION_TOKEN output_view: OUTPUT_VIEW_SELF redaction_strategy: REDACTION_STRATEGY_REDACT encryption_key_class: "vault-transit" uniqueness_scope: "tenant" }];
+  string message = 2;
+  udb.core.common.v1.ApiError error = 3;
 }
 
 message SignRequest {

@@ -805,6 +805,8 @@ fn full_service_descriptor_surface_snapshot() {
         (
             "udb.core.vault.services.v1.VaultService",
             &[
+                "BatchDecrypt",
+                "BatchEncrypt",
                 "CreateTransitKey",
                 "Decrypt",
                 "DeleteSecret",

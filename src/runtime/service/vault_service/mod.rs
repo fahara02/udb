@@ -10,7 +10,8 @@
 //!   * KV      — versioned, envelope-encrypted secrets at hierarchical paths
 //!               (`tenant/<t>/app/<path>`), with compare-and-swap, soft delete +
 //!               undelete (restore), and crypto-shred destroy.
-//!   * Transit — encrypt/decrypt/sign/verify/hmac by key NAME (+ envelope
+//!   * Transit — encrypt/decrypt (+ batch encrypt/decrypt)/sign/verify/hmac by
+//!               key NAME (+ envelope
 //!               generate-data-key/rewrap and, for ed25519 signing keys,
 //!               get-transit-public-key); private key material is never exported
 //!               (only the ed25519 PUBLIC key is); versioned keys with an
@@ -42,7 +43,7 @@
 //! the durable-row DTOs + JSON decoders + version selectors, [`store`] the
 //! neutral-IR read/record builders, [`dynamic`] the dynamic DB-credential engine
 //! helpers, [`events`] the audit emit, [`workers`] the leader-elected lease
-//! reaper, [`handlers`] the eighteen RPCs — `mod.rs` keeps only the struct, the
+//! reaper, [`handlers`] the twenty RPCs — `mod.rs` keeps only the struct, the
 //! builders/require-guard/seal-gate/read helpers, and one-line trait delegators.
 
 use std::sync::Arc;
@@ -319,6 +320,20 @@ impl VaultService for VaultServiceImpl {
         request: Request<vault_pb::DecryptRequest>,
     ) -> Result<Response<vault_pb::DecryptResponse>, Status> {
         handlers::decrypt(self, request).await
+    }
+
+    async fn batch_encrypt(
+        &self,
+        request: Request<vault_pb::BatchEncryptRequest>,
+    ) -> Result<Response<vault_pb::BatchEncryptResponse>, Status> {
+        handlers::batch_encrypt(self, request).await
+    }
+
+    async fn batch_decrypt(
+        &self,
+        request: Request<vault_pb::BatchDecryptRequest>,
+    ) -> Result<Response<vault_pb::BatchDecryptResponse>, Status> {
+        handlers::batch_decrypt(self, request).await
     }
 
     async fn generate_data_key(

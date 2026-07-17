@@ -1,6 +1,7 @@
-//! The eighteen `VaultService` RPC handlers (KV put/get/list/delete/undelete/
-//! destroy, transit create/rotate/encrypt/decrypt/sign/verify/hmac + envelope
-//! generate-data-key/rewrap + ed25519 get-transit-public-key, seal-status, and
+//! The twenty `VaultService` RPC handlers (KV put/get/list/delete/undelete/
+//! destroy, transit create/rotate/encrypt/decrypt/batch-encrypt/batch-decrypt/
+//! sign/verify/hmac + envelope generate-data-key/rewrap + ed25519
+//! get-transit-public-key, seal-status, and
 //! dynamic database-credential generation), extracted from the trait impl as free
 //! `pub(crate) async fn`s taking `svc` where the trait method took `&self`.
 //! `mod.rs` delegates one line to each. Bodies are verbatim — the same seal gate,
@@ -884,6 +885,152 @@ pub(crate) async fn decrypt(
     Ok(Response::new(vault_pb::DecryptResponse {
         plaintext: plaintext.0,
         key_version: version as i32,
+        message: "ok".to_string(),
+        error: None,
+    }))
+}
+
+pub(crate) async fn batch_encrypt(
+    svc: &VaultServiceImpl,
+    request: Request<vault_pb::BatchEncryptRequest>,
+) -> Result<Response<vault_pb::BatchEncryptResponse>, Status> {
+    let metadata = request.metadata().clone();
+    let req = request.into_inner();
+    svc.check_seal()?;
+    validate_request_tenant(&metadata, &req.tenant_id)?;
+    let tenant_id = req.tenant_id.trim().to_string();
+    let key_name = req.key_name.trim().to_string();
+    if key_name.is_empty() {
+        return Err(vault_required_key_name());
+    }
+    let _admit = native_admit_on(
+        svc.channels.as_ref(),
+        &svc.metrics,
+        "vault",
+        OperationChannel::Admin,
+        &tenant_id,
+        None,
+    )
+    .await?;
+    let runtime = svc.require_runtime()?;
+    let context = native_service_context(&metadata, &tenant_id, "");
+
+    let versions = svc
+        .read_transit_versions(runtime, &context, &tenant_id, &key_name)
+        .await?;
+    let active = active_transit(&versions).ok_or_else(|| {
+        vault_schema_not_found_status(
+            "batch_encrypt",
+            "vault_transit_active_key_not_found",
+            "transit key not found or has no active version",
+        )
+    })?;
+    require_encryption_algorithm(&active.algorithm, "batch_encrypt")?;
+    // Unwrap the DEK ONCE and seal every plaintext with it — the batch amortizes
+    // the master-key unwrap over N items. Order-preserving.
+    let dek = unwrap_dek(runtime, &active.wrapped_key_material)?;
+    let mut ciphertexts = Vec::with_capacity(req.plaintexts.len());
+    for plaintext in &req.plaintexts {
+        let secret = PlaintextSecret(plaintext.clone());
+        ciphertexts.push(dek_seal(&dek, active.version, secret.0.as_bytes())?);
+    }
+
+    svc.emit(
+        TOPIC_TRANSIT_ENCRYPTED,
+        &key_name,
+        &tenant_id,
+        &context.project_id,
+        "batch_encrypt",
+        &key_name,
+        serde_json::json!({"tenant_id": tenant_id, "key_name": key_name, "key_version": active.version, "count": req.plaintexts.len()}),
+    )
+    .await;
+
+    Ok(Response::new(vault_pb::BatchEncryptResponse {
+        ciphertexts,
+        key_version: active.version as i32,
+        message: "ok".to_string(),
+        error: None,
+    }))
+}
+
+pub(crate) async fn batch_decrypt(
+    svc: &VaultServiceImpl,
+    request: Request<vault_pb::BatchDecryptRequest>,
+) -> Result<Response<vault_pb::BatchDecryptResponse>, Status> {
+    let metadata = request.metadata().clone();
+    let req = request.into_inner();
+    svc.check_seal()?;
+    validate_request_tenant(&metadata, &req.tenant_id)?;
+    let tenant_id = req.tenant_id.trim().to_string();
+    let key_name = req.key_name.trim().to_string();
+    if key_name.is_empty() {
+        return Err(vault_required_key_name());
+    }
+    let _admit = native_admit_on(
+        svc.channels.as_ref(),
+        &svc.metrics,
+        "vault",
+        OperationChannel::Read,
+        &tenant_id,
+        None,
+    )
+    .await?;
+    let runtime = svc.require_runtime()?;
+    let context = native_service_context(&metadata, &tenant_id, "");
+
+    let versions = svc
+        .read_transit_versions(runtime, &context, &tenant_id, &key_name)
+        .await?;
+    // Guard key purpose once (every ciphertext shares the named key). An empty
+    // key set falls through to the per-item version lookup, which fails closed.
+    let algorithm = versions
+        .first()
+        .map(|key| key.algorithm.clone())
+        .unwrap_or_default();
+    require_encryption_algorithm(&algorithm, "batch_decrypt")?;
+
+    let mut plaintexts = Vec::with_capacity(req.ciphertexts.len());
+    for ciphertext in &req.ciphertexts {
+        let (version, encoded) = parse_transit_envelope(ciphertext).ok_or_else(|| {
+            vault_field_violation(
+                "ciphertexts",
+                "each entry must match udb-vault:v<version>:<base64>",
+                "batch contains an entry that is not a vault transit ciphertext envelope",
+            )
+        })?;
+        let key = transit_version(&versions, version, &[KEY_STATE_ACTIVE, KEY_STATE_VERIFYING])
+            .ok_or_else(|| {
+                vault_schema_not_found_status(
+                    "batch_decrypt",
+                    "vault_transit_key_version_not_found",
+                    "transit key version not found or retired",
+                )
+            })?;
+        let dek = unwrap_dek(runtime, &key.wrapped_key_material)?;
+        let bytes = dek_open(&dek, encoded)?;
+        let text = String::from_utf8(bytes).map_err(|_| {
+            vault_internal_status(
+                "batch_decrypt_transit_plaintext",
+                "a decrypted payload is not valid UTF-8",
+            )
+        })?;
+        plaintexts.push(text);
+    }
+
+    svc.emit(
+        TOPIC_TRANSIT_DECRYPTED,
+        &key_name,
+        &tenant_id,
+        &context.project_id,
+        "batch_decrypt",
+        &key_name,
+        serde_json::json!({"tenant_id": tenant_id, "key_name": key_name, "count": req.ciphertexts.len()}),
+    )
+    .await;
+
+    Ok(Response::new(vault_pb::BatchDecryptResponse {
+        plaintexts,
         message: "ok".to_string(),
         error: None,
     }))
