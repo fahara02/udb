@@ -482,7 +482,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "AssetService missing runtime/store capability uses typed capability detail",
-        "src/runtime/service/asset_service/mod.rs",
+        "src/runtime/service/asset_service",
         (
             "asset_capability_status",
             "capability_status",
@@ -497,7 +497,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "AssetService native-state crypto failures use typed capability detail",
-        "src/runtime/service/asset_service/mod.rs",
+        "src/runtime/service/asset_service",
         (
             "fn native_state_encryption_failed_status(",
             "fn native_state_decryption_failed_status(",
@@ -515,7 +515,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "AssetService not-found denials use typed schema detail",
-        "src/runtime/service/asset_service/mod.rs",
+        "src/runtime/service/asset_service",
         (
             "fn asset_schema_not_found_status(",
             "crate::runtime::executor_utils::schema_status",
@@ -538,7 +538,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "AssetService internal failures use typed internal detail",
-        "src/runtime/service/asset_service/mod.rs",
+        "src/runtime/service/asset_service",
         (
             "fn asset_internal_status(operation: impl Into<String>, message: impl Into<String>) -> Status",
             'crate::runtime::executor_utils::internal_status("asset", operation, message)',
@@ -596,7 +596,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "LockService missing runtime capability uses typed capability detail",
-        "src/runtime/service/lock_service/mod.rs",
+        "src/runtime/service/lock_service",
         (
             "lock_capability_status",
             "capability_status",
@@ -609,7 +609,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "LockService not-held miss uses typed schema detail",
-        "src/runtime/service/lock_service/mod.rs",
+        "src/runtime/service/lock_service",
         (
             "fn lock_not_held_status(operation: &'static str) -> Status",
             "crate::runtime::executor_utils::schema_status",
@@ -1259,7 +1259,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "NotificationService missing setup capability uses typed capability detail",
-        "src/runtime/service/notification_service/mod.rs",
+        "src/runtime/service/notification_service",
         (
             "notification_capability_status",
             "capability_status",
@@ -1274,7 +1274,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "NotificationService internal failures use typed internal detail",
-        "src/runtime/service/notification_service/mod.rs",
+        "src/runtime/service/notification_service",
         (
             "fn notification_internal_status(",
             'crate::runtime::executor_utils::internal_status("notification", operation, message)',
@@ -1295,7 +1295,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "NotificationService retry lifecycle denial uses typed policy detail",
-        "src/runtime/service/notification_service/mod.rs",
+        "src/runtime/service/notification_service",
         (
             "fn notification_policy_status_with_reason(",
             "crate::runtime::executor_utils::policy_status",
@@ -1324,7 +1324,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "NotificationService not-found denials use typed schema detail",
-        "src/runtime/service/notification_service/mod.rs",
+        "src/runtime/service/notification_service",
         (
             "fn notification_schema_not_found_status(",
             "crate::runtime::executor_utils::schema_status",
@@ -1349,7 +1349,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "BackupService missing setup capability uses typed capability detail",
-        "src/runtime/service/backup_service/mod.rs",
+        "src/runtime/service/backup_service",
         (
             "backup_capability_status",
             "capability_status",
@@ -1367,7 +1367,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "EmbeddingService missing setup capability uses typed capability detail",
-        "src/runtime/service/embedding_service/mod.rs",
+        "src/runtime/service/embedding_service",
         (
             "embedding_capability_status",
             "capability_status",
@@ -1390,7 +1390,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "EmbeddingService source miss uses typed schema detail",
-        "src/runtime/service/embedding_service/mod.rs",
+        "src/runtime/service/embedding_service",
         (
             "fn embedding_source_not_found_status(operation: &'static str) -> Status",
             "crate::runtime::executor_utils::schema_status",
@@ -1407,7 +1407,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "SearchService missing setup capability uses typed capability detail",
-        "src/runtime/service/search_service/mod.rs",
+        "src/runtime/service/search_service",
         (
             "search_capability_status",
             "capability_status",
@@ -1423,7 +1423,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "SearchService full-text-only refusal uses typed capability detail",
-        "src/runtime/service/search_service/mod.rs",
+        "src/runtime/service/search_service",
         (
             "fn full_text_only_requires_mediated_ir_status() -> Status",
             "search_capability_status(",
@@ -1438,7 +1438,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "SearchService index miss uses typed schema detail",
-        "src/runtime/service/search_service/mod.rs",
+        "src/runtime/service/search_service",
         (
             "fn search_index_not_found_status(operation: &'static str) -> Status",
             "crate::runtime::executor_utils::schema_status",
@@ -1495,7 +1495,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "StorageService missing runtime capability uses typed capability detail",
-        "src/runtime/service/storage_service/mod.rs",
+        "src/runtime/service/storage_service",
         (
             "storage_capability_status",
             "capability_status",
@@ -1510,7 +1510,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "StorageService internal failures use typed internal detail",
-        "src/runtime/service/storage_service/mod.rs",
+        "src/runtime/service/storage_service",
         (
             "fn storage_internal_status(operation: impl Into<String>, message: impl Into<String>) -> Status",
             'crate::runtime::executor_utils::internal_status("storage", operation, message)',
@@ -1526,7 +1526,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "VaultService internal failures use typed internal detail",
-        "src/runtime/service/vault_service/mod.rs",
+        "src/runtime/service/vault_service",
         (
             "fn vault_internal_status(operation: impl Into<String>, message: impl Into<String>) -> Status",
             'crate::runtime::executor_utils::internal_status("vault", operation, message)',
@@ -1545,7 +1545,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "VaultService seal/setup capability uses typed capability detail",
-        "src/runtime/service/vault_service/mod.rs",
+        "src/runtime/service/vault_service",
         (
             "vault_capability_status",
             "capability_status",
@@ -1580,7 +1580,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "VaultService not-found denials use typed schema detail",
-        "src/runtime/service/vault_service/mod.rs",
+        "src/runtime/service/vault_service",
         (
             "fn vault_schema_not_found_status(",
             "crate::runtime::executor_utils::schema_status",
@@ -3260,7 +3260,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "vault secret CAS abort uses typed retry detail",
-        "src/runtime/service/vault_service/mod.rs",
+        "src/runtime/service/vault_service",
         (
             "crate::runtime::executor_utils::retryable_aborted_status",
             '"vault"',
@@ -3270,7 +3270,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "vault request validation uses typed field violations",
-        "src/runtime/service/vault_service/mod.rs",
+        "src/runtime/service/vault_service",
         (
             "crate::runtime::executor_utils::invalid_argument_fields",
             "fn vault_required_field(",
@@ -3912,7 +3912,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "Embedding retrieve deadlines use typed retryable detail",
-        "src/runtime/service/embedding_service/mod.rs",
+        "src/runtime/service/embedding_service",
         (
             "crate::runtime::executor_utils::deadline_exceeded_status",
             '"embedding"',
@@ -6392,7 +6392,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "native hard quota errors use typed non-retryable detail",
-        "src/runtime/service/lock_service/mod.rs",
+        "src/runtime/service/lock_service",
         (
             "crate::runtime::executor_utils::quota_refusal_status",
             '"lock"',
@@ -6402,7 +6402,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "search hard quota error uses typed non-retryable detail",
-        "src/runtime/service/search_service/mod.rs",
+        "src/runtime/service/search_service",
         (
             "crate::runtime::executor_utils::quota_refusal_status",
             '"search"',
@@ -6412,7 +6412,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "embedding hard quota error uses typed non-retryable detail",
-        "src/runtime/service/embedding_service/mod.rs",
+        "src/runtime/service/embedding_service",
         (
             "crate::runtime::executor_utils::quota_refusal_status",
             '"embedding"',
@@ -6422,7 +6422,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "embedding request validation uses typed field violations",
-        "src/runtime/service/embedding_service/mod.rs",
+        "src/runtime/service/embedding_service",
         (
             "crate::runtime::executor_utils::invalid_argument_fields",
             "fn embedding_field_violation",
@@ -6471,7 +6471,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "storage hard quota error uses typed non-retryable detail",
-        "src/runtime/service/storage_service/mod.rs",
+        "src/runtime/service/storage_service",
         (
             "crate::runtime::executor_utils::quota_refusal_status",
             '"storage"',
@@ -6481,7 +6481,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "storage quota lease contention uses typed retryable detail",
-        "src/runtime/service/storage_service/mod.rs",
+        "src/runtime/service/storage_service",
         (
             "crate::runtime::executor_utils::retryable_status",
             "crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS",
@@ -6492,7 +6492,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "storage upload lifecycle denial uses typed policy detail with reason",
-        "src/runtime/service/storage_service/mod.rs",
+        "src/runtime/service/storage_service",
         (
             "fn storage_policy_status_with_reason(",
             "crate::runtime::executor_utils::policy_status",
@@ -6513,7 +6513,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "storage upload head mismatches use typed validation detail with reason",
-        "src/runtime/service/storage_service/mod.rs",
+        "src/runtime/service/storage_service",
         (
             "crate::runtime::executor_utils::failed_precondition_fields",
             "fn upload_etag_mismatch_status() -> Status",
@@ -6532,7 +6532,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "storage object stream missing store uses typed capability detail with reason",
-        "src/runtime/service/storage_service/mod.rs",
+        "src/runtime/service/storage_service",
         (
             "fn storage_capability_status_with_reason(",
             "fn object_stream_requires_store_status() -> Status",
@@ -6548,7 +6548,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "storage file-not-found denials use typed schema detail",
-        "src/runtime/service/storage_service/mod.rs",
+        "src/runtime/service/storage_service",
         (
             "fn storage_file_not_found_status(operation: &'static str) -> Status",
             "crate::runtime::executor_utils::schema_status",
@@ -6568,7 +6568,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "storage download missing object bytes uses typed policy detail with reason",
-        "src/runtime/service/storage_service/mod.rs",
+        "src/runtime/service/storage_service",
         (
             "fn file_object_bytes_missing_status() -> Status",
             "fn object_store_bytes_missing_status() -> Status",
@@ -6648,7 +6648,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "notification template validation uses typed field violations",
-        "src/runtime/service/notification_service/mod.rs",
+        "src/runtime/service/notification_service",
         (
             "crate::runtime::executor_utils::invalid_argument_fields",
             '"variables.{field}"',
@@ -6666,7 +6666,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "notification request validation uses typed field violations",
-        "src/runtime/service/notification_service/mod.rs",
+        "src/runtime/service/notification_service",
         (
             "fn notification_required_field(",
             '"event_type is required"',
@@ -6713,7 +6713,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "storage register upload validation uses typed field violations",
-        "src/runtime/service/storage_service/mod.rs",
+        "src/runtime/service/storage_service",
         (
             "crate::runtime::executor_utils::invalid_argument_fields",
             "fn storage_field_violation",
@@ -6761,7 +6761,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "backup request validation uses typed field violations",
-        "src/runtime/service/backup_service/mod.rs",
+        "src/runtime/service/backup_service",
         (
             "crate::runtime::executor_utils::invalid_argument_fields",
             "fn required_backup_field(",
@@ -6793,7 +6793,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "backup restore state denials use typed policy detail",
-        "src/runtime/service/backup_service/mod.rs",
+        "src/runtime/service/backup_service",
         (
             "fn backup_policy_status(",
             "crate::runtime::executor_utils::policy_status",
@@ -6812,7 +6812,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "BackupService not-found denials use typed schema detail",
-        "src/runtime/service/backup_service/mod.rs",
+        "src/runtime/service/backup_service",
         (
             "fn backup_not_found_status(",
             "crate::runtime::executor_utils::schema_status",
@@ -6831,7 +6831,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "BackupService internal failures use typed internal detail",
-        "src/runtime/service/backup_service/mod.rs",
+        "src/runtime/service/backup_service",
         (
             "fn backup_internal_status(operation: impl Into<String>, message: impl Into<String>) -> Status",
             'crate::runtime::executor_utils::internal_status("backup", operation, message)',
@@ -6872,7 +6872,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "backup/tenant services route movement denials through typed policy detail",
-        "src/runtime/service/backup_service/mod.rs",
+        "src/runtime/service/backup_service",
         (
             "tenant_movement_policy_status",
             "validate_tenant_movement_scope(&movement)",
@@ -6895,7 +6895,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "lock request validation uses typed field violations",
-        "src/runtime/service/lock_service/mod.rs",
+        "src/runtime/service/lock_service",
         (
             "crate::runtime::executor_utils::invalid_argument_fields",
             "fn validate_lock_identity(",
@@ -6911,7 +6911,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "lock state denials use typed policy detail",
-        "src/runtime/service/lock_service/mod.rs",
+        "src/runtime/service/lock_service",
         (
             "fn lock_policy_status(",
             "crate::runtime::executor_utils::policy_status",
@@ -6983,7 +6983,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "asset request validation uses typed field violations",
-        "src/runtime/service/asset_service/mod.rs",
+        "src/runtime/service/asset_service",
         (
             "crate::runtime::executor_utils::invalid_argument_fields",
             "fn asset_invalid_field(",
@@ -7174,7 +7174,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "search request validation uses typed field violations",
-        "src/runtime/service/search_service/mod.rs",
+        "src/runtime/service/search_service",
         (
             "crate::runtime::executor_utils::invalid_argument_fields",
             "fn search_field_violation",
@@ -8243,7 +8243,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
 
 ERROR_REASON_REGISTRY: tuple[tuple[str, tuple[str, ...]], ...] = (
     (
-        "src/runtime/service/storage_service/mod.rs",
+        "src/runtime/service/storage_service",
         (
             "STORAGE_QUOTA_EXCEEDED",
             "UPLOAD_URL_UNAVAILABLE",
@@ -8254,7 +8254,7 @@ ERROR_REASON_REGISTRY: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
     (
-        "src/runtime/service/asset_service/mod.rs",
+        "src/runtime/service/asset_service",
         (
             "PIPELINE_DEFINITION_INVALID",
             "STEP_TYPE_UNSUPPORTED",
@@ -8262,7 +8262,7 @@ ERROR_REASON_REGISTRY: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
     (
-        "src/runtime/service/notification_service/mod.rs",
+        "src/runtime/service/notification_service",
         (
             "TEMPLATE_NOT_FOUND",
             "VARIABLE_MISSING",
@@ -8463,7 +8463,7 @@ AUTHN_DIRECT_NOT_FOUND_PATTERNS = (
 ANALYTICS_INTERNAL_STATUS_PATH = "src/runtime/service/analytics_service"
 ADMIN_HANDLERS_INTERNAL_STATUS_PATH = "src/runtime/service/handlers_admin.rs"
 APIKEY_INTERNAL_STATUS_PATH = "src/runtime/service/auth_service/apikey.rs"
-ASSET_INTERNAL_STATUS_PATH = "src/runtime/service/asset_service/mod.rs"
+ASSET_INTERNAL_STATUS_PATH = "src/runtime/service/asset_service"
 AUTHN_CORE_INTERNAL_STATUS_PATH = "src/runtime/service/auth_service/authn/core.rs"
 AUTHN_LIFECYCLE_INTERNAL_STATUS_PATH = "src/runtime/service/auth_service/authn/lifecycle.rs"
 AUTHN_LOGIN_INTERNAL_STATUS_PATH = "src/runtime/service/auth_service/authn/login.rs"
@@ -8480,7 +8480,7 @@ AUTHZ_GOVERNANCE_INTERNAL_STATUS_PATH = "src/runtime/service/auth_service/authz/
 AUTHZ_GOVERNANCE_SIM_INTERNAL_STATUS_PATH = "src/runtime/service/auth_service/authz/governance_sim.rs"
 AUTHZ_GOVERNANCE_STORE_INTERNAL_STATUS_PATH = "src/runtime/service/auth_service/authz/governance_store.rs"
 AUTHZ_TUPLES_INTERNAL_STATUS_PATH = "src/runtime/service/auth_service/authz/tuples.rs"
-BACKUP_INTERNAL_STATUS_PATH = "src/runtime/service/backup_service/mod.rs"
+BACKUP_INTERNAL_STATUS_PATH = "src/runtime/service/backup_service"
 CASSANDRA_INTERNAL_STATUS_PATH = "src/runtime/executors/cassandra.rs"
 CATALOG_ADMIN_INTERNAL_STATUS_PATH = "src/runtime/core/catalog_admin.rs"
 CATALOG_HANDLERS_INTERNAL_STATUS_PATH = "src/runtime/service/handlers_catalog.rs"
@@ -8502,7 +8502,7 @@ MYSQL_INTERNAL_STATUS_PATH = "src/runtime/executors/mysql.rs"
 MSSQL_INTERNAL_STATUS_PATH = "src/runtime/executors/mssql.rs"
 NATIVE_ENTITY_STORE_INTERNAL_STATUS_PATH = "src/runtime/service/native_entity_store.rs"
 NEO4J_INTERNAL_STATUS_PATH = "src/runtime/executors/neo4j.rs"
-NOTIFICATION_INTERNAL_STATUS_PATH = "src/runtime/service/notification_service/mod.rs"
+NOTIFICATION_INTERNAL_STATUS_PATH = "src/runtime/service/notification_service"
 PINECONE_INTERNAL_STATUS_PATH = "src/runtime/executors/pinecone.rs"
 POSTGRES_EXECUTOR_INTERNAL_STATUS_PATH = "src/runtime/executors/postgres.rs"
 POSTGRES_HELPERS_INTERNAL_STATUS_PATH = "src/runtime/postgres_helpers.rs"
@@ -8513,12 +8513,12 @@ S3_INTERNAL_STATUS_PATH = "src/runtime/executors/s3.rs"
 SCHEDULER_INTERNAL_STATUS_PATH = "src/runtime/service/scheduler_service"
 SETUP_DATA_INTERNAL_STATUS_PATH = "src/runtime/core/setup_data.rs"
 SQLITE_INTERNAL_STATUS_PATH = "src/runtime/executors/sqlite.rs"
-STORAGE_INTERNAL_STATUS_PATH = "src/runtime/service/storage_service/mod.rs"
+STORAGE_INTERNAL_STATUS_PATH = "src/runtime/service/storage_service"
 SYSTEM_CATALOG_INTERNAL_STATUS_PATH = "src/runtime/system.rs"
 TENANT_PURGE_INTERNAL_STATUS_PATH = "src/runtime/core/tenant_purge.rs"
 TENANT_INTERNAL_STATUS_PATH = "src/runtime/service/tenant_service"
 TX_OBJECT_INTERNAL_STATUS_PATH = "src/runtime/core/tx_object.rs"
-VAULT_INTERNAL_STATUS_PATH = "src/runtime/service/vault_service/mod.rs"
+VAULT_INTERNAL_STATUS_PATH = "src/runtime/service/vault_service"
 WEBHOOK_INTERNAL_STATUS_PATH = "src/runtime/service/webhook_service"
 WEAVIATE_INTERNAL_STATUS_PATH = "src/runtime/executors/weaviate.rs"
 WEBRTC_INTERNAL_STATUS_PATH = "src/runtime/service/webrtc_service/mod.rs"
@@ -10548,7 +10548,13 @@ def run_selftest() -> None:
         assert not any("ApiKeyService" in failure and "Internal" in failure for failure in failures), failures
 
         write_fixture(root)
-        asset_internal = root / ASSET_INTERNAL_STATUS_PATH
+        asset_internal_dir = root / ASSET_INTERNAL_STATUS_PATH
+        # See the metering note above: mutate a `.rs` file inside a service dir.
+        asset_internal = (
+            asset_internal_dir / "mod.rs"
+            if asset_internal_dir.is_dir()
+            else asset_internal_dir
+        )
         asset_internal_good = read(asset_internal)
         asset_internal.write_text(
             asset_internal_good + '\nfn bad() { tonic::Status::internal("asset db failed"); }\n',
@@ -10600,7 +10606,13 @@ def run_selftest() -> None:
         assert not any("AnalyticsService" in failure and "Internal" in failure for failure in failures), failures
 
         write_fixture(root)
-        backup_internal = root / BACKUP_INTERNAL_STATUS_PATH
+        backup_internal_dir = root / BACKUP_INTERNAL_STATUS_PATH
+        # See the metering note above: mutate a `.rs` file inside a service dir.
+        backup_internal = (
+            backup_internal_dir / "mod.rs"
+            if backup_internal_dir.is_dir()
+            else backup_internal_dir
+        )
         backup_internal_good = read(backup_internal)
         backup_internal.write_text(
             backup_internal_good + '\nfn bad() { tonic::Status::internal("backup db failed"); }\n',
@@ -10843,7 +10855,13 @@ def run_selftest() -> None:
         assert not any("SQLite executor" in failure and "Internal" in failure for failure in failures), failures
 
         write_fixture(root)
-        storage_internal = root / STORAGE_INTERNAL_STATUS_PATH
+        storage_internal_dir = root / STORAGE_INTERNAL_STATUS_PATH
+        # See the metering note above: mutate a `.rs` file inside a service dir.
+        storage_internal = (
+            storage_internal_dir / "mod.rs"
+            if storage_internal_dir.is_dir()
+            else storage_internal_dir
+        )
         storage_internal_good = read(storage_internal)
         storage_internal.write_text(
             storage_internal_good + '\nfn bad() { tonic::Status::internal("storage db failed"); }\n',
@@ -10866,7 +10884,13 @@ def run_selftest() -> None:
         assert not any("StorageService" in failure and "Internal" in failure for failure in failures), failures
 
         write_fixture(root)
-        notification_internal = root / NOTIFICATION_INTERNAL_STATUS_PATH
+        notification_internal_dir = root / NOTIFICATION_INTERNAL_STATUS_PATH
+        # See the metering note above: mutate a `.rs` file inside a service dir.
+        notification_internal = (
+            notification_internal_dir / "mod.rs"
+            if notification_internal_dir.is_dir()
+            else notification_internal_dir
+        )
         notification_internal_good = read(notification_internal)
         notification_internal.write_text(
             notification_internal_good + '\nfn bad() { tonic::Status::internal("notification db failed"); }\n',
@@ -11372,7 +11396,13 @@ def run_selftest() -> None:
         assert not any("Weaviate executor" in failure and "Internal" in failure for failure in failures), failures
 
         write_fixture(root)
-        vault_internal = root / VAULT_INTERNAL_STATUS_PATH
+        vault_internal_dir = root / VAULT_INTERNAL_STATUS_PATH
+        # See the metering note above: mutate a `.rs` file inside a service dir.
+        vault_internal = (
+            vault_internal_dir / "mod.rs"
+            if vault_internal_dir.is_dir()
+            else vault_internal_dir
+        )
         vault_internal_good = read(vault_internal)
         vault_internal.write_text(
             vault_internal_good + '\nfn bad() { tonic::Status::internal("vault db failed"); }\n',

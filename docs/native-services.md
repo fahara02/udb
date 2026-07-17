@@ -13,10 +13,10 @@
 │    UNIVERSAL DATA BROKER                                                   │
 │    gRPC data plane | native control plane | tenant/project scope guard     │
 │                                                                            │
-│    crate v0.4.12 | protocol v1.0.0                                          │
+│    crate v0.4.13 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
-UDB 0.4.12 includes a native control plane for identity, access, storage metadata,
+UDB 0.4.13 includes a native control plane for identity, access, storage metadata,
 asset workflows, realtime coordination, tenancy, notifications, analytics, and
 policy distribution.
 

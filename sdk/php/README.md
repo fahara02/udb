@@ -7,7 +7,7 @@
 
 <p align="center">
   <strong>UDB :: Universal Data Broker</strong><br>
-  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.4.12 | protocol v1.0.0</sub>
+  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.4.13 | protocol v1.0.0</sub>
 </p>
 <!-- UDB_BRAND_HEADER_END -->
 
@@ -33,7 +33,7 @@ That means the Laravel app does not need to know whether the data is in Postgres
 
 This package makes UDB feel natural inside Laravel:
 
-- `composer require fahara02/udb-laravel:^0.4.12`
+- `composer require fahara02/udb-laravel:^0.4.13`
 - set `UDB_ENDPOINT` in `.env`
 - call `Udb::select()`, `Udb::upsert()`, or `Udb::delete()`
 - use typed generated PHP classes for requests and responses
@@ -54,7 +54,7 @@ This package makes UDB feel natural inside Laravel:
 ## Installation
 
 ```bash
-composer require fahara02/udb-laravel:^0.4.12
+composer require fahara02/udb-laravel:^0.4.13
 ```
 
 The service provider is auto-discovered by Laravel. The `Udb` facade is registered automatically. By default, the package also adds middleware to the `web` and `api` route groups so each request can carry tenant and user context into UDB.
