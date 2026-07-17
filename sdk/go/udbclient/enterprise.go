@@ -89,6 +89,12 @@ func ConnectEnterprise(ctx context.Context, cfg EnterpriseConfig) (*EnterpriseSe
 	adopted, err := u.LoginAndAdoptTenant(ctx, &authnv1.LoginRequest{
 		Username: cfg.Username,
 		Password: cfg.Password,
+		// UDB-GO-001: transmit the documented pre-login tenant/project selection so
+		// the broker can resolve/verify the intended identity. The post-login source
+		// of truth is unchanged — only the VERIFIED principal (adopted below) is ever
+		// used for tenant/project scope, never these input hints.
+		TenantHint:  cfg.TenantCode,
+		ProjectHint: cfg.ProjectID,
 	})
 	if err != nil {
 		_ = u.Close()
