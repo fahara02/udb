@@ -14,14 +14,13 @@ use crate::proto::udb::core::vault::services::v1::vault_service_server::VaultSer
 use crate::proto::{ErrorDetail, ErrorKind};
 use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
 
-use super::VaultServiceImpl;
 use super::config::{
     DEFAULT_TRANSIT_ALGORITHM, MIN_DB_CREDENTIAL_TTL_SECONDS, VAULT_MASTER_KEY_UNAVAILABLE_MESSAGE,
     VAULT_RUNTIME_REQUIRED_MESSAGE,
 };
 use super::crypto::{
-    DataKey, PlaintextSecret, constant_time_eq, dek_open, dek_seal, hmac_sha256,
-    parse_transit_envelope, validate_transit_algorithm,
+    constant_time_eq, dek_open, dek_seal, ed25519_sign_b64, ed25519_verify_b64, hmac_sha256,
+    parse_transit_envelope, validate_transit_algorithm, DataKey, PlaintextSecret,
 };
 use super::dynamic::{
     parse_vault_db_role_configs, requested_db_credential_ttl, validate_db_role_alias,
@@ -31,6 +30,7 @@ use super::errors::{
     vault_internal_status, vault_master_key_operation_status, vault_schema_already_exists_status,
     vault_schema_not_found_status,
 };
+use super::VaultServiceImpl;
 
 fn decode_detail(status: &Status) -> ErrorDetail {
     let raw = status
@@ -330,11 +330,9 @@ fn transit_ciphertext_helpers_carry_field_violations() {
     let dek = DataKey([3u8; 32]);
     let invalid_base64 = dek_open(&dek, "@@").expect_err("invalid base64 must fail");
     assert_eq!(invalid_base64.code(), tonic::Code::InvalidArgument);
-    assert!(
-        invalid_base64
-            .message()
-            .starts_with("vault ciphertext decode failed: ")
-    );
+    assert!(invalid_base64
+        .message()
+        .starts_with("vault ciphertext decode failed: "));
     assert_single_field_violation(
         &invalid_base64,
         "ciphertext",
@@ -488,6 +486,39 @@ fn dek_seal_round_trips_and_hmac_is_stable() {
     let b = hmac_sha256(&dek.0, b"message");
     assert!(constant_time_eq(&a, &b));
     assert!(!constant_time_eq(&a, &hmac_sha256(&dek.0, b"other")));
+}
+
+/// Ed25519 Sign/Verify (the asymmetric transit algorithm): a signature verifies
+/// only for the exact message under the exact key, and every corruption is a
+/// clean `false` (no panic). The 32-byte transit key material is the seed, so any
+/// key works. `ed25519` must also be an accepted CreateTransitKey algorithm.
+#[test]
+fn ed25519_sign_verify_round_trips_and_rejects_tampering() {
+    assert_eq!(
+        validate_transit_algorithm("ed25519").expect("ed25519 is a supported algorithm"),
+        "ed25519"
+    );
+
+    let seed = [9u8; 32];
+    let sig = ed25519_sign_b64(&seed, b"dispatch record 42");
+    assert!(ed25519_verify_b64(&seed, b"dispatch record 42", &sig));
+    // Deterministic (RFC 8032): same seed + message ⇒ identical signature.
+    assert_eq!(ed25519_sign_b64(&seed, b"dispatch record 42"), sig);
+    // Tampered message, wrong key, and malformed/short signatures all fail closed.
+    assert!(!ed25519_verify_b64(&seed, b"dispatch record 43", &sig));
+    assert!(!ed25519_verify_b64(&[8u8; 32], b"dispatch record 42", &sig));
+    assert!(!ed25519_verify_b64(
+        &seed,
+        b"dispatch record 42",
+        "not-base64!!"
+    ));
+    // "AAAA" is valid base64 but decodes to 3 bytes — not a 64-byte signature.
+    assert!(!ed25519_verify_b64(&seed, b"dispatch record 42", "AAAA"));
+    // The DEK material (any 32 bytes) is a valid seed, distinct keys don't cross.
+    let other = DataKey([1u8; 32]);
+    let sig2 = ed25519_sign_b64(&other.0, b"dispatch record 42");
+    assert!(ed25519_verify_b64(&other.0, b"dispatch record 42", &sig2));
+    assert!(!ed25519_verify_b64(&seed, b"dispatch record 42", &sig2));
 }
 
 #[test]

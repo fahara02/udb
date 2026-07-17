@@ -10,8 +10,8 @@
 //! CRITICAL: no crypto/encryption/decryption/signing/HMAC/wrap/envelope/seal
 //! logic is altered — only the `self` → `svc` receiver rename.
 
-use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
+use base64::Engine as _;
 use chrono::Utc;
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
@@ -24,20 +24,19 @@ use super::super::native_helpers::{
     admit_on as native_admit_on, native_next_page_token_for_total, native_offset_page_window,
     native_service_context, non_empty_json, validate_request_tenant,
 };
-use super::VaultServiceImpl;
 use super::config::{
     DEFAULT_DB_CREDENTIAL_MAX_TTL_SECONDS, DEFAULT_TRANSIT_ALGORITHM, KEY_STATE_ACTIVE,
-    KEY_STATE_VERIFYING, MAX_LIST_SECRETS, STATE_ACTIVE, STATE_DELETED, STATE_DESTROYED,
-    TOPIC_DB_CREDENTIAL_ISSUED, TOPIC_KEY_CREATED, TOPIC_KEY_ROTATED, TOPIC_SECRET_ACCESSED,
-    TOPIC_SECRET_DELETED, TOPIC_SECRET_DESTROYED, TOPIC_SECRET_LISTED, TOPIC_SECRET_PUT,
-    TOPIC_TRANSIT_DECRYPTED, TOPIC_TRANSIT_ENCRYPTED, TOPIC_TRANSIT_HMAC, TOPIC_TRANSIT_SIGNED,
-    TOPIC_TRANSIT_VERIFIED, VAULT_DB_CREDENTIAL_LEASE_MSG, VAULT_HMAC_PREFIX, VAULT_SECRET_MSG,
-    VAULT_TRANSIT_KEY_MSG,
+    KEY_STATE_VERIFYING, MAX_LIST_SECRETS, SIGNING_TRANSIT_ALGORITHM, STATE_ACTIVE, STATE_DELETED,
+    STATE_DESTROYED, TOPIC_DB_CREDENTIAL_ISSUED, TOPIC_KEY_CREATED, TOPIC_KEY_ROTATED,
+    TOPIC_SECRET_ACCESSED, TOPIC_SECRET_DELETED, TOPIC_SECRET_DESTROYED, TOPIC_SECRET_LISTED,
+    TOPIC_SECRET_PUT, TOPIC_TRANSIT_DECRYPTED, TOPIC_TRANSIT_ENCRYPTED, TOPIC_TRANSIT_HMAC,
+    TOPIC_TRANSIT_SIGNED, TOPIC_TRANSIT_VERIFIED, VAULT_DB_CREDENTIAL_LEASE_MSG,
+    VAULT_ED25519_PREFIX, VAULT_HMAC_PREFIX, VAULT_SECRET_MSG, VAULT_TRANSIT_KEY_MSG,
 };
 use super::crypto::{
-    DataKey, PlaintextSecret, constant_time_eq, dek_open, dek_seal, hmac_sha256,
-    parse_mac_envelope, parse_transit_envelope, transit_payload, unwrap_dek,
-    validate_transit_algorithm, wrap_dek,
+    constant_time_eq, dek_open, dek_seal, ed25519_sign_b64, ed25519_verify_b64, hmac_sha256,
+    parse_ed25519_envelope, parse_mac_envelope, parse_transit_envelope, transit_payload,
+    unwrap_dek, validate_transit_algorithm, wrap_dek, DataKey, PlaintextSecret,
 };
 use super::dynamic::{
     create_postgres_login_role, drop_postgres_login_role, generate_db_password,
@@ -55,6 +54,7 @@ use super::store::{
     db_credential_lease_record, secret_conflict, secret_list_read, secret_record,
     transit_key_conflict, transit_key_record,
 };
+use super::VaultServiceImpl;
 
 // ── KV engine ─────────────────────────────────────────────────────────────
 
@@ -978,12 +978,23 @@ pub(crate) async fn sign(
         )
     })?;
     let dek = unwrap_dek(runtime, &active.wrapped_key_material)?;
-    let mac = hmac_sha256(&dek.0, req.input.as_bytes());
-    let signature = format!(
-        "{VAULT_HMAC_PREFIX}{}:{}",
-        active.version,
-        BASE64_STANDARD.encode(mac)
-    );
+    // A key created with the Ed25519 algorithm produces a real asymmetric
+    // signature (the 32-byte material is the seed); every other key keeps the
+    // symmetric HMAC. The envelope prefix records which, so Verify dispatches
+    // correctly. Both preserve the existing behavior for existing keys.
+    let signature = if active.algorithm == SIGNING_TRANSIT_ALGORITHM {
+        format!(
+            "{VAULT_ED25519_PREFIX}{}:{}",
+            active.version,
+            ed25519_sign_b64(&dek.0, req.input.as_bytes())
+        )
+    } else {
+        format!(
+            "{VAULT_HMAC_PREFIX}{}:{}",
+            active.version,
+            BASE64_STANDARD.encode(hmac_sha256(&dek.0, req.input.as_bytes()))
+        )
+    };
 
     // Audit the crypto operation (no input/signature/key material — only the
     // tenant/key/version metadata).
@@ -1019,7 +1030,13 @@ pub(crate) async fn verify(
     if key_name.is_empty() {
         return Err(vault_required_key_name());
     }
-    let Some((version, mac_b64)) = parse_mac_envelope(&req.signature) else {
+    // Accept either an Ed25519 signature envelope or the HMAC envelope; the
+    // prefix selects the verification primitive below (an old HMAC signature
+    // still verifies exactly as before).
+    let Some((version, signature_b64, is_ed25519)) = parse_ed25519_envelope(&req.signature)
+        .map(|(v, s)| (v, s, true))
+        .or_else(|| parse_mac_envelope(&req.signature).map(|(v, s)| (v, s, false)))
+    else {
         return Ok(Response::new(vault_pb::VerifyResponse {
             valid: false,
             message: "not a vault signature envelope".to_string(),
@@ -1050,9 +1067,13 @@ pub(crate) async fn verify(
             )
         })?;
     let dek = unwrap_dek(runtime, &key.wrapped_key_material)?;
-    let expected = hmac_sha256(&dek.0, req.input.as_bytes());
-    let provided = BASE64_STANDARD.decode(mac_b64).unwrap_or_default();
-    let valid = constant_time_eq(&expected, &provided);
+    let valid = if is_ed25519 {
+        ed25519_verify_b64(&dek.0, req.input.as_bytes(), signature_b64)
+    } else {
+        let expected = hmac_sha256(&dek.0, req.input.as_bytes());
+        let provided = BASE64_STANDARD.decode(signature_b64).unwrap_or_default();
+        constant_time_eq(&expected, &provided)
+    };
 
     // Audit the verification (no input/signature/key material — only the
     // tenant/key/version metadata and the boolean outcome).

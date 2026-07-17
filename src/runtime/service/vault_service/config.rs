@@ -45,12 +45,19 @@ pub(crate) const KEY_STATE_ACTIVE: &str = "ACTIVE";
 pub(crate) const KEY_STATE_VERIFYING: &str = "VERIFYING";
 
 pub(crate) const DEFAULT_TRANSIT_ALGORITHM: &str = "aes256-gcm-siv";
-/// The transit algorithms the crypto stack actually implements. Only the
-/// AES-256-GCM-SIV envelope primitive exists today, so this is the sole accepted
-/// value; an unknown `algorithm` on CreateTransitKey is rejected up front instead
-/// of being silently coerced to the default (a latent capability lie). Extend this
-/// set only when a new primitive is genuinely wired into the seal/open path.
-pub(crate) const SUPPORTED_TRANSIT_ALGORITHMS: &[&str] = &[DEFAULT_TRANSIT_ALGORITHM];
+/// The asymmetric signing algorithm: a key created with this algorithm signs via
+/// real Ed25519 (Sign/Verify), not the symmetric HMAC used by every other key.
+/// The 32-byte transit key material doubles as the Ed25519 seed, so no separate
+/// key generation is needed.
+pub(crate) const SIGNING_TRANSIT_ALGORITHM: &str = "ed25519";
+/// The transit algorithms the crypto stack actually implements: the
+/// AES-256-GCM-SIV envelope primitive (Encrypt/Decrypt/HMAC-Sign) and Ed25519
+/// (asymmetric Sign/Verify). An unknown `algorithm` on CreateTransitKey is
+/// rejected up front instead of being silently coerced to the default (a latent
+/// capability lie). Extend this set only when a new primitive is genuinely wired
+/// into the seal/open/sign path.
+pub(crate) const SUPPORTED_TRANSIT_ALGORITHMS: &[&str] =
+    &[DEFAULT_TRANSIT_ALGORITHM, SIGNING_TRANSIT_ALGORITHM];
 
 /// Transit ciphertext envelope tag: `udb-vault:v<keyver>:<b64(nonce||ct)>`.
 /// Distinct from the broker's `udb-aead:` master-key envelope so the two layers
@@ -58,6 +65,9 @@ pub(crate) const SUPPORTED_TRANSIT_ALGORITHMS: &[&str] = &[DEFAULT_TRANSIT_ALGOR
 pub(crate) const VAULT_TRANSIT_ENVELOPE_PREFIX: &str = "udb-vault:v";
 /// Transit MAC/signature envelope tag: `udb-vmac:v<keyver>:<b64(mac)>`.
 pub(crate) const VAULT_HMAC_PREFIX: &str = "udb-vmac:v";
+/// Ed25519 signature envelope tag: `udb-vsig:v<keyver>:<b64(sig)>`. Distinct from
+/// the HMAC tag so Verify dispatches to the right primitive by the envelope alone.
+pub(crate) const VAULT_ED25519_PREFIX: &str = "udb-vsig:v";
 
 /// Bound on how many versions of a single path/key are scanned in one read.
 pub(crate) const MAX_VERSIONS_SCAN: u32 = 10_000;

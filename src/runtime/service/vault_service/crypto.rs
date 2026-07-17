@@ -14,8 +14,9 @@ use std::fmt;
 
 use aead::{Aead, KeyInit};
 use aes_gcm_siv::{Aes256GcmSiv, Nonce};
-use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
+use base64::Engine as _;
+use ed25519_dalek::{Signature, Signer, SigningKey};
 use sha2::{Digest, Sha256};
 use tonic::Status;
 use uuid::Uuid;
@@ -23,8 +24,8 @@ use uuid::Uuid;
 use crate::runtime::DataBrokerRuntime;
 
 use super::config::{
-    DEFAULT_TRANSIT_ALGORITHM, SUPPORTED_TRANSIT_ALGORITHMS, VAULT_HMAC_PREFIX,
-    VAULT_TRANSIT_ENVELOPE_PREFIX,
+    DEFAULT_TRANSIT_ALGORITHM, SUPPORTED_TRANSIT_ALGORITHMS, VAULT_ED25519_PREFIX,
+    VAULT_HMAC_PREFIX, VAULT_TRANSIT_ENVELOPE_PREFIX,
 };
 use super::errors::{
     vault_field_violation, vault_internal_status, vault_master_key_operation_status,
@@ -185,6 +186,40 @@ pub(crate) fn parse_mac_envelope(value: &str) -> Option<(i64, &str)> {
     let rest = value.strip_prefix(VAULT_HMAC_PREFIX)?;
     let (version, encoded) = rest.split_once(':')?;
     Some((version.parse().ok()?, encoded))
+}
+
+/// Parse a `udb-vsig:v<version>:<b64>` Ed25519 signature into `(version, b64)`.
+pub(crate) fn parse_ed25519_envelope(value: &str) -> Option<(i64, &str)> {
+    let rest = value.strip_prefix(VAULT_ED25519_PREFIX)?;
+    let (version, encoded) = rest.split_once(':')?;
+    Some((version.parse().ok()?, encoded))
+}
+
+/// Ed25519-sign `message` with the 32-byte transit key material as the seed,
+/// returning the base64 of the 64-byte signature. The key material never leaves
+/// the broker; the signature is a real asymmetric signature verifiable by anyone
+/// holding the corresponding public key. Deterministic (RFC 8032).
+pub(crate) fn ed25519_sign_b64(seed: &[u8; 32], message: &[u8]) -> String {
+    let signing_key = SigningKey::from_bytes(seed);
+    BASE64_STANDARD.encode(signing_key.sign(message).to_bytes())
+}
+
+/// Verify a base64 Ed25519 signature over `message` under the key derived from
+/// `seed`. Any decode/length/verification failure is a plain `false` (no panic,
+/// no error leak) — the caller reports only the boolean outcome. Uses
+/// `verify_strict` to reject malleable/small-order signatures.
+pub(crate) fn ed25519_verify_b64(seed: &[u8; 32], message: &[u8], signature_b64: &str) -> bool {
+    let Ok(bytes) = BASE64_STANDARD.decode(signature_b64) else {
+        return false;
+    };
+    let Ok(signature_bytes): Result<[u8; 64], _> = bytes.try_into() else {
+        return false;
+    };
+    let signature = Signature::from_bytes(&signature_bytes);
+    SigningKey::from_bytes(seed)
+        .verifying_key()
+        .verify_strict(message, &signature)
+        .is_ok()
 }
 
 const HMAC_BLOCK: usize = 64; // SHA-256 block size.
