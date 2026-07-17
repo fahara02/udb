@@ -566,7 +566,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "native service missing runtime/store capability uses typed capability detail",
-        "src/runtime/service/analytics_service/mod.rs",
+        "src/runtime/service/analytics_service",
         (
             "analytics_capability_status",
             "capability_status",
@@ -578,7 +578,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "AnalyticsService internal failures use typed internal detail",
-        "src/runtime/service/analytics_service/mod.rs",
+        "src/runtime/service/analytics_service",
         (
             "fn analytics_internal_status(operation: impl Into<String>, message: impl Into<String>) -> Status",
             'crate::runtime::executor_utils::internal_status("analytics", operation, message)',
@@ -6969,7 +6969,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "analytics request validation uses typed field violations",
-        "src/runtime/service/analytics_service/mod.rs",
+        "src/runtime/service/analytics_service",
         (
             "crate::runtime::executor_utils::invalid_argument_fields",
             "fn analytics_required_field(",
@@ -8460,7 +8460,7 @@ AUTHN_DIRECT_NOT_FOUND_PATTERNS = (
     'tonic::Status::not_found("device not found or already revoked")',
 )
 
-ANALYTICS_INTERNAL_STATUS_PATH = "src/runtime/service/analytics_service/mod.rs"
+ANALYTICS_INTERNAL_STATUS_PATH = "src/runtime/service/analytics_service"
 ADMIN_HANDLERS_INTERNAL_STATUS_PATH = "src/runtime/service/handlers_admin.rs"
 APIKEY_INTERNAL_STATUS_PATH = "src/runtime/service/auth_service/apikey.rs"
 ASSET_INTERNAL_STATUS_PATH = "src/runtime/service/asset_service/mod.rs"
@@ -10571,7 +10571,13 @@ def run_selftest() -> None:
         assert not any("AssetService" in failure and "Internal" in failure for failure in failures), failures
 
         write_fixture(root)
-        analytics_internal = root / ANALYTICS_INTERNAL_STATUS_PATH
+        analytics_internal_dir = root / ANALYTICS_INTERNAL_STATUS_PATH
+        # See the metering note above: mutate a `.rs` file inside a service dir.
+        analytics_internal = (
+            analytics_internal_dir / "mod.rs"
+            if analytics_internal_dir.is_dir()
+            else analytics_internal_dir
+        )
         analytics_internal_good = read(analytics_internal)
         analytics_internal.write_text(
             analytics_internal_good + '\nfn bad() { tonic::Status::internal("analytics db failed"); }\n',

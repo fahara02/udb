@@ -13,10 +13,10 @@
 │    UNIVERSAL DATA BROKER                                                   │
 │    gRPC data plane | native control plane | tenant/project scope guard     │
 │                                                                            │
-│    crate v0.4.10 | protocol v1.0.0                                          │
+│    crate v0.4.11 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
-This directory contains the public documentation for UDB 0.4.10. The guides are
+This directory contains the public documentation for UDB 0.4.11. The guides are
 organized around the product surface: architecture, annotations, integration,
 native services, operations, security, testing, and SDKs.
 
