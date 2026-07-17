@@ -19,7 +19,6 @@ use crate::proto::{ErrorDetail, ErrorKind};
 use crate::runtime::catalog::CatalogManager;
 use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
 
-use super::EmbeddingServiceImpl;
 use super::config::{EMBEDDING_BACKFILL_PAGE_LIMIT, STATUS_ACTIVE};
 use super::errors::{
     embedding_capability_status, embedding_source_not_found_status, require_source_tenant_column,
@@ -27,12 +26,13 @@ use super::errors::{
 };
 use super::events::build_work_event_payload;
 use super::handlers::{parse_grpc_timeout, remaining_before_deadline, retrieve_hit_payload_json};
-use super::model::{StoredSource, build_embedding_point};
+use super::model::{build_embedding_point, merge_retrieve_filter, StoredSource};
 use super::workers::{
     backfill_read_context, backfill_select_request, embedding_teardown_jobs_sql,
     embedding_teardown_point_ids_sql, embedding_work_jobs_sql, extract_source_text,
     parse_source_text_fields, source_change_is_delete, source_change_row, source_change_row_pk,
 };
+use super::EmbeddingServiceImpl;
 
 fn decode_detail(status: &Status) -> ErrorDetail {
     let raw = status
@@ -318,6 +318,74 @@ fn embedding_point_is_tenant_tagged_no_fail_open() {
     );
 }
 
+/// The caller `filter_json` is merged UNDER the mandatory tenant clause: the
+/// verified `_tenant_id` `must` condition stays first and authoritative, a caller
+/// filter can only narrow, and any attempt to reference an internal `_`-prefixed
+/// payload key (a tenant-escape) is rejected fail-closed.
+#[test]
+fn retrieve_filter_merges_under_authoritative_tenant_clause() {
+    // Empty / whitespace filter ⇒ the original tenant-only clause, byte-for-byte.
+    let tenant_only =
+        serde_json::json!({ "must": [{ "key": "_tenant_id", "match": { "value": "t1" } }] });
+    assert_eq!(merge_retrieve_filter("t1", "").unwrap(), tenant_only);
+    assert_eq!(merge_retrieve_filter("t1", "   ").unwrap(), tenant_only);
+
+    // A caller `must` condition is appended AFTER the tenant clause (which stays
+    // first and is ANDed, so the caller can only narrow scope).
+    let merged = merge_retrieve_filter(
+        "t1",
+        r#"{"must":[{"key":"doc_type","match":{"value":"invoice"}}]}"#,
+    )
+    .unwrap();
+    let must = merged.get("must").unwrap().as_array().unwrap();
+    assert_eq!(must.len(), 2);
+    assert_eq!(must[0].get("key").unwrap(), "_tenant_id");
+    assert_eq!(must[1].get("key").unwrap(), "doc_type");
+
+    // `should` / `must_not` groups are carried through, tenant still forced into `must`.
+    let merged = merge_retrieve_filter(
+        "t1",
+        r#"{"should":[{"key":"tag","match":{"value":"x"}}],"must_not":[{"key":"archived","match":{"value":true}}]}"#,
+    )
+    .unwrap();
+    assert!(merged.get("should").is_some());
+    assert!(merged.get("must_not").is_some());
+    assert_eq!(
+        merged.get("must").unwrap().as_array().unwrap()[0]
+            .get("key")
+            .unwrap(),
+        "_tenant_id"
+    );
+
+    // SECURITY: a caller may not reference any internal `_`-prefixed key, even
+    // nested, and malformed input fails closed rather than being ignored.
+    assert!(
+        merge_retrieve_filter(
+            "t1",
+            r#"{"must":[{"key":"_tenant_id","match":{"value":"OTHER"}}]}"#
+        )
+        .is_err(),
+        "must reject an attempt to override the tenant clause"
+    );
+    assert!(merge_retrieve_filter(
+        "t1",
+        r#"{"must":[{"key":"_project","match":{"value":"p"}}]}"#
+    )
+    .is_err());
+    assert!(
+        merge_retrieve_filter(
+            "t1",
+            r#"{"must":[{"should":[{"key":"_tenant_id","match":{"value":"x"}}]}]}"#
+        )
+        .is_err(),
+        "must reject a nested internal-key reference"
+    );
+    assert!(merge_retrieve_filter("t1", "not json").is_err());
+    assert!(merge_retrieve_filter("t1", "[1,2,3]").is_err());
+    assert!(merge_retrieve_filter("t1", r#"{"whatever":[]}"#).is_err());
+    assert!(merge_retrieve_filter("t1", r#"{"must":{}}"#).is_err());
+}
+
 /// RegisterSource fails closed when the source entity has no resolvable tenant
 /// column (a reported vector / Retrieve would otherwise have no tenant
 /// predicate to inject).
@@ -367,11 +435,9 @@ fn retrieve_past_deadline_returns_deadline_exceeded() {
         .expect("some remaining budget");
     assert!(remaining > Duration::from_secs(20));
     // No deadline ⇒ unbounded (None).
-    assert!(
-        remaining_before_deadline(None, base)
-            .expect("no deadline ok")
-            .is_none()
-    );
+    assert!(remaining_before_deadline(None, base)
+        .expect("no deadline ok")
+        .is_none());
 }
 
 /// The gRPC timeout header parser handles the standard unit suffixes.
