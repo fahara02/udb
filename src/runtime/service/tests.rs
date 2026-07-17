@@ -821,6 +821,7 @@ fn full_service_descriptor_surface_snapshot() {
                 "RotateTransitKey",
                 "SealStatus",
                 "Sign",
+                "UndeleteSecret",
                 "Verify",
             ],
         ),

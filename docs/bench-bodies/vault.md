@@ -19,4 +19,5 @@ _proto: core/vault/services/v1/vault_service.proto_
 | [ ] | RotateTransitKey | MUTATION | RotateTransitKeyRequest | `{ "tenant_id": "<seed:tenant_id>", "key_name": "<seed:vault_key_name>" }` | rotates the seeded transit key. |
 | [ ] | SealStatus | READ_ONLY | SealStatusRequest | `{ "tenant_id": "<seed:tenant_id>" }` | reads the tenant vault seal status. |
 | [ ] | Sign | MUTATION | SignRequest | `{ "tenant_id": "<seed:tenant_id>", "key_name": "<seed:vault_key_name>", "input": "perf" }` | signs a small transit input. |
+| [ ] | UndeleteSecret | MUTATION | UndeleteSecretRequest | `{ "tenant_id": "<seed:tenant_id>", "secret_path": "<seed:vault_undelete_secret_path>" }` | restores a soft-deleted secret to ACTIVE; requires a seeded soft-deleted (not destroyed) secret path. |
 | [ ] | Verify | READ_ONLY | VerifyRequest | `{ "tenant_id": "<seed:tenant_id>", "key_name": "<seed:vault_key_name>", "input": "perf", "signature": "<seed:vault_signature>" }` | verifies the seeded transit signature. |

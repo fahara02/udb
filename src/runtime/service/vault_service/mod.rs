@@ -8,8 +8,8 @@
 //! [`DataBrokerRuntime::decrypt_secret_at_rest`]:
 //!
 //!   * KV      — versioned, envelope-encrypted secrets at hierarchical paths
-//!               (`tenant/<t>/app/<path>`), with compare-and-swap, soft delete,
-//!               and crypto-shred destroy.
+//!               (`tenant/<t>/app/<path>`), with compare-and-swap, soft delete +
+//!               undelete (restore), and crypto-shred destroy.
 //!   * Transit — encrypt/decrypt/sign/verify/hmac by key NAME (+ envelope
 //!               generate-data-key/rewrap and, for ed25519 signing keys,
 //!               get-transit-public-key); private key material is never exported
@@ -42,7 +42,7 @@
 //! the durable-row DTOs + JSON decoders + version selectors, [`store`] the
 //! neutral-IR read/record builders, [`dynamic`] the dynamic DB-credential engine
 //! helpers, [`events`] the audit emit, [`workers`] the leader-elected lease
-//! reaper, [`handlers`] the seventeen RPCs — `mod.rs` keeps only the struct, the
+//! reaper, [`handlers`] the eighteen RPCs — `mod.rs` keeps only the struct, the
 //! builders/require-guard/seal-gate/read helpers, and one-line trait delegators.
 
 use std::sync::Arc;
@@ -275,6 +275,13 @@ impl VaultService for VaultServiceImpl {
         request: Request<vault_pb::DeleteSecretRequest>,
     ) -> Result<Response<vault_pb::DeleteSecretResponse>, Status> {
         handlers::delete_secret(self, request).await
+    }
+
+    async fn undelete_secret(
+        &self,
+        request: Request<vault_pb::UndeleteSecretRequest>,
+    ) -> Result<Response<vault_pb::UndeleteSecretResponse>, Status> {
+        handlers::undelete_secret(self, request).await
     }
 
     async fn destroy_secret(

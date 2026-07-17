@@ -16,6 +16,7 @@ pub(crate) const VAULT_DB_CREDENTIAL_LEASE_MSG: &str =
 pub(crate) const TOPIC_SECRET_PUT: &str = "udb.vault.secret.put.v1";
 pub(crate) const TOPIC_SECRET_ACCESSED: &str = "udb.vault.secret.accessed.v1";
 pub(crate) const TOPIC_SECRET_DELETED: &str = "udb.vault.secret.deleted.v1";
+pub(crate) const TOPIC_SECRET_RESTORED: &str = "udb.vault.secret.restored.v1";
 pub(crate) const TOPIC_SECRET_DESTROYED: &str = "udb.vault.secret.destroyed.v1";
 pub(crate) const TOPIC_KEY_CREATED: &str = "udb.vault.transit_key.created.v1";
 pub(crate) const TOPIC_KEY_ROTATED: &str = "udb.vault.transit_key.rotated.v1";

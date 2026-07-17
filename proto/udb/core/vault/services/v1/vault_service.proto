@@ -249,6 +249,52 @@ service VaultService {
     option (google.api.http) = {post: "/v1/vault/secrets:delete" body: "*"};
   }
 
+  // Restore a soft-DELETED secret: flip its latest deleted version back to ACTIVE.
+  // A soft delete keeps the ciphertext + wrapped key, so recovery is exact. A
+  // crypto-shredded (DestroySecret) version can NEVER be restored.
+  rpc UndeleteSecret(UndeleteSecretRequest) returns (UndeleteSecretResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:vault:undelete-secret"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "vault.UndeleteSecret"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "undelete_secret" rest_operation_id: "undeleteSecret"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "vault"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "vault"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "vault.UndeleteSecret"
+      outbox_topic: "udb.vault.secret.restored.v1"
+      partition_key_field: "secret_path"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {post: "/v1/vault/secrets:undelete" body: "*"};
+  }
+
   // Crypto-shred every version of a secret: clears the wrapped DEK + ciphertext
   // so the value is irrecoverable. DESTRUCTIVE + irreversible — a confirmation
   // token is required and an empty token fails closed.
@@ -900,6 +946,28 @@ message DeleteSecretResponse {
   };
   string message = 1;
   udb.core.common.v1.ApiError error = 2;
+}
+
+message UndeleteSecretRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 3 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string secret_path = 2;
+}
+
+message UndeleteSecretResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 3 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  string secret_path = 1;
+  int32 version = 2;
+  string message = 3;
+  udb.core.common.v1.ApiError error = 4;
 }
 
 message DestroySecretRequest {

@@ -1,5 +1,5 @@
-//! The seventeen `VaultService` RPC handlers (KV put/get/list/delete/destroy,
-//! transit create/rotate/encrypt/decrypt/sign/verify/hmac + envelope
+//! The eighteen `VaultService` RPC handlers (KV put/get/list/delete/undelete/
+//! destroy, transit create/rotate/encrypt/decrypt/sign/verify/hmac + envelope
 //! generate-data-key/rewrap + ed25519 get-transit-public-key, seal-status, and
 //! dynamic database-credential generation), extracted from the trait impl as free
 //! `pub(crate) async fn`s taking `svc` where the trait method took `&self`.
@@ -31,9 +31,10 @@ use super::config::{
     KEY_STATE_VERIFYING, MAX_LIST_SECRETS, SIGNING_TRANSIT_ALGORITHM, STATE_ACTIVE, STATE_DELETED,
     STATE_DESTROYED, TOPIC_DB_CREDENTIAL_ISSUED, TOPIC_KEY_CREATED, TOPIC_KEY_ROTATED,
     TOPIC_SECRET_ACCESSED, TOPIC_SECRET_DELETED, TOPIC_SECRET_DESTROYED, TOPIC_SECRET_LISTED,
-    TOPIC_SECRET_PUT, TOPIC_TRANSIT_DECRYPTED, TOPIC_TRANSIT_ENCRYPTED, TOPIC_TRANSIT_HMAC,
-    TOPIC_TRANSIT_SIGNED, TOPIC_TRANSIT_VERIFIED, VAULT_DB_CREDENTIAL_LEASE_MSG,
-    VAULT_ED25519_PREFIX, VAULT_HMAC_PREFIX, VAULT_SECRET_MSG, VAULT_TRANSIT_KEY_MSG,
+    TOPIC_SECRET_PUT, TOPIC_SECRET_RESTORED, TOPIC_TRANSIT_DECRYPTED, TOPIC_TRANSIT_ENCRYPTED,
+    TOPIC_TRANSIT_HMAC, TOPIC_TRANSIT_SIGNED, TOPIC_TRANSIT_VERIFIED,
+    VAULT_DB_CREDENTIAL_LEASE_MSG, VAULT_ED25519_PREFIX, VAULT_HMAC_PREFIX, VAULT_SECRET_MSG,
+    VAULT_TRANSIT_KEY_MSG,
 };
 use super::crypto::{
     DataKey, PlaintextSecret, constant_time_eq, dek_open, dek_seal, ed25519_public_key_b64,
@@ -402,6 +403,92 @@ pub(crate) async fn delete_secret(
 
     Ok(Response::new(vault_pb::DeleteSecretResponse {
         message: "secret soft-deleted".to_string(),
+        error: None,
+    }))
+}
+
+pub(crate) async fn undelete_secret(
+    svc: &VaultServiceImpl,
+    request: Request<vault_pb::UndeleteSecretRequest>,
+) -> Result<Response<vault_pb::UndeleteSecretResponse>, Status> {
+    let metadata = request.metadata().clone();
+    let req = request.into_inner();
+    svc.check_seal()?;
+    validate_request_tenant(&metadata, &req.tenant_id)?;
+    let tenant_id = req.tenant_id.trim().to_string();
+    let secret_path = req.secret_path.trim().to_string();
+    if secret_path.is_empty() {
+        return Err(vault_required_secret_path());
+    }
+    let _admit = native_admit_on(
+        svc.channels.as_ref(),
+        &svc.metrics,
+        "vault",
+        OperationChannel::Admin,
+        &tenant_id,
+        None,
+    )
+    .await?;
+    let runtime = svc.require_runtime()?;
+    let context = native_service_context(&metadata, &tenant_id, "");
+
+    let versions = svc
+        .read_secret_versions(runtime, &context, &tenant_id, &secret_path)
+        .await?;
+    // Restore the latest SOFT-deleted version. A crypto-shredded (DESTROYED)
+    // version is never eligible — its key material is gone, so recovery is
+    // impossible; fail closed rather than "restore" an unopenable row.
+    let Some(deleted) = versions
+        .iter()
+        .filter(|s| s.state == STATE_DELETED)
+        .max_by_key(|s| s.version)
+    else {
+        return Err(vault_schema_not_found_status(
+            "undelete_secret",
+            "vault_secret_not_found",
+            "no soft-deleted secret version to restore (a destroyed secret cannot be recovered)",
+        ));
+    };
+    // The soft delete kept the ciphertext + wrapped DEK, so flip the same row back
+    // to ACTIVE for an exact recovery.
+    runtime
+        .native_entity_write_for_service(
+            "vault",
+            &context,
+            VAULT_SECRET_MSG,
+            secret_record(
+                &deleted.secret_id,
+                &tenant_id,
+                &secret_path,
+                deleted.version,
+                &deleted.ciphertext,
+                &deleted.data_key_wrapped,
+                STATE_ACTIVE,
+                &deleted.metadata_json,
+            ),
+            secret_conflict(),
+        )
+        .await?;
+
+    svc.emit(
+        TOPIC_SECRET_RESTORED,
+        &secret_path,
+        &tenant_id,
+        &context.project_id,
+        "undelete",
+        &secret_path,
+        serde_json::json!({
+            "tenant_id": tenant_id,
+            "secret_path": secret_path,
+            "version": deleted.version,
+        }),
+    )
+    .await;
+
+    Ok(Response::new(vault_pb::UndeleteSecretResponse {
+        secret_path,
+        version: deleted.version as i32,
+        message: "secret restored".to_string(),
         error: None,
     }))
 }
