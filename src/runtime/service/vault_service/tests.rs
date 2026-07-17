@@ -20,7 +20,8 @@ use super::config::{
 };
 use super::crypto::{
     constant_time_eq, dek_open, dek_seal, ed25519_sign_b64, ed25519_verify_b64, hmac_sha256,
-    parse_transit_envelope, validate_transit_algorithm, DataKey, PlaintextSecret,
+    parse_transit_envelope, require_encryption_algorithm, validate_transit_algorithm, DataKey,
+    PlaintextSecret,
 };
 use super::dynamic::{
     parse_vault_db_role_configs, requested_db_credential_ttl, validate_db_role_alias,
@@ -519,6 +520,22 @@ fn ed25519_sign_verify_round_trips_and_rejects_tampering() {
     let sig2 = ed25519_sign_b64(&other.0, b"dispatch record 42");
     assert!(ed25519_verify_b64(&other.0, b"dispatch record 42", &sig2));
     assert!(!ed25519_verify_b64(&seed, b"dispatch record 42", &sig2));
+}
+
+/// The encryption path refuses an Ed25519 signing key (key-purpose confusion): a
+/// signing seed is not an AEAD key. Encryption-algorithm keys pass through.
+#[test]
+fn encryption_path_rejects_a_signing_key() {
+    assert!(require_encryption_algorithm("aes256-gcm-siv", "encrypt").is_ok());
+    assert!(require_encryption_algorithm("", "decrypt").is_ok());
+    let err = require_encryption_algorithm("ed25519", "encrypt")
+        .expect_err("an ed25519 signing key must not be used to encrypt");
+    assert_eq!(err.code(), tonic::Code::InvalidArgument);
+    assert_single_field_violation(
+        &err,
+        "key_name",
+        "must name an encryption key (aes256-gcm-siv), not an ed25519 signing key",
+    );
 }
 
 #[test]

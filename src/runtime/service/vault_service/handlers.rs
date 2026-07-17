@@ -35,8 +35,9 @@ use super::config::{
 };
 use super::crypto::{
     constant_time_eq, dek_open, dek_seal, ed25519_sign_b64, ed25519_verify_b64, hmac_sha256,
-    parse_ed25519_envelope, parse_mac_envelope, parse_transit_envelope, transit_payload,
-    unwrap_dek, validate_transit_algorithm, wrap_dek, DataKey, PlaintextSecret,
+    parse_ed25519_envelope, parse_mac_envelope, parse_transit_envelope,
+    require_encryption_algorithm, transit_payload, unwrap_dek, validate_transit_algorithm,
+    wrap_dek, DataKey, PlaintextSecret,
 };
 use super::dynamic::{
     create_postgres_login_role, drop_postgres_login_role, generate_db_password,
@@ -700,6 +701,7 @@ pub(crate) async fn encrypt(
             "transit key not found or has no active version",
         )
     })?;
+    require_encryption_algorithm(&active.algorithm, "encrypt")?;
     let dek = unwrap_dek(runtime, &active.wrapped_key_material)?;
     let plaintext = PlaintextSecret(req.plaintext);
     let ciphertext = dek_seal(&dek, active.version, plaintext.0.as_bytes())?;
@@ -769,6 +771,7 @@ pub(crate) async fn decrypt(
                 "transit key version not found or retired",
             )
         })?;
+    require_encryption_algorithm(&key.algorithm, "decrypt")?;
     let dek = unwrap_dek(runtime, &key.wrapped_key_material)?;
     let bytes = dek_open(&dek, encoded)?;
     let plaintext = PlaintextSecret(String::from_utf8(bytes).map_err(|_| {
@@ -836,6 +839,7 @@ pub(crate) async fn generate_data_key(
     // Envelope encryption: mint a fresh random 256-bit DEK, wrap it under the
     // transit key (same seal path as Encrypt). The plaintext DEK is returned ONCE
     // for the caller's local use and is never persisted broker-side.
+    require_encryption_algorithm(&active.algorithm, "generate_data_key")?;
     let transit_dek = unwrap_dek(runtime, &active.wrapped_key_material)?;
     let new_dek = DataKey::generate();
     let ciphertext = dek_seal(&transit_dek, active.version, &new_dek.0)?;
@@ -909,6 +913,7 @@ pub(crate) async fn rewrap(
                 "transit key version not found or retired",
             )
         })?;
+    require_encryption_algorithm(&old_key.algorithm, "rewrap")?;
     let old_dek = unwrap_dek(runtime, &old_key.wrapped_key_material)?;
     let raw = dek_open(&old_dek, encoded)?;
 

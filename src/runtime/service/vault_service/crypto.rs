@@ -24,8 +24,8 @@ use uuid::Uuid;
 use crate::runtime::DataBrokerRuntime;
 
 use super::config::{
-    DEFAULT_TRANSIT_ALGORITHM, SUPPORTED_TRANSIT_ALGORITHMS, VAULT_ED25519_PREFIX,
-    VAULT_HMAC_PREFIX, VAULT_TRANSIT_ENVELOPE_PREFIX,
+    DEFAULT_TRANSIT_ALGORITHM, SIGNING_TRANSIT_ALGORITHM, SUPPORTED_TRANSIT_ALGORITHMS,
+    VAULT_ED25519_PREFIX, VAULT_HMAC_PREFIX, VAULT_TRANSIT_ENVELOPE_PREFIX,
 };
 use super::errors::{
     vault_field_violation, vault_internal_status, vault_master_key_operation_status,
@@ -286,6 +286,28 @@ pub(crate) fn validate_transit_algorithm(requested: &str) -> Result<String, Stat
         format!("must be one of the supported transit algorithms: {supported}"),
         format!("unsupported transit key algorithm '{trimmed}'; supported: {supported}"),
     ))
+}
+
+/// Reject the encryption path (Encrypt/Decrypt/GenerateDataKey/Rewrap) on a key
+/// created with the Ed25519 signing algorithm: its material is a signature seed,
+/// not an AEAD key, so encrypting with it is a key-purpose confusion. Keeps key
+/// purpose unambiguous — a signing key signs (Sign/Verify), an encryption key
+/// encrypts. A no-op for every encryption-algorithm key (the common case).
+pub(crate) fn require_encryption_algorithm(algorithm: &str, operation: &str) -> Result<(), Status> {
+    if algorithm == SIGNING_TRANSIT_ALGORITHM {
+        return Err(vault_field_violation(
+            "key_name",
+            format!(
+                "must name an encryption key ({DEFAULT_TRANSIT_ALGORITHM}), not an \
+                 {SIGNING_TRANSIT_ALGORITHM} signing key"
+            ),
+            format!(
+                "{operation} requires an encryption key; the named key uses the \
+                 {SIGNING_TRANSIT_ALGORITHM} signing algorithm (use Sign/Verify instead)"
+            ),
+        ));
+    }
+    Ok(())
 }
 
 /// The transit-ciphertext stored for a KV secret is written as a bare
