@@ -448,7 +448,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "CacheService Redis transient failures use typed retryable detail",
-        "src/runtime/service/cache_service/mod.rs",
+        "src/runtime/service/cache_service",
         (
             'backend_transport_status("redis", context, err)',
             'backend_transport_status(',
@@ -466,7 +466,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "CacheService missing Redis capability uses typed capability detail",
-        "src/runtime/service/cache_service/mod.rs",
+        "src/runtime/service/cache_service",
         (
             "redis_capability_status",
             "capability_status",
@@ -6461,7 +6461,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "cache hard quota error uses typed non-retryable detail",
-        "src/runtime/service/cache_service/mod.rs",
+        "src/runtime/service/cache_service",
         (
             "crate::runtime::executor_utils::quota_refusal_status",
             '"cache"',
@@ -6692,7 +6692,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
     ),
     TokenCheck(
         "cache request validation uses typed field violations",
-        "src/runtime/service/cache_service/mod.rs",
+        "src/runtime/service/cache_service",
         (
             "crate::runtime::executor_utils::invalid_argument_fields",
             '"namespace is required"',
