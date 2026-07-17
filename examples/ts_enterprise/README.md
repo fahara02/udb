@@ -1,54 +1,110 @@
-# UDB enterprise TypeScript example
+# Connect to UDB from TypeScript — the enterprise path
 
-A **standalone** project (it installs `@udb_plus/sdk` from npm — no source
-imports) that runs the **real** enterprise path against a UDB broker:
+This is the real, no-shortcuts way to go from *username + password* to *doing
+tenant-scoped work* against a UDB broker in TypeScript: log in, get a JWT, and
+run tenant-scoped CRUD that the broker actually authorizes. It's a **standalone**
+project — it installs `@udb_plus/sdk` from npm and imports it like any other
+dependency, no source paths into this repo.
 
-```
-provision  →  authn (password → RS256 JWT)  →  authz (default-deny ABAC)
-           →  tenant-scoped CRUD of a billing.Invoice  →  isolation check
-```
+If you only remember one thing: **you log in with the human tenant *code* (e.g.
+`acme`), but you do all your data work with the canonical tenant *UUID* the
+broker hands back.** Mixing those two up is the single most common UDB
+integration bug — your reads quietly return nothing, because row-level security
+compares UUIDs and `"acme"` is not a UUID. The login flow below resolves the code
+to its UUID for you; you adopt that UUID and use it everywhere after.
 
-Unlike a "hello world", it faces the friction real deployments hit — and shows
-how each is resolved:
+Unlike a "hello world", this example faces the friction real deployments hit:
 
-| Real-world friction | How this example handles it |
-|---|---|
-| The SDK is a dependency, not a file you import | `npm install @udb_plus/sdk`, `import { UdbProject } from "@udb_plus/sdk"` |
-| Auth lives on a **separate** listener (`:50061`), not the data port (`:50051`) | client sets `authTarget`; broker sets `UDB_AUTH_GRPC_ADDR` |
-| Login needs JWT keys + session/password secrets | `bootstrap.sh` generates an RS256 keypair + HMAC secrets |
-| The JWT tenant claim is a **canonical UUID**, not the code `"acme"` | client verifies the bearer and adopts `principal.tenant_id` |
-| Authorization is **default-deny**; the org-owner role alone is not enough | `bootstrap.sh` seeds a real ABAC policy (`UDB_ABAC_POLICIES_JSON`) |
-| Two authz surfaces (data-plane ABAC vs control-plane Casbin) disagree | documented below; the example relies on the authoritative data-plane gate |
-| Tenant-scoped reads must filter on `tenant_id` | every `select`/`delete` carries the adopted tenant UUID |
-| The row type duplicates the proto | `Invoice` is **generated** from `invoice.proto` (ts-proto), not hand-written |
+- The **auth control plane is on a separate listener** (`:50061`), not the data
+  port (`:50051`). Call `login` on the data port and you get `UNIMPLEMENTED`.
+- **Authorization is default-deny.** Without a seeded access policy, even an
+  org-owner admin gets `PERMISSION_DENIED` on every CRUD call. `bootstrap.sh`
+  seeds a real policy so you can watch it work.
+- The **row type is generated from the proto**, not hand-written — so your code
+  and the schema the broker serves can't drift apart.
 
-> The dev counterpart (header-scopes, default-allow, no login) is intentionally
-> *not* what this is. For the broker-side hardening reference see
+> This is the hardened shape (real JWT login, default-deny). The dev counterpart
+> — header-scopes, default-allow, no login — is intentionally *not* what this is.
+> For broker-side hardening, see
 > [`../../docs/enterprise-deployment.md`](../../docs/enterprise-deployment.md).
 
----
+## The 30-second version
 
-## Prerequisites
-- **Docker** (PostgreSQL), **Node 18+**, **openssl**, and **buf** (for type-gen).
-- The **`udb` CLI** — `cargo build --release --bin udb`, or set `UDB_CLI` to a
-  binary. The scripts auto-find `udb` on `PATH` / `target/{release,debug}`.
+TypeScript doesn't have a one-call `ConnectEnterprise` like the Go SDK; you do
+the four steps yourself, and they're short:
+
+```ts
+import { UdbProject } from "@udb_plus/sdk";
+
+// 1. Connect. Two listeners: data plane + the separate auth plane.
+const udb = await UdbProject.connect({
+  target:     "127.0.0.1:50051", // DataBroker (public) listener
+  authTarget: "127.0.0.1:50061", // auth (native-bearer) listener
+  tenantId:   "acme",            // the HUMAN code you know up front
+  projectId:  "default",
+  purpose:    "billing-app",
+});
+
+// 2. Log in → RS256 JWT.
+const login = await udb.login({ username: "admin", password: process.env.UDB_PASS! });
+
+// 3. Verify the bearer and read the VERIFIED tenant UUID out of it.
+const verified = await udb.auth.authenticateBearer(login.access_token);
+const tenant = verified.principal.tenant_id;   // the canonical UUID — never "acme"
+udb.setTenant(tenant);                          // adopt it on every outbound call
+
+// 4. Do tenant-scoped work. tenant_id is the UUID RLS matches on.
+const invoices = udb.data.table("billing.v1.Invoice", { key: ["invoice_id"] });
+await invoices.upsert({ invoice_id: "inv-1001", tenant_id: tenant, amount_cents: 4200, status: "paid" });
+```
+
+No `protoc` step at call time: rows go as plain objects and the broker validates
+them against the proto it serves. The generated `Invoice` type just gives you
+compile-time field checking.
+
+## What the full example does, in order
+
+[`src/main.ts`](src/main.ts) walks the whole flow and prints each stage:
+
+1. **Connect** to both listeners. The data plane is `:50051`; the native auth
+   control plane is `:50061`. The SDK dials both — you don't wire two clients.
+2. **Authn** — a real password login returns an RS256 JWT (`login.access_token`).
+   If the broker has no signing key, you'll see a clear error instead of a
+   mystery failure.
+3. **Adopt the canonical tenant** — `authenticateBearer` verifies the token and
+   returns the *principal*, including the real tenant UUID and scopes. From here
+   on, `udb.setTenant(uuid)` means the human code `"acme"` is only a memory; the
+   UUID is the truth. A tenant-scoped RPC rejects a mismatched tenant, so this
+   step is not optional.
+4. **CRUD** a tenant-scoped `billing.Invoice`: create, read, update, delete —
+   each carrying the adopted UUID as `tenant_id`. A tenant-scoped read *requires*
+   `tenant_id` in the filter; the broker rejects an unscoped read outright.
+5. **Isolation check** — it re-creates the row, then asks for a *different*
+   tenant's data and shows you it comes back empty. That proves the guard is
+   real rather than asking you to take it on faith.
 
 ## Run it
 
+**Prerequisites:** Docker (for PostgreSQL), Node 18+, `openssl`, and `buf` (to
+generate the row type). You also need the **`udb` CLI** — build it with
+`cargo build --release --bin udb`, or point `UDB_CLI` at a binary. The scripts
+auto-find `udb` on `PATH` and under `target/{release,debug}`.
+
 ```bash
-# 1. Postgres (the enterprise DB is created on a dedicated database name).
+# 1. Postgres. php_quickstart's compose already maps host :55432 → container
+#    :5432 (the port bootstrap.sh expects); the enterprise DB is a separate name.
 cd ../php_quickstart && docker compose up -d && cd ../ts_enterprise
 docker exec udb-php-quickstart-postgres-1 psql -U udb -d udb -c "CREATE DATABASE udb_enterprise;" || true
 
 # 2. Provision: RS256 keys, HMAC secrets, the admin user (bound to
-#    organization_owner → udb:*), and the seeded ABAC policy. Writes secrets/.
+#    organization_owner → udb:*), and a seeded ABAC policy. Writes secrets/.
 ./scripts/bootstrap.sh
 
 # 3. Start the broker in ENTERPRISE mode (keep this terminal open).
 #    Wait for "UDB DataBroker is ready".
 ./scripts/serve.sh
 
-# 4. (second terminal) Install the SDK + generate the Invoice type, then run.
+# 4. (second terminal) Install the SDK, generate the Invoice type, run.
 npm install
 npm run gen                       # udb proto export + buf generate → gen/billing/v1/invoice.ts
 set -a; source secrets/enterprise.env; set +a
@@ -56,7 +112,9 @@ npm start
 ```
 
 Expected output:
+
 ```
+transport: plaintext
 authn: logged in as admin
        tenant code "acme" → canonical UUID 00000000-0000-0000-0000-0000000d0001
        scopes: ["udb:admin","udb:*"]
@@ -70,7 +128,39 @@ authz: cross-tenant read (tenant …d9999) → 0 row(s) — isolation enforced
 ENTERPRISE FLOW OK (authn + authz + tenant-scoped CRUD + isolation)
 ```
 
----
+### Configuration
+
+`bootstrap.sh` writes these into `secrets/enterprise.env`; you `source` that
+before `npm start`. The client (`src/main.ts`) reads only these five — the rest
+of the env file is for the broker. Everything except `UDB_PASS` has a default:
+
+| Env var | What it is | Default |
+|---|---|---|
+| `UDB_PASS` | admin password (from `bootstrap.sh`) | **required** |
+| `UDB_TARGET` | DataBroker (public) address | `127.0.0.1:50051` |
+| `UDB_AUTH_TARGET` | auth (native-bearer) address | `127.0.0.1:50061` |
+| `UDB_USER` | username to log in as | `admin` |
+| `UDB_TENANT` | human tenant code | `acme` |
+
+## Common mistakes this example is designed to prevent
+
+- **Using the tenant code in filters.** Always use the UUID from
+  `verified.principal.tenant_id` after `udb.setTenant(...)`, never `"acme"`.
+  RLS matches on the UUID, so a human code silently returns zero rows instead of
+  erroring — the most confusing way to fail.
+- **Logging in on the wrong port.** `login` lives on the auth listener
+  (`:50061`), not the data port. Point `authTarget` at it.
+- **Expecting the org-owner role to be enough.** Authorization is default-deny:
+  the data plane reads an ABAC policy snapshot on *every* CRUD call, and without
+  a seeded policy even `udb:*` gets `PERMISSION_DENIED`. `bootstrap.sh` seeds it
+  via `UDB_ABAC_POLICIES_JSON`.
+- **Hand-writing the row shape.** The `Invoice` type is generated from
+  `invoice.proto` with `buf generate`, using **snake_case** field names
+  (`invoice_id`, `amount_cents`, …) so it matches the JSON the SDK's `data.table`
+  puts on the wire. Rename a field to camelCase and the row won't round-trip —
+  keep the generated names.
+- **Forgetting isolation is server-enforced.** You don't police tenant
+  boundaries in app code; UDB's row-level security does. Step 5 proves it.
 
 ## The two authorization surfaces (a real UDB gotcha)
 
@@ -79,25 +169,31 @@ UDB authorizes in **two** independent places, and they are not the same engine:
 1. **Data-plane ABAC** — gates every `Select`/`Upsert`/`Delete`. Built from an
    ABAC policy snapshot (`UDB_ABAC_POLICIES_JSON`, or the `udb_abac_policies`
    table). **This is the authoritative gate on your data, and it is
-   default-deny** — without a seeded policy, even an `organization_owner` admin
-   gets `PERMISSION_DENIED`. `bootstrap.sh` seeds it.
-2. **Control-plane Casbin** — what the SDK's `udb.authz.can/require` query
-   (`AuthzService.Check`), a governance model over roles + `policy_rules`. It can
-   say DENY while the data-plane says ALLOW until *its* rules are seeded too.
+   default-deny.** `bootstrap.sh` seeds it, and it's what this example relies on.
+2. **Control-plane Casbin** — the engine behind the SDK's `udb.authz.can` /
+   `udb.authz.require` queries: a governance model over roles and policy rules.
+   It can answer DENY while the data plane allows, until *its* rules are seeded
+   too.
 
-This example relies on (1) — the gate that actually runs on each CRUD call.
-Seeding (2) to match is a governance exercise (`udb auth policy …`).
+This example depends on (1), the gate that actually runs on each CRUD call.
+Seeding (2) to match is a separate governance exercise (`udb auth policy …`).
 
 ## Going further: TLS / mTLS
 
-This example uses plaintext on localhost with real JWT auth (a valid hardened
-shape is to terminate TLS at an edge proxy). For in-broker TLS, set `UDB_TLS_*`
-(and `UDB_MTLS_*`) on the broker and pass `tls: { rootCerts, privateKey,
-certChain }` to `UdbProject.connect`. See `docs/enterprise-deployment.md`.
+This example runs plaintext on localhost with real JWT auth (terminating TLS at
+an edge proxy is a valid hardened shape). For in-broker TLS, set `UDB_TLS_*` (and
+`UDB_MTLS_*`) on the broker and pass `tls: { rootCerts, certChain, privateKey }`
+to `UdbProject.connect` — `src/main.ts` already reads `UDB_TLS_CA` /
+`UDB_TLS_CLIENT_CERT` / `UDB_TLS_CLIENT_KEY` and switches to mTLS when they're
+set. See [`../../docs/enterprise-deployment.md`](../../docs/enterprise-deployment.md).
 
 ## Files
+
 - `proto/billing/v1/invoice.proto` — your tenant-scoped table (the only schema you write).
-- `gen/billing/v1/invoice.ts` — **generated** `Invoice` type (do not edit).
-- `src/main.ts` — the authn → authz → CRUD flow.
+- `gen/billing/v1/invoice.ts` — the **generated** `Invoice` type (do not edit).
+- `src/main.ts` — the connect → authn → authz → CRUD → isolation flow.
 - `scripts/bootstrap.sh` — one-time provisioning (keys, secrets, admin, ABAC policy).
 - `scripts/serve.sh` — start the broker in enterprise mode.
+- `scripts/serve-mtls.sh` — the same, with in-broker TLS/mTLS.
+</content>
+</invoke>

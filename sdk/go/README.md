@@ -109,8 +109,8 @@ if err != nil {
 The `Udb` facade (`udbclient.NewUdb`) exposes a `Storage` client. `UploadFile`
 runs the register → presigned PUT → finalize sequence in one call; downloads come
 in two flavours — a presigned URL (the happy path, bytes never transit the broker)
-and a server-streaming byte fetch (the 0.3.6 fallback for callers that cannot use
-a presigned HTTP URL).
+and a server-streaming byte fetch (the fallback for callers that cannot use a
+presigned HTTP URL).
 
 ```go
 udb, err := udbclient.NewUdb(ctx, udbclient.Config{Target: "localhost:50051"})
@@ -133,8 +133,8 @@ fileID := up.GetFile().GetFileId()
 // Preferred: mint a time-limited presigned download URL (bytes stay out of the broker).
 url, err := udb.Storage.DownloadFile(ctx, fileID, 15) // valid 15 minutes; 0 = server default
 
-// 0.3.6 fallback: stream the bytes back through the broker when a presigned URL
-// can't be used. Reassembles the server-streaming DownloadFile chunk stream.
+// Streaming fallback: stream the bytes back through the broker when a presigned
+// URL can't be used. Reassembles the server-streaming DownloadFile chunk stream.
 res, err := udb.Storage.DownloadFileBytes(ctx, fileID)
 _ = res.Data // full file bytes; res.ContentType / res.TotalSize / res.ETag carry metadata
 ```

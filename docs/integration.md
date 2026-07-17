@@ -16,7 +16,12 @@
 │    crate v0.4.13 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
-This guide shows the normal application integration flow.
+This is the path from an installed SDK to tenant-scoped calls against a running
+broker. The one thing to get right up front: you name your tenant by its human
+**code** (e.g. `acme`), but row-level security compares the canonical tenant
+**UUID** — the SDK's login/adopt step resolves the code to that UUID for you.
+Passing a raw code without it is the most common reason a first integration reads
+back zero rows.
 
 ## 1. Install An SDK
 
