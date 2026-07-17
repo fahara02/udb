@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"sync"
 	"time"
 
 	authnv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/authn/services/v1"
@@ -50,7 +51,13 @@ type EnterpriseSession struct {
 	// Tenant tracks the code -> canonical-UUID transition + the fail-fast guard.
 	Tenant TenantState
 
-	bearer string // "Bearer <access-token>"
+	// tm resolves + refreshes the bearer for the session's whole lifetime, instead
+	// of freezing the single initial access token (which expires and would drop a
+	// long-running service). Composed from the login token in ConnectEnterprise.
+	tm *TokenManager
+	// mu guards the cached bearer against a concurrent refresh + Bearer() read.
+	mu     sync.Mutex
+	bearer string // last-known "Bearer <access-token>", refreshed via tm
 }
 
 // ConnectEnterprise runs the full enterprise flow in one call and returns a
@@ -110,12 +117,23 @@ func ConnectEnterprise(ctx context.Context, cfg EnterpriseConfig) (*EnterpriseSe
 		return nil, fmt.Errorf("udb: ConnectEnterprise adopt tenant: %w", err)
 	}
 
+	// Seed a TokenManager with the token we just obtained so the session refreshes
+	// its bearer for its whole lifetime — a long-running service must not lose UDB
+	// access when the initial access token expires. Refresh (RefreshToken RPC) uses
+	// the login response's refresh_token + session_id, carried on adopted.Token.
+	store := &MemoryTokenStore{}
+	if err := store.Save(ctx, adopted.Token); err != nil {
+		_ = u.Close()
+		return nil, fmt.Errorf("udb: ConnectEnterprise seed token: %w", err)
+	}
+
 	return &EnterpriseSession{
 		Udb:                u,
 		CanonicalTenantID:  principal.GetTenantId(),
 		CanonicalProjectID: principal.GetProjectId(),
 		Principal:          principal,
 		Tenant:             tenant,
+		tm:                 NewTokenManager(u.Auth, store),
 		bearer:             "Bearer " + adopted.Token.AccessToken,
 	}, nil
 }
@@ -124,18 +142,48 @@ func ConnectEnterprise(ctx context.Context, cfg EnterpriseConfig) (*EnterpriseSe
 // the verified metadata AND the bearer. Use it for every data-plane call so the
 // post-login token is sent (the dial-time interceptor does not carry it).
 func (s *EnterpriseSession) DataContext(ctx context.Context) context.Context {
-	return metadata.AppendToOutgoingContext(s.Udb.Data.Context(ctx), "authorization", s.bearer)
+	return metadata.AppendToOutgoingContext(s.Udb.Data.Context(ctx), "authorization", s.currentBearer(ctx))
 }
 
 // NativeContext returns a context for native control-plane calls (ApiKey/Tenant/
 // Notification/…) carrying the verified metadata AND the bearer.
 func (s *EnterpriseSession) NativeContext(ctx context.Context) context.Context {
-	return metadata.AppendToOutgoingContext(s.Udb.Auth.Context(ctx), "authorization", s.bearer)
+	return metadata.AppendToOutgoingContext(s.Udb.Auth.Context(ctx), "authorization", s.currentBearer(ctx))
 }
 
 // Bearer is the "Bearer <token>" credential, for callers that build their own
 // metadata.
-func (s *EnterpriseSession) Bearer() string { return s.bearer }
+func (s *EnterpriseSession) Bearer() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.bearer
+}
+
+// currentBearer resolves the live bearer, refreshing the access token once when it
+// is expired or within the manager's refresh skew (concurrent callers share ONE
+// RefreshToken RPC via the TokenManager's single-flight). On success it atomically
+// updates the cached bearer so Bearer() reflects the refreshed token too. If
+// refresh fails it returns the last-known bearer, which the broker rejects as
+// Unauthenticated — so a call never silently succeeds on an expired credential
+// (fail closed) rather than proceeding with a stale-but-valid-looking token.
+func (s *EnterpriseSession) currentBearer(ctx context.Context) string {
+	if s.tm == nil {
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		return s.bearer
+	}
+	tok, err := s.tm.Token(ctx)
+	if err != nil || tok.AccessToken == "" {
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		return s.bearer
+	}
+	bearer := "Bearer " + tok.AccessToken
+	s.mu.Lock()
+	s.bearer = bearer
+	s.mu.Unlock()
+	return bearer
+}
 
 // ValidateTenant fails fast (naming both values) if recordTenantID differs from
 // the verified canonical tenant — call it before a tenant-scoped write.
