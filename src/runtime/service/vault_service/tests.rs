@@ -400,7 +400,7 @@ fn transit_algorithm_validation_accepts_supported_and_rejects_unknown() {
     assert_single_field_violation(
         &err,
         "algorithm",
-        "must be one of the supported transit algorithms: aes256-gcm-siv",
+        "must be one of the supported transit algorithms: aes256-gcm-siv, ed25519",
     );
 }
 
