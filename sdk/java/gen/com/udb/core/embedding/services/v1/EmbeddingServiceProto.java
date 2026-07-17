@@ -163,100 +163,102 @@ public final class EmbeddingServiceProto {
       "\010upserted\030\001 \001(\010R\010upserted\022\030\n\007message\030\002 \001" +
       "(\tR\007message\0222\n\005error\030\003 \001(\0132\034.udb.core.co" +
       "mmon.v1.ApiErrorR\005error:\034\232\262\031\030\032\003udb(\260\352\0010\003" +
-      "@\001J\tembedding\"\310\001\n\017RetrieveRequest\022\033\n\tten" +
+      "@\001J\tembedding\"\222\002\n\017RetrieveRequest\022\033\n\tten" +
       "ant_id\030\001 \001(\tR\010tenantId\022\037\n\013source_name\030\002 " +
       "\001(\tR\nsourceName\022\035\n\nquery_text\030\003 \001(\tR\tque" +
       "ryText\022!\n\014query_vector\030\004 \003(\002R\013queryVecto" +
-      "r\022\023\n\005top_k\030\005 \001(\005R\004topK: \232\262\031\034\010\001\032\003udb(\260\352\0010" +
-      "\003@\001J\tembeddingP\001\"V\n\013RetrieveHit\022\016\n\002id\030\001 " +
-      "\001(\tR\002id\022\024\n\005score\030\002 \001(\001R\005score\022!\n\014payload" +
-      "_json\030\003 \001(\tR\013payloadJson\"\303\001\n\020RetrieveRes" +
-      "ponse\022?\n\004hits\030\001 \003(\0132+.udb.core.embedding" +
-      ".services.v1.RetrieveHitR\004hits\022\030\n\007messag" +
-      "e\030\002 \001(\tR\007message\0222\n\005error\030\003 \001(\0132\034.udb.co" +
-      "re.common.v1.ApiErrorR\005error: \232\262\031\034\010\001\032\003ud" +
-      "b(\260\352\0010\003@\001J\tembeddingP\0012\377\026\n\020EmbeddingServ" +
-      "ice\022\202\004\n\016RegisterSource\0225.udb.core.embedd" +
-      "ing.services.v1.RegisterSourceRequest\0326." +
-      "udb.core.embedding.services.v1.RegisterS" +
-      "ourceResponse\"\200\003\312\363\030D\010\002\032\035udb:embedding:re" +
-      "gister-source \001J\002\001\002j\030embedding.RegisterS" +
-      "ource\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030F\010\001\022\017register_sourc" +
-      "e\032\003udb(\260\352\0010\003@\001J\tembeddingP\001Z\027registerEmb" +
-      "eddingSource\352\363\030l\n\030embedding.RegisterSour" +
-      "ce\022\"udb.embedding.source.registered.v1\032\013" +
-      "source_name\"\010standard*\rat_least_once2\006st" +
-      "able\362\363\030C\n\tembedding\032\010postgres2\033UDB_NATIV" +
-      "E_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202" +
-      "\323\344\223\002#\"\036/v1/embedding/sources:register:\001*" +
-      "\022\361\002\n\013ListSources\0222.udb.core.embedding.se" +
-      "rvices.v1.ListSourcesRequest\0323.udb.core." +
-      "embedding.services.v1.ListSourcesRespons" +
-      "e\"\370\001\312\363\030>\010\002\032\032udb:embedding:list-sources \001" +
-      "J\002\001\002j\025embedding.ListSources\220\001\001\322\363\030\006\010\001\020\001 \001" +
-      "\332\363\030@\010\001\022\014list_sources\032\003udb(\260\352\0010\003@\001J\tembed" +
-      "dingP\001Z\024listEmbeddingSources\362\363\030C\n\tembedd" +
+      "r\022\023\n\005top_k\030\005 \001(\005R\004topK\022\037\n\013filter_json\030\006 " +
+      "\001(\tR\nfilterJson\022\'\n\017score_threshold\030\007 \001(\001" +
+      "R\016scoreThreshold: \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\te" +
+      "mbeddingP\001\"V\n\013RetrieveHit\022\016\n\002id\030\001 \001(\tR\002i" +
+      "d\022\024\n\005score\030\002 \001(\001R\005score\022!\n\014payload_json\030" +
+      "\003 \001(\tR\013payloadJson\"\303\001\n\020RetrieveResponse\022" +
+      "?\n\004hits\030\001 \003(\0132+.udb.core.embedding.servi" +
+      "ces.v1.RetrieveHitR\004hits\022\030\n\007message\030\002 \001(" +
+      "\tR\007message\0222\n\005error\030\003 \001(\0132\034.udb.core.com" +
+      "mon.v1.ApiErrorR\005error: \232\262\031\034\010\001\032\003udb(\260\352\0010" +
+      "\003@\001J\tembeddingP\0012\377\026\n\020EmbeddingService\022\202\004" +
+      "\n\016RegisterSource\0225.udb.core.embedding.se" +
+      "rvices.v1.RegisterSourceRequest\0326.udb.co" +
+      "re.embedding.services.v1.RegisterSourceR" +
+      "esponse\"\200\003\312\363\030D\010\002\032\035udb:embedding:register" +
+      "-source \001J\002\001\002j\030embedding.RegisterSource\220" +
+      "\001\001\322\363\030\006\010\001\020\001 \001\332\363\030F\010\001\022\017register_source\032\003udb" +
+      "(\260\352\0010\003@\001J\tembeddingP\001Z\027registerEmbedding" +
+      "Source\352\363\030l\n\030embedding.RegisterSource\022\"ud" +
+      "b.embedding.source.registered.v1\032\013source" +
+      "_name\"\010standard*\rat_least_once2\006stable\362\363" +
+      "\030C\n\tembedding\032\010postgres2\033UDB_NATIVE_SERV" +
+      "ICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002#\"" +
+      "\036/v1/embedding/sources:register:\001*\022\361\002\n\013L" +
+      "istSources\0222.udb.core.embedding.services" +
+      ".v1.ListSourcesRequest\0323.udb.core.embedd" +
+      "ing.services.v1.ListSourcesResponse\"\370\001\312\363" +
+      "\030>\010\002\032\032udb:embedding:list-sources \001J\002\001\002j\025" +
+      "embedding.ListSources\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030@\010\001" +
+      "\022\014list_sources\032\003udb(\260\352\0010\003@\001J\tembeddingP\001" +
+      "Z\024listEmbeddingSources\362\363\030C\n\tembedding\032\010p" +
+      "ostgres2\033UDB_NATIVE_SERVICES_ENABLED2\017UD" +
+      "B_GRPC_TARGET\370\363\030\001\202\323\344\223\002\027\022\025/v1/embedding/s" +
+      "ources\022\355\003\n\014DeleteSource\0223.udb.core.embed" +
+      "ding.services.v1.DeleteSourceRequest\0324.u" +
+      "db.core.embedding.services.v1.DeleteSour" +
+      "ceResponse\"\361\002\312\363\030@\010\002\032\033udb:embedding:delet" +
+      "e-source \001J\002\001\002j\026embedding.DeleteSource\220\001" +
+      "\001\322\363\030\006\010\001\020\001 \001\332\363\030B\010\001\022\rdelete_source\032\003udb(\260\352" +
+      "\0010\003@\001J\tembeddingP\001Z\025deleteEmbeddingSourc" +
+      "e\352\363\030g\n\026embedding.DeleteSource\022\037udb.embed" +
+      "ding.source.deleted.v1\032\013source_name\"\010sta" +
+      "ndard*\rat_least_once2\006stable\362\363\030C\n\tembedd" +
       "ing\032\010postgres2\033UDB_NATIVE_SERVICES_ENABL" +
-      "ED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\027\022\025/v1/embed" +
-      "ding/sources\022\355\003\n\014DeleteSource\0223.udb.core" +
-      ".embedding.services.v1.DeleteSourceReque" +
-      "st\0324.udb.core.embedding.services.v1.Dele" +
-      "teSourceResponse\"\361\002\312\363\030@\010\002\032\033udb:embedding" +
-      ":delete-source \001J\002\001\002j\026embedding.DeleteSo" +
-      "urce\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030B\010\001\022\rdelete_source\032\003" +
-      "udb(\260\352\0010\003@\001J\tembeddingP\001Z\025deleteEmbeddin" +
-      "gSource\352\363\030g\n\026embedding.DeleteSource\022\037udb" +
-      ".embedding.source.deleted.v1\032\013source_nam" +
-      "e\"\010standard*\rat_least_once2\006stable\362\363\030C\n\t" +
+      "ED2\017UDB_GRPC_TARGET\370\363\030\003\202\323\344\223\002!\"\034/v1/embed" +
+      "ding/sources:delete:\001*\022\327\003\n\010Backfill\022/.ud" +
+      "b.core.embedding.services.v1.BackfillReq" +
+      "uest\0320.udb.core.embedding.services.v1.Ba" +
+      "ckfillResponse\"\347\002\312\363\0307\010\002\032\026udb:embedding:b" +
+      "ackfill \001J\002\001\002j\022embedding.Backfill\220\001\001\322\363\030\006" +
+      "\010\001\020\001 \001\332\363\030?\010\001\022\010backfill\032\003udb(\260\352\0010\003@\001J\temb" +
+      "eddingP\001Z\027backfillEmbeddingSource\352\363\030g\n\022e" +
+      "mbedding.Backfill\022#udb.embedding.backfil" +
+      "l.requested.v1\032\013source_name\"\010standard*\ra" +
+      "t_least_once2\006stable\362\363\030C\n\tembedding\032\010pos" +
+      "tgres2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_" +
+      "GRPC_TARGET\370\363\030\002\202\323\344\223\002#\"\036/v1/embedding/sou" +
+      "rces:backfill:\001*\022\312\002\n\017ReportEmbedding\0226.u" +
+      "db.core.embedding.services.v1.ReportEmbe" +
+      "ddingRequest\0327.udb.core.embedding.servic" +
+      "es.v1.ReportEmbeddingResponse\"\305\001\312\363\030H\010\002\032\036" +
+      "udb:embedding:report-embedding \0018\001J\002\001\002j\031" +
+      "embedding.ReportEmbedding\220\001\001\332\363\030*\022\020report" +
+      "_embedding\032\003udb(\260\352\0010\003@\001J\tembedding\362\363\030C\n\t" +
       "embedding\032\010postgres2\033UDB_NATIVE_SERVICES" +
-      "_ENABLED2\017UDB_GRPC_TARGET\370\363\030\003\202\323\344\223\002!\"\034/v1" +
-      "/embedding/sources:delete:\001*\022\327\003\n\010Backfil" +
-      "l\022/.udb.core.embedding.services.v1.Backf" +
-      "illRequest\0320.udb.core.embedding.services" +
-      ".v1.BackfillResponse\"\347\002\312\363\0307\010\002\032\026udb:embed" +
-      "ding:backfill \001J\002\001\002j\022embedding.Backfill\220" +
-      "\001\001\322\363\030\006\010\001\020\001 \001\332\363\030?\010\001\022\010backfill\032\003udb(\260\352\0010\003@" +
-      "\001J\tembeddingP\001Z\027backfillEmbeddingSource\352" +
-      "\363\030g\n\022embedding.Backfill\022#udb.embedding.b" +
-      "ackfill.requested.v1\032\013source_name\"\010stand" +
-      "ard*\rat_least_once2\006stable\362\363\030C\n\tembeddin" +
-      "g\032\010postgres2\033UDB_NATIVE_SERVICES_ENABLED" +
-      "2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002#\"\036/v1/embeddi" +
-      "ng/sources:backfill:\001*\022\312\002\n\017ReportEmbeddi" +
-      "ng\0226.udb.core.embedding.services.v1.Repo" +
-      "rtEmbeddingRequest\0327.udb.core.embedding." +
-      "services.v1.ReportEmbeddingResponse\"\305\001\312\363" +
-      "\030H\010\002\032\036udb:embedding:report-embedding \0018\001" +
-      "J\002\001\002j\031embedding.ReportEmbedding\220\001\001\332\363\030*\022\020" +
-      "report_embedding\032\003udb(\260\352\0010\003@\001J\tembedding" +
-      "\362\363\030C\n\tembedding\032\010postgres2\033UDB_NATIVE_SE" +
-      "RVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\022\336\002\n\010" +
-      "Retrieve\022/.udb.core.embedding.services.v" +
-      "1.RetrieveRequest\0320.udb.core.embedding.s" +
-      "ervices.v1.RetrieveResponse\"\356\001\312\363\0307\010\002\032\026ud" +
-      "b:embedding:retrieve \001J\002\001\002j\022embedding.Re" +
-      "trieve\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0309\010\001\022\010retrieve\032\003udb" +
-      "(\260\352\0010\003@\001J\tembeddingP\001Z\021retrieveEmbedding" +
-      "\362\363\030C\n\tembedding\032\010postgres2\033UDB_NATIVE_SE" +
-      "RVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002" +
-      "\033\"\026/v1/embedding:retrieve:\001*\032\371\002\312\360\031t\n\temb" +
-      "edding\022\tembedding\032\tembedding\"\nEmbeddings" +
-      "*\tembedding0\0018\001h\001z\tembedding\202\001\tembedding" +
-      "\212\001\tembedding\222\001\020native.embedding\322\360\031\034\010\001\032\003u" +
-      "db(\260\352\0010\003@\001J\tembeddingP\001\332\360\031\225\001\n\tembedding\022" +
-      "\024udb/native/embedding\032\033UDB_NATIVE_SERVIC" +
-      "ES_ENABLED\032\017UDB_GRPC_TARGET\"\033udb.native." +
-      "embedding.config:\tembeddingJ\013UDB_API_KEY" +
-      "Z\017udb native lint\342\360\031C\n\tembedding\032\010postgr" +
-      "es2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRP" +
-      "C_TARGETB\246\002\n\"com.udb.core.embedding.serv" +
-      "ices.v1B\025EmbeddingServiceProtoP\001ZLgithub" +
-      ".com/fahara02/udb/sdk/go/gen/udb/core/em" +
-      "bedding/services/v1;servicesv1\242\002\004UCES\252\002\036" +
-      "udb.core.Embedding.Services.V1\312\002\036Udb\\Cor" +
-      "e\\Embedding\\Services\\V1\342\002*Udb\\GPBMetadat" +
-      "a\\Core\\Embedding\\Services\\V1\352\002\"Udb::Core" +
-      "::Embedding::Services::V1b\006proto3"
+      "_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\022\336\002\n\010Retrie" +
+      "ve\022/.udb.core.embedding.services.v1.Retr" +
+      "ieveRequest\0320.udb.core.embedding.service" +
+      "s.v1.RetrieveResponse\"\356\001\312\363\0307\010\002\032\026udb:embe" +
+      "dding:retrieve \001J\002\001\002j\022embedding.Retrieve" +
+      "\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0309\010\001\022\010retrieve\032\003udb(\260\352\0010\003" +
+      "@\001J\tembeddingP\001Z\021retrieveEmbedding\362\363\030C\n\t" +
+      "embedding\032\010postgres2\033UDB_NATIVE_SERVICES" +
+      "_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\033\"\026/v1" +
+      "/embedding:retrieve:\001*\032\371\002\312\360\031t\n\tembedding" +
+      "\022\tembedding\032\tembedding\"\nEmbeddings*\tembe" +
+      "dding0\0018\001h\001z\tembedding\202\001\tembedding\212\001\temb" +
+      "edding\222\001\020native.embedding\322\360\031\034\010\001\032\003udb(\260\352\001" +
+      "0\003@\001J\tembeddingP\001\332\360\031\225\001\n\tembedding\022\024udb/n" +
+      "ative/embedding\032\033UDB_NATIVE_SERVICES_ENA" +
+      "BLED\032\017UDB_GRPC_TARGET\"\033udb.native.embedd" +
+      "ing.config:\tembeddingJ\013UDB_API_KEYZ\017udb " +
+      "native lint\342\360\031C\n\tembedding\032\010postgres2\033UD" +
+      "B_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARG" +
+      "ETB\246\002\n\"com.udb.core.embedding.services.v" +
+      "1B\025EmbeddingServiceProtoP\001ZLgithub.com/f" +
+      "ahara02/udb/sdk/go/gen/udb/core/embeddin" +
+      "g/services/v1;servicesv1\242\002\004UCES\252\002\036udb.co" +
+      "re.Embedding.Services.V1\312\002\036Udb\\Core\\Embe" +
+      "dding\\Services\\V1\342\002*Udb\\GPBMetadata\\Core" +
+      "\\Embedding\\Services\\V1\352\002\"Udb::Core::Embe" +
+      "dding::Services::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -336,7 +338,7 @@ public final class EmbeddingServiceProto {
     internal_static_udb_core_embedding_services_v1_RetrieveRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_embedding_services_v1_RetrieveRequest_descriptor,
-        new java.lang.String[] { "TenantId", "SourceName", "QueryText", "QueryVector", "TopK", });
+        new java.lang.String[] { "TenantId", "SourceName", "QueryText", "QueryVector", "TopK", "FilterJson", "ScoreThreshold", });
     internal_static_udb_core_embedding_services_v1_RetrieveHit_descriptor =
       getDescriptor().getMessageTypes().get(12);
     internal_static_udb_core_embedding_services_v1_RetrieveHit_fieldAccessorTable = new

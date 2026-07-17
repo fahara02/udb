@@ -104,7 +104,7 @@ Per-service RPC counts (native control plane):
 ## 0.3.7 Release Focus
 
 UDB 0.3.7 is the current release. It carries the workflow-oriented simple-client
-SDK layer over the full **344-RPC surface** (77 `DataBroker` RPCs plus 267 native
+SDK layer over the full **351-RPC surface** (77 `DataBroker` RPCs plus 274 native
 control-plane RPCs) and folds in the post-v0.3.2 native-service wave, so normal
 application code stays short without hiding correctness rules — read-after-write,
 idempotency, tenant binding, and typed errors stay explicit or broker-owned.

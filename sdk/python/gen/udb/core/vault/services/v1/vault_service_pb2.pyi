@@ -113,6 +113,26 @@ class DeleteSecretResponse(_message.Message):
     error: _dto_pb2.ApiError
     def __init__(self, message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
 
+class UndeleteSecretRequest(_message.Message):
+    __slots__ = ("tenant_id", "secret_path")
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    SECRET_PATH_FIELD_NUMBER: _ClassVar[int]
+    tenant_id: str
+    secret_path: str
+    def __init__(self, tenant_id: _Optional[str] = ..., secret_path: _Optional[str] = ...) -> None: ...
+
+class UndeleteSecretResponse(_message.Message):
+    __slots__ = ("secret_path", "version", "message", "error")
+    SECRET_PATH_FIELD_NUMBER: _ClassVar[int]
+    VERSION_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    ERROR_FIELD_NUMBER: _ClassVar[int]
+    secret_path: str
+    version: int
+    message: str
+    error: _dto_pb2.ApiError
+    def __init__(self, secret_path: _Optional[str] = ..., version: _Optional[int] = ..., message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
+
 class DestroySecretRequest(_message.Message):
     __slots__ = ("tenant_id", "secret_path", "confirmation_token")
     TENANT_ID_FIELD_NUMBER: _ClassVar[int]
@@ -218,6 +238,124 @@ class DecryptResponse(_message.Message):
     message: str
     error: _dto_pb2.ApiError
     def __init__(self, plaintext: _Optional[str] = ..., key_version: _Optional[int] = ..., message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
+
+class GenerateDataKeyRequest(_message.Message):
+    __slots__ = ("tenant_id", "key_name")
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    KEY_NAME_FIELD_NUMBER: _ClassVar[int]
+    tenant_id: str
+    key_name: str
+    def __init__(self, tenant_id: _Optional[str] = ..., key_name: _Optional[str] = ...) -> None: ...
+
+class GenerateDataKeyResponse(_message.Message):
+    __slots__ = ("plaintext", "ciphertext", "key_version", "message", "error")
+    PLAINTEXT_FIELD_NUMBER: _ClassVar[int]
+    CIPHERTEXT_FIELD_NUMBER: _ClassVar[int]
+    KEY_VERSION_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    ERROR_FIELD_NUMBER: _ClassVar[int]
+    plaintext: str
+    ciphertext: str
+    key_version: int
+    message: str
+    error: _dto_pb2.ApiError
+    def __init__(self, plaintext: _Optional[str] = ..., ciphertext: _Optional[str] = ..., key_version: _Optional[int] = ..., message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
+
+class RewrapRequest(_message.Message):
+    __slots__ = ("tenant_id", "key_name", "ciphertext")
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    KEY_NAME_FIELD_NUMBER: _ClassVar[int]
+    CIPHERTEXT_FIELD_NUMBER: _ClassVar[int]
+    tenant_id: str
+    key_name: str
+    ciphertext: str
+    def __init__(self, tenant_id: _Optional[str] = ..., key_name: _Optional[str] = ..., ciphertext: _Optional[str] = ...) -> None: ...
+
+class RewrapResponse(_message.Message):
+    __slots__ = ("ciphertext", "key_version", "message", "error")
+    CIPHERTEXT_FIELD_NUMBER: _ClassVar[int]
+    KEY_VERSION_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    ERROR_FIELD_NUMBER: _ClassVar[int]
+    ciphertext: str
+    key_version: int
+    message: str
+    error: _dto_pb2.ApiError
+    def __init__(self, ciphertext: _Optional[str] = ..., key_version: _Optional[int] = ..., message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
+
+class GetTransitPublicKeyRequest(_message.Message):
+    __slots__ = ("tenant_id", "key_name")
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    KEY_NAME_FIELD_NUMBER: _ClassVar[int]
+    tenant_id: str
+    key_name: str
+    def __init__(self, tenant_id: _Optional[str] = ..., key_name: _Optional[str] = ...) -> None: ...
+
+class TransitPublicKey(_message.Message):
+    __slots__ = ("version", "public_key", "state")
+    VERSION_FIELD_NUMBER: _ClassVar[int]
+    PUBLIC_KEY_FIELD_NUMBER: _ClassVar[int]
+    STATE_FIELD_NUMBER: _ClassVar[int]
+    version: int
+    public_key: str
+    state: str
+    def __init__(self, version: _Optional[int] = ..., public_key: _Optional[str] = ..., state: _Optional[str] = ...) -> None: ...
+
+class GetTransitPublicKeyResponse(_message.Message):
+    __slots__ = ("key_name", "algorithm", "public_keys", "message", "error")
+    KEY_NAME_FIELD_NUMBER: _ClassVar[int]
+    ALGORITHM_FIELD_NUMBER: _ClassVar[int]
+    PUBLIC_KEYS_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    ERROR_FIELD_NUMBER: _ClassVar[int]
+    key_name: str
+    algorithm: str
+    public_keys: _containers.RepeatedCompositeFieldContainer[TransitPublicKey]
+    message: str
+    error: _dto_pb2.ApiError
+    def __init__(self, key_name: _Optional[str] = ..., algorithm: _Optional[str] = ..., public_keys: _Optional[_Iterable[_Union[TransitPublicKey, _Mapping]]] = ..., message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
+
+class BatchEncryptRequest(_message.Message):
+    __slots__ = ("tenant_id", "key_name", "plaintexts")
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    KEY_NAME_FIELD_NUMBER: _ClassVar[int]
+    PLAINTEXTS_FIELD_NUMBER: _ClassVar[int]
+    tenant_id: str
+    key_name: str
+    plaintexts: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, tenant_id: _Optional[str] = ..., key_name: _Optional[str] = ..., plaintexts: _Optional[_Iterable[str]] = ...) -> None: ...
+
+class BatchEncryptResponse(_message.Message):
+    __slots__ = ("ciphertexts", "key_version", "message", "error")
+    CIPHERTEXTS_FIELD_NUMBER: _ClassVar[int]
+    KEY_VERSION_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    ERROR_FIELD_NUMBER: _ClassVar[int]
+    ciphertexts: _containers.RepeatedScalarFieldContainer[str]
+    key_version: int
+    message: str
+    error: _dto_pb2.ApiError
+    def __init__(self, ciphertexts: _Optional[_Iterable[str]] = ..., key_version: _Optional[int] = ..., message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
+
+class BatchDecryptRequest(_message.Message):
+    __slots__ = ("tenant_id", "key_name", "ciphertexts")
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    KEY_NAME_FIELD_NUMBER: _ClassVar[int]
+    CIPHERTEXTS_FIELD_NUMBER: _ClassVar[int]
+    tenant_id: str
+    key_name: str
+    ciphertexts: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, tenant_id: _Optional[str] = ..., key_name: _Optional[str] = ..., ciphertexts: _Optional[_Iterable[str]] = ...) -> None: ...
+
+class BatchDecryptResponse(_message.Message):
+    __slots__ = ("plaintexts", "message", "error")
+    PLAINTEXTS_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    ERROR_FIELD_NUMBER: _ClassVar[int]
+    plaintexts: _containers.RepeatedScalarFieldContainer[str]
+    message: str
+    error: _dto_pb2.ApiError
+    def __init__(self, plaintexts: _Optional[_Iterable[str]] = ..., message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
 
 class SignRequest(_message.Message):
     __slots__ = ("tenant_id", "key_name", "input")

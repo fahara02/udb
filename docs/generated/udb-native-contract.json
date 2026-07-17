@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "descriptor_sha256": "ef63cb71c1f9abfab5d1836817d3fef9d86122791964be8a0d176e38d9f3870a",
+  "descriptor_sha256": "18218b14ad8f0f377064064bbeb9feff61038baab6b3223b385ec131a65e4e2a",
   "contract_version": "4.0.0",
   "udb_version": "0.4.13",
   "protocol_version": "1.0.0",
@@ -19854,7 +19854,7 @@
           "object_store"
         ]
       },
-      "rpc_count": 8,
+      "rpc_count": 9,
       "rpcs": [
         {
           "method": "DeleteFile",
@@ -20608,6 +20608,96 @@
             "verb": "post",
             "path": "/v1/storage/uploads",
             "body": "*",
+            "response_body": ""
+          }
+        },
+        {
+          "method": "ReissueUploadUrl",
+          "method_alias": "reissue_upload_url",
+          "rest_operation_id": "reissueUploadUrl",
+          "path": "/udb.core.storage.services.v1.StorageService/ReissueUploadUrl",
+          "kind": "unary",
+          "operation_kind": "read_only",
+          "read_only": true,
+          "input": ".udb.core.storage.services.v1.ReissueUploadUrlRequest",
+          "output": ".udb.core.storage.services.v1.ReissueUploadUrlResponse",
+          "auth_mode": "bearer",
+          "scopes": [
+            "udb:storage:reissue-upload-url"
+          ],
+          "roles": [],
+          "policy_ref": "",
+          "tenant_required": true,
+          "tenant_field": "",
+          "project_field": "",
+          "endpoint_security": {
+            "auth_mode": "bearer",
+            "roles": [],
+            "scopes": [
+              "udb:storage:reissue-upload-url"
+            ],
+            "policy_ref": "",
+            "tenant_required": true,
+            "csrf_required": false,
+            "internal_grpc_only": false,
+            "required_assurance_level": 0,
+            "allowed_credential_types": [
+              1,
+              2
+            ],
+            "rate_limit_policy_ref": "",
+            "abuse_policy_ref": "",
+            "audit_event_type": "",
+            "decision_resource": "storage.ReissueUploadUrl",
+            "owner_field": "",
+            "tenant_field": "",
+            "project_field": "",
+            "idempotency_required": false,
+            "request_context_required": true
+          },
+          "event_contract": null,
+          "emits": [],
+          "sdk_surface": {
+            "include_in_facade": true,
+            "method_alias": "reissue_upload_url",
+            "rest_operation_id": "reissueUploadUrl",
+            "required_credential_provider": "udb",
+            "streaming_helper_type": "",
+            "default_deadline_ms": 30000,
+            "default_max_attempts": 3,
+            "browser_safe": false,
+            "server_only": true,
+            "boilerplate_recipe_tags": [
+              "storage"
+            ],
+            "generate_minimal_example": true
+          },
+          "dependency_contract": {
+            "required_native_services": [
+              "storage"
+            ],
+            "optional_native_services": [],
+            "required_backends": [
+              "postgres",
+              "object_store"
+            ],
+            "optional_backends": [],
+            "required_features": [],
+            "required_env": [
+              "UDB_NATIVE_SERVICES_ENABLED",
+              "UDB_GRPC_TARGET"
+            ],
+            "degraded_when_missing": []
+          },
+          "precondition_contract": null,
+          "readback_contract": null,
+          "lifecycle_contract": null,
+          "idempotency_contract": null,
+          "error_contract": null,
+          "http": {
+            "verb": "get",
+            "path": "/v1/storage/files/{file_id}:reissueUploadUrl",
+            "body": "",
             "response_body": ""
           }
         },
@@ -21540,8 +21630,186 @@
         ],
         "degraded_when_missing": []
       },
-      "rpc_count": 14,
+      "rpc_count": 20,
       "rpcs": [
+        {
+          "method": "BatchDecrypt",
+          "method_alias": "batch_decrypt",
+          "rest_operation_id": "vaultBatchDecrypt",
+          "path": "/udb.core.vault.services.v1.VaultService/BatchDecrypt",
+          "kind": "unary",
+          "operation_kind": "mutation",
+          "read_only": false,
+          "input": ".udb.core.vault.services.v1.BatchDecryptRequest",
+          "output": ".udb.core.vault.services.v1.BatchDecryptResponse",
+          "auth_mode": "bearer",
+          "scopes": [
+            "udb:vault:decrypt"
+          ],
+          "roles": [],
+          "policy_ref": "",
+          "tenant_required": true,
+          "tenant_field": "",
+          "project_field": "",
+          "endpoint_security": {
+            "auth_mode": "bearer",
+            "roles": [],
+            "scopes": [
+              "udb:vault:decrypt"
+            ],
+            "policy_ref": "",
+            "tenant_required": true,
+            "csrf_required": false,
+            "internal_grpc_only": false,
+            "required_assurance_level": 0,
+            "allowed_credential_types": [
+              1,
+              2
+            ],
+            "rate_limit_policy_ref": "",
+            "abuse_policy_ref": "",
+            "audit_event_type": "",
+            "decision_resource": "vault.BatchDecrypt",
+            "owner_field": "",
+            "tenant_field": "",
+            "project_field": "",
+            "idempotency_required": false,
+            "request_context_required": true
+          },
+          "event_contract": null,
+          "emits": [],
+          "sdk_surface": {
+            "include_in_facade": true,
+            "method_alias": "batch_decrypt",
+            "rest_operation_id": "vaultBatchDecrypt",
+            "required_credential_provider": "udb",
+            "streaming_helper_type": "",
+            "default_deadline_ms": 30000,
+            "default_max_attempts": 3,
+            "browser_safe": false,
+            "server_only": true,
+            "boilerplate_recipe_tags": [
+              "vault"
+            ],
+            "generate_minimal_example": true
+          },
+          "dependency_contract": {
+            "required_native_services": [
+              "vault"
+            ],
+            "optional_native_services": [],
+            "required_backends": [
+              "postgres"
+            ],
+            "optional_backends": [],
+            "required_features": [],
+            "required_env": [
+              "UDB_NATIVE_SERVICES_ENABLED",
+              "UDB_GRPC_TARGET"
+            ],
+            "degraded_when_missing": []
+          },
+          "precondition_contract": null,
+          "readback_contract": null,
+          "lifecycle_contract": null,
+          "idempotency_contract": null,
+          "error_contract": null,
+          "http": {
+            "verb": "post",
+            "path": "/v1/vault/transit:batchDecrypt",
+            "body": "*",
+            "response_body": ""
+          }
+        },
+        {
+          "method": "BatchEncrypt",
+          "method_alias": "batch_encrypt",
+          "rest_operation_id": "vaultBatchEncrypt",
+          "path": "/udb.core.vault.services.v1.VaultService/BatchEncrypt",
+          "kind": "unary",
+          "operation_kind": "mutation",
+          "read_only": false,
+          "input": ".udb.core.vault.services.v1.BatchEncryptRequest",
+          "output": ".udb.core.vault.services.v1.BatchEncryptResponse",
+          "auth_mode": "bearer",
+          "scopes": [
+            "udb:vault:encrypt"
+          ],
+          "roles": [],
+          "policy_ref": "",
+          "tenant_required": true,
+          "tenant_field": "",
+          "project_field": "",
+          "endpoint_security": {
+            "auth_mode": "bearer",
+            "roles": [],
+            "scopes": [
+              "udb:vault:encrypt"
+            ],
+            "policy_ref": "",
+            "tenant_required": true,
+            "csrf_required": false,
+            "internal_grpc_only": false,
+            "required_assurance_level": 0,
+            "allowed_credential_types": [
+              1,
+              2
+            ],
+            "rate_limit_policy_ref": "",
+            "abuse_policy_ref": "",
+            "audit_event_type": "",
+            "decision_resource": "vault.BatchEncrypt",
+            "owner_field": "",
+            "tenant_field": "",
+            "project_field": "",
+            "idempotency_required": false,
+            "request_context_required": true
+          },
+          "event_contract": null,
+          "emits": [],
+          "sdk_surface": {
+            "include_in_facade": true,
+            "method_alias": "batch_encrypt",
+            "rest_operation_id": "vaultBatchEncrypt",
+            "required_credential_provider": "udb",
+            "streaming_helper_type": "",
+            "default_deadline_ms": 30000,
+            "default_max_attempts": 3,
+            "browser_safe": false,
+            "server_only": true,
+            "boilerplate_recipe_tags": [
+              "vault"
+            ],
+            "generate_minimal_example": true
+          },
+          "dependency_contract": {
+            "required_native_services": [
+              "vault"
+            ],
+            "optional_native_services": [],
+            "required_backends": [
+              "postgres"
+            ],
+            "optional_backends": [],
+            "required_features": [],
+            "required_env": [
+              "UDB_NATIVE_SERVICES_ENABLED",
+              "UDB_GRPC_TARGET"
+            ],
+            "degraded_when_missing": []
+          },
+          "precondition_contract": null,
+          "readback_contract": null,
+          "lifecycle_contract": null,
+          "idempotency_contract": null,
+          "error_contract": null,
+          "http": {
+            "verb": "post",
+            "path": "/v1/vault/transit:batchEncrypt",
+            "body": "*",
+            "response_body": ""
+          }
+        },
         {
           "method": "CreateTransitKey",
           "method_alias": "create_transit_key",
@@ -22016,6 +22284,95 @@
           }
         },
         {
+          "method": "GenerateDataKey",
+          "method_alias": "generate_data_key",
+          "rest_operation_id": "vaultGenerateDataKey",
+          "path": "/udb.core.vault.services.v1.VaultService/GenerateDataKey",
+          "kind": "unary",
+          "operation_kind": "mutation",
+          "read_only": false,
+          "input": ".udb.core.vault.services.v1.GenerateDataKeyRequest",
+          "output": ".udb.core.vault.services.v1.GenerateDataKeyResponse",
+          "auth_mode": "bearer",
+          "scopes": [
+            "udb:vault:generate-data-key"
+          ],
+          "roles": [],
+          "policy_ref": "",
+          "tenant_required": true,
+          "tenant_field": "",
+          "project_field": "",
+          "endpoint_security": {
+            "auth_mode": "bearer",
+            "roles": [],
+            "scopes": [
+              "udb:vault:generate-data-key"
+            ],
+            "policy_ref": "",
+            "tenant_required": true,
+            "csrf_required": false,
+            "internal_grpc_only": false,
+            "required_assurance_level": 0,
+            "allowed_credential_types": [
+              1,
+              2
+            ],
+            "rate_limit_policy_ref": "",
+            "abuse_policy_ref": "",
+            "audit_event_type": "",
+            "decision_resource": "vault.GenerateDataKey",
+            "owner_field": "",
+            "tenant_field": "",
+            "project_field": "",
+            "idempotency_required": false,
+            "request_context_required": true
+          },
+          "event_contract": null,
+          "emits": [],
+          "sdk_surface": {
+            "include_in_facade": true,
+            "method_alias": "generate_data_key",
+            "rest_operation_id": "vaultGenerateDataKey",
+            "required_credential_provider": "udb",
+            "streaming_helper_type": "",
+            "default_deadline_ms": 30000,
+            "default_max_attempts": 3,
+            "browser_safe": false,
+            "server_only": true,
+            "boilerplate_recipe_tags": [
+              "vault"
+            ],
+            "generate_minimal_example": true
+          },
+          "dependency_contract": {
+            "required_native_services": [
+              "vault"
+            ],
+            "optional_native_services": [],
+            "required_backends": [
+              "postgres"
+            ],
+            "optional_backends": [],
+            "required_features": [],
+            "required_env": [
+              "UDB_NATIVE_SERVICES_ENABLED",
+              "UDB_GRPC_TARGET"
+            ],
+            "degraded_when_missing": []
+          },
+          "precondition_contract": null,
+          "readback_contract": null,
+          "lifecycle_contract": null,
+          "idempotency_contract": null,
+          "error_contract": null,
+          "http": {
+            "verb": "post",
+            "path": "/v1/vault/transit:generateDataKey",
+            "body": "*",
+            "response_body": ""
+          }
+        },
+        {
           "method": "GenerateDatabaseCredentials",
           "method_alias": "generate_database_credentials",
           "rest_operation_id": "generateDatabaseCredentials",
@@ -22197,6 +22554,95 @@
             "verb": "get",
             "path": "/v1/vault/secrets/{secret_path=**}",
             "body": "",
+            "response_body": ""
+          }
+        },
+        {
+          "method": "GetTransitPublicKey",
+          "method_alias": "get_transit_public_key",
+          "rest_operation_id": "vaultGetTransitPublicKey",
+          "path": "/udb.core.vault.services.v1.VaultService/GetTransitPublicKey",
+          "kind": "unary",
+          "operation_kind": "read_only",
+          "read_only": true,
+          "input": ".udb.core.vault.services.v1.GetTransitPublicKeyRequest",
+          "output": ".udb.core.vault.services.v1.GetTransitPublicKeyResponse",
+          "auth_mode": "bearer",
+          "scopes": [
+            "udb:vault:get-public-key"
+          ],
+          "roles": [],
+          "policy_ref": "",
+          "tenant_required": true,
+          "tenant_field": "",
+          "project_field": "",
+          "endpoint_security": {
+            "auth_mode": "bearer",
+            "roles": [],
+            "scopes": [
+              "udb:vault:get-public-key"
+            ],
+            "policy_ref": "",
+            "tenant_required": true,
+            "csrf_required": false,
+            "internal_grpc_only": false,
+            "required_assurance_level": 0,
+            "allowed_credential_types": [
+              1,
+              2
+            ],
+            "rate_limit_policy_ref": "",
+            "abuse_policy_ref": "",
+            "audit_event_type": "",
+            "decision_resource": "vault.GetTransitPublicKey",
+            "owner_field": "",
+            "tenant_field": "",
+            "project_field": "",
+            "idempotency_required": false,
+            "request_context_required": true
+          },
+          "event_contract": null,
+          "emits": [],
+          "sdk_surface": {
+            "include_in_facade": true,
+            "method_alias": "get_transit_public_key",
+            "rest_operation_id": "vaultGetTransitPublicKey",
+            "required_credential_provider": "udb",
+            "streaming_helper_type": "",
+            "default_deadline_ms": 30000,
+            "default_max_attempts": 3,
+            "browser_safe": false,
+            "server_only": true,
+            "boilerplate_recipe_tags": [
+              "vault"
+            ],
+            "generate_minimal_example": true
+          },
+          "dependency_contract": {
+            "required_native_services": [
+              "vault"
+            ],
+            "optional_native_services": [],
+            "required_backends": [
+              "postgres"
+            ],
+            "optional_backends": [],
+            "required_features": [],
+            "required_env": [
+              "UDB_NATIVE_SERVICES_ENABLED",
+              "UDB_GRPC_TARGET"
+            ],
+            "degraded_when_missing": []
+          },
+          "precondition_contract": null,
+          "readback_contract": null,
+          "lifecycle_contract": null,
+          "idempotency_contract": null,
+          "error_contract": null,
+          "http": {
+            "verb": "post",
+            "path": "/v1/vault/transit:publicKey",
+            "body": "*",
             "response_body": ""
           }
         },
@@ -22482,6 +22928,95 @@
           }
         },
         {
+          "method": "Rewrap",
+          "method_alias": "rewrap",
+          "rest_operation_id": "vaultRewrap",
+          "path": "/udb.core.vault.services.v1.VaultService/Rewrap",
+          "kind": "unary",
+          "operation_kind": "mutation",
+          "read_only": false,
+          "input": ".udb.core.vault.services.v1.RewrapRequest",
+          "output": ".udb.core.vault.services.v1.RewrapResponse",
+          "auth_mode": "bearer",
+          "scopes": [
+            "udb:vault:rewrap"
+          ],
+          "roles": [],
+          "policy_ref": "",
+          "tenant_required": true,
+          "tenant_field": "",
+          "project_field": "",
+          "endpoint_security": {
+            "auth_mode": "bearer",
+            "roles": [],
+            "scopes": [
+              "udb:vault:rewrap"
+            ],
+            "policy_ref": "",
+            "tenant_required": true,
+            "csrf_required": false,
+            "internal_grpc_only": false,
+            "required_assurance_level": 0,
+            "allowed_credential_types": [
+              1,
+              2
+            ],
+            "rate_limit_policy_ref": "",
+            "abuse_policy_ref": "",
+            "audit_event_type": "",
+            "decision_resource": "vault.Rewrap",
+            "owner_field": "",
+            "tenant_field": "",
+            "project_field": "",
+            "idempotency_required": false,
+            "request_context_required": true
+          },
+          "event_contract": null,
+          "emits": [],
+          "sdk_surface": {
+            "include_in_facade": true,
+            "method_alias": "rewrap",
+            "rest_operation_id": "vaultRewrap",
+            "required_credential_provider": "udb",
+            "streaming_helper_type": "",
+            "default_deadline_ms": 30000,
+            "default_max_attempts": 3,
+            "browser_safe": false,
+            "server_only": true,
+            "boilerplate_recipe_tags": [
+              "vault"
+            ],
+            "generate_minimal_example": true
+          },
+          "dependency_contract": {
+            "required_native_services": [
+              "vault"
+            ],
+            "optional_native_services": [],
+            "required_backends": [
+              "postgres"
+            ],
+            "optional_backends": [],
+            "required_features": [],
+            "required_env": [
+              "UDB_NATIVE_SERVICES_ENABLED",
+              "UDB_GRPC_TARGET"
+            ],
+            "degraded_when_missing": []
+          },
+          "precondition_contract": null,
+          "readback_contract": null,
+          "lifecycle_contract": null,
+          "idempotency_contract": null,
+          "error_contract": null,
+          "http": {
+            "verb": "post",
+            "path": "/v1/vault/transit:rewrap",
+            "body": "*",
+            "response_body": ""
+          }
+        },
+        {
           "method": "RotateTransitKey",
           "method_alias": "rotate_transit_key",
           "rest_operation_id": "rotateTransitKey",
@@ -22751,6 +23286,102 @@
           "http": {
             "verb": "post",
             "path": "/v1/vault/transit:sign",
+            "body": "*",
+            "response_body": ""
+          }
+        },
+        {
+          "method": "UndeleteSecret",
+          "method_alias": "undelete_secret",
+          "rest_operation_id": "undeleteSecret",
+          "path": "/udb.core.vault.services.v1.VaultService/UndeleteSecret",
+          "kind": "unary",
+          "operation_kind": "mutation",
+          "read_only": false,
+          "input": ".udb.core.vault.services.v1.UndeleteSecretRequest",
+          "output": ".udb.core.vault.services.v1.UndeleteSecretResponse",
+          "auth_mode": "bearer",
+          "scopes": [
+            "udb:vault:undelete-secret"
+          ],
+          "roles": [],
+          "policy_ref": "",
+          "tenant_required": true,
+          "tenant_field": "",
+          "project_field": "",
+          "endpoint_security": {
+            "auth_mode": "bearer",
+            "roles": [],
+            "scopes": [
+              "udb:vault:undelete-secret"
+            ],
+            "policy_ref": "",
+            "tenant_required": true,
+            "csrf_required": false,
+            "internal_grpc_only": false,
+            "required_assurance_level": 0,
+            "allowed_credential_types": [
+              1,
+              2
+            ],
+            "rate_limit_policy_ref": "",
+            "abuse_policy_ref": "",
+            "audit_event_type": "",
+            "decision_resource": "vault.UndeleteSecret",
+            "owner_field": "",
+            "tenant_field": "",
+            "project_field": "",
+            "idempotency_required": false,
+            "request_context_required": true
+          },
+          "event_contract": {
+            "event_type": "vault.UndeleteSecret",
+            "outbox_topic": "udb.vault.secret.restored.v1",
+            "partition_key_field": "secret_path",
+            "payload_redaction_profile": "standard",
+            "delivery_guarantee": "at_least_once",
+            "replay_compatibility": "stable"
+          },
+          "emits": [],
+          "sdk_surface": {
+            "include_in_facade": true,
+            "method_alias": "undelete_secret",
+            "rest_operation_id": "undeleteSecret",
+            "required_credential_provider": "udb",
+            "streaming_helper_type": "",
+            "default_deadline_ms": 30000,
+            "default_max_attempts": 3,
+            "browser_safe": false,
+            "server_only": true,
+            "boilerplate_recipe_tags": [
+              "vault"
+            ],
+            "generate_minimal_example": true
+          },
+          "dependency_contract": {
+            "required_native_services": [
+              "vault"
+            ],
+            "optional_native_services": [],
+            "required_backends": [
+              "postgres"
+            ],
+            "optional_backends": [],
+            "required_features": [],
+            "required_env": [
+              "UDB_NATIVE_SERVICES_ENABLED",
+              "UDB_GRPC_TARGET"
+            ],
+            "degraded_when_missing": []
+          },
+          "precondition_contract": null,
+          "readback_contract": null,
+          "lifecycle_contract": null,
+          "idempotency_contract": null,
+          "error_contract": null,
+          "http": {
+            "verb": "post",
+            "path": "/v1/vault/secrets:undelete",
             "body": "*",
             "response_body": ""
           }
@@ -29662,7 +30293,7 @@
       ]
     }
   ],
-  "message_count": 955,
+  "message_count": 970,
   "messages": [
     {
       "message": "udb.core.analytics.entity.v1.ExecutorPerformanceSummary",
@@ -91317,7 +91948,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 5,
+      "field_count": 7,
       "fields": [
         {
           "name": "tenant_id",
@@ -91399,6 +92030,44 @@
           "name": "top_k",
           "number": 5,
           "type": "5",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "filter_json",
+          "number": 6,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "score_threshold",
+          "number": 7,
+          "type": "1",
           "column_security": null,
           "scalar_security": {
             "pii": false,
@@ -111964,6 +112633,208 @@
       ]
     },
     {
+      "message": "udb.core.storage.services.v1.ReissueUploadUrlRequest",
+      "file": "udb/core/storage/services/v1/storage_service.proto",
+      "sdk_surface": {
+        "include_in_facade": true,
+        "method_alias": "",
+        "rest_operation_id": "",
+        "required_credential_provider": "udb",
+        "streaming_helper_type": "",
+        "default_deadline_ms": 30000,
+        "default_max_attempts": 3,
+        "browser_safe": false,
+        "server_only": true,
+        "boilerplate_recipe_tags": [
+          "storage"
+        ],
+        "generate_minimal_example": true
+      },
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 3,
+      "fields": [
+        {
+          "name": "tenant_id",
+          "number": 1,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "file_id",
+          "number": 2,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "expires_in_minutes",
+          "number": 3,
+          "type": "5",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
+      "message": "udb.core.storage.services.v1.ReissueUploadUrlResponse",
+      "file": "udb/core/storage/services/v1/storage_service.proto",
+      "sdk_surface": {
+        "include_in_facade": true,
+        "method_alias": "",
+        "rest_operation_id": "",
+        "required_credential_provider": "udb",
+        "streaming_helper_type": "",
+        "default_deadline_ms": 30000,
+        "default_max_attempts": 3,
+        "browser_safe": false,
+        "server_only": true,
+        "boilerplate_recipe_tags": [
+          "storage"
+        ],
+        "generate_minimal_example": true
+      },
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 5,
+      "fields": [
+        {
+          "name": "file_id",
+          "number": 1,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "upload_url",
+          "number": 2,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "object_key",
+          "number": 3,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "error",
+          "number": 4,
+          "type": ".udb.core.common.v1.ApiError",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "expires_at",
+          "number": 5,
+          "type": "3",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
       "message": "udb.core.storage.services.v1.UpdateFileRequest",
       "file": "udb/core/storage/services/v1/storage_service.proto",
       "sdk_surface": {
@@ -114975,6 +115846,379 @@
       ]
     },
     {
+      "message": "udb.core.vault.services.v1.BatchDecryptRequest",
+      "file": "udb/core/vault/services/v1/vault_service.proto",
+      "sdk_surface": {
+        "include_in_facade": true,
+        "method_alias": "",
+        "rest_operation_id": "",
+        "required_credential_provider": "udb",
+        "streaming_helper_type": "",
+        "default_deadline_ms": 30000,
+        "default_max_attempts": 3,
+        "browser_safe": false,
+        "server_only": true,
+        "boilerplate_recipe_tags": [
+          "vault"
+        ],
+        "generate_minimal_example": true
+      },
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 3,
+      "fields": [
+        {
+          "name": "tenant_id",
+          "number": 1,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "key_name",
+          "number": 2,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "ciphertexts",
+          "number": 3,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
+      "message": "udb.core.vault.services.v1.BatchDecryptResponse",
+      "file": "udb/core/vault/services/v1/vault_service.proto",
+      "sdk_surface": {
+        "include_in_facade": true,
+        "method_alias": "",
+        "rest_operation_id": "",
+        "required_credential_provider": "udb",
+        "streaming_helper_type": "",
+        "default_deadline_ms": 30000,
+        "default_max_attempts": 3,
+        "browser_safe": false,
+        "server_only": true,
+        "boilerplate_recipe_tags": [
+          "vault"
+        ],
+        "generate_minimal_example": true
+      },
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 3,
+      "fields": [
+        {
+          "name": "plaintexts",
+          "number": 1,
+          "type": "9",
+          "column_security": {
+            "secret_classification": 4,
+            "output_view": 3,
+            "redaction_strategy": 3,
+            "tokenization_strategy": "",
+            "hashing_strategy": "",
+            "hashing_algorithm": "",
+            "encryption_key_class": "vault-transit",
+            "searchable_encrypted": false,
+            "uniqueness_scope": "tenant",
+            "owner_field": false,
+            "tenant_field": false,
+            "project_field": false
+          },
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": true,
+            "sensitive": true,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "message",
+          "number": 2,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "error",
+          "number": 3,
+          "type": ".udb.core.common.v1.ApiError",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
+      "message": "udb.core.vault.services.v1.BatchEncryptRequest",
+      "file": "udb/core/vault/services/v1/vault_service.proto",
+      "sdk_surface": {
+        "include_in_facade": true,
+        "method_alias": "",
+        "rest_operation_id": "",
+        "required_credential_provider": "udb",
+        "streaming_helper_type": "",
+        "default_deadline_ms": 30000,
+        "default_max_attempts": 3,
+        "browser_safe": false,
+        "server_only": true,
+        "boilerplate_recipe_tags": [
+          "vault"
+        ],
+        "generate_minimal_example": true
+      },
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 3,
+      "fields": [
+        {
+          "name": "tenant_id",
+          "number": 1,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "key_name",
+          "number": 2,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "plaintexts",
+          "number": 3,
+          "type": "9",
+          "column_security": {
+            "secret_classification": 4,
+            "output_view": 6,
+            "redaction_strategy": 3,
+            "tokenization_strategy": "",
+            "hashing_strategy": "",
+            "hashing_algorithm": "",
+            "encryption_key_class": "vault-transit",
+            "searchable_encrypted": false,
+            "uniqueness_scope": "tenant",
+            "owner_field": false,
+            "tenant_field": false,
+            "project_field": false
+          },
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": true,
+            "sensitive": true,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
+      "message": "udb.core.vault.services.v1.BatchEncryptResponse",
+      "file": "udb/core/vault/services/v1/vault_service.proto",
+      "sdk_surface": {
+        "include_in_facade": true,
+        "method_alias": "",
+        "rest_operation_id": "",
+        "required_credential_provider": "udb",
+        "streaming_helper_type": "",
+        "default_deadline_ms": 30000,
+        "default_max_attempts": 3,
+        "browser_safe": false,
+        "server_only": true,
+        "boilerplate_recipe_tags": [
+          "vault"
+        ],
+        "generate_minimal_example": true
+      },
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 4,
+      "fields": [
+        {
+          "name": "ciphertexts",
+          "number": 1,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "key_version",
+          "number": 2,
+          "type": "5",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "message",
+          "number": 3,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "error",
+          "number": 4,
+          "type": ".udb.core.common.v1.ApiError",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
       "message": "udb.core.vault.services.v1.CreateTransitKeyRequest",
       "file": "udb/core/vault/services/v1/vault_service.proto",
       "sdk_surface": {
@@ -115840,6 +117084,202 @@
       ]
     },
     {
+      "message": "udb.core.vault.services.v1.GenerateDataKeyRequest",
+      "file": "udb/core/vault/services/v1/vault_service.proto",
+      "sdk_surface": {
+        "include_in_facade": true,
+        "method_alias": "",
+        "rest_operation_id": "",
+        "required_credential_provider": "udb",
+        "streaming_helper_type": "",
+        "default_deadline_ms": 30000,
+        "default_max_attempts": 3,
+        "browser_safe": false,
+        "server_only": true,
+        "boilerplate_recipe_tags": [
+          "vault"
+        ],
+        "generate_minimal_example": true
+      },
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 2,
+      "fields": [
+        {
+          "name": "tenant_id",
+          "number": 1,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "key_name",
+          "number": 2,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
+      "message": "udb.core.vault.services.v1.GenerateDataKeyResponse",
+      "file": "udb/core/vault/services/v1/vault_service.proto",
+      "sdk_surface": {
+        "include_in_facade": true,
+        "method_alias": "",
+        "rest_operation_id": "",
+        "required_credential_provider": "udb",
+        "streaming_helper_type": "",
+        "default_deadline_ms": 30000,
+        "default_max_attempts": 3,
+        "browser_safe": false,
+        "server_only": true,
+        "boilerplate_recipe_tags": [
+          "vault"
+        ],
+        "generate_minimal_example": true
+      },
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 5,
+      "fields": [
+        {
+          "name": "plaintext",
+          "number": 1,
+          "type": "9",
+          "column_security": {
+            "secret_classification": 4,
+            "output_view": 3,
+            "redaction_strategy": 3,
+            "tokenization_strategy": "",
+            "hashing_strategy": "",
+            "hashing_algorithm": "",
+            "encryption_key_class": "vault-transit",
+            "searchable_encrypted": false,
+            "uniqueness_scope": "tenant",
+            "owner_field": false,
+            "tenant_field": false,
+            "project_field": false
+          },
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": true,
+            "sensitive": true,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "ciphertext",
+          "number": 2,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "key_version",
+          "number": 3,
+          "type": "5",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "message",
+          "number": 4,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "error",
+          "number": 5,
+          "type": ".udb.core.common.v1.ApiError",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
       "message": "udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest",
       "file": "udb/core/vault/services/v1/vault_service.proto",
       "sdk_surface": {
@@ -116289,6 +117729,189 @@
         {
           "name": "error",
           "number": 6,
+          "type": ".udb.core.common.v1.ApiError",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
+      "message": "udb.core.vault.services.v1.GetTransitPublicKeyRequest",
+      "file": "udb/core/vault/services/v1/vault_service.proto",
+      "sdk_surface": {
+        "include_in_facade": true,
+        "method_alias": "",
+        "rest_operation_id": "",
+        "required_credential_provider": "udb",
+        "streaming_helper_type": "",
+        "default_deadline_ms": 30000,
+        "default_max_attempts": 3,
+        "browser_safe": false,
+        "server_only": true,
+        "boilerplate_recipe_tags": [
+          "vault"
+        ],
+        "generate_minimal_example": true
+      },
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 2,
+      "fields": [
+        {
+          "name": "tenant_id",
+          "number": 1,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "key_name",
+          "number": 2,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
+      "message": "udb.core.vault.services.v1.GetTransitPublicKeyResponse",
+      "file": "udb/core/vault/services/v1/vault_service.proto",
+      "sdk_surface": {
+        "include_in_facade": true,
+        "method_alias": "",
+        "rest_operation_id": "",
+        "required_credential_provider": "udb",
+        "streaming_helper_type": "",
+        "default_deadline_ms": 30000,
+        "default_max_attempts": 3,
+        "browser_safe": false,
+        "server_only": true,
+        "boilerplate_recipe_tags": [
+          "vault"
+        ],
+        "generate_minimal_example": true
+      },
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 5,
+      "fields": [
+        {
+          "name": "key_name",
+          "number": 1,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "algorithm",
+          "number": 2,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "public_keys",
+          "number": 3,
+          "type": ".udb.core.vault.services.v1.TransitPublicKey",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "message",
+          "number": 4,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "error",
+          "number": 5,
           "type": ".udb.core.common.v1.ApiError",
           "column_security": null,
           "scalar_security": {
@@ -116946,6 +118569,189 @@
       ]
     },
     {
+      "message": "udb.core.vault.services.v1.RewrapRequest",
+      "file": "udb/core/vault/services/v1/vault_service.proto",
+      "sdk_surface": {
+        "include_in_facade": true,
+        "method_alias": "",
+        "rest_operation_id": "",
+        "required_credential_provider": "udb",
+        "streaming_helper_type": "",
+        "default_deadline_ms": 30000,
+        "default_max_attempts": 3,
+        "browser_safe": false,
+        "server_only": true,
+        "boilerplate_recipe_tags": [
+          "vault"
+        ],
+        "generate_minimal_example": true
+      },
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 3,
+      "fields": [
+        {
+          "name": "tenant_id",
+          "number": 1,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "key_name",
+          "number": 2,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "ciphertext",
+          "number": 3,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
+      "message": "udb.core.vault.services.v1.RewrapResponse",
+      "file": "udb/core/vault/services/v1/vault_service.proto",
+      "sdk_surface": {
+        "include_in_facade": true,
+        "method_alias": "",
+        "rest_operation_id": "",
+        "required_credential_provider": "udb",
+        "streaming_helper_type": "",
+        "default_deadline_ms": 30000,
+        "default_max_attempts": 3,
+        "browser_safe": false,
+        "server_only": true,
+        "boilerplate_recipe_tags": [
+          "vault"
+        ],
+        "generate_minimal_example": true
+      },
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 4,
+      "fields": [
+        {
+          "name": "ciphertext",
+          "number": 1,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "key_version",
+          "number": 2,
+          "type": "5",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "message",
+          "number": 3,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "error",
+          "number": 4,
+          "type": ".udb.core.common.v1.ApiError",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
       "message": "udb.core.vault.services.v1.RotateTransitKeyRequest",
       "file": "udb/core/vault/services/v1/vault_service.proto",
       "sdk_surface": {
@@ -117462,6 +119268,238 @@
         },
         {
           "name": "key_version",
+          "number": 2,
+          "type": "5",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "message",
+          "number": 3,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "error",
+          "number": 4,
+          "type": ".udb.core.common.v1.ApiError",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
+      "message": "udb.core.vault.services.v1.TransitPublicKey",
+      "file": "udb/core/vault/services/v1/vault_service.proto",
+      "sdk_surface": null,
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 3,
+      "fields": [
+        {
+          "name": "version",
+          "number": 1,
+          "type": "5",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "public_key",
+          "number": 2,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "state",
+          "number": 3,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
+      "message": "udb.core.vault.services.v1.UndeleteSecretRequest",
+      "file": "udb/core/vault/services/v1/vault_service.proto",
+      "sdk_surface": {
+        "include_in_facade": true,
+        "method_alias": "",
+        "rest_operation_id": "",
+        "required_credential_provider": "udb",
+        "streaming_helper_type": "",
+        "default_deadline_ms": 30000,
+        "default_max_attempts": 3,
+        "browser_safe": false,
+        "server_only": true,
+        "boilerplate_recipe_tags": [
+          "vault"
+        ],
+        "generate_minimal_example": true
+      },
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 2,
+      "fields": [
+        {
+          "name": "tenant_id",
+          "number": 1,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "secret_path",
+          "number": 2,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
+      "message": "udb.core.vault.services.v1.UndeleteSecretResponse",
+      "file": "udb/core/vault/services/v1/vault_service.proto",
+      "sdk_surface": {
+        "include_in_facade": true,
+        "method_alias": "",
+        "rest_operation_id": "",
+        "required_credential_provider": "udb",
+        "streaming_helper_type": "",
+        "default_deadline_ms": 30000,
+        "default_max_attempts": 3,
+        "browser_safe": false,
+        "server_only": true,
+        "boilerplate_recipe_tags": [
+          "vault"
+        ],
+        "generate_minimal_example": true
+      },
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 4,
+      "fields": [
+        {
+          "name": "secret_path",
+          "number": 1,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "version",
           "number": 2,
           "type": "5",
           "column_security": null,
@@ -161369,7 +163407,7 @@
       ]
     }
   ],
-  "event_count": 242,
+  "event_count": 243,
   "events": [
     {
       "event_type": "analytics.GetExecutorPerformance",
@@ -162738,6 +164776,15 @@
       "delivery_guarantee": "at_least_once",
       "replay_compatibility": "stable",
       "source": "/udb.core.vault.services.v1.VaultService/RotateTransitKey"
+    },
+    {
+      "event_type": "vault.UndeleteSecret",
+      "outbox_topic": "udb.vault.secret.restored.v1",
+      "partition_key_field": "secret_path",
+      "payload_redaction_profile": "standard",
+      "delivery_guarantee": "at_least_once",
+      "replay_compatibility": "stable",
+      "source": "/udb.core.vault.services.v1.VaultService/UndeleteSecret"
     },
     {
       "event_type": "webhook.CreateEndpoint",

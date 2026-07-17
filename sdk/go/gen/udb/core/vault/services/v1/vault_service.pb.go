@@ -630,6 +630,126 @@ func (x *DeleteSecretResponse) GetError() *v1.ApiError {
 	return nil
 }
 
+type UndeleteSecretRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	SecretPath    string                 `protobuf:"bytes,2,opt,name=secret_path,json=secretPath,proto3" json:"secret_path,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UndeleteSecretRequest) Reset() {
+	*x = UndeleteSecretRequest{}
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UndeleteSecretRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UndeleteSecretRequest) ProtoMessage() {}
+
+func (x *UndeleteSecretRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UndeleteSecretRequest.ProtoReflect.Descriptor instead.
+func (*UndeleteSecretRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *UndeleteSecretRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *UndeleteSecretRequest) GetSecretPath() string {
+	if x != nil {
+		return x.SecretPath
+	}
+	return ""
+}
+
+type UndeleteSecretResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SecretPath    string                 `protobuf:"bytes,1,opt,name=secret_path,json=secretPath,proto3" json:"secret_path,omitempty"`
+	Version       int32                  `protobuf:"varint,2,opt,name=version,proto3" json:"version,omitempty"`
+	Message       string                 `protobuf:"bytes,3,opt,name=message,proto3" json:"message,omitempty"`
+	Error         *v1.ApiError           `protobuf:"bytes,4,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UndeleteSecretResponse) Reset() {
+	*x = UndeleteSecretResponse{}
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UndeleteSecretResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UndeleteSecretResponse) ProtoMessage() {}
+
+func (x *UndeleteSecretResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UndeleteSecretResponse.ProtoReflect.Descriptor instead.
+func (*UndeleteSecretResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *UndeleteSecretResponse) GetSecretPath() string {
+	if x != nil {
+		return x.SecretPath
+	}
+	return ""
+}
+
+func (x *UndeleteSecretResponse) GetVersion() int32 {
+	if x != nil {
+		return x.Version
+	}
+	return 0
+}
+
+func (x *UndeleteSecretResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *UndeleteSecretResponse) GetError() *v1.ApiError {
+	if x != nil {
+		return x.Error
+	}
+	return nil
+}
+
 type DestroySecretRequest struct {
 	state      protoimpl.MessageState `protogen:"open.v1"`
 	TenantId   string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
@@ -643,7 +763,7 @@ type DestroySecretRequest struct {
 
 func (x *DestroySecretRequest) Reset() {
 	*x = DestroySecretRequest{}
-	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[9]
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -655,7 +775,7 @@ func (x *DestroySecretRequest) String() string {
 func (*DestroySecretRequest) ProtoMessage() {}
 
 func (x *DestroySecretRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[9]
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -668,7 +788,7 @@ func (x *DestroySecretRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DestroySecretRequest.ProtoReflect.Descriptor instead.
 func (*DestroySecretRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{9}
+	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *DestroySecretRequest) GetTenantId() string {
@@ -703,7 +823,7 @@ type DestroySecretResponse struct {
 
 func (x *DestroySecretResponse) Reset() {
 	*x = DestroySecretResponse{}
-	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[10]
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -715,7 +835,7 @@ func (x *DestroySecretResponse) String() string {
 func (*DestroySecretResponse) ProtoMessage() {}
 
 func (x *DestroySecretResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[10]
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -728,7 +848,7 @@ func (x *DestroySecretResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DestroySecretResponse.ProtoReflect.Descriptor instead.
 func (*DestroySecretResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{10}
+	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *DestroySecretResponse) GetDestroyedVersions() uint32 {
@@ -763,7 +883,7 @@ type CreateTransitKeyRequest struct {
 
 func (x *CreateTransitKeyRequest) Reset() {
 	*x = CreateTransitKeyRequest{}
-	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[11]
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -775,7 +895,7 @@ func (x *CreateTransitKeyRequest) String() string {
 func (*CreateTransitKeyRequest) ProtoMessage() {}
 
 func (x *CreateTransitKeyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[11]
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -788,7 +908,7 @@ func (x *CreateTransitKeyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateTransitKeyRequest.ProtoReflect.Descriptor instead.
 func (*CreateTransitKeyRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{11}
+	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *CreateTransitKeyRequest) GetTenantId() string {
@@ -824,7 +944,7 @@ type CreateTransitKeyResponse struct {
 
 func (x *CreateTransitKeyResponse) Reset() {
 	*x = CreateTransitKeyResponse{}
-	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[12]
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -836,7 +956,7 @@ func (x *CreateTransitKeyResponse) String() string {
 func (*CreateTransitKeyResponse) ProtoMessage() {}
 
 func (x *CreateTransitKeyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[12]
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -849,7 +969,7 @@ func (x *CreateTransitKeyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateTransitKeyResponse.ProtoReflect.Descriptor instead.
 func (*CreateTransitKeyResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{12}
+	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *CreateTransitKeyResponse) GetKeyName() string {
@@ -890,7 +1010,7 @@ type RotateTransitKeyRequest struct {
 
 func (x *RotateTransitKeyRequest) Reset() {
 	*x = RotateTransitKeyRequest{}
-	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[13]
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -902,7 +1022,7 @@ func (x *RotateTransitKeyRequest) String() string {
 func (*RotateTransitKeyRequest) ProtoMessage() {}
 
 func (x *RotateTransitKeyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[13]
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -915,7 +1035,7 @@ func (x *RotateTransitKeyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RotateTransitKeyRequest.ProtoReflect.Descriptor instead.
 func (*RotateTransitKeyRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{13}
+	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *RotateTransitKeyRequest) GetTenantId() string {
@@ -944,7 +1064,7 @@ type RotateTransitKeyResponse struct {
 
 func (x *RotateTransitKeyResponse) Reset() {
 	*x = RotateTransitKeyResponse{}
-	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[14]
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -956,7 +1076,7 @@ func (x *RotateTransitKeyResponse) String() string {
 func (*RotateTransitKeyResponse) ProtoMessage() {}
 
 func (x *RotateTransitKeyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[14]
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -969,7 +1089,7 @@ func (x *RotateTransitKeyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RotateTransitKeyResponse.ProtoReflect.Descriptor instead.
 func (*RotateTransitKeyResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{14}
+	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *RotateTransitKeyResponse) GetKeyName() string {
@@ -1011,7 +1131,7 @@ type EncryptRequest struct {
 
 func (x *EncryptRequest) Reset() {
 	*x = EncryptRequest{}
-	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[15]
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1023,7 +1143,7 @@ func (x *EncryptRequest) String() string {
 func (*EncryptRequest) ProtoMessage() {}
 
 func (x *EncryptRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[15]
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1036,7 +1156,7 @@ func (x *EncryptRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EncryptRequest.ProtoReflect.Descriptor instead.
 func (*EncryptRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{15}
+	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *EncryptRequest) GetTenantId() string {
@@ -1072,7 +1192,7 @@ type EncryptResponse struct {
 
 func (x *EncryptResponse) Reset() {
 	*x = EncryptResponse{}
-	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[16]
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1084,7 +1204,7 @@ func (x *EncryptResponse) String() string {
 func (*EncryptResponse) ProtoMessage() {}
 
 func (x *EncryptResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[16]
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1097,7 +1217,7 @@ func (x *EncryptResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EncryptResponse.ProtoReflect.Descriptor instead.
 func (*EncryptResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{16}
+	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *EncryptResponse) GetCiphertext() string {
@@ -1139,7 +1259,7 @@ type DecryptRequest struct {
 
 func (x *DecryptRequest) Reset() {
 	*x = DecryptRequest{}
-	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[17]
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1151,7 +1271,7 @@ func (x *DecryptRequest) String() string {
 func (*DecryptRequest) ProtoMessage() {}
 
 func (x *DecryptRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[17]
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1164,7 +1284,7 @@ func (x *DecryptRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DecryptRequest.ProtoReflect.Descriptor instead.
 func (*DecryptRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{17}
+	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *DecryptRequest) GetTenantId() string {
@@ -1200,7 +1320,7 @@ type DecryptResponse struct {
 
 func (x *DecryptResponse) Reset() {
 	*x = DecryptResponse{}
-	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[18]
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1212,7 +1332,7 @@ func (x *DecryptResponse) String() string {
 func (*DecryptResponse) ProtoMessage() {}
 
 func (x *DecryptResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[18]
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1225,7 +1345,7 @@ func (x *DecryptResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DecryptResponse.ProtoReflect.Descriptor instead.
 func (*DecryptResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{18}
+	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *DecryptResponse) GetPlaintext() string {
@@ -1256,6 +1376,702 @@ func (x *DecryptResponse) GetError() *v1.ApiError {
 	return nil
 }
 
+type GenerateDataKeyRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	KeyName       string                 `protobuf:"bytes,2,opt,name=key_name,json=keyName,proto3" json:"key_name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GenerateDataKeyRequest) Reset() {
+	*x = GenerateDataKeyRequest{}
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GenerateDataKeyRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GenerateDataKeyRequest) ProtoMessage() {}
+
+func (x *GenerateDataKeyRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GenerateDataKeyRequest.ProtoReflect.Descriptor instead.
+func (*GenerateDataKeyRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *GenerateDataKeyRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *GenerateDataKeyRequest) GetKeyName() string {
+	if x != nil {
+		return x.KeyName
+	}
+	return ""
+}
+
+type GenerateDataKeyResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The plaintext data key (base64). SENSITIVE — use it to encrypt data locally
+	// and DO NOT persist it; store `ciphertext` instead.
+	Plaintext string `protobuf:"bytes,1,opt,name=plaintext,proto3" json:"plaintext,omitempty"`
+	// The data key wrapped under the transit key — persist THIS; Decrypt/Rewrap later.
+	Ciphertext    string       `protobuf:"bytes,2,opt,name=ciphertext,proto3" json:"ciphertext,omitempty"`
+	KeyVersion    int32        `protobuf:"varint,3,opt,name=key_version,json=keyVersion,proto3" json:"key_version,omitempty"`
+	Message       string       `protobuf:"bytes,4,opt,name=message,proto3" json:"message,omitempty"`
+	Error         *v1.ApiError `protobuf:"bytes,5,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GenerateDataKeyResponse) Reset() {
+	*x = GenerateDataKeyResponse{}
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GenerateDataKeyResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GenerateDataKeyResponse) ProtoMessage() {}
+
+func (x *GenerateDataKeyResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GenerateDataKeyResponse.ProtoReflect.Descriptor instead.
+func (*GenerateDataKeyResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *GenerateDataKeyResponse) GetPlaintext() string {
+	if x != nil {
+		return x.Plaintext
+	}
+	return ""
+}
+
+func (x *GenerateDataKeyResponse) GetCiphertext() string {
+	if x != nil {
+		return x.Ciphertext
+	}
+	return ""
+}
+
+func (x *GenerateDataKeyResponse) GetKeyVersion() int32 {
+	if x != nil {
+		return x.KeyVersion
+	}
+	return 0
+}
+
+func (x *GenerateDataKeyResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *GenerateDataKeyResponse) GetError() *v1.ApiError {
+	if x != nil {
+		return x.Error
+	}
+	return nil
+}
+
+type RewrapRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	KeyName       string                 `protobuf:"bytes,2,opt,name=key_name,json=keyName,proto3" json:"key_name,omitempty"`
+	Ciphertext    string                 `protobuf:"bytes,3,opt,name=ciphertext,proto3" json:"ciphertext,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RewrapRequest) Reset() {
+	*x = RewrapRequest{}
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RewrapRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RewrapRequest) ProtoMessage() {}
+
+func (x *RewrapRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RewrapRequest.ProtoReflect.Descriptor instead.
+func (*RewrapRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *RewrapRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *RewrapRequest) GetKeyName() string {
+	if x != nil {
+		return x.KeyName
+	}
+	return ""
+}
+
+func (x *RewrapRequest) GetCiphertext() string {
+	if x != nil {
+		return x.Ciphertext
+	}
+	return ""
+}
+
+type RewrapResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Ciphertext    string                 `protobuf:"bytes,1,opt,name=ciphertext,proto3" json:"ciphertext,omitempty"`
+	KeyVersion    int32                  `protobuf:"varint,2,opt,name=key_version,json=keyVersion,proto3" json:"key_version,omitempty"`
+	Message       string                 `protobuf:"bytes,3,opt,name=message,proto3" json:"message,omitempty"`
+	Error         *v1.ApiError           `protobuf:"bytes,4,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RewrapResponse) Reset() {
+	*x = RewrapResponse{}
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RewrapResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RewrapResponse) ProtoMessage() {}
+
+func (x *RewrapResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RewrapResponse.ProtoReflect.Descriptor instead.
+func (*RewrapResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *RewrapResponse) GetCiphertext() string {
+	if x != nil {
+		return x.Ciphertext
+	}
+	return ""
+}
+
+func (x *RewrapResponse) GetKeyVersion() int32 {
+	if x != nil {
+		return x.KeyVersion
+	}
+	return 0
+}
+
+func (x *RewrapResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *RewrapResponse) GetError() *v1.ApiError {
+	if x != nil {
+		return x.Error
+	}
+	return nil
+}
+
+type GetTransitPublicKeyRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	KeyName       string                 `protobuf:"bytes,2,opt,name=key_name,json=keyName,proto3" json:"key_name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetTransitPublicKeyRequest) Reset() {
+	*x = GetTransitPublicKeyRequest{}
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetTransitPublicKeyRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetTransitPublicKeyRequest) ProtoMessage() {}
+
+func (x *GetTransitPublicKeyRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetTransitPublicKeyRequest.ProtoReflect.Descriptor instead.
+func (*GetTransitPublicKeyRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *GetTransitPublicKeyRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *GetTransitPublicKeyRequest) GetKeyName() string {
+	if x != nil {
+		return x.KeyName
+	}
+	return ""
+}
+
+// One usable version's Ed25519 public key. The public key is NOT secret.
+type TransitPublicKey struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Version       int32                  `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`
+	PublicKey     string                 `protobuf:"bytes,2,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
+	State         string                 `protobuf:"bytes,3,opt,name=state,proto3" json:"state,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TransitPublicKey) Reset() {
+	*x = TransitPublicKey{}
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TransitPublicKey) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TransitPublicKey) ProtoMessage() {}
+
+func (x *TransitPublicKey) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TransitPublicKey.ProtoReflect.Descriptor instead.
+func (*TransitPublicKey) Descriptor() ([]byte, []int) {
+	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *TransitPublicKey) GetVersion() int32 {
+	if x != nil {
+		return x.Version
+	}
+	return 0
+}
+
+func (x *TransitPublicKey) GetPublicKey() string {
+	if x != nil {
+		return x.PublicKey
+	}
+	return ""
+}
+
+func (x *TransitPublicKey) GetState() string {
+	if x != nil {
+		return x.State
+	}
+	return ""
+}
+
+type GetTransitPublicKeyResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	KeyName       string                 `protobuf:"bytes,1,opt,name=key_name,json=keyName,proto3" json:"key_name,omitempty"`
+	Algorithm     string                 `protobuf:"bytes,2,opt,name=algorithm,proto3" json:"algorithm,omitempty"`
+	PublicKeys    []*TransitPublicKey    `protobuf:"bytes,3,rep,name=public_keys,json=publicKeys,proto3" json:"public_keys,omitempty"`
+	Message       string                 `protobuf:"bytes,4,opt,name=message,proto3" json:"message,omitempty"`
+	Error         *v1.ApiError           `protobuf:"bytes,5,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetTransitPublicKeyResponse) Reset() {
+	*x = GetTransitPublicKeyResponse{}
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetTransitPublicKeyResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetTransitPublicKeyResponse) ProtoMessage() {}
+
+func (x *GetTransitPublicKeyResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetTransitPublicKeyResponse.ProtoReflect.Descriptor instead.
+func (*GetTransitPublicKeyResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *GetTransitPublicKeyResponse) GetKeyName() string {
+	if x != nil {
+		return x.KeyName
+	}
+	return ""
+}
+
+func (x *GetTransitPublicKeyResponse) GetAlgorithm() string {
+	if x != nil {
+		return x.Algorithm
+	}
+	return ""
+}
+
+func (x *GetTransitPublicKeyResponse) GetPublicKeys() []*TransitPublicKey {
+	if x != nil {
+		return x.PublicKeys
+	}
+	return nil
+}
+
+func (x *GetTransitPublicKeyResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *GetTransitPublicKeyResponse) GetError() *v1.ApiError {
+	if x != nil {
+		return x.Error
+	}
+	return nil
+}
+
+type BatchEncryptRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	KeyName       string                 `protobuf:"bytes,2,opt,name=key_name,json=keyName,proto3" json:"key_name,omitempty"`
+	Plaintexts    []string               `protobuf:"bytes,3,rep,name=plaintexts,proto3" json:"plaintexts,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BatchEncryptRequest) Reset() {
+	*x = BatchEncryptRequest{}
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BatchEncryptRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BatchEncryptRequest) ProtoMessage() {}
+
+func (x *BatchEncryptRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BatchEncryptRequest.ProtoReflect.Descriptor instead.
+func (*BatchEncryptRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *BatchEncryptRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *BatchEncryptRequest) GetKeyName() string {
+	if x != nil {
+		return x.KeyName
+	}
+	return ""
+}
+
+func (x *BatchEncryptRequest) GetPlaintexts() []string {
+	if x != nil {
+		return x.Plaintexts
+	}
+	return nil
+}
+
+type BatchEncryptResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Ciphertexts   []string               `protobuf:"bytes,1,rep,name=ciphertexts,proto3" json:"ciphertexts,omitempty"`
+	KeyVersion    int32                  `protobuf:"varint,2,opt,name=key_version,json=keyVersion,proto3" json:"key_version,omitempty"`
+	Message       string                 `protobuf:"bytes,3,opt,name=message,proto3" json:"message,omitempty"`
+	Error         *v1.ApiError           `protobuf:"bytes,4,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BatchEncryptResponse) Reset() {
+	*x = BatchEncryptResponse{}
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BatchEncryptResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BatchEncryptResponse) ProtoMessage() {}
+
+func (x *BatchEncryptResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BatchEncryptResponse.ProtoReflect.Descriptor instead.
+func (*BatchEncryptResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *BatchEncryptResponse) GetCiphertexts() []string {
+	if x != nil {
+		return x.Ciphertexts
+	}
+	return nil
+}
+
+func (x *BatchEncryptResponse) GetKeyVersion() int32 {
+	if x != nil {
+		return x.KeyVersion
+	}
+	return 0
+}
+
+func (x *BatchEncryptResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *BatchEncryptResponse) GetError() *v1.ApiError {
+	if x != nil {
+		return x.Error
+	}
+	return nil
+}
+
+type BatchDecryptRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	KeyName       string                 `protobuf:"bytes,2,opt,name=key_name,json=keyName,proto3" json:"key_name,omitempty"`
+	Ciphertexts   []string               `protobuf:"bytes,3,rep,name=ciphertexts,proto3" json:"ciphertexts,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BatchDecryptRequest) Reset() {
+	*x = BatchDecryptRequest{}
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BatchDecryptRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BatchDecryptRequest) ProtoMessage() {}
+
+func (x *BatchDecryptRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BatchDecryptRequest.ProtoReflect.Descriptor instead.
+func (*BatchDecryptRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *BatchDecryptRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *BatchDecryptRequest) GetKeyName() string {
+	if x != nil {
+		return x.KeyName
+	}
+	return ""
+}
+
+func (x *BatchDecryptRequest) GetCiphertexts() []string {
+	if x != nil {
+		return x.Ciphertexts
+	}
+	return nil
+}
+
+type BatchDecryptResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Plaintexts    []string               `protobuf:"bytes,1,rep,name=plaintexts,proto3" json:"plaintexts,omitempty"`
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	Error         *v1.ApiError           `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BatchDecryptResponse) Reset() {
+	*x = BatchDecryptResponse{}
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BatchDecryptResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BatchDecryptResponse) ProtoMessage() {}
+
+func (x *BatchDecryptResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BatchDecryptResponse.ProtoReflect.Descriptor instead.
+func (*BatchDecryptResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *BatchDecryptResponse) GetPlaintexts() []string {
+	if x != nil {
+		return x.Plaintexts
+	}
+	return nil
+}
+
+func (x *BatchDecryptResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *BatchDecryptResponse) GetError() *v1.ApiError {
+	if x != nil {
+		return x.Error
+	}
+	return nil
+}
+
 type SignRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
@@ -1267,7 +2083,7 @@ type SignRequest struct {
 
 func (x *SignRequest) Reset() {
 	*x = SignRequest{}
-	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[19]
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1279,7 +2095,7 @@ func (x *SignRequest) String() string {
 func (*SignRequest) ProtoMessage() {}
 
 func (x *SignRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[19]
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1292,7 +2108,7 @@ func (x *SignRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SignRequest.ProtoReflect.Descriptor instead.
 func (*SignRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{19}
+	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *SignRequest) GetTenantId() string {
@@ -1328,7 +2144,7 @@ type SignResponse struct {
 
 func (x *SignResponse) Reset() {
 	*x = SignResponse{}
-	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[20]
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1340,7 +2156,7 @@ func (x *SignResponse) String() string {
 func (*SignResponse) ProtoMessage() {}
 
 func (x *SignResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[20]
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1353,7 +2169,7 @@ func (x *SignResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SignResponse.ProtoReflect.Descriptor instead.
 func (*SignResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{20}
+	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *SignResponse) GetSignature() string {
@@ -1396,7 +2212,7 @@ type VerifyRequest struct {
 
 func (x *VerifyRequest) Reset() {
 	*x = VerifyRequest{}
-	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[21]
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1408,7 +2224,7 @@ func (x *VerifyRequest) String() string {
 func (*VerifyRequest) ProtoMessage() {}
 
 func (x *VerifyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[21]
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1421,7 +2237,7 @@ func (x *VerifyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VerifyRequest.ProtoReflect.Descriptor instead.
 func (*VerifyRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{21}
+	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *VerifyRequest) GetTenantId() string {
@@ -1463,7 +2279,7 @@ type VerifyResponse struct {
 
 func (x *VerifyResponse) Reset() {
 	*x = VerifyResponse{}
-	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[22]
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1475,7 +2291,7 @@ func (x *VerifyResponse) String() string {
 func (*VerifyResponse) ProtoMessage() {}
 
 func (x *VerifyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[22]
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1488,7 +2304,7 @@ func (x *VerifyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VerifyResponse.ProtoReflect.Descriptor instead.
 func (*VerifyResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{22}
+	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *VerifyResponse) GetValid() bool {
@@ -1523,7 +2339,7 @@ type HmacRequest struct {
 
 func (x *HmacRequest) Reset() {
 	*x = HmacRequest{}
-	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[23]
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1535,7 +2351,7 @@ func (x *HmacRequest) String() string {
 func (*HmacRequest) ProtoMessage() {}
 
 func (x *HmacRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[23]
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1548,7 +2364,7 @@ func (x *HmacRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HmacRequest.ProtoReflect.Descriptor instead.
 func (*HmacRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{23}
+	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *HmacRequest) GetTenantId() string {
@@ -1584,7 +2400,7 @@ type HmacResponse struct {
 
 func (x *HmacResponse) Reset() {
 	*x = HmacResponse{}
-	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[24]
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1596,7 +2412,7 @@ func (x *HmacResponse) String() string {
 func (*HmacResponse) ProtoMessage() {}
 
 func (x *HmacResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[24]
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1609,7 +2425,7 @@ func (x *HmacResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HmacResponse.ProtoReflect.Descriptor instead.
 func (*HmacResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{24}
+	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *HmacResponse) GetHmac() string {
@@ -1649,7 +2465,7 @@ type SealStatusRequest struct {
 
 func (x *SealStatusRequest) Reset() {
 	*x = SealStatusRequest{}
-	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[25]
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1661,7 +2477,7 @@ func (x *SealStatusRequest) String() string {
 func (*SealStatusRequest) ProtoMessage() {}
 
 func (x *SealStatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[25]
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1674,7 +2490,7 @@ func (x *SealStatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SealStatusRequest.ProtoReflect.Descriptor instead.
 func (*SealStatusRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{25}
+	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *SealStatusRequest) GetTenantId() string {
@@ -1698,7 +2514,7 @@ type SealStatusResponse struct {
 
 func (x *SealStatusResponse) Reset() {
 	*x = SealStatusResponse{}
-	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[26]
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1710,7 +2526,7 @@ func (x *SealStatusResponse) String() string {
 func (*SealStatusResponse) ProtoMessage() {}
 
 func (x *SealStatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[26]
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1723,7 +2539,7 @@ func (x *SealStatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SealStatusResponse.ProtoReflect.Descriptor instead.
 func (*SealStatusResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{26}
+	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *SealStatusResponse) GetSealed() bool {
@@ -1765,7 +2581,7 @@ type GenerateDatabaseCredentialsRequest struct {
 
 func (x *GenerateDatabaseCredentialsRequest) Reset() {
 	*x = GenerateDatabaseCredentialsRequest{}
-	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[27]
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1777,7 +2593,7 @@ func (x *GenerateDatabaseCredentialsRequest) String() string {
 func (*GenerateDatabaseCredentialsRequest) ProtoMessage() {}
 
 func (x *GenerateDatabaseCredentialsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[27]
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1790,7 +2606,7 @@ func (x *GenerateDatabaseCredentialsRequest) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use GenerateDatabaseCredentialsRequest.ProtoReflect.Descriptor instead.
 func (*GenerateDatabaseCredentialsRequest) Descriptor() ([]byte, []int) {
-	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{27}
+	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *GenerateDatabaseCredentialsRequest) GetTenantId() string {
@@ -1828,7 +2644,7 @@ type GenerateDatabaseCredentialsResponse struct {
 
 func (x *GenerateDatabaseCredentialsResponse) Reset() {
 	*x = GenerateDatabaseCredentialsResponse{}
-	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[28]
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1840,7 +2656,7 @@ func (x *GenerateDatabaseCredentialsResponse) String() string {
 func (*GenerateDatabaseCredentialsResponse) ProtoMessage() {}
 
 func (x *GenerateDatabaseCredentialsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[28]
+	mi := &file_udb_core_vault_services_v1_vault_service_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1853,7 +2669,7 @@ func (x *GenerateDatabaseCredentialsResponse) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use GenerateDatabaseCredentialsResponse.ProtoReflect.Descriptor instead.
 func (*GenerateDatabaseCredentialsResponse) Descriptor() ([]byte, []int) {
-	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{28}
+	return file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *GenerateDatabaseCredentialsResponse) GetUsername() string {
@@ -1956,7 +2772,17 @@ const file_udb_core_vault_services_v1_vault_service_proto_rawDesc = "" +
 	"secretPath:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01\"\x82\x01\n" +
 	"\x14DeleteSecretResponse\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage\x122\n" +
-	"\x05error\x18\x02 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01\"\xa1\x01\n" +
+	"\x05error\x18\x02 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01\"s\n" +
+	"\x15UndeleteSecretRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1f\n" +
+	"\vsecret_path\x18\x02 \x01(\tR\n" +
+	"secretPath:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01\"\xbf\x01\n" +
+	"\x16UndeleteSecretResponse\x12\x1f\n" +
+	"\vsecret_path\x18\x01 \x01(\tR\n" +
+	"secretPath\x12\x18\n" +
+	"\aversion\x18\x02 \x01(\x05R\aversion\x12\x18\n" +
+	"\amessage\x18\x03 \x01(\tR\amessage\x122\n" +
+	"\x05error\x18\x04 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01\"\xa1\x01\n" +
 	"\x14DestroySecretRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1f\n" +
 	"\vsecret_path\x18\x02 \x01(\tR\n" +
@@ -2006,7 +2832,70 @@ const file_udb_core_vault_services_v1_vault_service_proto_rawDesc = "" +
 	"\vkey_version\x18\x02 \x01(\x05R\n" +
 	"keyVersion\x12\x18\n" +
 	"\amessage\x18\x03 \x01(\tR\amessage\x122\n" +
-	"\x05error\x18\x04 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01\"y\n" +
+	"\x05error\x18\x04 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01\"n\n" +
+	"\x16GenerateDataKeyRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x19\n" +
+	"\bkey_name\x18\x02 \x01(\tR\akeyName:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01\"\x8f\x02\n" +
+	"\x17GenerateDataKeyResponse\x12G\n" +
+	"\tplaintext\x18\x01 \x01(\tB)\xe8\xb5\x18\x01\xf0\xb5\x18\x01\x8a\xb7\x18\x1d\b\x04\x10\x03\x18\x03:\rvault-transitJ\x06tenantR\tplaintext\x12\x1e\n" +
+	"\n" +
+	"ciphertext\x18\x02 \x01(\tR\n" +
+	"ciphertext\x12\x1f\n" +
+	"\vkey_version\x18\x03 \x01(\x05R\n" +
+	"keyVersion\x12\x18\n" +
+	"\amessage\x18\x04 \x01(\tR\amessage\x122\n" +
+	"\x05error\x18\x05 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01\"\x85\x01\n" +
+	"\rRewrapRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x19\n" +
+	"\bkey_name\x18\x02 \x01(\tR\akeyName\x12\x1e\n" +
+	"\n" +
+	"ciphertext\x18\x03 \x01(\tR\n" +
+	"ciphertext:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01\"\xbd\x01\n" +
+	"\x0eRewrapResponse\x12\x1e\n" +
+	"\n" +
+	"ciphertext\x18\x01 \x01(\tR\n" +
+	"ciphertext\x12\x1f\n" +
+	"\vkey_version\x18\x02 \x01(\x05R\n" +
+	"keyVersion\x12\x18\n" +
+	"\amessage\x18\x03 \x01(\tR\amessage\x122\n" +
+	"\x05error\x18\x04 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01\"r\n" +
+	"\x1aGetTransitPublicKeyRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x19\n" +
+	"\bkey_name\x18\x02 \x01(\tR\akeyName:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01\"a\n" +
+	"\x10TransitPublicKey\x12\x18\n" +
+	"\aversion\x18\x01 \x01(\x05R\aversion\x12\x1d\n" +
+	"\n" +
+	"public_key\x18\x02 \x01(\tR\tpublicKey\x12\x14\n" +
+	"\x05state\x18\x03 \x01(\tR\x05state\"\x91\x02\n" +
+	"\x1bGetTransitPublicKeyResponse\x12\x19\n" +
+	"\bkey_name\x18\x01 \x01(\tR\akeyName\x12\x1c\n" +
+	"\talgorithm\x18\x02 \x01(\tR\talgorithm\x12M\n" +
+	"\vpublic_keys\x18\x03 \x03(\v2,.udb.core.vault.services.v1.TransitPublicKeyR\n" +
+	"publicKeys\x12\x18\n" +
+	"\amessage\x18\x04 \x01(\tR\amessage\x122\n" +
+	"\x05error\x18\x05 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01\"\xb6\x01\n" +
+	"\x13BatchEncryptRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x19\n" +
+	"\bkey_name\x18\x02 \x01(\tR\akeyName\x12I\n" +
+	"\n" +
+	"plaintexts\x18\x03 \x03(\tB)\xe8\xb5\x18\x01\xf0\xb5\x18\x01\x8a\xb7\x18\x1d\b\x04\x10\x06\x18\x03:\rvault-transitJ\x06tenantR\n" +
+	"plaintexts:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01\"\xc5\x01\n" +
+	"\x14BatchEncryptResponse\x12 \n" +
+	"\vciphertexts\x18\x01 \x03(\tR\vciphertexts\x12\x1f\n" +
+	"\vkey_version\x18\x02 \x01(\x05R\n" +
+	"keyVersion\x12\x18\n" +
+	"\amessage\x18\x03 \x01(\tR\amessage\x122\n" +
+	"\x05error\x18\x04 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01\"\x8d\x01\n" +
+	"\x13BatchDecryptRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x19\n" +
+	"\bkey_name\x18\x02 \x01(\tR\akeyName\x12 \n" +
+	"\vciphertexts\x18\x03 \x03(\tR\vciphertexts:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01\"\xcd\x01\n" +
+	"\x14BatchDecryptResponse\x12I\n" +
+	"\n" +
+	"plaintexts\x18\x01 \x03(\tB)\xe8\xb5\x18\x01\xf0\xb5\x18\x01\x8a\xb7\x18\x1d\b\x04\x10\x03\x18\x03:\rvault-transitJ\x06tenantR\n" +
+	"plaintexts\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\x122\n" +
+	"\x05error\x18\x03 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01\"y\n" +
 	"\vSignRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x19\n" +
 	"\bkey_name\x18\x02 \x01(\tR\akeyName\x12\x14\n" +
@@ -2054,7 +2943,7 @@ const file_udb_core_vault_services_v1_vault_service_proto_rawDesc = "" +
 	"\blease_id\x18\x03 \x01(\tR\aleaseId\x12*\n" +
 	"\x11lease_ttl_seconds\x18\x04 \x01(\x05R\x0fleaseTtlSeconds\x12\x18\n" +
 	"\amessage\x18\x05 \x01(\tR\amessage\x122\n" +
-	"\x05error\x18\x06 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x012\xb5.\n" +
+	"\x05error\x18\x06 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x012\xa8@\n" +
 	"\fVaultService\x12\x9f\x03\n" +
 	"\tPutSecret\x12,.udb.core.vault.services.v1.PutSecretRequest\x1a-.udb.core.vault.services.v1.PutSecretResponse\"\xb4\x02\xca\xf3\x182\b\x02\x1a\x14udb:vault:put-secret \x01J\x02\x01\x02j\x0fvault.PutSecret\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18/\b\x01\x12\n" +
 	"put_secret\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01Z\tputSecret\xea\xf3\x18V\n" +
@@ -2069,7 +2958,10 @@ const file_udb_core_vault_services_v1_vault_service_proto_rawDesc = "" +
 	"\x05vault\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02\x13\x12\x11/v1/vault/secrets\x12\xc0\x03\n" +
 	"\fDeleteSecret\x12/.udb.core.vault.services.v1.DeleteSecretRequest\x1a0.udb.core.vault.services.v1.DeleteSecretResponse\"\xcc\x02\xca\xf3\x188\b\x02\x1a\x17udb:vault:delete-secret \x01J\x02\x01\x02j\x12vault.DeleteSecret\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x185\b\x01\x12\rdelete_secret\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01Z\fdeleteSecret\xea\xf3\x18_\n" +
 	"\x12vault.DeleteSecret\x12\x1budb.vault.secret.deleted.v1\x1a\vsecret_path\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18?\n" +
-	"\x05vault\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02\x1d:\x01*\"\x18/v1/vault/secrets:delete\x12\xcb\x03\n" +
+	"\x05vault\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02\x1d:\x01*\"\x18/v1/vault/secrets:delete\x12\xd3\x03\n" +
+	"\x0eUndeleteSecret\x121.udb.core.vault.services.v1.UndeleteSecretRequest\x1a2.udb.core.vault.services.v1.UndeleteSecretResponse\"\xd9\x02\xca\xf3\x18<\b\x02\x1a\x19udb:vault:undelete-secret \x01J\x02\x01\x02j\x14vault.UndeleteSecret\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x189\b\x01\x12\x0fundelete_secret\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01Z\x0eundeleteSecret\xea\xf3\x18b\n" +
+	"\x14vault.UndeleteSecret\x12\x1cudb.vault.secret.restored.v1\x1a\vsecret_path\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18?\n" +
+	"\x05vault\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02\x1f:\x01*\"\x1a/v1/vault/secrets:undelete\x12\xcb\x03\n" +
 	"\rDestroySecret\x120.udb.core.vault.services.v1.DestroySecretRequest\x1a1.udb.core.vault.services.v1.DestroySecretResponse\"\xd4\x02\xca\xf3\x18:\b\x02\x1a\x18udb:vault:destroy-secret \x01J\x02\x01\x02j\x13vault.DestroySecret\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x187\b\x01\x12\x0edestroy_secret\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01Z\rdestroySecret\xea\xf3\x18b\n" +
 	"\x13vault.DestroySecret\x12\x1dudb.vault.secret.destroyed.v1\x1a\vsecret_path\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18?\n" +
 	"\x05vault\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x03\x82\xd3\xe4\x93\x02\x1e:\x01*\"\x19/v1/vault/secrets:destroy\x12\xe2\x03\n" +
@@ -2096,7 +2988,17 @@ const file_udb_core_vault_services_v1_vault_service_proto_rawDesc = "" +
 	"SealStatus\x12-.udb.core.vault.services.v1.SealStatusRequest\x1a..udb.core.vault.services.v1.SealStatusResponse\"\xe0\x01\xca\xf3\x184\b\x02\x1a\x15udb:vault:seal-status \x01J\x02\x01\x02j\x10vault.SealStatus\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x186\b\x01\x12\vseal_status\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01Z\x0fvaultSealStatus\xf2\xf3\x18?\n" +
 	"\x05vault\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02\x17\x12\x15/v1/vault/seal-status\x12\xc8\x03\n" +
 	"\x1bGenerateDatabaseCredentials\x12>.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest\x1a?.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse\"\xa7\x02\xca\xf3\x18Q\b\x02\x1a!udb:vault:generate-db-credentials \x01J\x02\x01\x02j!vault.GenerateDatabaseCredentials\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18T\b\x01\x12\x1dgenerate_database_credentials\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01Z\x1bgenerateDatabaseCredentials\xf2\xf3\x18?\n" +
-	"\x05vault\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02#:\x01*\"\x1e/v1/vault/database/credentials\x1a\xbc\x02\xca\xf0\x19O\n" +
+	"\x05vault\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02#:\x01*\"\x1e/v1/vault/database/credentials\x12\x82\x03\n" +
+	"\x0fGenerateDataKey\x122.udb.core.vault.services.v1.GenerateDataKeyRequest\x1a3.udb.core.vault.services.v1.GenerateDataKeyResponse\"\x85\x02\xca\xf3\x18?\b\x02\x1a\x1budb:vault:generate-data-key \x01J\x02\x01\x02j\x15vault.GenerateDataKey\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18A\b\x01\x12\x11generate_data_key\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01Z\x14vaultGenerateDataKey\xf2\xf3\x18?\n" +
+	"\x05vault\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02&:\x01*\"!/v1/vault/transit:generateDataKey\x12\xb6\x02\n" +
+	"\x06Rewrap\x12).udb.core.vault.services.v1.RewrapRequest\x1a*.udb.core.vault.services.v1.RewrapResponse\"\xd4\x01\xca\xf3\x18+\b\x02\x1a\x10udb:vault:rewrap \x01J\x02\x01\x02j\fvault.Rewrap\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18-\b\x01\x12\x06rewrap\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01Z\vvaultRewrap\xf2\xf3\x18?\n" +
+	"\x05vault\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02\x1d:\x01*\"\x18/v1/vault/transit:rewrap\x12\x92\x03\n" +
+	"\x13GetTransitPublicKey\x126.udb.core.vault.services.v1.GetTransitPublicKeyRequest\x1a7.udb.core.vault.services.v1.GetTransitPublicKeyResponse\"\x89\x02\xca\xf3\x18@\b\x02\x1a\x18udb:vault:get-public-key \x01J\x02\x01\x02j\x19vault.GetTransitPublicKey\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18J\b\x01\x12\x16get_transit_public_key\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01Z\x18vaultGetTransitPublicKey\xf2\xf3\x18?\n" +
+	"\x05vault\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02 :\x01*\"\x1b/v1/vault/transit:publicKey\x12\xe2\x02\n" +
+	"\fBatchEncrypt\x12/.udb.core.vault.services.v1.BatchEncryptRequest\x1a0.udb.core.vault.services.v1.BatchEncryptResponse\"\xee\x01\xca\xf3\x182\b\x02\x1a\x11udb:vault:encrypt \x01J\x02\x01\x02j\x12vault.BatchEncrypt\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18:\b\x01\x12\rbatch_encrypt\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01Z\x11vaultBatchEncrypt\xf2\xf3\x18?\n" +
+	"\x05vault\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02#:\x01*\"\x1e/v1/vault/transit:batchEncrypt\x12\xe2\x02\n" +
+	"\fBatchDecrypt\x12/.udb.core.vault.services.v1.BatchDecryptRequest\x1a0.udb.core.vault.services.v1.BatchDecryptResponse\"\xee\x01\xca\xf3\x182\b\x02\x1a\x11udb:vault:decrypt \x01J\x02\x01\x02j\x12vault.BatchDecrypt\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18:\b\x01\x12\rbatch_decrypt\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01Z\x11vaultBatchDecrypt\xf2\xf3\x18?\n" +
+	"\x05vault\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02#:\x01*\"\x1e/v1/vault/transit:batchDecrypt\x1a\xbc\x02\xca\xf0\x19O\n" +
 	"\x05vault\x12\x05vault\x1a\x05vault\"\x05Vault*\x05vault0\x018\x01h\x01z\x05vault\x82\x01\x05vault\x8a\x01\x05vault\x92\x01\fnative.vault\xd2\xf0\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05vaultP\x01\xda\xf0\x19\x85\x01\n" +
 	"\x05vault\x12\x10udb/native/vault\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"\x17udb.native.vault.config:\x05vaultJ\vUDB_API_KEYZ\x0fudb native lint\xe2\xf0\x19?\n" +
 	"\x05vault\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGETB\x8a\x02\n" +
@@ -2114,7 +3016,7 @@ func file_udb_core_vault_services_v1_vault_service_proto_rawDescGZIP() []byte {
 	return file_udb_core_vault_services_v1_vault_service_proto_rawDescData
 }
 
-var file_udb_core_vault_services_v1_vault_service_proto_msgTypes = make([]protoimpl.MessageInfo, 29)
+var file_udb_core_vault_services_v1_vault_service_proto_msgTypes = make([]protoimpl.MessageInfo, 42)
 var file_udb_core_vault_services_v1_vault_service_proto_goTypes = []any{
 	(*PutSecretRequest)(nil),                    // 0: udb.core.vault.services.v1.PutSecretRequest
 	(*PutSecretResponse)(nil),                   // 1: udb.core.vault.services.v1.PutSecretResponse
@@ -2125,77 +3027,109 @@ var file_udb_core_vault_services_v1_vault_service_proto_goTypes = []any{
 	(*ListSecretsResponse)(nil),                 // 6: udb.core.vault.services.v1.ListSecretsResponse
 	(*DeleteSecretRequest)(nil),                 // 7: udb.core.vault.services.v1.DeleteSecretRequest
 	(*DeleteSecretResponse)(nil),                // 8: udb.core.vault.services.v1.DeleteSecretResponse
-	(*DestroySecretRequest)(nil),                // 9: udb.core.vault.services.v1.DestroySecretRequest
-	(*DestroySecretResponse)(nil),               // 10: udb.core.vault.services.v1.DestroySecretResponse
-	(*CreateTransitKeyRequest)(nil),             // 11: udb.core.vault.services.v1.CreateTransitKeyRequest
-	(*CreateTransitKeyResponse)(nil),            // 12: udb.core.vault.services.v1.CreateTransitKeyResponse
-	(*RotateTransitKeyRequest)(nil),             // 13: udb.core.vault.services.v1.RotateTransitKeyRequest
-	(*RotateTransitKeyResponse)(nil),            // 14: udb.core.vault.services.v1.RotateTransitKeyResponse
-	(*EncryptRequest)(nil),                      // 15: udb.core.vault.services.v1.EncryptRequest
-	(*EncryptResponse)(nil),                     // 16: udb.core.vault.services.v1.EncryptResponse
-	(*DecryptRequest)(nil),                      // 17: udb.core.vault.services.v1.DecryptRequest
-	(*DecryptResponse)(nil),                     // 18: udb.core.vault.services.v1.DecryptResponse
-	(*SignRequest)(nil),                         // 19: udb.core.vault.services.v1.SignRequest
-	(*SignResponse)(nil),                        // 20: udb.core.vault.services.v1.SignResponse
-	(*VerifyRequest)(nil),                       // 21: udb.core.vault.services.v1.VerifyRequest
-	(*VerifyResponse)(nil),                      // 22: udb.core.vault.services.v1.VerifyResponse
-	(*HmacRequest)(nil),                         // 23: udb.core.vault.services.v1.HmacRequest
-	(*HmacResponse)(nil),                        // 24: udb.core.vault.services.v1.HmacResponse
-	(*SealStatusRequest)(nil),                   // 25: udb.core.vault.services.v1.SealStatusRequest
-	(*SealStatusResponse)(nil),                  // 26: udb.core.vault.services.v1.SealStatusResponse
-	(*GenerateDatabaseCredentialsRequest)(nil),  // 27: udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest
-	(*GenerateDatabaseCredentialsResponse)(nil), // 28: udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse
-	(*v1.ApiError)(nil),                         // 29: udb.core.common.v1.ApiError
+	(*UndeleteSecretRequest)(nil),               // 9: udb.core.vault.services.v1.UndeleteSecretRequest
+	(*UndeleteSecretResponse)(nil),              // 10: udb.core.vault.services.v1.UndeleteSecretResponse
+	(*DestroySecretRequest)(nil),                // 11: udb.core.vault.services.v1.DestroySecretRequest
+	(*DestroySecretResponse)(nil),               // 12: udb.core.vault.services.v1.DestroySecretResponse
+	(*CreateTransitKeyRequest)(nil),             // 13: udb.core.vault.services.v1.CreateTransitKeyRequest
+	(*CreateTransitKeyResponse)(nil),            // 14: udb.core.vault.services.v1.CreateTransitKeyResponse
+	(*RotateTransitKeyRequest)(nil),             // 15: udb.core.vault.services.v1.RotateTransitKeyRequest
+	(*RotateTransitKeyResponse)(nil),            // 16: udb.core.vault.services.v1.RotateTransitKeyResponse
+	(*EncryptRequest)(nil),                      // 17: udb.core.vault.services.v1.EncryptRequest
+	(*EncryptResponse)(nil),                     // 18: udb.core.vault.services.v1.EncryptResponse
+	(*DecryptRequest)(nil),                      // 19: udb.core.vault.services.v1.DecryptRequest
+	(*DecryptResponse)(nil),                     // 20: udb.core.vault.services.v1.DecryptResponse
+	(*GenerateDataKeyRequest)(nil),              // 21: udb.core.vault.services.v1.GenerateDataKeyRequest
+	(*GenerateDataKeyResponse)(nil),             // 22: udb.core.vault.services.v1.GenerateDataKeyResponse
+	(*RewrapRequest)(nil),                       // 23: udb.core.vault.services.v1.RewrapRequest
+	(*RewrapResponse)(nil),                      // 24: udb.core.vault.services.v1.RewrapResponse
+	(*GetTransitPublicKeyRequest)(nil),          // 25: udb.core.vault.services.v1.GetTransitPublicKeyRequest
+	(*TransitPublicKey)(nil),                    // 26: udb.core.vault.services.v1.TransitPublicKey
+	(*GetTransitPublicKeyResponse)(nil),         // 27: udb.core.vault.services.v1.GetTransitPublicKeyResponse
+	(*BatchEncryptRequest)(nil),                 // 28: udb.core.vault.services.v1.BatchEncryptRequest
+	(*BatchEncryptResponse)(nil),                // 29: udb.core.vault.services.v1.BatchEncryptResponse
+	(*BatchDecryptRequest)(nil),                 // 30: udb.core.vault.services.v1.BatchDecryptRequest
+	(*BatchDecryptResponse)(nil),                // 31: udb.core.vault.services.v1.BatchDecryptResponse
+	(*SignRequest)(nil),                         // 32: udb.core.vault.services.v1.SignRequest
+	(*SignResponse)(nil),                        // 33: udb.core.vault.services.v1.SignResponse
+	(*VerifyRequest)(nil),                       // 34: udb.core.vault.services.v1.VerifyRequest
+	(*VerifyResponse)(nil),                      // 35: udb.core.vault.services.v1.VerifyResponse
+	(*HmacRequest)(nil),                         // 36: udb.core.vault.services.v1.HmacRequest
+	(*HmacResponse)(nil),                        // 37: udb.core.vault.services.v1.HmacResponse
+	(*SealStatusRequest)(nil),                   // 38: udb.core.vault.services.v1.SealStatusRequest
+	(*SealStatusResponse)(nil),                  // 39: udb.core.vault.services.v1.SealStatusResponse
+	(*GenerateDatabaseCredentialsRequest)(nil),  // 40: udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest
+	(*GenerateDatabaseCredentialsResponse)(nil), // 41: udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse
+	(*v1.ApiError)(nil),                         // 42: udb.core.common.v1.ApiError
 }
 var file_udb_core_vault_services_v1_vault_service_proto_depIdxs = []int32{
-	29, // 0: udb.core.vault.services.v1.PutSecretResponse.error:type_name -> udb.core.common.v1.ApiError
-	29, // 1: udb.core.vault.services.v1.GetSecretResponse.error:type_name -> udb.core.common.v1.ApiError
+	42, // 0: udb.core.vault.services.v1.PutSecretResponse.error:type_name -> udb.core.common.v1.ApiError
+	42, // 1: udb.core.vault.services.v1.GetSecretResponse.error:type_name -> udb.core.common.v1.ApiError
 	5,  // 2: udb.core.vault.services.v1.ListSecretsResponse.secrets:type_name -> udb.core.vault.services.v1.SecretSummary
-	29, // 3: udb.core.vault.services.v1.ListSecretsResponse.error:type_name -> udb.core.common.v1.ApiError
-	29, // 4: udb.core.vault.services.v1.DeleteSecretResponse.error:type_name -> udb.core.common.v1.ApiError
-	29, // 5: udb.core.vault.services.v1.DestroySecretResponse.error:type_name -> udb.core.common.v1.ApiError
-	29, // 6: udb.core.vault.services.v1.CreateTransitKeyResponse.error:type_name -> udb.core.common.v1.ApiError
-	29, // 7: udb.core.vault.services.v1.RotateTransitKeyResponse.error:type_name -> udb.core.common.v1.ApiError
-	29, // 8: udb.core.vault.services.v1.EncryptResponse.error:type_name -> udb.core.common.v1.ApiError
-	29, // 9: udb.core.vault.services.v1.DecryptResponse.error:type_name -> udb.core.common.v1.ApiError
-	29, // 10: udb.core.vault.services.v1.SignResponse.error:type_name -> udb.core.common.v1.ApiError
-	29, // 11: udb.core.vault.services.v1.VerifyResponse.error:type_name -> udb.core.common.v1.ApiError
-	29, // 12: udb.core.vault.services.v1.HmacResponse.error:type_name -> udb.core.common.v1.ApiError
-	29, // 13: udb.core.vault.services.v1.SealStatusResponse.error:type_name -> udb.core.common.v1.ApiError
-	29, // 14: udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse.error:type_name -> udb.core.common.v1.ApiError
-	0,  // 15: udb.core.vault.services.v1.VaultService.PutSecret:input_type -> udb.core.vault.services.v1.PutSecretRequest
-	2,  // 16: udb.core.vault.services.v1.VaultService.GetSecret:input_type -> udb.core.vault.services.v1.GetSecretRequest
-	4,  // 17: udb.core.vault.services.v1.VaultService.ListSecrets:input_type -> udb.core.vault.services.v1.ListSecretsRequest
-	7,  // 18: udb.core.vault.services.v1.VaultService.DeleteSecret:input_type -> udb.core.vault.services.v1.DeleteSecretRequest
-	9,  // 19: udb.core.vault.services.v1.VaultService.DestroySecret:input_type -> udb.core.vault.services.v1.DestroySecretRequest
-	11, // 20: udb.core.vault.services.v1.VaultService.CreateTransitKey:input_type -> udb.core.vault.services.v1.CreateTransitKeyRequest
-	13, // 21: udb.core.vault.services.v1.VaultService.RotateTransitKey:input_type -> udb.core.vault.services.v1.RotateTransitKeyRequest
-	15, // 22: udb.core.vault.services.v1.VaultService.Encrypt:input_type -> udb.core.vault.services.v1.EncryptRequest
-	17, // 23: udb.core.vault.services.v1.VaultService.Decrypt:input_type -> udb.core.vault.services.v1.DecryptRequest
-	19, // 24: udb.core.vault.services.v1.VaultService.Sign:input_type -> udb.core.vault.services.v1.SignRequest
-	21, // 25: udb.core.vault.services.v1.VaultService.Verify:input_type -> udb.core.vault.services.v1.VerifyRequest
-	23, // 26: udb.core.vault.services.v1.VaultService.Hmac:input_type -> udb.core.vault.services.v1.HmacRequest
-	25, // 27: udb.core.vault.services.v1.VaultService.SealStatus:input_type -> udb.core.vault.services.v1.SealStatusRequest
-	27, // 28: udb.core.vault.services.v1.VaultService.GenerateDatabaseCredentials:input_type -> udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest
-	1,  // 29: udb.core.vault.services.v1.VaultService.PutSecret:output_type -> udb.core.vault.services.v1.PutSecretResponse
-	3,  // 30: udb.core.vault.services.v1.VaultService.GetSecret:output_type -> udb.core.vault.services.v1.GetSecretResponse
-	6,  // 31: udb.core.vault.services.v1.VaultService.ListSecrets:output_type -> udb.core.vault.services.v1.ListSecretsResponse
-	8,  // 32: udb.core.vault.services.v1.VaultService.DeleteSecret:output_type -> udb.core.vault.services.v1.DeleteSecretResponse
-	10, // 33: udb.core.vault.services.v1.VaultService.DestroySecret:output_type -> udb.core.vault.services.v1.DestroySecretResponse
-	12, // 34: udb.core.vault.services.v1.VaultService.CreateTransitKey:output_type -> udb.core.vault.services.v1.CreateTransitKeyResponse
-	14, // 35: udb.core.vault.services.v1.VaultService.RotateTransitKey:output_type -> udb.core.vault.services.v1.RotateTransitKeyResponse
-	16, // 36: udb.core.vault.services.v1.VaultService.Encrypt:output_type -> udb.core.vault.services.v1.EncryptResponse
-	18, // 37: udb.core.vault.services.v1.VaultService.Decrypt:output_type -> udb.core.vault.services.v1.DecryptResponse
-	20, // 38: udb.core.vault.services.v1.VaultService.Sign:output_type -> udb.core.vault.services.v1.SignResponse
-	22, // 39: udb.core.vault.services.v1.VaultService.Verify:output_type -> udb.core.vault.services.v1.VerifyResponse
-	24, // 40: udb.core.vault.services.v1.VaultService.Hmac:output_type -> udb.core.vault.services.v1.HmacResponse
-	26, // 41: udb.core.vault.services.v1.VaultService.SealStatus:output_type -> udb.core.vault.services.v1.SealStatusResponse
-	28, // 42: udb.core.vault.services.v1.VaultService.GenerateDatabaseCredentials:output_type -> udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse
-	29, // [29:43] is the sub-list for method output_type
-	15, // [15:29] is the sub-list for method input_type
-	15, // [15:15] is the sub-list for extension type_name
-	15, // [15:15] is the sub-list for extension extendee
-	0,  // [0:15] is the sub-list for field type_name
+	42, // 3: udb.core.vault.services.v1.ListSecretsResponse.error:type_name -> udb.core.common.v1.ApiError
+	42, // 4: udb.core.vault.services.v1.DeleteSecretResponse.error:type_name -> udb.core.common.v1.ApiError
+	42, // 5: udb.core.vault.services.v1.UndeleteSecretResponse.error:type_name -> udb.core.common.v1.ApiError
+	42, // 6: udb.core.vault.services.v1.DestroySecretResponse.error:type_name -> udb.core.common.v1.ApiError
+	42, // 7: udb.core.vault.services.v1.CreateTransitKeyResponse.error:type_name -> udb.core.common.v1.ApiError
+	42, // 8: udb.core.vault.services.v1.RotateTransitKeyResponse.error:type_name -> udb.core.common.v1.ApiError
+	42, // 9: udb.core.vault.services.v1.EncryptResponse.error:type_name -> udb.core.common.v1.ApiError
+	42, // 10: udb.core.vault.services.v1.DecryptResponse.error:type_name -> udb.core.common.v1.ApiError
+	42, // 11: udb.core.vault.services.v1.GenerateDataKeyResponse.error:type_name -> udb.core.common.v1.ApiError
+	42, // 12: udb.core.vault.services.v1.RewrapResponse.error:type_name -> udb.core.common.v1.ApiError
+	26, // 13: udb.core.vault.services.v1.GetTransitPublicKeyResponse.public_keys:type_name -> udb.core.vault.services.v1.TransitPublicKey
+	42, // 14: udb.core.vault.services.v1.GetTransitPublicKeyResponse.error:type_name -> udb.core.common.v1.ApiError
+	42, // 15: udb.core.vault.services.v1.BatchEncryptResponse.error:type_name -> udb.core.common.v1.ApiError
+	42, // 16: udb.core.vault.services.v1.BatchDecryptResponse.error:type_name -> udb.core.common.v1.ApiError
+	42, // 17: udb.core.vault.services.v1.SignResponse.error:type_name -> udb.core.common.v1.ApiError
+	42, // 18: udb.core.vault.services.v1.VerifyResponse.error:type_name -> udb.core.common.v1.ApiError
+	42, // 19: udb.core.vault.services.v1.HmacResponse.error:type_name -> udb.core.common.v1.ApiError
+	42, // 20: udb.core.vault.services.v1.SealStatusResponse.error:type_name -> udb.core.common.v1.ApiError
+	42, // 21: udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse.error:type_name -> udb.core.common.v1.ApiError
+	0,  // 22: udb.core.vault.services.v1.VaultService.PutSecret:input_type -> udb.core.vault.services.v1.PutSecretRequest
+	2,  // 23: udb.core.vault.services.v1.VaultService.GetSecret:input_type -> udb.core.vault.services.v1.GetSecretRequest
+	4,  // 24: udb.core.vault.services.v1.VaultService.ListSecrets:input_type -> udb.core.vault.services.v1.ListSecretsRequest
+	7,  // 25: udb.core.vault.services.v1.VaultService.DeleteSecret:input_type -> udb.core.vault.services.v1.DeleteSecretRequest
+	9,  // 26: udb.core.vault.services.v1.VaultService.UndeleteSecret:input_type -> udb.core.vault.services.v1.UndeleteSecretRequest
+	11, // 27: udb.core.vault.services.v1.VaultService.DestroySecret:input_type -> udb.core.vault.services.v1.DestroySecretRequest
+	13, // 28: udb.core.vault.services.v1.VaultService.CreateTransitKey:input_type -> udb.core.vault.services.v1.CreateTransitKeyRequest
+	15, // 29: udb.core.vault.services.v1.VaultService.RotateTransitKey:input_type -> udb.core.vault.services.v1.RotateTransitKeyRequest
+	17, // 30: udb.core.vault.services.v1.VaultService.Encrypt:input_type -> udb.core.vault.services.v1.EncryptRequest
+	19, // 31: udb.core.vault.services.v1.VaultService.Decrypt:input_type -> udb.core.vault.services.v1.DecryptRequest
+	32, // 32: udb.core.vault.services.v1.VaultService.Sign:input_type -> udb.core.vault.services.v1.SignRequest
+	34, // 33: udb.core.vault.services.v1.VaultService.Verify:input_type -> udb.core.vault.services.v1.VerifyRequest
+	36, // 34: udb.core.vault.services.v1.VaultService.Hmac:input_type -> udb.core.vault.services.v1.HmacRequest
+	38, // 35: udb.core.vault.services.v1.VaultService.SealStatus:input_type -> udb.core.vault.services.v1.SealStatusRequest
+	40, // 36: udb.core.vault.services.v1.VaultService.GenerateDatabaseCredentials:input_type -> udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest
+	21, // 37: udb.core.vault.services.v1.VaultService.GenerateDataKey:input_type -> udb.core.vault.services.v1.GenerateDataKeyRequest
+	23, // 38: udb.core.vault.services.v1.VaultService.Rewrap:input_type -> udb.core.vault.services.v1.RewrapRequest
+	25, // 39: udb.core.vault.services.v1.VaultService.GetTransitPublicKey:input_type -> udb.core.vault.services.v1.GetTransitPublicKeyRequest
+	28, // 40: udb.core.vault.services.v1.VaultService.BatchEncrypt:input_type -> udb.core.vault.services.v1.BatchEncryptRequest
+	30, // 41: udb.core.vault.services.v1.VaultService.BatchDecrypt:input_type -> udb.core.vault.services.v1.BatchDecryptRequest
+	1,  // 42: udb.core.vault.services.v1.VaultService.PutSecret:output_type -> udb.core.vault.services.v1.PutSecretResponse
+	3,  // 43: udb.core.vault.services.v1.VaultService.GetSecret:output_type -> udb.core.vault.services.v1.GetSecretResponse
+	6,  // 44: udb.core.vault.services.v1.VaultService.ListSecrets:output_type -> udb.core.vault.services.v1.ListSecretsResponse
+	8,  // 45: udb.core.vault.services.v1.VaultService.DeleteSecret:output_type -> udb.core.vault.services.v1.DeleteSecretResponse
+	10, // 46: udb.core.vault.services.v1.VaultService.UndeleteSecret:output_type -> udb.core.vault.services.v1.UndeleteSecretResponse
+	12, // 47: udb.core.vault.services.v1.VaultService.DestroySecret:output_type -> udb.core.vault.services.v1.DestroySecretResponse
+	14, // 48: udb.core.vault.services.v1.VaultService.CreateTransitKey:output_type -> udb.core.vault.services.v1.CreateTransitKeyResponse
+	16, // 49: udb.core.vault.services.v1.VaultService.RotateTransitKey:output_type -> udb.core.vault.services.v1.RotateTransitKeyResponse
+	18, // 50: udb.core.vault.services.v1.VaultService.Encrypt:output_type -> udb.core.vault.services.v1.EncryptResponse
+	20, // 51: udb.core.vault.services.v1.VaultService.Decrypt:output_type -> udb.core.vault.services.v1.DecryptResponse
+	33, // 52: udb.core.vault.services.v1.VaultService.Sign:output_type -> udb.core.vault.services.v1.SignResponse
+	35, // 53: udb.core.vault.services.v1.VaultService.Verify:output_type -> udb.core.vault.services.v1.VerifyResponse
+	37, // 54: udb.core.vault.services.v1.VaultService.Hmac:output_type -> udb.core.vault.services.v1.HmacResponse
+	39, // 55: udb.core.vault.services.v1.VaultService.SealStatus:output_type -> udb.core.vault.services.v1.SealStatusResponse
+	41, // 56: udb.core.vault.services.v1.VaultService.GenerateDatabaseCredentials:output_type -> udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse
+	22, // 57: udb.core.vault.services.v1.VaultService.GenerateDataKey:output_type -> udb.core.vault.services.v1.GenerateDataKeyResponse
+	24, // 58: udb.core.vault.services.v1.VaultService.Rewrap:output_type -> udb.core.vault.services.v1.RewrapResponse
+	27, // 59: udb.core.vault.services.v1.VaultService.GetTransitPublicKey:output_type -> udb.core.vault.services.v1.GetTransitPublicKeyResponse
+	29, // 60: udb.core.vault.services.v1.VaultService.BatchEncrypt:output_type -> udb.core.vault.services.v1.BatchEncryptResponse
+	31, // 61: udb.core.vault.services.v1.VaultService.BatchDecrypt:output_type -> udb.core.vault.services.v1.BatchDecryptResponse
+	42, // [42:62] is the sub-list for method output_type
+	22, // [22:42] is the sub-list for method input_type
+	22, // [22:22] is the sub-list for extension type_name
+	22, // [22:22] is the sub-list for extension extendee
+	0,  // [0:22] is the sub-list for field type_name
 }
 
 func init() { file_udb_core_vault_services_v1_vault_service_proto_init() }
@@ -2209,7 +3143,7 @@ func file_udb_core_vault_services_v1_vault_service_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_udb_core_vault_services_v1_vault_service_proto_rawDesc), len(file_udb_core_vault_services_v1_vault_service_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   29,
+			NumMessages:   42,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

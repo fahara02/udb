@@ -149,6 +149,37 @@ public final class VaultServiceGrpc {
     return getDeleteSecretMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.vault.services.v1.UndeleteSecretRequest,
+      com.udb.core.vault.services.v1.UndeleteSecretResponse> getUndeleteSecretMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "UndeleteSecret",
+      requestType = com.udb.core.vault.services.v1.UndeleteSecretRequest.class,
+      responseType = com.udb.core.vault.services.v1.UndeleteSecretResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.vault.services.v1.UndeleteSecretRequest,
+      com.udb.core.vault.services.v1.UndeleteSecretResponse> getUndeleteSecretMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.vault.services.v1.UndeleteSecretRequest, com.udb.core.vault.services.v1.UndeleteSecretResponse> getUndeleteSecretMethod;
+    if ((getUndeleteSecretMethod = VaultServiceGrpc.getUndeleteSecretMethod) == null) {
+      synchronized (VaultServiceGrpc.class) {
+        if ((getUndeleteSecretMethod = VaultServiceGrpc.getUndeleteSecretMethod) == null) {
+          VaultServiceGrpc.getUndeleteSecretMethod = getUndeleteSecretMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.vault.services.v1.UndeleteSecretRequest, com.udb.core.vault.services.v1.UndeleteSecretResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "UndeleteSecret"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.vault.services.v1.UndeleteSecretRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.vault.services.v1.UndeleteSecretResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new VaultServiceMethodDescriptorSupplier("UndeleteSecret"))
+              .build();
+        }
+      }
+    }
+    return getUndeleteSecretMethod;
+  }
+
   private static volatile io.grpc.MethodDescriptor<com.udb.core.vault.services.v1.DestroySecretRequest,
       com.udb.core.vault.services.v1.DestroySecretResponse> getDestroySecretMethod;
 
@@ -459,6 +490,161 @@ public final class VaultServiceGrpc {
     return getGenerateDatabaseCredentialsMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.vault.services.v1.GenerateDataKeyRequest,
+      com.udb.core.vault.services.v1.GenerateDataKeyResponse> getGenerateDataKeyMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "GenerateDataKey",
+      requestType = com.udb.core.vault.services.v1.GenerateDataKeyRequest.class,
+      responseType = com.udb.core.vault.services.v1.GenerateDataKeyResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.vault.services.v1.GenerateDataKeyRequest,
+      com.udb.core.vault.services.v1.GenerateDataKeyResponse> getGenerateDataKeyMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.vault.services.v1.GenerateDataKeyRequest, com.udb.core.vault.services.v1.GenerateDataKeyResponse> getGenerateDataKeyMethod;
+    if ((getGenerateDataKeyMethod = VaultServiceGrpc.getGenerateDataKeyMethod) == null) {
+      synchronized (VaultServiceGrpc.class) {
+        if ((getGenerateDataKeyMethod = VaultServiceGrpc.getGenerateDataKeyMethod) == null) {
+          VaultServiceGrpc.getGenerateDataKeyMethod = getGenerateDataKeyMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.vault.services.v1.GenerateDataKeyRequest, com.udb.core.vault.services.v1.GenerateDataKeyResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "GenerateDataKey"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.vault.services.v1.GenerateDataKeyRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.vault.services.v1.GenerateDataKeyResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new VaultServiceMethodDescriptorSupplier("GenerateDataKey"))
+              .build();
+        }
+      }
+    }
+    return getGenerateDataKeyMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.vault.services.v1.RewrapRequest,
+      com.udb.core.vault.services.v1.RewrapResponse> getRewrapMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "Rewrap",
+      requestType = com.udb.core.vault.services.v1.RewrapRequest.class,
+      responseType = com.udb.core.vault.services.v1.RewrapResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.vault.services.v1.RewrapRequest,
+      com.udb.core.vault.services.v1.RewrapResponse> getRewrapMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.vault.services.v1.RewrapRequest, com.udb.core.vault.services.v1.RewrapResponse> getRewrapMethod;
+    if ((getRewrapMethod = VaultServiceGrpc.getRewrapMethod) == null) {
+      synchronized (VaultServiceGrpc.class) {
+        if ((getRewrapMethod = VaultServiceGrpc.getRewrapMethod) == null) {
+          VaultServiceGrpc.getRewrapMethod = getRewrapMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.vault.services.v1.RewrapRequest, com.udb.core.vault.services.v1.RewrapResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "Rewrap"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.vault.services.v1.RewrapRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.vault.services.v1.RewrapResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new VaultServiceMethodDescriptorSupplier("Rewrap"))
+              .build();
+        }
+      }
+    }
+    return getRewrapMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.vault.services.v1.GetTransitPublicKeyRequest,
+      com.udb.core.vault.services.v1.GetTransitPublicKeyResponse> getGetTransitPublicKeyMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "GetTransitPublicKey",
+      requestType = com.udb.core.vault.services.v1.GetTransitPublicKeyRequest.class,
+      responseType = com.udb.core.vault.services.v1.GetTransitPublicKeyResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.vault.services.v1.GetTransitPublicKeyRequest,
+      com.udb.core.vault.services.v1.GetTransitPublicKeyResponse> getGetTransitPublicKeyMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.vault.services.v1.GetTransitPublicKeyRequest, com.udb.core.vault.services.v1.GetTransitPublicKeyResponse> getGetTransitPublicKeyMethod;
+    if ((getGetTransitPublicKeyMethod = VaultServiceGrpc.getGetTransitPublicKeyMethod) == null) {
+      synchronized (VaultServiceGrpc.class) {
+        if ((getGetTransitPublicKeyMethod = VaultServiceGrpc.getGetTransitPublicKeyMethod) == null) {
+          VaultServiceGrpc.getGetTransitPublicKeyMethod = getGetTransitPublicKeyMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.vault.services.v1.GetTransitPublicKeyRequest, com.udb.core.vault.services.v1.GetTransitPublicKeyResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "GetTransitPublicKey"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.vault.services.v1.GetTransitPublicKeyRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.vault.services.v1.GetTransitPublicKeyResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new VaultServiceMethodDescriptorSupplier("GetTransitPublicKey"))
+              .build();
+        }
+      }
+    }
+    return getGetTransitPublicKeyMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.vault.services.v1.BatchEncryptRequest,
+      com.udb.core.vault.services.v1.BatchEncryptResponse> getBatchEncryptMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "BatchEncrypt",
+      requestType = com.udb.core.vault.services.v1.BatchEncryptRequest.class,
+      responseType = com.udb.core.vault.services.v1.BatchEncryptResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.vault.services.v1.BatchEncryptRequest,
+      com.udb.core.vault.services.v1.BatchEncryptResponse> getBatchEncryptMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.vault.services.v1.BatchEncryptRequest, com.udb.core.vault.services.v1.BatchEncryptResponse> getBatchEncryptMethod;
+    if ((getBatchEncryptMethod = VaultServiceGrpc.getBatchEncryptMethod) == null) {
+      synchronized (VaultServiceGrpc.class) {
+        if ((getBatchEncryptMethod = VaultServiceGrpc.getBatchEncryptMethod) == null) {
+          VaultServiceGrpc.getBatchEncryptMethod = getBatchEncryptMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.vault.services.v1.BatchEncryptRequest, com.udb.core.vault.services.v1.BatchEncryptResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "BatchEncrypt"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.vault.services.v1.BatchEncryptRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.vault.services.v1.BatchEncryptResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new VaultServiceMethodDescriptorSupplier("BatchEncrypt"))
+              .build();
+        }
+      }
+    }
+    return getBatchEncryptMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.vault.services.v1.BatchDecryptRequest,
+      com.udb.core.vault.services.v1.BatchDecryptResponse> getBatchDecryptMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "BatchDecrypt",
+      requestType = com.udb.core.vault.services.v1.BatchDecryptRequest.class,
+      responseType = com.udb.core.vault.services.v1.BatchDecryptResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.vault.services.v1.BatchDecryptRequest,
+      com.udb.core.vault.services.v1.BatchDecryptResponse> getBatchDecryptMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.vault.services.v1.BatchDecryptRequest, com.udb.core.vault.services.v1.BatchDecryptResponse> getBatchDecryptMethod;
+    if ((getBatchDecryptMethod = VaultServiceGrpc.getBatchDecryptMethod) == null) {
+      synchronized (VaultServiceGrpc.class) {
+        if ((getBatchDecryptMethod = VaultServiceGrpc.getBatchDecryptMethod) == null) {
+          VaultServiceGrpc.getBatchDecryptMethod = getBatchDecryptMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.vault.services.v1.BatchDecryptRequest, com.udb.core.vault.services.v1.BatchDecryptResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "BatchDecrypt"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.vault.services.v1.BatchDecryptRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.vault.services.v1.BatchDecryptResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new VaultServiceMethodDescriptorSupplier("BatchDecrypt"))
+              .build();
+        }
+      }
+    }
+    return getBatchDecryptMethod;
+  }
+
   /**
    * Creates a new async stub that supports all call types for the service
    */
@@ -581,6 +767,18 @@ public final class VaultServiceGrpc {
 
     /**
      * <pre>
+     * Restore a soft-DELETED secret: flip its latest deleted version back to ACTIVE.
+     * A soft delete keeps the ciphertext + wrapped key, so recovery is exact. A
+     * crypto-shredded (DestroySecret) version can NEVER be restored.
+     * </pre>
+     */
+    default void undeleteSecret(com.udb.core.vault.services.v1.UndeleteSecretRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.vault.services.v1.UndeleteSecretResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getUndeleteSecretMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
      * Crypto-shred every version of a secret: clears the wrapped DEK + ciphertext
      * so the value is irrecoverable. DESTRUCTIVE + irreversible — a confirmation
      * token is required and an empty token fails closed.
@@ -695,6 +893,69 @@ public final class VaultServiceGrpc {
         io.grpc.stub.StreamObserver<com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getGenerateDatabaseCredentialsMethod(), responseObserver);
     }
+
+    /**
+     * <pre>
+     * Generate a fresh 256-bit data key, returned BOTH plaintext (for the caller to
+     * encrypt data locally) AND wrapped under the named transit key (store this and
+     * Decrypt/Rewrap it later). Envelope-encryption without exposing the transit
+     * key. Reuses the transit seal path; AUDITED via the outbox compliance envelope.
+     * </pre>
+     */
+    default void generateDataKey(com.udb.core.vault.services.v1.GenerateDataKeyRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.vault.services.v1.GenerateDataKeyResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getGenerateDataKeyMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Re-wrap a transit ciphertext under the key's CURRENT active version: decrypt
+     * with the version embedded in the envelope, then re-seal with the active
+     * version. The post-rotation migration primitive (no plaintext leaves the
+     * broker). AUDITED via the outbox compliance envelope.
+     * </pre>
+     */
+    default void rewrap(com.udb.core.vault.services.v1.RewrapRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.vault.services.v1.RewrapResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getRewrapMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Export the Ed25519 PUBLIC key(s) of a signing transit key so an external
+     * party can verify broker-produced signatures without ever holding the private
+     * key — the missing half that makes Sign/Verify genuinely asymmetric. Only
+     * valid for keys created with the ed25519 algorithm; READ-ONLY (public keys are
+     * not secret). Returns one entry per usable (ACTIVE/VERIFYING) version.
+     * </pre>
+     */
+    default void getTransitPublicKey(com.udb.core.vault.services.v1.GetTransitPublicKeyRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.vault.services.v1.GetTransitPublicKeyResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getGetTransitPublicKeyMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Encrypt MANY plaintexts under one transit key in a single call: the key is
+     * unwrapped ONCE and each plaintext sealed with the active version, amortizing
+     * the master-key unwrap over the batch. Order-preserving. AUDITED.
+     * </pre>
+     */
+    default void batchEncrypt(com.udb.core.vault.services.v1.BatchEncryptRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.vault.services.v1.BatchEncryptResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getBatchEncryptMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Decrypt MANY transit ciphertexts under one key in a single call; each
+     * ciphertext carries its own key version in the envelope. Order-preserving.
+     * </pre>
+     */
+    default void batchDecrypt(com.udb.core.vault.services.v1.BatchDecryptRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.vault.services.v1.BatchDecryptResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getBatchDecryptMethod(), responseObserver);
+    }
   }
 
   /**
@@ -796,6 +1057,19 @@ public final class VaultServiceGrpc {
         io.grpc.stub.StreamObserver<com.udb.core.vault.services.v1.DeleteSecretResponse> responseObserver) {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getDeleteSecretMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Restore a soft-DELETED secret: flip its latest deleted version back to ACTIVE.
+     * A soft delete keeps the ciphertext + wrapped key, so recovery is exact. A
+     * crypto-shredded (DestroySecret) version can NEVER be restored.
+     * </pre>
+     */
+    public void undeleteSecret(com.udb.core.vault.services.v1.UndeleteSecretRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.vault.services.v1.UndeleteSecretResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getUndeleteSecretMethod(), getCallOptions()), request, responseObserver);
     }
 
     /**
@@ -924,6 +1198,74 @@ public final class VaultServiceGrpc {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getGenerateDatabaseCredentialsMethod(), getCallOptions()), request, responseObserver);
     }
+
+    /**
+     * <pre>
+     * Generate a fresh 256-bit data key, returned BOTH plaintext (for the caller to
+     * encrypt data locally) AND wrapped under the named transit key (store this and
+     * Decrypt/Rewrap it later). Envelope-encryption without exposing the transit
+     * key. Reuses the transit seal path; AUDITED via the outbox compliance envelope.
+     * </pre>
+     */
+    public void generateDataKey(com.udb.core.vault.services.v1.GenerateDataKeyRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.vault.services.v1.GenerateDataKeyResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getGenerateDataKeyMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Re-wrap a transit ciphertext under the key's CURRENT active version: decrypt
+     * with the version embedded in the envelope, then re-seal with the active
+     * version. The post-rotation migration primitive (no plaintext leaves the
+     * broker). AUDITED via the outbox compliance envelope.
+     * </pre>
+     */
+    public void rewrap(com.udb.core.vault.services.v1.RewrapRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.vault.services.v1.RewrapResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getRewrapMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Export the Ed25519 PUBLIC key(s) of a signing transit key so an external
+     * party can verify broker-produced signatures without ever holding the private
+     * key — the missing half that makes Sign/Verify genuinely asymmetric. Only
+     * valid for keys created with the ed25519 algorithm; READ-ONLY (public keys are
+     * not secret). Returns one entry per usable (ACTIVE/VERIFYING) version.
+     * </pre>
+     */
+    public void getTransitPublicKey(com.udb.core.vault.services.v1.GetTransitPublicKeyRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.vault.services.v1.GetTransitPublicKeyResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getGetTransitPublicKeyMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Encrypt MANY plaintexts under one transit key in a single call: the key is
+     * unwrapped ONCE and each plaintext sealed with the active version, amortizing
+     * the master-key unwrap over the batch. Order-preserving. AUDITED.
+     * </pre>
+     */
+    public void batchEncrypt(com.udb.core.vault.services.v1.BatchEncryptRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.vault.services.v1.BatchEncryptResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getBatchEncryptMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Decrypt MANY transit ciphertexts under one key in a single call; each
+     * ciphertext carries its own key version in the envelope. Order-preserving.
+     * </pre>
+     */
+    public void batchDecrypt(com.udb.core.vault.services.v1.BatchDecryptRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.vault.services.v1.BatchDecryptResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getBatchDecryptMethod(), getCallOptions()), request, responseObserver);
+    }
   }
 
   /**
@@ -997,6 +1339,18 @@ public final class VaultServiceGrpc {
     public com.udb.core.vault.services.v1.DeleteSecretResponse deleteSecret(com.udb.core.vault.services.v1.DeleteSecretRequest request) throws io.grpc.StatusException {
       return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
           getChannel(), getDeleteSecretMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Restore a soft-DELETED secret: flip its latest deleted version back to ACTIVE.
+     * A soft delete keeps the ciphertext + wrapped key, so recovery is exact. A
+     * crypto-shredded (DestroySecret) version can NEVER be restored.
+     * </pre>
+     */
+    public com.udb.core.vault.services.v1.UndeleteSecretResponse undeleteSecret(com.udb.core.vault.services.v1.UndeleteSecretRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getUndeleteSecretMethod(), getCallOptions(), request);
     }
 
     /**
@@ -1115,6 +1469,69 @@ public final class VaultServiceGrpc {
       return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
           getChannel(), getGenerateDatabaseCredentialsMethod(), getCallOptions(), request);
     }
+
+    /**
+     * <pre>
+     * Generate a fresh 256-bit data key, returned BOTH plaintext (for the caller to
+     * encrypt data locally) AND wrapped under the named transit key (store this and
+     * Decrypt/Rewrap it later). Envelope-encryption without exposing the transit
+     * key. Reuses the transit seal path; AUDITED via the outbox compliance envelope.
+     * </pre>
+     */
+    public com.udb.core.vault.services.v1.GenerateDataKeyResponse generateDataKey(com.udb.core.vault.services.v1.GenerateDataKeyRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getGenerateDataKeyMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Re-wrap a transit ciphertext under the key's CURRENT active version: decrypt
+     * with the version embedded in the envelope, then re-seal with the active
+     * version. The post-rotation migration primitive (no plaintext leaves the
+     * broker). AUDITED via the outbox compliance envelope.
+     * </pre>
+     */
+    public com.udb.core.vault.services.v1.RewrapResponse rewrap(com.udb.core.vault.services.v1.RewrapRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getRewrapMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Export the Ed25519 PUBLIC key(s) of a signing transit key so an external
+     * party can verify broker-produced signatures without ever holding the private
+     * key — the missing half that makes Sign/Verify genuinely asymmetric. Only
+     * valid for keys created with the ed25519 algorithm; READ-ONLY (public keys are
+     * not secret). Returns one entry per usable (ACTIVE/VERIFYING) version.
+     * </pre>
+     */
+    public com.udb.core.vault.services.v1.GetTransitPublicKeyResponse getTransitPublicKey(com.udb.core.vault.services.v1.GetTransitPublicKeyRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getGetTransitPublicKeyMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Encrypt MANY plaintexts under one transit key in a single call: the key is
+     * unwrapped ONCE and each plaintext sealed with the active version, amortizing
+     * the master-key unwrap over the batch. Order-preserving. AUDITED.
+     * </pre>
+     */
+    public com.udb.core.vault.services.v1.BatchEncryptResponse batchEncrypt(com.udb.core.vault.services.v1.BatchEncryptRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getBatchEncryptMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Decrypt MANY transit ciphertexts under one key in a single call; each
+     * ciphertext carries its own key version in the envelope. Order-preserving.
+     * </pre>
+     */
+    public com.udb.core.vault.services.v1.BatchDecryptResponse batchDecrypt(com.udb.core.vault.services.v1.BatchDecryptRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getBatchDecryptMethod(), getCallOptions(), request);
+    }
   }
 
   /**
@@ -1188,6 +1605,18 @@ public final class VaultServiceGrpc {
     public com.udb.core.vault.services.v1.DeleteSecretResponse deleteSecret(com.udb.core.vault.services.v1.DeleteSecretRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getDeleteSecretMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Restore a soft-DELETED secret: flip its latest deleted version back to ACTIVE.
+     * A soft delete keeps the ciphertext + wrapped key, so recovery is exact. A
+     * crypto-shredded (DestroySecret) version can NEVER be restored.
+     * </pre>
+     */
+    public com.udb.core.vault.services.v1.UndeleteSecretResponse undeleteSecret(com.udb.core.vault.services.v1.UndeleteSecretRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getUndeleteSecretMethod(), getCallOptions(), request);
     }
 
     /**
@@ -1306,6 +1735,69 @@ public final class VaultServiceGrpc {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getGenerateDatabaseCredentialsMethod(), getCallOptions(), request);
     }
+
+    /**
+     * <pre>
+     * Generate a fresh 256-bit data key, returned BOTH plaintext (for the caller to
+     * encrypt data locally) AND wrapped under the named transit key (store this and
+     * Decrypt/Rewrap it later). Envelope-encryption without exposing the transit
+     * key. Reuses the transit seal path; AUDITED via the outbox compliance envelope.
+     * </pre>
+     */
+    public com.udb.core.vault.services.v1.GenerateDataKeyResponse generateDataKey(com.udb.core.vault.services.v1.GenerateDataKeyRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getGenerateDataKeyMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Re-wrap a transit ciphertext under the key's CURRENT active version: decrypt
+     * with the version embedded in the envelope, then re-seal with the active
+     * version. The post-rotation migration primitive (no plaintext leaves the
+     * broker). AUDITED via the outbox compliance envelope.
+     * </pre>
+     */
+    public com.udb.core.vault.services.v1.RewrapResponse rewrap(com.udb.core.vault.services.v1.RewrapRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getRewrapMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Export the Ed25519 PUBLIC key(s) of a signing transit key so an external
+     * party can verify broker-produced signatures without ever holding the private
+     * key — the missing half that makes Sign/Verify genuinely asymmetric. Only
+     * valid for keys created with the ed25519 algorithm; READ-ONLY (public keys are
+     * not secret). Returns one entry per usable (ACTIVE/VERIFYING) version.
+     * </pre>
+     */
+    public com.udb.core.vault.services.v1.GetTransitPublicKeyResponse getTransitPublicKey(com.udb.core.vault.services.v1.GetTransitPublicKeyRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getGetTransitPublicKeyMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Encrypt MANY plaintexts under one transit key in a single call: the key is
+     * unwrapped ONCE and each plaintext sealed with the active version, amortizing
+     * the master-key unwrap over the batch. Order-preserving. AUDITED.
+     * </pre>
+     */
+    public com.udb.core.vault.services.v1.BatchEncryptResponse batchEncrypt(com.udb.core.vault.services.v1.BatchEncryptRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getBatchEncryptMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Decrypt MANY transit ciphertexts under one key in a single call; each
+     * ciphertext carries its own key version in the envelope. Order-preserving.
+     * </pre>
+     */
+    public com.udb.core.vault.services.v1.BatchDecryptResponse batchDecrypt(com.udb.core.vault.services.v1.BatchDecryptRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getBatchDecryptMethod(), getCallOptions(), request);
+    }
   }
 
   /**
@@ -1383,6 +1875,19 @@ public final class VaultServiceGrpc {
         com.udb.core.vault.services.v1.DeleteSecretRequest request) {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getDeleteSecretMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * Restore a soft-DELETED secret: flip its latest deleted version back to ACTIVE.
+     * A soft delete keeps the ciphertext + wrapped key, so recovery is exact. A
+     * crypto-shredded (DestroySecret) version can NEVER be restored.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.vault.services.v1.UndeleteSecretResponse> undeleteSecret(
+        com.udb.core.vault.services.v1.UndeleteSecretRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getUndeleteSecretMethod(), getCallOptions()), request);
     }
 
     /**
@@ -1511,22 +2016,96 @@ public final class VaultServiceGrpc {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getGenerateDatabaseCredentialsMethod(), getCallOptions()), request);
     }
+
+    /**
+     * <pre>
+     * Generate a fresh 256-bit data key, returned BOTH plaintext (for the caller to
+     * encrypt data locally) AND wrapped under the named transit key (store this and
+     * Decrypt/Rewrap it later). Envelope-encryption without exposing the transit
+     * key. Reuses the transit seal path; AUDITED via the outbox compliance envelope.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.vault.services.v1.GenerateDataKeyResponse> generateDataKey(
+        com.udb.core.vault.services.v1.GenerateDataKeyRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getGenerateDataKeyMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * Re-wrap a transit ciphertext under the key's CURRENT active version: decrypt
+     * with the version embedded in the envelope, then re-seal with the active
+     * version. The post-rotation migration primitive (no plaintext leaves the
+     * broker). AUDITED via the outbox compliance envelope.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.vault.services.v1.RewrapResponse> rewrap(
+        com.udb.core.vault.services.v1.RewrapRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getRewrapMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * Export the Ed25519 PUBLIC key(s) of a signing transit key so an external
+     * party can verify broker-produced signatures without ever holding the private
+     * key — the missing half that makes Sign/Verify genuinely asymmetric. Only
+     * valid for keys created with the ed25519 algorithm; READ-ONLY (public keys are
+     * not secret). Returns one entry per usable (ACTIVE/VERIFYING) version.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.vault.services.v1.GetTransitPublicKeyResponse> getTransitPublicKey(
+        com.udb.core.vault.services.v1.GetTransitPublicKeyRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getGetTransitPublicKeyMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * Encrypt MANY plaintexts under one transit key in a single call: the key is
+     * unwrapped ONCE and each plaintext sealed with the active version, amortizing
+     * the master-key unwrap over the batch. Order-preserving. AUDITED.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.vault.services.v1.BatchEncryptResponse> batchEncrypt(
+        com.udb.core.vault.services.v1.BatchEncryptRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getBatchEncryptMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * Decrypt MANY transit ciphertexts under one key in a single call; each
+     * ciphertext carries its own key version in the envelope. Order-preserving.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.vault.services.v1.BatchDecryptResponse> batchDecrypt(
+        com.udb.core.vault.services.v1.BatchDecryptRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getBatchDecryptMethod(), getCallOptions()), request);
+    }
   }
 
   private static final int METHODID_PUT_SECRET = 0;
   private static final int METHODID_GET_SECRET = 1;
   private static final int METHODID_LIST_SECRETS = 2;
   private static final int METHODID_DELETE_SECRET = 3;
-  private static final int METHODID_DESTROY_SECRET = 4;
-  private static final int METHODID_CREATE_TRANSIT_KEY = 5;
-  private static final int METHODID_ROTATE_TRANSIT_KEY = 6;
-  private static final int METHODID_ENCRYPT = 7;
-  private static final int METHODID_DECRYPT = 8;
-  private static final int METHODID_SIGN = 9;
-  private static final int METHODID_VERIFY = 10;
-  private static final int METHODID_HMAC = 11;
-  private static final int METHODID_SEAL_STATUS = 12;
-  private static final int METHODID_GENERATE_DATABASE_CREDENTIALS = 13;
+  private static final int METHODID_UNDELETE_SECRET = 4;
+  private static final int METHODID_DESTROY_SECRET = 5;
+  private static final int METHODID_CREATE_TRANSIT_KEY = 6;
+  private static final int METHODID_ROTATE_TRANSIT_KEY = 7;
+  private static final int METHODID_ENCRYPT = 8;
+  private static final int METHODID_DECRYPT = 9;
+  private static final int METHODID_SIGN = 10;
+  private static final int METHODID_VERIFY = 11;
+  private static final int METHODID_HMAC = 12;
+  private static final int METHODID_SEAL_STATUS = 13;
+  private static final int METHODID_GENERATE_DATABASE_CREDENTIALS = 14;
+  private static final int METHODID_GENERATE_DATA_KEY = 15;
+  private static final int METHODID_REWRAP = 16;
+  private static final int METHODID_GET_TRANSIT_PUBLIC_KEY = 17;
+  private static final int METHODID_BATCH_ENCRYPT = 18;
+  private static final int METHODID_BATCH_DECRYPT = 19;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -1560,6 +2139,10 @@ public final class VaultServiceGrpc {
         case METHODID_DELETE_SECRET:
           serviceImpl.deleteSecret((com.udb.core.vault.services.v1.DeleteSecretRequest) request,
               (io.grpc.stub.StreamObserver<com.udb.core.vault.services.v1.DeleteSecretResponse>) responseObserver);
+          break;
+        case METHODID_UNDELETE_SECRET:
+          serviceImpl.undeleteSecret((com.udb.core.vault.services.v1.UndeleteSecretRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.vault.services.v1.UndeleteSecretResponse>) responseObserver);
           break;
         case METHODID_DESTROY_SECRET:
           serviceImpl.destroySecret((com.udb.core.vault.services.v1.DestroySecretRequest) request,
@@ -1600,6 +2183,26 @@ public final class VaultServiceGrpc {
         case METHODID_GENERATE_DATABASE_CREDENTIALS:
           serviceImpl.generateDatabaseCredentials((com.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest) request,
               (io.grpc.stub.StreamObserver<com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse>) responseObserver);
+          break;
+        case METHODID_GENERATE_DATA_KEY:
+          serviceImpl.generateDataKey((com.udb.core.vault.services.v1.GenerateDataKeyRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.vault.services.v1.GenerateDataKeyResponse>) responseObserver);
+          break;
+        case METHODID_REWRAP:
+          serviceImpl.rewrap((com.udb.core.vault.services.v1.RewrapRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.vault.services.v1.RewrapResponse>) responseObserver);
+          break;
+        case METHODID_GET_TRANSIT_PUBLIC_KEY:
+          serviceImpl.getTransitPublicKey((com.udb.core.vault.services.v1.GetTransitPublicKeyRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.vault.services.v1.GetTransitPublicKeyResponse>) responseObserver);
+          break;
+        case METHODID_BATCH_ENCRYPT:
+          serviceImpl.batchEncrypt((com.udb.core.vault.services.v1.BatchEncryptRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.vault.services.v1.BatchEncryptResponse>) responseObserver);
+          break;
+        case METHODID_BATCH_DECRYPT:
+          serviceImpl.batchDecrypt((com.udb.core.vault.services.v1.BatchDecryptRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.vault.services.v1.BatchDecryptResponse>) responseObserver);
           break;
         default:
           throw new AssertionError();
@@ -1647,6 +2250,13 @@ public final class VaultServiceGrpc {
               com.udb.core.vault.services.v1.DeleteSecretRequest,
               com.udb.core.vault.services.v1.DeleteSecretResponse>(
                 service, METHODID_DELETE_SECRET)))
+        .addMethod(
+          getUndeleteSecretMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.vault.services.v1.UndeleteSecretRequest,
+              com.udb.core.vault.services.v1.UndeleteSecretResponse>(
+                service, METHODID_UNDELETE_SECRET)))
         .addMethod(
           getDestroySecretMethod(),
           io.grpc.stub.ServerCalls.asyncUnaryCall(
@@ -1717,6 +2327,41 @@ public final class VaultServiceGrpc {
               com.udb.core.vault.services.v1.GenerateDatabaseCredentialsRequest,
               com.udb.core.vault.services.v1.GenerateDatabaseCredentialsResponse>(
                 service, METHODID_GENERATE_DATABASE_CREDENTIALS)))
+        .addMethod(
+          getGenerateDataKeyMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.vault.services.v1.GenerateDataKeyRequest,
+              com.udb.core.vault.services.v1.GenerateDataKeyResponse>(
+                service, METHODID_GENERATE_DATA_KEY)))
+        .addMethod(
+          getRewrapMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.vault.services.v1.RewrapRequest,
+              com.udb.core.vault.services.v1.RewrapResponse>(
+                service, METHODID_REWRAP)))
+        .addMethod(
+          getGetTransitPublicKeyMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.vault.services.v1.GetTransitPublicKeyRequest,
+              com.udb.core.vault.services.v1.GetTransitPublicKeyResponse>(
+                service, METHODID_GET_TRANSIT_PUBLIC_KEY)))
+        .addMethod(
+          getBatchEncryptMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.vault.services.v1.BatchEncryptRequest,
+              com.udb.core.vault.services.v1.BatchEncryptResponse>(
+                service, METHODID_BATCH_ENCRYPT)))
+        .addMethod(
+          getBatchDecryptMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.vault.services.v1.BatchDecryptRequest,
+              com.udb.core.vault.services.v1.BatchDecryptResponse>(
+                service, METHODID_BATCH_DECRYPT)))
         .build();
   }
 
@@ -1769,6 +2414,7 @@ public final class VaultServiceGrpc {
               .addMethod(getGetSecretMethod())
               .addMethod(getListSecretsMethod())
               .addMethod(getDeleteSecretMethod())
+              .addMethod(getUndeleteSecretMethod())
               .addMethod(getDestroySecretMethod())
               .addMethod(getCreateTransitKeyMethod())
               .addMethod(getRotateTransitKeyMethod())
@@ -1779,6 +2425,11 @@ public final class VaultServiceGrpc {
               .addMethod(getHmacMethod())
               .addMethod(getSealStatusMethod())
               .addMethod(getGenerateDatabaseCredentialsMethod())
+              .addMethod(getGenerateDataKeyMethod())
+              .addMethod(getRewrapMethod())
+              .addMethod(getGetTransitPublicKeyMethod())
+              .addMethod(getBatchEncryptMethod())
+              .addMethod(getBatchDecryptMethod())
               .build();
         }
       }

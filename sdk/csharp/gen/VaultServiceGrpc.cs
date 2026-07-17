@@ -75,6 +75,10 @@ namespace udb.core.Vault.Services.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.DeleteSecretResponse> __Marshaller_udb_core_vault_services_v1_DeleteSecretResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.DeleteSecretResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.UndeleteSecretRequest> __Marshaller_udb_core_vault_services_v1_UndeleteSecretRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.UndeleteSecretRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.UndeleteSecretResponse> __Marshaller_udb_core_vault_services_v1_UndeleteSecretResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.UndeleteSecretResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.DestroySecretRequest> __Marshaller_udb_core_vault_services_v1_DestroySecretRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.DestroySecretRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.DestroySecretResponse> __Marshaller_udb_core_vault_services_v1_DestroySecretResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.DestroySecretResponse.Parser));
@@ -114,6 +118,26 @@ namespace udb.core.Vault.Services.V1 {
     static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.GenerateDatabaseCredentialsRequest> __Marshaller_udb_core_vault_services_v1_GenerateDatabaseCredentialsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.GenerateDatabaseCredentialsRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.GenerateDatabaseCredentialsResponse> __Marshaller_udb_core_vault_services_v1_GenerateDatabaseCredentialsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.GenerateDatabaseCredentialsResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.GenerateDataKeyRequest> __Marshaller_udb_core_vault_services_v1_GenerateDataKeyRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.GenerateDataKeyRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.GenerateDataKeyResponse> __Marshaller_udb_core_vault_services_v1_GenerateDataKeyResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.GenerateDataKeyResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.RewrapRequest> __Marshaller_udb_core_vault_services_v1_RewrapRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.RewrapRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.RewrapResponse> __Marshaller_udb_core_vault_services_v1_RewrapResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.RewrapResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.GetTransitPublicKeyRequest> __Marshaller_udb_core_vault_services_v1_GetTransitPublicKeyRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.GetTransitPublicKeyRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.GetTransitPublicKeyResponse> __Marshaller_udb_core_vault_services_v1_GetTransitPublicKeyResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.GetTransitPublicKeyResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.BatchEncryptRequest> __Marshaller_udb_core_vault_services_v1_BatchEncryptRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.BatchEncryptRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.BatchEncryptResponse> __Marshaller_udb_core_vault_services_v1_BatchEncryptResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.BatchEncryptResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.BatchDecryptRequest> __Marshaller_udb_core_vault_services_v1_BatchDecryptRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.BatchDecryptRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Vault.Services.V1.BatchDecryptResponse> __Marshaller_udb_core_vault_services_v1_BatchDecryptResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Vault.Services.V1.BatchDecryptResponse.Parser));
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Method<global::udb.core.Vault.Services.V1.PutSecretRequest, global::udb.core.Vault.Services.V1.PutSecretResponse> __Method_PutSecret = new grpc::Method<global::udb.core.Vault.Services.V1.PutSecretRequest, global::udb.core.Vault.Services.V1.PutSecretResponse>(
@@ -146,6 +170,14 @@ namespace udb.core.Vault.Services.V1 {
         "DeleteSecret",
         __Marshaller_udb_core_vault_services_v1_DeleteSecretRequest,
         __Marshaller_udb_core_vault_services_v1_DeleteSecretResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Vault.Services.V1.UndeleteSecretRequest, global::udb.core.Vault.Services.V1.UndeleteSecretResponse> __Method_UndeleteSecret = new grpc::Method<global::udb.core.Vault.Services.V1.UndeleteSecretRequest, global::udb.core.Vault.Services.V1.UndeleteSecretResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "UndeleteSecret",
+        __Marshaller_udb_core_vault_services_v1_UndeleteSecretRequest,
+        __Marshaller_udb_core_vault_services_v1_UndeleteSecretResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Method<global::udb.core.Vault.Services.V1.DestroySecretRequest, global::udb.core.Vault.Services.V1.DestroySecretResponse> __Method_DestroySecret = new grpc::Method<global::udb.core.Vault.Services.V1.DestroySecretRequest, global::udb.core.Vault.Services.V1.DestroySecretResponse>(
@@ -227,6 +259,46 @@ namespace udb.core.Vault.Services.V1 {
         __Marshaller_udb_core_vault_services_v1_GenerateDatabaseCredentialsRequest,
         __Marshaller_udb_core_vault_services_v1_GenerateDatabaseCredentialsResponse);
 
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Vault.Services.V1.GenerateDataKeyRequest, global::udb.core.Vault.Services.V1.GenerateDataKeyResponse> __Method_GenerateDataKey = new grpc::Method<global::udb.core.Vault.Services.V1.GenerateDataKeyRequest, global::udb.core.Vault.Services.V1.GenerateDataKeyResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "GenerateDataKey",
+        __Marshaller_udb_core_vault_services_v1_GenerateDataKeyRequest,
+        __Marshaller_udb_core_vault_services_v1_GenerateDataKeyResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Vault.Services.V1.RewrapRequest, global::udb.core.Vault.Services.V1.RewrapResponse> __Method_Rewrap = new grpc::Method<global::udb.core.Vault.Services.V1.RewrapRequest, global::udb.core.Vault.Services.V1.RewrapResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "Rewrap",
+        __Marshaller_udb_core_vault_services_v1_RewrapRequest,
+        __Marshaller_udb_core_vault_services_v1_RewrapResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Vault.Services.V1.GetTransitPublicKeyRequest, global::udb.core.Vault.Services.V1.GetTransitPublicKeyResponse> __Method_GetTransitPublicKey = new grpc::Method<global::udb.core.Vault.Services.V1.GetTransitPublicKeyRequest, global::udb.core.Vault.Services.V1.GetTransitPublicKeyResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "GetTransitPublicKey",
+        __Marshaller_udb_core_vault_services_v1_GetTransitPublicKeyRequest,
+        __Marshaller_udb_core_vault_services_v1_GetTransitPublicKeyResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Vault.Services.V1.BatchEncryptRequest, global::udb.core.Vault.Services.V1.BatchEncryptResponse> __Method_BatchEncrypt = new grpc::Method<global::udb.core.Vault.Services.V1.BatchEncryptRequest, global::udb.core.Vault.Services.V1.BatchEncryptResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "BatchEncrypt",
+        __Marshaller_udb_core_vault_services_v1_BatchEncryptRequest,
+        __Marshaller_udb_core_vault_services_v1_BatchEncryptResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Vault.Services.V1.BatchDecryptRequest, global::udb.core.Vault.Services.V1.BatchDecryptResponse> __Method_BatchDecrypt = new grpc::Method<global::udb.core.Vault.Services.V1.BatchDecryptRequest, global::udb.core.Vault.Services.V1.BatchDecryptResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "BatchDecrypt",
+        __Marshaller_udb_core_vault_services_v1_BatchDecryptRequest,
+        __Marshaller_udb_core_vault_services_v1_BatchDecryptResponse);
+
     /// <summary>Service descriptor</summary>
     public static global::Google.Protobuf.Reflection.ServiceDescriptor Descriptor
     {
@@ -285,6 +357,20 @@ namespace udb.core.Vault.Services.V1 {
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::System.Threading.Tasks.Task<global::udb.core.Vault.Services.V1.DeleteSecretResponse> DeleteSecret(global::udb.core.Vault.Services.V1.DeleteSecretRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Restore a soft-DELETED secret: flip its latest deleted version back to ACTIVE.
+      /// A soft delete keeps the ciphertext + wrapped key, so recovery is exact. A
+      /// crypto-shredded (DestroySecret) version can NEVER be restored.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Vault.Services.V1.UndeleteSecretResponse> UndeleteSecret(global::udb.core.Vault.Services.V1.UndeleteSecretRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -422,6 +508,79 @@ namespace udb.core.Vault.Services.V1 {
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::System.Threading.Tasks.Task<global::udb.core.Vault.Services.V1.GenerateDatabaseCredentialsResponse> GenerateDatabaseCredentials(global::udb.core.Vault.Services.V1.GenerateDatabaseCredentialsRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Generate a fresh 256-bit data key, returned BOTH plaintext (for the caller to
+      /// encrypt data locally) AND wrapped under the named transit key (store this and
+      /// Decrypt/Rewrap it later). Envelope-encryption without exposing the transit
+      /// key. Reuses the transit seal path; AUDITED via the outbox compliance envelope.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Vault.Services.V1.GenerateDataKeyResponse> GenerateDataKey(global::udb.core.Vault.Services.V1.GenerateDataKeyRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Re-wrap a transit ciphertext under the key's CURRENT active version: decrypt
+      /// with the version embedded in the envelope, then re-seal with the active
+      /// version. The post-rotation migration primitive (no plaintext leaves the
+      /// broker). AUDITED via the outbox compliance envelope.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Vault.Services.V1.RewrapResponse> Rewrap(global::udb.core.Vault.Services.V1.RewrapRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Export the Ed25519 PUBLIC key(s) of a signing transit key so an external
+      /// party can verify broker-produced signatures without ever holding the private
+      /// key — the missing half that makes Sign/Verify genuinely asymmetric. Only
+      /// valid for keys created with the ed25519 algorithm; READ-ONLY (public keys are
+      /// not secret). Returns one entry per usable (ACTIVE/VERIFYING) version.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Vault.Services.V1.GetTransitPublicKeyResponse> GetTransitPublicKey(global::udb.core.Vault.Services.V1.GetTransitPublicKeyRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Encrypt MANY plaintexts under one transit key in a single call: the key is
+      /// unwrapped ONCE and each plaintext sealed with the active version, amortizing
+      /// the master-key unwrap over the batch. Order-preserving. AUDITED.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Vault.Services.V1.BatchEncryptResponse> BatchEncrypt(global::udb.core.Vault.Services.V1.BatchEncryptRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Decrypt MANY transit ciphertexts under one key in a single call; each
+      /// ciphertext carries its own key version in the envelope. Order-preserving.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Vault.Services.V1.BatchDecryptResponse> BatchDecrypt(global::udb.core.Vault.Services.V1.BatchDecryptRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -662,6 +821,62 @@ namespace udb.core.Vault.Services.V1 {
       public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.DeleteSecretResponse> DeleteSecretAsync(global::udb.core.Vault.Services.V1.DeleteSecretRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_DeleteSecret, null, options, request);
+      }
+      /// <summary>
+      /// Restore a soft-DELETED secret: flip its latest deleted version back to ACTIVE.
+      /// A soft delete keeps the ciphertext + wrapped key, so recovery is exact. A
+      /// crypto-shredded (DestroySecret) version can NEVER be restored.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Vault.Services.V1.UndeleteSecretResponse UndeleteSecret(global::udb.core.Vault.Services.V1.UndeleteSecretRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return UndeleteSecret(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Restore a soft-DELETED secret: flip its latest deleted version back to ACTIVE.
+      /// A soft delete keeps the ciphertext + wrapped key, so recovery is exact. A
+      /// crypto-shredded (DestroySecret) version can NEVER be restored.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Vault.Services.V1.UndeleteSecretResponse UndeleteSecret(global::udb.core.Vault.Services.V1.UndeleteSecretRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_UndeleteSecret, null, options, request);
+      }
+      /// <summary>
+      /// Restore a soft-DELETED secret: flip its latest deleted version back to ACTIVE.
+      /// A soft delete keeps the ciphertext + wrapped key, so recovery is exact. A
+      /// crypto-shredded (DestroySecret) version can NEVER be restored.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.UndeleteSecretResponse> UndeleteSecretAsync(global::udb.core.Vault.Services.V1.UndeleteSecretRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return UndeleteSecretAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Restore a soft-DELETED secret: flip its latest deleted version back to ACTIVE.
+      /// A soft delete keeps the ciphertext + wrapped key, so recovery is exact. A
+      /// crypto-shredded (DestroySecret) version can NEVER be restored.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.UndeleteSecretResponse> UndeleteSecretAsync(global::udb.core.Vault.Services.V1.UndeleteSecretRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_UndeleteSecret, null, options, request);
       }
       /// <summary>
       /// Crypto-shred every version of a secret: clears the wrapped DEK + ciphertext
@@ -1211,6 +1426,298 @@ namespace udb.core.Vault.Services.V1 {
       {
         return CallInvoker.AsyncUnaryCall(__Method_GenerateDatabaseCredentials, null, options, request);
       }
+      /// <summary>
+      /// Generate a fresh 256-bit data key, returned BOTH plaintext (for the caller to
+      /// encrypt data locally) AND wrapped under the named transit key (store this and
+      /// Decrypt/Rewrap it later). Envelope-encryption without exposing the transit
+      /// key. Reuses the transit seal path; AUDITED via the outbox compliance envelope.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Vault.Services.V1.GenerateDataKeyResponse GenerateDataKey(global::udb.core.Vault.Services.V1.GenerateDataKeyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return GenerateDataKey(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Generate a fresh 256-bit data key, returned BOTH plaintext (for the caller to
+      /// encrypt data locally) AND wrapped under the named transit key (store this and
+      /// Decrypt/Rewrap it later). Envelope-encryption without exposing the transit
+      /// key. Reuses the transit seal path; AUDITED via the outbox compliance envelope.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Vault.Services.V1.GenerateDataKeyResponse GenerateDataKey(global::udb.core.Vault.Services.V1.GenerateDataKeyRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_GenerateDataKey, null, options, request);
+      }
+      /// <summary>
+      /// Generate a fresh 256-bit data key, returned BOTH plaintext (for the caller to
+      /// encrypt data locally) AND wrapped under the named transit key (store this and
+      /// Decrypt/Rewrap it later). Envelope-encryption without exposing the transit
+      /// key. Reuses the transit seal path; AUDITED via the outbox compliance envelope.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.GenerateDataKeyResponse> GenerateDataKeyAsync(global::udb.core.Vault.Services.V1.GenerateDataKeyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return GenerateDataKeyAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Generate a fresh 256-bit data key, returned BOTH plaintext (for the caller to
+      /// encrypt data locally) AND wrapped under the named transit key (store this and
+      /// Decrypt/Rewrap it later). Envelope-encryption without exposing the transit
+      /// key. Reuses the transit seal path; AUDITED via the outbox compliance envelope.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.GenerateDataKeyResponse> GenerateDataKeyAsync(global::udb.core.Vault.Services.V1.GenerateDataKeyRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_GenerateDataKey, null, options, request);
+      }
+      /// <summary>
+      /// Re-wrap a transit ciphertext under the key's CURRENT active version: decrypt
+      /// with the version embedded in the envelope, then re-seal with the active
+      /// version. The post-rotation migration primitive (no plaintext leaves the
+      /// broker). AUDITED via the outbox compliance envelope.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Vault.Services.V1.RewrapResponse Rewrap(global::udb.core.Vault.Services.V1.RewrapRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return Rewrap(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Re-wrap a transit ciphertext under the key's CURRENT active version: decrypt
+      /// with the version embedded in the envelope, then re-seal with the active
+      /// version. The post-rotation migration primitive (no plaintext leaves the
+      /// broker). AUDITED via the outbox compliance envelope.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Vault.Services.V1.RewrapResponse Rewrap(global::udb.core.Vault.Services.V1.RewrapRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_Rewrap, null, options, request);
+      }
+      /// <summary>
+      /// Re-wrap a transit ciphertext under the key's CURRENT active version: decrypt
+      /// with the version embedded in the envelope, then re-seal with the active
+      /// version. The post-rotation migration primitive (no plaintext leaves the
+      /// broker). AUDITED via the outbox compliance envelope.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.RewrapResponse> RewrapAsync(global::udb.core.Vault.Services.V1.RewrapRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return RewrapAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Re-wrap a transit ciphertext under the key's CURRENT active version: decrypt
+      /// with the version embedded in the envelope, then re-seal with the active
+      /// version. The post-rotation migration primitive (no plaintext leaves the
+      /// broker). AUDITED via the outbox compliance envelope.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.RewrapResponse> RewrapAsync(global::udb.core.Vault.Services.V1.RewrapRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_Rewrap, null, options, request);
+      }
+      /// <summary>
+      /// Export the Ed25519 PUBLIC key(s) of a signing transit key so an external
+      /// party can verify broker-produced signatures without ever holding the private
+      /// key — the missing half that makes Sign/Verify genuinely asymmetric. Only
+      /// valid for keys created with the ed25519 algorithm; READ-ONLY (public keys are
+      /// not secret). Returns one entry per usable (ACTIVE/VERIFYING) version.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Vault.Services.V1.GetTransitPublicKeyResponse GetTransitPublicKey(global::udb.core.Vault.Services.V1.GetTransitPublicKeyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return GetTransitPublicKey(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Export the Ed25519 PUBLIC key(s) of a signing transit key so an external
+      /// party can verify broker-produced signatures without ever holding the private
+      /// key — the missing half that makes Sign/Verify genuinely asymmetric. Only
+      /// valid for keys created with the ed25519 algorithm; READ-ONLY (public keys are
+      /// not secret). Returns one entry per usable (ACTIVE/VERIFYING) version.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Vault.Services.V1.GetTransitPublicKeyResponse GetTransitPublicKey(global::udb.core.Vault.Services.V1.GetTransitPublicKeyRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_GetTransitPublicKey, null, options, request);
+      }
+      /// <summary>
+      /// Export the Ed25519 PUBLIC key(s) of a signing transit key so an external
+      /// party can verify broker-produced signatures without ever holding the private
+      /// key — the missing half that makes Sign/Verify genuinely asymmetric. Only
+      /// valid for keys created with the ed25519 algorithm; READ-ONLY (public keys are
+      /// not secret). Returns one entry per usable (ACTIVE/VERIFYING) version.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.GetTransitPublicKeyResponse> GetTransitPublicKeyAsync(global::udb.core.Vault.Services.V1.GetTransitPublicKeyRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return GetTransitPublicKeyAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Export the Ed25519 PUBLIC key(s) of a signing transit key so an external
+      /// party can verify broker-produced signatures without ever holding the private
+      /// key — the missing half that makes Sign/Verify genuinely asymmetric. Only
+      /// valid for keys created with the ed25519 algorithm; READ-ONLY (public keys are
+      /// not secret). Returns one entry per usable (ACTIVE/VERIFYING) version.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.GetTransitPublicKeyResponse> GetTransitPublicKeyAsync(global::udb.core.Vault.Services.V1.GetTransitPublicKeyRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_GetTransitPublicKey, null, options, request);
+      }
+      /// <summary>
+      /// Encrypt MANY plaintexts under one transit key in a single call: the key is
+      /// unwrapped ONCE and each plaintext sealed with the active version, amortizing
+      /// the master-key unwrap over the batch. Order-preserving. AUDITED.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Vault.Services.V1.BatchEncryptResponse BatchEncrypt(global::udb.core.Vault.Services.V1.BatchEncryptRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return BatchEncrypt(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Encrypt MANY plaintexts under one transit key in a single call: the key is
+      /// unwrapped ONCE and each plaintext sealed with the active version, amortizing
+      /// the master-key unwrap over the batch. Order-preserving. AUDITED.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Vault.Services.V1.BatchEncryptResponse BatchEncrypt(global::udb.core.Vault.Services.V1.BatchEncryptRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_BatchEncrypt, null, options, request);
+      }
+      /// <summary>
+      /// Encrypt MANY plaintexts under one transit key in a single call: the key is
+      /// unwrapped ONCE and each plaintext sealed with the active version, amortizing
+      /// the master-key unwrap over the batch. Order-preserving. AUDITED.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.BatchEncryptResponse> BatchEncryptAsync(global::udb.core.Vault.Services.V1.BatchEncryptRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return BatchEncryptAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Encrypt MANY plaintexts under one transit key in a single call: the key is
+      /// unwrapped ONCE and each plaintext sealed with the active version, amortizing
+      /// the master-key unwrap over the batch. Order-preserving. AUDITED.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.BatchEncryptResponse> BatchEncryptAsync(global::udb.core.Vault.Services.V1.BatchEncryptRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_BatchEncrypt, null, options, request);
+      }
+      /// <summary>
+      /// Decrypt MANY transit ciphertexts under one key in a single call; each
+      /// ciphertext carries its own key version in the envelope. Order-preserving.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Vault.Services.V1.BatchDecryptResponse BatchDecrypt(global::udb.core.Vault.Services.V1.BatchDecryptRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return BatchDecrypt(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Decrypt MANY transit ciphertexts under one key in a single call; each
+      /// ciphertext carries its own key version in the envelope. Order-preserving.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Vault.Services.V1.BatchDecryptResponse BatchDecrypt(global::udb.core.Vault.Services.V1.BatchDecryptRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_BatchDecrypt, null, options, request);
+      }
+      /// <summary>
+      /// Decrypt MANY transit ciphertexts under one key in a single call; each
+      /// ciphertext carries its own key version in the envelope. Order-preserving.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.BatchDecryptResponse> BatchDecryptAsync(global::udb.core.Vault.Services.V1.BatchDecryptRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return BatchDecryptAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Decrypt MANY transit ciphertexts under one key in a single call; each
+      /// ciphertext carries its own key version in the envelope. Order-preserving.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Vault.Services.V1.BatchDecryptResponse> BatchDecryptAsync(global::udb.core.Vault.Services.V1.BatchDecryptRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_BatchDecrypt, null, options, request);
+      }
       /// <summary>Creates a new instance of client from given <c>ClientBaseConfiguration</c>.</summary>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       protected override VaultServiceClient NewInstance(ClientBaseConfiguration configuration)
@@ -1229,6 +1736,7 @@ namespace udb.core.Vault.Services.V1 {
           .AddMethod(__Method_GetSecret, serviceImpl.GetSecret)
           .AddMethod(__Method_ListSecrets, serviceImpl.ListSecrets)
           .AddMethod(__Method_DeleteSecret, serviceImpl.DeleteSecret)
+          .AddMethod(__Method_UndeleteSecret, serviceImpl.UndeleteSecret)
           .AddMethod(__Method_DestroySecret, serviceImpl.DestroySecret)
           .AddMethod(__Method_CreateTransitKey, serviceImpl.CreateTransitKey)
           .AddMethod(__Method_RotateTransitKey, serviceImpl.RotateTransitKey)
@@ -1238,7 +1746,12 @@ namespace udb.core.Vault.Services.V1 {
           .AddMethod(__Method_Verify, serviceImpl.Verify)
           .AddMethod(__Method_Hmac, serviceImpl.Hmac)
           .AddMethod(__Method_SealStatus, serviceImpl.SealStatus)
-          .AddMethod(__Method_GenerateDatabaseCredentials, serviceImpl.GenerateDatabaseCredentials).Build();
+          .AddMethod(__Method_GenerateDatabaseCredentials, serviceImpl.GenerateDatabaseCredentials)
+          .AddMethod(__Method_GenerateDataKey, serviceImpl.GenerateDataKey)
+          .AddMethod(__Method_Rewrap, serviceImpl.Rewrap)
+          .AddMethod(__Method_GetTransitPublicKey, serviceImpl.GetTransitPublicKey)
+          .AddMethod(__Method_BatchEncrypt, serviceImpl.BatchEncrypt)
+          .AddMethod(__Method_BatchDecrypt, serviceImpl.BatchDecrypt).Build();
     }
 
     /// <summary>Register service method with a service binder with or without implementation. Useful when customizing the service binding logic.
@@ -1252,6 +1765,7 @@ namespace udb.core.Vault.Services.V1 {
       serviceBinder.AddMethod(__Method_GetSecret, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Vault.Services.V1.GetSecretRequest, global::udb.core.Vault.Services.V1.GetSecretResponse>(serviceImpl.GetSecret));
       serviceBinder.AddMethod(__Method_ListSecrets, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Vault.Services.V1.ListSecretsRequest, global::udb.core.Vault.Services.V1.ListSecretsResponse>(serviceImpl.ListSecrets));
       serviceBinder.AddMethod(__Method_DeleteSecret, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Vault.Services.V1.DeleteSecretRequest, global::udb.core.Vault.Services.V1.DeleteSecretResponse>(serviceImpl.DeleteSecret));
+      serviceBinder.AddMethod(__Method_UndeleteSecret, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Vault.Services.V1.UndeleteSecretRequest, global::udb.core.Vault.Services.V1.UndeleteSecretResponse>(serviceImpl.UndeleteSecret));
       serviceBinder.AddMethod(__Method_DestroySecret, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Vault.Services.V1.DestroySecretRequest, global::udb.core.Vault.Services.V1.DestroySecretResponse>(serviceImpl.DestroySecret));
       serviceBinder.AddMethod(__Method_CreateTransitKey, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Vault.Services.V1.CreateTransitKeyRequest, global::udb.core.Vault.Services.V1.CreateTransitKeyResponse>(serviceImpl.CreateTransitKey));
       serviceBinder.AddMethod(__Method_RotateTransitKey, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Vault.Services.V1.RotateTransitKeyRequest, global::udb.core.Vault.Services.V1.RotateTransitKeyResponse>(serviceImpl.RotateTransitKey));
@@ -1262,6 +1776,11 @@ namespace udb.core.Vault.Services.V1 {
       serviceBinder.AddMethod(__Method_Hmac, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Vault.Services.V1.HmacRequest, global::udb.core.Vault.Services.V1.HmacResponse>(serviceImpl.Hmac));
       serviceBinder.AddMethod(__Method_SealStatus, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Vault.Services.V1.SealStatusRequest, global::udb.core.Vault.Services.V1.SealStatusResponse>(serviceImpl.SealStatus));
       serviceBinder.AddMethod(__Method_GenerateDatabaseCredentials, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Vault.Services.V1.GenerateDatabaseCredentialsRequest, global::udb.core.Vault.Services.V1.GenerateDatabaseCredentialsResponse>(serviceImpl.GenerateDatabaseCredentials));
+      serviceBinder.AddMethod(__Method_GenerateDataKey, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Vault.Services.V1.GenerateDataKeyRequest, global::udb.core.Vault.Services.V1.GenerateDataKeyResponse>(serviceImpl.GenerateDataKey));
+      serviceBinder.AddMethod(__Method_Rewrap, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Vault.Services.V1.RewrapRequest, global::udb.core.Vault.Services.V1.RewrapResponse>(serviceImpl.Rewrap));
+      serviceBinder.AddMethod(__Method_GetTransitPublicKey, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Vault.Services.V1.GetTransitPublicKeyRequest, global::udb.core.Vault.Services.V1.GetTransitPublicKeyResponse>(serviceImpl.GetTransitPublicKey));
+      serviceBinder.AddMethod(__Method_BatchEncrypt, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Vault.Services.V1.BatchEncryptRequest, global::udb.core.Vault.Services.V1.BatchEncryptResponse>(serviceImpl.BatchEncrypt));
+      serviceBinder.AddMethod(__Method_BatchDecrypt, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Vault.Services.V1.BatchDecryptRequest, global::udb.core.Vault.Services.V1.BatchDecryptResponse>(serviceImpl.BatchDecrypt));
     }
 
   }

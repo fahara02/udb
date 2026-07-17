@@ -6,7 +6,7 @@ Inputs:
 - `docs/generated/bench-bodies.json`
 - `docs/site/bench-results.json`
 
-Current generated RPC surface: 346 RPCs across 28 services.
+Current generated RPC surface: 353 RPCs across 28 services.
 
 Published benchmark artifact: not committed yet.
 Release tag: -.
@@ -65,11 +65,11 @@ Generated at: -.
 | SchedulerService | 6 | 2 | 3 | 1 | 0 |
 | SearchService | 5 | 2 | 2 | 1 | 0 |
 | SignalingService | 1 | 0 | 1 | 0 | 0 |
-| StorageService | 8 | 4 | 4 | 0 | 0 |
+| StorageService | 9 | 5 | 4 | 0 | 0 |
 | TenantService | 7 | 3 | 3 | 1 | 0 |
 | TrackService | 4 | 1 | 3 | 0 | 0 |
 | TurnService | 1 | 0 | 1 | 0 | 0 |
-| VaultService | 14 | 5 | 8 | 1 | 0 |
+| VaultService | 20 | 6 | 13 | 1 | 0 |
 | WebhookService | 6 | 3 | 2 | 1 | 0 |
 | WorkflowService | 5 | 2 | 2 | 1 | 0 |
 
@@ -389,6 +389,7 @@ identity surface available to benchmark reports.
 | `StorageService/GetFile` | `get_file` | `getFile` | READ_ONLY |
 | `StorageService/ListFiles` | `list_files` | `listFiles` | READ_ONLY |
 | `StorageService/RegisterUpload` | `register_upload` | `registerUpload` | MUTATION |
+| `StorageService/ReissueUploadUrl` | `reissue_upload_url` | `reissueUploadUrl` | READ_ONLY |
 | `StorageService/UpdateFile` | `update_file` | `updateFile` | MUTATION |
 | `TenantService/CreateTenant` | `create_tenant` | `createTenant` | MUTATION |
 | `TenantService/GetTenant` | `get_tenant` | `getTenant` | READ_ONLY |
@@ -402,19 +403,25 @@ identity surface available to benchmark reports.
 | `TrackService/PublishTrack` | `publish_track` | `publishTrack` | MUTATION |
 | `TrackService/UnpublishTrack` | `unpublish_track` | `unpublishTrack` | MUTATION |
 | `TurnService/IssueCredentials` | `issue_credentials` | `issueCredentials` | MUTATION |
+| `VaultService/BatchDecrypt` | `batch_decrypt` | `vaultBatchDecrypt` | MUTATION |
+| `VaultService/BatchEncrypt` | `batch_encrypt` | `vaultBatchEncrypt` | MUTATION |
 | `VaultService/CreateTransitKey` | `create_transit_key` | `createTransitKey` | MUTATION |
 | `VaultService/Decrypt` | `decrypt` | `vaultDecrypt` | READ_ONLY |
 | `VaultService/DeleteSecret` | `delete_secret` | `deleteSecret` | MUTATION |
 | `VaultService/DestroySecret` | `destroy_secret` | `destroySecret` | DESTRUCTIVE |
 | `VaultService/Encrypt` | `encrypt` | `vaultEncrypt` | MUTATION |
 | `VaultService/GenerateDatabaseCredentials` | `generate_database_credentials` | `generateDatabaseCredentials` | MUTATION |
+| `VaultService/GenerateDataKey` | `generate_data_key` | `vaultGenerateDataKey` | MUTATION |
 | `VaultService/GetSecret` | `get_secret` | `getSecret` | READ_ONLY |
+| `VaultService/GetTransitPublicKey` | `get_transit_public_key` | `vaultGetTransitPublicKey` | READ_ONLY |
 | `VaultService/Hmac` | `hmac` | `vaultHmac` | MUTATION |
 | `VaultService/ListSecrets` | `list_secrets` | `listSecrets` | READ_ONLY |
 | `VaultService/PutSecret` | `put_secret` | `putSecret` | MUTATION |
+| `VaultService/Rewrap` | `rewrap` | `vaultRewrap` | MUTATION |
 | `VaultService/RotateTransitKey` | `rotate_transit_key` | `rotateTransitKey` | MUTATION |
 | `VaultService/SealStatus` | `seal_status` | `vaultSealStatus` | READ_ONLY |
 | `VaultService/Sign` | `sign` | `vaultSign` | MUTATION |
+| `VaultService/UndeleteSecret` | `undelete_secret` | `undeleteSecret` | MUTATION |
 | `VaultService/Verify` | `verify` | `vaultVerify` | READ_ONLY |
 | `WebhookService/CreateEndpoint` | `create_endpoint` | `createWebhookEndpoint` | MUTATION |
 | `WebhookService/DeleteEndpoint` | `delete_endpoint` | `deleteWebhookEndpoint` | DESTRUCTIVE |

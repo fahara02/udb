@@ -801,10 +801,22 @@ type RetrieveRequest struct {
 	// search runs hybrid (lexical + vector) fusion.
 	QueryText string `protobuf:"bytes,3,opt,name=query_text,json=queryText,proto3" json:"query_text,omitempty"`
 	// Already-embedded query vector (the broker never embeds the query).
-	QueryVector   []float32 `protobuf:"fixed32,4,rep,packed,name=query_vector,json=queryVector,proto3" json:"query_vector,omitempty"`
-	TopK          int32     `protobuf:"varint,5,opt,name=top_k,json=topK,proto3" json:"top_k,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	QueryVector []float32 `protobuf:"fixed32,4,rep,packed,name=query_vector,json=queryVector,proto3" json:"query_vector,omitempty"`
+	TopK        int32     `protobuf:"varint,5,opt,name=top_k,json=topK,proto3" json:"top_k,omitempty"`
+	// Optional caller-supplied metadata filter (Qdrant-style JSON object with
+	// `must` / `should` / `must_not` condition arrays), merged UNDER the mandatory
+	// server-side tenant clause. The verified `_tenant_id` `must` clause is always
+	// applied first and cannot be broadened by this filter; conditions referencing
+	// any internal `_`-prefixed payload key are rejected. Example:
+	// `{"must":[{"key":"doc_type","match":{"value":"invoice"}}]}`.
+	FilterJson string `protobuf:"bytes,6,opt,name=filter_json,json=filterJson,proto3" json:"filter_json,omitempty"`
+	// Optional per-query minimum similarity score a hit must clear to be returned.
+	// RAISES (never lowers) the server-side floor, so a caller can demand
+	// higher-precision results per query; <= 0 uses the server default. Applies to
+	// both the vector and hybrid paths.
+	ScoreThreshold float64 `protobuf:"fixed64,7,opt,name=score_threshold,json=scoreThreshold,proto3" json:"score_threshold,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *RetrieveRequest) Reset() {
@@ -868,6 +880,20 @@ func (x *RetrieveRequest) GetQueryVector() []float32 {
 func (x *RetrieveRequest) GetTopK() int32 {
 	if x != nil {
 		return x.TopK
+	}
+	return 0
+}
+
+func (x *RetrieveRequest) GetFilterJson() string {
+	if x != nil {
+		return x.FilterJson
+	}
+	return ""
+}
+
+func (x *RetrieveRequest) GetScoreThreshold() float64 {
+	if x != nil {
+		return x.ScoreThreshold
 	}
 	return 0
 }
@@ -1061,7 +1087,7 @@ const file_udb_core_embedding_services_v1_embedding_service_proto_rawDesc = "" +
 	"\x17ReportEmbeddingResponse\x12\x1a\n" +
 	"\bupserted\x18\x01 \x01(\bR\bupserted\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x122\n" +
-	"\x05error\x18\x03 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tembedding\"\xc8\x01\n" +
+	"\x05error\x18\x03 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tembedding\"\x92\x02\n" +
 	"\x0fRetrieveRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1f\n" +
 	"\vsource_name\x18\x02 \x01(\tR\n" +
@@ -1069,7 +1095,10 @@ const file_udb_core_embedding_services_v1_embedding_service_proto_rawDesc = "" +
 	"\n" +
 	"query_text\x18\x03 \x01(\tR\tqueryText\x12!\n" +
 	"\fquery_vector\x18\x04 \x03(\x02R\vqueryVector\x12\x13\n" +
-	"\x05top_k\x18\x05 \x01(\x05R\x04topK: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tembeddingP\x01\"V\n" +
+	"\x05top_k\x18\x05 \x01(\x05R\x04topK\x12\x1f\n" +
+	"\vfilter_json\x18\x06 \x01(\tR\n" +
+	"filterJson\x12'\n" +
+	"\x0fscore_threshold\x18\a \x01(\x01R\x0escoreThreshold: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tembeddingP\x01\"V\n" +
 	"\vRetrieveHit\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05score\x18\x02 \x01(\x01R\x05score\x12!\n" +

@@ -90,4 +90,47 @@ public interface RetrieveRequestOrBuilder extends
    * @return The topK.
    */
   int getTopK();
+
+  /**
+   * <pre>
+   * Optional caller-supplied metadata filter (Qdrant-style JSON object with
+   * `must` / `should` / `must_not` condition arrays), merged UNDER the mandatory
+   * server-side tenant clause. The verified `_tenant_id` `must` clause is always
+   * applied first and cannot be broadened by this filter; conditions referencing
+   * any internal `_`-prefixed payload key are rejected. Example:
+   * `{"must":[{"key":"doc_type","match":{"value":"invoice"}}]}`.
+   * </pre>
+   *
+   * <code>string filter_json = 6 [json_name = "filterJson"];</code>
+   * @return The filterJson.
+   */
+  java.lang.String getFilterJson();
+  /**
+   * <pre>
+   * Optional caller-supplied metadata filter (Qdrant-style JSON object with
+   * `must` / `should` / `must_not` condition arrays), merged UNDER the mandatory
+   * server-side tenant clause. The verified `_tenant_id` `must` clause is always
+   * applied first and cannot be broadened by this filter; conditions referencing
+   * any internal `_`-prefixed payload key are rejected. Example:
+   * `{"must":[{"key":"doc_type","match":{"value":"invoice"}}]}`.
+   * </pre>
+   *
+   * <code>string filter_json = 6 [json_name = "filterJson"];</code>
+   * @return The bytes for filterJson.
+   */
+  com.google.protobuf.ByteString
+      getFilterJsonBytes();
+
+  /**
+   * <pre>
+   * Optional per-query minimum similarity score a hit must clear to be returned.
+   * RAISES (never lowers) the server-side floor, so a caller can demand
+   * higher-precision results per query; &lt;= 0 uses the server default. Applies to
+   * both the vector and hybrid paths.
+   * </pre>
+   *
+   * <code>double score_threshold = 7 [json_name = "scoreThreshold"];</code>
+   * @return The scoreThreshold.
+   */
+  double getScoreThreshold();
 }

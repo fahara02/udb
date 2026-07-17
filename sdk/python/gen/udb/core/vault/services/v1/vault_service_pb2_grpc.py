@@ -45,6 +45,11 @@ class VaultServiceStub(object):
                 request_serializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.DeleteSecretRequest.SerializeToString,
                 response_deserializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.DeleteSecretResponse.FromString,
                 _registered_method=True)
+        self.UndeleteSecret = channel.unary_unary(
+                '/udb.core.vault.services.v1.VaultService/UndeleteSecret',
+                request_serializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.UndeleteSecretRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.UndeleteSecretResponse.FromString,
+                _registered_method=True)
         self.DestroySecret = channel.unary_unary(
                 '/udb.core.vault.services.v1.VaultService/DestroySecret',
                 request_serializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.DestroySecretRequest.SerializeToString,
@@ -95,6 +100,31 @@ class VaultServiceStub(object):
                 request_serializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.GenerateDatabaseCredentialsRequest.SerializeToString,
                 response_deserializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.GenerateDatabaseCredentialsResponse.FromString,
                 _registered_method=True)
+        self.GenerateDataKey = channel.unary_unary(
+                '/udb.core.vault.services.v1.VaultService/GenerateDataKey',
+                request_serializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.GenerateDataKeyRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.GenerateDataKeyResponse.FromString,
+                _registered_method=True)
+        self.Rewrap = channel.unary_unary(
+                '/udb.core.vault.services.v1.VaultService/Rewrap',
+                request_serializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.RewrapRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.RewrapResponse.FromString,
+                _registered_method=True)
+        self.GetTransitPublicKey = channel.unary_unary(
+                '/udb.core.vault.services.v1.VaultService/GetTransitPublicKey',
+                request_serializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.GetTransitPublicKeyRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.GetTransitPublicKeyResponse.FromString,
+                _registered_method=True)
+        self.BatchEncrypt = channel.unary_unary(
+                '/udb.core.vault.services.v1.VaultService/BatchEncrypt',
+                request_serializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.BatchEncryptRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.BatchEncryptResponse.FromString,
+                _registered_method=True)
+        self.BatchDecrypt = channel.unary_unary(
+                '/udb.core.vault.services.v1.VaultService/BatchDecrypt',
+                request_serializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.BatchDecryptRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.BatchDecryptResponse.FromString,
+                _registered_method=True)
 
 
 class VaultServiceServicer(object):
@@ -140,6 +170,15 @@ class VaultServiceServicer(object):
     def DeleteSecret(self, request, context):
         """Soft-delete the latest version (recoverable bookkeeping state). The ciphertext
         is retained; use DestroySecret to crypto-shred.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def UndeleteSecret(self, request, context):
+        """Restore a soft-DELETED secret: flip its latest deleted version back to ACTIVE.
+        A soft delete keeps the ciphertext + wrapped key, so recovery is exact. A
+        crypto-shredded (DestroySecret) version can NEVER be restored.
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -238,6 +277,54 @@ class VaultServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def GenerateDataKey(self, request, context):
+        """Generate a fresh 256-bit data key, returned BOTH plaintext (for the caller to
+        encrypt data locally) AND wrapped under the named transit key (store this and
+        Decrypt/Rewrap it later). Envelope-encryption without exposing the transit
+        key. Reuses the transit seal path; AUDITED via the outbox compliance envelope.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def Rewrap(self, request, context):
+        """Re-wrap a transit ciphertext under the key's CURRENT active version: decrypt
+        with the version embedded in the envelope, then re-seal with the active
+        version. The post-rotation migration primitive (no plaintext leaves the
+        broker). AUDITED via the outbox compliance envelope.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetTransitPublicKey(self, request, context):
+        """Export the Ed25519 PUBLIC key(s) of a signing transit key so an external
+        party can verify broker-produced signatures without ever holding the private
+        key — the missing half that makes Sign/Verify genuinely asymmetric. Only
+        valid for keys created with the ed25519 algorithm; READ-ONLY (public keys are
+        not secret). Returns one entry per usable (ACTIVE/VERIFYING) version.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def BatchEncrypt(self, request, context):
+        """Encrypt MANY plaintexts under one transit key in a single call: the key is
+        unwrapped ONCE and each plaintext sealed with the active version, amortizing
+        the master-key unwrap over the batch. Order-preserving. AUDITED.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def BatchDecrypt(self, request, context):
+        """Decrypt MANY transit ciphertexts under one key in a single call; each
+        ciphertext carries its own key version in the envelope. Order-preserving.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_VaultServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -260,6 +347,11 @@ def add_VaultServiceServicer_to_server(servicer, server):
                     servicer.DeleteSecret,
                     request_deserializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.DeleteSecretRequest.FromString,
                     response_serializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.DeleteSecretResponse.SerializeToString,
+            ),
+            'UndeleteSecret': grpc.unary_unary_rpc_method_handler(
+                    servicer.UndeleteSecret,
+                    request_deserializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.UndeleteSecretRequest.FromString,
+                    response_serializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.UndeleteSecretResponse.SerializeToString,
             ),
             'DestroySecret': grpc.unary_unary_rpc_method_handler(
                     servicer.DestroySecret,
@@ -310,6 +402,31 @@ def add_VaultServiceServicer_to_server(servicer, server):
                     servicer.GenerateDatabaseCredentials,
                     request_deserializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.GenerateDatabaseCredentialsRequest.FromString,
                     response_serializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.GenerateDatabaseCredentialsResponse.SerializeToString,
+            ),
+            'GenerateDataKey': grpc.unary_unary_rpc_method_handler(
+                    servicer.GenerateDataKey,
+                    request_deserializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.GenerateDataKeyRequest.FromString,
+                    response_serializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.GenerateDataKeyResponse.SerializeToString,
+            ),
+            'Rewrap': grpc.unary_unary_rpc_method_handler(
+                    servicer.Rewrap,
+                    request_deserializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.RewrapRequest.FromString,
+                    response_serializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.RewrapResponse.SerializeToString,
+            ),
+            'GetTransitPublicKey': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetTransitPublicKey,
+                    request_deserializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.GetTransitPublicKeyRequest.FromString,
+                    response_serializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.GetTransitPublicKeyResponse.SerializeToString,
+            ),
+            'BatchEncrypt': grpc.unary_unary_rpc_method_handler(
+                    servicer.BatchEncrypt,
+                    request_deserializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.BatchEncryptRequest.FromString,
+                    response_serializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.BatchEncryptResponse.SerializeToString,
+            ),
+            'BatchDecrypt': grpc.unary_unary_rpc_method_handler(
+                    servicer.BatchDecrypt,
+                    request_deserializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.BatchDecryptRequest.FromString,
+                    response_serializer=udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.BatchDecryptResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -431,6 +548,33 @@ class VaultService(object):
             '/udb.core.vault.services.v1.VaultService/DeleteSecret',
             udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.DeleteSecretRequest.SerializeToString,
             udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.DeleteSecretResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def UndeleteSecret(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.vault.services.v1.VaultService/UndeleteSecret',
+            udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.UndeleteSecretRequest.SerializeToString,
+            udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.UndeleteSecretResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -701,6 +845,141 @@ class VaultService(object):
             '/udb.core.vault.services.v1.VaultService/GenerateDatabaseCredentials',
             udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.GenerateDatabaseCredentialsRequest.SerializeToString,
             udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.GenerateDatabaseCredentialsResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GenerateDataKey(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.vault.services.v1.VaultService/GenerateDataKey',
+            udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.GenerateDataKeyRequest.SerializeToString,
+            udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.GenerateDataKeyResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def Rewrap(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.vault.services.v1.VaultService/Rewrap',
+            udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.RewrapRequest.SerializeToString,
+            udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.RewrapResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetTransitPublicKey(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.vault.services.v1.VaultService/GetTransitPublicKey',
+            udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.GetTransitPublicKeyRequest.SerializeToString,
+            udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.GetTransitPublicKeyResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def BatchEncrypt(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.vault.services.v1.VaultService/BatchEncrypt',
+            udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.BatchEncryptRequest.SerializeToString,
+            udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.BatchEncryptResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def BatchDecrypt(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.vault.services.v1.VaultService/BatchDecrypt',
+            udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.BatchDecryptRequest.SerializeToString,
+            udb_dot_core_dot_vault_dot_services_dot_v1_dot_vault__service__pb2.BatchDecryptResponse.FromString,
             options,
             channel_credentials,
             insecure,

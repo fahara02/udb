@@ -32,6 +32,7 @@ private static final long serialVersionUID = 0L;
     sourceName_ = "";
     queryText_ = "";
     queryVector_ = emptyFloatList();
+    filterJson_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -227,6 +228,81 @@ private static final long serialVersionUID = 0L;
     return topK_;
   }
 
+  public static final int FILTER_JSON_FIELD_NUMBER = 6;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object filterJson_ = "";
+  /**
+   * <pre>
+   * Optional caller-supplied metadata filter (Qdrant-style JSON object with
+   * `must` / `should` / `must_not` condition arrays), merged UNDER the mandatory
+   * server-side tenant clause. The verified `_tenant_id` `must` clause is always
+   * applied first and cannot be broadened by this filter; conditions referencing
+   * any internal `_`-prefixed payload key are rejected. Example:
+   * `{"must":[{"key":"doc_type","match":{"value":"invoice"}}]}`.
+   * </pre>
+   *
+   * <code>string filter_json = 6 [json_name = "filterJson"];</code>
+   * @return The filterJson.
+   */
+  @java.lang.Override
+  public java.lang.String getFilterJson() {
+    java.lang.Object ref = filterJson_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      filterJson_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Optional caller-supplied metadata filter (Qdrant-style JSON object with
+   * `must` / `should` / `must_not` condition arrays), merged UNDER the mandatory
+   * server-side tenant clause. The verified `_tenant_id` `must` clause is always
+   * applied first and cannot be broadened by this filter; conditions referencing
+   * any internal `_`-prefixed payload key are rejected. Example:
+   * `{"must":[{"key":"doc_type","match":{"value":"invoice"}}]}`.
+   * </pre>
+   *
+   * <code>string filter_json = 6 [json_name = "filterJson"];</code>
+   * @return The bytes for filterJson.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getFilterJsonBytes() {
+    java.lang.Object ref = filterJson_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      filterJson_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int SCORE_THRESHOLD_FIELD_NUMBER = 7;
+  private double scoreThreshold_ = 0D;
+  /**
+   * <pre>
+   * Optional per-query minimum similarity score a hit must clear to be returned.
+   * RAISES (never lowers) the server-side floor, so a caller can demand
+   * higher-precision results per query; &lt;= 0 uses the server default. Applies to
+   * both the vector and hybrid paths.
+   * </pre>
+   *
+   * <code>double score_threshold = 7 [json_name = "scoreThreshold"];</code>
+   * @return The scoreThreshold.
+   */
+  @java.lang.Override
+  public double getScoreThreshold() {
+    return scoreThreshold_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -261,6 +337,12 @@ private static final long serialVersionUID = 0L;
     if (topK_ != 0) {
       output.writeInt32(5, topK_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(filterJson_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 6, filterJson_);
+    }
+    if (java.lang.Double.doubleToRawLongBits(scoreThreshold_) != 0) {
+      output.writeDouble(7, scoreThreshold_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -294,6 +376,13 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeInt32Size(5, topK_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(filterJson_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(6, filterJson_);
+    }
+    if (java.lang.Double.doubleToRawLongBits(scoreThreshold_) != 0) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeDoubleSize(7, scoreThreshold_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -319,6 +408,11 @@ private static final long serialVersionUID = 0L;
         .equals(other.getQueryVectorList())) return false;
     if (getTopK()
         != other.getTopK()) return false;
+    if (!getFilterJson()
+        .equals(other.getFilterJson())) return false;
+    if (java.lang.Double.doubleToLongBits(getScoreThreshold())
+        != java.lang.Double.doubleToLongBits(
+            other.getScoreThreshold())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -342,6 +436,11 @@ private static final long serialVersionUID = 0L;
     }
     hash = (37 * hash) + TOP_K_FIELD_NUMBER;
     hash = (53 * hash) + getTopK();
+    hash = (37 * hash) + FILTER_JSON_FIELD_NUMBER;
+    hash = (53 * hash) + getFilterJson().hashCode();
+    hash = (37 * hash) + SCORE_THRESHOLD_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+        java.lang.Double.doubleToLongBits(getScoreThreshold()));
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -478,6 +577,8 @@ private static final long serialVersionUID = 0L;
       queryText_ = "";
       queryVector_ = emptyFloatList();
       topK_ = 0;
+      filterJson_ = "";
+      scoreThreshold_ = 0D;
       return this;
     }
 
@@ -527,6 +628,12 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000010) != 0)) {
         result.topK_ = topK_;
       }
+      if (((from_bitField0_ & 0x00000020) != 0)) {
+        result.filterJson_ = filterJson_;
+      }
+      if (((from_bitField0_ & 0x00000040) != 0)) {
+        result.scoreThreshold_ = scoreThreshold_;
+      }
     }
 
     @java.lang.Override
@@ -569,6 +676,14 @@ private static final long serialVersionUID = 0L;
       }
       if (other.getTopK() != 0) {
         setTopK(other.getTopK());
+      }
+      if (!other.getFilterJson().isEmpty()) {
+        filterJson_ = other.filterJson_;
+        bitField0_ |= 0x00000020;
+        onChanged();
+      }
+      if (java.lang.Double.doubleToRawLongBits(other.getScoreThreshold()) != 0) {
+        setScoreThreshold(other.getScoreThreshold());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -633,6 +748,16 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000010;
               break;
             } // case 40
+            case 50: {
+              filterJson_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000020;
+              break;
+            } // case 50
+            case 57: {
+              scoreThreshold_ = input.readDouble();
+              bitField0_ |= 0x00000040;
+              break;
+            } // case 57
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1037,6 +1162,176 @@ private static final long serialVersionUID = 0L;
     public Builder clearTopK() {
       bitField0_ = (bitField0_ & ~0x00000010);
       topK_ = 0;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object filterJson_ = "";
+    /**
+     * <pre>
+     * Optional caller-supplied metadata filter (Qdrant-style JSON object with
+     * `must` / `should` / `must_not` condition arrays), merged UNDER the mandatory
+     * server-side tenant clause. The verified `_tenant_id` `must` clause is always
+     * applied first and cannot be broadened by this filter; conditions referencing
+     * any internal `_`-prefixed payload key are rejected. Example:
+     * `{"must":[{"key":"doc_type","match":{"value":"invoice"}}]}`.
+     * </pre>
+     *
+     * <code>string filter_json = 6 [json_name = "filterJson"];</code>
+     * @return The filterJson.
+     */
+    public java.lang.String getFilterJson() {
+      java.lang.Object ref = filterJson_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        filterJson_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Optional caller-supplied metadata filter (Qdrant-style JSON object with
+     * `must` / `should` / `must_not` condition arrays), merged UNDER the mandatory
+     * server-side tenant clause. The verified `_tenant_id` `must` clause is always
+     * applied first and cannot be broadened by this filter; conditions referencing
+     * any internal `_`-prefixed payload key are rejected. Example:
+     * `{"must":[{"key":"doc_type","match":{"value":"invoice"}}]}`.
+     * </pre>
+     *
+     * <code>string filter_json = 6 [json_name = "filterJson"];</code>
+     * @return The bytes for filterJson.
+     */
+    public com.google.protobuf.ByteString
+        getFilterJsonBytes() {
+      java.lang.Object ref = filterJson_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        filterJson_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Optional caller-supplied metadata filter (Qdrant-style JSON object with
+     * `must` / `should` / `must_not` condition arrays), merged UNDER the mandatory
+     * server-side tenant clause. The verified `_tenant_id` `must` clause is always
+     * applied first and cannot be broadened by this filter; conditions referencing
+     * any internal `_`-prefixed payload key are rejected. Example:
+     * `{"must":[{"key":"doc_type","match":{"value":"invoice"}}]}`.
+     * </pre>
+     *
+     * <code>string filter_json = 6 [json_name = "filterJson"];</code>
+     * @param value The filterJson to set.
+     * @return This builder for chaining.
+     */
+    public Builder setFilterJson(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      filterJson_ = value;
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Optional caller-supplied metadata filter (Qdrant-style JSON object with
+     * `must` / `should` / `must_not` condition arrays), merged UNDER the mandatory
+     * server-side tenant clause. The verified `_tenant_id` `must` clause is always
+     * applied first and cannot be broadened by this filter; conditions referencing
+     * any internal `_`-prefixed payload key are rejected. Example:
+     * `{"must":[{"key":"doc_type","match":{"value":"invoice"}}]}`.
+     * </pre>
+     *
+     * <code>string filter_json = 6 [json_name = "filterJson"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearFilterJson() {
+      filterJson_ = getDefaultInstance().getFilterJson();
+      bitField0_ = (bitField0_ & ~0x00000020);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Optional caller-supplied metadata filter (Qdrant-style JSON object with
+     * `must` / `should` / `must_not` condition arrays), merged UNDER the mandatory
+     * server-side tenant clause. The verified `_tenant_id` `must` clause is always
+     * applied first and cannot be broadened by this filter; conditions referencing
+     * any internal `_`-prefixed payload key are rejected. Example:
+     * `{"must":[{"key":"doc_type","match":{"value":"invoice"}}]}`.
+     * </pre>
+     *
+     * <code>string filter_json = 6 [json_name = "filterJson"];</code>
+     * @param value The bytes for filterJson to set.
+     * @return This builder for chaining.
+     */
+    public Builder setFilterJsonBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      filterJson_ = value;
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+
+    private double scoreThreshold_ ;
+    /**
+     * <pre>
+     * Optional per-query minimum similarity score a hit must clear to be returned.
+     * RAISES (never lowers) the server-side floor, so a caller can demand
+     * higher-precision results per query; &lt;= 0 uses the server default. Applies to
+     * both the vector and hybrid paths.
+     * </pre>
+     *
+     * <code>double score_threshold = 7 [json_name = "scoreThreshold"];</code>
+     * @return The scoreThreshold.
+     */
+    @java.lang.Override
+    public double getScoreThreshold() {
+      return scoreThreshold_;
+    }
+    /**
+     * <pre>
+     * Optional per-query minimum similarity score a hit must clear to be returned.
+     * RAISES (never lowers) the server-side floor, so a caller can demand
+     * higher-precision results per query; &lt;= 0 uses the server default. Applies to
+     * both the vector and hybrid paths.
+     * </pre>
+     *
+     * <code>double score_threshold = 7 [json_name = "scoreThreshold"];</code>
+     * @param value The scoreThreshold to set.
+     * @return This builder for chaining.
+     */
+    public Builder setScoreThreshold(double value) {
+
+      scoreThreshold_ = value;
+      bitField0_ |= 0x00000040;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Optional per-query minimum similarity score a hit must clear to be returned.
+     * RAISES (never lowers) the server-side floor, so a caller can demand
+     * higher-precision results per query; &lt;= 0 uses the server default. Applies to
+     * both the vector and hybrid paths.
+     * </pre>
+     *
+     * <code>double score_threshold = 7 [json_name = "scoreThreshold"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearScoreThreshold() {
+      bitField0_ = (bitField0_ & ~0x00000040);
+      scoreThreshold_ = 0D;
       onChanged();
       return this;
     }

@@ -52,6 +52,30 @@ class RegisterUploadResponse(_message.Message):
     expires_at: int
     def __init__(self, file_id: _Optional[str] = ..., upload_url: _Optional[str] = ..., object_key: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ..., expires_at: _Optional[int] = ...) -> None: ...
 
+class ReissueUploadUrlRequest(_message.Message):
+    __slots__ = ("tenant_id", "file_id", "expires_in_minutes")
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    FILE_ID_FIELD_NUMBER: _ClassVar[int]
+    EXPIRES_IN_MINUTES_FIELD_NUMBER: _ClassVar[int]
+    tenant_id: str
+    file_id: str
+    expires_in_minutes: int
+    def __init__(self, tenant_id: _Optional[str] = ..., file_id: _Optional[str] = ..., expires_in_minutes: _Optional[int] = ...) -> None: ...
+
+class ReissueUploadUrlResponse(_message.Message):
+    __slots__ = ("file_id", "upload_url", "object_key", "error", "expires_at")
+    FILE_ID_FIELD_NUMBER: _ClassVar[int]
+    UPLOAD_URL_FIELD_NUMBER: _ClassVar[int]
+    OBJECT_KEY_FIELD_NUMBER: _ClassVar[int]
+    ERROR_FIELD_NUMBER: _ClassVar[int]
+    EXPIRES_AT_FIELD_NUMBER: _ClassVar[int]
+    file_id: str
+    upload_url: str
+    object_key: str
+    error: _dto_pb2.ApiError
+    expires_at: int
+    def __init__(self, file_id: _Optional[str] = ..., upload_url: _Optional[str] = ..., object_key: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ..., expires_at: _Optional[int] = ...) -> None: ...
+
 class FinalizeUploadRequest(_message.Message):
     __slots__ = ("tenant_id", "file_id", "content_type", "file_type", "reference_id", "reference_type", "is_public", "size_bytes", "checksum", "etag")
     TENANT_ID_FIELD_NUMBER: _ClassVar[int]

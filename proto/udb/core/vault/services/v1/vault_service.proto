@@ -746,7 +746,7 @@ service VaultService {
       api_error: true
       explicit_nulls: true
     };
-    option (google.api.http) = {post: "/v1/vault/transit:generate-data-key" body: "*"};
+    option (google.api.http) = {post: "/v1/vault/transit:generateDataKey" body: "*"};
   }
 
   // Re-wrap a transit ciphertext under the key's CURRENT active version: decrypt
@@ -825,7 +825,7 @@ service VaultService {
       api_error: true
       explicit_nulls: true
     };
-    option (google.api.http) = {post: "/v1/vault/transit:public-key" body: "*"};
+    option (google.api.http) = {post: "/v1/vault/transit:publicKey" body: "*"};
   }
 
   // Encrypt MANY plaintexts under one transit key in a single call: the key is
@@ -863,7 +863,7 @@ service VaultService {
       api_error: true
       explicit_nulls: true
     };
-    option (google.api.http) = {post: "/v1/vault/transit:batch-encrypt" body: "*"};
+    option (google.api.http) = {post: "/v1/vault/transit:batchEncrypt" body: "*"};
   }
 
   // Decrypt MANY transit ciphertexts under one key in a single call; each
@@ -900,7 +900,7 @@ service VaultService {
       api_error: true
       explicit_nulls: true
     };
-    option (google.api.http) = {post: "/v1/vault/transit:batch-decrypt" body: "*"};
+    option (google.api.http) = {post: "/v1/vault/transit:batchDecrypt" body: "*"};
   }
 }
 

@@ -62,6 +62,25 @@ class StorageServiceClient extends \Grpc\BaseStub {
     }
 
     /**
+     * Reissue a presigned PUT URL for an existing PENDING upload — the resume path
+     * when a RegisterUpload response was lost in flight (the client kept the file_id
+     * but not the secret upload URL). The File row + object_key are unchanged; only
+     * a fresh short-lived upload URL is minted. Rejected fail-closed for a
+     * non-PENDING (already-finalized or removed) file. READ-ONLY (no state change).
+     * @param \Udb\Core\Storage\Services\V1\ReissueUploadUrlRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Storage\Services\V1\ReissueUploadUrlResponse>
+     */
+    public function ReissueUploadUrl(\Udb\Core\Storage\Services\V1\ReissueUploadUrlRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.storage.services.v1.StorageService/ReissueUploadUrl',
+        $argument,
+        ['\Udb\Core\Storage\Services\V1\ReissueUploadUrlResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
      * Stream a file's bytes directly through the broker. FALLBACK for clients
      * that cannot use the presigned `GetDownloadUrl` HTTP GET (no egress to the
      * object store, corporate proxy, etc.). The broker streams the object bytes

@@ -23,6 +23,7 @@ const (
 	VaultService_GetSecret_FullMethodName                   = "/udb.core.vault.services.v1.VaultService/GetSecret"
 	VaultService_ListSecrets_FullMethodName                 = "/udb.core.vault.services.v1.VaultService/ListSecrets"
 	VaultService_DeleteSecret_FullMethodName                = "/udb.core.vault.services.v1.VaultService/DeleteSecret"
+	VaultService_UndeleteSecret_FullMethodName              = "/udb.core.vault.services.v1.VaultService/UndeleteSecret"
 	VaultService_DestroySecret_FullMethodName               = "/udb.core.vault.services.v1.VaultService/DestroySecret"
 	VaultService_CreateTransitKey_FullMethodName            = "/udb.core.vault.services.v1.VaultService/CreateTransitKey"
 	VaultService_RotateTransitKey_FullMethodName            = "/udb.core.vault.services.v1.VaultService/RotateTransitKey"
@@ -33,6 +34,11 @@ const (
 	VaultService_Hmac_FullMethodName                        = "/udb.core.vault.services.v1.VaultService/Hmac"
 	VaultService_SealStatus_FullMethodName                  = "/udb.core.vault.services.v1.VaultService/SealStatus"
 	VaultService_GenerateDatabaseCredentials_FullMethodName = "/udb.core.vault.services.v1.VaultService/GenerateDatabaseCredentials"
+	VaultService_GenerateDataKey_FullMethodName             = "/udb.core.vault.services.v1.VaultService/GenerateDataKey"
+	VaultService_Rewrap_FullMethodName                      = "/udb.core.vault.services.v1.VaultService/Rewrap"
+	VaultService_GetTransitPublicKey_FullMethodName         = "/udb.core.vault.services.v1.VaultService/GetTransitPublicKey"
+	VaultService_BatchEncrypt_FullMethodName                = "/udb.core.vault.services.v1.VaultService/BatchEncrypt"
+	VaultService_BatchDecrypt_FullMethodName                = "/udb.core.vault.services.v1.VaultService/BatchDecrypt"
 )
 
 // VaultServiceClient is the client API for VaultService service.
@@ -64,6 +70,10 @@ type VaultServiceClient interface {
 	// Soft-delete the latest version (recoverable bookkeeping state). The ciphertext
 	// is retained; use DestroySecret to crypto-shred.
 	DeleteSecret(ctx context.Context, in *DeleteSecretRequest, opts ...grpc.CallOption) (*DeleteSecretResponse, error)
+	// Restore a soft-DELETED secret: flip its latest deleted version back to ACTIVE.
+	// A soft delete keeps the ciphertext + wrapped key, so recovery is exact. A
+	// crypto-shredded (DestroySecret) version can NEVER be restored.
+	UndeleteSecret(ctx context.Context, in *UndeleteSecretRequest, opts ...grpc.CallOption) (*UndeleteSecretResponse, error)
 	// Crypto-shred every version of a secret: clears the wrapped DEK + ciphertext
 	// so the value is irrecoverable. DESTRUCTIVE + irreversible — a confirmation
 	// token is required and an empty token fails closed.
@@ -101,6 +111,29 @@ type VaultServiceClient interface {
 	// UDB_VAULT_DB_ROLES_JSON; arbitrary request-supplied role grants fail closed.
 	// WORKER_VAULT_LEASE_REAPER revokes and drops expired generated login roles.
 	GenerateDatabaseCredentials(ctx context.Context, in *GenerateDatabaseCredentialsRequest, opts ...grpc.CallOption) (*GenerateDatabaseCredentialsResponse, error)
+	// Generate a fresh 256-bit data key, returned BOTH plaintext (for the caller to
+	// encrypt data locally) AND wrapped under the named transit key (store this and
+	// Decrypt/Rewrap it later). Envelope-encryption without exposing the transit
+	// key. Reuses the transit seal path; AUDITED via the outbox compliance envelope.
+	GenerateDataKey(ctx context.Context, in *GenerateDataKeyRequest, opts ...grpc.CallOption) (*GenerateDataKeyResponse, error)
+	// Re-wrap a transit ciphertext under the key's CURRENT active version: decrypt
+	// with the version embedded in the envelope, then re-seal with the active
+	// version. The post-rotation migration primitive (no plaintext leaves the
+	// broker). AUDITED via the outbox compliance envelope.
+	Rewrap(ctx context.Context, in *RewrapRequest, opts ...grpc.CallOption) (*RewrapResponse, error)
+	// Export the Ed25519 PUBLIC key(s) of a signing transit key so an external
+	// party can verify broker-produced signatures without ever holding the private
+	// key — the missing half that makes Sign/Verify genuinely asymmetric. Only
+	// valid for keys created with the ed25519 algorithm; READ-ONLY (public keys are
+	// not secret). Returns one entry per usable (ACTIVE/VERIFYING) version.
+	GetTransitPublicKey(ctx context.Context, in *GetTransitPublicKeyRequest, opts ...grpc.CallOption) (*GetTransitPublicKeyResponse, error)
+	// Encrypt MANY plaintexts under one transit key in a single call: the key is
+	// unwrapped ONCE and each plaintext sealed with the active version, amortizing
+	// the master-key unwrap over the batch. Order-preserving. AUDITED.
+	BatchEncrypt(ctx context.Context, in *BatchEncryptRequest, opts ...grpc.CallOption) (*BatchEncryptResponse, error)
+	// Decrypt MANY transit ciphertexts under one key in a single call; each
+	// ciphertext carries its own key version in the envelope. Order-preserving.
+	BatchDecrypt(ctx context.Context, in *BatchDecryptRequest, opts ...grpc.CallOption) (*BatchDecryptResponse, error)
 }
 
 type vaultServiceClient struct {
@@ -145,6 +178,16 @@ func (c *vaultServiceClient) DeleteSecret(ctx context.Context, in *DeleteSecretR
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(DeleteSecretResponse)
 	err := c.cc.Invoke(ctx, VaultService_DeleteSecret_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *vaultServiceClient) UndeleteSecret(ctx context.Context, in *UndeleteSecretRequest, opts ...grpc.CallOption) (*UndeleteSecretResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UndeleteSecretResponse)
+	err := c.cc.Invoke(ctx, VaultService_UndeleteSecret_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -251,6 +294,56 @@ func (c *vaultServiceClient) GenerateDatabaseCredentials(ctx context.Context, in
 	return out, nil
 }
 
+func (c *vaultServiceClient) GenerateDataKey(ctx context.Context, in *GenerateDataKeyRequest, opts ...grpc.CallOption) (*GenerateDataKeyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GenerateDataKeyResponse)
+	err := c.cc.Invoke(ctx, VaultService_GenerateDataKey_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *vaultServiceClient) Rewrap(ctx context.Context, in *RewrapRequest, opts ...grpc.CallOption) (*RewrapResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RewrapResponse)
+	err := c.cc.Invoke(ctx, VaultService_Rewrap_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *vaultServiceClient) GetTransitPublicKey(ctx context.Context, in *GetTransitPublicKeyRequest, opts ...grpc.CallOption) (*GetTransitPublicKeyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetTransitPublicKeyResponse)
+	err := c.cc.Invoke(ctx, VaultService_GetTransitPublicKey_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *vaultServiceClient) BatchEncrypt(ctx context.Context, in *BatchEncryptRequest, opts ...grpc.CallOption) (*BatchEncryptResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BatchEncryptResponse)
+	err := c.cc.Invoke(ctx, VaultService_BatchEncrypt_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *vaultServiceClient) BatchDecrypt(ctx context.Context, in *BatchDecryptRequest, opts ...grpc.CallOption) (*BatchDecryptResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BatchDecryptResponse)
+	err := c.cc.Invoke(ctx, VaultService_BatchDecrypt_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // VaultServiceServer is the server API for VaultService service.
 // All implementations should embed UnimplementedVaultServiceServer
 // for forward compatibility.
@@ -280,6 +373,10 @@ type VaultServiceServer interface {
 	// Soft-delete the latest version (recoverable bookkeeping state). The ciphertext
 	// is retained; use DestroySecret to crypto-shred.
 	DeleteSecret(context.Context, *DeleteSecretRequest) (*DeleteSecretResponse, error)
+	// Restore a soft-DELETED secret: flip its latest deleted version back to ACTIVE.
+	// A soft delete keeps the ciphertext + wrapped key, so recovery is exact. A
+	// crypto-shredded (DestroySecret) version can NEVER be restored.
+	UndeleteSecret(context.Context, *UndeleteSecretRequest) (*UndeleteSecretResponse, error)
 	// Crypto-shred every version of a secret: clears the wrapped DEK + ciphertext
 	// so the value is irrecoverable. DESTRUCTIVE + irreversible — a confirmation
 	// token is required and an empty token fails closed.
@@ -317,6 +414,29 @@ type VaultServiceServer interface {
 	// UDB_VAULT_DB_ROLES_JSON; arbitrary request-supplied role grants fail closed.
 	// WORKER_VAULT_LEASE_REAPER revokes and drops expired generated login roles.
 	GenerateDatabaseCredentials(context.Context, *GenerateDatabaseCredentialsRequest) (*GenerateDatabaseCredentialsResponse, error)
+	// Generate a fresh 256-bit data key, returned BOTH plaintext (for the caller to
+	// encrypt data locally) AND wrapped under the named transit key (store this and
+	// Decrypt/Rewrap it later). Envelope-encryption without exposing the transit
+	// key. Reuses the transit seal path; AUDITED via the outbox compliance envelope.
+	GenerateDataKey(context.Context, *GenerateDataKeyRequest) (*GenerateDataKeyResponse, error)
+	// Re-wrap a transit ciphertext under the key's CURRENT active version: decrypt
+	// with the version embedded in the envelope, then re-seal with the active
+	// version. The post-rotation migration primitive (no plaintext leaves the
+	// broker). AUDITED via the outbox compliance envelope.
+	Rewrap(context.Context, *RewrapRequest) (*RewrapResponse, error)
+	// Export the Ed25519 PUBLIC key(s) of a signing transit key so an external
+	// party can verify broker-produced signatures without ever holding the private
+	// key — the missing half that makes Sign/Verify genuinely asymmetric. Only
+	// valid for keys created with the ed25519 algorithm; READ-ONLY (public keys are
+	// not secret). Returns one entry per usable (ACTIVE/VERIFYING) version.
+	GetTransitPublicKey(context.Context, *GetTransitPublicKeyRequest) (*GetTransitPublicKeyResponse, error)
+	// Encrypt MANY plaintexts under one transit key in a single call: the key is
+	// unwrapped ONCE and each plaintext sealed with the active version, amortizing
+	// the master-key unwrap over the batch. Order-preserving. AUDITED.
+	BatchEncrypt(context.Context, *BatchEncryptRequest) (*BatchEncryptResponse, error)
+	// Decrypt MANY transit ciphertexts under one key in a single call; each
+	// ciphertext carries its own key version in the envelope. Order-preserving.
+	BatchDecrypt(context.Context, *BatchDecryptRequest) (*BatchDecryptResponse, error)
 }
 
 // UnimplementedVaultServiceServer should be embedded to have
@@ -337,6 +457,9 @@ func (UnimplementedVaultServiceServer) ListSecrets(context.Context, *ListSecrets
 }
 func (UnimplementedVaultServiceServer) DeleteSecret(context.Context, *DeleteSecretRequest) (*DeleteSecretResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteSecret not implemented")
+}
+func (UnimplementedVaultServiceServer) UndeleteSecret(context.Context, *UndeleteSecretRequest) (*UndeleteSecretResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UndeleteSecret not implemented")
 }
 func (UnimplementedVaultServiceServer) DestroySecret(context.Context, *DestroySecretRequest) (*DestroySecretResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DestroySecret not implemented")
@@ -367,6 +490,21 @@ func (UnimplementedVaultServiceServer) SealStatus(context.Context, *SealStatusRe
 }
 func (UnimplementedVaultServiceServer) GenerateDatabaseCredentials(context.Context, *GenerateDatabaseCredentialsRequest) (*GenerateDatabaseCredentialsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GenerateDatabaseCredentials not implemented")
+}
+func (UnimplementedVaultServiceServer) GenerateDataKey(context.Context, *GenerateDataKeyRequest) (*GenerateDataKeyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GenerateDataKey not implemented")
+}
+func (UnimplementedVaultServiceServer) Rewrap(context.Context, *RewrapRequest) (*RewrapResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Rewrap not implemented")
+}
+func (UnimplementedVaultServiceServer) GetTransitPublicKey(context.Context, *GetTransitPublicKeyRequest) (*GetTransitPublicKeyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetTransitPublicKey not implemented")
+}
+func (UnimplementedVaultServiceServer) BatchEncrypt(context.Context, *BatchEncryptRequest) (*BatchEncryptResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method BatchEncrypt not implemented")
+}
+func (UnimplementedVaultServiceServer) BatchDecrypt(context.Context, *BatchDecryptRequest) (*BatchDecryptResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method BatchDecrypt not implemented")
 }
 func (UnimplementedVaultServiceServer) testEmbeddedByValue() {}
 
@@ -456,6 +594,24 @@ func _VaultService_DeleteSecret_Handler(srv interface{}, ctx context.Context, de
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(VaultServiceServer).DeleteSecret(ctx, req.(*DeleteSecretRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _VaultService_UndeleteSecret_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UndeleteSecretRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VaultServiceServer).UndeleteSecret(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: VaultService_UndeleteSecret_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VaultServiceServer).UndeleteSecret(ctx, req.(*UndeleteSecretRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -640,6 +796,96 @@ func _VaultService_GenerateDatabaseCredentials_Handler(srv interface{}, ctx cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _VaultService_GenerateDataKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GenerateDataKeyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VaultServiceServer).GenerateDataKey(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: VaultService_GenerateDataKey_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VaultServiceServer).GenerateDataKey(ctx, req.(*GenerateDataKeyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _VaultService_Rewrap_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RewrapRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VaultServiceServer).Rewrap(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: VaultService_Rewrap_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VaultServiceServer).Rewrap(ctx, req.(*RewrapRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _VaultService_GetTransitPublicKey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetTransitPublicKeyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VaultServiceServer).GetTransitPublicKey(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: VaultService_GetTransitPublicKey_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VaultServiceServer).GetTransitPublicKey(ctx, req.(*GetTransitPublicKeyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _VaultService_BatchEncrypt_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BatchEncryptRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VaultServiceServer).BatchEncrypt(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: VaultService_BatchEncrypt_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VaultServiceServer).BatchEncrypt(ctx, req.(*BatchEncryptRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _VaultService_BatchDecrypt_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BatchDecryptRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(VaultServiceServer).BatchDecrypt(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: VaultService_BatchDecrypt_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(VaultServiceServer).BatchDecrypt(ctx, req.(*BatchDecryptRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // VaultService_ServiceDesc is the grpc.ServiceDesc for VaultService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -662,6 +908,10 @@ var VaultService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteSecret",
 			Handler:    _VaultService_DeleteSecret_Handler,
+		},
+		{
+			MethodName: "UndeleteSecret",
+			Handler:    _VaultService_UndeleteSecret_Handler,
 		},
 		{
 			MethodName: "DestroySecret",
@@ -702,6 +952,26 @@ var VaultService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GenerateDatabaseCredentials",
 			Handler:    _VaultService_GenerateDatabaseCredentials_Handler,
+		},
+		{
+			MethodName: "GenerateDataKey",
+			Handler:    _VaultService_GenerateDataKey_Handler,
+		},
+		{
+			MethodName: "Rewrap",
+			Handler:    _VaultService_Rewrap_Handler,
+		},
+		{
+			MethodName: "GetTransitPublicKey",
+			Handler:    _VaultService_GetTransitPublicKey_Handler,
+		},
+		{
+			MethodName: "BatchEncrypt",
+			Handler:    _VaultService_BatchEncrypt_Handler,
+		},
+		{
+			MethodName: "BatchDecrypt",
+			Handler:    _VaultService_BatchDecrypt_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

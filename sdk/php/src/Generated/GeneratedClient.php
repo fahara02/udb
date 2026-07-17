@@ -21,7 +21,7 @@ use Grpc\ChannelCredentials;
  *   UDB version ...... 0.4.13
  *   Protocol version . 1.0.0
  *   Services ......... 28
- *   RPCs ............. 346
+ *   RPCs ............. 353
  *
  * This class COMPOSES WITH the hand-written layer; it does not replace it:
  *   - it reuses {@see UdbMetadata} for the eight broker headers,
@@ -278,6 +278,7 @@ final class GeneratedClient
         "GetFile" => "read_only",
         "ListFiles" => "read_only",
         "RegisterUpload" => "mutation",
+        "ReissueUploadUrl" => "read_only",
         "UpdateFile" => "mutation",
         "CreateTenant" => "mutation",
         "GetTenant" => "read_only",
@@ -286,19 +287,25 @@ final class GeneratedClient
         "PurgeTenant" => "destructive",
         "UpdateTenant" => "mutation",
         "UpdateTenantConfig" => "mutation",
+        "BatchDecrypt" => "mutation",
+        "BatchEncrypt" => "mutation",
         "CreateTransitKey" => "mutation",
         "Decrypt" => "read_only",
         "DeleteSecret" => "mutation",
         "DestroySecret" => "destructive",
         "Encrypt" => "mutation",
+        "GenerateDataKey" => "mutation",
         "GenerateDatabaseCredentials" => "mutation",
         "GetSecret" => "read_only",
+        "GetTransitPublicKey" => "read_only",
         "Hmac" => "mutation",
         "ListSecrets" => "read_only",
         "PutSecret" => "mutation",
+        "Rewrap" => "mutation",
         "RotateTransitKey" => "mutation",
         "SealStatus" => "read_only",
         "Sign" => "mutation",
+        "UndeleteSecret" => "mutation",
         "Verify" => "read_only",
         "CreateEndpoint" => "mutation",
         "DeleteEndpoint" => "destructive",
@@ -633,6 +640,7 @@ final class GeneratedClient
         "StorageService/GetFile" => "read_only",
         "StorageService/ListFiles" => "read_only",
         "StorageService/RegisterUpload" => "mutation",
+        "StorageService/ReissueUploadUrl" => "read_only",
         "StorageService/UpdateFile" => "mutation",
         "TenantService/CreateTenant" => "mutation",
         "TenantService/GetTenant" => "read_only",
@@ -641,19 +649,25 @@ final class GeneratedClient
         "TenantService/PurgeTenant" => "destructive",
         "TenantService/UpdateTenant" => "mutation",
         "TenantService/UpdateTenantConfig" => "mutation",
+        "VaultService/BatchDecrypt" => "mutation",
+        "VaultService/BatchEncrypt" => "mutation",
         "VaultService/CreateTransitKey" => "mutation",
         "VaultService/Decrypt" => "read_only",
         "VaultService/DeleteSecret" => "mutation",
         "VaultService/DestroySecret" => "destructive",
         "VaultService/Encrypt" => "mutation",
+        "VaultService/GenerateDataKey" => "mutation",
         "VaultService/GenerateDatabaseCredentials" => "mutation",
         "VaultService/GetSecret" => "read_only",
+        "VaultService/GetTransitPublicKey" => "read_only",
         "VaultService/Hmac" => "mutation",
         "VaultService/ListSecrets" => "read_only",
         "VaultService/PutSecret" => "mutation",
+        "VaultService/Rewrap" => "mutation",
         "VaultService/RotateTransitKey" => "mutation",
         "VaultService/SealStatus" => "read_only",
         "VaultService/Sign" => "mutation",
+        "VaultService/UndeleteSecret" => "mutation",
         "VaultService/Verify" => "read_only",
         "WebhookService/CreateEndpoint" => "mutation",
         "WebhookService/DeleteEndpoint" => "destructive",
@@ -988,6 +1002,7 @@ final class GeneratedClient
         "StorageService/GetFile" => "get_file",
         "StorageService/ListFiles" => "list_files",
         "StorageService/RegisterUpload" => "register_upload",
+        "StorageService/ReissueUploadUrl" => "reissue_upload_url",
         "StorageService/UpdateFile" => "update_file",
         "TenantService/CreateTenant" => "create_tenant",
         "TenantService/GetTenant" => "get_tenant",
@@ -996,19 +1011,25 @@ final class GeneratedClient
         "TenantService/PurgeTenant" => "purge_tenant",
         "TenantService/UpdateTenant" => "update_tenant",
         "TenantService/UpdateTenantConfig" => "update_tenant_config",
+        "VaultService/BatchDecrypt" => "batch_decrypt",
+        "VaultService/BatchEncrypt" => "batch_encrypt",
         "VaultService/CreateTransitKey" => "create_transit_key",
         "VaultService/Decrypt" => "decrypt",
         "VaultService/DeleteSecret" => "delete_secret",
         "VaultService/DestroySecret" => "destroy_secret",
         "VaultService/Encrypt" => "encrypt",
+        "VaultService/GenerateDataKey" => "generate_data_key",
         "VaultService/GenerateDatabaseCredentials" => "generate_database_credentials",
         "VaultService/GetSecret" => "get_secret",
+        "VaultService/GetTransitPublicKey" => "get_transit_public_key",
         "VaultService/Hmac" => "hmac",
         "VaultService/ListSecrets" => "list_secrets",
         "VaultService/PutSecret" => "put_secret",
+        "VaultService/Rewrap" => "rewrap",
         "VaultService/RotateTransitKey" => "rotate_transit_key",
         "VaultService/SealStatus" => "seal_status",
         "VaultService/Sign" => "sign",
+        "VaultService/UndeleteSecret" => "undelete_secret",
         "VaultService/Verify" => "verify",
         "WebhookService/CreateEndpoint" => "create_endpoint",
         "WebhookService/DeleteEndpoint" => "delete_endpoint",
@@ -1342,6 +1363,7 @@ final class GeneratedClient
         "StorageService/GetFile" => "getFile",
         "StorageService/ListFiles" => "listFiles",
         "StorageService/RegisterUpload" => "registerUpload",
+        "StorageService/ReissueUploadUrl" => "reissueUploadUrl",
         "StorageService/UpdateFile" => "updateFile",
         "TenantService/CreateTenant" => "createTenant",
         "TenantService/GetTenant" => "getTenant",
@@ -1350,19 +1372,25 @@ final class GeneratedClient
         "TenantService/PurgeTenant" => "purgeTenant",
         "TenantService/UpdateTenant" => "updateTenant",
         "TenantService/UpdateTenantConfig" => "updateTenantConfig",
+        "VaultService/BatchDecrypt" => "vaultBatchDecrypt",
+        "VaultService/BatchEncrypt" => "vaultBatchEncrypt",
         "VaultService/CreateTransitKey" => "createTransitKey",
         "VaultService/Decrypt" => "vaultDecrypt",
         "VaultService/DeleteSecret" => "deleteSecret",
         "VaultService/DestroySecret" => "destroySecret",
         "VaultService/Encrypt" => "vaultEncrypt",
+        "VaultService/GenerateDataKey" => "vaultGenerateDataKey",
         "VaultService/GenerateDatabaseCredentials" => "generateDatabaseCredentials",
         "VaultService/GetSecret" => "getSecret",
+        "VaultService/GetTransitPublicKey" => "vaultGetTransitPublicKey",
         "VaultService/Hmac" => "vaultHmac",
         "VaultService/ListSecrets" => "listSecrets",
         "VaultService/PutSecret" => "putSecret",
+        "VaultService/Rewrap" => "vaultRewrap",
         "VaultService/RotateTransitKey" => "rotateTransitKey",
         "VaultService/SealStatus" => "vaultSealStatus",
         "VaultService/Sign" => "vaultSign",
+        "VaultService/UndeleteSecret" => "undeleteSecret",
         "VaultService/Verify" => "vaultVerify",
         "WebhookService/CreateEndpoint" => "createWebhookEndpoint",
         "WebhookService/DeleteEndpoint" => "deleteWebhookEndpoint",
@@ -1696,6 +1724,7 @@ final class GeneratedClient
         "StorageService/GetFile" => "get",
         "StorageService/ListFiles" => "get",
         "StorageService/RegisterUpload" => "post",
+        "StorageService/ReissueUploadUrl" => "get",
         "StorageService/UpdateFile" => "patch",
         "TenantService/CreateTenant" => "post",
         "TenantService/GetTenant" => "get",
@@ -1704,19 +1733,25 @@ final class GeneratedClient
         "TenantService/PurgeTenant" => "post",
         "TenantService/UpdateTenant" => "patch",
         "TenantService/UpdateTenantConfig" => "put",
+        "VaultService/BatchDecrypt" => "post",
+        "VaultService/BatchEncrypt" => "post",
         "VaultService/CreateTransitKey" => "post",
         "VaultService/Decrypt" => "post",
         "VaultService/DeleteSecret" => "post",
         "VaultService/DestroySecret" => "post",
         "VaultService/Encrypt" => "post",
+        "VaultService/GenerateDataKey" => "post",
         "VaultService/GenerateDatabaseCredentials" => "post",
         "VaultService/GetSecret" => "get",
+        "VaultService/GetTransitPublicKey" => "post",
         "VaultService/Hmac" => "post",
         "VaultService/ListSecrets" => "get",
         "VaultService/PutSecret" => "post",
+        "VaultService/Rewrap" => "post",
         "VaultService/RotateTransitKey" => "post",
         "VaultService/SealStatus" => "get",
         "VaultService/Sign" => "post",
+        "VaultService/UndeleteSecret" => "post",
         "VaultService/Verify" => "post",
         "WebhookService/CreateEndpoint" => "post",
         "WebhookService/DeleteEndpoint" => "delete",
@@ -2050,6 +2085,7 @@ final class GeneratedClient
         "StorageService/GetFile" => "/v1/storage/files/{file_id}",
         "StorageService/ListFiles" => "/v1/storage/files",
         "StorageService/RegisterUpload" => "/v1/storage/uploads",
+        "StorageService/ReissueUploadUrl" => "/v1/storage/files/{file_id}:reissueUploadUrl",
         "StorageService/UpdateFile" => "/v1/storage/files/{file_id}",
         "TenantService/CreateTenant" => "/v1/tenants",
         "TenantService/GetTenant" => "/v1/tenants/{tenant_id}",
@@ -2058,19 +2094,25 @@ final class GeneratedClient
         "TenantService/PurgeTenant" => "/v1/tenants/{tenant_id}:purge",
         "TenantService/UpdateTenant" => "/v1/tenants/{tenant_id}",
         "TenantService/UpdateTenantConfig" => "/v1/tenants/{tenant_id}/config",
+        "VaultService/BatchDecrypt" => "/v1/vault/transit:batch-decrypt",
+        "VaultService/BatchEncrypt" => "/v1/vault/transit:batch-encrypt",
         "VaultService/CreateTransitKey" => "/v1/vault/transit/keys",
         "VaultService/Decrypt" => "/v1/vault/transit:decrypt",
         "VaultService/DeleteSecret" => "/v1/vault/secrets:delete",
         "VaultService/DestroySecret" => "/v1/vault/secrets:destroy",
         "VaultService/Encrypt" => "/v1/vault/transit:encrypt",
+        "VaultService/GenerateDataKey" => "/v1/vault/transit:generate-data-key",
         "VaultService/GenerateDatabaseCredentials" => "/v1/vault/database/credentials",
         "VaultService/GetSecret" => "/v1/vault/secrets/{secret_path=**}",
+        "VaultService/GetTransitPublicKey" => "/v1/vault/transit:public-key",
         "VaultService/Hmac" => "/v1/vault/transit:hmac",
         "VaultService/ListSecrets" => "/v1/vault/secrets",
         "VaultService/PutSecret" => "/v1/vault/secrets:put",
+        "VaultService/Rewrap" => "/v1/vault/transit:rewrap",
         "VaultService/RotateTransitKey" => "/v1/vault/transit/keys:rotate",
         "VaultService/SealStatus" => "/v1/vault/seal-status",
         "VaultService/Sign" => "/v1/vault/transit:sign",
+        "VaultService/UndeleteSecret" => "/v1/vault/secrets:undelete",
         "VaultService/Verify" => "/v1/vault/transit:verify",
         "WebhookService/CreateEndpoint" => "/v1/webhook/endpoints",
         "WebhookService/DeleteEndpoint" => "/v1/webhook/endpoints/{endpoint_id}",
@@ -2500,6 +2542,7 @@ final class GeneratedClient
         "get_file" => "getFile",
         "list_files" => "listFiles",
         "register_upload" => "registerUpload",
+        "reissue_upload_url" => "reissueUploadUrl",
         "update_file" => "updateFile",
         "create_tenant" => "createTenant",
         "get_tenant" => "getTenant",
@@ -2508,19 +2551,25 @@ final class GeneratedClient
         "purge_tenant" => "purgeTenant",
         "update_tenant" => "updateTenant",
         "update_tenant_config" => "updateTenantConfig",
+        "batch_decrypt" => "batchDecrypt",
+        "batch_encrypt" => "batchEncrypt",
         "create_transit_key" => "createTransitKey",
         "decrypt" => "decrypt",
         "delete_secret" => "deleteSecret",
         "destroy_secret" => "destroySecret",
         "encrypt" => "encrypt",
+        "generate_data_key" => "generateDataKey",
         "generate_database_credentials" => "generateDatabaseCredentials",
         "get_secret" => "getSecret",
+        "get_transit_public_key" => "getTransitPublicKey",
         "hmac" => "hmac",
         "list_secrets" => "listSecrets",
         "put_secret" => "putSecret",
+        "rewrap" => "rewrap",
         "rotate_transit_key" => "rotateTransitKey",
         "seal_status" => "sealStatus",
         "sign" => "sign",
+        "undelete_secret" => "undeleteSecret",
         "verify" => "verify",
         "create_endpoint" => "createEndpoint",
         "delete_endpoint" => "deleteEndpoint",
@@ -7167,6 +7216,27 @@ final class GeneratedClient
         );
     }
     /**
+     * udb.core.storage.services.v1.StorageService / ReissueUploadUrl (unary), public alias reissue_upload_url.
+     *
+     * Forwards to {@see stubFor()}->ReissueUploadUrl(); retries transient codes.
+     * Path: /udb.core.storage.services.v1.StorageService/ReissueUploadUrl
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ReissueUploadUrlResponse
+     */
+    public function reissueUploadUrl($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ReissueUploadUrl',
+            'StorageService',
+            'udb.core.storage.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ReissueUploadUrl($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
      * udb.core.storage.services.v1.StorageService / UpdateFile (unary), public alias update_file.
      *
      * Forwards to {@see stubFor()}->UpdateFile(); retries transient codes.
@@ -7335,6 +7405,48 @@ final class GeneratedClient
         );
     }
     /**
+     * udb.core.vault.services.v1.VaultService / BatchDecrypt (unary), public alias batch_decrypt.
+     *
+     * Forwards to {@see stubFor()}->BatchDecrypt(); retries transient codes.
+     * Path: /udb.core.vault.services.v1.VaultService/BatchDecrypt
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded BatchDecryptResponse
+     */
+    public function batchDecrypt($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'BatchDecrypt',
+            'VaultService',
+            'udb.core.vault.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->BatchDecrypt($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.vault.services.v1.VaultService / BatchEncrypt (unary), public alias batch_encrypt.
+     *
+     * Forwards to {@see stubFor()}->BatchEncrypt(); retries transient codes.
+     * Path: /udb.core.vault.services.v1.VaultService/BatchEncrypt
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded BatchEncryptResponse
+     */
+    public function batchEncrypt($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'BatchEncrypt',
+            'VaultService',
+            'udb.core.vault.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->BatchEncrypt($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
      * udb.core.vault.services.v1.VaultService / CreateTransitKey (unary), public alias create_transit_key.
      *
      * Forwards to {@see stubFor()}->CreateTransitKey(); retries transient codes.
@@ -7440,6 +7552,27 @@ final class GeneratedClient
         );
     }
     /**
+     * udb.core.vault.services.v1.VaultService / GenerateDataKey (unary), public alias generate_data_key.
+     *
+     * Forwards to {@see stubFor()}->GenerateDataKey(); retries transient codes.
+     * Path: /udb.core.vault.services.v1.VaultService/GenerateDataKey
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded GenerateDataKeyResponse
+     */
+    public function generateDataKey($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'GenerateDataKey',
+            'VaultService',
+            'udb.core.vault.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->GenerateDataKey($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
      * udb.core.vault.services.v1.VaultService / GenerateDatabaseCredentials (unary), public alias generate_database_credentials.
      *
      * Forwards to {@see stubFor()}->GenerateDatabaseCredentials(); retries transient codes.
@@ -7476,6 +7609,27 @@ final class GeneratedClient
             'VaultService',
             'udb.core.vault.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->GetSecret($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.vault.services.v1.VaultService / GetTransitPublicKey (unary), public alias get_transit_public_key.
+     *
+     * Forwards to {@see stubFor()}->GetTransitPublicKey(); retries transient codes.
+     * Path: /udb.core.vault.services.v1.VaultService/GetTransitPublicKey
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded GetTransitPublicKeyResponse
+     */
+    public function getTransitPublicKey($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'GetTransitPublicKey',
+            'VaultService',
+            'udb.core.vault.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->GetTransitPublicKey($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
             $request,
@@ -7545,6 +7699,27 @@ final class GeneratedClient
         );
     }
     /**
+     * udb.core.vault.services.v1.VaultService / Rewrap (unary), public alias rewrap.
+     *
+     * Forwards to {@see stubFor()}->Rewrap(); retries transient codes.
+     * Path: /udb.core.vault.services.v1.VaultService/Rewrap
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded RewrapResponse
+     */
+    public function rewrap($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'Rewrap',
+            'VaultService',
+            'udb.core.vault.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->Rewrap($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
      * udb.core.vault.services.v1.VaultService / RotateTransitKey (unary), public alias rotate_transit_key.
      *
      * Forwards to {@see stubFor()}->RotateTransitKey(); retries transient codes.
@@ -7602,6 +7777,27 @@ final class GeneratedClient
             'VaultService',
             'udb.core.vault.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->Sign($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.vault.services.v1.VaultService / UndeleteSecret (unary), public alias undelete_secret.
+     *
+     * Forwards to {@see stubFor()}->UndeleteSecret(); retries transient codes.
+     * Path: /udb.core.vault.services.v1.VaultService/UndeleteSecret
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded UndeleteSecretResponse
+     */
+    public function undeleteSecret($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'UndeleteSecret',
+            'VaultService',
+            'udb.core.vault.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->UndeleteSecret($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
             $request,
@@ -10062,7 +10258,7 @@ final class GeneratedClient
         return $this->stubFor('SearchService', 'udb.core.search.services.v1');
     }
     /**
-     * Underlying buf-generated stub for udb.core.storage.services.v1.StorageService (8 RPC(s)).
+     * Underlying buf-generated stub for udb.core.storage.services.v1.StorageService (9 RPC(s)).
      * Channel is shared with every other service stub on this client.
      *
      * @return BaseStub  a StorageServiceClient
@@ -10082,7 +10278,7 @@ final class GeneratedClient
         return $this->stubFor('TenantService', 'udb.core.tenant.services.v1');
     }
     /**
-     * Underlying buf-generated stub for udb.core.vault.services.v1.VaultService (14 RPC(s)).
+     * Underlying buf-generated stub for udb.core.vault.services.v1.VaultService (20 RPC(s)).
      * Channel is shared with every other service stub on this client.
      *
      * @return BaseStub  a VaultServiceClient

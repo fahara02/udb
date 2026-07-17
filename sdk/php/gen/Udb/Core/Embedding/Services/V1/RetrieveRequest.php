@@ -39,6 +39,26 @@ class RetrieveRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>int32 top_k = 5 [json_name = "topK"];</code>
      */
     protected $top_k = 0;
+    /**
+     * Optional caller-supplied metadata filter (Qdrant-style JSON object with
+     * `must` / `should` / `must_not` condition arrays), merged UNDER the mandatory
+     * server-side tenant clause. The verified `_tenant_id` `must` clause is always
+     * applied first and cannot be broadened by this filter; conditions referencing
+     * any internal `_`-prefixed payload key are rejected. Example:
+     * `{"must":[{"key":"doc_type","match":{"value":"invoice"}}]}`.
+     *
+     * Generated from protobuf field <code>string filter_json = 6 [json_name = "filterJson"];</code>
+     */
+    protected $filter_json = '';
+    /**
+     * Optional per-query minimum similarity score a hit must clear to be returned.
+     * RAISES (never lowers) the server-side floor, so a caller can demand
+     * higher-precision results per query; <= 0 uses the server default. Applies to
+     * both the vector and hybrid paths.
+     *
+     * Generated from protobuf field <code>double score_threshold = 7 [json_name = "scoreThreshold"];</code>
+     */
+    protected $score_threshold = 0.0;
 
     /**
      * Constructor.
@@ -54,6 +74,18 @@ class RetrieveRequest extends \Google\Protobuf\Internal\Message
      *     @type float[] $query_vector
      *           Already-embedded query vector (the broker never embeds the query).
      *     @type int $top_k
+     *     @type string $filter_json
+     *           Optional caller-supplied metadata filter (Qdrant-style JSON object with
+     *           `must` / `should` / `must_not` condition arrays), merged UNDER the mandatory
+     *           server-side tenant clause. The verified `_tenant_id` `must` clause is always
+     *           applied first and cannot be broadened by this filter; conditions referencing
+     *           any internal `_`-prefixed payload key are rejected. Example:
+     *           `{"must":[{"key":"doc_type","match":{"value":"invoice"}}]}`.
+     *     @type float $score_threshold
+     *           Optional per-query minimum similarity score a hit must clear to be returned.
+     *           RAISES (never lowers) the server-side floor, so a caller can demand
+     *           higher-precision results per query; <= 0 uses the server default. Applies to
+     *           both the vector and hybrid paths.
      * }
      */
     public function __construct($data = NULL) {
@@ -177,6 +209,74 @@ class RetrieveRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkInt32($var);
         $this->top_k = $var;
+
+        return $this;
+    }
+
+    /**
+     * Optional caller-supplied metadata filter (Qdrant-style JSON object with
+     * `must` / `should` / `must_not` condition arrays), merged UNDER the mandatory
+     * server-side tenant clause. The verified `_tenant_id` `must` clause is always
+     * applied first and cannot be broadened by this filter; conditions referencing
+     * any internal `_`-prefixed payload key are rejected. Example:
+     * `{"must":[{"key":"doc_type","match":{"value":"invoice"}}]}`.
+     *
+     * Generated from protobuf field <code>string filter_json = 6 [json_name = "filterJson"];</code>
+     * @return string
+     */
+    public function getFilterJson()
+    {
+        return $this->filter_json;
+    }
+
+    /**
+     * Optional caller-supplied metadata filter (Qdrant-style JSON object with
+     * `must` / `should` / `must_not` condition arrays), merged UNDER the mandatory
+     * server-side tenant clause. The verified `_tenant_id` `must` clause is always
+     * applied first and cannot be broadened by this filter; conditions referencing
+     * any internal `_`-prefixed payload key are rejected. Example:
+     * `{"must":[{"key":"doc_type","match":{"value":"invoice"}}]}`.
+     *
+     * Generated from protobuf field <code>string filter_json = 6 [json_name = "filterJson"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setFilterJson($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->filter_json = $var;
+
+        return $this;
+    }
+
+    /**
+     * Optional per-query minimum similarity score a hit must clear to be returned.
+     * RAISES (never lowers) the server-side floor, so a caller can demand
+     * higher-precision results per query; <= 0 uses the server default. Applies to
+     * both the vector and hybrid paths.
+     *
+     * Generated from protobuf field <code>double score_threshold = 7 [json_name = "scoreThreshold"];</code>
+     * @return float
+     */
+    public function getScoreThreshold()
+    {
+        return $this->score_threshold;
+    }
+
+    /**
+     * Optional per-query minimum similarity score a hit must clear to be returned.
+     * RAISES (never lowers) the server-side floor, so a caller can demand
+     * higher-precision results per query; <= 0 uses the server default. Applies to
+     * both the vector and hybrid paths.
+     *
+     * Generated from protobuf field <code>double score_threshold = 7 [json_name = "scoreThreshold"];</code>
+     * @param float $var
+     * @return $this
+     */
+    public function setScoreThreshold($var)
+    {
+        GPBUtil::checkDouble($var);
+        $this->score_threshold = $var;
 
         return $this;
     }
