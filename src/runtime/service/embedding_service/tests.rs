@@ -247,6 +247,8 @@ async fn retrieve_missing_query_vector_carries_field_violation() {
         query_text: String::new(),
         query_vector: Vec::new(),
         top_k: 10,
+        filter_json: String::new(),
+        score_threshold: 0.0,
     });
     request
         .metadata_mut()
