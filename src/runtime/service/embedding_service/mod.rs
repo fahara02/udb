@@ -1149,6 +1149,38 @@ impl EmbeddingService for EmbeddingServiceImpl {
         )
         .await;
 
+        // Reindex-on-model-change guard (Part B.1.3): a re-register that switches
+        // the model or the target collection would otherwise leave the collection
+        // silently MIXING vectors from the old model/dims with newly-reported ones
+        // — corrupting retrieval (different models embed into incomparable spaces).
+        // Auto-enqueue a backfill using the SAME control event the Backfill RPC
+        // emits (the leader work-emitter re-embeds every existing row under the new
+        // binding). A brand-new source, or a re-register that changes neither the
+        // model nor the collection, needs no reindex.
+        if let Some(prev) = existing.as_ref() {
+            let model_changed = prev.model_id.trim() != model_id;
+            let collection_changed = prev.target_collection.trim() != target_collection;
+            if model_changed || collection_changed {
+                let reindex_id = Uuid::new_v4().to_string();
+                self.emit_source_event(
+                    TOPIC_BACKFILL_REQUESTED,
+                    &tenant_id,
+                    &context.project_id,
+                    &source_name,
+                    serde_json::json!({
+                        "backfill_id": reindex_id,
+                        "source_message_type": source_message_type,
+                        "target_collection": target_collection,
+                        "model_id": model_id,
+                        "reason": "model_or_collection_changed",
+                        "previous_model_id": prev.model_id,
+                        "previous_collection": prev.target_collection,
+                    }),
+                )
+                .await;
+            }
+        }
+
         Ok(Response::new(embedding_pb::RegisterSourceResponse {
             source_id,
             source_name,
