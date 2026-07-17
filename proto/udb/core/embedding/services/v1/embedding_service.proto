@@ -526,6 +526,11 @@ message RetrieveRequest {
   // any internal `_`-prefixed payload key are rejected. Example:
   // `{"must":[{"key":"doc_type","match":{"value":"invoice"}}]}`.
   string filter_json = 6;
+  // Optional per-query minimum similarity score a hit must clear to be returned.
+  // RAISES (never lowers) the server-side floor, so a caller can demand
+  // higher-precision results per query; <= 0 uses the server default. Applies to
+  // both the vector and hybrid paths.
+  double score_threshold = 7;
 }
 
 message RetrieveHit {

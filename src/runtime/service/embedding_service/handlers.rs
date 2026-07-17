@@ -650,6 +650,20 @@ pub(crate) async fn retrieve(
     let mut context = native_service_context(&metadata, &tenant_id, "");
     context.scopes.push("udb:vector:read".to_string());
     let top_k = resolve_top_k(req.top_k);
+    // Per-query minimum similarity: a positive request threshold RAISES the
+    // server-side floor (never lowers it), so a caller can demand higher-precision
+    // hits without being able to weaken the operator's minimum. Enforced uniformly
+    // on the returned hits below (and pushed into the vector engine as an
+    // optimization), so it applies to both the vector and hybrid paths.
+    let score_floor = {
+        let env_floor = retrieve_score_threshold();
+        let requested = req.score_threshold as f32;
+        if requested > 0.0 {
+            requested.max(env_floor)
+        } else {
+            env_floor
+        }
+    };
 
     let stored = runtime
         .native_entity_read_for_service(
@@ -711,7 +725,7 @@ pub(crate) async fn retrieve(
             vector: req.query_vector.clone(),
             filter: tenant_filter,
             limit: top_k,
-            score_threshold: retrieve_score_threshold(),
+            score_threshold: score_floor,
             // Hits carry the stored user payload (minus the internal
             // `_tenant_id` write-stamp, stripped in the hit mapping below).
             with_payload: true,
@@ -733,6 +747,10 @@ pub(crate) async fn retrieve(
     let hits = result
         .points
         .into_iter()
+        // Enforce the (possibly per-request-raised) score floor uniformly — the
+        // hybrid path does not push a threshold into the engine, so this is where
+        // both paths honor it.
+        .filter(|point| point.score >= score_floor)
         .take(top_k as usize)
         .map(|point| embedding_pb::RetrieveHit {
             payload_json: retrieve_hit_payload_json(point.payload.as_ref()),
