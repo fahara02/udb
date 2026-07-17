@@ -1,5 +1,6 @@
-//! The fourteen `VaultService` RPC handlers (KV put/get/list/delete/destroy,
-//! transit create/rotate/encrypt/decrypt/sign/verify/hmac, seal-status, and
+//! The seventeen `VaultService` RPC handlers (KV put/get/list/delete/destroy,
+//! transit create/rotate/encrypt/decrypt/sign/verify/hmac + envelope
+//! generate-data-key/rewrap + ed25519 get-transit-public-key, seal-status, and
 //! dynamic database-credential generation), extracted from the trait impl as free
 //! `pub(crate) async fn`s taking `svc` where the trait method took `&self`.
 //! `mod.rs` delegates one line to each. Bodies are verbatim — the same seal gate,
@@ -10,8 +11,8 @@
 //! CRITICAL: no crypto/encryption/decryption/signing/HMAC/wrap/envelope/seal
 //! logic is altered — only the `self` → `svc` receiver rename.
 
-use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
 use base64::Engine as _;
+use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
 use chrono::Utc;
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
@@ -24,6 +25,7 @@ use super::super::native_helpers::{
     admit_on as native_admit_on, native_next_page_token_for_total, native_offset_page_window,
     native_service_context, non_empty_json, validate_request_tenant,
 };
+use super::VaultServiceImpl;
 use super::config::{
     DEFAULT_DB_CREDENTIAL_MAX_TTL_SECONDS, DEFAULT_TRANSIT_ALGORITHM, KEY_STATE_ACTIVE,
     KEY_STATE_VERIFYING, MAX_LIST_SECRETS, SIGNING_TRANSIT_ALGORITHM, STATE_ACTIVE, STATE_DELETED,
@@ -34,10 +36,10 @@ use super::config::{
     VAULT_ED25519_PREFIX, VAULT_HMAC_PREFIX, VAULT_SECRET_MSG, VAULT_TRANSIT_KEY_MSG,
 };
 use super::crypto::{
-    constant_time_eq, dek_open, dek_seal, ed25519_sign_b64, ed25519_verify_b64, hmac_sha256,
-    parse_ed25519_envelope, parse_mac_envelope, parse_transit_envelope,
-    require_encryption_algorithm, transit_payload, unwrap_dek, validate_transit_algorithm,
-    wrap_dek, DataKey, PlaintextSecret,
+    DataKey, PlaintextSecret, constant_time_eq, dek_open, dek_seal, ed25519_public_key_b64,
+    ed25519_sign_b64, ed25519_verify_b64, hmac_sha256, parse_ed25519_envelope, parse_mac_envelope,
+    parse_transit_envelope, require_encryption_algorithm, require_signing_algorithm,
+    transit_payload, unwrap_dek, validate_transit_algorithm, wrap_dek,
 };
 use super::dynamic::{
     create_postgres_login_role, drop_postgres_login_role, generate_db_password,
@@ -55,7 +57,6 @@ use super::store::{
     db_credential_lease_record, secret_conflict, secret_list_read, secret_record,
     transit_key_conflict, transit_key_record,
 };
-use super::VaultServiceImpl;
 
 // ── KV engine ─────────────────────────────────────────────────────────────
 
@@ -942,6 +943,73 @@ pub(crate) async fn rewrap(
     Ok(Response::new(vault_pb::RewrapResponse {
         ciphertext,
         key_version: active.version as i32,
+        message: "ok".to_string(),
+        error: None,
+    }))
+}
+
+pub(crate) async fn get_transit_public_key(
+    svc: &VaultServiceImpl,
+    request: Request<vault_pb::GetTransitPublicKeyRequest>,
+) -> Result<Response<vault_pb::GetTransitPublicKeyResponse>, Status> {
+    let metadata = request.metadata().clone();
+    let req = request.into_inner();
+    svc.check_seal()?;
+    validate_request_tenant(&metadata, &req.tenant_id)?;
+    let tenant_id = req.tenant_id.trim().to_string();
+    let key_name = req.key_name.trim().to_string();
+    if key_name.is_empty() {
+        return Err(vault_required_key_name());
+    }
+    let _admit = native_admit_on(
+        svc.channels.as_ref(),
+        &svc.metrics,
+        "vault",
+        OperationChannel::Read,
+        &tenant_id,
+        None,
+    )
+    .await?;
+    let runtime = svc.require_runtime()?;
+    let context = native_service_context(&metadata, &tenant_id, "");
+
+    let versions = svc
+        .read_transit_versions(runtime, &context, &tenant_id, &key_name)
+        .await?;
+    if versions.is_empty() {
+        return Err(vault_schema_not_found_status(
+            "get_transit_public_key",
+            "vault_transit_key_not_found",
+            "transit key not found",
+        ));
+    }
+    let algorithm = versions
+        .first()
+        .map(|key| key.algorithm.clone())
+        .unwrap_or_default();
+    // Only an Ed25519 signing key has a public half to export.
+    require_signing_algorithm(&algorithm, "get_transit_public_key")?;
+
+    // One public key per usable version (ACTIVE + the rotation-overlap VERIFYING),
+    // so a verifier can check a signature produced under any live version. The
+    // private seed never leaves the broker.
+    let mut public_keys = Vec::new();
+    for key in versions
+        .iter()
+        .filter(|key| key.state == KEY_STATE_ACTIVE || key.state == KEY_STATE_VERIFYING)
+    {
+        let dek = unwrap_dek(runtime, &key.wrapped_key_material)?;
+        public_keys.push(vault_pb::TransitPublicKey {
+            version: key.version as i32,
+            public_key: ed25519_public_key_b64(&dek.0),
+            state: key.state.clone(),
+        });
+    }
+
+    Ok(Response::new(vault_pb::GetTransitPublicKeyResponse {
+        key_name,
+        algorithm,
+        public_keys,
         message: "ok".to_string(),
         error: None,
     }))

@@ -741,6 +741,46 @@ service VaultService {
     };
     option (google.api.http) = {post: "/v1/vault/transit:rewrap" body: "*"};
   }
+
+  // Export the Ed25519 PUBLIC key(s) of a signing transit key so an external
+  // party can verify broker-produced signatures without ever holding the private
+  // key — the missing half that makes Sign/Verify genuinely asymmetric. Only
+  // valid for keys created with the ed25519 algorithm; READ-ONLY (public keys are
+  // not secret). Returns one entry per usable (ACTIVE/VERIFYING) version.
+  rpc GetTransitPublicKey(GetTransitPublicKeyRequest) returns (GetTransitPublicKeyResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:vault:get-public-key"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "vault.GetTransitPublicKey"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "get_transit_public_key" rest_operation_id: "vaultGetTransitPublicKey"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "vault"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "vault"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {post: "/v1/vault/transit:public-key" body: "*"};
+  }
 }
 
 // ── KV messages ─────────────────────────────────────────────────────────────
@@ -1026,6 +1066,36 @@ message RewrapResponse {
   int32 key_version = 2;
   string message = 3;
   udb.core.common.v1.ApiError error = 4;
+}
+
+message GetTransitPublicKeyRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 3 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string key_name = 2;
+}
+
+// One usable version's Ed25519 public key. The public key is NOT secret.
+message TransitPublicKey {
+  int32 version = 1;
+  string public_key = 2;
+  string state = 3;
+}
+
+message GetTransitPublicKeyResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true required_credential_provider: "udb"
+    default_deadline_ms: 30000 default_max_attempts: 3 server_only: true
+    boilerplate_recipe_tags: "vault" generate_minimal_example: true
+  };
+  string key_name = 1;
+  string algorithm = 2;
+  repeated TransitPublicKey public_keys = 3;
+  string message = 4;
+  udb.core.common.v1.ApiError error = 5;
 }
 
 message SignRequest {

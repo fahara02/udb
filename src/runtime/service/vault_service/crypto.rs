@@ -14,8 +14,8 @@ use std::fmt;
 
 use aead::{Aead, KeyInit};
 use aes_gcm_siv::{Aes256GcmSiv, Nonce};
-use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
 use base64::Engine as _;
+use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
 use ed25519_dalek::{Signature, Signer, SigningKey};
 use sha2::{Digest, Sha256};
 use tonic::Status;
@@ -222,6 +222,13 @@ pub(crate) fn ed25519_verify_b64(seed: &[u8; 32], message: &[u8], signature_b64:
         .is_ok()
 }
 
+/// Derive the base64 Ed25519 PUBLIC key from the 32-byte transit key material.
+/// The public key is not secret — it is exported so an external party can verify
+/// a broker-produced signature without ever holding the private seed.
+pub(crate) fn ed25519_public_key_b64(seed: &[u8; 32]) -> String {
+    BASE64_STANDARD.encode(SigningKey::from_bytes(seed).verifying_key().to_bytes())
+}
+
 const HMAC_BLOCK: usize = 64; // SHA-256 block size.
 
 /// HMAC-SHA256 built on the already-vendored `sha2` crate (no `hmac` crate
@@ -304,6 +311,24 @@ pub(crate) fn require_encryption_algorithm(algorithm: &str, operation: &str) -> 
             format!(
                 "{operation} requires an encryption key; the named key uses the \
                  {SIGNING_TRANSIT_ALGORITHM} signing algorithm (use Sign/Verify instead)"
+            ),
+        ));
+    }
+    Ok(())
+}
+
+/// The inverse of [`require_encryption_algorithm`]: reject an operation that only
+/// applies to an asymmetric signing key (e.g. exporting a public key) when the
+/// named key is an encryption key. An encryption key has no public half to
+/// export, so this fails closed rather than returning a meaningless value.
+pub(crate) fn require_signing_algorithm(algorithm: &str, operation: &str) -> Result<(), Status> {
+    if algorithm != SIGNING_TRANSIT_ALGORITHM {
+        return Err(vault_field_violation(
+            "key_name",
+            format!("must name an {SIGNING_TRANSIT_ALGORITHM} signing key"),
+            format!(
+                "{operation} requires an {SIGNING_TRANSIT_ALGORITHM} signing key; the named key \
+                 uses the '{algorithm}' algorithm and has no public key to export"
             ),
         ));
     }

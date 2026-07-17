@@ -14,14 +14,15 @@ use crate::proto::udb::core::vault::services::v1::vault_service_server::VaultSer
 use crate::proto::{ErrorDetail, ErrorKind};
 use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
 
+use super::VaultServiceImpl;
 use super::config::{
     DEFAULT_TRANSIT_ALGORITHM, MIN_DB_CREDENTIAL_TTL_SECONDS, VAULT_MASTER_KEY_UNAVAILABLE_MESSAGE,
     VAULT_RUNTIME_REQUIRED_MESSAGE,
 };
 use super::crypto::{
-    constant_time_eq, dek_open, dek_seal, ed25519_sign_b64, ed25519_verify_b64, hmac_sha256,
-    parse_transit_envelope, require_encryption_algorithm, validate_transit_algorithm, DataKey,
-    PlaintextSecret,
+    DataKey, PlaintextSecret, constant_time_eq, dek_open, dek_seal, ed25519_public_key_b64,
+    ed25519_sign_b64, ed25519_verify_b64, hmac_sha256, parse_transit_envelope,
+    require_encryption_algorithm, validate_transit_algorithm,
 };
 use super::dynamic::{
     parse_vault_db_role_configs, requested_db_credential_ttl, validate_db_role_alias,
@@ -31,7 +32,6 @@ use super::errors::{
     vault_internal_status, vault_master_key_operation_status, vault_schema_already_exists_status,
     vault_schema_not_found_status,
 };
-use super::VaultServiceImpl;
 
 fn decode_detail(status: &Status) -> ErrorDetail {
     let raw = status
@@ -331,9 +331,11 @@ fn transit_ciphertext_helpers_carry_field_violations() {
     let dek = DataKey([3u8; 32]);
     let invalid_base64 = dek_open(&dek, "@@").expect_err("invalid base64 must fail");
     assert_eq!(invalid_base64.code(), tonic::Code::InvalidArgument);
-    assert!(invalid_base64
-        .message()
-        .starts_with("vault ciphertext decode failed: "));
+    assert!(
+        invalid_base64
+            .message()
+            .starts_with("vault ciphertext decode failed: ")
+    );
     assert_single_field_violation(
         &invalid_base64,
         "ciphertext",
@@ -520,6 +522,14 @@ fn ed25519_sign_verify_round_trips_and_rejects_tampering() {
     let sig2 = ed25519_sign_b64(&other.0, b"dispatch record 42");
     assert!(ed25519_verify_b64(&other.0, b"dispatch record 42", &sig2));
     assert!(!ed25519_verify_b64(&seed, b"dispatch record 42", &sig2));
+
+    // Public-key export (GetTransitPublicKey): deterministic, the standard 44-char
+    // base64 of a 32-byte key, and distinct per key — an external verifier uses it
+    // to check a signature without the private seed.
+    let pubkey = ed25519_public_key_b64(&seed);
+    assert_eq!(ed25519_public_key_b64(&seed), pubkey);
+    assert_eq!(pubkey.len(), 44);
+    assert_ne!(pubkey, ed25519_public_key_b64(&other.0));
 }
 
 /// The encryption path refuses an Ed25519 signing key (key-purpose confusion): a

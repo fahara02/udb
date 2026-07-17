@@ -10,9 +10,12 @@
 //!   * KV      — versioned, envelope-encrypted secrets at hierarchical paths
 //!               (`tenant/<t>/app/<path>`), with compare-and-swap, soft delete,
 //!               and crypto-shred destroy.
-//!   * Transit — encrypt/decrypt/sign/verify/hmac by key NAME; key material is
-//!               never exported; versioned keys with an ACTIVE/VERIFYING rotation
-//!               overlap modelled on the auth-service signing-key registry.
+//!   * Transit — encrypt/decrypt/sign/verify/hmac by key NAME (+ envelope
+//!               generate-data-key/rewrap and, for ed25519 signing keys,
+//!               get-transit-public-key); private key material is never exported
+//!               (only the ed25519 PUBLIC key is); versioned keys with an
+//!               ACTIVE/VERIFYING rotation overlap modelled on the auth-service
+//!               signing-key registry.
 //!   * Seal    — every handler checks the seal state FIRST and fails closed
 //!               (`failed_precondition`) when the master key is unavailable;
 //!               `SealStatus` reports the state.
@@ -39,7 +42,7 @@
 //! the durable-row DTOs + JSON decoders + version selectors, [`store`] the
 //! neutral-IR read/record builders, [`dynamic`] the dynamic DB-credential engine
 //! helpers, [`events`] the audit emit, [`workers`] the leader-elected lease
-//! reaper, [`handlers`] the fourteen RPCs — `mod.rs` keeps only the struct, the
+//! reaper, [`handlers`] the seventeen RPCs — `mod.rs` keeps only the struct, the
 //! builders/require-guard/seal-gate/read helpers, and one-line trait delegators.
 
 use std::sync::Arc;
@@ -323,6 +326,13 @@ impl VaultService for VaultServiceImpl {
         request: Request<vault_pb::RewrapRequest>,
     ) -> Result<Response<vault_pb::RewrapResponse>, Status> {
         handlers::rewrap(self, request).await
+    }
+
+    async fn get_transit_public_key(
+        &self,
+        request: Request<vault_pb::GetTransitPublicKeyRequest>,
+    ) -> Result<Response<vault_pb::GetTransitPublicKeyResponse>, Status> {
+        handlers::get_transit_public_key(self, request).await
     }
 
     async fn sign(

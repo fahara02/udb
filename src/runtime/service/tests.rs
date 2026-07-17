@@ -813,6 +813,7 @@ fn full_service_descriptor_surface_snapshot() {
                 "GenerateDataKey",
                 "GenerateDatabaseCredentials",
                 "GetSecret",
+                "GetTransitPublicKey",
                 "Hmac",
                 "ListSecrets",
                 "PutSecret",
