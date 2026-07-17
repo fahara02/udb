@@ -9,7 +9,9 @@ use tonic::Status;
 use crate::proto::VectorPointMutation;
 
 use super::config::DEFAULT_VECTOR_COLLECTION;
-use super::errors::{embedding_policy_status_with_code, embedding_required_field};
+use super::errors::{
+    embedding_field_violation, embedding_policy_status_with_code, embedding_required_field,
+};
 
 /// A registered source decoded from the native read JSON.
 pub(crate) struct StoredSource {
@@ -118,4 +120,93 @@ pub(crate) fn build_embedding_point(
         vector,
         payload,
     })
+}
+
+/// Merge a caller-supplied Qdrant-style filter under the mandatory server-side
+/// tenant clause and return the combined engine filter as a JSON value (the
+/// caller wraps it with `json_to_struct`).
+///
+/// The `_tenant_id` `must` clause is ALWAYS first and authoritative: because it
+/// is ANDed in `must`, no caller filter can broaden a query beyond the verified
+/// tenant. Callers may not reference any internal `_`-prefixed payload key (the
+/// write-stamp namespace, e.g. `_tenant_id`) — such a filter is a tenant-escape
+/// attempt and is rejected fail-closed, never silently dropped. Only the
+/// `must` / `should` / `must_not` groups are accepted.
+pub(crate) fn merge_retrieve_filter(
+    tenant_id: &str,
+    filter_json: &str,
+) -> Result<serde_json::Value, Status> {
+    let tenant_clause = serde_json::json!({ "key": "_tenant_id", "match": { "value": tenant_id } });
+    let trimmed = filter_json.trim();
+    if trimmed.is_empty() {
+        return Ok(serde_json::json!({ "must": [tenant_clause] }));
+    }
+    let user: serde_json::Value = serde_json::from_str(trimmed).map_err(|err| {
+        embedding_field_violation(
+            "filter_json",
+            "must be a JSON object with must/should/must_not condition arrays",
+            format!("filter_json is not valid JSON: {err}"),
+        )
+    })?;
+    let obj = user.as_object().ok_or_else(|| {
+        embedding_field_violation(
+            "filter_json",
+            "must be a JSON object with must/should/must_not condition arrays",
+            "filter_json must be a JSON object",
+        )
+    })?;
+
+    let mut must = vec![tenant_clause];
+    let mut out = serde_json::Map::new();
+    for (group, value) in obj {
+        if !matches!(group.as_str(), "must" | "should" | "must_not") {
+            return Err(embedding_field_violation(
+                "filter_json",
+                "only the must/should/must_not condition groups are supported",
+                format!("unsupported filter group {group:?}"),
+            ));
+        }
+        let conditions = value.as_array().ok_or_else(|| {
+            embedding_field_violation(
+                "filter_json",
+                "each filter group must be an array of conditions",
+                format!("filter group {group:?} must be an array"),
+            )
+        })?;
+        for condition in conditions {
+            reject_internal_filter_key(condition)?;
+        }
+        if group == "must" {
+            must.extend(conditions.iter().cloned());
+        } else {
+            out.insert(group.clone(), value.clone());
+        }
+    }
+    out.insert("must".to_string(), serde_json::Value::Array(must));
+    Ok(serde_json::Value::Object(out))
+}
+
+/// Reject any filter condition (recursively, through nested must/should/must_not)
+/// that targets an internal `_`-prefixed payload key — the server-owned isolation
+/// namespace a caller must never address.
+fn reject_internal_filter_key(condition: &serde_json::Value) -> Result<(), Status> {
+    if let Some(key) = condition.get("key").and_then(|key| key.as_str()) {
+        if key.starts_with('_') {
+            return Err(embedding_field_violation(
+                "filter_json",
+                "filter conditions may not reference internal payload keys",
+                format!(
+                    "filter key {key:?} is reserved (tenant/project isolation is server-enforced)"
+                ),
+            ));
+        }
+    }
+    for nested in ["must", "should", "must_not"] {
+        if let Some(inner) = condition.get(nested).and_then(|value| value.as_array()) {
+            for child in inner {
+                reject_internal_filter_key(child)?;
+            }
+        }
+    }
+    Ok(())
 }

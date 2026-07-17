@@ -22,19 +22,19 @@ use super::super::native_helpers::{
     admit_on as native_admit_on, native_next_page_token, native_offset_page_window,
     native_service_context, non_empty_json, validate_request_tenant,
 };
-use super::EmbeddingServiceImpl;
 use super::config::{
-    EMBEDDING_SOURCE_MSG, MAX_SOURCES_PER_TENANT, STATUS_ACTIVE, STATUS_DELETED,
-    TOPIC_BACKFILL_REQUESTED, TOPIC_SOURCE_DELETED, TOPIC_SOURCE_REGISTERED, resolve_top_k,
-    retrieve_fusion_weights, retrieve_score_threshold,
+    resolve_top_k, retrieve_fusion_weights, retrieve_score_threshold, EMBEDDING_SOURCE_MSG,
+    MAX_SOURCES_PER_TENANT, STATUS_ACTIVE, STATUS_DELETED, TOPIC_BACKFILL_REQUESTED,
+    TOPIC_SOURCE_DELETED, TOPIC_SOURCE_REGISTERED,
 };
 use super::errors::{
     embedding_field_violation, embedding_required_field, embedding_source_not_found_status,
     require_source_tenant_column, validate_register_source_required_fields,
     validate_report_embedding_required_fields, validate_reported_vector,
 };
-use super::model::{build_embedding_point, stored_source_from_json};
+use super::model::{build_embedding_point, merge_retrieve_filter, stored_source_from_json};
 use super::store::{active_sources_read, source_conflict, source_read_by_name, source_record};
+use super::EmbeddingServiceImpl;
 
 impl EmbeddingServiceImpl {
     /// Resolve the SOURCE entity's tenant column through the project-active
@@ -665,9 +665,11 @@ pub(crate) async fn retrieve(
 
     // SERVER-SIDE tenant filter built from the VERIFIED claim, injected into the
     // delegated engine query (the `_tenant_id` must-clause). Never from the body.
-    let tenant_filter = crate::runtime::executor_utils::json_to_struct(&serde_json::json!({
-        "must": [ { "key": "_tenant_id", "match": { "value": tenant_id } } ]
-    }));
+    // Any caller-supplied `filter_json` is merged UNDER this clause: the tenant
+    // condition stays first and authoritative and internal `_`-prefixed keys are
+    // rejected, so a caller filter can narrow but never broaden tenant scope.
+    let merged_filter = merge_retrieve_filter(&tenant_id, &req.filter_json)?;
+    let tenant_filter = crate::runtime::executor_utils::json_to_struct(&merged_filter);
     let state = catalog.active_for(&context.project_id);
     let manifest = &state.manifest;
     let collection = stored.collection();
