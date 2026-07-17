@@ -101,65 +101,34 @@ Per-service RPC counts (native control plane):
 | SDKs | Go, Python, TypeScript/Node, Java, C#, PHP/Laravel |
 | Release | crate/SDK version `0.4.13`, wire protocol `1.0.0` |
 
-## 0.3.7 Release Focus
+## What's Battle-Tested
 
-UDB 0.3.7 is the current release. It carries the workflow-oriented simple-client
-SDK layer over the full **351-RPC surface** (77 `DataBroker` RPCs plus 274 native
-control-plane RPCs) and folds in the post-v0.3.2 native-service wave, so normal
-application code stays short without hiding correctness rules — read-after-write,
-idempotency, tenant binding, and typed errors stay explicit or broker-owned.
+UDB isn't a prototype. Every backend it advertises is exercised by live
+conformance tests against a real server, and the hard parts of putting one API in
+front of many databases are already handled for you:
 
-- Simple-client facade across all SDKs: one `connect` + `loginAndAdoptTenant`,
-  then `storage.uploadFile` / `downloadFileBytes`, `data.table(...).select(...)`,
-  `authz.allowRole(...)`, `metadata.afterWrite(receipt)`, and replay-safe typed
-  retries with automatic idempotency keys.
-- `StorageService.DownloadFile` server-streaming RPC with a presigned-default +
-  streaming-fallback client helper, so file bytes never transit the broker on the
-  common path.
-- The full native-service wave is in source and service wiring: Vault, Lock,
-  Scheduler, Webhook, Search, Cache, LiveQuery, Config, Metering, Backup,
-  Embedding, and Workflow join the earlier Authn/Authz/IdP/Tenant/Notification/
-  Analytics/Storage/Asset/WebRTC/Control surfaces.
-- Notification and analytics flows run through the native entity store path
-  instead of hand-built SQL call sites; storage, asset, WebRTC, tenant, auth, IdP,
-  and control services share the same native runtime/store binding and generated
-  contract checks.
-- SDKs are regenerated for Go, Python, TypeScript, Java, C#, and PHP, with
-  cross-language conformance plus deep live coverage for the broker-backed SDK
-  harnesses.
-- CI release gates cover version consistency, native contract drift, SDK service
-  coverage, MinIO-backed live SDK startup, the six-language `scaffold-compiles`
-  job, and native-service live integration assumptions.
-
-### Since 0.3.7: hardening
-
-The private masterplan/todo board re-grounded every tracked item in real v0.3.7
-source and adversarially verified it against code anchors. The hardening wave (82 of the
-tracked items landed) includes:
-
-- **Verification depth** — live backend-by-backend conformance for all nine
-  canonical stores, with two real store bugs fixed (a promoted-primary read fence
-  in Postgres `wait_for_token`, and SQL Server migration-audit backfill deferral).
-- **IR mediation by default** — raw dispatch is gated, compiler classification is
-  single-sourced, SDK IR builders ship in templates and committed SDKs, and served
-  `GenericDispatch` cross-language byte parity plus the PG planner/IR merge oracle
-  were observed green.
-- **Distributed correctness** — Keeper-backed ClickHouse canonical CAS and
-  Elasticsearch native CAS observed green; Qdrant fail-closed proof green;
-  Weaviate/Pinecone terminally fail-closed (no usable CAS primitive); MySQL XA
-  crash-recovery `XA RECOVER` fixed to the text protocol.
-- **Identity and compliance** — SAML HTTP, internal-only listener gating, evidence
-  export, and WebAuthn attestation-statement crypto (fixing a base64 ErrorDetail
-  decode bug); enterprise token/key lifecycle, IdP/SAML/SCIM, and policy
-  governance.
-- **Media plane** — vendored ffmpeg transcode and the LiveKit SFU served WebRTC
-  smoke observed green over the broker's three-listener topology.
-- **Native services** — Metering `QueryUsage` RLS-GUC under-report fixed, and the
-  Embedding backfill worker fixed (project-isolation filter plus two CDC
-  journal-envelope read bugs) and proven live.
-- **Typed error and idempotency contract** — a public `udb.entity.v1.ErrorDetail`
-  wire trailer decoded across all six SDKs, and durable broker-side idempotency
-  dedup with `was_duplicate` replay for keyed Upsert/Delete and BatchUpsert.
+- **Multi-tenant isolation that actually holds.** Row-level security is enforced
+  in the database, scoped by a canonical tenant **UUID** — not a string you can
+  typo. The SDKs resolve your human-readable tenant *code* (`"acme"`) to that UUID
+  for you, which removes the single most common first-integration bug: a code/UUID
+  mismatch that silently returns zero rows.
+- **Correctness you don't re-implement.** Read-after-write, idempotent retries
+  (keyed `Upsert`/`Delete` replay safely), typed errors on a stable wire contract,
+  and tenant/project binding are broker-owned. Your application code stays short
+  without the rules going quiet.
+- **A real control plane, not stubs.** Native identity (authentication,
+  authorization, API keys, IdP with SAML/SCIM), plus Vault, Lock, Scheduler,
+  Webhook, Search, Cache, LiveQuery, Config, Metering, Backup, Embedding,
+  Workflow, Storage, Assets, and WebRTC — all served through the same
+  tenant-scoped runtime.
+- **Broad backend coverage, one typed API.** Relational (Postgres, MySQL, SQLite,
+  SQL Server), document (MongoDB), vector (Qdrant, Weaviate, Pinecone), object
+  (S3, MinIO, GCS, Azure Blob), cache (Redis, Memcached), graph (Neo4j),
+  wide-column (Cassandra), analytics (ClickHouse), and search (Elasticsearch).
+- **Six SDKs from one contract.** Go, Python, TypeScript, Java, C#, and PHP are
+  generated from the same protos and checked for cross-language parity, so an
+  `Invoice` behaves the same in every language — and the full RPC surface is
+  measured live in each.
 
 ## How It Feels
 
@@ -194,7 +163,9 @@ Application code calls the broker through an SDK:
 from udb_client import Metadata, UdbClient, decode_records
 
 meta = Metadata(
-    tenant_id="acme",
+    tenant_id="acme",   # your human tenant code; the SDK login flow resolves it to
+                        # the canonical UUID that RLS checks — see examples/python_enterprise
+                        # (passing a raw code is the #1 "why are my reads empty?" bug).
     user_id="user-1",
     purpose="billing.api",
     scopes=("udb:read", "udb:write"),
