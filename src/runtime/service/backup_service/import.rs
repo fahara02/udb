@@ -1,0 +1,634 @@
+//! The tenant restore IMPORT machinery for the native `BackupService`:
+//! `restore_tenant` (shared movement gate, fresh-target guard, manifest load +
+//! integrity verification, decrypt-at-rest, FK-ordered reinsert, cross-tenant
+//! unique/foreign-key remapping, journal + outbox) plus the restore-remap model
+//! and the Postgres unique-index probe it uses. Extracted verbatim from the
+//! former god file — the SQL, crypto, and remap contracts are byte-for-byte
+//! identical; `svc` replaces `&self`.
+
+use std::collections::{HashMap, HashSet};
+
+use sqlx::{PgPool, Row};
+use tonic::{Request, Response, Status};
+use uuid::Uuid;
+
+use crate::generation::{CatalogManifest, ManifestColumn, ManifestTable};
+use crate::proto::udb::core::backup::services::v1 as backup_pb;
+use crate::runtime::channels::OperationChannel;
+use crate::runtime::core::tenant_purge::plan_tenant_purge;
+use crate::runtime::executor_utils::qi_runtime;
+use crate::runtime::tenant_movement::{
+    TenantMovementOperation, TenantMovementRequest, tenant_movement_policy_status,
+    validate_tenant_movement_scope,
+};
+
+use super::super::native_helpers::{
+    admit_on as native_admit_on, native_service_context, parse_uuid, validate_request_tenant,
+};
+use super::BackupServiceImpl;
+use super::config::{KIND_RESTORE, MANIFEST_SUFFIX, TOPIC_BACKUP_RESTORED};
+use super::errors::{
+    backup_internal_status, backup_not_found_status, backup_run_missing_object_prefix_status,
+    ensure_target_is_fresh,
+};
+use super::events::emit_event;
+use super::model::{qualified_relation, run_summary_from_json, sha256_hex};
+use super::store::{journal_run, run_read_by_id};
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+struct RestoreColumnKey {
+    schema: String,
+    table: String,
+    column: String,
+}
+
+type RestoreValueRemaps = HashMap<RestoreColumnKey, HashMap<String, String>>;
+
+fn manifest_table_by_relation<'a>(
+    manifest: &'a CatalogManifest,
+    schema: &str,
+    table: &str,
+) -> Option<&'a ManifestTable> {
+    manifest
+        .tables
+        .iter()
+        .find(|candidate| candidate.schema == schema && candidate.table == table)
+}
+
+fn manifest_column<'a>(table: &'a ManifestTable, column: &str) -> Option<&'a ManifestColumn> {
+    table
+        .columns
+        .iter()
+        .find(|candidate| candidate.column_name == column)
+}
+
+fn unique_restore_columns(table: &ManifestTable, tenant_column: &str) -> Vec<String> {
+    let mut columns = Vec::new();
+    let mut seen = HashSet::new();
+    let fk_columns: HashSet<&str> = table
+        .foreign_keys
+        .iter()
+        .flat_map(|fk| fk.columns.iter().map(String::as_str))
+        .collect();
+    let mut add_column = |column: &str| {
+        if column != tenant_column
+            && !fk_columns.contains(column)
+            && seen.insert(column.to_string())
+        {
+            columns.push(column.to_string());
+        }
+    };
+
+    if !table
+        .primary_key
+        .iter()
+        .any(|column| column == tenant_column)
+    {
+        for column in &table.primary_key {
+            add_column(column);
+        }
+    }
+    for column in &table.columns {
+        if column.unique {
+            add_column(&column.column_name);
+        }
+    }
+    for index in &table.indexes {
+        if index.unique && !index.columns.iter().any(|column| column == tenant_column) {
+            for column in &index.columns {
+                add_column(column);
+            }
+        }
+    }
+
+    columns
+}
+
+fn restored_unique_value(
+    column: Option<&ManifestColumn>,
+    target_tenant_id: &str,
+    old_value: &str,
+) -> String {
+    let sql_type = column
+        .map(|column| column.sql_type.as_str())
+        .unwrap_or_default()
+        .to_ascii_lowercase();
+    if sql_type.contains("uuid") && Uuid::parse_str(old_value).is_ok() {
+        return Uuid::new_v4().to_string();
+    }
+
+    let target = target_tenant_id.replace('-', "");
+    let nonce = Uuid::new_v4().simple().to_string();
+    let mut value = format!(
+        "restored-{}-{}",
+        &target[..12.min(target.len())],
+        &nonce[..16]
+    );
+    if let Some(limit) = varchar_limit(&sql_type)
+        && value.len() > limit
+    {
+        value.truncate(limit);
+    }
+    value
+}
+
+fn can_remap_unique_value(column: Option<&ManifestColumn>) -> bool {
+    let sql_type = column
+        .map(|column| column.sql_type.as_str())
+        .unwrap_or_default()
+        .to_ascii_lowercase();
+    sql_type.contains("uuid")
+        || sql_type.contains("char")
+        || sql_type.contains("text")
+        || sql_type.is_empty()
+}
+
+fn varchar_limit(sql_type: &str) -> Option<usize> {
+    let open = sql_type.find('(')?;
+    let close = sql_type[open + 1..].find(')')? + open + 1;
+    sql_type[open + 1..close].trim().parse().ok()
+}
+
+fn apply_parent_restore_remaps(
+    row: &mut serde_json::Map<String, serde_json::Value>,
+    table: &ManifestTable,
+    remaps: &RestoreValueRemaps,
+) {
+    for fk in &table.foreign_keys {
+        for (column, ref_column) in fk.columns.iter().zip(fk.ref_columns.iter()) {
+            let Some(serde_json::Value::String(old_value)) = row.get(column) else {
+                continue;
+            };
+            let key = RestoreColumnKey {
+                schema: fk.ref_schema.clone(),
+                table: fk.ref_table.clone(),
+                column: ref_column.clone(),
+            };
+            let Some(new_value) = remaps.get(&key).and_then(|values| values.get(old_value)) else {
+                continue;
+            };
+            row.insert(column.clone(), serde_json::Value::String(new_value.clone()));
+        }
+    }
+}
+
+fn apply_cross_tenant_restore_remaps(
+    row: &mut serde_json::Map<String, serde_json::Value>,
+    table: &ManifestTable,
+    tenant_column: &str,
+    target_tenant_id: &str,
+    remaps: &mut RestoreValueRemaps,
+    extra_unique_columns: &[String],
+) {
+    let mut columns = unique_restore_columns(table, tenant_column);
+    let mut seen: HashSet<String> = columns.iter().cloned().collect();
+    for column in extra_unique_columns {
+        if seen.insert(column.clone()) {
+            columns.push(column.clone());
+        }
+    }
+    for column in columns {
+        let Some(serde_json::Value::String(old_value)) = row.get(&column) else {
+            continue;
+        };
+        if old_value.is_empty() {
+            continue;
+        }
+        let column_meta = manifest_column(table, &column);
+        if !can_remap_unique_value(column_meta) {
+            continue;
+        }
+        let key = RestoreColumnKey {
+            schema: table.schema.clone(),
+            table: table.table.clone(),
+            column: column.clone(),
+        };
+        let values = remaps.entry(key).or_default();
+        let new_value = values
+            .entry(old_value.clone())
+            .or_insert_with(|| restored_unique_value(column_meta, target_tenant_id, old_value))
+            .clone();
+        row.insert(column, serde_json::Value::String(new_value));
+    }
+}
+
+async fn postgres_unique_restore_columns(
+    pool: &PgPool,
+    schema: &str,
+    table: &str,
+    tenant_column: &str,
+    table_meta: &ManifestTable,
+) -> Result<Vec<String>, Status> {
+    let fk_columns: HashSet<&str> = table_meta
+        .foreign_keys
+        .iter()
+        .flat_map(|fk| fk.columns.iter().map(String::as_str))
+        .collect();
+    let sql = r#"
+        SELECT cols
+        FROM (
+          SELECT i.indexrelid, array_agg(a.attname::text ORDER BY k.ordinality) AS cols
+          FROM pg_catalog.pg_index i
+          JOIN pg_catalog.pg_class c ON c.oid = i.indrelid
+          JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+          JOIN unnest(i.indkey) WITH ORDINALITY AS k(attnum, ordinality) ON true
+          JOIN pg_catalog.pg_attribute a ON a.attrelid = c.oid AND a.attnum = k.attnum
+          WHERE i.indisunique
+            AND n.nspname = $1
+            AND c.relname = $2
+            AND k.attnum > 0
+          GROUP BY i.indexrelid
+        ) unique_indexes
+        WHERE NOT ($3 = ANY(cols))
+    "#;
+    let rows = sqlx::query(sql)
+        .bind(schema)
+        .bind(table)
+        .bind(tenant_column)
+        .fetch_all(pool)
+        .await
+        .map_err(|err| {
+            backup_internal_status(
+                "restore_unique_index_probe",
+                format!("restore unique-index probe failed for {schema}.{table}: {err}"),
+            )
+        })?;
+    let mut columns = Vec::new();
+    let mut seen = HashSet::new();
+    for row in rows {
+        let cols: Vec<String> = row.try_get("cols").map_err(|err| {
+            backup_internal_status(
+                "restore_unique_index_probe",
+                format!("restore unique-index row decode failed for {schema}.{table}: {err}"),
+            )
+        })?;
+        for column in cols {
+            if column != tenant_column
+                && !fk_columns.contains(column.as_str())
+                && seen.insert(column.clone())
+            {
+                columns.push(column);
+            }
+        }
+    }
+    Ok(columns)
+}
+
+pub(crate) async fn restore_tenant(
+    svc: &BackupServiceImpl,
+    request: Request<backup_pb::RestoreTenantRequest>,
+) -> Result<Response<backup_pb::RestoreTenantResponse>, Status> {
+    let metadata = request.metadata().clone();
+    let req = request.into_inner();
+    let source_tenant_id = req.source_tenant_id.trim().to_string();
+    let target_tenant_id = req.target_tenant_id.trim().to_string();
+    let backup_id = req.backup_id.trim().to_string();
+    if source_tenant_id.is_empty() || target_tenant_id.is_empty() || backup_id.is_empty() {
+        return Err(crate::runtime::executor_utils::invalid_argument_fields(
+            "source_tenant_id, target_tenant_id and backup_id are required",
+            [
+                ("source_tenant_id", "must be a non-empty source tenant id"),
+                ("target_tenant_id", "must be a non-empty target tenant id"),
+                ("backup_id", "must be a non-empty backup id"),
+            ],
+        ));
+    }
+    // Same-tenant restore acts on the target tenant. Cross-tenant restore
+    // into a fresh target has no target principal yet, so authorize the
+    // source tenant and require the explicit movement gate below.
+    let auth_tenant_id = if req.allow_cross_tenant {
+        &source_tenant_id
+    } else {
+        &target_tenant_id
+    };
+    validate_request_tenant(&metadata, auth_tenant_id)?;
+    // DESTRUCTIVE: a missing confirmation token fails CLOSED.
+    if req.confirmation_token.trim().is_empty() {
+        return Err(crate::runtime::executor_utils::invalid_argument_fields(
+            "RestoreTenant overwrites a tenant's data; confirmation_token is required",
+            [(
+                "confirmation_token",
+                "must be present to restore over tenant data",
+            )],
+        ));
+    }
+
+    // SHARED fail-closed movement validator — RestoreImport. A target that
+    // differs from the source is a cross-tenant move and requires explicit
+    // privileged approval; otherwise this returns an error and we fail closed.
+    let movement = TenantMovementRequest {
+        operation: TenantMovementOperation::RestoreImport,
+        tenant_id: &source_tenant_id,
+        target_tenant_id: Some(&target_tenant_id),
+        tenant_filter_present: true,
+        privileged_cross_tenant: req.allow_cross_tenant,
+    };
+    validate_tenant_movement_scope(&movement)
+        .map_err(|err| tenant_movement_policy_status(movement.operation, err))?;
+
+    let runtime = svc.require_runtime()?;
+    let pool = svc.require_pool()?;
+    let manifest = svc.require_manifest()?;
+    let _ = parse_uuid("source_tenant_id", &source_tenant_id)?;
+    let _ = parse_uuid("target_tenant_id", &target_tenant_id)?;
+    let context = native_service_context(&metadata, &target_tenant_id, "");
+
+    // Resolve the source run's object prefix from the durable journal.
+    let source_ctx = native_service_context(&metadata, &source_tenant_id, "");
+    let run = runtime
+        .native_entity_read_for_service(
+            "backup",
+            &source_ctx,
+            run_read_by_id(&source_tenant_id, &backup_id),
+        )
+        .await?
+        .first()
+        .map(run_summary_from_json)
+        .ok_or_else(|| {
+            backup_not_found_status(
+                "restore_tenant",
+                "backup_run_not_found",
+                "backup run not found for source tenant",
+            )
+        })?;
+    let object_prefix = run.object_prefix.trim().to_string();
+    if object_prefix.is_empty() {
+        return Err(backup_run_missing_object_prefix_status());
+    }
+
+    // Enumerate the tenant-owned tables via the SHARED planner.
+    let plan = plan_tenant_purge(manifest);
+
+    // FRESH-target guard: refuse to write over a live tenant. Probe each
+    // tenant-owned table for ANY existing row under the target tenant.
+    let mut existing_rows: u64 = 0;
+    for target in &plan.targets {
+        let rel = qualified_relation(&target.schema, &target.table);
+        let probe_sql = format!(
+            "SELECT 1 FROM {rel} WHERE {col}::text = $1 LIMIT 1",
+            col = qi_runtime(&target.tenant_column),
+        );
+        let present: Option<i32> = sqlx::query_scalar(&probe_sql)
+            .bind(&target_tenant_id)
+            .fetch_optional(pool)
+            .await
+            .map_err(|err| {
+                backup_internal_status(
+                    "restore_freshness_probe",
+                    format!(
+                        "restore freshness probe failed on {}.{}: {err}",
+                        target.schema, target.table
+                    ),
+                )
+            })?;
+        if present.is_some() {
+            existing_rows += 1;
+        }
+    }
+    ensure_target_is_fresh(existing_rows)?;
+
+    let _admit = native_admit_on(
+        svc.channels.as_ref(),
+        &svc.metrics,
+        "backup",
+        OperationChannel::Admin,
+        &target_tenant_id,
+        None,
+    )
+    .await?;
+
+    // Load + verify the run manifest (object backend/bucket are recorded in
+    // it). The manifest itself lives under the service default object target
+    // (where the backup wrote it); the per-table artifacts then use whatever
+    // backend/bucket the manifest records.
+    let manifest_key = format!("{object_prefix}{MANIFEST_SUFFIX}");
+    let run_backend = svc.object_backend.clone();
+    let run_bucket = svc.object_bucket.clone();
+    let manifest_get = crate::runtime::core::setup_data::object_request_json(
+        "get",
+        &run_bucket,
+        &manifest_key,
+        "",
+    );
+    let manifest_bytes = runtime
+        .get_object_backend_target_for_project(
+            &run_backend,
+            None,
+            &context.project_id,
+            &manifest_get,
+        )
+        .await?;
+    let manifest_value: serde_json::Value =
+        serde_json::from_slice(&manifest_bytes).map_err(|err| {
+            backup_internal_status(
+                "restore_manifest_parse",
+                format!("restore manifest parse failed: {err}"),
+            )
+        })?;
+    let object_backend = manifest_value
+        .get("object_backend")
+        .and_then(|v| v.as_str())
+        .filter(|v| !v.trim().is_empty())
+        .map(str::to_string)
+        .unwrap_or(run_backend);
+    let object_bucket = manifest_value
+        .get("object_bucket")
+        .and_then(|v| v.as_str())
+        .filter(|v| !v.trim().is_empty())
+        .map(str::to_string)
+        .unwrap_or(run_bucket);
+    let manifest_tables = manifest_value
+        .get("tables")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+
+    // Restore in REVERSE planner order: the planner emits children→parents
+    // (safe for delete); inserting parents→children satisfies FK constraints.
+    let mut ordered_tables = manifest_tables;
+    ordered_tables.reverse();
+
+    let mut restored_rows: i64 = 0;
+    let mut restored_table_count: i32 = 0;
+    let cross_tenant_restore = source_tenant_id != target_tenant_id;
+    let mut restore_remaps: RestoreValueRemaps = HashMap::new();
+    let mut tx = pool.begin().await.map_err(|err| {
+        backup_internal_status(
+            "restore_transaction_begin",
+            format!("failed to begin restore transaction: {err}"),
+        )
+    })?;
+    for entry in &ordered_tables {
+        let schema = entry.get("schema").and_then(|v| v.as_str()).unwrap_or("");
+        let table = entry.get("table").and_then(|v| v.as_str()).unwrap_or("");
+        let tenant_column = entry
+            .get("tenant_column")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        let object_key = entry
+            .get("object_key")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        let expected_checksum = entry
+            .get("checksum_sha256")
+            .and_then(|v| v.as_str())
+            .unwrap_or("");
+        if schema.is_empty() || table.is_empty() || object_key.is_empty() {
+            continue;
+        }
+        let manifest_table = manifest_table_by_relation(manifest, schema, table);
+        let db_unique_restore_columns = if cross_tenant_restore {
+            match manifest_table {
+                Some(table_meta) => {
+                    postgres_unique_restore_columns(pool, schema, table, tenant_column, table_meta)
+                        .await?
+                }
+                None => Vec::new(),
+            }
+        } else {
+            Vec::new()
+        };
+        let get_req = crate::runtime::core::setup_data::object_request_json(
+            "get",
+            &object_bucket,
+            object_key,
+            "",
+        );
+        let bytes = runtime
+            .get_object_backend_target_for_project(
+                &object_backend,
+                None,
+                &context.project_id,
+                &get_req,
+            )
+            .await?;
+        // Integrity: the encrypted artifact must match the manifest checksum.
+        if !expected_checksum.is_empty() && sha256_hex(&bytes) != expected_checksum {
+            return Err(Status::data_loss(format!(
+                "restore integrity check failed for {schema}.{table} (checksum mismatch)"
+            )));
+        }
+        let ciphertext = String::from_utf8(bytes).map_err(|err| {
+            backup_internal_status(
+                "restore_artifact_utf8",
+                format!("restore artifact is not valid UTF-8: {err}"),
+            )
+        })?;
+        let jsonl = runtime.decrypt_secret_at_rest(&ciphertext).map_err(|err| {
+            backup_internal_status(
+                "restore_decrypt_artifact",
+                format!("restore decryption failed: {err}"),
+            )
+        })?;
+        let rel = qualified_relation(schema, table);
+        // `jsonb_populate_record` casts the row JSON into the table's row type,
+        // so every column type is handled by Postgres without hand-mapping.
+        let insert_sql =
+            format!("INSERT INTO {rel} SELECT (jsonb_populate_record(NULL::{rel}, $1::jsonb)).*");
+        for line in jsonl.lines() {
+            let line = line.trim();
+            if line.is_empty() {
+                continue;
+            }
+            let mut value: serde_json::Value = serde_json::from_str(line).map_err(|err| {
+                backup_internal_status(
+                    "restore_row_parse",
+                    format!("restore row parse failed for {schema}.{table}: {err}"),
+                )
+            })?;
+            // Rewrite the tenant column to the target on insert.
+            if let Some(obj) = value.as_object_mut()
+                && !tenant_column.is_empty()
+            {
+                if cross_tenant_restore && let Some(table_meta) = manifest_table {
+                    apply_parent_restore_remaps(obj, table_meta, &restore_remaps);
+                }
+                obj.insert(
+                    tenant_column.to_string(),
+                    serde_json::Value::String(target_tenant_id.clone()),
+                );
+                if cross_tenant_restore && let Some(table_meta) = manifest_table {
+                    apply_cross_tenant_restore_remaps(
+                        obj,
+                        table_meta,
+                        tenant_column,
+                        &target_tenant_id,
+                        &mut restore_remaps,
+                        &db_unique_restore_columns,
+                    );
+                }
+            }
+            // Bind the row as text and cast to jsonb in SQL ($1::jsonb), so the
+            // bind never depends on the sqlx json feature being enabled.
+            let row_json = serde_json::to_string(&value).map_err(|err| {
+                backup_internal_status(
+                    "restore_row_reserialize",
+                    format!("restore row reserialize failed: {err}"),
+                )
+            })?;
+            sqlx::query(&insert_sql)
+                .bind(row_json)
+                .execute(&mut *tx)
+                .await
+                .map_err(|err| {
+                    backup_internal_status(
+                        "restore_insert_row",
+                        format!("restore insert failed for {schema}.{table}: {err}"),
+                    )
+                })?;
+            restored_rows += 1;
+        }
+        restored_table_count += 1;
+    }
+    tx.commit().await.map_err(|err| {
+        backup_internal_status(
+            "restore_transaction_commit",
+            format!("failed to commit restore transaction: {err}"),
+        )
+    })?;
+
+    let restore_id = Uuid::new_v4().to_string();
+    journal_run(
+        runtime,
+        &context,
+        &restore_id,
+        &target_tenant_id,
+        KIND_RESTORE,
+        &object_prefix,
+        &run.manifest_checksum,
+        restored_table_count as i64,
+        restored_rows,
+        0,
+        &source_tenant_id,
+        &target_tenant_id,
+    )
+    .await?;
+
+    emit_event(
+        svc,
+        TOPIC_BACKUP_RESTORED,
+        &target_tenant_id,
+        &target_tenant_id,
+        &context.project_id,
+        &restore_id,
+        serde_json::json!({
+            "backup_id": restore_id,
+            "source_backup_id": backup_id,
+            "source_tenant_id": source_tenant_id,
+            "target_tenant_id": target_tenant_id,
+            "object_prefix": object_prefix,
+            "restored_table_count": restored_table_count,
+            "restored_rows": restored_rows,
+        }),
+    )
+    .await;
+
+    Ok(Response::new(backup_pb::RestoreTenantResponse {
+        backup_id: restore_id,
+        source_object_prefix: object_prefix,
+        restored_table_count,
+        restored_rows,
+        message: "tenant restored".to_string(),
+        error: None,
+    }))
+}
