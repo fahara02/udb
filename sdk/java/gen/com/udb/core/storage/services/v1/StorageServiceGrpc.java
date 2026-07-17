@@ -105,6 +105,37 @@ public final class StorageServiceGrpc {
     return getGetDownloadUrlMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.storage.services.v1.ReissueUploadUrlRequest,
+      com.udb.core.storage.services.v1.ReissueUploadUrlResponse> getReissueUploadUrlMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "ReissueUploadUrl",
+      requestType = com.udb.core.storage.services.v1.ReissueUploadUrlRequest.class,
+      responseType = com.udb.core.storage.services.v1.ReissueUploadUrlResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.storage.services.v1.ReissueUploadUrlRequest,
+      com.udb.core.storage.services.v1.ReissueUploadUrlResponse> getReissueUploadUrlMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.storage.services.v1.ReissueUploadUrlRequest, com.udb.core.storage.services.v1.ReissueUploadUrlResponse> getReissueUploadUrlMethod;
+    if ((getReissueUploadUrlMethod = StorageServiceGrpc.getReissueUploadUrlMethod) == null) {
+      synchronized (StorageServiceGrpc.class) {
+        if ((getReissueUploadUrlMethod = StorageServiceGrpc.getReissueUploadUrlMethod) == null) {
+          StorageServiceGrpc.getReissueUploadUrlMethod = getReissueUploadUrlMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.storage.services.v1.ReissueUploadUrlRequest, com.udb.core.storage.services.v1.ReissueUploadUrlResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "ReissueUploadUrl"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.storage.services.v1.ReissueUploadUrlRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.storage.services.v1.ReissueUploadUrlResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new StorageServiceMethodDescriptorSupplier("ReissueUploadUrl"))
+              .build();
+        }
+      }
+    }
+    return getReissueUploadUrlMethod;
+  }
+
   private static volatile io.grpc.MethodDescriptor<com.udb.core.storage.services.v1.DownloadFileRequest,
       com.udb.core.storage.services.v1.DownloadFileChunk> getDownloadFileMethod;
 
@@ -355,6 +386,20 @@ public final class StorageServiceGrpc {
 
     /**
      * <pre>
+     * Reissue a presigned PUT URL for an existing PENDING upload — the resume path
+     * when a RegisterUpload response was lost in flight (the client kept the file_id
+     * but not the secret upload URL). The File row + object_key are unchanged; only
+     * a fresh short-lived upload URL is minted. Rejected fail-closed for a
+     * non-PENDING (already-finalized or removed) file. READ-ONLY (no state change).
+     * </pre>
+     */
+    default void reissueUploadUrl(com.udb.core.storage.services.v1.ReissueUploadUrlRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.storage.services.v1.ReissueUploadUrlResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getReissueUploadUrlMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
      * Stream a file's bytes directly through the broker. FALLBACK for clients
      * that cannot use the presigned `GetDownloadUrl` HTTP GET (no egress to the
      * object store, corporate proxy, etc.). The broker streams the object bytes
@@ -469,6 +514,21 @@ public final class StorageServiceGrpc {
 
     /**
      * <pre>
+     * Reissue a presigned PUT URL for an existing PENDING upload — the resume path
+     * when a RegisterUpload response was lost in flight (the client kept the file_id
+     * but not the secret upload URL). The File row + object_key are unchanged; only
+     * a fresh short-lived upload URL is minted. Rejected fail-closed for a
+     * non-PENDING (already-finalized or removed) file. READ-ONLY (no state change).
+     * </pre>
+     */
+    public void reissueUploadUrl(com.udb.core.storage.services.v1.ReissueUploadUrlRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.storage.services.v1.ReissueUploadUrlResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getReissueUploadUrlMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
      * Stream a file's bytes directly through the broker. FALLBACK for clients
      * that cannot use the presigned `GetDownloadUrl` HTTP GET (no egress to the
      * object store, corporate proxy, etc.). The broker streams the object bytes
@@ -574,6 +634,20 @@ public final class StorageServiceGrpc {
 
     /**
      * <pre>
+     * Reissue a presigned PUT URL for an existing PENDING upload — the resume path
+     * when a RegisterUpload response was lost in flight (the client kept the file_id
+     * but not the secret upload URL). The File row + object_key are unchanged; only
+     * a fresh short-lived upload URL is minted. Rejected fail-closed for a
+     * non-PENDING (already-finalized or removed) file. READ-ONLY (no state change).
+     * </pre>
+     */
+    public com.udb.core.storage.services.v1.ReissueUploadUrlResponse reissueUploadUrl(com.udb.core.storage.services.v1.ReissueUploadUrlRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getReissueUploadUrlMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
      * Stream a file's bytes directly through the broker. FALLBACK for clients
      * that cannot use the presigned `GetDownloadUrl` HTTP GET (no egress to the
      * object store, corporate proxy, etc.). The broker streams the object bytes
@@ -672,6 +746,20 @@ public final class StorageServiceGrpc {
     public com.udb.core.storage.services.v1.GetDownloadUrlResponse getDownloadUrl(com.udb.core.storage.services.v1.GetDownloadUrlRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getGetDownloadUrlMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Reissue a presigned PUT URL for an existing PENDING upload — the resume path
+     * when a RegisterUpload response was lost in flight (the client kept the file_id
+     * but not the secret upload URL). The File row + object_key are unchanged; only
+     * a fresh short-lived upload URL is minted. Rejected fail-closed for a
+     * non-PENDING (already-finalized or removed) file. READ-ONLY (no state change).
+     * </pre>
+     */
+    public com.udb.core.storage.services.v1.ReissueUploadUrlResponse reissueUploadUrl(com.udb.core.storage.services.v1.ReissueUploadUrlRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getReissueUploadUrlMethod(), getCallOptions(), request);
     }
 
     /**
@@ -780,6 +868,21 @@ public final class StorageServiceGrpc {
 
     /**
      * <pre>
+     * Reissue a presigned PUT URL for an existing PENDING upload — the resume path
+     * when a RegisterUpload response was lost in flight (the client kept the file_id
+     * but not the secret upload URL). The File row + object_key are unchanged; only
+     * a fresh short-lived upload URL is minted. Rejected fail-closed for a
+     * non-PENDING (already-finalized or removed) file. READ-ONLY (no state change).
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.storage.services.v1.ReissueUploadUrlResponse> reissueUploadUrl(
+        com.udb.core.storage.services.v1.ReissueUploadUrlRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getReissueUploadUrlMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
      * Get file metadata
      * </pre>
      */
@@ -826,11 +929,12 @@ public final class StorageServiceGrpc {
   private static final int METHODID_REGISTER_UPLOAD = 0;
   private static final int METHODID_FINALIZE_UPLOAD = 1;
   private static final int METHODID_GET_DOWNLOAD_URL = 2;
-  private static final int METHODID_DOWNLOAD_FILE = 3;
-  private static final int METHODID_GET_FILE = 4;
-  private static final int METHODID_UPDATE_FILE = 5;
-  private static final int METHODID_DELETE_FILE = 6;
-  private static final int METHODID_LIST_FILES = 7;
+  private static final int METHODID_REISSUE_UPLOAD_URL = 3;
+  private static final int METHODID_DOWNLOAD_FILE = 4;
+  private static final int METHODID_GET_FILE = 5;
+  private static final int METHODID_UPDATE_FILE = 6;
+  private static final int METHODID_DELETE_FILE = 7;
+  private static final int METHODID_LIST_FILES = 8;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -860,6 +964,10 @@ public final class StorageServiceGrpc {
         case METHODID_GET_DOWNLOAD_URL:
           serviceImpl.getDownloadUrl((com.udb.core.storage.services.v1.GetDownloadUrlRequest) request,
               (io.grpc.stub.StreamObserver<com.udb.core.storage.services.v1.GetDownloadUrlResponse>) responseObserver);
+          break;
+        case METHODID_REISSUE_UPLOAD_URL:
+          serviceImpl.reissueUploadUrl((com.udb.core.storage.services.v1.ReissueUploadUrlRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.storage.services.v1.ReissueUploadUrlResponse>) responseObserver);
           break;
         case METHODID_DOWNLOAD_FILE:
           serviceImpl.downloadFile((com.udb.core.storage.services.v1.DownloadFileRequest) request,
@@ -920,6 +1028,13 @@ public final class StorageServiceGrpc {
               com.udb.core.storage.services.v1.GetDownloadUrlRequest,
               com.udb.core.storage.services.v1.GetDownloadUrlResponse>(
                 service, METHODID_GET_DOWNLOAD_URL)))
+        .addMethod(
+          getReissueUploadUrlMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.storage.services.v1.ReissueUploadUrlRequest,
+              com.udb.core.storage.services.v1.ReissueUploadUrlResponse>(
+                service, METHODID_REISSUE_UPLOAD_URL)))
         .addMethod(
           getDownloadFileMethod(),
           io.grpc.stub.ServerCalls.asyncServerStreamingCall(
@@ -1006,6 +1121,7 @@ public final class StorageServiceGrpc {
               .addMethod(getRegisterUploadMethod())
               .addMethod(getFinalizeUploadMethod())
               .addMethod(getGetDownloadUrlMethod())
+              .addMethod(getReissueUploadUrlMethod())
               .addMethod(getDownloadFileMethod())
               .addMethod(getGetFileMethod())
               .addMethod(getUpdateFileMethod())

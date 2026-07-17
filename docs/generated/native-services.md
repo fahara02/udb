@@ -18,14 +18,14 @@ Contract version `4.0.0` · 27 native services.
 | `embedding` | Embeddings | embedding | yes | postgres | 6 | control-plane |
 | `idp` | Identity Providers | auth | yes | postgres | 27 | control-plane |
 | `livequery` | Live Query | livequery | yes | postgres | 1 | control-plane |
-| `lock` | Locks | lock | yes | postgres | 3 | control-plane |
+| `lock` | Locks | lock | yes | postgres | 5 | control-plane |
 | `metering` | Metering | metering | yes | postgres | 6 | control-plane |
 | `notification` | Notifications | messaging | yes | postgres, kafka | 12 | control-plane |
 | `scheduler` | Scheduler | scheduler | yes | postgres | 6 | control-plane |
 | `search` | Search | search | yes | postgres | 5 | control-plane |
-| `storage` | Storage | storage | yes | postgres, object_store | 8 | control-plane |
+| `storage` | Storage | storage | yes | postgres, object_store | 9 | control-plane |
 | `tenant` | Tenants | tenant | yes | postgres | 7 | control-plane |
-| `vault` | Vault | vault | yes | postgres | 14 | control-plane |
+| `vault` | Vault | vault | yes | postgres | 20 | control-plane |
 | `webhook` | Webhooks | webhook | yes | postgres | 6 | control-plane |
 | `webrtc_peer` | WebRTC Peers | realtime | yes | postgres | 5 | control-plane, peer |
 | `webrtc_room` | WebRTC Rooms | realtime | yes | postgres | 9 | control-plane |

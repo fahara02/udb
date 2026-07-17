@@ -144,18 +144,22 @@ class ReportEmbeddingResponse(_message.Message):
     def __init__(self, upserted: bool = ..., message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
 
 class RetrieveRequest(_message.Message):
-    __slots__ = ("tenant_id", "source_name", "query_text", "query_vector", "top_k")
+    __slots__ = ("tenant_id", "source_name", "query_text", "query_vector", "top_k", "filter_json", "score_threshold")
     TENANT_ID_FIELD_NUMBER: _ClassVar[int]
     SOURCE_NAME_FIELD_NUMBER: _ClassVar[int]
     QUERY_TEXT_FIELD_NUMBER: _ClassVar[int]
     QUERY_VECTOR_FIELD_NUMBER: _ClassVar[int]
     TOP_K_FIELD_NUMBER: _ClassVar[int]
+    FILTER_JSON_FIELD_NUMBER: _ClassVar[int]
+    SCORE_THRESHOLD_FIELD_NUMBER: _ClassVar[int]
     tenant_id: str
     source_name: str
     query_text: str
     query_vector: _containers.RepeatedScalarFieldContainer[float]
     top_k: int
-    def __init__(self, tenant_id: _Optional[str] = ..., source_name: _Optional[str] = ..., query_text: _Optional[str] = ..., query_vector: _Optional[_Iterable[float]] = ..., top_k: _Optional[int] = ...) -> None: ...
+    filter_json: str
+    score_threshold: float
+    def __init__(self, tenant_id: _Optional[str] = ..., source_name: _Optional[str] = ..., query_text: _Optional[str] = ..., query_vector: _Optional[_Iterable[float]] = ..., top_k: _Optional[int] = ..., filter_json: _Optional[str] = ..., score_threshold: _Optional[float] = ...) -> None: ...
 
 class RetrieveHit(_message.Message):
     __slots__ = ("id", "score", "payload_json")

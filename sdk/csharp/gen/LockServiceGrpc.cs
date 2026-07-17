@@ -63,6 +63,14 @@ namespace udb.core.Lock.Services.V1 {
     static readonly grpc::Marshaller<global::udb.core.Lock.Services.V1.ReleaseLockRequest> __Marshaller_udb_core_lock_services_v1_ReleaseLockRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Lock.Services.V1.ReleaseLockRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::udb.core.Lock.Services.V1.ReleaseLockResponse> __Marshaller_udb_core_lock_services_v1_ReleaseLockResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Lock.Services.V1.ReleaseLockResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Lock.Services.V1.GetLockRequest> __Marshaller_udb_core_lock_services_v1_GetLockRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Lock.Services.V1.GetLockRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Lock.Services.V1.GetLockResponse> __Marshaller_udb_core_lock_services_v1_GetLockResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Lock.Services.V1.GetLockResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Lock.Services.V1.ListLocksRequest> __Marshaller_udb_core_lock_services_v1_ListLocksRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Lock.Services.V1.ListLocksRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Lock.Services.V1.ListLocksResponse> __Marshaller_udb_core_lock_services_v1_ListLocksResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Lock.Services.V1.ListLocksResponse.Parser));
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Method<global::udb.core.Lock.Services.V1.AcquireLockRequest, global::udb.core.Lock.Services.V1.AcquireLockResponse> __Method_AcquireLock = new grpc::Method<global::udb.core.Lock.Services.V1.AcquireLockRequest, global::udb.core.Lock.Services.V1.AcquireLockResponse>(
@@ -87,6 +95,22 @@ namespace udb.core.Lock.Services.V1 {
         "ReleaseLock",
         __Marshaller_udb_core_lock_services_v1_ReleaseLockRequest,
         __Marshaller_udb_core_lock_services_v1_ReleaseLockResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Lock.Services.V1.GetLockRequest, global::udb.core.Lock.Services.V1.GetLockResponse> __Method_GetLock = new grpc::Method<global::udb.core.Lock.Services.V1.GetLockRequest, global::udb.core.Lock.Services.V1.GetLockResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "GetLock",
+        __Marshaller_udb_core_lock_services_v1_GetLockRequest,
+        __Marshaller_udb_core_lock_services_v1_GetLockResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Lock.Services.V1.ListLocksRequest, global::udb.core.Lock.Services.V1.ListLocksResponse> __Method_ListLocks = new grpc::Method<global::udb.core.Lock.Services.V1.ListLocksRequest, global::udb.core.Lock.Services.V1.ListLocksResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "ListLocks",
+        __Marshaller_udb_core_lock_services_v1_ListLocksRequest,
+        __Marshaller_udb_core_lock_services_v1_ListLocksResponse);
 
     /// <summary>Service descriptor</summary>
     public static global::Google.Protobuf.Reflection.ServiceDescriptor Descriptor
@@ -134,6 +158,32 @@ namespace udb.core.Lock.Services.V1 {
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::System.Threading.Tasks.Task<global::udb.core.Lock.Services.V1.ReleaseLockResponse> ReleaseLock(global::udb.core.Lock.Services.V1.ReleaseLockRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Fetch a single lock by name within the caller's tenant. Read-only; an absent
+      /// lock returns found=false (not an error) — a tenant-scoped read miss is normal.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Lock.Services.V1.GetLockResponse> GetLock(global::udb.core.Lock.Services.V1.GetLockRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// List the caller tenant's locks, optionally narrowed by status. Paginated
+      /// (page_size + opaque page_token). Read-only.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Lock.Services.V1.ListLocksResponse> ListLocks(global::udb.core.Lock.Services.V1.ListLocksRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -327,6 +377,110 @@ namespace udb.core.Lock.Services.V1 {
       {
         return CallInvoker.AsyncUnaryCall(__Method_ReleaseLock, null, options, request);
       }
+      /// <summary>
+      /// Fetch a single lock by name within the caller's tenant. Read-only; an absent
+      /// lock returns found=false (not an error) — a tenant-scoped read miss is normal.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Lock.Services.V1.GetLockResponse GetLock(global::udb.core.Lock.Services.V1.GetLockRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return GetLock(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Fetch a single lock by name within the caller's tenant. Read-only; an absent
+      /// lock returns found=false (not an error) — a tenant-scoped read miss is normal.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Lock.Services.V1.GetLockResponse GetLock(global::udb.core.Lock.Services.V1.GetLockRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_GetLock, null, options, request);
+      }
+      /// <summary>
+      /// Fetch a single lock by name within the caller's tenant. Read-only; an absent
+      /// lock returns found=false (not an error) — a tenant-scoped read miss is normal.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Lock.Services.V1.GetLockResponse> GetLockAsync(global::udb.core.Lock.Services.V1.GetLockRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return GetLockAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Fetch a single lock by name within the caller's tenant. Read-only; an absent
+      /// lock returns found=false (not an error) — a tenant-scoped read miss is normal.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Lock.Services.V1.GetLockResponse> GetLockAsync(global::udb.core.Lock.Services.V1.GetLockRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_GetLock, null, options, request);
+      }
+      /// <summary>
+      /// List the caller tenant's locks, optionally narrowed by status. Paginated
+      /// (page_size + opaque page_token). Read-only.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Lock.Services.V1.ListLocksResponse ListLocks(global::udb.core.Lock.Services.V1.ListLocksRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ListLocks(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// List the caller tenant's locks, optionally narrowed by status. Paginated
+      /// (page_size + opaque page_token). Read-only.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Lock.Services.V1.ListLocksResponse ListLocks(global::udb.core.Lock.Services.V1.ListLocksRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_ListLocks, null, options, request);
+      }
+      /// <summary>
+      /// List the caller tenant's locks, optionally narrowed by status. Paginated
+      /// (page_size + opaque page_token). Read-only.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Lock.Services.V1.ListLocksResponse> ListLocksAsync(global::udb.core.Lock.Services.V1.ListLocksRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ListLocksAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// List the caller tenant's locks, optionally narrowed by status. Paginated
+      /// (page_size + opaque page_token). Read-only.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Lock.Services.V1.ListLocksResponse> ListLocksAsync(global::udb.core.Lock.Services.V1.ListLocksRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_ListLocks, null, options, request);
+      }
       /// <summary>Creates a new instance of client from given <c>ClientBaseConfiguration</c>.</summary>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       protected override LockServiceClient NewInstance(ClientBaseConfiguration configuration)
@@ -343,7 +497,9 @@ namespace udb.core.Lock.Services.V1 {
       return grpc::ServerServiceDefinition.CreateBuilder()
           .AddMethod(__Method_AcquireLock, serviceImpl.AcquireLock)
           .AddMethod(__Method_RenewLock, serviceImpl.RenewLock)
-          .AddMethod(__Method_ReleaseLock, serviceImpl.ReleaseLock).Build();
+          .AddMethod(__Method_ReleaseLock, serviceImpl.ReleaseLock)
+          .AddMethod(__Method_GetLock, serviceImpl.GetLock)
+          .AddMethod(__Method_ListLocks, serviceImpl.ListLocks).Build();
     }
 
     /// <summary>Register service method with a service binder with or without implementation. Useful when customizing the service binding logic.
@@ -356,6 +512,8 @@ namespace udb.core.Lock.Services.V1 {
       serviceBinder.AddMethod(__Method_AcquireLock, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Lock.Services.V1.AcquireLockRequest, global::udb.core.Lock.Services.V1.AcquireLockResponse>(serviceImpl.AcquireLock));
       serviceBinder.AddMethod(__Method_RenewLock, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Lock.Services.V1.RenewLockRequest, global::udb.core.Lock.Services.V1.RenewLockResponse>(serviceImpl.RenewLock));
       serviceBinder.AddMethod(__Method_ReleaseLock, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Lock.Services.V1.ReleaseLockRequest, global::udb.core.Lock.Services.V1.ReleaseLockResponse>(serviceImpl.ReleaseLock));
+      serviceBinder.AddMethod(__Method_GetLock, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Lock.Services.V1.GetLockRequest, global::udb.core.Lock.Services.V1.GetLockResponse>(serviceImpl.GetLock));
+      serviceBinder.AddMethod(__Method_ListLocks, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Lock.Services.V1.ListLocksRequest, global::udb.core.Lock.Services.V1.ListLocksResponse>(serviceImpl.ListLocks));
     }
 
   }

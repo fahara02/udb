@@ -1,82 +1,68 @@
 # UDB PHP Quickstart
 
-Learn UDB from the absolute basics, in three small steps. Each example adds
-**one** concept on top of the previous one and is meant to be run in order:
+Learn UDB from zero in three tiny PHP scripts. You define a table as a **proto**,
+and the broker turns it into a real Postgres table plus a typed gRPC API — you
+never hand-write DDL, migrations, or a data-access layer. Each script adds
+exactly one idea and is meant to be run in order:
 
-| # | Script | New concept | Proto |
-|---|--------|-------------|-------|
-| 1 | `01_crud.php` | Create / read / update / delete one row | `customer.proto` |
-| 2 | `02_authz.php` | Authorization — the broker enforces operation scopes | (same `Customer`) |
-| 3 | `03_relations.php` | A second, related table + querying many rows | `order.proto` |
+| # | Script | What it adds |
+|---|--------|--------------|
+| 1 | `01_crud.php` | Create / read / update / delete one row (`customer.proto`) |
+| 2 | `02_authz.php` | The broker enforces `udb:read` / `udb:write` scopes on every call |
+| 3 | `03_relations.php` | A second related table + a real query (filter, sort, limit) |
 
-You hand-write only the protos and the three scripts. Everything else
-(`proto/udb/**`, the PHP models, the database tables) is generated.
+You hand-write only the protos and these three scripts. Everything else — the UDB
+contract protos, the PHP models, the database tables — is generated for you.
 
-> This is the small sibling of `examples/php_arbitary_project`. Start here; go
-> there when you want vectors, object storage, and a richer schema.
+> Small sibling of `examples/php_arbitary_project`. Start here; go there for
+> vectors, object storage, caching, and a richer schema.
 
----
+## Setup once, run in ~30 seconds
 
-## One-time setup
+**You need:** Docker, PHP 8.1+ with the `grpc` and `protobuf` extensions
+(`pecl install grpc protobuf` — or use the [container fallback](#no-local-grpc-extension)),
+`buf` ≥ 1.x, and the `udb` CLI (`cargo build --release --bin udb`, or point
+`$env:UDB_CLI` at a release binary — the scripts find it either way).
 
-Do this once; all three examples reuse it.
-
-### Prerequisites
-- **Docker** — for PostgreSQL + Redis.
-- **The UDB CLI** — `cargo build --release --bin udb`, or set
-  `$env:UDB_CLI` to a release binary. The scripts find it automatically.
-- **buf** ≥ 1.x.
-- **PHP 8.1+** with the **`grpc`** and **`protobuf`** extensions for the live run
-  (`pecl install grpc protobuf`). No extension? See [Running without a local
-  gRPC extension](#running-without-a-local-grpc-extension).
-
-### 1. Bring in the UDB protos
 ```powershell
+# 1. Bring the UDB contract protos into proto/udb/** so your protos can import them
 ./scripts/export-protos.ps1
-```
-`udb proto export` writes the UDB annotation contract into `proto/udb/**` so your
-protos can `import "udb/core/common/v1/db.proto"`.
 
-### 2. Generate the PHP models + install the SDK
-```powershell
+# 2. Generate the PHP models (buf) and install the SDK (composer)
 ./scripts/generate.ps1
-```
-`buf generate --path proto/shop` emits PHP **only** for your protos
-(`gen/PhpQuickstart/Shop/V1/Customer.php`, `Order.php`). The UDB request/response
-classes (`Udb\Entity\V1\*`) ship inside the `fahara02/udb-laravel` SDK that
-`composer install` pulls in.
 
-### 3. Start the data backends
-```powershell
-docker compose up -d        # PostgreSQL (:55432) + Redis (:56379)
-```
-> Postgres is built from `Dockerfile.postgres` (stock `postgres:16-alpine` plus
-> `pg_partman`, which the broker's control-plane schemas need). The first
-> `up` compiles the extension once.
->
-> If port `55432` is taken (Windows reserves some high ports), pick another:
-> `$env:UDB_POSTGRES_PORT="15432"` before `docker compose up -d` **and** before
-> running the broker.
+# 3. Start the data backends: Postgres on :55432, Redis on :56379
+docker compose up -d
 
-### 4. Run the broker (keep this terminal open)
-```powershell
+# 4. Run the broker — keep this terminal open. It serves proto/shop and
+#    force-syncs the schema on boot, so shop.customers / shop.orders just appear.
 ./scripts/serve-broker.ps1
 ```
-It serves `proto/shop`, connects to the containers, and **force-syncs the schema
-on boot** — so `shop.customers` and `shop.orders` are created from your protos
-automatically. No manual migration step.
 
-You're ready. Open a second terminal for the examples and set the target once:
+Then, in a second terminal:
+
 ```powershell
 $env:UDB_TARGET = "127.0.0.1:50051"
+php 01_crud.php
+php 02_authz.php
+php 03_relations.php
 ```
 
----
+Each script prints its steps and ends with `CRUD OK` / `AUTHZ OK` / `RELATIONS OK`.
 
-## Example 1 — basic CRUD
+> **Port 55432 taken?** Windows reserves some high ports. Pick another with
+> `$env:UDB_POSTGRES_PORT = "15432"` **before** `docker compose up -d` *and*
+> before running the broker (the broker reads the same variable).
+>
+> The Postgres image (`Dockerfile.postgres`) is `postgres:16-alpine` plus
+> `pg_partman`, which the broker's control-plane schemas need. The first `up`
+> compiles that extension once.
 
-`customer.proto` declares one table. One message == one table; the
-fully-qualified name `shop.v1.Customer` is the key you pass on every call.
+## What each example teaches
+
+**1 — CRUD.** `customer.proto` declares one table. One message = one table, and
+its fully-qualified name (`shop.v1.Customer`) is the key you pass on every call.
+The broker turns these annotations:
 
 ```proto
 message Customer {
@@ -88,160 +74,89 @@ message Customer {
 }
 ```
 
-→ the broker creates exactly:
-```sql
-CREATE TABLE "shop"."customers" (
-  "customer_id"    UUID DEFAULT gen_random_uuid(),
-  "email"          VARCHAR(320) NOT NULL,
-  "full_name"      TEXT,
-  "loyalty_points" BIGINT DEFAULT 0 NOT NULL,
-  "created_at"     TIMESTAMPTZ DEFAULT now() NOT NULL,
-  CONSTRAINT "pk_customers" PRIMARY KEY ("customer_id")
-);
-```
+into a real `"shop"."customers"` table (UUID PK, unique email, a
+broker-managed `created_at`), then serves `$client->upsert()`,
+`->select()`, `->delete()` against it. Because the script owns the primary key
+and passes `conflict_fields: ['customer_id']`, the same call inserts or updates
+and re-runs are idempotent. (Upserting on a non-PK column needs a declared unique
+index.)
 
-Run it:
-```powershell
-php 01_crud.php
-```
-```
-created   affected_rows=1
-read      rows=1  {"created_at":"…","customer_id":"…","email":"ada@example.com","full_name":"Ada Lovelace","loyalty_points":100}
-updated   rows=1  {…,"full_name":"Augusta Ada King","loyalty_points":250}
-deleted   rows=0
+**2 — authorization.** Identical CRUD calls — the only thing that changes is the
+`scopes` in the request metadata. The broker enforces, on every call: a write
+(`Upsert`/`Delete`) needs `udb:write`, a read (`Select`) needs `udb:read`. Your
+code checks nothing; the broker returns gRPC `INVALID_ARGUMENT` with a clear
+message (`scope udb:write is required`) when a scope is missing. The script runs
+one allowed and one denied identity for each so you watch the guard work.
 
-CRUD OK
-```
+**3 — relations & queries.** `order.proto` adds an `orders` table that references
+a customer by id. The script creates one customer, places several orders, then
+runs a real query — `filter` (a `Struct` of column → value), `sort`
+(`new Sort(['field' => 'amount_cents', 'descending' => true])`), and `limit`. The
+response gives you both `getRecordsJson()` (raw JSON) and structured `getRows()`,
+whose `getFields()` map is keyed by column name. Deterministic ids make re-runs
+idempotent, so the output never changes.
 
-Key points:
-- The whole loop is `$client->upsert()`, `$client->select()`, `$client->delete()`.
-- We **own the primary key** (`customer_id`) and pass `conflict_fields: ["customer_id"]`, so the same call inserts or updates and re-runs are idempotent. Upserting on a non-PK column requires a declared unique index.
-- `record_json` is the row; columns with defaults (`created_at`) are filled by the database when omitted.
+## Configuration
 
----
+Every script and the broker read a small set of environment variables:
 
-## Example 2 — authorization (operation scopes)
+| Env var | What it is | Default |
+|---|---|---|
+| `UDB_TARGET` | broker (public) address the scripts dial | `127.0.0.1:50051` |
+| `UDB_POSTGRES_PORT` | host port for the Postgres container | `55432` |
+| `UDB_REDIS_PORT` | host port for the Redis container | `56379` |
+| `UDB_CLI` | path to a `udb` release binary (else the scripts build/find it) | auto |
 
-Same table, same operations — the only thing that changes is the **scopes** in
-the request metadata. The broker enforces, on every call:
+## Common mistakes this prevents
 
-- a write (`Upsert`/`Delete`) requires the **`udb:write`** scope,
-- a read (`Select`) requires the **`udb:read`** scope.
+- **Calling native services on the public port.** Example 2 shows the
+  authorization an app client uses on `:50051`: per-request **scopes**. The rest
+  of UDB's control plane — `AuthnService` (login, users, MFA), `AuthzService`
+  (roles, policies), `ApiKeyService`, plus Tenant/Notification/Analytics — is
+  deliberately bound to a separate internal listener (default `:50061`, the
+  public port + 10) behind a control-plane bearer. It's meant for a trusted
+  gateway, not arbitrary clients. Call those RPCs on `:50051` and you get
+  `Unimplemented`. Wiring that plane up (minting an admin bearer, seeding
+  policies) is beyond this quickstart — see
+  [`../../docs/native-services.md`](../../docs/native-services.md).
+- **Passing a bare request.** Every call needs `UdbMetadata` (tenant, user,
+  scopes, project). All three scripts use tenant code `quickstart` consistently,
+  so the broker resolves it to the same tenant every time — keep it consistent or
+  your rows land under a different tenant and reads come back empty.
+- **Forgetting the runtime extensions.** The SDK installs without them, but a
+  live run needs PHP's `grpc` + `protobuf` extensions.
 
-Your code does not check anything — the broker does, returning
-`INVALID_ARGUMENT` with a clear message when the scope is missing.
-
-```powershell
-php 02_authz.php
-```
-```
-read-only identity, Upsert:
-  denied as expected — gRPC 3: scope udb:write is required
-read-write identity, Upsert:
-  allowed — affected_rows=1
-read-only identity, Select:
-  allowed — rows=1
-write-only identity, Select:
-  denied as expected — gRPC 3: scope udb:read is required
-
-AUTHZ OK
-```
-
-In a real app the scopes come from your authenticated principal; here we just
-vary them to watch the broker allow and deny. See [Authorization & identity —
-the full picture](#authorization--identity--the-full-picture) for where policies
-and login fit in.
-
----
-
-## Example 3 — relationships & queries
-
-`order.proto` adds a second table that references a customer by id:
-
-```proto
-message Order {
-  option (udb.core.common.v1.table) = { table_name: "orders" schema_name: "shop" is_table: true };
-  string order_id     = 1 [(udb.core.common.v1.column) = { sql_type: "UUID" primary_key: true default_value: "gen_random_uuid()" }];
-  string customer_id  = 2 [(udb.core.common.v1.column) = { sql_type: "UUID" not_null: true }];
-  int64  amount_cents = 3 [(udb.core.common.v1.column) = { sql_type: "BIGINT" not_null: true default_value: "0" }];
-  string status       = 4 [(udb.core.common.v1.column) = { sql_type: "VARCHAR(32)" not_null: true default_value: "'pending'" }];
-}
-```
-
-The script creates one customer, places several orders for them, then runs a
-real query — filter by customer, sort by amount, limit the result:
-
-```powershell
-php 03_relations.php
-```
-```
-customer upserted: 0a0a0a0a-0000-4000-8000-000000000001
-orders upserted: 4
-top 3 orders for customer (amount desc):
-  order=…0002  amount_cents=4999  status=paid
-  order=…0003  amount_cents=2500  status=paid
-  order=…0001  amount_cents=1299  status=paid
-
-RELATIONS OK
-```
-
-Re-running the script is safe — it upserts the same rows (deterministic ids), so
-the output never changes.
-
-Key points:
-- A `SelectRequest` can carry a `filter` (Struct of column → value), `sort`
-  (`[new Sort(['field' => …, 'descending' => true])]`), and `limit`.
-- The response gives you both `recordsJson` (raw JSON strings) and structured
-  `rows` whose `getFields()` map is keyed by column name.
-
----
-
-## Authorization & identity — the full picture
-
-Example 2 shows the part of authorization an **application client** uses on the
-public port: the broker checks the request's **scopes** on every data call.
-
-Two further pieces live in UDB's **native control plane** — `AuthnService`
-(login, users, sessions, MFA…), `AuthzService` (roles, policies, decisions),
-`ApiKeyService`, plus Tenant/Notification/Analytics. These are **deliberately
-bound to a separate internal listener** (default `127.0.0.1:<public_port+10>`,
-i.e. `:50061`) behind a control-plane bearer, *not* the public DataBroker port —
-they are meant for a trusted PEP/gateway, not arbitrary clients. Calling them on
-`:50051` returns `Unimplemented`.
-
-The maintained native-service overview is in
-[`../../docs/native-services.md`](../../docs/native-services.md). Wiring up
-that control plane (minting an admin bearer, seeding policies) is an advanced
-topic beyond this quickstart.
-
----
-
-## Regenerating / cleaning up
+## Regenerating & cleaning up
 
 Everything under `proto/udb/`, `third_party/`, `gen/`, and `vendor/` is generated
 and git-ignored. Rebuild from scratch:
+
 ```powershell
 ./scripts/export-protos.ps1   # proto/udb/** + third_party/
 ./scripts/generate.ps1        # gen/** + vendor/
 ```
+
 Stop the stack with `docker compose down` (add `-v` to wipe the database).
 
-## Running without a local gRPC extension
+## No local gRPC extension
 
-Run a script in a container that has the extension:
+Run a script inside a container that already has the extensions:
+
 ```powershell
 docker run --rm -it -v "${PWD}:/app" -w /app --network host php:8.3-cli bash -lc `
   "pecl install grpc protobuf >/dev/null && docker-php-ext-enable grpc protobuf && php 01_crud.php"
 ```
 
-## Verifying the broker yourself
+## Verify the broker yourself
 
 `.probe-unimplemented.sh` calls every RPC over gRPC reflection and prints which
 are reachable on the public port:
+
 ```powershell
 bash .probe-unimplemented.sh 127.0.0.1:50051 | sort
 ```
 
 ## Where to go next
-- `examples/php_arbitary_project` — vectors, object storage, caching, batch RPCs, richer schema.
+
+- `examples/php_arbitary_project` — vectors, object storage, caching, batch RPCs, a richer schema.
 - `udb sdk generate --lang php` — regenerate the SDK itself from the proto descriptor set.

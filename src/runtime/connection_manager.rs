@@ -1582,6 +1582,16 @@ mod tests {
             "src/runtime/service/metering_service/",
             "src/runtime/service/embedding_service/",
             "src/runtime/service/cache_service/",
+            // Depth lane 16: Analytics/Scheduler/Search/Lock/Workflow each resolve
+            // their leader-worker + quota knobs ONCE via OnceLock (rollup window,
+            // per-tenant job budget, freshness/reindex/expiry cadences, step
+            // timeout) — read at startup/worker-spawn, never on a per-request path;
+            // same native-service startup-config category as the services above.
+            "src/runtime/service/analytics_service/",
+            "src/runtime/service/scheduler_service/",
+            "src/runtime/service/search_service/",
+            "src/runtime/service/lock_service/",
+            "src/runtime/service/workflow_service/",
         ];
         let mut stack = vec![runtime_dir];
         let mut violations = Vec::new();

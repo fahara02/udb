@@ -3,10 +3,10 @@
 //
 // UDB C# SDK — generated robustness/forwarding layer.
 //   Language:         csharp
-//   UDB version:      0.4.0
+//   UDB version:      0.4.13
 //   Protocol version: 1.0.0
 //   Services:         28
-//   RPCs:             344
+//   RPCs:             353
 //
 // This file is RENDERED by `udb sdk generate` from
 //   sdk-templates/csharp/Udb.Client/GeneratedClient.cs.tmpl
@@ -239,6 +239,8 @@ public static class GeneratedRpcIdentities
         map["/udb.core.idp.services.v1.IdentityProviderService/UpdateProvider"] = new RpcIdentity("/udb.core.idp.services.v1.IdentityProviderService/UpdateProvider", "IdentityProviderService", "UpdateProvider", "update_provider", "updateProvider", "mutation", "patch", "/v1/idp/providers/{provider_id}");
         map["/udb.core.livequery.services.v1.LiveQueryService/Subscribe"] = new RpcIdentity("/udb.core.livequery.services.v1.LiveQueryService/Subscribe", "LiveQueryService", "Subscribe", "subscribe", "liveQuerySubscribe", "read_only", "post", "/v1/livequery:subscribe");
         map["/udb.core.lock.services.v1.LockService/AcquireLock"] = new RpcIdentity("/udb.core.lock.services.v1.LockService/AcquireLock", "LockService", "AcquireLock", "acquire_lock", "acquireLock", "mutation", "post", "/v1/locks:acquire");
+        map["/udb.core.lock.services.v1.LockService/GetLock"] = new RpcIdentity("/udb.core.lock.services.v1.LockService/GetLock", "LockService", "GetLock", "get_lock", "getLock", "read_only", "get", "/v1/locks/{lock_name}");
+        map["/udb.core.lock.services.v1.LockService/ListLocks"] = new RpcIdentity("/udb.core.lock.services.v1.LockService/ListLocks", "LockService", "ListLocks", "list_locks", "listLocks", "read_only", "get", "/v1/locks");
         map["/udb.core.lock.services.v1.LockService/ReleaseLock"] = new RpcIdentity("/udb.core.lock.services.v1.LockService/ReleaseLock", "LockService", "ReleaseLock", "release_lock", "releaseLock", "mutation", "post", "/v1/locks:release");
         map["/udb.core.lock.services.v1.LockService/RenewLock"] = new RpcIdentity("/udb.core.lock.services.v1.LockService/RenewLock", "LockService", "RenewLock", "renew_lock", "renewLock", "mutation", "post", "/v1/locks:renew");
         map["/udb.core.metering.services.v1.MeteringService/CheckQuota"] = new RpcIdentity("/udb.core.metering.services.v1.MeteringService/CheckQuota", "MeteringService", "CheckQuota", "check_quota", "checkQuota", "read_only", "post", "/v1/metering/quotas:check");
@@ -277,6 +279,7 @@ public static class GeneratedRpcIdentities
         map["/udb.core.storage.services.v1.StorageService/GetFile"] = new RpcIdentity("/udb.core.storage.services.v1.StorageService/GetFile", "StorageService", "GetFile", "get_file", "getFile", "read_only", "get", "/v1/storage/files/{file_id}");
         map["/udb.core.storage.services.v1.StorageService/ListFiles"] = new RpcIdentity("/udb.core.storage.services.v1.StorageService/ListFiles", "StorageService", "ListFiles", "list_files", "listFiles", "read_only", "get", "/v1/storage/files");
         map["/udb.core.storage.services.v1.StorageService/RegisterUpload"] = new RpcIdentity("/udb.core.storage.services.v1.StorageService/RegisterUpload", "StorageService", "RegisterUpload", "register_upload", "registerUpload", "mutation", "post", "/v1/storage/uploads");
+        map["/udb.core.storage.services.v1.StorageService/ReissueUploadUrl"] = new RpcIdentity("/udb.core.storage.services.v1.StorageService/ReissueUploadUrl", "StorageService", "ReissueUploadUrl", "reissue_upload_url", "reissueUploadUrl", "read_only", "get", "/v1/storage/files/{file_id}:reissueUploadUrl");
         map["/udb.core.storage.services.v1.StorageService/UpdateFile"] = new RpcIdentity("/udb.core.storage.services.v1.StorageService/UpdateFile", "StorageService", "UpdateFile", "update_file", "updateFile", "mutation", "patch", "/v1/storage/files/{file_id}");
         map["/udb.core.tenant.services.v1.TenantService/CreateTenant"] = new RpcIdentity("/udb.core.tenant.services.v1.TenantService/CreateTenant", "TenantService", "CreateTenant", "create_tenant", "createTenant", "mutation", "post", "/v1/tenants");
         map["/udb.core.tenant.services.v1.TenantService/GetTenant"] = new RpcIdentity("/udb.core.tenant.services.v1.TenantService/GetTenant", "TenantService", "GetTenant", "get_tenant", "getTenant", "read_only", "get", "/v1/tenants/{tenant_id}");
@@ -285,19 +288,25 @@ public static class GeneratedRpcIdentities
         map["/udb.core.tenant.services.v1.TenantService/PurgeTenant"] = new RpcIdentity("/udb.core.tenant.services.v1.TenantService/PurgeTenant", "TenantService", "PurgeTenant", "purge_tenant", "purgeTenant", "destructive", "post", "/v1/tenants/{tenant_id}:purge");
         map["/udb.core.tenant.services.v1.TenantService/UpdateTenant"] = new RpcIdentity("/udb.core.tenant.services.v1.TenantService/UpdateTenant", "TenantService", "UpdateTenant", "update_tenant", "updateTenant", "mutation", "patch", "/v1/tenants/{tenant_id}");
         map["/udb.core.tenant.services.v1.TenantService/UpdateTenantConfig"] = new RpcIdentity("/udb.core.tenant.services.v1.TenantService/UpdateTenantConfig", "TenantService", "UpdateTenantConfig", "update_tenant_config", "updateTenantConfig", "mutation", "put", "/v1/tenants/{tenant_id}/config");
+        map["/udb.core.vault.services.v1.VaultService/BatchDecrypt"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/BatchDecrypt", "VaultService", "BatchDecrypt", "batch_decrypt", "vaultBatchDecrypt", "mutation", "post", "/v1/vault/transit:batchDecrypt");
+        map["/udb.core.vault.services.v1.VaultService/BatchEncrypt"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/BatchEncrypt", "VaultService", "BatchEncrypt", "batch_encrypt", "vaultBatchEncrypt", "mutation", "post", "/v1/vault/transit:batchEncrypt");
         map["/udb.core.vault.services.v1.VaultService/CreateTransitKey"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/CreateTransitKey", "VaultService", "CreateTransitKey", "create_transit_key", "createTransitKey", "mutation", "post", "/v1/vault/transit/keys");
         map["/udb.core.vault.services.v1.VaultService/Decrypt"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/Decrypt", "VaultService", "Decrypt", "decrypt", "vaultDecrypt", "read_only", "post", "/v1/vault/transit:decrypt");
         map["/udb.core.vault.services.v1.VaultService/DeleteSecret"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/DeleteSecret", "VaultService", "DeleteSecret", "delete_secret", "deleteSecret", "mutation", "post", "/v1/vault/secrets:delete");
         map["/udb.core.vault.services.v1.VaultService/DestroySecret"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/DestroySecret", "VaultService", "DestroySecret", "destroy_secret", "destroySecret", "destructive", "post", "/v1/vault/secrets:destroy");
         map["/udb.core.vault.services.v1.VaultService/Encrypt"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/Encrypt", "VaultService", "Encrypt", "encrypt", "vaultEncrypt", "mutation", "post", "/v1/vault/transit:encrypt");
+        map["/udb.core.vault.services.v1.VaultService/GenerateDataKey"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/GenerateDataKey", "VaultService", "GenerateDataKey", "generate_data_key", "vaultGenerateDataKey", "mutation", "post", "/v1/vault/transit:generateDataKey");
         map["/udb.core.vault.services.v1.VaultService/GenerateDatabaseCredentials"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/GenerateDatabaseCredentials", "VaultService", "GenerateDatabaseCredentials", "generate_database_credentials", "generateDatabaseCredentials", "mutation", "post", "/v1/vault/database/credentials");
         map["/udb.core.vault.services.v1.VaultService/GetSecret"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/GetSecret", "VaultService", "GetSecret", "get_secret", "getSecret", "read_only", "get", "/v1/vault/secrets/{secret_path=**}");
+        map["/udb.core.vault.services.v1.VaultService/GetTransitPublicKey"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/GetTransitPublicKey", "VaultService", "GetTransitPublicKey", "get_transit_public_key", "vaultGetTransitPublicKey", "read_only", "post", "/v1/vault/transit:publicKey");
         map["/udb.core.vault.services.v1.VaultService/Hmac"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/Hmac", "VaultService", "Hmac", "hmac", "vaultHmac", "mutation", "post", "/v1/vault/transit:hmac");
         map["/udb.core.vault.services.v1.VaultService/ListSecrets"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/ListSecrets", "VaultService", "ListSecrets", "list_secrets", "listSecrets", "read_only", "get", "/v1/vault/secrets");
         map["/udb.core.vault.services.v1.VaultService/PutSecret"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/PutSecret", "VaultService", "PutSecret", "put_secret", "putSecret", "mutation", "post", "/v1/vault/secrets:put");
+        map["/udb.core.vault.services.v1.VaultService/Rewrap"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/Rewrap", "VaultService", "Rewrap", "rewrap", "vaultRewrap", "mutation", "post", "/v1/vault/transit:rewrap");
         map["/udb.core.vault.services.v1.VaultService/RotateTransitKey"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/RotateTransitKey", "VaultService", "RotateTransitKey", "rotate_transit_key", "rotateTransitKey", "mutation", "post", "/v1/vault/transit/keys:rotate");
         map["/udb.core.vault.services.v1.VaultService/SealStatus"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/SealStatus", "VaultService", "SealStatus", "seal_status", "vaultSealStatus", "read_only", "get", "/v1/vault/seal-status");
         map["/udb.core.vault.services.v1.VaultService/Sign"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/Sign", "VaultService", "Sign", "sign", "vaultSign", "mutation", "post", "/v1/vault/transit:sign");
+        map["/udb.core.vault.services.v1.VaultService/UndeleteSecret"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/UndeleteSecret", "VaultService", "UndeleteSecret", "undelete_secret", "undeleteSecret", "mutation", "post", "/v1/vault/secrets:undelete");
         map["/udb.core.vault.services.v1.VaultService/Verify"] = new RpcIdentity("/udb.core.vault.services.v1.VaultService/Verify", "VaultService", "Verify", "verify", "vaultVerify", "read_only", "post", "/v1/vault/transit:verify");
         map["/udb.core.webhook.services.v1.WebhookService/CreateEndpoint"] = new RpcIdentity("/udb.core.webhook.services.v1.WebhookService/CreateEndpoint", "WebhookService", "CreateEndpoint", "create_endpoint", "createWebhookEndpoint", "mutation", "post", "/v1/webhook/endpoints");
         map["/udb.core.webhook.services.v1.WebhookService/DeleteEndpoint"] = new RpcIdentity("/udb.core.webhook.services.v1.WebhookService/DeleteEndpoint", "WebhookService", "DeleteEndpoint", "delete_endpoint", "deleteWebhookEndpoint", "destructive", "delete", "/v1/webhook/endpoints/{endpoint_id}");
@@ -743,7 +752,7 @@ public sealed partial class GeneratedLiveQueryServiceClient : GeneratedServiceBa
 }
 /// <summary>
 /// Robustness wrapper for the <c>udb.core.lock.services.v1.LockService</c> service
-/// (3 RPCs). Forwards to the buf-generated
+/// (5 RPCs). Forwards to the buf-generated
 /// <c>LockServiceClient</c> stub.
 /// </summary>
 public sealed partial class GeneratedLockServiceClient : GeneratedServiceBase
@@ -878,7 +887,7 @@ public sealed partial class GeneratedSearchServiceClient : GeneratedServiceBase
 }
 /// <summary>
 /// Robustness wrapper for the <c>udb.core.storage.services.v1.StorageService</c> service
-/// (8 RPCs). Forwards to the buf-generated
+/// (9 RPCs). Forwards to the buf-generated
 /// <c>StorageServiceClient</c> stub.
 /// </summary>
 public sealed partial class GeneratedStorageServiceClient : GeneratedServiceBase
@@ -932,7 +941,7 @@ public sealed partial class GeneratedTenantServiceClient : GeneratedServiceBase
 }
 /// <summary>
 /// Robustness wrapper for the <c>udb.core.vault.services.v1.VaultService</c> service
-/// (14 RPCs). Forwards to the buf-generated
+/// (20 RPCs). Forwards to the buf-generated
 /// <c>VaultServiceClient</c> stub.
 /// </summary>
 public sealed partial class GeneratedVaultServiceClient : GeneratedServiceBase
@@ -5157,6 +5166,52 @@ public sealed partial class GeneratedLockServiceClient
 public sealed partial class GeneratedLockServiceClient
 {
     /// <summary>
+    /// <c>get_lock</c> (unary) — forwards to <c>LockServiceClient.GetLockAsync</c>.
+    /// gRPC path: <c>/udb.core.lock.services.v1.LockService/GetLock</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> GetLockAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.GetLockAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.lock.services.v1.LockService/GetLock",
+            co => (object)_stub.GetLockAsync(request, co),
+            deadline,
+            cancellationToken,
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedLockServiceClient
+{
+    /// <summary>
+    /// <c>list_locks</c> (unary) — forwards to <c>LockServiceClient.ListLocksAsync</c>.
+    /// gRPC path: <c>/udb.core.lock.services.v1.LockService/ListLocks</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> ListLocksAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.ListLocksAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.lock.services.v1.LockService/ListLocks",
+            co => (object)_stub.ListLocksAsync(request, co),
+            deadline,
+            cancellationToken,
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedLockServiceClient
+{
+    /// <summary>
     /// <c>release_lock</c> (unary) — forwards to <c>LockServiceClient.ReleaseLockAsync</c>.
     /// gRPC path: <c>/udb.core.lock.services.v1.LockService/ReleaseLock</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
@@ -6008,6 +6063,29 @@ public sealed partial class GeneratedStorageServiceClient
 public sealed partial class GeneratedStorageServiceClient
 {
     /// <summary>
+    /// <c>reissue_upload_url</c> (unary) — forwards to <c>StorageServiceClient.ReissueUploadUrlAsync</c>.
+    /// gRPC path: <c>/udb.core.storage.services.v1.StorageService/ReissueUploadUrl</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> ReissueUploadUrlAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.ReissueUploadUrlAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.storage.services.v1.StorageService/ReissueUploadUrl",
+            co => (object)_stub.ReissueUploadUrlAsync(request, co),
+            deadline,
+            cancellationToken,
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedStorageServiceClient
+{
+    /// <summary>
     /// <c>update_file</c> (unary) — forwards to <c>StorageServiceClient.UpdateFileAsync</c>.
     /// gRPC path: <c>/udb.core.storage.services.v1.StorageService/UpdateFile</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
@@ -6192,6 +6270,52 @@ public sealed partial class GeneratedTenantServiceClient
 public sealed partial class GeneratedVaultServiceClient
 {
     /// <summary>
+    /// <c>batch_decrypt</c> (unary) — forwards to <c>VaultServiceClient.BatchDecryptAsync</c>.
+    /// gRPC path: <c>/udb.core.vault.services.v1.VaultService/BatchDecrypt</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> BatchDecryptAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.BatchDecryptAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.vault.services.v1.VaultService/BatchDecrypt",
+            co => (object)_stub.BatchDecryptAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedVaultServiceClient
+{
+    /// <summary>
+    /// <c>batch_encrypt</c> (unary) — forwards to <c>VaultServiceClient.BatchEncryptAsync</c>.
+    /// gRPC path: <c>/udb.core.vault.services.v1.VaultService/BatchEncrypt</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> BatchEncryptAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.BatchEncryptAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.vault.services.v1.VaultService/BatchEncrypt",
+            co => (object)_stub.BatchEncryptAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedVaultServiceClient
+{
+    /// <summary>
     /// <c>create_transit_key</c> (unary) — forwards to <c>VaultServiceClient.CreateTransitKeyAsync</c>.
     /// gRPC path: <c>/udb.core.vault.services.v1.VaultService/CreateTransitKey</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
@@ -6307,6 +6431,29 @@ public sealed partial class GeneratedVaultServiceClient
 public sealed partial class GeneratedVaultServiceClient
 {
     /// <summary>
+    /// <c>generate_data_key</c> (unary) — forwards to <c>VaultServiceClient.GenerateDataKeyAsync</c>.
+    /// gRPC path: <c>/udb.core.vault.services.v1.VaultService/GenerateDataKey</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> GenerateDataKeyAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.GenerateDataKeyAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.vault.services.v1.VaultService/GenerateDataKey",
+            co => (object)_stub.GenerateDataKeyAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedVaultServiceClient
+{
+    /// <summary>
     /// <c>generate_database_credentials</c> (unary) — forwards to <c>VaultServiceClient.GenerateDatabaseCredentialsAsync</c>.
     /// gRPC path: <c>/udb.core.vault.services.v1.VaultService/GenerateDatabaseCredentials</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
@@ -6343,6 +6490,29 @@ public sealed partial class GeneratedVaultServiceClient
         return InvokeUnaryAsync(
             "/udb.core.vault.services.v1.VaultService/GetSecret",
             co => (object)_stub.GetSecretAsync(request, co),
+            deadline,
+            cancellationToken,
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedVaultServiceClient
+{
+    /// <summary>
+    /// <c>get_transit_public_key</c> (unary) — forwards to <c>VaultServiceClient.GetTransitPublicKeyAsync</c>.
+    /// gRPC path: <c>/udb.core.vault.services.v1.VaultService/GetTransitPublicKey</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> GetTransitPublicKeyAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.GetTransitPublicKeyAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.vault.services.v1.VaultService/GetTransitPublicKey",
+            co => (object)_stub.GetTransitPublicKeyAsync(request, co),
             deadline,
             cancellationToken,
             "read_only" == "read_only",
@@ -6422,6 +6592,29 @@ public sealed partial class GeneratedVaultServiceClient
 public sealed partial class GeneratedVaultServiceClient
 {
     /// <summary>
+    /// <c>rewrap</c> (unary) — forwards to <c>VaultServiceClient.RewrapAsync</c>.
+    /// gRPC path: <c>/udb.core.vault.services.v1.VaultService/Rewrap</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> RewrapAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.RewrapAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.vault.services.v1.VaultService/Rewrap",
+            co => (object)_stub.RewrapAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedVaultServiceClient
+{
+    /// <summary>
     /// <c>rotate_transit_key</c> (unary) — forwards to <c>VaultServiceClient.RotateTransitKeyAsync</c>.
     /// gRPC path: <c>/udb.core.vault.services.v1.VaultService/RotateTransitKey</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
@@ -6481,6 +6674,29 @@ public sealed partial class GeneratedVaultServiceClient
         return InvokeUnaryAsync(
             "/udb.core.vault.services.v1.VaultService/Sign",
             co => (object)_stub.SignAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedVaultServiceClient
+{
+    /// <summary>
+    /// <c>undelete_secret</c> (unary) — forwards to <c>VaultServiceClient.UndeleteSecretAsync</c>.
+    /// gRPC path: <c>/udb.core.vault.services.v1.VaultService/UndeleteSecret</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> UndeleteSecretAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.UndeleteSecretAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.vault.services.v1.VaultService/UndeleteSecret",
+            co => (object)_stub.UndeleteSecretAsync(request, co),
             deadline,
             cancellationToken,
             "mutation" == "read_only",

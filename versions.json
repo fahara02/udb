@@ -3,43 +3,43 @@
   "protocol": "1.0.0",
   "components": {
     "udb": {
-      "version": "0.4.0",
+      "version": "0.4.13",
       "manifest": "Cargo.toml",
       "tag": "v{version}",
       "publishes": ["crates.io", "release binaries", "ghcr docker image"]
     },
     "sdk-go": {
-      "version": "0.4.0",
+      "version": "0.4.13",
       "manifest": "(git tag only — Go module)",
       "tag": "sdk/go/v{version}",
       "publishes": ["Go module proxy"]
     },
     "sdk-python": {
-      "version": "0.4.0",
+      "version": "0.4.13",
       "manifest": "sdk/python/pyproject.toml",
       "tag": "v{version}",
       "publishes": ["PyPI (udb-client)"]
     },
     "sdk-typescript": {
-      "version": "0.4.0",
+      "version": "0.4.13",
       "manifest": "sdk/typescript/package.json",
       "tag": "v{version}",
       "publishes": ["npm (@udb_plus/sdk)"]
     },
     "sdk-csharp": {
-      "version": "0.4.0",
+      "version": "0.4.13",
       "manifest": "sdk/csharp/Udb.Client/Udb.Client.csproj",
       "tag": "v{version}",
       "publishes": ["NuGet (Udb.Client)"]
     },
     "sdk-java": {
-      "version": "0.4.0",
+      "version": "0.4.13",
       "manifest": "sdk/java/pom.xml",
       "tag": "v{version}",
       "publishes": ["Maven Central (dev.udb:udb-java-client)"]
     },
     "sdk-php": {
-      "version": "0.4.0",
+      "version": "0.4.13",
       "manifest": "(git tag only — Composer/VCS)",
       "tag": "v{version}",
       "publishes": ["Packagist (fahara02/udb-laravel)"]

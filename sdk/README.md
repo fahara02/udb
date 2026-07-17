@@ -12,7 +12,7 @@
 │    UNIVERSAL DATA BROKER                                                   │
 │    gRPC data plane | native control plane | tenant/project scope guard     │
 │                                                                            │
-│    crate v0.4.0 | protocol v1.0.0                                          │
+│    crate v0.4.13 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -20,41 +20,46 @@ UDB SDKs are language clients for a running UDB broker. They attach request
 metadata, expose common DataBroker helpers, provide native auth/authz clients,
 and include a version-matched `udb` CLI launcher.
 
-Current SDK release: `0.4.0`
+Current SDK release: `0.4.13`
 
 Current wire protocol: [`1.0.0`](UDB_PROTOCOL_VERSION)
 
-## 0.3.7 SDK Focus
+## How You Actually Use It
 
-The 0.3.7 SDK cut keeps the workflow-oriented simple-client facade aligned with
-the descriptor-derived native/data-plane surface (344 generated RPCs). Application code uses one
-`connect` + `loginAndAdoptTenant`, then `storage.uploadFile` /
-`downloadFileBytes`, `data.table(name).select({ where })`,
-`authz.allowRole(role, { resource, action })`, and `metadata.afterWrite(receipt)`
-for read-after-write — with replay-safe typed retries and automatic idempotency
-keys. The raw generated RPC clients stay available for admin tools and advanced
-callers; the simple layer is a thin typed workflow over the same served RPCs, not
-a second protocol.
+Every SDK gives you a small, high-level layer over the generated RPCs so normal
+application code stays short — without hiding the rules that keep multi-tenant
+data correct:
 
-The CI story has two layers:
+- **One connect + login that adopts your tenant.** You log in with a username and
+  password (or an API key) and name your tenant by its human *code*; the SDK
+  resolves that code to the canonical tenant UUID that row-level security actually
+  checks. This is the step that prevents the most common first-integration bug —
+  passing a tenant code where a UUID is expected and silently reading zero rows.
+- **Typed, tenant-scoped data calls.** Read and write your own proto-defined
+  records (`select`, `upsert`, `delete`), with read-after-write, replay-safe
+  retries, and automatic idempotency keys handled for you.
+- **The native control plane, same client.** Authorization checks, API keys,
+  storage, vault, and the other native services are one call away.
+- **Raw generated RPCs stay available.** The high-level layer is a thin typed
+  workflow over the same served RPCs — not a second protocol — so admin tools and
+  advanced callers can drop down to the full generated surface any time.
 
-- static cross-language conformance for all six SDKs through
-  `node sdk-conformance/run.mjs typescript python go csharp java php`;
-- deep live broker coverage for the Go, TypeScript, Python, and PHP harnesses,
-  including DataBroker RPCs, native auth, tenant/authz/API key flows,
-  notification/analytics/storage/asset/WebRTC facades, and backend capability
-  checks. Their manifest gates now compare against the current generated RPC
-  surface instead of a hand-maintained fixed row count.
+Behavior is identical across languages, and that's enforced: static
+cross-language conformance covers all six SDKs (`node sdk-conformance/run.mjs`),
+and live broker coverage exercises the Go, TypeScript, Python, and PHP harnesses
+against a real server — DataBroker RPCs, native auth, tenant/authz/API-key flows,
+and the storage/asset/notification/WebRTC facades — with every RPC measured, so
+the gates track the current generated surface instead of a hand-maintained count.
 
 ## Install
 
 | Language | Package | Install |
 |---|---|---|
-| Go | `github.com/fahara02/udb/sdk/go` | `go get github.com/fahara02/udb/sdk/go@v0.4.0` |
-| Python | `udb-client` | `pip install udb-client==0.4.0` |
-| TypeScript / Node | `@udb_plus/sdk` | `npm i @udb_plus/sdk@0.4.0` |
-| PHP / Laravel | `fahara02/udb-laravel` | `composer require fahara02/udb-laravel:^0.4.0` |
-| C# | `Udb.Client` | `dotnet add package Udb.Client --version 0.4.0` |
+| Go | `github.com/fahara02/udb/sdk/go` | `go get github.com/fahara02/udb/sdk/go@v0.4.13` |
+| Python | `udb-client` | `pip install udb-client==0.4.13` |
+| TypeScript / Node | `@udb_plus/sdk` | `npm i @udb_plus/sdk@0.4.13` |
+| PHP / Laravel | `fahara02/udb-laravel` | `composer require fahara02/udb-laravel:^0.4.13` |
+| C# | `Udb.Client` | `dotnet add package Udb.Client --version 0.4.13` |
 | Java | `dev.udb:udb-java-client` | build from checkout until Maven Central publishing lands |
 
 ## What Every SDK Provides
@@ -156,7 +161,7 @@ udb sdk generate --lang all
 
 Generated code should stay tied to:
 
-- crate/package version `0.4.0`;
+- crate/package version `0.4.13`;
 - protocol version `1.0.0`;
 - descriptor-derived RPC and service metadata;
 - the shared metadata contract used by every SDK.
@@ -178,7 +183,7 @@ Release flow:
 Consumer install command:
 
 ```bash
-composer require fahara02/udb-laravel:^0.4.0
+composer require fahara02/udb-laravel:^0.4.13
 ```
 
 The monorepo remains the source of truth for generated PHP code, tests, and

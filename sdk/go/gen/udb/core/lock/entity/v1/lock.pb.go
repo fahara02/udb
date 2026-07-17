@@ -49,7 +49,8 @@ type Lock struct {
 	// high-water mark (the same monotone counter write receipts advance).
 	FencingToken    int64 `protobuf:"varint,5,opt,name=fencing_token,json=fencingToken,proto3" json:"fencing_token,omitempty"`
 	LeaseTtlSeconds int32 `protobuf:"varint,6,opt,name=lease_ttl_seconds,json=leaseTtlSeconds,proto3" json:"lease_ttl_seconds,omitempty"`
-	// HELD | RELEASED — operational state for quota counting and audit.
+	// HELD | RELEASED | EXPIRED — operational state for quota counting and audit
+	// (EXPIRED is stamped by the leader-elected expiry reaper, ch16 16.5.1).
 	Status        string                 `protobuf:"bytes,7,opt,name=status,proto3" json:"status,omitempty"`
 	AcquiredAt    *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=acquired_at,json=acquiredAt,proto3" json:"acquired_at,omitempty"`
 	ExpiresAt     *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`

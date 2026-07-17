@@ -201,6 +201,80 @@ service LockService {
       body: "*"
     };
   }
+
+  // Fetch a single lock by name within the caller's tenant. Read-only; an absent
+  // lock returns found=false (not an error) — a tenant-scoped read miss is normal.
+  rpc GetLock(GetLockRequest) returns (GetLockResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:lock:get-lock"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "lock.GetLock"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "get_lock" rest_operation_id: "getLock"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "lock"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "lock"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/locks/{lock_name}"};
+  }
+
+  // List the caller tenant's locks, optionally narrowed by status. Paginated
+  // (page_size + opaque page_token). Read-only.
+  rpc ListLocks(ListLocksRequest) returns (ListLocksResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:lock:list-locks"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "lock.ListLocks"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "list_locks" rest_operation_id: "listLocks"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "lock"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "lock"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/locks"};
+  }
 }
 
 message AcquireLockRequest {
@@ -305,4 +379,98 @@ message ReleaseLockResponse {
   string message = 2;
   // Error information if operation failed
   udb.core.common.v1.ApiError error = 3;
+}
+
+message GetLockRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "lock"
+    generate_minimal_example: true
+  };
+  // Verified against the bearer/claim tenant; cross-tenant values are rejected.
+  string tenant_id = 1;
+  string lock_name = 2;
+}
+
+message GetLockResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "lock"
+    generate_minimal_example: true
+  };
+  // Populated only when found=true.
+  Lock lock = 1;
+  bool found = 2;
+  string message = 3;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 4;
+}
+
+message ListLocksRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "lock"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  // Optional exact status filter (e.g. HELD, RELEASED, EXPIRED); empty = all.
+  string status_filter = 2;
+  int32 page_size = 3;
+  // Opaque pagination token returned by ListLocksResponse.next_page_token.
+  string page_token = 4;
+}
+
+message ListLocksResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "lock"
+    generate_minimal_example: true
+  };
+  repeated Lock locks = 1;
+  // Empty when the last page has been returned.
+  string next_page_token = 2;
+  string message = 3;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 4;
+}
+
+// Read-only projection of a durable `udb_lock.locks` row for GetLock/ListLocks.
+// Timestamps are unix seconds (SDK-friendly, no well-known-type import in the
+// services surface). metadata_json is the declared non-secret holder metadata.
+message Lock {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "lock"
+    generate_minimal_example: true
+  };
+  string lock_id = 1;
+  string tenant_id = 2;
+  string lock_name = 3;
+  string owner_id = 4;
+  int64 fencing_token = 5;
+  int32 lease_ttl_seconds = 6;
+  string status = 7;
+  int64 acquired_at_unix = 8;
+  int64 expires_at_unix = 9;
+  string metadata_json = 10;
 }

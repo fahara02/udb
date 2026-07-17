@@ -89,7 +89,7 @@ func TestLivePerfExplicitBodyCoverage(t *testing.T) {
 		"unpublish_track_id": "unpublish-track-1", "update_draft_id": "update-draft-1", "update_key_id": "update-key-1", "username": "perf-u",
 		"vault_ciphertext": "vault-ciphertext-1", "vault_db_role": "readonly", "vault_delete_secret_path": "secret/delete",
 		"vault_create_key_name": "transit-create-key", "vault_destroy_secret_path": "secret/destroy", "vault_key_name": "transit-key", "vault_put_secret_path": "secret/put", "vault_secret_path": "secret/path",
-		"vault_signature": "vault-signature-1", "workflow_id": "workflow-1",
+		"vault_signature": "vault-signature-1", "vault_signing_key_name": "transit-signing-key", "reissue_file_id": "reissue-file-1", "workflow_id": "workflow-1",
 	} {
 		fix.set(k, v)
 	}

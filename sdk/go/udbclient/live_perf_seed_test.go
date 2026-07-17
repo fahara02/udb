@@ -767,6 +767,14 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 
 	// ── BackupService: policy + backup id for read/restore fixtures ─────────────
 	backup := backuppb.NewBackupServiceClient(authConn)
+	// StartTenantBackup exports to the broker's object_bucket (UDB_OBJECT_BUCKET,
+	// default "udb-storage"). That bucket is otherwise first created by the storage
+	// section further below, so ensure it here — before the backup runs — or the
+	// export fails "S3 put_object failed" and backup_id/restore fixtures go empty.
+	backupBucket := liveEnv("UDB_OBJECT_BUCKET", "udb-storage")
+	if _, err := broker.EnsureResource(brokerCtx, &entityv1.ResourceAdminRequest{Context: rc, Backend: "minio", ResourceName: backupBucket, SpecJson: `{}`}); err != nil {
+		t.Logf("perf seed: EnsureResource for backup bucket %q failed: %v", backupBucket, err)
+	}
 	if _, err := backup.PutBackupPolicy(nctx, &backuppb.PutBackupPolicyRequest{
 		TenantId: tenant, PolicyName: "sdk-perf-default", ScheduleCron: "0 3 * * *",
 		RetentionDays: 7, MaxRetainedBackups: 3, Enabled: true, MetadataJson: "{}",
@@ -822,6 +830,16 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 		TenantId: tenant, KeyName: vaultKey, Algorithm: "aes256-gcm-siv",
 	}); err != nil {
 		t.Logf("perf seed: CreateTransitKey failed: %v", err)
+	}
+	// A dedicated ed25519 SIGNING key so GetTransitPublicKey exports a real public
+	// key — the aes256-gcm-siv key above has no exportable public half, so the
+	// GetTransitPublicKey read fixture needs its own asymmetric key.
+	signingKey := "sdk-perf-signing-key-" + suffix
+	fix.set("vault_signing_key_name", signingKey)
+	if _, err := vault.CreateTransitKey(nctx, &vaultpb.CreateTransitKeyRequest{
+		TenantId: tenant, KeyName: signingKey, Algorithm: "ed25519",
+	}); err != nil {
+		t.Logf("perf seed: CreateTransitKey(ed25519 signing) failed: %v", err)
 	}
 	if enc, err := vault.Encrypt(nctx, &vaultpb.EncryptRequest{
 		TenantId: tenant, KeyName: vaultKey, Plaintext: "perf",
@@ -981,6 +999,23 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 				}
 			}
 			// NB: intentionally NOT finalized — the measured FinalizeUpload finalizes it.
+		}
+
+		// A registered-but-PENDING upload (never uploaded, never finalized) for the
+		// measured ReissueUploadUrl: it resumes a PENDING upload by minting a fresh
+		// presigned URL, and rejects any non-PENDING (finalized/ACTIVE) file — so it
+		// needs its own upload that stays in the PENDING state for the whole run.
+		if rreg, err := storage.RegisterUpload(nctx, &storagepb.RegisterUploadRequest{
+			TenantId: uuidTenant, ProjectId: "", Filename: "perf-reissue-" + suffix + ".txt", ContentType: "text/plain",
+			FileType: "DOCUMENT", ReferenceId: uuid4(), ReferenceType: "sdk.perf", SizeBytes: 64, ExpiresInMinutes: 30,
+		}); err == nil {
+			rfid := rreg.GetFileId()
+			fix.set("reissue_file_id", rfid)
+			addCleanup(func() {
+				_, _ = storage.DeleteFile(nativeCtxFn(), &storagepb.DeleteFileRequest{TenantId: uuidTenant, FileId: rfid})
+			})
+		} else {
+			t.Logf("perf seed: RegisterUpload(reissue PENDING) failed: %v", err)
 		}
 
 		// ── AssetService: pipeline definition + asset + a started instance ────────

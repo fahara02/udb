@@ -1,6 +1,9 @@
 package udbclient
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // TenantState makes the tenant-code → canonical-UUID transition explicit
 // (critic.md §15). The human tenant code (e.g. "acme", "billing") is only a
@@ -27,10 +30,22 @@ func NewTenantState(code string) TenantState {
 
 // Adopt records the canonical tenant UUID returned by the verified principal.
 func (t *TenantState) Adopt(canonicalID string) error {
-	if canonicalID == "" {
+	value := strings.TrimSpace(canonicalID)
+	if value == "" {
 		return fmt.Errorf("udb: cannot adopt an empty canonical tenant_id")
 	}
-	t.CanonicalID = canonicalID
+	// The canonical tenant identity MUST be a lowercase hyphenated UUID: RLS
+	// compares it to the authenticated tenant column, so a human code or an
+	// upper/mixed-case form would miss rows or stamp an unusable value. Validate
+	// the shape (reusing isUUIDString) AND require the canonical lowercase form,
+	// and reject WITHOUT mutating CanonicalID/IsVerified — fail closed at the
+	// identity boundary, not later inside a query.
+	if !isUUIDString(value) || value != strings.ToLower(value) {
+		return fmt.Errorf(
+			"udb: canonical tenant_id %q is not a canonical (lowercase hyphenated) UUID",
+			canonicalID)
+	}
+	t.CanonicalID = value
 	t.IsVerified = true
 	return nil
 }

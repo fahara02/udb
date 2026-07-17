@@ -8,7 +8,7 @@ resolver = "2"
 
 [package]
 name = "udb"
-version = "0.4.0"
+version = "0.4.13"
 edition = "2024"
 rust-version = "1.85"
 description = "Universal Data Broker — a Rust gRPC broker over multiple databases (Postgres, MySQL, SQLite, MongoDB, ClickHouse, Cassandra, MSSQL, Redis, Qdrant, S3, Neo4j, …) with per-tenant RLS, 2PC, sagas, and CDC."
@@ -164,6 +164,7 @@ aws-sdk-s3 = { version = "1", optional = true }
 aes-gcm-siv = "0.11"
 base64 = "0.22"
 bytes = "1"
+ed25519-dalek = "2.2.0"
 casbin = "2"
 chrono = { version = "0.4", features = ["serde"] }
 opentelemetry = { version = "0.27", optional = true }

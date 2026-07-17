@@ -7,7 +7,7 @@ Inputs:
 - `sdk/go/udbclient/generated_client.go`
 - `docs/site/bench-results.json`
 
-Current generated RPC surface: 344 RPCs across 28 services.
+Current generated RPC surface: 353 RPCs across 28 services.
 
 The benchmark body manifest is checked against generated SDK metadata before this
 file is written. A missing row, extra row, alias drift, operationId drift, or
@@ -45,7 +45,7 @@ do not yet publish per-RPC live benchmark results.
 | EmbeddingService | 6 | 2 | 3 | 1 | 0 |
 | IdentityProviderService | 27 | 6 | 21 | 0 | 0 |
 | LiveQueryService | 1 | 1 | 0 | 0 | 0 |
-| LockService | 3 | 0 | 3 | 0 | 0 |
+| LockService | 5 | 2 | 3 | 0 | 0 |
 | MeteringService | 6 | 4 | 2 | 0 | 0 |
 | NotificationService | 12 | 7 | 5 | 0 | 0 |
 | PeerService | 5 | 2 | 3 | 0 | 0 |
@@ -53,11 +53,11 @@ do not yet publish per-RPC live benchmark results.
 | SchedulerService | 6 | 2 | 3 | 1 | 0 |
 | SearchService | 5 | 2 | 2 | 1 | 0 |
 | SignalingService | 1 | 0 | 1 | 0 | 0 |
-| StorageService | 8 | 4 | 4 | 0 | 0 |
+| StorageService | 9 | 5 | 4 | 0 | 0 |
 | TenantService | 7 | 3 | 3 | 1 | 0 |
 | TrackService | 4 | 1 | 3 | 0 | 0 |
 | TurnService | 1 | 0 | 1 | 0 | 0 |
-| VaultService | 14 | 5 | 8 | 1 | 0 |
+| VaultService | 20 | 6 | 13 | 1 | 0 |
 | WebhookService | 6 | 3 | 2 | 1 | 0 |
 | WorkflowService | 5 | 2 | 2 | 1 | 0 |
 
@@ -321,6 +321,8 @@ benchmark harnesses.
 | IdentityProviderService | `IdentityProviderService/UpdateProvider` | `update_provider` | `updateProvider` | MUTATION | idp.md |
 | LiveQueryService | `LiveQueryService/Subscribe` | `subscribe` | `liveQuerySubscribe` | READ_ONLY | livequery.md |
 | LockService | `LockService/AcquireLock` | `acquire_lock` | `acquireLock` | MUTATION | lock.md |
+| LockService | `LockService/GetLock` | `get_lock` | `getLock` | READ_ONLY | lock.md |
+| LockService | `LockService/ListLocks` | `list_locks` | `listLocks` | READ_ONLY | lock.md |
 | LockService | `LockService/ReleaseLock` | `release_lock` | `releaseLock` | MUTATION | lock.md |
 | LockService | `LockService/RenewLock` | `renew_lock` | `renewLock` | MUTATION | lock.md |
 | MeteringService | `MeteringService/CheckQuota` | `check_quota` | `checkQuota` | READ_ONLY | metering.md |
@@ -374,6 +376,7 @@ benchmark harnesses.
 | StorageService | `StorageService/GetFile` | `get_file` | `getFile` | READ_ONLY | storage.md |
 | StorageService | `StorageService/ListFiles` | `list_files` | `listFiles` | READ_ONLY | storage.md |
 | StorageService | `StorageService/RegisterUpload` | `register_upload` | `registerUpload` | MUTATION | storage.md |
+| StorageService | `StorageService/ReissueUploadUrl` | `reissue_upload_url` | `reissueUploadUrl` | READ_ONLY | storage.md |
 | StorageService | `StorageService/UpdateFile` | `update_file` | `updateFile` | MUTATION | storage.md |
 | TenantService | `TenantService/CreateTenant` | `create_tenant` | `createTenant` | MUTATION | tenant.md |
 | TenantService | `TenantService/GetTenant` | `get_tenant` | `getTenant` | READ_ONLY | tenant.md |
@@ -387,19 +390,25 @@ benchmark harnesses.
 | TrackService | `TrackService/PublishTrack` | `publish_track` | `publishTrack` | MUTATION | webrtc.md |
 | TrackService | `TrackService/UnpublishTrack` | `unpublish_track` | `unpublishTrack` | MUTATION | webrtc.md |
 | TurnService | `TurnService/IssueCredentials` | `issue_credentials` | `issueCredentials` | MUTATION | webrtc.md |
+| VaultService | `VaultService/BatchDecrypt` | `batch_decrypt` | `vaultBatchDecrypt` | MUTATION | vault.md |
+| VaultService | `VaultService/BatchEncrypt` | `batch_encrypt` | `vaultBatchEncrypt` | MUTATION | vault.md |
 | VaultService | `VaultService/CreateTransitKey` | `create_transit_key` | `createTransitKey` | MUTATION | vault.md |
 | VaultService | `VaultService/Decrypt` | `decrypt` | `vaultDecrypt` | READ_ONLY | vault.md |
 | VaultService | `VaultService/DeleteSecret` | `delete_secret` | `deleteSecret` | MUTATION | vault.md |
 | VaultService | `VaultService/DestroySecret` | `destroy_secret` | `destroySecret` | DESTRUCTIVE | vault.md |
 | VaultService | `VaultService/Encrypt` | `encrypt` | `vaultEncrypt` | MUTATION | vault.md |
 | VaultService | `VaultService/GenerateDatabaseCredentials` | `generate_database_credentials` | `generateDatabaseCredentials` | MUTATION | vault.md |
+| VaultService | `VaultService/GenerateDataKey` | `generate_data_key` | `vaultGenerateDataKey` | MUTATION | vault.md |
 | VaultService | `VaultService/GetSecret` | `get_secret` | `getSecret` | READ_ONLY | vault.md |
+| VaultService | `VaultService/GetTransitPublicKey` | `get_transit_public_key` | `vaultGetTransitPublicKey` | READ_ONLY | vault.md |
 | VaultService | `VaultService/Hmac` | `hmac` | `vaultHmac` | MUTATION | vault.md |
 | VaultService | `VaultService/ListSecrets` | `list_secrets` | `listSecrets` | READ_ONLY | vault.md |
 | VaultService | `VaultService/PutSecret` | `put_secret` | `putSecret` | MUTATION | vault.md |
+| VaultService | `VaultService/Rewrap` | `rewrap` | `vaultRewrap` | MUTATION | vault.md |
 | VaultService | `VaultService/RotateTransitKey` | `rotate_transit_key` | `rotateTransitKey` | MUTATION | vault.md |
 | VaultService | `VaultService/SealStatus` | `seal_status` | `vaultSealStatus` | READ_ONLY | vault.md |
 | VaultService | `VaultService/Sign` | `sign` | `vaultSign` | MUTATION | vault.md |
+| VaultService | `VaultService/UndeleteSecret` | `undelete_secret` | `undeleteSecret` | MUTATION | vault.md |
 | VaultService | `VaultService/Verify` | `verify` | `vaultVerify` | READ_ONLY | vault.md |
 | WebhookService | `WebhookService/CreateEndpoint` | `create_endpoint` | `createWebhookEndpoint` | MUTATION | webhook.md |
 | WebhookService | `WebhookService/DeleteEndpoint` | `delete_endpoint` | `deleteWebhookEndpoint` | DESTRUCTIVE | webhook.md |

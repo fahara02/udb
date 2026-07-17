@@ -152,9 +152,10 @@ mod scheduler_service;
 // results are fused with pure RRF. The leader wires `build_search_service`
 // + `add_service(search_service::SearchServiceServer::new(...))` in `serve()`,
 // mirroring `tenant_service`/`lock_service` (`SearchServiceServer` is pub-used
-// inside the module), and spawns `search_service::run_index_freshness_consumer`
-// per active index under a leader-elected worker once the tenant-scoped CDC feed
-// is threaded in (freshness-worker follow-up).
+// inside the module). The leader also spawns two singleton workers in `serve()`:
+// `run_index_freshness_consumer` (WORKER_SEARCH_FRESHNESS, CDC-driven index
+// freshness) and `run_search_reindex_once` (WORKER_SEARCH_REINDEX, reindex +
+// engine teardown).
 mod search_service;
 mod storage_service;
 mod tenant_service;
@@ -2496,6 +2497,41 @@ pub async fn serve(
             );
         }
     }
+    // 16.1.5: leader-elected analytics percentile rollup — recomputes
+    // p50/p95/p99 per (tenant, stage, hour) over the trailing window from the
+    // durable hourly accumulators (percentiles over hourly means; raw
+    // per-request latencies are not persisted).
+    {
+        let analytics_runtime = service.runtime.load_full();
+        if let Ok(analytics_pool) =
+            analytics_runtime.native_store_pool_for_service("analytics", true, "")
+        {
+            let singleton_relation = analytics_runtime.config().cdc.lock_log_relation();
+            let lease_pool = analytics_pool.clone();
+            let rollup_interval = std::time::Duration::from_secs(
+                std::env::var("UDB_ANALYTICS_ROLLUP_INTERVAL_SECS")
+                    .ok()
+                    .and_then(|v| v.parse::<u64>().ok())
+                    .filter(|v| *v > 0)
+                    .unwrap_or(300),
+            );
+            crate::runtime::service::native_runtime::NativeWorkerHost::spawn_while_leader(
+                crate::runtime::singleton::WORKER_ANALYTICS_ROLLUP,
+                "analytics rollup refreshed percentile snapshots",
+                lease_pool,
+                singleton_relation,
+                rollup_interval,
+                move || {
+                    let pool = analytics_pool.clone();
+                    async move {
+                        crate::runtime::service::analytics_service::run_analytics_rollup_once(&pool)
+                            .await
+                            .map(|rows| i64::try_from(rows).unwrap_or(i64::MAX))
+                    }
+                },
+            );
+        }
+    }
     {
         let embedding_worker_service = std::sync::Arc::new(service.build_embedding_service());
         let embedding_runtime = service.runtime.load_full();
@@ -2519,6 +2555,61 @@ pub async fn serve(
                             service,
                             &journal,
                             crate::runtime::service::embedding_service::EMBEDDING_WORK_EMITTER_BATCH,
+                        )
+                        .await
+                    }
+                },
+            );
+        }
+    }
+    // 16.2.1: leader-elected search index-freshness consumer — joins published
+    // CDC-journal source changes to ACTIVE indexes and re-upserts changed rows
+    // through the mediated vector seam, deduped per source event.
+    {
+        let search_worker_service = std::sync::Arc::new(service.build_search_service());
+        let search_runtime = service.runtime.load_full();
+        if let Ok(search_pool) = search_runtime.native_store_pool_for_service("search", true, "") {
+            let singleton_relation = search_runtime.config().cdc.lock_log_relation();
+            let journal_relation =
+                crate::runtime::system::SystemCatalogConfig::current().cdc_journal_relation();
+            let freshness_service = search_worker_service.clone();
+            let freshness_journal = journal_relation.clone();
+            crate::runtime::service::native_runtime::NativeWorkerHost::spawn_while_leader(
+                crate::runtime::singleton::WORKER_SEARCH_FRESHNESS,
+                "search freshness applied source changes",
+                search_pool.clone(),
+                singleton_relation.clone(),
+                crate::runtime::service::search_service::search_freshness_interval(),
+                move || {
+                    let service = freshness_service.clone();
+                    let journal = freshness_journal.clone();
+                    async move {
+                        crate::runtime::service::search_service::run_index_freshness_consumer(
+                            service,
+                            &journal,
+                            crate::runtime::service::search_service::SEARCH_FRESHNESS_BATCH,
+                        )
+                        .await
+                    }
+                },
+            );
+            // 16.2.2/16.2.3: leader-elected reindex + engine-teardown worker —
+            // consumes `reindex.requested` jobs (rebuild, REINDEXING -> ACTIVE
+            // writeback) and `index.deleted` teardown jobs (engine point purge).
+            crate::runtime::service::native_runtime::NativeWorkerHost::spawn_while_leader(
+                crate::runtime::singleton::WORKER_SEARCH_REINDEX,
+                "search reindex rebuilt requested indexes",
+                search_pool,
+                singleton_relation,
+                crate::runtime::service::search_service::search_reindex_interval(),
+                move || {
+                    let service = search_worker_service.clone();
+                    let journal = journal_relation.clone();
+                    async move {
+                        crate::runtime::service::search_service::run_search_reindex_once(
+                            service,
+                            &journal,
+                            crate::runtime::service::search_service::SEARCH_REINDEX_BATCH,
                         )
                         .await
                     }
@@ -2565,10 +2656,42 @@ pub async fn serve(
             );
         }
     }
+    // 16.5.1: leader-elected lock expiry reaper — flips lapsed HELD locks to
+    // EXPIRED (FOR UPDATE SKIP LOCKED) with the expired event in the same
+    // transaction, so lapsed leases stop exhausting tenant quotas.
+    {
+        let lock_runtime = service.runtime.load_full();
+        if let Ok(lock_pool) = lock_runtime.native_store_pool_for_service("lock", true, "") {
+            let singleton_relation = lock_runtime.config().cdc.lock_log_relation();
+            let outbox_relation = lock_runtime.config().cdc.outbox_relation();
+            let lease_pool = lock_pool.clone();
+            crate::runtime::service::native_runtime::NativeWorkerHost::spawn_while_leader(
+                crate::runtime::singleton::WORKER_LOCK_EXPIRY_REAPER,
+                "lock expiry reaper flipped lapsed leases",
+                lease_pool,
+                singleton_relation,
+                crate::runtime::service::lock_service::lock_expiry_interval(),
+                move || {
+                    let pool = lock_pool.clone();
+                    let outbox = outbox_relation.clone();
+                    async move {
+                        crate::runtime::service::lock_service::run_lock_expiry_once(
+                            &pool,
+                            Some(&outbox),
+                            crate::runtime::service::lock_service::LOCK_EXPIRY_SWEEP_BATCH,
+                        )
+                        .await
+                    }
+                },
+            );
+        }
+    }
     // 9.12: leader-elected workflow tick — claims DUE workflow instances (FOR
-    // UPDATE SKIP LOCKED) and atomically advances durable state + transition
-    // outbox events. It does NOT execute payloads or compensation in-process;
-    // compensation remains on the existing saga recovery worker.
+    // UPDATE SKIP LOCKED) and atomically advances durable state + outbox
+    // transition events. Since 16.3.2 the tick also owns application-level
+    // compensation: it emits reverse-order `udb.workflow.compensate.step.v1`
+    // events and drives COMPENSATING -> COMPENSATED; the saga recovery worker
+    // keeps handling data-plane backend compensations only.
     {
         let workflow_runtime = service.runtime.load_full();
         if let Ok(workflow_pool) =

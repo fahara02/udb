@@ -29,6 +29,11 @@ class StorageServiceStub(object):
                 request_serializer=udb_dot_core_dot_storage_dot_services_dot_v1_dot_storage__service__pb2.GetDownloadUrlRequest.SerializeToString,
                 response_deserializer=udb_dot_core_dot_storage_dot_services_dot_v1_dot_storage__service__pb2.GetDownloadUrlResponse.FromString,
                 _registered_method=True)
+        self.ReissueUploadUrl = channel.unary_unary(
+                '/udb.core.storage.services.v1.StorageService/ReissueUploadUrl',
+                request_serializer=udb_dot_core_dot_storage_dot_services_dot_v1_dot_storage__service__pb2.ReissueUploadUrlRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_storage_dot_services_dot_v1_dot_storage__service__pb2.ReissueUploadUrlResponse.FromString,
+                _registered_method=True)
         self.DownloadFile = channel.unary_stream(
                 '/udb.core.storage.services.v1.StorageService/DownloadFile',
                 request_serializer=udb_dot_core_dot_storage_dot_services_dot_v1_dot_storage__service__pb2.DownloadFileRequest.SerializeToString,
@@ -75,6 +80,17 @@ class StorageServiceServicer(object):
 
     def GetDownloadUrl(self, request, context):
         """Get a pre-signed download URL for a file
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ReissueUploadUrl(self, request, context):
+        """Reissue a presigned PUT URL for an existing PENDING upload — the resume path
+        when a RegisterUpload response was lost in flight (the client kept the file_id
+        but not the secret upload URL). The File row + object_key are unchanged; only
+        a fresh short-lived upload URL is minted. Rejected fail-closed for a
+        non-PENDING (already-finalized or removed) file. READ-ONLY (no state change).
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -135,6 +151,11 @@ def add_StorageServiceServicer_to_server(servicer, server):
                     servicer.GetDownloadUrl,
                     request_deserializer=udb_dot_core_dot_storage_dot_services_dot_v1_dot_storage__service__pb2.GetDownloadUrlRequest.FromString,
                     response_serializer=udb_dot_core_dot_storage_dot_services_dot_v1_dot_storage__service__pb2.GetDownloadUrlResponse.SerializeToString,
+            ),
+            'ReissueUploadUrl': grpc.unary_unary_rpc_method_handler(
+                    servicer.ReissueUploadUrl,
+                    request_deserializer=udb_dot_core_dot_storage_dot_services_dot_v1_dot_storage__service__pb2.ReissueUploadUrlRequest.FromString,
+                    response_serializer=udb_dot_core_dot_storage_dot_services_dot_v1_dot_storage__service__pb2.ReissueUploadUrlResponse.SerializeToString,
             ),
             'DownloadFile': grpc.unary_stream_rpc_method_handler(
                     servicer.DownloadFile,
@@ -243,6 +264,33 @@ class StorageService(object):
             '/udb.core.storage.services.v1.StorageService/GetDownloadUrl',
             udb_dot_core_dot_storage_dot_services_dot_v1_dot_storage__service__pb2.GetDownloadUrlRequest.SerializeToString,
             udb_dot_core_dot_storage_dot_services_dot_v1_dot_storage__service__pb2.GetDownloadUrlResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ReissueUploadUrl(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.storage.services.v1.StorageService/ReissueUploadUrl',
+            udb_dot_core_dot_storage_dot_services_dot_v1_dot_storage__service__pb2.ReissueUploadUrlRequest.SerializeToString,
+            udb_dot_core_dot_storage_dot_services_dot_v1_dot_storage__service__pb2.ReissueUploadUrlResponse.FromString,
             options,
             channel_credentials,
             insecure,

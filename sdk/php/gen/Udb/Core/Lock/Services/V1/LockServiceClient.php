@@ -69,4 +69,36 @@ class LockServiceClient extends \Grpc\BaseStub {
         $metadata, $options);
     }
 
+    /**
+     * Fetch a single lock by name within the caller's tenant. Read-only; an absent
+     * lock returns found=false (not an error) — a tenant-scoped read miss is normal.
+     * @param \Udb\Core\Lock\Services\V1\GetLockRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Lock\Services\V1\GetLockResponse>
+     */
+    public function GetLock(\Udb\Core\Lock\Services\V1\GetLockRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.lock.services.v1.LockService/GetLock',
+        $argument,
+        ['\Udb\Core\Lock\Services\V1\GetLockResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * List the caller tenant's locks, optionally narrowed by status. Paginated
+     * (page_size + opaque page_token). Read-only.
+     * @param \Udb\Core\Lock\Services\V1\ListLocksRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Lock\Services\V1\ListLocksResponse>
+     */
+    public function ListLocks(\Udb\Core\Lock\Services\V1\ListLocksRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.lock.services.v1.LockService/ListLocks',
+        $argument,
+        ['\Udb\Core\Lock\Services\V1\ListLocksResponse', 'decode'],
+        $metadata, $options);
+    }
+
 }

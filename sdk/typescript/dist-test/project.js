@@ -836,6 +836,11 @@ exports.WebRtcFacade = WebRtcFacade;
  * udb.close();
  * ```
  */
+// Background bearer-refresher tuning (parity with the Go enterprise session).
+const BG_REFRESH_SKEW_MS = 60_000; // refresh this long before expiry
+const BG_REFRESH_MIN_MS = 1_000; // floor between attempts (never busy-loop)
+const BG_REFRESH_IDLE_MS = 5 * 60_000; // cadence when the token carries no expiry
+const BG_REFRESH_RETRY_MS = 5_000; // cadence after a load error or while poisoned
 class UdbProject {
     config;
     /** The shared generated client (escape hatch — raw, typed, per-service RPCs). */
@@ -872,6 +877,14 @@ class UdbProject {
     admin;
     tokenStore;
     refreshInFlight = null;
+    /** Background bearer-refresher state (parity with the Go enterprise session): a
+     *  timer proactively refreshes before expiry; on a hard failure (expired +
+     *  unrefreshable) the bearer is cleared so calls fail CLOSED instead of sending a
+     *  dead credential. `poisoned` reflects that state; `lastRefreshError` exposes it. */
+    refreshTimer = null;
+    poisoned = false;
+    lastRefreshError = null;
+    closed = false;
     /** Dedicated generated client for the auth/control-plane target when
      * `authTarget` differs from `target`; otherwise null (native facades share
      * `this.generated`). */
@@ -893,6 +906,31 @@ class UdbProject {
      */
     static connect(config) {
         return Promise.resolve(new UdbProject(config));
+    }
+    /**
+     * One-call enterprise setup — the parity of the Go SDK's `ConnectEnterprise`.
+     * Connect, log in with username/password, verify the freshly-minted bearer, and
+     * adopt the canonical tenant/project from the VERIFIED principal, then start a
+     * background refresher that keeps the bearer fresh and fails closed if it can no
+     * longer be renewed.
+     *
+     * Pass the human tenant CODE as `config.tenantId` (e.g. `"acme"`); it is used as
+     * the pre-login hint and replaced by the canonical tenant UUID after login — so
+     * every later call sends the UUID that row-level security compares, never the
+     * code. Returns a session ready for tenant-scoped work; call `close()` to stop
+     * the refresher and channels.
+     */
+    static async connectEnterprise(config) {
+        const { username, password, ...rest } = config;
+        const udb = new UdbProject(rest);
+        await udb.loginAndAdoptTenant({
+            username,
+            password,
+            tenant_hint: rest.tenantId,
+            project_hint: rest.projectId ?? "",
+        });
+        udb.startBackgroundRefresh();
+        return udb;
     }
     constructor(config) {
         this.config = config;
@@ -1127,13 +1165,94 @@ class UdbProject {
         }
         return this.refreshInFlight;
     }
+    /**
+     * Start the background bearer refresher: it wakes shortly before the access
+     * token's expiry and refreshes it (sharing `refreshIfNeeded`'s single-flight),
+     * so no call pays the RefreshToken round-trip. On a hard failure — an expired
+     * token that can no longer be refreshed — it clears the active bearer so
+     * subsequent calls fail CLOSED (Unauthenticated) instead of sending a dead
+     * credential. Idempotent; stopped by `close()`. `connectEnterprise` calls it
+     * automatically. Retrieve the last failure with `refreshError()`.
+     */
+    startBackgroundRefresh() {
+        if (this.refreshTimer || this.closed)
+            return;
+        this.scheduleRefresh();
+    }
+    /** The most recent background bearer-refresh error, or null if the last refresh
+     *  succeeded. Useful for health checks / logging. */
+    refreshError() {
+        return this.lastRefreshError;
+    }
+    scheduleRefresh() {
+        if (this.closed)
+            return;
+        if (this.refreshTimer) {
+            clearTimeout(this.refreshTimer);
+            this.refreshTimer = null;
+        }
+        void Promise.resolve(this.tokenStore.load())
+            .then((tok) => {
+            let delay = BG_REFRESH_IDLE_MS;
+            if (tok && tok.expiresAt > 0) {
+                delay = tok.expiresAt - BG_REFRESH_SKEW_MS - Date.now();
+                if (delay < BG_REFRESH_MIN_MS)
+                    delay = BG_REFRESH_MIN_MS;
+            }
+            // While poisoned, back off from the 1s floor so a permanently-dead token
+            // doesn't hot-loop the refresh RPC.
+            if (this.poisoned && delay < BG_REFRESH_RETRY_MS)
+                delay = BG_REFRESH_RETRY_MS;
+            this.armTimer(delay);
+        })
+            .catch(() => this.armTimer(BG_REFRESH_RETRY_MS));
+    }
+    armTimer(delayMs) {
+        if (this.closed)
+            return;
+        this.refreshTimer = setTimeout(() => {
+            void this.backgroundRefreshTick();
+        }, delayMs);
+        // Never keep the process alive just for the refresh timer.
+        this.refreshTimer.unref?.();
+    }
+    async backgroundRefreshTick() {
+        try {
+            await this.refreshIfNeeded(BG_REFRESH_SKEW_MS);
+            const tok = await this.tokenStore.load();
+            if (tok && (tok.expiresAt === 0 || Date.now() < tok.expiresAt)) {
+                this.poisoned = false;
+                this.lastRefreshError = null;
+            }
+        }
+        catch (err) {
+            this.lastRefreshError = err instanceof Error ? err : new Error(String(err));
+            const tok = await Promise.resolve(this.tokenStore.load()).catch(() => null);
+            const expired = !tok || (tok.expiresAt > 0 && Date.now() >= tok.expiresAt);
+            if (expired) {
+                // Fail closed: drop the dead bearer so no call goes out with a stale
+                // credential — the broker rejects (Unauthenticated) until a fresh login.
+                this.poisoned = true;
+                this.clearBearerCredentials();
+            }
+        }
+        finally {
+            this.scheduleRefresh();
+        }
+    }
     /** Clear the stored token (local only; does not call Logout). */
     async logout() {
         await this.tokenStore.clear();
         this.clearBearerCredentials();
     }
-    /** Close the shared channels (and the dedicated WebRTC channel, if any). */
+    /** Close the shared channels (and the dedicated WebRTC channel, if any), and
+     *  stop the background bearer refresher. */
     close() {
+        this.closed = true;
+        if (this.refreshTimer) {
+            clearTimeout(this.refreshTimer);
+            this.refreshTimer = null;
+        }
         this.generated.close();
         this.authGenerated?.close();
         this.webrtcGenerated?.close();

@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>UDB :: Universal Data Broker</strong><br>
-  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.4.0 | protocol v1.0.0</sub>
+  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.4.13 | protocol v1.0.0</sub>
 </p>
 
 <p align="center">
@@ -99,67 +99,36 @@ Per-service RPC counts (native control plane):
 | Contract manifest | 733 messages, 49 table-backed models, 192 event contracts |
 | Backends | 18 backend kinds across SQL, cache, vector, object, document, graph, and column stores |
 | SDKs | Go, Python, TypeScript/Node, Java, C#, PHP/Laravel |
-| Release | crate/SDK version `0.4.0`, wire protocol `1.0.0` |
+| Release | crate/SDK version `0.4.13`, wire protocol `1.0.0` |
 
-## 0.3.7 Release Focus
+## What's Battle-Tested
 
-UDB 0.3.7 is the current release. It carries the workflow-oriented simple-client
-SDK layer over the full **344-RPC surface** (77 `DataBroker` RPCs plus 267 native
-control-plane RPCs) and folds in the post-v0.3.2 native-service wave, so normal
-application code stays short without hiding correctness rules — read-after-write,
-idempotency, tenant binding, and typed errors stay explicit or broker-owned.
+UDB isn't a prototype. Every backend it advertises is exercised by live
+conformance tests against a real server, and the hard parts of putting one API in
+front of many databases are already handled for you:
 
-- Simple-client facade across all SDKs: one `connect` + `loginAndAdoptTenant`,
-  then `storage.uploadFile` / `downloadFileBytes`, `data.table(...).select(...)`,
-  `authz.allowRole(...)`, `metadata.afterWrite(receipt)`, and replay-safe typed
-  retries with automatic idempotency keys.
-- `StorageService.DownloadFile` server-streaming RPC with a presigned-default +
-  streaming-fallback client helper, so file bytes never transit the broker on the
-  common path.
-- The full native-service wave is in source and service wiring: Vault, Lock,
-  Scheduler, Webhook, Search, Cache, LiveQuery, Config, Metering, Backup,
-  Embedding, and Workflow join the earlier Authn/Authz/IdP/Tenant/Notification/
-  Analytics/Storage/Asset/WebRTC/Control surfaces.
-- Notification and analytics flows run through the native entity store path
-  instead of hand-built SQL call sites; storage, asset, WebRTC, tenant, auth, IdP,
-  and control services share the same native runtime/store binding and generated
-  contract checks.
-- SDKs are regenerated for Go, Python, TypeScript, Java, C#, and PHP, with
-  cross-language conformance plus deep live coverage for the broker-backed SDK
-  harnesses.
-- CI release gates cover version consistency, native contract drift, SDK service
-  coverage, MinIO-backed live SDK startup, the six-language `scaffold-compiles`
-  job, and native-service live integration assumptions.
-
-### Since 0.3.7: hardening
-
-The private masterplan/todo board re-grounded every tracked item in real v0.3.7
-source and adversarially verified it against code anchors. The hardening wave (82 of the
-tracked items landed) includes:
-
-- **Verification depth** — live backend-by-backend conformance for all nine
-  canonical stores, with two real store bugs fixed (a promoted-primary read fence
-  in Postgres `wait_for_token`, and SQL Server migration-audit backfill deferral).
-- **IR mediation by default** — raw dispatch is gated, compiler classification is
-  single-sourced, SDK IR builders ship in templates and committed SDKs, and served
-  `GenericDispatch` cross-language byte parity plus the PG planner/IR merge oracle
-  were observed green.
-- **Distributed correctness** — Keeper-backed ClickHouse canonical CAS and
-  Elasticsearch native CAS observed green; Qdrant fail-closed proof green;
-  Weaviate/Pinecone terminally fail-closed (no usable CAS primitive); MySQL XA
-  crash-recovery `XA RECOVER` fixed to the text protocol.
-- **Identity and compliance** — SAML HTTP, internal-only listener gating, evidence
-  export, and WebAuthn attestation-statement crypto (fixing a base64 ErrorDetail
-  decode bug); enterprise token/key lifecycle, IdP/SAML/SCIM, and policy
-  governance.
-- **Media plane** — vendored ffmpeg transcode and the LiveKit SFU served WebRTC
-  smoke observed green over the broker's three-listener topology.
-- **Native services** — Metering `QueryUsage` RLS-GUC under-report fixed, and the
-  Embedding backfill worker fixed (project-isolation filter plus two CDC
-  journal-envelope read bugs) and proven live.
-- **Typed error and idempotency contract** — a public `udb.entity.v1.ErrorDetail`
-  wire trailer decoded across all six SDKs, and durable broker-side idempotency
-  dedup with `was_duplicate` replay for keyed Upsert/Delete and BatchUpsert.
+- **Multi-tenant isolation that actually holds.** Row-level security is enforced
+  in the database, scoped by a canonical tenant **UUID** — not a string you can
+  typo. The SDKs resolve your human-readable tenant *code* (`"acme"`) to that UUID
+  for you, which removes the single most common first-integration bug: a code/UUID
+  mismatch that silently returns zero rows.
+- **Correctness you don't re-implement.** Read-after-write, idempotent retries
+  (keyed `Upsert`/`Delete` replay safely), typed errors on a stable wire contract,
+  and tenant/project binding are broker-owned. Your application code stays short
+  without the rules going quiet.
+- **A real control plane, not stubs.** Native identity (authentication,
+  authorization, API keys, IdP with SAML/SCIM), plus Vault, Lock, Scheduler,
+  Webhook, Search, Cache, LiveQuery, Config, Metering, Backup, Embedding,
+  Workflow, Storage, Assets, and WebRTC — all served through the same
+  tenant-scoped runtime.
+- **Broad backend coverage, one typed API.** Relational (Postgres, MySQL, SQLite,
+  SQL Server), document (MongoDB), vector (Qdrant, Weaviate, Pinecone), object
+  (S3, MinIO, GCS, Azure Blob), cache (Redis, Memcached), graph (Neo4j),
+  wide-column (Cassandra), analytics (ClickHouse), and search (Elasticsearch).
+- **Six SDKs from one contract.** Go, Python, TypeScript, Java, C#, and PHP are
+  generated from the same protos and checked for cross-language parity, so an
+  `Invoice` behaves the same in every language — and the full RPC surface is
+  measured live in each.
 
 ## How It Feels
 
@@ -194,7 +163,9 @@ Application code calls the broker through an SDK:
 from udb_client import Metadata, UdbClient, decode_records
 
 meta = Metadata(
-    tenant_id="acme",
+    tenant_id="acme",   # your human tenant code; the SDK login flow resolves it to
+                        # the canonical UUID that RLS checks — see examples/python_enterprise
+                        # (passing a raw code is the #1 "why are my reads empty?" bug).
     user_id="user-1",
     purpose="billing.api",
     scopes=("udb:read", "udb:write"),
@@ -209,44 +180,60 @@ with UdbClient("127.0.0.1:50051", meta) as udb:
 
 ## Quick Start
 
-Install the CLI from a release binary, through an SDK launcher, or from source:
+The whole idea: **you describe your data model in protobuf, and UDB turns it into
+a running, multi-tenant, RLS-protected API over your database — no ORM, no
+hand-written SQL, no schema migrations to babysit.** Here's the path from an empty
+folder to querying your own tables.
+
+**1. Get the `udb` CLI** — from a release binary, an SDK launcher, or source:
 
 ```bash
 cargo install --path .
 ```
 
-Export UDB's shared protos into an application project:
+**2. Pull in UDB's shared protobuf annotations** so your own protos can use them:
 
 ```bash
-udb proto export --fmt
+udb proto export --fmt      # writes udb/core/common/v1/*.proto into your project
 ```
 
-Write app-owned protos that import UDB annotations:
+**3. Describe your data model.** Write normal protos and annotate the fields UDB
+should turn into tables/columns — that annotation file is the one you just
+exported:
 
 ```proto
-import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/db.proto";   // gives you pg_table / pg_column, RLS, tenancy
 ```
 
-Inspect the catalog and generated SQL:
+**4. See exactly what UDB will build** before you run anything — the catalog, the
+SQL it generates, and a human-readable lint of your model:
 
 ```bash
-udb catalog proto
-udb sql proto
-udb lint proto --human
+udb catalog proto            # the tables/columns UDB derived from your protos
+udb sql proto                # the DDL it will run
+udb lint proto --human       # plain-English warnings (missing tenant column, etc.)
 ```
 
-Start a local broker:
+**5. Start the broker.** It generates the schema and serves your model over gRPC:
 
 ```bash
 udb serve proto "" 0.0.0.0:50051
 ```
 
-Check runtime readiness:
+**6. Confirm it's healthy:**
 
 ```bash
-udb doctor --human
-udb compat-matrix
+udb doctor --human           # readiness in plain English
+udb compat-matrix            # which backends/features are live
 ```
+
+**7. Connect your application.** Now point an SDK at the broker, authenticate, and
+do tenant-scoped CRUD. The shortest correct path — including the tenant-code →
+canonical-UUID handling that trips up most first integrations — is in
+[`examples/go_enterprise`](examples/go_enterprise) (Go), with equivalents in
+[`examples/python_enterprise`](examples/python_enterprise) and
+[`examples/ts_enterprise`](examples/ts_enterprise). Start there rather than
+wiring the raw gRPC clients yourself.
 
 ## CLI
 
@@ -313,12 +300,12 @@ read fences, consistency modes) and idempotency `was_duplicate` replay:
 
 | Language | Install |
 |---|---|
-| Go | `go get github.com/fahara02/udb/sdk/go@v0.4.0` |
-| Python | `pip install udb-client==0.4.0` |
-| TypeScript / Node | `npm i @udb_plus/sdk@0.4.0` |
-| PHP / Laravel | `composer require fahara02/udb-laravel:^0.4.0` |
-| C# | `dotnet add package Udb.Client --version 0.4.0` |
-| Java | `dev.udb:udb-java-client` (`0.4.0` target; build from checkout until publishing lands) |
+| Go | `go get github.com/fahara02/udb/sdk/go@v0.4.13` |
+| Python | `pip install udb-client==0.4.13` |
+| TypeScript / Node | `npm i @udb_plus/sdk@0.4.13` |
+| PHP / Laravel | `composer require fahara02/udb-laravel:^0.4.13` |
+| C# | `dotnet add package Udb.Client --version 0.4.13` |
+| Java | `dev.udb:udb-java-client` (`0.4.13` target; build from checkout until publishing lands) |
 
 Start here: [sdk/README.md](sdk/README.md).
 

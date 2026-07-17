@@ -3037,6 +3037,30 @@
   },
   {
     "file": "lock.md",
+    "rpc": "GetLock",
+    "service": "LockService",
+    "wire_rpc": "LockService/GetLock",
+    "api_alias": "get_lock",
+    "operation_id": "getLock",
+    "op_kind": "READ_ONLY",
+    "request_msg": "GetLockRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"lock_name\": \"sdk-perf-acquire-lock\" }`",
+    "notes": "reads back a single lock by name within the seeded tenant (found=false when absent)."
+  },
+  {
+    "file": "lock.md",
+    "rpc": "ListLocks",
+    "service": "LockService",
+    "wire_rpc": "LockService/ListLocks",
+    "api_alias": "list_locks",
+    "operation_id": "listLocks",
+    "op_kind": "READ_ONLY",
+    "request_msg": "ListLocksRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"status_filter\": \"HELD\", \"page_size\": 50 }`",
+    "notes": "lists the seeded tenant's HELD locks, first page."
+  },
+  {
+    "file": "lock.md",
     "rpc": "ReleaseLock",
     "service": "LockService",
     "wire_rpc": "LockService/ReleaseLock",
@@ -3493,6 +3517,18 @@
   },
   {
     "file": "storage.md",
+    "rpc": "ReissueUploadUrl",
+    "service": "StorageService",
+    "wire_rpc": "StorageService/ReissueUploadUrl",
+    "api_alias": "reissue_upload_url",
+    "operation_id": "reissueUploadUrl",
+    "op_kind": "READ_ONLY",
+    "request_msg": "ReissueUploadUrlRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"file_id\": \"<seed:reissue_file_id>\", \"expires_in_minutes\": 15 }`",
+    "notes": "fields: tenant_id(str), file_id(str), expires_in_minutes(int32). Requires a seeded PENDING (not finalized) upload — a non-PENDING file is rejected."
+  },
+  {
+    "file": "storage.md",
     "rpc": "UpdateFile",
     "service": "StorageService",
     "wire_rpc": "StorageService/UpdateFile",
@@ -3589,6 +3625,30 @@
   },
   {
     "file": "vault.md",
+    "rpc": "BatchDecrypt",
+    "service": "VaultService",
+    "wire_rpc": "VaultService/BatchDecrypt",
+    "api_alias": "batch_decrypt",
+    "operation_id": "vaultBatchDecrypt",
+    "op_kind": "MUTATION",
+    "request_msg": "BatchDecryptRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"key_name\": \"<seed:vault_key_name>\", \"ciphertexts\": [\"<seed:vault_ciphertext>\"] }`",
+    "notes": "decrypts a batch of transit ciphertexts under the seeded key in one call."
+  },
+  {
+    "file": "vault.md",
+    "rpc": "BatchEncrypt",
+    "service": "VaultService",
+    "wire_rpc": "VaultService/BatchEncrypt",
+    "api_alias": "batch_encrypt",
+    "operation_id": "vaultBatchEncrypt",
+    "op_kind": "MUTATION",
+    "request_msg": "BatchEncryptRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"key_name\": \"<seed:vault_key_name>\", \"plaintexts\": [\"perf-a\", \"perf-b\"] }`",
+    "notes": "encrypts a batch of plaintexts under the seeded key (one key-unwrap amortized over the batch)."
+  },
+  {
+    "file": "vault.md",
     "rpc": "CreateTransitKey",
     "service": "VaultService",
     "wire_rpc": "VaultService/CreateTransitKey",
@@ -3649,6 +3709,18 @@
   },
   {
     "file": "vault.md",
+    "rpc": "GenerateDataKey",
+    "service": "VaultService",
+    "wire_rpc": "VaultService/GenerateDataKey",
+    "api_alias": "generate_data_key",
+    "operation_id": "vaultGenerateDataKey",
+    "op_kind": "MUTATION",
+    "request_msg": "GenerateDataKeyRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"key_name\": \"<seed:vault_key_name>\" }`",
+    "notes": "mints a fresh data key wrapped under the seeded transit key (envelope encryption); the plaintext key is returned once and not persisted."
+  },
+  {
+    "file": "vault.md",
     "rpc": "GenerateDatabaseCredentials",
     "service": "VaultService",
     "wire_rpc": "VaultService/GenerateDatabaseCredentials",
@@ -3670,6 +3742,18 @@
     "request_msg": "GetSecretRequest",
     "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"secret_path\": \"<seed:vault_secret_path>\", \"version\": 0 }`",
     "notes": "reads the seeded secret version."
+  },
+  {
+    "file": "vault.md",
+    "rpc": "GetTransitPublicKey",
+    "service": "VaultService",
+    "wire_rpc": "VaultService/GetTransitPublicKey",
+    "api_alias": "get_transit_public_key",
+    "operation_id": "vaultGetTransitPublicKey",
+    "op_kind": "READ_ONLY",
+    "request_msg": "GetTransitPublicKeyRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"key_name\": \"<seed:vault_signing_key_name>\" }`",
+    "notes": "exports the ed25519 public key(s) for external signature verification; requires a seeded key created with the ed25519 signing algorithm (non-ed25519 keys are rejected)."
   },
   {
     "file": "vault.md",
@@ -3709,6 +3793,18 @@
   },
   {
     "file": "vault.md",
+    "rpc": "Rewrap",
+    "service": "VaultService",
+    "wire_rpc": "VaultService/Rewrap",
+    "api_alias": "rewrap",
+    "operation_id": "vaultRewrap",
+    "op_kind": "MUTATION",
+    "request_msg": "RewrapRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"key_name\": \"<seed:vault_key_name>\", \"ciphertext\": \"<seed:vault_ciphertext>\" }`",
+    "notes": "re-wraps the seeded ciphertext under the transit key's current active version (post-rotation migration primitive)."
+  },
+  {
+    "file": "vault.md",
     "rpc": "RotateTransitKey",
     "service": "VaultService",
     "wire_rpc": "VaultService/RotateTransitKey",
@@ -3742,6 +3838,18 @@
     "request_msg": "SignRequest",
     "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"key_name\": \"<seed:vault_key_name>\", \"input\": \"perf\" }`",
     "notes": "signs a small transit input."
+  },
+  {
+    "file": "vault.md",
+    "rpc": "UndeleteSecret",
+    "service": "VaultService",
+    "wire_rpc": "VaultService/UndeleteSecret",
+    "api_alias": "undelete_secret",
+    "operation_id": "undeleteSecret",
+    "op_kind": "MUTATION",
+    "request_msg": "UndeleteSecretRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"secret_path\": \"<seed:vault_delete_secret_path>\" }`",
+    "notes": "restores a soft-deleted secret to ACTIVE; requires a seeded soft-deleted (not destroyed) secret path."
   },
   {
     "file": "vault.md",

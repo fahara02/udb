@@ -87,7 +87,8 @@ message Lock {
 
   int32 lease_ttl_seconds = 6 [(udb.core.common.v1.pg_column) = { column_name: "lease_ttl_seconds" sql_type: "INTEGER" not_null: true default_value: "30" }];
 
-  // HELD | RELEASED — operational state for quota counting and audit.
+  // HELD | RELEASED | EXPIRED — operational state for quota counting and audit
+  // (EXPIRED is stamped by the leader-elected expiry reaper, ch16 16.5.1).
   string status = 7 [(udb.core.common.v1.pg_column) = { column_name: "status" sql_type: "VARCHAR(20)" not_null: true default_value: "'HELD'" index: { index_name: "idx_locks_status" index_type: "BTREE" } }];
 
   google.protobuf.Timestamp acquired_at = 8 [(udb.core.common.v1.pg_column) = { column_name: "acquired_at" sql_type: "TIMESTAMPTZ" comment: "When the current holder acquired the lease" }];

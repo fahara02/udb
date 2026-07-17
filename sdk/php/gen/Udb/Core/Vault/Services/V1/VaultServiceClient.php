@@ -94,6 +94,23 @@ class VaultServiceClient extends \Grpc\BaseStub {
     }
 
     /**
+     * Restore a soft-DELETED secret: flip its latest deleted version back to ACTIVE.
+     * A soft delete keeps the ciphertext + wrapped key, so recovery is exact. A
+     * crypto-shredded (DestroySecret) version can NEVER be restored.
+     * @param \Udb\Core\Vault\Services\V1\UndeleteSecretRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Vault\Services\V1\UndeleteSecretResponse>
+     */
+    public function UndeleteSecret(\Udb\Core\Vault\Services\V1\UndeleteSecretRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.vault.services.v1.VaultService/UndeleteSecret',
+        $argument,
+        ['\Udb\Core\Vault\Services\V1\UndeleteSecretResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
      * Crypto-shred every version of a secret: clears the wrapped DEK + ciphertext
      * so the value is irrecoverable. DESTRUCTIVE + irreversible — a confirmation
      * token is required and an empty token fails closed.
@@ -263,6 +280,94 @@ class VaultServiceClient extends \Grpc\BaseStub {
         return $this->_simpleRequest('/udb.core.vault.services.v1.VaultService/GenerateDatabaseCredentials',
         $argument,
         ['\Udb\Core\Vault\Services\V1\GenerateDatabaseCredentialsResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * Generate a fresh 256-bit data key, returned BOTH plaintext (for the caller to
+     * encrypt data locally) AND wrapped under the named transit key (store this and
+     * Decrypt/Rewrap it later). Envelope-encryption without exposing the transit
+     * key. Reuses the transit seal path; AUDITED via the outbox compliance envelope.
+     * @param \Udb\Core\Vault\Services\V1\GenerateDataKeyRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Vault\Services\V1\GenerateDataKeyResponse>
+     */
+    public function GenerateDataKey(\Udb\Core\Vault\Services\V1\GenerateDataKeyRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.vault.services.v1.VaultService/GenerateDataKey',
+        $argument,
+        ['\Udb\Core\Vault\Services\V1\GenerateDataKeyResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * Re-wrap a transit ciphertext under the key's CURRENT active version: decrypt
+     * with the version embedded in the envelope, then re-seal with the active
+     * version. The post-rotation migration primitive (no plaintext leaves the
+     * broker). AUDITED via the outbox compliance envelope.
+     * @param \Udb\Core\Vault\Services\V1\RewrapRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Vault\Services\V1\RewrapResponse>
+     */
+    public function Rewrap(\Udb\Core\Vault\Services\V1\RewrapRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.vault.services.v1.VaultService/Rewrap',
+        $argument,
+        ['\Udb\Core\Vault\Services\V1\RewrapResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * Export the Ed25519 PUBLIC key(s) of a signing transit key so an external
+     * party can verify broker-produced signatures without ever holding the private
+     * key — the missing half that makes Sign/Verify genuinely asymmetric. Only
+     * valid for keys created with the ed25519 algorithm; READ-ONLY (public keys are
+     * not secret). Returns one entry per usable (ACTIVE/VERIFYING) version.
+     * @param \Udb\Core\Vault\Services\V1\GetTransitPublicKeyRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Vault\Services\V1\GetTransitPublicKeyResponse>
+     */
+    public function GetTransitPublicKey(\Udb\Core\Vault\Services\V1\GetTransitPublicKeyRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.vault.services.v1.VaultService/GetTransitPublicKey',
+        $argument,
+        ['\Udb\Core\Vault\Services\V1\GetTransitPublicKeyResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * Encrypt MANY plaintexts under one transit key in a single call: the key is
+     * unwrapped ONCE and each plaintext sealed with the active version, amortizing
+     * the master-key unwrap over the batch. Order-preserving. AUDITED.
+     * @param \Udb\Core\Vault\Services\V1\BatchEncryptRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Vault\Services\V1\BatchEncryptResponse>
+     */
+    public function BatchEncrypt(\Udb\Core\Vault\Services\V1\BatchEncryptRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.vault.services.v1.VaultService/BatchEncrypt',
+        $argument,
+        ['\Udb\Core\Vault\Services\V1\BatchEncryptResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * Decrypt MANY transit ciphertexts under one key in a single call; each
+     * ciphertext carries its own key version in the envelope. Order-preserving.
+     * @param \Udb\Core\Vault\Services\V1\BatchDecryptRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Vault\Services\V1\BatchDecryptResponse>
+     */
+    public function BatchDecrypt(\Udb\Core\Vault\Services\V1\BatchDecryptRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.vault.services.v1.VaultService/BatchDecrypt',
+        $argument,
+        ['\Udb\Core\Vault\Services\V1\BatchDecryptResponse', 'decode'],
         $metadata, $options);
     }
 

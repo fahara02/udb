@@ -3123,6 +3123,19 @@ def perf_seed(clients: dict, meta: Metadata):
             cleanups.append(lambda: storage.DeleteFile(storage_pb.DeleteFileRequest(tenant_id=tenant, file_id=fin_file_id), metadata=md, timeout=8.0))
         except grpc.RpcError:
             pass
+        # A registered-but-PENDING upload (never uploaded, never finalized) for the
+        # measured ReissueUploadUrl — it resumes a PENDING upload and rejects any
+        # non-PENDING (finalized/ACTIVE) file, so it needs its own PENDING target.
+        try:
+            reissue_reg = storage.RegisterUpload(
+                storage_pb.RegisterUploadRequest(tenant_id=tenant, project_id="", filename=f"perf-reissue-{suffix}.txt", content_type="text/plain", file_type=STORAGE_FILE_TYPE, reference_id=str(uuid.uuid4()), reference_type="sdk.perf", size_bytes=64, expires_in_minutes=30),
+                metadata=md, timeout=8.0,
+            )
+            reissue_file_id = reissue_reg.file_id
+            fix.set("reissue_file_id", reissue_file_id)
+            cleanups.append(lambda: storage.DeleteFile(storage_pb.DeleteFileRequest(tenant_id=tenant, file_id=reissue_file_id), metadata=md, timeout=8.0))
+        except grpc.RpcError:
+            pass
         cleanups.append(lambda: storage.DeleteFile(storage_pb.DeleteFileRequest(tenant_id=tenant, file_id=file_id), metadata=md, timeout=8.0))
     except grpc.RpcError:
         pass
@@ -3243,6 +3256,14 @@ def perf_seed(clients: dict, meta: Metadata):
     fix.set("vault_destroy_secret_path", f"app/destroy-{suffix}")
     try:
         vault.CreateTransitKey(vault_pb.CreateTransitKeyRequest(tenant_id=tenant, key_name=vault_key, algorithm="aes256-gcm-siv"), metadata=md, timeout=8.0)
+    except grpc.RpcError:
+        pass
+    # A dedicated ed25519 SIGNING key so GetTransitPublicKey exports a real public
+    # key — the aes256-gcm-siv key above has no exportable public half.
+    signing_key = f"sdk-perf-signing-key-{suffix}"
+    fix.set("vault_signing_key_name", signing_key)
+    try:
+        vault.CreateTransitKey(vault_pb.CreateTransitKeyRequest(tenant_id=tenant, key_name=signing_key, algorithm="ed25519"), metadata=md, timeout=8.0)
     except grpc.RpcError:
         pass
     try:

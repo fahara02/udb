@@ -19,14 +19,15 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	StorageService_RegisterUpload_FullMethodName = "/udb.core.storage.services.v1.StorageService/RegisterUpload"
-	StorageService_FinalizeUpload_FullMethodName = "/udb.core.storage.services.v1.StorageService/FinalizeUpload"
-	StorageService_GetDownloadUrl_FullMethodName = "/udb.core.storage.services.v1.StorageService/GetDownloadUrl"
-	StorageService_DownloadFile_FullMethodName   = "/udb.core.storage.services.v1.StorageService/DownloadFile"
-	StorageService_GetFile_FullMethodName        = "/udb.core.storage.services.v1.StorageService/GetFile"
-	StorageService_UpdateFile_FullMethodName     = "/udb.core.storage.services.v1.StorageService/UpdateFile"
-	StorageService_DeleteFile_FullMethodName     = "/udb.core.storage.services.v1.StorageService/DeleteFile"
-	StorageService_ListFiles_FullMethodName      = "/udb.core.storage.services.v1.StorageService/ListFiles"
+	StorageService_RegisterUpload_FullMethodName   = "/udb.core.storage.services.v1.StorageService/RegisterUpload"
+	StorageService_FinalizeUpload_FullMethodName   = "/udb.core.storage.services.v1.StorageService/FinalizeUpload"
+	StorageService_GetDownloadUrl_FullMethodName   = "/udb.core.storage.services.v1.StorageService/GetDownloadUrl"
+	StorageService_ReissueUploadUrl_FullMethodName = "/udb.core.storage.services.v1.StorageService/ReissueUploadUrl"
+	StorageService_DownloadFile_FullMethodName     = "/udb.core.storage.services.v1.StorageService/DownloadFile"
+	StorageService_GetFile_FullMethodName          = "/udb.core.storage.services.v1.StorageService/GetFile"
+	StorageService_UpdateFile_FullMethodName       = "/udb.core.storage.services.v1.StorageService/UpdateFile"
+	StorageService_DeleteFile_FullMethodName       = "/udb.core.storage.services.v1.StorageService/DeleteFile"
+	StorageService_ListFiles_FullMethodName        = "/udb.core.storage.services.v1.StorageService/ListFiles"
 )
 
 // StorageServiceClient is the client API for StorageService service.
@@ -39,6 +40,12 @@ type StorageServiceClient interface {
 	FinalizeUpload(ctx context.Context, in *FinalizeUploadRequest, opts ...grpc.CallOption) (*FinalizeUploadResponse, error)
 	// Get a pre-signed download URL for a file
 	GetDownloadUrl(ctx context.Context, in *GetDownloadUrlRequest, opts ...grpc.CallOption) (*GetDownloadUrlResponse, error)
+	// Reissue a presigned PUT URL for an existing PENDING upload — the resume path
+	// when a RegisterUpload response was lost in flight (the client kept the file_id
+	// but not the secret upload URL). The File row + object_key are unchanged; only
+	// a fresh short-lived upload URL is minted. Rejected fail-closed for a
+	// non-PENDING (already-finalized or removed) file. READ-ONLY (no state change).
+	ReissueUploadUrl(ctx context.Context, in *ReissueUploadUrlRequest, opts ...grpc.CallOption) (*ReissueUploadUrlResponse, error)
 	// Stream a file's bytes directly through the broker. FALLBACK for clients
 	// that cannot use the presigned `GetDownloadUrl` HTTP GET (no egress to the
 	// object store, corporate proxy, etc.). The broker streams the object bytes
@@ -86,6 +93,16 @@ func (c *storageServiceClient) GetDownloadUrl(ctx context.Context, in *GetDownlo
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetDownloadUrlResponse)
 	err := c.cc.Invoke(ctx, StorageService_GetDownloadUrl_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *storageServiceClient) ReissueUploadUrl(ctx context.Context, in *ReissueUploadUrlRequest, opts ...grpc.CallOption) (*ReissueUploadUrlResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReissueUploadUrlResponse)
+	err := c.cc.Invoke(ctx, StorageService_ReissueUploadUrl_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -161,6 +178,12 @@ type StorageServiceServer interface {
 	FinalizeUpload(context.Context, *FinalizeUploadRequest) (*FinalizeUploadResponse, error)
 	// Get a pre-signed download URL for a file
 	GetDownloadUrl(context.Context, *GetDownloadUrlRequest) (*GetDownloadUrlResponse, error)
+	// Reissue a presigned PUT URL for an existing PENDING upload — the resume path
+	// when a RegisterUpload response was lost in flight (the client kept the file_id
+	// but not the secret upload URL). The File row + object_key are unchanged; only
+	// a fresh short-lived upload URL is minted. Rejected fail-closed for a
+	// non-PENDING (already-finalized or removed) file. READ-ONLY (no state change).
+	ReissueUploadUrl(context.Context, *ReissueUploadUrlRequest) (*ReissueUploadUrlResponse, error)
 	// Stream a file's bytes directly through the broker. FALLBACK for clients
 	// that cannot use the presigned `GetDownloadUrl` HTTP GET (no egress to the
 	// object store, corporate proxy, etc.). The broker streams the object bytes
@@ -191,6 +214,9 @@ func (UnimplementedStorageServiceServer) FinalizeUpload(context.Context, *Finali
 }
 func (UnimplementedStorageServiceServer) GetDownloadUrl(context.Context, *GetDownloadUrlRequest) (*GetDownloadUrlResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetDownloadUrl not implemented")
+}
+func (UnimplementedStorageServiceServer) ReissueUploadUrl(context.Context, *ReissueUploadUrlRequest) (*ReissueUploadUrlResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ReissueUploadUrl not implemented")
 }
 func (UnimplementedStorageServiceServer) DownloadFile(*DownloadFileRequest, grpc.ServerStreamingServer[DownloadFileChunk]) error {
 	return status.Error(codes.Unimplemented, "method DownloadFile not implemented")
@@ -277,6 +303,24 @@ func _StorageService_GetDownloadUrl_Handler(srv interface{}, ctx context.Context
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(StorageServiceServer).GetDownloadUrl(ctx, req.(*GetDownloadUrlRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _StorageService_ReissueUploadUrl_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReissueUploadUrlRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StorageServiceServer).ReissueUploadUrl(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: StorageService_ReissueUploadUrl_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StorageServiceServer).ReissueUploadUrl(ctx, req.(*ReissueUploadUrlRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -382,6 +426,10 @@ var StorageService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetDownloadUrl",
 			Handler:    _StorageService_GetDownloadUrl_Handler,
+		},
+		{
+			MethodName: "ReissueUploadUrl",
+			Handler:    _StorageService_ReissueUploadUrl_Handler,
 		},
 		{
 			MethodName: "GetFile",

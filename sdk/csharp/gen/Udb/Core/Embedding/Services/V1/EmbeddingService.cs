@@ -75,90 +75,92 @@ namespace udb.core.Embedding.Services.V1 {
             "ZW1iZWRkaW5nIqEBChdSZXBvcnRFbWJlZGRpbmdSZXNwb25zZRIaCgh1cHNl",
             "cnRlZBgBIAEoCFIIdXBzZXJ0ZWQSGAoHbWVzc2FnZRgCIAEoCVIHbWVzc2Fn",
             "ZRIyCgVlcnJvchgDIAEoCzIcLnVkYi5jb3JlLmNvbW1vbi52MS5BcGlFcnJv",
-            "clIFZXJyb3I6HJqyGRgaA3VkYiiw6gEwA0ABSgllbWJlZGRpbmciyAEKD1Jl",
+            "clIFZXJyb3I6HJqyGRgaA3VkYiiw6gEwA0ABSgllbWJlZGRpbmcikgIKD1Jl",
             "dHJpZXZlUmVxdWVzdBIbCgl0ZW5hbnRfaWQYASABKAlSCHRlbmFudElkEh8K",
             "C3NvdXJjZV9uYW1lGAIgASgJUgpzb3VyY2VOYW1lEh0KCnF1ZXJ5X3RleHQY",
             "AyABKAlSCXF1ZXJ5VGV4dBIhCgxxdWVyeV92ZWN0b3IYBCADKAJSC3F1ZXJ5",
-            "VmVjdG9yEhMKBXRvcF9rGAUgASgFUgR0b3BLOiCashkcCAEaA3VkYiiw6gEw",
-            "A0ABSgllbWJlZGRpbmdQASJWCgtSZXRyaWV2ZUhpdBIOCgJpZBgBIAEoCVIC",
-            "aWQSFAoFc2NvcmUYAiABKAFSBXNjb3JlEiEKDHBheWxvYWRfanNvbhgDIAEo",
-            "CVILcGF5bG9hZEpzb24iwwEKEFJldHJpZXZlUmVzcG9uc2USPwoEaGl0cxgB",
-            "IAMoCzIrLnVkYi5jb3JlLmVtYmVkZGluZy5zZXJ2aWNlcy52MS5SZXRyaWV2",
-            "ZUhpdFIEaGl0cxIYCgdtZXNzYWdlGAIgASgJUgdtZXNzYWdlEjIKBWVycm9y",
-            "GAMgASgLMhwudWRiLmNvcmUuY29tbW9uLnYxLkFwaUVycm9yUgVlcnJvcjog",
-            "mrIZHAgBGgN1ZGIosOoBMANAAUoJZW1iZWRkaW5nUAEy/xYKEEVtYmVkZGlu",
-            "Z1NlcnZpY2USggQKDlJlZ2lzdGVyU291cmNlEjUudWRiLmNvcmUuZW1iZWRk",
-            "aW5nLnNlcnZpY2VzLnYxLlJlZ2lzdGVyU291cmNlUmVxdWVzdBo2LnVkYi5j",
-            "b3JlLmVtYmVkZGluZy5zZXJ2aWNlcy52MS5SZWdpc3RlclNvdXJjZVJlc3Bv",
-            "bnNlIoADyvMYRAgCGh11ZGI6ZW1iZWRkaW5nOnJlZ2lzdGVyLXNvdXJjZSAB",
-            "SgIBAmoYZW1iZWRkaW5nLlJlZ2lzdGVyU291cmNlkAEB0vMYBggBEAEgAdrz",
-            "GEYIARIPcmVnaXN0ZXJfc291cmNlGgN1ZGIosOoBMANAAUoJZW1iZWRkaW5n",
-            "UAFaF3JlZ2lzdGVyRW1iZWRkaW5nU291cmNl6vMYbAoYZW1iZWRkaW5nLlJl",
-            "Z2lzdGVyU291cmNlEiJ1ZGIuZW1iZWRkaW5nLnNvdXJjZS5yZWdpc3RlcmVk",
-            "LnYxGgtzb3VyY2VfbmFtZSIIc3RhbmRhcmQqDWF0X2xlYXN0X29uY2UyBnN0",
-            "YWJsZfLzGEMKCWVtYmVkZGluZxoIcG9zdGdyZXMyG1VEQl9OQVRJVkVfU0VS",
-            "VklDRVNfRU5BQkxFRDIPVURCX0dSUENfVEFSR0VU+PMYAoLT5JMCIyIeL3Yx",
-            "L2VtYmVkZGluZy9zb3VyY2VzOnJlZ2lzdGVyOgEqEvECCgtMaXN0U291cmNl",
-            "cxIyLnVkYi5jb3JlLmVtYmVkZGluZy5zZXJ2aWNlcy52MS5MaXN0U291cmNl",
-            "c1JlcXVlc3QaMy51ZGIuY29yZS5lbWJlZGRpbmcuc2VydmljZXMudjEuTGlz",
-            "dFNvdXJjZXNSZXNwb25zZSL4AcrzGD4IAhoadWRiOmVtYmVkZGluZzpsaXN0",
-            "LXNvdXJjZXMgAUoCAQJqFWVtYmVkZGluZy5MaXN0U291cmNlc5ABAdLzGAYI",
-            "ARABIAHa8xhACAESDGxpc3Rfc291cmNlcxoDdWRiKLDqATADQAFKCWVtYmVk",
-            "ZGluZ1ABWhRsaXN0RW1iZWRkaW5nU291cmNlc/LzGEMKCWVtYmVkZGluZxoI",
-            "cG9zdGdyZXMyG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRDIPVURCX0dS",
-            "UENfVEFSR0VU+PMYAYLT5JMCFxIVL3YxL2VtYmVkZGluZy9zb3VyY2VzEu0D",
-            "CgxEZWxldGVTb3VyY2USMy51ZGIuY29yZS5lbWJlZGRpbmcuc2VydmljZXMu",
-            "djEuRGVsZXRlU291cmNlUmVxdWVzdBo0LnVkYi5jb3JlLmVtYmVkZGluZy5z",
-            "ZXJ2aWNlcy52MS5EZWxldGVTb3VyY2VSZXNwb25zZSLxAsrzGEAIAhobdWRi",
-            "OmVtYmVkZGluZzpkZWxldGUtc291cmNlIAFKAgECahZlbWJlZGRpbmcuRGVs",
-            "ZXRlU291cmNlkAEB0vMYBggBEAEgAdrzGEIIARINZGVsZXRlX3NvdXJjZRoD",
-            "dWRiKLDqATADQAFKCWVtYmVkZGluZ1ABWhVkZWxldGVFbWJlZGRpbmdTb3Vy",
-            "Y2Xq8xhnChZlbWJlZGRpbmcuRGVsZXRlU291cmNlEh91ZGIuZW1iZWRkaW5n",
-            "LnNvdXJjZS5kZWxldGVkLnYxGgtzb3VyY2VfbmFtZSIIc3RhbmRhcmQqDWF0",
-            "X2xlYXN0X29uY2UyBnN0YWJsZfLzGEMKCWVtYmVkZGluZxoIcG9zdGdyZXMy",
-            "G1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRDIPVURCX0dSUENfVEFSR0VU",
-            "+PMYA4LT5JMCISIcL3YxL2VtYmVkZGluZy9zb3VyY2VzOmRlbGV0ZToBKhLX",
-            "AwoIQmFja2ZpbGwSLy51ZGIuY29yZS5lbWJlZGRpbmcuc2VydmljZXMudjEu",
-            "QmFja2ZpbGxSZXF1ZXN0GjAudWRiLmNvcmUuZW1iZWRkaW5nLnNlcnZpY2Vz",
-            "LnYxLkJhY2tmaWxsUmVzcG9uc2Ui5wLK8xg3CAIaFnVkYjplbWJlZGRpbmc6",
-            "YmFja2ZpbGwgAUoCAQJqEmVtYmVkZGluZy5CYWNrZmlsbJABAdLzGAYIARAB",
-            "IAHa8xg/CAESCGJhY2tmaWxsGgN1ZGIosOoBMANAAUoJZW1iZWRkaW5nUAFa",
-            "F2JhY2tmaWxsRW1iZWRkaW5nU291cmNl6vMYZwoSZW1iZWRkaW5nLkJhY2tm",
-            "aWxsEiN1ZGIuZW1iZWRkaW5nLmJhY2tmaWxsLnJlcXVlc3RlZC52MRoLc291",
-            "cmNlX25hbWUiCHN0YW5kYXJkKg1hdF9sZWFzdF9vbmNlMgZzdGFibGXy8xhD",
-            "CgllbWJlZGRpbmcaCHBvc3RncmVzMhtVREJfTkFUSVZFX1NFUlZJQ0VTX0VO",
-            "QUJMRUQyD1VEQl9HUlBDX1RBUkdFVPjzGAKC0+STAiMiHi92MS9lbWJlZGRp",
-            "bmcvc291cmNlczpiYWNrZmlsbDoBKhLKAgoPUmVwb3J0RW1iZWRkaW5nEjYu",
-            "dWRiLmNvcmUuZW1iZWRkaW5nLnNlcnZpY2VzLnYxLlJlcG9ydEVtYmVkZGlu",
-            "Z1JlcXVlc3QaNy51ZGIuY29yZS5lbWJlZGRpbmcuc2VydmljZXMudjEuUmVw",
-            "b3J0RW1iZWRkaW5nUmVzcG9uc2UixQHK8xhICAIaHnVkYjplbWJlZGRpbmc6",
-            "cmVwb3J0LWVtYmVkZGluZyABOAFKAgECahllbWJlZGRpbmcuUmVwb3J0RW1i",
-            "ZWRkaW5nkAEB2vMYKhIQcmVwb3J0X2VtYmVkZGluZxoDdWRiKLDqATADQAFK",
-            "CWVtYmVkZGluZ/LzGEMKCWVtYmVkZGluZxoIcG9zdGdyZXMyG1VEQl9OQVRJ",
-            "VkVfU0VSVklDRVNfRU5BQkxFRDIPVURCX0dSUENfVEFSR0VU+PMYAhLeAgoI",
-            "UmV0cmlldmUSLy51ZGIuY29yZS5lbWJlZGRpbmcuc2VydmljZXMudjEuUmV0",
-            "cmlldmVSZXF1ZXN0GjAudWRiLmNvcmUuZW1iZWRkaW5nLnNlcnZpY2VzLnYx",
-            "LlJldHJpZXZlUmVzcG9uc2Ui7gHK8xg3CAIaFnVkYjplbWJlZGRpbmc6cmV0",
-            "cmlldmUgAUoCAQJqEmVtYmVkZGluZy5SZXRyaWV2ZZABAdLzGAYIARABIAHa",
-            "8xg5CAESCHJldHJpZXZlGgN1ZGIosOoBMANAAUoJZW1iZWRkaW5nUAFaEXJl",
-            "dHJpZXZlRW1iZWRkaW5n8vMYQwoJZW1iZWRkaW5nGghwb3N0Z3JlczIbVURC",
-            "X05BVElWRV9TRVJWSUNFU19FTkFCTEVEMg9VREJfR1JQQ19UQVJHRVT48xgB",
-            "gtPkkwIbIhYvdjEvZW1iZWRkaW5nOnJldHJpZXZlOgEqGvkCyvAZdAoJZW1i",
-            "ZWRkaW5nEgllbWJlZGRpbmcaCWVtYmVkZGluZyIKRW1iZWRkaW5ncyoJZW1i",
-            "ZWRkaW5nMAE4AWgBegllbWJlZGRpbmeCAQllbWJlZGRpbmeKAQllbWJlZGRp",
-            "bmeSARBuYXRpdmUuZW1iZWRkaW5n0vAZHAgBGgN1ZGIosOoBMANAAUoJZW1i",
-            "ZWRkaW5nUAHa8BmVAQoJZW1iZWRkaW5nEhR1ZGIvbmF0aXZlL2VtYmVkZGlu",
-            "ZxobVURCX05BVElWRV9TRVJWSUNFU19FTkFCTEVEGg9VREJfR1JQQ19UQVJH",
-            "RVQiG3VkYi5uYXRpdmUuZW1iZWRkaW5nLmNvbmZpZzoJZW1iZWRkaW5nSgtV",
-            "REJfQVBJX0tFWVoPdWRiIG5hdGl2ZSBsaW504vAZQwoJZW1iZWRkaW5nGghw",
-            "b3N0Z3JlczIbVURCX05BVElWRV9TRVJWSUNFU19FTkFCTEVEMg9VREJfR1JQ",
-            "Q19UQVJHRVRCpgIKImNvbS51ZGIuY29yZS5lbWJlZGRpbmcuc2VydmljZXMu",
-            "djFCFUVtYmVkZGluZ1NlcnZpY2VQcm90b1ABWkxnaXRodWIuY29tL2ZhaGFy",
-            "YTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9jb3JlL2VtYmVkZGluZy9zZXJ2aWNl",
-            "cy92MTtzZXJ2aWNlc3YxogIEVUNFU6oCHnVkYi5jb3JlLkVtYmVkZGluZy5T",
-            "ZXJ2aWNlcy5WMcoCHlVkYlxDb3JlXEVtYmVkZGluZ1xTZXJ2aWNlc1xWMeIC",
-            "KlVkYlxHUEJNZXRhZGF0YVxDb3JlXEVtYmVkZGluZ1xTZXJ2aWNlc1xWMeoC",
-            "IlVkYjo6Q29yZTo6RW1iZWRkaW5nOjpTZXJ2aWNlczo6VjFiBnByb3RvMw=="));
+            "VmVjdG9yEhMKBXRvcF9rGAUgASgFUgR0b3BLEh8KC2ZpbHRlcl9qc29uGAYg",
+            "ASgJUgpmaWx0ZXJKc29uEicKD3Njb3JlX3RocmVzaG9sZBgHIAEoAVIOc2Nv",
+            "cmVUaHJlc2hvbGQ6IJqyGRwIARoDdWRiKLDqATADQAFKCWVtYmVkZGluZ1AB",
+            "IlYKC1JldHJpZXZlSGl0Eg4KAmlkGAEgASgJUgJpZBIUCgVzY29yZRgCIAEo",
+            "AVIFc2NvcmUSIQoMcGF5bG9hZF9qc29uGAMgASgJUgtwYXlsb2FkSnNvbiLD",
+            "AQoQUmV0cmlldmVSZXNwb25zZRI/CgRoaXRzGAEgAygLMisudWRiLmNvcmUu",
+            "ZW1iZWRkaW5nLnNlcnZpY2VzLnYxLlJldHJpZXZlSGl0UgRoaXRzEhgKB21l",
+            "c3NhZ2UYAiABKAlSB21lc3NhZ2USMgoFZXJyb3IYAyABKAsyHC51ZGIuY29y",
+            "ZS5jb21tb24udjEuQXBpRXJyb3JSBWVycm9yOiCashkcCAEaA3VkYiiw6gEw",
+            "A0ABSgllbWJlZGRpbmdQATL/FgoQRW1iZWRkaW5nU2VydmljZRKCBAoOUmVn",
+            "aXN0ZXJTb3VyY2USNS51ZGIuY29yZS5lbWJlZGRpbmcuc2VydmljZXMudjEu",
+            "UmVnaXN0ZXJTb3VyY2VSZXF1ZXN0GjYudWRiLmNvcmUuZW1iZWRkaW5nLnNl",
+            "cnZpY2VzLnYxLlJlZ2lzdGVyU291cmNlUmVzcG9uc2UigAPK8xhECAIaHXVk",
+            "YjplbWJlZGRpbmc6cmVnaXN0ZXItc291cmNlIAFKAgECahhlbWJlZGRpbmcu",
+            "UmVnaXN0ZXJTb3VyY2WQAQHS8xgGCAEQASAB2vMYRggBEg9yZWdpc3Rlcl9z",
+            "b3VyY2UaA3VkYiiw6gEwA0ABSgllbWJlZGRpbmdQAVoXcmVnaXN0ZXJFbWJl",
+            "ZGRpbmdTb3VyY2Xq8xhsChhlbWJlZGRpbmcuUmVnaXN0ZXJTb3VyY2USInVk",
+            "Yi5lbWJlZGRpbmcuc291cmNlLnJlZ2lzdGVyZWQudjEaC3NvdXJjZV9uYW1l",
+            "IghzdGFuZGFyZCoNYXRfbGVhc3Rfb25jZTIGc3RhYmxl8vMYQwoJZW1iZWRk",
+            "aW5nGghwb3N0Z3JlczIbVURCX05BVElWRV9TRVJWSUNFU19FTkFCTEVEMg9V",
+            "REJfR1JQQ19UQVJHRVT48xgCgtPkkwIjIh4vdjEvZW1iZWRkaW5nL3NvdXJj",
+            "ZXM6cmVnaXN0ZXI6ASoS8QIKC0xpc3RTb3VyY2VzEjIudWRiLmNvcmUuZW1i",
+            "ZWRkaW5nLnNlcnZpY2VzLnYxLkxpc3RTb3VyY2VzUmVxdWVzdBozLnVkYi5j",
+            "b3JlLmVtYmVkZGluZy5zZXJ2aWNlcy52MS5MaXN0U291cmNlc1Jlc3BvbnNl",
+            "IvgByvMYPggCGhp1ZGI6ZW1iZWRkaW5nOmxpc3Qtc291cmNlcyABSgIBAmoV",
+            "ZW1iZWRkaW5nLkxpc3RTb3VyY2VzkAEB0vMYBggBEAEgAdrzGEAIARIMbGlz",
+            "dF9zb3VyY2VzGgN1ZGIosOoBMANAAUoJZW1iZWRkaW5nUAFaFGxpc3RFbWJl",
+            "ZGRpbmdTb3VyY2Vz8vMYQwoJZW1iZWRkaW5nGghwb3N0Z3JlczIbVURCX05B",
+            "VElWRV9TRVJWSUNFU19FTkFCTEVEMg9VREJfR1JQQ19UQVJHRVT48xgBgtPk",
+            "kwIXEhUvdjEvZW1iZWRkaW5nL3NvdXJjZXMS7QMKDERlbGV0ZVNvdXJjZRIz",
+            "LnVkYi5jb3JlLmVtYmVkZGluZy5zZXJ2aWNlcy52MS5EZWxldGVTb3VyY2VS",
+            "ZXF1ZXN0GjQudWRiLmNvcmUuZW1iZWRkaW5nLnNlcnZpY2VzLnYxLkRlbGV0",
+            "ZVNvdXJjZVJlc3BvbnNlIvECyvMYQAgCGht1ZGI6ZW1iZWRkaW5nOmRlbGV0",
+            "ZS1zb3VyY2UgAUoCAQJqFmVtYmVkZGluZy5EZWxldGVTb3VyY2WQAQHS8xgG",
+            "CAEQASAB2vMYQggBEg1kZWxldGVfc291cmNlGgN1ZGIosOoBMANAAUoJZW1i",
+            "ZWRkaW5nUAFaFWRlbGV0ZUVtYmVkZGluZ1NvdXJjZerzGGcKFmVtYmVkZGlu",
+            "Zy5EZWxldGVTb3VyY2USH3VkYi5lbWJlZGRpbmcuc291cmNlLmRlbGV0ZWQu",
+            "djEaC3NvdXJjZV9uYW1lIghzdGFuZGFyZCoNYXRfbGVhc3Rfb25jZTIGc3Rh",
+            "Ymxl8vMYQwoJZW1iZWRkaW5nGghwb3N0Z3JlczIbVURCX05BVElWRV9TRVJW",
+            "SUNFU19FTkFCTEVEMg9VREJfR1JQQ19UQVJHRVT48xgDgtPkkwIhIhwvdjEv",
+            "ZW1iZWRkaW5nL3NvdXJjZXM6ZGVsZXRlOgEqEtcDCghCYWNrZmlsbBIvLnVk",
+            "Yi5jb3JlLmVtYmVkZGluZy5zZXJ2aWNlcy52MS5CYWNrZmlsbFJlcXVlc3Qa",
+            "MC51ZGIuY29yZS5lbWJlZGRpbmcuc2VydmljZXMudjEuQmFja2ZpbGxSZXNw",
+            "b25zZSLnAsrzGDcIAhoWdWRiOmVtYmVkZGluZzpiYWNrZmlsbCABSgIBAmoS",
+            "ZW1iZWRkaW5nLkJhY2tmaWxskAEB0vMYBggBEAEgAdrzGD8IARIIYmFja2Zp",
+            "bGwaA3VkYiiw6gEwA0ABSgllbWJlZGRpbmdQAVoXYmFja2ZpbGxFbWJlZGRp",
+            "bmdTb3VyY2Xq8xhnChJlbWJlZGRpbmcuQmFja2ZpbGwSI3VkYi5lbWJlZGRp",
+            "bmcuYmFja2ZpbGwucmVxdWVzdGVkLnYxGgtzb3VyY2VfbmFtZSIIc3RhbmRh",
+            "cmQqDWF0X2xlYXN0X29uY2UyBnN0YWJsZfLzGEMKCWVtYmVkZGluZxoIcG9z",
+            "dGdyZXMyG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRDIPVURCX0dSUENf",
+            "VEFSR0VU+PMYAoLT5JMCIyIeL3YxL2VtYmVkZGluZy9zb3VyY2VzOmJhY2tm",
+            "aWxsOgEqEsoCCg9SZXBvcnRFbWJlZGRpbmcSNi51ZGIuY29yZS5lbWJlZGRp",
+            "bmcuc2VydmljZXMudjEuUmVwb3J0RW1iZWRkaW5nUmVxdWVzdBo3LnVkYi5j",
+            "b3JlLmVtYmVkZGluZy5zZXJ2aWNlcy52MS5SZXBvcnRFbWJlZGRpbmdSZXNw",
+            "b25zZSLFAcrzGEgIAhoedWRiOmVtYmVkZGluZzpyZXBvcnQtZW1iZWRkaW5n",
+            "IAE4AUoCAQJqGWVtYmVkZGluZy5SZXBvcnRFbWJlZGRpbmeQAQHa8xgqEhBy",
+            "ZXBvcnRfZW1iZWRkaW5nGgN1ZGIosOoBMANAAUoJZW1iZWRkaW5n8vMYQwoJ",
+            "ZW1iZWRkaW5nGghwb3N0Z3JlczIbVURCX05BVElWRV9TRVJWSUNFU19FTkFC",
+            "TEVEMg9VREJfR1JQQ19UQVJHRVT48xgCEt4CCghSZXRyaWV2ZRIvLnVkYi5j",
+            "b3JlLmVtYmVkZGluZy5zZXJ2aWNlcy52MS5SZXRyaWV2ZVJlcXVlc3QaMC51",
+            "ZGIuY29yZS5lbWJlZGRpbmcuc2VydmljZXMudjEuUmV0cmlldmVSZXNwb25z",
+            "ZSLuAcrzGDcIAhoWdWRiOmVtYmVkZGluZzpyZXRyaWV2ZSABSgIBAmoSZW1i",
+            "ZWRkaW5nLlJldHJpZXZlkAEB0vMYBggBEAEgAdrzGDkIARIIcmV0cmlldmUa",
+            "A3VkYiiw6gEwA0ABSgllbWJlZGRpbmdQAVoRcmV0cmlldmVFbWJlZGRpbmfy",
+            "8xhDCgllbWJlZGRpbmcaCHBvc3RncmVzMhtVREJfTkFUSVZFX1NFUlZJQ0VT",
+            "X0VOQUJMRUQyD1VEQl9HUlBDX1RBUkdFVPjzGAGC0+STAhsiFi92MS9lbWJl",
+            "ZGRpbmc6cmV0cmlldmU6ASoa+QLK8Bl0CgllbWJlZGRpbmcSCWVtYmVkZGlu",
+            "ZxoJZW1iZWRkaW5nIgpFbWJlZGRpbmdzKgllbWJlZGRpbmcwATgBaAF6CWVt",
+            "YmVkZGluZ4IBCWVtYmVkZGluZ4oBCWVtYmVkZGluZ5IBEG5hdGl2ZS5lbWJl",
+            "ZGRpbmfS8BkcCAEaA3VkYiiw6gEwA0ABSgllbWJlZGRpbmdQAdrwGZUBCgll",
+            "bWJlZGRpbmcSFHVkYi9uYXRpdmUvZW1iZWRkaW5nGhtVREJfTkFUSVZFX1NF",
+            "UlZJQ0VTX0VOQUJMRUQaD1VEQl9HUlBDX1RBUkdFVCIbdWRiLm5hdGl2ZS5l",
+            "bWJlZGRpbmcuY29uZmlnOgllbWJlZGRpbmdKC1VEQl9BUElfS0VZWg91ZGIg",
+            "bmF0aXZlIGxpbnTi8BlDCgllbWJlZGRpbmcaCHBvc3RncmVzMhtVREJfTkFU",
+            "SVZFX1NFUlZJQ0VTX0VOQUJMRUQyD1VEQl9HUlBDX1RBUkdFVEKmAgoiY29t",
+            "LnVkYi5jb3JlLmVtYmVkZGluZy5zZXJ2aWNlcy52MUIVRW1iZWRkaW5nU2Vy",
+            "dmljZVByb3RvUAFaTGdpdGh1Yi5jb20vZmFoYXJhMDIvdWRiL3Nkay9nby9n",
+            "ZW4vdWRiL2NvcmUvZW1iZWRkaW5nL3NlcnZpY2VzL3YxO3NlcnZpY2VzdjGi",
+            "AgRVQ0VTqgIedWRiLmNvcmUuRW1iZWRkaW5nLlNlcnZpY2VzLlYxygIeVWRi",
+            "XENvcmVcRW1iZWRkaW5nXFNlcnZpY2VzXFYx4gIqVWRiXEdQQk1ldGFkYXRh",
+            "XENvcmVcRW1iZWRkaW5nXFNlcnZpY2VzXFYx6gIiVWRiOjpDb3JlOjpFbWJl",
+            "ZGRpbmc6OlNlcnZpY2VzOjpWMWIGcHJvdG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Api.AnnotationsReflection.Descriptor, global::udb.core.Common.V1.DtoReflection.Descriptor, global::udb.core.Common.V1.SecurityReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
@@ -173,7 +175,7 @@ namespace udb.core.Embedding.Services.V1 {
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Embedding.Services.V1.BackfillResponse), global::udb.core.Embedding.Services.V1.BackfillResponse.Parser, new[]{ "BackfillId", "Accepted", "Message", "Error" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Embedding.Services.V1.ReportEmbeddingRequest), global::udb.core.Embedding.Services.V1.ReportEmbeddingRequest.Parser, new[]{ "TenantId", "SourceName", "RowPk", "Vector", "Model", "Dims" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Embedding.Services.V1.ReportEmbeddingResponse), global::udb.core.Embedding.Services.V1.ReportEmbeddingResponse.Parser, new[]{ "Upserted", "Message", "Error" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Embedding.Services.V1.RetrieveRequest), global::udb.core.Embedding.Services.V1.RetrieveRequest.Parser, new[]{ "TenantId", "SourceName", "QueryText", "QueryVector", "TopK" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Embedding.Services.V1.RetrieveRequest), global::udb.core.Embedding.Services.V1.RetrieveRequest.Parser, new[]{ "TenantId", "SourceName", "QueryText", "QueryVector", "TopK", "FilterJson", "ScoreThreshold" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Embedding.Services.V1.RetrieveHit), global::udb.core.Embedding.Services.V1.RetrieveHit.Parser, new[]{ "Id", "Score", "PayloadJson" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Embedding.Services.V1.RetrieveResponse), global::udb.core.Embedding.Services.V1.RetrieveResponse.Parser, new[]{ "Hits", "Message", "Error" }, null, null, null, null)
           }));
@@ -3715,6 +3717,8 @@ namespace udb.core.Embedding.Services.V1 {
       queryText_ = other.queryText_;
       queryVector_ = other.queryVector_.Clone();
       topK_ = other.topK_;
+      filterJson_ = other.filterJson_;
+      scoreThreshold_ = other.scoreThreshold_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -3790,6 +3794,44 @@ namespace udb.core.Embedding.Services.V1 {
       }
     }
 
+    /// <summary>Field number for the "filter_json" field.</summary>
+    public const int FilterJsonFieldNumber = 6;
+    private string filterJson_ = "";
+    /// <summary>
+    /// Optional caller-supplied metadata filter (Qdrant-style JSON object with
+    /// `must` / `should` / `must_not` condition arrays), merged UNDER the mandatory
+    /// server-side tenant clause. The verified `_tenant_id` `must` clause is always
+    /// applied first and cannot be broadened by this filter; conditions referencing
+    /// any internal `_`-prefixed payload key are rejected. Example:
+    /// `{"must":[{"key":"doc_type","match":{"value":"invoice"}}]}`.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string FilterJson {
+      get { return filterJson_; }
+      set {
+        filterJson_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "score_threshold" field.</summary>
+    public const int ScoreThresholdFieldNumber = 7;
+    private double scoreThreshold_;
+    /// <summary>
+    /// Optional per-query minimum similarity score a hit must clear to be returned.
+    /// RAISES (never lowers) the server-side floor, so a caller can demand
+    /// higher-precision results per query; &lt;= 0 uses the server default. Applies to
+    /// both the vector and hybrid paths.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public double ScoreThreshold {
+      get { return scoreThreshold_; }
+      set {
+        scoreThreshold_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -3810,6 +3852,8 @@ namespace udb.core.Embedding.Services.V1 {
       if (QueryText != other.QueryText) return false;
       if(!queryVector_.Equals(other.queryVector_)) return false;
       if (TopK != other.TopK) return false;
+      if (FilterJson != other.FilterJson) return false;
+      if (!pbc::ProtobufEqualityComparers.BitwiseDoubleEqualityComparer.Equals(ScoreThreshold, other.ScoreThreshold)) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -3822,6 +3866,8 @@ namespace udb.core.Embedding.Services.V1 {
       if (QueryText.Length != 0) hash ^= QueryText.GetHashCode();
       hash ^= queryVector_.GetHashCode();
       if (TopK != 0) hash ^= TopK.GetHashCode();
+      if (FilterJson.Length != 0) hash ^= FilterJson.GetHashCode();
+      if (ScoreThreshold != 0D) hash ^= pbc::ProtobufEqualityComparers.BitwiseDoubleEqualityComparer.GetHashCode(ScoreThreshold);
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -3857,6 +3903,14 @@ namespace udb.core.Embedding.Services.V1 {
         output.WriteRawTag(40);
         output.WriteInt32(TopK);
       }
+      if (FilterJson.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(FilterJson);
+      }
+      if (ScoreThreshold != 0D) {
+        output.WriteRawTag(57);
+        output.WriteDouble(ScoreThreshold);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -3884,6 +3938,14 @@ namespace udb.core.Embedding.Services.V1 {
         output.WriteRawTag(40);
         output.WriteInt32(TopK);
       }
+      if (FilterJson.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(FilterJson);
+      }
+      if (ScoreThreshold != 0D) {
+        output.WriteRawTag(57);
+        output.WriteDouble(ScoreThreshold);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -3906,6 +3968,12 @@ namespace udb.core.Embedding.Services.V1 {
       size += queryVector_.CalculateSize(_repeated_queryVector_codec);
       if (TopK != 0) {
         size += 1 + pb::CodedOutputStream.ComputeInt32Size(TopK);
+      }
+      if (FilterJson.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(FilterJson);
+      }
+      if (ScoreThreshold != 0D) {
+        size += 1 + 8;
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -3931,6 +3999,12 @@ namespace udb.core.Embedding.Services.V1 {
       queryVector_.Add(other.queryVector_);
       if (other.TopK != 0) {
         TopK = other.TopK;
+      }
+      if (other.FilterJson.Length != 0) {
+        FilterJson = other.FilterJson;
+      }
+      if (other.ScoreThreshold != 0D) {
+        ScoreThreshold = other.ScoreThreshold;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -3972,6 +4046,14 @@ namespace udb.core.Embedding.Services.V1 {
             TopK = input.ReadInt32();
             break;
           }
+          case 50: {
+            FilterJson = input.ReadString();
+            break;
+          }
+          case 57: {
+            ScoreThreshold = input.ReadDouble();
+            break;
+          }
         }
       }
     #endif
@@ -4010,6 +4092,14 @@ namespace udb.core.Embedding.Services.V1 {
           }
           case 40: {
             TopK = input.ReadInt32();
+            break;
+          }
+          case 50: {
+            FilterJson = input.ReadString();
+            break;
+          }
+          case 57: {
+            ScoreThreshold = input.ReadDouble();
             break;
           }
         }

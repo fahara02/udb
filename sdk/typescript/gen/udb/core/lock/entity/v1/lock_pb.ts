@@ -73,7 +73,8 @@ export type Lock = Message<"udb.core.lock.entity.v1.Lock"> & {
   leaseTtlSeconds: number;
 
   /**
-   * HELD | RELEASED — operational state for quota counting and audit.
+   * HELD | RELEASED | EXPIRED — operational state for quota counting and audit
+   * (EXPIRED is stamped by the leader-elected expiry reaper, ch16 16.5.1).
    *
    * @generated from field: string status = 7;
    */

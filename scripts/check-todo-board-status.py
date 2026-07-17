@@ -26,12 +26,7 @@ CHAPTER_RE = re.compile(r"^(?:0[1-9]|1[0-5])-.+\.md$")
 
 EXPECTED_OPEN_BY_FILE: dict[str, tuple[str, ...]] = {
     "14-api-sdk-standardization.md": (
-        "14.6.4",
-        "14.7.4",
-        "14.7.5",
-        "14.7.6",
         "14.8.6",
-        "14.8.8",
         "14.9.9",
         "14.9.12",
     ),
@@ -59,13 +54,13 @@ DOC_REQUIREMENTS: dict[str, tuple[str, ...]] = {
         "`[ ]` unchecked atomic rows in the numbered chapter files",
     ),
     "private/masterplan/todos/PLAN.md": (
-        "10 active non-closed",
+        "5 active non-closed",
         "all are `[~]` partial/proof tails, not unchecked rows",
-        "Chapter 14 (8) and Chapter 15 (2)",
+        "Chapter 14 (3) and Chapter 15 (2)",
     ),
     "private/masterplan/todos/00-orchestration.md": (
         "366 atomic todos across 15 numbered chapters",
-        "remaining active work is 10",
+        "remaining active work is 5",
         "`[~]` proof/source tails in Chapters 14 and 15",
         "no numbered chapter",
         "has an unchecked `[ ]` atomic row",
@@ -79,9 +74,8 @@ DOC_REQUIREMENTS: dict[str, tuple[str, ...]] = {
         "Chapter 05 has no active numbered proof tail left",
         "`05.2.3.1` BatchUpsert",
         "`05.6.1.1`",
-        "Chapter 14 has eight live/served validation tails",
-        "`14.6.4`, `14.7.4`, `14.7.5`, `14.7.6`, `14.8.6`, `14.8.8`,",
-        "`14.9.9`, and `14.9.12`",
+        "Chapter 14 has three live/served validation tails",
+        "`14.8.6`, `14.9.9`, and `14.9.12`",
         "Chapter 15 has two remote evidence tails: `15.A.5` and `15.10.1`",
         "The R7 closeout below remains the non-code landing bucket",
         "R7 landing plus the explicit live-proof",
@@ -218,7 +212,7 @@ def run_selftest() -> int:
             raise AssertionError(f"good fixture failed: {failures}")
 
         ch14 = root / TODO_ROOT / "14-api-sdk-standardization.md"
-        ch14.write_text(read_text(ch14).replace("[~] **14.6.4", "[x] **14.6.4"), encoding="utf-8")
+        ch14.write_text(read_text(ch14).replace("[~] **14.8.6", "[x] **14.8.6"), encoding="utf-8")
         failures = check(root)
         if not any("expected open rows are closed or missing" in failure for failure in failures):
             raise AssertionError(f"missing closed-row detection: {failures}")

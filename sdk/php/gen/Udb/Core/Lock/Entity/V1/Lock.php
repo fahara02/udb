@@ -61,7 +61,8 @@ class Lock extends \Google\Protobuf\Internal\Message
      */
     protected $lease_ttl_seconds = 0;
     /**
-     * HELD | RELEASED — operational state for quota counting and audit.
+     * HELD | RELEASED | EXPIRED — operational state for quota counting and audit
+     * (EXPIRED is stamped by the leader-elected expiry reaper, ch16 16.5.1).
      *
      * Generated from protobuf field <code>string status = 7 [json_name = "status", (.udb.core.common.v1.pg_column) = {</code>
      */
@@ -101,7 +102,8 @@ class Lock extends \Google\Protobuf\Internal\Message
      *           high-water mark (the same monotone counter write receipts advance).
      *     @type int $lease_ttl_seconds
      *     @type string $status
-     *           HELD | RELEASED — operational state for quota counting and audit.
+     *           HELD | RELEASED | EXPIRED — operational state for quota counting and audit
+     *           (EXPIRED is stamped by the leader-elected expiry reaper, ch16 16.5.1).
      *     @type \Google\Protobuf\Timestamp $acquired_at
      *     @type \Google\Protobuf\Timestamp $expires_at
      *     @type string $metadata_json
@@ -269,7 +271,8 @@ class Lock extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * HELD | RELEASED — operational state for quota counting and audit.
+     * HELD | RELEASED | EXPIRED — operational state for quota counting and audit
+     * (EXPIRED is stamped by the leader-elected expiry reaper, ch16 16.5.1).
      *
      * Generated from protobuf field <code>string status = 7 [json_name = "status", (.udb.core.common.v1.pg_column) = {</code>
      * @return string
@@ -280,7 +283,8 @@ class Lock extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * HELD | RELEASED — operational state for quota counting and audit.
+     * HELD | RELEASED | EXPIRED — operational state for quota counting and audit
+     * (EXPIRED is stamped by the leader-elected expiry reaper, ch16 16.5.1).
      *
      * Generated from protobuf field <code>string status = 7 [json_name = "status", (.udb.core.common.v1.pg_column) = {</code>
      * @param string $var

@@ -10,14 +10,11 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 
-	entitypb "github.com/fahara02/udb/sdk/go/gen/udb/entity/v1"
 	udb "github.com/fahara02/udb/sdk/go/udbclient"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 const messageType = "billing.v1.Invoice"
@@ -63,7 +60,15 @@ func main() {
 
 	const invoiceID = "1c1c1c1c-0000-4000-8000-000000000001"
 
-	// CREATE — note tenant_id is the canonical UUID; ValidateTenant fails fast on a mismatch.
+	if err := session.ValidateTenant(tenant); err != nil {
+		log.Fatal(err)
+	}
+
+	// Bind the entity ONCE (message type + conflict key). From here every op is a
+	// one-liner over plain maps through session.DataContext — no request structs,
+	// no json.Marshal, no structpb. This is the ergonomic bound-entity API; the
+	// tenant_id you pass is the canonical UUID RLS matches on.
+	inv := session.Udb.Entity(messageType, udb.Key("invoice_id"))
 	record := map[string]any{
 		"invoice_id":     invoiceID,
 		"tenant_id":      tenant,
@@ -71,67 +76,36 @@ func main() {
 		"amount_cents":   4999,
 		"status":         "paid",
 	}
-	if err := session.ValidateTenant(tenant); err != nil {
-		log.Fatal(err)
-	}
-	recordJSON, err := json.Marshal(record)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if _, err := session.Data.Broker.Upsert(session.DataContext(ctx), &entitypb.UpsertRequest{
-		MessageType:    messageType,
-		RecordJson:     recordJSON,
-		ConflictFields: []string{"invoice_id"},
-	}); err != nil {
+
+	// CREATE
+	if _, err := inv.Upsert(session.DataContext(ctx), record); err != nil {
 		log.Fatalf("create: %v", err)
 	}
 	fmt.Printf("crud:  created invoice %s\n", invoiceID)
 
 	// READ — a tenant-scoped read MUST carry tenant_id in the filter.
-	filter, err := structpb.NewStruct(map[string]any{"invoice_id": invoiceID, "tenant_id": tenant})
-	if err != nil {
-		log.Fatal(err)
-	}
-	rs, err := session.Data.Broker.Select(session.DataContext(ctx), &entitypb.SelectRequest{
-		MessageType: messageType,
-		Filter:      filter,
-	})
+	rows, err := inv.Select(session.DataContext(ctx), map[string]any{"invoice_id": invoiceID, "tenant_id": tenant})
 	if err != nil {
 		log.Fatalf("read: %v", err)
 	}
-	fmt.Printf("crud:  read    %d row(s)\n", len(rs.GetRecordsJson()))
+	fmt.Printf("crud:  read    %d row(s)\n", len(rows))
 
 	// UPDATE
 	record["status"] = "refunded"
-	recordJSON, _ = json.Marshal(record)
-	if _, err := session.Data.Broker.Upsert(session.DataContext(ctx), &entitypb.UpsertRequest{
-		MessageType:    messageType,
-		RecordJson:     recordJSON,
-		ConflictFields: []string{"invoice_id"},
-	}); err != nil {
+	if _, err := inv.Upsert(session.DataContext(ctx), record); err != nil {
 		log.Fatalf("update: %v", err)
 	}
 	fmt.Println("crud:  updated status -> refunded")
 
 	// DELETE
-	if _, err := session.Data.Broker.Delete(session.DataContext(ctx), &entitypb.DeleteRequest{
-		MessageType: messageType,
-		Filter:      filter,
-	}); err != nil {
+	if _, err := inv.Delete(session.DataContext(ctx), map[string]any{"invoice_id": invoiceID, "tenant_id": tenant}); err != nil {
 		log.Fatalf("delete: %v", err)
 	}
 	fmt.Println("crud:  deleted")
 
 	// CROSS-TENANT ISOLATION — reads scoped to another tenant return nothing.
-	otherFilter, err := structpb.NewStruct(map[string]any{"tenant_id": "00000000-0000-0000-0000-00000000d999"})
-	if err != nil {
-		log.Fatal(err)
-	}
-	if other, err := session.Data.Broker.Select(session.DataContext(ctx), &entitypb.SelectRequest{
-		MessageType: messageType,
-		Filter:      otherFilter,
-	}); err == nil {
-		fmt.Printf("authz: cross-tenant read -> %d row(s) — isolation enforced\n", len(other.GetRecordsJson()))
+	if other, err := inv.Select(session.DataContext(ctx), map[string]any{"tenant_id": "00000000-0000-0000-0000-00000000d999"}); err == nil {
+		fmt.Printf("authz: cross-tenant read -> %d row(s) — isolation enforced\n", len(other))
 	}
 
 	fmt.Println("\nENTERPRISE FLOW OK (authn + authz + tenant-scoped CRUD + isolation)")

@@ -99,6 +99,29 @@ impl SqlDialect for Postgres {
             // `COALESCE($1::JSONB, j)` type-check; a value already bound as jsonb
             // casts to itself (no-op). bug_report.md A4.
             format!("{placeholder}::JSONB")
+        } else if {
+            // Column types with a canonical TEXT input form but NO implicit
+            // assignment cast from a bound `text` parameter, so an INSERT/UPDATE
+            // supplying the column fails to plan (SQLSTATE 42804): PostGIS
+            // spatial (`GEOGRAPHY(POINT,4326)`/`GEOMETRY(...)`, input = hex EWKB),
+            // network address (`inet`/`cidr`/`macaddr`/`macaddr8`), and `date`.
+            // Casting the placeholder to the column's base type makes the text
+            // input (hex EWKB, "10.1.2.3", "2026-07-16") type-check; the column
+            // typmod is still checked on assignment. (bug_report 2026-07-16
+            // #1a geography, #1c inet, #1d date — same class as the B8 uuid fix.)
+            let base = ty.split('(').next().unwrap_or(ty).trim();
+            matches!(
+                base.to_ascii_lowercase().as_str(),
+                "geography" | "geometry" | "inet" | "cidr" | "macaddr" | "macaddr8" | "date"
+            )
+        } {
+            let base = ty
+                .split('(')
+                .next()
+                .unwrap_or(ty)
+                .trim()
+                .to_ascii_uppercase();
+            format!("{placeholder}::{base}")
         } else {
             placeholder.to_string()
         }
@@ -1442,6 +1465,47 @@ mod tests {
             sql.contains("WHERE \"created_at\" < $1::TIMESTAMPTZ"),
             "timestamptz-column comparison must cast the placeholder; got: {sql}"
         );
+    }
+
+    #[test]
+    fn geography_and_geometry_columns_cast_the_placeholder() {
+        // PostGIS has no implicit text->geography/geometry cast, so a text-bound
+        // (hex EWKB) value for a GEOGRAPHY(POINT,4326)/GEOMETRY(...) column MUST be
+        // cast `$N::GEOGRAPHY` / `$N::GEOMETRY` or the INSERT/UPDATE fails to plan
+        // (SQLSTATE 42804). Base type only — the column typmod (Point/SRID) is
+        // checked on assignment. (bug_report 2026-07-16 #1a)
+        assert_eq!(
+            <Postgres as SqlDialect>::cast_compare_placeholder("GEOGRAPHY(POINT,4326)", "$1"),
+            "$1::GEOGRAPHY"
+        );
+        assert_eq!(
+            <Postgres as SqlDialect>::cast_compare_placeholder("geometry(LineString,4326)", "$2"),
+            "$2::GEOMETRY"
+        );
+        // Plain text/varchar columns are still NOT cast — byte-identical to before.
+        assert_eq!(
+            <Postgres as SqlDialect>::cast_compare_placeholder("VARCHAR(255)", "$3"),
+            "$3"
+        );
+    }
+
+    #[test]
+    fn network_and_date_columns_cast_the_placeholder() {
+        // inet/cidr/macaddr/date have a canonical TEXT input but no implicit
+        // assignment cast from a bound text parameter (SQLSTATE 42804). Cast the
+        // placeholder to the base type. (bug_report 2026-07-16 #1c inet, #1d date)
+        for (ty, ph, want) in [
+            ("inet", "$1", "$1::INET"),
+            ("cidr", "$2", "$2::CIDR"),
+            ("macaddr", "$3", "$3::MACADDR"),
+            ("date", "$4", "$4::DATE"),
+        ] {
+            assert_eq!(
+                <Postgres as SqlDialect>::cast_compare_placeholder(ty, ph),
+                want,
+                "{ty} column must cast the placeholder"
+            );
+        }
     }
 
     #[test]

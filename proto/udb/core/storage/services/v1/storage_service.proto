@@ -279,6 +279,47 @@ service StorageService {
     option (google.api.http) = {get: "/v1/storage/files/{file_id}:getDownloadUrl"};
   }
 
+  // Reissue a presigned PUT URL for an existing PENDING upload — the resume path
+  // when a RegisterUpload response was lost in flight (the client kept the file_id
+  // but not the secret upload URL). The File row + object_key are unchanged; only
+  // a fresh short-lived upload URL is minted. Rejected fail-closed for a
+  // non-PENDING (already-finalized or removed) file. READ-ONLY (no state change).
+  rpc ReissueUploadUrl(ReissueUploadUrlRequest) returns (ReissueUploadUrlResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:storage:reissue-upload-url"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "storage.ReissueUploadUrl"
+      request_context_required: true
+      tenant_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "reissue_upload_url" rest_operation_id: "reissueUploadUrl"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "storage"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "storage"
+      required_backends: "postgres"
+      required_backends: "object_store"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {get: "/v1/storage/files/{file_id}:reissueUploadUrl"};
+  }
+
   // Stream a file's bytes directly through the broker. FALLBACK for clients
   // that cannot use the presigned `GetDownloadUrl` HTTP GET (no egress to the
   // object store, corporate proxy, etc.). The broker streams the object bytes
@@ -615,6 +656,38 @@ message RegisterUploadResponse {
   // Unix-seconds expiry of the presigned PUT `upload_url`; 0 when no URL was
   // minted (metadata-only mode / presign error). Lets the client know when the
   // URL dies without a follow-up call.
+  int64 expires_at = 5;
+}
+
+message ReissueUploadUrlRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "storage"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  string file_id = 2;
+  int32 expires_in_minutes = 3;
+}
+
+message ReissueUploadUrlResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "storage"
+    generate_minimal_example: true
+  };
+  string file_id = 1;
+  string upload_url = 2;
+  string object_key = 3;
+  udb.core.common.v1.ApiError error = 4;
   int64 expires_at = 5;
 }
 

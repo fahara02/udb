@@ -56,6 +56,31 @@ public final class LockServiceProto {
   static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_lock_services_v1_ReleaseLockResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_lock_services_v1_GetLockRequest_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_lock_services_v1_GetLockRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_lock_services_v1_GetLockResponse_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_lock_services_v1_GetLockResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_lock_services_v1_ListLocksRequest_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_lock_services_v1_ListLocksRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_lock_services_v1_ListLocksResponse_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_lock_services_v1_ListLocksResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_lock_services_v1_Lock_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_lock_services_v1_Lock_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -100,53 +125,96 @@ public final class LockServiceProto {
       "leaseLockResponse\022\032\n\010released\030\001 \001(\010R\010rel" +
       "eased\022\030\n\007message\030\002 \001(\tR\007message\0222\n\005error" +
       "\030\003 \001(\0132\034.udb.core.common.v1.ApiErrorR\005er" +
-      "ror:\033\232\262\031\027\010\001\032\003udb(\260\352\0010\003@\001J\004lockP\0012\246\014\n\013Loc" +
-      "kService\022\246\003\n\013AcquireLock\022-.udb.core.lock" +
-      ".services.v1.AcquireLockRequest\032..udb.co" +
-      "re.lock.services.v1.AcquireLockResponse\"" +
-      "\267\002\312\363\0304\010\002\032\025udb:lock:acquire-lock \001J\002\001\002j\020l" +
-      "ock.AcquireLock\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0302\010\001\022\014acqu" +
-      "ire_lock\032\003udb(\260\352\0010\003@\001J\004lockP\001Z\013acquireLo" +
-      "ck\352\363\030Y\n\020lock.AcquireLock\022\031udb.lock.lock." +
-      "acquired.v1\032\tlock_name\"\010standard*\rat_lea" +
-      "st_once2\006stable\362\363\030>\n\004lock\032\010postgres2\033UDB" +
-      "_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGE" +
-      "T\370\363\030\002\202\323\344\223\002\026\"\021/v1/locks:acquire:\001*\022\223\003\n\tRe" +
-      "newLock\022+.udb.core.lock.services.v1.Rene" +
-      "wLockRequest\032,.udb.core.lock.services.v1" +
-      ".RenewLockResponse\"\252\002\312\363\0300\010\002\032\023udb:lock:re" +
-      "new-lock \001J\002\001\002j\016lock.RenewLock\220\001\001\322\363\030\006\010\001\020" +
-      "\001 \001\332\363\030.\010\001\022\nrenew_lock\032\003udb(\260\352\0010\003@\001J\004lock" +
-      "P\001Z\trenewLock\352\363\030V\n\016lock.RenewLock\022\030udb.l" +
-      "ock.lock.renewed.v1\032\tlock_name\"\010standard" +
-      "*\rat_least_once2\006stable\362\363\030>\n\004lock\032\010postg" +
-      "res2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GR" +
-      "PC_TARGET\370\363\030\002\202\323\344\223\002\024\"\017/v1/locks:renew:\001*\022" +
-      "\246\003\n\013ReleaseLock\022-.udb.core.lock.services" +
-      ".v1.ReleaseLockRequest\032..udb.core.lock.s" +
-      "ervices.v1.ReleaseLockResponse\"\267\002\312\363\0304\010\002\032" +
-      "\025udb:lock:release-lock \001J\002\001\002j\020lock.Relea" +
-      "seLock\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0302\010\001\022\014release_lock\032" +
-      "\003udb(\260\352\0010\003@\001J\004lockP\001Z\013releaseLock\352\363\030Y\n\020l" +
-      "ock.ReleaseLock\022\031udb.lock.lock.released." +
-      "v1\032\tlock_name\"\010standard*\rat_least_once2\006" +
-      "stable\362\363\030>\n\004lock\032\010postgres2\033UDB_NATIVE_S" +
-      "ERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223" +
-      "\002\026\"\021/v1/locks:release:\001*\032\256\002\312\360\031G\n\004lock\022\004l" +
-      "ock\032\004lock\"\005Locks*\004lock0\0018\001h\001z\004lock\202\001\004loc" +
-      "k\212\001\004lock\222\001\013native.lock\322\360\031\027\010\001\032\003udb(\260\352\0010\003@" +
-      "\001J\004lockP\001\332\360\031\201\001\n\004lock\022\017udb/native/lock\032\033U" +
-      "DB_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TAR" +
-      "GET\"\026udb.native.lock.config:\004lockJ\013UDB_A" +
-      "PI_KEYZ\017udb native lint\342\360\031>\n\004lock\032\010postg" +
-      "res2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GR" +
-      "PC_TARGETB\203\002\n\035com.udb.core.lock.services" +
-      ".v1B\020LockServiceProtoP\001ZGgithub.com/faha" +
-      "ra02/udb/sdk/go/gen/udb/core/lock/servic" +
-      "es/v1;servicesv1\242\002\004UCLS\252\002\031udb.core.Lock." +
-      "Services.V1\312\002\031Udb\\Core\\Lock\\Services\\V1\342" +
-      "\002%Udb\\GPBMetadata\\Core\\Lock\\Services\\V1\352" +
-      "\002\035Udb::Core::Lock::Services::V1b\006proto3"
+      "ror:\033\232\262\031\027\010\001\032\003udb(\260\352\0010\003@\001J\004lockP\001\"g\n\016GetL" +
+      "ockRequest\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022" +
+      "\033\n\tlock_name\030\002 \001(\tR\010lockName:\033\232\262\031\027\010\001\032\003ud" +
+      "b(\260\352\0010\003@\001J\004lockP\001\"\307\001\n\017GetLockResponse\0223\n" +
+      "\004lock\030\001 \001(\0132\037.udb.core.lock.services.v1." +
+      "LockR\004lock\022\024\n\005found\030\002 \001(\010R\005found\022\030\n\007mess" +
+      "age\030\003 \001(\tR\007message\0222\n\005error\030\004 \001(\0132\034.udb." +
+      "core.common.v1.ApiErrorR\005error:\033\232\262\031\027\010\001\032\003" +
+      "udb(\260\352\0010\003@\001J\004lockP\001\"\255\001\n\020ListLocksRequest" +
+      "\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022#\n\rstatus_" +
+      "filter\030\002 \001(\tR\014statusFilter\022\033\n\tpage_size\030" +
+      "\003 \001(\005R\010pageSize\022\035\n\npage_token\030\004 \001(\tR\tpag" +
+      "eToken:\033\232\262\031\027\010\001\032\003udb(\260\352\0010\003@\001J\004lockP\001\"\335\001\n\021" +
+      "ListLocksResponse\0225\n\005locks\030\001 \003(\0132\037.udb.c" +
+      "ore.lock.services.v1.LockR\005locks\022&\n\017next" +
+      "_page_token\030\002 \001(\tR\rnextPageToken\022\030\n\007mess" +
+      "age\030\003 \001(\tR\007message\0222\n\005error\030\004 \001(\0132\034.udb." +
+      "core.common.v1.ApiErrorR\005error:\033\232\262\031\027\010\001\032\003" +
+      "udb(\260\352\0010\003@\001J\004lockP\001\"\361\002\n\004Lock\022\027\n\007lock_id\030" +
+      "\001 \001(\tR\006lockId\022\033\n\ttenant_id\030\002 \001(\tR\010tenant" +
+      "Id\022\033\n\tlock_name\030\003 \001(\tR\010lockName\022\031\n\010owner" +
+      "_id\030\004 \001(\tR\007ownerId\022#\n\rfencing_token\030\005 \001(" +
+      "\003R\014fencingToken\022*\n\021lease_ttl_seconds\030\006 \001" +
+      "(\005R\017leaseTtlSeconds\022\026\n\006status\030\007 \001(\tR\006sta" +
+      "tus\022(\n\020acquired_at_unix\030\010 \001(\003R\016acquiredA" +
+      "tUnix\022&\n\017expires_at_unix\030\t \001(\003R\rexpiresA" +
+      "tUnix\022#\n\rmetadata_json\030\n \001(\tR\014metadataJs" +
+      "on:\033\232\262\031\027\010\001\032\003udb(\260\352\0010\003@\001J\004lockP\0012\212\021\n\013Lock" +
+      "Service\022\246\003\n\013AcquireLock\022-.udb.core.lock." +
+      "services.v1.AcquireLockRequest\032..udb.cor" +
+      "e.lock.services.v1.AcquireLockResponse\"\267" +
+      "\002\312\363\0304\010\002\032\025udb:lock:acquire-lock \001J\002\001\002j\020lo" +
+      "ck.AcquireLock\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0302\010\001\022\014acqui" +
+      "re_lock\032\003udb(\260\352\0010\003@\001J\004lockP\001Z\013acquireLoc" +
+      "k\352\363\030Y\n\020lock.AcquireLock\022\031udb.lock.lock.a" +
+      "cquired.v1\032\tlock_name\"\010standard*\rat_leas" +
+      "t_once2\006stable\362\363\030>\n\004lock\032\010postgres2\033UDB_" +
+      "NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET" +
+      "\370\363\030\002\202\323\344\223\002\026\"\021/v1/locks:acquire:\001*\022\223\003\n\tRen" +
+      "ewLock\022+.udb.core.lock.services.v1.Renew" +
+      "LockRequest\032,.udb.core.lock.services.v1." +
+      "RenewLockResponse\"\252\002\312\363\0300\010\002\032\023udb:lock:ren" +
+      "ew-lock \001J\002\001\002j\016lock.RenewLock\220\001\001\322\363\030\006\010\001\020\001" +
+      " \001\332\363\030.\010\001\022\nrenew_lock\032\003udb(\260\352\0010\003@\001J\004lockP" +
+      "\001Z\trenewLock\352\363\030V\n\016lock.RenewLock\022\030udb.lo" +
+      "ck.lock.renewed.v1\032\tlock_name\"\010standard*" +
+      "\rat_least_once2\006stable\362\363\030>\n\004lock\032\010postgr" +
+      "es2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRP" +
+      "C_TARGET\370\363\030\002\202\323\344\223\002\024\"\017/v1/locks:renew:\001*\022\246" +
+      "\003\n\013ReleaseLock\022-.udb.core.lock.services." +
+      "v1.ReleaseLockRequest\032..udb.core.lock.se" +
+      "rvices.v1.ReleaseLockResponse\"\267\002\312\363\0304\010\002\032\025" +
+      "udb:lock:release-lock \001J\002\001\002j\020lock.Releas" +
+      "eLock\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0302\010\001\022\014release_lock\032\003" +
+      "udb(\260\352\0010\003@\001J\004lockP\001Z\013releaseLock\352\363\030Y\n\020lo" +
+      "ck.ReleaseLock\022\031udb.lock.lock.released.v" +
+      "1\032\tlock_name\"\010standard*\rat_least_once2\006s" +
+      "table\362\363\030>\n\004lock\032\010postgres2\033UDB_NATIVE_SE" +
+      "RVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002" +
+      "\026\"\021/v1/locks:release:\001*\022\256\002\n\007GetLock\022).ud" +
+      "b.core.lock.services.v1.GetLockRequest\032*" +
+      ".udb.core.lock.services.v1.GetLockRespon" +
+      "se\"\313\001\312\363\030,\010\002\032\021udb:lock:get-lock \001J\002\001\002j\014lo" +
+      "ck.GetLock\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030*\010\001\022\010get_lock\032" +
+      "\003udb(\260\352\0010\003@\001J\004lockP\001Z\007getLock\362\363\030>\n\004lock\032" +
+      "\010postgres2\033UDB_NATIVE_SERVICES_ENABLED2\017" +
+      "UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\027\022\025/v1/locks/{lo" +
+      "ck_name}\022\260\002\n\tListLocks\022+.udb.core.lock.s" +
+      "ervices.v1.ListLocksRequest\032,.udb.core.l" +
+      "ock.services.v1.ListLocksResponse\"\307\001\312\363\0300" +
+      "\010\002\032\023udb:lock:list-locks \001J\002\001\002j\016lock.List" +
+      "Locks\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030.\010\001\022\nlist_locks\032\003ud" +
+      "b(\260\352\0010\003@\001J\004lockP\001Z\tlistLocks\362\363\030>\n\004lock\032\010" +
+      "postgres2\033UDB_NATIVE_SERVICES_ENABLED2\017U" +
+      "DB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\013\022\t/v1/locks\032\256\002\312\360" +
+      "\031G\n\004lock\022\004lock\032\004lock\"\005Locks*\004lock0\0018\001h\001z" +
+      "\004lock\202\001\004lock\212\001\004lock\222\001\013native.lock\322\360\031\027\010\001\032" +
+      "\003udb(\260\352\0010\003@\001J\004lockP\001\332\360\031\201\001\n\004lock\022\017udb/nat" +
+      "ive/lock\032\033UDB_NATIVE_SERVICES_ENABLED\032\017U" +
+      "DB_GRPC_TARGET\"\026udb.native.lock.config:\004" +
+      "lockJ\013UDB_API_KEYZ\017udb native lint\342\360\031>\n\004" +
+      "lock\032\010postgres2\033UDB_NATIVE_SERVICES_ENAB" +
+      "LED2\017UDB_GRPC_TARGETB\203\002\n\035com.udb.core.lo" +
+      "ck.services.v1B\020LockServiceProtoP\001ZGgith" +
+      "ub.com/fahara02/udb/sdk/go/gen/udb/core/" +
+      "lock/services/v1;servicesv1\242\002\004UCLS\252\002\031udb" +
+      ".core.Lock.Services.V1\312\002\031Udb\\Core\\Lock\\S" +
+      "ervices\\V1\342\002%Udb\\GPBMetadata\\Core\\Lock\\S" +
+      "ervices\\V1\352\002\035Udb::Core::Lock::Services::" +
+      "V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -191,6 +259,36 @@ public final class LockServiceProto {
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_lock_services_v1_ReleaseLockResponse_descriptor,
         new java.lang.String[] { "Released", "Message", "Error", });
+    internal_static_udb_core_lock_services_v1_GetLockRequest_descriptor =
+      getDescriptor().getMessageTypes().get(6);
+    internal_static_udb_core_lock_services_v1_GetLockRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_lock_services_v1_GetLockRequest_descriptor,
+        new java.lang.String[] { "TenantId", "LockName", });
+    internal_static_udb_core_lock_services_v1_GetLockResponse_descriptor =
+      getDescriptor().getMessageTypes().get(7);
+    internal_static_udb_core_lock_services_v1_GetLockResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_lock_services_v1_GetLockResponse_descriptor,
+        new java.lang.String[] { "Lock", "Found", "Message", "Error", });
+    internal_static_udb_core_lock_services_v1_ListLocksRequest_descriptor =
+      getDescriptor().getMessageTypes().get(8);
+    internal_static_udb_core_lock_services_v1_ListLocksRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_lock_services_v1_ListLocksRequest_descriptor,
+        new java.lang.String[] { "TenantId", "StatusFilter", "PageSize", "PageToken", });
+    internal_static_udb_core_lock_services_v1_ListLocksResponse_descriptor =
+      getDescriptor().getMessageTypes().get(9);
+    internal_static_udb_core_lock_services_v1_ListLocksResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_lock_services_v1_ListLocksResponse_descriptor,
+        new java.lang.String[] { "Locks", "NextPageToken", "Message", "Error", });
+    internal_static_udb_core_lock_services_v1_Lock_descriptor =
+      getDescriptor().getMessageTypes().get(10);
+    internal_static_udb_core_lock_services_v1_Lock_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_lock_services_v1_Lock_descriptor,
+        new java.lang.String[] { "LockId", "TenantId", "LockName", "OwnerId", "FencingToken", "LeaseTtlSeconds", "Status", "AcquiredAtUnix", "ExpiresAtUnix", "MetadataJson", });
     descriptor.resolveAllFeaturesImmutable();
     com.google.api.AnnotationsProto.getDescriptor();
     com.udb.core.common.v1.DtoProto.getDescriptor();

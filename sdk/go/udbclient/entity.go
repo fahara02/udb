@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	entityv1 "github.com/fahara02/udb/sdk/go/gen/udb/entity/v1"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -85,12 +86,23 @@ func (e *Entity) requestContext() *entityv1.RequestContext {
 type UpsertOption func(*upsertOptions)
 
 type upsertOptions struct {
-	returnRecord bool
+	returnRecord   bool
+	idempotencyKey string
 }
 
 // ReturnRecord requests that Upsert decode the MutationResponse.record_json the
 // broker already returns on the SAME response — it does NOT issue a second Get.
 func ReturnRecord() UpsertOption { return func(o *upsertOptions) { o.returnRecord = true } }
+
+// WithIdempotencyKey attaches a caller-supplied durable idempotency key to the
+// Upsert. The broker deduplicates replays of the SAME key (surfacing
+// WasDuplicate) so an ambiguous client/network retry cannot create a second row
+// or repeat a side effect, and it re-enables the generated mutation retry policy
+// for this bound-entity path. A key that is present but only whitespace is
+// rejected; an unset key leaves the request's idempotency_key empty (unchanged).
+func WithIdempotencyKey(key string) UpsertOption {
+	return func(o *upsertOptions) { o.idempotencyKey = key }
+}
 
 // UpsertResult carries an Upsert outcome. Record is populated only when
 // ReturnRecord() was passed and the broker returned a record body.
@@ -112,6 +124,11 @@ func (e *Entity) Upsert(ctx context.Context, record any, opts ...UpsertOption) (
 	for _, opt := range opts {
 		opt(&o)
 	}
+	// A supplied idempotency key must not be whitespace-only — a blank key would
+	// silently disable replay-safety while looking set. Empty (unset) is fine.
+	if o.idempotencyKey != "" && strings.TrimSpace(o.idempotencyKey) == "" {
+		return nil, fmt.Errorf("udb: idempotency key must not be whitespace-only")
+	}
 	b, err := toRecordJSON(record)
 	if err != nil {
 		return nil, err
@@ -122,6 +139,7 @@ func (e *Entity) Upsert(ctx context.Context, record any, opts ...UpsertOption) (
 		RecordJson:     b,
 		ConflictFields: []string(e.key),
 		ReturnRecord:   o.returnRecord,
+		IdempotencyKey: o.idempotencyKey,
 	})
 	if err != nil {
 		return nil, err

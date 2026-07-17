@@ -3911,6 +3911,20 @@ function perfSeedPhp(array $s): array
         if ($delReg) {
             $fix->set('delete_file_id', $delReg->getFileId());
         }
+        // A registered-but-PENDING upload (never uploaded, never finalized) for the
+        // measured ReissueUploadUrl — it resumes a PENDING upload and rejects any
+        // non-PENDING (finalized/ACTIVE) file, so it needs its own PENDING target.
+        $reissueReg = $try('RegisterReissueFile', fn () => $authGen->register_upload((new \Udb\Core\Storage\Services\V1\RegisterUploadRequest())
+            ->setTenantId($tenant)->setProjectId('')->setFilename("perf-reissue-$suffix.txt")->setContentType('text/plain')
+            ->setFileType('DOCUMENT')->setReferenceId(liveUuidV4())->setReferenceType('sdk.perf')->setSizeBytes(64)->setExpiresInMinutes(30), $meta));
+        if ($reissueReg) {
+            $rfid = $reissueReg->getFileId();
+            $fix->set('reissue_file_id', $rfid);
+            if ($rfid !== '') {
+                $cleanups[] = fn () => $try('DeleteReissueFile', fn () => $authGen->delete_file((new \Udb\Core\Storage\Services\V1\DeleteFileRequest())
+                    ->setTenantId($tenant)->setFileId($rfid), $meta));
+            }
+        }
         if ($fid !== '') {
             $cleanups[] = fn () => $try('DeleteFile', fn () => $authGen->delete_file((new \Udb\Core\Storage\Services\V1\DeleteFileRequest())
                 ->setTenantId($tenant)->setFileId($fid), $meta));
@@ -4044,6 +4058,11 @@ function perfSeedPhp(array $s): array
     $fix->set('vault_signature', base64_encode('perf'));
     $seedStub('CreateTransitKey', $vault, 'CreateTransitKey', \Udb\Core\Vault\Services\V1\CreateTransitKeyRequest::class,
         ['tenant_id' => $tenant, 'key_name' => $fix->lookup('vault_key_name'), 'algorithm' => 'aes256-gcm-siv']);
+    // A dedicated ed25519 SIGNING key so GetTransitPublicKey exports a real public
+    // key — the aes256-gcm-siv key above has no exportable public half.
+    $fix->set('vault_signing_key_name', "sdk-perf-signing-key-$suffix");
+    $seedStub('CreateSigningKey', $vault, 'CreateTransitKey', \Udb\Core\Vault\Services\V1\CreateTransitKeyRequest::class,
+        ['tenant_id' => $tenant, 'key_name' => $fix->lookup('vault_signing_key_name'), 'algorithm' => 'ed25519']);
     $enc = $seedStub('VaultEncrypt', $vault, 'Encrypt', \Udb\Core\Vault\Services\V1\EncryptRequest::class,
         ['tenant_id' => $tenant, 'key_name' => $fix->lookup('vault_key_name'), 'plaintext' => 'perf']);
     if ($enc && $enc->getCiphertext() !== '') {
@@ -4062,13 +4081,16 @@ function perfSeedPhp(array $s): array
     // LockService: two independent locks whose captured fencing tokens back the
     // measured RenewLock / ReleaseLock (each keyed by its exact seeded lock name).
     $locks = $authGen->LockServiceStub();
+    // Lease long enough to outlive the whole measured run — the perf surface takes
+    // well over a minute (PHP runs in Docker) to reach the measured RenewLock/
+    // ReleaseLock, and a short lease would expire first → "lock_not_held".
     $renew = $seedStub('AcquireLock:renew', $locks, 'AcquireLock', \Udb\Core\Lock\Services\V1\AcquireLockRequest::class,
-        ['tenant_id' => $tenant, 'lock_name' => 'sdk-perf-renew-lock', 'owner_id' => $lockOwner, 'lease_ttl_seconds' => 60, 'metadata_json' => '{}']);
+        ['tenant_id' => $tenant, 'lock_name' => 'sdk-perf-renew-lock', 'owner_id' => $lockOwner, 'lease_ttl_seconds' => 3600, 'metadata_json' => '{}']);
     if ($renew) {
         $fix->set('renew_fencing_token', (string) $renew->getFencingToken());
     }
     $release = $seedStub('AcquireLock:release', $locks, 'AcquireLock', \Udb\Core\Lock\Services\V1\AcquireLockRequest::class,
-        ['tenant_id' => $tenant, 'lock_name' => 'sdk-perf-release-lock', 'owner_id' => $lockOwner, 'lease_ttl_seconds' => 60, 'metadata_json' => '{}']);
+        ['tenant_id' => $tenant, 'lock_name' => 'sdk-perf-release-lock', 'owner_id' => $lockOwner, 'lease_ttl_seconds' => 3600, 'metadata_json' => '{}']);
     if ($release) {
         $fix->set('release_fencing_token', (string) $release->getFencingToken());
     }

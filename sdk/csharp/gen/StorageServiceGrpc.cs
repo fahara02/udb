@@ -58,6 +58,10 @@ namespace udb.core.Storage.Services.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::udb.core.Storage.Services.V1.GetDownloadUrlResponse> __Marshaller_udb_core_storage_services_v1_GetDownloadUrlResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Storage.Services.V1.GetDownloadUrlResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Storage.Services.V1.ReissueUploadUrlRequest> __Marshaller_udb_core_storage_services_v1_ReissueUploadUrlRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Storage.Services.V1.ReissueUploadUrlRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Storage.Services.V1.ReissueUploadUrlResponse> __Marshaller_udb_core_storage_services_v1_ReissueUploadUrlResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Storage.Services.V1.ReissueUploadUrlResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::udb.core.Storage.Services.V1.DownloadFileRequest> __Marshaller_udb_core_storage_services_v1_DownloadFileRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Storage.Services.V1.DownloadFileRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::udb.core.Storage.Services.V1.DownloadFileChunk> __Marshaller_udb_core_storage_services_v1_DownloadFileChunk = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Storage.Services.V1.DownloadFileChunk.Parser));
@@ -101,6 +105,14 @@ namespace udb.core.Storage.Services.V1 {
         "GetDownloadUrl",
         __Marshaller_udb_core_storage_services_v1_GetDownloadUrlRequest,
         __Marshaller_udb_core_storage_services_v1_GetDownloadUrlResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Storage.Services.V1.ReissueUploadUrlRequest, global::udb.core.Storage.Services.V1.ReissueUploadUrlResponse> __Method_ReissueUploadUrl = new grpc::Method<global::udb.core.Storage.Services.V1.ReissueUploadUrlRequest, global::udb.core.Storage.Services.V1.ReissueUploadUrlResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "ReissueUploadUrl",
+        __Marshaller_udb_core_storage_services_v1_ReissueUploadUrlRequest,
+        __Marshaller_udb_core_storage_services_v1_ReissueUploadUrlResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Method<global::udb.core.Storage.Services.V1.DownloadFileRequest, global::udb.core.Storage.Services.V1.DownloadFileChunk> __Method_DownloadFile = new grpc::Method<global::udb.core.Storage.Services.V1.DownloadFileRequest, global::udb.core.Storage.Services.V1.DownloadFileChunk>(
@@ -184,6 +196,22 @@ namespace udb.core.Storage.Services.V1 {
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::System.Threading.Tasks.Task<global::udb.core.Storage.Services.V1.GetDownloadUrlResponse> GetDownloadUrl(global::udb.core.Storage.Services.V1.GetDownloadUrlRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Reissue a presigned PUT URL for an existing PENDING upload — the resume path
+      /// when a RegisterUpload response was lost in flight (the client kept the file_id
+      /// but not the secret upload URL). The File row + object_key are unchanged; only
+      /// a fresh short-lived upload URL is minted. Rejected fail-closed for a
+      /// non-PENDING (already-finalized or removed) file. READ-ONLY (no state change).
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Storage.Services.V1.ReissueUploadUrlResponse> ReissueUploadUrl(global::udb.core.Storage.Services.V1.ReissueUploadUrlRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -426,6 +454,70 @@ namespace udb.core.Storage.Services.V1 {
         return CallInvoker.AsyncUnaryCall(__Method_GetDownloadUrl, null, options, request);
       }
       /// <summary>
+      /// Reissue a presigned PUT URL for an existing PENDING upload — the resume path
+      /// when a RegisterUpload response was lost in flight (the client kept the file_id
+      /// but not the secret upload URL). The File row + object_key are unchanged; only
+      /// a fresh short-lived upload URL is minted. Rejected fail-closed for a
+      /// non-PENDING (already-finalized or removed) file. READ-ONLY (no state change).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Storage.Services.V1.ReissueUploadUrlResponse ReissueUploadUrl(global::udb.core.Storage.Services.V1.ReissueUploadUrlRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ReissueUploadUrl(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Reissue a presigned PUT URL for an existing PENDING upload — the resume path
+      /// when a RegisterUpload response was lost in flight (the client kept the file_id
+      /// but not the secret upload URL). The File row + object_key are unchanged; only
+      /// a fresh short-lived upload URL is minted. Rejected fail-closed for a
+      /// non-PENDING (already-finalized or removed) file. READ-ONLY (no state change).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Storage.Services.V1.ReissueUploadUrlResponse ReissueUploadUrl(global::udb.core.Storage.Services.V1.ReissueUploadUrlRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_ReissueUploadUrl, null, options, request);
+      }
+      /// <summary>
+      /// Reissue a presigned PUT URL for an existing PENDING upload — the resume path
+      /// when a RegisterUpload response was lost in flight (the client kept the file_id
+      /// but not the secret upload URL). The File row + object_key are unchanged; only
+      /// a fresh short-lived upload URL is minted. Rejected fail-closed for a
+      /// non-PENDING (already-finalized or removed) file. READ-ONLY (no state change).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Storage.Services.V1.ReissueUploadUrlResponse> ReissueUploadUrlAsync(global::udb.core.Storage.Services.V1.ReissueUploadUrlRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ReissueUploadUrlAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Reissue a presigned PUT URL for an existing PENDING upload — the resume path
+      /// when a RegisterUpload response was lost in flight (the client kept the file_id
+      /// but not the secret upload URL). The File row + object_key are unchanged; only
+      /// a fresh short-lived upload URL is minted. Rejected fail-closed for a
+      /// non-PENDING (already-finalized or removed) file. READ-ONLY (no state change).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Storage.Services.V1.ReissueUploadUrlResponse> ReissueUploadUrlAsync(global::udb.core.Storage.Services.V1.ReissueUploadUrlRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_ReissueUploadUrl, null, options, request);
+      }
+      /// <summary>
       /// Stream a file's bytes directly through the broker. FALLBACK for clients
       /// that cannot use the presigned `GetDownloadUrl` HTTP GET (no egress to the
       /// object store, corporate proxy, etc.). The broker streams the object bytes
@@ -664,6 +756,7 @@ namespace udb.core.Storage.Services.V1 {
           .AddMethod(__Method_RegisterUpload, serviceImpl.RegisterUpload)
           .AddMethod(__Method_FinalizeUpload, serviceImpl.FinalizeUpload)
           .AddMethod(__Method_GetDownloadUrl, serviceImpl.GetDownloadUrl)
+          .AddMethod(__Method_ReissueUploadUrl, serviceImpl.ReissueUploadUrl)
           .AddMethod(__Method_DownloadFile, serviceImpl.DownloadFile)
           .AddMethod(__Method_GetFile, serviceImpl.GetFile)
           .AddMethod(__Method_UpdateFile, serviceImpl.UpdateFile)
@@ -681,6 +774,7 @@ namespace udb.core.Storage.Services.V1 {
       serviceBinder.AddMethod(__Method_RegisterUpload, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Storage.Services.V1.RegisterUploadRequest, global::udb.core.Storage.Services.V1.RegisterUploadResponse>(serviceImpl.RegisterUpload));
       serviceBinder.AddMethod(__Method_FinalizeUpload, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Storage.Services.V1.FinalizeUploadRequest, global::udb.core.Storage.Services.V1.FinalizeUploadResponse>(serviceImpl.FinalizeUpload));
       serviceBinder.AddMethod(__Method_GetDownloadUrl, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Storage.Services.V1.GetDownloadUrlRequest, global::udb.core.Storage.Services.V1.GetDownloadUrlResponse>(serviceImpl.GetDownloadUrl));
+      serviceBinder.AddMethod(__Method_ReissueUploadUrl, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Storage.Services.V1.ReissueUploadUrlRequest, global::udb.core.Storage.Services.V1.ReissueUploadUrlResponse>(serviceImpl.ReissueUploadUrl));
       serviceBinder.AddMethod(__Method_DownloadFile, serviceImpl == null ? null : new grpc::ServerStreamingServerMethod<global::udb.core.Storage.Services.V1.DownloadFileRequest, global::udb.core.Storage.Services.V1.DownloadFileChunk>(serviceImpl.DownloadFile));
       serviceBinder.AddMethod(__Method_GetFile, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Storage.Services.V1.GetFileRequest, global::udb.core.Storage.Services.V1.GetFileResponse>(serviceImpl.GetFile));
       serviceBinder.AddMethod(__Method_UpdateFile, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Storage.Services.V1.UpdateFileRequest, global::udb.core.Storage.Services.V1.UpdateFileResponse>(serviceImpl.UpdateFile));
