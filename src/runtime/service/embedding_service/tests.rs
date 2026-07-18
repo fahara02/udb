@@ -361,9 +361,10 @@ fn embedding_point_is_tenant_tagged_no_fail_open() {
         "stored vector is not source-tagged (teardown filter-delete would miss it)"
     );
     // A bare id ⇒ `_parent_pk` = the id itself, `_chunk_seq` = 0 (single-chunk).
+    // (Numbers round-trip through prost `NumberValue(f64)`, so compare as f64.)
     let pjson = crate::runtime::executor_utils::struct_to_json(&payload);
     assert_eq!(pjson["_parent_pk"], "row-1");
-    assert_eq!(pjson["_chunk_seq"], 0);
+    assert_eq!(pjson["_chunk_seq"].as_f64(), Some(0.0));
     // A composite chunk id ⇒ `_parent_pk` = the parent row, `_chunk_seq` parsed.
     let chunked = build_embedding_point("row-1#chunk:4", vec![0.1, 0.2], "acme", "orders")
         .expect("verified tenant ok");
@@ -373,7 +374,7 @@ fn embedding_point_is_tenant_tagged_no_fail_open() {
         cjson["_parent_pk"], "row-1",
         "chunk point must tag its PARENT row pk for row-scoped teardown"
     );
-    assert_eq!(cjson["_chunk_seq"], 4);
+    assert_eq!(cjson["_chunk_seq"].as_f64(), Some(4.0));
     // An empty source ⇒ no `_source` key (defensive; the handler always supplies
     // a validated non-empty source).
     let untagged =
