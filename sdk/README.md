@@ -12,7 +12,7 @@
 │    UNIVERSAL DATA BROKER                                                   │
 │    gRPC data plane | native control plane | tenant/project scope guard     │
 │                                                                            │
-│    crate v0.4.13 | protocol v1.0.0                                          │
+│    crate v0.4.14 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -20,7 +20,7 @@ UDB SDKs are language clients for a running UDB broker. They attach request
 metadata, expose common DataBroker helpers, provide native auth/authz clients,
 and include a version-matched `udb` CLI launcher.
 
-Current SDK release: `0.4.13`
+Current SDK release: `0.4.14`
 
 Current wire protocol: [`1.0.0`](UDB_PROTOCOL_VERSION)
 
@@ -55,11 +55,11 @@ the gates track the current generated surface instead of a hand-maintained count
 
 | Language | Package | Install |
 |---|---|---|
-| Go | `github.com/fahara02/udb/sdk/go` | `go get github.com/fahara02/udb/sdk/go@v0.4.13` |
-| Python | `udb-client` | `pip install udb-client==0.4.13` |
-| TypeScript / Node | `@udb_plus/sdk` | `npm i @udb_plus/sdk@0.4.13` |
-| PHP / Laravel | `fahara02/udb-laravel` | `composer require fahara02/udb-laravel:^0.4.13` |
-| C# | `Udb.Client` | `dotnet add package Udb.Client --version 0.4.13` |
+| Go | `github.com/fahara02/udb/sdk/go` | `go get github.com/fahara02/udb/sdk/go@v0.4.14` |
+| Python | `udb-client` | `pip install udb-client==0.4.14` |
+| TypeScript / Node | `@udb_plus/sdk` | `npm i @udb_plus/sdk@0.4.14` |
+| PHP / Laravel | `fahara02/udb-laravel` | `composer require fahara02/udb-laravel:^0.4.14` |
+| C# | `Udb.Client` | `dotnet add package Udb.Client --version 0.4.14` |
 | Java | `dev.udb:udb-java-client` | build from checkout until Maven Central publishing lands |
 
 ## What Every SDK Provides
@@ -161,7 +161,7 @@ udb sdk generate --lang all
 
 Generated code should stay tied to:
 
-- crate/package version `0.4.13`;
+- crate/package version `0.4.14`;
 - protocol version `1.0.0`;
 - descriptor-derived RPC and service metadata;
 - the shared metadata contract used by every SDK.
@@ -183,7 +183,7 @@ Release flow:
 Consumer install command:
 
 ```bash
-composer require fahara02/udb-laravel:^0.4.13
+composer require fahara02/udb-laravel:^0.4.14
 ```
 
 The monorepo remains the source of truth for generated PHP code, tests, and
