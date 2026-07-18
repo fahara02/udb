@@ -47,8 +47,8 @@ use crate::proto::{
 use crate::runtime::DataBrokerRuntime;
 use crate::runtime::authz::{AuthzQuery, AuthzSnapshot, Principal, ResourceRef};
 use crate::security::{
-    SecurityConfig, SecurityContext, enforce_select_export_controls,
-    ip_matches_allow_entry, security_from_request, validate_bearer_token,
+    SecurityConfig, SecurityContext, enforce_select_export_controls, ip_matches_allow_entry,
+    security_from_request, validate_bearer_token,
 };
 
 mod analytics_service;

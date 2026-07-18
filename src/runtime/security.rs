@@ -2162,7 +2162,12 @@ mod tests {
         assert_eq!(header.alg, jsonwebtoken::Algorithm::RS256);
     }
 
-    fn make_allow_policy(service: &str, purpose: &str, operation: &str, scope: &str) -> AuthzPolicy {
+    fn make_allow_policy(
+        service: &str,
+        purpose: &str,
+        operation: &str,
+        scope: &str,
+    ) -> AuthzPolicy {
         AuthzPolicy {
             effect: Effect::Allow,
             subject: service.to_string(),

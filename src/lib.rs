@@ -132,13 +132,12 @@ pub use provisioning::{
     BackendRequirement, ProvisioningAction, ProvisioningParameter, ProvisioningPlan,
     build_provisioning_plan, required_backends, try_build_provisioning_plan,
 };
+pub use runtime::authz::{AuthzPolicy, Effect as AuthzEffect};
 pub use runtime::core::{BackendProbeResult, EnqueueOutboxEventResult, PostgresPrivilegeReport};
 pub use runtime::{DataBrokerRuntime, RuntimeInitReport};
 pub use security::{
-    LogSafeSecurityContext, PolicyEffect, PolicyLintFinding, SecurityContext,
-    lint_policies,
+    LogSafeSecurityContext, PolicyEffect, PolicyLintFinding, SecurityContext, lint_policies,
 };
-pub use runtime::authz::{AuthzPolicy, Effect as AuthzEffect};
 pub use service::{DataBrokerService, context_from_metadata, serve};
 pub use signal::{AnalyticsEvent, DDL_ANALYTICS_EVENTS_DAILY, SignalConfig, common_events};
 pub use status::{ErrorLogEntry, ErrorSummary, MigrationStatus};

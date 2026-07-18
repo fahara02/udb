@@ -1691,7 +1691,9 @@ fn webrtc_peer_policy_denials_carry_policy_detail() {
 // passes the raw RPC name (`Select`/`Upsert`/`PutPolicy`) as the operation, so
 // a matching policy carries the same operation string.
 
-fn test_authz_snapshot(policies: Vec<crate::runtime::authz::AuthzPolicy>) -> crate::runtime::authz::AuthzSnapshot {
+fn test_authz_snapshot(
+    policies: Vec<crate::runtime::authz::AuthzPolicy>,
+) -> crate::runtime::authz::AuthzSnapshot {
     crate::runtime::authz::AuthzSnapshot {
         version: "test".to_string(),
         policies,
@@ -1886,9 +1888,9 @@ async fn broker_v2_policy_reload_updates_decisions() {
         "deny-by-default before any policy is loaded"
     );
     svc.authz_snapshot
-        .store(std::sync::Arc::new(test_authz_snapshot(vec![allow_policy(
-            "Select", "udb:read",
-        )])));
+        .store(std::sync::Arc::new(test_authz_snapshot(vec![
+            allow_policy("Select", "udb:read"),
+        ])));
     assert!(
         svc.authorize(&ctx, "Payment", "Select").await.is_ok(),
         "the reloaded grant must take effect on the next decision"

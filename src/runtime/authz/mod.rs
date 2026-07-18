@@ -60,9 +60,7 @@ pub fn authz_catalog_ddl(_schema: &str) -> Vec<String> {
 }
 
 /// Allow / Deny effect for a policy or a decision.
-#[derive(
-    Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Effect {
     #[default]
