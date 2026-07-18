@@ -437,13 +437,12 @@ async fn load_embedding_source_teardown_jobs(
 /// fail closed, no false completion). A source re-registered ACTIVE after the
 /// delete supersedes the teardown: it is marked completed WITHOUT deleting.
 ///
-/// LIMITATION (best-effort, deliberate): the runtime exposes only a
-/// per-point-id vector delete (`vector_delete_backend_target`) — no
-/// tenant+source filter-delete seam — so teardown can only remove points whose
-/// work events are still present in the journal/outbox. A point whose work
-/// event was purged by journal retention, or that a sidecar reported for a row
-/// that never produced a work event, is not enumerable here and survives until
-/// a runtime filter-delete seam exists.
+/// Erasure is retention-INDEPENDENT: a filter-delete on the `{_tenant_id,
+/// _source}` payload tags (`delete_embedding_points_by_source`) runs FIRST and
+/// removes every tagged point regardless of journal retention, then the point-id
+/// enumeration runs as a fallback for legacy points written before `_source`
+/// tagging. Points a sidecar reported for a row that never produced a work event
+/// are still tagged `_source` at upsert, so the filter-delete covers them too.
 async fn process_embedding_teardown_job(
     service: &EmbeddingServiceImpl,
     pool: &PgPool,
@@ -474,6 +473,29 @@ async fn process_embedding_teardown_job(
     } else {
         job.target_collection.clone()
     };
+    // B.1.5 — authoritative, retention-INDEPENDENT erasure FIRST: drop every
+    // point tagged `{_tenant_id, _source}` in the source's collection by payload
+    // filter. Unlike the point-id enumeration below (which can only see points
+    // whose `udb.embedding.work.v1` events survive journal retention), this
+    // erases a deleted source completely even after its work events are purged —
+    // closing the GDPR right-to-erasure hole. A failure returns (job stays
+    // pending → retried next leader pass), never a false completion. The journal
+    // enumeration still runs, as the fallback for legacy points written before
+    // `_source` tagging (and points left in a since-changed target collection).
+    service
+        .delete_embedding_points_by_source(
+            &job.project_id,
+            &fallback_collection,
+            &job.tenant_id,
+            &job.source_name,
+        )
+        .await
+        .map_err(|err| {
+            format!(
+                "embedding teardown filter-delete failed (collection \
+                 {fallback_collection}): {err}"
+            )
+        })?;
     let mut deleted = 0i64;
     let mut cursor_collection = String::new();
     let mut cursor_pk = String::new();
@@ -1028,6 +1050,41 @@ impl EmbeddingServiceImpl {
         }
         runtime
             .vector_delete_backend_target(None, project_id, collection, point_ids)
+            .await
+    }
+
+    /// Retention-independent source teardown: delete EVERY point tagged with this
+    /// `{tenant, source}` in the collection through the shared filter-delete seam
+    /// ([`DataBrokerRuntime::vector_delete_by_filter_backend_target`]). This closes
+    /// the GDPR erasure hole in the point-id enumeration path — a source whose
+    /// `udb.embedding.work.v1` journal events were purged by log retention was
+    /// otherwise un-erasable. Points written before `_source` tagging carry no
+    /// `_source` and are not matched here — the journal enumeration remains as the
+    /// legacy fallback for them. Fails closed: an empty tenant/source yields a
+    /// no-op (an under-scoped filter must never delete another tenant's vectors);
+    /// backend errors are RETURNED so teardown withholds its completion marker and
+    /// retries.
+    pub(crate) async fn delete_embedding_points_by_source(
+        &self,
+        project_id: &str,
+        collection: &str,
+        tenant_id: &str,
+        source_name: &str,
+    ) -> Result<(), Status> {
+        let Some(runtime) = self.runtime.as_ref() else {
+            return Err(embedding_capability_status(
+                "embedding_vector_delete",
+                "runtime_vector_seam",
+                "embedding vector delete requires the runtime vector seam (no runtime configured)",
+            ));
+        };
+        let Some(filter) = super::model::source_teardown_filter(tenant_id, source_name) else {
+            // Unscopeable (empty tenant or source) — refuse to issue an
+            // under-scoped filter-delete; the journal fallback still runs.
+            return Ok(());
+        };
+        runtime
+            .vector_delete_by_filter_backend_target(None, project_id, collection, filter)
             .await
     }
 

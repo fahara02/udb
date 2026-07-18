@@ -87,6 +87,7 @@ pub(crate) fn build_embedding_point(
     row_pk: &str,
     vector: Vec<f32>,
     tenant_id: &str,
+    source_name: &str,
 ) -> Result<VectorPointMutation, Status> {
     let tenant = tenant_id.trim();
     if tenant.is_empty() {
@@ -112,14 +113,47 @@ pub(crate) fn build_embedding_point(
             "vector is required",
         ));
     }
-    let payload = crate::runtime::executor_utils::json_to_struct(&serde_json::json!({
-        "_tenant_id": tenant,
-    }));
+    // Tag the isolation key AND the owning source. `_source` lets the
+    // source-teardown pass erase every point of a deleted source by payload
+    // filter — retention-independent — instead of re-deriving point ids from
+    // `udb.embedding.work.v1` journal events that log retention eventually
+    // purges (the GDPR erasure hole). The tag is written from the verified
+    // source name, never raw body, and is stripped from every RetrieveHit like
+    // `_tenant_id`.
+    let mut payload_json = serde_json::json!({ "_tenant_id": tenant });
+    let source = source_name.trim();
+    if !source.is_empty() {
+        payload_json["_source"] = serde_json::Value::String(source.to_string());
+    }
+    let payload = crate::runtime::executor_utils::json_to_struct(&payload_json);
     Ok(VectorPointMutation {
         id: row_pk.to_string(),
         vector,
         payload,
     })
+}
+
+/// Build the Qdrant-style payload filter that scopes a source-teardown delete to
+/// exactly one source's points: `_tenant_id` AND `_source`, both authoritative
+/// `must` clauses. Returns `None` when either scope key is empty — a filter with
+/// only one clause could delete another tenant's or another source's vectors, so
+/// the caller must fall back to the point-id enumeration rather than issue an
+/// under-scoped delete. Pure — unit-tested without an engine.
+pub(crate) fn source_teardown_filter(
+    tenant_id: &str,
+    source_name: &str,
+) -> Option<serde_json::Value> {
+    let tenant = tenant_id.trim();
+    let source = source_name.trim();
+    if tenant.is_empty() || source.is_empty() {
+        return None;
+    }
+    Some(serde_json::json!({
+        "must": [
+            { "key": "_tenant_id", "match": { "value": tenant } },
+            { "key": "_source", "match": { "value": source } },
+        ]
+    }))
 }
 
 /// Merge a caller-supplied Qdrant-style filter under the mandatory server-side

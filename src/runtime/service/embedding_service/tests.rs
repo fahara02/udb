@@ -332,7 +332,7 @@ fn embedding_source_not_found_statuses_carry_schema_detail() {
 #[test]
 fn embedding_point_is_tenant_tagged_no_fail_open() {
     // Empty (unverified) tenant ⇒ fail closed, never stored.
-    let err = build_embedding_point("row-1", vec![0.1, 0.2], "  ")
+    let err = build_embedding_point("row-1", vec![0.1, 0.2], "  ", "orders")
         .expect_err("empty tenant must fail closed");
     assert_eq!(err.code(), tonic::Code::PermissionDenied);
     assert_eq!(
@@ -346,14 +346,57 @@ fn embedding_point_is_tenant_tagged_no_fail_open() {
     assert_eq!(detail.policy_decision_id, "verified_tenant_required");
     assert!(!detail.retryable);
     assert_eq!(detail.retry_after_ms, 0);
-    // A verified tenant ⇒ the point is tagged with `_tenant_id`.
-    let point = build_embedding_point("row-1", vec![0.1, 0.2], "acme").expect("verified tenant ok");
+    // A verified tenant ⇒ the point is tagged with `_tenant_id` AND `_source`
+    // (the latter scopes retention-independent teardown).
+    let point = build_embedding_point("row-1", vec![0.1, 0.2], "acme", "orders")
+        .expect("verified tenant ok");
     assert_eq!(point.id, "row-1");
     let payload = point.payload.expect("tenant-tag payload present");
     assert!(
         payload.fields.contains_key("_tenant_id"),
         "stored vector is not tenant-tagged"
     );
+    assert!(
+        payload.fields.contains_key("_source"),
+        "stored vector is not source-tagged (teardown filter-delete would miss it)"
+    );
+    // An empty source ⇒ no `_source` key (defensive; the handler always supplies
+    // a validated non-empty source).
+    let untagged =
+        build_embedding_point("row-2", vec![0.1, 0.2], "acme", "  ").expect("verified tenant ok");
+    assert!(
+        !untagged
+            .payload
+            .expect("payload present")
+            .fields
+            .contains_key("_source"),
+        "empty source must not write an empty _source tag"
+    );
+}
+
+/// The source-teardown filter scopes to BOTH `_tenant_id` and `_source` as
+/// authoritative `must` clauses, and refuses to build (returns `None`) when
+/// either scope key is empty — an under-scoped filter could erase another
+/// tenant's or source's vectors, so the caller must fall back to point-id
+/// enumeration instead.
+#[test]
+fn source_teardown_filter_is_fully_scoped_or_none() {
+    use super::model::source_teardown_filter;
+    // Both keys present ⇒ a two-clause `must` filter, tenant first.
+    let filter = source_teardown_filter(" acme ", " orders ").expect("scoped filter");
+    let must = filter
+        .get("must")
+        .and_then(|m| m.as_array())
+        .expect("must array");
+    assert_eq!(must.len(), 2, "filter must AND tenant + source");
+    assert_eq!(must[0]["key"], "_tenant_id");
+    assert_eq!(must[0]["match"]["value"], "acme");
+    assert_eq!(must[1]["key"], "_source");
+    assert_eq!(must[1]["match"]["value"], "orders");
+    // Either scope key empty ⇒ None (never an under-scoped delete).
+    assert!(source_teardown_filter("", "orders").is_none());
+    assert!(source_teardown_filter("acme", "   ").is_none());
+    assert!(source_teardown_filter("  ", "  ").is_none());
 }
 
 /// The caller `filter_json` is merged UNDER the mandatory tenant clause: the

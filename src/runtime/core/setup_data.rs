@@ -1934,6 +1934,41 @@ impl DataBrokerRuntime {
         }
     }
 
+    /// Delete every point in a collection whose payload matches `filter`, through
+    /// the SAME shared vector seam as [`Self::vector_delete_backend_target`]
+    /// (never a second vector client). Used by the embedding source-teardown pass
+    /// to erase a deleted source's vectors by their `{_tenant_id, _source}` tags —
+    /// retention-independent, so a source whose `udb.embedding.work.v1` journal
+    /// events were purged is still fully erased. The caller MUST scope the filter
+    /// to a verified tenant (an under-scoped filter could delete another tenant's
+    /// vectors); this seam trusts the filter it is given.
+    pub async fn vector_delete_by_filter_backend_target(
+        &self,
+        instance: Option<&str>,
+        project_id: &str,
+        collection: &str,
+        filter: serde_json::Value,
+    ) -> Result<(), tonic::Status> {
+        #[cfg(not(feature = "qdrant"))]
+        {
+            let _ = (instance, project_id, collection, filter);
+            Err(qdrant_vector_feature_status(
+                "vector_delete_by_filter_backend_target",
+            ))
+        }
+        #[cfg(feature = "qdrant")]
+        {
+            let project = project_id.trim();
+            let project = if project.is_empty() {
+                crate::runtime::catalog::DEFAULT_PROJECT_ID
+            } else {
+                project
+            };
+            let client = self.qdrant_for_instance_for_project(instance, project)?;
+            client.delete_by_filter(collection, filter).await
+        }
+    }
+
     /// Mint a presigned object URL WITHOUT manifest/policy evaluation — the
     /// admin/native path (mirrors `*_object_backend_target`). Used by the native
     /// storage service, which owns its own bucket. `method` is "PUT" or "GET".
