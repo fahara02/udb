@@ -1016,7 +1016,7 @@ mod tests {
         // authz, so `--fix` must never apply it. It must be advisory.
         let rem = remediation_for_preflight(&finding(
             "authz-default-deny",
-            "seed ABAC policies, or set UDB_ABAC_DEFAULT_ALLOW=true for dev/bootstrap",
+            "configure policies via the AuthzService (policy_rules), or set UDB_ABAC_DEFAULT_ALLOW=true for dev/bootstrap",
         ));
         assert!(!rem.is_auto_fixable());
         assert!(matches!(rem, Remediation::Advisory { .. }));

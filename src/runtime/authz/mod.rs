@@ -10,14 +10,13 @@
 //! enforcer and an explicit Deny short-circuiting before enforcement.
 //!
 //! It is intentionally decoupled from gRPC: callers map a `Decision` to a
-//! `tonic::Status` only at the service boundary. The existing `AbacPolicy` is
-//! consumable via [`AuthzPolicy::from_abac`] so legacy policies keep working.
+//! `tonic::Status` only at the service boundary.
 
 use std::collections::BTreeMap;
 
 use sha2::{Digest, Sha256};
 
-use crate::runtime::security::{AbacPolicy, PolicyEffect, SecurityContext};
+use crate::runtime::security::{PolicyEffect, SecurityContext};
 
 /// Real Casbin-driven enforcement of the snapshot via a PERM model.
 mod casbin_engine;
@@ -61,7 +60,8 @@ pub fn authz_catalog_ddl(_schema: &str) -> Vec<String> {
 }
 
 /// Allow / Deny effect for a policy or a decision.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum Effect {
     #[default]
     Allow,
@@ -182,7 +182,8 @@ impl ResourceRef {
 }
 
 /// One v2 authorization policy. Empty string selectors are wildcards.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
 pub struct AuthzPolicy {
     pub id: String,
     pub priority: i32,
@@ -229,34 +230,6 @@ impl Default for AuthzPolicy {
             relationship: String::new(),
             conditions: BTreeMap::new(),
             required_scopes: Vec::new(),
-        }
-    }
-}
-
-impl AuthzPolicy {
-    /// Adapt a legacy 7-field `AbacPolicy` into the v2 shape so existing
-    /// policies evaluate through the same engine.
-    pub fn from_abac(id: impl Into<String>, p: &AbacPolicy) -> Self {
-        let required_scopes = if p.required_scope.trim().is_empty() {
-            Vec::new()
-        } else {
-            vec![p.required_scope.clone()]
-        };
-        Self {
-            id: id.into(),
-            priority: 0,
-            enabled: true,
-            effect: p.effect.clone().into(),
-            tenant: p.tenant_id.clone(),
-            project: String::new(),
-            subject: p.service_identity.clone(),
-            role: String::new(),
-            action: p.operation.clone(),
-            resource: p.message_type.clone(),
-            purpose: p.purpose.clone(),
-            relationship: String::new(),
-            conditions: BTreeMap::new(),
-            required_scopes,
         }
     }
 }
@@ -324,22 +297,6 @@ pub struct AuthzSnapshot {
 }
 
 impl AuthzSnapshot {
-    /// Build a snapshot from legacy `AbacPolicy` records (compatibility path).
-    pub fn from_abac_policies(version: impl Into<String>, policies: &[AbacPolicy]) -> Self {
-        Self {
-            version: version.into(),
-            relationship_version: String::new(),
-            policies: policies
-                .iter()
-                .enumerate()
-                .map(|(i, p)| AuthzPolicy::from_abac(format!("abac-{i}"), p))
-                .collect(),
-            role_bindings: Vec::new(),
-            tuples: Vec::new(),
-            default_allow: false,
-        }
-    }
-
     /// Effective roles = principal-carried roles ∪ role bindings matching the
     /// principal's identities within the request domain.
     fn effective_roles(&self, principal: &Principal) -> Vec<String> {

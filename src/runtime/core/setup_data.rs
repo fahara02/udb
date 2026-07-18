@@ -240,85 +240,6 @@ impl DataBrokerRuntime {
             })
     }
 
-    pub async fn load_abac_policies(&self) -> Vec<AbacPolicy> {
-        // Backward-compatible wrapper: a transient query error degrades to an empty
-        // set for callers that can't act on it (initial load), but the error is now
-        // LOGGED, not silently swallowed. bug_report.md J.
-        match self.try_load_abac_policies().await {
-            Ok(policies) => policies,
-            Err(err) => {
-                tracing::error!(error = %err, "ABAC policy load failed; using empty set");
-                Vec::new()
-            }
-        }
-    }
-
-    /// Load ABAC policies, surfacing a DB query failure as `Err` so the periodic
-    /// refresh retains stale policies on a transient error instead of mistaking it
-    /// for a genuine empty set — the authz-snapshot flapping under CDC pool
-    /// contention (`ABAC policy refresh returned empty set`). bug_report.md J.
-    pub async fn try_load_abac_policies(&self) -> Result<Vec<AbacPolicy>, String> {
-        if let Some(raw) = self.config.abac_policies_json.as_ref() {
-            match serde_json::from_str::<Vec<AbacPolicy>>(raw) {
-                Ok(policies) => return Ok(policies),
-                Err(err) => tracing::warn!("failed to parse UDB_ABAC_POLICIES_JSON: {err}"),
-            }
-        }
-        let Some(pool) = &self.pg_pool else {
-            return Ok(Vec::new());
-        };
-        let abac_schema = if self.config.abac_schema.trim().is_empty() {
-            "udb_system"
-        } else {
-            self.config.abac_schema.as_str()
-        };
-        let abac_table_name = if self.config.abac_table.trim().is_empty() {
-            "udb_abac_policies"
-        } else {
-            self.config.abac_table.as_str()
-        };
-        let abac_table = format!(
-            "{}.{}",
-            qi_runtime(abac_schema),
-            qi_runtime(abac_table_name)
-        );
-        let sql = format!(
-            "SELECT effect, service_identity, tenant_id, purpose, message_type, operation, required_scope
-             FROM {abac_table}
-             WHERE enabled = TRUE
-             ORDER BY priority DESC, policy_id ASC"
-        );
-        let rows = sqlx::query(&sql)
-            .fetch_all(pool)
-            .await
-            .map_err(|e| format!("ABAC policy query failed: {e}"))?;
-        Ok(rows
-            .into_iter()
-            .map(|row| {
-                let effect = row
-                    .try_get::<String, _>("effect")
-                    .unwrap_or_else(|_| "allow".to_string());
-                AbacPolicy {
-                    effect: if effect.eq_ignore_ascii_case("deny") {
-                        PolicyEffect::Deny
-                    } else {
-                        PolicyEffect::Allow
-                    },
-                    service_identity: row
-                        .try_get("service_identity")
-                        .unwrap_or_else(|_| "*".to_string()),
-                    tenant_id: row.try_get("tenant_id").unwrap_or_else(|_| "*".to_string()),
-                    purpose: row.try_get("purpose").unwrap_or_else(|_| "*".to_string()),
-                    message_type: row
-                        .try_get("message_type")
-                        .unwrap_or_else(|_| "*".to_string()),
-                    operation: row.try_get("operation").unwrap_or_else(|_| "*".to_string()),
-                    required_scope: row.try_get("required_scope").unwrap_or_default(),
-                }
-            })
-            .collect())
-    }
-
     pub async fn try_from_config(config: UdbConfig) -> Result<Self, String> {
         let validation = config.validate();
         if !validation.passed {
@@ -2010,6 +1931,41 @@ impl DataBrokerRuntime {
             };
             let client = self.qdrant_for_instance_for_project(instance, project)?;
             client.delete_points(collection, &point_ids).await
+        }
+    }
+
+    /// Delete every point in a collection whose payload matches `filter`, through
+    /// the SAME shared vector seam as [`Self::vector_delete_backend_target`]
+    /// (never a second vector client). Used by the embedding source-teardown pass
+    /// to erase a deleted source's vectors by their `{_tenant_id, _source}` tags —
+    /// retention-independent, so a source whose `udb.embedding.work.v1` journal
+    /// events were purged is still fully erased. The caller MUST scope the filter
+    /// to a verified tenant (an under-scoped filter could delete another tenant's
+    /// vectors); this seam trusts the filter it is given.
+    pub async fn vector_delete_by_filter_backend_target(
+        &self,
+        instance: Option<&str>,
+        project_id: &str,
+        collection: &str,
+        filter: serde_json::Value,
+    ) -> Result<(), tonic::Status> {
+        #[cfg(not(feature = "qdrant"))]
+        {
+            let _ = (instance, project_id, collection, filter);
+            Err(qdrant_vector_feature_status(
+                "vector_delete_by_filter_backend_target",
+            ))
+        }
+        #[cfg(feature = "qdrant")]
+        {
+            let project = project_id.trim();
+            let project = if project.is_empty() {
+                crate::runtime::catalog::DEFAULT_PROJECT_ID
+            } else {
+                project
+            };
+            let client = self.qdrant_for_instance_for_project(instance, project)?;
+            client.delete_by_filter(collection, filter).await
         }
     }
 

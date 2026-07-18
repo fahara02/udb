@@ -294,57 +294,6 @@ async fn required_scope_must_be_present() {
     );
 }
 
-/// Legacy `AbacPolicy` rows, adapted into v2 `AuthzPolicy` via
-/// `from_abac_policies`, must evaluate correctly through the Casbin engine —
-/// proving backward compatibility: the legacy policy format produces the same
-/// allow/deny semantics under Casbin (purpose gate, required scope gate).
-#[tokio::test]
-async fn legacy_abac_policies_evaluate_through_casbin() {
-    let abac = vec![AbacPolicy {
-        effect: PolicyEffect::Allow,
-        service_identity: "billing-api".into(),
-        tenant_id: "*".into(),
-        purpose: "billing.read".into(),
-        message_type: "acme.Invoice".into(),
-        operation: "data.select".into(),
-        required_scope: "udb:read".into(),
-    }];
-    let snap = AuthzSnapshot::from_abac_policies("compat", &abac);
-    let res = ResourceRef::message("acme.Invoice");
-    let attrs = no_attrs();
-
-    let ok = principal("billing-api", "acme", &["udb:read"], &[]);
-    assert!(
-        snap.casbin_authorize(&query(&ok, &res, "data.select", "billing.read", &attrs))
-            .await
-            .allowed
-    );
-
-    // Wrong purpose → no match → default deny.
-    let bad = principal("billing-api", "acme", &["udb:read"], &[]);
-    assert!(
-        !snap
-            .casbin_authorize(&query(&bad, &res, "data.select", "other", &attrs))
-            .await
-            .allowed
-    );
-
-    // Missing the required scope → deny.
-    let noscope = principal("billing-api", "acme", &[], &[]);
-    assert!(
-        !snap
-            .casbin_authorize(&query(
-                &noscope,
-                &res,
-                "data.select",
-                "billing.read",
-                &attrs
-            ))
-            .await
-            .allowed
-    );
-}
-
 #[tokio::test]
 async fn decision_id_is_stable_for_same_inputs() {
     let snap = AuthzSnapshot {

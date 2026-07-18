@@ -1278,13 +1278,11 @@ fn capabilities_request_with_tenant() -> Request<CapabilitiesRequest> {
 fn open_service() -> DataBrokerService {
     install_test_security();
     let lifecycle = Arc::new(RwLock::new(FsmState::Completed));
-    let policies = Arc::new(RwLock::new(Vec::new()));
     let metrics = Arc::new(PrometheusMetrics::new().expect("metrics"));
     DataBrokerService::with_runtime_and_state(
         test_manifest(),
         DataBrokerRuntime::planning_only(),
         lifecycle,
-        policies,
         metrics,
         None,
         true, // abac_default_allow
@@ -1693,14 +1691,23 @@ fn webrtc_peer_policy_denials_carry_policy_detail() {
 // passes the raw RPC name (`Select`/`Upsert`/`PutPolicy`) as the operation, so
 // a matching policy carries the same operation string.
 
-fn v2_service(policies: Vec<crate::runtime::security::AbacPolicy>) -> DataBrokerService {
-    let svc = ready_service(); // abac_default_allow = false
-    if let Ok(mut p) = svc.abac_policies.write() {
-        *p = policies;
+fn test_authz_snapshot(
+    policies: Vec<crate::runtime::authz::AuthzPolicy>,
+) -> crate::runtime::authz::AuthzSnapshot {
+    crate::runtime::authz::AuthzSnapshot {
+        version: "test".to_string(),
+        policies,
+        ..Default::default()
     }
-    // Casbin is the only authz engine; refresh the snapshot so the new policies
-    // take effect (the gate reads the cached `Arc<AuthzSnapshot>`).
-    svc.refresh_abac_snapshot();
+}
+
+fn v2_service(policies: Vec<crate::runtime::authz::AuthzPolicy>) -> DataBrokerService {
+    let svc = ready_service(); // abac_default_allow = false
+    // Casbin is the only authz engine: store the policy set directly into the
+    // shared snapshot cell the broker's data-plane gate reads (in production this
+    // cell is PG-warmed from `udb_authz.policy_rules`).
+    svc.authz_snapshot
+        .store(std::sync::Arc::new(test_authz_snapshot(policies)));
     svc
 }
 
@@ -1714,15 +1721,32 @@ fn billing_ctx(scopes: &[&str]) -> SecurityContext {
     }
 }
 
-fn allow_policy(operation: &str, scope: &str) -> crate::runtime::security::AbacPolicy {
-    crate::runtime::security::AbacPolicy {
-        effect: crate::runtime::security::PolicyEffect::Allow,
-        service_identity: "svc:billing".to_string(),
-        tenant_id: "*".to_string(),
+fn allow_policy(operation: &str, scope: &str) -> crate::runtime::authz::AuthzPolicy {
+    crate::runtime::authz::AuthzPolicy {
+        effect: crate::runtime::authz::Effect::Allow,
+        subject: "svc:billing".to_string(),
+        tenant: "*".to_string(),
         purpose: "billing".to_string(),
-        message_type: "*".to_string(),
-        operation: operation.to_string(),
-        required_scope: scope.to_string(),
+        resource: "*".to_string(),
+        action: operation.to_string(),
+        required_scopes: if scope.is_empty() {
+            Vec::new()
+        } else {
+            vec![scope.to_string()]
+        },
+        ..Default::default()
+    }
+}
+
+fn deny_policy(operation: &str) -> crate::runtime::authz::AuthzPolicy {
+    crate::runtime::authz::AuthzPolicy {
+        effect: crate::runtime::authz::Effect::Deny,
+        subject: "svc:billing".to_string(),
+        tenant: "*".to_string(),
+        purpose: "billing".to_string(),
+        resource: "*".to_string(),
+        action: operation.to_string(),
+        ..Default::default()
     }
 }
 
@@ -1750,7 +1774,7 @@ async fn broker_v2_select_denied_without_policy() {
     assert!(detail.policy_decision_id.starts_with("authz_"));
     assert_eq!(
         err.message(),
-        "no authz policy (default deny); seed ABAC policies or set UDB_ABAC_DEFAULT_ALLOW=true"
+        "no authz policy (default deny); configure authorization via the AuthzService (policy_rules) or set UDB_ABAC_DEFAULT_ALLOW=true for dev"
     );
 }
 
@@ -1786,7 +1810,7 @@ async fn broker_v2_admin_rpc_denied_without_grant() {
 async fn broker_v2_batch_item_denial_carries_policy_detail() {
     let svc = v2_service(vec![]);
     let ctx = billing_ctx(&["udb:read"]);
-    let snapshot = svc.current_abac_snapshot();
+    let snapshot = svc.current_authz_snapshot();
     let err = DataBrokerService::authorize_message_item(&snapshot, &ctx, "Payment", "Select")
         .await
         .expect_err("batch item with no matching policy must be denied");
@@ -1797,7 +1821,7 @@ async fn broker_v2_batch_item_denial_carries_policy_detail() {
     assert!(detail.policy_decision_id.starts_with("authz_"));
     assert_eq!(
         err.message(),
-        "no authz policy (default deny); seed ABAC policies or set UDB_ABAC_DEFAULT_ALLOW=true"
+        "no authz policy (default deny); configure authorization via the AuthzService (policy_rules) or set UDB_ABAC_DEFAULT_ALLOW=true for dev"
     );
 }
 
@@ -1863,10 +1887,10 @@ async fn broker_v2_policy_reload_updates_decisions() {
         tonic::Code::PermissionDenied,
         "deny-by-default before any policy is loaded"
     );
-    svc.abac_policies
-        .write()
-        .unwrap()
-        .push(allow_policy("Select", "udb:read"));
+    svc.authz_snapshot
+        .store(std::sync::Arc::new(test_authz_snapshot(vec![
+            allow_policy("Select", "udb:read"),
+        ])));
     assert!(
         svc.authorize(&ctx, "Payment", "Select").await.is_ok(),
         "the reloaded grant must take effect on the next decision"
@@ -1880,18 +1904,7 @@ async fn broker_casbin_enforces_legacy_policy_semantics() {
     // deny / no-match matrix. (Formerly compared a v2 path against the deleted
     // legacy `evaluate_abac`; Casbin is now the only engine, so we assert the
     // outcomes directly.)
-    let policies = vec![
-        allow_policy("Select", "udb:read"),
-        crate::runtime::security::AbacPolicy {
-            effect: crate::runtime::security::PolicyEffect::Deny,
-            service_identity: "svc:billing".to_string(),
-            tenant_id: "*".to_string(),
-            purpose: "billing".to_string(),
-            message_type: "*".to_string(),
-            operation: "Delete".to_string(),
-            required_scope: String::new(),
-        },
-    ];
+    let policies = vec![allow_policy("Select", "udb:read"), deny_policy("Delete")];
     // (ctx, message_type, operation, expected_allow)
     let cases = [
         (billing_ctx(&["udb:read"]), "Payment", "Select", true), // matching allow

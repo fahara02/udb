@@ -70,10 +70,11 @@ generic Rust/SQL/engine knowledge for everything else.
 - **One-shot preflight:** `runtime/preflight.rs` `evaluate(&config, addr)` reports
   ALL unmet enterprise prereqs at once (encryption/password/session/auth-plane/
   redis/authz); wired into `serve()` startup AND `udb doctor --enterprise`.
-- **TWO authz engines:** the data-plane `authorize()` reads an ABAC snapshot
-  (`from_abac_policies`, `UDB_ABAC_POLICIES_JSON`/`udb_abac_policies`, default-DENY);
-  the control-plane `AuthzService.Check` is Casbin over roles/`policy_rules`. Don't
-  conflate them. Production force-sets TLS+mTLS in `ServiceSettings::apply_security_posture`
+- **ONE authz engine (Casbin):** both the data-plane `authorize()` and the
+  control-plane `AuthzService.Check` decide via Casbin over roles/`policy_rules`
+  (default-DENY). The data plane reads a shared, PG-warmed snapshot of
+  `policy_rules`; there is no separate env-JSON ABAC lane. Production force-sets
+  TLS+mTLS in `ServiceSettings::apply_security_posture`
   (warns when it overrides an explicit `=false`); TLS env = `UDB_TLS_CERT_PEM|PATH`,
   `UDB_TLS_KEY_PEM|PATH`, `UDB_MTLS_CLIENT_CA_PEM|PATH`.
 - **0.3.7 auth/crypto fixes:** DataBroker bearer auth now returns a clearer

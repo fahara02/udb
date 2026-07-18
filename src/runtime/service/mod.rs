@@ -47,8 +47,8 @@ use crate::proto::{
 use crate::runtime::DataBrokerRuntime;
 use crate::runtime::authz::{AuthzQuery, AuthzSnapshot, Principal, ResourceRef};
 use crate::security::{
-    AbacPolicy, SecurityConfig, SecurityContext, enforce_select_export_controls,
-    ip_matches_allow_entry, security_from_request, validate_bearer_token,
+    SecurityConfig, SecurityContext, enforce_select_export_controls, ip_matches_allow_entry,
+    security_from_request, validate_bearer_token,
 };
 
 mod analytics_service;
@@ -188,14 +188,17 @@ mod workflow_service;
 
 const UDB_FILE_DESCRIPTOR_SET: &[u8] = tonic::include_file_descriptor_set!("udb_descriptor");
 
-fn build_abac_snapshot(
-    version: impl Into<String>,
-    policies: &[AbacPolicy],
-    default_allow: bool,
-) -> Arc<AuthzSnapshot> {
-    let mut snapshot = AuthzSnapshot::from_abac_policies(version, policies);
-    snapshot.default_allow = default_allow;
-    Arc::new(snapshot)
+/// The initial authorization snapshot for a fresh broker cell: EMPTY
+/// (deny-by-default), carrying only the dev `default_allow` escape hatch
+/// (`UDB_ABAC_DEFAULT_ALLOW`). The real policy set is PG-warmed into the shared
+/// cell from `udb_authz.policy_rules` by the AuthzService warmer — there is no
+/// env-JSON ABAC policy source. Operators configure authorization exclusively
+/// through the AuthzService (Casbin, policy_rules).
+fn initial_authz_snapshot(default_allow: bool) -> AuthzSnapshot {
+    AuthzSnapshot {
+        default_allow,
+        ..AuthzSnapshot::default()
+    }
 }
 
 fn startup_bool_env(key: &str) -> bool {
@@ -245,14 +248,18 @@ pub struct DataBrokerService {
     pub manifest: CatalogManifest,
     pub runtime: Arc<ArcSwap<DataBrokerRuntime>>,
     lifecycle_state: Arc<RwLock<FsmState>>,
-    abac_policies: Arc<RwLock<Vec<AbacPolicy>>>,
-    abac_snapshot: Arc<RwLock<Arc<AuthzSnapshot>>>,
+    /// The single, atomically-swappable Casbin authorization snapshot, shared with
+    /// the native AuthzService (`build_auth_services` wires the SAME cell) and
+    /// PG-warmed from the `udb_authz.policy_rules` governance table by the authz
+    /// service's warmer. The broker's data-plane `authorize()` reads THIS cell, so
+    /// what an operator configures through AuthzService is what actually enforces —
+    /// there is no separate env-JSON ABAC policy lane.
+    authz_snapshot: Arc<ArcSwap<AuthzSnapshot>>,
     metrics: Arc<dyn MetricsRecorder>,
     cdc_engine: Option<Arc<CdcEngine>>,
     projection_engine: Option<Arc<crate::runtime::projection::ProjectionEngine>>,
     #[cfg(feature = "redis")]
     rate_limit_redis: Arc<tokio::sync::Mutex<Option<redis::aio::MultiplexedConnection>>>,
-    abac_default_allow: bool,
 }
 
 pub(crate) const UDB_PROTOCOL_VERSION: &str = "1.0.0";
@@ -361,14 +368,12 @@ impl DataBrokerService {
             manifest,
             runtime: Arc::new(ArcSwap::from_pointee(DataBrokerRuntime::planning_only())),
             lifecycle_state: Arc::new(RwLock::new(FsmState::Idle)),
-            abac_policies: Arc::new(RwLock::new(Vec::new())),
-            abac_snapshot: Arc::new(RwLock::new(build_abac_snapshot("live-abac", &[], false))),
+            authz_snapshot: Arc::new(ArcSwap::from_pointee(initial_authz_snapshot(false))),
             metrics: service_metrics_recorder(),
             cdc_engine: None,
             projection_engine: None,
             #[cfg(feature = "redis")]
             rate_limit_redis: Arc::new(tokio::sync::Mutex::new(None)),
-            abac_default_allow: false,
         }
     }
 
@@ -381,14 +386,12 @@ impl DataBrokerService {
             manifest,
             runtime: Arc::new(ArcSwap::from_pointee(runtime)),
             lifecycle_state: Arc::new(RwLock::new(FsmState::Completed)),
-            abac_policies: Arc::new(RwLock::new(Vec::new())),
-            abac_snapshot: Arc::new(RwLock::new(build_abac_snapshot("live-abac", &[], false))),
+            authz_snapshot: Arc::new(ArcSwap::from_pointee(initial_authz_snapshot(false))),
             metrics: service_metrics_recorder(),
             cdc_engine: None,
             projection_engine: None,
             #[cfg(feature = "redis")]
             rate_limit_redis: Arc::new(tokio::sync::Mutex::new(None)),
-            abac_default_allow: false,
         }
     }
 
@@ -396,7 +399,6 @@ impl DataBrokerService {
         manifest: CatalogManifest,
         runtime: DataBrokerRuntime,
         lifecycle_state: Arc<RwLock<FsmState>>,
-        abac_policies: Arc<RwLock<Vec<AbacPolicy>>>,
         metrics: Arc<dyn MetricsRecorder>,
         cdc_engine: Option<Arc<CdcEngine>>,
         abac_default_allow: bool,
@@ -404,69 +406,34 @@ impl DataBrokerService {
         let catalog = Arc::new(crate::runtime::catalog::CatalogManager::new(
             manifest.clone(),
         ));
-        let abac_snapshot = abac_policies
-            .read()
-            .map(|policies| build_abac_snapshot("live-abac", &policies, abac_default_allow))
-            .unwrap_or_else(|_| build_abac_snapshot("live-abac", &[], abac_default_allow));
         Self {
             catalog,
             manifest,
             runtime: Arc::new(ArcSwap::from_pointee(runtime)),
             lifecycle_state,
-            abac_policies,
-            abac_snapshot: Arc::new(RwLock::new(abac_snapshot)),
+            authz_snapshot: Arc::new(ArcSwap::from_pointee(initial_authz_snapshot(
+                abac_default_allow,
+            ))),
             metrics,
             cdc_engine,
             projection_engine: None,
             #[cfg(feature = "redis")]
             rate_limit_redis: Arc::new(tokio::sync::Mutex::new(None)),
-            abac_default_allow,
         }
     }
 
-    fn replace_abac_policies(&self, fresh: Vec<AbacPolicy>) {
-        let snapshot = build_abac_snapshot("live-abac", &fresh, self.abac_default_allow);
-        if let Ok(mut guard) = self.abac_policies.write() {
-            *guard = fresh;
-        }
-        if let Ok(mut guard) = self.abac_snapshot.write() {
-            *guard = snapshot;
-        }
+    /// The single shared Casbin authorization snapshot cell — the SAME
+    /// `Arc<ArcSwap<AuthzSnapshot>>` the native AuthzService owns and PG-warms from
+    /// `udb_authz.policy_rules`. `build_auth_services` wires this exact cell into the
+    /// authn/authz services, and the broker's `authorize()` reads it, so operator
+    /// policy configured through AuthzService is what the data plane enforces.
+    pub(crate) fn authz_snapshot(&self) -> Arc<ArcSwap<AuthzSnapshot>> {
+        self.authz_snapshot.clone()
     }
 
-    fn refresh_abac_snapshot(&self) {
-        let snapshot = self
-            .abac_policies
-            .read()
-            .map(|policies| build_abac_snapshot("live-abac", &policies, self.abac_default_allow))
-            .unwrap_or_else(|_| build_abac_snapshot("live-abac", &[], self.abac_default_allow));
-        if let Ok(mut guard) = self.abac_snapshot.write() {
-            *guard = snapshot;
-        }
-    }
-
-    fn current_abac_snapshot(&self) -> Arc<AuthzSnapshot> {
-        if let Ok(snapshot_guard) = self.abac_snapshot.read() {
-            let snapshot = Arc::clone(&*snapshot_guard);
-            if let Ok(policy_guard) = self.abac_policies.read()
-                && snapshot.policies.len() == policy_guard.len()
-            {
-                return snapshot;
-            }
-        }
-        self.refresh_abac_snapshot();
-        self.abac_snapshot
-            .read()
-            .map(|snapshot| Arc::clone(&*snapshot))
-            .unwrap_or_else(|_| build_abac_snapshot("live-abac", &[], self.abac_default_allow))
-    }
-
-    /// The shared, atomically-reloadable ABAC/authz snapshot cell. Cloned (Arc)
-    /// so callers can build a `'static` version probe over the live snapshot
-    /// (used by the control-plane reload subscriber to detect authz-only policy
-    /// changes that do not alter the sourced RLS/method-security registry).
-    fn abac_snapshot(&self) -> Arc<RwLock<Arc<AuthzSnapshot>>> {
-        self.abac_snapshot.clone()
+    /// Load the current authorization snapshot (the live PG-warmed policy set).
+    fn current_authz_snapshot(&self) -> Arc<AuthzSnapshot> {
+        self.authz_snapshot.load_full()
     }
 
     pub fn runtime_snapshot(&self) -> Arc<DataBrokerRuntime> {
@@ -614,7 +581,7 @@ impl DataBrokerService {
         let principal = Principal::from_security_context(security, Vec::new());
         let resource = ResourceRef::message(message_type);
         let attributes = std::collections::BTreeMap::new();
-        let snapshot = self.current_abac_snapshot();
+        let snapshot = self.current_authz_snapshot();
         let decision = snapshot
             .casbin_authorize(&AuthzQuery {
                 principal: &principal,
@@ -2012,8 +1979,6 @@ pub async fn serve(
             tracing::warn!("saga recovery worker disabled: no canonical store is registered");
         }
     }
-    let abac_policies = Arc::new(RwLock::new(runtime.load_abac_policies().await));
-
     let scheduled_views = runtime.start_materialized_view_refresh(&manifest);
     if scheduled_views > 0 {
         tracing::info!(
@@ -2033,44 +1998,15 @@ pub async fn serve(
         manifest,
         runtime,
         lifecycle_state,
-        abac_policies,
         metrics.clone(),
         cdc_engine,
         abac_default_allow,
     );
     spawn_config_reload_watcher(service.clone());
 
-    // GAP 36 / F83: refresh the legacy policy vector and the v2 authz snapshot
-    // together so authorize() never rebuilds the ABAC snapshot per request.
-    {
-        let abac_refresh_secs = runtime_config.service.abac_refresh_secs;
-        let runtime_bg = service.runtime_snapshot();
-        let service_bg = service.clone();
-        tokio::spawn(async move {
-            let mut interval =
-                tokio::time::interval(std::time::Duration::from_secs(abac_refresh_secs));
-            loop {
-                interval.tick().await;
-                // bug_report.md J: distinguish a transient query failure (PG pool
-                // contention under CDC load) from a genuinely empty policy set. A
-                // failure retains stale policies AND surfaces the real DB error (the
-                // old code swallowed both into a misleading "empty set" warning,
-                // which made the authz snapshot flap run-to-run).
-                match runtime_bg.try_load_abac_policies().await {
-                    Ok(fresh) if !fresh.is_empty() => service_bg.replace_abac_policies(fresh),
-                    Ok(_) => tracing::warn!(
-                        "ABAC policy refresh returned a genuinely empty set - retaining stale \
-                         policies to avoid accidental deny-all"
-                    ),
-                    Err(err) => tracing::error!(
-                        error = %err,
-                        "ABAC policy refresh query FAILED - retaining stale policies (transient; \
-                         likely PG pool contention under CDC load)"
-                    ),
-                }
-            }
-        });
-    }
+    // Authorization policy is warmed into the shared snapshot cell from the Casbin
+    // governance table (`udb_authz.policy_rules`) by the AuthzService warmer +
+    // interval (below); there is no separate env-JSON ABAC refresh loop.
 
     // ── U3 + NW1-3b: Projection materialization engine ────────────────────
     // The engine needs a `SystemStores` trait object for the projection

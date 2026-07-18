@@ -85,6 +85,22 @@ fn authz_internal_status(operation: impl Into<String>, message: impl Into<String
     crate::runtime::executor_utils::internal_status("authz", operation, message)
 }
 
+/// The dev/bootstrap default-allow escape hatch (`UDB_ABAC_DEFAULT_ALLOW`). Read
+/// when assembling the PG-warmed authorization snapshot so it SURVIVES reloads —
+/// the broker's data plane reads this same cell. Production leaves it unset
+/// (deny-by-default). Named `abac_*` for continuity with the documented env var.
+fn abac_default_allow_env() -> bool {
+    std::env::var("UDB_ABAC_DEFAULT_ALLOW")
+        .ok()
+        .map(|v| {
+            matches!(
+                v.trim().to_ascii_lowercase().as_str(),
+                "1" | "true" | "yes" | "on"
+            )
+        })
+        .unwrap_or(false)
+}
+
 fn governed_direct_mutation_status(rpc: &'static str, policy_decision_id: &'static str) -> Status {
     crate::runtime::executor_utils::policy_status(
         "authz_governed_direct_mutation",
@@ -1467,7 +1483,11 @@ impl AuthzServiceImpl {
             policies,
             role_bindings,
             tuples,
-            default_allow: false,
+            // The dev/bootstrap escape hatch must SURVIVE a PG warm: the broker's
+            // data-plane authorize() reads this same PG-warmed cell, so if this were
+            // hardcoded false, `UDB_ABAC_DEFAULT_ALLOW=true` would silently stop
+            // working the moment the first reload replaced the initial snapshot.
+            default_allow: abac_default_allow_env(),
         }))
     }
 

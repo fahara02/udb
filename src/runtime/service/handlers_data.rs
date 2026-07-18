@@ -241,7 +241,7 @@ impl DataBrokerService {
         // so each streamed item is decided through the SAME `casbin_authorize`
         // path as the single-item gate — deny-by-default, no legacy `evaluate_abac`,
         // no v2 flag. The stream body is async, so it `.await`s the decision.
-        let abac_snapshot = self.current_abac_snapshot();
+        let abac_snapshot = self.current_authz_snapshot();
         // #155: batch items are admitted and executed ONE AT A TIME on purpose.
         // The fair-admission permit is acquired PER ITEM (it drops at the end of
         // each loop iteration, not held across the whole batch) so every item
@@ -357,7 +357,7 @@ impl DataBrokerService {
         // `message_type` is authorized (batch grant covered only "BatchUpsert").
         // Casbin-only per-item authz (see batch_select_inner): capture the
         // cloneable snapshot and decide each item via `casbin_authorize`.
-        let abac_snapshot = self.current_abac_snapshot();
+        let abac_snapshot = self.current_authz_snapshot();
         // #155: per-item fair-admission permit (dropped each iteration) + per-item
         // timeout below — intentional bounded-concurrency admission for the
         // streaming RPC, not a permit-held-across-batch serialization bug.

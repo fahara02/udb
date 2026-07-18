@@ -68,7 +68,6 @@ use crate::runtime::authn::{
     AccountStatus, AuthnConfig, PostgresApiKeyStore, PostgresSessionStore, PostgresUserStore,
     SessionStore, UserStore,
 };
-use crate::runtime::authz::AuthzSnapshot;
 use crate::runtime::security::SecurityConfig;
 
 use super::DataBrokerService;
@@ -89,19 +88,13 @@ impl DataBrokerService {
     pub(crate) fn build_auth_services(
         &self,
     ) -> (AuthnServiceImpl, AuthzServiceImpl, ApiKeyServiceImpl) {
-        let policies = self
-            .abac_policies
-            .read()
-            .map(|guard| guard.clone())
-            .unwrap_or_default();
-        let mut snapshot = AuthzSnapshot::from_abac_policies("live-abac", &policies);
-        snapshot.default_allow = self.abac_default_allow;
-        // Tier-0 #5 (D2-full): share ONE atomically-swappable snapshot cell between
-        // the authz service (which owns reloads) and the authn admin-mutation
-        // handlers, so those handlers invoke the SAME native authz DECISION ENGINE
-        // per action — not a divergent copy. The authz service is built from this
-        // shared cell via `AuthzServiceImpl::shared(...)` below.
-        let shared_snapshot = Arc::new(arc_swap::ArcSwap::from_pointee(snapshot));
+        // Share the broker's SINGLE authorization snapshot cell (empty +
+        // deny-by-default at startup, plus the dev `UDB_ABAC_DEFAULT_ALLOW` escape
+        // hatch). The AuthzService built below PG-warms this exact cell from
+        // `udb_authz.policy_rules`, and the broker's data-plane `authorize()` reads
+        // it — so the authn admin-mutation handlers, the authz service, and the data
+        // plane all enforce ONE Casbin policy set. There is no env-JSON ABAC lane.
+        let shared_snapshot = self.authz_snapshot();
         let runtime = self.runtime.load_full();
         // Native-service persistence resolves through the discovery seam (extend_udb.md):
         // the backend is read from this service's proto `native_service` binding, then a

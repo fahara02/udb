@@ -55,7 +55,6 @@ use crate::proto::{
     VectorHybridSearchRequest, VectorPoint, VectorPointMutation, VectorSearchRequest, VectorSet,
     VectorUpsertRequest, ViewDefinition,
 };
-use crate::security::{AbacPolicy, PolicyEffect};
 
 #[cfg(feature = "s3")]
 use super::config::MinioConfig;

@@ -1,47 +1,47 @@
 [
   {
-    "effect": "Allow",
-    "service_identity": "example.ocr.python",
-    "tenant_id": "*",
+    "effect": "allow",
+    "subject": "example.ocr.python",
+    "tenant": "*",
     "purpose": "*",
-    "message_type": "DocumentExtraction",
-    "operation": "*",
-    "required_scope": "udb:write"
+    "resource": "DocumentExtraction",
+    "action": "*",
+    "required_scopes": ["udb:write"]
   },
   {
-    "effect": "Allow",
-    "service_identity": "example.ocr.python",
-    "tenant_id": "*",
+    "effect": "allow",
+    "subject": "example.ocr.python",
+    "tenant": "*",
     "purpose": "*",
-    "message_type": "ProcessingQueue",
-    "operation": "Select",
-    "required_scope": "udb:read"
+    "resource": "ProcessingQueue",
+    "action": "Select",
+    "required_scopes": ["udb:read"]
   },
   {
-    "effect": "Allow",
-    "service_identity": "example.workflow.go",
-    "tenant_id": "*",
+    "effect": "allow",
+    "subject": "example.workflow.go",
+    "tenant": "*",
     "purpose": "*",
-    "message_type": "*",
-    "operation": "*",
-    "required_scope": "udb:write"
+    "resource": "*",
+    "action": "*",
+    "required_scopes": ["udb:write"]
   },
   {
-    "effect": "Allow",
-    "service_identity": "example.admin.csharp",
-    "tenant_id": "*",
+    "effect": "allow",
+    "subject": "example.admin.csharp",
+    "tenant": "*",
     "purpose": "*",
-    "message_type": "*",
-    "operation": "*",
-    "required_scope": "udb:admin"
+    "resource": "*",
+    "action": "*",
+    "required_scopes": ["udb:admin"]
   },
   {
-    "effect": "Allow",
-    "service_identity": "example.reporting.csharp",
-    "tenant_id": "*",
+    "effect": "allow",
+    "subject": "example.reporting.csharp",
+    "tenant": "*",
     "purpose": "*",
-    "message_type": "*",
-    "operation": "Select",
-    "required_scope": "udb:read"
+    "resource": "*",
+    "action": "Select",
+    "required_scopes": ["udb:read"]
   }
 ]

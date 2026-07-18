@@ -95,24 +95,30 @@ sees *"another UDB instance holds the startup advisory lock"* and crash-loops.
 
 ---
 
-## 5. Authorization: ABAC enforcement vs the `policy_rules` table
+## 5. Authorization: one Casbin engine over `udb_authz.policy_rules`
 
-These are two different surfaces — a common time-sink:
+Authorization is **one** Casbin engine, not two surfaces. The data plane's
+`authorize()` gate and the control-plane `AuthzService.Check` both decide from
+the same durable governance table, `udb_authz.policy_rules`. It is
+**default-deny**.
 
-- **Live enforcement** reads an in-memory **ABAC snapshot** built via
-  `AuthzSnapshot::from_abac_policies(...)` from the broker's loaded ABAC policies
-  (seeded from `UDB_ABAC_POLICY_FILE` / the ABAC table; generate seed SQL with
-  `udb policy-seed`). When the snapshot has **zero** policies, the decision falls
-  back to `UDB_ABAC_DEFAULT_ALLOW` (default `false` = deny-all), and a denied
-  client sees `7 PERMISSION_DENIED: no authz policy (default deny); seed ABAC
-  policies or set UDB_ABAC_DEFAULT_ALLOW=true`.
-- **`udb_authz.policy_rules`** is the durable **Casbin governance** table behind
-  the `PolicyRule` entity and the `udb auth policy put` / draft→approve→activate
-  governance flow. Writing a wildcard row here does **not** affect the live
-  decision engine.
+- **Live enforcement** reads a **shared, PG-warmed snapshot** of `policy_rules`
+  (revision-fenced — the cache invalidates on any policy mutation and a warmer
+  reloads it). It evaluates the real RPC action the broker submits —
+  `Select` / `Upsert` / `Delete` — against the rules for the request's tenant.
+  When no rule matches, the decision falls back to `UDB_ABAC_DEFAULT_ALLOW`
+  (default `false` = deny-all), and a denied client sees `7 PERMISSION_DENIED:
+  no authz policy (default deny); configure authorization via the AuthzService
+  (policy_rules) or set UDB_ABAC_DEFAULT_ALLOW=true for dev`.
+- **Seed policy** two ways, both writing `udb_authz.policy_rules`: at runtime
+  from app code via `AuthzService.CreatePolicyRule` (effective immediately, the
+  snapshot reloads), or offline via **`udb policy-seed`** (emits INSERTs into
+  `udb_authz.policy_rules`, piped to psql). There is no separate in-memory ABAC
+  snapshot and no env-JSON policy lane — a rule written here **is** the live
+  decision.
 
-For dev/bootstrap: `UDB_ABAC_DEFAULT_ALLOW=true`. For production: seed real ABAC
-policies and leave default-deny on.
+For dev/bootstrap: `UDB_ABAC_DEFAULT_ALLOW=true`. For production: seed real
+`policy_rules` and leave default-deny on.
 
 ---
 

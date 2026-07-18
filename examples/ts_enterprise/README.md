@@ -97,7 +97,7 @@ cd ../php_quickstart && docker compose up -d && cd ../ts_enterprise
 docker exec udb-php-quickstart-postgres-1 psql -U udb -d udb -c "CREATE DATABASE udb_enterprise;" || true
 
 # 2. Provision: RS256 keys, HMAC secrets, the admin user (bound to
-#    organization_owner → udb:*), and a seeded ABAC policy. Writes secrets/.
+#    organization_owner → udb:*), and a seeded policy_rules rule. Writes secrets/.
 ./scripts/bootstrap.sh
 
 # 3. Start the broker in ENTERPRISE mode (keep this terminal open).
@@ -151,9 +151,11 @@ of the env file is for the broker. Everything except `UDB_PASS` has a default:
 - **Logging in on the wrong port.** `login` lives on the auth listener
   (`:50061`), not the data port. Point `authTarget` at it.
 - **Expecting the org-owner role to be enough.** Authorization is default-deny:
-  the data plane reads an ABAC policy snapshot on *every* CRUD call, and without
-  a seeded policy even `udb:*` gets `PERMISSION_DENIED`. `bootstrap.sh` seeds it
-  via `UDB_ABAC_POLICIES_JSON`.
+  the data plane evaluates a Casbin policy from the `udb_authz.policy_rules`
+  governance table on *every* CRUD call, and without a matching rule even
+  `udb:*` gets `PERMISSION_DENIED`. `bootstrap.sh` seeds a rule into
+  `policy_rules` (via `udb policy-seed`) so `Select`/`Upsert`/`Delete` are
+  allowed for this tenant.
 - **Hand-writing the row shape.** The `Invoice` type is generated from
   `invoice.proto` with `buf generate`, using **snake_case** field names
   (`invoice_id`, `amount_cents`, …) so it matches the JSON the SDK's `data.table`
@@ -162,21 +164,27 @@ of the env file is for the broker. Everything except `UDB_PASS` has a default:
 - **Forgetting isolation is server-enforced.** You don't police tenant
   boundaries in app code; UDB's row-level security does. Step 5 proves it.
 
-## The two authorization surfaces (a real UDB gotcha)
+## One authorization engine (a real UDB gotcha)
 
-UDB authorizes in **two** independent places, and they are not the same engine:
+UDB authorizes through **one** Casbin engine over the `udb_authz.policy_rules`
+governance table — the same rules drive both the data-plane `authorize()` gate
+on every `Select`/`Upsert`/`Delete` and the control-plane `AuthzService.Check`
+that answers the SDK's `udb.authz.can` / `udb.authz.require` queries. It is
+**default-deny**:
 
-1. **Data-plane ABAC** — gates every `Select`/`Upsert`/`Delete`. Built from an
-   ABAC policy snapshot (`UDB_ABAC_POLICIES_JSON`, or the `udb_abac_policies`
-   table). **This is the authoritative gate on your data, and it is
-   default-deny.** `bootstrap.sh` seeds it, and it's what this example relies on.
-2. **Control-plane Casbin** — the engine behind the SDK's `udb.authz.can` /
-   `udb.authz.require` queries: a governance model over roles and policy rules.
-   It can answer DENY while the data plane allows, until *its* rules are seeded
-   too.
+- The data plane reads a **shared, PG-warmed snapshot** of `policy_rules`
+  (revision-fenced): it evaluates the real RPC action the broker submits —
+  `Select` / `Upsert` / `Delete` — against the rules for your tenant. With no
+  matching rule, even `udb:*` gets `PERMISSION_DENIED`.
+- You configure policy per-tenant at runtime via `AuthzService.CreatePolicyRule`
+  (effective immediately — the snapshot cache invalidates on mutation and a
+  warmer reloads), or offline via **`udb policy-seed`** (emits INSERTs into
+  `udb_authz.policy_rules`, piped to psql). `bootstrap.sh` uses the offline path.
 
-This example depends on (1), the gate that actually runs on each CRUD call.
-Seeding (2) to match is a separate governance exercise (`udb auth policy …`).
+Because it is one engine over one table, seeding a rule that allows
+`Select`/`Upsert`/`Delete` for this tenant is all this example needs — there is
+no separate ABAC lane to keep in sync. (`UDB_ABAC_DEFAULT_ALLOW=true` is the
+dev-only escape hatch that flips the default to allow.)
 
 ## Going further: TLS / mTLS
 
@@ -192,7 +200,7 @@ set. See [`../../docs/enterprise-deployment.md`](../../docs/enterprise-deploymen
 - `proto/billing/v1/invoice.proto` — your tenant-scoped table (the only schema you write).
 - `gen/billing/v1/invoice.ts` — the **generated** `Invoice` type (do not edit).
 - `src/main.ts` — the connect → authn → authz → CRUD → isolation flow.
-- `scripts/bootstrap.sh` — one-time provisioning (keys, secrets, admin, ABAC policy).
+- `scripts/bootstrap.sh` — one-time provisioning (keys, secrets, admin, policy_rules rule).
 - `scripts/serve.sh` — start the broker in enterprise mode.
 - `scripts/serve-mtls.sh` — the same, with in-broker TLS/mTLS.
 </content>

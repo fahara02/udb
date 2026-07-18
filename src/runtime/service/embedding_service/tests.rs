@@ -332,7 +332,7 @@ fn embedding_source_not_found_statuses_carry_schema_detail() {
 #[test]
 fn embedding_point_is_tenant_tagged_no_fail_open() {
     // Empty (unverified) tenant ⇒ fail closed, never stored.
-    let err = build_embedding_point("row-1", vec![0.1, 0.2], "  ")
+    let err = build_embedding_point("row-1", vec![0.1, 0.2], "  ", "orders")
         .expect_err("empty tenant must fail closed");
     assert_eq!(err.code(), tonic::Code::PermissionDenied);
     assert_eq!(
@@ -346,14 +346,155 @@ fn embedding_point_is_tenant_tagged_no_fail_open() {
     assert_eq!(detail.policy_decision_id, "verified_tenant_required");
     assert!(!detail.retryable);
     assert_eq!(detail.retry_after_ms, 0);
-    // A verified tenant ⇒ the point is tagged with `_tenant_id`.
-    let point = build_embedding_point("row-1", vec![0.1, 0.2], "acme").expect("verified tenant ok");
+    // A verified tenant ⇒ the point is tagged with `_tenant_id` AND `_source`
+    // (the latter scopes retention-independent teardown).
+    let point = build_embedding_point("row-1", vec![0.1, 0.2], "acme", "orders")
+        .expect("verified tenant ok");
     assert_eq!(point.id, "row-1");
     let payload = point.payload.expect("tenant-tag payload present");
     assert!(
         payload.fields.contains_key("_tenant_id"),
         "stored vector is not tenant-tagged"
     );
+    assert!(
+        payload.fields.contains_key("_source"),
+        "stored vector is not source-tagged (teardown filter-delete would miss it)"
+    );
+    // A bare id ⇒ `_parent_pk` = the id itself, `_chunk_seq` = 0 (single-chunk).
+    // (Numbers round-trip through prost `NumberValue(f64)`, so compare as f64.)
+    let pjson = crate::runtime::executor_utils::struct_to_json(&payload);
+    assert_eq!(pjson["_parent_pk"], "row-1");
+    assert_eq!(pjson["_chunk_seq"].as_f64(), Some(0.0));
+    // A composite chunk id ⇒ `_parent_pk` = the parent row, `_chunk_seq` parsed.
+    let chunked = build_embedding_point("row-1#chunk:4", vec![0.1, 0.2], "acme", "orders")
+        .expect("verified tenant ok");
+    let cjson =
+        crate::runtime::executor_utils::struct_to_json(&chunked.payload.expect("payload present"));
+    assert_eq!(
+        cjson["_parent_pk"], "row-1",
+        "chunk point must tag its PARENT row pk for row-scoped teardown"
+    );
+    assert_eq!(cjson["_chunk_seq"].as_f64(), Some(4.0));
+    // An empty source ⇒ no `_source` key (defensive; the handler always supplies
+    // a validated non-empty source).
+    let untagged =
+        build_embedding_point("row-2", vec![0.1, 0.2], "acme", "  ").expect("verified tenant ok");
+    assert!(
+        !untagged
+            .payload
+            .expect("payload present")
+            .fields
+            .contains_key("_source"),
+        "empty source must not write an empty _source tag"
+    );
+}
+
+/// The source-teardown filter scopes to BOTH `_tenant_id` and `_source` as
+/// authoritative `must` clauses, and refuses to build (returns `None`) when
+/// either scope key is empty — an under-scoped filter could erase another
+/// tenant's or source's vectors, so the caller must fall back to point-id
+/// enumeration instead.
+#[test]
+fn source_teardown_filter_is_fully_scoped_or_none() {
+    use super::model::source_teardown_filter;
+    // Both keys present ⇒ a two-clause `must` filter, tenant first.
+    let filter = source_teardown_filter(" acme ", " orders ").expect("scoped filter");
+    let must = filter
+        .get("must")
+        .and_then(|m| m.as_array())
+        .expect("must array");
+    assert_eq!(must.len(), 2, "filter must AND tenant + source");
+    assert_eq!(must[0]["key"], "_tenant_id");
+    assert_eq!(must[0]["match"]["value"], "acme");
+    assert_eq!(must[1]["key"], "_source");
+    assert_eq!(must[1]["match"]["value"], "orders");
+    // Either scope key empty ⇒ None (never an under-scoped delete).
+    assert!(source_teardown_filter("", "orders").is_none());
+    assert!(source_teardown_filter("acme", "   ").is_none());
+    assert!(source_teardown_filter("  ", "  ").is_none());
+}
+
+/// The row-scoped teardown filter ANDs `_parent_pk` on top of tenant + source so
+/// a delete/re-embed erases exactly one row's chunks; any empty scope key ⇒ None.
+#[test]
+fn row_teardown_filter_scopes_to_a_single_parent() {
+    use super::model::row_teardown_filter;
+    let filter = row_teardown_filter("acme", "orders", "row-7").expect("scoped filter");
+    let must = filter.get("must").and_then(|m| m.as_array()).expect("must");
+    assert_eq!(must.len(), 3, "tenant + source + parent");
+    assert_eq!(must[2]["key"], "_parent_pk");
+    assert_eq!(must[2]["match"]["value"], "row-7");
+    assert!(row_teardown_filter("acme", "orders", "  ").is_none());
+    assert!(row_teardown_filter("", "orders", "row-7").is_none());
+}
+
+/// The composite point-id scheme round-trips: a single-chunk row keeps its bare
+/// pk (backward-compatible ids), a multi-chunk row gets `{pk}#chunk:{seq}`, and
+/// parsing recovers `(parent, seq)`; a bare or non-numeric-suffix id is seq 0.
+#[test]
+fn chunk_point_id_round_trips_and_is_backward_compatible() {
+    use super::chunking::{chunk_point_id, parse_chunk_point_id};
+    // Single chunk ⇒ bare id (no behavior change for short rows).
+    assert_eq!(chunk_point_id("row-1", 0, 1), "row-1");
+    assert_eq!(parse_chunk_point_id("row-1"), ("row-1", 0));
+    // Multi chunk ⇒ composite id, parses back to (parent, seq).
+    assert_eq!(chunk_point_id("row-1", 3, 5), "row-1#chunk:3");
+    assert_eq!(parse_chunk_point_id("row-1#chunk:3"), ("row-1", 3));
+    // A parent pk that itself contains the sentinel followed by NON-digits is not
+    // mistaken for a chunk suffix (only a trailing numeric run counts).
+    assert_eq!(parse_chunk_point_id("a#chunk:b"), ("a#chunk:b", 0));
+    // The LAST sentinel wins, so a parent that legitimately contains one survives.
+    assert_eq!(parse_chunk_point_id("a#chunk:x#chunk:2"), ("a#chunk:x", 2));
+}
+
+/// `chunk_text` splits over-long text into word-boundary-aware overlapping
+/// windows, keeps short text as one chunk, is multibyte-safe, and honors the cap.
+#[test]
+fn chunk_text_splits_with_overlap_and_bounds() {
+    use super::chunking::chunk_text;
+    // Within size ⇒ exactly one chunk (trimmed), seq 0.
+    let one = chunk_text("  hello world  ", 100, 10, 8);
+    assert_eq!(one.len(), 1);
+    assert_eq!(one[0].seq, 0);
+    assert_eq!(one[0].text, "hello world");
+    // Empty / whitespace ⇒ no chunks.
+    assert!(chunk_text("   ", 100, 10, 8).is_empty());
+    assert!(chunk_text("", 100, 10, 8).is_empty());
+    // Over size ⇒ multiple chunks, sequential seqs, each within the char bound,
+    // no chunk splits a word (each is whitespace-trimmed and re-joins cleanly).
+    let text = "alpha beta gamma delta epsilon zeta eta theta iota kappa";
+    let chunks = chunk_text(text, 20, 5, 100);
+    assert!(chunks.len() >= 2, "long text must split");
+    for (i, c) in chunks.iter().enumerate() {
+        assert_eq!(c.seq as usize, i, "seqs are sequential from 0");
+        assert!(c.text.chars().count() <= 20, "chunk within size");
+        assert!(
+            !c.text.starts_with(' ') && !c.text.ends_with(' '),
+            "trimmed"
+        );
+    }
+    // Overlap ⇒ the union of chunks still covers every source word.
+    let joined: String = chunks
+        .iter()
+        .map(|c| c.text.clone())
+        .collect::<Vec<_>>()
+        .join(" ");
+    for word in text.split_whitespace() {
+        assert!(joined.contains(word), "word '{word}' lost across chunks");
+    }
+    // max_chunks caps the fan-out.
+    let capped = chunk_text(text, 10, 2, 2);
+    assert!(capped.len() <= 2, "max_chunks caps the count");
+    // Multibyte safety: char-based, never panics, each chunk within the bound.
+    let mb = chunk_text(
+        "café ☕ ambulance 🚑 dispatch café ☕ ambulance 🚑 dispatch",
+        8,
+        2,
+        100,
+    );
+    for c in &mb {
+        assert!(c.text.chars().count() <= 8);
+    }
 }
 
 /// The caller `filter_json` is merged UNDER the mandatory tenant clause: the

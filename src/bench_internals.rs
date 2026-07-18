@@ -19,7 +19,7 @@ pub use prost_types::{Struct, Value as ProstValue};
 
 use crate::runtime::executor_utils as eu;
 
-pub use crate::runtime::security::{AbacPolicy, PolicyEffect};
+pub use crate::runtime::security::PolicyEffect;
 
 // ── Struct / prost <-> JSON (read/write row conversion) ───────────────────────
 
@@ -55,13 +55,6 @@ pub fn merge_context(
 }
 
 // ── Authz / method-security hot maps (D.2 allocation coverage) ───────────────
-
-pub fn rebuild_authz_snapshot_from_abac(
-    version: &str,
-    policies: &[AbacPolicy],
-) -> crate::runtime::authz::AuthzSnapshot {
-    crate::runtime::authz::AuthzSnapshot::from_abac_policies(version, policies)
-}
 
 pub fn rebuild_method_security_scope_registry() -> usize {
     crate::runtime::service::build_method_security_registry()

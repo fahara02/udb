@@ -1137,9 +1137,6 @@ pub struct UdbConfig {
     /// Materialized view refresh TTL in days. Zero disables scheduled refresh.
     #[serde(default)]
     pub materialized_view_ttl_days: i32,
-    /// ABAC policies JSON override.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub abac_policies_json: Option<String>,
     /// ABAC schema name.
     #[serde(default)]
     pub abac_schema: String,
@@ -1207,7 +1204,6 @@ impl std::fmt::Debug for UdbConfig {
                 "materialized_view_ttl_days",
                 &self.materialized_view_ttl_days,
             )
-            .field("abac_policies_json", &self.abac_policies_json)
             .field("abac_schema", &self.abac_schema)
             .field("abac_table", &self.abac_table)
             .field("kafka_brokers", &self.kafka_brokers)
@@ -1552,7 +1548,6 @@ pub fn merge_udb_config(base: UdbConfig, source: UdbConfig) -> UdbConfig {
         } else {
             source.materialized_view_ttl_days
         },
-        abac_policies_json: source.abac_policies_json.or(base.abac_policies_json),
         abac_schema: if source.abac_schema.is_empty() {
             base.abac_schema
         } else {
@@ -1829,11 +1824,6 @@ impl UdbConfig {
         }
         if let Some(v) = env_i32("UDB_MATERIALIZED_VIEW_TTL_DAYS") {
             self.materialized_view_ttl_days = v;
-        }
-        if let Ok(v) = std::env::var("UDB_ABAC_POLICIES_JSON")
-            && !v.trim().is_empty()
-        {
-            self.abac_policies_json = Some(v);
         }
         if let Ok(v) = std::env::var("UDB_ABAC_SCHEMA")
             && !v.trim().is_empty()

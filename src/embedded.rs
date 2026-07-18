@@ -15,7 +15,6 @@ use crate::runtime::core::DataBrokerRuntime;
 use crate::runtime::executor_utils::invalid_argument_fields;
 use crate::runtime::metrics::PrometheusMetrics;
 use crate::runtime::service::DataBrokerService;
-use crate::security::AbacPolicy;
 
 /// In-process UDB runtime facade for tests, CLIs, batch jobs, and local workers.
 ///
@@ -35,13 +34,11 @@ impl EmbeddedRuntime {
 
     pub async fn from_runtime(manifest: CatalogManifest, runtime: DataBrokerRuntime) -> Self {
         let abac_default_allow = runtime.config().service.abac_default_allow;
-        let abac_policies = Arc::new(RwLock::new(runtime.load_abac_policies().await));
         let metrics = Arc::new(PrometheusMetrics::new().expect("create prometheus metrics"));
         let service = DataBrokerService::with_runtime_and_state(
             manifest,
             runtime,
             Arc::new(RwLock::new(FsmState::Completed)),
-            abac_policies,
             metrics,
             None,
             abac_default_allow,
@@ -54,7 +51,6 @@ impl EmbeddedRuntime {
             manifest,
             DataBrokerRuntime::planning_only(),
             Arc::new(RwLock::new(FsmState::Completed)),
-            Arc::new(RwLock::new(Vec::<AbacPolicy>::new())),
             Arc::new(PrometheusMetrics::new().expect("create prometheus metrics")),
             None,
             true,

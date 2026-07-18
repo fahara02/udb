@@ -584,15 +584,16 @@ fn lint_policies_empty_set_returns_deny_by_default_warning() {
 
 #[test]
 fn lint_policies_detects_broad_wildcard_deny() {
-    use udb::{AbacPolicy, PolicyEffect, lint_policies};
-    let policies = vec![AbacPolicy {
-        effect: PolicyEffect::Deny,
-        service_identity: "svc-a".to_string(),
-        tenant_id: "*".to_string(),
+    use udb::{AuthzEffect, AuthzPolicy, lint_policies};
+    let policies = vec![AuthzPolicy {
+        effect: AuthzEffect::Deny,
+        subject: "svc-a".to_string(),
+        tenant: "*".to_string(),
         purpose: "read".to_string(),
-        message_type: "User".to_string(),
-        operation: "Select".to_string(),
-        required_scope: "udb:read".to_string(),
+        resource: "User".to_string(),
+        action: "Select".to_string(),
+        required_scopes: vec!["udb:read".to_string()],
+        ..Default::default()
     }];
     let findings = lint_policies(&policies);
     assert!(findings.iter().any(|f| f.category == "broad_wildcard"));
@@ -600,15 +601,16 @@ fn lint_policies_detects_broad_wildcard_deny() {
 
 #[test]
 fn lint_policies_detects_shadowed_allow() {
-    use udb::{AbacPolicy, PolicyEffect, lint_policies};
-    let p = AbacPolicy {
-        effect: PolicyEffect::Allow,
-        service_identity: "svc-a".to_string(),
-        tenant_id: "t1".to_string(),
+    use udb::{AuthzEffect, AuthzPolicy, lint_policies};
+    let p = AuthzPolicy {
+        effect: AuthzEffect::Allow,
+        subject: "svc-a".to_string(),
+        tenant: "t1".to_string(),
         purpose: "read".to_string(),
-        message_type: "User".to_string(),
-        operation: "Select".to_string(),
-        required_scope: "udb:read".to_string(),
+        resource: "User".to_string(),
+        action: "Select".to_string(),
+        required_scopes: vec!["udb:read".to_string()],
+        ..Default::default()
     };
     let policies = vec![p.clone(), p];
     let findings = lint_policies(&policies);
@@ -622,9 +624,9 @@ fn policy_lint_loader_rejects_malformed_policy_file() {
     let path = root.join("policy.json");
     std::fs::write(&path, "[{").expect("write malformed policy");
 
-    let error = load_abac_policies_from_file(path.to_str().expect("utf-8 temp path"))
+    let error = load_authz_policies_from_file(path.to_str().expect("utf-8 temp path"))
         .expect_err("malformed policy file should fail");
-    assert!(error.contains("failed to parse ABAC policy file"));
+    assert!(error.contains("failed to parse authorization policy file"));
 
     let (result, exit_code) = build_policy_lint_cli_result(Err(error));
     assert_eq!(exit_code, 1);

@@ -31,9 +31,14 @@ server:
 
 system:
   schema: "udb_system"
+  # NOTE: authorization now lives in the udb_authz.policy_rules Casbin governance
+  # table (one engine, default-deny). Configure policy at runtime via
+  # AuthzService.CreatePolicyRule or offline via `udb policy-seed`. The two keys
+  # below name a legacy ABAC table that no longer drives enforcement; they are
+  # still parsed by the config loader but are vestigial.
   abac_schema: "udb_system"
   abac_table: "udb_abac_policies"
-  abac_default_allow: false   # set true for development
+  abac_default_allow: false   # set true (UDB_ABAC_DEFAULT_ALLOW) for development
 
 saga:
   recovery_enabled: true
