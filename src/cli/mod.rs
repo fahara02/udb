@@ -11,7 +11,7 @@ use std::sync::Once;
 use serde::Serialize;
 use serde_yaml::Value as YamlValue;
 use udb::{
-    AbacPolicy, BackendCapabilityMatrixEntry, BackendProbeResult, BackendSyncTarget,
+    AuthzPolicy, BackendCapabilityMatrixEntry, BackendProbeResult, BackendSyncTarget,
     CatalogManifest, DDL_ANALYTICS_EVENTS_DAILY, DEFAULT_LEDGER_SCHEMA, DataBrokerRuntime,
     DbOpsSyncConfig, DsnGenerationConfig, FsmState, LintReport, LintSeverity, MigrationOptions,
     MigrationPlanConfig, MultiPgConfig, ParserConfig, PgInstance, PolicyLintFinding,
@@ -548,7 +548,7 @@ pub fn run() {
             });
         }
         Command::PolicyLint => {
-            let (result, exit_code) = build_policy_lint_cli_result(load_abac_policies_for_lint());
+            let (result, exit_code) = build_policy_lint_cli_result(load_authz_policies_for_lint());
             if let Some(error) = result.error.as_ref() {
                 eprintln!("{error}");
             }
@@ -556,7 +556,7 @@ pub fn run() {
             process::exit(exit_code);
         }
         Command::PolicySeed => {
-            let policies = match load_abac_policies_for_lint() {
+            let policies = match load_authz_policies_for_lint() {
                 Ok(policies) => policies,
                 Err(err) => {
                     eprintln!("{err}");
@@ -565,14 +565,14 @@ pub fn run() {
             };
             if policies.is_empty() {
                 eprintln!(
-                    "No policies loaded. Set UDB_ABAC_POLICY_FILE to a JSON array of AbacPolicy objects."
+                    "No policies loaded. Set UDB_ABAC_POLICY_FILE to a JSON array of AuthzPolicy (Casbin) objects."
                 );
                 process::exit(1);
             }
-            let sys_cfg = SystemCatalogConfig::default();
-            let table = pg_relation(&sys_cfg.abac_schema, &sys_cfg.abac_table);
+            // The Casbin governance table the runtime data plane enforces from.
+            let table = pg_relation("udb_authz", "policy_rules");
             let source = env::var("UDB_ABAC_POLICY_FILE").unwrap_or_default();
-            println!("-- UDB ABAC policy seed SQL");
+            println!("-- UDB authorization (Casbin) policy seed SQL for the governance table");
             println!("-- Source: {source}");
             println!("-- Table : {table}");
             println!("-- Generated: {} policies", policies.len());
@@ -581,21 +581,30 @@ pub fn run() {
             println!("DELETE FROM {table}; -- clear existing policies before re-seeding");
             println!();
             for (i, p) in policies.iter().enumerate() {
-                let effect = match p.effect {
-                    udb::PolicyEffect::Allow => "allow",
-                    udb::PolicyEffect::Deny => "deny",
-                };
+                // Non-column AuthzPolicy fields (priority/role/purpose/relationship/
+                // required_scopes) live in attributes_json, exactly as the runtime
+                // policy loader reads them back.
+                let attributes = serde_json::json!({
+                    "priority": p.priority.to_string(),
+                    "role": p.role,
+                    "purpose": p.purpose,
+                    "relationship": p.relationship,
+                    "required_scopes": p.required_scopes.join(","),
+                })
+                .to_string();
                 println!(
                     "INSERT INTO {table} \
-                     (effect, service_identity, tenant_id, purpose, message_type, operation, required_scope) VALUES \
-                     ({eff}, {svc}, {ten}, {pur}, {msg}, {op}, {sco}); -- #{i}",
-                    eff = sql_literal(effect),
-                    svc = sql_literal(&p.service_identity),
-                    ten = sql_literal(&p.tenant_id),
-                    pur = sql_literal(&p.purpose),
-                    msg = sql_literal(&p.message_type),
-                    op = sql_literal(&p.operation),
-                    sco = sql_literal(&p.required_scope),
+                     (subject, domain, object, action, effect, is_active, tenant_id, project_id, attributes_json) VALUES \
+                     ({sub}, {dom}, {obj}, {act}, {eff}, {active}, {ten}, {proj}, {attrs}::jsonb); -- #{i}",
+                    sub = sql_literal(&p.subject),
+                    dom = sql_literal(&p.tenant),
+                    obj = sql_literal(&p.resource),
+                    act = sql_literal(&p.action),
+                    eff = sql_literal(&p.effect.as_str().to_uppercase()),
+                    active = p.enabled,
+                    ten = sql_literal(&p.tenant),
+                    proj = sql_literal(&p.project),
+                    attrs = sql_literal(&attributes),
                 );
             }
             println!();
@@ -1949,7 +1958,7 @@ struct PolicyLintCliResult {
 }
 
 fn build_policy_lint_cli_result(
-    policies: Result<Vec<AbacPolicy>, String>,
+    policies: Result<Vec<AuthzPolicy>, String>,
 ) -> (PolicyLintCliResult, i32) {
     match policies {
         Ok(policies) => {

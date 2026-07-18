@@ -260,9 +260,10 @@ pub(crate) fn load_prior_manifest_from_args(args: &[String]) -> Option<CatalogMa
     }
 }
 
-/// Load ABAC policies from `UDB_ABAC_POLICY_FILE`.
-/// Returns an empty Vec only when the env-var is unset.
-pub(crate) fn load_abac_policies_for_lint() -> Result<Vec<AbacPolicy>, String> {
+/// Load authorization (Casbin `AuthzPolicy`) rules from `UDB_ABAC_POLICY_FILE`
+/// (a JSON array of AuthzPolicy objects). Returns an empty Vec only when the
+/// env-var is unset.
+pub(crate) fn load_authz_policies_for_lint() -> Result<Vec<AuthzPolicy>, String> {
     let path = match env::var("UDB_ABAC_POLICY_FILE") {
         Ok(p) if !p.is_empty() => p,
         _ => {
@@ -270,14 +271,14 @@ pub(crate) fn load_abac_policies_for_lint() -> Result<Vec<AbacPolicy>, String> {
             return Ok(Vec::new());
         }
     };
-    load_abac_policies_from_file(&path)
+    load_authz_policies_from_file(&path)
 }
 
-pub(crate) fn load_abac_policies_from_file(path: &str) -> Result<Vec<AbacPolicy>, String> {
+pub(crate) fn load_authz_policies_from_file(path: &str) -> Result<Vec<AuthzPolicy>, String> {
     let content = fs::read_to_string(path)
-        .map_err(|err| format!("failed to read ABAC policy file '{path}': {err}"))?;
-    let policies = serde_json::from_str::<Vec<AbacPolicy>>(&content)
-        .map_err(|err| format!("failed to parse ABAC policy file '{path}': {err}"))?;
+        .map_err(|err| format!("failed to read authorization policy file '{path}': {err}"))?;
+    let policies = serde_json::from_str::<Vec<AuthzPolicy>>(&content)
+        .map_err(|err| format!("failed to parse authorization policy file '{path}': {err}"))?;
     eprintln!("loaded {} policies from {path}", policies.len());
     Ok(policies)
 }

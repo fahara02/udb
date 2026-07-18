@@ -34,7 +34,6 @@ fn open_service(manifest: CatalogManifest) -> DataBrokerService {
         manifest,
         DataBrokerRuntime::planning_only(),
         Arc::new(RwLock::new(FsmState::Completed)),
-        Arc::new(RwLock::new(Vec::new())),
         Arc::new(PrometheusMetrics::new().expect("metrics")),
         None,
         true,

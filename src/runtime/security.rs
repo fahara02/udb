@@ -9,6 +9,7 @@ use x509_parser::prelude::parse_x509_certificate;
 
 use crate::broker::table_for_message;
 use crate::generation::{CatalogManifest, ManifestColumn};
+use crate::runtime::authz::{AuthzPolicy, Effect};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct SecurityContext {
@@ -592,17 +593,6 @@ pub fn hardened_startup_violations(transport_violations: &[String]) -> Vec<Strin
         .unwrap_or_default();
     violations.extend(transport_violations.iter().cloned());
     violations
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct AbacPolicy {
-    pub effect: PolicyEffect,
-    pub service_identity: String,
-    pub tenant_id: String,
-    pub purpose: String,
-    pub message_type: String,
-    pub operation: String,
-    pub required_scope: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -2021,15 +2011,15 @@ pub struct PolicyLintFinding {
     pub policy_index: Option<usize>,
 }
 
-/// Lint a set of ABAC policies and return a list of findings.
+/// Lint a set of authorization policies and return a list of findings.
 ///
 /// Checks performed:
 /// - `deny_by_default`: warn if no Allow policy covers `*`/`*` (broad default allow missing).
 /// - `shadowed_policy`: warn when an earlier Allow policy makes a later Allow policy
-///   for the same (identity, tenant, purpose, message_type, operation) unreachable.
-/// - `broad_wildcard`: warn when a Deny policy uses `*` for tenant_id or purpose,
+///   for the same (subject, tenant, purpose, resource, action) unreachable.
+/// - `broad_wildcard`: warn when a Deny policy uses `*` for tenant or purpose,
 ///   which could silently block unintended callers.
-pub fn lint_policies(policies: &[AbacPolicy]) -> Vec<PolicyLintFinding> {
+pub fn lint_policies(policies: &[AuthzPolicy]) -> Vec<PolicyLintFinding> {
     let mut findings = Vec::new();
 
     // 1. deny_by_default: if there are no policies at all, all RPCs are gated
@@ -2038,7 +2028,7 @@ pub fn lint_policies(policies: &[AbacPolicy]) -> Vec<PolicyLintFinding> {
         findings.push(PolicyLintFinding {
             severity: "warning".to_string(),
             category: "deny_by_default".to_string(),
-            message: "No ABAC policies are loaded. All RPCs will be denied by default \
+            message: "No authorization policies are loaded. All RPCs will be denied by default \
                       unless UDB_ABAC_DEFAULT_ALLOW=true is set."
                 .to_string(),
             policy_index: None,
@@ -2049,16 +2039,12 @@ pub fn lint_policies(policies: &[AbacPolicy]) -> Vec<PolicyLintFinding> {
     // 2. shadowed_policy: detect duplicate Allow policies (same key tuple).
     let mut seen_allow_keys: Vec<(usize, String)> = Vec::new();
     for (idx, policy) in policies.iter().enumerate() {
-        if policy.effect != PolicyEffect::Allow {
+        if policy.effect != Effect::Allow {
             continue;
         }
         let key = format!(
             "{}|{}|{}|{}|{}",
-            policy.service_identity,
-            policy.tenant_id,
-            policy.purpose,
-            policy.message_type,
-            policy.operation
+            policy.subject, policy.tenant, policy.purpose, policy.resource, policy.action
         );
         if let Some((prior_idx, _)) = seen_allow_keys.iter().find(|(_, k)| k == &key) {
             findings.push(PolicyLintFinding {
@@ -2067,7 +2053,7 @@ pub fn lint_policies(policies: &[AbacPolicy]) -> Vec<PolicyLintFinding> {
                 message: format!(
                     "Policy #{idx} (Allow {}/{}) is shadowed by the identical Allow at \
                      policy #{prior_idx}. Remove the duplicate.",
-                    policy.message_type, policy.operation
+                    policy.resource, policy.action
                 ),
                 policy_index: Some(idx),
             });
@@ -2078,17 +2064,17 @@ pub fn lint_policies(policies: &[AbacPolicy]) -> Vec<PolicyLintFinding> {
 
     // 3. broad_wildcard on Deny policies.
     for (idx, policy) in policies.iter().enumerate() {
-        if policy.effect != PolicyEffect::Deny {
+        if policy.effect != Effect::Deny {
             continue;
         }
-        if policy.tenant_id == "*" {
+        if policy.tenant == "*" {
             findings.push(PolicyLintFinding {
                 severity: "warning".to_string(),
                 category: "broad_wildcard".to_string(),
                 message: format!(
-                    "Policy #{idx} (Deny {}/{}) uses wildcard tenant_id='*'. \
+                    "Policy #{idx} (Deny {}/{}) uses wildcard tenant='*'. \
                      This will deny access for ALL tenants. Narrow the scope.",
-                    policy.message_type, policy.operation
+                    policy.resource, policy.action
                 ),
                 policy_index: Some(idx),
             });
@@ -2100,17 +2086,17 @@ pub fn lint_policies(policies: &[AbacPolicy]) -> Vec<PolicyLintFinding> {
                 message: format!(
                     "Policy #{idx} (Deny {}/{}) uses wildcard purpose='*'. \
                      This will deny access regardless of declared purpose. Narrow the scope.",
-                    policy.message_type, policy.operation
+                    policy.resource, policy.action
                 ),
                 policy_index: Some(idx),
             });
         }
-        if policy.message_type == "*" && policy.operation == "*" {
+        if policy.resource == "*" && policy.action == "*" {
             findings.push(PolicyLintFinding {
                 severity: "warning".to_string(),
                 category: "broad_wildcard".to_string(),
                 message: format!(
-                    "Policy #{idx} is a blanket Deny (message_type='*', operation='*'). \
+                    "Policy #{idx} is a blanket Deny (resource='*', action='*'). \
                      This will silently deny all RPCs for matched identities."
                 ),
                 policy_index: Some(idx),
@@ -2176,15 +2162,20 @@ mod tests {
         assert_eq!(header.alg, jsonwebtoken::Algorithm::RS256);
     }
 
-    fn make_allow_policy(service: &str, purpose: &str, operation: &str, scope: &str) -> AbacPolicy {
-        AbacPolicy {
-            effect: PolicyEffect::Allow,
-            service_identity: service.to_string(),
-            tenant_id: "*".to_string(),
+    fn make_allow_policy(service: &str, purpose: &str, operation: &str, scope: &str) -> AuthzPolicy {
+        AuthzPolicy {
+            effect: Effect::Allow,
+            subject: service.to_string(),
+            tenant: "*".to_string(),
             purpose: purpose.to_string(),
-            message_type: "*".to_string(),
-            operation: operation.to_string(),
-            required_scope: scope.to_string(),
+            resource: "*".to_string(),
+            action: operation.to_string(),
+            required_scopes: if scope.is_empty() {
+                Vec::new()
+            } else {
+                vec![scope.to_string()]
+            },
+            ..AuthzPolicy::default()
         }
     }
 
@@ -2346,14 +2337,14 @@ mod tests {
 
     #[test]
     fn lint_policies_detects_shadowed_allow() {
-        let p = AbacPolicy {
-            effect: PolicyEffect::Allow,
-            service_identity: "s".to_string(),
-            tenant_id: "t".to_string(),
+        let p = AuthzPolicy {
+            effect: Effect::Allow,
+            subject: "s".to_string(),
+            tenant: "t".to_string(),
             purpose: "p".to_string(),
-            message_type: "M".to_string(),
-            operation: "Select".to_string(),
-            required_scope: String::new(),
+            resource: "M".to_string(),
+            action: "Select".to_string(),
+            ..AuthzPolicy::default()
         };
         let findings = lint_policies(&[p.clone(), p]);
         assert!(findings.iter().any(|f| f.category == "shadowed_policy"));
@@ -2361,14 +2352,14 @@ mod tests {
 
     #[test]
     fn lint_policies_detects_broad_wildcard_on_deny() {
-        let p = AbacPolicy {
-            effect: PolicyEffect::Deny,
-            service_identity: "s".to_string(),
-            tenant_id: "*".to_string(),
+        let p = AuthzPolicy {
+            effect: Effect::Deny,
+            subject: "s".to_string(),
+            tenant: "*".to_string(),
             purpose: "p".to_string(),
-            message_type: "M".to_string(),
-            operation: "Select".to_string(),
-            required_scope: String::new(),
+            resource: "M".to_string(),
+            action: "Select".to_string(),
+            ..AuthzPolicy::default()
         };
         let findings = lint_policies(&[p]);
         assert!(findings.iter().any(|f| f.category == "broad_wildcard"));
@@ -2381,14 +2372,14 @@ mod tests {
         let _ctx = make_context("tenant-1", "ocr", "example.ocr.python", &["udb:write"]);
         let policies = vec![
             make_allow_policy("example.ocr.python", "ocr", "Upsert", "udb:write"),
-            AbacPolicy {
-                effect: PolicyEffect::Deny,
-                service_identity: "example.ocr.python".to_string(),
-                tenant_id: "tenant-1".to_string(),
+            AuthzPolicy {
+                effect: Effect::Deny,
+                subject: "example.ocr.python".to_string(),
+                tenant: "tenant-1".to_string(),
                 purpose: "*".to_string(),
-                message_type: "*".to_string(),
-                operation: "Upsert".to_string(),
-                required_scope: String::new(),
+                resource: "*".to_string(),
+                action: "Upsert".to_string(),
+                ..AuthzPolicy::default()
             },
         ];
         // Deny rule targets exact tenant — should be caught by lint_policies broad_wildcard check
