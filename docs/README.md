@@ -16,7 +16,7 @@
 │    crate v0.4.14 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
-This is the documentation for UDB, the Universal Data Broker — one typed API in
+These pages document UDB, the Universal Data Broker — one typed API in
 front of many databases and the backend services (auth, secrets, search, jobs,
 storage, and more) you'd otherwise stitch together yourself. This page is the
 map: find what you're trying to do in the left column and follow the link.
@@ -25,7 +25,7 @@ If you're brand new, start with the [project overview](../README.md) to see what
 UDB is and why it exists. When you're ready to build, jump straight to the guide
 that matches your task below.
 
-The guides are grouped by what you're doing: understanding the architecture,
+This is the public documentation for UDB 0.4.14. The guides are grouped by what you're doing: understanding the architecture,
 annotating your protos, integrating an app, using the native services, running
 UDB in production, securing it, testing it, and picking an SDK.
 

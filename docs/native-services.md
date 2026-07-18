@@ -16,8 +16,8 @@
 │    crate v0.4.14 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
-Alongside the data plane that reads and writes your app's tables, UDB 0.4.14 ships
-a **native control plane**: a set of built-in gRPC services that handle the plumbing
+Alongside the data plane that reads and writes your app's tables, UDB 0.4.14 includes a native control plane
+— a set of built-in gRPC services that handle the plumbing
 most applications end up building anyway. If you need login and access control, file
 storage, asset pipelines, realtime coordination, multi-tenancy, notifications,
 analytics, or policy distribution, these services are already here — you call them
