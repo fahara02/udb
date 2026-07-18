@@ -56,14 +56,13 @@ Here are the rules the versions follow:
 ## Pre-1.0 Beta Compatibility
 
 UDB `0.x` releases are beta, so please treat the public surface as still
-settling. Before `1.0.0`, HTTP routes, OpenAPI `operationId`s, SDK public method
-names, generated examples, and benchmark/API labels may change whenever the
-change simplifies the long-term public contract. The wire protocol version stays
-factual metadata; it is not a promise that the product API and SDK surface are
-stable during `0.x`.
+settling. Before `1.0.0`, HTTP routes, OpenAPI `operationId`s, SDK public method names,
+generated examples, and benchmark/API labels may change whenever that simplifies
+the long-term public contract. The wire protocol version remains factual metadata:
+it is not a promise that the product API and SDK surface are stable during `0.x`.
 
-Breaking `0.x` changes must ship with migration notes, but those notes are not a
-backward-compatibility guarantee. Don't add permanent compatibility shims for
+Breaking `0.x` changes must be documented with migration notes, but those notes are
+not a backward-compatibility guarantee. Don't add permanent compatibility shims for
 every beta route or SDK method name — reserve them for the rare release that
 genuinely needs a temporary bridge.
 
