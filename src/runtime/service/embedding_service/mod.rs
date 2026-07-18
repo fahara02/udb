@@ -54,6 +54,7 @@ pub use crate::proto::udb::core::embedding::services::v1::embedding_service_serv
 
 use super::DataBrokerService;
 
+mod chunking;
 mod config;
 mod errors;
 mod events;

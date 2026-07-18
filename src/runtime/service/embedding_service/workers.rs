@@ -814,6 +814,16 @@ pub(crate) fn source_change_is_delete(payload: &serde_json::Value) -> bool {
     op.eq_ignore_ascii_case("delete") || op.eq_ignore_ascii_case("d")
 }
 
+/// A create/insert change — a brand-new row with no prior chunks to clear before
+/// embedding. An unknown/absent op is treated as NOT a create (i.e. a potential
+/// re-embed), so stale chunks are cleared conservatively rather than orphaned.
+pub(crate) fn source_change_is_create(payload: &serde_json::Value) -> bool {
+    let op = source_change_operation(payload);
+    op.eq_ignore_ascii_case("create")
+        || op.eq_ignore_ascii_case("c")
+        || op.eq_ignore_ascii_case("insert")
+}
+
 pub(crate) fn parse_source_text_fields(raw: &str) -> Vec<String> {
     if let Ok(fields) = serde_json::from_str::<Vec<String>>(raw) {
         return fields;
@@ -844,8 +854,15 @@ async fn process_embedding_work_job(
     }
     let collection = job.source.collection();
     if source_change_is_delete(&job.payload) {
+        // Remove EVERY chunk of the deleted row (not just a single point id).
         service
-            .delete_embedding_point(&job.project_id, &collection, &row_pk)
+            .delete_embedding_row(
+                &job.project_id,
+                &collection,
+                event_tenant,
+                &job.source.source_name,
+                &row_pk,
+            )
             .await;
         return true;
     }
@@ -855,6 +872,20 @@ async fn process_embedding_work_job(
     let text = extract_source_text(row, &text_fields);
     if text.trim().is_empty() {
         return false;
+    }
+    // A re-embed (update) may produce a different chunk count than the prior
+    // version — clear the row's existing chunks before fanning out the new set so
+    // a shrunk row leaves no orphan tail chunk. A fresh insert has none to clear.
+    if !source_change_is_create(&job.payload) {
+        service
+            .delete_embedding_row(
+                &job.project_id,
+                &collection,
+                event_tenant,
+                &job.source.source_name,
+                &row_pk,
+            )
+            .await;
     }
     service
         .emit_work_event_with_source_event(
@@ -959,7 +990,13 @@ pub(crate) async fn run_embedding_work_emitter(
             .unwrap_or_default();
         if op.eq_ignore_ascii_case("delete") || op.eq_ignore_ascii_case("d") {
             service
-                .delete_embedding_point(&project_id, &collection, &row_pk)
+                .delete_embedding_row(
+                    &project_id,
+                    &collection,
+                    event_tenant,
+                    &source.source_name,
+                    &row_pk,
+                )
                 .await;
             continue;
         }
@@ -968,6 +1005,22 @@ pub(crate) async fn run_embedding_work_emitter(
         let text = extract_source_text(row, &text_fields);
         if text.trim().is_empty() {
             continue;
+        }
+        // Re-embed (non-insert): clear the row's prior chunks before re-fanning
+        // out so a shrunk chunk count leaves no orphan (mirrors the journal path).
+        let is_create = op.eq_ignore_ascii_case("create")
+            || op.eq_ignore_ascii_case("c")
+            || op.eq_ignore_ascii_case("insert");
+        if !is_create {
+            service
+                .delete_embedding_row(
+                    &project_id,
+                    &collection,
+                    event_tenant,
+                    &source.source_name,
+                    &row_pk,
+                )
+                .await;
         }
         service
             .emit_work_event(
@@ -1086,6 +1139,72 @@ impl EmbeddingServiceImpl {
         runtime
             .vector_delete_by_filter_backend_target(None, project_id, collection, filter)
             .await
+    }
+
+    /// Delete EVERY chunk of one source row by the `{_tenant_id, _source,
+    /// _parent_pk}` payload filter — the correct primitive when a row is chunked
+    /// into N points whose count/ids may have changed (a re-embed that shrinks
+    /// the text must not leave stale tail chunks). Errors are RETURNED so the
+    /// caller can decide (the CDC delete path logs; the re-embed path proceeds).
+    /// Fails safe: an empty scope key yields a no-op rather than an under-scoped
+    /// delete.
+    pub(crate) async fn delete_embedding_points_by_parent(
+        &self,
+        project_id: &str,
+        collection: &str,
+        tenant_id: &str,
+        source_name: &str,
+        parent_pk: &str,
+    ) -> Result<(), Status> {
+        let Some(runtime) = self.runtime.as_ref() else {
+            return Err(embedding_capability_status(
+                "embedding_vector_delete",
+                "runtime_vector_seam",
+                "embedding vector delete requires the runtime vector seam (no runtime configured)",
+            ));
+        };
+        let Some(filter) = super::model::row_teardown_filter(tenant_id, source_name, parent_pk)
+        else {
+            return Ok(());
+        };
+        runtime
+            .vector_delete_by_filter_backend_target(None, project_id, collection, filter)
+            .await
+    }
+
+    /// Best-effort removal of ALL vectors for a source row (every chunk),
+    /// idempotent and never fatal to the caller. Runs the `_parent_pk` filter
+    /// delete (covers all `_source`-tagged chunk points) AND deletes the bare
+    /// `parent_pk` point id (covers a legacy pre-chunking single vector that
+    /// carries no `_parent_pk` tag). Used on a CDC row delete and before a
+    /// re-embed so a shrunk/replaced row leaves no orphan chunk.
+    pub(crate) async fn delete_embedding_row(
+        &self,
+        project_id: &str,
+        collection: &str,
+        tenant_id: &str,
+        source_name: &str,
+        parent_pk: &str,
+    ) {
+        if parent_pk.trim().is_empty() {
+            return;
+        }
+        if let Err(err) = self
+            .delete_embedding_points_by_parent(
+                project_id,
+                collection,
+                tenant_id,
+                source_name,
+                parent_pk,
+            )
+            .await
+        {
+            tracing::warn!(error = %err, collection, parent_pk, "embedding row chunk delete failed");
+        }
+        // Legacy fallback: a point stored before `_parent_pk` tagging has the bare
+        // row pk as its id and no tag to match the filter above.
+        self.delete_embedding_point(project_id, collection, parent_pk)
+            .await;
     }
 
     /// Best-effort: remove a source row's embedding (point id = row pk) through the

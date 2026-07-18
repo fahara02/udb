@@ -110,9 +110,10 @@ impl EmbeddingServiceImpl {
 }
 
 /// Serialize a retrieved point's payload for a `RetrieveHit`: the internal
-/// write-stamps `_tenant_id` (isolation key) and `_source` (teardown-scope tag)
-/// are stripped — they only mirror server state the caller already holds, never
-/// expose them — and the remaining user payload is serialized as JSON. No
+/// isolation/scope write-stamps `_tenant_id` and `_source` are stripped (they
+/// only mirror server state the caller already holds), the chunk-provenance tags
+/// `_parent_pk`/`_chunk_seq` are promoted to public `parent_pk`/`chunk_seq`
+/// citation fields, and the remaining user payload is serialized as JSON. No
 /// payload, a non-object payload, or a tag-only payload all yield an empty
 /// string. Pure — unit-tested.
 pub(crate) fn retrieve_hit_payload_json(payload: Option<&prost_types::Struct>) -> String {
@@ -123,11 +124,19 @@ pub(crate) fn retrieve_hit_payload_json(payload: Option<&prost_types::Struct>) -
     let Some(object) = json.as_object_mut() else {
         return String::new();
     };
-    // Strip the internal write-stamps — `_tenant_id` (isolation key) and
-    // `_source` (teardown-scope tag) mirror server state the caller already
-    // holds; never surface them in a RetrieveHit.
+    // Strip the internal isolation/scope write-stamps — `_tenant_id` and
+    // `_source` mirror server state the caller already holds; never surface them.
     object.remove("_tenant_id");
     object.remove("_source");
+    // Chunk provenance IS useful to the caller (which source row a hit came from,
+    // and which chunk of it): promote the internal tags to public fields so a
+    // RetrieveHit over a chunked document carries a citation.
+    if let Some(parent) = object.remove("_parent_pk") {
+        object.insert("parent_pk".to_string(), parent);
+    }
+    if let Some(seq) = object.remove("_chunk_seq") {
+        object.insert("chunk_seq".to_string(), seq);
+    }
     if object.is_empty() {
         return String::new();
     }

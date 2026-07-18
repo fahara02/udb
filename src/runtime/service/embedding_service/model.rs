@@ -113,14 +113,21 @@ pub(crate) fn build_embedding_point(
             "vector is required",
         ));
     }
-    // Tag the isolation key AND the owning source. `_source` lets the
-    // source-teardown pass erase every point of a deleted source by payload
-    // filter — retention-independent — instead of re-deriving point ids from
-    // `udb.embedding.work.v1` journal events that log retention eventually
-    // purges (the GDPR erasure hole). The tag is written from the verified
-    // source name, never raw body, and is stripped from every RetrieveHit like
-    // `_tenant_id`.
-    let mut payload_json = serde_json::json!({ "_tenant_id": tenant });
+    // Tag the isolation key, the owning source, AND the chunk's parent row.
+    // `_source` lets the source-teardown pass erase every point of a deleted
+    // source by payload filter — retention-independent — instead of re-deriving
+    // point ids from `udb.embedding.work.v1` journal events that log retention
+    // eventually purges (the GDPR erasure hole). `_parent_pk` (+ `_chunk_seq`)
+    // carries chunk provenance so a single source ROW's chunks are erased/
+    // re-embedded together by filter (the id itself may be composite
+    // `row_pk#chunk:seq`). All tags are written from verified/server-derived
+    // values, never raw body, and are normalized/stripped from every RetrieveHit.
+    let (parent_pk, chunk_seq) = super::chunking::parse_chunk_point_id(row_pk);
+    let mut payload_json = serde_json::json!({
+        "_tenant_id": tenant,
+        "_parent_pk": parent_pk,
+        "_chunk_seq": chunk_seq,
+    });
     let source = source_name.trim();
     if !source.is_empty() {
         payload_json["_source"] = serde_json::Value::String(source.to_string());
@@ -152,6 +159,32 @@ pub(crate) fn source_teardown_filter(
         "must": [
             { "key": "_tenant_id", "match": { "value": tenant } },
             { "key": "_source", "match": { "value": source } },
+        ]
+    }))
+}
+
+/// Build the payload filter that scopes a delete to exactly one source ROW's
+/// chunks: `_tenant_id` AND `_source` AND `_parent_pk`, all authoritative `must`
+/// clauses. Used to erase every chunk of a row on a CDC delete/re-embed without
+/// enumerating the (variable, possibly shrunk) set of chunk ids. Returns `None`
+/// when any scope key is empty — an under-scoped filter could delete another
+/// tenant's/source's/row's vectors, so the caller must fall back. Pure.
+pub(crate) fn row_teardown_filter(
+    tenant_id: &str,
+    source_name: &str,
+    parent_pk: &str,
+) -> Option<serde_json::Value> {
+    let tenant = tenant_id.trim();
+    let source = source_name.trim();
+    let parent = parent_pk.trim();
+    if tenant.is_empty() || source.is_empty() || parent.is_empty() {
+        return None;
+    }
+    Some(serde_json::json!({
+        "must": [
+            { "key": "_tenant_id", "match": { "value": tenant } },
+            { "key": "_source", "match": { "value": source } },
+            { "key": "_parent_pk", "match": { "value": parent } },
         ]
     }))
 }

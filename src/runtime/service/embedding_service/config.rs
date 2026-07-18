@@ -55,6 +55,19 @@ const EMBEDDING_RETRIEVE_FUSION_WEIGHTS_ENV: &str = "UDB_EMBEDDING_RETRIEVE_FUSI
 const DEFAULT_EMBEDDING_MAX_TEXT_CHARS: usize = 8000;
 const EMBEDDING_MAX_TEXT_CHARS_ENV: &str = "UDB_EMBEDDING_MAX_TEXT_CHARS";
 
+/// Chunking knobs (Part B.2.2). A source row's text is split into overlapping
+/// `chunk_size`-character windows (word-boundary-aware), `chunk_overlap`
+/// characters shared between neighbors, capped at `max_chunks_per_row` points per
+/// row. Defaults suit a general RAG corpus; all operator-tunable, resolved once.
+/// A row whose text fits in one window keeps its bare `row_pk` point id (no
+/// behavior change for short rows).
+const DEFAULT_EMBEDDING_CHUNK_SIZE: usize = 1000;
+const EMBEDDING_CHUNK_SIZE_ENV: &str = "UDB_EMBEDDING_CHUNK_SIZE";
+const DEFAULT_EMBEDDING_CHUNK_OVERLAP: usize = 150;
+const EMBEDDING_CHUNK_OVERLAP_ENV: &str = "UDB_EMBEDDING_CHUNK_OVERLAP";
+const DEFAULT_EMBEDDING_MAX_CHUNKS_PER_ROW: usize = 256;
+const EMBEDDING_MAX_CHUNKS_PER_ROW_ENV: &str = "UDB_EMBEDDING_MAX_CHUNKS_PER_ROW";
+
 /// Fallback vector collection when a source row somehow carries no target (mirrors
 /// `asset_service::DEFAULT_VECTOR_COLLECTION`; a source normally always specifies
 /// its own `target_collection`, validated non-empty at register time).
@@ -144,4 +157,52 @@ pub(crate) fn max_embedding_text_chars() -> usize {
             .filter(|v| *v > 0)
             .unwrap_or(DEFAULT_EMBEDDING_MAX_TEXT_CHARS)
     })
+}
+
+fn usize_env_once(cell: &'static OnceLock<usize>, var: &str, default: usize) -> usize {
+    *cell.get_or_init(|| {
+        std::env::var(var)
+            .ok()
+            .and_then(|v| v.trim().parse::<usize>().ok())
+            .filter(|v| *v > 0)
+            .unwrap_or(default)
+    })
+}
+
+/// Chunk window size in characters (resolved once). Bounded to
+/// `max_embedding_text_chars` so a single chunk can never exceed the work-event
+/// text envelope.
+pub(crate) fn embedding_chunk_size() -> usize {
+    static SIZE: OnceLock<usize> = OnceLock::new();
+    usize_env_once(
+        &SIZE,
+        EMBEDDING_CHUNK_SIZE_ENV,
+        DEFAULT_EMBEDDING_CHUNK_SIZE,
+    )
+    .min(max_embedding_text_chars())
+    .max(1)
+}
+
+/// Characters shared between neighboring chunks (resolved once). The chunker
+/// clamps this below the window size to guarantee forward progress.
+pub(crate) fn embedding_chunk_overlap() -> usize {
+    static OVERLAP: OnceLock<usize> = OnceLock::new();
+    // A `0` override is legitimate (no overlap), so this one accepts zero.
+    *OVERLAP.get_or_init(|| {
+        std::env::var(EMBEDDING_CHUNK_OVERLAP_ENV)
+            .ok()
+            .and_then(|v| v.trim().parse::<usize>().ok())
+            .unwrap_or(DEFAULT_EMBEDDING_CHUNK_OVERLAP)
+    })
+}
+
+/// Safety cap on chunks emitted per source row (resolved once), so a
+/// pathologically large row cannot fan out an unbounded number of points.
+pub(crate) fn embedding_max_chunks_per_row() -> usize {
+    static MAX_CHUNKS: OnceLock<usize> = OnceLock::new();
+    usize_env_once(
+        &MAX_CHUNKS,
+        EMBEDDING_MAX_CHUNKS_PER_ROW_ENV,
+        DEFAULT_EMBEDDING_MAX_CHUNKS_PER_ROW,
+    )
 }
