@@ -1,6 +1,6 @@
 // UDB enterprise TypeScript example — the REAL path, no dev shortcuts.
 //
-//   project → authn (password login → RS256 JWT) → authz (real ABAC decision)
+//   project → authn (password login → RS256 JWT) → authz (real Casbin decision)
 //           → CRUD a tenant-scoped billing table with the verified bearer.
 //
 // This deliberately faces the friction a toy example dodges:
@@ -9,8 +9,8 @@
 //     the public data port (:50051);
 //   - login returns a JWT whose tenant claim is the CANONICAL tenant UUID, not
 //     the human code "acme" — we adopt it before touching data;
-//   - the broker authorizes data RPCs against a real ABAC policy snapshot
-//     (default-deny); without a seeded policy every call is PERMISSION_DENIED.
+//   - the broker enforces from the policy_rules Casbin governance table
+//     (default-deny); without a seeded rule every call is PERMISSION_DENIED.
 //
 // Env (see .env.example): UDB_TARGET, UDB_AUTH_TARGET, UDB_USER, UDB_PASS, UDB_TENANT.
 import * as fs from "fs";
@@ -75,14 +75,14 @@ async function main(): Promise<void> {
     console.log(`       scopes: ${JSON.stringify(scopes)}`);
 
     // ── 2. AUTHZ ────────────────────────────────────────────────────────────
-    // Authorization is enforced SERVER-SIDE on every CRUD op below, against the
-    // seeded ABAC policy snapshot. It is DEFAULT-DENY: without
-    // UDB_ABAC_POLICIES_JSON these calls return PERMISSION_DENIED even for this
-    // org-owner admin (that's the real §7 friction — the org-owner ROLE alone is
-    // not enough; the data-plane reads an ABAC policy snapshot).
-    // (Gotcha: the SDK's udb.authz.can/require query a SEPARATE control-plane
-    // Casbin governance engine, which can disagree until its rules are seeded
-    // too. We rely on the authoritative data-plane gate exercised by the CRUD.)
+    // Authorization is enforced SERVER-SIDE on every CRUD op below, from the
+    // policy_rules Casbin governance table. It is DEFAULT-DENY: without a
+    // seeded rule these calls return PERMISSION_DENIED even for this org-owner
+    // admin (that's the real §7 friction — the org-owner ROLE alone is not
+    // enough; the data plane reads a PG-warmed snapshot of policy_rules).
+    // (One engine: the SDK's udb.authz.can/require and this data-plane gate
+    // both decide from the SAME policy_rules table, so a rule seeded here — via
+    // udb policy-seed or AuthzService.CreatePolicyRule — governs both.)
     console.log("authz: data-plane ABAC gates every CRUD op below (default-deny without the seeded policy)");
 
     // ── 3. CRUD the tenant-scoped billing table with the verified bearer ─────
