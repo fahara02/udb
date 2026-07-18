@@ -38,10 +38,11 @@ table.
    `conflict_fields` + an `idempotency_key` on writes.
 5. **Every mutation emits an event** (`udb.<svc>.<entity>.<verb>.v1`);
    CDC subscription streams are tenant-scoped with `since_event_id` replay.
-6. **TWO authz surfaces, different engines.** Data RPCs are gated by a **data-plane
-   ABAC snapshot** (default-DENY); `udb.authz.can/require` query a SEPARATE
-   control-plane **Casbin** engine (roles/`policy_rules`). They can disagree — the
-   data-plane ABAC is what actually protects your data. (UDB_FRICTION §7.)
+6. **ONE authz engine (Casbin), default-DENY.** Data RPCs and
+   `udb.authz.can/require` both decide via Casbin over roles/`policy_rules`. The
+   data plane reads a PG-warmed snapshot of `policy_rules` — what an operator
+   configures via `AuthzService.CreatePolicyRule` is exactly what protects your
+   data (no separate env-JSON ABAC lane).
 
 ## Before giving code, establish
 - **Language** (TS / Python / Go / Java / C# / PHP) → that SDK's snippet from
@@ -98,11 +99,12 @@ canonical UUID, so human project codes like `private` are safe. `is_public` is
 2. **Login → adopt the canonical tenant UUID** (the JWT tenant claim is the UUID,
    NOT the code "acme"): `login()` → `auth.authenticateBearer(token)` →
    `setTenant(principal.tenant_id)` (or `loginAndAdoptTenant()`).
-3. **SEED ABAC or every data RPC is `PERMISSION_DENIED`** — the org-owner role +
-   `udb:*` scopes are NOT enough; the data-plane reads an ABAC policy snapshot.
-   Set `UDB_ABAC_POLICIES_JSON` (or rows in `udb_system.udb_abac_policies`):
-   `{effect,service_identity,tenant_id,purpose,message_type,operation,required_scope}`
-   (`*`/empty = wildcard). Dev shortcut: `UDB_ABAC_DEFAULT_ALLOW=true`.
+3. **SEED authz or every data RPC is `PERMISSION_DENIED`** — the org-owner role +
+   `udb:*` scopes are NOT enough; the data plane enforces from `policy_rules`.
+   Seed it via `AuthzService.CreatePolicyRule` (per-tenant, at runtime, from your
+   code) or `udb policy-seed`, with the real `Select`/`Upsert`/`Delete` action:
+   `{effect,subject,tenant,resource,action,required_scopes}` (`*`/empty =
+   wildcard). Dev shortcut: `UDB_ABAC_DEFAULT_ALLOW=true`.
 4. The broker needs JWT keys (`UDB_JWT_PRIVATE_KEY`/`_PUBLIC_KEY`, RS256), sessions
    (`UDB_SESSION_ENABLED=true` + `UDB_SESSION_HASH_SECRET`), and the auth plane
    exposed (`UDB_AUTH_GRPC_ADDR=0.0.0.0:<port+10>`). `udb doctor --enterprise`
@@ -130,8 +132,9 @@ JWT or mTLS; log in for an access token and send `authorization: Bearer <jwt>` �
 put `tenant_id` IN THE FILTER (`select({where:{…, tenant_id}})`) ·
 `ABORTED`→version/CAS conflict (re-read, retry) · `NOT_FOUND` can mean
 "exists, but not your tenant" — by design ·
-`PERMISSION_DENIED` on a data RPC with valid scopes → no ABAC policy seeded
-(default-deny); seed `UDB_ABAC_POLICIES_JSON` or set `UDB_ABAC_DEFAULT_ALLOW=true`.
+`PERMISSION_DENIED` on a data RPC with valid scopes → no policy seeded
+(default-deny); seed `policy_rules` (`AuthzService.CreatePolicyRule` / `udb
+policy-seed`) or set `UDB_ABAC_DEFAULT_ALLOW=true`.
 
 ## Guardrails
 - Always include metadata (tenant/project/scopes) AND a credential in examples;
