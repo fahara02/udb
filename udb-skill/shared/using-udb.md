@@ -50,15 +50,15 @@ SDK is a thin typed client.
 6. **Every mutation emits an event** on a versioned dot topic
    (`udb.<service>.<entity>.<verb>.v1`) through a durable outbox→Kafka pipeline;
    clients can subscribe to tenant-scoped CDC streams.
-7. **TWO authz surfaces, different engines — the #1 bootstrap trap.** Data RPCs
-   (`Select`/`Upsert`/`Delete`) are gated by a **data-plane ABAC snapshot** that
-   is **default-DENY**: with no policy seeded, even an `organization_owner` admin
-   gets `PERMISSION_DENIED` on every CRUD call. Separately, `udb.authz.can/require`
-   query a control-plane **Casbin** engine (roles + `policy_rules`). They are
-   independent — seeding `policy_rules` does **nothing** for data CRUD. The ABAC
-   snapshot (from `UDB_ABAC_POLICIES_JSON` or the `udb_abac_policies` table) is
-   what actually protects your data; you MUST seed it (or set
-   `UDB_ABAC_DEFAULT_ALLOW=true` for dev) before any CRUD works.
+7. **Authorization is ONE Casbin system — default-DENY.** Data RPCs
+   (`Select`/`Upsert`/`Delete`) and `udb.authz.can/require` are enforced by the
+   **same Casbin engine** over the `udb_authz.policy_rules` governance table. With
+   no policy seeded, even an `organization_owner` admin gets `PERMISSION_DENIED` on
+   every CRUD call. You seed `policy_rules` — at runtime via
+   `AuthzService.CreatePolicyRule` (per-tenant, from your own code, effective
+   immediately) or offline (`udb policy-seed`) — using the **real action** the
+   broker submits (`Select`/`Upsert`/`Delete`, NOT a `data.*` alias). Set
+   `UDB_ABAC_DEFAULT_ALLOW=true` for dev to bypass while bootstrapping.
 8. **Tenant is a canonical UUID, not the human code.** `udb auth bootstrap user
    --tenant acme` prints a canonical **tenant UUID** (e.g.
    `00000000-0000-0000-0000-0000000d0001`); the login JWT carries that UUID, not
@@ -430,7 +430,7 @@ unknown command or sub-action prints a "did you mean …?" suggestion.
 |---|---|
 | `UNIMPLEMENTED` | Native-service call sent to the **data target** — set `authTarget`/control-plane address. |
 | `UNAUTHENTICATED` | Missing/invalid bearer. On the DataBroker data plane, `x-api-key` alone is not accepted; log in for a JWT and send `authorization: Bearer <jwt>` or use mTLS. UDB names this case explicitly. |
-| `PERMISSION_DENIED` | Missing scope, tenant mismatch (metadata/body vs credential), revoked credential, or per-action policy deny. **On a data RPC with otherwise-valid scopes → no ABAC policy seeded** (default-deny snapshot, mental model #7): seed `UDB_ABAC_POLICIES_JSON` / the `udb_abac_policies` table, or `UDB_ABAC_DEFAULT_ALLOW=true` for dev. Seeding `policy_rules` does NOT fix this. |
+| `PERMISSION_DENIED` | Missing scope, tenant mismatch (metadata/body vs credential), revoked credential, or per-action policy deny. **On a data RPC with otherwise-valid scopes → no policy seeded** (default-deny, mental model #7): seed the `udb_authz.policy_rules` table via `AuthzService.CreatePolicyRule` (or `udb policy-seed`) with the real `Select`/`Upsert`/`Delete` action, or set `UDB_ABAC_DEFAULT_ALLOW=true` for dev. |
 | `INVALID_ARGUMENT` "tenant isolation requires filter on tenant_id" | A tenant-scoped read/delete MUST include `tenant_id` (the canonical UUID, not the code) in the filter. |
 | `FAILED_PRECONDITION` | Service disabled/not mounted, wrong lifecycle state (e.g. apply before approve), feature requires config (TURN secret, media profile). |
 | `RESOURCE_EXHAUSTED` | Public-auth rate limit, per-key rate limit, quota, or per-tenant fairness backpressure — back off and retry. |
@@ -463,19 +463,21 @@ udb auth bootstrap user --username admin --email admin@x.com \
 # → prints tenant_id, e.g. 00000000-0000-0000-0000-0000000d0001  (the UUID, NOT "acme")
 ```
 
-**3. SEED ABAC, or every data RPC is `PERMISSION_DENIED`** (default-deny snapshot —
-the org-owner role is NOT enough; see mental model #7). Set
-`UDB_ABAC_POLICIES_JSON` to a policy granting this tenant's principals data ops
-(shape verified against the live example — `operation` ∈ `data.select`/
-`data.upsert`/`data.delete`, `*`/empty = wildcard, `required_scope` reflects
+**3. SEED authorization, or every data RPC is `PERMISSION_DENIED`** (default-deny —
+the org-owner role is NOT enough; see mental model #7). Seed the
+`udb_authz.policy_rules` governance table — the table the data plane enforces from.
+Author a JSON array of Casbin `AuthzPolicy` objects granting this tenant's
+principals data ops (`action` is the REAL operation the broker submits —
+`Select`/`Upsert`/`Delete`; `*`/empty = wildcard; `required_scopes` reflect
 read/write and the org owner's `udb:*` satisfies both):
 ```json
-[{"effect":"allow","service_identity":"*","tenant_id":"<TENANT_UUID>","purpose":"*","message_type":"*","operation":"data.select","required_scope":"udb:read"},
- {"effect":"allow","service_identity":"*","tenant_id":"<TENANT_UUID>","purpose":"*","message_type":"*","operation":"data.upsert","required_scope":"udb:write"},
- {"effect":"allow","service_identity":"*","tenant_id":"<TENANT_UUID>","purpose":"*","message_type":"*","operation":"data.delete","required_scope":"udb:write"}]
+[{"effect":"allow","subject":"*","tenant":"<TENANT_UUID>","resource":"*","action":"Select","required_scopes":["udb:read"]},
+ {"effect":"allow","subject":"*","tenant":"<TENANT_UUID>","resource":"*","action":"Upsert","required_scopes":["udb:write"]},
+ {"effect":"allow","subject":"*","tenant":"<TENANT_UUID>","resource":"*","action":"Delete","required_scopes":["udb:write"]}]
 ```
-Alternatives: `UDB_ABAC_POLICY_FILE=<path>`, rows in the `udb_abac_policies`
-table, or the dev-only shortcut `UDB_ABAC_DEFAULT_ALLOW=true`.
+Apply it at runtime via `AuthzService.CreatePolicyRule` (per-tenant, from app code,
+effective immediately), or offline with `UDB_ABAC_POLICY_FILE=<path> udb policy-seed
+| psql <dsn>`. Dev-only shortcut: `UDB_ABAC_DEFAULT_ALLOW=true`.
 
 **4. Set the enterprise env the broker needs to boot + accept login**, then serve:
 ```bash
@@ -483,8 +485,8 @@ UDB_JWT_PRIVATE_KEY=<pem|path>  UDB_JWT_PUBLIC_KEY=<pem|path>   # RS256, signs/v
 UDB_SESSION_ENABLED=true  UDB_SESSION_HASH_SECRET=<hmac>        # else Authenticate → FAILED_PRECONDITION "sessions disabled"
 UDB_PASSWORD_HASH_SECRET=<hmac>                                # SAME value used at bootstrap (step 2) so login verifies
 UDB_AUTH_GRPC_ADDR=0.0.0.0:50061                               # expose the auth plane; default is loopback-only
-UDB_ABAC_POLICIES_JSON='[…step 3…]'
 udb serve proto "" 0.0.0.0:50051     # wait for the "UDB DataBroker is ready: data=… auth=…" line
+# authorization is enforced from the policy_rules you seeded in step 3 (no env override)
 ```
 Run **`udb doctor --enterprise`** (manifest-aware) and **`udb requirements`** FIRST
 — they list every unmet prerequisite/backend at once instead of one-restart-at-a-time.
