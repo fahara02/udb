@@ -16,9 +16,14 @@
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 
-UDB SDKs are language clients for a running UDB broker. They attach request
-metadata, expose common DataBroker helpers, provide native auth/authz clients,
-and include a version-matched `udb` CLI launcher.
+A UDB SDK is the client library your application uses to talk to a running UDB
+broker. If you're building an app in Go, Python, TypeScript, PHP, C#, or Java and
+want to read and write data through UDB, this is where you start.
+
+Each SDK does four jobs for you: it attaches the request metadata every call
+needs, wraps the common DataBroker operations in short helper methods, gives you
+typed clients for the native auth and authz services, and ships a version-matched
+`udb` CLI launcher so the tooling always matches your library.
 
 Current SDK release: `0.4.14`
 
@@ -26,30 +31,31 @@ Current wire protocol: [`1.0.0`](UDB_PROTOCOL_VERSION)
 
 ## How You Actually Use It
 
-Every SDK gives you a small, high-level layer over the generated RPCs so normal
-application code stays short — without hiding the rules that keep multi-tenant
-data correct:
+Every SDK puts a small, high-level layer over the generated RPCs (the low-level
+remote procedure calls the broker exposes). Your application code stays short,
+but the layer never hides the rules that keep multi-tenant data correct:
 
-- **One connect + login that adopts your tenant.** You log in with a username and
-  password (or an API key) and name your tenant by its human *code*; the SDK
-  resolves that code to the canonical tenant UUID that row-level security actually
-  checks. This is the step that prevents the most common first-integration bug —
-  passing a tenant code where a UUID is expected and silently reading zero rows.
+- **One connect and login that adopts your tenant.** You log in with a username
+  and password (or an API key) and name your tenant by its human *code*. The SDK
+  resolves that code to the canonical tenant UUID that row-level security (the
+  database's per-tenant access rule) actually checks. This one step prevents the
+  most common first-integration bug: passing a tenant code where a UUID is
+  expected and then silently reading zero rows.
 - **Typed, tenant-scoped data calls.** Read and write your own proto-defined
-  records (`select`, `upsert`, `delete`), with read-after-write, replay-safe
-  retries, and automatic idempotency keys handled for you.
-- **The native control plane, same client.** Authorization checks, API keys,
-  storage, vault, and the other native services are one call away.
+  records with `select`, `upsert`, and `delete`. Read-after-write consistency,
+  replay-safe retries, and idempotency keys are handled for you.
+- **The native control plane, from the same client.** Authorization checks, API
+  keys, storage, vault, and the other native services are one call away.
 - **Raw generated RPCs stay available.** The high-level layer is a thin typed
   workflow over the same served RPCs — not a second protocol — so admin tools and
   advanced callers can drop down to the full generated surface any time.
 
-Behavior is identical across languages, and that's enforced: static
-cross-language conformance covers all six SDKs (`node sdk-conformance/run.mjs`),
-and live broker coverage exercises the Go, TypeScript, Python, and PHP harnesses
-against a real server — DataBroker RPCs, native auth, tenant/authz/API-key flows,
-and the storage/asset/notification/WebRTC facades — with every RPC measured, so
-the gates track the current generated surface instead of a hand-maintained count.
+Every language behaves the same way, and that's enforced. Static cross-language
+conformance covers all six SDKs (`node sdk-conformance/run.mjs`), and live broker
+coverage runs the Go, TypeScript, Python, and PHP harnesses against a real
+server — DataBroker RPCs, native auth, tenant/authz/API-key flows, and the
+storage/asset/notification/WebRTC facades. Every RPC is measured, so the gates
+track the current generated surface instead of a hand-maintained count.
 
 ## Install
 

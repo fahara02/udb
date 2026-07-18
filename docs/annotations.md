@@ -16,10 +16,18 @@
 │    crate v0.4.14 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
-UDB annotations let an application describe how protobuf messages map to
-storage, routing, field security, and generated SDK behavior.
+This guide is for developers defining the data model their app stores in UDB.
+
+You describe that model in protobuf (the `.proto` files that already define your
+messages). UDB *annotations* are small tags you attach to those messages and
+fields to say how each one maps to a real database: which table and column it
+becomes, which field carries the tenant, which fields are sensitive, and how the
+generated SDKs should behave. You write the annotation once; UDB uses it to build
+the database schema, route requests at runtime, and shape the SDK output.
 
 ## Export The Contract
+
+First, get the annotation definitions so your `.proto` files can reference them:
 
 ```bash
 udb proto export --fmt
@@ -32,6 +40,11 @@ import "udb/core/common/v1/db.proto";
 ```
 
 ## Table And Column Mapping
+
+The `table` option turns a message into a database table; the `column` option on
+each field turns that field into a column. This example maps a `Customer` message
+to a `crm.customers` table, marks `customer_id` as the primary key, and tags
+`tenant_id` as the tenant column so UDB scopes every row to the right tenant:
 
 ```proto
 message Customer {
@@ -73,7 +86,9 @@ views, and documentation.
 
 ## Formatting
 
-Keep long field annotations readable:
+Annotations get long. These commands keep them tidy — the first reformats your
+proto files in place, the second checks formatting without changing anything
+(handy in CI):
 
 ```bash
 udb proto fmt proto
@@ -82,7 +97,9 @@ udb proto fmt proto --check
 
 ## Compatibility
 
-Follow normal protobuf compatibility rules:
+Because these are protobuf messages, the usual protobuf compatibility rules
+apply — and because they also define your database schema, changing them changes
+your deployment. Follow these rules:
 
 - do not reuse field numbers;
 - reserve deleted names and numbers;

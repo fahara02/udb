@@ -16,40 +16,49 @@
 │    crate v0.4.14 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
-This is the path from an installed SDK to tenant-scoped calls against a running
-broker. The one thing to get right up front: you name your tenant by its human
-**code** (e.g. `acme`), but row-level security compares the canonical tenant
-**UUID** — the SDK's login/adopt step resolves the code to that UUID for you.
-Passing a raw code without it is the most common reason a first integration reads
-back zero rows.
+This guide walks you from a freshly installed SDK to your first tenant-scoped
+calls against a running broker. Follow it if you're wiring an app into UDB for
+the first time.
+
+Get one thing right up front and you'll skip the most common first-week bug. You
+refer to a tenant by its human **code** (for example, `acme`), but row-level
+security — the database rule that keeps one tenant's rows invisible to another —
+compares the canonical tenant **UUID** instead. The SDK's login/adopt step
+resolves the code to that UUID for you. Skip it and pass a raw code, and your
+integration reads back zero rows with no error to explain why.
 
 ## 1. Install An SDK
 
-Use [../sdk/README.md](../sdk/README.md) for language-specific install commands.
+Pick your language and follow the install commands in
+[../sdk/README.md](../sdk/README.md).
 
 ## 2. Export UDB Protos
+
+Protos are the schema files that define UDB's API. Pull them into your app repo:
 
 ```bash
 udb proto export --fmt
 ```
 
-This creates or refreshes `proto/udb/**` in the application repo and can merge
-the required `buf.yaml` entries.
+This creates or refreshes `proto/udb/**` in the application repo, and it can
+merge the required `buf.yaml` entries for you.
 
 ## 3. Write App Protos
+
+Describe your own entities in proto files, importing UDB's shared definitions:
 
 ```proto
 import "udb/core/common/v1/db.proto";
 ```
 
-Add storage and security annotations where UDB should manage routing or
+Add storage and security annotations wherever you want UDB to manage routing or
 metadata.
 
 ## 4. Configure Backends
 
-Define backend instances in `configs/backends.yaml` or the deployment
-environment. Use `udb compat-matrix` to verify the current binary and runtime
-configuration.
+Tell UDB which databases to talk to. Define backend instances in
+`configs/backends.yaml` or in the deployment environment. To check that your
+binary and runtime configuration line up, run `udb compat-matrix`.
 
 ## 5. Start The Broker
 
@@ -59,7 +68,7 @@ udb serve proto "" 0.0.0.0:50051
 
 ## 6. Send Metadata
 
-Every request should carry:
+Every request should carry a set of context fields:
 
 - tenant id;
 - project id;
@@ -69,12 +78,13 @@ Every request should carry:
 - service identity;
 - user id when an end user exists;
 - client catalog/protocol version;
-- optionally, a read fence and consistency mode for read-your-writes reads
-  (see [native-services.md](native-services.md#consistency-write-receipts-and-read-fences)).
+- optionally, a read fence and consistency mode for read-your-writes reads —
+  the guarantee that a read sees your own just-committed write (see
+  [native-services.md](native-services.md#consistency-write-receipts-and-read-fences)).
 
-SDKs attach these fields for you.
+You rarely set these by hand: the SDKs attach these fields for you.
 
 ## 7. Call UDB
 
-Use SDK helpers for common operations and generated request/response types for
-advanced RPCs.
+For everyday operations, reach for the SDK helpers. For advanced RPCs, use the
+generated request and response types.

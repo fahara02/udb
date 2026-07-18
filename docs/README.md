@@ -16,11 +16,22 @@
 │    crate v0.4.14 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
-This directory contains the public documentation for UDB 0.4.14. The guides are
-organized around the product surface: architecture, annotations, integration,
-native services, operations, security, testing, and SDKs.
+This is the documentation for UDB, the Universal Data Broker — one typed API in
+front of many databases and the backend services (auth, secrets, search, jobs,
+storage, and more) you'd otherwise stitch together yourself. This page is the
+map: find what you're trying to do in the left column and follow the link.
+
+If you're brand new, start with the [project overview](../README.md) to see what
+UDB is and why it exists. When you're ready to build, jump straight to the guide
+that matches your task below.
+
+The guides are grouped by what you're doing: understanding the architecture,
+annotating your protos, integrating an app, using the native services, running
+UDB in production, securing it, testing it, and picking an SDK.
 
 ## Guides
+
+Each row is a task. Read across to the guide that covers it.
 
 | Need | Read |
 |---|---|
@@ -38,7 +49,9 @@ native services, operations, security, testing, and SDKs.
 
 ## Consolidated Topics
 
-Older narrow pages have been folded into the main guides:
+We used to keep a separate page for each narrow topic. Those pages now live
+inside the main guides above, so there's one place to look per subject. If you
+came here searching for one of these, the table points you to its new home.
 
 | Topic | Consolidated in |
 |---|---|
@@ -50,13 +63,18 @@ Older narrow pages have been folded into the main guides:
 
 ## Diagrams
 
-The maintained diagrams live in [assets](assets/):
+Prefer a picture? These diagrams show how requests move through UDB. They live
+in [assets](assets/):
 
 - [architecture-pipeline.svg](assets/architecture-pipeline.svg)
 - [request-flow.svg](assets/request-flow.svg)
 - [control-plane.svg](assets/control-plane.svg)
 
 ## Generated Docs
+
+These files are produced automatically from UDB's service descriptors, so they
+always match the running build. Don't hand-edit them — regenerate them with the
+commands below.
 
 - [generated/native-services.md](generated/native-services.md) - native service table
 - [generated/udb-native-contract.json](generated/udb-native-contract.json) - descriptor-derived service contract
