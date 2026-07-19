@@ -713,6 +713,9 @@ export type RegisterModelRequest = Message<"udb.core.embedding.services.v1.Regis
   tenantId: string;
 
   /**
+   * Stable public model id in caller-chosen format (e.g. "text-embedding-3-small@1");
+   * 1-255 chars, no credentials — the registry rejects ids that fail validation.
+   *
    * @generated from field: string model_id = 2;
    */
   modelId: string;
@@ -1215,6 +1218,8 @@ export type GetEmbeddingJobStatusRequest = Message<"udb.core.embedding.services.
   tenantId: string;
 
   /**
+   * Canonical job id returned by Backfill/IngestDocument (server-assigned UUID).
+   *
    * @generated from field: string job_id = 2;
    */
   jobId: string;
@@ -1341,6 +1346,8 @@ export type ListEmbeddingWorkItemsRequest = Message<"udb.core.embedding.services
   tenantId: string;
 
   /**
+   * Canonical job id returned by Backfill/IngestDocument (server-assigned UUID).
+   *
    * @generated from field: string job_id = 2;
    */
   jobId: string;
@@ -1356,6 +1363,8 @@ export type ListEmbeddingWorkItemsRequest = Message<"udb.core.embedding.services
   pageSize: number;
 
   /**
+   * Opaque pagination token returned by ListEmbeddingWorkItemsResponse.next_page_token.
+   *
    * @generated from field: string page_token = 5;
    */
   pageToken: string;
@@ -1445,6 +1454,8 @@ export type ListEmbeddingWorkItemsResponse = Message<"udb.core.embedding.service
   workItems: EmbeddingWorkItemSummary[];
 
   /**
+   * Opaque pagination token; empty when this is the last page.
+   *
    * @generated from field: string next_page_token = 2;
    */
   nextPageToken: string;

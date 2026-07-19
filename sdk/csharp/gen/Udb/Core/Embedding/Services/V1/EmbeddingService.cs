@@ -6599,6 +6599,10 @@ namespace udb.core.Embedding.Services.V1 {
     /// <summary>Field number for the "model_id" field.</summary>
     public const int ModelIdFieldNumber = 2;
     private string modelId_ = "";
+    /// <summary>
+    /// Stable public model id in caller-chosen format (e.g. "text-embedding-3-small@1");
+    /// 1-255 chars, no credentials — the registry rejects ids that fail validation.
+    /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public string ModelId {
@@ -11109,6 +11113,9 @@ namespace udb.core.Embedding.Services.V1 {
     /// <summary>Field number for the "job_id" field.</summary>
     public const int JobIdFieldNumber = 2;
     private string jobId_ = "";
+    /// <summary>
+    /// Canonical job id returned by Backfill/IngestDocument (server-assigned UUID).
+    /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public string JobId {
@@ -12279,6 +12286,9 @@ namespace udb.core.Embedding.Services.V1 {
     /// <summary>Field number for the "job_id" field.</summary>
     public const int JobIdFieldNumber = 2;
     private string jobId_ = "";
+    /// <summary>
+    /// Canonical job id returned by Backfill/IngestDocument (server-assigned UUID).
+    /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public string JobId {
@@ -12315,6 +12325,9 @@ namespace udb.core.Embedding.Services.V1 {
     /// <summary>Field number for the "page_token" field.</summary>
     public const int PageTokenFieldNumber = 5;
     private string pageToken_ = "";
+    /// <summary>
+    /// Opaque pagination token returned by ListEmbeddingWorkItemsResponse.next_page_token.
+    /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public string PageToken {
@@ -13191,6 +13204,9 @@ namespace udb.core.Embedding.Services.V1 {
     /// <summary>Field number for the "next_page_token" field.</summary>
     public const int NextPageTokenFieldNumber = 2;
     private string nextPageToken_ = "";
+    /// <summary>
+    /// Opaque pagination token; empty when this is the last page.
+    /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public string NextPageToken {

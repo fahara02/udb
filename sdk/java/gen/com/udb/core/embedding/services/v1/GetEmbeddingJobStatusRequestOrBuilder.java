@@ -23,11 +23,19 @@ public interface GetEmbeddingJobStatusRequestOrBuilder extends
       getTenantIdBytes();
 
   /**
+   * <pre>
+   * Canonical job id returned by Backfill/IngestDocument (server-assigned UUID).
+   * </pre>
+   *
    * <code>string job_id = 2 [json_name = "jobId"];</code>
    * @return The jobId.
    */
   java.lang.String getJobId();
   /**
+   * <pre>
+   * Canonical job id returned by Backfill/IngestDocument (server-assigned UUID).
+   * </pre>
+   *
    * <code>string job_id = 2 [json_name = "jobId"];</code>
    * @return The bytes for jobId.
    */

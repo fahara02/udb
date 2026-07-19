@@ -19,6 +19,8 @@ class ListEmbeddingWorkItemsResponse extends \Google\Protobuf\Internal\Message
      */
     private $work_items;
     /**
+     * Opaque pagination token; empty when this is the last page.
+     *
      * Generated from protobuf field <code>string next_page_token = 2 [json_name = "nextPageToken"];</code>
      */
     protected $next_page_token = '';
@@ -39,6 +41,7 @@ class ListEmbeddingWorkItemsResponse extends \Google\Protobuf\Internal\Message
      *
      *     @type \Udb\Core\Embedding\Services\V1\EmbeddingWorkItemSummary[] $work_items
      *     @type string $next_page_token
+     *           Opaque pagination token; empty when this is the last page.
      *     @type string $message
      *     @type \Udb\Core\Common\V1\ApiError $error
      * }
@@ -71,6 +74,8 @@ class ListEmbeddingWorkItemsResponse extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * Opaque pagination token; empty when this is the last page.
+     *
      * Generated from protobuf field <code>string next_page_token = 2 [json_name = "nextPageToken"];</code>
      * @return string
      */
@@ -80,6 +85,8 @@ class ListEmbeddingWorkItemsResponse extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * Opaque pagination token; empty when this is the last page.
+     *
      * Generated from protobuf field <code>string next_page_token = 2 [json_name = "nextPageToken"];</code>
      * @param string $var
      * @return $this

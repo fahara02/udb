@@ -721,6 +721,8 @@ message RerankConfig {
 
 message RegisterModelRequest {
   string tenant_id = 1;
+  // Stable public model id in caller-chosen format (e.g. "text-embedding-3-small@1");
+  // 1-255 chars, no credentials — the registry rejects ids that fail validation.
   string model_id = 2;
   string provider = 3;
   string model_name = 4;
@@ -805,7 +807,11 @@ message CutoverModelAliasRequest {
 }
 message CutoverModelAliasResponse { bool cutover = 1; string collection_alias = 2; string active_collection = 3; string message = 4; udb.core.common.v1.ApiError error = 5; }
 
-message GetEmbeddingJobStatusRequest { string tenant_id = 1; string job_id = 2; }
+message GetEmbeddingJobStatusRequest {
+  string tenant_id = 1;
+  // Canonical job id returned by Backfill/IngestDocument (server-assigned UUID).
+  string job_id = 2;
+}
 message EmbeddingJobStatus {
   string job_id = 1;
   string source_name = 2;
@@ -823,7 +829,15 @@ message EmbeddingJobStatus {
 }
 message GetEmbeddingJobStatusResponse { EmbeddingJobStatus job = 1; string message = 2; udb.core.common.v1.ApiError error = 3; }
 
-message ListEmbeddingWorkItemsRequest { string tenant_id = 1; string job_id = 2; string status = 3; int32 page_size = 4; string page_token = 5; }
+message ListEmbeddingWorkItemsRequest {
+  string tenant_id = 1;
+  // Canonical job id returned by Backfill/IngestDocument (server-assigned UUID).
+  string job_id = 2;
+  string status = 3;
+  int32 page_size = 4;
+  // Opaque pagination token returned by ListEmbeddingWorkItemsResponse.next_page_token.
+  string page_token = 5;
+}
 message EmbeddingWorkItemSummary {
   string work_item_id = 1;
   string point_id = 2;
@@ -837,7 +851,13 @@ message EmbeddingWorkItemSummary {
   string last_error = 10;
   int64 next_attempt_at_unix_ms = 11;
 }
-message ListEmbeddingWorkItemsResponse { repeated EmbeddingWorkItemSummary work_items = 1; string next_page_token = 2; string message = 3; udb.core.common.v1.ApiError error = 4; }
+message ListEmbeddingWorkItemsResponse {
+  repeated EmbeddingWorkItemSummary work_items = 1;
+  // Opaque pagination token; empty when this is the last page.
+  string next_page_token = 2;
+  string message = 3;
+  udb.core.common.v1.ApiError error = 4;
+}
 
 message ReportEmbeddingBatchRequest { string tenant_id = 1; repeated ReportEmbeddingRequest items = 2; int32 declared_capacity = 3; }
 message ReportEmbeddingBatchItemResult { string work_item_id = 1; string row_pk = 2; bool upserted = 3; string error = 4; }

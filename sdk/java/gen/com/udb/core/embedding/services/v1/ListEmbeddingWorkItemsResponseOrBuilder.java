@@ -35,11 +35,19 @@ public interface ListEmbeddingWorkItemsResponseOrBuilder extends
       int index);
 
   /**
+   * <pre>
+   * Opaque pagination token; empty when this is the last page.
+   * </pre>
+   *
    * <code>string next_page_token = 2 [json_name = "nextPageToken"];</code>
    * @return The nextPageToken.
    */
   java.lang.String getNextPageToken();
   /**
+   * <pre>
+   * Opaque pagination token; empty when this is the last page.
+   * </pre>
+   *
    * <code>string next_page_token = 2 [json_name = "nextPageToken"];</code>
    * @return The bytes for nextPageToken.
    */

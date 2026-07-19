@@ -88,6 +88,10 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private volatile java.lang.Object jobId_ = "";
   /**
+   * <pre>
+   * Canonical job id returned by Backfill/IngestDocument (server-assigned UUID).
+   * </pre>
+   *
    * <code>string job_id = 2 [json_name = "jobId"];</code>
    * @return The jobId.
    */
@@ -105,6 +109,10 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
+   * <pre>
+   * Canonical job id returned by Backfill/IngestDocument (server-assigned UUID).
+   * </pre>
+   *
    * <code>string job_id = 2 [json_name = "jobId"];</code>
    * @return The bytes for jobId.
    */
@@ -515,6 +523,10 @@ private static final long serialVersionUID = 0L;
 
     private java.lang.Object jobId_ = "";
     /**
+     * <pre>
+     * Canonical job id returned by Backfill/IngestDocument (server-assigned UUID).
+     * </pre>
+     *
      * <code>string job_id = 2 [json_name = "jobId"];</code>
      * @return The jobId.
      */
@@ -531,6 +543,10 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
+     * <pre>
+     * Canonical job id returned by Backfill/IngestDocument (server-assigned UUID).
+     * </pre>
+     *
      * <code>string job_id = 2 [json_name = "jobId"];</code>
      * @return The bytes for jobId.
      */
@@ -548,6 +564,10 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
+     * <pre>
+     * Canonical job id returned by Backfill/IngestDocument (server-assigned UUID).
+     * </pre>
+     *
      * <code>string job_id = 2 [json_name = "jobId"];</code>
      * @param value The jobId to set.
      * @return This builder for chaining.
@@ -561,6 +581,10 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * Canonical job id returned by Backfill/IngestDocument (server-assigned UUID).
+     * </pre>
+     *
      * <code>string job_id = 2 [json_name = "jobId"];</code>
      * @return This builder for chaining.
      */
@@ -571,6 +595,10 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * Canonical job id returned by Backfill/IngestDocument (server-assigned UUID).
+     * </pre>
+     *
      * <code>string job_id = 2 [json_name = "jobId"];</code>
      * @param value The bytes for jobId to set.
      * @return This builder for chaining.

@@ -19,6 +19,8 @@ class ListEmbeddingWorkItemsRequest extends \Google\Protobuf\Internal\Message
      */
     protected $tenant_id = '';
     /**
+     * Canonical job id returned by Backfill/IngestDocument (server-assigned UUID).
+     *
      * Generated from protobuf field <code>string job_id = 2 [json_name = "jobId"];</code>
      */
     protected $job_id = '';
@@ -31,6 +33,8 @@ class ListEmbeddingWorkItemsRequest extends \Google\Protobuf\Internal\Message
      */
     protected $page_size = 0;
     /**
+     * Opaque pagination token returned by ListEmbeddingWorkItemsResponse.next_page_token.
+     *
      * Generated from protobuf field <code>string page_token = 5 [json_name = "pageToken"];</code>
      */
     protected $page_token = '';
@@ -43,9 +47,11 @@ class ListEmbeddingWorkItemsRequest extends \Google\Protobuf\Internal\Message
      *
      *     @type string $tenant_id
      *     @type string $job_id
+     *           Canonical job id returned by Backfill/IngestDocument (server-assigned UUID).
      *     @type string $status
      *     @type int $page_size
      *     @type string $page_token
+     *           Opaque pagination token returned by ListEmbeddingWorkItemsResponse.next_page_token.
      * }
      */
     public function __construct($data = NULL) {
@@ -76,6 +82,8 @@ class ListEmbeddingWorkItemsRequest extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * Canonical job id returned by Backfill/IngestDocument (server-assigned UUID).
+     *
      * Generated from protobuf field <code>string job_id = 2 [json_name = "jobId"];</code>
      * @return string
      */
@@ -85,6 +93,8 @@ class ListEmbeddingWorkItemsRequest extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * Canonical job id returned by Backfill/IngestDocument (server-assigned UUID).
+     *
      * Generated from protobuf field <code>string job_id = 2 [json_name = "jobId"];</code>
      * @param string $var
      * @return $this
@@ -142,6 +152,8 @@ class ListEmbeddingWorkItemsRequest extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * Opaque pagination token returned by ListEmbeddingWorkItemsResponse.next_page_token.
+     *
      * Generated from protobuf field <code>string page_token = 5 [json_name = "pageToken"];</code>
      * @return string
      */
@@ -151,6 +163,8 @@ class ListEmbeddingWorkItemsRequest extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * Opaque pagination token returned by ListEmbeddingWorkItemsResponse.next_page_token.
+     *
      * Generated from protobuf field <code>string page_token = 5 [json_name = "pageToken"];</code>
      * @param string $var
      * @return $this
