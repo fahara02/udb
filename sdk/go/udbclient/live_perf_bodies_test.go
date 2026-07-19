@@ -1583,6 +1583,14 @@ func TestBuildManifestJSONBodyUsesSharedManifest(t *testing.T) {
 	if got := deleteIndexMsg.Get(deleteIndexFields.ByName("index_name")).String(); got != "sdk_live_records" {
 		t.Fatalf("search delete_index index_name = %q, want sdk_live_records", got)
 	}
+	// The embedding manifest bodies reference their own seed family (job /
+	// work-item / document / delete-model ids) — mirror the values the live
+	// coverage fixture uses so every body hydrates in this offline check too.
+	fix.set("embedding_job_id", "11111111-1111-4111-8111-000000000101")
+	fix.set("embedding_work_item_id", "11111111-1111-4111-8111-000000000102")
+	fix.set("embedding_document_id", "11111111-1111-4111-8111-000000000103")
+	fix.set("embedding_document_job_id", "11111111-1111-4111-8111-000000000104")
+	fix.set("embedding_delete_model_id", "embedding-delete-model-1")
 	embeddingRPCs := []string{
 		"EmbeddingService/Backfill",
 		"EmbeddingService/CutoverModelAlias",
