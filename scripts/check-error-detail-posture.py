@@ -3917,8 +3917,12 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
             "crate::runtime::executor_utils::deadline_exceeded_status",
             '"embedding"',
             '"retrieve"',
-            '"retrieve_hybrid_search"',
-            '"retrieve_vector_search"',
+            # The enterprise retrieval rework unified the hybrid/vector search
+            # paths behind one budgeted dispatch, so the two per-path operation
+            # tokens collapsed into the single "retrieve" operation with a
+            # pre-dispatch deadline guard + an in-flight timeout — both typed.
+            '"retrieve exceeded its deadline"',
+            '"retrieve deadline exceeded before semantic search dispatch"',
         ),
     ),
     TokenCheck(

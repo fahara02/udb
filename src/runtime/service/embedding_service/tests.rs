@@ -262,17 +262,18 @@ async fn retrieve_missing_query_vector_carries_field_violation() {
         .await
         .expect_err("missing query vector must fail");
     assert_eq!(err.code(), tonic::Code::InvalidArgument);
-    assert_eq!(
-        err.message(),
-        "query_vector is required (the broker does not embed queries; supply a vector)"
-    );
+    // The retrieval rework's message: `query_text` is now genuinely consumed
+    // (hybrid text query + rerank), so the old "the broker does not embed
+    // queries" parenthetical became misleading — the vector itself is still
+    // required and must be computed by the caller/sidecar.
+    assert_eq!(err.message(), "query_vector is required");
     let detail = decode_detail(&err);
     assert_eq!(detail.kind, ErrorKind::Validation as i32);
     assert_eq!(detail.field_violations.len(), 1);
     assert_eq!(detail.field_violations[0].field, "query_vector");
     assert_eq!(
         detail.field_violations[0].description,
-        "must contain at least one embedding dimension"
+        "must contain an already-computed query embedding"
     );
 }
 
