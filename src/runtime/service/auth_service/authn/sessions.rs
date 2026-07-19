@@ -289,7 +289,14 @@ mod tests {
         );
 
         let err = svc
-            .create_login_session(&user_record(), String::new(), Vec::new(), Vec::new(), 1)
+            .create_login_session(
+                &user_record(),
+                String::new(),
+                Vec::new(),
+                Vec::new(),
+                String::new(),
+                1,
+            )
             .await
             .expect_err("disabled sessions must fail before session persistence");
 
@@ -519,6 +526,7 @@ impl AuthnServiceImpl {
         client_fingerprint: String,
         scopes: Vec<String>,
         roles: Vec<String>,
+        service_identity: String,
         now: u64,
     ) -> Result<(String, u64), Status> {
         if !self.config.sessions_usable() {
@@ -534,7 +542,7 @@ impl AuthnServiceImpl {
             session_id_hash: authn::hash_secret(&raw_session_id, &self.hash_key()),
             principal_id: user.user_id.clone(),
             user_id: user.user_id.clone(),
-            service_identity: String::new(),
+            service_identity,
             tenant_id: user.tenant_id.clone(),
             project_id: user.project_id.clone(),
             // Block 1 (auth_fix.md, Decision E): the SessionRecord is the carrier —

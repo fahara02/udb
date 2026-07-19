@@ -194,7 +194,13 @@ pub fn generate_delta_sql(
         .iter()
         .filter(|change| change.safety == ChangeSafety::SafeAuto)
     {
-        if matches!(change.kind, ChangeKind::AddSchema | ChangeKind::CreateStore) {
+        // HintWarning (UDB-MIG-001) is an informational audit record, never DDL;
+        // now that consumed/stale allow_drop hints are SafeAuto they would
+        // otherwise create an empty no-op delta artifact.
+        if matches!(
+            change.kind,
+            ChangeKind::AddSchema | ChangeKind::CreateStore | ChangeKind::HintWarning
+        ) {
             continue;
         }
         if op_requires_standalone(manifest, change) {

@@ -27,14 +27,17 @@
 
 use std::sync::Arc;
 
+#[cfg(feature = "postgres")]
 use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::migration::apply::{ApplyError, ApplyFuture, ArtifactApplyResult, MigrationAuditSink};
+#[cfg(feature = "postgres")]
 use crate::runtime::canonical_store::postgres::PostgresCanonicalStore;
 use crate::runtime::canonical_store::system_store::{
     MigrationAuditStore, MigrationOpInsert, MigrationRunInsert, MigrationRunState, OpLedgerStatus,
 };
+#[cfg(feature = "postgres")]
 use crate::runtime::system::SystemCatalogConfig;
 
 // ── PostgresMigrationAuditSink ────────────────────────────────────────────────
@@ -54,6 +57,7 @@ impl PostgresMigrationAuditSink {
     /// `MigrationAuditStore`. The relation overrides on the canonical
     /// store make it use exactly the same tables the old direct-pool
     /// path used.
+    #[cfg(feature = "postgres")]
     pub fn new(pool: PgPool, config: &SystemCatalogConfig) -> Self {
         let store = PostgresCanonicalStore::new(pool, "primary", "").with_migration_relations(
             config.migration_runs_relation(),

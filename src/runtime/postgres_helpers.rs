@@ -415,6 +415,15 @@ pub(crate) fn bind_one<'q>(
     let sql_type = column
         .map(|column| column.sql_type.to_ascii_uppercase())
         .unwrap_or_default();
+    // DAT-001: a JSON/JSONB target column stores the value VERBATIM — including a
+    // top-level JSON array or object. This decision MUST precede the filter-array
+    // path below: otherwise a genuine JSON array destined for a JSONB entity
+    // column is misrouted into the typed `text[]` bind and PostgreSQL rejects the
+    // mutation with SQLSTATE 42846. Typed SQL-array binding (the branch below)
+    // stays for a scalar column in a `$in` / `= ANY` filter context only.
+    if sql_type.contains("JSON") {
+        return Ok(query.bind(sqlx::types::Json(strip_nul_json(value))));
+    }
     // Array value — used for `$in` / `col = ANY($N)` filters. (#121)
     // Bind a *typed* array matching the column type: PostgreSQL does NOT
     // implicitly cast a `text[]` element to the column type inside `= ANY`, so a
@@ -478,11 +487,6 @@ pub(crate) fn bind_one<'q>(
             .map(|s| strip_nul(&s))
             .collect();
         return Ok(query.bind(arr));
-    }
-
-    // JSON columns store any JSON value (including SQL NULL) verbatim.
-    if sql_type.contains("JSON") {
-        return Ok(query.bind(sqlx::types::Json(strip_nul_json(value))));
     }
 
     // Typed scalar binds for the column types that have NO implicit/assignment
@@ -1035,6 +1039,44 @@ mod tests {
             &err,
             "message_type",
             "must match a manifest table message type",
+        );
+    }
+
+    /// DAT-001: a top-level JSON array destined for a JSON/JSONB column must bind
+    /// as JSON (verbatim), NOT be misrouted into the typed `text[]` filter-array
+    /// path (which fails at PostgreSQL with 42846). The JSON decision must precede
+    /// the array branch, so a JSONB column accepts an array of strings, an array
+    /// of objects, and an empty array without string-wrapping — while a scalar
+    /// column still gets its typed `$in` array.
+    #[test]
+    fn postgres_binds_json_arrays_into_jsonb_columns() {
+        let mut jsonb = col("permissions_json");
+        jsonb.sql_type = "JSONB".to_string();
+        // Array of strings, array of objects, and an empty array all bind OK for a
+        // JSONB target (before the fix these hit the typed text[] path).
+        for value in [
+            serde_json::json!(["partner.fleet.read", "partner.fleet.write"]),
+            serde_json::json!([{"role": "reader"}, {"role": "writer"}]),
+            serde_json::json!([]),
+            serde_json::json!({"nested": ["a", "b"]}),
+        ] {
+            assert!(
+                bind_one(sqlx::query("SELECT $1"), Some(&jsonb), &value).is_ok(),
+                "JSONB column must accept JSON value {value} without a text[] misbind"
+            );
+        }
+        // A scalar UUID column still routes an array into the typed $in path and
+        // rejects non-string elements there (proves the array branch is intact).
+        let mut uuid_col = col("id");
+        uuid_col.sql_type = "UUID".to_string();
+        assert!(
+            bind_one(
+                sqlx::query("SELECT $1"),
+                Some(&uuid_col),
+                &serde_json::json!([1])
+            )
+            .is_err(),
+            "a scalar UUID $in array must still validate its elements"
         );
     }
 

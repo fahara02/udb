@@ -30,6 +30,49 @@ func TestEnterpriseSession_BackgroundRefreshClearsPoisonOnValidToken(t *testing.
 	}
 }
 
+// UDB-GO-002: a refreshed bearer must reach EVERY consumer, including the embedded
+// generated client used for escape-hatch calls (s.Generated.InvokeUnary). Before the
+// fix the generated client kept the initial static bearer LoginAndAdoptTenant set and
+// went Unauthenticated after the access token expired; currentBearer must propagate
+// the fresh token to it (setBearerLocked) alongside Bearer() and DataContext.
+func TestEnterpriseSession_CurrentBearerPropagatesToGeneratedClient(t *testing.T) {
+	store := &MemoryTokenStore{}
+	_ = store.Save(context.Background(), Token{AccessToken: "fresh", ExpiresAt: time.Now().Add(time.Hour)})
+	u := &Udb{Generated: NewGenerated(nil, Options{Authorization: "Bearer stale-initial"})}
+	s := &EnterpriseSession{Udb: u, tm: NewTokenManager(nil, store), bearer: "Bearer stale-initial"}
+
+	got := s.currentBearer(context.Background())
+
+	if got != "Bearer fresh" {
+		t.Fatalf("currentBearer returned %q, want %q", got, "Bearer fresh")
+	}
+	if auth := u.Generated.options().Authorization; auth != "Bearer fresh" {
+		t.Fatalf("generated-client authorization not refreshed: got %q, want %q", auth, "Bearer fresh")
+	}
+	if s.Bearer() != "Bearer fresh" {
+		t.Fatalf("Bearer() not refreshed: got %q, want %q", s.Bearer(), "Bearer fresh")
+	}
+}
+
+// The background refresher must ALSO propagate the rotated bearer to the generated
+// client, so a long-running service's generated-client calls never freeze on the
+// initial token.
+func TestEnterpriseSession_BackgroundRefreshPropagatesToGeneratedClient(t *testing.T) {
+	store := &MemoryTokenStore{}
+	_ = store.Save(context.Background(), Token{AccessToken: "rotated", ExpiresAt: time.Now().Add(time.Hour)})
+	u := &Udb{Generated: NewGenerated(nil, Options{Authorization: "Bearer old"})}
+	s := &EnterpriseSession{Udb: u, tm: NewTokenManager(nil, store), bearer: "Bearer old"}
+
+	s.backgroundRefresh()
+
+	if auth := u.Generated.options().Authorization; auth != "Bearer rotated" {
+		t.Fatalf("generated-client authorization not refreshed by background loop: got %q, want %q", auth, "Bearer rotated")
+	}
+	if s.Bearer() != "Bearer rotated" {
+		t.Fatalf("Bearer() not refreshed by background loop: got %q, want %q", s.Bearer(), "Bearer rotated")
+	}
+}
+
 // When poisoned, DataContext/NativeContext must fail CLOSED locally: the returned
 // context is already Done and its cancel cause carries the refresh failure.
 func TestEnterpriseSession_PoisonedContextFailsClosed(t *testing.T) {

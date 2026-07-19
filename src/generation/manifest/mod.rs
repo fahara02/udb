@@ -126,6 +126,40 @@ pub struct ManifestTable {
     pub reserved_names: Vec<String>,
 }
 
+impl ManifestTable {
+    /// Fully-qualified protobuf message name (`proto_package.message_name`).
+    /// The canonical identity for routing and collision detection. Falls back to
+    /// the bare `message_name` when the package is absent (older manifests /
+    /// packageless protos), so callers get a stable non-empty key either way.
+    pub fn message_fqn(&self) -> String {
+        fq_message(&self.proto_package, &self.message_name)
+    }
+}
+
+impl ManifestProjection {
+    /// Fully-qualified protobuf message name (`proto_package.message_type`) this
+    /// projection belongs to — the identity used to group write-owners and route
+    /// reads/writes. Two projections whose short `message_type` matches but whose
+    /// packages differ are DISTINCT and must not be grouped together.
+    pub fn message_fqn(&self) -> String {
+        fq_message(&self.proto_package, &self.message_type)
+    }
+}
+
+/// Join a proto package and a (possibly already-qualified) message name into the
+/// fully-qualified message name. When `package` is empty the message name is
+/// returned unchanged; when `message` already carries the package prefix it is
+/// returned as-is (idempotent) so callers can pass either form safely.
+pub fn fq_message(package: &str, message: &str) -> String {
+    let package = package.trim();
+    let message = message.trim();
+    if package.is_empty() || message.starts_with(&format!("{package}.")) {
+        message.to_string()
+    } else {
+        format!("{package}.{message}")
+    }
+}
+
 /// Manifest counterpart to `ProtoReservedRange` — `[start, end]`
 /// inclusive. Both endpoints equal a single reserved number;
 /// `end = i32::MAX` represents `reserved N to max;`.
@@ -146,6 +180,14 @@ impl ManifestReservedRange {
 #[serde(default)]
 pub struct ManifestProjection {
     pub message_type: String,
+    /// Proto package that owns this projection's message. Carried so routing and
+    /// collision detection can key by the FULLY-QUALIFIED message name
+    /// (`proto_package` + `message_type`) instead of the bare short name — two
+    /// different packages that reuse a short name (e.g. consumer
+    /// `ambulife.authn.entity.v1.User` vs embedded `udb.core.authn.entity.v1.User`)
+    /// are distinct identities and must not collide. Empty on manifests loaded
+    /// from pre-FQN JSON, where the FQN degrades to the bare `message_type`.
+    pub proto_package: String,
     pub projection_kind: String,
     pub backend: String,
     pub instance: String,

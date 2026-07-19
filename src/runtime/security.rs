@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::{IpAddr, SocketAddr};
-use std::sync::{Mutex, OnceLock, RwLock};
+use std::sync::{Arc, Mutex, OnceLock, RwLock};
 use tonic::{Request, Status};
 use x509_parser::prelude::parse_x509_certificate;
 
@@ -1215,6 +1215,141 @@ pub fn validate_bearer_token_cached(
     Ok(claims)
 }
 
+// ── API-key data-plane principal (UDB-AUTH-004) ───────────────────────────────
+// A scoped service `x-api-key` must be able to authenticate DataBroker CRUD, but
+// [`security_from_request`] is a synchronous, header-only layer with no runtime
+// handle or `ApiKeyStore` — it cannot itself run the async keyed-HMAC DB lookup
+// that `crate::runtime::authn::validate_api_key` performs. Following the same
+// async→sync idiom this module already uses for the signing-key registry
+// ([`install_signing_key_registry_snapshot`]), the async auth control plane
+// installs an [`ApiKeyPrincipalResolver`] once the Postgres-backed `ApiKeyStore`
+// is constructed; the sync data plane then resolves an `x-api-key` to a verified
+// principal without a second validator or any in-memory store.
+
+/// A canonical API-key principal, derived ENTIRELY from UDB's stored key record
+/// (owner, tenant, project, scopes) — never from caller headers. Produced by the
+/// installed [`ApiKeyPrincipalResolver`] and consumed by [`security_from_request`].
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ApiKeyPrincipal {
+    /// The key owner (`ApiKeyRecord.principal_id`). Becomes the request principal
+    /// (`SecurityContext.user_id`) so subject-bound ABAC policy for the owner applies.
+    pub subject: String,
+    /// The record's stored service identity (may be empty for a bare service key).
+    pub service_identity: String,
+    /// The tenant the key is bound to (`ApiKeyRecord.tenant_id`).
+    pub tenant_id: String,
+    /// The project the key is bound to (`ApiKeyRecord.project_id`).
+    pub project_id: String,
+    /// The key's stored scopes — the ONLY source of the request's scopes on this
+    /// path (caller `x-scopes` is never consulted, so a key cannot be widened).
+    pub scopes: Vec<String>,
+}
+
+/// Synchronously resolve a raw `x-api-key` to a verified [`ApiKeyPrincipal`].
+///
+/// The installed implementation MUST reuse the single key validator
+/// `crate::runtime::authn::validate_api_key` (keyed-HMAC prefix lookup +
+/// revoked/expired checks against the stored record) — this trait only bridges
+/// that async validator into the sync data-plane layer; it must never become a
+/// second validator or an in-memory key store. Contract:
+///   * `Ok(Some(principal))` — key is valid and active; the principal is derived
+///     from the stored record.
+///   * `Ok(None)` — key is unknown, revoked, or expired (fail closed → deny).
+///   * `Err(msg)` — the key store errored (fail closed → deny; `msg` is for logs
+///     only and must carry no key material).
+pub trait ApiKeyPrincipalResolver: Send + Sync {
+    fn resolve(&self, raw_api_key: &str) -> Result<Option<ApiKeyPrincipal>, String>;
+}
+
+static API_KEY_PRINCIPAL_RESOLVER: OnceLock<RwLock<Option<Arc<dyn ApiKeyPrincipalResolver>>>> =
+    OnceLock::new();
+
+fn api_key_principal_resolver_cell() -> &'static RwLock<Option<Arc<dyn ApiKeyPrincipalResolver>>> {
+    API_KEY_PRINCIPAL_RESOLVER.get_or_init(|| RwLock::new(None))
+}
+
+/// Install the process-global API-key principal resolver. Called by the async
+/// auth control plane once the Postgres-backed `ApiKeyStore` is available, so a
+/// scoped `x-api-key` can authenticate the DataBroker data plane. Until this is
+/// installed, the data plane FAILS CLOSED on `x-api-key` (deny with an actionable
+/// error) — it never falls back to header trust or fails open.
+pub fn install_api_key_principal_resolver(resolver: Arc<dyn ApiKeyPrincipalResolver>) {
+    if let Ok(mut guard) = api_key_principal_resolver_cell().write() {
+        *guard = Some(resolver);
+    }
+}
+
+/// Fail-closed reconciliation of a resolved API-key principal against the caller's
+/// headers. Returns the canonical principal DERIVED FROM THE RECORD, or a denial.
+///
+/// Security rules (mirroring the AUTH-005 `x-user-id` rule for the JWT path):
+///   * resolver not installed → `Unauthenticated` (API-key auth is not wired here).
+///   * unknown/revoked/expired key → `Unauthenticated`.
+///   * key-store error → `Unauthenticated` (deny; never fail open, no key material).
+///   * a non-empty `x-user-id`/`x-tenant-id`/`x-udb-project-id` that DISAGREES with
+///     the record → `PermissionDenied`. These headers may only echo the record;
+///     they can never redirect the principal or move the key to another
+///     tenant/project. `x-scopes`/`x-service-identity` are ignored entirely.
+fn reconcile_api_key_principal(
+    resolved: Result<Option<ApiKeyPrincipal>, String>,
+    resolver_installed: bool,
+    header_user_id: &str,
+    header_tenant_id: &str,
+    header_project_id: &str,
+) -> Result<ApiKeyPrincipal, Status> {
+    if !resolver_installed {
+        return Err(Status::unauthenticated(
+            "x-api-key authentication is not available on this listener (the API-key principal \
+             resolver is not wired). Send 'authorization: Bearer <jwt>' instead, or enable \
+             API-key authentication on the broker.",
+        ));
+    }
+    let principal = match resolved {
+        Ok(Some(principal)) => principal,
+        Ok(None) => {
+            return Err(Status::unauthenticated(
+                "x-api-key is invalid, revoked, or expired",
+            ));
+        }
+        Err(_) => {
+            // Fail closed on a key-store error: never fall back to header trust or
+            // fail open. The underlying error is logged by the resolver; the
+            // caller-facing status carries no key material or store detail.
+            return Err(Status::unauthenticated(
+                "x-api-key could not be validated (key store unavailable); request denied",
+            ));
+        }
+    };
+    if !header_user_id.is_empty() && header_user_id != principal.subject {
+        return Err(crate::runtime::executor_utils::policy_status_with_code(
+            tonic::Code::PermissionDenied,
+            "authenticate",
+            "api_key_user_id_mismatch",
+            "x-user-id does not match the API key owner; the request principal is the key's \
+             stored owner. Do not send a different id in x-user-id.",
+        ));
+    }
+    if !header_tenant_id.is_empty() && header_tenant_id != principal.tenant_id {
+        return Err(crate::runtime::executor_utils::policy_status_with_code(
+            tonic::Code::PermissionDenied,
+            "authenticate",
+            "api_key_tenant_mismatch",
+            "x-tenant-id does not match the API key's tenant; a key is bound to its stored \
+             tenant and cannot be used for another.",
+        ));
+    }
+    if !header_project_id.is_empty() && header_project_id != principal.project_id {
+        return Err(crate::runtime::executor_utils::policy_status_with_code(
+            tonic::Code::PermissionDenied,
+            "authenticate",
+            "api_key_project_mismatch",
+            "x-udb-project-id does not match the API key's project; a key is bound to its \
+             stored project.",
+        ));
+    }
+    Ok(principal)
+}
+
 pub fn security_from_request<T>(request: &Request<T>) -> Result<SecurityContext, Status> {
     let config = SecurityConfig::current();
     let metadata = request.metadata();
@@ -1259,24 +1394,74 @@ pub fn security_from_request<T>(request: &Request<T>) -> Result<SecurityContext,
         // the mTLS/header path (fail-open). `validate_bearer_token` resolves the
         // key from JWKS when no static PEM is present.
         let auth_header = header("authorization");
-        let token = auth_header.strip_prefix("Bearer ").ok_or_else(|| {
-            // §12: the DataBroker data plane authenticates a JWT bearer (or mTLS),
-            // NOT an opaque API key — the headers-only security layer cannot do a
-            // per-request key lookup. An app that set only `x-api-key` otherwise
-            // gets a confusing "JWT required"; name the supported path instead.
-            if !header("x-api-key").trim().is_empty() {
-                Status::unauthenticated(
-                    "API key is not accepted on the DataBroker data plane (it authenticates a \
-                     JWT bearer or mTLS only). Log in (username/password -> access_token) and \
-                     send it as 'authorization: Bearer <jwt>'.",
-                )
-            } else {
-                Status::unauthenticated(
-                    "missing or invalid authorization header: send 'authorization: Bearer <jwt>' \
-                     (obtain the JWT via login).",
-                )
+        let token = match auth_header.strip_prefix("Bearer ") {
+            Some(token) => token,
+            None => {
+                // UDB-AUTH-004: no Bearer JWT — a scoped service `x-api-key` may
+                // authenticate the DataBroker data plane. Validate it against
+                // UDB's STORED key record via the installed principal resolver
+                // (which reuses the single key validator `authn::validate_api_key`)
+                // and derive the principal ENTIRELY from that record — never from
+                // caller headers. Fail closed on an unknown/revoked/expired key, a
+                // key-store error, a mismatched tenant/project, or a resolver that
+                // is not wired. When neither a Bearer nor an `x-api-key` is present,
+                // name both supported paths.
+                let api_key = non_empty(header("x-api-key"))
+                    .or_else(|| non_empty(header("x-udb-api-key")))
+                    .unwrap_or_default();
+                if api_key.trim().is_empty() {
+                    return Err(Status::unauthenticated(
+                        "missing credentials: send 'authorization: Bearer <jwt>' (obtain the JWT \
+                         via login) or a scoped 'x-api-key'.",
+                    ));
+                }
+                // Resolve the raw key to a verified principal. Clone the Arc out
+                // of the process-global so the lock is not held across resolution.
+                let resolver = api_key_principal_resolver_cell()
+                    .read()
+                    .ok()
+                    .and_then(|guard| guard.as_ref().map(Arc::clone));
+                let (resolver_installed, resolved) = match &resolver {
+                    Some(resolver) => (true, resolver.resolve(&api_key)),
+                    None => (false, Ok(None)),
+                };
+                let principal = reconcile_api_key_principal(
+                    resolved,
+                    resolver_installed,
+                    user_id.trim(),
+                    header("x-tenant-id").trim(),
+                    project_id_header.trim(),
+                )?;
+                // Authz identity comes from the record: the owner is the request
+                // principal (`user_id`), so a subject-bound ABAC policy for the key
+                // owner applies. `service_identity` prefers the record's stored
+                // value, else falls back to the owner id so the authz `Principal`
+                // always has a stable, verified identity. Scopes are the record's
+                // scopes — `x-scopes`/`x-service-identity` are never read here, so a
+                // caller can never widen a key through request metadata.
+                let service_identity = non_empty(principal.service_identity.clone())
+                    .unwrap_or_else(|| principal.subject.clone());
+                return Ok(SecurityContext {
+                    tenant_id: principal.tenant_id,
+                    purpose: header("x-purpose"),
+                    correlation_id: correlation_id.clone(),
+                    user_id: principal.subject,
+                    scopes: principal.scopes,
+                    service_identity,
+                    trace_id: trace_id.clone(),
+                    project_id: principal.project_id,
+                    consistency: consistency.clone(),
+                    max_replica_lag_ms,
+                    client_catalog_version: client_catalog_version.clone(),
+                    target_backend: target_backend.clone(),
+                    target_instance: target_instance.clone(),
+                    routing_policy: routing_policy.clone(),
+                    primary_read,
+                    eventual_consistency_allowed,
+                    read_fence_json: read_fence_json.clone(),
+                });
             }
-        })?;
+        };
 
         // Single JWT validation path: reuse the CACHED validator (the data plane
         // re-checks the same token on every request; the AuthnService RPCs still
@@ -1285,13 +1470,28 @@ pub fn security_from_request<T>(request: &Request<T>) -> Result<SecurityContext,
         let claims =
             validate_bearer_token_cached(&config, token).map_err(Status::unauthenticated)?;
 
-        // `sub` is the canonical principal id; fall back to it when the
-        // x-user-id header is absent.
-        let user_id = if user_id.trim().is_empty() {
-            claims.sub.clone().unwrap_or_default()
-        } else {
-            user_id
-        };
+        // AUTH-005: the authorization principal is the VERIFIED JWT `sub` — never
+        // the untrusted `x-user-id` header. A bearer for subject A carrying
+        // `x-user-id: B` must NOT be able to authorize as B (identity confusion →
+        // any subject-bound policy for B becomes reachable). Bind the principal to
+        // the signed subject and reject a non-empty header that disagrees (fail
+        // closed). End-user/on-behalf-of attribution belongs in a distinct field,
+        // never in the authorization principal.
+        let subject = claims.sub.clone().unwrap_or_default();
+        if subject.trim().is_empty() {
+            return Err(Status::unauthenticated("JWT subject claim is required"));
+        }
+        if !user_id.trim().is_empty() && user_id.trim() != subject {
+            return Err(crate::runtime::executor_utils::policy_status_with_code(
+                tonic::Code::PermissionDenied,
+                "authenticate",
+                "user_id_subject_mismatch",
+                "x-user-id does not match the verified bearer subject; the request principal is \
+                 the signed JWT 'sub'. Do not send an end-user id in x-user-id — it is not an \
+                 authorization principal.",
+            ));
+        }
+        let user_id = subject;
         // Compute before the struct literal: the literal partially moves `claims`.
         let resolved_scopes = claims.resolved_scopes();
 
@@ -2972,5 +3172,118 @@ mod tests {
         );
 
         set_test_jwks(None);
+    }
+
+    // ── UDB-AUTH-004: API-key data-plane principal reconciliation ──────────────
+    //
+    // These exercise the fail-closed reconciliation that turns a resolved
+    // `x-api-key` principal into the request's authorization identity. They cover
+    // the security-critical decisions without the process-global resolver so they
+    // stay deterministic under parallel test execution.
+
+    fn api_key_principal_fixture() -> ApiKeyPrincipal {
+        ApiKeyPrincipal {
+            subject: "svc-owner-uuid".to_string(),
+            service_identity: "ambulife.partner".to_string(),
+            tenant_id: "tenant-1".to_string(),
+            project_id: "portal".to_string(),
+            scopes: vec!["udb:read".to_string(), "udb:write".to_string()],
+        }
+    }
+
+    #[test]
+    fn api_key_principal_derives_from_record_not_headers() {
+        // A valid key with agreeing (or absent) headers yields the record's
+        // principal verbatim — scopes come from the record, never from headers.
+        let principal = reconcile_api_key_principal(
+            Ok(Some(api_key_principal_fixture())),
+            true,
+            "", // no x-user-id
+            "", // no x-tenant-id
+            "", // no x-udb-project-id
+        )
+        .expect("a valid key with no conflicting headers authenticates");
+        assert_eq!(principal, api_key_principal_fixture());
+    }
+
+    #[test]
+    fn api_key_resolver_not_installed_fails_closed() {
+        let err = reconcile_api_key_principal(Ok(None), false, "", "", "")
+            .expect_err("an unwired resolver must deny, never fail open");
+        assert_eq!(err.code(), tonic::Code::Unauthenticated);
+        assert!(err.message().contains("not available"));
+    }
+
+    #[test]
+    fn api_key_invalid_or_revoked_fails_closed() {
+        // `Ok(None)` is the resolver's signal for unknown/revoked/expired.
+        let err = reconcile_api_key_principal(Ok(None), true, "", "", "")
+            .expect_err("an invalid/revoked/expired key must be denied");
+        assert_eq!(err.code(), tonic::Code::Unauthenticated);
+        assert!(err.message().contains("invalid, revoked, or expired"));
+    }
+
+    #[test]
+    fn api_key_store_error_fails_closed() {
+        let err = reconcile_api_key_principal(Err("db down".to_string()), true, "", "", "")
+            .expect_err("a key-store error must deny (fail closed), never fall back to headers");
+        assert_eq!(err.code(), tonic::Code::Unauthenticated);
+        // The caller-facing message must not leak the underlying store error.
+        assert!(!err.message().contains("db down"));
+    }
+
+    #[test]
+    fn api_key_rejects_conflicting_user_id_header() {
+        let err = reconcile_api_key_principal(
+            Ok(Some(api_key_principal_fixture())),
+            true,
+            "someone-else",
+            "",
+            "",
+        )
+        .expect_err("x-user-id that disagrees with the key owner must be denied");
+        assert_eq!(err.code(), tonic::Code::PermissionDenied);
+        assert!(err.message().contains("x-user-id"));
+    }
+
+    #[test]
+    fn api_key_rejects_wrong_tenant_and_project_headers() {
+        let wrong_tenant = reconcile_api_key_principal(
+            Ok(Some(api_key_principal_fixture())),
+            true,
+            "",
+            "tenant-2",
+            "",
+        )
+        .expect_err("a key cannot be used against a different tenant via x-tenant-id");
+        assert_eq!(wrong_tenant.code(), tonic::Code::PermissionDenied);
+        assert!(wrong_tenant.message().contains("tenant"));
+
+        let wrong_project = reconcile_api_key_principal(
+            Ok(Some(api_key_principal_fixture())),
+            true,
+            "",
+            "",
+            "other-project",
+        )
+        .expect_err("a key cannot be used against a different project via x-udb-project-id");
+        assert_eq!(wrong_project.code(), tonic::Code::PermissionDenied);
+        assert!(wrong_project.message().contains("project"));
+    }
+
+    #[test]
+    fn api_key_accepts_matching_identity_headers() {
+        // A caller MAY echo the record's own identity for audit convenience; a
+        // matching header must not be treated as a conflict.
+        let principal = reconcile_api_key_principal(
+            Ok(Some(api_key_principal_fixture())),
+            true,
+            "svc-owner-uuid",
+            "tenant-1",
+            "portal",
+        )
+        .expect("headers that match the record are accepted");
+        assert_eq!(principal.subject, "svc-owner-uuid");
+        assert_eq!(principal.scopes, vec!["udb:read", "udb:write"]);
     }
 }
