@@ -41,10 +41,7 @@ use crate::proto::udb::core::apikey::services::v1 as apikey_pb;
 use crate::proto::udb::core::common::v1 as common_pb;
 use apikey_pb::api_key_service_server::ApiKeyService;
 
-use crate::runtime::authn::{
-    self, AccountKind, AccountStatus, ApiKeyRecord, ApiKeyStore, AuthnConfig,
-    UnavailableApiKeyStore, UnavailableUserStore, UserRecord, UserStore,
-};
+use crate::runtime::authn::{self, ApiKeyRecord, ApiKeyStore, AuthnConfig, UnavailableApiKeyStore};
 use crate::runtime::service::native_helpers::{update_mask_allows, update_mask_path_set};
 
 use super::events::{self, AuthEvent, AuthEventSink, ComplianceEnvelope, topics};
@@ -54,7 +51,6 @@ use super::now_unix;
 #[derive(Clone)]
 pub struct ApiKeyServiceImpl {
     api_keys: Arc<dyn ApiKeyStore>,
-    users: Arc<dyn UserStore>,
     config: AuthnConfig,
     event_sink: Arc<dyn AuthEventSink>,
     /// Direct pool for read-only usage aggregation over `api_key_usages`
@@ -66,7 +62,6 @@ impl ApiKeyServiceImpl {
     pub fn new(config: AuthnConfig) -> Self {
         Self {
             api_keys: Arc::new(UnavailableApiKeyStore),
-            users: Arc::new(UnavailableUserStore),
             config,
             event_sink: events::noop_sink(),
             pg_pool: None,
@@ -76,16 +71,10 @@ impl ApiKeyServiceImpl {
     pub fn with_store(config: AuthnConfig, api_keys: Arc<dyn ApiKeyStore>) -> Self {
         Self {
             api_keys,
-            users: Arc::new(UnavailableUserStore),
             config,
             event_sink: events::noop_sink(),
             pg_pool: None,
         }
-    }
-
-    pub fn with_user_store(mut self, users: Arc<dyn UserStore>) -> Self {
-        self.users = users;
-        self
     }
 
     /// Attach the Postgres pool used for usage-stat aggregation.
@@ -102,36 +91,6 @@ impl ApiKeyServiceImpl {
 
     fn hash_key(&self) -> Vec<u8> {
         self.config.api_key_hash_secret().as_bytes().to_vec()
-    }
-
-    async fn resolve_service_account_owner(&self, owner_id: &str) -> Result<UserRecord, Status> {
-        let owner = self
-            .users
-            .get_user_by_id(owner_id)
-            .await
-            .map_err(|err| Self::internal_status("create_api_key_owner_load", err))?
-            .ok_or_else(|| {
-                Self::required_field(
-                    "owner_id",
-                    "must reference an existing native service account",
-                    "service-account owner not found",
-                )
-            })?;
-        if owner.account_kind != AccountKind::ServiceAccount {
-            return Err(Self::required_field(
-                "owner_id",
-                "must reference an ACCOUNT_KIND_SERVICE_ACCOUNT user",
-                "service-account owner is required",
-            ));
-        }
-        if owner.status != AccountStatus::Active {
-            return Err(Self::required_field(
-                "owner_id",
-                "service-account owner must be ACTIVE",
-                "service-account owner is not active",
-            ));
-        }
-        Ok(owner)
     }
 
     fn required_field(
@@ -662,16 +621,6 @@ fn status_for(rec: &ApiKeyRecord, now_unix: u64) -> apikey_entity_pb::ApiKeyStat
     }
 }
 
-fn service_identity_for_owner(owner: &UserRecord) -> String {
-    let from_profile = authn::profile::service_identity_from_profile_attributes_json(
-        &owner.profile_attributes_json,
-    );
-    if !from_profile.trim().is_empty() {
-        return from_profile;
-    }
-    owner.external_subject.trim().to_string()
-}
-
 fn api_key_to_pb(rec: &ApiKeyRecord, now_unix: u64) -> apikey_entity_pb::ApiKey {
     let mut dto = apikey_entity_pb::ApiKey {
         key_id: rec.key_prefix.clone(),
@@ -679,12 +628,8 @@ fn api_key_to_pb(rec: &ApiKeyRecord, now_unix: u64) -> apikey_entity_pb::ApiKey 
         // Never return the stored key hash over the read API — the digest should
         // not leave the storage layer (defense-in-depth if the hash secret leaks).
         key_hash: String::new(),
-        name: if rec.name.trim().is_empty() {
-            rec.key_prefix.clone()
-        } else {
-            rec.name.clone()
-        },
-        description: rec.description.clone(),
+        name: rec.key_prefix.clone(),
+        description: String::new(),
         owner_type: apikey_entity_pb::ApiKeyOwnerType::ServiceAccount as i32,
         owner_id: rec.principal_id.clone(),
         scopes_json: serde_json::to_string(&rec.scopes).unwrap_or_else(|_| "[]".to_string()),
@@ -737,24 +682,6 @@ impl ApiKeyService for ApiKeyServiceImpl {
                 "owner_id is required",
             ));
         }
-        let owner_type =
-            apikey_entity_pb::ApiKeyOwnerType::try_from(req.owner_type).unwrap_or_default();
-        if owner_type != apikey_entity_pb::ApiKeyOwnerType::ServiceAccount {
-            return Err(Self::required_field(
-                "owner_type",
-                "must be SERVICE_ACCOUNT for native scoped service credentials",
-                "service-account owner_type is required",
-            ));
-        }
-        let owner = self.resolve_service_account_owner(&req.owner_id).await?;
-        let service_identity = service_identity_for_owner(&owner);
-        if service_identity.trim().is_empty() {
-            return Err(Self::required_field(
-                "owner_id",
-                "service-account owner profile must include service_identity",
-                "service account service_identity is required",
-            ));
-        }
         let prefix = format!(
             "udbk_{}",
             Uuid::new_v4()
@@ -766,43 +693,25 @@ impl ApiKeyService for ApiKeyServiceImpl {
         );
         let plain_key = format!("{}.{}", prefix, Uuid::new_v4().simple());
         let now = now_unix();
-        let requested_tenant_id = req
+        let tenant_id = req
             .context
             .as_ref()
             .and_then(|ctx| ctx.tenant.as_ref())
             .map(|tenant| tenant.tenant_id.clone())
             .unwrap_or_default();
-        let requested_project_id = req
+        let project_id = req
             .context
             .as_ref()
             .and_then(|ctx| ctx.tenant.as_ref())
             .map(|tenant| tenant.project_id.clone())
             .unwrap_or_default();
-        if !requested_tenant_id.trim().is_empty() && requested_tenant_id != owner.tenant_id {
-            return Err(crate::runtime::executor_utils::policy_status_with_code(
-                tonic::Code::PermissionDenied,
-                "authenticate",
-                "api_key_owner_tenant_mismatch",
-                "API key tenant must match the validated service-account owner tenant",
-            ));
-        }
-        if !requested_project_id.trim().is_empty() && requested_project_id != owner.project_id {
-            return Err(crate::runtime::executor_utils::policy_status_with_code(
-                tonic::Code::PermissionDenied,
-                "authenticate",
-                "api_key_owner_project_mismatch",
-                "API key project must match the validated service-account owner project",
-            ));
-        }
-        let tenant_id = owner.tenant_id.clone();
-        let project_id = owner.project_id.clone();
         let rec = ApiKeyRecord {
             key_prefix: authn::api_key_prefix(&plain_key),
             key_hash: authn::hash_secret(&plain_key, &self.hash_key()),
             name: req.name.trim().to_string(),
             description: req.description.trim().to_string(),
-            principal_id: owner.user_id.clone(),
-            service_identity,
+            principal_id: req.owner_id,
+            service_identity: String::new(),
             tenant_id,
             project_id,
             scopes: req.scopes,
@@ -829,8 +738,6 @@ impl ApiKeyService for ApiKeyServiceImpl {
                 "key_id": rec.key_prefix.clone(),
                 "key_prefix": rec.key_prefix.clone(),
                 "owner_id": rec.principal_id.clone(),
-                "name": rec.name.clone(),
-                "description": rec.description.clone(),
                 "scopes": rec.scopes.clone(),
                 "tenant_id": rec.tenant_id.clone(),
                 "project_id": rec.project_id.clone(),
@@ -929,20 +836,8 @@ impl ApiKeyService for ApiKeyServiceImpl {
         // spoofable/absent body tenant.
         let caller_context = Self::current_claim_request_context();
         self.enforce_caller_tenant(caller_context.as_ref(), &rec.tenant_id)?;
-        let update_mask = update_mask_path_set(
-            req.update_mask.as_ref(),
-            &["name", "description", "scopes", "expires_at"],
-        )?;
-        if update_mask_allows(&update_mask, "name", !req.name.trim().is_empty()) {
-            rec.name = req.name.trim().to_string();
-        }
-        if update_mask_allows(
-            &update_mask,
-            "description",
-            !req.description.trim().is_empty(),
-        ) {
-            rec.description = req.description.trim().to_string();
-        }
+        let update_mask =
+            update_mask_path_set(req.update_mask.as_ref(), &["scopes", "expires_at"])?;
         if update_mask_allows(&update_mask, "scopes", !req.scopes.is_empty()) {
             rec.scopes = req.scopes;
         }
@@ -960,8 +855,6 @@ impl ApiKeyService for ApiKeyServiceImpl {
             serde_json::json!({
                 "key_id": req.key_id.clone(),
                 "key_prefix": rec.key_prefix.clone(),
-                "name": rec.name.clone(),
-                "description": rec.description.clone(),
                 "scopes": rec.scopes.clone(),
                 "expires_at_unix": rec.expires_at_unix,
             }),
@@ -1049,7 +942,6 @@ impl ApiKeyService for ApiKeyServiceImpl {
         self.enforce_caller_tenant(caller_context.as_ref(), &existing.tenant_id)?;
         // Mint a fresh secret under a new prefix; lineage carried via the event +
         // metadata. The new key inherits scopes/owner/tenant/project.
-
         let prefix = format!(
             "udbk_{}",
             Uuid::new_v4()

@@ -210,7 +210,6 @@ pub(super) fn api_key_service(pool: sqlx::PgPool) -> ApiKeyServiceImpl {
         ..AuthnConfig::default()
     };
     ApiKeyServiceImpl::with_store(config, Arc::new(PostgresApiKeyStore::new(pool.clone(), "")))
-        .with_user_store(Arc::new(PostgresUserStore::new(pool.clone(), "")))
         .with_postgres(Some(pool))
 }
 
