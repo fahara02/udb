@@ -179,64 +179,84 @@ async fn rerank_points(
         "query": query, "model": config.model, "strategy": config.strategy,
         "top_n": config.top_n, "candidates": candidates,
     });
-    let response = reqwest::Client::new()
-        .post(endpoint.trim())
-        .json(&body)
-        .timeout(Duration::from_secs(10))
-        .send()
-        .await;
-    let decoded = match response {
-        Ok(response) if response.status().is_success() => {
-            response.json::<serde_json::Value>().await.ok()
-        }
-        _ => None,
-    };
-    let Some(decoded) = decoded else {
+    // Slim builds (`--no-default-features --features postgres`) carry no HTTP
+    // client at all — honest capability degradation instead of a compile-time
+    // reqwest dependency: fail_open configs skip the rerank, strict configs get
+    // a typed capability error naming the missing feature.
+    #[cfg(not(feature = "http-client"))]
+    {
+        let _ = body;
         if config.fail_open {
             return Ok((points, BTreeMap::new(), false));
         }
-        return Err(crate::runtime::executor_utils::retryable_status(
+        return Err(crate::runtime::executor_utils::capability_status(
             "embedding",
             "rerank",
-            500,
-            "embedding reranker sidecar is unavailable",
+            "http_client_feature",
+            "rerank requires a broker built with the http-client feature",
         ));
-    };
-    let mut scores = BTreeMap::new();
-    for result in decoded
-        .get("results")
-        .and_then(serde_json::Value::as_array)
-        .into_iter()
-        .flatten()
+    }
+    #[cfg(feature = "http-client")]
     {
-        if let (Some(id), Some(score)) = (
-            result.get("id").and_then(serde_json::Value::as_str),
-            result.get("score").and_then(serde_json::Value::as_f64),
-        ) {
-            scores.insert(id.to_string(), score);
+        let response = reqwest::Client::new()
+            .post(endpoint.trim())
+            .json(&body)
+            .timeout(Duration::from_secs(10))
+            .send()
+            .await;
+        let decoded = match response {
+            Ok(response) if response.status().is_success() => {
+                response.json::<serde_json::Value>().await.ok()
+            }
+            _ => None,
+        };
+        let Some(decoded) = decoded else {
+            if config.fail_open {
+                return Ok((points, BTreeMap::new(), false));
+            }
+            return Err(crate::runtime::executor_utils::retryable_status(
+                "embedding",
+                "rerank",
+                500,
+                "embedding reranker sidecar is unavailable",
+            ));
+        };
+        let mut scores = BTreeMap::new();
+        for result in decoded
+            .get("results")
+            .and_then(serde_json::Value::as_array)
+            .into_iter()
+            .flatten()
+        {
+            if let (Some(id), Some(score)) = (
+                result.get("id").and_then(serde_json::Value::as_str),
+                result.get("score").and_then(serde_json::Value::as_f64),
+            ) {
+                scores.insert(id.to_string(), score);
+            }
         }
-    }
-    if scores.is_empty() {
-        if config.fail_open {
-            return Ok((points, scores, false));
+        if scores.is_empty() {
+            if config.fail_open {
+                return Ok((points, scores, false));
+            }
+            return Err(crate::runtime::executor_utils::schema_status(
+                tonic::Code::FailedPrecondition,
+                "embedding",
+                "rerank",
+                "embedding_rerank_response_invalid",
+                "reranker returned no candidate scores",
+            ));
         }
-        return Err(crate::runtime::executor_utils::schema_status(
-            tonic::Code::FailedPrecondition,
-            "embedding",
-            "rerank",
-            "embedding_rerank_response_invalid",
-            "reranker returned no candidate scores",
-        ));
+        let mut points = points;
+        points.sort_by(|left, right| {
+            scores
+                .get(&right.id)
+                .copied()
+                .unwrap_or(f64::NEG_INFINITY)
+                .total_cmp(&scores.get(&left.id).copied().unwrap_or(f64::NEG_INFINITY))
+        });
+        Ok((points, scores, true))
     }
-    let mut points = points;
-    points.sort_by(|left, right| {
-        scores
-            .get(&right.id)
-            .copied()
-            .unwrap_or(f64::NEG_INFINITY)
-            .total_cmp(&scores.get(&left.id).copied().unwrap_or(f64::NEG_INFINITY))
-    });
-    Ok((points, scores, true))
 }
 
 pub(crate) async fn retrieve(
