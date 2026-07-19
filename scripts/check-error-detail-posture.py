@@ -6438,7 +6438,11 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
             '"source_name is required"',
             '"source_name and row_pk are required"',
             '"vector is required"',
-            '"query_vector is required (the broker does not embed queries; supply a vector)"',
+            # Retrieval rework: query_text is now genuinely consumed (hybrid
+            # text query + rerank), so the old "the broker does not embed
+            # queries" parenthetical was dropped; the vector remains required.
+            '"query_vector is required"',
+            '"must contain an already-computed query embedding"',
             '"source_message_type \'{source_message_type}\' is not present in the active catalog',
             "source entity '{message_type}' has no resolvable tenant column",
             '"must be a non-empty embedding source name"',
