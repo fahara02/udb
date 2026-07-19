@@ -44,7 +44,7 @@ namespace Udb.Entity.V1 {
             "IAMoCVIGZmllbGRzEhQKBWxpbWl0GAUgASgFUgVsaW1pdBIdCgpwYWdlX3Rv",
             "a2VuGAYgASgJUglwYWdlVG9rZW4SJwoEc29ydBgHIAMoCzITLnVkYi5lbnRp",
             "dHkudjEuU29ydFIEc29ydBIxCgVjYWNoZRgIIAEoCzIbLnVkYi5lbnRpdHku",
-            "djEuQ2FjaGVPcHRpb25zUgVjYWNoZSLpAgoNVXBzZXJ0UmVxdWVzdBI3Cgdj",
+            "djEuQ2FjaGVPcHRpb25zUgVjYWNoZSKeAwoNVXBzZXJ0UmVxdWVzdBI3Cgdj",
             "b250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dFIH",
             "Y29udGV4dBIhCgxtZXNzYWdlX3R5cGUYAiABKAlSC21lc3NhZ2VUeXBlEh8K",
             "C3JlY29yZF9qc29uGAMgASgMUgpyZWNvcmRKc29uEjEKB3BheWxvYWQYBCAB",
@@ -52,20 +52,21 @@ namespace Udb.Entity.V1 {
             "aWN0X2ZpZWxkcxgFIAMoCVIOY29uZmxpY3RGaWVsZHMSIwoNcmV0dXJuX3Jl",
             "Y29yZBgGIAEoCFIMcmV0dXJuUmVjb3JkEjEKBWNhY2hlGAcgASgLMhsudWRi",
             "LmVudGl0eS52MS5DYWNoZU9wdGlvbnNSBWNhY2hlEicKD2lkZW1wb3RlbmN5",
-            "X2tleRgIIAEoCVIOaWRlbXBvdGVuY3lLZXkixQEKDURlbGV0ZVJlcXVlc3QS",
-            "NwoHY29udGV4dBgBIAEoCzIdLnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRl",
-            "eHRSB2NvbnRleHQSIQoMbWVzc2FnZV90eXBlGAIgASgJUgttZXNzYWdlVHlw",
-            "ZRIvCgZmaWx0ZXIYAyABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0UgZm",
-            "aWx0ZXISJwoPaWRlbXBvdGVuY3lfa2V5GAQgASgJUg5pZGVtcG90ZW5jeUtl",
-            "eSLDAQoOVmlld0RlZmluaXRpb24SNwoHY29udGV4dBgBIAEoCzIdLnVkYi5l",
-            "bnRpdHkudjEuUmVxdWVzdENvbnRleHRSB2NvbnRleHQSFgoGc2NoZW1hGAIg",
-            "ASgJUgZzY2hlbWESEgoEbmFtZRgDIAEoCVIEbmFtZRIUCgVxdWVyeRgEIAEo",
-            "CVIFcXVlcnkSGwoJd2l0aF9kYXRhGAUgASgIUgh3aXRoRGF0YRIZCgh0dGxf",
-            "ZGF5cxgGIAEoBVIHdHRsRGF5c0K1AQoRY29tLnVkYi5lbnRpdHkudjFCD1Jl",
-            "bGF0aW9uYWxQcm90b1ABWjlnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsv",
-            "Z28vZ2VuL3VkYi9lbnRpdHkvdjE7ZW50aXR5djGiAgNVRViqAg1VZGIuRW50",
-            "aXR5LlYxygINVWRiXEVudGl0eVxWMeICGVVkYlxHUEJNZXRhZGF0YVxFbnRp",
-            "dHlcVjHqAg9VZGI6OkVudGl0eTo6VjFiBnByb3RvMw=="));
+            "X2tleRgIIAEoCVIOaWRlbXBvdGVuY3lLZXkSMwoIZXhwZWN0ZWQYCSABKAsy",
+            "Fy5nb29nbGUucHJvdG9idWYuU3RydWN0UghleHBlY3RlZCLFAQoNRGVsZXRl",
+            "UmVxdWVzdBI3Cgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1",
+            "ZXN0Q29udGV4dFIHY29udGV4dBIhCgxtZXNzYWdlX3R5cGUYAiABKAlSC21l",
+            "c3NhZ2VUeXBlEi8KBmZpbHRlchgDIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5T",
+            "dHJ1Y3RSBmZpbHRlchInCg9pZGVtcG90ZW5jeV9rZXkYBCABKAlSDmlkZW1w",
+            "b3RlbmN5S2V5IsMBCg5WaWV3RGVmaW5pdGlvbhI3Cgdjb250ZXh0GAEgASgL",
+            "Mh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dFIHY29udGV4dBIWCgZz",
+            "Y2hlbWEYAiABKAlSBnNjaGVtYRISCgRuYW1lGAMgASgJUgRuYW1lEhQKBXF1",
+            "ZXJ5GAQgASgJUgVxdWVyeRIbCgl3aXRoX2RhdGEYBSABKAhSCHdpdGhEYXRh",
+            "EhkKCHR0bF9kYXlzGAYgASgFUgd0dGxEYXlzQrUBChFjb20udWRiLmVudGl0",
+            "eS52MUIPUmVsYXRpb25hbFByb3RvUAFaOWdpdGh1Yi5jb20vZmFoYXJhMDIv",
+            "dWRiL3Nkay9nby9nZW4vdWRiL2VudGl0eS92MTtlbnRpdHl2MaICA1VFWKoC",
+            "DVVkYi5FbnRpdHkuVjHKAg1VZGJcRW50aXR5XFYx4gIZVWRiXEdQQk1ldGFk",
+            "YXRhXEVudGl0eVxWMeoCD1VkYjo6RW50aXR5OjpWMWIGcHJvdG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.StructReflection.Descriptor, global::Udb.Entity.V1.ContextReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
@@ -74,7 +75,7 @@ namespace Udb.Entity.V1 {
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.Row), global::Udb.Entity.V1.Row.Parser, new[]{ "Fields" }, null, null, null, new pbr::GeneratedClrTypeInfo[] { null, }),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.RecordSet), global::Udb.Entity.V1.RecordSet.Parser, new[]{ "RecordsJson", "Rows", "NextPageToken", "TotalCount" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.SelectRequest), global::Udb.Entity.V1.SelectRequest.Parser, new[]{ "Context", "MessageType", "Filter", "Fields", "Limit", "PageToken", "Sort", "Cache" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.UpsertRequest), global::Udb.Entity.V1.UpsertRequest.Parser, new[]{ "Context", "MessageType", "RecordJson", "Payload", "ConflictFields", "ReturnRecord", "Cache", "IdempotencyKey" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.UpsertRequest), global::Udb.Entity.V1.UpsertRequest.Parser, new[]{ "Context", "MessageType", "RecordJson", "Payload", "ConflictFields", "ReturnRecord", "Cache", "IdempotencyKey", "Expected" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.DeleteRequest), global::Udb.Entity.V1.DeleteRequest.Parser, new[]{ "Context", "MessageType", "Filter", "IdempotencyKey" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.ViewDefinition), global::Udb.Entity.V1.ViewDefinition.Parser, new[]{ "Context", "Schema", "Name", "Query", "WithData", "TtlDays" }, null, null, null, null)
           }));
@@ -1569,6 +1570,7 @@ namespace Udb.Entity.V1 {
       returnRecord_ = other.returnRecord_;
       cache_ = other.cache_ != null ? other.cache_.Clone() : null;
       idempotencyKey_ = other.idempotencyKey_;
+      expected_ = other.expected_ != null ? other.expected_.Clone() : null;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -1673,6 +1675,29 @@ namespace Udb.Entity.V1 {
       }
     }
 
+    /// <summary>Field number for the "expected" field.</summary>
+    public const int ExpectedFieldNumber = 9;
+    private global::Google.Protobuf.WellKnownTypes.Struct expected_;
+    /// <summary>
+    /// Optional compare-and-swap precondition (UDB-GO-005). When set, each
+    /// `field -> value` assertion is checked against the CURRENT row — located by
+    /// `conflict_fields` (else the primary key) and locked FOR UPDATE — inside the
+    /// same write transaction and tenant/RLS context as the upsert. If the row is
+    /// absent or any asserted field does not match, the mutation is rejected with
+    /// `FAILED_PRECONDITION` and nothing is written, projected, or emitted to CDC.
+    /// This lets optimistic-concurrency callers make "update WHERE version = N"
+    /// atomic without dropping to a service-specific command or external lock.
+    /// Backwards-compatible: an unset/empty `expected` behaves exactly as before.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Google.Protobuf.WellKnownTypes.Struct Expected {
+      get { return expected_; }
+      set {
+        expected_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -1696,6 +1721,7 @@ namespace Udb.Entity.V1 {
       if (ReturnRecord != other.ReturnRecord) return false;
       if (!object.Equals(Cache, other.Cache)) return false;
       if (IdempotencyKey != other.IdempotencyKey) return false;
+      if (!object.Equals(Expected, other.Expected)) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -1711,6 +1737,7 @@ namespace Udb.Entity.V1 {
       if (ReturnRecord != false) hash ^= ReturnRecord.GetHashCode();
       if (cache_ != null) hash ^= Cache.GetHashCode();
       if (IdempotencyKey.Length != 0) hash ^= IdempotencyKey.GetHashCode();
+      if (expected_ != null) hash ^= Expected.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -1758,6 +1785,10 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(66);
         output.WriteString(IdempotencyKey);
       }
+      if (expected_ != null) {
+        output.WriteRawTag(74);
+        output.WriteMessage(Expected);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -1797,6 +1828,10 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(66);
         output.WriteString(IdempotencyKey);
       }
+      if (expected_ != null) {
+        output.WriteRawTag(74);
+        output.WriteMessage(Expected);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -1828,6 +1863,9 @@ namespace Udb.Entity.V1 {
       }
       if (IdempotencyKey.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(IdempotencyKey);
+      }
+      if (expected_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Expected);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -1871,6 +1909,12 @@ namespace Udb.Entity.V1 {
       }
       if (other.IdempotencyKey.Length != 0) {
         IdempotencyKey = other.IdempotencyKey;
+      }
+      if (other.expected_ != null) {
+        if (expected_ == null) {
+          Expected = new global::Google.Protobuf.WellKnownTypes.Struct();
+        }
+        Expected.MergeFrom(other.Expected);
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -1932,6 +1976,13 @@ namespace Udb.Entity.V1 {
             IdempotencyKey = input.ReadString();
             break;
           }
+          case 74: {
+            if (expected_ == null) {
+              Expected = new global::Google.Protobuf.WellKnownTypes.Struct();
+            }
+            input.ReadMessage(Expected);
+            break;
+          }
         }
       }
     #endif
@@ -1990,6 +2041,13 @@ namespace Udb.Entity.V1 {
           }
           case 66: {
             IdempotencyKey = input.ReadString();
+            break;
+          }
+          case 74: {
+            if (expected_ == null) {
+              Expected = new global::Google.Protobuf.WellKnownTypes.Struct();
+            }
+            input.ReadMessage(Expected);
             break;
           }
         }

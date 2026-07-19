@@ -115,4 +115,55 @@ public interface UpsertRequestOrBuilder extends
    */
   com.google.protobuf.ByteString
       getIdempotencyKeyBytes();
+
+  /**
+   * <pre>
+   * Optional compare-and-swap precondition (UDB-GO-005). When set, each
+   * `field -&gt; value` assertion is checked against the CURRENT row — located by
+   * `conflict_fields` (else the primary key) and locked FOR UPDATE — inside the
+   * same write transaction and tenant/RLS context as the upsert. If the row is
+   * absent or any asserted field does not match, the mutation is rejected with
+   * `FAILED_PRECONDITION` and nothing is written, projected, or emitted to CDC.
+   * This lets optimistic-concurrency callers make "update WHERE version = N"
+   * atomic without dropping to a service-specific command or external lock.
+   * Backwards-compatible: an unset/empty `expected` behaves exactly as before.
+   * </pre>
+   *
+   * <code>.google.protobuf.Struct expected = 9 [json_name = "expected"];</code>
+   * @return Whether the expected field is set.
+   */
+  boolean hasExpected();
+  /**
+   * <pre>
+   * Optional compare-and-swap precondition (UDB-GO-005). When set, each
+   * `field -&gt; value` assertion is checked against the CURRENT row — located by
+   * `conflict_fields` (else the primary key) and locked FOR UPDATE — inside the
+   * same write transaction and tenant/RLS context as the upsert. If the row is
+   * absent or any asserted field does not match, the mutation is rejected with
+   * `FAILED_PRECONDITION` and nothing is written, projected, or emitted to CDC.
+   * This lets optimistic-concurrency callers make "update WHERE version = N"
+   * atomic without dropping to a service-specific command or external lock.
+   * Backwards-compatible: an unset/empty `expected` behaves exactly as before.
+   * </pre>
+   *
+   * <code>.google.protobuf.Struct expected = 9 [json_name = "expected"];</code>
+   * @return The expected.
+   */
+  com.google.protobuf.Struct getExpected();
+  /**
+   * <pre>
+   * Optional compare-and-swap precondition (UDB-GO-005). When set, each
+   * `field -&gt; value` assertion is checked against the CURRENT row — located by
+   * `conflict_fields` (else the primary key) and locked FOR UPDATE — inside the
+   * same write transaction and tenant/RLS context as the upsert. If the row is
+   * absent or any asserted field does not match, the mutation is rejected with
+   * `FAILED_PRECONDITION` and nothing is written, projected, or emitted to CDC.
+   * This lets optimistic-concurrency callers make "update WHERE version = N"
+   * atomic without dropping to a service-specific command or external lock.
+   * Backwards-compatible: an unset/empty `expected` behaves exactly as before.
+   * </pre>
+   *
+   * <code>.google.protobuf.Struct expected = 9 [json_name = "expected"];</code>
+   */
+  com.google.protobuf.StructOrBuilder getExpectedOrBuilder();
 }

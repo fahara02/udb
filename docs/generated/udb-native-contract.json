@@ -1,8 +1,8 @@
 {
   "schema_version": "1",
-  "descriptor_sha256": "18218b14ad8f0f377064064bbeb9feff61038baab6b3223b385ec131a65e4e2a",
+  "descriptor_sha256": "220c34b1f9590e396583de3a9157a3114ae29071875ea9258a2f08f7354a43fb",
   "contract_version": "4.0.0",
-  "udb_version": "0.4.14",
+  "udb_version": "0.4.15",
   "protocol_version": "1.0.0",
   "service_count": 28,
   "services": [
@@ -143447,7 +143447,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 8,
+      "field_count": 9,
       "fields": [
         {
           "name": "context",
@@ -143586,6 +143586,25 @@
           "name": "idempotency_key",
           "number": 8,
           "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "expected",
+          "number": 9,
+          "type": ".google.protobuf.Struct",
           "column_security": null,
           "scalar_security": {
             "pii": false,

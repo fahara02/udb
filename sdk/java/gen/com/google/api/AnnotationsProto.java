@@ -55,10 +55,10 @@ public final class AnnotationsProto {
       "pi\032\025google/api/http.proto\032 google/protob" +
       "uf/descriptor.proto:K\n\004http\022\036.google.pro" +
       "tobuf.MethodOptions\030\260\312\274\" \001(\0132\024.google.ap" +
-      "i.HttpRuleR\004httpBg\n\016com.google.apiB\020Anno" +
-      "tationsProtoP\001Z-github.com/fahara02/udb/" +
-      "sdk/go/gen/google/api\242\002\003GAX\352\002\013Google::Ap" +
-      "ib\006proto3"
+      "i.HttpRuleR\004httpBn\n\016com.google.apiB\020Anno" +
+      "tationsProtoP\001ZAgoogle.golang.org/genpro" +
+      "to/googleapis/api/annotations;annotation" +
+      "s\242\002\004GAPIb\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

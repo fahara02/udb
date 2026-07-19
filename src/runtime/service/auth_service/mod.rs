@@ -228,6 +228,9 @@ impl DataBrokerService {
             (
                 authn,
                 ApiKeyServiceImpl::with_store(authn_config, api_key_store)
+                    // AUTH-006: owner lookup for service-identity lineage —
+                    // best-effort inside CreateApiKey, never a hard gate.
+                    .with_user_store(user_store)
                     .with_postgres(Some(pool.clone()))
                     .with_event_sink(event_sink.clone()),
             )

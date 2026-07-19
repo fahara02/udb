@@ -27,10 +27,10 @@ namespace Google.Api {
             "Chxnb29nbGUvYXBpL2Fubm90YXRpb25zLnByb3RvEgpnb29nbGUuYXBpGhVn",
             "b29nbGUvYXBpL2h0dHAucHJvdG8aIGdvb2dsZS9wcm90b2J1Zi9kZXNjcmlw",
             "dG9yLnByb3RvOksKBGh0dHASHi5nb29nbGUucHJvdG9idWYuTWV0aG9kT3B0",
-            "aW9ucxiwyrwiIAEoCzIULmdvb2dsZS5hcGkuSHR0cFJ1bGVSBGh0dHBCZwoO",
-            "Y29tLmdvb2dsZS5hcGlCEEFubm90YXRpb25zUHJvdG9QAVotZ2l0aHViLmNv",
-            "bS9mYWhhcmEwMi91ZGIvc2RrL2dvL2dlbi9nb29nbGUvYXBpogIDR0FY6gIL",
-            "R29vZ2xlOjpBcGliBnByb3RvMw=="));
+            "aW9ucxiwyrwiIAEoCzIULmdvb2dsZS5hcGkuSHR0cFJ1bGVSBGh0dHBCbgoO",
+            "Y29tLmdvb2dsZS5hcGlCEEFubm90YXRpb25zUHJvdG9QAVpBZ29vZ2xlLmdv",
+            "bGFuZy5vcmcvZ2VucHJvdG8vZ29vZ2xlYXBpcy9hcGkvYW5ub3RhdGlvbnM7",
+            "YW5ub3RhdGlvbnOiAgRHQVBJYgZwcm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Api.HttpReflection.Descriptor, global::Google.Protobuf.Reflection.DescriptorReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, new pb::Extension[] { AnnotationsExtensions.Http }, null));

@@ -72,7 +72,7 @@ class SelectRequest(_message.Message):
     def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., message_type: _Optional[str] = ..., filter: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., fields: _Optional[_Iterable[str]] = ..., limit: _Optional[int] = ..., page_token: _Optional[str] = ..., sort: _Optional[_Iterable[_Union[Sort, _Mapping]]] = ..., cache: _Optional[_Union[CacheOptions, _Mapping]] = ...) -> None: ...
 
 class UpsertRequest(_message.Message):
-    __slots__ = ("context", "message_type", "record_json", "payload", "conflict_fields", "return_record", "cache", "idempotency_key")
+    __slots__ = ("context", "message_type", "record_json", "payload", "conflict_fields", "return_record", "cache", "idempotency_key", "expected")
     CONTEXT_FIELD_NUMBER: _ClassVar[int]
     MESSAGE_TYPE_FIELD_NUMBER: _ClassVar[int]
     RECORD_JSON_FIELD_NUMBER: _ClassVar[int]
@@ -81,6 +81,7 @@ class UpsertRequest(_message.Message):
     RETURN_RECORD_FIELD_NUMBER: _ClassVar[int]
     CACHE_FIELD_NUMBER: _ClassVar[int]
     IDEMPOTENCY_KEY_FIELD_NUMBER: _ClassVar[int]
+    EXPECTED_FIELD_NUMBER: _ClassVar[int]
     context: _context_pb2.RequestContext
     message_type: str
     record_json: bytes
@@ -89,7 +90,8 @@ class UpsertRequest(_message.Message):
     return_record: bool
     cache: CacheOptions
     idempotency_key: str
-    def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., message_type: _Optional[str] = ..., record_json: _Optional[bytes] = ..., payload: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., conflict_fields: _Optional[_Iterable[str]] = ..., return_record: bool = ..., cache: _Optional[_Union[CacheOptions, _Mapping]] = ..., idempotency_key: _Optional[str] = ...) -> None: ...
+    expected: _struct_pb2.Struct
+    def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., message_type: _Optional[str] = ..., record_json: _Optional[bytes] = ..., payload: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., conflict_fields: _Optional[_Iterable[str]] = ..., return_record: bool = ..., cache: _Optional[_Union[CacheOptions, _Mapping]] = ..., idempotency_key: _Optional[str] = ..., expected: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ...) -> None: ...
 
 class DeleteRequest(_message.Message):
     __slots__ = ("context", "message_type", "filter", "idempotency_key")

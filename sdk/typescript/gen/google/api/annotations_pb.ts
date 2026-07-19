@@ -27,7 +27,7 @@ import { file_google_protobuf_descriptor } from "@bufbuild/protobuf/wkt";
  * Describes the file google/api/annotations.proto.
  */
 export const file_google_api_annotations: GenFile = /*@__PURE__*/
-  fileDesc("Chxnb29nbGUvYXBpL2Fubm90YXRpb25zLnByb3RvEgpnb29nbGUuYXBpOksKBGh0dHASHi5nb29nbGUucHJvdG9idWYuTWV0aG9kT3B0aW9ucxiwyrwiIAEoCzIULmdvb2dsZS5hcGkuSHR0cFJ1bGVSBGh0dHBCZwoOY29tLmdvb2dsZS5hcGlCEEFubm90YXRpb25zUHJvdG9QAVotZ2l0aHViLmNvbS9mYWhhcmEwMi91ZGIvc2RrL2dvL2dlbi9nb29nbGUvYXBpogIDR0FY6gILR29vZ2xlOjpBcGliBnByb3RvMw", [file_google_api_http, file_google_protobuf_descriptor]);
+  fileDesc("Chxnb29nbGUvYXBpL2Fubm90YXRpb25zLnByb3RvEgpnb29nbGUuYXBpOksKBGh0dHASHi5nb29nbGUucHJvdG9idWYuTWV0aG9kT3B0aW9ucxiwyrwiIAEoCzIULmdvb2dsZS5hcGkuSHR0cFJ1bGVSBGh0dHBCbgoOY29tLmdvb2dsZS5hcGlCEEFubm90YXRpb25zUHJvdG9QAVpBZ29vZ2xlLmdvbGFuZy5vcmcvZ2VucHJvdG8vZ29vZ2xlYXBpcy9hcGkvYW5ub3RhdGlvbnM7YW5ub3RhdGlvbnOiAgRHQVBJYgZwcm90bzM", [file_google_api_http, file_google_protobuf_descriptor]);
 
 /**
  * See `HttpRule`.
