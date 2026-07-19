@@ -121,7 +121,7 @@ runs:
         set -euo pipefail
         docker run -d --name udb-bench-qdrant \
           -p 6333:6333 \
-          qdrant/qdrant:v1.13.4
+          qdrant/qdrant:v1.18.2
         for _ in {1..60}; do
           curl -fsS http://localhost:6333/readyz >/dev/null 2>&1 && exit 0
           docker ps --filter name=udb-bench-qdrant --filter status=running --quiet | grep -q . || {

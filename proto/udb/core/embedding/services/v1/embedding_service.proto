@@ -319,6 +319,106 @@ service EmbeddingService {
       body: "*"
     };
   }
+
+  rpc RegisterModel(RegisterModelRequest) returns (RegisterModelResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = { mode: AUTH_MODE_BEARER scopes: "udb:embedding:register-model" allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT allowed_credential_types: CREDENTIAL_TYPE_SESSION decision_resource: "embedding.RegisterModel" request_context_required: true tenant_required: true };
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "register_model" rest_operation_id: "registerEmbeddingModel" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "embedding" generate_minimal_example: true };
+    option (udb.core.common.v1.method_dependency_contract) = { required_native_services: "embedding" required_backends: "postgres" required_env: "UDB_NATIVE_SERVICES_ENABLED" required_env: "UDB_GRPC_TARGET" };
+    option (google.api.http) = { post: "/v1/embedding/models:register" body: "*" };
+  }
+
+  rpc ListModels(ListModelsRequest) returns (ListModelsResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = { mode: AUTH_MODE_BEARER scopes: "udb:embedding:list-models" allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT allowed_credential_types: CREDENTIAL_TYPE_SESSION decision_resource: "embedding.ListModels" request_context_required: true tenant_required: true };
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "list_models" rest_operation_id: "listEmbeddingModels" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "embedding" generate_minimal_example: true };
+    option (udb.core.common.v1.method_dependency_contract) = { required_native_services: "embedding" required_backends: "postgres" required_env: "UDB_NATIVE_SERVICES_ENABLED" required_env: "UDB_GRPC_TARGET" };
+    option (google.api.http) = { get: "/v1/embedding/models" };
+  }
+
+  rpc DeleteModel(DeleteModelRequest) returns (DeleteModelResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
+    option (udb.core.common.v1.endpoint_security) = { mode: AUTH_MODE_BEARER scopes: "udb:embedding:delete-model" allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT allowed_credential_types: CREDENTIAL_TYPE_SESSION decision_resource: "embedding.DeleteModel" request_context_required: true tenant_required: true };
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "delete_model" rest_operation_id: "deleteEmbeddingModel" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "embedding" generate_minimal_example: true };
+    option (udb.core.common.v1.method_dependency_contract) = { required_native_services: "embedding" required_backends: "postgres" required_env: "UDB_NATIVE_SERVICES_ENABLED" required_env: "UDB_GRPC_TARGET" };
+    option (google.api.http) = { post: "/v1/embedding/models:delete" body: "*" };
+  }
+
+  rpc SetModelStatus(SetModelStatusRequest) returns (SetModelStatusResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = { mode: AUTH_MODE_BEARER scopes: "udb:embedding:update-model" allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT allowed_credential_types: CREDENTIAL_TYPE_SESSION decision_resource: "embedding.SetModelStatus" request_context_required: true tenant_required: true };
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "set_model_status" rest_operation_id: "setEmbeddingModelStatus" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "embedding" };
+    option (udb.core.common.v1.method_dependency_contract) = { required_native_services: "embedding" required_backends: "postgres" required_env: "UDB_NATIVE_SERVICES_ENABLED" required_env: "UDB_GRPC_TARGET" };
+    option (google.api.http) = { post: "/v1/embedding/models:setStatus" body: "*" };
+  }
+
+  rpc CutoverModelAlias(CutoverModelAliasRequest) returns (CutoverModelAliasResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = { mode: AUTH_MODE_BEARER scopes: "udb:embedding:cutover-model" allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT allowed_credential_types: CREDENTIAL_TYPE_SESSION decision_resource: "embedding.CutoverModelAlias" request_context_required: true tenant_required: true };
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "cutover_model_alias" rest_operation_id: "cutoverEmbeddingModelAlias" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 1 server_only: true boilerplate_recipe_tags: "embedding" };
+    option (udb.core.common.v1.method_dependency_contract) = { required_native_services: "embedding" required_backends: "postgres" required_env: "UDB_NATIVE_SERVICES_ENABLED" required_env: "UDB_GRPC_TARGET" };
+    option (google.api.http) = { post: "/v1/embedding/models:cutover" body: "*" };
+  }
+
+  rpc GetEmbeddingJobStatus(GetEmbeddingJobStatusRequest) returns (GetEmbeddingJobStatusResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = { mode: AUTH_MODE_BEARER scopes: "udb:embedding:get-job" allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT allowed_credential_types: CREDENTIAL_TYPE_SESSION decision_resource: "embedding.GetEmbeddingJobStatus" request_context_required: true tenant_required: true };
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "get_job_status" rest_operation_id: "getEmbeddingJobStatus" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "embedding" };
+    option (udb.core.common.v1.method_dependency_contract) = { required_native_services: "embedding" required_backends: "postgres" required_env: "UDB_NATIVE_SERVICES_ENABLED" required_env: "UDB_GRPC_TARGET" };
+    option (google.api.http) = { get: "/v1/embedding/jobs/{job_id}" };
+  }
+
+  rpc ListEmbeddingWorkItems(ListEmbeddingWorkItemsRequest) returns (ListEmbeddingWorkItemsResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;
+    option (udb.core.common.v1.endpoint_security) = { mode: AUTH_MODE_BEARER scopes: "udb:embedding:list-work" allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT allowed_credential_types: CREDENTIAL_TYPE_SESSION decision_resource: "embedding.ListEmbeddingWorkItems" request_context_required: true tenant_required: true };
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "list_work_items" rest_operation_id: "listEmbeddingWorkItems" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "embedding" };
+    option (udb.core.common.v1.method_dependency_contract) = { required_native_services: "embedding" required_backends: "postgres" required_env: "UDB_NATIVE_SERVICES_ENABLED" required_env: "UDB_GRPC_TARGET" };
+    option (google.api.http) = { get: "/v1/embedding/jobs/{job_id}/work-items" };
+  }
+
+  rpc ReportEmbeddingBatch(ReportEmbeddingBatchRequest) returns (ReportEmbeddingBatchResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = { mode: AUTH_MODE_BEARER scopes: "udb:embedding:report-embedding" allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT allowed_credential_types: CREDENTIAL_TYPE_SESSION decision_resource: "embedding.ReportEmbeddingBatch" request_context_required: true tenant_required: true internal_grpc_only: true };
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: false method_alias: "report_embedding_batch" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "embedding" };
+    option (udb.core.common.v1.method_dependency_contract) = { required_native_services: "embedding" required_backends: "postgres" required_env: "UDB_NATIVE_SERVICES_ENABLED" required_env: "UDB_GRPC_TARGET" };
+  }
+
+  rpc ReportEmbeddingFailure(ReportEmbeddingFailureRequest) returns (ReportEmbeddingFailureResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = { mode: AUTH_MODE_BEARER scopes: "udb:embedding:report-embedding" allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT allowed_credential_types: CREDENTIAL_TYPE_SESSION decision_resource: "embedding.ReportEmbeddingFailure" request_context_required: true tenant_required: true internal_grpc_only: true };
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: false method_alias: "report_embedding_failure" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 1 server_only: true boilerplate_recipe_tags: "embedding" };
+    option (udb.core.common.v1.method_dependency_contract) = { required_native_services: "embedding" required_backends: "postgres" required_env: "UDB_NATIVE_SERVICES_ENABLED" required_env: "UDB_GRPC_TARGET" };
+  }
+
+  rpc IngestDocument(IngestDocumentRequest) returns (IngestDocumentResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = { mode: AUTH_MODE_BEARER scopes: "udb:embedding:ingest-document" allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT allowed_credential_types: CREDENTIAL_TYPE_SESSION decision_resource: "embedding.IngestDocument" request_context_required: true tenant_required: true };
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "ingest_document" rest_operation_id: "ingestEmbeddingDocument" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "embedding" generate_minimal_example: true };
+    option (udb.core.common.v1.method_dependency_contract) = { required_native_services: "embedding" required_backends: "postgres" required_env: "UDB_NATIVE_SERVICES_ENABLED" required_env: "UDB_GRPC_TARGET" };
+    option (google.api.http) = { post: "/v1/embedding/documents:ingest" body: "*" };
+  }
+
+  rpc IngestDocumentBatch(IngestDocumentBatchRequest) returns (IngestDocumentBatchResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = { mode: AUTH_MODE_BEARER scopes: "udb:embedding:ingest-document" allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT allowed_credential_types: CREDENTIAL_TYPE_SESSION decision_resource: "embedding.IngestDocumentBatch" request_context_required: true tenant_required: true };
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "ingest_document_batch" rest_operation_id: "ingestEmbeddingDocumentBatch" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "embedding" };
+    option (udb.core.common.v1.method_dependency_contract) = { required_native_services: "embedding" required_backends: "postgres" required_env: "UDB_NATIVE_SERVICES_ENABLED" required_env: "UDB_GRPC_TARGET" };
+    option (google.api.http) = { post: "/v1/embedding/documents:batchIngest" body: "*" };
+  }
+
+  rpc ReportParsedDocument(ReportParsedDocumentRequest) returns (ReportParsedDocumentResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = { mode: AUTH_MODE_BEARER scopes: "udb:embedding:report-document" allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT allowed_credential_types: CREDENTIAL_TYPE_SESSION decision_resource: "embedding.ReportParsedDocument" request_context_required: true tenant_required: true internal_grpc_only: true };
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: false method_alias: "report_parsed_document" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "embedding" };
+    option (udb.core.common.v1.method_dependency_contract) = { required_native_services: "embedding" required_backends: "postgres" required_env: "UDB_NATIVE_SERVICES_ENABLED" required_env: "UDB_GRPC_TARGET" };
+  }
+
+  rpc ReportRetrievalEvaluation(ReportRetrievalEvaluationRequest) returns (ReportRetrievalEvaluationResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.endpoint_security) = { mode: AUTH_MODE_BEARER scopes: "udb:embedding:report-evaluation" allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT allowed_credential_types: CREDENTIAL_TYPE_SESSION decision_resource: "embedding.ReportRetrievalEvaluation" request_context_required: true tenant_required: true internal_grpc_only: true };
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: false method_alias: "report_retrieval_evaluation" required_credential_provider: "udb" default_deadline_ms: 30000 default_max_attempts: 3 server_only: true boilerplate_recipe_tags: "embedding" };
+    option (udb.core.common.v1.method_dependency_contract) = { required_native_services: "embedding" required_backends: "postgres" required_env: "UDB_NATIVE_SERVICES_ENABLED" required_env: "UDB_GRPC_TARGET" };
+  }
 }
 
 message RegisterSourceRequest {
@@ -447,6 +547,8 @@ message BackfillRequest {
   };
   string tenant_id = 1;
   string source_name = 2;
+  // INCREMENTAL skips unchanged chunk hashes; FULL re-emits every chunk.
+  string mode = 3;
 }
 
 message BackfillResponse {
@@ -485,6 +587,10 @@ message ReportEmbeddingRequest {
   string model = 5;
   // Embedding dimensionality (0 ⇒ inferred from `vector`).
   int32 dims = 6;
+  string work_item_id = 7;
+  string chunk_hash = 8;
+  int64 token_count = 9;
+  string vector_name = 10;
 }
 
 message ReportEmbeddingResponse {
@@ -531,12 +637,28 @@ message RetrieveRequest {
   // higher-precision results per query; <= 0 uses the server default. Applies to
   // both the vector and hybrid paths.
   double score_threshold = 7;
+  bool include_vectors = 8;
+  MmrConfig mmr = 9;
+  FusionStrategy fusion = 10;
+  int32 prefetch_limit = 11;
+  RerankConfig rerank = 12;
+  string vector_name = 13;
+  int32 parent_window = 14;
+  bool include_citations = 15;
 }
 
 message RetrieveHit {
   string id = 1;
   double score = 2;
   string payload_json = 3; // JSON
+  repeated float vector = 4;
+  string source_name = 5;
+  string parent_pk = 6;
+  int32 chunk_seq = 7;
+  string document_id = 8;
+  string doc_version = 9;
+  string vector_name = 10;
+  double rerank_score = 11;
 }
 
 message RetrieveResponse {
@@ -552,4 +674,203 @@ message RetrieveResponse {
   repeated RetrieveHit hits = 1;
   string message = 2;
   udb.core.common.v1.ApiError error = 3;
+  int64 index_lag_ms = 4;
+  bool rerank_applied = 5;
+  string evaluation_id = 6;
 }
+
+enum EmbeddingModelStatus {
+  EMBEDDING_MODEL_STATUS_UNSPECIFIED = 0;
+  EMBEDDING_MODEL_STATUS_ACTIVE = 1;
+  EMBEDDING_MODEL_STATUS_DEPRECATED = 2;
+  EMBEDDING_MODEL_STATUS_RETIRED = 3;
+}
+
+enum EmbeddingTenantState {
+  EMBEDDING_TENANT_STATE_UNSPECIFIED = 0;
+  EMBEDDING_TENANT_STATE_ACTIVE = 1;
+  EMBEDDING_TENANT_STATE_INACTIVE = 2;
+  EMBEDDING_TENANT_STATE_OFFLOADED = 3;
+}
+
+enum FusionStrategy {
+  FUSION_STRATEGY_UNSPECIFIED = 0;
+  FUSION_STRATEGY_RRF = 1;
+  FUSION_STRATEGY_WEIGHTED = 2;
+  FUSION_STRATEGY_DBSF = 3;
+}
+
+enum RerankStrategy {
+  RERANK_STRATEGY_UNSPECIFIED = 0;
+  RERANK_STRATEGY_CROSS_ENCODER = 1;
+  RERANK_STRATEGY_LATE_INTERACTION = 2;
+}
+
+message MmrConfig {
+  bool enabled = 1;
+  double lambda = 2;
+}
+
+message RerankConfig {
+  bool enabled = 1;
+  RerankStrategy strategy = 2;
+  string model = 3;
+  int32 top_n = 4;
+  bool fail_open = 5;
+}
+
+message RegisterModelRequest {
+  string tenant_id = 1;
+  string model_id = 2;
+  string provider = 3;
+  string model_name = 4;
+  string version = 5;
+  int32 dimensions = 6;
+  repeated int32 matryoshka_dims = 7;
+  string distance_metric = 8;
+  bool normalize = 9;
+  string output_dtype = 10;
+  bool rescore = 11;
+  int32 max_input_tokens = 12;
+  string tokenizer = 13;
+  string task_type = 14;
+  bool asymmetric = 15;
+  string provider_endpoint_ref = 16;
+  string vector_backend = 17;
+  string vector_instance = 18;
+  string collection_alias = 19;
+  string active_collection = 20;
+  string chunking_strategy = 21;
+  int32 chunk_tokens = 22;
+  int32 chunk_overlap_tokens = 23;
+  bool contextual_retrieval = 24;
+  bool late_chunking = 25;
+  string metadata_json = 26;
+}
+
+message RegisterModelResponse {
+  string model_id = 1;
+  string active_collection = 2;
+  string message = 3;
+  udb.core.common.v1.ApiError error = 4;
+}
+
+message ListModelsRequest {
+  string tenant_id = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  EmbeddingModelStatus status = 4;
+}
+
+message EmbeddingModelSummary {
+  string model_id = 1;
+  string provider = 2;
+  string model_name = 3;
+  string version = 4;
+  int32 dimensions = 5;
+  string distance_metric = 6;
+  string output_dtype = 7;
+  string task_type = 8;
+  EmbeddingModelStatus status = 9;
+  string vector_backend = 10;
+  string collection_alias = 11;
+  string active_collection = 12;
+  EmbeddingTenantState tenant_state = 13;
+}
+
+message ListModelsResponse {
+  repeated EmbeddingModelSummary models = 1;
+  string next_page_token = 2;
+  string message = 3;
+  udb.core.common.v1.ApiError error = 4;
+}
+
+message DeleteModelRequest { string tenant_id = 1; string model_id = 2; }
+message DeleteModelResponse { bool deleted = 1; string message = 2; udb.core.common.v1.ApiError error = 3; }
+
+message SetModelStatusRequest {
+  string tenant_id = 1;
+  string model_id = 2;
+  EmbeddingModelStatus status = 3;
+  string replacement_model_id = 4;
+  int64 retire_after_unix_ms = 5;
+  EmbeddingTenantState tenant_state = 6;
+}
+message SetModelStatusResponse { bool updated = 1; string message = 2; udb.core.common.v1.ApiError error = 3; EmbeddingTenantState tenant_state = 4; }
+
+message CutoverModelAliasRequest {
+  string tenant_id = 1;
+  string model_id = 2;
+  string expected_collection = 3;
+}
+message CutoverModelAliasResponse { bool cutover = 1; string collection_alias = 2; string active_collection = 3; string message = 4; udb.core.common.v1.ApiError error = 5; }
+
+message GetEmbeddingJobStatusRequest { string tenant_id = 1; string job_id = 2; }
+message EmbeddingJobStatus {
+  string job_id = 1;
+  string source_name = 2;
+  string document_id = 3;
+  string job_type = 4;
+  string mode = 5;
+  string status = 6;
+  int64 rows_enumerated = 7;
+  int64 chunks_emitted = 8;
+  int64 vectors_stored = 9;
+  int64 failed = 10;
+  string error = 11;
+  int64 started_at_unix_ms = 12;
+  int64 finished_at_unix_ms = 13;
+}
+message GetEmbeddingJobStatusResponse { EmbeddingJobStatus job = 1; string message = 2; udb.core.common.v1.ApiError error = 3; }
+
+message ListEmbeddingWorkItemsRequest { string tenant_id = 1; string job_id = 2; string status = 3; int32 page_size = 4; string page_token = 5; }
+message EmbeddingWorkItemSummary {
+  string work_item_id = 1;
+  string point_id = 2;
+  string source_name = 3;
+  string parent_pk = 4;
+  int32 chunk_seq = 5;
+  string chunk_hash = 6;
+  string status = 7;
+  int32 attempt_count = 8;
+  int32 max_attempts = 9;
+  string last_error = 10;
+  int64 next_attempt_at_unix_ms = 11;
+}
+message ListEmbeddingWorkItemsResponse { repeated EmbeddingWorkItemSummary work_items = 1; string next_page_token = 2; string message = 3; udb.core.common.v1.ApiError error = 4; }
+
+message ReportEmbeddingBatchRequest { string tenant_id = 1; repeated ReportEmbeddingRequest items = 2; int32 declared_capacity = 3; }
+message ReportEmbeddingBatchItemResult { string work_item_id = 1; string row_pk = 2; bool upserted = 3; string error = 4; }
+message ReportEmbeddingBatchResponse { repeated ReportEmbeddingBatchItemResult results = 1; int32 upserted = 2; int32 failed = 3; string message = 4; udb.core.common.v1.ApiError error = 5; }
+
+message ReportEmbeddingFailureRequest { string tenant_id = 1; string work_item_id = 2; string error = 3; bool retryable = 4; string error_code = 5; }
+message ReportEmbeddingFailureResponse { bool recorded = 1; bool dead_lettered = 2; int32 attempt_count = 3; string message = 4; udb.core.common.v1.ApiError error = 5; }
+
+message IngestDocumentRequest {
+  string tenant_id = 1;
+  string external_id = 2;
+  string title = 3;
+  string raw_text = 4;
+  string storage_object_ref = 5;
+  string content_type = 6;
+  string doc_version = 7;
+  string model_id = 8;
+  string metadata_json = 9;
+}
+message IngestDocumentResponse { string document_id = 1; string job_id = 2; bool accepted = 3; string message = 4; udb.core.common.v1.ApiError error = 5; string source_name = 6; }
+message IngestDocumentBatchRequest { string tenant_id = 1; repeated IngestDocumentRequest documents = 2; }
+message IngestDocumentBatchResponse { repeated IngestDocumentResponse documents = 1; int32 accepted = 2; int32 failed = 3; string message = 4; udb.core.common.v1.ApiError error = 5; }
+
+message ReportParsedDocumentRequest { string tenant_id = 1; string document_id = 2; string job_id = 3; string text = 4; string content_hash = 5; }
+message ReportParsedDocumentResponse { bool accepted = 1; int32 chunks_emitted = 2; string message = 3; udb.core.common.v1.ApiError error = 4; }
+
+message ReportRetrievalEvaluationRequest {
+  string tenant_id = 1;
+  string evaluation_id = 2;
+  double context_relevance = 3;
+  double groundedness = 4;
+  double answer_relevance = 5;
+  string evaluator_model = 6;
+  string error = 7;
+}
+message ReportRetrievalEvaluationResponse { bool accepted = 1; string message = 2; udb.core.common.v1.ApiError error = 3; }

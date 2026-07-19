@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package udb.core.embedding.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Embedding.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/embedding/entity/v1;embeddingv1";
+option java_package = "com.udb.core.embedding.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Embedding\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Embedding\\Entity\\V1";
+
+message EmbeddingJob {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "embedding_jobs" schema_name: "udb_embedding" migration_order: 3 is_table: true
+    comment: "Durable embedding backfill and document-ingestion job state"
+    audit_fields: true enable_rls: true
+    rls_policies: { policy_name: "tenant_isolation" using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text)" permissive: true }
+    indexes: { index_name: "idx_embedding_jobs_tenant_status" index_type: "BTREE" columns: "tenant_id" columns: "status" columns: "created_at" }
+    cdc_topic: "udb.embedding.embedding_jobs.cdc" required_scope: "embedding:jobs:read"
+  };
+  option (udb.core.common.v1.db_table_security) = { tenant_isolation_mode: "tenant" tenant_column: "tenant_id" rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')" retention_class: "embedding.operational" retention_days: 365 audit_mode: AUDIT_MODE_MUTATION encryption_profile: "tenant" pii_profile: "standard" export_eligible: false data_residency_policy_ref: "tenant.data_residency" };
+
+  string job_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "job_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(64)" not_null: true }];
+  string project_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "project_id" sql_type: "VARCHAR(120)" not_null: true }];
+  string source_name = 4 [(udb.core.common.v1.pg_column) = { column_name: "source_name" sql_type: "VARCHAR(255)" }];
+  string document_id = 5 [(udb.core.common.v1.pg_column) = { column_name: "document_id" sql_type: "VARCHAR(255)" }];
+  string job_type = 6 [(udb.core.common.v1.pg_column) = { column_name: "job_type" sql_type: "VARCHAR(32)" not_null: true }];
+  string mode = 7 [(udb.core.common.v1.pg_column) = { column_name: "mode" sql_type: "VARCHAR(20)" not_null: true default_value: "'INCREMENTAL'" }];
+  string status = 8 [(udb.core.common.v1.pg_column) = { column_name: "status" sql_type: "VARCHAR(20)" not_null: true default_value: "'PENDING'" }];
+  int64 rows_enumerated = 9 [(udb.core.common.v1.pg_column) = { column_name: "rows_enumerated" sql_type: "BIGINT" not_null: true default_value: "0" }];
+  int64 chunks_emitted = 10 [(udb.core.common.v1.pg_column) = { column_name: "chunks_emitted" sql_type: "BIGINT" not_null: true default_value: "0" }];
+  int64 vectors_stored = 11 [(udb.core.common.v1.pg_column) = { column_name: "vectors_stored" sql_type: "BIGINT" not_null: true default_value: "0" }];
+  int64 failed = 12 [(udb.core.common.v1.pg_column) = { column_name: "failed" sql_type: "BIGINT" not_null: true default_value: "0" }];
+  string error = 13 [(udb.core.common.v1.pg_column) = { column_name: "error" sql_type: "TEXT" }];
+  string metadata_json = 14 [(udb.core.common.v1.pg_column) = { column_name: "metadata_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'{}'::jsonb" }];
+  google.protobuf.Timestamp created_at = 15 [(udb.core.common.v1.pg_column) = { column_name: "created_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true exclude_from_update: true }];
+  google.protobuf.Timestamp started_at = 16 [(udb.core.common.v1.pg_column) = { column_name: "started_at" sql_type: "TIMESTAMPTZ" }];
+  google.protobuf.Timestamp finished_at = 17 [(udb.core.common.v1.pg_column) = { column_name: "finished_at" sql_type: "TIMESTAMPTZ" }];
+  google.protobuf.Timestamp updated_at = 18 [(udb.core.common.v1.pg_column) = { column_name: "updated_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" }];
+}

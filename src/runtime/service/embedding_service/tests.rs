@@ -159,6 +159,7 @@ async fn report_embedding_rejects_cross_tenant_body() {
         vector: vec![0.1, 0.2, 0.3],
         model: "m".to_string(),
         dims: 3,
+        ..Default::default()
     });
     request
         .metadata_mut()
@@ -220,6 +221,7 @@ async fn report_embedding_missing_identity_carries_field_violations() {
         vector: vec![0.1, 0.2],
         model: "m".to_string(),
         dims: 2,
+        ..Default::default()
     });
     request
         .metadata_mut()
@@ -249,6 +251,7 @@ async fn retrieve_missing_query_vector_carries_field_violation() {
         top_k: 10,
         filter_json: String::new(),
         score_threshold: 0.0,
+        ..Default::default()
     });
     request
         .metadata_mut()
@@ -445,6 +448,74 @@ fn chunk_point_id_round_trips_and_is_backward_compatible() {
     assert_eq!(parse_chunk_point_id("a#chunk:b"), ("a#chunk:b", 0));
     // The LAST sentinel wins, so a parent that legitimately contains one survives.
     assert_eq!(parse_chunk_point_id("a#chunk:x#chunk:2"), ("a#chunk:x", 2));
+}
+
+#[test]
+fn chunk_hash_and_work_identity_are_stable() {
+    use super::chunking::{chunk_content_hash, deterministic_work_item_id};
+    let first = chunk_content_hash("alpha  beta\n gamma");
+    let second = chunk_content_hash("alpha beta gamma");
+    assert_eq!(
+        first, second,
+        "normalized whitespace must not trigger re-embedding"
+    );
+    assert_eq!(
+        deterministic_work_item_id("t", "s", "p", 2, "v1", &first),
+        deterministic_work_item_id("t", "s", "p", 2, "v1", &second),
+    );
+    assert_ne!(
+        deterministic_work_item_id("t", "s", "p", 2, "v1", &first),
+        deterministic_work_item_id("t", "s", "p", 3, "v1", &first),
+    );
+}
+
+#[test]
+fn token_chunks_preserve_parent_boundaries_and_model_limit() {
+    use super::chunking::chunk_text_tokens;
+    let text = "One sentence ends here. Two sentence continues with detail.\n\n# Heading\nThree block values finish.";
+    let chunks = chunk_text_tokens(text, 6, 1, 16, 8);
+    assert!(chunks.len() >= 2);
+    for chunk in &chunks {
+        assert!(chunk.token_count <= 6);
+        assert!(chunk.char_start < chunk.char_end);
+        assert!(chunk.token_start < text.split_whitespace().count());
+        let rebuilt = text
+            .chars()
+            .skip(chunk.char_start)
+            .take(chunk.char_end - chunk.char_start)
+            .collect::<String>();
+        assert_eq!(rebuilt, chunk.text);
+    }
+}
+
+#[test]
+fn mmr_prefers_relevant_diversity_over_duplicate_hits() {
+    use super::retrieval::mmr_select;
+    use crate::proto::VectorPoint;
+    let point = |id: &str, score: f32, vector: Vec<f32>| VectorPoint {
+        id: id.to_string(),
+        score,
+        payload: None,
+        vector,
+        vector_name: String::new(),
+    };
+    let selected = mmr_select(
+        vec![
+            point("best", 1.0, vec![1.0, 0.0]),
+            point("duplicate", 0.99, vec![0.999, 0.001]),
+            point("diverse", 0.7, vec![0.0, 1.0]),
+        ],
+        &[1.0, 0.0],
+        2,
+        0.5,
+    );
+    assert_eq!(
+        selected
+            .iter()
+            .map(|point| point.id.as_str())
+            .collect::<Vec<_>>(),
+        ["best", "diverse"]
+    );
 }
 
 /// `chunk_text` splits over-long text into word-boundary-aware overlapping
@@ -776,6 +847,7 @@ async fn report_embedding_dims_mismatch_carries_field_violation() {
         vector: vec![0.1, 0.2, 0.3],
         model: "m".to_string(),
         dims: 5,
+        ..Default::default()
     });
     request
         .metadata_mut()

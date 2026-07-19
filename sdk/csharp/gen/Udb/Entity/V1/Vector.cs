@@ -26,49 +26,73 @@ namespace Udb.Entity.V1 {
           string.Concat(
             "Chp1ZGIvZW50aXR5L3YxL3ZlY3Rvci5wcm90bxINdWRiLmVudGl0eS52MRoc",
             "Z29vZ2xlL3Byb3RvYnVmL3N0cnVjdC5wcm90bxobdWRiL2VudGl0eS92MS9j",
-            "b250ZXh0LnByb3RvIpkCChNWZWN0b3JTZWFyY2hSZXF1ZXN0EjcKB2NvbnRl",
+            "b250ZXh0LnByb3RvIo4DChNWZWN0b3JTZWFyY2hSZXF1ZXN0EjcKB2NvbnRl",
             "eHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Ugdjb250",
             "ZXh0Eh4KCmNvbGxlY3Rpb24YAiABKAlSCmNvbGxlY3Rpb24SFgoGdmVjdG9y",
             "GAMgAygCUgZ2ZWN0b3ISLwoGZmlsdGVyGAQgASgLMhcuZ29vZ2xlLnByb3Rv",
             "YnVmLlN0cnVjdFIGZmlsdGVyEhQKBWxpbWl0GAUgASgFUgVsaW1pdBInCg9z",
             "Y29yZV90aHJlc2hvbGQYBiABKAJSDnNjb3JlVGhyZXNob2xkEiEKDHdpdGhf",
-            "cGF5bG9hZBgHIAEoCFILd2l0aFBheWxvYWQivAIKGVZlY3Rvckh5YnJpZFNl",
-            "YXJjaFJlcXVlc3QSNwoHY29udGV4dBgBIAEoCzIdLnVkYi5lbnRpdHkudjEu",
-            "UmVxdWVzdENvbnRleHRSB2NvbnRleHQSHgoKY29sbGVjdGlvbhgCIAEoCVIK",
-            "Y29sbGVjdGlvbhIWCgZ2ZWN0b3IYAyADKAJSBnZlY3RvchIdCgp0ZXh0X3F1",
-            "ZXJ5GAQgASgJUgl0ZXh0UXVlcnkSLwoGZmlsdGVyGAUgASgLMhcuZ29vZ2xl",
-            "LnByb3RvYnVmLlN0cnVjdFIGZmlsdGVyEhQKBWxpbWl0GAYgASgFUgVsaW1p",
-            "dBIlCg5mdXNpb25fd2VpZ2h0cxgHIAMoAlINZnVzaW9uV2VpZ2h0cxIhCgx3",
-            "aXRoX3BheWxvYWQYCCABKAhSC3dpdGhQYXlsb2FkInAKE1ZlY3RvclBvaW50",
-            "TXV0YXRpb24SDgoCaWQYASABKAlSAmlkEhYKBnZlY3RvchgCIAMoAlIGdmVj",
-            "dG9yEjEKB3BheWxvYWQYAyABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0",
-            "UgdwYXlsb2FkItMBChNWZWN0b3JVcHNlcnRSZXF1ZXN0EjcKB2NvbnRleHQY",
-            "ASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Ugdjb250ZXh0",
-            "Eh4KCmNvbGxlY3Rpb24YAiABKAlSCmNvbGxlY3Rpb24SOgoGcG9pbnRzGAMg",
-            "AygLMiIudWRiLmVudGl0eS52MS5WZWN0b3JQb2ludE11dGF0aW9uUgZwb2lu",
-            "dHMSJwoPaWRlbXBvdGVuY3lfa2V5GAQgASgJUg5pZGVtcG90ZW5jeUtleSJm",
-            "CgtWZWN0b3JQb2ludBIOCgJpZBgBIAEoCVICaWQSFAoFc2NvcmUYAiABKAJS",
-            "BXNjb3JlEjEKB3BheWxvYWQYAyABKAsyFy5nb29nbGUucHJvdG9idWYuU3Ry",
-            "dWN0UgdwYXlsb2FkIj8KCVZlY3RvclNldBIyCgZwb2ludHMYASADKAsyGi51",
-            "ZGIuZW50aXR5LnYxLlZlY3RvclBvaW50UgZwb2ludHNCsQEKEWNvbS51ZGIu",
-            "ZW50aXR5LnYxQgtWZWN0b3JQcm90b1ABWjlnaXRodWIuY29tL2ZhaGFyYTAy",
-            "L3VkYi9zZGsvZ28vZ2VuL3VkYi9lbnRpdHkvdjE7ZW50aXR5djGiAgNVRViq",
-            "Ag1VZGIuRW50aXR5LlYxygINVWRiXEVudGl0eVxWMeICGVVkYlxHUEJNZXRh",
-            "ZGF0YVxFbnRpdHlcVjHqAg9VZGI6OkVudGl0eTo6VjFiBnByb3RvMw=="));
+            "cGF5bG9hZBgHIAEoCFILd2l0aFBheWxvYWQSHwoLd2l0aF92ZWN0b3IYCCAB",
+            "KAhSCndpdGhWZWN0b3ISHwoLdmVjdG9yX25hbWUYCSABKAlSCnZlY3Rvck5h",
+            "bWUSMQoUcXVhbnRpemF0aW9uX3Jlc2NvcmUYCiABKAhSE3F1YW50aXphdGlv",
+            "blJlc2NvcmUipgQKGVZlY3Rvckh5YnJpZFNlYXJjaFJlcXVlc3QSNwoHY29u",
+            "dGV4dBgBIAEoCzIdLnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHRSB2Nv",
+            "bnRleHQSHgoKY29sbGVjdGlvbhgCIAEoCVIKY29sbGVjdGlvbhIWCgZ2ZWN0",
+            "b3IYAyADKAJSBnZlY3RvchIdCgp0ZXh0X3F1ZXJ5GAQgASgJUgl0ZXh0UXVl",
+            "cnkSLwoGZmlsdGVyGAUgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdFIG",
+            "ZmlsdGVyEhQKBWxpbWl0GAYgASgFUgVsaW1pdBIlCg5mdXNpb25fd2VpZ2h0",
+            "cxgHIAMoAlINZnVzaW9uV2VpZ2h0cxIhCgx3aXRoX3BheWxvYWQYCCABKAhS",
+            "C3dpdGhQYXlsb2FkEh8KC3dpdGhfdmVjdG9yGAkgASgIUgp3aXRoVmVjdG9y",
+            "Eh8KC3ZlY3Rvcl9uYW1lGAogASgJUgp2ZWN0b3JOYW1lEkwKD2Z1c2lvbl9z",
+            "dHJhdGVneRgLIAEoDjIjLnVkYi5lbnRpdHkudjEuVmVjdG9yRnVzaW9uU3Ry",
+            "YXRlZ3lSDmZ1c2lvblN0cmF0ZWd5EiUKDnByZWZldGNoX2xpbWl0GAwgASgF",
+            "Ug1wcmVmZXRjaExpbWl0EjEKFHF1YW50aXphdGlvbl9yZXNjb3JlGA0gASgI",
+            "UhNxdWFudGl6YXRpb25SZXNjb3JlIpEBChNWZWN0b3JQb2ludE11dGF0aW9u",
+            "Eg4KAmlkGAEgASgJUgJpZBIWCgZ2ZWN0b3IYAiADKAJSBnZlY3RvchIxCgdw",
+            "YXlsb2FkGAMgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdFIHcGF5bG9h",
+            "ZBIfCgt2ZWN0b3JfbmFtZRgEIAEoCVIKdmVjdG9yTmFtZSLTAQoTVmVjdG9y",
+            "VXBzZXJ0UmVxdWVzdBI3Cgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52",
+            "MS5SZXF1ZXN0Q29udGV4dFIHY29udGV4dBIeCgpjb2xsZWN0aW9uGAIgASgJ",
+            "Ugpjb2xsZWN0aW9uEjoKBnBvaW50cxgDIAMoCzIiLnVkYi5lbnRpdHkudjEu",
+            "VmVjdG9yUG9pbnRNdXRhdGlvblIGcG9pbnRzEicKD2lkZW1wb3RlbmN5X2tl",
+            "eRgEIAEoCVIOaWRlbXBvdGVuY3lLZXkinwEKC1ZlY3RvclBvaW50Eg4KAmlk",
+            "GAEgASgJUgJpZBIUCgVzY29yZRgCIAEoAlIFc2NvcmUSMQoHcGF5bG9hZBgD",
+            "IAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3RSB3BheWxvYWQSFgoGdmVj",
+            "dG9yGAQgAygCUgZ2ZWN0b3ISHwoLdmVjdG9yX25hbWUYBSABKAlSCnZlY3Rv",
+            "ck5hbWUiPwoJVmVjdG9yU2V0EjIKBnBvaW50cxgBIAMoCzIaLnVkYi5lbnRp",
+            "dHkudjEuVmVjdG9yUG9pbnRSBnBvaW50cyqkAQoUVmVjdG9yRnVzaW9uU3Ry",
+            "YXRlZ3kSJgoiVkVDVE9SX0ZVU0lPTl9TVFJBVEVHWV9VTlNQRUNJRklFRBAA",
+            "Eh4KGlZFQ1RPUl9GVVNJT05fU1RSQVRFR1lfUlJGEAESIwofVkVDVE9SX0ZV",
+            "U0lPTl9TVFJBVEVHWV9XRUlHSFRFRBACEh8KG1ZFQ1RPUl9GVVNJT05fU1RS",
+            "QVRFR1lfREJTRhADQrEBChFjb20udWRiLmVudGl0eS52MUILVmVjdG9yUHJv",
+            "dG9QAVo5Z2l0aHViLmNvbS9mYWhhcmEwMi91ZGIvc2RrL2dvL2dlbi91ZGIv",
+            "ZW50aXR5L3YxO2VudGl0eXYxogIDVUVYqgINVWRiLkVudGl0eS5WMcoCDVVk",
+            "YlxFbnRpdHlcVjHiAhlVZGJcR1BCTWV0YWRhdGFcRW50aXR5XFYx6gIPVWRi",
+            "OjpFbnRpdHk6OlYxYgZwcm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.StructReflection.Descriptor, global::Udb.Entity.V1.ContextReflection.Descriptor, },
-          new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.VectorSearchRequest), global::Udb.Entity.V1.VectorSearchRequest.Parser, new[]{ "Context", "Collection", "Vector", "Filter", "Limit", "ScoreThreshold", "WithPayload" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.VectorHybridSearchRequest), global::Udb.Entity.V1.VectorHybridSearchRequest.Parser, new[]{ "Context", "Collection", "Vector", "TextQuery", "Filter", "Limit", "FusionWeights", "WithPayload" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.VectorPointMutation), global::Udb.Entity.V1.VectorPointMutation.Parser, new[]{ "Id", "Vector", "Payload" }, null, null, null, null),
+          new pbr::GeneratedClrTypeInfo(new[] {typeof(global::Udb.Entity.V1.VectorFusionStrategy), }, null, new pbr::GeneratedClrTypeInfo[] {
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.VectorSearchRequest), global::Udb.Entity.V1.VectorSearchRequest.Parser, new[]{ "Context", "Collection", "Vector", "Filter", "Limit", "ScoreThreshold", "WithPayload", "WithVector", "VectorName", "QuantizationRescore" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.VectorHybridSearchRequest), global::Udb.Entity.V1.VectorHybridSearchRequest.Parser, new[]{ "Context", "Collection", "Vector", "TextQuery", "Filter", "Limit", "FusionWeights", "WithPayload", "WithVector", "VectorName", "FusionStrategy", "PrefetchLimit", "QuantizationRescore" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.VectorPointMutation), global::Udb.Entity.V1.VectorPointMutation.Parser, new[]{ "Id", "Vector", "Payload", "VectorName" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.VectorUpsertRequest), global::Udb.Entity.V1.VectorUpsertRequest.Parser, new[]{ "Context", "Collection", "Points", "IdempotencyKey" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.VectorPoint), global::Udb.Entity.V1.VectorPoint.Parser, new[]{ "Id", "Score", "Payload" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.VectorPoint), global::Udb.Entity.V1.VectorPoint.Parser, new[]{ "Id", "Score", "Payload", "Vector", "VectorName" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.VectorSet), global::Udb.Entity.V1.VectorSet.Parser, new[]{ "Points" }, null, null, null, null)
           }));
     }
     #endregion
 
   }
+  #region Enums
+  public enum VectorFusionStrategy {
+    [pbr::OriginalName("VECTOR_FUSION_STRATEGY_UNSPECIFIED")] Unspecified = 0,
+    [pbr::OriginalName("VECTOR_FUSION_STRATEGY_RRF")] Rrf = 1,
+    [pbr::OriginalName("VECTOR_FUSION_STRATEGY_WEIGHTED")] Weighted = 2,
+    [pbr::OriginalName("VECTOR_FUSION_STRATEGY_DBSF")] Dbsf = 3,
+  }
+
+  #endregion
+
   #region Messages
   [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
   public sealed partial class VectorSearchRequest : pb::IMessage<VectorSearchRequest>
@@ -112,6 +136,9 @@ namespace Udb.Entity.V1 {
       limit_ = other.limit_;
       scoreThreshold_ = other.scoreThreshold_;
       withPayload_ = other.withPayload_;
+      withVector_ = other.withVector_;
+      vectorName_ = other.vectorName_;
+      quantizationRescore_ = other.quantizationRescore_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -204,6 +231,42 @@ namespace Udb.Entity.V1 {
       }
     }
 
+    /// <summary>Field number for the "with_vector" field.</summary>
+    public const int WithVectorFieldNumber = 8;
+    private bool withVector_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool WithVector {
+      get { return withVector_; }
+      set {
+        withVector_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "vector_name" field.</summary>
+    public const int VectorNameFieldNumber = 9;
+    private string vectorName_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string VectorName {
+      get { return vectorName_; }
+      set {
+        vectorName_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "quantization_rescore" field.</summary>
+    public const int QuantizationRescoreFieldNumber = 10;
+    private bool quantizationRescore_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool QuantizationRescore {
+      get { return quantizationRescore_; }
+      set {
+        quantizationRescore_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -226,6 +289,9 @@ namespace Udb.Entity.V1 {
       if (Limit != other.Limit) return false;
       if (!pbc::ProtobufEqualityComparers.BitwiseSingleEqualityComparer.Equals(ScoreThreshold, other.ScoreThreshold)) return false;
       if (WithPayload != other.WithPayload) return false;
+      if (WithVector != other.WithVector) return false;
+      if (VectorName != other.VectorName) return false;
+      if (QuantizationRescore != other.QuantizationRescore) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -240,6 +306,9 @@ namespace Udb.Entity.V1 {
       if (Limit != 0) hash ^= Limit.GetHashCode();
       if (ScoreThreshold != 0F) hash ^= pbc::ProtobufEqualityComparers.BitwiseSingleEqualityComparer.GetHashCode(ScoreThreshold);
       if (WithPayload != false) hash ^= WithPayload.GetHashCode();
+      if (WithVector != false) hash ^= WithVector.GetHashCode();
+      if (VectorName.Length != 0) hash ^= VectorName.GetHashCode();
+      if (QuantizationRescore != false) hash ^= QuantizationRescore.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -283,6 +352,18 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(56);
         output.WriteBool(WithPayload);
       }
+      if (WithVector != false) {
+        output.WriteRawTag(64);
+        output.WriteBool(WithVector);
+      }
+      if (VectorName.Length != 0) {
+        output.WriteRawTag(74);
+        output.WriteString(VectorName);
+      }
+      if (QuantizationRescore != false) {
+        output.WriteRawTag(80);
+        output.WriteBool(QuantizationRescore);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -318,6 +399,18 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(56);
         output.WriteBool(WithPayload);
       }
+      if (WithVector != false) {
+        output.WriteRawTag(64);
+        output.WriteBool(WithVector);
+      }
+      if (VectorName.Length != 0) {
+        output.WriteRawTag(74);
+        output.WriteString(VectorName);
+      }
+      if (QuantizationRescore != false) {
+        output.WriteRawTag(80);
+        output.WriteBool(QuantizationRescore);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -345,6 +438,15 @@ namespace Udb.Entity.V1 {
         size += 1 + 4;
       }
       if (WithPayload != false) {
+        size += 1 + 1;
+      }
+      if (WithVector != false) {
+        size += 1 + 1;
+      }
+      if (VectorName.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(VectorName);
+      }
+      if (QuantizationRescore != false) {
         size += 1 + 1;
       }
       if (_unknownFields != null) {
@@ -383,6 +485,15 @@ namespace Udb.Entity.V1 {
       }
       if (other.WithPayload != false) {
         WithPayload = other.WithPayload;
+      }
+      if (other.WithVector != false) {
+        WithVector = other.WithVector;
+      }
+      if (other.VectorName.Length != 0) {
+        VectorName = other.VectorName;
+      }
+      if (other.QuantizationRescore != false) {
+        QuantizationRescore = other.QuantizationRescore;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -436,6 +547,18 @@ namespace Udb.Entity.V1 {
           }
           case 56: {
             WithPayload = input.ReadBool();
+            break;
+          }
+          case 64: {
+            WithVector = input.ReadBool();
+            break;
+          }
+          case 74: {
+            VectorName = input.ReadString();
+            break;
+          }
+          case 80: {
+            QuantizationRescore = input.ReadBool();
             break;
           }
         }
@@ -492,6 +615,18 @@ namespace Udb.Entity.V1 {
             WithPayload = input.ReadBool();
             break;
           }
+          case 64: {
+            WithVector = input.ReadBool();
+            break;
+          }
+          case 74: {
+            VectorName = input.ReadString();
+            break;
+          }
+          case 80: {
+            QuantizationRescore = input.ReadBool();
+            break;
+          }
         }
       }
     }
@@ -542,6 +677,11 @@ namespace Udb.Entity.V1 {
       limit_ = other.limit_;
       fusionWeights_ = other.fusionWeights_.Clone();
       withPayload_ = other.withPayload_;
+      withVector_ = other.withVector_;
+      vectorName_ = other.vectorName_;
+      fusionStrategy_ = other.fusionStrategy_;
+      prefetchLimit_ = other.prefetchLimit_;
+      quantizationRescore_ = other.quantizationRescore_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -645,6 +785,66 @@ namespace Udb.Entity.V1 {
       }
     }
 
+    /// <summary>Field number for the "with_vector" field.</summary>
+    public const int WithVectorFieldNumber = 9;
+    private bool withVector_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool WithVector {
+      get { return withVector_; }
+      set {
+        withVector_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "vector_name" field.</summary>
+    public const int VectorNameFieldNumber = 10;
+    private string vectorName_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string VectorName {
+      get { return vectorName_; }
+      set {
+        vectorName_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "fusion_strategy" field.</summary>
+    public const int FusionStrategyFieldNumber = 11;
+    private global::Udb.Entity.V1.VectorFusionStrategy fusionStrategy_ = global::Udb.Entity.V1.VectorFusionStrategy.Unspecified;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Udb.Entity.V1.VectorFusionStrategy FusionStrategy {
+      get { return fusionStrategy_; }
+      set {
+        fusionStrategy_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "prefetch_limit" field.</summary>
+    public const int PrefetchLimitFieldNumber = 12;
+    private int prefetchLimit_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int PrefetchLimit {
+      get { return prefetchLimit_; }
+      set {
+        prefetchLimit_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "quantization_rescore" field.</summary>
+    public const int QuantizationRescoreFieldNumber = 13;
+    private bool quantizationRescore_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool QuantizationRescore {
+      get { return quantizationRescore_; }
+      set {
+        quantizationRescore_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -668,6 +868,11 @@ namespace Udb.Entity.V1 {
       if (Limit != other.Limit) return false;
       if(!fusionWeights_.Equals(other.fusionWeights_)) return false;
       if (WithPayload != other.WithPayload) return false;
+      if (WithVector != other.WithVector) return false;
+      if (VectorName != other.VectorName) return false;
+      if (FusionStrategy != other.FusionStrategy) return false;
+      if (PrefetchLimit != other.PrefetchLimit) return false;
+      if (QuantizationRescore != other.QuantizationRescore) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -683,6 +888,11 @@ namespace Udb.Entity.V1 {
       if (Limit != 0) hash ^= Limit.GetHashCode();
       hash ^= fusionWeights_.GetHashCode();
       if (WithPayload != false) hash ^= WithPayload.GetHashCode();
+      if (WithVector != false) hash ^= WithVector.GetHashCode();
+      if (VectorName.Length != 0) hash ^= VectorName.GetHashCode();
+      if (FusionStrategy != global::Udb.Entity.V1.VectorFusionStrategy.Unspecified) hash ^= FusionStrategy.GetHashCode();
+      if (PrefetchLimit != 0) hash ^= PrefetchLimit.GetHashCode();
+      if (QuantizationRescore != false) hash ^= QuantizationRescore.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -727,6 +937,26 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(64);
         output.WriteBool(WithPayload);
       }
+      if (WithVector != false) {
+        output.WriteRawTag(72);
+        output.WriteBool(WithVector);
+      }
+      if (VectorName.Length != 0) {
+        output.WriteRawTag(82);
+        output.WriteString(VectorName);
+      }
+      if (FusionStrategy != global::Udb.Entity.V1.VectorFusionStrategy.Unspecified) {
+        output.WriteRawTag(88);
+        output.WriteEnum((int) FusionStrategy);
+      }
+      if (PrefetchLimit != 0) {
+        output.WriteRawTag(96);
+        output.WriteInt32(PrefetchLimit);
+      }
+      if (QuantizationRescore != false) {
+        output.WriteRawTag(104);
+        output.WriteBool(QuantizationRescore);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -763,6 +993,26 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(64);
         output.WriteBool(WithPayload);
       }
+      if (WithVector != false) {
+        output.WriteRawTag(72);
+        output.WriteBool(WithVector);
+      }
+      if (VectorName.Length != 0) {
+        output.WriteRawTag(82);
+        output.WriteString(VectorName);
+      }
+      if (FusionStrategy != global::Udb.Entity.V1.VectorFusionStrategy.Unspecified) {
+        output.WriteRawTag(88);
+        output.WriteEnum((int) FusionStrategy);
+      }
+      if (PrefetchLimit != 0) {
+        output.WriteRawTag(96);
+        output.WriteInt32(PrefetchLimit);
+      }
+      if (QuantizationRescore != false) {
+        output.WriteRawTag(104);
+        output.WriteBool(QuantizationRescore);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -791,6 +1041,21 @@ namespace Udb.Entity.V1 {
       }
       size += fusionWeights_.CalculateSize(_repeated_fusionWeights_codec);
       if (WithPayload != false) {
+        size += 1 + 1;
+      }
+      if (WithVector != false) {
+        size += 1 + 1;
+      }
+      if (VectorName.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(VectorName);
+      }
+      if (FusionStrategy != global::Udb.Entity.V1.VectorFusionStrategy.Unspecified) {
+        size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) FusionStrategy);
+      }
+      if (PrefetchLimit != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(PrefetchLimit);
+      }
+      if (QuantizationRescore != false) {
         size += 1 + 1;
       }
       if (_unknownFields != null) {
@@ -830,6 +1095,21 @@ namespace Udb.Entity.V1 {
       fusionWeights_.Add(other.fusionWeights_);
       if (other.WithPayload != false) {
         WithPayload = other.WithPayload;
+      }
+      if (other.WithVector != false) {
+        WithVector = other.WithVector;
+      }
+      if (other.VectorName.Length != 0) {
+        VectorName = other.VectorName;
+      }
+      if (other.FusionStrategy != global::Udb.Entity.V1.VectorFusionStrategy.Unspecified) {
+        FusionStrategy = other.FusionStrategy;
+      }
+      if (other.PrefetchLimit != 0) {
+        PrefetchLimit = other.PrefetchLimit;
+      }
+      if (other.QuantizationRescore != false) {
+        QuantizationRescore = other.QuantizationRescore;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -888,6 +1168,26 @@ namespace Udb.Entity.V1 {
           }
           case 64: {
             WithPayload = input.ReadBool();
+            break;
+          }
+          case 72: {
+            WithVector = input.ReadBool();
+            break;
+          }
+          case 82: {
+            VectorName = input.ReadString();
+            break;
+          }
+          case 88: {
+            FusionStrategy = (global::Udb.Entity.V1.VectorFusionStrategy) input.ReadEnum();
+            break;
+          }
+          case 96: {
+            PrefetchLimit = input.ReadInt32();
+            break;
+          }
+          case 104: {
+            QuantizationRescore = input.ReadBool();
             break;
           }
         }
@@ -949,6 +1249,26 @@ namespace Udb.Entity.V1 {
             WithPayload = input.ReadBool();
             break;
           }
+          case 72: {
+            WithVector = input.ReadBool();
+            break;
+          }
+          case 82: {
+            VectorName = input.ReadString();
+            break;
+          }
+          case 88: {
+            FusionStrategy = (global::Udb.Entity.V1.VectorFusionStrategy) input.ReadEnum();
+            break;
+          }
+          case 96: {
+            PrefetchLimit = input.ReadInt32();
+            break;
+          }
+          case 104: {
+            QuantizationRescore = input.ReadBool();
+            break;
+          }
         }
       }
     }
@@ -994,6 +1314,7 @@ namespace Udb.Entity.V1 {
       id_ = other.id_;
       vector_ = other.vector_.Clone();
       payload_ = other.payload_ != null ? other.payload_.Clone() : null;
+      vectorName_ = other.vectorName_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -1038,6 +1359,18 @@ namespace Udb.Entity.V1 {
       }
     }
 
+    /// <summary>Field number for the "vector_name" field.</summary>
+    public const int VectorNameFieldNumber = 4;
+    private string vectorName_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string VectorName {
+      get { return vectorName_; }
+      set {
+        vectorName_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -1056,6 +1389,7 @@ namespace Udb.Entity.V1 {
       if (Id != other.Id) return false;
       if(!vector_.Equals(other.vector_)) return false;
       if (!object.Equals(Payload, other.Payload)) return false;
+      if (VectorName != other.VectorName) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -1066,6 +1400,7 @@ namespace Udb.Entity.V1 {
       if (Id.Length != 0) hash ^= Id.GetHashCode();
       hash ^= vector_.GetHashCode();
       if (payload_ != null) hash ^= Payload.GetHashCode();
+      if (VectorName.Length != 0) hash ^= VectorName.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -1093,6 +1428,10 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(26);
         output.WriteMessage(Payload);
       }
+      if (VectorName.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(VectorName);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -1112,6 +1451,10 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(26);
         output.WriteMessage(Payload);
       }
+      if (VectorName.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(VectorName);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -1128,6 +1471,9 @@ namespace Udb.Entity.V1 {
       size += vector_.CalculateSize(_repeated_vector_codec);
       if (payload_ != null) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(Payload);
+      }
+      if (VectorName.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(VectorName);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -1150,6 +1496,9 @@ namespace Udb.Entity.V1 {
           Payload = new global::Google.Protobuf.WellKnownTypes.Struct();
         }
         Payload.MergeFrom(other.Payload);
+      }
+      if (other.VectorName.Length != 0) {
+        VectorName = other.VectorName;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -1186,6 +1535,10 @@ namespace Udb.Entity.V1 {
             input.ReadMessage(Payload);
             break;
           }
+          case 34: {
+            VectorName = input.ReadString();
+            break;
+          }
         }
       }
     #endif
@@ -1219,6 +1572,10 @@ namespace Udb.Entity.V1 {
               Payload = new global::Google.Protobuf.WellKnownTypes.Struct();
             }
             input.ReadMessage(Payload);
+            break;
+          }
+          case 34: {
+            VectorName = input.ReadString();
             break;
           }
         }
@@ -1573,6 +1930,8 @@ namespace Udb.Entity.V1 {
       id_ = other.id_;
       score_ = other.score_;
       payload_ = other.payload_ != null ? other.payload_.Clone() : null;
+      vector_ = other.vector_.Clone();
+      vectorName_ = other.vectorName_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -1618,6 +1977,29 @@ namespace Udb.Entity.V1 {
       }
     }
 
+    /// <summary>Field number for the "vector" field.</summary>
+    public const int VectorFieldNumber = 4;
+    private static readonly pb::FieldCodec<float> _repeated_vector_codec
+        = pb::FieldCodec.ForFloat(34);
+    private readonly pbc::RepeatedField<float> vector_ = new pbc::RepeatedField<float>();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::RepeatedField<float> Vector {
+      get { return vector_; }
+    }
+
+    /// <summary>Field number for the "vector_name" field.</summary>
+    public const int VectorNameFieldNumber = 5;
+    private string vectorName_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string VectorName {
+      get { return vectorName_; }
+      set {
+        vectorName_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -1636,6 +2018,8 @@ namespace Udb.Entity.V1 {
       if (Id != other.Id) return false;
       if (!pbc::ProtobufEqualityComparers.BitwiseSingleEqualityComparer.Equals(Score, other.Score)) return false;
       if (!object.Equals(Payload, other.Payload)) return false;
+      if(!vector_.Equals(other.vector_)) return false;
+      if (VectorName != other.VectorName) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -1646,6 +2030,8 @@ namespace Udb.Entity.V1 {
       if (Id.Length != 0) hash ^= Id.GetHashCode();
       if (Score != 0F) hash ^= pbc::ProtobufEqualityComparers.BitwiseSingleEqualityComparer.GetHashCode(Score);
       if (payload_ != null) hash ^= Payload.GetHashCode();
+      hash ^= vector_.GetHashCode();
+      if (VectorName.Length != 0) hash ^= VectorName.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -1676,6 +2062,11 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(26);
         output.WriteMessage(Payload);
       }
+      vector_.WriteTo(output, _repeated_vector_codec);
+      if (VectorName.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(VectorName);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -1698,6 +2089,11 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(26);
         output.WriteMessage(Payload);
       }
+      vector_.WriteTo(ref output, _repeated_vector_codec);
+      if (VectorName.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(VectorName);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -1716,6 +2112,10 @@ namespace Udb.Entity.V1 {
       }
       if (payload_ != null) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(Payload);
+      }
+      size += vector_.CalculateSize(_repeated_vector_codec);
+      if (VectorName.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(VectorName);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -1740,6 +2140,10 @@ namespace Udb.Entity.V1 {
           Payload = new global::Google.Protobuf.WellKnownTypes.Struct();
         }
         Payload.MergeFrom(other.Payload);
+      }
+      vector_.Add(other.vector_);
+      if (other.VectorName.Length != 0) {
+        VectorName = other.VectorName;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -1775,6 +2179,15 @@ namespace Udb.Entity.V1 {
             input.ReadMessage(Payload);
             break;
           }
+          case 34:
+          case 37: {
+            vector_.AddEntriesFrom(input, _repeated_vector_codec);
+            break;
+          }
+          case 42: {
+            VectorName = input.ReadString();
+            break;
+          }
         }
       }
     #endif
@@ -1807,6 +2220,15 @@ namespace Udb.Entity.V1 {
               Payload = new global::Google.Protobuf.WellKnownTypes.Struct();
             }
             input.ReadMessage(Payload);
+            break;
+          }
+          case 34:
+          case 37: {
+            vector_.AddEntriesFrom(ref input, _repeated_vector_codec);
+            break;
+          }
+          case 42: {
+            VectorName = input.ReadString();
             break;
           }
         }

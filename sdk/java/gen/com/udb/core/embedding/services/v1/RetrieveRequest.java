@@ -33,6 +33,8 @@ private static final long serialVersionUID = 0L;
     queryText_ = "";
     queryVector_ = emptyFloatList();
     filterJson_ = "";
+    fusion_ = 0;
+    vectorName_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -48,6 +50,7 @@ private static final long serialVersionUID = 0L;
             com.udb.core.embedding.services.v1.RetrieveRequest.class, com.udb.core.embedding.services.v1.RetrieveRequest.Builder.class);
   }
 
+  private int bitField0_;
   public static final int TENANT_ID_FIELD_NUMBER = 1;
   @SuppressWarnings("serial")
   private volatile java.lang.Object tenantId_ = "";
@@ -303,6 +306,159 @@ private static final long serialVersionUID = 0L;
     return scoreThreshold_;
   }
 
+  public static final int INCLUDE_VECTORS_FIELD_NUMBER = 8;
+  private boolean includeVectors_ = false;
+  /**
+   * <code>bool include_vectors = 8 [json_name = "includeVectors"];</code>
+   * @return The includeVectors.
+   */
+  @java.lang.Override
+  public boolean getIncludeVectors() {
+    return includeVectors_;
+  }
+
+  public static final int MMR_FIELD_NUMBER = 9;
+  private com.udb.core.embedding.services.v1.MmrConfig mmr_;
+  /**
+   * <code>.udb.core.embedding.services.v1.MmrConfig mmr = 9 [json_name = "mmr"];</code>
+   * @return Whether the mmr field is set.
+   */
+  @java.lang.Override
+  public boolean hasMmr() {
+    return ((bitField0_ & 0x00000001) != 0);
+  }
+  /**
+   * <code>.udb.core.embedding.services.v1.MmrConfig mmr = 9 [json_name = "mmr"];</code>
+   * @return The mmr.
+   */
+  @java.lang.Override
+  public com.udb.core.embedding.services.v1.MmrConfig getMmr() {
+    return mmr_ == null ? com.udb.core.embedding.services.v1.MmrConfig.getDefaultInstance() : mmr_;
+  }
+  /**
+   * <code>.udb.core.embedding.services.v1.MmrConfig mmr = 9 [json_name = "mmr"];</code>
+   */
+  @java.lang.Override
+  public com.udb.core.embedding.services.v1.MmrConfigOrBuilder getMmrOrBuilder() {
+    return mmr_ == null ? com.udb.core.embedding.services.v1.MmrConfig.getDefaultInstance() : mmr_;
+  }
+
+  public static final int FUSION_FIELD_NUMBER = 10;
+  private int fusion_ = 0;
+  /**
+   * <code>.udb.core.embedding.services.v1.FusionStrategy fusion = 10 [json_name = "fusion"];</code>
+   * @return The enum numeric value on the wire for fusion.
+   */
+  @java.lang.Override public int getFusionValue() {
+    return fusion_;
+  }
+  /**
+   * <code>.udb.core.embedding.services.v1.FusionStrategy fusion = 10 [json_name = "fusion"];</code>
+   * @return The fusion.
+   */
+  @java.lang.Override public com.udb.core.embedding.services.v1.FusionStrategy getFusion() {
+    com.udb.core.embedding.services.v1.FusionStrategy result = com.udb.core.embedding.services.v1.FusionStrategy.forNumber(fusion_);
+    return result == null ? com.udb.core.embedding.services.v1.FusionStrategy.UNRECOGNIZED : result;
+  }
+
+  public static final int PREFETCH_LIMIT_FIELD_NUMBER = 11;
+  private int prefetchLimit_ = 0;
+  /**
+   * <code>int32 prefetch_limit = 11 [json_name = "prefetchLimit"];</code>
+   * @return The prefetchLimit.
+   */
+  @java.lang.Override
+  public int getPrefetchLimit() {
+    return prefetchLimit_;
+  }
+
+  public static final int RERANK_FIELD_NUMBER = 12;
+  private com.udb.core.embedding.services.v1.RerankConfig rerank_;
+  /**
+   * <code>.udb.core.embedding.services.v1.RerankConfig rerank = 12 [json_name = "rerank"];</code>
+   * @return Whether the rerank field is set.
+   */
+  @java.lang.Override
+  public boolean hasRerank() {
+    return ((bitField0_ & 0x00000002) != 0);
+  }
+  /**
+   * <code>.udb.core.embedding.services.v1.RerankConfig rerank = 12 [json_name = "rerank"];</code>
+   * @return The rerank.
+   */
+  @java.lang.Override
+  public com.udb.core.embedding.services.v1.RerankConfig getRerank() {
+    return rerank_ == null ? com.udb.core.embedding.services.v1.RerankConfig.getDefaultInstance() : rerank_;
+  }
+  /**
+   * <code>.udb.core.embedding.services.v1.RerankConfig rerank = 12 [json_name = "rerank"];</code>
+   */
+  @java.lang.Override
+  public com.udb.core.embedding.services.v1.RerankConfigOrBuilder getRerankOrBuilder() {
+    return rerank_ == null ? com.udb.core.embedding.services.v1.RerankConfig.getDefaultInstance() : rerank_;
+  }
+
+  public static final int VECTOR_NAME_FIELD_NUMBER = 13;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object vectorName_ = "";
+  /**
+   * <code>string vector_name = 13 [json_name = "vectorName"];</code>
+   * @return The vectorName.
+   */
+  @java.lang.Override
+  public java.lang.String getVectorName() {
+    java.lang.Object ref = vectorName_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      vectorName_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string vector_name = 13 [json_name = "vectorName"];</code>
+   * @return The bytes for vectorName.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getVectorNameBytes() {
+    java.lang.Object ref = vectorName_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      vectorName_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int PARENT_WINDOW_FIELD_NUMBER = 14;
+  private int parentWindow_ = 0;
+  /**
+   * <code>int32 parent_window = 14 [json_name = "parentWindow"];</code>
+   * @return The parentWindow.
+   */
+  @java.lang.Override
+  public int getParentWindow() {
+    return parentWindow_;
+  }
+
+  public static final int INCLUDE_CITATIONS_FIELD_NUMBER = 15;
+  private boolean includeCitations_ = false;
+  /**
+   * <code>bool include_citations = 15 [json_name = "includeCitations"];</code>
+   * @return The includeCitations.
+   */
+  @java.lang.Override
+  public boolean getIncludeCitations() {
+    return includeCitations_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -342,6 +498,30 @@ private static final long serialVersionUID = 0L;
     }
     if (java.lang.Double.doubleToRawLongBits(scoreThreshold_) != 0) {
       output.writeDouble(7, scoreThreshold_);
+    }
+    if (includeVectors_ != false) {
+      output.writeBool(8, includeVectors_);
+    }
+    if (((bitField0_ & 0x00000001) != 0)) {
+      output.writeMessage(9, getMmr());
+    }
+    if (fusion_ != com.udb.core.embedding.services.v1.FusionStrategy.FUSION_STRATEGY_UNSPECIFIED.getNumber()) {
+      output.writeEnum(10, fusion_);
+    }
+    if (prefetchLimit_ != 0) {
+      output.writeInt32(11, prefetchLimit_);
+    }
+    if (((bitField0_ & 0x00000002) != 0)) {
+      output.writeMessage(12, getRerank());
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(vectorName_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 13, vectorName_);
+    }
+    if (parentWindow_ != 0) {
+      output.writeInt32(14, parentWindow_);
+    }
+    if (includeCitations_ != false) {
+      output.writeBool(15, includeCitations_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -383,6 +563,37 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeDoubleSize(7, scoreThreshold_);
     }
+    if (includeVectors_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(8, includeVectors_);
+    }
+    if (((bitField0_ & 0x00000001) != 0)) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(9, getMmr());
+    }
+    if (fusion_ != com.udb.core.embedding.services.v1.FusionStrategy.FUSION_STRATEGY_UNSPECIFIED.getNumber()) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeEnumSize(10, fusion_);
+    }
+    if (prefetchLimit_ != 0) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeInt32Size(11, prefetchLimit_);
+    }
+    if (((bitField0_ & 0x00000002) != 0)) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(12, getRerank());
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(vectorName_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(13, vectorName_);
+    }
+    if (parentWindow_ != 0) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeInt32Size(14, parentWindow_);
+    }
+    if (includeCitations_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(15, includeCitations_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -413,6 +624,27 @@ private static final long serialVersionUID = 0L;
     if (java.lang.Double.doubleToLongBits(getScoreThreshold())
         != java.lang.Double.doubleToLongBits(
             other.getScoreThreshold())) return false;
+    if (getIncludeVectors()
+        != other.getIncludeVectors()) return false;
+    if (hasMmr() != other.hasMmr()) return false;
+    if (hasMmr()) {
+      if (!getMmr()
+          .equals(other.getMmr())) return false;
+    }
+    if (fusion_ != other.fusion_) return false;
+    if (getPrefetchLimit()
+        != other.getPrefetchLimit()) return false;
+    if (hasRerank() != other.hasRerank()) return false;
+    if (hasRerank()) {
+      if (!getRerank()
+          .equals(other.getRerank())) return false;
+    }
+    if (!getVectorName()
+        .equals(other.getVectorName())) return false;
+    if (getParentWindow()
+        != other.getParentWindow()) return false;
+    if (getIncludeCitations()
+        != other.getIncludeCitations()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -441,6 +673,28 @@ private static final long serialVersionUID = 0L;
     hash = (37 * hash) + SCORE_THRESHOLD_FIELD_NUMBER;
     hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
         java.lang.Double.doubleToLongBits(getScoreThreshold()));
+    hash = (37 * hash) + INCLUDE_VECTORS_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getIncludeVectors());
+    if (hasMmr()) {
+      hash = (37 * hash) + MMR_FIELD_NUMBER;
+      hash = (53 * hash) + getMmr().hashCode();
+    }
+    hash = (37 * hash) + FUSION_FIELD_NUMBER;
+    hash = (53 * hash) + fusion_;
+    hash = (37 * hash) + PREFETCH_LIMIT_FIELD_NUMBER;
+    hash = (53 * hash) + getPrefetchLimit();
+    if (hasRerank()) {
+      hash = (37 * hash) + RERANK_FIELD_NUMBER;
+      hash = (53 * hash) + getRerank().hashCode();
+    }
+    hash = (37 * hash) + VECTOR_NAME_FIELD_NUMBER;
+    hash = (53 * hash) + getVectorName().hashCode();
+    hash = (37 * hash) + PARENT_WINDOW_FIELD_NUMBER;
+    hash = (53 * hash) + getParentWindow();
+    hash = (37 * hash) + INCLUDE_CITATIONS_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getIncludeCitations());
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -560,13 +814,20 @@ private static final long serialVersionUID = 0L;
 
     // Construct using com.udb.core.embedding.services.v1.RetrieveRequest.newBuilder()
     private Builder() {
-
+      maybeForceBuilderInitialization();
     }
 
     private Builder(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       super(parent);
-
+      maybeForceBuilderInitialization();
+    }
+    private void maybeForceBuilderInitialization() {
+      if (com.google.protobuf.GeneratedMessage
+              .alwaysUseFieldBuilders) {
+        internalGetMmrFieldBuilder();
+        internalGetRerankFieldBuilder();
+      }
     }
     @java.lang.Override
     public Builder clear() {
@@ -579,6 +840,22 @@ private static final long serialVersionUID = 0L;
       topK_ = 0;
       filterJson_ = "";
       scoreThreshold_ = 0D;
+      includeVectors_ = false;
+      mmr_ = null;
+      if (mmrBuilder_ != null) {
+        mmrBuilder_.dispose();
+        mmrBuilder_ = null;
+      }
+      fusion_ = 0;
+      prefetchLimit_ = 0;
+      rerank_ = null;
+      if (rerankBuilder_ != null) {
+        rerankBuilder_.dispose();
+        rerankBuilder_ = null;
+      }
+      vectorName_ = "";
+      parentWindow_ = 0;
+      includeCitations_ = false;
       return this;
     }
 
@@ -634,6 +911,38 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000040) != 0)) {
         result.scoreThreshold_ = scoreThreshold_;
       }
+      if (((from_bitField0_ & 0x00000080) != 0)) {
+        result.includeVectors_ = includeVectors_;
+      }
+      int to_bitField0_ = 0;
+      if (((from_bitField0_ & 0x00000100) != 0)) {
+        result.mmr_ = mmrBuilder_ == null
+            ? mmr_
+            : mmrBuilder_.build();
+        to_bitField0_ |= 0x00000001;
+      }
+      if (((from_bitField0_ & 0x00000200) != 0)) {
+        result.fusion_ = fusion_;
+      }
+      if (((from_bitField0_ & 0x00000400) != 0)) {
+        result.prefetchLimit_ = prefetchLimit_;
+      }
+      if (((from_bitField0_ & 0x00000800) != 0)) {
+        result.rerank_ = rerankBuilder_ == null
+            ? rerank_
+            : rerankBuilder_.build();
+        to_bitField0_ |= 0x00000002;
+      }
+      if (((from_bitField0_ & 0x00001000) != 0)) {
+        result.vectorName_ = vectorName_;
+      }
+      if (((from_bitField0_ & 0x00002000) != 0)) {
+        result.parentWindow_ = parentWindow_;
+      }
+      if (((from_bitField0_ & 0x00004000) != 0)) {
+        result.includeCitations_ = includeCitations_;
+      }
+      result.bitField0_ |= to_bitField0_;
     }
 
     @java.lang.Override
@@ -684,6 +993,32 @@ private static final long serialVersionUID = 0L;
       }
       if (java.lang.Double.doubleToRawLongBits(other.getScoreThreshold()) != 0) {
         setScoreThreshold(other.getScoreThreshold());
+      }
+      if (other.getIncludeVectors() != false) {
+        setIncludeVectors(other.getIncludeVectors());
+      }
+      if (other.hasMmr()) {
+        mergeMmr(other.getMmr());
+      }
+      if (other.fusion_ != 0) {
+        setFusionValue(other.getFusionValue());
+      }
+      if (other.getPrefetchLimit() != 0) {
+        setPrefetchLimit(other.getPrefetchLimit());
+      }
+      if (other.hasRerank()) {
+        mergeRerank(other.getRerank());
+      }
+      if (!other.getVectorName().isEmpty()) {
+        vectorName_ = other.vectorName_;
+        bitField0_ |= 0x00001000;
+        onChanged();
+      }
+      if (other.getParentWindow() != 0) {
+        setParentWindow(other.getParentWindow());
+      }
+      if (other.getIncludeCitations() != false) {
+        setIncludeCitations(other.getIncludeCitations());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -758,6 +1093,50 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000040;
               break;
             } // case 57
+            case 64: {
+              includeVectors_ = input.readBool();
+              bitField0_ |= 0x00000080;
+              break;
+            } // case 64
+            case 74: {
+              input.readMessage(
+                  internalGetMmrFieldBuilder().getBuilder(),
+                  extensionRegistry);
+              bitField0_ |= 0x00000100;
+              break;
+            } // case 74
+            case 80: {
+              fusion_ = input.readEnum();
+              bitField0_ |= 0x00000200;
+              break;
+            } // case 80
+            case 88: {
+              prefetchLimit_ = input.readInt32();
+              bitField0_ |= 0x00000400;
+              break;
+            } // case 88
+            case 98: {
+              input.readMessage(
+                  internalGetRerankFieldBuilder().getBuilder(),
+                  extensionRegistry);
+              bitField0_ |= 0x00000800;
+              break;
+            } // case 98
+            case 106: {
+              vectorName_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00001000;
+              break;
+            } // case 106
+            case 112: {
+              parentWindow_ = input.readInt32();
+              bitField0_ |= 0x00002000;
+              break;
+            } // case 112
+            case 120: {
+              includeCitations_ = input.readBool();
+              bitField0_ |= 0x00004000;
+              break;
+            } // case 120
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1332,6 +1711,499 @@ private static final long serialVersionUID = 0L;
     public Builder clearScoreThreshold() {
       bitField0_ = (bitField0_ & ~0x00000040);
       scoreThreshold_ = 0D;
+      onChanged();
+      return this;
+    }
+
+    private boolean includeVectors_ ;
+    /**
+     * <code>bool include_vectors = 8 [json_name = "includeVectors"];</code>
+     * @return The includeVectors.
+     */
+    @java.lang.Override
+    public boolean getIncludeVectors() {
+      return includeVectors_;
+    }
+    /**
+     * <code>bool include_vectors = 8 [json_name = "includeVectors"];</code>
+     * @param value The includeVectors to set.
+     * @return This builder for chaining.
+     */
+    public Builder setIncludeVectors(boolean value) {
+
+      includeVectors_ = value;
+      bitField0_ |= 0x00000080;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>bool include_vectors = 8 [json_name = "includeVectors"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearIncludeVectors() {
+      bitField0_ = (bitField0_ & ~0x00000080);
+      includeVectors_ = false;
+      onChanged();
+      return this;
+    }
+
+    private com.udb.core.embedding.services.v1.MmrConfig mmr_;
+    private com.google.protobuf.SingleFieldBuilder<
+        com.udb.core.embedding.services.v1.MmrConfig, com.udb.core.embedding.services.v1.MmrConfig.Builder, com.udb.core.embedding.services.v1.MmrConfigOrBuilder> mmrBuilder_;
+    /**
+     * <code>.udb.core.embedding.services.v1.MmrConfig mmr = 9 [json_name = "mmr"];</code>
+     * @return Whether the mmr field is set.
+     */
+    public boolean hasMmr() {
+      return ((bitField0_ & 0x00000100) != 0);
+    }
+    /**
+     * <code>.udb.core.embedding.services.v1.MmrConfig mmr = 9 [json_name = "mmr"];</code>
+     * @return The mmr.
+     */
+    public com.udb.core.embedding.services.v1.MmrConfig getMmr() {
+      if (mmrBuilder_ == null) {
+        return mmr_ == null ? com.udb.core.embedding.services.v1.MmrConfig.getDefaultInstance() : mmr_;
+      } else {
+        return mmrBuilder_.getMessage();
+      }
+    }
+    /**
+     * <code>.udb.core.embedding.services.v1.MmrConfig mmr = 9 [json_name = "mmr"];</code>
+     */
+    public Builder setMmr(com.udb.core.embedding.services.v1.MmrConfig value) {
+      if (mmrBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        mmr_ = value;
+      } else {
+        mmrBuilder_.setMessage(value);
+      }
+      bitField0_ |= 0x00000100;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>.udb.core.embedding.services.v1.MmrConfig mmr = 9 [json_name = "mmr"];</code>
+     */
+    public Builder setMmr(
+        com.udb.core.embedding.services.v1.MmrConfig.Builder builderForValue) {
+      if (mmrBuilder_ == null) {
+        mmr_ = builderForValue.build();
+      } else {
+        mmrBuilder_.setMessage(builderForValue.build());
+      }
+      bitField0_ |= 0x00000100;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>.udb.core.embedding.services.v1.MmrConfig mmr = 9 [json_name = "mmr"];</code>
+     */
+    public Builder mergeMmr(com.udb.core.embedding.services.v1.MmrConfig value) {
+      if (mmrBuilder_ == null) {
+        if (((bitField0_ & 0x00000100) != 0) &&
+          mmr_ != null &&
+          mmr_ != com.udb.core.embedding.services.v1.MmrConfig.getDefaultInstance()) {
+          getMmrBuilder().mergeFrom(value);
+        } else {
+          mmr_ = value;
+        }
+      } else {
+        mmrBuilder_.mergeFrom(value);
+      }
+      if (mmr_ != null) {
+        bitField0_ |= 0x00000100;
+        onChanged();
+      }
+      return this;
+    }
+    /**
+     * <code>.udb.core.embedding.services.v1.MmrConfig mmr = 9 [json_name = "mmr"];</code>
+     */
+    public Builder clearMmr() {
+      bitField0_ = (bitField0_ & ~0x00000100);
+      mmr_ = null;
+      if (mmrBuilder_ != null) {
+        mmrBuilder_.dispose();
+        mmrBuilder_ = null;
+      }
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>.udb.core.embedding.services.v1.MmrConfig mmr = 9 [json_name = "mmr"];</code>
+     */
+    public com.udb.core.embedding.services.v1.MmrConfig.Builder getMmrBuilder() {
+      bitField0_ |= 0x00000100;
+      onChanged();
+      return internalGetMmrFieldBuilder().getBuilder();
+    }
+    /**
+     * <code>.udb.core.embedding.services.v1.MmrConfig mmr = 9 [json_name = "mmr"];</code>
+     */
+    public com.udb.core.embedding.services.v1.MmrConfigOrBuilder getMmrOrBuilder() {
+      if (mmrBuilder_ != null) {
+        return mmrBuilder_.getMessageOrBuilder();
+      } else {
+        return mmr_ == null ?
+            com.udb.core.embedding.services.v1.MmrConfig.getDefaultInstance() : mmr_;
+      }
+    }
+    /**
+     * <code>.udb.core.embedding.services.v1.MmrConfig mmr = 9 [json_name = "mmr"];</code>
+     */
+    private com.google.protobuf.SingleFieldBuilder<
+        com.udb.core.embedding.services.v1.MmrConfig, com.udb.core.embedding.services.v1.MmrConfig.Builder, com.udb.core.embedding.services.v1.MmrConfigOrBuilder>
+        internalGetMmrFieldBuilder() {
+      if (mmrBuilder_ == null) {
+        mmrBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+            com.udb.core.embedding.services.v1.MmrConfig, com.udb.core.embedding.services.v1.MmrConfig.Builder, com.udb.core.embedding.services.v1.MmrConfigOrBuilder>(
+                getMmr(),
+                getParentForChildren(),
+                isClean());
+        mmr_ = null;
+      }
+      return mmrBuilder_;
+    }
+
+    private int fusion_ = 0;
+    /**
+     * <code>.udb.core.embedding.services.v1.FusionStrategy fusion = 10 [json_name = "fusion"];</code>
+     * @return The enum numeric value on the wire for fusion.
+     */
+    @java.lang.Override public int getFusionValue() {
+      return fusion_;
+    }
+    /**
+     * <code>.udb.core.embedding.services.v1.FusionStrategy fusion = 10 [json_name = "fusion"];</code>
+     * @param value The enum numeric value on the wire for fusion to set.
+     * @return This builder for chaining.
+     */
+    public Builder setFusionValue(int value) {
+      fusion_ = value;
+      bitField0_ |= 0x00000200;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>.udb.core.embedding.services.v1.FusionStrategy fusion = 10 [json_name = "fusion"];</code>
+     * @return The fusion.
+     */
+    @java.lang.Override
+    public com.udb.core.embedding.services.v1.FusionStrategy getFusion() {
+      com.udb.core.embedding.services.v1.FusionStrategy result = com.udb.core.embedding.services.v1.FusionStrategy.forNumber(fusion_);
+      return result == null ? com.udb.core.embedding.services.v1.FusionStrategy.UNRECOGNIZED : result;
+    }
+    /**
+     * <code>.udb.core.embedding.services.v1.FusionStrategy fusion = 10 [json_name = "fusion"];</code>
+     * @param value The fusion to set.
+     * @return This builder for chaining.
+     */
+    public Builder setFusion(com.udb.core.embedding.services.v1.FusionStrategy value) {
+      if (value == null) { throw new NullPointerException(); }
+      bitField0_ |= 0x00000200;
+      fusion_ = value.getNumber();
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>.udb.core.embedding.services.v1.FusionStrategy fusion = 10 [json_name = "fusion"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearFusion() {
+      bitField0_ = (bitField0_ & ~0x00000200);
+      fusion_ = 0;
+      onChanged();
+      return this;
+    }
+
+    private int prefetchLimit_ ;
+    /**
+     * <code>int32 prefetch_limit = 11 [json_name = "prefetchLimit"];</code>
+     * @return The prefetchLimit.
+     */
+    @java.lang.Override
+    public int getPrefetchLimit() {
+      return prefetchLimit_;
+    }
+    /**
+     * <code>int32 prefetch_limit = 11 [json_name = "prefetchLimit"];</code>
+     * @param value The prefetchLimit to set.
+     * @return This builder for chaining.
+     */
+    public Builder setPrefetchLimit(int value) {
+
+      prefetchLimit_ = value;
+      bitField0_ |= 0x00000400;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>int32 prefetch_limit = 11 [json_name = "prefetchLimit"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearPrefetchLimit() {
+      bitField0_ = (bitField0_ & ~0x00000400);
+      prefetchLimit_ = 0;
+      onChanged();
+      return this;
+    }
+
+    private com.udb.core.embedding.services.v1.RerankConfig rerank_;
+    private com.google.protobuf.SingleFieldBuilder<
+        com.udb.core.embedding.services.v1.RerankConfig, com.udb.core.embedding.services.v1.RerankConfig.Builder, com.udb.core.embedding.services.v1.RerankConfigOrBuilder> rerankBuilder_;
+    /**
+     * <code>.udb.core.embedding.services.v1.RerankConfig rerank = 12 [json_name = "rerank"];</code>
+     * @return Whether the rerank field is set.
+     */
+    public boolean hasRerank() {
+      return ((bitField0_ & 0x00000800) != 0);
+    }
+    /**
+     * <code>.udb.core.embedding.services.v1.RerankConfig rerank = 12 [json_name = "rerank"];</code>
+     * @return The rerank.
+     */
+    public com.udb.core.embedding.services.v1.RerankConfig getRerank() {
+      if (rerankBuilder_ == null) {
+        return rerank_ == null ? com.udb.core.embedding.services.v1.RerankConfig.getDefaultInstance() : rerank_;
+      } else {
+        return rerankBuilder_.getMessage();
+      }
+    }
+    /**
+     * <code>.udb.core.embedding.services.v1.RerankConfig rerank = 12 [json_name = "rerank"];</code>
+     */
+    public Builder setRerank(com.udb.core.embedding.services.v1.RerankConfig value) {
+      if (rerankBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        rerank_ = value;
+      } else {
+        rerankBuilder_.setMessage(value);
+      }
+      bitField0_ |= 0x00000800;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>.udb.core.embedding.services.v1.RerankConfig rerank = 12 [json_name = "rerank"];</code>
+     */
+    public Builder setRerank(
+        com.udb.core.embedding.services.v1.RerankConfig.Builder builderForValue) {
+      if (rerankBuilder_ == null) {
+        rerank_ = builderForValue.build();
+      } else {
+        rerankBuilder_.setMessage(builderForValue.build());
+      }
+      bitField0_ |= 0x00000800;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>.udb.core.embedding.services.v1.RerankConfig rerank = 12 [json_name = "rerank"];</code>
+     */
+    public Builder mergeRerank(com.udb.core.embedding.services.v1.RerankConfig value) {
+      if (rerankBuilder_ == null) {
+        if (((bitField0_ & 0x00000800) != 0) &&
+          rerank_ != null &&
+          rerank_ != com.udb.core.embedding.services.v1.RerankConfig.getDefaultInstance()) {
+          getRerankBuilder().mergeFrom(value);
+        } else {
+          rerank_ = value;
+        }
+      } else {
+        rerankBuilder_.mergeFrom(value);
+      }
+      if (rerank_ != null) {
+        bitField0_ |= 0x00000800;
+        onChanged();
+      }
+      return this;
+    }
+    /**
+     * <code>.udb.core.embedding.services.v1.RerankConfig rerank = 12 [json_name = "rerank"];</code>
+     */
+    public Builder clearRerank() {
+      bitField0_ = (bitField0_ & ~0x00000800);
+      rerank_ = null;
+      if (rerankBuilder_ != null) {
+        rerankBuilder_.dispose();
+        rerankBuilder_ = null;
+      }
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>.udb.core.embedding.services.v1.RerankConfig rerank = 12 [json_name = "rerank"];</code>
+     */
+    public com.udb.core.embedding.services.v1.RerankConfig.Builder getRerankBuilder() {
+      bitField0_ |= 0x00000800;
+      onChanged();
+      return internalGetRerankFieldBuilder().getBuilder();
+    }
+    /**
+     * <code>.udb.core.embedding.services.v1.RerankConfig rerank = 12 [json_name = "rerank"];</code>
+     */
+    public com.udb.core.embedding.services.v1.RerankConfigOrBuilder getRerankOrBuilder() {
+      if (rerankBuilder_ != null) {
+        return rerankBuilder_.getMessageOrBuilder();
+      } else {
+        return rerank_ == null ?
+            com.udb.core.embedding.services.v1.RerankConfig.getDefaultInstance() : rerank_;
+      }
+    }
+    /**
+     * <code>.udb.core.embedding.services.v1.RerankConfig rerank = 12 [json_name = "rerank"];</code>
+     */
+    private com.google.protobuf.SingleFieldBuilder<
+        com.udb.core.embedding.services.v1.RerankConfig, com.udb.core.embedding.services.v1.RerankConfig.Builder, com.udb.core.embedding.services.v1.RerankConfigOrBuilder>
+        internalGetRerankFieldBuilder() {
+      if (rerankBuilder_ == null) {
+        rerankBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+            com.udb.core.embedding.services.v1.RerankConfig, com.udb.core.embedding.services.v1.RerankConfig.Builder, com.udb.core.embedding.services.v1.RerankConfigOrBuilder>(
+                getRerank(),
+                getParentForChildren(),
+                isClean());
+        rerank_ = null;
+      }
+      return rerankBuilder_;
+    }
+
+    private java.lang.Object vectorName_ = "";
+    /**
+     * <code>string vector_name = 13 [json_name = "vectorName"];</code>
+     * @return The vectorName.
+     */
+    public java.lang.String getVectorName() {
+      java.lang.Object ref = vectorName_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        vectorName_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>string vector_name = 13 [json_name = "vectorName"];</code>
+     * @return The bytes for vectorName.
+     */
+    public com.google.protobuf.ByteString
+        getVectorNameBytes() {
+      java.lang.Object ref = vectorName_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        vectorName_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string vector_name = 13 [json_name = "vectorName"];</code>
+     * @param value The vectorName to set.
+     * @return This builder for chaining.
+     */
+    public Builder setVectorName(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      vectorName_ = value;
+      bitField0_ |= 0x00001000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string vector_name = 13 [json_name = "vectorName"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearVectorName() {
+      vectorName_ = getDefaultInstance().getVectorName();
+      bitField0_ = (bitField0_ & ~0x00001000);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string vector_name = 13 [json_name = "vectorName"];</code>
+     * @param value The bytes for vectorName to set.
+     * @return This builder for chaining.
+     */
+    public Builder setVectorNameBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      vectorName_ = value;
+      bitField0_ |= 0x00001000;
+      onChanged();
+      return this;
+    }
+
+    private int parentWindow_ ;
+    /**
+     * <code>int32 parent_window = 14 [json_name = "parentWindow"];</code>
+     * @return The parentWindow.
+     */
+    @java.lang.Override
+    public int getParentWindow() {
+      return parentWindow_;
+    }
+    /**
+     * <code>int32 parent_window = 14 [json_name = "parentWindow"];</code>
+     * @param value The parentWindow to set.
+     * @return This builder for chaining.
+     */
+    public Builder setParentWindow(int value) {
+
+      parentWindow_ = value;
+      bitField0_ |= 0x00002000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>int32 parent_window = 14 [json_name = "parentWindow"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearParentWindow() {
+      bitField0_ = (bitField0_ & ~0x00002000);
+      parentWindow_ = 0;
+      onChanged();
+      return this;
+    }
+
+    private boolean includeCitations_ ;
+    /**
+     * <code>bool include_citations = 15 [json_name = "includeCitations"];</code>
+     * @return The includeCitations.
+     */
+    @java.lang.Override
+    public boolean getIncludeCitations() {
+      return includeCitations_;
+    }
+    /**
+     * <code>bool include_citations = 15 [json_name = "includeCitations"];</code>
+     * @param value The includeCitations to set.
+     * @return This builder for chaining.
+     */
+    public Builder setIncludeCitations(boolean value) {
+
+      includeCitations_ = value;
+      bitField0_ |= 0x00004000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>bool include_citations = 15 [json_name = "includeCitations"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearIncludeCitations() {
+      bitField0_ = (bitField0_ & ~0x00004000);
+      includeCitations_ = false;
       onChanged();
       return this;
     }

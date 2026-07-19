@@ -26,6 +26,18 @@ class RetrieveResponse extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>.udb.core.common.v1.ApiError error = 3 [json_name = "error"];</code>
      */
     protected $error = null;
+    /**
+     * Generated from protobuf field <code>int64 index_lag_ms = 4 [json_name = "indexLagMs"];</code>
+     */
+    protected $index_lag_ms = 0;
+    /**
+     * Generated from protobuf field <code>bool rerank_applied = 5 [json_name = "rerankApplied"];</code>
+     */
+    protected $rerank_applied = false;
+    /**
+     * Generated from protobuf field <code>string evaluation_id = 6 [json_name = "evaluationId"];</code>
+     */
+    protected $evaluation_id = '';
 
     /**
      * Constructor.
@@ -36,6 +48,9 @@ class RetrieveResponse extends \Google\Protobuf\Internal\Message
      *     @type \Udb\Core\Embedding\Services\V1\RetrieveHit[] $hits
      *     @type string $message
      *     @type \Udb\Core\Common\V1\ApiError $error
+     *     @type int|string $index_lag_ms
+     *     @type bool $rerank_applied
+     *     @type string $evaluation_id
      * }
      */
     public function __construct($data = NULL) {
@@ -115,6 +130,72 @@ class RetrieveResponse extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkMessage($var, \Udb\Core\Common\V1\ApiError::class);
         $this->error = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>int64 index_lag_ms = 4 [json_name = "indexLagMs"];</code>
+     * @return int|string
+     */
+    public function getIndexLagMs()
+    {
+        return $this->index_lag_ms;
+    }
+
+    /**
+     * Generated from protobuf field <code>int64 index_lag_ms = 4 [json_name = "indexLagMs"];</code>
+     * @param int|string $var
+     * @return $this
+     */
+    public function setIndexLagMs($var)
+    {
+        GPBUtil::checkInt64($var);
+        $this->index_lag_ms = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>bool rerank_applied = 5 [json_name = "rerankApplied"];</code>
+     * @return bool
+     */
+    public function getRerankApplied()
+    {
+        return $this->rerank_applied;
+    }
+
+    /**
+     * Generated from protobuf field <code>bool rerank_applied = 5 [json_name = "rerankApplied"];</code>
+     * @param bool $var
+     * @return $this
+     */
+    public function setRerankApplied($var)
+    {
+        GPBUtil::checkBool($var);
+        $this->rerank_applied = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>string evaluation_id = 6 [json_name = "evaluationId"];</code>
+     * @return string
+     */
+    public function getEvaluationId()
+    {
+        return $this->evaluation_id;
+    }
+
+    /**
+     * Generated from protobuf field <code>string evaluation_id = 6 [json_name = "evaluationId"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setEvaluationId($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->evaluation_id = $var;
 
         return $this;
     }

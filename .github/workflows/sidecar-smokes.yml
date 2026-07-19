@@ -36,6 +36,7 @@ jobs:
           set -euo pipefail
           python scripts/embedding_sidecar_roundtrip_smoke.py --selftest
           python scripts/embedding_sidecar_smoke.py --selftest
+          python scripts/embedding_retrieval_eval.py
 
       - name: Start embedding sidecar
         shell: bash

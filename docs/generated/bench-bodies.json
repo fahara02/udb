@@ -2624,8 +2624,32 @@
     "operation_id": "backfillEmbeddingSource",
     "op_kind": "MUTATION",
     "request_msg": "BackfillRequest",
-    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"source_name\": \"sdk_live_records\" }`",
-    "notes": "schedules a backfill for the seeded source."
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"source_name\": \"sdk_live_records\", \"mode\": \"INCREMENTAL\" }`",
+    "notes": "Schedules a durable incremental backfill for the seeded source and exposes its job id to later reads."
+  },
+  {
+    "file": "embedding.md",
+    "rpc": "CutoverModelAlias",
+    "service": "EmbeddingService",
+    "wire_rpc": "EmbeddingService/CutoverModelAlias",
+    "api_alias": "cutover_model_alias",
+    "operation_id": "cutoverEmbeddingModelAlias",
+    "op_kind": "MUTATION",
+    "request_msg": "CutoverModelAliasRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"model_id\": \"text-embedding-3-small\", \"expected_collection\": \"sdk_live_records\" }`",
+    "notes": "Atomically points `sdk_live_records_alias` at the seeded model's physical collection."
+  },
+  {
+    "file": "embedding.md",
+    "rpc": "DeleteModel",
+    "service": "EmbeddingService",
+    "wire_rpc": "EmbeddingService/DeleteModel",
+    "api_alias": "delete_model",
+    "operation_id": "deleteEmbeddingModel",
+    "op_kind": "DESTRUCTIVE",
+    "request_msg": "DeleteModelRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"model_id\": \"<seed:embedding_delete_model_id>\" }`",
+    "notes": "Deletes a disposable model that is not referenced by the live source."
   },
   {
     "file": "embedding.md",
@@ -2641,6 +2665,66 @@
   },
   {
     "file": "embedding.md",
+    "rpc": "GetEmbeddingJobStatus",
+    "service": "EmbeddingService",
+    "wire_rpc": "EmbeddingService/GetEmbeddingJobStatus",
+    "api_alias": "get_job_status",
+    "operation_id": "getEmbeddingJobStatus",
+    "op_kind": "READ_ONLY",
+    "request_msg": "GetEmbeddingJobStatusRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"job_id\": \"<seed:embedding_job_id>\" }`",
+    "notes": "Reads the durable document-ingestion job created during live seeding."
+  },
+  {
+    "file": "embedding.md",
+    "rpc": "IngestDocument",
+    "service": "EmbeddingService",
+    "wire_rpc": "EmbeddingService/IngestDocument",
+    "api_alias": "ingest_document",
+    "operation_id": "ingestEmbeddingDocument",
+    "op_kind": "MUTATION",
+    "request_msg": "IngestDocumentRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"external_id\": \"sdk-live-bench-document\", \"title\": \"SDK benchmark document\", \"raw_text\": \"UDB keeps embedding model identity, durable work, tenant filters, and vector storage inside one governed data plane.\", \"content_type\": \"text/plain\", \"doc_version\": \"1\", \"model_id\": \"text-embedding-3-small\", \"metadata_json\": \"{\\\"suite\\\":\\\"sdk-live\\\"}\" }`",
+    "notes": "Ingests raw text through durable chunking and work emission."
+  },
+  {
+    "file": "embedding.md",
+    "rpc": "IngestDocumentBatch",
+    "service": "EmbeddingService",
+    "wire_rpc": "EmbeddingService/IngestDocumentBatch",
+    "api_alias": "ingest_document_batch",
+    "operation_id": "ingestEmbeddingDocumentBatch",
+    "op_kind": "MUTATION",
+    "request_msg": "IngestDocumentBatchRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"documents\": [{ \"external_id\": \"sdk-live-bench-batch-document\", \"title\": \"SDK benchmark batch document\", \"raw_text\": \"Batch document ingestion shares the registered model and durable embedding queue.\", \"content_type\": \"text/plain\", \"doc_version\": \"1\", \"model_id\": \"text-embedding-3-small\", \"metadata_json\": \"{\\\"suite\\\":\\\"sdk-live\\\",\\\"mode\\\":\\\"batch\\\"}\" }] }`",
+    "notes": "Exercises bounded batch ingestion with an independently stable external id."
+  },
+  {
+    "file": "embedding.md",
+    "rpc": "ListEmbeddingWorkItems",
+    "service": "EmbeddingService",
+    "wire_rpc": "EmbeddingService/ListEmbeddingWorkItems",
+    "api_alias": "list_work_items",
+    "operation_id": "listEmbeddingWorkItems",
+    "op_kind": "READ_ONLY",
+    "request_msg": "ListEmbeddingWorkItemsRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"job_id\": \"<seed:embedding_job_id>\", \"page_size\": 50 }`",
+    "notes": "Lists durable work for the seeded ingestion job."
+  },
+  {
+    "file": "embedding.md",
+    "rpc": "ListModels",
+    "service": "EmbeddingService",
+    "wire_rpc": "EmbeddingService/ListModels",
+    "api_alias": "list_models",
+    "operation_id": "listEmbeddingModels",
+    "op_kind": "READ_ONLY",
+    "request_msg": "ListModelsRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"page_size\": 50 }`",
+    "notes": "Lists tenant-scoped model registry entries."
+  },
+  {
+    "file": "embedding.md",
     "rpc": "ListSources",
     "service": "EmbeddingService",
     "wire_rpc": "EmbeddingService/ListSources",
@@ -2650,6 +2734,18 @@
     "request_msg": "ListSourcesRequest",
     "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"page_size\": 50 }`",
     "notes": "lists embedding sources for the tenant."
+  },
+  {
+    "file": "embedding.md",
+    "rpc": "RegisterModel",
+    "service": "EmbeddingService",
+    "wire_rpc": "EmbeddingService/RegisterModel",
+    "api_alias": "register_model",
+    "operation_id": "registerEmbeddingModel",
+    "op_kind": "MUTATION",
+    "request_msg": "RegisterModelRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"model_id\": \"text-embedding-3-small\", \"provider\": \"deterministic\", \"model_name\": \"text-embedding-3-small\", \"version\": \"1\", \"dimensions\": 3, \"matryoshka_dims\": [3], \"distance_metric\": \"COSINE\", \"normalize\": true, \"output_dtype\": \"FLOAT32\", \"rescore\": false, \"max_input_tokens\": 8192, \"tokenizer\": \"cl100k_base\", \"task_type\": \"DOCUMENT\", \"provider_endpoint_ref\": \"vault://embedding/sdk-live\", \"vector_backend\": \"qdrant\", \"vector_instance\": \"default\", \"collection_alias\": \"sdk_live_records_alias\", \"active_collection\": \"sdk_live_records\", \"chunking_strategy\": \"TOKEN_RECURSIVE\", \"chunk_tokens\": 256, \"chunk_overlap_tokens\": 32, \"contextual_retrieval\": false, \"late_chunking\": false, \"metadata_json\": \"{\\\"suite\\\":\\\"sdk-live\\\"}\" }`",
+    "notes": "Idempotently registers the real model geometry and ensures the physical vector collection."
   },
   {
     "file": "embedding.md",
@@ -2677,6 +2773,54 @@
   },
   {
     "file": "embedding.md",
+    "rpc": "ReportEmbeddingBatch",
+    "service": "EmbeddingService",
+    "wire_rpc": "EmbeddingService/ReportEmbeddingBatch",
+    "api_alias": "report_embedding_batch",
+    "operation_id": "reportEmbeddingBatch",
+    "op_kind": "MUTATION",
+    "request_msg": "ReportEmbeddingBatchRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"items\": [{ \"source_name\": \"sdk_live_records\", \"row_pk\": \"<seed:record_id>\", \"vector\": [0.1, 0.2, 0.3], \"model\": \"text-embedding-3-small\", \"dims\": 3, \"token_count\": 3 }], \"declared_capacity\": 16 }`",
+    "notes": "Sidecar batch callback validates model geometry and uses the real vector-store seam."
+  },
+  {
+    "file": "embedding.md",
+    "rpc": "ReportEmbeddingFailure",
+    "service": "EmbeddingService",
+    "wire_rpc": "EmbeddingService/ReportEmbeddingFailure",
+    "api_alias": "report_embedding_failure",
+    "operation_id": "reportEmbeddingFailure",
+    "op_kind": "MUTATION",
+    "request_msg": "ReportEmbeddingFailureRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"work_item_id\": \"<seed:embedding_work_item_id>\", \"error\": \"sdk benchmark retry probe\", \"retryable\": true, \"error_code\": \"SDK_BENCH_PROBE\" }`",
+    "notes": "Records a retry against a real pending durable work item."
+  },
+  {
+    "file": "embedding.md",
+    "rpc": "ReportParsedDocument",
+    "service": "EmbeddingService",
+    "wire_rpc": "EmbeddingService/ReportParsedDocument",
+    "api_alias": "report_parsed_document",
+    "operation_id": "reportParsedDocument",
+    "op_kind": "MUTATION",
+    "request_msg": "ReportParsedDocumentRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"document_id\": \"<seed:embedding_document_id>\", \"job_id\": \"<seed:embedding_document_job_id>\", \"text\": \"Parsed SDK benchmark content is chunked and queued through the registered embedding model.\" }`",
+    "notes": "Completes a seeded `udb://` parser job; omitting `content_hash` lets the broker compute the canonical hash."
+  },
+  {
+    "file": "embedding.md",
+    "rpc": "ReportRetrievalEvaluation",
+    "service": "EmbeddingService",
+    "wire_rpc": "EmbeddingService/ReportRetrievalEvaluation",
+    "api_alias": "report_retrieval_evaluation",
+    "operation_id": "reportRetrievalEvaluation",
+    "op_kind": "MUTATION",
+    "request_msg": "ReportRetrievalEvaluationRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"evaluation_id\": \"4a85f680-37e8-4d6f-b754-a80eb2fa3423\", \"context_relevance\": 0.9, \"groundedness\": 0.95, \"answer_relevance\": 0.85, \"evaluator_model\": \"sdk-benchmark-evaluator\" }`",
+    "notes": "Reports bounded retrieval-quality scores through the internal callback surface."
+  },
+  {
+    "file": "embedding.md",
     "rpc": "Retrieve",
     "service": "EmbeddingService",
     "wire_rpc": "EmbeddingService/Retrieve",
@@ -2684,8 +2828,20 @@
     "operation_id": "retrieveEmbedding",
     "op_kind": "READ_ONLY",
     "request_msg": "RetrieveRequest",
-    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"source_name\": \"sdk_live_records\", \"query_text\": \"perf\", \"query_vector\": [0.1, 0.2, 0.3], \"top_k\": 5 }`",
-    "notes": "retrieves seeded embedding/search records."
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"source_name\": \"sdk_live_records\", \"query_text\": \"governed embedding performance\", \"query_vector\": [0.1, 0.2, 0.3], \"top_k\": 5, \"include_vectors\": true, \"mmr\": { \"enabled\": true, \"lambda\": 0.7 }, \"fusion\": \"FUSION_STRATEGY_RRF\", \"prefetch_limit\": 20, \"parent_window\": 1, \"include_citations\": true }`",
+    "notes": "Exercises hybrid fusion, MMR, vector return, parent-window expansion, and citations over seeded vectors."
+  },
+  {
+    "file": "embedding.md",
+    "rpc": "SetModelStatus",
+    "service": "EmbeddingService",
+    "wire_rpc": "EmbeddingService/SetModelStatus",
+    "api_alias": "set_model_status",
+    "operation_id": "setEmbeddingModelStatus",
+    "op_kind": "MUTATION",
+    "request_msg": "SetModelStatusRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"model_id\": \"text-embedding-3-small\", \"status\": \"EMBEDDING_MODEL_STATUS_ACTIVE\", \"tenant_state\": \"EMBEDDING_TENANT_STATE_ACTIVE\" }`",
+    "notes": "Exercises model and tenant lifecycle persistence without disabling the benchmark model."
   },
   {
     "file": "idp.md",

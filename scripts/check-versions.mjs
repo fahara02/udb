@@ -222,6 +222,29 @@ processTriple("ops bench label", "docs/operations.md", C.udb.version,
 processAll("versioning release refs", "VERSIONING.md", C.udb.version,
   /(^|[^0-9]v?)(0\.\d+\.\d+)([^0-9]|$)/gm);
 
+// ── docs/site (GitHub Pages) version refs ─────────────────────────────────────
+// The published site drifted all the way back to 0.3.6 because it was NOT
+// governed here — every page footer + the index pill track the crate version,
+// and the sdks install table tracks each SDK. Gating them makes
+// `--fix` bump the site on every release instead of shipping a stale page.
+for (const page of ["index", "architecture", "control-plane", "data-plane",
+  "enterprise", "security", "sdks"]) {
+  processAllOptional(`site ${page} footer`, `docs/site/${page}.html`, C.udb.version,
+    /(crate v)(\d+\.\d+\.\d+)( · protocol)/);
+}
+processAllOptional("site index pill", "docs/site/index.html", C.udb.version,
+  /(<b>v)(\d+\.\d+\.\d+)(<\/b> · 18 backends)/);
+processAllOptional("site sdks go install", "docs/site/sdks.html", C["sdk-go"].version,
+  /(sdk\/go@v)(\d+\.\d+\.\d+)(<)/);
+processAllOptional("site sdks python install", "docs/site/sdks.html", C["sdk-python"].version,
+  /(udb-client==)(\d+\.\d+\.\d+)(<)/);
+processAllOptional("site sdks ts install", "docs/site/sdks.html", C["sdk-typescript"].version,
+  /(@udb_plus\/sdk@)(\d+\.\d+\.\d+)(<)/);
+processAllOptional("site sdks php install", "docs/site/sdks.html", C["sdk-php"].version,
+  /(udb-laravel:\^)(\d+\.\d+\.\d+)(<)/);
+processAllOptional("site sdks csharp install", "docs/site/sdks.html", C["sdk-csharp"].version,
+  /(Udb\.Client --version )(\d+\.\d+\.\d+)(<)/);
+
 // ── README.md install table ───────────────────────────────────────────────────
 processTriple("readme install go", "README.md", C["sdk-go"].version,
   /(go get github\.com\/fahara02\/udb\/sdk\/go@v)(\d+\.\d+\.\d+)(` \|)/);

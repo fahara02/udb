@@ -56,9 +56,8 @@ type EmbeddingSource struct {
 	TextFieldsJson string `protobuf:"bytes,5,opt,name=text_fields_json,json=textFieldsJson,proto3" json:"text_fields_json,omitempty"`
 	// Target vector collection the reported embedding is upserted into.
 	TargetCollection string `protobuf:"bytes,6,opt,name=target_collection,json=targetCollection,proto3" json:"target_collection,omitempty"`
-	// Model identifier the SIDECAR must use to embed. Non-secret routing only; the
-	// model credentials/API keys live ONLY in the sidecar, never in the broker and
-	// never in a work-event payload.
+	// Registered model identity. The sidecar receives this non-secret id and a
+	// Vault reference; provider credentials never enter the broker or outbox.
 	ModelId string `protobuf:"bytes,7,opt,name=model_id,json=modelId,proto3" json:"model_id,omitempty"`
 	// The SOURCE table's resolved tenant column, captured at register time via the
 	// shared catalog resolver. An EmbeddingSource cannot exist without it, so every
@@ -201,7 +200,7 @@ var File_udb_core_embedding_entity_v1_embedding_source_proto protoreflect.FileDe
 
 const file_udb_core_embedding_entity_v1_embedding_source_proto_rawDesc = "" +
 	"\n" +
-	"3udb/core/embedding/entity/v1/embedding_source.proto\x12\x1cudb.core.embedding.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xbd\x0e\n" +
+	"3udb/core/embedding/entity/v1/embedding_source.proto\x12\x1cudb.core.embedding.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xcb\x0f\n" +
 	"\x0fEmbeddingSource\x12I\n" +
 	"\tsource_id\x18\x01 \x01(\tB,\x82\xb7\x18(\n" +
 	"\tsource_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\bsourceId\x12e\n" +
@@ -216,9 +215,10 @@ const file_udb_core_embedding_entity_v1_embedding_source_proto_rawDesc = "" +
 	"\x10text_fields_json\x18\x05 \x01(\tBK\x82\xb7\x18G\n" +
 	"\x10text_fields_json\x12\x05JSONB\x18\x01:\v'[]'::jsonbZ\x1bSource field names to embedx\x01R\x0etextFieldsJson\x12T\n" +
 	"\x11target_collection\x18\x06 \x01(\tB'\x82\xb7\x18#\n" +
-	"\x11target_collection\x12\fVARCHAR(255)\x18\x01R\x10targetCollection\x12=\n" +
-	"\bmodel_id\x18\a \x01(\tB\"\x82\xb7\x18\x1e\n" +
-	"\bmodel_id\x12\fVARCHAR(255)\x18\x01:\x02''R\amodelId\x12H\n" +
+	"\x11target_collection\x12\fVARCHAR(255)\x18\x01R\x10targetCollection\x12_\n" +
+	"\bmodel_id\x18\a \x01(\tBD\x82\xb7\x18@\n" +
+	"\bmodel_id\x12\fVARCHAR(255)\x18\x01R$\n" +
+	"\x1bidx_embedding_sources_model\x12\x05BTREER\amodelId\x12H\n" +
 	"\rtenant_column\x18\b \x01(\tB#\x82\xb7\x18\x1f\n" +
 	"\rtenant_column\x12\fVARCHAR(255)\x18\x01R\ftenantColumn\x12T\n" +
 	"\x10source_cdc_topic\x18\t \x01(\tB*\x82\xb7\x18&\n" +
@@ -236,11 +236,13 @@ const file_udb_core_embedding_entity_v1_embedding_source_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x12\vTIMESTAMPTZZ\x1fLast status/registration changeR\tupdatedAt\x12z\n" +
 	"\rmetadata_json\x18\r \x01(\tBU\x82\xb7\x18Q\n" +
-	"\rmetadata_json\x12\x05JSONB\x18\x01:\v'{}'::jsonbZ(Non-secret source configuration metadatax\x01R\fmetadataJson:\xd5\x04\xfa\xb6\x18\xb7\x03\n" +
-	"\x11embedding_sources\x12\rudb_embedding\x18\x01 \x01*WTenant-scoped source registrations for change-driven vector indexing (master-plan 9.11)8\x01@\x01b^\n" +
+	"\rmetadata_json\x12\x05JSONB\x18\x01:\v'{}'::jsonbZ(Non-secret source configuration metadatax\x01R\fmetadataJson:\xc1\x05\xfa\xb6\x18\xa3\x04\n" +
+	"\x11embedding_sources\x12\rudb_embedding\x18\x02 \x01*WTenant-scoped source registrations for change-driven vector indexing (master-plan 9.11)8\x01@\x01b^\n" +
 	"\x10tenant_isolation\x1aH(tenant_id::text = current_setting('app.current_tenant_id', true)::text)(\x01\x8a\x01K\n" +
 	"(idx_embedding_sources_tenant_name_unique\x12\x05BTREE\x18\x01Z\ttenant_idZ\vsource_name\x8a\x01L\n" +
-	"#idx_embedding_sources_tenant_source\x12\x05BTREEZ\ttenant_idZ\x13source_message_type\xf2\x01#udb.embedding.embedding_sources.cdc\xfa\x01\x0eembedding:read\x8a\xb2\x19\x94\x01\n" +
+	"#idx_embedding_sources_tenant_source\x12\x05BTREEZ\ttenant_idZ\x13source_message_type\x92\x01i\n" +
+	"\bmodel_id\n" +
+	"\ttenant_id\x12\x10embedding_models\x1a\bmodel_id\x1a\ttenant_id\"\rudb_embedding(\x02:\x1afk_embedding_sources_model\xf2\x01#udb.embedding.embedding_sources.cdc\xfa\x01\x0eembedding:read\x8a\xb2\x19\x94\x01\n" +
 	"\x06tenant\x1a\ttenant_id*4tenant_id = current_setting('app.current_tenant_id')2\x04none:\x15embedding.operational@\xed\x02H\x02R\x06tenantZ\bstandardr\x15tenant.data_residencyB\x97\x02\n" +
 	" com.udb.core.embedding.entity.v1B\x14EmbeddingSourceProtoP\x01ZHgithub.com/fahara02/udb/sdk/go/gen/udb/core/embedding/entity/v1;entityv1\xa2\x02\x04UCEE\xaa\x02\x1cudb.core.Embedding.Entity.V1\xca\x02\x1cUdb\\Core\\Embedding\\Entity\\V1\xe2\x02(Udb\\GPBMetadata\\Core\\Embedding\\Entity\\V1\xea\x02 Udb::Core::Embedding::Entity::V1b\x06proto3"
 

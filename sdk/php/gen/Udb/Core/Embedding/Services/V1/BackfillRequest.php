@@ -22,6 +22,12 @@ class BackfillRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string source_name = 2 [json_name = "sourceName"];</code>
      */
     protected $source_name = '';
+    /**
+     * INCREMENTAL skips unchanged chunk hashes; FULL re-emits every chunk.
+     *
+     * Generated from protobuf field <code>string mode = 3 [json_name = "mode"];</code>
+     */
+    protected $mode = '';
 
     /**
      * Constructor.
@@ -31,6 +37,8 @@ class BackfillRequest extends \Google\Protobuf\Internal\Message
      *
      *     @type string $tenant_id
      *     @type string $source_name
+     *     @type string $mode
+     *           INCREMENTAL skips unchanged chunk hashes; FULL re-emits every chunk.
      * }
      */
     public function __construct($data = NULL) {
@@ -78,6 +86,32 @@ class BackfillRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, True);
         $this->source_name = $var;
+
+        return $this;
+    }
+
+    /**
+     * INCREMENTAL skips unchanged chunk hashes; FULL re-emits every chunk.
+     *
+     * Generated from protobuf field <code>string mode = 3 [json_name = "mode"];</code>
+     * @return string
+     */
+    public function getMode()
+    {
+        return $this->mode;
+    }
+
+    /**
+     * INCREMENTAL skips unchanged chunk hashes; FULL re-emits every chunk.
+     *
+     * Generated from protobuf field <code>string mode = 3 [json_name = "mode"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setMode($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->mode = $var;
 
         return $this;
     }

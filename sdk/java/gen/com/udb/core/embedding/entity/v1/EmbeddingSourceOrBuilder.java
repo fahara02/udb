@@ -122,9 +122,8 @@ public interface EmbeddingSourceOrBuilder extends
 
   /**
    * <pre>
-   * Model identifier the SIDECAR must use to embed. Non-secret routing only; the
-   * model credentials/API keys live ONLY in the sidecar, never in the broker and
-   * never in a work-event payload.
+   * Registered model identity. The sidecar receives this non-secret id and a
+   * Vault reference; provider credentials never enter the broker or outbox.
    * </pre>
    *
    * <code>string model_id = 7 [json_name = "modelId", (.udb.core.common.v1.pg_column) = { ... }</code>
@@ -133,9 +132,8 @@ public interface EmbeddingSourceOrBuilder extends
   java.lang.String getModelId();
   /**
    * <pre>
-   * Model identifier the SIDECAR must use to embed. Non-secret routing only; the
-   * model credentials/API keys live ONLY in the sidecar, never in the broker and
-   * never in a work-event payload.
+   * Registered model identity. The sidecar receives this non-secret id and a
+   * Vault reference; provider credentials never enter the broker or outbox.
    * </pre>
    *
    * <code>string model_id = 7 [json_name = "modelId", (.udb.core.common.v1.pg_column) = { ... }</code>

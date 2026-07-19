@@ -207,13 +207,13 @@ def test_project_config_and_set_credentials_feed_shared_metadata() -> None:
     try:
         headers = dict(project._ctl_metadata(None))
         assert headers["authorization"] == "Bearer bearer-1"
-        assert headers[HEADER_API_KEY] == "key-1"
+        assert HEADER_API_KEY not in headers
 
         project.set_credentials(bearer_token="bearer-2", api_key="key-2")
 
         headers = dict(project._ctl_metadata(None))
         assert headers["authorization"] == "Bearer bearer-2"
-        assert headers[HEADER_API_KEY] == "key-2"
+        assert HEADER_API_KEY not in headers
         override = Metadata(
             tenant_id="other",
             purpose="override",
@@ -222,13 +222,11 @@ def test_project_config_and_set_credentials_feed_shared_metadata() -> None:
         headers = dict(project._ctl_metadata(override))
         assert headers["x-tenant-id"] == "other"
         assert headers["authorization"] == "Bearer bearer-2"
-        assert headers[HEADER_API_KEY] == "key-2"
+        assert HEADER_API_KEY not in headers
         assert dict(project.data._call_metadata(None))["authorization"] == (
             "Bearer bearer-2"
         )
-        assert dict(project.auth._effective_metadata(None).to_grpc_metadata())[
-            HEADER_API_KEY
-        ] == "key-2"
+        assert HEADER_API_KEY not in dict(project.auth._effective_metadata(None).to_grpc_metadata())
     finally:
         project.close()
 

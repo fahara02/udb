@@ -6,7 +6,7 @@
 //   UDB version:      0.4.14
 //   Protocol version: 1.0.0
 //   Services:         28
-//   RPCs:             353
+//   RPCs:             366
 //
 // This file is RENDERED by `udb sdk generate` from
 //   sdk-templates/csharp/Udb.Client/GeneratedClient.cs.tmpl
@@ -205,11 +205,24 @@ public static class GeneratedRpcIdentities
         map["/udb.core.control.services.v1.ControlPlaneService/RollbackResources"] = new RpcIdentity("/udb.core.control.services.v1.ControlPlaneService/RollbackResources", "ControlPlaneService", "RollbackResources", "rollback_resources", "rollbackResources", "mutation", "post", "/v1/control/node-states/{node_id}:rollbackResources");
         map["/udb.core.control.services.v1.ControlPlaneService/StreamResources"] = new RpcIdentity("/udb.core.control.services.v1.ControlPlaneService/StreamResources", "ControlPlaneService", "StreamResources", "stream_resources", "streamResources", "mutation", "", "");
         map["/udb.core.embedding.services.v1.EmbeddingService/Backfill"] = new RpcIdentity("/udb.core.embedding.services.v1.EmbeddingService/Backfill", "EmbeddingService", "Backfill", "backfill", "backfillEmbeddingSource", "mutation", "post", "/v1/embedding/sources:backfill");
+        map["/udb.core.embedding.services.v1.EmbeddingService/CutoverModelAlias"] = new RpcIdentity("/udb.core.embedding.services.v1.EmbeddingService/CutoverModelAlias", "EmbeddingService", "CutoverModelAlias", "cutover_model_alias", "cutoverEmbeddingModelAlias", "mutation", "post", "/v1/embedding/models:cutover");
+        map["/udb.core.embedding.services.v1.EmbeddingService/DeleteModel"] = new RpcIdentity("/udb.core.embedding.services.v1.EmbeddingService/DeleteModel", "EmbeddingService", "DeleteModel", "delete_model", "deleteEmbeddingModel", "destructive", "post", "/v1/embedding/models:delete");
         map["/udb.core.embedding.services.v1.EmbeddingService/DeleteSource"] = new RpcIdentity("/udb.core.embedding.services.v1.EmbeddingService/DeleteSource", "EmbeddingService", "DeleteSource", "delete_source", "deleteEmbeddingSource", "destructive", "post", "/v1/embedding/sources:delete");
+        map["/udb.core.embedding.services.v1.EmbeddingService/GetEmbeddingJobStatus"] = new RpcIdentity("/udb.core.embedding.services.v1.EmbeddingService/GetEmbeddingJobStatus", "EmbeddingService", "GetEmbeddingJobStatus", "get_job_status", "getEmbeddingJobStatus", "read_only", "get", "/v1/embedding/jobs/{job_id}");
+        map["/udb.core.embedding.services.v1.EmbeddingService/IngestDocument"] = new RpcIdentity("/udb.core.embedding.services.v1.EmbeddingService/IngestDocument", "EmbeddingService", "IngestDocument", "ingest_document", "ingestEmbeddingDocument", "mutation", "post", "/v1/embedding/documents:ingest");
+        map["/udb.core.embedding.services.v1.EmbeddingService/IngestDocumentBatch"] = new RpcIdentity("/udb.core.embedding.services.v1.EmbeddingService/IngestDocumentBatch", "EmbeddingService", "IngestDocumentBatch", "ingest_document_batch", "ingestEmbeddingDocumentBatch", "mutation", "post", "/v1/embedding/documents:batchIngest");
+        map["/udb.core.embedding.services.v1.EmbeddingService/ListEmbeddingWorkItems"] = new RpcIdentity("/udb.core.embedding.services.v1.EmbeddingService/ListEmbeddingWorkItems", "EmbeddingService", "ListEmbeddingWorkItems", "list_work_items", "listEmbeddingWorkItems", "read_only", "get", "/v1/embedding/jobs/{job_id}/work-items");
+        map["/udb.core.embedding.services.v1.EmbeddingService/ListModels"] = new RpcIdentity("/udb.core.embedding.services.v1.EmbeddingService/ListModels", "EmbeddingService", "ListModels", "list_models", "listEmbeddingModels", "read_only", "get", "/v1/embedding/models");
         map["/udb.core.embedding.services.v1.EmbeddingService/ListSources"] = new RpcIdentity("/udb.core.embedding.services.v1.EmbeddingService/ListSources", "EmbeddingService", "ListSources", "list_sources", "listEmbeddingSources", "read_only", "get", "/v1/embedding/sources");
+        map["/udb.core.embedding.services.v1.EmbeddingService/RegisterModel"] = new RpcIdentity("/udb.core.embedding.services.v1.EmbeddingService/RegisterModel", "EmbeddingService", "RegisterModel", "register_model", "registerEmbeddingModel", "mutation", "post", "/v1/embedding/models:register");
         map["/udb.core.embedding.services.v1.EmbeddingService/RegisterSource"] = new RpcIdentity("/udb.core.embedding.services.v1.EmbeddingService/RegisterSource", "EmbeddingService", "RegisterSource", "register_source", "registerEmbeddingSource", "mutation", "post", "/v1/embedding/sources:register");
         map["/udb.core.embedding.services.v1.EmbeddingService/ReportEmbedding"] = new RpcIdentity("/udb.core.embedding.services.v1.EmbeddingService/ReportEmbedding", "EmbeddingService", "ReportEmbedding", "report_embedding", "reportEmbedding", "mutation", "", "");
+        map["/udb.core.embedding.services.v1.EmbeddingService/ReportEmbeddingBatch"] = new RpcIdentity("/udb.core.embedding.services.v1.EmbeddingService/ReportEmbeddingBatch", "EmbeddingService", "ReportEmbeddingBatch", "report_embedding_batch", "reportEmbeddingBatch", "mutation", "", "");
+        map["/udb.core.embedding.services.v1.EmbeddingService/ReportEmbeddingFailure"] = new RpcIdentity("/udb.core.embedding.services.v1.EmbeddingService/ReportEmbeddingFailure", "EmbeddingService", "ReportEmbeddingFailure", "report_embedding_failure", "reportEmbeddingFailure", "mutation", "", "");
+        map["/udb.core.embedding.services.v1.EmbeddingService/ReportParsedDocument"] = new RpcIdentity("/udb.core.embedding.services.v1.EmbeddingService/ReportParsedDocument", "EmbeddingService", "ReportParsedDocument", "report_parsed_document", "reportParsedDocument", "mutation", "", "");
+        map["/udb.core.embedding.services.v1.EmbeddingService/ReportRetrievalEvaluation"] = new RpcIdentity("/udb.core.embedding.services.v1.EmbeddingService/ReportRetrievalEvaluation", "EmbeddingService", "ReportRetrievalEvaluation", "report_retrieval_evaluation", "reportRetrievalEvaluation", "mutation", "", "");
         map["/udb.core.embedding.services.v1.EmbeddingService/Retrieve"] = new RpcIdentity("/udb.core.embedding.services.v1.EmbeddingService/Retrieve", "EmbeddingService", "Retrieve", "retrieve", "retrieveEmbedding", "read_only", "post", "/v1/embedding:retrieve");
+        map["/udb.core.embedding.services.v1.EmbeddingService/SetModelStatus"] = new RpcIdentity("/udb.core.embedding.services.v1.EmbeddingService/SetModelStatus", "EmbeddingService", "SetModelStatus", "set_model_status", "setEmbeddingModelStatus", "mutation", "post", "/v1/embedding/models:setStatus");
         map["/udb.core.idp.services.v1.IdentityProviderService/CreateProvider"] = new RpcIdentity("/udb.core.idp.services.v1.IdentityProviderService/CreateProvider", "IdentityProviderService", "CreateProvider", "create_provider", "createProvider", "mutation", "post", "/v1/idp/providers");
         map["/udb.core.idp.services.v1.IdentityProviderService/DisableProvider"] = new RpcIdentity("/udb.core.idp.services.v1.IdentityProviderService/DisableProvider", "IdentityProviderService", "DisableProvider", "disable_provider", "disableProvider", "mutation", "post", "/v1/idp/providers/{provider_id}:disable");
         map["/udb.core.idp.services.v1.IdentityProviderService/ForceJwksRefresh"] = new RpcIdentity("/udb.core.idp.services.v1.IdentityProviderService/ForceJwksRefresh", "IdentityProviderService", "ForceJwksRefresh", "force_jwks_refresh", "forceJwksRefresh", "mutation", "post", "/v1/idp/providers/{provider_id}:refreshJwks");
@@ -671,7 +684,7 @@ public sealed partial class GeneratedControlPlaneServiceClient : GeneratedServic
 }
 /// <summary>
 /// Robustness wrapper for the <c>udb.core.embedding.services.v1.EmbeddingService</c> service
-/// (6 RPCs). Forwards to the buf-generated
+/// (19 RPCs). Forwards to the buf-generated
 /// <c>EmbeddingServiceClient</c> stub.
 /// </summary>
 public sealed partial class GeneratedEmbeddingServiceClient : GeneratedServiceBase
@@ -4407,6 +4420,52 @@ public sealed partial class GeneratedEmbeddingServiceClient
 public sealed partial class GeneratedEmbeddingServiceClient
 {
     /// <summary>
+    /// <c>cutover_model_alias</c> (unary) — forwards to <c>EmbeddingServiceClient.CutoverModelAliasAsync</c>.
+    /// gRPC path: <c>/udb.core.embedding.services.v1.EmbeddingService/CutoverModelAlias</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> CutoverModelAliasAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.CutoverModelAliasAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.embedding.services.v1.EmbeddingService/CutoverModelAlias",
+            co => (object)_stub.CutoverModelAliasAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedEmbeddingServiceClient
+{
+    /// <summary>
+    /// <c>delete_model</c> (unary) — forwards to <c>EmbeddingServiceClient.DeleteModelAsync</c>.
+    /// gRPC path: <c>/udb.core.embedding.services.v1.EmbeddingService/DeleteModel</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> DeleteModelAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.DeleteModelAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.embedding.services.v1.EmbeddingService/DeleteModel",
+            co => (object)_stub.DeleteModelAsync(request, co),
+            deadline,
+            cancellationToken,
+            "destructive" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedEmbeddingServiceClient
+{
+    /// <summary>
     /// <c>delete_source</c> (unary) — forwards to <c>EmbeddingServiceClient.DeleteSourceAsync</c>.
     /// gRPC path: <c>/udb.core.embedding.services.v1.EmbeddingService/DeleteSource</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
@@ -4430,6 +4489,121 @@ public sealed partial class GeneratedEmbeddingServiceClient
 public sealed partial class GeneratedEmbeddingServiceClient
 {
     /// <summary>
+    /// <c>get_job_status</c> (unary) — forwards to <c>EmbeddingServiceClient.GetEmbeddingJobStatusAsync</c>.
+    /// gRPC path: <c>/udb.core.embedding.services.v1.EmbeddingService/GetEmbeddingJobStatus</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> GetJobStatusAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.GetEmbeddingJobStatusAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.embedding.services.v1.EmbeddingService/GetEmbeddingJobStatus",
+            co => (object)_stub.GetEmbeddingJobStatusAsync(request, co),
+            deadline,
+            cancellationToken,
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedEmbeddingServiceClient
+{
+    /// <summary>
+    /// <c>ingest_document</c> (unary) — forwards to <c>EmbeddingServiceClient.IngestDocumentAsync</c>.
+    /// gRPC path: <c>/udb.core.embedding.services.v1.EmbeddingService/IngestDocument</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> IngestDocumentAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.IngestDocumentAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.embedding.services.v1.EmbeddingService/IngestDocument",
+            co => (object)_stub.IngestDocumentAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedEmbeddingServiceClient
+{
+    /// <summary>
+    /// <c>ingest_document_batch</c> (unary) — forwards to <c>EmbeddingServiceClient.IngestDocumentBatchAsync</c>.
+    /// gRPC path: <c>/udb.core.embedding.services.v1.EmbeddingService/IngestDocumentBatch</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> IngestDocumentBatchAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.IngestDocumentBatchAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.embedding.services.v1.EmbeddingService/IngestDocumentBatch",
+            co => (object)_stub.IngestDocumentBatchAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedEmbeddingServiceClient
+{
+    /// <summary>
+    /// <c>list_work_items</c> (unary) — forwards to <c>EmbeddingServiceClient.ListEmbeddingWorkItemsAsync</c>.
+    /// gRPC path: <c>/udb.core.embedding.services.v1.EmbeddingService/ListEmbeddingWorkItems</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> ListWorkItemsAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.ListEmbeddingWorkItemsAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.embedding.services.v1.EmbeddingService/ListEmbeddingWorkItems",
+            co => (object)_stub.ListEmbeddingWorkItemsAsync(request, co),
+            deadline,
+            cancellationToken,
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedEmbeddingServiceClient
+{
+    /// <summary>
+    /// <c>list_models</c> (unary) — forwards to <c>EmbeddingServiceClient.ListModelsAsync</c>.
+    /// gRPC path: <c>/udb.core.embedding.services.v1.EmbeddingService/ListModels</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> ListModelsAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.ListModelsAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.embedding.services.v1.EmbeddingService/ListModels",
+            co => (object)_stub.ListModelsAsync(request, co),
+            deadline,
+            cancellationToken,
+            "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedEmbeddingServiceClient
+{
+    /// <summary>
     /// <c>list_sources</c> (unary) — forwards to <c>EmbeddingServiceClient.ListSourcesAsync</c>.
     /// gRPC path: <c>/udb.core.embedding.services.v1.EmbeddingService/ListSources</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
@@ -4446,6 +4620,29 @@ public sealed partial class GeneratedEmbeddingServiceClient
             deadline,
             cancellationToken,
             "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedEmbeddingServiceClient
+{
+    /// <summary>
+    /// <c>register_model</c> (unary) — forwards to <c>EmbeddingServiceClient.RegisterModelAsync</c>.
+    /// gRPC path: <c>/udb.core.embedding.services.v1.EmbeddingService/RegisterModel</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> RegisterModelAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.RegisterModelAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.embedding.services.v1.EmbeddingService/RegisterModel",
+            co => (object)_stub.RegisterModelAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
             "false" == "true",
             (object)request);
     }
@@ -4499,6 +4696,98 @@ public sealed partial class GeneratedEmbeddingServiceClient
 public sealed partial class GeneratedEmbeddingServiceClient
 {
     /// <summary>
+    /// <c>report_embedding_batch</c> (unary) — forwards to <c>EmbeddingServiceClient.ReportEmbeddingBatchAsync</c>.
+    /// gRPC path: <c>/udb.core.embedding.services.v1.EmbeddingService/ReportEmbeddingBatch</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> ReportEmbeddingBatchAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.ReportEmbeddingBatchAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.embedding.services.v1.EmbeddingService/ReportEmbeddingBatch",
+            co => (object)_stub.ReportEmbeddingBatchAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedEmbeddingServiceClient
+{
+    /// <summary>
+    /// <c>report_embedding_failure</c> (unary) — forwards to <c>EmbeddingServiceClient.ReportEmbeddingFailureAsync</c>.
+    /// gRPC path: <c>/udb.core.embedding.services.v1.EmbeddingService/ReportEmbeddingFailure</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> ReportEmbeddingFailureAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.ReportEmbeddingFailureAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.embedding.services.v1.EmbeddingService/ReportEmbeddingFailure",
+            co => (object)_stub.ReportEmbeddingFailureAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedEmbeddingServiceClient
+{
+    /// <summary>
+    /// <c>report_parsed_document</c> (unary) — forwards to <c>EmbeddingServiceClient.ReportParsedDocumentAsync</c>.
+    /// gRPC path: <c>/udb.core.embedding.services.v1.EmbeddingService/ReportParsedDocument</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> ReportParsedDocumentAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.ReportParsedDocumentAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.embedding.services.v1.EmbeddingService/ReportParsedDocument",
+            co => (object)_stub.ReportParsedDocumentAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedEmbeddingServiceClient
+{
+    /// <summary>
+    /// <c>report_retrieval_evaluation</c> (unary) — forwards to <c>EmbeddingServiceClient.ReportRetrievalEvaluationAsync</c>.
+    /// gRPC path: <c>/udb.core.embedding.services.v1.EmbeddingService/ReportRetrievalEvaluation</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> ReportRetrievalEvaluationAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.ReportRetrievalEvaluationAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.embedding.services.v1.EmbeddingService/ReportRetrievalEvaluation",
+            co => (object)_stub.ReportRetrievalEvaluationAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedEmbeddingServiceClient
+{
+    /// <summary>
     /// <c>retrieve</c> (unary) — forwards to <c>EmbeddingServiceClient.RetrieveAsync</c>.
     /// gRPC path: <c>/udb.core.embedding.services.v1.EmbeddingService/Retrieve</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
@@ -4515,6 +4804,29 @@ public sealed partial class GeneratedEmbeddingServiceClient
             deadline,
             cancellationToken,
             "read_only" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedEmbeddingServiceClient
+{
+    /// <summary>
+    /// <c>set_model_status</c> (unary) — forwards to <c>EmbeddingServiceClient.SetModelStatusAsync</c>.
+    /// gRPC path: <c>/udb.core.embedding.services.v1.EmbeddingService/SetModelStatus</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> SetModelStatusAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.SetModelStatusAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.embedding.services.v1.EmbeddingService/SetModelStatus",
+            co => (object)_stub.SetModelStatusAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
             "false" == "true",
             (object)request);
     }
@@ -9020,11 +9332,11 @@ public static class UdbIr
     public const string DefaultBackend = "postgres";
 
     public static IReadOnlyDictionary<string, string> BackendRoles { get; } =
-        JsonSerializer.Deserialize<Dictionary<string, string>>("{\"postgres\":\"canonical\",\"mysql\":\"canonical\",\"sqlite\":\"canonical\",\"sqlserver\":\"canonical\",\"clickhouse\":\"canonical\",\"redis\":\"canonical\",\"memcached\":\"projection\",\"qdrant\":\"projection\",\"weaviate\":\"projection\",\"pinecone\":\"projection\",\"minio\":\"projection\",\"s3\":\"projection\",\"azureblob\":\"projection\",\"gcs\":\"projection\",\"mongodb\":\"canonical\",\"elasticsearch\":\"projection\",\"neo4j\":\"canonical\",\"cassandra\":\"canonical\"}")
+        JsonSerializer.Deserialize<Dictionary<string, string>>("{\"azureblob\":\"projection\",\"cassandra\":\"projection\",\"clickhouse\":\"projection\",\"elasticsearch\":\"projection\",\"gcs\":\"projection\",\"memcached\":\"projection\",\"minio\":\"projection\",\"mongodb\":\"projection\",\"mysql\":\"canonical\",\"neo4j\":\"projection\",\"pinecone\":\"projection\",\"postgres\":\"canonical\",\"qdrant\":\"projection\",\"redis\":\"projection\",\"s3\":\"projection\",\"sqlite\":\"canonical\",\"sqlserver\":\"canonical\",\"weaviate\":\"projection\"}")
         ?? new Dictionary<string, string>();
 
     public static IReadOnlyDictionary<string, string> OrmTiers { get; } =
-        JsonSerializer.Deserialize<Dictionary<string, string>>("{\"postgres\":\"relational\",\"mysql\":\"relational\",\"sqlite\":\"relational\",\"sqlserver\":\"relational\",\"clickhouse\":\"relational\",\"redis\":\"kv\",\"memcached\":\"kv\",\"qdrant\":\"vector\",\"weaviate\":\"vector\",\"pinecone\":\"vector\",\"minio\":\"blob\",\"s3\":\"blob\",\"azureblob\":\"blob\",\"gcs\":\"blob\",\"mongodb\":\"document\",\"elasticsearch\":\"vector\",\"neo4j\":\"graph\",\"cassandra\":\"relational\"}")
+        JsonSerializer.Deserialize<Dictionary<string, string>>("{\"azureblob\":\"blob\",\"cassandra\":\"relational\",\"clickhouse\":\"relational\",\"elasticsearch\":\"vector\",\"gcs\":\"blob\",\"memcached\":\"kv\",\"minio\":\"blob\",\"mongodb\":\"document\",\"mysql\":\"relational\",\"neo4j\":\"graph\",\"pinecone\":\"vector\",\"postgres\":\"relational\",\"qdrant\":\"vector\",\"redis\":\"kv\",\"s3\":\"blob\",\"sqlite\":\"relational\",\"sqlserver\":\"relational\",\"weaviate\":\"vector\"}")
         ?? new Dictionary<string, string>();
 
     public static IReadOnlyDictionary<string, EntityBinding> Entities { get; } = BuildEntityRegistry();
@@ -9422,16 +9734,56 @@ public static class UdbIr
             "tenant_id",
             "",
             "udb.core.Control.Entity.V1.ControlPlaneResource");
+        entities["udb.core.embedding.entity.v1.EmbeddingDocument"] = new EntityBinding(
+            "udb.core.embedding.entity.v1.EmbeddingDocument",
+            "embedding_documents",
+            new List<string> { "document_id" },
+            new List<string> { "document_id", "tenant_id", "project_id", "external_id", "title", "raw_text", "storage_object_ref", "content_type", "doc_version", "model_id", "target_collection", "status", "metadata_json", "created_at", "updated_at", "created_by" },
+            "[{\"name\":\"model\",\"kind\":\"belongs_to\",\"local_fields\":[\"model_id\",\"tenant_id\"],\"target_message_type\":\"udb.core.embedding.entity.v1.EmbeddingModel\",\"target_table\":\"udb_embedding.embedding_models\",\"target_fields\":[\"model_id\",\"tenant_id\"],\"on_delete\":\"RESTRICT\",\"on_update\":\"NO ACTION\"}]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Embedding.Entity.V1.EmbeddingDocument");
+        entities["udb.core.embedding.entity.v1.EmbeddingJob"] = new EntityBinding(
+            "udb.core.embedding.entity.v1.EmbeddingJob",
+            "embedding_jobs",
+            new List<string> { "job_id" },
+            new List<string> { "job_id", "tenant_id", "project_id", "source_name", "document_id", "job_type", "mode", "status", "rows_enumerated", "chunks_emitted", "vectors_stored", "failed", "error", "metadata_json", "created_at", "started_at", "finished_at", "updated_at", "created_by" },
+            "[{\"name\":\"embedding_work_items\",\"kind\":\"has_many\",\"local_fields\":[\"job_id\"],\"target_message_type\":\"udb.core.embedding.entity.v1.EmbeddingWorkItem\",\"target_table\":\"udb_embedding.embedding_work_items\",\"target_fields\":[\"job_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Embedding.Entity.V1.EmbeddingJob");
+        entities["udb.core.embedding.entity.v1.EmbeddingModel"] = new EntityBinding(
+            "udb.core.embedding.entity.v1.EmbeddingModel",
+            "embedding_models",
+            new List<string> { "model_id", "tenant_id" },
+            new List<string> { "model_id", "tenant_id", "provider", "model_name", "version", "dimensions", "matryoshka_dims_json", "distance_metric", "normalize", "output_dtype", "rescore", "max_input_tokens", "tokenizer", "task_type", "asymmetric", "provider_endpoint_ref", "status", "retire_after", "replacement_model_id", "vector_backend", "vector_instance", "collection_alias", "active_collection", "chunking_strategy", "chunk_tokens", "chunk_overlap_tokens", "contextual_retrieval", "late_chunking", "tenant_state", "metadata_json", "created_at", "updated_at", "created_by" },
+            "[{\"name\":\"embedding_documents\",\"kind\":\"has_many\",\"local_fields\":[\"model_id\",\"tenant_id\"],\"target_message_type\":\"udb.core.embedding.entity.v1.EmbeddingDocument\",\"target_table\":\"udb_embedding.embedding_documents\",\"target_fields\":[\"model_id\",\"tenant_id\"],\"on_delete\":\"RESTRICT\",\"on_update\":\"NO ACTION\"},{\"name\":\"embedding_models\",\"kind\":\"has_many\",\"local_fields\":[\"model_id\",\"tenant_id\"],\"target_message_type\":\"udb.core.embedding.entity.v1.EmbeddingModel\",\"target_table\":\"udb_embedding.embedding_models\",\"target_fields\":[\"replacement_model_id\",\"tenant_id\"],\"on_delete\":\"RESTRICT\",\"on_update\":\"NO ACTION\"},{\"name\":\"embedding_sources\",\"kind\":\"has_many\",\"local_fields\":[\"model_id\",\"tenant_id\"],\"target_message_type\":\"udb.core.embedding.entity.v1.EmbeddingSource\",\"target_table\":\"udb_embedding.embedding_sources\",\"target_fields\":[\"model_id\",\"tenant_id\"],\"on_delete\":\"RESTRICT\",\"on_update\":\"NO ACTION\"},{\"name\":\"embedding_work_items\",\"kind\":\"has_many\",\"local_fields\":[\"model_id\",\"tenant_id\"],\"target_message_type\":\"udb.core.embedding.entity.v1.EmbeddingWorkItem\",\"target_table\":\"udb_embedding.embedding_work_items\",\"target_fields\":[\"model_id\",\"tenant_id\"],\"on_delete\":\"RESTRICT\",\"on_update\":\"NO ACTION\"},{\"name\":\"replacement_model\",\"kind\":\"belongs_to\",\"local_fields\":[\"replacement_model_id\",\"tenant_id\"],\"target_message_type\":\"udb.core.embedding.entity.v1.EmbeddingModel\",\"target_table\":\"udb_embedding.embedding_models\",\"target_fields\":[\"model_id\",\"tenant_id\"],\"on_delete\":\"RESTRICT\",\"on_update\":\"NO ACTION\"}]",
+            "version",
+            "tenant_id",
+            "",
+            "udb.core.Embedding.Entity.V1.EmbeddingModel");
         entities["udb.core.embedding.entity.v1.EmbeddingSource"] = new EntityBinding(
             "udb.core.embedding.entity.v1.EmbeddingSource",
             "embedding_sources",
             new List<string> { "source_id" },
             new List<string> { "source_id", "tenant_id", "source_name", "source_message_type", "text_fields_json", "target_collection", "model_id", "tenant_column", "source_cdc_topic", "status", "created_at", "updated_at", "metadata_json", "created_by" },
-            "[]",
+            "[{\"name\":\"model\",\"kind\":\"belongs_to\",\"local_fields\":[\"model_id\",\"tenant_id\"],\"target_message_type\":\"udb.core.embedding.entity.v1.EmbeddingModel\",\"target_table\":\"udb_embedding.embedding_models\",\"target_fields\":[\"model_id\",\"tenant_id\"],\"on_delete\":\"RESTRICT\",\"on_update\":\"NO ACTION\"}]",
             "",
             "tenant_id",
             "",
             "udb.core.Embedding.Entity.V1.EmbeddingSource");
+        entities["udb.core.embedding.entity.v1.EmbeddingWorkItem"] = new EntityBinding(
+            "udb.core.embedding.entity.v1.EmbeddingWorkItem",
+            "embedding_work_items",
+            new List<string> { "work_item_id" },
+            new List<string> { "work_item_id", "tenant_id", "project_id", "job_id", "source_name", "parent_pk", "point_id", "document_id", "doc_version", "chunk_seq", "chunk_count", "chunk_hash", "chunk_text", "model_id", "target_collection", "status", "attempt_count", "max_attempts", "last_error", "retryable", "token_count", "next_attempt_at", "created_at", "last_emitted_at", "acked_at", "updated_at", "parent_text", "char_start", "char_end", "token_start", "token_end", "created_by" },
+            "[{\"name\":\"job\",\"kind\":\"belongs_to\",\"local_fields\":[\"job_id\"],\"target_message_type\":\"udb.core.embedding.entity.v1.EmbeddingJob\",\"target_table\":\"udb_embedding.embedding_jobs\",\"target_fields\":[\"job_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"model\",\"kind\":\"belongs_to\",\"local_fields\":[\"model_id\",\"tenant_id\"],\"target_message_type\":\"udb.core.embedding.entity.v1.EmbeddingModel\",\"target_table\":\"udb_embedding.embedding_models\",\"target_fields\":[\"model_id\",\"tenant_id\"],\"on_delete\":\"RESTRICT\",\"on_update\":\"NO ACTION\"}]",
+            "",
+            "tenant_id",
+            "",
+            "udb.core.Embedding.Entity.V1.EmbeddingWorkItem");
         entities["udb.core.idp.entity.v1.ExternalIdentity"] = new EntityBinding(
             "udb.core.idp.entity.v1.ExternalIdentity",
             "external_identities",
@@ -9743,7 +10095,11 @@ public static class UdbIr
     public static EntityRepository FlagRepository() => Repository("udb.core.config.entity.v1.Flag");
     public static EntityRepository ControlPlaneNodeStateRepository() => Repository("udb.core.control.entity.v1.ControlPlaneNodeState");
     public static EntityRepository ControlPlaneResourceRepository() => Repository("udb.core.control.entity.v1.ControlPlaneResource");
+    public static EntityRepository EmbeddingDocumentRepository() => Repository("udb.core.embedding.entity.v1.EmbeddingDocument");
+    public static EntityRepository EmbeddingJobRepository() => Repository("udb.core.embedding.entity.v1.EmbeddingJob");
+    public static EntityRepository EmbeddingModelRepository() => Repository("udb.core.embedding.entity.v1.EmbeddingModel");
     public static EntityRepository EmbeddingSourceRepository() => Repository("udb.core.embedding.entity.v1.EmbeddingSource");
+    public static EntityRepository EmbeddingWorkItemRepository() => Repository("udb.core.embedding.entity.v1.EmbeddingWorkItem");
     public static EntityRepository ExternalIdentityRepository() => Repository("udb.core.idp.entity.v1.ExternalIdentity");
     public static EntityRepository IdentityProviderRepository() => Repository("udb.core.idp.entity.v1.IdentityProvider");
     public static EntityRepository SamlReplayEntryRepository() => Repository("udb.core.idp.entity.v1.SamlReplayEntry");

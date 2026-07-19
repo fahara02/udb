@@ -59,6 +59,38 @@ class RetrieveRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>double score_threshold = 7 [json_name = "scoreThreshold"];</code>
      */
     protected $score_threshold = 0.0;
+    /**
+     * Generated from protobuf field <code>bool include_vectors = 8 [json_name = "includeVectors"];</code>
+     */
+    protected $include_vectors = false;
+    /**
+     * Generated from protobuf field <code>.udb.core.embedding.services.v1.MmrConfig mmr = 9 [json_name = "mmr"];</code>
+     */
+    protected $mmr = null;
+    /**
+     * Generated from protobuf field <code>.udb.core.embedding.services.v1.FusionStrategy fusion = 10 [json_name = "fusion"];</code>
+     */
+    protected $fusion = 0;
+    /**
+     * Generated from protobuf field <code>int32 prefetch_limit = 11 [json_name = "prefetchLimit"];</code>
+     */
+    protected $prefetch_limit = 0;
+    /**
+     * Generated from protobuf field <code>.udb.core.embedding.services.v1.RerankConfig rerank = 12 [json_name = "rerank"];</code>
+     */
+    protected $rerank = null;
+    /**
+     * Generated from protobuf field <code>string vector_name = 13 [json_name = "vectorName"];</code>
+     */
+    protected $vector_name = '';
+    /**
+     * Generated from protobuf field <code>int32 parent_window = 14 [json_name = "parentWindow"];</code>
+     */
+    protected $parent_window = 0;
+    /**
+     * Generated from protobuf field <code>bool include_citations = 15 [json_name = "includeCitations"];</code>
+     */
+    protected $include_citations = false;
 
     /**
      * Constructor.
@@ -86,6 +118,14 @@ class RetrieveRequest extends \Google\Protobuf\Internal\Message
      *           RAISES (never lowers) the server-side floor, so a caller can demand
      *           higher-precision results per query; <= 0 uses the server default. Applies to
      *           both the vector and hybrid paths.
+     *     @type bool $include_vectors
+     *     @type \Udb\Core\Embedding\Services\V1\MmrConfig $mmr
+     *     @type int $fusion
+     *     @type int $prefetch_limit
+     *     @type \Udb\Core\Embedding\Services\V1\RerankConfig $rerank
+     *     @type string $vector_name
+     *     @type int $parent_window
+     *     @type bool $include_citations
      * }
      */
     public function __construct($data = NULL) {
@@ -277,6 +317,202 @@ class RetrieveRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkDouble($var);
         $this->score_threshold = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>bool include_vectors = 8 [json_name = "includeVectors"];</code>
+     * @return bool
+     */
+    public function getIncludeVectors()
+    {
+        return $this->include_vectors;
+    }
+
+    /**
+     * Generated from protobuf field <code>bool include_vectors = 8 [json_name = "includeVectors"];</code>
+     * @param bool $var
+     * @return $this
+     */
+    public function setIncludeVectors($var)
+    {
+        GPBUtil::checkBool($var);
+        $this->include_vectors = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>.udb.core.embedding.services.v1.MmrConfig mmr = 9 [json_name = "mmr"];</code>
+     * @return \Udb\Core\Embedding\Services\V1\MmrConfig|null
+     */
+    public function getMmr()
+    {
+        return $this->mmr;
+    }
+
+    public function hasMmr()
+    {
+        return isset($this->mmr);
+    }
+
+    public function clearMmr()
+    {
+        unset($this->mmr);
+    }
+
+    /**
+     * Generated from protobuf field <code>.udb.core.embedding.services.v1.MmrConfig mmr = 9 [json_name = "mmr"];</code>
+     * @param \Udb\Core\Embedding\Services\V1\MmrConfig $var
+     * @return $this
+     */
+    public function setMmr($var)
+    {
+        GPBUtil::checkMessage($var, \Udb\Core\Embedding\Services\V1\MmrConfig::class);
+        $this->mmr = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>.udb.core.embedding.services.v1.FusionStrategy fusion = 10 [json_name = "fusion"];</code>
+     * @return int
+     */
+    public function getFusion()
+    {
+        return $this->fusion;
+    }
+
+    /**
+     * Generated from protobuf field <code>.udb.core.embedding.services.v1.FusionStrategy fusion = 10 [json_name = "fusion"];</code>
+     * @param int $var
+     * @return $this
+     */
+    public function setFusion($var)
+    {
+        GPBUtil::checkEnum($var, \Udb\Core\Embedding\Services\V1\FusionStrategy::class);
+        $this->fusion = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>int32 prefetch_limit = 11 [json_name = "prefetchLimit"];</code>
+     * @return int
+     */
+    public function getPrefetchLimit()
+    {
+        return $this->prefetch_limit;
+    }
+
+    /**
+     * Generated from protobuf field <code>int32 prefetch_limit = 11 [json_name = "prefetchLimit"];</code>
+     * @param int $var
+     * @return $this
+     */
+    public function setPrefetchLimit($var)
+    {
+        GPBUtil::checkInt32($var);
+        $this->prefetch_limit = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>.udb.core.embedding.services.v1.RerankConfig rerank = 12 [json_name = "rerank"];</code>
+     * @return \Udb\Core\Embedding\Services\V1\RerankConfig|null
+     */
+    public function getRerank()
+    {
+        return $this->rerank;
+    }
+
+    public function hasRerank()
+    {
+        return isset($this->rerank);
+    }
+
+    public function clearRerank()
+    {
+        unset($this->rerank);
+    }
+
+    /**
+     * Generated from protobuf field <code>.udb.core.embedding.services.v1.RerankConfig rerank = 12 [json_name = "rerank"];</code>
+     * @param \Udb\Core\Embedding\Services\V1\RerankConfig $var
+     * @return $this
+     */
+    public function setRerank($var)
+    {
+        GPBUtil::checkMessage($var, \Udb\Core\Embedding\Services\V1\RerankConfig::class);
+        $this->rerank = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>string vector_name = 13 [json_name = "vectorName"];</code>
+     * @return string
+     */
+    public function getVectorName()
+    {
+        return $this->vector_name;
+    }
+
+    /**
+     * Generated from protobuf field <code>string vector_name = 13 [json_name = "vectorName"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setVectorName($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->vector_name = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>int32 parent_window = 14 [json_name = "parentWindow"];</code>
+     * @return int
+     */
+    public function getParentWindow()
+    {
+        return $this->parent_window;
+    }
+
+    /**
+     * Generated from protobuf field <code>int32 parent_window = 14 [json_name = "parentWindow"];</code>
+     * @param int $var
+     * @return $this
+     */
+    public function setParentWindow($var)
+    {
+        GPBUtil::checkInt32($var);
+        $this->parent_window = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>bool include_citations = 15 [json_name = "includeCitations"];</code>
+     * @return bool
+     */
+    public function getIncludeCitations()
+    {
+        return $this->include_citations;
+    }
+
+    /**
+     * Generated from protobuf field <code>bool include_citations = 15 [json_name = "includeCitations"];</code>
+     * @param bool $var
+     * @return $this
+     */
+    public function setIncludeCitations($var)
+    {
+        GPBUtil::checkBool($var);
+        $this->include_citations = $var;
 
         return $this;
     }

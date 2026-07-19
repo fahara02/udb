@@ -7,7 +7,7 @@
 package servicesv1
 
 import (
-	_ "github.com/fahara02/udb/sdk/go/gen/google/api"
+	_ "google.golang.org/genproto/googleapis/api/annotations"
 	v1 "github.com/fahara02/udb/sdk/go/gen/udb/core/common/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"

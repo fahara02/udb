@@ -252,7 +252,7 @@ services:
       - "49160-49200:49160-49200/udp"
 
   qdrant:
-    image: qdrant/qdrant:v1.13.4
+    image: qdrant/qdrant:v1.18.2
     ports:
       - "56333:6333"
     healthcheck:

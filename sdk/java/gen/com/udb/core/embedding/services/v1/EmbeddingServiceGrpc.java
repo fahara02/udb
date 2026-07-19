@@ -209,6 +209,409 @@ public final class EmbeddingServiceGrpc {
     return getRetrieveMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.embedding.services.v1.RegisterModelRequest,
+      com.udb.core.embedding.services.v1.RegisterModelResponse> getRegisterModelMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "RegisterModel",
+      requestType = com.udb.core.embedding.services.v1.RegisterModelRequest.class,
+      responseType = com.udb.core.embedding.services.v1.RegisterModelResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.embedding.services.v1.RegisterModelRequest,
+      com.udb.core.embedding.services.v1.RegisterModelResponse> getRegisterModelMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.embedding.services.v1.RegisterModelRequest, com.udb.core.embedding.services.v1.RegisterModelResponse> getRegisterModelMethod;
+    if ((getRegisterModelMethod = EmbeddingServiceGrpc.getRegisterModelMethod) == null) {
+      synchronized (EmbeddingServiceGrpc.class) {
+        if ((getRegisterModelMethod = EmbeddingServiceGrpc.getRegisterModelMethod) == null) {
+          EmbeddingServiceGrpc.getRegisterModelMethod = getRegisterModelMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.embedding.services.v1.RegisterModelRequest, com.udb.core.embedding.services.v1.RegisterModelResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "RegisterModel"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.embedding.services.v1.RegisterModelRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.embedding.services.v1.RegisterModelResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new EmbeddingServiceMethodDescriptorSupplier("RegisterModel"))
+              .build();
+        }
+      }
+    }
+    return getRegisterModelMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.embedding.services.v1.ListModelsRequest,
+      com.udb.core.embedding.services.v1.ListModelsResponse> getListModelsMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "ListModels",
+      requestType = com.udb.core.embedding.services.v1.ListModelsRequest.class,
+      responseType = com.udb.core.embedding.services.v1.ListModelsResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.embedding.services.v1.ListModelsRequest,
+      com.udb.core.embedding.services.v1.ListModelsResponse> getListModelsMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.embedding.services.v1.ListModelsRequest, com.udb.core.embedding.services.v1.ListModelsResponse> getListModelsMethod;
+    if ((getListModelsMethod = EmbeddingServiceGrpc.getListModelsMethod) == null) {
+      synchronized (EmbeddingServiceGrpc.class) {
+        if ((getListModelsMethod = EmbeddingServiceGrpc.getListModelsMethod) == null) {
+          EmbeddingServiceGrpc.getListModelsMethod = getListModelsMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.embedding.services.v1.ListModelsRequest, com.udb.core.embedding.services.v1.ListModelsResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "ListModels"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.embedding.services.v1.ListModelsRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.embedding.services.v1.ListModelsResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new EmbeddingServiceMethodDescriptorSupplier("ListModels"))
+              .build();
+        }
+      }
+    }
+    return getListModelsMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.embedding.services.v1.DeleteModelRequest,
+      com.udb.core.embedding.services.v1.DeleteModelResponse> getDeleteModelMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "DeleteModel",
+      requestType = com.udb.core.embedding.services.v1.DeleteModelRequest.class,
+      responseType = com.udb.core.embedding.services.v1.DeleteModelResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.embedding.services.v1.DeleteModelRequest,
+      com.udb.core.embedding.services.v1.DeleteModelResponse> getDeleteModelMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.embedding.services.v1.DeleteModelRequest, com.udb.core.embedding.services.v1.DeleteModelResponse> getDeleteModelMethod;
+    if ((getDeleteModelMethod = EmbeddingServiceGrpc.getDeleteModelMethod) == null) {
+      synchronized (EmbeddingServiceGrpc.class) {
+        if ((getDeleteModelMethod = EmbeddingServiceGrpc.getDeleteModelMethod) == null) {
+          EmbeddingServiceGrpc.getDeleteModelMethod = getDeleteModelMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.embedding.services.v1.DeleteModelRequest, com.udb.core.embedding.services.v1.DeleteModelResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "DeleteModel"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.embedding.services.v1.DeleteModelRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.embedding.services.v1.DeleteModelResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new EmbeddingServiceMethodDescriptorSupplier("DeleteModel"))
+              .build();
+        }
+      }
+    }
+    return getDeleteModelMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.embedding.services.v1.SetModelStatusRequest,
+      com.udb.core.embedding.services.v1.SetModelStatusResponse> getSetModelStatusMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "SetModelStatus",
+      requestType = com.udb.core.embedding.services.v1.SetModelStatusRequest.class,
+      responseType = com.udb.core.embedding.services.v1.SetModelStatusResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.embedding.services.v1.SetModelStatusRequest,
+      com.udb.core.embedding.services.v1.SetModelStatusResponse> getSetModelStatusMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.embedding.services.v1.SetModelStatusRequest, com.udb.core.embedding.services.v1.SetModelStatusResponse> getSetModelStatusMethod;
+    if ((getSetModelStatusMethod = EmbeddingServiceGrpc.getSetModelStatusMethod) == null) {
+      synchronized (EmbeddingServiceGrpc.class) {
+        if ((getSetModelStatusMethod = EmbeddingServiceGrpc.getSetModelStatusMethod) == null) {
+          EmbeddingServiceGrpc.getSetModelStatusMethod = getSetModelStatusMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.embedding.services.v1.SetModelStatusRequest, com.udb.core.embedding.services.v1.SetModelStatusResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "SetModelStatus"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.embedding.services.v1.SetModelStatusRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.embedding.services.v1.SetModelStatusResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new EmbeddingServiceMethodDescriptorSupplier("SetModelStatus"))
+              .build();
+        }
+      }
+    }
+    return getSetModelStatusMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.embedding.services.v1.CutoverModelAliasRequest,
+      com.udb.core.embedding.services.v1.CutoverModelAliasResponse> getCutoverModelAliasMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "CutoverModelAlias",
+      requestType = com.udb.core.embedding.services.v1.CutoverModelAliasRequest.class,
+      responseType = com.udb.core.embedding.services.v1.CutoverModelAliasResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.embedding.services.v1.CutoverModelAliasRequest,
+      com.udb.core.embedding.services.v1.CutoverModelAliasResponse> getCutoverModelAliasMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.embedding.services.v1.CutoverModelAliasRequest, com.udb.core.embedding.services.v1.CutoverModelAliasResponse> getCutoverModelAliasMethod;
+    if ((getCutoverModelAliasMethod = EmbeddingServiceGrpc.getCutoverModelAliasMethod) == null) {
+      synchronized (EmbeddingServiceGrpc.class) {
+        if ((getCutoverModelAliasMethod = EmbeddingServiceGrpc.getCutoverModelAliasMethod) == null) {
+          EmbeddingServiceGrpc.getCutoverModelAliasMethod = getCutoverModelAliasMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.embedding.services.v1.CutoverModelAliasRequest, com.udb.core.embedding.services.v1.CutoverModelAliasResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "CutoverModelAlias"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.embedding.services.v1.CutoverModelAliasRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.embedding.services.v1.CutoverModelAliasResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new EmbeddingServiceMethodDescriptorSupplier("CutoverModelAlias"))
+              .build();
+        }
+      }
+    }
+    return getCutoverModelAliasMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.embedding.services.v1.GetEmbeddingJobStatusRequest,
+      com.udb.core.embedding.services.v1.GetEmbeddingJobStatusResponse> getGetEmbeddingJobStatusMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "GetEmbeddingJobStatus",
+      requestType = com.udb.core.embedding.services.v1.GetEmbeddingJobStatusRequest.class,
+      responseType = com.udb.core.embedding.services.v1.GetEmbeddingJobStatusResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.embedding.services.v1.GetEmbeddingJobStatusRequest,
+      com.udb.core.embedding.services.v1.GetEmbeddingJobStatusResponse> getGetEmbeddingJobStatusMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.embedding.services.v1.GetEmbeddingJobStatusRequest, com.udb.core.embedding.services.v1.GetEmbeddingJobStatusResponse> getGetEmbeddingJobStatusMethod;
+    if ((getGetEmbeddingJobStatusMethod = EmbeddingServiceGrpc.getGetEmbeddingJobStatusMethod) == null) {
+      synchronized (EmbeddingServiceGrpc.class) {
+        if ((getGetEmbeddingJobStatusMethod = EmbeddingServiceGrpc.getGetEmbeddingJobStatusMethod) == null) {
+          EmbeddingServiceGrpc.getGetEmbeddingJobStatusMethod = getGetEmbeddingJobStatusMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.embedding.services.v1.GetEmbeddingJobStatusRequest, com.udb.core.embedding.services.v1.GetEmbeddingJobStatusResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "GetEmbeddingJobStatus"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.embedding.services.v1.GetEmbeddingJobStatusRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.embedding.services.v1.GetEmbeddingJobStatusResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new EmbeddingServiceMethodDescriptorSupplier("GetEmbeddingJobStatus"))
+              .build();
+        }
+      }
+    }
+    return getGetEmbeddingJobStatusMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.embedding.services.v1.ListEmbeddingWorkItemsRequest,
+      com.udb.core.embedding.services.v1.ListEmbeddingWorkItemsResponse> getListEmbeddingWorkItemsMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "ListEmbeddingWorkItems",
+      requestType = com.udb.core.embedding.services.v1.ListEmbeddingWorkItemsRequest.class,
+      responseType = com.udb.core.embedding.services.v1.ListEmbeddingWorkItemsResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.embedding.services.v1.ListEmbeddingWorkItemsRequest,
+      com.udb.core.embedding.services.v1.ListEmbeddingWorkItemsResponse> getListEmbeddingWorkItemsMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.embedding.services.v1.ListEmbeddingWorkItemsRequest, com.udb.core.embedding.services.v1.ListEmbeddingWorkItemsResponse> getListEmbeddingWorkItemsMethod;
+    if ((getListEmbeddingWorkItemsMethod = EmbeddingServiceGrpc.getListEmbeddingWorkItemsMethod) == null) {
+      synchronized (EmbeddingServiceGrpc.class) {
+        if ((getListEmbeddingWorkItemsMethod = EmbeddingServiceGrpc.getListEmbeddingWorkItemsMethod) == null) {
+          EmbeddingServiceGrpc.getListEmbeddingWorkItemsMethod = getListEmbeddingWorkItemsMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.embedding.services.v1.ListEmbeddingWorkItemsRequest, com.udb.core.embedding.services.v1.ListEmbeddingWorkItemsResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "ListEmbeddingWorkItems"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.embedding.services.v1.ListEmbeddingWorkItemsRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.embedding.services.v1.ListEmbeddingWorkItemsResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new EmbeddingServiceMethodDescriptorSupplier("ListEmbeddingWorkItems"))
+              .build();
+        }
+      }
+    }
+    return getListEmbeddingWorkItemsMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.embedding.services.v1.ReportEmbeddingBatchRequest,
+      com.udb.core.embedding.services.v1.ReportEmbeddingBatchResponse> getReportEmbeddingBatchMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "ReportEmbeddingBatch",
+      requestType = com.udb.core.embedding.services.v1.ReportEmbeddingBatchRequest.class,
+      responseType = com.udb.core.embedding.services.v1.ReportEmbeddingBatchResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.embedding.services.v1.ReportEmbeddingBatchRequest,
+      com.udb.core.embedding.services.v1.ReportEmbeddingBatchResponse> getReportEmbeddingBatchMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.embedding.services.v1.ReportEmbeddingBatchRequest, com.udb.core.embedding.services.v1.ReportEmbeddingBatchResponse> getReportEmbeddingBatchMethod;
+    if ((getReportEmbeddingBatchMethod = EmbeddingServiceGrpc.getReportEmbeddingBatchMethod) == null) {
+      synchronized (EmbeddingServiceGrpc.class) {
+        if ((getReportEmbeddingBatchMethod = EmbeddingServiceGrpc.getReportEmbeddingBatchMethod) == null) {
+          EmbeddingServiceGrpc.getReportEmbeddingBatchMethod = getReportEmbeddingBatchMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.embedding.services.v1.ReportEmbeddingBatchRequest, com.udb.core.embedding.services.v1.ReportEmbeddingBatchResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "ReportEmbeddingBatch"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.embedding.services.v1.ReportEmbeddingBatchRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.embedding.services.v1.ReportEmbeddingBatchResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new EmbeddingServiceMethodDescriptorSupplier("ReportEmbeddingBatch"))
+              .build();
+        }
+      }
+    }
+    return getReportEmbeddingBatchMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.embedding.services.v1.ReportEmbeddingFailureRequest,
+      com.udb.core.embedding.services.v1.ReportEmbeddingFailureResponse> getReportEmbeddingFailureMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "ReportEmbeddingFailure",
+      requestType = com.udb.core.embedding.services.v1.ReportEmbeddingFailureRequest.class,
+      responseType = com.udb.core.embedding.services.v1.ReportEmbeddingFailureResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.embedding.services.v1.ReportEmbeddingFailureRequest,
+      com.udb.core.embedding.services.v1.ReportEmbeddingFailureResponse> getReportEmbeddingFailureMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.embedding.services.v1.ReportEmbeddingFailureRequest, com.udb.core.embedding.services.v1.ReportEmbeddingFailureResponse> getReportEmbeddingFailureMethod;
+    if ((getReportEmbeddingFailureMethod = EmbeddingServiceGrpc.getReportEmbeddingFailureMethod) == null) {
+      synchronized (EmbeddingServiceGrpc.class) {
+        if ((getReportEmbeddingFailureMethod = EmbeddingServiceGrpc.getReportEmbeddingFailureMethod) == null) {
+          EmbeddingServiceGrpc.getReportEmbeddingFailureMethod = getReportEmbeddingFailureMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.embedding.services.v1.ReportEmbeddingFailureRequest, com.udb.core.embedding.services.v1.ReportEmbeddingFailureResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "ReportEmbeddingFailure"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.embedding.services.v1.ReportEmbeddingFailureRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.embedding.services.v1.ReportEmbeddingFailureResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new EmbeddingServiceMethodDescriptorSupplier("ReportEmbeddingFailure"))
+              .build();
+        }
+      }
+    }
+    return getReportEmbeddingFailureMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.embedding.services.v1.IngestDocumentRequest,
+      com.udb.core.embedding.services.v1.IngestDocumentResponse> getIngestDocumentMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "IngestDocument",
+      requestType = com.udb.core.embedding.services.v1.IngestDocumentRequest.class,
+      responseType = com.udb.core.embedding.services.v1.IngestDocumentResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.embedding.services.v1.IngestDocumentRequest,
+      com.udb.core.embedding.services.v1.IngestDocumentResponse> getIngestDocumentMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.embedding.services.v1.IngestDocumentRequest, com.udb.core.embedding.services.v1.IngestDocumentResponse> getIngestDocumentMethod;
+    if ((getIngestDocumentMethod = EmbeddingServiceGrpc.getIngestDocumentMethod) == null) {
+      synchronized (EmbeddingServiceGrpc.class) {
+        if ((getIngestDocumentMethod = EmbeddingServiceGrpc.getIngestDocumentMethod) == null) {
+          EmbeddingServiceGrpc.getIngestDocumentMethod = getIngestDocumentMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.embedding.services.v1.IngestDocumentRequest, com.udb.core.embedding.services.v1.IngestDocumentResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "IngestDocument"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.embedding.services.v1.IngestDocumentRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.embedding.services.v1.IngestDocumentResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new EmbeddingServiceMethodDescriptorSupplier("IngestDocument"))
+              .build();
+        }
+      }
+    }
+    return getIngestDocumentMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.embedding.services.v1.IngestDocumentBatchRequest,
+      com.udb.core.embedding.services.v1.IngestDocumentBatchResponse> getIngestDocumentBatchMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "IngestDocumentBatch",
+      requestType = com.udb.core.embedding.services.v1.IngestDocumentBatchRequest.class,
+      responseType = com.udb.core.embedding.services.v1.IngestDocumentBatchResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.embedding.services.v1.IngestDocumentBatchRequest,
+      com.udb.core.embedding.services.v1.IngestDocumentBatchResponse> getIngestDocumentBatchMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.embedding.services.v1.IngestDocumentBatchRequest, com.udb.core.embedding.services.v1.IngestDocumentBatchResponse> getIngestDocumentBatchMethod;
+    if ((getIngestDocumentBatchMethod = EmbeddingServiceGrpc.getIngestDocumentBatchMethod) == null) {
+      synchronized (EmbeddingServiceGrpc.class) {
+        if ((getIngestDocumentBatchMethod = EmbeddingServiceGrpc.getIngestDocumentBatchMethod) == null) {
+          EmbeddingServiceGrpc.getIngestDocumentBatchMethod = getIngestDocumentBatchMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.embedding.services.v1.IngestDocumentBatchRequest, com.udb.core.embedding.services.v1.IngestDocumentBatchResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "IngestDocumentBatch"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.embedding.services.v1.IngestDocumentBatchRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.embedding.services.v1.IngestDocumentBatchResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new EmbeddingServiceMethodDescriptorSupplier("IngestDocumentBatch"))
+              .build();
+        }
+      }
+    }
+    return getIngestDocumentBatchMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.embedding.services.v1.ReportParsedDocumentRequest,
+      com.udb.core.embedding.services.v1.ReportParsedDocumentResponse> getReportParsedDocumentMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "ReportParsedDocument",
+      requestType = com.udb.core.embedding.services.v1.ReportParsedDocumentRequest.class,
+      responseType = com.udb.core.embedding.services.v1.ReportParsedDocumentResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.embedding.services.v1.ReportParsedDocumentRequest,
+      com.udb.core.embedding.services.v1.ReportParsedDocumentResponse> getReportParsedDocumentMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.embedding.services.v1.ReportParsedDocumentRequest, com.udb.core.embedding.services.v1.ReportParsedDocumentResponse> getReportParsedDocumentMethod;
+    if ((getReportParsedDocumentMethod = EmbeddingServiceGrpc.getReportParsedDocumentMethod) == null) {
+      synchronized (EmbeddingServiceGrpc.class) {
+        if ((getReportParsedDocumentMethod = EmbeddingServiceGrpc.getReportParsedDocumentMethod) == null) {
+          EmbeddingServiceGrpc.getReportParsedDocumentMethod = getReportParsedDocumentMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.embedding.services.v1.ReportParsedDocumentRequest, com.udb.core.embedding.services.v1.ReportParsedDocumentResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "ReportParsedDocument"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.embedding.services.v1.ReportParsedDocumentRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.embedding.services.v1.ReportParsedDocumentResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new EmbeddingServiceMethodDescriptorSupplier("ReportParsedDocument"))
+              .build();
+        }
+      }
+    }
+    return getReportParsedDocumentMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.embedding.services.v1.ReportRetrievalEvaluationRequest,
+      com.udb.core.embedding.services.v1.ReportRetrievalEvaluationResponse> getReportRetrievalEvaluationMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "ReportRetrievalEvaluation",
+      requestType = com.udb.core.embedding.services.v1.ReportRetrievalEvaluationRequest.class,
+      responseType = com.udb.core.embedding.services.v1.ReportRetrievalEvaluationResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.embedding.services.v1.ReportRetrievalEvaluationRequest,
+      com.udb.core.embedding.services.v1.ReportRetrievalEvaluationResponse> getReportRetrievalEvaluationMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.embedding.services.v1.ReportRetrievalEvaluationRequest, com.udb.core.embedding.services.v1.ReportRetrievalEvaluationResponse> getReportRetrievalEvaluationMethod;
+    if ((getReportRetrievalEvaluationMethod = EmbeddingServiceGrpc.getReportRetrievalEvaluationMethod) == null) {
+      synchronized (EmbeddingServiceGrpc.class) {
+        if ((getReportRetrievalEvaluationMethod = EmbeddingServiceGrpc.getReportRetrievalEvaluationMethod) == null) {
+          EmbeddingServiceGrpc.getReportRetrievalEvaluationMethod = getReportRetrievalEvaluationMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.embedding.services.v1.ReportRetrievalEvaluationRequest, com.udb.core.embedding.services.v1.ReportRetrievalEvaluationResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "ReportRetrievalEvaluation"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.embedding.services.v1.ReportRetrievalEvaluationRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.embedding.services.v1.ReportRetrievalEvaluationResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new EmbeddingServiceMethodDescriptorSupplier("ReportRetrievalEvaluation"))
+              .build();
+        }
+      }
+    }
+    return getReportRetrievalEvaluationMethod;
+  }
+
   /**
    * Creates a new async stub that supports all call types for the service
    */
@@ -354,6 +757,97 @@ public final class EmbeddingServiceGrpc {
         io.grpc.stub.StreamObserver<com.udb.core.embedding.services.v1.RetrieveResponse> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getRetrieveMethod(), responseObserver);
     }
+
+    /**
+     */
+    default void registerModel(com.udb.core.embedding.services.v1.RegisterModelRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.embedding.services.v1.RegisterModelResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getRegisterModelMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void listModels(com.udb.core.embedding.services.v1.ListModelsRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.embedding.services.v1.ListModelsResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getListModelsMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void deleteModel(com.udb.core.embedding.services.v1.DeleteModelRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.embedding.services.v1.DeleteModelResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getDeleteModelMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void setModelStatus(com.udb.core.embedding.services.v1.SetModelStatusRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.embedding.services.v1.SetModelStatusResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getSetModelStatusMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void cutoverModelAlias(com.udb.core.embedding.services.v1.CutoverModelAliasRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.embedding.services.v1.CutoverModelAliasResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getCutoverModelAliasMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void getEmbeddingJobStatus(com.udb.core.embedding.services.v1.GetEmbeddingJobStatusRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.embedding.services.v1.GetEmbeddingJobStatusResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getGetEmbeddingJobStatusMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void listEmbeddingWorkItems(com.udb.core.embedding.services.v1.ListEmbeddingWorkItemsRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.embedding.services.v1.ListEmbeddingWorkItemsResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getListEmbeddingWorkItemsMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void reportEmbeddingBatch(com.udb.core.embedding.services.v1.ReportEmbeddingBatchRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.embedding.services.v1.ReportEmbeddingBatchResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getReportEmbeddingBatchMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void reportEmbeddingFailure(com.udb.core.embedding.services.v1.ReportEmbeddingFailureRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.embedding.services.v1.ReportEmbeddingFailureResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getReportEmbeddingFailureMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void ingestDocument(com.udb.core.embedding.services.v1.IngestDocumentRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.embedding.services.v1.IngestDocumentResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getIngestDocumentMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void ingestDocumentBatch(com.udb.core.embedding.services.v1.IngestDocumentBatchRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.embedding.services.v1.IngestDocumentBatchResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getIngestDocumentBatchMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void reportParsedDocument(com.udb.core.embedding.services.v1.ReportParsedDocumentRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.embedding.services.v1.ReportParsedDocumentResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getReportParsedDocumentMethod(), responseObserver);
+    }
+
+    /**
+     */
+    default void reportRetrievalEvaluation(com.udb.core.embedding.services.v1.ReportRetrievalEvaluationRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.embedding.services.v1.ReportRetrievalEvaluationResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getReportRetrievalEvaluationMethod(), responseObserver);
+    }
   }
 
   /**
@@ -482,6 +976,110 @@ public final class EmbeddingServiceGrpc {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getRetrieveMethod(), getCallOptions()), request, responseObserver);
     }
+
+    /**
+     */
+    public void registerModel(com.udb.core.embedding.services.v1.RegisterModelRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.embedding.services.v1.RegisterModelResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getRegisterModelMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void listModels(com.udb.core.embedding.services.v1.ListModelsRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.embedding.services.v1.ListModelsResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getListModelsMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void deleteModel(com.udb.core.embedding.services.v1.DeleteModelRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.embedding.services.v1.DeleteModelResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getDeleteModelMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void setModelStatus(com.udb.core.embedding.services.v1.SetModelStatusRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.embedding.services.v1.SetModelStatusResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getSetModelStatusMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void cutoverModelAlias(com.udb.core.embedding.services.v1.CutoverModelAliasRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.embedding.services.v1.CutoverModelAliasResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getCutoverModelAliasMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void getEmbeddingJobStatus(com.udb.core.embedding.services.v1.GetEmbeddingJobStatusRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.embedding.services.v1.GetEmbeddingJobStatusResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getGetEmbeddingJobStatusMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void listEmbeddingWorkItems(com.udb.core.embedding.services.v1.ListEmbeddingWorkItemsRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.embedding.services.v1.ListEmbeddingWorkItemsResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getListEmbeddingWorkItemsMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void reportEmbeddingBatch(com.udb.core.embedding.services.v1.ReportEmbeddingBatchRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.embedding.services.v1.ReportEmbeddingBatchResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getReportEmbeddingBatchMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void reportEmbeddingFailure(com.udb.core.embedding.services.v1.ReportEmbeddingFailureRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.embedding.services.v1.ReportEmbeddingFailureResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getReportEmbeddingFailureMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void ingestDocument(com.udb.core.embedding.services.v1.IngestDocumentRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.embedding.services.v1.IngestDocumentResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getIngestDocumentMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void ingestDocumentBatch(com.udb.core.embedding.services.v1.IngestDocumentBatchRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.embedding.services.v1.IngestDocumentBatchResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getIngestDocumentBatchMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void reportParsedDocument(com.udb.core.embedding.services.v1.ReportParsedDocumentRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.embedding.services.v1.ReportParsedDocumentResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getReportParsedDocumentMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public void reportRetrievalEvaluation(com.udb.core.embedding.services.v1.ReportRetrievalEvaluationRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.embedding.services.v1.ReportRetrievalEvaluationResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getReportRetrievalEvaluationMethod(), getCallOptions()), request, responseObserver);
+    }
   }
 
   /**
@@ -582,6 +1180,97 @@ public final class EmbeddingServiceGrpc {
       return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
           getChannel(), getRetrieveMethod(), getCallOptions(), request);
     }
+
+    /**
+     */
+    public com.udb.core.embedding.services.v1.RegisterModelResponse registerModel(com.udb.core.embedding.services.v1.RegisterModelRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getRegisterModelMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.embedding.services.v1.ListModelsResponse listModels(com.udb.core.embedding.services.v1.ListModelsRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getListModelsMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.embedding.services.v1.DeleteModelResponse deleteModel(com.udb.core.embedding.services.v1.DeleteModelRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getDeleteModelMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.embedding.services.v1.SetModelStatusResponse setModelStatus(com.udb.core.embedding.services.v1.SetModelStatusRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getSetModelStatusMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.embedding.services.v1.CutoverModelAliasResponse cutoverModelAlias(com.udb.core.embedding.services.v1.CutoverModelAliasRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getCutoverModelAliasMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.embedding.services.v1.GetEmbeddingJobStatusResponse getEmbeddingJobStatus(com.udb.core.embedding.services.v1.GetEmbeddingJobStatusRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getGetEmbeddingJobStatusMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.embedding.services.v1.ListEmbeddingWorkItemsResponse listEmbeddingWorkItems(com.udb.core.embedding.services.v1.ListEmbeddingWorkItemsRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getListEmbeddingWorkItemsMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.embedding.services.v1.ReportEmbeddingBatchResponse reportEmbeddingBatch(com.udb.core.embedding.services.v1.ReportEmbeddingBatchRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getReportEmbeddingBatchMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.embedding.services.v1.ReportEmbeddingFailureResponse reportEmbeddingFailure(com.udb.core.embedding.services.v1.ReportEmbeddingFailureRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getReportEmbeddingFailureMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.embedding.services.v1.IngestDocumentResponse ingestDocument(com.udb.core.embedding.services.v1.IngestDocumentRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getIngestDocumentMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.embedding.services.v1.IngestDocumentBatchResponse ingestDocumentBatch(com.udb.core.embedding.services.v1.IngestDocumentBatchRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getIngestDocumentBatchMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.embedding.services.v1.ReportParsedDocumentResponse reportParsedDocument(com.udb.core.embedding.services.v1.ReportParsedDocumentRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getReportParsedDocumentMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.embedding.services.v1.ReportRetrievalEvaluationResponse reportRetrievalEvaluation(com.udb.core.embedding.services.v1.ReportRetrievalEvaluationRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getReportRetrievalEvaluationMethod(), getCallOptions(), request);
+    }
   }
 
   /**
@@ -681,6 +1370,97 @@ public final class EmbeddingServiceGrpc {
     public com.udb.core.embedding.services.v1.RetrieveResponse retrieve(com.udb.core.embedding.services.v1.RetrieveRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getRetrieveMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.embedding.services.v1.RegisterModelResponse registerModel(com.udb.core.embedding.services.v1.RegisterModelRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getRegisterModelMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.embedding.services.v1.ListModelsResponse listModels(com.udb.core.embedding.services.v1.ListModelsRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getListModelsMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.embedding.services.v1.DeleteModelResponse deleteModel(com.udb.core.embedding.services.v1.DeleteModelRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getDeleteModelMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.embedding.services.v1.SetModelStatusResponse setModelStatus(com.udb.core.embedding.services.v1.SetModelStatusRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getSetModelStatusMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.embedding.services.v1.CutoverModelAliasResponse cutoverModelAlias(com.udb.core.embedding.services.v1.CutoverModelAliasRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getCutoverModelAliasMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.embedding.services.v1.GetEmbeddingJobStatusResponse getEmbeddingJobStatus(com.udb.core.embedding.services.v1.GetEmbeddingJobStatusRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getGetEmbeddingJobStatusMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.embedding.services.v1.ListEmbeddingWorkItemsResponse listEmbeddingWorkItems(com.udb.core.embedding.services.v1.ListEmbeddingWorkItemsRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getListEmbeddingWorkItemsMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.embedding.services.v1.ReportEmbeddingBatchResponse reportEmbeddingBatch(com.udb.core.embedding.services.v1.ReportEmbeddingBatchRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getReportEmbeddingBatchMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.embedding.services.v1.ReportEmbeddingFailureResponse reportEmbeddingFailure(com.udb.core.embedding.services.v1.ReportEmbeddingFailureRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getReportEmbeddingFailureMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.embedding.services.v1.IngestDocumentResponse ingestDocument(com.udb.core.embedding.services.v1.IngestDocumentRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getIngestDocumentMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.embedding.services.v1.IngestDocumentBatchResponse ingestDocumentBatch(com.udb.core.embedding.services.v1.IngestDocumentBatchRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getIngestDocumentBatchMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.embedding.services.v1.ReportParsedDocumentResponse reportParsedDocument(com.udb.core.embedding.services.v1.ReportParsedDocumentRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getReportParsedDocumentMethod(), getCallOptions(), request);
+    }
+
+    /**
+     */
+    public com.udb.core.embedding.services.v1.ReportRetrievalEvaluationResponse reportRetrievalEvaluation(com.udb.core.embedding.services.v1.ReportRetrievalEvaluationRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getReportRetrievalEvaluationMethod(), getCallOptions(), request);
     }
   }
 
@@ -788,6 +1568,110 @@ public final class EmbeddingServiceGrpc {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getRetrieveMethod(), getCallOptions()), request);
     }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.embedding.services.v1.RegisterModelResponse> registerModel(
+        com.udb.core.embedding.services.v1.RegisterModelRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getRegisterModelMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.embedding.services.v1.ListModelsResponse> listModels(
+        com.udb.core.embedding.services.v1.ListModelsRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getListModelsMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.embedding.services.v1.DeleteModelResponse> deleteModel(
+        com.udb.core.embedding.services.v1.DeleteModelRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getDeleteModelMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.embedding.services.v1.SetModelStatusResponse> setModelStatus(
+        com.udb.core.embedding.services.v1.SetModelStatusRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getSetModelStatusMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.embedding.services.v1.CutoverModelAliasResponse> cutoverModelAlias(
+        com.udb.core.embedding.services.v1.CutoverModelAliasRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getCutoverModelAliasMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.embedding.services.v1.GetEmbeddingJobStatusResponse> getEmbeddingJobStatus(
+        com.udb.core.embedding.services.v1.GetEmbeddingJobStatusRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getGetEmbeddingJobStatusMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.embedding.services.v1.ListEmbeddingWorkItemsResponse> listEmbeddingWorkItems(
+        com.udb.core.embedding.services.v1.ListEmbeddingWorkItemsRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getListEmbeddingWorkItemsMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.embedding.services.v1.ReportEmbeddingBatchResponse> reportEmbeddingBatch(
+        com.udb.core.embedding.services.v1.ReportEmbeddingBatchRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getReportEmbeddingBatchMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.embedding.services.v1.ReportEmbeddingFailureResponse> reportEmbeddingFailure(
+        com.udb.core.embedding.services.v1.ReportEmbeddingFailureRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getReportEmbeddingFailureMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.embedding.services.v1.IngestDocumentResponse> ingestDocument(
+        com.udb.core.embedding.services.v1.IngestDocumentRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getIngestDocumentMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.embedding.services.v1.IngestDocumentBatchResponse> ingestDocumentBatch(
+        com.udb.core.embedding.services.v1.IngestDocumentBatchRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getIngestDocumentBatchMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.embedding.services.v1.ReportParsedDocumentResponse> reportParsedDocument(
+        com.udb.core.embedding.services.v1.ReportParsedDocumentRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getReportParsedDocumentMethod(), getCallOptions()), request);
+    }
+
+    /**
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.embedding.services.v1.ReportRetrievalEvaluationResponse> reportRetrievalEvaluation(
+        com.udb.core.embedding.services.v1.ReportRetrievalEvaluationRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getReportRetrievalEvaluationMethod(), getCallOptions()), request);
+    }
   }
 
   private static final int METHODID_REGISTER_SOURCE = 0;
@@ -796,6 +1680,19 @@ public final class EmbeddingServiceGrpc {
   private static final int METHODID_BACKFILL = 3;
   private static final int METHODID_REPORT_EMBEDDING = 4;
   private static final int METHODID_RETRIEVE = 5;
+  private static final int METHODID_REGISTER_MODEL = 6;
+  private static final int METHODID_LIST_MODELS = 7;
+  private static final int METHODID_DELETE_MODEL = 8;
+  private static final int METHODID_SET_MODEL_STATUS = 9;
+  private static final int METHODID_CUTOVER_MODEL_ALIAS = 10;
+  private static final int METHODID_GET_EMBEDDING_JOB_STATUS = 11;
+  private static final int METHODID_LIST_EMBEDDING_WORK_ITEMS = 12;
+  private static final int METHODID_REPORT_EMBEDDING_BATCH = 13;
+  private static final int METHODID_REPORT_EMBEDDING_FAILURE = 14;
+  private static final int METHODID_INGEST_DOCUMENT = 15;
+  private static final int METHODID_INGEST_DOCUMENT_BATCH = 16;
+  private static final int METHODID_REPORT_PARSED_DOCUMENT = 17;
+  private static final int METHODID_REPORT_RETRIEVAL_EVALUATION = 18;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -837,6 +1734,58 @@ public final class EmbeddingServiceGrpc {
         case METHODID_RETRIEVE:
           serviceImpl.retrieve((com.udb.core.embedding.services.v1.RetrieveRequest) request,
               (io.grpc.stub.StreamObserver<com.udb.core.embedding.services.v1.RetrieveResponse>) responseObserver);
+          break;
+        case METHODID_REGISTER_MODEL:
+          serviceImpl.registerModel((com.udb.core.embedding.services.v1.RegisterModelRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.embedding.services.v1.RegisterModelResponse>) responseObserver);
+          break;
+        case METHODID_LIST_MODELS:
+          serviceImpl.listModels((com.udb.core.embedding.services.v1.ListModelsRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.embedding.services.v1.ListModelsResponse>) responseObserver);
+          break;
+        case METHODID_DELETE_MODEL:
+          serviceImpl.deleteModel((com.udb.core.embedding.services.v1.DeleteModelRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.embedding.services.v1.DeleteModelResponse>) responseObserver);
+          break;
+        case METHODID_SET_MODEL_STATUS:
+          serviceImpl.setModelStatus((com.udb.core.embedding.services.v1.SetModelStatusRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.embedding.services.v1.SetModelStatusResponse>) responseObserver);
+          break;
+        case METHODID_CUTOVER_MODEL_ALIAS:
+          serviceImpl.cutoverModelAlias((com.udb.core.embedding.services.v1.CutoverModelAliasRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.embedding.services.v1.CutoverModelAliasResponse>) responseObserver);
+          break;
+        case METHODID_GET_EMBEDDING_JOB_STATUS:
+          serviceImpl.getEmbeddingJobStatus((com.udb.core.embedding.services.v1.GetEmbeddingJobStatusRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.embedding.services.v1.GetEmbeddingJobStatusResponse>) responseObserver);
+          break;
+        case METHODID_LIST_EMBEDDING_WORK_ITEMS:
+          serviceImpl.listEmbeddingWorkItems((com.udb.core.embedding.services.v1.ListEmbeddingWorkItemsRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.embedding.services.v1.ListEmbeddingWorkItemsResponse>) responseObserver);
+          break;
+        case METHODID_REPORT_EMBEDDING_BATCH:
+          serviceImpl.reportEmbeddingBatch((com.udb.core.embedding.services.v1.ReportEmbeddingBatchRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.embedding.services.v1.ReportEmbeddingBatchResponse>) responseObserver);
+          break;
+        case METHODID_REPORT_EMBEDDING_FAILURE:
+          serviceImpl.reportEmbeddingFailure((com.udb.core.embedding.services.v1.ReportEmbeddingFailureRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.embedding.services.v1.ReportEmbeddingFailureResponse>) responseObserver);
+          break;
+        case METHODID_INGEST_DOCUMENT:
+          serviceImpl.ingestDocument((com.udb.core.embedding.services.v1.IngestDocumentRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.embedding.services.v1.IngestDocumentResponse>) responseObserver);
+          break;
+        case METHODID_INGEST_DOCUMENT_BATCH:
+          serviceImpl.ingestDocumentBatch((com.udb.core.embedding.services.v1.IngestDocumentBatchRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.embedding.services.v1.IngestDocumentBatchResponse>) responseObserver);
+          break;
+        case METHODID_REPORT_PARSED_DOCUMENT:
+          serviceImpl.reportParsedDocument((com.udb.core.embedding.services.v1.ReportParsedDocumentRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.embedding.services.v1.ReportParsedDocumentResponse>) responseObserver);
+          break;
+        case METHODID_REPORT_RETRIEVAL_EVALUATION:
+          serviceImpl.reportRetrievalEvaluation((com.udb.core.embedding.services.v1.ReportRetrievalEvaluationRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.embedding.services.v1.ReportRetrievalEvaluationResponse>) responseObserver);
           break;
         default:
           throw new AssertionError();
@@ -898,6 +1847,97 @@ public final class EmbeddingServiceGrpc {
               com.udb.core.embedding.services.v1.RetrieveRequest,
               com.udb.core.embedding.services.v1.RetrieveResponse>(
                 service, METHODID_RETRIEVE)))
+        .addMethod(
+          getRegisterModelMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.embedding.services.v1.RegisterModelRequest,
+              com.udb.core.embedding.services.v1.RegisterModelResponse>(
+                service, METHODID_REGISTER_MODEL)))
+        .addMethod(
+          getListModelsMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.embedding.services.v1.ListModelsRequest,
+              com.udb.core.embedding.services.v1.ListModelsResponse>(
+                service, METHODID_LIST_MODELS)))
+        .addMethod(
+          getDeleteModelMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.embedding.services.v1.DeleteModelRequest,
+              com.udb.core.embedding.services.v1.DeleteModelResponse>(
+                service, METHODID_DELETE_MODEL)))
+        .addMethod(
+          getSetModelStatusMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.embedding.services.v1.SetModelStatusRequest,
+              com.udb.core.embedding.services.v1.SetModelStatusResponse>(
+                service, METHODID_SET_MODEL_STATUS)))
+        .addMethod(
+          getCutoverModelAliasMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.embedding.services.v1.CutoverModelAliasRequest,
+              com.udb.core.embedding.services.v1.CutoverModelAliasResponse>(
+                service, METHODID_CUTOVER_MODEL_ALIAS)))
+        .addMethod(
+          getGetEmbeddingJobStatusMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.embedding.services.v1.GetEmbeddingJobStatusRequest,
+              com.udb.core.embedding.services.v1.GetEmbeddingJobStatusResponse>(
+                service, METHODID_GET_EMBEDDING_JOB_STATUS)))
+        .addMethod(
+          getListEmbeddingWorkItemsMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.embedding.services.v1.ListEmbeddingWorkItemsRequest,
+              com.udb.core.embedding.services.v1.ListEmbeddingWorkItemsResponse>(
+                service, METHODID_LIST_EMBEDDING_WORK_ITEMS)))
+        .addMethod(
+          getReportEmbeddingBatchMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.embedding.services.v1.ReportEmbeddingBatchRequest,
+              com.udb.core.embedding.services.v1.ReportEmbeddingBatchResponse>(
+                service, METHODID_REPORT_EMBEDDING_BATCH)))
+        .addMethod(
+          getReportEmbeddingFailureMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.embedding.services.v1.ReportEmbeddingFailureRequest,
+              com.udb.core.embedding.services.v1.ReportEmbeddingFailureResponse>(
+                service, METHODID_REPORT_EMBEDDING_FAILURE)))
+        .addMethod(
+          getIngestDocumentMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.embedding.services.v1.IngestDocumentRequest,
+              com.udb.core.embedding.services.v1.IngestDocumentResponse>(
+                service, METHODID_INGEST_DOCUMENT)))
+        .addMethod(
+          getIngestDocumentBatchMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.embedding.services.v1.IngestDocumentBatchRequest,
+              com.udb.core.embedding.services.v1.IngestDocumentBatchResponse>(
+                service, METHODID_INGEST_DOCUMENT_BATCH)))
+        .addMethod(
+          getReportParsedDocumentMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.embedding.services.v1.ReportParsedDocumentRequest,
+              com.udb.core.embedding.services.v1.ReportParsedDocumentResponse>(
+                service, METHODID_REPORT_PARSED_DOCUMENT)))
+        .addMethod(
+          getReportRetrievalEvaluationMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.embedding.services.v1.ReportRetrievalEvaluationRequest,
+              com.udb.core.embedding.services.v1.ReportRetrievalEvaluationResponse>(
+                service, METHODID_REPORT_RETRIEVAL_EVALUATION)))
         .build();
   }
 
@@ -952,6 +1992,19 @@ public final class EmbeddingServiceGrpc {
               .addMethod(getBackfillMethod())
               .addMethod(getReportEmbeddingMethod())
               .addMethod(getRetrieveMethod())
+              .addMethod(getRegisterModelMethod())
+              .addMethod(getListModelsMethod())
+              .addMethod(getDeleteModelMethod())
+              .addMethod(getSetModelStatusMethod())
+              .addMethod(getCutoverModelAliasMethod())
+              .addMethod(getGetEmbeddingJobStatusMethod())
+              .addMethod(getListEmbeddingWorkItemsMethod())
+              .addMethod(getReportEmbeddingBatchMethod())
+              .addMethod(getReportEmbeddingFailureMethod())
+              .addMethod(getIngestDocumentMethod())
+              .addMethod(getIngestDocumentBatchMethod())
+              .addMethod(getReportParsedDocumentMethod())
+              .addMethod(getReportRetrievalEvaluationMethod())
               .build();
         }
       }

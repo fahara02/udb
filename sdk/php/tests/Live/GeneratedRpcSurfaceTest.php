@@ -4141,13 +4141,50 @@ function perfSeedPhp(array $s): array
         $fix->set('backup_id', $bk->getBackupId());
     }
 
-    // EmbeddingService: register the seeded record as a source + report one vector,
-    // so the embedding read RPCs resolve a real source/row.
+    // EmbeddingService: model registry, durable jobs, and one searchable vector.
     $embedding = $authGen->EmbeddingServiceStub();
+    $registerEmbeddingModel = function (string $label, string $modelId, string $collection, string $alias) use ($seedStub, $embedding, $tenant) {
+        return $seedStub($label, $embedding, 'RegisterModel', \Udb\Core\Embedding\Services\V1\RegisterModelRequest::class,
+            ['tenant_id' => $tenant, 'model_id' => $modelId, 'provider' => 'deterministic',
+                'model_name' => 'text-embedding-3-small', 'version' => '1', 'dimensions' => 3,
+                'matryoshka_dims' => [3], 'distance_metric' => 'COSINE', 'normalize' => true,
+                'output_dtype' => 'FLOAT32', 'max_input_tokens' => 8192, 'tokenizer' => 'cl100k_base',
+                'task_type' => 'DOCUMENT', 'provider_endpoint_ref' => 'vault://embedding/sdk-live',
+                'vector_backend' => 'qdrant', 'vector_instance' => 'default', 'collection_alias' => $alias,
+                'active_collection' => $collection, 'chunking_strategy' => 'TOKEN_RECURSIVE',
+                'chunk_tokens' => 256, 'chunk_overlap_tokens' => 32,
+                'metadata_json' => '{"suite":"sdk-live"}']);
+    };
+    $registerEmbeddingModel('RegisterModel', 'text-embedding-3-small', 'sdk_live_records', 'sdk_live_records_alias');
+    $embeddingDeleteModelId = "sdk-live-delete-model-$suffix";
+    $fix->set('embedding_delete_model_id', $embeddingDeleteModelId);
+    $registerEmbeddingModel('RegisterModel:delete', $embeddingDeleteModelId, "sdk_live_delete_records_$suffix", "sdk_live_delete_records_alias_$suffix");
     $seedStub('RegisterSource', $embedding, 'RegisterSource', \Udb\Core\Embedding\Services\V1\RegisterSourceRequest::class,
         ['tenant_id' => $tenant, 'source_name' => 'sdk_live_records', 'source_message_type' => 'udb.sdk.live.v1.SdkLiveRecord', 'text_fields' => ['payload'], 'target_collection' => 'sdk_live_records', 'model_id' => 'text-embedding-3-small', 'metadata_json' => '{}']);
     $seedStub('ReportEmbedding', $embedding, 'ReportEmbedding', \Udb\Core\Embedding\Services\V1\ReportEmbeddingRequest::class,
         ['tenant_id' => $tenant, 'source_name' => 'sdk_live_records', 'row_pk' => $recordId, 'vector' => [0.1, 0.2, 0.3], 'model' => 'text-embedding-3-small', 'dims' => 3]);
+    $embeddingDocument = $seedStub('IngestDocument:work', $embedding, 'IngestDocument', \Udb\Core\Embedding\Services\V1\IngestDocumentRequest::class,
+        ['tenant_id' => $tenant, 'external_id' => "sdk-live-work-$suffix", 'title' => 'SDK benchmark work fixture',
+            'raw_text' => 'Durable embedding work is seeded from real document text for the SDK benchmark.',
+            'content_type' => 'text/plain', 'doc_version' => '1', 'model_id' => 'text-embedding-3-small',
+            'metadata_json' => '{"suite":"sdk-live","fixture":"work"}']);
+    if ($embeddingDocument) {
+        $fix->set('embedding_job_id', $embeddingDocument->getJobId());
+        $work = $seedStub('ListEmbeddingWorkItems:seed', $embedding, 'ListEmbeddingWorkItems', \Udb\Core\Embedding\Services\V1\ListEmbeddingWorkItemsRequest::class,
+            ['tenant_id' => $tenant, 'job_id' => $embeddingDocument->getJobId(), 'page_size' => 50]);
+        if ($work && count($work->getWorkItems()) > 0) {
+            $fix->set('embedding_work_item_id', $work->getWorkItems()[0]->getWorkItemId());
+        }
+    }
+    $parserDocument = $seedStub('IngestDocument:parser', $embedding, 'IngestDocument', \Udb\Core\Embedding\Services\V1\IngestDocumentRequest::class,
+        ['tenant_id' => $tenant, 'external_id' => "sdk-live-parser-$suffix", 'title' => 'SDK benchmark parser fixture',
+            'storage_object_ref' => "udb://sdk-live/embedding-$suffix.txt", 'content_type' => 'text/plain',
+            'doc_version' => '1', 'model_id' => 'text-embedding-3-small',
+            'metadata_json' => '{"suite":"sdk-live","fixture":"parser"}']);
+    if ($parserDocument) {
+        $fix->set('embedding_document_id', $parserDocument->getDocumentId());
+        $fix->set('embedding_document_job_id', $parserDocument->getJobId());
+    }
 
     // SearchService: create the seeded index so the search read RPCs resolve.
     $search = $authGen->SearchServiceStub();

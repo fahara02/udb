@@ -117,11 +117,11 @@ test("refreshIfNeeded hot-swaps the new bearer into core, auth, and webrtc core"
     const last = spy.calls.at(-1);
     assert.ok(last, `${label} setCredentials was not called`);
     assert.equal(last!.bearerToken, "token-2", `${label} did not receive the refreshed bearer`);
-    assert.equal(last!.apiKey, "key-1", `${label} dropped the configured API key`);
+    assert.equal(last!.apiKey, undefined, `${label} retained raw API-key metadata`);
   }
 });
 
-test("logout clears active bearer credentials while preserving configured API key", async () => {
+test("logout clears active bearer credentials and raw API-key metadata", async () => {
   const auth: any = credSpy();
   const core = credSpy();
   const webrtcCore = credSpy();
@@ -143,7 +143,7 @@ test("logout clears active bearer credentials while preserving configured API ke
     const last = spy.calls.at(-1);
     assert.ok(last, `${label} setCredentials was not called`);
     assert.equal(last!.bearerToken, undefined, `${label} retained the bearer token`);
-    assert.equal(last!.apiKey, "key-1", `${label} dropped the configured API key`);
+    assert.equal(last!.apiKey, undefined, `${label} retained raw API-key metadata`);
   }
 });
 
@@ -201,7 +201,7 @@ test("background refresh fails CLOSED: expired token + failing refresh clears th
     const last = spy.calls.at(-1);
     assert.ok(last, `${label} setCredentials was not called`);
     assert.equal(last!.bearerToken, undefined, `${label} still holds a bearer (not failed closed)`);
-    assert.equal(last!.apiKey, "key-1", `${label} dropped the configured API key`);
+    assert.equal(last!.apiKey, undefined, `${label} retained raw API-key metadata`);
   }
 });
 

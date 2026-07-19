@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package udb.core.embedding.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Embedding.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/embedding/entity/v1;embeddingv1";
+option java_package = "com.udb.core.embedding.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Embedding\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Embedding\\Entity\\V1";
+
+message EmbeddingDocument {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "embedding_documents" schema_name: "udb_embedding" migration_order: 4 is_table: true
+    comment: "Raw-text or storage-backed documents routed into embedding work"
+    audit_fields: true enable_rls: true
+    rls_policies: { policy_name: "tenant_isolation" using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text)" permissive: true }
+    indexes: { index_name: "idx_embedding_documents_tenant_external_unique" index_type: "BTREE" unique: true columns: "tenant_id" columns: "external_id" }
+    foreign_keys: { columns: "model_id" columns: "tenant_id" references_table: "embedding_models" references_schema: "udb_embedding" references_column: "model_id" references_column: "tenant_id" on_delete: REFERENTIAL_ACTION_RESTRICT constraint_name: "fk_embedding_documents_model" }
+    cdc_topic: "udb.embedding.embedding_documents.cdc" required_scope: "embedding:documents:read"
+  };
+  option (udb.core.common.v1.db_table_security) = { tenant_isolation_mode: "tenant" tenant_column: "tenant_id" rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')" retention_class: "embedding.content" retention_days: 365 audit_mode: AUDIT_MODE_MUTATION encryption_profile: "tenant" pii_profile: "restricted" export_eligible: false data_residency_policy_ref: "tenant.data_residency" };
+
+  string document_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "document_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(64)" not_null: true }];
+  string project_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "project_id" sql_type: "VARCHAR(120)" not_null: true }];
+  string external_id = 4 [(udb.core.common.v1.pg_column) = { column_name: "external_id" sql_type: "VARCHAR(255)" not_null: true }];
+  string title = 5 [(udb.core.common.v1.pg_column) = { column_name: "title" sql_type: "VARCHAR(512)" }];
+  string raw_text = 6 [(udb.core.common.v1.pg_column) = { column_name: "raw_text" sql_type: "TEXT" }, (udb.core.common.v1.sensitive) = true, (udb.core.common.v1.log_redacted) = true, (udb.core.common.v1.encrypted_security) = true, (udb.core.common.v1.db_column_security) = { secret_classification: SECRET_CLASSIFICATION_PII output_view: OUTPUT_VIEW_STORAGE_ONLY redaction_strategy: REDACTION_STRATEGY_REDACT encryption_key_class: "embedding-document" }];
+  string storage_object_ref = 7 [(udb.core.common.v1.pg_column) = { column_name: "storage_object_ref" sql_type: "VARCHAR(1024)" }];
+  string content_type = 8 [(udb.core.common.v1.pg_column) = { column_name: "content_type" sql_type: "VARCHAR(160)" }];
+  string doc_version = 9 [(udb.core.common.v1.pg_column) = { column_name: "doc_version" sql_type: "VARCHAR(80)" not_null: true default_value: "'1'" }];
+  string model_id = 10 [(udb.core.common.v1.pg_column) = { column_name: "model_id" sql_type: "VARCHAR(255)" not_null: true }];
+  string target_collection = 11 [(udb.core.common.v1.pg_column) = { column_name: "target_collection" sql_type: "VARCHAR(255)" not_null: true }];
+  string status = 12 [(udb.core.common.v1.pg_column) = { column_name: "status" sql_type: "VARCHAR(20)" not_null: true default_value: "'PENDING'" }];
+  string metadata_json = 13 [(udb.core.common.v1.pg_column) = { column_name: "metadata_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'{}'::jsonb" }];
+  google.protobuf.Timestamp created_at = 14 [(udb.core.common.v1.pg_column) = { column_name: "created_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true exclude_from_update: true }];
+  google.protobuf.Timestamp updated_at = 15 [(udb.core.common.v1.pg_column) = { column_name: "updated_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" }];
+}

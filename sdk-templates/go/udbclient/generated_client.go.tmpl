@@ -321,6 +321,14 @@ func (g *GeneratedClient) SetAuthorization(authorization string) {
 	g.opt.Store(&o)
 }
 
+// SetAPIKey atomically swaps the `x-api-key` credential. Passing an empty string
+// clears API-key metadata after it has been exchanged for a bearer.
+func (g *GeneratedClient) SetAPIKey(apiKey string) {
+	o := g.options()
+	o.APIKey = apiKey
+	g.opt.Store(&o)
+}
+
 // Conn exposes the underlying connection so the hand-written typed wrappers can
 // be built on the same channel: udbclient.New(gc.Conn(), gc.Meta()).
 func (g *GeneratedClient) Conn() grpc.ClientConnInterface { return g.conn }

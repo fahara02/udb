@@ -96,6 +96,166 @@ public final class EmbeddingServiceProto {
   static final
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_udb_core_embedding_services_v1_RetrieveResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_embedding_services_v1_MmrConfig_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_embedding_services_v1_MmrConfig_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_embedding_services_v1_RerankConfig_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_embedding_services_v1_RerankConfig_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_embedding_services_v1_RegisterModelRequest_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_embedding_services_v1_RegisterModelRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_embedding_services_v1_RegisterModelResponse_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_embedding_services_v1_RegisterModelResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_embedding_services_v1_ListModelsRequest_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_embedding_services_v1_ListModelsRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_embedding_services_v1_EmbeddingModelSummary_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_embedding_services_v1_EmbeddingModelSummary_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_embedding_services_v1_ListModelsResponse_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_embedding_services_v1_ListModelsResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_embedding_services_v1_DeleteModelRequest_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_embedding_services_v1_DeleteModelRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_embedding_services_v1_DeleteModelResponse_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_embedding_services_v1_DeleteModelResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_embedding_services_v1_SetModelStatusRequest_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_embedding_services_v1_SetModelStatusRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_embedding_services_v1_SetModelStatusResponse_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_embedding_services_v1_SetModelStatusResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_embedding_services_v1_CutoverModelAliasRequest_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_embedding_services_v1_CutoverModelAliasRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_embedding_services_v1_CutoverModelAliasResponse_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_embedding_services_v1_CutoverModelAliasResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_embedding_services_v1_GetEmbeddingJobStatusRequest_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_embedding_services_v1_GetEmbeddingJobStatusRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_embedding_services_v1_EmbeddingJobStatus_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_embedding_services_v1_EmbeddingJobStatus_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_embedding_services_v1_GetEmbeddingJobStatusResponse_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_embedding_services_v1_GetEmbeddingJobStatusResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_embedding_services_v1_ListEmbeddingWorkItemsRequest_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_embedding_services_v1_ListEmbeddingWorkItemsRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_embedding_services_v1_EmbeddingWorkItemSummary_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_embedding_services_v1_EmbeddingWorkItemSummary_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_embedding_services_v1_ListEmbeddingWorkItemsResponse_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_embedding_services_v1_ListEmbeddingWorkItemsResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_embedding_services_v1_ReportEmbeddingBatchRequest_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_embedding_services_v1_ReportEmbeddingBatchRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_embedding_services_v1_ReportEmbeddingBatchItemResult_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_embedding_services_v1_ReportEmbeddingBatchItemResult_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_embedding_services_v1_ReportEmbeddingBatchResponse_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_embedding_services_v1_ReportEmbeddingBatchResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_embedding_services_v1_ReportEmbeddingFailureRequest_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_embedding_services_v1_ReportEmbeddingFailureRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_embedding_services_v1_ReportEmbeddingFailureResponse_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_embedding_services_v1_ReportEmbeddingFailureResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_embedding_services_v1_IngestDocumentRequest_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_embedding_services_v1_IngestDocumentRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_embedding_services_v1_IngestDocumentResponse_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_embedding_services_v1_IngestDocumentResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_embedding_services_v1_IngestDocumentBatchRequest_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_embedding_services_v1_IngestDocumentBatchRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_embedding_services_v1_IngestDocumentBatchResponse_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_embedding_services_v1_IngestDocumentBatchResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_embedding_services_v1_ReportParsedDocumentRequest_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_embedding_services_v1_ReportParsedDocumentRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_embedding_services_v1_ReportParsedDocumentResponse_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_embedding_services_v1_ReportParsedDocumentResponse_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_embedding_services_v1_ReportRetrievalEvaluationRequest_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_embedding_services_v1_ReportRetrievalEvaluationRequest_fieldAccessorTable;
+  static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_udb_core_embedding_services_v1_ReportRetrievalEvaluationResponse_descriptor;
+  static final
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_udb_core_embedding_services_v1_ReportRetrievalEvaluationResponse_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -146,119 +306,476 @@ public final class EmbeddingServiceProto {
       "leted\030\001 \001(\010R\007deleted\022\030\n\007message\030\002 \001(\tR\007m" +
       "essage\0222\n\005error\030\003 \001(\0132\034.udb.core.common." +
       "v1.ApiErrorR\005error: \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J" +
-      "\tembeddingP\001\"q\n\017BackfillRequest\022\033\n\ttenan" +
-      "t_id\030\001 \001(\tR\010tenantId\022\037\n\013source_name\030\002 \001(" +
-      "\tR\nsourceName: \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tembe" +
-      "ddingP\001\"\277\001\n\020BackfillResponse\022\037\n\013backfill" +
-      "_id\030\001 \001(\tR\nbackfillId\022\032\n\010accepted\030\002 \001(\010R" +
-      "\010accepted\022\030\n\007message\030\003 \001(\tR\007message\0222\n\005e" +
-      "rror\030\004 \001(\0132\034.udb.core.common.v1.ApiError" +
-      "R\005error: \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tembeddingP" +
-      "\001\"\315\001\n\026ReportEmbeddingRequest\022\033\n\ttenant_i" +
-      "d\030\001 \001(\tR\010tenantId\022\037\n\013source_name\030\002 \001(\tR\n" +
-      "sourceName\022\025\n\006row_pk\030\003 \001(\tR\005rowPk\022\026\n\006vec" +
-      "tor\030\004 \003(\002R\006vector\022\024\n\005model\030\005 \001(\tR\005model\022" +
-      "\022\n\004dims\030\006 \001(\005R\004dims:\034\232\262\031\030\032\003udb(\260\352\0010\003@\001J\t" +
-      "embedding\"\241\001\n\027ReportEmbeddingResponse\022\032\n" +
-      "\010upserted\030\001 \001(\010R\010upserted\022\030\n\007message\030\002 \001" +
-      "(\tR\007message\0222\n\005error\030\003 \001(\0132\034.udb.core.co" +
-      "mmon.v1.ApiErrorR\005error:\034\232\262\031\030\032\003udb(\260\352\0010\003" +
-      "@\001J\tembedding\"\222\002\n\017RetrieveRequest\022\033\n\tten" +
-      "ant_id\030\001 \001(\tR\010tenantId\022\037\n\013source_name\030\002 " +
-      "\001(\tR\nsourceName\022\035\n\nquery_text\030\003 \001(\tR\tque" +
-      "ryText\022!\n\014query_vector\030\004 \003(\002R\013queryVecto" +
-      "r\022\023\n\005top_k\030\005 \001(\005R\004topK\022\037\n\013filter_json\030\006 " +
-      "\001(\tR\nfilterJson\022\'\n\017score_threshold\030\007 \001(\001" +
-      "R\016scoreThreshold: \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\te" +
-      "mbeddingP\001\"V\n\013RetrieveHit\022\016\n\002id\030\001 \001(\tR\002i" +
-      "d\022\024\n\005score\030\002 \001(\001R\005score\022!\n\014payload_json\030" +
-      "\003 \001(\tR\013payloadJson\"\303\001\n\020RetrieveResponse\022" +
+      "\tembeddingP\001\"\205\001\n\017BackfillRequest\022\033\n\ttena" +
+      "nt_id\030\001 \001(\tR\010tenantId\022\037\n\013source_name\030\002 \001" +
+      "(\tR\nsourceName\022\022\n\004mode\030\003 \001(\tR\004mode: \232\262\031\034" +
+      "\010\001\032\003udb(\260\352\0010\003@\001J\tembeddingP\001\"\277\001\n\020Backfil" +
+      "lResponse\022\037\n\013backfill_id\030\001 \001(\tR\nbackfill" +
+      "Id\022\032\n\010accepted\030\002 \001(\010R\010accepted\022\030\n\007messag" +
+      "e\030\003 \001(\tR\007message\0222\n\005error\030\004 \001(\0132\034.udb.co" +
+      "re.common.v1.ApiErrorR\005error: \232\262\031\034\010\001\032\003ud" +
+      "b(\260\352\0010\003@\001J\tembeddingP\001\"\320\002\n\026ReportEmbeddi" +
+      "ngRequest\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022\037" +
+      "\n\013source_name\030\002 \001(\tR\nsourceName\022\025\n\006row_p" +
+      "k\030\003 \001(\tR\005rowPk\022\026\n\006vector\030\004 \003(\002R\006vector\022\024" +
+      "\n\005model\030\005 \001(\tR\005model\022\022\n\004dims\030\006 \001(\005R\004dims" +
+      "\022 \n\014work_item_id\030\007 \001(\tR\nworkItemId\022\035\n\nch" +
+      "unk_hash\030\010 \001(\tR\tchunkHash\022\037\n\013token_count" +
+      "\030\t \001(\003R\ntokenCount\022\037\n\013vector_name\030\n \001(\tR" +
+      "\nvectorName:\034\232\262\031\030\032\003udb(\260\352\0010\003@\001J\tembeddin" +
+      "g\"\241\001\n\027ReportEmbeddingResponse\022\032\n\010upserte" +
+      "d\030\001 \001(\010R\010upserted\022\030\n\007message\030\002 \001(\tR\007mess" +
+      "age\0222\n\005error\030\003 \001(\0132\034.udb.core.common.v1." +
+      "ApiErrorR\005error:\034\232\262\031\030\032\003udb(\260\352\0010\003@\001J\tembe" +
+      "dding\"\240\005\n\017RetrieveRequest\022\033\n\ttenant_id\030\001" +
+      " \001(\tR\010tenantId\022\037\n\013source_name\030\002 \001(\tR\nsou" +
+      "rceName\022\035\n\nquery_text\030\003 \001(\tR\tqueryText\022!" +
+      "\n\014query_vector\030\004 \003(\002R\013queryVector\022\023\n\005top" +
+      "_k\030\005 \001(\005R\004topK\022\037\n\013filter_json\030\006 \001(\tR\nfil" +
+      "terJson\022\'\n\017score_threshold\030\007 \001(\001R\016scoreT" +
+      "hreshold\022\'\n\017include_vectors\030\010 \001(\010R\016inclu" +
+      "deVectors\022;\n\003mmr\030\t \001(\0132).udb.core.embedd" +
+      "ing.services.v1.MmrConfigR\003mmr\022F\n\006fusion" +
+      "\030\n \001(\0162..udb.core.embedding.services.v1." +
+      "FusionStrategyR\006fusion\022%\n\016prefetch_limit" +
+      "\030\013 \001(\005R\rprefetchLimit\022D\n\006rerank\030\014 \001(\0132,." +
+      "udb.core.embedding.services.v1.RerankCon" +
+      "figR\006rerank\022\037\n\013vector_name\030\r \001(\tR\nvector" +
+      "Name\022#\n\rparent_window\030\016 \001(\005R\014parentWindo" +
+      "w\022+\n\021include_citations\030\017 \001(\010R\020includeCit" +
+      "ations: \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tembeddingP\001" +
+      "\"\317\002\n\013RetrieveHit\022\016\n\002id\030\001 \001(\tR\002id\022\024\n\005scor" +
+      "e\030\002 \001(\001R\005score\022!\n\014payload_json\030\003 \001(\tR\013pa" +
+      "yloadJson\022\026\n\006vector\030\004 \003(\002R\006vector\022\037\n\013sou" +
+      "rce_name\030\005 \001(\tR\nsourceName\022\033\n\tparent_pk\030" +
+      "\006 \001(\tR\010parentPk\022\033\n\tchunk_seq\030\007 \001(\005R\010chun" +
+      "kSeq\022\037\n\013document_id\030\010 \001(\tR\ndocumentId\022\037\n" +
+      "\013doc_version\030\t \001(\tR\ndocVersion\022\037\n\013vector" +
+      "_name\030\n \001(\tR\nvectorName\022!\n\014rerank_score\030" +
+      "\013 \001(\001R\013rerankScore\"\261\002\n\020RetrieveResponse\022" +
       "?\n\004hits\030\001 \003(\0132+.udb.core.embedding.servi" +
       "ces.v1.RetrieveHitR\004hits\022\030\n\007message\030\002 \001(" +
       "\tR\007message\0222\n\005error\030\003 \001(\0132\034.udb.core.com" +
-      "mon.v1.ApiErrorR\005error: \232\262\031\034\010\001\032\003udb(\260\352\0010" +
-      "\003@\001J\tembeddingP\0012\377\026\n\020EmbeddingService\022\202\004" +
-      "\n\016RegisterSource\0225.udb.core.embedding.se" +
-      "rvices.v1.RegisterSourceRequest\0326.udb.co" +
-      "re.embedding.services.v1.RegisterSourceR" +
-      "esponse\"\200\003\312\363\030D\010\002\032\035udb:embedding:register" +
-      "-source \001J\002\001\002j\030embedding.RegisterSource\220" +
-      "\001\001\322\363\030\006\010\001\020\001 \001\332\363\030F\010\001\022\017register_source\032\003udb" +
-      "(\260\352\0010\003@\001J\tembeddingP\001Z\027registerEmbedding" +
-      "Source\352\363\030l\n\030embedding.RegisterSource\022\"ud" +
-      "b.embedding.source.registered.v1\032\013source" +
-      "_name\"\010standard*\rat_least_once2\006stable\362\363" +
-      "\030C\n\tembedding\032\010postgres2\033UDB_NATIVE_SERV" +
-      "ICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002#\"" +
-      "\036/v1/embedding/sources:register:\001*\022\361\002\n\013L" +
-      "istSources\0222.udb.core.embedding.services" +
-      ".v1.ListSourcesRequest\0323.udb.core.embedd" +
-      "ing.services.v1.ListSourcesResponse\"\370\001\312\363" +
-      "\030>\010\002\032\032udb:embedding:list-sources \001J\002\001\002j\025" +
-      "embedding.ListSources\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030@\010\001" +
-      "\022\014list_sources\032\003udb(\260\352\0010\003@\001J\tembeddingP\001" +
-      "Z\024listEmbeddingSources\362\363\030C\n\tembedding\032\010p" +
-      "ostgres2\033UDB_NATIVE_SERVICES_ENABLED2\017UD" +
-      "B_GRPC_TARGET\370\363\030\001\202\323\344\223\002\027\022\025/v1/embedding/s" +
-      "ources\022\355\003\n\014DeleteSource\0223.udb.core.embed" +
-      "ding.services.v1.DeleteSourceRequest\0324.u" +
-      "db.core.embedding.services.v1.DeleteSour" +
-      "ceResponse\"\361\002\312\363\030@\010\002\032\033udb:embedding:delet" +
-      "e-source \001J\002\001\002j\026embedding.DeleteSource\220\001" +
-      "\001\322\363\030\006\010\001\020\001 \001\332\363\030B\010\001\022\rdelete_source\032\003udb(\260\352" +
-      "\0010\003@\001J\tembeddingP\001Z\025deleteEmbeddingSourc" +
-      "e\352\363\030g\n\026embedding.DeleteSource\022\037udb.embed" +
-      "ding.source.deleted.v1\032\013source_name\"\010sta" +
-      "ndard*\rat_least_once2\006stable\362\363\030C\n\tembedd" +
-      "ing\032\010postgres2\033UDB_NATIVE_SERVICES_ENABL" +
-      "ED2\017UDB_GRPC_TARGET\370\363\030\003\202\323\344\223\002!\"\034/v1/embed" +
-      "ding/sources:delete:\001*\022\327\003\n\010Backfill\022/.ud" +
-      "b.core.embedding.services.v1.BackfillReq" +
-      "uest\0320.udb.core.embedding.services.v1.Ba" +
-      "ckfillResponse\"\347\002\312\363\0307\010\002\032\026udb:embedding:b" +
-      "ackfill \001J\002\001\002j\022embedding.Backfill\220\001\001\322\363\030\006" +
-      "\010\001\020\001 \001\332\363\030?\010\001\022\010backfill\032\003udb(\260\352\0010\003@\001J\temb" +
-      "eddingP\001Z\027backfillEmbeddingSource\352\363\030g\n\022e" +
-      "mbedding.Backfill\022#udb.embedding.backfil" +
-      "l.requested.v1\032\013source_name\"\010standard*\ra" +
+      "mon.v1.ApiErrorR\005error\022 \n\014index_lag_ms\030\004" +
+      " \001(\003R\nindexLagMs\022%\n\016rerank_applied\030\005 \001(\010" +
+      "R\rrerankApplied\022#\n\revaluation_id\030\006 \001(\tR\014" +
+      "evaluationId: \232\262\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tembed" +
+      "dingP\001\"=\n\tMmrConfig\022\030\n\007enabled\030\001 \001(\010R\007en" +
+      "abled\022\026\n\006lambda\030\002 \001(\001R\006lambda\"\274\001\n\014Rerank" +
+      "Config\022\030\n\007enabled\030\001 \001(\010R\007enabled\022J\n\010stra" +
+      "tegy\030\002 \001(\0162..udb.core.embedding.services" +
+      ".v1.RerankStrategyR\010strategy\022\024\n\005model\030\003 " +
+      "\001(\tR\005model\022\023\n\005top_n\030\004 \001(\005R\004topN\022\033\n\tfail_" +
+      "open\030\005 \001(\010R\010failOpen\"\320\007\n\024RegisterModelRe" +
+      "quest\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022\031\n\010mo" +
+      "del_id\030\002 \001(\tR\007modelId\022\032\n\010provider\030\003 \001(\tR" +
+      "\010provider\022\035\n\nmodel_name\030\004 \001(\tR\tmodelName" +
+      "\022\030\n\007version\030\005 \001(\tR\007version\022\036\n\ndimensions" +
+      "\030\006 \001(\005R\ndimensions\022\'\n\017matryoshka_dims\030\007 " +
+      "\003(\005R\016matryoshkaDims\022\'\n\017distance_metric\030\010" +
+      " \001(\tR\016distanceMetric\022\034\n\tnormalize\030\t \001(\010R" +
+      "\tnormalize\022!\n\014output_dtype\030\n \001(\tR\013output" +
+      "Dtype\022\030\n\007rescore\030\013 \001(\010R\007rescore\022(\n\020max_i" +
+      "nput_tokens\030\014 \001(\005R\016maxInputTokens\022\034\n\ttok" +
+      "enizer\030\r \001(\tR\ttokenizer\022\033\n\ttask_type\030\016 \001" +
+      "(\tR\010taskType\022\036\n\nasymmetric\030\017 \001(\010R\nasymme" +
+      "tric\0222\n\025provider_endpoint_ref\030\020 \001(\tR\023pro" +
+      "viderEndpointRef\022%\n\016vector_backend\030\021 \001(\t" +
+      "R\rvectorBackend\022\'\n\017vector_instance\030\022 \001(\t" +
+      "R\016vectorInstance\022)\n\020collection_alias\030\023 \001" +
+      "(\tR\017collectionAlias\022+\n\021active_collection" +
+      "\030\024 \001(\tR\020activeCollection\022+\n\021chunking_str" +
+      "ategy\030\025 \001(\tR\020chunkingStrategy\022!\n\014chunk_t" +
+      "okens\030\026 \001(\005R\013chunkTokens\0220\n\024chunk_overla" +
+      "p_tokens\030\027 \001(\005R\022chunkOverlapTokens\0221\n\024co" +
+      "ntextual_retrieval\030\030 \001(\010R\023contextualRetr" +
+      "ieval\022#\n\rlate_chunking\030\031 \001(\010R\014lateChunki" +
+      "ng\022#\n\rmetadata_json\030\032 \001(\tR\014metadataJson\"" +
+      "\255\001\n\025RegisterModelResponse\022\031\n\010model_id\030\001 " +
+      "\001(\tR\007modelId\022+\n\021active_collection\030\002 \001(\tR" +
+      "\020activeCollection\022\030\n\007message\030\003 \001(\tR\007mess" +
+      "age\0222\n\005error\030\004 \001(\0132\034.udb.core.common.v1." +
+      "ApiErrorR\005error\"\272\001\n\021ListModelsRequest\022\033\n" +
+      "\ttenant_id\030\001 \001(\tR\010tenantId\022\033\n\tpage_size\030" +
+      "\002 \001(\005R\010pageSize\022\035\n\npage_token\030\003 \001(\tR\tpag" +
+      "eToken\022L\n\006status\030\004 \001(\01624.udb.core.embedd" +
+      "ing.services.v1.EmbeddingModelStatusR\006st" +
+      "atus\"\266\004\n\025EmbeddingModelSummary\022\031\n\010model_" +
+      "id\030\001 \001(\tR\007modelId\022\032\n\010provider\030\002 \001(\tR\010pro" +
+      "vider\022\035\n\nmodel_name\030\003 \001(\tR\tmodelName\022\030\n\007" +
+      "version\030\004 \001(\tR\007version\022\036\n\ndimensions\030\005 \001" +
+      "(\005R\ndimensions\022\'\n\017distance_metric\030\006 \001(\tR" +
+      "\016distanceMetric\022!\n\014output_dtype\030\007 \001(\tR\013o" +
+      "utputDtype\022\033\n\ttask_type\030\010 \001(\tR\010taskType\022" +
+      "L\n\006status\030\t \001(\01624.udb.core.embedding.ser" +
+      "vices.v1.EmbeddingModelStatusR\006status\022%\n" +
+      "\016vector_backend\030\n \001(\tR\rvectorBackend\022)\n\020" +
+      "collection_alias\030\013 \001(\tR\017collectionAlias\022" +
+      "+\n\021active_collection\030\014 \001(\tR\020activeCollec" +
+      "tion\022W\n\014tenant_state\030\r \001(\01624.udb.core.em" +
+      "bedding.services.v1.EmbeddingTenantState" +
+      "R\013tenantState\"\331\001\n\022ListModelsResponse\022M\n\006" +
+      "models\030\001 \003(\01325.udb.core.embedding.servic" +
+      "es.v1.EmbeddingModelSummaryR\006models\022&\n\017n" +
+      "ext_page_token\030\002 \001(\tR\rnextPageToken\022\030\n\007m" +
+      "essage\030\003 \001(\tR\007message\0222\n\005error\030\004 \001(\0132\034.u" +
+      "db.core.common.v1.ApiErrorR\005error\"L\n\022Del" +
+      "eteModelRequest\022\033\n\ttenant_id\030\001 \001(\tR\010tena" +
+      "ntId\022\031\n\010model_id\030\002 \001(\tR\007modelId\"}\n\023Delet" +
+      "eModelResponse\022\030\n\007deleted\030\001 \001(\010R\007deleted" +
+      "\022\030\n\007message\030\002 \001(\tR\007message\0222\n\005error\030\003 \001(" +
+      "\0132\034.udb.core.common.v1.ApiErrorR\005error\"\331" +
+      "\002\n\025SetModelStatusRequest\022\033\n\ttenant_id\030\001 " +
+      "\001(\tR\010tenantId\022\031\n\010model_id\030\002 \001(\tR\007modelId" +
+      "\022L\n\006status\030\003 \001(\01624.udb.core.embedding.se" +
+      "rvices.v1.EmbeddingModelStatusR\006status\0220" +
+      "\n\024replacement_model_id\030\004 \001(\tR\022replacemen" +
+      "tModelId\022/\n\024retire_after_unix_ms\030\005 \001(\003R\021" +
+      "retireAfterUnixMs\022W\n\014tenant_state\030\006 \001(\0162" +
+      "4.udb.core.embedding.services.v1.Embeddi" +
+      "ngTenantStateR\013tenantState\"\331\001\n\026SetModelS" +
+      "tatusResponse\022\030\n\007updated\030\001 \001(\010R\007updated\022" +
+      "\030\n\007message\030\002 \001(\tR\007message\0222\n\005error\030\003 \001(\013" +
+      "2\034.udb.core.common.v1.ApiErrorR\005error\022W\n" +
+      "\014tenant_state\030\004 \001(\01624.udb.core.embedding" +
+      ".services.v1.EmbeddingTenantStateR\013tenan" +
+      "tState\"\203\001\n\030CutoverModelAliasRequest\022\033\n\tt" +
+      "enant_id\030\001 \001(\tR\010tenantId\022\031\n\010model_id\030\002 \001" +
+      "(\tR\007modelId\022/\n\023expected_collection\030\003 \001(\t" +
+      "R\022expectedCollection\"\333\001\n\031CutoverModelAli" +
+      "asResponse\022\030\n\007cutover\030\001 \001(\010R\007cutover\022)\n\020" +
+      "collection_alias\030\002 \001(\tR\017collectionAlias\022" +
+      "+\n\021active_collection\030\003 \001(\tR\020activeCollec" +
+      "tion\022\030\n\007message\030\004 \001(\tR\007message\0222\n\005error\030" +
+      "\005 \001(\0132\034.udb.core.common.v1.ApiErrorR\005err" +
+      "or\"R\n\034GetEmbeddingJobStatusRequest\022\033\n\tte" +
+      "nant_id\030\001 \001(\tR\010tenantId\022\025\n\006job_id\030\002 \001(\tR" +
+      "\005jobId\"\265\003\n\022EmbeddingJobStatus\022\025\n\006job_id\030" +
+      "\001 \001(\tR\005jobId\022\037\n\013source_name\030\002 \001(\tR\nsourc" +
+      "eName\022\037\n\013document_id\030\003 \001(\tR\ndocumentId\022\031" +
+      "\n\010job_type\030\004 \001(\tR\007jobType\022\022\n\004mode\030\005 \001(\tR" +
+      "\004mode\022\026\n\006status\030\006 \001(\tR\006status\022\'\n\017rows_en" +
+      "umerated\030\007 \001(\003R\016rowsEnumerated\022%\n\016chunks" +
+      "_emitted\030\010 \001(\003R\rchunksEmitted\022%\n\016vectors" +
+      "_stored\030\t \001(\003R\rvectorsStored\022\026\n\006failed\030\n" +
+      " \001(\003R\006failed\022\024\n\005error\030\013 \001(\tR\005error\022+\n\022st" +
+      "arted_at_unix_ms\030\014 \001(\003R\017startedAtUnixMs\022" +
+      "-\n\023finished_at_unix_ms\030\r \001(\003R\020finishedAt" +
+      "UnixMs\"\263\001\n\035GetEmbeddingJobStatusResponse" +
+      "\022D\n\003job\030\001 \001(\01322.udb.core.embedding.servi" +
+      "ces.v1.EmbeddingJobStatusR\003job\022\030\n\007messag" +
+      "e\030\002 \001(\tR\007message\0222\n\005error\030\003 \001(\0132\034.udb.co" +
+      "re.common.v1.ApiErrorR\005error\"\247\001\n\035ListEmb" +
+      "eddingWorkItemsRequest\022\033\n\ttenant_id\030\001 \001(" +
+      "\tR\010tenantId\022\025\n\006job_id\030\002 \001(\tR\005jobId\022\026\n\006st" +
+      "atus\030\003 \001(\tR\006status\022\033\n\tpage_size\030\004 \001(\005R\010p" +
+      "ageSize\022\035\n\npage_token\030\005 \001(\tR\tpageToken\"\206" +
+      "\003\n\030EmbeddingWorkItemSummary\022 \n\014work_item" +
+      "_id\030\001 \001(\tR\nworkItemId\022\031\n\010point_id\030\002 \001(\tR" +
+      "\007pointId\022\037\n\013source_name\030\003 \001(\tR\nsourceNam" +
+      "e\022\033\n\tparent_pk\030\004 \001(\tR\010parentPk\022\033\n\tchunk_" +
+      "seq\030\005 \001(\005R\010chunkSeq\022\035\n\nchunk_hash\030\006 \001(\tR" +
+      "\tchunkHash\022\026\n\006status\030\007 \001(\tR\006status\022#\n\rat" +
+      "tempt_count\030\010 \001(\005R\014attemptCount\022!\n\014max_a" +
+      "ttempts\030\t \001(\005R\013maxAttempts\022\035\n\nlast_error" +
+      "\030\n \001(\tR\tlastError\0224\n\027next_attempt_at_uni" +
+      "x_ms\030\013 \001(\003R\023nextAttemptAtUnixMs\"\357\001\n\036List" +
+      "EmbeddingWorkItemsResponse\022W\n\nwork_items" +
+      "\030\001 \003(\01328.udb.core.embedding.services.v1." +
+      "EmbeddingWorkItemSummaryR\tworkItems\022&\n\017n" +
+      "ext_page_token\030\002 \001(\tR\rnextPageToken\022\030\n\007m" +
+      "essage\030\003 \001(\tR\007message\0222\n\005error\030\004 \001(\0132\034.u" +
+      "db.core.common.v1.ApiErrorR\005error\"\265\001\n\033Re" +
+      "portEmbeddingBatchRequest\022\033\n\ttenant_id\030\001" +
+      " \001(\tR\010tenantId\022L\n\005items\030\002 \003(\01326.udb.core" +
+      ".embedding.services.v1.ReportEmbeddingRe" +
+      "questR\005items\022+\n\021declared_capacity\030\003 \001(\005R" +
+      "\020declaredCapacity\"\213\001\n\036ReportEmbeddingBat" +
+      "chItemResult\022 \n\014work_item_id\030\001 \001(\tR\nwork" +
+      "ItemId\022\025\n\006row_pk\030\002 \001(\tR\005rowPk\022\032\n\010upserte" +
+      "d\030\003 \001(\010R\010upserted\022\024\n\005error\030\004 \001(\tR\005error\"" +
+      "\372\001\n\034ReportEmbeddingBatchResponse\022X\n\007resu" +
+      "lts\030\001 \003(\0132>.udb.core.embedding.services." +
+      "v1.ReportEmbeddingBatchItemResultR\007resul" +
+      "ts\022\032\n\010upserted\030\002 \001(\005R\010upserted\022\026\n\006failed" +
+      "\030\003 \001(\005R\006failed\022\030\n\007message\030\004 \001(\tR\007message" +
+      "\0222\n\005error\030\005 \001(\0132\034.udb.core.common.v1.Api" +
+      "ErrorR\005error\"\261\001\n\035ReportEmbeddingFailureR" +
+      "equest\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022 \n\014w" +
+      "ork_item_id\030\002 \001(\tR\nworkItemId\022\024\n\005error\030\003" +
+      " \001(\tR\005error\022\034\n\tretryable\030\004 \001(\010R\tretryabl" +
+      "e\022\035\n\nerror_code\030\005 \001(\tR\terrorCode\"\324\001\n\036Rep" +
+      "ortEmbeddingFailureResponse\022\032\n\010recorded\030" +
+      "\001 \001(\010R\010recorded\022#\n\rdead_lettered\030\002 \001(\010R\014" +
+      "deadLettered\022#\n\rattempt_count\030\003 \001(\005R\014att" +
+      "emptCount\022\030\n\007message\030\004 \001(\tR\007message\0222\n\005e" +
+      "rror\030\005 \001(\0132\034.udb.core.common.v1.ApiError" +
+      "R\005error\"\270\002\n\025IngestDocumentRequest\022\033\n\tten" +
+      "ant_id\030\001 \001(\tR\010tenantId\022\037\n\013external_id\030\002 " +
+      "\001(\tR\nexternalId\022\024\n\005title\030\003 \001(\tR\005title\022\031\n" +
+      "\010raw_text\030\004 \001(\tR\007rawText\022,\n\022storage_obje" +
+      "ct_ref\030\005 \001(\tR\020storageObjectRef\022!\n\014conten" +
+      "t_type\030\006 \001(\tR\013contentType\022\037\n\013doc_version" +
+      "\030\007 \001(\tR\ndocVersion\022\031\n\010model_id\030\010 \001(\tR\007mo" +
+      "delId\022#\n\rmetadata_json\030\t \001(\tR\014metadataJs" +
+      "on\"\333\001\n\026IngestDocumentResponse\022\037\n\013documen" +
+      "t_id\030\001 \001(\tR\ndocumentId\022\025\n\006job_id\030\002 \001(\tR\005" +
+      "jobId\022\032\n\010accepted\030\003 \001(\010R\010accepted\022\030\n\007mes" +
+      "sage\030\004 \001(\tR\007message\0222\n\005error\030\005 \001(\0132\034.udb" +
+      ".core.common.v1.ApiErrorR\005error\022\037\n\013sourc" +
+      "e_name\030\006 \001(\tR\nsourceName\"\216\001\n\032IngestDocum" +
+      "entBatchRequest\022\033\n\ttenant_id\030\001 \001(\tR\010tena" +
+      "ntId\022S\n\tdocuments\030\002 \003(\01325.udb.core.embed" +
+      "ding.services.v1.IngestDocumentRequestR\t" +
+      "documents\"\365\001\n\033IngestDocumentBatchRespons" +
+      "e\022T\n\tdocuments\030\001 \003(\01326.udb.core.embeddin" +
+      "g.services.v1.IngestDocumentResponseR\tdo" +
+      "cuments\022\032\n\010accepted\030\002 \001(\005R\010accepted\022\026\n\006f" +
+      "ailed\030\003 \001(\005R\006failed\022\030\n\007message\030\004 \001(\tR\007me" +
+      "ssage\0222\n\005error\030\005 \001(\0132\034.udb.core.common.v" +
+      "1.ApiErrorR\005error\"\251\001\n\033ReportParsedDocume" +
+      "ntRequest\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022\037" +
+      "\n\013document_id\030\002 \001(\tR\ndocumentId\022\025\n\006job_i" +
+      "d\030\003 \001(\tR\005jobId\022\022\n\004text\030\004 \001(\tR\004text\022!\n\014co" +
+      "ntent_hash\030\005 \001(\tR\013contentHash\"\257\001\n\034Report" +
+      "ParsedDocumentResponse\022\032\n\010accepted\030\001 \001(\010" +
+      "R\010accepted\022%\n\016chunks_emitted\030\002 \001(\005R\rchun" +
+      "ksEmitted\022\030\n\007message\030\003 \001(\tR\007message\0222\n\005e" +
+      "rror\030\004 \001(\0132\034.udb.core.common.v1.ApiError" +
+      "R\005error\"\237\002\n ReportRetrievalEvaluationReq" +
+      "uest\022\033\n\ttenant_id\030\001 \001(\tR\010tenantId\022#\n\reva" +
+      "luation_id\030\002 \001(\tR\014evaluationId\022+\n\021contex" +
+      "t_relevance\030\003 \001(\001R\020contextRelevance\022\"\n\014g" +
+      "roundedness\030\004 \001(\001R\014groundedness\022)\n\020answe" +
+      "r_relevance\030\005 \001(\001R\017answerRelevance\022\'\n\017ev" +
+      "aluator_model\030\006 \001(\tR\016evaluatorModel\022\024\n\005e" +
+      "rror\030\007 \001(\tR\005error\"\215\001\n!ReportRetrievalEva" +
+      "luationResponse\022\032\n\010accepted\030\001 \001(\010R\010accep" +
+      "ted\022\030\n\007message\030\002 \001(\tR\007message\0222\n\005error\030\003" +
+      " \001(\0132\034.udb.core.common.v1.ApiErrorR\005erro" +
+      "r*\254\001\n\024EmbeddingModelStatus\022&\n\"EMBEDDING_" +
+      "MODEL_STATUS_UNSPECIFIED\020\000\022!\n\035EMBEDDING_" +
+      "MODEL_STATUS_ACTIVE\020\001\022%\n!EMBEDDING_MODEL" +
+      "_STATUS_DEPRECATED\020\002\022\"\n\036EMBEDDING_MODEL_" +
+      "STATUS_RETIRED\020\003*\254\001\n\024EmbeddingTenantStat" +
+      "e\022&\n\"EMBEDDING_TENANT_STATE_UNSPECIFIED\020" +
+      "\000\022!\n\035EMBEDDING_TENANT_STATE_ACTIVE\020\001\022#\n\037" +
+      "EMBEDDING_TENANT_STATE_INACTIVE\020\002\022$\n EMB" +
+      "EDDING_TENANT_STATE_OFFLOADED\020\003*\202\001\n\016Fusi" +
+      "onStrategy\022\037\n\033FUSION_STRATEGY_UNSPECIFIE" +
+      "D\020\000\022\027\n\023FUSION_STRATEGY_RRF\020\001\022\034\n\030FUSION_S" +
+      "TRATEGY_WEIGHTED\020\002\022\030\n\024FUSION_STRATEGY_DB" +
+      "SF\020\003*z\n\016RerankStrategy\022\037\n\033RERANK_STRATEG" +
+      "Y_UNSPECIFIED\020\000\022!\n\035RERANK_STRATEGY_CROSS" +
+      "_ENCODER\020\001\022$\n RERANK_STRATEGY_LATE_INTER" +
+      "ACTION\020\0022\250>\n\020EmbeddingService\022\202\004\n\016Regist" +
+      "erSource\0225.udb.core.embedding.services.v" +
+      "1.RegisterSourceRequest\0326.udb.core.embed" +
+      "ding.services.v1.RegisterSourceResponse\"" +
+      "\200\003\312\363\030D\010\002\032\035udb:embedding:register-source " +
+      "\001J\002\001\002j\030embedding.RegisterSource\220\001\001\322\363\030\006\010\001" +
+      "\020\001 \001\332\363\030F\010\001\022\017register_source\032\003udb(\260\352\0010\003@\001" +
+      "J\tembeddingP\001Z\027registerEmbeddingSource\352\363" +
+      "\030l\n\030embedding.RegisterSource\022\"udb.embedd" +
+      "ing.source.registered.v1\032\013source_name\"\010s" +
+      "tandard*\rat_least_once2\006stable\362\363\030C\n\tembe" +
+      "dding\032\010postgres2\033UDB_NATIVE_SERVICES_ENA" +
+      "BLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002#\"\036/v1/emb" +
+      "edding/sources:register:\001*\022\361\002\n\013ListSourc" +
+      "es\0222.udb.core.embedding.services.v1.List" +
+      "SourcesRequest\0323.udb.core.embedding.serv" +
+      "ices.v1.ListSourcesResponse\"\370\001\312\363\030>\010\002\032\032ud" +
+      "b:embedding:list-sources \001J\002\001\002j\025embeddin" +
+      "g.ListSources\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030@\010\001\022\014list_s" +
+      "ources\032\003udb(\260\352\0010\003@\001J\tembeddingP\001Z\024listEm" +
+      "beddingSources\362\363\030C\n\tembedding\032\010postgres2" +
+      "\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_T" +
+      "ARGET\370\363\030\001\202\323\344\223\002\027\022\025/v1/embedding/sources\022\355" +
+      "\003\n\014DeleteSource\0223.udb.core.embedding.ser" +
+      "vices.v1.DeleteSourceRequest\0324.udb.core." +
+      "embedding.services.v1.DeleteSourceRespon" +
+      "se\"\361\002\312\363\030@\010\002\032\033udb:embedding:delete-source" +
+      " \001J\002\001\002j\026embedding.DeleteSource\220\001\001\322\363\030\006\010\001\020" +
+      "\001 \001\332\363\030B\010\001\022\rdelete_source\032\003udb(\260\352\0010\003@\001J\te" +
+      "mbeddingP\001Z\025deleteEmbeddingSource\352\363\030g\n\026e" +
+      "mbedding.DeleteSource\022\037udb.embedding.sou" +
+      "rce.deleted.v1\032\013source_name\"\010standard*\ra" +
       "t_least_once2\006stable\362\363\030C\n\tembedding\032\010pos" +
       "tgres2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_" +
-      "GRPC_TARGET\370\363\030\002\202\323\344\223\002#\"\036/v1/embedding/sou" +
-      "rces:backfill:\001*\022\312\002\n\017ReportEmbedding\0226.u" +
-      "db.core.embedding.services.v1.ReportEmbe" +
-      "ddingRequest\0327.udb.core.embedding.servic" +
-      "es.v1.ReportEmbeddingResponse\"\305\001\312\363\030H\010\002\032\036" +
-      "udb:embedding:report-embedding \0018\001J\002\001\002j\031" +
-      "embedding.ReportEmbedding\220\001\001\332\363\030*\022\020report" +
-      "_embedding\032\003udb(\260\352\0010\003@\001J\tembedding\362\363\030C\n\t" +
-      "embedding\032\010postgres2\033UDB_NATIVE_SERVICES" +
-      "_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\022\336\002\n\010Retrie" +
-      "ve\022/.udb.core.embedding.services.v1.Retr" +
-      "ieveRequest\0320.udb.core.embedding.service" +
-      "s.v1.RetrieveResponse\"\356\001\312\363\0307\010\002\032\026udb:embe" +
-      "dding:retrieve \001J\002\001\002j\022embedding.Retrieve" +
-      "\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0309\010\001\022\010retrieve\032\003udb(\260\352\0010\003" +
-      "@\001J\tembeddingP\001Z\021retrieveEmbedding\362\363\030C\n\t" +
-      "embedding\032\010postgres2\033UDB_NATIVE_SERVICES" +
-      "_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\033\"\026/v1" +
-      "/embedding:retrieve:\001*\032\371\002\312\360\031t\n\tembedding" +
-      "\022\tembedding\032\tembedding\"\nEmbeddings*\tembe" +
-      "dding0\0018\001h\001z\tembedding\202\001\tembedding\212\001\temb" +
-      "edding\222\001\020native.embedding\322\360\031\034\010\001\032\003udb(\260\352\001" +
-      "0\003@\001J\tembeddingP\001\332\360\031\225\001\n\tembedding\022\024udb/n" +
-      "ative/embedding\032\033UDB_NATIVE_SERVICES_ENA" +
-      "BLED\032\017UDB_GRPC_TARGET\"\033udb.native.embedd" +
-      "ing.config:\tembeddingJ\013UDB_API_KEYZ\017udb " +
-      "native lint\342\360\031C\n\tembedding\032\010postgres2\033UD" +
+      "GRPC_TARGET\370\363\030\003\202\323\344\223\002!\"\034/v1/embedding/sou" +
+      "rces:delete:\001*\022\327\003\n\010Backfill\022/.udb.core.e" +
+      "mbedding.services.v1.BackfillRequest\0320.u" +
+      "db.core.embedding.services.v1.BackfillRe" +
+      "sponse\"\347\002\312\363\0307\010\002\032\026udb:embedding:backfill " +
+      "\001J\002\001\002j\022embedding.Backfill\220\001\001\322\363\030\006\010\001\020\001 \001\332\363" +
+      "\030?\010\001\022\010backfill\032\003udb(\260\352\0010\003@\001J\tembeddingP\001" +
+      "Z\027backfillEmbeddingSource\352\363\030g\n\022embedding" +
+      ".Backfill\022#udb.embedding.backfill.reques" +
+      "ted.v1\032\013source_name\"\010standard*\rat_least_" +
+      "once2\006stable\362\363\030C\n\tembedding\032\010postgres2\033U" +
+      "DB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TAR" +
+      "GET\370\363\030\002\202\323\344\223\002#\"\036/v1/embedding/sources:bac" +
+      "kfill:\001*\022\312\002\n\017ReportEmbedding\0226.udb.core." +
+      "embedding.services.v1.ReportEmbeddingReq" +
+      "uest\0327.udb.core.embedding.services.v1.Re" +
+      "portEmbeddingResponse\"\305\001\312\363\030H\010\002\032\036udb:embe" +
+      "dding:report-embedding \0018\001J\002\001\002j\031embeddin" +
+      "g.ReportEmbedding\220\001\001\332\363\030*\022\020report_embeddi" +
+      "ng\032\003udb(\260\352\0010\003@\001J\tembedding\362\363\030C\n\tembeddin" +
+      "g\032\010postgres2\033UDB_NATIVE_SERVICES_ENABLED" +
+      "2\017UDB_GRPC_TARGET\370\363\030\002\022\336\002\n\010Retrieve\022/.udb" +
+      ".core.embedding.services.v1.RetrieveRequ" +
+      "est\0320.udb.core.embedding.services.v1.Ret" +
+      "rieveResponse\"\356\001\312\363\0307\010\002\032\026udb:embedding:re" +
+      "trieve \001J\002\001\002j\022embedding.Retrieve\220\001\001\322\363\030\006\010" +
+      "\001\020\001 \001\332\363\0309\010\001\022\010retrieve\032\003udb(\260\352\0010\003@\001J\tembe" +
+      "ddingP\001Z\021retrieveEmbedding\362\363\030C\n\tembeddin" +
+      "g\032\010postgres2\033UDB_NATIVE_SERVICES_ENABLED" +
+      "2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\033\"\026/v1/embeddi" +
+      "ng:retrieve:\001*\022\200\003\n\rRegisterModel\0224.udb.c" +
+      "ore.embedding.services.v1.RegisterModelR" +
+      "equest\0325.udb.core.embedding.services.v1." +
+      "RegisterModelResponse\"\201\002\312\363\030B\010\002\032\034udb:embe" +
+      "dding:register-model \001J\002\001\002j\027embedding.Re" +
+      "gisterModel\220\001\001\332\363\030D\010\001\022\016register_model\032\003ud" +
+      "b(\260\352\0010\003@\001J\tembeddingP\001Z\026registerEmbeddin" +
+      "gModel\362\363\030C\n\tembedding\032\010postgres2\033UDB_NAT" +
+      "IVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030" +
+      "\002\202\323\344\223\002\"\"\035/v1/embedding/models:register:\001" +
+      "*\022\337\002\n\nListModels\0221.udb.core.embedding.se" +
+      "rvices.v1.ListModelsRequest\0322.udb.core.e" +
+      "mbedding.services.v1.ListModelsResponse\"" +
+      "\351\001\312\363\030<\010\002\032\031udb:embedding:list-models \001J\002\001" +
+      "\002j\024embedding.ListModels\220\001\001\332\363\030>\010\001\022\013list_m" +
+      "odels\032\003udb(\260\352\0010\003@\001J\tembeddingP\001Z\023listEmb" +
+      "eddingModels\362\363\030C\n\tembedding\032\010postgres2\033U" +
+      "DB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TAR" +
+      "GET\370\363\030\001\202\323\344\223\002\026\022\024/v1/embedding/models\022\360\002\n\013" +
+      "DeleteModel\0222.udb.core.embedding.service" +
+      "s.v1.DeleteModelRequest\0323.udb.core.embed" +
+      "ding.services.v1.DeleteModelResponse\"\367\001\312" +
+      "\363\030>\010\002\032\032udb:embedding:delete-model \001J\002\001\002j" +
+      "\025embedding.DeleteModel\220\001\001\332\363\030@\010\001\022\014delete_" +
+      "model\032\003udb(\260\352\0010\003@\001J\tembeddingP\001Z\024deleteE" +
+      "mbeddingModel\362\363\030C\n\tembedding\032\010postgres2\033" +
+      "UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TA" +
+      "RGET\370\363\030\003\202\323\344\223\002 \"\033/v1/embedding/models:del" +
+      "ete:\001*\022\204\003\n\016SetModelStatus\0225.udb.core.emb" +
+      "edding.services.v1.SetModelStatusRequest" +
+      "\0326.udb.core.embedding.services.v1.SetMod" +
+      "elStatusResponse\"\202\002\312\363\030A\010\002\032\032udb:embedding" +
+      ":update-model \001J\002\001\002j\030embedding.SetModelS",
+      "tatus\220\001\001\332\363\030E\010\001\022\020set_model_status\032\003udb(\260\352" +
+      "\0010\003@\001J\tembeddingZ\027setEmbeddingModelStatu" +
+      "s\362\363\030C\n\tembedding\032\010postgres2\033UDB_NATIVE_S" +
+      "ERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223" +
+      "\002#\"\036/v1/embedding/models:setStatus:\001*\022\225\003" +
+      "\n\021CutoverModelAlias\0228.udb.core.embedding" +
+      ".services.v1.CutoverModelAliasRequest\0329." +
+      "udb.core.embedding.services.v1.CutoverMo" +
+      "delAliasResponse\"\212\002\312\363\030E\010\002\032\033udb:embedding" +
+      ":cutover-model \001J\002\001\002j\033embedding.CutoverM" +
+      "odelAlias\220\001\001\332\363\030K\010\001\022\023cutover_model_alias\032" +
+      "\003udb(\260\352\0010\001@\001J\tembeddingZ\032cutoverEmbeddin" +
+      "gModelAlias\362\363\030C\n\tembedding\032\010postgres2\033UD" +
       "B_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARG" +
-      "ETB\246\002\n\"com.udb.core.embedding.services.v" +
-      "1B\025EmbeddingServiceProtoP\001ZLgithub.com/f" +
-      "ahara02/udb/sdk/go/gen/udb/core/embeddin" +
-      "g/services/v1;servicesv1\242\002\004UCES\252\002\036udb.co" +
-      "re.Embedding.Services.V1\312\002\036Udb\\Core\\Embe" +
-      "dding\\Services\\V1\342\002*Udb\\GPBMetadata\\Core" +
-      "\\Embedding\\Services\\V1\352\002\"Udb::Core::Embe" +
-      "dding::Services::V1b\006proto3"
+      "ET\370\363\030\002\202\323\344\223\002!\"\034/v1/embedding/models:cutov" +
+      "er:\001*\022\221\003\n\025GetEmbeddingJobStatus\022<.udb.co" +
+      "re.embedding.services.v1.GetEmbeddingJob" +
+      "StatusRequest\032=.udb.core.embedding.servi" +
+      "ces.v1.GetEmbeddingJobStatusResponse\"\372\001\312" +
+      "\363\030C\010\002\032\025udb:embedding:get-job \001J\002\001\002j\037embe" +
+      "dding.GetEmbeddingJobStatus\220\001\001\332\363\030A\010\001\022\016ge" +
+      "t_job_status\032\003udb(\260\352\0010\003@\001J\tembeddingZ\025ge" +
+      "tEmbeddingJobStatus\362\363\030C\n\tembedding\032\010post" +
+      "gres2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_G" +
+      "RPC_TARGET\370\363\030\001\202\323\344\223\002\035\022\033/v1/embedding/jobs" +
+      "/{job_id}\022\244\003\n\026ListEmbeddingWorkItems\022=.u" +
+      "db.core.embedding.services.v1.ListEmbedd" +
+      "ingWorkItemsRequest\032>.udb.core.embedding" +
+      ".services.v1.ListEmbeddingWorkItemsRespo" +
+      "nse\"\212\002\312\363\030F\010\002\032\027udb:embedding:list-work \001J" +
+      "\002\001\002j embedding.ListEmbeddingWorkItems\220\001\001" +
+      "\332\363\030C\010\001\022\017list_work_items\032\003udb(\260\352\0010\003@\001J\tem" +
+      "beddingZ\026listEmbeddingWorkItems\362\363\030C\n\temb" +
+      "edding\032\010postgres2\033UDB_NATIVE_SERVICES_EN" +
+      "ABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002(\022&/v1/em" +
+      "bedding/jobs/{job_id}/work-items\022\344\002\n\024Rep" +
+      "ortEmbeddingBatch\022;.udb.core.embedding.s" +
+      "ervices.v1.ReportEmbeddingBatchRequest\032<" +
+      ".udb.core.embedding.services.v1.ReportEm" +
+      "beddingBatchResponse\"\320\001\312\363\030M\010\002\032\036udb:embed" +
+      "ding:report-embedding \0018\001J\002\001\002j\036embedding" +
+      ".ReportEmbeddingBatch\220\001\001\332\363\0300\022\026report_emb" +
+      "edding_batch\032\003udb(\260\352\0010\003@\001J\tembedding\362\363\030C" +
+      "\n\tembedding\032\010postgres2\033UDB_NATIVE_SERVIC" +
+      "ES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\022\356\002\n\026Repo" +
+      "rtEmbeddingFailure\022=.udb.core.embedding." +
+      "services.v1.ReportEmbeddingFailureReques" +
+      "t\032>.udb.core.embedding.services.v1.Repor" +
+      "tEmbeddingFailureResponse\"\324\001\312\363\030O\010\002\032\036udb:" +
+      "embedding:report-embedding \0018\001J\002\001\002j embe" +
+      "dding.ReportEmbeddingFailure\220\001\001\332\363\0302\022\030rep" +
+      "ort_embedding_failure\032\003udb(\260\352\0010\001@\001J\tembe" +
+      "dding\362\363\030C\n\tembedding\032\010postgres2\033UDB_NATI" +
+      "VE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002" +
+      "\022\210\003\n\016IngestDocument\0225.udb.core.embedding" +
+      ".services.v1.IngestDocumentRequest\0326.udb" +
+      ".core.embedding.services.v1.IngestDocume" +
+      "ntResponse\"\206\002\312\363\030D\010\002\032\035udb:embedding:inges" +
+      "t-document \001J\002\001\002j\030embedding.IngestDocume" +
+      "nt\220\001\001\332\363\030F\010\001\022\017ingest_document\032\003udb(\260\352\0010\003@" +
+      "\001J\tembeddingP\001Z\027ingestEmbeddingDocument\362" +
+      "\363\030C\n\tembedding\032\010postgres2\033UDB_NATIVE_SER" +
+      "VICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002#" +
+      "\"\036/v1/embedding/documents:ingest:\001*\022\252\003\n\023" +
+      "IngestDocumentBatch\022:.udb.core.embedding" +
+      ".services.v1.IngestDocumentBatchRequest\032" +
+      ";.udb.core.embedding.services.v1.IngestD" +
+      "ocumentBatchResponse\"\231\002\312\363\030I\010\002\032\035udb:embed" +
+      "ding:ingest-document \001J\002\001\002j\035embedding.In" +
+      "gestDocumentBatch\220\001\001\332\363\030O\010\001\022\025ingest_docum" +
+      "ent_batch\032\003udb(\260\352\0010\003@\001J\tembeddingZ\034inges" +
+      "tEmbeddingDocumentBatch\362\363\030C\n\tembedding\032\010" +
+      "postgres2\033UDB_NATIVE_SERVICES_ENABLED2\017U" +
+      "DB_GRPC_TARGET\370\363\030\002\202\323\344\223\002(\"#/v1/embedding/" +
+      "documents:batchIngest:\001*\022\343\002\n\024ReportParse" +
+      "dDocument\022;.udb.core.embedding.services." +
+      "v1.ReportParsedDocumentRequest\032<.udb.cor" +
+      "e.embedding.services.v1.ReportParsedDocu" +
+      "mentResponse\"\317\001\312\363\030L\010\002\032\035udb:embedding:rep" +
+      "ort-document \0018\001J\002\001\002j\036embedding.ReportPa" +
+      "rsedDocument\220\001\001\332\363\0300\022\026report_parsed_docum" +
+      "ent\032\003udb(\260\352\0010\003@\001J\tembedding\362\363\030C\n\tembeddi" +
+      "ng\032\010postgres2\033UDB_NATIVE_SERVICES_ENABLE" +
+      "D2\017UDB_GRPC_TARGET\370\363\030\002\022\376\002\n\031ReportRetriev" +
+      "alEvaluation\022@.udb.core.embedding.servic" +
+      "es.v1.ReportRetrievalEvaluationRequest\032A" +
+      ".udb.core.embedding.services.v1.ReportRe" +
+      "trievalEvaluationResponse\"\333\001\312\363\030S\010\002\032\037udb:" +
+      "embedding:report-evaluation \0018\001J\002\001\002j#emb" +
+      "edding.ReportRetrievalEvaluation\220\001\001\332\363\0305\022" +
+      "\033report_retrieval_evaluation\032\003udb(\260\352\0010\003@" +
+      "\001J\tembedding\362\363\030C\n\tembedding\032\010postgres2\033U" +
+      "DB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TAR" +
+      "GET\370\363\030\002\032\371\002\312\360\031t\n\tembedding\022\tembedding\032\tem" +
+      "bedding\"\nEmbeddings*\tembedding0\0018\001h\001z\tem" +
+      "bedding\202\001\tembedding\212\001\tembedding\222\001\020native" +
+      ".embedding\322\360\031\034\010\001\032\003udb(\260\352\0010\003@\001J\tembedding" +
+      "P\001\332\360\031\225\001\n\tembedding\022\024udb/native/embedding" +
+      "\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_" +
+      "TARGET\"\033udb.native.embedding.config:\temb" +
+      "eddingJ\013UDB_API_KEYZ\017udb native lint\342\360\031C" +
+      "\n\tembedding\032\010postgres2\033UDB_NATIVE_SERVIC" +
+      "ES_ENABLED2\017UDB_GRPC_TARGETB\246\002\n\"com.udb." +
+      "core.embedding.services.v1B\025EmbeddingSer" +
+      "viceProtoP\001ZLgithub.com/fahara02/udb/sdk" +
+      "/go/gen/udb/core/embedding/services/v1;s" +
+      "ervicesv1\242\002\004UCES\252\002\036udb.core.Embedding.Se" +
+      "rvices.V1\312\002\036Udb\\Core\\Embedding\\Services\\" +
+      "V1\342\002*Udb\\GPBMetadata\\Core\\Embedding\\Serv" +
+      "ices\\V1\352\002\"Udb::Core::Embedding::Services" +
+      "::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -314,7 +831,7 @@ public final class EmbeddingServiceProto {
     internal_static_udb_core_embedding_services_v1_BackfillRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_embedding_services_v1_BackfillRequest_descriptor,
-        new java.lang.String[] { "TenantId", "SourceName", });
+        new java.lang.String[] { "TenantId", "SourceName", "Mode", });
     internal_static_udb_core_embedding_services_v1_BackfillResponse_descriptor =
       getDescriptor().getMessageTypes().get(8);
     internal_static_udb_core_embedding_services_v1_BackfillResponse_fieldAccessorTable = new
@@ -326,7 +843,7 @@ public final class EmbeddingServiceProto {
     internal_static_udb_core_embedding_services_v1_ReportEmbeddingRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_embedding_services_v1_ReportEmbeddingRequest_descriptor,
-        new java.lang.String[] { "TenantId", "SourceName", "RowPk", "Vector", "Model", "Dims", });
+        new java.lang.String[] { "TenantId", "SourceName", "RowPk", "Vector", "Model", "Dims", "WorkItemId", "ChunkHash", "TokenCount", "VectorName", });
     internal_static_udb_core_embedding_services_v1_ReportEmbeddingResponse_descriptor =
       getDescriptor().getMessageTypes().get(10);
     internal_static_udb_core_embedding_services_v1_ReportEmbeddingResponse_fieldAccessorTable = new
@@ -338,19 +855,211 @@ public final class EmbeddingServiceProto {
     internal_static_udb_core_embedding_services_v1_RetrieveRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_embedding_services_v1_RetrieveRequest_descriptor,
-        new java.lang.String[] { "TenantId", "SourceName", "QueryText", "QueryVector", "TopK", "FilterJson", "ScoreThreshold", });
+        new java.lang.String[] { "TenantId", "SourceName", "QueryText", "QueryVector", "TopK", "FilterJson", "ScoreThreshold", "IncludeVectors", "Mmr", "Fusion", "PrefetchLimit", "Rerank", "VectorName", "ParentWindow", "IncludeCitations", });
     internal_static_udb_core_embedding_services_v1_RetrieveHit_descriptor =
       getDescriptor().getMessageTypes().get(12);
     internal_static_udb_core_embedding_services_v1_RetrieveHit_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_embedding_services_v1_RetrieveHit_descriptor,
-        new java.lang.String[] { "Id", "Score", "PayloadJson", });
+        new java.lang.String[] { "Id", "Score", "PayloadJson", "Vector", "SourceName", "ParentPk", "ChunkSeq", "DocumentId", "DocVersion", "VectorName", "RerankScore", });
     internal_static_udb_core_embedding_services_v1_RetrieveResponse_descriptor =
       getDescriptor().getMessageTypes().get(13);
     internal_static_udb_core_embedding_services_v1_RetrieveResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_core_embedding_services_v1_RetrieveResponse_descriptor,
-        new java.lang.String[] { "Hits", "Message", "Error", });
+        new java.lang.String[] { "Hits", "Message", "Error", "IndexLagMs", "RerankApplied", "EvaluationId", });
+    internal_static_udb_core_embedding_services_v1_MmrConfig_descriptor =
+      getDescriptor().getMessageTypes().get(14);
+    internal_static_udb_core_embedding_services_v1_MmrConfig_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_embedding_services_v1_MmrConfig_descriptor,
+        new java.lang.String[] { "Enabled", "Lambda", });
+    internal_static_udb_core_embedding_services_v1_RerankConfig_descriptor =
+      getDescriptor().getMessageTypes().get(15);
+    internal_static_udb_core_embedding_services_v1_RerankConfig_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_embedding_services_v1_RerankConfig_descriptor,
+        new java.lang.String[] { "Enabled", "Strategy", "Model", "TopN", "FailOpen", });
+    internal_static_udb_core_embedding_services_v1_RegisterModelRequest_descriptor =
+      getDescriptor().getMessageTypes().get(16);
+    internal_static_udb_core_embedding_services_v1_RegisterModelRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_embedding_services_v1_RegisterModelRequest_descriptor,
+        new java.lang.String[] { "TenantId", "ModelId", "Provider", "ModelName", "Version", "Dimensions", "MatryoshkaDims", "DistanceMetric", "Normalize", "OutputDtype", "Rescore", "MaxInputTokens", "Tokenizer", "TaskType", "Asymmetric", "ProviderEndpointRef", "VectorBackend", "VectorInstance", "CollectionAlias", "ActiveCollection", "ChunkingStrategy", "ChunkTokens", "ChunkOverlapTokens", "ContextualRetrieval", "LateChunking", "MetadataJson", });
+    internal_static_udb_core_embedding_services_v1_RegisterModelResponse_descriptor =
+      getDescriptor().getMessageTypes().get(17);
+    internal_static_udb_core_embedding_services_v1_RegisterModelResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_embedding_services_v1_RegisterModelResponse_descriptor,
+        new java.lang.String[] { "ModelId", "ActiveCollection", "Message", "Error", });
+    internal_static_udb_core_embedding_services_v1_ListModelsRequest_descriptor =
+      getDescriptor().getMessageTypes().get(18);
+    internal_static_udb_core_embedding_services_v1_ListModelsRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_embedding_services_v1_ListModelsRequest_descriptor,
+        new java.lang.String[] { "TenantId", "PageSize", "PageToken", "Status", });
+    internal_static_udb_core_embedding_services_v1_EmbeddingModelSummary_descriptor =
+      getDescriptor().getMessageTypes().get(19);
+    internal_static_udb_core_embedding_services_v1_EmbeddingModelSummary_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_embedding_services_v1_EmbeddingModelSummary_descriptor,
+        new java.lang.String[] { "ModelId", "Provider", "ModelName", "Version", "Dimensions", "DistanceMetric", "OutputDtype", "TaskType", "Status", "VectorBackend", "CollectionAlias", "ActiveCollection", "TenantState", });
+    internal_static_udb_core_embedding_services_v1_ListModelsResponse_descriptor =
+      getDescriptor().getMessageTypes().get(20);
+    internal_static_udb_core_embedding_services_v1_ListModelsResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_embedding_services_v1_ListModelsResponse_descriptor,
+        new java.lang.String[] { "Models", "NextPageToken", "Message", "Error", });
+    internal_static_udb_core_embedding_services_v1_DeleteModelRequest_descriptor =
+      getDescriptor().getMessageTypes().get(21);
+    internal_static_udb_core_embedding_services_v1_DeleteModelRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_embedding_services_v1_DeleteModelRequest_descriptor,
+        new java.lang.String[] { "TenantId", "ModelId", });
+    internal_static_udb_core_embedding_services_v1_DeleteModelResponse_descriptor =
+      getDescriptor().getMessageTypes().get(22);
+    internal_static_udb_core_embedding_services_v1_DeleteModelResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_embedding_services_v1_DeleteModelResponse_descriptor,
+        new java.lang.String[] { "Deleted", "Message", "Error", });
+    internal_static_udb_core_embedding_services_v1_SetModelStatusRequest_descriptor =
+      getDescriptor().getMessageTypes().get(23);
+    internal_static_udb_core_embedding_services_v1_SetModelStatusRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_embedding_services_v1_SetModelStatusRequest_descriptor,
+        new java.lang.String[] { "TenantId", "ModelId", "Status", "ReplacementModelId", "RetireAfterUnixMs", "TenantState", });
+    internal_static_udb_core_embedding_services_v1_SetModelStatusResponse_descriptor =
+      getDescriptor().getMessageTypes().get(24);
+    internal_static_udb_core_embedding_services_v1_SetModelStatusResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_embedding_services_v1_SetModelStatusResponse_descriptor,
+        new java.lang.String[] { "Updated", "Message", "Error", "TenantState", });
+    internal_static_udb_core_embedding_services_v1_CutoverModelAliasRequest_descriptor =
+      getDescriptor().getMessageTypes().get(25);
+    internal_static_udb_core_embedding_services_v1_CutoverModelAliasRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_embedding_services_v1_CutoverModelAliasRequest_descriptor,
+        new java.lang.String[] { "TenantId", "ModelId", "ExpectedCollection", });
+    internal_static_udb_core_embedding_services_v1_CutoverModelAliasResponse_descriptor =
+      getDescriptor().getMessageTypes().get(26);
+    internal_static_udb_core_embedding_services_v1_CutoverModelAliasResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_embedding_services_v1_CutoverModelAliasResponse_descriptor,
+        new java.lang.String[] { "Cutover", "CollectionAlias", "ActiveCollection", "Message", "Error", });
+    internal_static_udb_core_embedding_services_v1_GetEmbeddingJobStatusRequest_descriptor =
+      getDescriptor().getMessageTypes().get(27);
+    internal_static_udb_core_embedding_services_v1_GetEmbeddingJobStatusRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_embedding_services_v1_GetEmbeddingJobStatusRequest_descriptor,
+        new java.lang.String[] { "TenantId", "JobId", });
+    internal_static_udb_core_embedding_services_v1_EmbeddingJobStatus_descriptor =
+      getDescriptor().getMessageTypes().get(28);
+    internal_static_udb_core_embedding_services_v1_EmbeddingJobStatus_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_embedding_services_v1_EmbeddingJobStatus_descriptor,
+        new java.lang.String[] { "JobId", "SourceName", "DocumentId", "JobType", "Mode", "Status", "RowsEnumerated", "ChunksEmitted", "VectorsStored", "Failed", "Error", "StartedAtUnixMs", "FinishedAtUnixMs", });
+    internal_static_udb_core_embedding_services_v1_GetEmbeddingJobStatusResponse_descriptor =
+      getDescriptor().getMessageTypes().get(29);
+    internal_static_udb_core_embedding_services_v1_GetEmbeddingJobStatusResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_embedding_services_v1_GetEmbeddingJobStatusResponse_descriptor,
+        new java.lang.String[] { "Job", "Message", "Error", });
+    internal_static_udb_core_embedding_services_v1_ListEmbeddingWorkItemsRequest_descriptor =
+      getDescriptor().getMessageTypes().get(30);
+    internal_static_udb_core_embedding_services_v1_ListEmbeddingWorkItemsRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_embedding_services_v1_ListEmbeddingWorkItemsRequest_descriptor,
+        new java.lang.String[] { "TenantId", "JobId", "Status", "PageSize", "PageToken", });
+    internal_static_udb_core_embedding_services_v1_EmbeddingWorkItemSummary_descriptor =
+      getDescriptor().getMessageTypes().get(31);
+    internal_static_udb_core_embedding_services_v1_EmbeddingWorkItemSummary_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_embedding_services_v1_EmbeddingWorkItemSummary_descriptor,
+        new java.lang.String[] { "WorkItemId", "PointId", "SourceName", "ParentPk", "ChunkSeq", "ChunkHash", "Status", "AttemptCount", "MaxAttempts", "LastError", "NextAttemptAtUnixMs", });
+    internal_static_udb_core_embedding_services_v1_ListEmbeddingWorkItemsResponse_descriptor =
+      getDescriptor().getMessageTypes().get(32);
+    internal_static_udb_core_embedding_services_v1_ListEmbeddingWorkItemsResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_embedding_services_v1_ListEmbeddingWorkItemsResponse_descriptor,
+        new java.lang.String[] { "WorkItems", "NextPageToken", "Message", "Error", });
+    internal_static_udb_core_embedding_services_v1_ReportEmbeddingBatchRequest_descriptor =
+      getDescriptor().getMessageTypes().get(33);
+    internal_static_udb_core_embedding_services_v1_ReportEmbeddingBatchRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_embedding_services_v1_ReportEmbeddingBatchRequest_descriptor,
+        new java.lang.String[] { "TenantId", "Items", "DeclaredCapacity", });
+    internal_static_udb_core_embedding_services_v1_ReportEmbeddingBatchItemResult_descriptor =
+      getDescriptor().getMessageTypes().get(34);
+    internal_static_udb_core_embedding_services_v1_ReportEmbeddingBatchItemResult_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_embedding_services_v1_ReportEmbeddingBatchItemResult_descriptor,
+        new java.lang.String[] { "WorkItemId", "RowPk", "Upserted", "Error", });
+    internal_static_udb_core_embedding_services_v1_ReportEmbeddingBatchResponse_descriptor =
+      getDescriptor().getMessageTypes().get(35);
+    internal_static_udb_core_embedding_services_v1_ReportEmbeddingBatchResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_embedding_services_v1_ReportEmbeddingBatchResponse_descriptor,
+        new java.lang.String[] { "Results", "Upserted", "Failed", "Message", "Error", });
+    internal_static_udb_core_embedding_services_v1_ReportEmbeddingFailureRequest_descriptor =
+      getDescriptor().getMessageTypes().get(36);
+    internal_static_udb_core_embedding_services_v1_ReportEmbeddingFailureRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_embedding_services_v1_ReportEmbeddingFailureRequest_descriptor,
+        new java.lang.String[] { "TenantId", "WorkItemId", "Error", "Retryable", "ErrorCode", });
+    internal_static_udb_core_embedding_services_v1_ReportEmbeddingFailureResponse_descriptor =
+      getDescriptor().getMessageTypes().get(37);
+    internal_static_udb_core_embedding_services_v1_ReportEmbeddingFailureResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_embedding_services_v1_ReportEmbeddingFailureResponse_descriptor,
+        new java.lang.String[] { "Recorded", "DeadLettered", "AttemptCount", "Message", "Error", });
+    internal_static_udb_core_embedding_services_v1_IngestDocumentRequest_descriptor =
+      getDescriptor().getMessageTypes().get(38);
+    internal_static_udb_core_embedding_services_v1_IngestDocumentRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_embedding_services_v1_IngestDocumentRequest_descriptor,
+        new java.lang.String[] { "TenantId", "ExternalId", "Title", "RawText", "StorageObjectRef", "ContentType", "DocVersion", "ModelId", "MetadataJson", });
+    internal_static_udb_core_embedding_services_v1_IngestDocumentResponse_descriptor =
+      getDescriptor().getMessageTypes().get(39);
+    internal_static_udb_core_embedding_services_v1_IngestDocumentResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_embedding_services_v1_IngestDocumentResponse_descriptor,
+        new java.lang.String[] { "DocumentId", "JobId", "Accepted", "Message", "Error", "SourceName", });
+    internal_static_udb_core_embedding_services_v1_IngestDocumentBatchRequest_descriptor =
+      getDescriptor().getMessageTypes().get(40);
+    internal_static_udb_core_embedding_services_v1_IngestDocumentBatchRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_embedding_services_v1_IngestDocumentBatchRequest_descriptor,
+        new java.lang.String[] { "TenantId", "Documents", });
+    internal_static_udb_core_embedding_services_v1_IngestDocumentBatchResponse_descriptor =
+      getDescriptor().getMessageTypes().get(41);
+    internal_static_udb_core_embedding_services_v1_IngestDocumentBatchResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_embedding_services_v1_IngestDocumentBatchResponse_descriptor,
+        new java.lang.String[] { "Documents", "Accepted", "Failed", "Message", "Error", });
+    internal_static_udb_core_embedding_services_v1_ReportParsedDocumentRequest_descriptor =
+      getDescriptor().getMessageTypes().get(42);
+    internal_static_udb_core_embedding_services_v1_ReportParsedDocumentRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_embedding_services_v1_ReportParsedDocumentRequest_descriptor,
+        new java.lang.String[] { "TenantId", "DocumentId", "JobId", "Text", "ContentHash", });
+    internal_static_udb_core_embedding_services_v1_ReportParsedDocumentResponse_descriptor =
+      getDescriptor().getMessageTypes().get(43);
+    internal_static_udb_core_embedding_services_v1_ReportParsedDocumentResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_embedding_services_v1_ReportParsedDocumentResponse_descriptor,
+        new java.lang.String[] { "Accepted", "ChunksEmitted", "Message", "Error", });
+    internal_static_udb_core_embedding_services_v1_ReportRetrievalEvaluationRequest_descriptor =
+      getDescriptor().getMessageTypes().get(44);
+    internal_static_udb_core_embedding_services_v1_ReportRetrievalEvaluationRequest_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_embedding_services_v1_ReportRetrievalEvaluationRequest_descriptor,
+        new java.lang.String[] { "TenantId", "EvaluationId", "ContextRelevance", "Groundedness", "AnswerRelevance", "EvaluatorModel", "Error", });
+    internal_static_udb_core_embedding_services_v1_ReportRetrievalEvaluationResponse_descriptor =
+      getDescriptor().getMessageTypes().get(45);
+    internal_static_udb_core_embedding_services_v1_ReportRetrievalEvaluationResponse_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+        internal_static_udb_core_embedding_services_v1_ReportRetrievalEvaluationResponse_descriptor,
+        new java.lang.String[] { "Accepted", "Message", "Error", });
     descriptor.resolveAllFeaturesImmutable();
     com.google.api.AnnotationsProto.getDescriptor();
     com.udb.core.common.v1.DtoProto.getDescriptor();

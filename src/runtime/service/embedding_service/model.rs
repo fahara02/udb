@@ -4,6 +4,7 @@
 //! the mediated-read row decode and the fail-closed point builder are
 //! byte-for-byte identical.
 
+use chrono::DateTime;
 use tonic::Status;
 
 use crate::proto::VectorPointMutation;
@@ -14,6 +15,7 @@ use super::errors::{
 };
 
 /// A registered source decoded from the native read JSON.
+#[derive(Clone)]
 pub(crate) struct StoredSource {
     pub(crate) source_id: String,
     pub(crate) tenant_id: String,
@@ -50,7 +52,7 @@ fn source_json_object(row: &serde_json::Value) -> &serde_json::Map<String, serde
         })
 }
 
-fn json_str(row: &serde_json::Map<String, serde_json::Value>, key: &str) -> String {
+pub(crate) fn json_str(row: &serde_json::Map<String, serde_json::Value>, key: &str) -> String {
     match row.get(key) {
         Some(serde_json::Value::String(value)) => value.clone(),
         Some(serde_json::Value::Number(value)) => value.to_string(),
@@ -58,6 +60,138 @@ fn json_str(row: &serde_json::Map<String, serde_json::Value>, key: &str) -> Stri
         Some(value @ serde_json::Value::Array(_)) => value.to_string(),
         Some(value @ serde_json::Value::Object(_)) => value.to_string(),
         _ => String::new(),
+    }
+}
+
+pub(crate) fn json_i32(row: &serde_json::Map<String, serde_json::Value>, key: &str) -> i32 {
+    row.get(key)
+        .and_then(|value| match value {
+            serde_json::Value::Number(number) => number.as_i64(),
+            serde_json::Value::String(value) => value.parse().ok(),
+            _ => None,
+        })
+        .and_then(|value| i32::try_from(value).ok())
+        .unwrap_or_default()
+}
+
+pub(crate) fn json_i64(row: &serde_json::Map<String, serde_json::Value>, key: &str) -> i64 {
+    row.get(key)
+        .and_then(|value| match value {
+            serde_json::Value::Number(number) => number.as_i64(),
+            serde_json::Value::String(value) => value.parse().ok(),
+            _ => None,
+        })
+        .unwrap_or_default()
+}
+
+pub(crate) fn json_bool(row: &serde_json::Map<String, serde_json::Value>, key: &str) -> bool {
+    row.get(key)
+        .and_then(|value| match value {
+            serde_json::Value::Bool(value) => Some(*value),
+            serde_json::Value::String(value) => value.parse().ok(),
+            _ => None,
+        })
+        .unwrap_or_default()
+}
+
+pub(crate) fn json_timestamp_ms(
+    row: &serde_json::Map<String, serde_json::Value>,
+    key: &str,
+) -> i64 {
+    row.get(key)
+        .and_then(|value| match value {
+            serde_json::Value::Number(number) => number.as_i64(),
+            serde_json::Value::String(value) => value.parse::<i64>().ok().or_else(|| {
+                DateTime::parse_from_rfc3339(value)
+                    .ok()
+                    .map(|ts| ts.timestamp_millis())
+            }),
+            _ => None,
+        })
+        .unwrap_or_default()
+}
+
+pub(crate) fn native_json_object(
+    row: &serde_json::Value,
+) -> &serde_json::Map<String, serde_json::Value> {
+    source_json_object(row)
+}
+
+#[derive(Clone, Debug)]
+pub(crate) struct StoredModel {
+    pub(crate) model_id: String,
+    pub(crate) provider: String,
+    pub(crate) model_name: String,
+    pub(crate) version: String,
+    pub(crate) dimensions: i32,
+    pub(crate) matryoshka_dims_json: String,
+    pub(crate) distance_metric: String,
+    pub(crate) normalize: bool,
+    pub(crate) output_dtype: String,
+    pub(crate) rescore: bool,
+    pub(crate) max_input_tokens: i32,
+    pub(crate) tokenizer: String,
+    pub(crate) task_type: String,
+    pub(crate) asymmetric: bool,
+    pub(crate) provider_endpoint_ref: String,
+    pub(crate) status: String,
+    pub(crate) replacement_model_id: String,
+    pub(crate) retire_after_unix_ms: i64,
+    pub(crate) vector_backend: String,
+    pub(crate) vector_instance: String,
+    pub(crate) collection_alias: String,
+    pub(crate) active_collection: String,
+    pub(crate) chunking_strategy: String,
+    pub(crate) chunk_tokens: i32,
+    pub(crate) chunk_overlap_tokens: i32,
+    pub(crate) contextual_retrieval: bool,
+    pub(crate) late_chunking: bool,
+    pub(crate) tenant_state: String,
+    pub(crate) metadata_json: String,
+}
+
+impl StoredModel {
+    pub(crate) fn collection(&self) -> &str {
+        if self.collection_alias.trim().is_empty() {
+            self.active_collection.as_str()
+        } else {
+            self.collection_alias.as_str()
+        }
+    }
+}
+
+pub(crate) fn stored_model_from_json(row: &serde_json::Value) -> StoredModel {
+    let map = source_json_object(row);
+    StoredModel {
+        model_id: json_str(map, "model_id"),
+        provider: json_str(map, "provider"),
+        model_name: json_str(map, "model_name"),
+        version: json_str(map, "version"),
+        dimensions: json_i32(map, "dimensions"),
+        matryoshka_dims_json: json_str(map, "matryoshka_dims_json"),
+        distance_metric: json_str(map, "distance_metric"),
+        normalize: json_bool(map, "normalize"),
+        output_dtype: json_str(map, "output_dtype"),
+        rescore: json_bool(map, "rescore"),
+        max_input_tokens: json_i32(map, "max_input_tokens"),
+        tokenizer: json_str(map, "tokenizer"),
+        task_type: json_str(map, "task_type"),
+        asymmetric: json_bool(map, "asymmetric"),
+        provider_endpoint_ref: json_str(map, "provider_endpoint_ref"),
+        status: json_str(map, "status"),
+        replacement_model_id: json_str(map, "replacement_model_id"),
+        retire_after_unix_ms: json_timestamp_ms(map, "retire_after"),
+        vector_backend: json_str(map, "vector_backend"),
+        vector_instance: json_str(map, "vector_instance"),
+        collection_alias: json_str(map, "collection_alias"),
+        active_collection: json_str(map, "active_collection"),
+        chunking_strategy: json_str(map, "chunking_strategy"),
+        chunk_tokens: json_i32(map, "chunk_tokens"),
+        chunk_overlap_tokens: json_i32(map, "chunk_overlap_tokens"),
+        contextual_retrieval: json_bool(map, "contextual_retrieval"),
+        late_chunking: json_bool(map, "late_chunking"),
+        tenant_state: json_str(map, "tenant_state"),
+        metadata_json: json_str(map, "metadata_json"),
     }
 }
 
@@ -137,7 +271,68 @@ pub(crate) fn build_embedding_point(
         id: row_pk.to_string(),
         vector,
         payload,
+        vector_name: String::new(),
     })
+}
+
+pub(crate) struct EmbeddingPointMetadata<'a> {
+    pub(crate) chunk_hash: &'a str,
+    pub(crate) chunk_text: &'a str,
+    pub(crate) document_id: &'a str,
+    pub(crate) doc_version: &'a str,
+    pub(crate) model_id: &'a str,
+    pub(crate) vector_name: &'a str,
+}
+
+pub(crate) fn build_embedding_point_with_metadata(
+    row_pk: &str,
+    vector: Vec<f32>,
+    tenant_id: &str,
+    source_name: &str,
+    metadata: EmbeddingPointMetadata<'_>,
+) -> Result<VectorPointMutation, Status> {
+    let mut point = build_embedding_point(row_pk, vector, tenant_id, source_name)?;
+    let Some(payload) = point.payload.as_mut() else {
+        return Err(embedding_policy_status_with_code(
+            tonic::Code::Internal,
+            "embedding_vector_upsert",
+            "embedding_payload_required",
+            "embedding point lost its mandatory tenant payload",
+        ));
+    };
+    let fields = &mut payload.fields;
+    let string_value = |value: &str| prost_types::Value {
+        kind: Some(prost_types::value::Kind::StringValue(value.to_string())),
+    };
+    if !metadata.chunk_hash.trim().is_empty() {
+        fields.insert("_chunk_hash".to_string(), string_value(metadata.chunk_hash));
+    }
+    if !metadata.chunk_text.trim().is_empty() {
+        fields.insert("_chunk_text".to_string(), string_value(metadata.chunk_text));
+    }
+    if !metadata.document_id.trim().is_empty() {
+        fields.insert(
+            "_document_id".to_string(),
+            string_value(metadata.document_id),
+        );
+    }
+    if !metadata.doc_version.trim().is_empty() {
+        fields.insert(
+            "_doc_version".to_string(),
+            string_value(metadata.doc_version),
+        );
+    }
+    fields.insert("_model_id".to_string(), string_value(metadata.model_id));
+    fields.insert(
+        "_indexed_at_unix_ms".to_string(),
+        prost_types::Value {
+            kind: Some(prost_types::value::Kind::NumberValue(
+                chrono::Utc::now().timestamp_millis() as f64,
+            )),
+        },
+    );
+    point.vector_name = metadata.vector_name.trim().to_string();
+    Ok(point)
 }
 
 /// Build the Qdrant-style payload filter that scopes a source-teardown delete to
@@ -251,6 +446,36 @@ pub(crate) fn merge_retrieve_filter(
     }
     out.insert("must".to_string(), serde_json::Value::Array(must));
     Ok(serde_json::Value::Object(out))
+}
+
+pub(crate) fn merge_retrieve_scope_filter(
+    tenant_id: &str,
+    source_name: &str,
+    filter_json: &str,
+    parent_pk: Option<&str>,
+) -> Result<serde_json::Value, Status> {
+    let mut filter = merge_retrieve_filter(tenant_id, filter_json)?;
+    let must = filter
+        .as_object_mut()
+        .and_then(|object| object.get_mut("must"))
+        .and_then(serde_json::Value::as_array_mut)
+        .ok_or_else(|| {
+            embedding_policy_status_with_code(
+                tonic::Code::Internal,
+                "embedding_retrieve_filter",
+                "mandatory_tenant_filter_missing",
+                "embedding retrieve lost its mandatory tenant filter",
+            )
+        })?;
+    must.push(serde_json::json!({
+        "key": "_source", "match": { "value": source_name }
+    }));
+    if let Some(parent_pk) = parent_pk.filter(|value| !value.trim().is_empty()) {
+        must.push(serde_json::json!({
+            "key": "_parent_pk", "match": { "value": parent_pk }
+        }));
+    }
+    Ok(filter)
 }
 
 /// Reject any filter condition (recursively, through nested must/should/must_not)

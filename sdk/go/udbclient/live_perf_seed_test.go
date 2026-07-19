@@ -878,8 +878,29 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 		fix.set("cancel_workflow_id", cwf.GetWorkflowId())
 	}
 
-	// ── EmbeddingService: register source + seed one vector before read phase ───
+	// ── EmbeddingService: model registry, durable jobs, and one searchable vector ─
 	embedding := embeddingpb.NewEmbeddingServiceClient(authConn)
+	registerModel := func(modelID, collection, alias string) error {
+		_, err := embedding.RegisterModel(nctx, &embeddingpb.RegisterModelRequest{
+			TenantId: tenant, ModelId: modelID, Provider: "deterministic",
+			ModelName: "text-embedding-3-small", Version: "1", Dimensions: 3,
+			MatryoshkaDims: []int32{3}, DistanceMetric: "COSINE", Normalize: true,
+			OutputDtype: "FLOAT32", MaxInputTokens: 8192, Tokenizer: "cl100k_base",
+			TaskType: "DOCUMENT", ProviderEndpointRef: "vault://embedding/sdk-live",
+			VectorBackend: "qdrant", VectorInstance: "default", CollectionAlias: alias,
+			ActiveCollection: collection, ChunkingStrategy: "TOKEN_RECURSIVE",
+			ChunkTokens: 256, ChunkOverlapTokens: 32, MetadataJson: `{"suite":"sdk-live"}`,
+		})
+		return err
+	}
+	if err := registerModel("text-embedding-3-small", "sdk_live_records", "sdk_live_records_alias"); err != nil {
+		t.Logf("perf seed: RegisterModel failed: %v", err)
+	}
+	deleteModelID := "sdk-live-delete-model-" + suffix
+	fix.set("embedding_delete_model_id", deleteModelID)
+	if err := registerModel(deleteModelID, "sdk_live_delete_records_"+suffix, "sdk_live_delete_records_alias_"+suffix); err != nil {
+		t.Logf("perf seed: RegisterModel(delete fixture) failed: %v", err)
+	}
 	if _, err := embedding.RegisterSource(nctx, &embeddingpb.RegisterSourceRequest{
 		TenantId: tenant, SourceName: "sdk_live_records", SourceMessageType: fix.m["message_type"],
 		TextFields: []string{"payload"}, TargetCollection: "sdk_live_records",
@@ -892,6 +913,35 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 		Vector: []float32{0.1, 0.2, 0.3}, Model: "text-embedding-3-small", Dims: 3,
 	}); err != nil {
 		t.Logf("perf seed: ReportEmbedding failed: %v", err)
+	}
+	if document, err := embedding.IngestDocument(nctx, &embeddingpb.IngestDocumentRequest{
+		TenantId: tenant, ExternalId: "sdk-live-work-" + suffix,
+		Title:       "SDK benchmark work fixture",
+		RawText:     "Durable embedding work is seeded from real document text for the SDK benchmark.",
+		ContentType: "text/plain", DocVersion: "1", ModelId: "text-embedding-3-small",
+		MetadataJson: `{"suite":"sdk-live","fixture":"work"}`,
+	}); err == nil {
+		fix.set("embedding_job_id", document.GetJobId())
+		if work, listErr := embedding.ListEmbeddingWorkItems(nctx, &embeddingpb.ListEmbeddingWorkItemsRequest{
+			TenantId: tenant, JobId: document.GetJobId(), PageSize: 50,
+		}); listErr == nil && len(work.GetWorkItems()) > 0 {
+			fix.set("embedding_work_item_id", work.GetWorkItems()[0].GetWorkItemId())
+		} else if listErr != nil {
+			t.Logf("perf seed: ListEmbeddingWorkItems failed: %v", listErr)
+		}
+	} else {
+		t.Logf("perf seed: IngestDocument(work fixture) failed: %v", err)
+	}
+	if parser, err := embedding.IngestDocument(nctx, &embeddingpb.IngestDocumentRequest{
+		TenantId: tenant, ExternalId: "sdk-live-parser-" + suffix,
+		Title: "SDK benchmark parser fixture", StorageObjectRef: "udb://sdk-live/embedding-" + suffix + ".txt",
+		ContentType: "text/plain", DocVersion: "1", ModelId: "text-embedding-3-small",
+		MetadataJson: `{"suite":"sdk-live","fixture":"parser"}`,
+	}); err == nil {
+		fix.set("embedding_document_id", parser.GetDocumentId())
+		fix.set("embedding_document_job_id", parser.GetJobId())
+	} else {
+		t.Logf("perf seed: IngestDocument(parser fixture) failed: %v", err)
 	}
 
 	// ── LockService: independent locks for renew/release mutation rows ──────────

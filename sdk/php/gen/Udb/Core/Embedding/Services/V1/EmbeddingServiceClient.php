@@ -127,4 +127,186 @@ class EmbeddingServiceClient extends \Grpc\BaseStub {
         $metadata, $options);
     }
 
+    /**
+     * @param \Udb\Core\Embedding\Services\V1\RegisterModelRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Embedding\Services\V1\RegisterModelResponse>
+     */
+    public function RegisterModel(\Udb\Core\Embedding\Services\V1\RegisterModelRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.embedding.services.v1.EmbeddingService/RegisterModel',
+        $argument,
+        ['\Udb\Core\Embedding\Services\V1\RegisterModelResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Core\Embedding\Services\V1\ListModelsRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Embedding\Services\V1\ListModelsResponse>
+     */
+    public function ListModels(\Udb\Core\Embedding\Services\V1\ListModelsRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.embedding.services.v1.EmbeddingService/ListModels',
+        $argument,
+        ['\Udb\Core\Embedding\Services\V1\ListModelsResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Core\Embedding\Services\V1\DeleteModelRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Embedding\Services\V1\DeleteModelResponse>
+     */
+    public function DeleteModel(\Udb\Core\Embedding\Services\V1\DeleteModelRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.embedding.services.v1.EmbeddingService/DeleteModel',
+        $argument,
+        ['\Udb\Core\Embedding\Services\V1\DeleteModelResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Core\Embedding\Services\V1\SetModelStatusRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Embedding\Services\V1\SetModelStatusResponse>
+     */
+    public function SetModelStatus(\Udb\Core\Embedding\Services\V1\SetModelStatusRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.embedding.services.v1.EmbeddingService/SetModelStatus',
+        $argument,
+        ['\Udb\Core\Embedding\Services\V1\SetModelStatusResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Core\Embedding\Services\V1\CutoverModelAliasRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Embedding\Services\V1\CutoverModelAliasResponse>
+     */
+    public function CutoverModelAlias(\Udb\Core\Embedding\Services\V1\CutoverModelAliasRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.embedding.services.v1.EmbeddingService/CutoverModelAlias',
+        $argument,
+        ['\Udb\Core\Embedding\Services\V1\CutoverModelAliasResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Core\Embedding\Services\V1\GetEmbeddingJobStatusRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Embedding\Services\V1\GetEmbeddingJobStatusResponse>
+     */
+    public function GetEmbeddingJobStatus(\Udb\Core\Embedding\Services\V1\GetEmbeddingJobStatusRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.embedding.services.v1.EmbeddingService/GetEmbeddingJobStatus',
+        $argument,
+        ['\Udb\Core\Embedding\Services\V1\GetEmbeddingJobStatusResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Core\Embedding\Services\V1\ListEmbeddingWorkItemsRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Embedding\Services\V1\ListEmbeddingWorkItemsResponse>
+     */
+    public function ListEmbeddingWorkItems(\Udb\Core\Embedding\Services\V1\ListEmbeddingWorkItemsRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.embedding.services.v1.EmbeddingService/ListEmbeddingWorkItems',
+        $argument,
+        ['\Udb\Core\Embedding\Services\V1\ListEmbeddingWorkItemsResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Core\Embedding\Services\V1\ReportEmbeddingBatchRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Embedding\Services\V1\ReportEmbeddingBatchResponse>
+     */
+    public function ReportEmbeddingBatch(\Udb\Core\Embedding\Services\V1\ReportEmbeddingBatchRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.embedding.services.v1.EmbeddingService/ReportEmbeddingBatch',
+        $argument,
+        ['\Udb\Core\Embedding\Services\V1\ReportEmbeddingBatchResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Core\Embedding\Services\V1\ReportEmbeddingFailureRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Embedding\Services\V1\ReportEmbeddingFailureResponse>
+     */
+    public function ReportEmbeddingFailure(\Udb\Core\Embedding\Services\V1\ReportEmbeddingFailureRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.embedding.services.v1.EmbeddingService/ReportEmbeddingFailure',
+        $argument,
+        ['\Udb\Core\Embedding\Services\V1\ReportEmbeddingFailureResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Core\Embedding\Services\V1\IngestDocumentRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Embedding\Services\V1\IngestDocumentResponse>
+     */
+    public function IngestDocument(\Udb\Core\Embedding\Services\V1\IngestDocumentRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.embedding.services.v1.EmbeddingService/IngestDocument',
+        $argument,
+        ['\Udb\Core\Embedding\Services\V1\IngestDocumentResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Core\Embedding\Services\V1\IngestDocumentBatchRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Embedding\Services\V1\IngestDocumentBatchResponse>
+     */
+    public function IngestDocumentBatch(\Udb\Core\Embedding\Services\V1\IngestDocumentBatchRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.embedding.services.v1.EmbeddingService/IngestDocumentBatch',
+        $argument,
+        ['\Udb\Core\Embedding\Services\V1\IngestDocumentBatchResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Core\Embedding\Services\V1\ReportParsedDocumentRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Embedding\Services\V1\ReportParsedDocumentResponse>
+     */
+    public function ReportParsedDocument(\Udb\Core\Embedding\Services\V1\ReportParsedDocumentRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.embedding.services.v1.EmbeddingService/ReportParsedDocument',
+        $argument,
+        ['\Udb\Core\Embedding\Services\V1\ReportParsedDocumentResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Udb\Core\Embedding\Services\V1\ReportRetrievalEvaluationRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Embedding\Services\V1\ReportRetrievalEvaluationResponse>
+     */
+    public function ReportRetrievalEvaluation(\Udb\Core\Embedding\Services\V1\ReportRetrievalEvaluationRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.embedding.services.v1.EmbeddingService/ReportRetrievalEvaluation',
+        $argument,
+        ['\Udb\Core\Embedding\Services\V1\ReportRetrievalEvaluationResponse', 'decode'],
+        $metadata, $options);
+    }
+
 }

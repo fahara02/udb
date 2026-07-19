@@ -106,6 +106,11 @@ impl SearchServiceImpl {
                 limit: top_k,
                 fusion_weights: Vec::new(),
                 with_payload: true,
+                with_vector: false,
+                vector_name: String::new(),
+                fusion_strategy: 0,
+                prefetch_limit: 0,
+                quantization_rescore: false,
             };
             runtime
                 .vector_hybrid_search(manifest, request, context.clone())
@@ -122,6 +127,9 @@ impl SearchServiceImpl {
                 limit: top_k,
                 score_threshold: 0.0,
                 with_payload: true,
+                with_vector: false,
+                vector_name: String::new(),
+                quantization_rescore: false,
             };
             runtime
                 .vector_search(manifest, request, context.clone())

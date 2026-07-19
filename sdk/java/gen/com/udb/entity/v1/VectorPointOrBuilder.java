@@ -42,4 +42,33 @@ public interface VectorPointOrBuilder extends
    * <code>.google.protobuf.Struct payload = 3 [json_name = "payload"];</code>
    */
   com.google.protobuf.StructOrBuilder getPayloadOrBuilder();
+
+  /**
+   * <code>repeated float vector = 4 [json_name = "vector"];</code>
+   * @return A list containing the vector.
+   */
+  java.util.List<java.lang.Float> getVectorList();
+  /**
+   * <code>repeated float vector = 4 [json_name = "vector"];</code>
+   * @return The count of vector.
+   */
+  int getVectorCount();
+  /**
+   * <code>repeated float vector = 4 [json_name = "vector"];</code>
+   * @param index The index of the element to return.
+   * @return The vector at the given index.
+   */
+  float getVector(int index);
+
+  /**
+   * <code>string vector_name = 5 [json_name = "vectorName"];</code>
+   * @return The vectorName.
+   */
+  java.lang.String getVectorName();
+  /**
+   * <code>string vector_name = 5 [json_name = "vectorName"];</code>
+   * @return The bytes for vectorName.
+   */
+  com.google.protobuf.ByteString
+      getVectorNameBytes();
 }

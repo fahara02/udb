@@ -34,6 +34,7 @@ from udb.entity.v1.vector_pb2 import VectorPointMutation as VectorPointMutation
 from udb.entity.v1.vector_pb2 import VectorUpsertRequest as VectorUpsertRequest
 from udb.entity.v1.vector_pb2 import VectorPoint as VectorPoint
 from udb.entity.v1.vector_pb2 import VectorSet as VectorSet
+from udb.entity.v1.vector_pb2 import VectorFusionStrategy as VectorFusionStrategy
 from udb.entity.v1.blob_pb2 import Chunk as Chunk
 from udb.entity.v1.blob_pb2 import ObjectRequest as ObjectRequest
 from udb.entity.v1.blob_pb2 import UrlRequest as UrlRequest
@@ -142,3 +143,7 @@ from udb.entity.v1.admin_pb2 import AdminCatalogSummary as AdminCatalogSummary
 from udb.entity.v1.admin_pb2 import AdminSummaryResponse as AdminSummaryResponse
 
 DESCRIPTOR: _descriptor.FileDescriptor
+VECTOR_FUSION_STRATEGY_UNSPECIFIED: _vector_pb2.VectorFusionStrategy
+VECTOR_FUSION_STRATEGY_RRF: _vector_pb2.VectorFusionStrategy
+VECTOR_FUSION_STRATEGY_WEIGHTED: _vector_pb2.VectorFusionStrategy
+VECTOR_FUSION_STRATEGY_DBSF: _vector_pb2.VectorFusionStrategy

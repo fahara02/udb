@@ -34,7 +34,7 @@ message EmbeddingSource {
   option (udb.core.common.v1.pg_table) = {
     table_name: "embedding_sources"
     schema_name: "udb_embedding"
-    migration_order: 1
+    migration_order: 2
     is_table: true
     comment: "Tenant-scoped source registrations for change-driven vector indexing (master-plan 9.11)"
     soft_delete: false
@@ -57,6 +57,16 @@ message EmbeddingSource {
       index_type: "BTREE"
       columns: "tenant_id"
       columns: "source_message_type"
+    }
+    foreign_keys: {
+      columns: "model_id"
+      columns: "tenant_id"
+      references_table: "embedding_models"
+      references_schema: "udb_embedding"
+      references_column: "model_id"
+      references_column: "tenant_id"
+      on_delete: REFERENTIAL_ACTION_RESTRICT
+      constraint_name: "fk_embedding_sources_model"
     }
     cdc_topic: "udb.embedding.embedding_sources.cdc"
     required_scope: "embedding:read"
@@ -94,10 +104,9 @@ message EmbeddingSource {
   // Target vector collection the reported embedding is upserted into.
   string target_collection = 6 [(udb.core.common.v1.pg_column) = { column_name: "target_collection" sql_type: "VARCHAR(255)" not_null: true }];
 
-  // Model identifier the SIDECAR must use to embed. Non-secret routing only; the
-  // model credentials/API keys live ONLY in the sidecar, never in the broker and
-  // never in a work-event payload.
-  string model_id = 7 [(udb.core.common.v1.pg_column) = { column_name: "model_id" sql_type: "VARCHAR(255)" not_null: true default_value: "''" }];
+  // Registered model identity. The sidecar receives this non-secret id and a
+  // Vault reference; provider credentials never enter the broker or outbox.
+  string model_id = 7 [(udb.core.common.v1.pg_column) = { column_name: "model_id" sql_type: "VARCHAR(255)" not_null: true index: { index_name: "idx_embedding_sources_model" index_type: "BTREE" } }];
 
   // The SOURCE table's resolved tenant column, captured at register time via the
   // shared catalog resolver. An EmbeddingSource cannot exist without it, so every

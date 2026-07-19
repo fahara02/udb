@@ -86,4 +86,28 @@ public interface VectorSearchRequestOrBuilder extends
    * @return The withPayload.
    */
   boolean getWithPayload();
+
+  /**
+   * <code>bool with_vector = 8 [json_name = "withVector"];</code>
+   * @return The withVector.
+   */
+  boolean getWithVector();
+
+  /**
+   * <code>string vector_name = 9 [json_name = "vectorName"];</code>
+   * @return The vectorName.
+   */
+  java.lang.String getVectorName();
+  /**
+   * <code>string vector_name = 9 [json_name = "vectorName"];</code>
+   * @return The bytes for vectorName.
+   */
+  com.google.protobuf.ByteString
+      getVectorNameBytes();
+
+  /**
+   * <code>bool quantization_rescore = 10 [json_name = "quantizationRescore"];</code>
+   * @return The quantizationRescore.
+   */
+  boolean getQuantizationRescore();
 }

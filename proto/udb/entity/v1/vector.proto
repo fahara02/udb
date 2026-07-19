@@ -19,6 +19,16 @@ message VectorSearchRequest {
   int32 limit = 5;
   float score_threshold = 6;
   bool with_payload = 7;
+  bool with_vector = 8;
+  string vector_name = 9;
+  bool quantization_rescore = 10;
+}
+
+enum VectorFusionStrategy {
+  VECTOR_FUSION_STRATEGY_UNSPECIFIED = 0;
+  VECTOR_FUSION_STRATEGY_RRF = 1;
+  VECTOR_FUSION_STRATEGY_WEIGHTED = 2;
+  VECTOR_FUSION_STRATEGY_DBSF = 3;
 }
 
 message VectorHybridSearchRequest {
@@ -30,12 +40,18 @@ message VectorHybridSearchRequest {
   int32 limit = 6;
   repeated float fusion_weights = 7;
   bool with_payload = 8;
+  bool with_vector = 9;
+  string vector_name = 10;
+  VectorFusionStrategy fusion_strategy = 11;
+  int32 prefetch_limit = 12;
+  bool quantization_rescore = 13;
 }
 
 message VectorPointMutation {
   string id = 1;
   repeated float vector = 2;
   google.protobuf.Struct payload = 3;
+  string vector_name = 4;
 }
 
 message VectorUpsertRequest {
@@ -49,6 +65,8 @@ message VectorPoint {
   string id = 1;
   float score = 2;
   google.protobuf.Struct payload = 3;
+  repeated float vector = 4;
+  string vector_name = 5;
 }
 
 message VectorSet {

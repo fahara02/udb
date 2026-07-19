@@ -47,4 +47,93 @@ public interface RetrieveHitOrBuilder extends
    */
   com.google.protobuf.ByteString
       getPayloadJsonBytes();
+
+  /**
+   * <code>repeated float vector = 4 [json_name = "vector"];</code>
+   * @return A list containing the vector.
+   */
+  java.util.List<java.lang.Float> getVectorList();
+  /**
+   * <code>repeated float vector = 4 [json_name = "vector"];</code>
+   * @return The count of vector.
+   */
+  int getVectorCount();
+  /**
+   * <code>repeated float vector = 4 [json_name = "vector"];</code>
+   * @param index The index of the element to return.
+   * @return The vector at the given index.
+   */
+  float getVector(int index);
+
+  /**
+   * <code>string source_name = 5 [json_name = "sourceName"];</code>
+   * @return The sourceName.
+   */
+  java.lang.String getSourceName();
+  /**
+   * <code>string source_name = 5 [json_name = "sourceName"];</code>
+   * @return The bytes for sourceName.
+   */
+  com.google.protobuf.ByteString
+      getSourceNameBytes();
+
+  /**
+   * <code>string parent_pk = 6 [json_name = "parentPk"];</code>
+   * @return The parentPk.
+   */
+  java.lang.String getParentPk();
+  /**
+   * <code>string parent_pk = 6 [json_name = "parentPk"];</code>
+   * @return The bytes for parentPk.
+   */
+  com.google.protobuf.ByteString
+      getParentPkBytes();
+
+  /**
+   * <code>int32 chunk_seq = 7 [json_name = "chunkSeq"];</code>
+   * @return The chunkSeq.
+   */
+  int getChunkSeq();
+
+  /**
+   * <code>string document_id = 8 [json_name = "documentId"];</code>
+   * @return The documentId.
+   */
+  java.lang.String getDocumentId();
+  /**
+   * <code>string document_id = 8 [json_name = "documentId"];</code>
+   * @return The bytes for documentId.
+   */
+  com.google.protobuf.ByteString
+      getDocumentIdBytes();
+
+  /**
+   * <code>string doc_version = 9 [json_name = "docVersion"];</code>
+   * @return The docVersion.
+   */
+  java.lang.String getDocVersion();
+  /**
+   * <code>string doc_version = 9 [json_name = "docVersion"];</code>
+   * @return The bytes for docVersion.
+   */
+  com.google.protobuf.ByteString
+      getDocVersionBytes();
+
+  /**
+   * <code>string vector_name = 10 [json_name = "vectorName"];</code>
+   * @return The vectorName.
+   */
+  java.lang.String getVectorName();
+  /**
+   * <code>string vector_name = 10 [json_name = "vectorName"];</code>
+   * @return The bytes for vectorName.
+   */
+  com.google.protobuf.ByteString
+      getVectorNameBytes();
+
+  /**
+   * <code>double rerank_score = 11 [json_name = "rerankScore"];</code>
+   * @return The rerankScore.
+   */
+  double getRerankScore();
 }

@@ -2,8 +2,8 @@
 // @generated from file udb/entity/v1/vector.proto (package udb.entity.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
 import { file_google_protobuf_struct } from "@bufbuild/protobuf/wkt";
 import type { RequestContext } from "./context_pb";
 import { file_udb_entity_v1_context } from "./context_pb";
@@ -13,7 +13,7 @@ import type { JsonObject, Message } from "@bufbuild/protobuf";
  * Describes the file udb/entity/v1/vector.proto.
  */
 export const file_udb_entity_v1_vector: GenFile = /*@__PURE__*/
-  fileDesc("Chp1ZGIvZW50aXR5L3YxL3ZlY3Rvci5wcm90bxINdWRiLmVudGl0eS52MSLQAQoTVmVjdG9yU2VhcmNoUmVxdWVzdBIuCgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dBISCgpjb2xsZWN0aW9uGAIgASgJEg4KBnZlY3RvchgDIAMoAhInCgZmaWx0ZXIYBCABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0Eg0KBWxpbWl0GAUgASgFEhcKD3Njb3JlX3RocmVzaG9sZBgGIAEoAhIUCgx3aXRoX3BheWxvYWQYByABKAgi6QEKGVZlY3Rvckh5YnJpZFNlYXJjaFJlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHQSEgoKY29sbGVjdGlvbhgCIAEoCRIOCgZ2ZWN0b3IYAyADKAISEgoKdGV4dF9xdWVyeRgEIAEoCRInCgZmaWx0ZXIYBSABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0Eg0KBWxpbWl0GAYgASgFEhYKDmZ1c2lvbl93ZWlnaHRzGAcgAygCEhQKDHdpdGhfcGF5bG9hZBgIIAEoCCJbChNWZWN0b3JQb2ludE11dGF0aW9uEgoKAmlkGAEgASgJEg4KBnZlY3RvchgCIAMoAhIoCgdwYXlsb2FkGAMgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdCKmAQoTVmVjdG9yVXBzZXJ0UmVxdWVzdBIuCgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dBISCgpjb2xsZWN0aW9uGAIgASgJEjIKBnBvaW50cxgDIAMoCzIiLnVkYi5lbnRpdHkudjEuVmVjdG9yUG9pbnRNdXRhdGlvbhIXCg9pZGVtcG90ZW5jeV9rZXkYBCABKAkiUgoLVmVjdG9yUG9pbnQSCgoCaWQYASABKAkSDQoFc2NvcmUYAiABKAISKAoHcGF5bG9hZBgDIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QiNwoJVmVjdG9yU2V0EioKBnBvaW50cxgBIAMoCzIaLnVkYi5lbnRpdHkudjEuVmVjdG9yUG9pbnRCsQEKEWNvbS51ZGIuZW50aXR5LnYxQgtWZWN0b3JQcm90b1ABWjlnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9lbnRpdHkvdjE7ZW50aXR5djGiAgNVRViqAg1VZGIuRW50aXR5LlYxygINVWRiXEVudGl0eVxWMeICGVVkYlxHUEJNZXRhZGF0YVxFbnRpdHlcVjHqAg9VZGI6OkVudGl0eTo6VjFiBnByb3RvMw", [file_google_protobuf_struct, file_udb_entity_v1_context]);
+  fileDesc("Chp1ZGIvZW50aXR5L3YxL3ZlY3Rvci5wcm90bxINdWRiLmVudGl0eS52MSKYAgoTVmVjdG9yU2VhcmNoUmVxdWVzdBIuCgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dBISCgpjb2xsZWN0aW9uGAIgASgJEg4KBnZlY3RvchgDIAMoAhInCgZmaWx0ZXIYBCABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0Eg0KBWxpbWl0GAUgASgFEhcKD3Njb3JlX3RocmVzaG9sZBgGIAEoAhIUCgx3aXRoX3BheWxvYWQYByABKAgSEwoLd2l0aF92ZWN0b3IYCCABKAgSEwoLdmVjdG9yX25hbWUYCSABKAkSHAoUcXVhbnRpemF0aW9uX3Jlc2NvcmUYCiABKAgihwMKGVZlY3Rvckh5YnJpZFNlYXJjaFJlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHQSEgoKY29sbGVjdGlvbhgCIAEoCRIOCgZ2ZWN0b3IYAyADKAISEgoKdGV4dF9xdWVyeRgEIAEoCRInCgZmaWx0ZXIYBSABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0Eg0KBWxpbWl0GAYgASgFEhYKDmZ1c2lvbl93ZWlnaHRzGAcgAygCEhQKDHdpdGhfcGF5bG9hZBgIIAEoCBITCgt3aXRoX3ZlY3RvchgJIAEoCBITCgt2ZWN0b3JfbmFtZRgKIAEoCRI8Cg9mdXNpb25fc3RyYXRlZ3kYCyABKA4yIy51ZGIuZW50aXR5LnYxLlZlY3RvckZ1c2lvblN0cmF0ZWd5EhYKDnByZWZldGNoX2xpbWl0GAwgASgFEhwKFHF1YW50aXphdGlvbl9yZXNjb3JlGA0gASgIInAKE1ZlY3RvclBvaW50TXV0YXRpb24SCgoCaWQYASABKAkSDgoGdmVjdG9yGAIgAygCEigKB3BheWxvYWQYAyABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EhMKC3ZlY3Rvcl9uYW1lGAQgASgJIqYBChNWZWN0b3JVcHNlcnRSZXF1ZXN0Ei4KB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0EhIKCmNvbGxlY3Rpb24YAiABKAkSMgoGcG9pbnRzGAMgAygLMiIudWRiLmVudGl0eS52MS5WZWN0b3JQb2ludE11dGF0aW9uEhcKD2lkZW1wb3RlbmN5X2tleRgEIAEoCSJ3CgtWZWN0b3JQb2ludBIKCgJpZBgBIAEoCRINCgVzY29yZRgCIAEoAhIoCgdwYXlsb2FkGAMgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBIOCgZ2ZWN0b3IYBCADKAISEwoLdmVjdG9yX25hbWUYBSABKAkiNwoJVmVjdG9yU2V0EioKBnBvaW50cxgBIAMoCzIaLnVkYi5lbnRpdHkudjEuVmVjdG9yUG9pbnQqpAEKFFZlY3RvckZ1c2lvblN0cmF0ZWd5EiYKIlZFQ1RPUl9GVVNJT05fU1RSQVRFR1lfVU5TUEVDSUZJRUQQABIeChpWRUNUT1JfRlVTSU9OX1NUUkFURUdZX1JSRhABEiMKH1ZFQ1RPUl9GVVNJT05fU1RSQVRFR1lfV0VJR0hURUQQAhIfChtWRUNUT1JfRlVTSU9OX1NUUkFURUdZX0RCU0YQA0KxAQoRY29tLnVkYi5lbnRpdHkudjFCC1ZlY3RvclByb3RvUAFaOWdpdGh1Yi5jb20vZmFoYXJhMDIvdWRiL3Nkay9nby9nZW4vdWRiL2VudGl0eS92MTtlbnRpdHl2MaICA1VFWKoCDVVkYi5FbnRpdHkuVjHKAg1VZGJcRW50aXR5XFYx4gIZVWRiXEdQQk1ldGFkYXRhXEVudGl0eVxWMeoCD1VkYjo6RW50aXR5OjpWMWIGcHJvdG8z", [file_google_protobuf_struct, file_udb_entity_v1_context]);
 
 /**
  * @generated from message udb.entity.v1.VectorSearchRequest
@@ -53,6 +53,21 @@ export type VectorSearchRequest = Message<"udb.entity.v1.VectorSearchRequest"> &
    * @generated from field: bool with_payload = 7;
    */
   withPayload: boolean;
+
+  /**
+   * @generated from field: bool with_vector = 8;
+   */
+  withVector: boolean;
+
+  /**
+   * @generated from field: string vector_name = 9;
+   */
+  vectorName: string;
+
+  /**
+   * @generated from field: bool quantization_rescore = 10;
+   */
+  quantizationRescore: boolean;
 };
 
 /**
@@ -105,6 +120,31 @@ export type VectorHybridSearchRequest = Message<"udb.entity.v1.VectorHybridSearc
    * @generated from field: bool with_payload = 8;
    */
   withPayload: boolean;
+
+  /**
+   * @generated from field: bool with_vector = 9;
+   */
+  withVector: boolean;
+
+  /**
+   * @generated from field: string vector_name = 10;
+   */
+  vectorName: string;
+
+  /**
+   * @generated from field: udb.entity.v1.VectorFusionStrategy fusion_strategy = 11;
+   */
+  fusionStrategy: VectorFusionStrategy;
+
+  /**
+   * @generated from field: int32 prefetch_limit = 12;
+   */
+  prefetchLimit: number;
+
+  /**
+   * @generated from field: bool quantization_rescore = 13;
+   */
+  quantizationRescore: boolean;
 };
 
 /**
@@ -132,6 +172,11 @@ export type VectorPointMutation = Message<"udb.entity.v1.VectorPointMutation"> &
    * @generated from field: google.protobuf.Struct payload = 3;
    */
   payload?: JsonObject | undefined;
+
+  /**
+   * @generated from field: string vector_name = 4;
+   */
+  vectorName: string;
 };
 
 /**
@@ -191,6 +236,16 @@ export type VectorPoint = Message<"udb.entity.v1.VectorPoint"> & {
    * @generated from field: google.protobuf.Struct payload = 3;
    */
   payload?: JsonObject | undefined;
+
+  /**
+   * @generated from field: repeated float vector = 4;
+   */
+  vector: number[];
+
+  /**
+   * @generated from field: string vector_name = 5;
+   */
+  vectorName: string;
 };
 
 /**
@@ -216,3 +271,34 @@ export type VectorSet = Message<"udb.entity.v1.VectorSet"> & {
  */
 export const VectorSetSchema: GenMessage<VectorSet> = /*@__PURE__*/
   messageDesc(file_udb_entity_v1_vector, 5);
+
+/**
+ * @generated from enum udb.entity.v1.VectorFusionStrategy
+ */
+export enum VectorFusionStrategy {
+  /**
+   * @generated from enum value: VECTOR_FUSION_STRATEGY_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: VECTOR_FUSION_STRATEGY_RRF = 1;
+   */
+  RRF = 1,
+
+  /**
+   * @generated from enum value: VECTOR_FUSION_STRATEGY_WEIGHTED = 2;
+   */
+  WEIGHTED = 2,
+
+  /**
+   * @generated from enum value: VECTOR_FUSION_STRATEGY_DBSF = 3;
+   */
+  DBSF = 3,
+}
+
+/**
+ * Describes the enum udb.entity.v1.VectorFusionStrategy.
+ */
+export const VectorFusionStrategySchema: GenEnum<VectorFusionStrategy> = /*@__PURE__*/
+  enumDesc(file_udb_entity_v1_vector, 0);

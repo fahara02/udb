@@ -1,0 +1,27 @@
+{
+  "thresholds": {
+    "recall_at_k": 0.8,
+    "ndcg_at_k": 0.7,
+    "mrr_at_k": 0.7
+  },
+  "queries": [
+    {
+      "query_id": "tenant-policy",
+      "k": 5,
+      "relevant": {"policy-tenant-isolation": 3, "policy-rls": 2},
+      "ranked": ["policy-tenant-isolation", "policy-rls", "vector-routing"]
+    },
+    {
+      "query_id": "embedding-retry",
+      "k": 5,
+      "relevant": ["embedding-visibility-timeout", "embedding-dlq"],
+      "ranked": ["embedding-visibility-timeout", "embedding-dlq", "embedding-model-registry"]
+    },
+    {
+      "query_id": "document-citation",
+      "k": 5,
+      "relevant": ["document-parent-window"],
+      "ranked": ["document-parent-window", "document-parser"]
+    }
+  ]
+}

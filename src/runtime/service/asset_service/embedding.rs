@@ -19,8 +19,15 @@ impl AssetServiceImpl {
     /// Best-effort: push a completed EMBED step's vector into the vector backend.
     /// `point_id` is the asset id; the embedding + dim come from the step result.
     /// Never fails the pipeline — a vector-backend outage just logs.
+    ///
+    /// The point payload carries `_tenant_id`/`_project_id` stamps: the shared
+    /// Qdrant seam enforces tenant-partitioned HNSW (`m=0` + a `_tenant_id`
+    /// tenant index), so an unstamped point would belong to no tenant partition
+    /// and be invisible to the tenant-filtered search path (which ANDs the same
+    /// stamps into must-filters).
     pub(crate) async fn upsert_embedding(
         &self,
+        tenant_id: &str,
         project_id: &str,
         point_id: &str,
         result: &serde_json::Value,
@@ -42,10 +49,26 @@ impl AssetServiceImpl {
             .get("dim")
             .and_then(|d| d.as_i64())
             .unwrap_or(vector.len() as i64) as i32;
+        let mut stamps = serde_json::Map::new();
+        if !tenant_id.trim().is_empty() {
+            stamps.insert(
+                "_tenant_id".to_string(),
+                serde_json::Value::String(tenant_id.trim().to_string()),
+            );
+        }
+        if !project_id.trim().is_empty() {
+            stamps.insert(
+                "_project_id".to_string(),
+                serde_json::Value::String(project_id.trim().to_string()),
+            );
+        }
+        let payload =
+            crate::runtime::executor_utils::json_to_struct(&serde_json::Value::Object(stamps));
         let point = crate::proto::VectorPointMutation {
             id: point_id.to_string(),
             vector,
-            payload: None,
+            payload,
+            vector_name: String::new(),
         };
         let vector_instance = runtime
             .choose_instance_name_for_project("qdrant", true, project_id)

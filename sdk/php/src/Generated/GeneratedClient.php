@@ -21,7 +21,7 @@ use Grpc\ChannelCredentials;
  *   UDB version ...... 0.4.14
  *   Protocol version . 1.0.0
  *   Services ......... 28
- *   RPCs ............. 353
+ *   RPCs ............. 366
  *
  * This class COMPOSES WITH the hand-written layer; it does not replace it:
  *   - it reuses {@see UdbMetadata} for the eight broker headers,
@@ -204,11 +204,24 @@ final class GeneratedClient
         "RollbackResources" => "mutation",
         "StreamResources" => "mutation",
         "Backfill" => "mutation",
+        "CutoverModelAlias" => "mutation",
+        "DeleteModel" => "destructive",
         "DeleteSource" => "destructive",
+        "GetEmbeddingJobStatus" => "read_only",
+        "IngestDocument" => "mutation",
+        "IngestDocumentBatch" => "mutation",
+        "ListEmbeddingWorkItems" => "read_only",
+        "ListModels" => "read_only",
         "ListSources" => "read_only",
+        "RegisterModel" => "mutation",
         "RegisterSource" => "mutation",
         "ReportEmbedding" => "mutation",
+        "ReportEmbeddingBatch" => "mutation",
+        "ReportEmbeddingFailure" => "mutation",
+        "ReportParsedDocument" => "mutation",
+        "ReportRetrievalEvaluation" => "mutation",
         "Retrieve" => "read_only",
+        "SetModelStatus" => "mutation",
         "CreateProvider" => "mutation",
         "DisableProvider" => "mutation",
         "ForceJwksRefresh" => "mutation",
@@ -566,11 +579,24 @@ final class GeneratedClient
         "ControlPlaneService/RollbackResources" => "mutation",
         "ControlPlaneService/StreamResources" => "mutation",
         "EmbeddingService/Backfill" => "mutation",
+        "EmbeddingService/CutoverModelAlias" => "mutation",
+        "EmbeddingService/DeleteModel" => "destructive",
         "EmbeddingService/DeleteSource" => "destructive",
+        "EmbeddingService/GetEmbeddingJobStatus" => "read_only",
+        "EmbeddingService/IngestDocument" => "mutation",
+        "EmbeddingService/IngestDocumentBatch" => "mutation",
+        "EmbeddingService/ListEmbeddingWorkItems" => "read_only",
+        "EmbeddingService/ListModels" => "read_only",
         "EmbeddingService/ListSources" => "read_only",
+        "EmbeddingService/RegisterModel" => "mutation",
         "EmbeddingService/RegisterSource" => "mutation",
         "EmbeddingService/ReportEmbedding" => "mutation",
+        "EmbeddingService/ReportEmbeddingBatch" => "mutation",
+        "EmbeddingService/ReportEmbeddingFailure" => "mutation",
+        "EmbeddingService/ReportParsedDocument" => "mutation",
+        "EmbeddingService/ReportRetrievalEvaluation" => "mutation",
         "EmbeddingService/Retrieve" => "read_only",
+        "EmbeddingService/SetModelStatus" => "mutation",
         "IdentityProviderService/CreateProvider" => "mutation",
         "IdentityProviderService/DisableProvider" => "mutation",
         "IdentityProviderService/ForceJwksRefresh" => "mutation",
@@ -928,11 +954,24 @@ final class GeneratedClient
         "ControlPlaneService/RollbackResources" => "rollback_resources",
         "ControlPlaneService/StreamResources" => "stream_resources",
         "EmbeddingService/Backfill" => "backfill",
+        "EmbeddingService/CutoverModelAlias" => "cutover_model_alias",
+        "EmbeddingService/DeleteModel" => "delete_model",
         "EmbeddingService/DeleteSource" => "delete_source",
+        "EmbeddingService/GetEmbeddingJobStatus" => "get_job_status",
+        "EmbeddingService/IngestDocument" => "ingest_document",
+        "EmbeddingService/IngestDocumentBatch" => "ingest_document_batch",
+        "EmbeddingService/ListEmbeddingWorkItems" => "list_work_items",
+        "EmbeddingService/ListModels" => "list_models",
         "EmbeddingService/ListSources" => "list_sources",
+        "EmbeddingService/RegisterModel" => "register_model",
         "EmbeddingService/RegisterSource" => "register_source",
         "EmbeddingService/ReportEmbedding" => "report_embedding",
+        "EmbeddingService/ReportEmbeddingBatch" => "report_embedding_batch",
+        "EmbeddingService/ReportEmbeddingFailure" => "report_embedding_failure",
+        "EmbeddingService/ReportParsedDocument" => "report_parsed_document",
+        "EmbeddingService/ReportRetrievalEvaluation" => "report_retrieval_evaluation",
         "EmbeddingService/Retrieve" => "retrieve",
+        "EmbeddingService/SetModelStatus" => "set_model_status",
         "IdentityProviderService/CreateProvider" => "create_provider",
         "IdentityProviderService/DisableProvider" => "disable_provider",
         "IdentityProviderService/ForceJwksRefresh" => "force_jwks_refresh",
@@ -1289,11 +1328,24 @@ final class GeneratedClient
         "ControlPlaneService/RollbackResources" => "rollbackResources",
         "ControlPlaneService/StreamResources" => "streamResources",
         "EmbeddingService/Backfill" => "backfillEmbeddingSource",
+        "EmbeddingService/CutoverModelAlias" => "cutoverEmbeddingModelAlias",
+        "EmbeddingService/DeleteModel" => "deleteEmbeddingModel",
         "EmbeddingService/DeleteSource" => "deleteEmbeddingSource",
+        "EmbeddingService/GetEmbeddingJobStatus" => "getEmbeddingJobStatus",
+        "EmbeddingService/IngestDocument" => "ingestEmbeddingDocument",
+        "EmbeddingService/IngestDocumentBatch" => "ingestEmbeddingDocumentBatch",
+        "EmbeddingService/ListEmbeddingWorkItems" => "listEmbeddingWorkItems",
+        "EmbeddingService/ListModels" => "listEmbeddingModels",
         "EmbeddingService/ListSources" => "listEmbeddingSources",
+        "EmbeddingService/RegisterModel" => "registerEmbeddingModel",
         "EmbeddingService/RegisterSource" => "registerEmbeddingSource",
         "EmbeddingService/ReportEmbedding" => "reportEmbedding",
+        "EmbeddingService/ReportEmbeddingBatch" => "reportEmbeddingBatch",
+        "EmbeddingService/ReportEmbeddingFailure" => "reportEmbeddingFailure",
+        "EmbeddingService/ReportParsedDocument" => "reportParsedDocument",
+        "EmbeddingService/ReportRetrievalEvaluation" => "reportRetrievalEvaluation",
         "EmbeddingService/Retrieve" => "retrieveEmbedding",
+        "EmbeddingService/SetModelStatus" => "setEmbeddingModelStatus",
         "IdentityProviderService/CreateProvider" => "createProvider",
         "IdentityProviderService/DisableProvider" => "disableProvider",
         "IdentityProviderService/ForceJwksRefresh" => "forceJwksRefresh",
@@ -1650,11 +1702,24 @@ final class GeneratedClient
         "ControlPlaneService/RollbackResources" => "post",
         "ControlPlaneService/StreamResources" => "",
         "EmbeddingService/Backfill" => "post",
+        "EmbeddingService/CutoverModelAlias" => "post",
+        "EmbeddingService/DeleteModel" => "post",
         "EmbeddingService/DeleteSource" => "post",
+        "EmbeddingService/GetEmbeddingJobStatus" => "get",
+        "EmbeddingService/IngestDocument" => "post",
+        "EmbeddingService/IngestDocumentBatch" => "post",
+        "EmbeddingService/ListEmbeddingWorkItems" => "get",
+        "EmbeddingService/ListModels" => "get",
         "EmbeddingService/ListSources" => "get",
+        "EmbeddingService/RegisterModel" => "post",
         "EmbeddingService/RegisterSource" => "post",
         "EmbeddingService/ReportEmbedding" => "",
+        "EmbeddingService/ReportEmbeddingBatch" => "",
+        "EmbeddingService/ReportEmbeddingFailure" => "",
+        "EmbeddingService/ReportParsedDocument" => "",
+        "EmbeddingService/ReportRetrievalEvaluation" => "",
         "EmbeddingService/Retrieve" => "post",
+        "EmbeddingService/SetModelStatus" => "post",
         "IdentityProviderService/CreateProvider" => "post",
         "IdentityProviderService/DisableProvider" => "post",
         "IdentityProviderService/ForceJwksRefresh" => "post",
@@ -2011,11 +2076,24 @@ final class GeneratedClient
         "ControlPlaneService/RollbackResources" => "/v1/control/node-states/{node_id}:rollbackResources",
         "ControlPlaneService/StreamResources" => "",
         "EmbeddingService/Backfill" => "/v1/embedding/sources:backfill",
+        "EmbeddingService/CutoverModelAlias" => "/v1/embedding/models:cutover",
+        "EmbeddingService/DeleteModel" => "/v1/embedding/models:delete",
         "EmbeddingService/DeleteSource" => "/v1/embedding/sources:delete",
+        "EmbeddingService/GetEmbeddingJobStatus" => "/v1/embedding/jobs/{job_id}",
+        "EmbeddingService/IngestDocument" => "/v1/embedding/documents:ingest",
+        "EmbeddingService/IngestDocumentBatch" => "/v1/embedding/documents:batchIngest",
+        "EmbeddingService/ListEmbeddingWorkItems" => "/v1/embedding/jobs/{job_id}/work-items",
+        "EmbeddingService/ListModels" => "/v1/embedding/models",
         "EmbeddingService/ListSources" => "/v1/embedding/sources",
+        "EmbeddingService/RegisterModel" => "/v1/embedding/models:register",
         "EmbeddingService/RegisterSource" => "/v1/embedding/sources:register",
         "EmbeddingService/ReportEmbedding" => "",
+        "EmbeddingService/ReportEmbeddingBatch" => "",
+        "EmbeddingService/ReportEmbeddingFailure" => "",
+        "EmbeddingService/ReportParsedDocument" => "",
+        "EmbeddingService/ReportRetrievalEvaluation" => "",
         "EmbeddingService/Retrieve" => "/v1/embedding:retrieve",
+        "EmbeddingService/SetModelStatus" => "/v1/embedding/models:setStatus",
         "IdentityProviderService/CreateProvider" => "/v1/idp/providers",
         "IdentityProviderService/DisableProvider" => "/v1/idp/providers/{provider_id}:disable",
         "IdentityProviderService/ForceJwksRefresh" => "/v1/idp/providers/{provider_id}:refreshJwks",
@@ -2280,7 +2358,11 @@ final class GeneratedClient
         "udb.core.config.entity.v1.Flag" => ['table' => "flags", 'primary_keys' => ["flag_id"], 'fields' => ["flag_id", "tenant_id", "project_id", "environment", "flag_key", "value_type", "value_json", "enabled", "rollout_percentage", "rollout_context_key", "revision", "metadata_json", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "revision", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Config\Entity\V1\Flag"],
         "udb.core.control.entity.v1.ControlPlaneNodeState" => ['table' => "control_plane_node_states", 'primary_keys' => ["node_state_id"], 'fields' => ["node_state_id", "node_id", "resource_type", "subscribed_names", "accepted_version", "last_good_version", "last_response_nonce", "nack_error_detail", "nonce_counter", "created_at", "updated_at", "served_snapshots", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "", 'project_field' => "", 'php_type' => "Udb\Core\Control\Entity\V1\ControlPlaneNodeState"],
         "udb.core.control.entity.v1.ControlPlaneResource" => ['table' => "control_plane_resources", 'primary_keys' => ["resource_id"], 'fields' => ["resource_id", "resource_type", "name", "tenant_id", "project_id", "version", "content_hash", "payload_json", "updated_by", "created_at", "updated_at", "created_by"], 'relations_json' => "[]", 'version_field' => "version", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Control\Entity\V1\ControlPlaneResource"],
-        "udb.core.embedding.entity.v1.EmbeddingSource" => ['table' => "embedding_sources", 'primary_keys' => ["source_id"], 'fields' => ["source_id", "tenant_id", "source_name", "source_message_type", "text_fields_json", "target_collection", "model_id", "tenant_column", "source_cdc_topic", "status", "created_at", "updated_at", "metadata_json", "created_by"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Embedding\Entity\V1\EmbeddingSource"],
+        "udb.core.embedding.entity.v1.EmbeddingDocument" => ['table' => "embedding_documents", 'primary_keys' => ["document_id"], 'fields' => ["document_id", "tenant_id", "project_id", "external_id", "title", "raw_text", "storage_object_ref", "content_type", "doc_version", "model_id", "target_collection", "status", "metadata_json", "created_at", "updated_at", "created_by"], 'relations_json' => "[{\"name\":\"model\",\"kind\":\"belongs_to\",\"local_fields\":[\"model_id\",\"tenant_id\"],\"target_message_type\":\"udb.core.embedding.entity.v1.EmbeddingModel\",\"target_table\":\"udb_embedding.embedding_models\",\"target_fields\":[\"model_id\",\"tenant_id\"],\"on_delete\":\"RESTRICT\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Embedding\Entity\V1\EmbeddingDocument"],
+        "udb.core.embedding.entity.v1.EmbeddingJob" => ['table' => "embedding_jobs", 'primary_keys' => ["job_id"], 'fields' => ["job_id", "tenant_id", "project_id", "source_name", "document_id", "job_type", "mode", "status", "rows_enumerated", "chunks_emitted", "vectors_stored", "failed", "error", "metadata_json", "created_at", "started_at", "finished_at", "updated_at", "created_by"], 'relations_json' => "[{\"name\":\"embedding_work_items\",\"kind\":\"has_many\",\"local_fields\":[\"job_id\"],\"target_message_type\":\"udb.core.embedding.entity.v1.EmbeddingWorkItem\",\"target_table\":\"udb_embedding.embedding_work_items\",\"target_fields\":[\"job_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Embedding\Entity\V1\EmbeddingJob"],
+        "udb.core.embedding.entity.v1.EmbeddingModel" => ['table' => "embedding_models", 'primary_keys' => ["model_id", "tenant_id"], 'fields' => ["model_id", "tenant_id", "provider", "model_name", "version", "dimensions", "matryoshka_dims_json", "distance_metric", "normalize", "output_dtype", "rescore", "max_input_tokens", "tokenizer", "task_type", "asymmetric", "provider_endpoint_ref", "status", "retire_after", "replacement_model_id", "vector_backend", "vector_instance", "collection_alias", "active_collection", "chunking_strategy", "chunk_tokens", "chunk_overlap_tokens", "contextual_retrieval", "late_chunking", "tenant_state", "metadata_json", "created_at", "updated_at", "created_by"], 'relations_json' => "[{\"name\":\"embedding_documents\",\"kind\":\"has_many\",\"local_fields\":[\"model_id\",\"tenant_id\"],\"target_message_type\":\"udb.core.embedding.entity.v1.EmbeddingDocument\",\"target_table\":\"udb_embedding.embedding_documents\",\"target_fields\":[\"model_id\",\"tenant_id\"],\"on_delete\":\"RESTRICT\",\"on_update\":\"NO ACTION\"},{\"name\":\"embedding_models\",\"kind\":\"has_many\",\"local_fields\":[\"model_id\",\"tenant_id\"],\"target_message_type\":\"udb.core.embedding.entity.v1.EmbeddingModel\",\"target_table\":\"udb_embedding.embedding_models\",\"target_fields\":[\"replacement_model_id\",\"tenant_id\"],\"on_delete\":\"RESTRICT\",\"on_update\":\"NO ACTION\"},{\"name\":\"embedding_sources\",\"kind\":\"has_many\",\"local_fields\":[\"model_id\",\"tenant_id\"],\"target_message_type\":\"udb.core.embedding.entity.v1.EmbeddingSource\",\"target_table\":\"udb_embedding.embedding_sources\",\"target_fields\":[\"model_id\",\"tenant_id\"],\"on_delete\":\"RESTRICT\",\"on_update\":\"NO ACTION\"},{\"name\":\"embedding_work_items\",\"kind\":\"has_many\",\"local_fields\":[\"model_id\",\"tenant_id\"],\"target_message_type\":\"udb.core.embedding.entity.v1.EmbeddingWorkItem\",\"target_table\":\"udb_embedding.embedding_work_items\",\"target_fields\":[\"model_id\",\"tenant_id\"],\"on_delete\":\"RESTRICT\",\"on_update\":\"NO ACTION\"},{\"name\":\"replacement_model\",\"kind\":\"belongs_to\",\"local_fields\":[\"replacement_model_id\",\"tenant_id\"],\"target_message_type\":\"udb.core.embedding.entity.v1.EmbeddingModel\",\"target_table\":\"udb_embedding.embedding_models\",\"target_fields\":[\"model_id\",\"tenant_id\"],\"on_delete\":\"RESTRICT\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "version", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Embedding\Entity\V1\EmbeddingModel"],
+        "udb.core.embedding.entity.v1.EmbeddingSource" => ['table' => "embedding_sources", 'primary_keys' => ["source_id"], 'fields' => ["source_id", "tenant_id", "source_name", "source_message_type", "text_fields_json", "target_collection", "model_id", "tenant_column", "source_cdc_topic", "status", "created_at", "updated_at", "metadata_json", "created_by"], 'relations_json' => "[{\"name\":\"model\",\"kind\":\"belongs_to\",\"local_fields\":[\"model_id\",\"tenant_id\"],\"target_message_type\":\"udb.core.embedding.entity.v1.EmbeddingModel\",\"target_table\":\"udb_embedding.embedding_models\",\"target_fields\":[\"model_id\",\"tenant_id\"],\"on_delete\":\"RESTRICT\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Embedding\Entity\V1\EmbeddingSource"],
+        "udb.core.embedding.entity.v1.EmbeddingWorkItem" => ['table' => "embedding_work_items", 'primary_keys' => ["work_item_id"], 'fields' => ["work_item_id", "tenant_id", "project_id", "job_id", "source_name", "parent_pk", "point_id", "document_id", "doc_version", "chunk_seq", "chunk_count", "chunk_hash", "chunk_text", "model_id", "target_collection", "status", "attempt_count", "max_attempts", "last_error", "retryable", "token_count", "next_attempt_at", "created_at", "last_emitted_at", "acked_at", "updated_at", "parent_text", "char_start", "char_end", "token_start", "token_end", "created_by"], 'relations_json' => "[{\"name\":\"job\",\"kind\":\"belongs_to\",\"local_fields\":[\"job_id\"],\"target_message_type\":\"udb.core.embedding.entity.v1.EmbeddingJob\",\"target_table\":\"udb_embedding.embedding_jobs\",\"target_fields\":[\"job_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"model\",\"kind\":\"belongs_to\",\"local_fields\":[\"model_id\",\"tenant_id\"],\"target_message_type\":\"udb.core.embedding.entity.v1.EmbeddingModel\",\"target_table\":\"udb_embedding.embedding_models\",\"target_fields\":[\"model_id\",\"tenant_id\"],\"on_delete\":\"RESTRICT\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Embedding\Entity\V1\EmbeddingWorkItem"],
         "udb.core.idp.entity.v1.ExternalIdentity" => ['table' => "external_identities", 'primary_keys' => ["external_identity_id"], 'fields' => ["external_identity_id", "tenant_id", "provider_id", "subject", "user_id", "email", "email_verified", "linked_at", "last_login_at", "deleted_at", "created_at", "updated_at", "created_by"], 'relations_json' => "[{\"name\":\"provider\",\"kind\":\"belongs_to\",\"local_fields\":[\"provider_id\"],\"target_message_type\":\"udb.core.idp.entity.v1.IdentityProvider\",\"target_table\":\"udb_idp.identity_providers\",\"target_fields\":[\"provider_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Idp\Entity\V1\ExternalIdentity"],
         "udb.core.idp.entity.v1.IdentityProvider" => ['table' => "identity_providers", 'primary_keys' => ["provider_id"], 'fields' => ["provider_id", "tenant_id", "kind", "display_name", "issuer", "entity_id", "jwks_url", "saml_metadata_url", "client_ids_json", "audiences_json", "claim_mapping_json", "group_mapping_json", "jit_policy_json", "account_linking_policy", "enabled", "client_secret", "saml_signing_key_pem", "saml_idp_certs_json", "saml_sso_url", "health", "last_jwks_refresh_at", "last_jwks_refresh_status", "created_by", "updated_by", "created_at", "updated_at", "deleted_at"], 'relations_json' => "[{\"name\":\"external_identities\",\"kind\":\"has_many\",\"local_fields\":[\"provider_id\"],\"target_message_type\":\"udb.core.idp.entity.v1.ExternalIdentity\",\"target_table\":\"udb_idp.external_identities\",\"target_fields\":[\"provider_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"},{\"name\":\"scim_directory_state\",\"kind\":\"has_many\",\"local_fields\":[\"provider_id\"],\"target_message_type\":\"udb.core.idp.entity.v1.ScimDirectoryState\",\"target_table\":\"udb_idp.scim_directory_state\",\"target_fields\":[\"provider_id\"],\"on_delete\":\"CASCADE\",\"on_update\":\"NO ACTION\"}]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Idp\Entity\V1\IdentityProvider"],
         "udb.core.idp.entity.v1.SamlReplayEntry" => ['table' => "saml_replay_entries", 'primary_keys' => ["saml_replay_entry_id"], 'fields' => ["saml_replay_entry_id", "tenant_id", "provider_id", "assertion_id", "not_on_or_after", "consumed_at"], 'relations_json' => "[]", 'version_field' => "", 'tenant_field' => "tenant_id", 'project_field' => "", 'php_type' => "Udb\Core\Idp\Entity\V1\SamlReplayEntry"],
@@ -2468,11 +2550,26 @@ final class GeneratedClient
         "rollback_resources" => "rollbackResources",
         "stream_resources" => "streamResources",
         "backfill" => "backfill",
+        "cutover_model_alias" => "cutoverModelAlias",
+        "delete_model" => "deleteModel",
         "delete_source" => "deleteSource",
+        "get_job_status" => "getJobStatus",
+        "get_embedding_job_status" => "getJobStatus",
+        "ingest_document" => "ingestDocument",
+        "ingest_document_batch" => "ingestDocumentBatch",
+        "list_work_items" => "listWorkItems",
+        "list_embedding_work_items" => "listWorkItems",
+        "list_models" => "listModels",
         "list_sources" => "listSources",
+        "register_model" => "registerModel",
         "register_source" => "registerSource",
         "report_embedding" => "reportEmbedding",
+        "report_embedding_batch" => "reportEmbeddingBatch",
+        "report_embedding_failure" => "reportEmbeddingFailure",
+        "report_parsed_document" => "reportParsedDocument",
+        "report_retrieval_evaluation" => "reportRetrievalEvaluation",
         "retrieve" => "retrieve",
+        "set_model_status" => "setModelStatus",
         "create_provider" => "createProvider",
         "disable_provider" => "disableProvider",
         "force_jwks_refresh" => "forceJwksRefresh",
@@ -5704,6 +5801,48 @@ final class GeneratedClient
         );
     }
     /**
+     * udb.core.embedding.services.v1.EmbeddingService / CutoverModelAlias (unary), public alias cutover_model_alias.
+     *
+     * Forwards to {@see stubFor()}->CutoverModelAlias(); retries transient codes.
+     * Path: /udb.core.embedding.services.v1.EmbeddingService/CutoverModelAlias
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded CutoverModelAliasResponse
+     */
+    public function cutoverModelAlias($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'CutoverModelAlias',
+            'EmbeddingService',
+            'udb.core.embedding.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->CutoverModelAlias($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.embedding.services.v1.EmbeddingService / DeleteModel (unary), public alias delete_model.
+     *
+     * Forwards to {@see stubFor()}->DeleteModel(); retries transient codes.
+     * Path: /udb.core.embedding.services.v1.EmbeddingService/DeleteModel
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded DeleteModelResponse
+     */
+    public function deleteModel($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'DeleteModel',
+            'EmbeddingService',
+            'udb.core.embedding.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->DeleteModel($request, $md, $opts),
+            $metadata,
+            'destructive' === 'read_only',
+            $request,
+        );
+    }
+    /**
      * udb.core.embedding.services.v1.EmbeddingService / DeleteSource (unary), public alias delete_source.
      *
      * Forwards to {@see stubFor()}->DeleteSource(); retries transient codes.
@@ -5725,6 +5864,111 @@ final class GeneratedClient
         );
     }
     /**
+     * udb.core.embedding.services.v1.EmbeddingService / GetEmbeddingJobStatus (unary), public alias get_job_status.
+     *
+     * Forwards to {@see stubFor()}->GetEmbeddingJobStatus(); retries transient codes.
+     * Path: /udb.core.embedding.services.v1.EmbeddingService/GetEmbeddingJobStatus
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded GetEmbeddingJobStatusResponse
+     */
+    public function getJobStatus($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'GetEmbeddingJobStatus',
+            'EmbeddingService',
+            'udb.core.embedding.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->GetEmbeddingJobStatus($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.embedding.services.v1.EmbeddingService / IngestDocument (unary), public alias ingest_document.
+     *
+     * Forwards to {@see stubFor()}->IngestDocument(); retries transient codes.
+     * Path: /udb.core.embedding.services.v1.EmbeddingService/IngestDocument
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded IngestDocumentResponse
+     */
+    public function ingestDocument($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'IngestDocument',
+            'EmbeddingService',
+            'udb.core.embedding.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->IngestDocument($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.embedding.services.v1.EmbeddingService / IngestDocumentBatch (unary), public alias ingest_document_batch.
+     *
+     * Forwards to {@see stubFor()}->IngestDocumentBatch(); retries transient codes.
+     * Path: /udb.core.embedding.services.v1.EmbeddingService/IngestDocumentBatch
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded IngestDocumentBatchResponse
+     */
+    public function ingestDocumentBatch($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'IngestDocumentBatch',
+            'EmbeddingService',
+            'udb.core.embedding.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->IngestDocumentBatch($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.embedding.services.v1.EmbeddingService / ListEmbeddingWorkItems (unary), public alias list_work_items.
+     *
+     * Forwards to {@see stubFor()}->ListEmbeddingWorkItems(); retries transient codes.
+     * Path: /udb.core.embedding.services.v1.EmbeddingService/ListEmbeddingWorkItems
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ListEmbeddingWorkItemsResponse
+     */
+    public function listWorkItems($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ListEmbeddingWorkItems',
+            'EmbeddingService',
+            'udb.core.embedding.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ListEmbeddingWorkItems($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.embedding.services.v1.EmbeddingService / ListModels (unary), public alias list_models.
+     *
+     * Forwards to {@see stubFor()}->ListModels(); retries transient codes.
+     * Path: /udb.core.embedding.services.v1.EmbeddingService/ListModels
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ListModelsResponse
+     */
+    public function listModels($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ListModels',
+            'EmbeddingService',
+            'udb.core.embedding.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ListModels($request, $md, $opts),
+            $metadata,
+            'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
      * udb.core.embedding.services.v1.EmbeddingService / ListSources (unary), public alias list_sources.
      *
      * Forwards to {@see stubFor()}->ListSources(); retries transient codes.
@@ -5742,6 +5986,27 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->ListSources($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.embedding.services.v1.EmbeddingService / RegisterModel (unary), public alias register_model.
+     *
+     * Forwards to {@see stubFor()}->RegisterModel(); retries transient codes.
+     * Path: /udb.core.embedding.services.v1.EmbeddingService/RegisterModel
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded RegisterModelResponse
+     */
+    public function registerModel($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'RegisterModel',
+            'EmbeddingService',
+            'udb.core.embedding.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->RegisterModel($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
             $request,
         );
     }
@@ -5788,6 +6053,90 @@ final class GeneratedClient
         );
     }
     /**
+     * udb.core.embedding.services.v1.EmbeddingService / ReportEmbeddingBatch (unary), public alias report_embedding_batch.
+     *
+     * Forwards to {@see stubFor()}->ReportEmbeddingBatch(); retries transient codes.
+     * Path: /udb.core.embedding.services.v1.EmbeddingService/ReportEmbeddingBatch
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ReportEmbeddingBatchResponse
+     */
+    public function reportEmbeddingBatch($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ReportEmbeddingBatch',
+            'EmbeddingService',
+            'udb.core.embedding.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ReportEmbeddingBatch($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.embedding.services.v1.EmbeddingService / ReportEmbeddingFailure (unary), public alias report_embedding_failure.
+     *
+     * Forwards to {@see stubFor()}->ReportEmbeddingFailure(); retries transient codes.
+     * Path: /udb.core.embedding.services.v1.EmbeddingService/ReportEmbeddingFailure
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ReportEmbeddingFailureResponse
+     */
+    public function reportEmbeddingFailure($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ReportEmbeddingFailure',
+            'EmbeddingService',
+            'udb.core.embedding.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ReportEmbeddingFailure($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.embedding.services.v1.EmbeddingService / ReportParsedDocument (unary), public alias report_parsed_document.
+     *
+     * Forwards to {@see stubFor()}->ReportParsedDocument(); retries transient codes.
+     * Path: /udb.core.embedding.services.v1.EmbeddingService/ReportParsedDocument
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ReportParsedDocumentResponse
+     */
+    public function reportParsedDocument($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ReportParsedDocument',
+            'EmbeddingService',
+            'udb.core.embedding.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ReportParsedDocument($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.embedding.services.v1.EmbeddingService / ReportRetrievalEvaluation (unary), public alias report_retrieval_evaluation.
+     *
+     * Forwards to {@see stubFor()}->ReportRetrievalEvaluation(); retries transient codes.
+     * Path: /udb.core.embedding.services.v1.EmbeddingService/ReportRetrievalEvaluation
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded ReportRetrievalEvaluationResponse
+     */
+    public function reportRetrievalEvaluation($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'ReportRetrievalEvaluation',
+            'EmbeddingService',
+            'udb.core.embedding.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->ReportRetrievalEvaluation($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
      * udb.core.embedding.services.v1.EmbeddingService / Retrieve (unary), public alias retrieve.
      *
      * Forwards to {@see stubFor()}->Retrieve(); retries transient codes.
@@ -5805,6 +6154,27 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->Retrieve($request, $md, $opts),
             $metadata,
             'read_only' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.embedding.services.v1.EmbeddingService / SetModelStatus (unary), public alias set_model_status.
+     *
+     * Forwards to {@see stubFor()}->SetModelStatus(); retries transient codes.
+     * Path: /udb.core.embedding.services.v1.EmbeddingService/SetModelStatus
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded SetModelStatusResponse
+     */
+    public function setModelStatus($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'SetModelStatus',
+            'EmbeddingService',
+            'udb.core.embedding.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->SetModelStatus($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
             $request,
         );
     }
@@ -10178,7 +10548,7 @@ final class GeneratedClient
         return $this->stubFor('ControlPlaneService', 'udb.core.control.services.v1');
     }
     /**
-     * Underlying buf-generated stub for udb.core.embedding.services.v1.EmbeddingService (6 RPC(s)).
+     * Underlying buf-generated stub for udb.core.embedding.services.v1.EmbeddingService (19 RPC(s)).
      * Channel is shared with every other service stub on this client.
      *
      * @return BaseStub  a EmbeddingServiceClient
@@ -10561,9 +10931,9 @@ final class GeneratedClient
 
     public const DEFAULT_IR_BACKEND = 'postgres';
 
-    private const ORM_TIERS_JSON = "{\"postgres\":\"relational\",\"mysql\":\"relational\",\"sqlite\":\"relational\",\"sqlserver\":\"relational\",\"clickhouse\":\"relational\",\"redis\":\"kv\",\"memcached\":\"kv\",\"qdrant\":\"vector\",\"weaviate\":\"vector\",\"pinecone\":\"vector\",\"minio\":\"blob\",\"s3\":\"blob\",\"azureblob\":\"blob\",\"gcs\":\"blob\",\"mongodb\":\"document\",\"elasticsearch\":\"vector\",\"neo4j\":\"graph\",\"cassandra\":\"relational\"}";
+    private const ORM_TIERS_JSON = "{\"azureblob\":\"blob\",\"cassandra\":\"relational\",\"clickhouse\":\"relational\",\"elasticsearch\":\"vector\",\"gcs\":\"blob\",\"memcached\":\"kv\",\"minio\":\"blob\",\"mongodb\":\"document\",\"mysql\":\"relational\",\"neo4j\":\"graph\",\"pinecone\":\"vector\",\"postgres\":\"relational\",\"qdrant\":\"vector\",\"redis\":\"kv\",\"s3\":\"blob\",\"sqlite\":\"relational\",\"sqlserver\":\"relational\",\"weaviate\":\"vector\"}";
 
-    private const BACKEND_ROLES_JSON = "{\"postgres\":\"canonical\",\"mysql\":\"canonical\",\"sqlite\":\"canonical\",\"sqlserver\":\"canonical\",\"clickhouse\":\"canonical\",\"redis\":\"canonical\",\"memcached\":\"projection\",\"qdrant\":\"projection\",\"weaviate\":\"projection\",\"pinecone\":\"projection\",\"minio\":\"projection\",\"s3\":\"projection\",\"azureblob\":\"projection\",\"gcs\":\"projection\",\"mongodb\":\"canonical\",\"elasticsearch\":\"projection\",\"neo4j\":\"canonical\",\"cassandra\":\"canonical\"}";
+    private const BACKEND_ROLES_JSON = "{\"azureblob\":\"projection\",\"cassandra\":\"projection\",\"clickhouse\":\"projection\",\"elasticsearch\":\"projection\",\"gcs\":\"projection\",\"memcached\":\"projection\",\"minio\":\"projection\",\"mongodb\":\"projection\",\"mysql\":\"canonical\",\"neo4j\":\"projection\",\"pinecone\":\"projection\",\"postgres\":\"canonical\",\"qdrant\":\"projection\",\"redis\":\"projection\",\"s3\":\"projection\",\"sqlite\":\"canonical\",\"sqlserver\":\"canonical\",\"weaviate\":\"projection\"}";
 
     public static function query(string $messageType): IrQuery
     {
@@ -10779,9 +11149,25 @@ final class GeneratedClient
     {
         return self::repository("udb.core.control.entity.v1.ControlPlaneResource");
     }
+    public static function embeddingDocumentRepository(): EntityRepository
+    {
+        return self::repository("udb.core.embedding.entity.v1.EmbeddingDocument");
+    }
+    public static function embeddingJobRepository(): EntityRepository
+    {
+        return self::repository("udb.core.embedding.entity.v1.EmbeddingJob");
+    }
+    public static function embeddingModelRepository(): EntityRepository
+    {
+        return self::repository("udb.core.embedding.entity.v1.EmbeddingModel");
+    }
     public static function embeddingSourceRepository(): EntityRepository
     {
         return self::repository("udb.core.embedding.entity.v1.EmbeddingSource");
+    }
+    public static function embeddingWorkItemRepository(): EntityRepository
+    {
+        return self::repository("udb.core.embedding.entity.v1.EmbeddingWorkItem");
     }
     public static function externalIdentityRepository(): EntityRepository
     {

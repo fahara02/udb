@@ -133,4 +133,81 @@ public interface RetrieveRequestOrBuilder extends
    * @return The scoreThreshold.
    */
   double getScoreThreshold();
+
+  /**
+   * <code>bool include_vectors = 8 [json_name = "includeVectors"];</code>
+   * @return The includeVectors.
+   */
+  boolean getIncludeVectors();
+
+  /**
+   * <code>.udb.core.embedding.services.v1.MmrConfig mmr = 9 [json_name = "mmr"];</code>
+   * @return Whether the mmr field is set.
+   */
+  boolean hasMmr();
+  /**
+   * <code>.udb.core.embedding.services.v1.MmrConfig mmr = 9 [json_name = "mmr"];</code>
+   * @return The mmr.
+   */
+  com.udb.core.embedding.services.v1.MmrConfig getMmr();
+  /**
+   * <code>.udb.core.embedding.services.v1.MmrConfig mmr = 9 [json_name = "mmr"];</code>
+   */
+  com.udb.core.embedding.services.v1.MmrConfigOrBuilder getMmrOrBuilder();
+
+  /**
+   * <code>.udb.core.embedding.services.v1.FusionStrategy fusion = 10 [json_name = "fusion"];</code>
+   * @return The enum numeric value on the wire for fusion.
+   */
+  int getFusionValue();
+  /**
+   * <code>.udb.core.embedding.services.v1.FusionStrategy fusion = 10 [json_name = "fusion"];</code>
+   * @return The fusion.
+   */
+  com.udb.core.embedding.services.v1.FusionStrategy getFusion();
+
+  /**
+   * <code>int32 prefetch_limit = 11 [json_name = "prefetchLimit"];</code>
+   * @return The prefetchLimit.
+   */
+  int getPrefetchLimit();
+
+  /**
+   * <code>.udb.core.embedding.services.v1.RerankConfig rerank = 12 [json_name = "rerank"];</code>
+   * @return Whether the rerank field is set.
+   */
+  boolean hasRerank();
+  /**
+   * <code>.udb.core.embedding.services.v1.RerankConfig rerank = 12 [json_name = "rerank"];</code>
+   * @return The rerank.
+   */
+  com.udb.core.embedding.services.v1.RerankConfig getRerank();
+  /**
+   * <code>.udb.core.embedding.services.v1.RerankConfig rerank = 12 [json_name = "rerank"];</code>
+   */
+  com.udb.core.embedding.services.v1.RerankConfigOrBuilder getRerankOrBuilder();
+
+  /**
+   * <code>string vector_name = 13 [json_name = "vectorName"];</code>
+   * @return The vectorName.
+   */
+  java.lang.String getVectorName();
+  /**
+   * <code>string vector_name = 13 [json_name = "vectorName"];</code>
+   * @return The bytes for vectorName.
+   */
+  com.google.protobuf.ByteString
+      getVectorNameBytes();
+
+  /**
+   * <code>int32 parent_window = 14 [json_name = "parentWindow"];</code>
+   * @return The parentWindow.
+   */
+  int getParentWindow();
+
+  /**
+   * <code>bool include_citations = 15 [json_name = "includeCitations"];</code>
+   * @return The includeCitations.
+   */
+  boolean getIncludeCitations();
 }

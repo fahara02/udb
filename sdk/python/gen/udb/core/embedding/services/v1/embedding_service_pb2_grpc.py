@@ -53,6 +53,71 @@ class EmbeddingServiceStub(object):
                 request_serializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.RetrieveRequest.SerializeToString,
                 response_deserializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.RetrieveResponse.FromString,
                 _registered_method=True)
+        self.RegisterModel = channel.unary_unary(
+                '/udb.core.embedding.services.v1.EmbeddingService/RegisterModel',
+                request_serializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.RegisterModelRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.RegisterModelResponse.FromString,
+                _registered_method=True)
+        self.ListModels = channel.unary_unary(
+                '/udb.core.embedding.services.v1.EmbeddingService/ListModels',
+                request_serializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.ListModelsRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.ListModelsResponse.FromString,
+                _registered_method=True)
+        self.DeleteModel = channel.unary_unary(
+                '/udb.core.embedding.services.v1.EmbeddingService/DeleteModel',
+                request_serializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.DeleteModelRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.DeleteModelResponse.FromString,
+                _registered_method=True)
+        self.SetModelStatus = channel.unary_unary(
+                '/udb.core.embedding.services.v1.EmbeddingService/SetModelStatus',
+                request_serializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.SetModelStatusRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.SetModelStatusResponse.FromString,
+                _registered_method=True)
+        self.CutoverModelAlias = channel.unary_unary(
+                '/udb.core.embedding.services.v1.EmbeddingService/CutoverModelAlias',
+                request_serializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.CutoverModelAliasRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.CutoverModelAliasResponse.FromString,
+                _registered_method=True)
+        self.GetEmbeddingJobStatus = channel.unary_unary(
+                '/udb.core.embedding.services.v1.EmbeddingService/GetEmbeddingJobStatus',
+                request_serializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.GetEmbeddingJobStatusRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.GetEmbeddingJobStatusResponse.FromString,
+                _registered_method=True)
+        self.ListEmbeddingWorkItems = channel.unary_unary(
+                '/udb.core.embedding.services.v1.EmbeddingService/ListEmbeddingWorkItems',
+                request_serializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.ListEmbeddingWorkItemsRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.ListEmbeddingWorkItemsResponse.FromString,
+                _registered_method=True)
+        self.ReportEmbeddingBatch = channel.unary_unary(
+                '/udb.core.embedding.services.v1.EmbeddingService/ReportEmbeddingBatch',
+                request_serializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.ReportEmbeddingBatchRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.ReportEmbeddingBatchResponse.FromString,
+                _registered_method=True)
+        self.ReportEmbeddingFailure = channel.unary_unary(
+                '/udb.core.embedding.services.v1.EmbeddingService/ReportEmbeddingFailure',
+                request_serializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.ReportEmbeddingFailureRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.ReportEmbeddingFailureResponse.FromString,
+                _registered_method=True)
+        self.IngestDocument = channel.unary_unary(
+                '/udb.core.embedding.services.v1.EmbeddingService/IngestDocument',
+                request_serializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.IngestDocumentRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.IngestDocumentResponse.FromString,
+                _registered_method=True)
+        self.IngestDocumentBatch = channel.unary_unary(
+                '/udb.core.embedding.services.v1.EmbeddingService/IngestDocumentBatch',
+                request_serializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.IngestDocumentBatchRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.IngestDocumentBatchResponse.FromString,
+                _registered_method=True)
+        self.ReportParsedDocument = channel.unary_unary(
+                '/udb.core.embedding.services.v1.EmbeddingService/ReportParsedDocument',
+                request_serializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.ReportParsedDocumentRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.ReportParsedDocumentResponse.FromString,
+                _registered_method=True)
+        self.ReportRetrievalEvaluation = channel.unary_unary(
+                '/udb.core.embedding.services.v1.EmbeddingService/ReportRetrievalEvaluation',
+                request_serializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.ReportRetrievalEvaluationRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.ReportRetrievalEvaluationResponse.FromString,
+                _registered_method=True)
 
 
 class EmbeddingServiceServicer(object):
@@ -121,6 +186,84 @@ class EmbeddingServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def RegisterModel(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ListModels(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def DeleteModel(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def SetModelStatus(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def CutoverModelAlias(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetEmbeddingJobStatus(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ListEmbeddingWorkItems(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ReportEmbeddingBatch(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ReportEmbeddingFailure(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def IngestDocument(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def IngestDocumentBatch(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ReportParsedDocument(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ReportRetrievalEvaluation(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_EmbeddingServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -153,6 +296,71 @@ def add_EmbeddingServiceServicer_to_server(servicer, server):
                     servicer.Retrieve,
                     request_deserializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.RetrieveRequest.FromString,
                     response_serializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.RetrieveResponse.SerializeToString,
+            ),
+            'RegisterModel': grpc.unary_unary_rpc_method_handler(
+                    servicer.RegisterModel,
+                    request_deserializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.RegisterModelRequest.FromString,
+                    response_serializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.RegisterModelResponse.SerializeToString,
+            ),
+            'ListModels': grpc.unary_unary_rpc_method_handler(
+                    servicer.ListModels,
+                    request_deserializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.ListModelsRequest.FromString,
+                    response_serializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.ListModelsResponse.SerializeToString,
+            ),
+            'DeleteModel': grpc.unary_unary_rpc_method_handler(
+                    servicer.DeleteModel,
+                    request_deserializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.DeleteModelRequest.FromString,
+                    response_serializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.DeleteModelResponse.SerializeToString,
+            ),
+            'SetModelStatus': grpc.unary_unary_rpc_method_handler(
+                    servicer.SetModelStatus,
+                    request_deserializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.SetModelStatusRequest.FromString,
+                    response_serializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.SetModelStatusResponse.SerializeToString,
+            ),
+            'CutoverModelAlias': grpc.unary_unary_rpc_method_handler(
+                    servicer.CutoverModelAlias,
+                    request_deserializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.CutoverModelAliasRequest.FromString,
+                    response_serializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.CutoverModelAliasResponse.SerializeToString,
+            ),
+            'GetEmbeddingJobStatus': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetEmbeddingJobStatus,
+                    request_deserializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.GetEmbeddingJobStatusRequest.FromString,
+                    response_serializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.GetEmbeddingJobStatusResponse.SerializeToString,
+            ),
+            'ListEmbeddingWorkItems': grpc.unary_unary_rpc_method_handler(
+                    servicer.ListEmbeddingWorkItems,
+                    request_deserializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.ListEmbeddingWorkItemsRequest.FromString,
+                    response_serializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.ListEmbeddingWorkItemsResponse.SerializeToString,
+            ),
+            'ReportEmbeddingBatch': grpc.unary_unary_rpc_method_handler(
+                    servicer.ReportEmbeddingBatch,
+                    request_deserializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.ReportEmbeddingBatchRequest.FromString,
+                    response_serializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.ReportEmbeddingBatchResponse.SerializeToString,
+            ),
+            'ReportEmbeddingFailure': grpc.unary_unary_rpc_method_handler(
+                    servicer.ReportEmbeddingFailure,
+                    request_deserializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.ReportEmbeddingFailureRequest.FromString,
+                    response_serializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.ReportEmbeddingFailureResponse.SerializeToString,
+            ),
+            'IngestDocument': grpc.unary_unary_rpc_method_handler(
+                    servicer.IngestDocument,
+                    request_deserializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.IngestDocumentRequest.FromString,
+                    response_serializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.IngestDocumentResponse.SerializeToString,
+            ),
+            'IngestDocumentBatch': grpc.unary_unary_rpc_method_handler(
+                    servicer.IngestDocumentBatch,
+                    request_deserializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.IngestDocumentBatchRequest.FromString,
+                    response_serializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.IngestDocumentBatchResponse.SerializeToString,
+            ),
+            'ReportParsedDocument': grpc.unary_unary_rpc_method_handler(
+                    servicer.ReportParsedDocument,
+                    request_deserializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.ReportParsedDocumentRequest.FromString,
+                    response_serializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.ReportParsedDocumentResponse.SerializeToString,
+            ),
+            'ReportRetrievalEvaluation': grpc.unary_unary_rpc_method_handler(
+                    servicer.ReportRetrievalEvaluation,
+                    request_deserializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.ReportRetrievalEvaluationRequest.FromString,
+                    response_serializer=udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.ReportRetrievalEvaluationResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -326,6 +534,357 @@ class EmbeddingService(object):
             '/udb.core.embedding.services.v1.EmbeddingService/Retrieve',
             udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.RetrieveRequest.SerializeToString,
             udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.RetrieveResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def RegisterModel(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.embedding.services.v1.EmbeddingService/RegisterModel',
+            udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.RegisterModelRequest.SerializeToString,
+            udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.RegisterModelResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ListModels(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.embedding.services.v1.EmbeddingService/ListModels',
+            udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.ListModelsRequest.SerializeToString,
+            udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.ListModelsResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def DeleteModel(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.embedding.services.v1.EmbeddingService/DeleteModel',
+            udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.DeleteModelRequest.SerializeToString,
+            udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.DeleteModelResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def SetModelStatus(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.embedding.services.v1.EmbeddingService/SetModelStatus',
+            udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.SetModelStatusRequest.SerializeToString,
+            udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.SetModelStatusResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def CutoverModelAlias(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.embedding.services.v1.EmbeddingService/CutoverModelAlias',
+            udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.CutoverModelAliasRequest.SerializeToString,
+            udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.CutoverModelAliasResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetEmbeddingJobStatus(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.embedding.services.v1.EmbeddingService/GetEmbeddingJobStatus',
+            udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.GetEmbeddingJobStatusRequest.SerializeToString,
+            udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.GetEmbeddingJobStatusResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ListEmbeddingWorkItems(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.embedding.services.v1.EmbeddingService/ListEmbeddingWorkItems',
+            udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.ListEmbeddingWorkItemsRequest.SerializeToString,
+            udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.ListEmbeddingWorkItemsResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ReportEmbeddingBatch(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.embedding.services.v1.EmbeddingService/ReportEmbeddingBatch',
+            udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.ReportEmbeddingBatchRequest.SerializeToString,
+            udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.ReportEmbeddingBatchResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ReportEmbeddingFailure(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.embedding.services.v1.EmbeddingService/ReportEmbeddingFailure',
+            udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.ReportEmbeddingFailureRequest.SerializeToString,
+            udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.ReportEmbeddingFailureResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def IngestDocument(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.embedding.services.v1.EmbeddingService/IngestDocument',
+            udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.IngestDocumentRequest.SerializeToString,
+            udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.IngestDocumentResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def IngestDocumentBatch(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.embedding.services.v1.EmbeddingService/IngestDocumentBatch',
+            udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.IngestDocumentBatchRequest.SerializeToString,
+            udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.IngestDocumentBatchResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ReportParsedDocument(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.embedding.services.v1.EmbeddingService/ReportParsedDocument',
+            udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.ReportParsedDocumentRequest.SerializeToString,
+            udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.ReportParsedDocumentResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ReportRetrievalEvaluation(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.embedding.services.v1.EmbeddingService/ReportRetrievalEvaluation',
+            udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.ReportRetrievalEvaluationRequest.SerializeToString,
+            udb_dot_core_dot_embedding_dot_services_dot_v1_dot_embedding__service__pb2.ReportRetrievalEvaluationResponse.FromString,
             options,
             channel_credentials,
             insecure,
