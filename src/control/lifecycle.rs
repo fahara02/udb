@@ -10,8 +10,8 @@ use crate::control::plan_approval::{
 use crate::db_ops_sync::{discover_db_ops_root, resolve_seeders_dir};
 use crate::engine::{Engine, FsmState};
 use crate::generation::{
-    CatalogManifest, DsnGenerationConfig, GeneratedArtifact, LintSeverity, SqlGenerationConfig,
-    generate_bootstrap_sql, generate_delta_sql, generate_unified_dsn_catalog,
+    CatalogManifest, DsnGenerationConfig, GeneratedArtifact, LintItem, LintSeverity,
+    SqlGenerationConfig, generate_bootstrap_sql, generate_delta_sql, generate_unified_dsn_catalog,
 };
 use crate::migration::diff::{ChangeKind, ChangeOperation, ChangeSafety, diff_manifests};
 use crate::provisioning::try_build_provisioning_plan;
@@ -634,12 +634,32 @@ async fn run_startup_lifecycle_core(
     )?;
     let lint = lint_catalog(manifest);
     if !lint.passed && !force_sync {
+        runtime.emit_drift_metric("catalog_lint_failed");
+        // Surface EVERY individual finding (kind, FQN/schema.table, source,
+        // description) — not just the aggregate counts. Without this an operator
+        // running `udb serve` / `udb admin dry-run` on a merged (embedded +
+        // consumer) catalog saw only "N error(s), M warning(s)" and could not
+        // identify which schemas blocked startup without patching UDB or forcing
+        // a run. Each pushed line is also echoed per-error via tracing by
+        // report_failure_json below.
+        for item in &lint.items {
+            let line = item.display_line();
+            match item.severity {
+                LintSeverity::Error => report.errors.push(line),
+                _ => report.warnings.push(line),
+            }
+        }
+        let detail = lint
+            .items
+            .iter()
+            .filter(|item| item.severity == LintSeverity::Error)
+            .map(LintItem::display_line)
+            .collect::<Vec<_>>()
+            .join("\n");
         let message = format!(
-            "catalog lint failed with {} error(s), {} warning(s)",
+            "catalog lint failed with {} error(s), {} warning(s):\n{detail}",
             lint.error_count, lint.warning_count
         );
-        runtime.emit_drift_metric("catalog_lint_failed");
-        report.errors.push(message.clone());
         return Err(report_failure_json(&report, message));
     }
     // GAP 34: When force_sync bypasses lint errors, record each bypassed error
@@ -662,6 +682,16 @@ async fn run_startup_lifecycle_core(
             "catalog lint emitted {} warning(s)",
             lint.warning_count
         ));
+        // Surface each warning individually (not just the count) so a dry-run /
+        // serve that lints clean-but-noisy still tells the operator exactly which
+        // schemas/tables produced the warnings.
+        for item in lint
+            .items
+            .iter()
+            .filter(|item| item.severity == LintSeverity::Warning)
+        {
+            report.warnings.push(item.display_line());
+        }
     }
 
     transition(

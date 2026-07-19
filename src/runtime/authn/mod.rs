@@ -293,6 +293,8 @@ impl SessionRecord {
 pub struct ApiKeyRecord {
     pub key_prefix: String,
     pub key_hash: String,
+    pub name: String,
+    pub description: String,
     pub principal_id: String,
     pub service_identity: String,
     pub tenant_id: String,
@@ -903,6 +905,8 @@ fn api_key_from_row(row: &sqlx::postgres::PgRow) -> Result<ApiKeyRecord, sqlx::E
     Ok(ApiKeyRecord {
         key_prefix: row.try_get("key_prefix")?,
         key_hash: row.try_get("key_hash")?,
+        name: row_string(row, "name")?,
+        description: row_string(row, "description")?,
         principal_id: row.try_get("principal_id")?,
         service_identity: row_string(row, "service_identity")?,
         tenant_id: row_string(row, "tenant_id")?,
@@ -2223,11 +2227,15 @@ fn api_key_write_op(record: &ApiKeyRecord, status: ApiKeyStatus) -> Result<Logic
     );
     row.insert(
         "name".to_string(),
-        LogicalValue::String(record.key_prefix.clone()),
+        LogicalValue::String(if record.name.trim().is_empty() {
+            record.key_prefix.clone()
+        } else {
+            record.name.clone()
+        }),
     );
     row.insert(
         "description".to_string(),
-        LogicalValue::String(String::new()),
+        LogicalValue::String(record.description.clone()),
     );
     row.insert(
         "owner_type".to_string(),
@@ -2290,6 +2298,8 @@ fn api_key_write_op(record: &ApiKeyRecord, status: ApiKeyStatus) -> Result<Logic
         conflict: ConflictStrategy::update_on(
             vec![
                 "key_prefix".to_string(),
+                "name".to_string(),
+                "description".to_string(),
                 "owner_id".to_string(),
                 "scopes_json".to_string(),
                 "status".to_string(),
@@ -2413,6 +2423,8 @@ impl ApiKeyStore for PostgresApiKeyStore {
         let m = &self.model;
         let key_prefix_col = m.q("key_prefix");
         let key_hash = m.select("key_hash");
+        let name = m.text_or_empty("name");
+        let description = m.text_or_empty("description");
         let owner_id = m.select_as("owner_id", "principal_id");
         let service_identity =
             m.json_get_as("metadata_json", "service_identity", "service_identity");
@@ -2426,7 +2438,7 @@ impl ApiKeyStore for PostgresApiKeyStore {
         let created_at = m.q("created_at");
         let deleted_at = m.q("deleted_at");
         let row = sqlx::query(&format!(
-            "SELECT {key_prefix_col} AS key_prefix, {key_hash}, {owner_id}, {service_identity}, {tenant_id}, {project_id}, {scopes}, \
+            "SELECT {key_prefix_col} AS key_prefix, {key_hash}, {name}, {description}, {owner_id}, {service_identity}, {tenant_id}, {project_id}, {scopes}, \
                     {created_at_unix}, {last_used_at_unix}, {expires_at_unix}, {revoked_at_unix} \
              FROM {rel} WHERE {key_prefix_col} = $1 AND {deleted_at} IS NULL ORDER BY {created_at} DESC LIMIT 1"
         ))
@@ -2450,6 +2462,8 @@ impl ApiKeyStore for PostgresApiKeyStore {
         let m = &self.model;
         let key_prefix_col = m.select("key_prefix");
         let key_hash = m.select("key_hash");
+        let name = m.text_or_empty("name");
+        let description = m.text_or_empty("description");
         let owner_id = m.select_as("owner_id", "principal_id");
         let owner_id_col = m.q("owner_id");
         let service_identity =
@@ -2474,7 +2488,7 @@ impl ApiKeyStore for PostgresApiKeyStore {
             String::new()
         };
         let sql = format!(
-            "SELECT {key_prefix_col}, {key_hash}, {owner_id}, {service_identity}, {tenant_id}, {project_id}, {scopes}, \
+            "SELECT {key_prefix_col}, {key_hash}, {name}, {description}, {owner_id}, {service_identity}, {tenant_id}, {project_id}, {scopes}, \
                     {created_at_unix}, {last_used_at_unix}, {expires_at_unix}, {revoked_at_unix} \
              FROM {rel} WHERE ({owner_id_col} = $1 OR {service_identity_expr} = $1) {active_clause} ORDER BY {created_at} DESC"
         );
@@ -2504,6 +2518,8 @@ impl ApiKeyStore for PostgresApiKeyStore {
         let m = &self.model;
         let key_prefix_col = m.select("key_prefix");
         let key_hash = m.select("key_hash");
+        let name = m.text_or_empty("name");
+        let description = m.text_or_empty("description");
         let owner_id = m.select_as("owner_id", "principal_id");
         let owner_id_col = m.q("owner_id");
         let service_identity =
@@ -2547,7 +2563,7 @@ impl ApiKeyStore for PostgresApiKeyStore {
             ("$2", "$3")
         };
         let sql = format!(
-            "SELECT {key_prefix_col}, {key_hash}, {owner_id}, {service_identity}, {tenant_id}, {project_id}, {scopes}, \
+            "SELECT {key_prefix_col}, {key_hash}, {name}, {description}, {owner_id}, {service_identity}, {tenant_id}, {project_id}, {scopes}, \
                     {created_at_unix}, {last_used_at_unix}, {expires_at_unix}, {revoked_at_unix} \
              FROM {rel} WHERE ({owner_id_col} = $1 OR {service_identity_expr} = $1) {active_clause} ORDER BY {created_at} DESC LIMIT {limit_param} OFFSET {offset_param}"
         );
@@ -2581,6 +2597,8 @@ impl ApiKeyStore for PostgresApiKeyStore {
         let m = &self.model;
         let key_prefix_col = m.select("key_prefix");
         let key_hash = m.select("key_hash");
+        let name = m.text_or_empty("name");
+        let description = m.text_or_empty("description");
         let owner_id = m.select_as("owner_id", "principal_id");
         let owner_id_col = m.q("owner_id");
         let service_identity =
@@ -2630,7 +2648,7 @@ impl ApiKeyStore for PostgresApiKeyStore {
                 ("$2", "$3")
             };
         let sql = format!(
-            "SELECT {key_prefix_col}, {key_hash}, {owner_id}, {service_identity}, {tenant_id}, {project_id}, {scopes}, \
+            "SELECT {key_prefix_col}, {key_hash}, {name}, {description}, {owner_id}, {service_identity}, {tenant_id}, {project_id}, {scopes}, \
                     {created_at_unix}, {last_used_at_unix}, {expires_at_unix}, {revoked_at_unix} \
              FROM {rel} WHERE ({owner_id_col} = $1 OR {service_identity_expr} = $1) {status_clause} ORDER BY {created_at} DESC LIMIT {limit_param} OFFSET {offset_param}"
         );

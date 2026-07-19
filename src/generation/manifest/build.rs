@@ -685,6 +685,7 @@ pub(crate) fn build_manifest_projections(
         let mut table_projections = Vec::new();
         table_projections.push(ManifestProjection {
             message_type: table.message_name.clone(),
+            proto_package: table.proto_package.clone(),
             projection_kind: "relational".to_string(),
             backend: "postgres".to_string(),
             instance: String::new(),
@@ -713,6 +714,7 @@ pub(crate) fn build_manifest_projections(
             let projection_kind = projection_kind_for_store(store);
             table_projections.push(ManifestProjection {
                 message_type: table.message_name.clone(),
+                proto_package: table.proto_package.clone(),
                 projection_kind: projection_kind.clone(),
                 backend: store.backend.clone(),
                 instance: store_option(store, "instance")

@@ -39,6 +39,38 @@ pub struct LintItem {
     pub source_file: String,
 }
 
+impl LintItem {
+    /// One human-readable line carrying every field an operator needs to locate a
+    /// finding — severity, kind, the schema/table (and column, when set), the
+    /// source file, and the description (which for routing findings names the
+    /// fully-qualified message). Used by `udb admin dry-run` and the startup
+    /// lifecycle to surface EVERY finding instead of only aggregate counts.
+    pub fn display_line(&self) -> String {
+        let severity = match self.severity {
+            LintSeverity::Error => "ERROR",
+            LintSeverity::Warning => "WARNING",
+            LintSeverity::Info => "INFO",
+        };
+        let mut location = String::new();
+        if !self.schema.is_empty() || !self.table.is_empty() {
+            location.push_str(&format!(" {}.{}", self.schema, self.table));
+            if !self.column.is_empty() {
+                location.push_str(&format!(".{}", self.column));
+            }
+        }
+        let source = if self.source_file.is_empty() {
+            String::new()
+        } else {
+            format!(" [{}]", self.source_file)
+        };
+        format!(
+            "[{severity}] {kind}{location}{source}: {description}",
+            kind = self.kind,
+            description = self.description
+        )
+    }
+}
+
 // ── Report ───────────────────────────────────────────────────────────────────
 
 /// Complete lint analysis of a `CatalogManifest`.
@@ -622,9 +654,16 @@ const SUPPORTED_CONSISTENCY_MODELS: &[&str] = &[
 ];
 
 fn lint_manifest_routing(manifest: &CatalogManifest, items: &mut Vec<LintItem>) {
+    // Routing identity is the FULLY-QUALIFIED message name (`proto_package` +
+    // message), never the bare short name. Keying by the short name conflated
+    // unrelated packages that happen to reuse a name (e.g. consumer
+    // `ambulife.authn.entity.v1.User` and embedded `udb.core.authn.entity.v1.User`),
+    // fabricating `ambiguous_projection_write_owner` collisions across two
+    // legitimately-distinct tables. A genuine same-FQN conflict is still grouped
+    // together and still reported — only different FQNs are now separated.
     let mut table_by_message = BTreeMap::<String, &ManifestTable>::new();
     for table in &manifest.tables {
-        table_by_message.insert(table.message_name.clone(), table);
+        table_by_message.insert(table.message_fqn(), table);
     }
 
     let declared_projections: Vec<&ManifestProjection> = if manifest.projections.is_empty() {
@@ -639,20 +678,17 @@ fn lint_manifest_routing(manifest: &CatalogManifest, items: &mut Vec<LintItem>) 
 
     let mut projections_by_message = BTreeMap::<String, Vec<&ManifestProjection>>::new();
     for projection in declared_projections {
+        let fqn = projection.message_fqn();
+        lint_projection_supported(projection, table_by_message.get(&fqn), items);
         projections_by_message
-            .entry(projection.message_type.clone())
+            .entry(fqn)
             .or_default()
             .push(projection);
-        lint_projection_supported(
-            projection,
-            table_by_message.get(&projection.message_type),
-            items,
-        );
     }
 
     for table in &manifest.tables {
         let projections = projections_by_message
-            .get(&table.message_name)
+            .get(&table.message_fqn())
             .map(Vec::as_slice)
             .unwrap_or(&[]);
         if projections.is_empty() {
@@ -663,7 +699,7 @@ fn lint_manifest_routing(manifest: &CatalogManifest, items: &mut Vec<LintItem>) 
                 table: table.table.clone(),
                 description: format!(
                     "{}.{} has no manifest projection; the broker cannot route reads or writes for message '{}'.",
-                    table.schema, table.table, table.message_name
+                    table.schema, table.table, table.message_fqn()
                 ),
                 suggestion: "Declare at least one projection, usually the relational PostgreSQL projection for the base table.".to_string(),
                 source_file: table.source_file.clone(),
@@ -685,7 +721,7 @@ fn lint_manifest_routing(manifest: &CatalogManifest, items: &mut Vec<LintItem>) 
                 table: table.table.clone(),
                 description: format!(
                     "Message '{}' has {} projection(s) but none is marked as the write owner.",
-                    table.message_name,
+                    table.message_fqn(),
                     projections.len()
                 ),
                 suggestion: "Mark exactly one primary projection as write_owner=true, or use a fan-out policy when more than one backend owns writes.".to_string(),
@@ -706,7 +742,7 @@ fn lint_manifest_routing(manifest: &CatalogManifest, items: &mut Vec<LintItem>) 
                 table: table.table.clone(),
                 description: format!(
                     "Message '{}' has multiple write-owner projections but no dual-write, outbox, async-projection, or saga fan-out policy.",
-                    table.message_name
+                    table.message_fqn()
                 ),
                 suggestion: "Choose a single write owner, or set an explicit multi-backend fanout_policy for the owner set.".to_string(),
                 source_file: table.source_file.clone(),
@@ -739,7 +775,8 @@ fn lint_projection_supported(
             table: table_name.clone(),
             description: format!(
                 "Projection for message '{}' uses unsupported projection_kind '{}'.",
-                projection.message_type, projection.projection_kind
+                projection.message_fqn(),
+                projection.projection_kind
             ),
             suggestion: "Use one of: relational, document, vector, graph, columnar, cache, object."
                 .to_string(),
@@ -756,7 +793,7 @@ fn lint_projection_supported(
             table: table_name.clone(),
             description: format!(
                 "Projection '{}' for message '{}' uses unsupported read_policy '{}'.",
-                projection.resource_name, projection.message_type, projection.read_policy
+                projection.resource_name, projection.message_fqn(), projection.read_policy
             ),
             suggestion: "Use primary, replica, cache-first, vector, document, analytics, object, or fallback-chain.".to_string(),
             source_file: source_file.clone(),
@@ -772,7 +809,9 @@ fn lint_projection_supported(
             table: table_name.clone(),
             description: format!(
                 "Projection '{}' for message '{}' uses unsupported write_policy '{}'.",
-                projection.resource_name, projection.message_type, projection.write_policy
+                projection.resource_name,
+                projection.message_fqn(),
+                projection.write_policy
             ),
             suggestion:
                 "Use primary, projection, readonly, dual-write, outbox, async-projection, or saga."
@@ -790,7 +829,9 @@ fn lint_projection_supported(
             table: table_name.clone(),
             description: format!(
                 "Projection '{}' for message '{}' uses unsupported fanout_policy '{}'.",
-                projection.resource_name, projection.message_type, projection.fanout_policy
+                projection.resource_name,
+                projection.message_fqn(),
+                projection.fanout_policy
             ),
             suggestion:
                 "Use primary-only, dual-write, outbox, async-projection, saga, or projection."
@@ -810,7 +851,7 @@ fn lint_projection_supported(
             table: table_name.clone(),
             description: format!(
                 "Projection '{}' for message '{}' declares unknown consistency model '{}'.",
-                projection.resource_name, projection.message_type, projection.consistency.model
+                projection.resource_name, projection.message_fqn(), projection.consistency.model
             ),
             suggestion: "Use strong, eventual, read-your-writes, bounded-staleness, backend-default, or document the backend-specific alternative in projection options.".to_string(),
             source_file: source_file.clone(),
@@ -831,7 +872,8 @@ fn lint_projection_supported(
             table: table_name,
             description: format!(
                 "Projection '{}' for message '{}' is readonly but is also marked as write_owner.",
-                projection.resource_name, projection.message_type
+                projection.resource_name,
+                projection.message_fqn()
             ),
             suggestion:
                 "Either clear write_owner or change write_policy to primary/projection/fan-out."
@@ -1124,5 +1166,181 @@ mod tests {
         let report = lint_catalog(&base_manifest(vec![primary, document]));
 
         assert!(!has_kind(&report, "ambiguous_projection_write_owner"));
+    }
+
+    // ── UDB-SRV-003: FQN-keyed composition & collision ────────────────────────
+
+    /// One relational, write-owner table + projection keyed by the FULLY-QUALIFIED
+    /// message name (`proto_package.message`). Mirrors what `build_manifest_projections`
+    /// emits for a real proto: a single primary write-owner relational projection
+    /// carrying the owning package.
+    fn fqn_table(proto_package: &str, message: &str, schema: &str, table: &str) -> ManifestTable {
+        let projection = ManifestProjection {
+            message_type: message.to_string(),
+            proto_package: proto_package.to_string(),
+            projection_kind: "relational".to_string(),
+            backend: "postgres".to_string(),
+            resource_name: format!("{schema}.{table}"),
+            read_policy: "primary".to_string(),
+            write_policy: "primary".to_string(),
+            fanout_policy: "primary_only".to_string(),
+            consistency: ManifestConsistency {
+                model: "strong".to_string(),
+                read_your_writes: true,
+                ..ManifestConsistency::default()
+            },
+            write_owner: true,
+            ..ManifestProjection::default()
+        };
+        ManifestTable {
+            message_name: message.to_string(),
+            proto_package: proto_package.to_string(),
+            schema: schema.to_string(),
+            table: table.to_string(),
+            columns: vec![ManifestColumn {
+                field_name: "id".to_string(),
+                column_name: "id".to_string(),
+                proto_type: "string".to_string(),
+                sql_type: "UUID".to_string(),
+                is_primary: true,
+                field_number: 1,
+                ..ManifestColumn::default()
+            }],
+            primary_key: vec!["id".to_string()],
+            projections: vec![projection],
+            ..ManifestTable::default()
+        }
+    }
+
+    fn manifest_of(tables: Vec<ManifestTable>) -> CatalogManifest {
+        let projections = tables
+            .iter()
+            .flat_map(|table| table.projections.iter().cloned())
+            .collect();
+        CatalogManifest {
+            tables,
+            projections,
+            ..CatalogManifest::default()
+        }
+    }
+
+    /// Embedded `udb.core.authn.entity.v1.User` and consumer
+    /// `ambulife.authn.entity.v1.User` (same SHORT name, different package) compose
+    /// cleanly: no fabricated write-owner collision, and each maps to a DISTINCT
+    /// resource keyed by its FQN. Reverting the FQN keying re-collapses both under
+    /// bare `User`, which fails with `ambiguous_projection_write_owner`.
+    #[test]
+    fn distinct_fqns_sharing_short_name_compose_without_collision() {
+        let consumer = fqn_table("ambulife.authn.entity.v1", "User", "authn", "users");
+        let embedded = fqn_table("udb.core.authn.entity.v1", "User", "udb_authn", "users");
+        let session_c = fqn_table("ambulife.authn.entity.v1", "Session", "authn", "sessions");
+        let session_e = fqn_table(
+            "udb.core.authn.entity.v1",
+            "Session",
+            "udb_authn",
+            "sessions",
+        );
+
+        let report = lint_catalog(&manifest_of(vec![consumer, embedded, session_c, session_e]));
+
+        assert!(
+            !has_kind(&report, "ambiguous_projection_write_owner"),
+            "different FQNs sharing a short name must NOT collide: {:#?}",
+            report.items
+        );
+        assert!(!has_kind(&report, "missing_projection_write_owner"));
+        assert!(!has_kind(&report, "missing_message_projection"));
+        assert_eq!(
+            report.error_count, 0,
+            "merged catalog must lint clean: {:#?}",
+            report.items
+        );
+
+        // Distinct mapped resources, keyed by FQN.
+        let resources: std::collections::BTreeSet<_> = manifest_of(vec![
+            fqn_table("ambulife.authn.entity.v1", "User", "authn", "users"),
+            fqn_table("udb.core.authn.entity.v1", "User", "udb_authn", "users"),
+        ])
+        .projections
+        .iter()
+        .map(|p| (p.message_fqn(), p.resource_name.clone()))
+        .collect();
+        assert!(resources.contains(&(
+            "ambulife.authn.entity.v1.User".to_string(),
+            "authn.users".to_string()
+        )));
+        assert!(resources.contains(&(
+            "udb.core.authn.entity.v1.User".to_string(),
+            "udb_authn.users".to_string()
+        )));
+    }
+
+    /// The real collision guard is preserved: two write-owner projections that
+    /// resolve to the SAME FQN with no multi-write fan-out are still an error
+    /// before migration. FQN keying separates different FQNs; it does not soften a
+    /// genuine same-identity conflict.
+    #[test]
+    fn same_fqn_incompatible_projections_still_fail() {
+        let mut table = fqn_table("ambulife.authn.entity.v1", "User", "authn", "users");
+        // A second, conflicting write-owner projection for the SAME message FQN.
+        table.projections.push(ManifestProjection {
+            message_type: "User".to_string(),
+            proto_package: "ambulife.authn.entity.v1".to_string(),
+            projection_kind: "document".to_string(),
+            backend: "mongodb".to_string(),
+            resource_name: "authn.users_doc".to_string(),
+            read_policy: "document".to_string(),
+            write_policy: "primary".to_string(),
+            fanout_policy: "primary_only".to_string(),
+            write_owner: true,
+            ..ManifestProjection::default()
+        });
+
+        let report = lint_catalog(&manifest_of(vec![table]));
+
+        assert!(
+            has_kind(&report, "ambiguous_projection_write_owner"),
+            "same-FQN conflicting write owners must still fail: {:#?}",
+            report.items
+        );
+        assert!(!report.passed);
+    }
+
+    /// The merged lint exposes EVERY finding as an individual, operator-readable
+    /// item (kind + FQN + schema/table) — not just aggregate counts. This is the
+    /// data the startup lifecycle / `udb admin dry-run` now surface per finding.
+    #[test]
+    fn failing_lint_surfaces_individual_findings_with_fqn() {
+        let mut table = fqn_table("ambulife.authn.entity.v1", "User", "authn", "users");
+        table.projections.push(ManifestProjection {
+            message_type: "User".to_string(),
+            proto_package: "ambulife.authn.entity.v1".to_string(),
+            projection_kind: "document".to_string(),
+            backend: "mongodb".to_string(),
+            resource_name: "authn.users_doc".to_string(),
+            write_policy: "primary".to_string(),
+            fanout_policy: "primary_only".to_string(),
+            write_owner: true,
+            ..ManifestProjection::default()
+        });
+
+        let report = lint_catalog(&manifest_of(vec![table]));
+
+        let finding = report
+            .items
+            .iter()
+            .find(|item| item.kind == "ambiguous_projection_write_owner")
+            .expect("individual finding must be present in the report, not just counts");
+        let line = finding.display_line();
+        assert!(line.contains("[ERROR]"), "line: {line}");
+        assert!(
+            line.contains("ambiguous_projection_write_owner"),
+            "line: {line}"
+        );
+        assert!(line.contains("authn.users"), "schema/table missing: {line}");
+        assert!(
+            line.contains("ambulife.authn.entity.v1.User"),
+            "fully-qualified message name missing: {line}"
+        );
     }
 }

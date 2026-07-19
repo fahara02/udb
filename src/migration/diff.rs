@@ -279,8 +279,165 @@ pub fn diff_manifests(
 
     diff_stores(old, new, &mut ops);
     diff_extensions(old, new, &mut ops);
+    // UDB-MIG-001: classify still-present `allow_drop` annotations only AFTER all
+    // drop operations are known, so a hint that unblocked a drop this run is
+    // recorded (non-blocking) rather than re-blocking the reviewed migration.
+    classify_allow_drop_hints(old, new, &mut ops);
     finalize_ops(&mut ops);
     ops
+}
+
+/// UDB-MIG-001: an `allow_drop` annotation that remains on a table/column which
+/// still exists in the desired proto is the middle phase of the documented
+/// two-phase migration (`allow_drop` → apply → remove `allow_drop`). Emit its
+/// diagnostic as a NON-blocking `HintWarning` so startup is never caught in the
+/// circular gate where keeping the hint blocks on the warning and removing it
+/// re-blocks the drop:
+///
+///  * **Consumed** — the annotation made at least one otherwise-blocked drop
+///    (a non-unique `DropIndex` / `DropForeignKey`, or a `DropColumn`) safe in
+///    *this* diff. The hint names the exact freed index/constraint so the audit
+///    trail records which operation the annotation approved.
+///  * **Unconsumed** — no destructive op in this diff needed the annotation, so
+///    it is a stale leftover; advise the operator to remove it. Still
+///    non-blocking.
+///
+/// A drop that is genuinely unsafe (no `allow_drop`) keeps its own
+/// `RequiresReview` op from `diff_indexes` / `diff_foreign_keys` / `diff_columns`
+/// / the drop-table pass, so the fail-closed posture is unchanged.
+fn classify_allow_drop_hints(
+    old: &CatalogManifest,
+    new: &CatalogManifest,
+    ops: &mut Vec<ChangeOperation>,
+) {
+    const STALE_HINT_ADVICE: &str = "remove the stale allow_drop annotation now that the destructive migration has been applied";
+    let mut hints: Vec<ChangeOperation> = Vec::new();
+    for table in &new.tables {
+        // A created or dropped table cannot carry a "still-present" hint: the
+        // annotation only matters while the table survives in both manifests.
+        let Some(old_table) = old.table(&table.schema, &table.table) else {
+            continue;
+        };
+        let has_table_allow_drop = table.allow_drop;
+        let column_allow_drops: Vec<&ManifestColumn> = table
+            .columns
+            .iter()
+            .filter(|column| {
+                column.allow_drop
+                    && old_table
+                        .columns
+                        .iter()
+                        .any(|old_col| old_col.column_name == column.column_name)
+            })
+            .collect();
+        if !has_table_allow_drop && column_allow_drops.is_empty() {
+            continue;
+        }
+
+        // The SafeAuto destructive drops this diff already decided for the table
+        // are the single source of truth for "what an allow_drop freed" — never
+        // re-derive the drop decision here.
+        let safe_drops: Vec<&ChangeOperation> = ops
+            .iter()
+            .filter(|o| {
+                o.safety == ChangeSafety::SafeAuto
+                    && o.schema == table.schema
+                    && o.table == table.table
+                    && matches!(
+                        o.kind,
+                        ChangeKind::DropIndex | ChangeKind::DropForeignKey | ChangeKind::DropColumn
+                    )
+            })
+            .collect();
+
+        // Map each freed index / FK object name back to its columns so a
+        // column-scoped hint can claim the exact resource it unblocked.
+        let index_cols: BTreeMap<String, &Vec<String>> = old_table
+            .indexes
+            .iter()
+            .map(|idx| (index_name(old_table, idx), &idx.columns))
+            .collect();
+        let fk_cols: BTreeMap<String, &Vec<String>> = old_table
+            .foreign_keys
+            .iter()
+            .map(|fk| (fk_name(old_table, fk), &fk.columns))
+            .collect();
+        let covers_column = |o: &ChangeOperation, column: &str| -> bool {
+            match o.kind {
+                ChangeKind::DropIndex => index_cols
+                    .get(&o.object_name)
+                    .map(|cols| cols.iter().any(|c| c.as_str() == column))
+                    .unwrap_or(false),
+                ChangeKind::DropForeignKey => fk_cols
+                    .get(&o.object_name)
+                    .map(|cols| cols.iter().any(|c| c.as_str() == column))
+                    .unwrap_or(false),
+                _ => false,
+            }
+        };
+
+        // ── Table-level allow_drop still present ──────────────────────────
+        if has_table_allow_drop {
+            match safe_drops.first() {
+                Some(freed) => hints.push(op(
+                    ChangeKind::HintWarning,
+                    ChangeSafety::SafeAuto,
+                    &table.schema,
+                    &table.table,
+                    "",
+                    &freed.object_name,
+                    &format!(
+                        "table allow_drop consumed this run by {:?} {}",
+                        freed.kind, freed.object_name
+                    ),
+                    "",
+                )),
+                None => hints.push(op(
+                    ChangeKind::HintWarning,
+                    ChangeSafety::SafeAuto,
+                    &table.schema,
+                    &table.table,
+                    "",
+                    "allow_drop",
+                    "table allow_drop is set but no destructive operation consumed it this run",
+                    STALE_HINT_ADVICE,
+                )),
+            }
+        }
+
+        // ── Column-level allow_drop still present ─────────────────────────
+        for column in column_allow_drops {
+            match safe_drops
+                .iter()
+                .find(|o| covers_column(o, &column.column_name))
+            {
+                Some(freed) => hints.push(op(
+                    ChangeKind::HintWarning,
+                    ChangeSafety::SafeAuto,
+                    &table.schema,
+                    &table.table,
+                    &column.column_name,
+                    &freed.object_name,
+                    &format!(
+                        "column allow_drop consumed this run by {:?} {}",
+                        freed.kind, freed.object_name
+                    ),
+                    "",
+                )),
+                None => hints.push(op(
+                    ChangeKind::HintWarning,
+                    ChangeSafety::SafeAuto,
+                    &table.schema,
+                    &table.table,
+                    &column.column_name,
+                    "allow_drop",
+                    "column allow_drop is set but no destructive operation consumed it this run",
+                    STALE_HINT_ADVICE,
+                )),
+            }
+        }
+    }
+    ops.extend(hints);
 }
 
 fn lint_hints(
@@ -305,18 +462,11 @@ fn lint_hints(
                 ));
             }
         }
-        if table.allow_drop && old.table(&table.schema, &table.table).is_some() {
-            ops.push(op(
-                ChangeKind::HintWarning,
-                ChangeSafety::RequiresReview,
-                &table.schema,
-                &table.table,
-                "",
-                "allow_drop",
-                "allow_drop is still set on a table that exists in desired proto",
-                "remove stale allow_drop after the destructive migration has been applied",
-            ));
-        }
+        // UDB-MIG-001: a still-present `allow_drop` on a retained table/column is
+        // NOT classified here. Its blocking-vs-advisory status depends on whether
+        // any destructive op in this same diff consumed it, which is only known
+        // after the table/index/FK/column diffs run — see
+        // `classify_allow_drop_hints`, invoked once at the end of `diff_manifests`.
 
         let prior_table = old.table(&table.schema, &table.table);
         for column in &table.columns {
@@ -342,27 +492,8 @@ fn lint_hints(
                     ));
                 }
             }
-            if column.allow_drop
-                && prior_table
-                    .map(|prior| {
-                        prior
-                            .columns
-                            .iter()
-                            .any(|old_col| old_col.column_name == column.column_name)
-                    })
-                    .unwrap_or(false)
-            {
-                ops.push(op(
-                    ChangeKind::HintWarning,
-                    ChangeSafety::RequiresReview,
-                    &table.schema,
-                    &table.table,
-                    &column.column_name,
-                    "allow_drop",
-                    "allow_drop is still set on a column that exists in desired proto",
-                    "remove stale allow_drop after the destructive migration has been applied",
-                ));
-            }
+            // UDB-MIG-001: still-present column `allow_drop` is classified in
+            // `classify_allow_drop_hints` after the drop diffs are known.
         }
     }
 }
@@ -2142,5 +2273,198 @@ mod tests {
                 && change.safety == ChangeSafety::RequiresReview
                 && change.object_name == "partitioning"
         }));
+    }
+
+    // ── UDB-MIG-001: allow_drop must survive the startup review gate ──────────
+    //
+    // The reviewed two-phase migration is `allow_drop` → apply → remove
+    // `allow_drop`. The startup gate (`src/control/lifecycle.rs`) blocks on any
+    // change whose `safety != SafeAuto`, so a still-present `allow_drop` hint must
+    // never be `RequiresReview` while it is doing its job.
+
+    fn nonunique_index(name: &str, columns: &[&str]) -> ManifestIndex {
+        ManifestIndex {
+            name: name.to_string(),
+            columns: columns.iter().map(|c| c.to_string()).collect(),
+            unique: false,
+            ..ManifestIndex::default()
+        }
+    }
+
+    /// `partner.rate_rules` with the given secondary index; `allow_drop` on the
+    /// retained `destination_district_code` column is caller-controlled.
+    fn rate_rules_table(index: ManifestIndex, district_allow_drop: bool) -> ManifestTable {
+        let mut district = column("destination_district_code", "TEXT");
+        district.allow_drop = district_allow_drop;
+        ManifestTable {
+            schema: "partner".to_string(),
+            table: "rate_rules".to_string(),
+            columns: vec![
+                column("partner_id", "UUID"),
+                district,
+                column("rate_purpose", "TEXT"),
+            ],
+            indexes: vec![index],
+            ..ManifestTable::default()
+        }
+    }
+
+    #[test]
+    fn allow_drop_consumed_in_same_diff_does_not_block_startup() {
+        // v2 → v3 non-unique index swap. `allow_drop` is added to a retained
+        // column of the old index so the DropIndex becomes auto-safe.
+        let old_table = rate_rules_table(
+            nonunique_index(
+                "idx_rate_rules_resolution_v2",
+                &["partner_id", "destination_district_code"],
+            ),
+            false,
+        );
+        let new_table = rate_rules_table(
+            nonunique_index(
+                "idx_rate_rules_resolution_v3",
+                &["partner_id", "rate_purpose"],
+            ),
+            true,
+        );
+        let old_manifest = manifest(old_table, "m-v2", "t-v2");
+        let new_manifest = manifest(new_table, "m-v3", "t-v3");
+        let changes = diff_manifests(Some(&old_manifest), &new_manifest);
+
+        // The reviewed drop of the old index is auto-safe.
+        assert!(
+            changes.iter().any(|c| c.kind == ChangeKind::DropIndex
+                && c.object_name == "idx_rate_rules_resolution_v2"
+                && c.safety == ChangeSafety::SafeAuto),
+            "old index drop must be auto-safe under allow_drop"
+        );
+        // Startup gate: nothing here is `!= SafeAuto`, so the broker starts
+        // without force-sync. This is the exact circular gate the bug reported.
+        let blocking: Vec<_> = changes
+            .iter()
+            .filter(|c| c.safety != ChangeSafety::SafeAuto)
+            .collect();
+        assert!(
+            blocking.is_empty(),
+            "consumed allow_drop must leave no blocking op, got: {blocking:?}"
+        );
+        // The consumed hint is recorded for the audit trail and names the EXACT
+        // freed index rather than only `partner.rate_rules()`.
+        let hint = changes
+            .iter()
+            .find(|c| c.kind == ChangeKind::HintWarning)
+            .expect("consumed allow_drop hint must be recorded");
+        assert_eq!(hint.safety, ChangeSafety::SafeAuto);
+        assert_eq!(hint.column, "destination_district_code");
+        assert_eq!(hint.object_name, "idx_rate_rules_resolution_v2");
+        assert!(
+            hint.reason.contains("consumed"),
+            "hint should record the operation it approved: {}",
+            hint.reason
+        );
+    }
+
+    #[test]
+    fn unconsumed_allow_drop_next_run_warns_but_does_not_block() {
+        // Post-migration: the v3 index is in place and the operator has not yet
+        // removed the `allow_drop` annotation. An unrelated additive change makes
+        // the manifest checksum advance, so the diff runs again. No drop consumes
+        // the lingering hint this run.
+        let old_table = rate_rules_table(
+            nonunique_index(
+                "idx_rate_rules_resolution_v3",
+                &["partner_id", "rate_purpose"],
+            ),
+            true,
+        );
+        let mut new_table = rate_rules_table(
+            nonunique_index(
+                "idx_rate_rules_resolution_v3",
+                &["partner_id", "rate_purpose"],
+            ),
+            true,
+        );
+        new_table.columns.push(column("subject_type", "TEXT"));
+        let old_manifest = manifest(old_table, "m-v3", "t-v3");
+        let new_manifest = manifest(new_table.clone(), "m-v4", "t-v4");
+        let changes = diff_manifests(Some(&old_manifest), &new_manifest);
+
+        // Non-blocking: the stale hint never prevents startup.
+        let blocking: Vec<_> = changes
+            .iter()
+            .filter(|c| c.safety != ChangeSafety::SafeAuto)
+            .collect();
+        assert!(
+            blocking.is_empty(),
+            "unconsumed allow_drop must not block startup, got: {blocking:?}"
+        );
+        let hint = changes
+            .iter()
+            .find(|c| c.kind == ChangeKind::HintWarning)
+            .expect("stale allow_drop must surface a cleanup warning");
+        assert_eq!(hint.safety, ChangeSafety::SafeAuto);
+        assert_eq!(hint.column, "destination_district_code");
+        assert!(
+            hint.reason.contains("no destructive operation consumed"),
+            "stale hint should advise cleanup: {}",
+            hint.reason
+        );
+        assert!(
+            hint.blocked_reason.contains("remove the stale allow_drop"),
+            "stale hint should tell the operator to remove it: {}",
+            hint.blocked_reason
+        );
+
+        // Removing the annotation entirely leaves a clean plan (no hint at all).
+        let mut clean_new = new_table.clone();
+        for col in &mut clean_new.columns {
+            col.allow_drop = false;
+        }
+        let clean_manifest = manifest(clean_new, "m-v5", "t-v5");
+        let clean_changes = diff_manifests(Some(&old_manifest), &clean_manifest);
+        assert!(
+            !clean_changes
+                .iter()
+                .any(|c| c.kind == ChangeKind::HintWarning),
+            "removing allow_drop must leave no hint warning"
+        );
+    }
+
+    #[test]
+    fn nonunique_index_drop_without_allow_drop_still_blocks() {
+        // Same v2 → v3 swap but WITHOUT any allow_drop: the destructive index
+        // drop must remain `RequiresReview` (fail-closed) and no hint is emitted.
+        let old_table = rate_rules_table(
+            nonunique_index(
+                "idx_rate_rules_resolution_v2",
+                &["partner_id", "destination_district_code"],
+            ),
+            false,
+        );
+        let new_table = rate_rules_table(
+            nonunique_index(
+                "idx_rate_rules_resolution_v3",
+                &["partner_id", "rate_purpose"],
+            ),
+            false,
+        );
+        let old_manifest = manifest(old_table, "m-v2", "t-v2");
+        let new_manifest = manifest(new_table, "m-v3", "t-v3");
+        let changes = diff_manifests(Some(&old_manifest), &new_manifest);
+
+        let drop = changes
+            .iter()
+            .find(|c| c.kind == ChangeKind::DropIndex)
+            .expect("index drop must be present");
+        assert_eq!(
+            drop.safety,
+            ChangeSafety::RequiresReview,
+            "unreviewed non-unique index drop must stay blocked"
+        );
+        assert_eq!(drop.object_name, "idx_rate_rules_resolution_v2");
+        assert!(
+            !changes.iter().any(|c| c.kind == ChangeKind::HintWarning),
+            "no allow_drop annotation means no hint warning"
+        );
     }
 }

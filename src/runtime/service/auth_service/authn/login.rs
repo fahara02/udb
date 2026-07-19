@@ -21,6 +21,40 @@ fn oidc_feature_required_status() -> Status {
     )
 }
 
+#[derive(Debug, Clone, Default)]
+struct PasswordLoginGrants {
+    scopes: Vec<String>,
+    roles: Vec<String>,
+    service_identity: String,
+}
+
+fn requested_scopes_from_metadata(metadata: &tonic::metadata::MetadataMap) -> Vec<String> {
+    metadata
+        .get("x-scopes")
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or_default()
+        .split(',')
+        .map(str::trim)
+        .filter(|scope| !scope.is_empty())
+        .map(ToString::to_string)
+        .fold(Vec::new(), |mut acc, scope| {
+            if !acc.contains(&scope) {
+                acc.push(scope);
+            }
+            acc
+        })
+}
+
+fn forbidden_service_scope(scope: &str) -> bool {
+    matches!(
+        scope.trim(),
+        "*" | "udb:*" | "udb:admin" | "organization_owner"
+    )
+}
+
+fn service_scope_policy_status(message: &'static str) -> Status {
+    login_policy_status_with_code("password_login", "service_account_scope_grant", message)
+}
 fn tenant_mfa_enrollment_required_status() -> Status {
     crate::runtime::executor_utils::policy_status(
         "password_login",
@@ -67,6 +101,64 @@ fn reset_password_request_valid_status() -> Status {
 }
 
 impl AuthnServiceImpl {
+    fn resolve_password_login_grants(
+        &self,
+        user: &UserRecord,
+        requested_scopes: &[String],
+    ) -> Result<PasswordLoginGrants, Status> {
+        if user.account_kind != authn::AccountKind::ServiceAccount {
+            let (scopes, roles) =
+                self.resolve_effective_grants(&user.user_id, &user.tenant_id, &user.project_id);
+            return Ok(PasswordLoginGrants {
+                scopes,
+                roles,
+                service_identity: String::new(),
+            });
+        }
+
+        let service_identity = authn::profile::service_identity_from_profile_attributes_json(
+            &user.profile_attributes_json,
+        );
+        if service_identity.trim().is_empty() {
+            return Err(service_scope_policy_status(
+                "service account profile must include service_identity",
+            ));
+        }
+        let approved = authn::profile::service_scopes_from_profile_attributes_json(
+            &user.profile_attributes_json,
+        );
+        if approved.is_empty() {
+            return Err(service_scope_policy_status(
+                "service account has no approved scopes",
+            ));
+        }
+        if approved.iter().any(|scope| forbidden_service_scope(scope))
+            || requested_scopes
+                .iter()
+                .any(|scope| forbidden_service_scope(scope))
+        {
+            return Err(service_scope_policy_status(
+                "service account password login cannot issue admin or wildcard scopes",
+            ));
+        }
+        let scopes = if requested_scopes.is_empty() {
+            approved
+        } else {
+            for requested in requested_scopes {
+                if !approved.contains(requested) {
+                    return Err(service_scope_policy_status(
+                        "requested service-account scope is not approved",
+                    ));
+                }
+            }
+            requested_scopes.to_vec()
+        };
+        Ok(PasswordLoginGrants {
+            scopes,
+            roles: Vec::new(),
+            service_identity,
+        })
+    }
     pub(super) async fn authenticate_impl(
         &self,
         request: Request<authn_pb::AuthnRequest>,
@@ -85,15 +177,47 @@ impl AuthnServiceImpl {
             .await
             .map_err(|err| login_internal_status("authenticate_api_key", err.to_string()))?
             .ok_or_else(|| Status::unauthenticated("invalid credential"))?;
-            let principal = principal_from_api_key(&rec);
+            let mut principal = principal_from_api_key(&rec);
+            let mut requested_scopes = req.requested_scopes.clone();
+            requested_scopes.retain(|scope| !scope.trim().is_empty());
+            requested_scopes.dedup();
+            let token_scopes = if requested_scopes.is_empty() {
+                rec.scopes.clone()
+            } else {
+                for requested in &requested_scopes {
+                    if !rec.scopes.contains(requested) {
+                        return Err(crate::runtime::executor_utils::policy_status_with_code(
+                            tonic::Code::PermissionDenied,
+                            "login",
+                            "api_key_scope_not_granted",
+                            "requested API-key scope is not granted to this key",
+                        ));
+                    }
+                }
+                requested_scopes
+            };
+            principal.scopes = token_scopes.clone();
+            let (access_token, access_exp) = self.issue_access_token(
+                &rec.principal_id,
+                &rec.tenant_id,
+                &rec.project_id,
+                &token_scopes,
+                &[],
+                &rec.service_identity,
+                &format!("apikey_{}", rec.key_prefix),
+                "api_key",
+                now,
+            );
+            let expires_at_unix = if access_exp > 0 {
+                access_exp
+            } else {
+                rec.expires_at_unix as i64
+            };
             return Ok(Response::new(authn_pb::AuthnResponse {
-                principal: Some(authn_principal_to_pb(
-                    &principal,
-                    rec.expires_at_unix as i64,
-                )),
+                principal: Some(authn_principal_to_pb(&principal, expires_at_unix)),
                 session_id: String::new(),
-                access_token: String::new(),
-                expires_at_unix: rec.expires_at_unix as i64,
+                access_token,
+                expires_at_unix,
                 relationship_version: String::new(),
                 warnings: Vec::new(),
             }));
@@ -248,6 +372,7 @@ impl AuthnServiceImpl {
         &self,
         request: Request<authn_pb::LoginRequest>,
     ) -> Result<Response<authn_pb::LoginResponse>, Status> {
+        let requested_scopes = requested_scopes_from_metadata(request.metadata());
         let req = request.into_inner();
         let now = now_unix();
         let login_name = req.username.to_ascii_lowercase();
@@ -509,14 +634,16 @@ impl AuthnServiceImpl {
         // Block 1 (auth_fix.md, Decision E): resolve the user's role-derived
         // grants ONCE from the warm authz snapshot and thread them into both the
         // session record (the refresh carrier) and the issued JWT below.
-        let (scopes, roles) =
-            self.resolve_effective_grants(&user.user_id, &user.tenant_id, &user.project_id);
+        let grants = self.resolve_password_login_grants(&user, &requested_scopes)?;
+        let scopes = grants.scopes.clone();
+        let roles = grants.roles.clone();
         let session_result = self
             .create_login_session(
                 &user,
                 format!("{}|{}|{}", req.device_name, req.ip_address, req.user_agent),
                 scopes.clone(),
                 roles.clone(),
+                grants.service_identity.clone(),
                 now,
             )
             .await;
@@ -579,7 +706,7 @@ impl AuthnServiceImpl {
             &user.project_id,
             &scopes,
             &roles,
-            "",
+            &grants.service_identity,
             &session_id,
             "pwd",
             now,
@@ -607,8 +734,10 @@ impl AuthnServiceImpl {
             )
             .await
             .unwrap_or_default();
-        let refresh_token = self
-            .mint_refresh_family(
+        let refresh_token = if user.account_kind == authn::AccountKind::ServiceAccount {
+            String::new()
+        } else {
+            self.mint_refresh_family(
                 &user.user_id,
                 &user.user_id,
                 &user.tenant_id,
@@ -618,7 +747,8 @@ impl AuthnServiceImpl {
                 now,
             )
             .await
-            .unwrap_or_default();
+            .unwrap_or_default()
+        };
         let refresh_token_expires_in = if refresh_token.is_empty() {
             0
         } else {

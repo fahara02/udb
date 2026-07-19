@@ -47,6 +47,15 @@ pub fn table_for_message<'a>(
             let mut built = HashMap::new();
             for (idx, table) in manifest.tables.iter().enumerate() {
                 if !table.message_name.trim().is_empty() {
+                    // Register the FULLY-QUALIFIED name so an exact FQN query
+                    // resolves deterministically even when two packages reuse a
+                    // short name (e.g. `ambulife.authn.entity.v1.User` vs embedded
+                    // `udb.core.authn.entity.v1.User`). The bare short name below is
+                    // a convenience fallback only; under a short-name collision only
+                    // the FQN query is unambiguous.
+                    built
+                        .entry(table.message_fqn().to_ascii_lowercase())
+                        .or_insert(idx);
                     built.insert(table.message_name.to_ascii_lowercase(), idx);
                     if let Some(short) = table.message_name.rsplit('.').next() {
                         built.entry(short.to_ascii_lowercase()).or_insert(idx);
@@ -68,4 +77,45 @@ pub fn table_for_message<'a>(
             || table.table.eq_ignore_ascii_case(message_type)
             || table.table.eq_ignore_ascii_case(&leaf)
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn table(proto_package: &str, message: &str, schema: &str, name: &str) -> ManifestTable {
+        ManifestTable {
+            message_name: message.to_string(),
+            proto_package: proto_package.to_string(),
+            schema: schema.to_string(),
+            table: name.to_string(),
+            ..ManifestTable::default()
+        }
+    }
+
+    /// Two messages that share a short name but belong to different packages must
+    /// each resolve to their OWN table when queried by the fully-qualified name.
+    /// (UDB-SRV-003: embedded `udb.core.authn.entity.v1.User` vs consumer
+    /// `ambulife.authn.entity.v1.User`.)
+    #[test]
+    fn exact_fqn_disambiguates_shared_short_name() {
+        let manifest = CatalogManifest {
+            // Non-empty checksum so the cached index path (not just the linear
+            // fallback) is exercised.
+            checksum_sha256: "srv003-fqn-index".to_string(),
+            tables: vec![
+                table("ambulife.authn.entity.v1", "User", "authn", "users"),
+                table("udb.core.authn.entity.v1", "User", "udb_authn", "users"),
+            ],
+            ..CatalogManifest::default()
+        };
+
+        let consumer = table_for_message(&manifest, "ambulife.authn.entity.v1.User")
+            .expect("consumer FQN must resolve");
+        assert_eq!(consumer.schema, "authn");
+
+        let embedded = table_for_message(&manifest, "udb.core.authn.entity.v1.User")
+            .expect("embedded FQN must resolve");
+        assert_eq!(embedded.schema, "udb_authn");
+    }
 }

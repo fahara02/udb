@@ -17,7 +17,13 @@
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 UDB is a Rust gRPC broker that turns protobuf domain schemas into a runtime
-catalog and uses that catalog to route requests to configured backends.
+catalog, then uses that catalog to route requests to the backends you configure.
+
+This document is the map of how the broker is built: how a proto file becomes a
+live catalog, what happens to a request from the moment it arrives, and where
+each backend fits. Read it if you operate a broker, add a backend, or just want
+the mental model behind the SDK you call. If you only want to *use* a running
+broker, start with the SDK guides instead.
 
 <p align="center">
   <img src="assets/architecture-pipeline.svg" alt="UDB architecture pipeline from proto files to catalog generation, runtime authorization, routing, and backend execution" width="940">
@@ -44,21 +50,28 @@ configured operational signals.
 
 ## Principles
 
-UDB brokers access to external databases and services. Backends own their own
-storage durability and replication. UDB owns the request contract, catalog,
-routing, tenant context, authz, migrations, events, SDKs, and operational
-signals around that access.
+Three ideas hold the whole design together.
 
-Protobuf descriptors and UDB annotations define RPC surfaces, table and column
-metadata, endpoint security, field security, SDK surfaces, CLI scaffolds, event
-contracts, and native service identity. Runtime checks, generated manifests,
-docs, and SDKs all derive from that descriptor contract.
+**UDB brokers access; backends own their data.** The databases and services
+behind UDB keep their own storage durability and replication. UDB owns the layer
+around that access: the request contract, the catalog, routing, tenant context,
+authorization (authz), migrations, events, SDKs, and operational signals.
 
-UDB is explicit about capabilities. A backend is only offered for an operation
-when the current binary, configuration, runtime health, and backend semantics
-support that operation. Unsupported or degraded paths fail before side effects.
+**The protobuf contract is the single source of truth.** Protobuf descriptors
+and UDB annotations define RPC surfaces, table and column metadata, endpoint
+security, field security, SDK surfaces, CLI scaffolds, event contracts, and
+native service identity. Everything else — runtime checks, generated manifests,
+docs, and SDKs — derives from that one contract, so it can't drift out of sync.
+
+**Capabilities are explicit, never assumed.** UDB offers a backend for an
+operation only when the current binary, configuration, runtime health, and
+backend semantics all support it. Unsupported or degraded paths fail before they
+cause any side effect, rather than half-completing.
 
 ## Layers
+
+A request travels top to bottom through these layers — from the proto contract
+that defines it, down to the backend that executes it:
 
 | Layer | Role |
 |---|---|
@@ -76,6 +89,8 @@ support that operation. Unsupported or degraded paths fail before side effects.
   <img src="assets/request-flow.svg" alt="DataBroker request flow through metadata extraction, authz, channel admission, routing, backend execution, and side effects" width="940">
 </p>
 
+Here is what the broker does with a single data-plane call, step by step:
+
 1. A client sends a gRPC request with UDB metadata.
 2. The broker extracts tenant, project, purpose, user, service identity, scopes,
    correlation id, and client catalog version.
@@ -90,7 +105,8 @@ support that operation. Unsupported or degraded paths fail before side effects.
 
 ## Data Plane
 
-`DataBroker` exposes 77 RPCs for:
+`DataBroker` is the public data-plane API — the single service your app calls to
+work with data. Its RPCs cover:
 
 - relational CRUD and batch operations;
 - streaming record sets;
@@ -100,9 +116,10 @@ support that operation. Unsupported or degraded paths fail before side effects.
 - transactions, 2PC/XA, saga coordination, CDC, DLQ, catalog, migration, and
   admin health.
 
-The data plane is intentionally backend-neutral at the API boundary. Backend
-details are resolved through the active catalog, project routing rules, backend
-capabilities, and runtime configuration.
+The API boundary is deliberately backend-neutral: a caller never names a
+specific database. UDB resolves the backend behind the scenes from the active
+catalog, the project's routing rules, backend capabilities, and runtime
+configuration.
 
 ## Project Protos
 
@@ -153,8 +170,10 @@ udb plan proto --prior previous-manifest.json
 
 ## Neutral IR
 
-Data-plane calls lower into backend-neutral operations before they reach a
-backend compiler or executor.
+Before a data-plane call reaches any backend compiler or executor, UDB lowers it
+into a backend-neutral operation — an intermediate representation (IR) that
+describes *what* to do without naming a specific database dialect. Each call maps
+to one of these IR families:
 
 | IR family | Used for |
 |---|---|
@@ -165,18 +184,20 @@ backend compiler or executor.
 | `LogicalAggregate` | grouped analytical and SQL aggregate paths |
 | `LogicalResourceOp` | backend resource administration and lifecycle commands |
 
-Compiler modules render those neutral operations into SQL dialects, JSON/HTTP
-payloads, key/value commands, object storage calls, CQL, Cypher, or vector
-backend requests. This keeps the public API stable while backend details stay
-behind capability checks.
+From there, compiler modules render each neutral operation into whatever the
+target speaks: a SQL dialect, a JSON/HTTP payload, key/value commands, object
+storage calls, CQL, Cypher, or a vector backend request. This split is what keeps
+the public API stable while backend details stay behind capability checks.
 
 ## Native Control Plane
 
-The native control plane is served on a separate listener. Its descriptor-rendered
-service catalog covers identity, access control, storage, assets, WebRTC,
-tenancy, notifications, analytics, and policy distribution.
+Beyond raw data access, UDB ships a set of internal services — the native
+control plane. It runs on its own listener, separate from the data plane, and its
+descriptor-rendered service catalog covers identity, access control, storage,
+assets, WebRTC, tenancy, notifications, analytics, and policy distribution.
 
-See [native-services.md](native-services.md).
+For the full service-by-service breakdown, see
+[native-services.md](native-services.md).
 
 ## Backend Kinds
 
@@ -229,7 +250,8 @@ UDB separates backend identity from runtime availability:
 | Azure Blob | object | object projection | object storage with staged block behavior |
 | Google Cloud Storage | object | object projection | object storage and signed access workflows |
 
-UDB distinguishes:
+Put together, that means UDB keeps several separate facts straight about any
+backend:
 
 - known backend kind;
 - support compiled into the current binary;
@@ -349,6 +371,8 @@ guarantee, UDB reports that clearly and refuses operations that require the
 missing guarantee.
 
 ## Repository Map
+
+Where each piece of the architecture above lives in the source tree:
 
 | Path | Purpose |
 |---|---|

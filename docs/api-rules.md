@@ -1,5 +1,10 @@
 # UDB API Rules
 
+This is the rulebook for how UDB's public surface is named and shaped: the
+HTTP/JSON routes, the OpenAPI operation IDs, and the SDK method names. Read it if
+you add or change a public API — a new RPC, a route, an SDK alias, or an OpenAPI
+entry — or if you review that kind of change.
+
 UDB `0.3.7` is beta and pre-1.0. The purpose of this guide is to settle the
 HTTP/JSON API, OpenAPI, and SDK naming rules before the product reaches `1.0.0`.
 Until `1.0.0`, UDB may make breaking API and SDK changes when they simplify the
@@ -11,6 +16,13 @@ with this guide, treat the mismatch as migration work, not as precedent.
 
 ## Sources Of Truth
 
+UDB is proto-driven: the protobuf definitions and the descriptor metadata built
+from them are authoritative, and everything else — Swagger, SDK clients, docs —
+is generated from them. When two things disagree, this list says which one wins.
+"Descriptor metadata" here means the extra per-RPC annotations UDB carries
+alongside the proto (SDK aliases, operation IDs, security posture) and reads back
+at generation time.
+
 - Proto service definitions and `google.api.http` annotations own HTTP routing.
 - Descriptor metadata owns SDK aliases, OpenAPI operation IDs, security posture,
   and generated documentation.
@@ -20,7 +32,8 @@ with this guide, treat the mismatch as migration work, not as precedent.
 - Root docs should describe behavior that is actually served. If docs and code
   disagree, fix the descriptor/runtime path first.
 
-External design basis:
+These rules don't come from nowhere. They follow well-established industry
+guidance, cited here so you can check the reasoning at the source:
 
 - Google API Improvement Proposals: resource-oriented design
   (`https://google.aip.dev/121`), resource names
@@ -45,6 +58,10 @@ External design basis:
 
 ## Version And Compatibility
 
+While UDB is in `0.x`, the API is still allowed to change. These rules keep those
+changes honest — documented, batched, and clearly labeled — so the surface can be
+tidied up before `1.0.0` locks it in.
+
 - UDB product version `0.x` means beta. Do not claim stable backward
   compatibility for HTTP routes, OpenAPI operation IDs, or SDK method names.
 - Breaking `0.x` changes must have migration notes: old route or SDK name, new
@@ -58,6 +75,10 @@ External design basis:
   Do not use the protocol version to imply product API stability.
 
 ## URL Shape
+
+These rules make routes predictable: a developer should be able to guess a URL
+and be right. Kebab-case means lowercase words joined by hyphens
+(`api-keys`); snake_case joins them with underscores (`api_keys`).
 
 - All public HTTP routes start with `/v1`.
 - Literal path segments use lowercase kebab-case: `/v1/api-keys`, not
@@ -82,7 +103,8 @@ External design basis:
   is part of identity or authorization. Deep navigation paths are harder to
   evolve and should fail the style review unless justified.
 
-Allowed exceptions:
+A few surfaces answer to an outside standard rather than this style guide, so
+they are exempt:
 
 - SCIM keeps protocol-required resource names such as `Users` and `Groups`.
 - Well-known endpoints may keep protocol-defined names such as
@@ -117,6 +139,9 @@ collection they operate on.
 
 ## Resource Identity
 
+Every public resource needs one clear, stable way to name it — a canonical
+identity — and it must not leak internal database or backend identifiers.
+
 - Public resources should have one canonical identity form. Prefer stable string
   IDs in path variables and resource bodies.
 - Resource names should be path-shaped and stable across product versions when
@@ -133,6 +158,10 @@ collection they operate on.
   as the canonical public identity.
 
 ## Standard Methods
+
+Most operations are ordinary create/read/update/delete work, and each maps to one
+HTTP verb and path shape. Reach for these first; only invent a custom action when
+none of them fits.
 
 Use standard methods unless a custom action is clearly simpler.
 
@@ -161,6 +190,10 @@ Rules:
 
 ## Custom Actions
 
+When an operation genuinely isn't a create/get/list/update/delete — finalizing an
+upload, rotating a key, closing a room — model it as a custom action: a verb
+attached to its resource with a colon.
+
 Custom actions use a colon suffix:
 
 - `POST /v1/auth/otps:send`
@@ -185,6 +218,10 @@ Rules:
   routes/actions produce clearer OpenAPI and SDK methods.
 
 ## Query Parameters
+
+Use the query string to narrow or shape a read, never to tell the server what to
+do. Anything that decides an action or changes a read into a write belongs in the
+path and verb, not the query string.
 
 Query parameters are selectors and read modifiers, not command dispatch.
 
@@ -228,6 +265,9 @@ List and search rules:
 
 ## Request And Response Shape
 
+These rules keep payloads typed and self-describing, so an SDK can map them to
+real language types instead of loose bags of strings.
+
 - Request and response JSON names follow protobuf JSON mapping.
 - Resource IDs should be stable strings. Do not expose database primary key
   details unless the key is already the public resource ID.
@@ -243,6 +283,11 @@ List and search rules:
 - Avoid `map<string, string>` for structured data that the SDKs need to type.
 
 ## Errors
+
+UDB has exactly one error model, and every other surface is a view of it: the
+server returns a gRPC status plus a typed UDB detail, and HTTP/JSON responses and
+SDK exceptions are all mapped from that single source. There is never a second,
+hand-rolled error format.
 
 - The canonical server error model is gRPC status code/message plus UDB-native
   typed detail: a developer-facing `tonic::Status` message and an optional
@@ -369,6 +414,11 @@ status mapping (`https://connectrpc.com/docs/protocol/`).
 
 ## Idempotency And Retries
 
+An idempotency key is a client-supplied token that lets the server recognize a
+retried request as the same one and return the original result instead of doing
+the work twice. These rules say when to accept such a key and when a retry is safe
+to perform automatically.
+
 - Mutating create/action routes that clients may retry should accept an
   idempotency key or request ID at the request message level.
 - Idempotency keys are scoped to the operation type, tenant/project, and caller
@@ -382,6 +432,10 @@ status mapping (`https://connectrpc.com/docs/protocol/`).
 
 ## Identity, Tenant, And Authorization
 
+Who the caller is and which tenant they act in comes from the verified request
+context — the authenticated claims — never from a field the caller sets in the
+body. The rule of thumb: trust the claims, distrust the body.
+
 - The authenticated principal, tenant, project, scopes, and service identity
   come from verified metadata/claims, not from caller-controlled body fields.
 - Body fields such as `tenant_id`, `project_id`, `actor`, `created_by`, or
@@ -394,6 +448,11 @@ status mapping (`https://connectrpc.com/docs/protocol/`).
   actor and verifies it.
 
 ## OpenAPI Rules
+
+The `operationId` is the name each operation carries in the generated Swagger, and
+SDK generators turn it into a client method — so it has to be stable, unique, and
+readable. These rules also cover the UDB-specific vendor extensions the Swagger
+carries for downstream generation.
 
 - Every public HTTP RPC has a stable `operationId` from descriptor metadata.
 - `operationId` uses lowerCamelCase and describes user intent:
@@ -417,6 +476,11 @@ status mapping (`https://connectrpc.com/docs/protocol/`).
 
 ## SDK Rules
 
+The method names developers call in each SDK come from descriptor aliases, not
+from the raw proto RPC names. One snake_case alias at the source becomes the
+idiomatic name in every language, generated mechanically so the casing stays
+consistent.
+
 - Public SDK method names come from descriptor aliases, not raw proto RPC names.
 - Wire RPC names remain available only for transport dispatch and diagnostics.
 - Descriptor aliases are snake_case at the source:
@@ -433,6 +497,9 @@ status mapping (`https://connectrpc.com/docs/protocol/`).
 - SDK examples in docs must use the canonical alias names from generated output.
 
 ## Naming Rules
+
+Each layer of the surface has its own casing convention. This is the quick
+reference for which style goes where:
 
 - Resource path literals: lowercase kebab-case.
 - Proto field names: lower_snake_case.
@@ -469,6 +536,9 @@ Before adding or changing a public API route:
 - Did the route-style checker and native lint cover the rule being relied on?
 
 ## Adoption Plan
+
+These rules are being rolled out gradually, not all at once. This section records
+the order of that rollout so no step gets skipped.
 
 The implementation plan is Chapter 14 of the private masterplan:
 `private/masterplan/todos/14-api-sdk-standardization.md`.

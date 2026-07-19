@@ -236,7 +236,7 @@ func (s *EnterpriseSession) backgroundRefresh() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if refErr == nil && loadErr == nil && tok.AccessToken != "" {
-		s.bearer = "Bearer " + tok.AccessToken
+		s.setBearerLocked("Bearer " + tok.AccessToken)
 		s.lastRefreshErr = nil
 		s.poisoned = false
 		return
@@ -299,7 +299,8 @@ func (s *EnterpriseSession) Bearer() string {
 // currentBearer resolves the live bearer, refreshing the access token once when it
 // is expired or within the manager's refresh skew (concurrent callers share ONE
 // RefreshToken RPC via the TokenManager's single-flight). On success it atomically
-// updates the cached bearer so Bearer() reflects the refreshed token too. If
+// updates the cached bearer AND the generated client's authorization (setBearerLocked)
+// so Bearer() and generated-client calls both reflect the refreshed token too. If
 // refresh fails it returns the last-known bearer, which the broker rejects as
 // Unauthenticated — so a call never silently succeeds on an expired credential
 // (fail closed) rather than proceeding with a stale-but-valid-looking token.
@@ -317,9 +318,25 @@ func (s *EnterpriseSession) currentBearer(ctx context.Context) string {
 	}
 	bearer := "Bearer " + tok.AccessToken
 	s.mu.Lock()
-	s.bearer = bearer
+	s.setBearerLocked(bearer)
 	s.mu.Unlock()
 	return bearer
+}
+
+// setBearerLocked caches the refreshed bearer AND propagates it to the embedded
+// project's generated client so every bearer consumer stays in lockstep: the
+// data context (DataContext), the native context (NativeContext), Bearer(), and
+// generated-client escape-hatch calls (s.Generated.InvokeUnary / NewServerStream
+// / NewClientStream) all attach the SAME currently-valid access token. Without
+// this propagation the generated client would keep the initial static bearer that
+// LoginAndAdoptTenant installed and go Unauthenticated once it expired. The
+// generated client's SetAuthorization swaps its options atomically, so it is safe
+// to call while holding s.mu. Caller MUST hold s.mu.
+func (s *EnterpriseSession) setBearerLocked(bearer string) {
+	s.bearer = bearer
+	if s.Udb != nil && s.Udb.Generated != nil {
+		s.Udb.Generated.SetAuthorization(bearer)
+	}
 }
 
 // ValidateTenant fails fast (naming both values) if recordTenantID differs from

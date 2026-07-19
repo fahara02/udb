@@ -101,34 +101,39 @@ Per-service RPC counts (native control plane):
 | SDKs | Go, Python, TypeScript/Node, Java, C#, PHP/Laravel |
 | Release | crate/SDK version `0.4.14`, wire protocol `1.0.0` |
 
-## What's Battle-Tested
+## Why UDB
 
-UDB isn't a prototype. Every backend it advertises is exercised by live
-conformance tests against a real server, and the hard parts of putting one API in
-front of many databases are already handled for you:
+Any app that outgrows a single database ends up hand-writing the same plumbing:
+a client per datastore, a tenant filter on every query, retry and idempotency
+logic, an auth layer, a secrets store, a search index, a job runner. UDB is that
+plumbing — built once, behind one typed API — so your code stays about your
+product, not the seams between systems.
 
-- **Multi-tenant isolation that actually holds.** Row-level security is enforced
-  in the database, scoped by a canonical tenant **UUID** — not a string you can
-  typo. The SDKs resolve your human-readable tenant *code* (`"acme"`) to that UUID
-  for you, which removes the single most common first-integration bug: a code/UUID
-  mismatch that silently returns zero rows.
-- **Correctness you don't re-implement.** Read-after-write, idempotent retries
-  (keyed `Upsert`/`Delete` replay safely), typed errors on a stable wire contract,
-  and tenant/project binding are broker-owned. Your application code stays short
-  without the rules going quiet.
-- **A real control plane, not stubs.** Native identity (authentication,
-  authorization, API keys, IdP with SAML/SCIM), plus Vault, Lock, Scheduler,
-  Webhook, Search, Cache, LiveQuery, Config, Metering, Backup, Embedding,
-  Workflow, Storage, Assets, and WebRTC — all served through the same
-  tenant-scoped runtime.
-- **Broad backend coverage, one typed API.** Relational (Postgres, MySQL, SQLite,
-  SQL Server), document (MongoDB), vector (Qdrant, Weaviate, Pinecone), object
-  (S3, MinIO, GCS, Azure Blob), cache (Redis, Memcached), graph (Neo4j),
-  wide-column (Cassandra), analytics (ClickHouse), and search (Elasticsearch).
-- **Six SDKs from one contract.** Go, Python, TypeScript, Java, C#, and PHP are
-  generated from the same protos and checked for cross-language parity, so an
-  `Invoice` behaves the same in every language — and the full RPC surface is
-  measured live in each.
+- **Tenant isolation you can't forget to add.** Every row is scoped by a
+  canonical tenant UUID, enforced in the database — not by a `WHERE tenant = …`
+  you might leave off one query. Pass your human tenant code (`"acme"`) and the
+  SDK resolves it to the UUID, so the classic first-week bug — a code/UUID
+  mismatch that silently returns zero rows — simply can't happen.
+- **Writes that behave, so you delete code.** Read-after-write consistency,
+  idempotent `Upsert`/`Delete` (a retried mutation replays safely and reports
+  `was_duplicate`), and typed errors on a stable wire contract are built in —
+  correctness glue you'd otherwise re-write in every service.
+- **The rest of the backend, already built.** Auth with SSO, secrets, search,
+  cache, schedulers and durable workflows, webhooks, metering, embeddings, file
+  storage — the [control plane](#native-control-plane) you'd normally assemble
+  from a dozen vendors, all tenant-scoped and reached through the same SDK as your
+  data.
+- **Swap the database without a rewrite.** The same `Select`/`Upsert`/`Delete`
+  fronts [18 backend kinds](#backends) — relational, document, vector, object,
+  cache, graph, wide-column, analytics, and search — so choosing or changing a
+  store is a config decision, not a rewrite of your app.
+- **Identical behavior in every language.** The Go, Python, TypeScript, Java, C#,
+  and PHP SDKs are generated from one proto contract, so an `Invoice` behaves the
+  same in all six.
+
+None of this is aspirational: every backend and RPC is exercised by live
+conformance tests against a running broker in each language — the surface is
+proven, not just declared.
 
 ## How It Feels
 

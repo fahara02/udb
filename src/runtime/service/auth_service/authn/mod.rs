@@ -3625,6 +3625,7 @@ impl AuthnServiceImpl {
                 "webauthn".to_string(),
                 scopes.clone(),
                 roles.clone(),
+                String::new(),
                 now,
             )
             .await?;

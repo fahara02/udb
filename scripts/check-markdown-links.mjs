@@ -14,6 +14,11 @@ const ignoredDirs = new Set([
   "dist",
   "build",
   "private",
+  // Build/dependency caches are not UDB-authored docs — their vendored READMEs
+  // carry their own relative links that resolve only inside the upstream repo.
+  ".cache",
+  ".cargo",
+  ".gocache",
 ]);
 
 function walk(dir, out) {

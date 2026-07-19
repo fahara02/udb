@@ -9,8 +9,11 @@
   <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.4.14 | protocol v1.0.0</sub>
 </p>
 
-UDB uses one product version for the crate, release binaries, Docker image, and
-SDK packages, plus one separate wire-protocol version.
+This page explains how UDB numbers its releases, and it's the reference to reach
+for whenever you're cutting a release or bumping a version. The short version:
+UDB keeps one product version shared across everything it ships — the crate,
+the release binaries, the Docker image, and every SDK package — plus one
+separate wire-protocol version that only moves when the network contract changes.
 
 ## Current Versions
 
@@ -21,13 +24,15 @@ SDK packages, plus one separate wire-protocol version.
 | Wire protocol | `1.0.0` |
 | Release tag | `v0.4.14` |
 
-The source of truth is [versions.json](versions.json). Package manifests and SDK
-protocol constants are checked against it in CI.
+The single source of truth for all of these numbers is
+[versions.json](versions.json). Everything else — package manifests and SDK
+protocol constants — is checked against that file in CI, so you edit it in one
+place and the checks keep the rest honest.
 
 ## 0.4.14 Release Gate Assumptions
 
-Before tagging 0.4.14, the staged tree should satisfy the gates that failed the
-last two release attempts:
+Before you tag 0.4.14, the staged tree needs to pass the gates that tripped up
+the last two release attempts:
 
 - `node scripts/check-versions.mjs` must agree with [versions.json](versions.json).
 - `cargo fmt --all -- --check` must be clean.
@@ -37,6 +42,8 @@ last two release attempts:
   the MinIO buckets required by live SDK/native-service startup.
 
 ## Version Model
+
+Here are the rules the versions follow:
 
 - Product releases use SemVer: `MAJOR.MINOR.PATCH`.
 - The Rust crate, binaries, Docker image, and all SDKs share the same product
@@ -48,16 +55,16 @@ last two release attempts:
 
 ## Pre-1.0 Beta Compatibility
 
-UDB `0.x` releases are beta. Before `1.0.0`, HTTP routes, OpenAPI
-`operationId`s, SDK public method names, generated examples, and benchmark/API
-labels may change when the change simplifies the long-term public contract. The
-wire protocol version remains factual metadata; it is not a promise that the
-product API and SDK surface are stable during `0.x`.
+UDB `0.x` releases are beta, so please treat the public surface as still
+settling. Before `1.0.0`, HTTP routes, OpenAPI `operationId`s, SDK public method names,
+generated examples, and benchmark/API labels may change whenever that simplifies
+the long-term public contract. The wire protocol version remains factual metadata:
+it is not a promise that the product API and SDK surface are stable during `0.x`.
 
-Breaking `0.x` changes must be documented with migration notes, but those notes
-are not a backward-compatibility guarantee. Permanent compatibility shims should
-not be added for every beta route or SDK method name unless a specific release
-requires a temporary bridge.
+Breaking `0.x` changes must be documented with migration notes, but those notes are
+not a backward-compatibility guarantee. Don't add permanent compatibility shims for
+every beta route or SDK method name — reserve them for the rare release that
+genuinely needs a temporary bridge.
 
 The normative API/SDK rules are in [docs/api-rules.md](docs/api-rules.md).
 The current beta route and SDK alias migration fixture is
@@ -82,6 +89,10 @@ Use this template for any breaking API or SDK change before `1.0.0`:
 
 ## Check And Fix Versions
 
+To change a version, edit [versions.json](versions.json), then let this script
+push the change everywhere else. Run it plain to check, with `--fix` to apply,
+or with `--json` for machine-readable output:
+
 ```bash
 node scripts/check-versions.mjs
 node scripts/check-versions.mjs --fix
@@ -93,6 +104,9 @@ manifests, `sdk/UDB_PROTOCOL_VERSION`, and SDK protocol constants.
 
 ## Release Tags
 
+Git tags follow a fixed shape. Everything ships under one tag; the Go SDK is the
+one exception, because its module lives in a subdirectory:
+
 | Component | Tag |
 |---|---|
 | Crate, binaries, Docker, Python, TypeScript, C#, Java, PHP | `v<x.y.z>` |
@@ -102,6 +116,8 @@ Release workflows assert that the tag, manifests, and [versions.json](versions.j
 agree before publishing.
 
 ## Publishing Targets
+
+Each artifact publishes to its language's usual home:
 
 | Component | Target |
 |---|---|

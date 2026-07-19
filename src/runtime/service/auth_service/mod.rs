@@ -80,6 +80,43 @@ pub(super) fn now_unix() -> u64 {
         .unwrap_or(0)
 }
 
+/// AUTH-004 producer: bridges the sync `security::ApiKeyPrincipalResolver` seam to
+/// the async keyed-HMAC validator so `x-api-key` authenticates DataBroker CRUD from
+/// the stored key record. Reuses `authn::validate_api_key` (no second validator);
+/// `block_in_place` yields the multi-thread runtime worker while the DB lookup runs
+/// (`resolve` only ever runs inside a tonic handler, i.e. on a runtime worker).
+struct ApiKeyPrincipalResolverImpl {
+    store: Arc<PostgresApiKeyStore>,
+    hash_key: Vec<u8>,
+}
+
+impl crate::runtime::security::ApiKeyPrincipalResolver for ApiKeyPrincipalResolverImpl {
+    fn resolve(
+        &self,
+        raw_api_key: &str,
+    ) -> Result<Option<crate::runtime::security::ApiKeyPrincipal>, String> {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        let record = tokio::task::block_in_place(|| {
+            tokio::runtime::Handle::current().block_on(crate::runtime::authn::validate_api_key(
+                self.store.as_ref(),
+                raw_api_key,
+                &self.hash_key,
+                now,
+            ))
+        })?;
+        Ok(record.map(|rec| crate::runtime::security::ApiKeyPrincipal {
+            subject: rec.principal_id,
+            service_identity: rec.service_identity,
+            tenant_id: rec.tenant_id,
+            project_id: rec.project_id,
+            scopes: rec.scopes,
+        }))
+    }
+}
+
 impl DataBrokerService {
     /// Build the Stage-1 auth services for the gRPC server, seeding the authz
     /// snapshot from the broker's currently-loaded ABAC policies so both share
@@ -137,6 +174,19 @@ impl DataBrokerService {
                 )
             });
             let api_key_store = Arc::new(PostgresApiKeyStore::new(pool.clone(), ""));
+            // AUTH-004: ACTIVATE `x-api-key` auth on the DataBroker data plane by
+            // installing the principal resolver over THIS key store. The sync,
+            // header-only `security_from_request` bridges to the async keyed-HMAC
+            // validator `authn::validate_api_key` (no second validator, no in-memory
+            // store); the principal/tenant/project/scopes come only from the stored
+            // record, so a caller cannot widen a key via headers.
+            crate::runtime::security::install_api_key_principal_resolver(Arc::new(
+                ApiKeyPrincipalResolverImpl {
+                    store: api_key_store.clone(),
+                    hash_key: authn_config.api_key_hash_secret().as_bytes().to_vec(),
+                },
+            ));
+            let user_store: Arc<dyn UserStore> = Arc::new(PostgresUserStore::new(pool.clone(), ""));
             let session_store: Arc<dyn SessionStore> =
                 if authn_config.session_backend.eq_ignore_ascii_case("redis") {
                     #[cfg(feature = "redis")]
@@ -163,7 +213,7 @@ impl DataBrokerService {
                 security,
                 session_store,
                 api_key_store.clone(),
-                Arc::new(PostgresUserStore::new(pool.clone(), "")),
+                user_store.clone(),
             )
             .with_postgres(Some(pool.clone()))
             .with_runtime(Some(runtime.clone()))
@@ -178,6 +228,7 @@ impl DataBrokerService {
             (
                 authn,
                 ApiKeyServiceImpl::with_store(authn_config, api_key_store)
+                    .with_user_store(user_store)
                     .with_postgres(Some(pool.clone()))
                     .with_event_sink(event_sink.clone()),
             )
