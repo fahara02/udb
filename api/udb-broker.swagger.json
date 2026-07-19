@@ -23290,6 +23290,7 @@
         "parameters": [
           {
             "name": "jobId",
+            "description": "Canonical job id returned by Backfill/IngestDocument (server-assigned UUID).",
             "in": "path",
             "required": true,
             "type": "string"
@@ -23436,6 +23437,7 @@
         "parameters": [
           {
             "name": "jobId",
+            "description": "Canonical job id returned by Backfill/IngestDocument (server-assigned UUID).",
             "in": "path",
             "required": true,
             "type": "string"
@@ -23461,6 +23463,7 @@
           },
           {
             "name": "pageToken",
+            "description": "Opaque pagination token returned by ListEmbeddingWorkItemsResponse.next_page_token.",
             "in": "query",
             "required": false,
             "type": "string"
@@ -50993,7 +50996,8 @@
           }
         },
         "nextPageToken": {
-          "type": "string"
+          "type": "string",
+          "description": "Opaque pagination token; empty when this is the last page."
         },
         "message": {
           "type": "string"
@@ -53788,7 +53792,8 @@
           "type": "string"
         },
         "modelId": {
-          "type": "string"
+          "type": "string",
+          "description": "Stable public model id in caller-chosen format (e.g. \"text-embedding-3-small@1\");\n1-255 chars, no credentials — the registry rejects ids that fail validation."
         },
         "provider": {
           "type": "string"

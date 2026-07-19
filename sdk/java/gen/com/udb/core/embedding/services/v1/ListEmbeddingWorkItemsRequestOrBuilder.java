@@ -23,11 +23,19 @@ public interface ListEmbeddingWorkItemsRequestOrBuilder extends
       getTenantIdBytes();
 
   /**
+   * <pre>
+   * Canonical job id returned by Backfill/IngestDocument (server-assigned UUID).
+   * </pre>
+   *
    * <code>string job_id = 2 [json_name = "jobId"];</code>
    * @return The jobId.
    */
   java.lang.String getJobId();
   /**
+   * <pre>
+   * Canonical job id returned by Backfill/IngestDocument (server-assigned UUID).
+   * </pre>
+   *
    * <code>string job_id = 2 [json_name = "jobId"];</code>
    * @return The bytes for jobId.
    */
@@ -53,11 +61,19 @@ public interface ListEmbeddingWorkItemsRequestOrBuilder extends
   int getPageSize();
 
   /**
+   * <pre>
+   * Opaque pagination token returned by ListEmbeddingWorkItemsResponse.next_page_token.
+   * </pre>
+   *
    * <code>string page_token = 5 [json_name = "pageToken"];</code>
    * @return The pageToken.
    */
   java.lang.String getPageToken();
   /**
+   * <pre>
+   * Opaque pagination token returned by ListEmbeddingWorkItemsResponse.next_page_token.
+   * </pre>
+   *
    * <code>string page_token = 5 [json_name = "pageToken"];</code>
    * @return The bytes for pageToken.
    */

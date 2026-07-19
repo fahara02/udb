@@ -19,6 +19,8 @@ class GetEmbeddingJobStatusRequest extends \Google\Protobuf\Internal\Message
      */
     protected $tenant_id = '';
     /**
+     * Canonical job id returned by Backfill/IngestDocument (server-assigned UUID).
+     *
      * Generated from protobuf field <code>string job_id = 2 [json_name = "jobId"];</code>
      */
     protected $job_id = '';
@@ -31,6 +33,7 @@ class GetEmbeddingJobStatusRequest extends \Google\Protobuf\Internal\Message
      *
      *     @type string $tenant_id
      *     @type string $job_id
+     *           Canonical job id returned by Backfill/IngestDocument (server-assigned UUID).
      * }
      */
     public function __construct($data = NULL) {
@@ -61,6 +64,8 @@ class GetEmbeddingJobStatusRequest extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * Canonical job id returned by Backfill/IngestDocument (server-assigned UUID).
+     *
      * Generated from protobuf field <code>string job_id = 2 [json_name = "jobId"];</code>
      * @return string
      */
@@ -70,6 +75,8 @@ class GetEmbeddingJobStatusRequest extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * Canonical job id returned by Backfill/IngestDocument (server-assigned UUID).
+     *
      * Generated from protobuf field <code>string job_id = 2 [json_name = "jobId"];</code>
      * @param string $var
      * @return $this

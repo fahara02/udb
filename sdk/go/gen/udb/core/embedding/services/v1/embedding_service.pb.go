@@ -1545,33 +1545,35 @@ func (x *RerankConfig) GetFailOpen() bool {
 }
 
 type RegisterModelRequest struct {
-	state               protoimpl.MessageState `protogen:"open.v1"`
-	TenantId            string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	ModelId             string                 `protobuf:"bytes,2,opt,name=model_id,json=modelId,proto3" json:"model_id,omitempty"`
-	Provider            string                 `protobuf:"bytes,3,opt,name=provider,proto3" json:"provider,omitempty"`
-	ModelName           string                 `protobuf:"bytes,4,opt,name=model_name,json=modelName,proto3" json:"model_name,omitempty"`
-	Version             string                 `protobuf:"bytes,5,opt,name=version,proto3" json:"version,omitempty"`
-	Dimensions          int32                  `protobuf:"varint,6,opt,name=dimensions,proto3" json:"dimensions,omitempty"`
-	MatryoshkaDims      []int32                `protobuf:"varint,7,rep,packed,name=matryoshka_dims,json=matryoshkaDims,proto3" json:"matryoshka_dims,omitempty"`
-	DistanceMetric      string                 `protobuf:"bytes,8,opt,name=distance_metric,json=distanceMetric,proto3" json:"distance_metric,omitempty"`
-	Normalize           bool                   `protobuf:"varint,9,opt,name=normalize,proto3" json:"normalize,omitempty"`
-	OutputDtype         string                 `protobuf:"bytes,10,opt,name=output_dtype,json=outputDtype,proto3" json:"output_dtype,omitempty"`
-	Rescore             bool                   `protobuf:"varint,11,opt,name=rescore,proto3" json:"rescore,omitempty"`
-	MaxInputTokens      int32                  `protobuf:"varint,12,opt,name=max_input_tokens,json=maxInputTokens,proto3" json:"max_input_tokens,omitempty"`
-	Tokenizer           string                 `protobuf:"bytes,13,opt,name=tokenizer,proto3" json:"tokenizer,omitempty"`
-	TaskType            string                 `protobuf:"bytes,14,opt,name=task_type,json=taskType,proto3" json:"task_type,omitempty"`
-	Asymmetric          bool                   `protobuf:"varint,15,opt,name=asymmetric,proto3" json:"asymmetric,omitempty"`
-	ProviderEndpointRef string                 `protobuf:"bytes,16,opt,name=provider_endpoint_ref,json=providerEndpointRef,proto3" json:"provider_endpoint_ref,omitempty"`
-	VectorBackend       string                 `protobuf:"bytes,17,opt,name=vector_backend,json=vectorBackend,proto3" json:"vector_backend,omitempty"`
-	VectorInstance      string                 `protobuf:"bytes,18,opt,name=vector_instance,json=vectorInstance,proto3" json:"vector_instance,omitempty"`
-	CollectionAlias     string                 `protobuf:"bytes,19,opt,name=collection_alias,json=collectionAlias,proto3" json:"collection_alias,omitempty"`
-	ActiveCollection    string                 `protobuf:"bytes,20,opt,name=active_collection,json=activeCollection,proto3" json:"active_collection,omitempty"`
-	ChunkingStrategy    string                 `protobuf:"bytes,21,opt,name=chunking_strategy,json=chunkingStrategy,proto3" json:"chunking_strategy,omitempty"`
-	ChunkTokens         int32                  `protobuf:"varint,22,opt,name=chunk_tokens,json=chunkTokens,proto3" json:"chunk_tokens,omitempty"`
-	ChunkOverlapTokens  int32                  `protobuf:"varint,23,opt,name=chunk_overlap_tokens,json=chunkOverlapTokens,proto3" json:"chunk_overlap_tokens,omitempty"`
-	ContextualRetrieval bool                   `protobuf:"varint,24,opt,name=contextual_retrieval,json=contextualRetrieval,proto3" json:"contextual_retrieval,omitempty"`
-	LateChunking        bool                   `protobuf:"varint,25,opt,name=late_chunking,json=lateChunking,proto3" json:"late_chunking,omitempty"`
-	MetadataJson        string                 `protobuf:"bytes,26,opt,name=metadata_json,json=metadataJson,proto3" json:"metadata_json,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	TenantId string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	// Stable public model id in caller-chosen format (e.g. "text-embedding-3-small@1");
+	// 1-255 chars, no credentials — the registry rejects ids that fail validation.
+	ModelId             string  `protobuf:"bytes,2,opt,name=model_id,json=modelId,proto3" json:"model_id,omitempty"`
+	Provider            string  `protobuf:"bytes,3,opt,name=provider,proto3" json:"provider,omitempty"`
+	ModelName           string  `protobuf:"bytes,4,opt,name=model_name,json=modelName,proto3" json:"model_name,omitempty"`
+	Version             string  `protobuf:"bytes,5,opt,name=version,proto3" json:"version,omitempty"`
+	Dimensions          int32   `protobuf:"varint,6,opt,name=dimensions,proto3" json:"dimensions,omitempty"`
+	MatryoshkaDims      []int32 `protobuf:"varint,7,rep,packed,name=matryoshka_dims,json=matryoshkaDims,proto3" json:"matryoshka_dims,omitempty"`
+	DistanceMetric      string  `protobuf:"bytes,8,opt,name=distance_metric,json=distanceMetric,proto3" json:"distance_metric,omitempty"`
+	Normalize           bool    `protobuf:"varint,9,opt,name=normalize,proto3" json:"normalize,omitempty"`
+	OutputDtype         string  `protobuf:"bytes,10,opt,name=output_dtype,json=outputDtype,proto3" json:"output_dtype,omitempty"`
+	Rescore             bool    `protobuf:"varint,11,opt,name=rescore,proto3" json:"rescore,omitempty"`
+	MaxInputTokens      int32   `protobuf:"varint,12,opt,name=max_input_tokens,json=maxInputTokens,proto3" json:"max_input_tokens,omitempty"`
+	Tokenizer           string  `protobuf:"bytes,13,opt,name=tokenizer,proto3" json:"tokenizer,omitempty"`
+	TaskType            string  `protobuf:"bytes,14,opt,name=task_type,json=taskType,proto3" json:"task_type,omitempty"`
+	Asymmetric          bool    `protobuf:"varint,15,opt,name=asymmetric,proto3" json:"asymmetric,omitempty"`
+	ProviderEndpointRef string  `protobuf:"bytes,16,opt,name=provider_endpoint_ref,json=providerEndpointRef,proto3" json:"provider_endpoint_ref,omitempty"`
+	VectorBackend       string  `protobuf:"bytes,17,opt,name=vector_backend,json=vectorBackend,proto3" json:"vector_backend,omitempty"`
+	VectorInstance      string  `protobuf:"bytes,18,opt,name=vector_instance,json=vectorInstance,proto3" json:"vector_instance,omitempty"`
+	CollectionAlias     string  `protobuf:"bytes,19,opt,name=collection_alias,json=collectionAlias,proto3" json:"collection_alias,omitempty"`
+	ActiveCollection    string  `protobuf:"bytes,20,opt,name=active_collection,json=activeCollection,proto3" json:"active_collection,omitempty"`
+	ChunkingStrategy    string  `protobuf:"bytes,21,opt,name=chunking_strategy,json=chunkingStrategy,proto3" json:"chunking_strategy,omitempty"`
+	ChunkTokens         int32   `protobuf:"varint,22,opt,name=chunk_tokens,json=chunkTokens,proto3" json:"chunk_tokens,omitempty"`
+	ChunkOverlapTokens  int32   `protobuf:"varint,23,opt,name=chunk_overlap_tokens,json=chunkOverlapTokens,proto3" json:"chunk_overlap_tokens,omitempty"`
+	ContextualRetrieval bool    `protobuf:"varint,24,opt,name=contextual_retrieval,json=contextualRetrieval,proto3" json:"contextual_retrieval,omitempty"`
+	LateChunking        bool    `protobuf:"varint,25,opt,name=late_chunking,json=lateChunking,proto3" json:"late_chunking,omitempty"`
+	MetadataJson        string  `protobuf:"bytes,26,opt,name=metadata_json,json=metadataJson,proto3" json:"metadata_json,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -2533,9 +2535,10 @@ func (x *CutoverModelAliasResponse) GetError() *v1.ApiError {
 }
 
 type GetEmbeddingJobStatusRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	JobId         string                 `protobuf:"bytes,2,opt,name=job_id,json=jobId,proto3" json:"job_id,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	TenantId string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	// Canonical job id returned by Backfill/IngestDocument (server-assigned UUID).
+	JobId         string `protobuf:"bytes,2,opt,name=job_id,json=jobId,proto3" json:"job_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2785,12 +2788,14 @@ func (x *GetEmbeddingJobStatusResponse) GetError() *v1.ApiError {
 }
 
 type ListEmbeddingWorkItemsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	JobId         string                 `protobuf:"bytes,2,opt,name=job_id,json=jobId,proto3" json:"job_id,omitempty"`
-	Status        string                 `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
-	PageSize      int32                  `protobuf:"varint,4,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	PageToken     string                 `protobuf:"bytes,5,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	TenantId string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	// Canonical job id returned by Backfill/IngestDocument (server-assigned UUID).
+	JobId    string `protobuf:"bytes,2,opt,name=job_id,json=jobId,proto3" json:"job_id,omitempty"`
+	Status   string `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
+	PageSize int32  `protobuf:"varint,4,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// Opaque pagination token returned by ListEmbeddingWorkItemsResponse.next_page_token.
+	PageToken     string `protobuf:"bytes,5,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2985,11 +2990,12 @@ func (x *EmbeddingWorkItemSummary) GetNextAttemptAtUnixMs() int64 {
 }
 
 type ListEmbeddingWorkItemsResponse struct {
-	state         protoimpl.MessageState      `protogen:"open.v1"`
-	WorkItems     []*EmbeddingWorkItemSummary `protobuf:"bytes,1,rep,name=work_items,json=workItems,proto3" json:"work_items,omitempty"`
-	NextPageToken string                      `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
-	Message       string                      `protobuf:"bytes,3,opt,name=message,proto3" json:"message,omitempty"`
-	Error         *v1.ApiError                `protobuf:"bytes,4,opt,name=error,proto3" json:"error,omitempty"`
+	state     protoimpl.MessageState      `protogen:"open.v1"`
+	WorkItems []*EmbeddingWorkItemSummary `protobuf:"bytes,1,rep,name=work_items,json=workItems,proto3" json:"work_items,omitempty"`
+	// Opaque pagination token; empty when this is the last page.
+	NextPageToken string       `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	Message       string       `protobuf:"bytes,3,opt,name=message,proto3" json:"message,omitempty"`
+	Error         *v1.ApiError `protobuf:"bytes,4,opt,name=error,proto3" json:"error,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

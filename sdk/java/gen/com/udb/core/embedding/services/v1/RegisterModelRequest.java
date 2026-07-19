@@ -103,6 +103,11 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private volatile java.lang.Object modelId_ = "";
   /**
+   * <pre>
+   * Stable public model id in caller-chosen format (e.g. "text-embedding-3-small&#64;1");
+   * 1-255 chars, no credentials — the registry rejects ids that fail validation.
+   * </pre>
+   *
    * <code>string model_id = 2 [json_name = "modelId"];</code>
    * @return The modelId.
    */
@@ -120,6 +125,11 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
+   * <pre>
+   * Stable public model id in caller-chosen format (e.g. "text-embedding-3-small&#64;1");
+   * 1-255 chars, no credentials — the registry rejects ids that fail validation.
+   * </pre>
+   *
    * <code>string model_id = 2 [json_name = "modelId"];</code>
    * @return The bytes for modelId.
    */
@@ -1813,6 +1823,11 @@ private static final long serialVersionUID = 0L;
 
     private java.lang.Object modelId_ = "";
     /**
+     * <pre>
+     * Stable public model id in caller-chosen format (e.g. "text-embedding-3-small&#64;1");
+     * 1-255 chars, no credentials — the registry rejects ids that fail validation.
+     * </pre>
+     *
      * <code>string model_id = 2 [json_name = "modelId"];</code>
      * @return The modelId.
      */
@@ -1829,6 +1844,11 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
+     * <pre>
+     * Stable public model id in caller-chosen format (e.g. "text-embedding-3-small&#64;1");
+     * 1-255 chars, no credentials — the registry rejects ids that fail validation.
+     * </pre>
+     *
      * <code>string model_id = 2 [json_name = "modelId"];</code>
      * @return The bytes for modelId.
      */
@@ -1846,6 +1866,11 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
+     * <pre>
+     * Stable public model id in caller-chosen format (e.g. "text-embedding-3-small&#64;1");
+     * 1-255 chars, no credentials — the registry rejects ids that fail validation.
+     * </pre>
+     *
      * <code>string model_id = 2 [json_name = "modelId"];</code>
      * @param value The modelId to set.
      * @return This builder for chaining.
@@ -1859,6 +1884,11 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * Stable public model id in caller-chosen format (e.g. "text-embedding-3-small&#64;1");
+     * 1-255 chars, no credentials — the registry rejects ids that fail validation.
+     * </pre>
+     *
      * <code>string model_id = 2 [json_name = "modelId"];</code>
      * @return This builder for chaining.
      */
@@ -1869,6 +1899,11 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * Stable public model id in caller-chosen format (e.g. "text-embedding-3-small&#64;1");
+     * 1-255 chars, no credentials — the registry rejects ids that fail validation.
+     * </pre>
+     *
      * <code>string model_id = 2 [json_name = "modelId"];</code>
      * @param value The bytes for modelId to set.
      * @return This builder for chaining.

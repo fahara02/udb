@@ -19,6 +19,9 @@ class RegisterModelRequest extends \Google\Protobuf\Internal\Message
      */
     protected $tenant_id = '';
     /**
+     * Stable public model id in caller-chosen format (e.g. "text-embedding-3-small\@1");
+     * 1-255 chars, no credentials — the registry rejects ids that fail validation.
+     *
      * Generated from protobuf field <code>string model_id = 2 [json_name = "modelId"];</code>
      */
     protected $model_id = '';
@@ -127,6 +130,8 @@ class RegisterModelRequest extends \Google\Protobuf\Internal\Message
      *
      *     @type string $tenant_id
      *     @type string $model_id
+     *           Stable public model id in caller-chosen format (e.g. "text-embedding-3-small\@1");
+     *           1-255 chars, no credentials — the registry rejects ids that fail validation.
      *     @type string $provider
      *     @type string $model_name
      *     @type string $version
@@ -181,6 +186,9 @@ class RegisterModelRequest extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * Stable public model id in caller-chosen format (e.g. "text-embedding-3-small\@1");
+     * 1-255 chars, no credentials — the registry rejects ids that fail validation.
+     *
      * Generated from protobuf field <code>string model_id = 2 [json_name = "modelId"];</code>
      * @return string
      */
@@ -190,6 +198,9 @@ class RegisterModelRequest extends \Google\Protobuf\Internal\Message
     }
 
     /**
+     * Stable public model id in caller-chosen format (e.g. "text-embedding-3-small\@1");
+     * 1-255 chars, no credentials — the registry rejects ids that fail validation.
+     *
      * Generated from protobuf field <code>string model_id = 2 [json_name = "modelId"];</code>
      * @param string $var
      * @return $this

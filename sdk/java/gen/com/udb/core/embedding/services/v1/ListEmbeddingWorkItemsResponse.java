@@ -92,6 +92,10 @@ private static final long serialVersionUID = 0L;
   @SuppressWarnings("serial")
   private volatile java.lang.Object nextPageToken_ = "";
   /**
+   * <pre>
+   * Opaque pagination token; empty when this is the last page.
+   * </pre>
+   *
    * <code>string next_page_token = 2 [json_name = "nextPageToken"];</code>
    * @return The nextPageToken.
    */
@@ -109,6 +113,10 @@ private static final long serialVersionUID = 0L;
     }
   }
   /**
+   * <pre>
+   * Opaque pagination token; empty when this is the last page.
+   * </pre>
+   *
    * <code>string next_page_token = 2 [json_name = "nextPageToken"];</code>
    * @return The bytes for nextPageToken.
    */
@@ -870,6 +878,10 @@ private static final long serialVersionUID = 0L;
 
     private java.lang.Object nextPageToken_ = "";
     /**
+     * <pre>
+     * Opaque pagination token; empty when this is the last page.
+     * </pre>
+     *
      * <code>string next_page_token = 2 [json_name = "nextPageToken"];</code>
      * @return The nextPageToken.
      */
@@ -886,6 +898,10 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
+     * <pre>
+     * Opaque pagination token; empty when this is the last page.
+     * </pre>
+     *
      * <code>string next_page_token = 2 [json_name = "nextPageToken"];</code>
      * @return The bytes for nextPageToken.
      */
@@ -903,6 +919,10 @@ private static final long serialVersionUID = 0L;
       }
     }
     /**
+     * <pre>
+     * Opaque pagination token; empty when this is the last page.
+     * </pre>
+     *
      * <code>string next_page_token = 2 [json_name = "nextPageToken"];</code>
      * @param value The nextPageToken to set.
      * @return This builder for chaining.
@@ -916,6 +936,10 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * Opaque pagination token; empty when this is the last page.
+     * </pre>
+     *
      * <code>string next_page_token = 2 [json_name = "nextPageToken"];</code>
      * @return This builder for chaining.
      */
@@ -926,6 +950,10 @@ private static final long serialVersionUID = 0L;
       return this;
     }
     /**
+     * <pre>
+     * Opaque pagination token; empty when this is the last page.
+     * </pre>
+     *
      * <code>string next_page_token = 2 [json_name = "nextPageToken"];</code>
      * @param value The bytes for nextPageToken to set.
      * @return This builder for chaining.

@@ -23,11 +23,21 @@ public interface RegisterModelRequestOrBuilder extends
       getTenantIdBytes();
 
   /**
+   * <pre>
+   * Stable public model id in caller-chosen format (e.g. "text-embedding-3-small&#64;1");
+   * 1-255 chars, no credentials — the registry rejects ids that fail validation.
+   * </pre>
+   *
    * <code>string model_id = 2 [json_name = "modelId"];</code>
    * @return The modelId.
    */
   java.lang.String getModelId();
   /**
+   * <pre>
+   * Stable public model id in caller-chosen format (e.g. "text-embedding-3-small&#64;1");
+   * 1-255 chars, no credentials — the registry rejects ids that fail validation.
+   * </pre>
+   *
    * <code>string model_id = 2 [json_name = "modelId"];</code>
    * @return The bytes for modelId.
    */
