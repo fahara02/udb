@@ -30,6 +30,7 @@ private static final long serialVersionUID = 0L;
   private VectorSearchRequest() {
     collection_ = "";
     vector_ = emptyFloatList();
+    vectorName_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -200,6 +201,67 @@ private static final long serialVersionUID = 0L;
     return withPayload_;
   }
 
+  public static final int WITH_VECTOR_FIELD_NUMBER = 8;
+  private boolean withVector_ = false;
+  /**
+   * <code>bool with_vector = 8 [json_name = "withVector"];</code>
+   * @return The withVector.
+   */
+  @java.lang.Override
+  public boolean getWithVector() {
+    return withVector_;
+  }
+
+  public static final int VECTOR_NAME_FIELD_NUMBER = 9;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object vectorName_ = "";
+  /**
+   * <code>string vector_name = 9 [json_name = "vectorName"];</code>
+   * @return The vectorName.
+   */
+  @java.lang.Override
+  public java.lang.String getVectorName() {
+    java.lang.Object ref = vectorName_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      vectorName_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string vector_name = 9 [json_name = "vectorName"];</code>
+   * @return The bytes for vectorName.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getVectorNameBytes() {
+    java.lang.Object ref = vectorName_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      vectorName_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int QUANTIZATION_RESCORE_FIELD_NUMBER = 10;
+  private boolean quantizationRescore_ = false;
+  /**
+   * <code>bool quantization_rescore = 10 [json_name = "quantizationRescore"];</code>
+   * @return The quantizationRescore.
+   */
+  @java.lang.Override
+  public boolean getQuantizationRescore() {
+    return quantizationRescore_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -239,6 +301,15 @@ private static final long serialVersionUID = 0L;
     }
     if (withPayload_ != false) {
       output.writeBool(7, withPayload_);
+    }
+    if (withVector_ != false) {
+      output.writeBool(8, withVector_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(vectorName_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 9, vectorName_);
+    }
+    if (quantizationRescore_ != false) {
+      output.writeBool(10, quantizationRescore_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -283,6 +354,17 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeBoolSize(7, withPayload_);
     }
+    if (withVector_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(8, withVector_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(vectorName_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(9, vectorName_);
+    }
+    if (quantizationRescore_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(10, quantizationRescore_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -319,6 +401,12 @@ private static final long serialVersionUID = 0L;
             other.getScoreThreshold())) return false;
     if (getWithPayload()
         != other.getWithPayload()) return false;
+    if (getWithVector()
+        != other.getWithVector()) return false;
+    if (!getVectorName()
+        .equals(other.getVectorName())) return false;
+    if (getQuantizationRescore()
+        != other.getQuantizationRescore()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -352,6 +440,14 @@ private static final long serialVersionUID = 0L;
     hash = (37 * hash) + WITH_PAYLOAD_FIELD_NUMBER;
     hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
         getWithPayload());
+    hash = (37 * hash) + WITH_VECTOR_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getWithVector());
+    hash = (37 * hash) + VECTOR_NAME_FIELD_NUMBER;
+    hash = (53 * hash) + getVectorName().hashCode();
+    hash = (37 * hash) + QUANTIZATION_RESCORE_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getQuantizationRescore());
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -505,6 +601,9 @@ private static final long serialVersionUID = 0L;
       limit_ = 0;
       scoreThreshold_ = 0F;
       withPayload_ = false;
+      withVector_ = false;
+      vectorName_ = "";
+      quantizationRescore_ = false;
       return this;
     }
 
@@ -567,6 +666,15 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000040) != 0)) {
         result.withPayload_ = withPayload_;
       }
+      if (((from_bitField0_ & 0x00000080) != 0)) {
+        result.withVector_ = withVector_;
+      }
+      if (((from_bitField0_ & 0x00000100) != 0)) {
+        result.vectorName_ = vectorName_;
+      }
+      if (((from_bitField0_ & 0x00000200) != 0)) {
+        result.quantizationRescore_ = quantizationRescore_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -612,6 +720,17 @@ private static final long serialVersionUID = 0L;
       }
       if (other.getWithPayload() != false) {
         setWithPayload(other.getWithPayload());
+      }
+      if (other.getWithVector() != false) {
+        setWithVector(other.getWithVector());
+      }
+      if (!other.getVectorName().isEmpty()) {
+        vectorName_ = other.vectorName_;
+        bitField0_ |= 0x00000100;
+        onChanged();
+      }
+      if (other.getQuantizationRescore() != false) {
+        setQuantizationRescore(other.getQuantizationRescore());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -690,6 +809,21 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000040;
               break;
             } // case 56
+            case 64: {
+              withVector_ = input.readBool();
+              bitField0_ |= 0x00000080;
+              break;
+            } // case 64
+            case 74: {
+              vectorName_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000100;
+              break;
+            } // case 74
+            case 80: {
+              quantizationRescore_ = input.readBool();
+              bitField0_ |= 0x00000200;
+              break;
+            } // case 80
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1203,6 +1337,142 @@ private static final long serialVersionUID = 0L;
     public Builder clearWithPayload() {
       bitField0_ = (bitField0_ & ~0x00000040);
       withPayload_ = false;
+      onChanged();
+      return this;
+    }
+
+    private boolean withVector_ ;
+    /**
+     * <code>bool with_vector = 8 [json_name = "withVector"];</code>
+     * @return The withVector.
+     */
+    @java.lang.Override
+    public boolean getWithVector() {
+      return withVector_;
+    }
+    /**
+     * <code>bool with_vector = 8 [json_name = "withVector"];</code>
+     * @param value The withVector to set.
+     * @return This builder for chaining.
+     */
+    public Builder setWithVector(boolean value) {
+
+      withVector_ = value;
+      bitField0_ |= 0x00000080;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>bool with_vector = 8 [json_name = "withVector"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearWithVector() {
+      bitField0_ = (bitField0_ & ~0x00000080);
+      withVector_ = false;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object vectorName_ = "";
+    /**
+     * <code>string vector_name = 9 [json_name = "vectorName"];</code>
+     * @return The vectorName.
+     */
+    public java.lang.String getVectorName() {
+      java.lang.Object ref = vectorName_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        vectorName_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>string vector_name = 9 [json_name = "vectorName"];</code>
+     * @return The bytes for vectorName.
+     */
+    public com.google.protobuf.ByteString
+        getVectorNameBytes() {
+      java.lang.Object ref = vectorName_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        vectorName_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string vector_name = 9 [json_name = "vectorName"];</code>
+     * @param value The vectorName to set.
+     * @return This builder for chaining.
+     */
+    public Builder setVectorName(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      vectorName_ = value;
+      bitField0_ |= 0x00000100;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string vector_name = 9 [json_name = "vectorName"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearVectorName() {
+      vectorName_ = getDefaultInstance().getVectorName();
+      bitField0_ = (bitField0_ & ~0x00000100);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string vector_name = 9 [json_name = "vectorName"];</code>
+     * @param value The bytes for vectorName to set.
+     * @return This builder for chaining.
+     */
+    public Builder setVectorNameBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      vectorName_ = value;
+      bitField0_ |= 0x00000100;
+      onChanged();
+      return this;
+    }
+
+    private boolean quantizationRescore_ ;
+    /**
+     * <code>bool quantization_rescore = 10 [json_name = "quantizationRescore"];</code>
+     * @return The quantizationRescore.
+     */
+    @java.lang.Override
+    public boolean getQuantizationRescore() {
+      return quantizationRescore_;
+    }
+    /**
+     * <code>bool quantization_rescore = 10 [json_name = "quantizationRescore"];</code>
+     * @param value The quantizationRescore to set.
+     * @return This builder for chaining.
+     */
+    public Builder setQuantizationRescore(boolean value) {
+
+      quantizationRescore_ = value;
+      bitField0_ |= 0x00000200;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>bool quantization_rescore = 10 [json_name = "quantizationRescore"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearQuantizationRescore() {
+      bitField0_ = (bitField0_ & ~0x00000200);
+      quantizationRescore_ = false;
       onChanged();
       return this;
     }

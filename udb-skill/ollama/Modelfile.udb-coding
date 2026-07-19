@@ -412,6 +412,60 @@ note `— DONE (date): <what> (file:line)` · out-of-fence edits reported, not
 made. An honest `[~]` beats a false `[x]`: completion claims are re-audited
 adversarially against source, and false completions ARE found.
 
+## 13. Releasing a version (the full checklist — do IN ORDER)
+
+Version is one source of truth: `versions.json`. **Never hand-edit a version
+anywhere else.**
+
+1. **Bump.** Edit `versions.json`, then `node scripts/check-versions.mjs --fix`.
+   This propagates to `Cargo.toml`, `Cargo.lock`, every SDK manifest/launcher/
+   generated client, `docs/generated/udb-native-contract.json`, swagger, the
+   release-workflow refs, AND `docs/site/**` (footers, index pill, sdks install
+   table — these are now gated; they previously drifted to 0.3.6 unnoticed).
+   Verify with `node scripts/check-versions.mjs` (exit 0 = the CI gate).
+2. **Proto/RPC change?** Run the full ch17 9-surface regen FIRST (buf stubs →
+   `udb native manifest/docs` → GOLDEN → bench bodies+counts → authn/authz
+   inventory → http-api report). A pure version bump needs NO regen.
+3. **Local gate sweep BEFORE any push** (hard-won: docs changes break gates that
+   pin *exact prose strings*). Run at minimum:
+   `node scripts/check-versions.mjs` · `check-beta-versioning-posture.py`
+   (pins beta-compat sentences in VERSIONING.md + api-rules.md) ·
+   `check-doc-service-counts.py` (NO hand-written `N services/M RPCs` in prose —
+   counts live only in the README generated block) ·
+   `check-docs-ci-freshness-posture.py` (pins strings in native-services.md) ·
+   `check-markdown-links.mjs` · `check-error-detail-posture.py` ·
+   `check-openapi-operationid-posture.py` · `check-bench-harness-posture.py` ·
+   `cargo fmt --check` (edition 2024). Fixing a doc AFTER it fails CI wastes a
+   full runner cycle — sweep locally first.
+4. **PR → main.** PR CI runs the FAST subset (`if: github.event_name ==
+   'pull_request'`). Green here ≠ fully validated.
+5. **Merge → main.** Main CI (`push` event) runs the FULL matrix: the
+   push-gated jobs (SIMD, AArch64, live canonical stores, Plugin-feature ×
+   backends, Auth-binary × platforms) that PRs skip by design.
+6. **WAIT for main CI green BEFORE tagging.** `release.yml`'s `ci-green` gate
+   requires main's full CI green; tag too early and the release fails at the gate
+   with everything downstream skipped (not failed — skipped). If it does, fix
+   main CI then `gh run rerun <release-run-id>`.
+7. **Tag `v{version}`.** `git tag v{version} origin/main && git push origin
+   v{version}` → `release.yml`: ci-green → build-binaries × 5 platforms (release
+   profile, slow — 20–40 min) → publish crates/docker(ghcr)/npm/pypi/nuget/
+   packagist → GitHub Release + assets. Publish only starts after ALL binaries.
+8. **Benchmarks + Pages.** `benchmark-sdks.yml` triggers on `Release` completion
+   (`workflow_run`); `pages.yml` is the SOLE Pages deployer (consumes the
+   `sdk-benchmark-results` artifact). GOTCHA: the release-gated bench job runs
+   only when the triggering run's `head_branch` starts with `v` — it often
+   `skipped`s, leaving stale live benchmarks. Fallback: `gh workflow run
+   benchmark-sdks.yml -f release_tag=v{version} -f
+   release_asset=udb-linux-amd64-full`.
+9. **Verify live.** `gh release view v{version}` (all 5 assets + publish jobs
+   success); the published crate/npm/pypi/nuget; and the GitHub Pages site shows
+   the new version + fresh benchmarks (not a stale RPC count).
+
+**Env gotchas:** the local full-crate build is flaky (disk fills
+`target/debug/incremental` → `rm -rf` it + `CARGO_INCREMENTAL=0`; linker
+`LNK1104` temp locks). For a local SDK grind, prefer downloading the release
+binary (`gh release download v{version} -p udb-windows-amd64.exe`) over building.
+
 ---
 
 # UDB Rust stack — how THIS repo uses the toolchain (companion to udb-coding)

@@ -30,6 +30,7 @@ private static final long serialVersionUID = 0L;
   private BackfillRequest() {
     tenantId_ = "";
     sourceName_ = "";
+    mode_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -123,6 +124,53 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int MODE_FIELD_NUMBER = 3;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object mode_ = "";
+  /**
+   * <pre>
+   * INCREMENTAL skips unchanged chunk hashes; FULL re-emits every chunk.
+   * </pre>
+   *
+   * <code>string mode = 3 [json_name = "mode"];</code>
+   * @return The mode.
+   */
+  @java.lang.Override
+  public java.lang.String getMode() {
+    java.lang.Object ref = mode_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      mode_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * INCREMENTAL skips unchanged chunk hashes; FULL re-emits every chunk.
+   * </pre>
+   *
+   * <code>string mode = 3 [json_name = "mode"];</code>
+   * @return The bytes for mode.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getModeBytes() {
+    java.lang.Object ref = mode_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      mode_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -143,6 +191,9 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(sourceName_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 2, sourceName_);
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(mode_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 3, mode_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -157,6 +208,9 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(sourceName_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(2, sourceName_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(mode_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(3, mode_);
     }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
@@ -177,6 +231,8 @@ private static final long serialVersionUID = 0L;
         .equals(other.getTenantId())) return false;
     if (!getSourceName()
         .equals(other.getSourceName())) return false;
+    if (!getMode()
+        .equals(other.getMode())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -192,6 +248,8 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getTenantId().hashCode();
     hash = (37 * hash) + SOURCE_NAME_FIELD_NUMBER;
     hash = (53 * hash) + getSourceName().hashCode();
+    hash = (37 * hash) + MODE_FIELD_NUMBER;
+    hash = (53 * hash) + getMode().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -325,6 +383,7 @@ private static final long serialVersionUID = 0L;
       bitField0_ = 0;
       tenantId_ = "";
       sourceName_ = "";
+      mode_ = "";
       return this;
     }
 
@@ -364,6 +423,9 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000002) != 0)) {
         result.sourceName_ = sourceName_;
       }
+      if (((from_bitField0_ & 0x00000004) != 0)) {
+        result.mode_ = mode_;
+      }
     }
 
     @java.lang.Override
@@ -386,6 +448,11 @@ private static final long serialVersionUID = 0L;
       if (!other.getSourceName().isEmpty()) {
         sourceName_ = other.sourceName_;
         bitField0_ |= 0x00000002;
+        onChanged();
+      }
+      if (!other.getMode().isEmpty()) {
+        mode_ = other.mode_;
+        bitField0_ |= 0x00000004;
         onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
@@ -424,6 +491,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000002;
               break;
             } // case 18
+            case 26: {
+              mode_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000004;
+              break;
+            } // case 26
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -581,6 +653,98 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       sourceName_ = value;
       bitField0_ |= 0x00000002;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object mode_ = "";
+    /**
+     * <pre>
+     * INCREMENTAL skips unchanged chunk hashes; FULL re-emits every chunk.
+     * </pre>
+     *
+     * <code>string mode = 3 [json_name = "mode"];</code>
+     * @return The mode.
+     */
+    public java.lang.String getMode() {
+      java.lang.Object ref = mode_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        mode_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * INCREMENTAL skips unchanged chunk hashes; FULL re-emits every chunk.
+     * </pre>
+     *
+     * <code>string mode = 3 [json_name = "mode"];</code>
+     * @return The bytes for mode.
+     */
+    public com.google.protobuf.ByteString
+        getModeBytes() {
+      java.lang.Object ref = mode_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        mode_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * INCREMENTAL skips unchanged chunk hashes; FULL re-emits every chunk.
+     * </pre>
+     *
+     * <code>string mode = 3 [json_name = "mode"];</code>
+     * @param value The mode to set.
+     * @return This builder for chaining.
+     */
+    public Builder setMode(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      mode_ = value;
+      bitField0_ |= 0x00000004;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * INCREMENTAL skips unchanged chunk hashes; FULL re-emits every chunk.
+     * </pre>
+     *
+     * <code>string mode = 3 [json_name = "mode"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearMode() {
+      mode_ = getDefaultInstance().getMode();
+      bitField0_ = (bitField0_ & ~0x00000004);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * INCREMENTAL skips unchanged chunk hashes; FULL re-emits every chunk.
+     * </pre>
+     *
+     * <code>string mode = 3 [json_name = "mode"];</code>
+     * @param value The bytes for mode to set.
+     * @return This builder for chaining.
+     */
+    public Builder setModeBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      mode_ = value;
+      bitField0_ |= 0x00000004;
       onChanged();
       return this;
     }

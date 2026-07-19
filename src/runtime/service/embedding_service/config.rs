@@ -9,6 +9,10 @@ use std::sync::OnceLock;
 use std::time::Duration;
 
 pub(crate) const EMBEDDING_SOURCE_MSG: &str = "udb.core.embedding.entity.v1.EmbeddingSource";
+pub(crate) const EMBEDDING_MODEL_MSG: &str = "udb.core.embedding.entity.v1.EmbeddingModel";
+pub(crate) const EMBEDDING_JOB_MSG: &str = "udb.core.embedding.entity.v1.EmbeddingJob";
+pub(crate) const EMBEDDING_WORK_ITEM_MSG: &str = "udb.core.embedding.entity.v1.EmbeddingWorkItem";
+pub(crate) const EMBEDDING_DOCUMENT_MSG: &str = "udb.core.embedding.entity.v1.EmbeddingDocument";
 
 /// The change-driven embedding WORK topic the sidecar pool consumes. Its payload
 /// carries ONLY the row pk + text + non-secret routing — never any credential.
@@ -17,6 +21,16 @@ pub(crate) const TOPIC_SOURCE_REGISTERED: &str = "udb.embedding.source.registere
 pub(crate) const TOPIC_SOURCE_DELETED: &str = "udb.embedding.source.deleted.v1";
 pub(crate) const TOPIC_BACKFILL_REQUESTED: &str = "udb.embedding.backfill.requested.v1";
 pub(crate) const TOPIC_BACKFILL_COMPLETED: &str = "udb.embedding.backfill.completed.v1";
+pub(crate) const TOPIC_SOURCE_CHANGE_COMPLETED: &str = "udb.embedding.source.change.completed.v1";
+pub(crate) const TOPIC_MODEL_REGISTERED: &str = "udb.embedding.model.registered.v1";
+pub(crate) const TOPIC_MODEL_STATUS_CHANGED: &str = "udb.embedding.model.status.changed.v1";
+pub(crate) const TOPIC_MODEL_ALIAS_CUTOVER: &str = "udb.embedding.model.alias.cutover.v1";
+pub(crate) const TOPIC_DOCUMENT_PARSE: &str = "udb.embedding.document.parse.v1";
+pub(crate) const TOPIC_DOCUMENT_INGESTED: &str = "udb.embedding.document.ingested.v1";
+pub(crate) const TOPIC_WORK_DEAD_LETTER: &str = "udb.embedding.work.dead.v1";
+pub(crate) const TOPIC_METERED: &str = "udb.embedding.metered.v1";
+pub(crate) const TOPIC_RETRIEVAL_SAMPLED: &str = "udb.embedding.retrieval.sampled.v1";
+pub(crate) const TOPIC_RETRIEVAL_EVALUATED: &str = "udb.embedding.retrieval.evaluated.v1";
 /// Completion marker for a deleted source's vector teardown, keyed by
 /// `teardown_event_id` (the journal event id of the source-deleted event) so the
 /// leader pass never re-runs a finished teardown (mirrors the backfill
@@ -26,6 +40,12 @@ pub(crate) const TOPIC_SOURCE_TEARDOWN_COMPLETED: &str =
 
 pub(crate) const STATUS_ACTIVE: &str = "ACTIVE";
 pub(crate) const STATUS_DELETED: &str = "DELETED";
+pub(crate) const STATUS_DEPRECATED: &str = "DEPRECATED";
+pub(crate) const STATUS_RETIRED: &str = "RETIRED";
+pub(crate) const WORK_PENDING: &str = "PENDING";
+pub(crate) const WORK_ACKED: &str = "ACKED";
+pub(crate) const WORK_DEAD: &str = "DEAD";
+pub(crate) const JOB_PENDING: &str = "PENDING";
 pub(crate) const EMBEDDING_WORK_EMITTER_BATCH: i64 = 200;
 /// Page size for enumerating (and deleting) a deleted source's point ids during
 /// vector teardown — bounds each journal scan and each vector-seam delete call.
@@ -80,6 +100,19 @@ const MAX_TOP_K: i32 = 200;
 /// Per-tenant registered-source budget. Bounds the durable table so one tenant
 /// cannot exhaust the shared store; a new source beyond this fails closed.
 pub(crate) const MAX_SOURCES_PER_TENANT: usize = 128;
+pub(crate) const MAX_MODELS_PER_TENANT: usize = 128;
+pub(crate) const MAX_EMBEDDING_REPORT_BATCH: usize = 256;
+pub(crate) const MAX_DOCUMENT_INGEST_BATCH: usize = 100;
+pub(crate) const DEFAULT_WORK_MAX_ATTEMPTS: i32 = 5;
+const DEFAULT_WORK_VISIBILITY_TIMEOUT_SECS: u64 = 120;
+const WORK_VISIBILITY_TIMEOUT_ENV: &str = "UDB_EMBEDDING_WORK_VISIBILITY_TIMEOUT_SECS";
+const DEFAULT_RETRY_SWEEP_LIMIT: i64 = 200;
+const RETRY_SWEEP_LIMIT_ENV: &str = "UDB_EMBEDDING_RETRY_SWEEP_LIMIT";
+const RETRIEVAL_EVAL_SAMPLE_RATE_ENV: &str = "UDB_EMBEDDING_EVAL_SAMPLE_RATE";
+const FRESH_BUFFER_TTL_ENV: &str = "UDB_EMBEDDING_FRESH_BUFFER_TTL_SECONDS";
+const FRESH_BUFFER_CAPACITY_ENV: &str = "UDB_EMBEDDING_FRESH_BUFFER_CAPACITY";
+const DEFAULT_FRESH_BUFFER_TTL_SECS: u64 = 30;
+const DEFAULT_FRESH_BUFFER_CAPACITY: usize = 10_000;
 
 /// Clamp a requested `top_k` into `[1, MAX_TOP_K]`; non-positive → default.
 pub(crate) fn resolve_top_k(requested: i32) -> i32 {
@@ -205,4 +238,65 @@ pub(crate) fn embedding_max_chunks_per_row() -> usize {
         EMBEDDING_MAX_CHUNKS_PER_ROW_ENV,
         DEFAULT_EMBEDDING_MAX_CHUNKS_PER_ROW,
     )
+}
+
+pub(crate) fn embedding_work_visibility_timeout() -> Duration {
+    static TIMEOUT: OnceLock<Duration> = OnceLock::new();
+    *TIMEOUT.get_or_init(|| {
+        Duration::from_secs(
+            std::env::var(WORK_VISIBILITY_TIMEOUT_ENV)
+                .ok()
+                .and_then(|value| value.trim().parse::<u64>().ok())
+                .filter(|value| *value > 0)
+                .unwrap_or(DEFAULT_WORK_VISIBILITY_TIMEOUT_SECS),
+        )
+    })
+}
+
+pub(crate) fn embedding_retry_sweep_limit() -> i64 {
+    static LIMIT: OnceLock<i64> = OnceLock::new();
+    *LIMIT.get_or_init(|| {
+        std::env::var(RETRY_SWEEP_LIMIT_ENV)
+            .ok()
+            .and_then(|value| value.trim().parse::<i64>().ok())
+            .filter(|value| *value > 0)
+            .unwrap_or(DEFAULT_RETRY_SWEEP_LIMIT)
+    })
+}
+
+pub(crate) fn retrieval_eval_sample_rate() -> f64 {
+    static RATE: OnceLock<f64> = OnceLock::new();
+    *RATE.get_or_init(|| {
+        std::env::var(RETRIEVAL_EVAL_SAMPLE_RATE_ENV)
+            .ok()
+            .and_then(|value| value.trim().parse::<f64>().ok())
+            .filter(|value| value.is_finite() && (0.0..=1.0).contains(value))
+            .unwrap_or(0.0)
+    })
+}
+
+pub(crate) fn embedding_fresh_buffer_ttl() -> Duration {
+    static TTL: OnceLock<Duration> = OnceLock::new();
+    *TTL.get_or_init(|| {
+        Duration::from_secs(
+            std::env::var(FRESH_BUFFER_TTL_ENV)
+                .ok()
+                .and_then(|value| value.trim().parse::<u64>().ok())
+                .filter(|value| *value > 0)
+                .unwrap_or(DEFAULT_FRESH_BUFFER_TTL_SECS)
+                .min(300),
+        )
+    })
+}
+
+pub(crate) fn embedding_fresh_buffer_capacity() -> usize {
+    static CAPACITY: OnceLock<usize> = OnceLock::new();
+    *CAPACITY.get_or_init(|| {
+        std::env::var(FRESH_BUFFER_CAPACITY_ENV)
+            .ok()
+            .and_then(|value| value.trim().parse::<usize>().ok())
+            .filter(|value| *value > 0)
+            .unwrap_or(DEFAULT_FRESH_BUFFER_CAPACITY)
+            .min(100_000)
+    })
 }

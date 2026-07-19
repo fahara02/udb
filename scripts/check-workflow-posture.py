@@ -105,6 +105,7 @@ SIDECAR_WORKFLOW_REQUIREMENTS = (
     ("python scripts/embedding_sidecar_roundtrip_smoke.py --selftest", "embedding round-trip selftest"),
     ("python scripts/notify_sidecar_roundtrip_smoke.py --selftest", "notification round-trip selftest"),
     ("python scripts/embedding_sidecar_smoke.py --selftest", "embedding sidecar smoke selftest"),
+    ("python scripts/embedding_retrieval_eval.py", "embedding retrieval golden-set evaluation"),
     ("python scripts/notify_sidecar_smoke.py --selftest", "notification sidecar smoke selftest"),
     ("--profile embedding", "embedding compose profile"),
     ("--profile notify", "notification compose profile"),
@@ -173,13 +174,16 @@ SIDECAR_CONTAINER_SOURCE_REQUIREMENTS = {
         ("FORBIDDEN_WORK_KEYS", "embedding credential denylist"),
         ("check_no_credentials(value)", "embedding recursive credential check"),
         ("def parse_work", "embedding work parser"),
-        ("def embed_text", "embedding provider seam"),
-        ('provider != "deterministic"', "embedding unsupported-provider fail closed"),
+        ("def embed_work", "embedding provider seam"),
+        ("def resolve_vault_reference", "embedding Vault resolver"),
+        ('work.provider not in {"openai", "openai-compatible", "azure-openai"}', "embedding unsupported-provider fail closed"),
         ('self.path == "/healthz"', "embedding health endpoint"),
-        ('self.path not in {"/embed", "/v1/embed"}', "embedding endpoint allowlist"),
+        ('"/embed-batch", "/v1/embed-batch", "/rerank", "/v1/rerank", "/parse", "/v1/parse"', "embedding advanced endpoint allowlist"),
         ('"status": "embedded"', "embedding status response"),
         ('"report_embedding_request": report', "ReportEmbedding payload response"),
-        ('"vector": embed_text(work.text, work.model_id, dims)', "embedding vector construction"),
+        ('"vector": embed_work(work)', "embedding vector construction"),
+        ('"report_embedding_batch_request"', "ReportEmbeddingBatch payload response"),
+        ('"report_embedding_failure_request"', "ReportEmbeddingFailure payload response"),
     ),
     "sidecars/notify/Dockerfile": (
         ("FROM python:3.12-alpine", "notification Python base"),
@@ -780,7 +784,7 @@ COMPOSITE_ACTION_SOURCE_REQUIREMENTS = {
         ("kafka-broker-api-versions.sh", "Kafka readiness gate"),
         ("kafka-topics.sh --create --if-not-exists", "Kafka topic creation"),
         ("docker run -d --name udb-bench-qdrant", "Qdrant container name"),
-        ("qdrant/qdrant:v1.13.4", "Qdrant image pin"),
+        ("qdrant/qdrant:v1.18.2", "Qdrant image pin"),
         ("curl -fsS http://localhost:6333/readyz", "Qdrant readiness gate"),
         ("docker run -d --name udb-bench-redis", "Redis container name"),
         ("redis:7-alpine", "Redis image pin"),
@@ -4199,6 +4203,7 @@ LINT_WORKFLOW_TRIGGER_PATHS = (
     ("scripts/cdc_fault_smoke.sh", "CDC fault smoke script"),
     ("scripts/embedding_sidecar_roundtrip_smoke.py", "embedding sidecar round-trip smoke"),
     ("scripts/embedding_sidecar_smoke.py", "embedding sidecar smoke"),
+    ("scripts/embedding_retrieval_eval.py", "embedding retrieval golden-set evaluation"),
     ("scripts/notify_sidecar_roundtrip_smoke.py", "notification sidecar round-trip smoke"),
     ("scripts/notify_sidecar_smoke.py", "notification sidecar smoke"),
     ("scripts/livekit_sfu_smoke.py", "LiveKit SFU smoke"),
@@ -5742,6 +5747,7 @@ jobs:
       - run: docker compose version
       - run: python scripts/embedding_sidecar_roundtrip_smoke.py --selftest
       - run: python scripts/embedding_sidecar_smoke.py --selftest
+      - run: python scripts/embedding_retrieval_eval.py
       - run: docker compose -p "$UDB_EMBEDDING_PROJECT" -f docker-compose.integration.yml --profile embedding up -d --wait embedding-sidecar
       - run: python scripts/embedding_sidecar_smoke.py --url http://127.0.0.1:58090
       - if: always()
@@ -8338,19 +8344,20 @@ CMD ["python", "/app/embedding_sidecar.py"]
 def check_no_credentials(value): pass
 def parse_work(value):
     check_no_credentials(value)
-def embed_text(text, model_id, dims):
-    provider = "deterministic"
-    if provider != "deterministic":
+def resolve_vault_reference(reference): return {}
+def embed_work(work):
+    if work.provider not in {"openai", "openai-compatible", "azure-openai"}:
         raise RuntimeError()
     return []
 class Handler:
     def post(self, work):
         if self.path == "/healthz":
             return
-        if self.path not in {"/embed", "/v1/embed"}:
+        endpoints = {"/embed-batch", "/v1/embed-batch", "/rerank", "/v1/rerank", "/parse", "/v1/parse"}
+        if self.path not in endpoints:
             return
-        report = {"vector": embed_text(work.text, work.model_id, dims)}
-        return {"status": "embedded", "report_embedding_request": report}
+        report = {"vector": embed_work(work)}
+        return {"status": "embedded", "report_embedding_request": report, "report_embedding_batch_request": {}, "report_embedding_failure_request": {}}
 '''
         notify_dockerfile_good = """FROM python:3.12-alpine
 COPY notify_sidecar.py /app/notify_sidecar.py

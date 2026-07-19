@@ -1,78 +1,52 @@
 # UDB Embedding Sidecar
 
-Provider adapter for master-plan 9.11. The broker remains model-free: it emits
-`udb.embedding.work.v1` payloads with row identity, text, model id, and vector
-routing only. This sidecar accepts that work payload and returns the JSON body a
-trusted sidecar can submit to the internal-only `EmbeddingService.ReportEmbedding`
-callback.
+The broker owns durable work, model identity, tenant scope, vector routing, and
+ACK/NACK state. This sidecar owns inference and document parsing. Provider
+credentials never enter broker events: work carries a `vault://` reference and
+the sidecar resolves it through `UDB_VAULT_RESOLVER_URL` with a short cache.
 
-Work request contract:
+Endpoints:
 
-```http
-POST /embed
-Content-Type: application/json
-```
+- `POST /embed` and `/v1/embed`: one durable work item.
+- `POST /embed-batch` and `/v1/embed-batch`: up to 256 work items and one
+  `ReportEmbeddingBatch` request.
+- `POST /rerank` and `/v1/rerank`: deterministic local reranking or a configured
+  cross-encoder provider.
+- `POST /parse` and `/v1/parse`: built-in text/HTML parsing or a configured
+  layout-aware parser.
+- `GET /healthz`: provider and dimension readiness.
 
-```json
-{
-  "tenant_id": "tenant-a",
-  "source": "contacts",
-  "row_pk": "contact-1",
-  "text": "Ada Lovelace wrote the first algorithm.",
-  "model_id": "deterministic-v1",
-  "target_collection": "contacts_vec"
-}
-```
+Work includes `work_item_id`, `chunk_hash`, model dimensions/dtype/task,
+`provider_endpoint_ref`, and optional parent text plus character/token boundaries
+for contextual retrieval or late chunking. Reports echo the durable identity so
+the broker can validate the model, dimensions, hash, source, and point before it
+stores and ACKs the vector.
 
-Response contract:
+`UDB_EMBED_PROVIDER=deterministic` is only for local smoke and fixtures.
+Production OpenAI-compatible providers require a Vault secret with `endpoint`
+and `api_key`; contextual and late-chunking models additionally require
+`contextualizer_endpoint` and `late_chunking_endpoint`. Reranking uses
+`UDB_RERANK_PROVIDER` plus `UDB_RERANK_VAULT_REF`. Layout-aware parsing uses
+`UDB_DOCUMENT_PARSER_VAULT_REF`.
 
-```json
-{
-  "status": "embedded",
-  "provider": "deterministic",
-  "target_collection": "contacts_vec",
-  "report_embedding_request": {
-    "tenant_id": "tenant-a",
-    "source_name": "contacts",
-    "row_pk": "contact-1",
-    "vector": [0.1, 0.2],
-    "model": "deterministic-v1",
-    "dims": 16
-  }
-}
-```
-
-Local smoke:
+Run the local contract gates:
 
 ```bash
+python scripts/embedding_sidecar_smoke.py --selftest
 python scripts/embedding_sidecar_smoke.py
-docker compose -f docker-compose.integration.yml --profile embedding up --build -d embedding-sidecar
-python scripts/embedding_sidecar_smoke.py --url http://127.0.0.1:58090
+python scripts/embedding_sidecar_roundtrip_smoke.py --selftest
+python scripts/embedding_retrieval_eval.py
 ```
 
-The built-in `deterministic` provider is for smoke and local fixtures. Production
-sidecars should replace `embed_text` with a model provider that keeps credentials
-inside the sidecar process. Broker work payloads must never contain credentials;
-this sidecar rejects credential-shaped keys recursively to preserve that contract.
-
-This smoke is sidecar-scoped. Full 9.11 proof still requires a live sidecar
-consumer to read `udb.embedding.work.v1`, call the broker's internal gRPC
-`ReportEmbedding` callback, and observe backfill rows becoming reported vectors.
-
-Gate-D round trip harness:
+The live round-trip harness consumes a complete `udb.embedding.work.v1`
+envelope, preserves its durable fields, calls the sidecar, then invokes the
+internal `ReportEmbedding` RPC. It requires Postgres, `grpcurl`, a running broker,
+and a sidecar:
 
 ```bash
-python scripts/embedding_sidecar_roundtrip_smoke.py --selftest
 python scripts/embedding_sidecar_roundtrip_smoke.py \
   --pg-dsn "$UDB_INTEGRATION_PG_DSN" \
   --sidecar-url http://127.0.0.1:58090 \
   --broker 127.0.0.1:50061 \
   --bearer-token "$UDB_BEARER_TOKEN"
 ```
-
-The live command consumes one durable `udb.embedding.work.v1` payload from the
-outbox/journal, posts it to the sidecar, then calls the internal
-`ReportEmbedding` RPC through `grpcurl` using the checked-in proto/import paths
-by default. Use `--use-reflection` only against a listener that actually exposes
-reflection. It is not a replacement for the observed green Gate-D run; it is the
-runnable proof command for that run.

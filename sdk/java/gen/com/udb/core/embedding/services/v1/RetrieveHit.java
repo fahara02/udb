@@ -30,6 +30,12 @@ private static final long serialVersionUID = 0L;
   private RetrieveHit() {
     id_ = "";
     payloadJson_ = "";
+    vector_ = emptyFloatList();
+    sourceName_ = "";
+    parentPk_ = "";
+    documentId_ = "";
+    docVersion_ = "";
+    vectorName_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -142,6 +148,253 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int VECTOR_FIELD_NUMBER = 4;
+  @SuppressWarnings("serial")
+  private com.google.protobuf.Internal.FloatList vector_ =
+      emptyFloatList();
+  /**
+   * <code>repeated float vector = 4 [json_name = "vector"];</code>
+   * @return A list containing the vector.
+   */
+  @java.lang.Override
+  public java.util.List<java.lang.Float>
+      getVectorList() {
+    return vector_;
+  }
+  /**
+   * <code>repeated float vector = 4 [json_name = "vector"];</code>
+   * @return The count of vector.
+   */
+  public int getVectorCount() {
+    return vector_.size();
+  }
+  /**
+   * <code>repeated float vector = 4 [json_name = "vector"];</code>
+   * @param index The index of the element to return.
+   * @return The vector at the given index.
+   */
+  public float getVector(int index) {
+    return vector_.getFloat(index);
+  }
+  private int vectorMemoizedSerializedSize = -1;
+
+  public static final int SOURCE_NAME_FIELD_NUMBER = 5;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object sourceName_ = "";
+  /**
+   * <code>string source_name = 5 [json_name = "sourceName"];</code>
+   * @return The sourceName.
+   */
+  @java.lang.Override
+  public java.lang.String getSourceName() {
+    java.lang.Object ref = sourceName_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      sourceName_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string source_name = 5 [json_name = "sourceName"];</code>
+   * @return The bytes for sourceName.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getSourceNameBytes() {
+    java.lang.Object ref = sourceName_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      sourceName_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int PARENT_PK_FIELD_NUMBER = 6;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object parentPk_ = "";
+  /**
+   * <code>string parent_pk = 6 [json_name = "parentPk"];</code>
+   * @return The parentPk.
+   */
+  @java.lang.Override
+  public java.lang.String getParentPk() {
+    java.lang.Object ref = parentPk_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      parentPk_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string parent_pk = 6 [json_name = "parentPk"];</code>
+   * @return The bytes for parentPk.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getParentPkBytes() {
+    java.lang.Object ref = parentPk_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      parentPk_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int CHUNK_SEQ_FIELD_NUMBER = 7;
+  private int chunkSeq_ = 0;
+  /**
+   * <code>int32 chunk_seq = 7 [json_name = "chunkSeq"];</code>
+   * @return The chunkSeq.
+   */
+  @java.lang.Override
+  public int getChunkSeq() {
+    return chunkSeq_;
+  }
+
+  public static final int DOCUMENT_ID_FIELD_NUMBER = 8;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object documentId_ = "";
+  /**
+   * <code>string document_id = 8 [json_name = "documentId"];</code>
+   * @return The documentId.
+   */
+  @java.lang.Override
+  public java.lang.String getDocumentId() {
+    java.lang.Object ref = documentId_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      documentId_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string document_id = 8 [json_name = "documentId"];</code>
+   * @return The bytes for documentId.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getDocumentIdBytes() {
+    java.lang.Object ref = documentId_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      documentId_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int DOC_VERSION_FIELD_NUMBER = 9;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object docVersion_ = "";
+  /**
+   * <code>string doc_version = 9 [json_name = "docVersion"];</code>
+   * @return The docVersion.
+   */
+  @java.lang.Override
+  public java.lang.String getDocVersion() {
+    java.lang.Object ref = docVersion_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      docVersion_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string doc_version = 9 [json_name = "docVersion"];</code>
+   * @return The bytes for docVersion.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getDocVersionBytes() {
+    java.lang.Object ref = docVersion_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      docVersion_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int VECTOR_NAME_FIELD_NUMBER = 10;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object vectorName_ = "";
+  /**
+   * <code>string vector_name = 10 [json_name = "vectorName"];</code>
+   * @return The vectorName.
+   */
+  @java.lang.Override
+  public java.lang.String getVectorName() {
+    java.lang.Object ref = vectorName_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      vectorName_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string vector_name = 10 [json_name = "vectorName"];</code>
+   * @return The bytes for vectorName.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getVectorNameBytes() {
+    java.lang.Object ref = vectorName_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      vectorName_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int RERANK_SCORE_FIELD_NUMBER = 11;
+  private double rerankScore_ = 0D;
+  /**
+   * <code>double rerank_score = 11 [json_name = "rerankScore"];</code>
+   * @return The rerankScore.
+   */
+  @java.lang.Override
+  public double getRerankScore() {
+    return rerankScore_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -156,6 +409,7 @@ private static final long serialVersionUID = 0L;
   @java.lang.Override
   public void writeTo(com.google.protobuf.CodedOutputStream output)
                       throws java.io.IOException {
+    getSerializedSize();
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(id_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 1, id_);
     }
@@ -164,6 +418,34 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(payloadJson_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 3, payloadJson_);
+    }
+    if (getVectorList().size() > 0) {
+      output.writeUInt32NoTag(34);
+      output.writeUInt32NoTag(vectorMemoizedSerializedSize);
+    }
+    for (int i = 0; i < vector_.size(); i++) {
+      output.writeFloatNoTag(vector_.getFloat(i));
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(sourceName_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 5, sourceName_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(parentPk_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 6, parentPk_);
+    }
+    if (chunkSeq_ != 0) {
+      output.writeInt32(7, chunkSeq_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(documentId_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 8, documentId_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(docVersion_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 9, docVersion_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(vectorName_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 10, vectorName_);
+    }
+    if (java.lang.Double.doubleToRawLongBits(rerankScore_) != 0) {
+      output.writeDouble(11, rerankScore_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -183,6 +465,40 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(payloadJson_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(3, payloadJson_);
+    }
+    {
+      int dataSize = 0;
+      dataSize = 4 * getVectorList().size();
+      size += dataSize;
+      if (!getVectorList().isEmpty()) {
+        size += 1;
+        size += com.google.protobuf.CodedOutputStream
+            .computeInt32SizeNoTag(dataSize);
+      }
+      vectorMemoizedSerializedSize = dataSize;
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(sourceName_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(5, sourceName_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(parentPk_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(6, parentPk_);
+    }
+    if (chunkSeq_ != 0) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeInt32Size(7, chunkSeq_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(documentId_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(8, documentId_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(docVersion_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(9, docVersion_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(vectorName_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(10, vectorName_);
+    }
+    if (java.lang.Double.doubleToRawLongBits(rerankScore_) != 0) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeDoubleSize(11, rerankScore_);
     }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
@@ -206,6 +522,23 @@ private static final long serialVersionUID = 0L;
             other.getScore())) return false;
     if (!getPayloadJson()
         .equals(other.getPayloadJson())) return false;
+    if (!getVectorList()
+        .equals(other.getVectorList())) return false;
+    if (!getSourceName()
+        .equals(other.getSourceName())) return false;
+    if (!getParentPk()
+        .equals(other.getParentPk())) return false;
+    if (getChunkSeq()
+        != other.getChunkSeq()) return false;
+    if (!getDocumentId()
+        .equals(other.getDocumentId())) return false;
+    if (!getDocVersion()
+        .equals(other.getDocVersion())) return false;
+    if (!getVectorName()
+        .equals(other.getVectorName())) return false;
+    if (java.lang.Double.doubleToLongBits(getRerankScore())
+        != java.lang.Double.doubleToLongBits(
+            other.getRerankScore())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -224,6 +557,25 @@ private static final long serialVersionUID = 0L;
         java.lang.Double.doubleToLongBits(getScore()));
     hash = (37 * hash) + PAYLOAD_JSON_FIELD_NUMBER;
     hash = (53 * hash) + getPayloadJson().hashCode();
+    if (getVectorCount() > 0) {
+      hash = (37 * hash) + VECTOR_FIELD_NUMBER;
+      hash = (53 * hash) + getVectorList().hashCode();
+    }
+    hash = (37 * hash) + SOURCE_NAME_FIELD_NUMBER;
+    hash = (53 * hash) + getSourceName().hashCode();
+    hash = (37 * hash) + PARENT_PK_FIELD_NUMBER;
+    hash = (53 * hash) + getParentPk().hashCode();
+    hash = (37 * hash) + CHUNK_SEQ_FIELD_NUMBER;
+    hash = (53 * hash) + getChunkSeq();
+    hash = (37 * hash) + DOCUMENT_ID_FIELD_NUMBER;
+    hash = (53 * hash) + getDocumentId().hashCode();
+    hash = (37 * hash) + DOC_VERSION_FIELD_NUMBER;
+    hash = (53 * hash) + getDocVersion().hashCode();
+    hash = (37 * hash) + VECTOR_NAME_FIELD_NUMBER;
+    hash = (53 * hash) + getVectorName().hashCode();
+    hash = (37 * hash) + RERANK_SCORE_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+        java.lang.Double.doubleToLongBits(getRerankScore()));
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -358,6 +710,14 @@ private static final long serialVersionUID = 0L;
       id_ = "";
       score_ = 0D;
       payloadJson_ = "";
+      vector_ = emptyFloatList();
+      sourceName_ = "";
+      parentPk_ = "";
+      chunkSeq_ = 0;
+      documentId_ = "";
+      docVersion_ = "";
+      vectorName_ = "";
+      rerankScore_ = 0D;
       return this;
     }
 
@@ -400,6 +760,31 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000004) != 0)) {
         result.payloadJson_ = payloadJson_;
       }
+      if (((from_bitField0_ & 0x00000008) != 0)) {
+        vector_.makeImmutable();
+        result.vector_ = vector_;
+      }
+      if (((from_bitField0_ & 0x00000010) != 0)) {
+        result.sourceName_ = sourceName_;
+      }
+      if (((from_bitField0_ & 0x00000020) != 0)) {
+        result.parentPk_ = parentPk_;
+      }
+      if (((from_bitField0_ & 0x00000040) != 0)) {
+        result.chunkSeq_ = chunkSeq_;
+      }
+      if (((from_bitField0_ & 0x00000080) != 0)) {
+        result.documentId_ = documentId_;
+      }
+      if (((from_bitField0_ & 0x00000100) != 0)) {
+        result.docVersion_ = docVersion_;
+      }
+      if (((from_bitField0_ & 0x00000200) != 0)) {
+        result.vectorName_ = vectorName_;
+      }
+      if (((from_bitField0_ & 0x00000400) != 0)) {
+        result.rerankScore_ = rerankScore_;
+      }
     }
 
     @java.lang.Override
@@ -426,6 +811,48 @@ private static final long serialVersionUID = 0L;
         payloadJson_ = other.payloadJson_;
         bitField0_ |= 0x00000004;
         onChanged();
+      }
+      if (!other.vector_.isEmpty()) {
+        if (vector_.isEmpty()) {
+          vector_ = other.vector_;
+          vector_.makeImmutable();
+          bitField0_ |= 0x00000008;
+        } else {
+          ensureVectorIsMutable();
+          vector_.addAll(other.vector_);
+        }
+        onChanged();
+      }
+      if (!other.getSourceName().isEmpty()) {
+        sourceName_ = other.sourceName_;
+        bitField0_ |= 0x00000010;
+        onChanged();
+      }
+      if (!other.getParentPk().isEmpty()) {
+        parentPk_ = other.parentPk_;
+        bitField0_ |= 0x00000020;
+        onChanged();
+      }
+      if (other.getChunkSeq() != 0) {
+        setChunkSeq(other.getChunkSeq());
+      }
+      if (!other.getDocumentId().isEmpty()) {
+        documentId_ = other.documentId_;
+        bitField0_ |= 0x00000080;
+        onChanged();
+      }
+      if (!other.getDocVersion().isEmpty()) {
+        docVersion_ = other.docVersion_;
+        bitField0_ |= 0x00000100;
+        onChanged();
+      }
+      if (!other.getVectorName().isEmpty()) {
+        vectorName_ = other.vectorName_;
+        bitField0_ |= 0x00000200;
+        onChanged();
+      }
+      if (java.lang.Double.doubleToRawLongBits(other.getRerankScore()) != 0) {
+        setRerankScore(other.getRerankScore());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -468,6 +895,58 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000004;
               break;
             } // case 26
+            case 37: {
+              float v = input.readFloat();
+              ensureVectorIsMutable();
+              vector_.addFloat(v);
+              break;
+            } // case 37
+            case 34: {
+              int length = input.readRawVarint32();
+              int limit = input.pushLimit(length);
+              int alloc = length > 4096 ? 4096 : length;
+              ensureVectorIsMutable(alloc / 4);
+              while (input.getBytesUntilLimit() > 0) {
+                vector_.addFloat(input.readFloat());
+              }
+              input.popLimit(limit);
+              break;
+            } // case 34
+            case 42: {
+              sourceName_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000010;
+              break;
+            } // case 42
+            case 50: {
+              parentPk_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000020;
+              break;
+            } // case 50
+            case 56: {
+              chunkSeq_ = input.readInt32();
+              bitField0_ |= 0x00000040;
+              break;
+            } // case 56
+            case 66: {
+              documentId_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000080;
+              break;
+            } // case 66
+            case 74: {
+              docVersion_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000100;
+              break;
+            } // case 74
+            case 82: {
+              vectorName_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000200;
+              break;
+            } // case 82
+            case 89: {
+              rerankScore_ = input.readDouble();
+              bitField0_ |= 0x00000400;
+              break;
+            } // case 89
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -677,6 +1156,520 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       payloadJson_ = value;
       bitField0_ |= 0x00000004;
+      onChanged();
+      return this;
+    }
+
+    private com.google.protobuf.Internal.FloatList vector_ = emptyFloatList();
+    private void ensureVectorIsMutable() {
+      if (!vector_.isModifiable()) {
+        vector_ = makeMutableCopy(vector_);
+      }
+      bitField0_ |= 0x00000008;
+    }
+    private void ensureVectorIsMutable(int capacity) {
+      if (!vector_.isModifiable()) {
+        vector_ = makeMutableCopy(vector_, capacity);
+      }
+      bitField0_ |= 0x00000008;
+    }
+    /**
+     * <code>repeated float vector = 4 [json_name = "vector"];</code>
+     * @return A list containing the vector.
+     */
+    public java.util.List<java.lang.Float>
+        getVectorList() {
+      vector_.makeImmutable();
+      return vector_;
+    }
+    /**
+     * <code>repeated float vector = 4 [json_name = "vector"];</code>
+     * @return The count of vector.
+     */
+    public int getVectorCount() {
+      return vector_.size();
+    }
+    /**
+     * <code>repeated float vector = 4 [json_name = "vector"];</code>
+     * @param index The index of the element to return.
+     * @return The vector at the given index.
+     */
+    public float getVector(int index) {
+      return vector_.getFloat(index);
+    }
+    /**
+     * <code>repeated float vector = 4 [json_name = "vector"];</code>
+     * @param index The index to set the value at.
+     * @param value The vector to set.
+     * @return This builder for chaining.
+     */
+    public Builder setVector(
+        int index, float value) {
+
+      ensureVectorIsMutable();
+      vector_.setFloat(index, value);
+      bitField0_ |= 0x00000008;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>repeated float vector = 4 [json_name = "vector"];</code>
+     * @param value The vector to add.
+     * @return This builder for chaining.
+     */
+    public Builder addVector(float value) {
+
+      ensureVectorIsMutable();
+      vector_.addFloat(value);
+      bitField0_ |= 0x00000008;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>repeated float vector = 4 [json_name = "vector"];</code>
+     * @param values The vector to add.
+     * @return This builder for chaining.
+     */
+    public Builder addAllVector(
+        java.lang.Iterable<? extends java.lang.Float> values) {
+      ensureVectorIsMutable();
+      com.google.protobuf.AbstractMessageLite.Builder.addAll(
+          values, vector_);
+      bitField0_ |= 0x00000008;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>repeated float vector = 4 [json_name = "vector"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearVector() {
+      vector_ = emptyFloatList();
+      bitField0_ = (bitField0_ & ~0x00000008);
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object sourceName_ = "";
+    /**
+     * <code>string source_name = 5 [json_name = "sourceName"];</code>
+     * @return The sourceName.
+     */
+    public java.lang.String getSourceName() {
+      java.lang.Object ref = sourceName_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        sourceName_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>string source_name = 5 [json_name = "sourceName"];</code>
+     * @return The bytes for sourceName.
+     */
+    public com.google.protobuf.ByteString
+        getSourceNameBytes() {
+      java.lang.Object ref = sourceName_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        sourceName_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string source_name = 5 [json_name = "sourceName"];</code>
+     * @param value The sourceName to set.
+     * @return This builder for chaining.
+     */
+    public Builder setSourceName(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      sourceName_ = value;
+      bitField0_ |= 0x00000010;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string source_name = 5 [json_name = "sourceName"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearSourceName() {
+      sourceName_ = getDefaultInstance().getSourceName();
+      bitField0_ = (bitField0_ & ~0x00000010);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string source_name = 5 [json_name = "sourceName"];</code>
+     * @param value The bytes for sourceName to set.
+     * @return This builder for chaining.
+     */
+    public Builder setSourceNameBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      sourceName_ = value;
+      bitField0_ |= 0x00000010;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object parentPk_ = "";
+    /**
+     * <code>string parent_pk = 6 [json_name = "parentPk"];</code>
+     * @return The parentPk.
+     */
+    public java.lang.String getParentPk() {
+      java.lang.Object ref = parentPk_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        parentPk_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>string parent_pk = 6 [json_name = "parentPk"];</code>
+     * @return The bytes for parentPk.
+     */
+    public com.google.protobuf.ByteString
+        getParentPkBytes() {
+      java.lang.Object ref = parentPk_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        parentPk_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string parent_pk = 6 [json_name = "parentPk"];</code>
+     * @param value The parentPk to set.
+     * @return This builder for chaining.
+     */
+    public Builder setParentPk(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      parentPk_ = value;
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string parent_pk = 6 [json_name = "parentPk"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearParentPk() {
+      parentPk_ = getDefaultInstance().getParentPk();
+      bitField0_ = (bitField0_ & ~0x00000020);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string parent_pk = 6 [json_name = "parentPk"];</code>
+     * @param value The bytes for parentPk to set.
+     * @return This builder for chaining.
+     */
+    public Builder setParentPkBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      parentPk_ = value;
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+
+    private int chunkSeq_ ;
+    /**
+     * <code>int32 chunk_seq = 7 [json_name = "chunkSeq"];</code>
+     * @return The chunkSeq.
+     */
+    @java.lang.Override
+    public int getChunkSeq() {
+      return chunkSeq_;
+    }
+    /**
+     * <code>int32 chunk_seq = 7 [json_name = "chunkSeq"];</code>
+     * @param value The chunkSeq to set.
+     * @return This builder for chaining.
+     */
+    public Builder setChunkSeq(int value) {
+
+      chunkSeq_ = value;
+      bitField0_ |= 0x00000040;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>int32 chunk_seq = 7 [json_name = "chunkSeq"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearChunkSeq() {
+      bitField0_ = (bitField0_ & ~0x00000040);
+      chunkSeq_ = 0;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object documentId_ = "";
+    /**
+     * <code>string document_id = 8 [json_name = "documentId"];</code>
+     * @return The documentId.
+     */
+    public java.lang.String getDocumentId() {
+      java.lang.Object ref = documentId_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        documentId_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>string document_id = 8 [json_name = "documentId"];</code>
+     * @return The bytes for documentId.
+     */
+    public com.google.protobuf.ByteString
+        getDocumentIdBytes() {
+      java.lang.Object ref = documentId_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        documentId_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string document_id = 8 [json_name = "documentId"];</code>
+     * @param value The documentId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDocumentId(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      documentId_ = value;
+      bitField0_ |= 0x00000080;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string document_id = 8 [json_name = "documentId"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearDocumentId() {
+      documentId_ = getDefaultInstance().getDocumentId();
+      bitField0_ = (bitField0_ & ~0x00000080);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string document_id = 8 [json_name = "documentId"];</code>
+     * @param value The bytes for documentId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDocumentIdBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      documentId_ = value;
+      bitField0_ |= 0x00000080;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object docVersion_ = "";
+    /**
+     * <code>string doc_version = 9 [json_name = "docVersion"];</code>
+     * @return The docVersion.
+     */
+    public java.lang.String getDocVersion() {
+      java.lang.Object ref = docVersion_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        docVersion_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>string doc_version = 9 [json_name = "docVersion"];</code>
+     * @return The bytes for docVersion.
+     */
+    public com.google.protobuf.ByteString
+        getDocVersionBytes() {
+      java.lang.Object ref = docVersion_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        docVersion_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string doc_version = 9 [json_name = "docVersion"];</code>
+     * @param value The docVersion to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDocVersion(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      docVersion_ = value;
+      bitField0_ |= 0x00000100;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string doc_version = 9 [json_name = "docVersion"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearDocVersion() {
+      docVersion_ = getDefaultInstance().getDocVersion();
+      bitField0_ = (bitField0_ & ~0x00000100);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string doc_version = 9 [json_name = "docVersion"];</code>
+     * @param value The bytes for docVersion to set.
+     * @return This builder for chaining.
+     */
+    public Builder setDocVersionBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      docVersion_ = value;
+      bitField0_ |= 0x00000100;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object vectorName_ = "";
+    /**
+     * <code>string vector_name = 10 [json_name = "vectorName"];</code>
+     * @return The vectorName.
+     */
+    public java.lang.String getVectorName() {
+      java.lang.Object ref = vectorName_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        vectorName_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>string vector_name = 10 [json_name = "vectorName"];</code>
+     * @return The bytes for vectorName.
+     */
+    public com.google.protobuf.ByteString
+        getVectorNameBytes() {
+      java.lang.Object ref = vectorName_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        vectorName_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string vector_name = 10 [json_name = "vectorName"];</code>
+     * @param value The vectorName to set.
+     * @return This builder for chaining.
+     */
+    public Builder setVectorName(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      vectorName_ = value;
+      bitField0_ |= 0x00000200;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string vector_name = 10 [json_name = "vectorName"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearVectorName() {
+      vectorName_ = getDefaultInstance().getVectorName();
+      bitField0_ = (bitField0_ & ~0x00000200);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string vector_name = 10 [json_name = "vectorName"];</code>
+     * @param value The bytes for vectorName to set.
+     * @return This builder for chaining.
+     */
+    public Builder setVectorNameBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      vectorName_ = value;
+      bitField0_ |= 0x00000200;
+      onChanged();
+      return this;
+    }
+
+    private double rerankScore_ ;
+    /**
+     * <code>double rerank_score = 11 [json_name = "rerankScore"];</code>
+     * @return The rerankScore.
+     */
+    @java.lang.Override
+    public double getRerankScore() {
+      return rerankScore_;
+    }
+    /**
+     * <code>double rerank_score = 11 [json_name = "rerankScore"];</code>
+     * @param value The rerankScore to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRerankScore(double value) {
+
+      rerankScore_ = value;
+      bitField0_ |= 0x00000400;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>double rerank_score = 11 [json_name = "rerankScore"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearRerankScore() {
+      bitField0_ = (bitField0_ & ~0x00000400);
+      rerankScore_ = 0D;
       onChanged();
       return this;
     }

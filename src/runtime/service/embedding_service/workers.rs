@@ -15,19 +15,23 @@
 use std::sync::Arc;
 
 use sqlx::{PgPool, Row};
-use tonic::Status;
 
 use crate::proto::{SelectRequest, Sort};
 
 use super::EmbeddingServiceImpl;
 use super::config::{
     DEFAULT_VECTOR_COLLECTION, EMBEDDING_BACKFILL_PAGE_LIMIT, EMBEDDING_TEARDOWN_DELETE_BATCH,
-    STATUS_ACTIVE, TOPIC_BACKFILL_COMPLETED, TOPIC_BACKFILL_REQUESTED, TOPIC_SOURCE_DELETED,
-    TOPIC_SOURCE_TEARDOWN_COMPLETED, TOPIC_WORK,
+    STATUS_ACTIVE, TOPIC_BACKFILL_COMPLETED, TOPIC_BACKFILL_REQUESTED,
+    TOPIC_SOURCE_CHANGE_COMPLETED, TOPIC_SOURCE_DELETED, TOPIC_SOURCE_TEARDOWN_COMPLETED,
+    TOPIC_WORK, TOPIC_WORK_DEAD_LETTER, embedding_retry_sweep_limit,
 };
-use super::errors::embedding_capability_status;
-use super::model::StoredSource;
-use super::store::embedding_source_model;
+use super::model::{StoredSource, stored_model_from_json};
+use super::queue::{
+    WorkBatch, complete_job_enumeration, dead_letter_exhausted_work, load_retryable_work,
+    reemit_work_item, update_job_emission,
+};
+use super::store::{embedding_source_model, model_read_by_id};
+use super::vector_store::VectorStore as _;
 
 struct EmbeddingWorkJob {
     source: StoredSource,
@@ -43,6 +47,7 @@ struct EmbeddingBackfillJob {
     tenant_id: String,
     project_id: String,
     backfill_id: String,
+    mode: String,
 }
 
 /// One `udb.embedding.source.deleted.v1` journal event still awaiting vector
@@ -55,6 +60,8 @@ struct EmbeddingTeardownJob {
     /// The collection recorded on the source-deleted event (may be empty for a
     /// legacy row; the processor falls back to [`DEFAULT_VECTOR_COLLECTION`]).
     target_collection: String,
+    vector_backend: String,
+    vector_instance: String,
     /// CURRENT status of the (tenant, source_name) source row, if any — a source
     /// re-registered ACTIVE after the delete supersedes the teardown (deleting
     /// then would wipe fresh vectors).
@@ -129,7 +136,7 @@ async fn load_embedding_work_jobs(
     let limit = batch.max(1);
     let rows = sqlx::query(&embedding_work_jobs_sql(journal_relation, outbox_relation))
         .bind(STATUS_ACTIVE)
-        .bind(TOPIC_WORK)
+        .bind(TOPIC_SOURCE_CHANGE_COMPLETED)
         .bind(limit)
         .fetch_all(pool)
         .await
@@ -214,7 +221,8 @@ async fn load_embedding_backfill_jobs(
             j.event_id::TEXT AS event_id, \
             COALESCE(j.payload->>'tenant_id', j.payload->'payload'->>'tenant_id', '') AS event_tenant_id, \
             COALESCE(j.payload->>'project_id', j.payload->'payload'->>'project_id', '') AS project_id, \
-            COALESCE(j.payload->>'backfill_id', j.payload->'payload'->>'backfill_id', '') AS backfill_id \
+            COALESCE(j.payload->>'backfill_id', j.payload->'payload'->>'backfill_id', '') AS backfill_id, \
+            COALESCE(j.payload->>'mode', j.payload->'payload'->>'mode', 'INCREMENTAL') AS mode \
          FROM {journal_relation} j \
          JOIN {source_rel} s \
            ON s.{tenant_id}::TEXT = COALESCE(j.payload->>'tenant_id', j.payload->'payload'->>'tenant_id', '') \
@@ -302,6 +310,9 @@ async fn load_embedding_backfill_jobs(
             backfill_id: row
                 .try_get("backfill_id")
                 .map_err(|err| format!("decode embedding backfill id failed: {err}"))?,
+            mode: row
+                .try_get("mode")
+                .unwrap_or_else(|_| "INCREMENTAL".to_string()),
         });
     }
     Ok(jobs)
@@ -324,6 +335,8 @@ pub(crate) fn embedding_teardown_jobs_sql(journal_relation: &str, outbox_relatio
             COALESCE(j.payload->>'project_id', j.payload->'payload'->>'project_id', '') AS project_id, \
             COALESCE(j.payload->>'source', j.payload->'payload'->>'source', '') AS source_name, \
             COALESCE(j.payload->>'target_collection', j.payload->'payload'->>'target_collection', '') AS target_collection, \
+            COALESCE(j.payload->>'vector_backend', j.payload->'payload'->>'vector_backend', 'qdrant') AS vector_backend, \
+            COALESCE(j.payload->>'vector_instance', j.payload->'payload'->>'vector_instance', 'default') AS vector_instance, \
             COALESCE(s.{status}::TEXT, '') AS source_status \
          FROM {journal_relation} j \
          LEFT JOIN {source_rel} s \
@@ -420,6 +433,12 @@ async fn load_embedding_source_teardown_jobs(
             target_collection: row
                 .try_get("target_collection")
                 .map_err(|err| format!("decode embedding teardown collection failed: {err}"))?,
+            vector_backend: row
+                .try_get("vector_backend")
+                .map_err(|err| format!("decode embedding teardown backend failed: {err}"))?,
+            vector_instance: row
+                .try_get("vector_instance")
+                .map_err(|err| format!("decode embedding teardown instance failed: {err}"))?,
             source_status: row
                 .try_get("source_status")
                 .map_err(|err| format!("decode embedding teardown source status failed: {err}"))?,
@@ -473,6 +492,9 @@ async fn process_embedding_teardown_job(
     } else {
         job.target_collection.clone()
     };
+    let store = service
+        .vector_store_for_routing(&job.project_id, &job.vector_backend, &job.vector_instance)
+        .map_err(|error| format!("embedding teardown vector store unavailable: {error}"))?;
     // B.1.5 — authoritative, retention-INDEPENDENT erasure FIRST: drop every
     // point tagged `{_tenant_id, _source}` in the source's collection by payload
     // filter. Unlike the point-id enumeration below (which can only see points
@@ -482,13 +504,10 @@ async fn process_embedding_teardown_job(
     // pending → retried next leader pass), never a false completion. The journal
     // enumeration still runs, as the fallback for legacy points written before
     // `_source` tagging (and points left in a since-changed target collection).
-    service
-        .delete_embedding_points_by_source(
-            &job.project_id,
-            &fallback_collection,
-            &job.tenant_id,
-            &job.source_name,
-        )
+    let source_filter = super::model::source_teardown_filter(&job.tenant_id, &job.source_name)
+        .ok_or_else(|| "embedding teardown requires a tenant and source scope".to_string())?;
+    store
+        .delete_by_filter(&fallback_collection, source_filter)
         .await
         .map_err(|err| {
             format!(
@@ -546,8 +565,8 @@ async fn process_embedding_teardown_job(
                 group_collection
             };
             let count = ids.len() as i64;
-            service
-                .delete_embedding_points(&job.project_id, &effective_collection, ids)
+            store
+                .delete_points(&effective_collection, ids)
                 .await
                 .map_err(|err| {
                     format!(
@@ -660,6 +679,35 @@ fn json_row_pk(row: &serde_json::Value, primary_key: &str) -> String {
     json_string_field(row, primary_key).unwrap_or_default()
 }
 
+async fn load_active_model(
+    service: &EmbeddingServiceImpl,
+    tenant_id: &str,
+    project_id: &str,
+    model_id: &str,
+) -> Result<super::model::StoredModel, String> {
+    let runtime = service
+        .runtime
+        .as_ref()
+        .ok_or_else(|| "embedding model lookup requires runtime dispatch".to_string())?;
+    let context = super::super::native_helpers::native_service_context(
+        &tonic::metadata::MetadataMap::new(),
+        tenant_id,
+        project_id,
+    );
+    runtime
+        .native_entity_read_for_service(
+            "embedding",
+            &context,
+            model_read_by_id(tenant_id, model_id),
+        )
+        .await
+        .map_err(|error| format!("embedding model lookup failed: {error}"))?
+        .first()
+        .map(stored_model_from_json)
+        .filter(|model| model.status == STATUS_ACTIVE && model.tenant_state == STATUS_ACTIVE)
+        .ok_or_else(|| format!("active embedding model '{model_id}' not found for tenant"))
+}
+
 async fn process_embedding_backfill_job(
     service: &EmbeddingServiceImpl,
     job: &EmbeddingBackfillJob,
@@ -697,7 +745,20 @@ async fn process_embedding_backfill_job(
     // must filter on it or the planner rejects it for project isolation.
     let project_column = crate::generation::sql::resolve_project_column(table);
     let context = backfill_read_context(&job.tenant_id, &job.project_id);
+    let model = load_active_model(
+        service,
+        &job.tenant_id,
+        &job.project_id,
+        &job.source.model_id,
+    )
+    .await?;
+    if job.source.target_collection != model.active_collection {
+        return Err(
+            "embedding source/model collection binding changed before backfill".to_string(),
+        );
+    }
     let mut emitted = 0i64;
+    let mut enumerated = 0i64;
     let mut after_pk: Option<String> = None;
     loop {
         let request = backfill_select_request(
@@ -728,20 +789,34 @@ async fn process_embedding_backfill_job(
             if text.trim().is_empty() {
                 continue;
             }
-            service
-                .emit_backfill_work_event(
-                    &job.tenant_id,
-                    &job.project_id,
-                    &job.source.source_name,
-                    &row_pk,
-                    &text,
-                    &job.source.model_id,
-                    &job.source.collection(),
-                    &job.event_id,
-                    &job.backfill_id,
-                )
-                .await;
-            emitted = emitted.saturating_add(1);
+            let chunks = super::chunking::chunk_source_text_for_model(&text, &model);
+            let result = service
+                .persist_and_emit_work_batch(WorkBatch {
+                    tenant_id: &job.tenant_id,
+                    project_id: &job.project_id,
+                    job_id: &job.backfill_id,
+                    source_name: &job.source.source_name,
+                    parent_pk: &row_pk,
+                    document_id: "",
+                    doc_version: "1",
+                    target_collection: &model.active_collection,
+                    model: &model,
+                    chunks: &chunks,
+                    parent_text: &text,
+                    force: job.mode.eq_ignore_ascii_case("FULL"),
+                })
+                .await
+                .map_err(|error| format!("persist embedding backfill work failed: {error}"))?;
+            if !result.stale_point_ids.is_empty() {
+                service
+                    .vector_store_for_model(&job.project_id, &model)
+                    .map_err(|error| error.to_string())?
+                    .delete_points(&model.active_collection, result.stale_point_ids)
+                    .await
+                    .map_err(|error| format!("delete stale embedding chunks failed: {error}"))?;
+            }
+            emitted = emitted.saturating_add(result.emitted);
+            enumerated = enumerated.saturating_add(1);
         }
         if record_set.records_json.len() < EMBEDDING_BACKFILL_PAGE_LIMIT as usize
             || last_pk.is_empty()
@@ -749,6 +824,14 @@ async fn process_embedding_backfill_job(
             break;
         }
         after_pk = Some(last_pk);
+    }
+    if let Some(pool) = service.pg_pool.as_ref() {
+        update_job_emission(pool, &job.tenant_id, &job.backfill_id, enumerated, emitted)
+            .await
+            .map_err(|error| error.to_string())?;
+        complete_job_enumeration(pool, &job.tenant_id, &job.backfill_id)
+            .await
+            .map_err(|error| error.to_string())?;
     }
     service
         .emit_source_event(
@@ -759,7 +842,8 @@ async fn process_embedding_backfill_job(
             serde_json::json!({
                 "backfill_event_id": job.event_id,
                 "backfill_id": job.backfill_id,
-                "emitted": emitted,
+                "rows_enumerated": enumerated,
+                "chunks_emitted": emitted,
             }),
         )
         .await;
@@ -814,16 +898,6 @@ pub(crate) fn source_change_is_delete(payload: &serde_json::Value) -> bool {
     op.eq_ignore_ascii_case("delete") || op.eq_ignore_ascii_case("d")
 }
 
-/// A create/insert change — a brand-new row with no prior chunks to clear before
-/// embedding. An unknown/absent op is treated as NOT a create (i.e. a potential
-/// re-embed), so stale chunks are cleared conservatively rather than orphaned.
-pub(crate) fn source_change_is_create(payload: &serde_json::Value) -> bool {
-    let op = source_change_operation(payload);
-    op.eq_ignore_ascii_case("create")
-        || op.eq_ignore_ascii_case("c")
-        || op.eq_ignore_ascii_case("insert")
-}
-
 pub(crate) fn parse_source_text_fields(raw: &str) -> Vec<String> {
     if let Ok(fields) = serde_json::from_str::<Vec<String>>(raw) {
         return fields;
@@ -853,15 +927,50 @@ async fn process_embedding_work_job(
         return false;
     }
     let collection = job.source.collection();
+    let model = match load_active_model(
+        service,
+        event_tenant,
+        &job.project_id,
+        &job.source.model_id,
+    )
+    .await
+    {
+        Ok(model) => model,
+        Err(error) => {
+            tracing::warn!(source = %job.source.source_name, %error, "embedding source change model lookup failed");
+            return false;
+        }
+    };
+    if collection != model.active_collection {
+        tracing::warn!(source = %job.source.source_name, "embedding source/model collection binding is inconsistent");
+        return false;
+    }
+    let store = match service.vector_store_for_model(&job.project_id, &model) {
+        Ok(store) => store,
+        Err(error) => {
+            tracing::warn!(%error, "embedding vector store unavailable");
+            return false;
+        }
+    };
     if source_change_is_delete(&job.payload) {
-        // Remove EVERY chunk of the deleted row (not just a single point id).
+        if let Some(filter) =
+            super::model::row_teardown_filter(event_tenant, &job.source.source_name, &row_pk)
+            && let Err(error) = store.delete_by_filter(&collection, filter).await
+        {
+            tracing::warn!(%error, "embedding row filtered delete failed");
+            return false;
+        }
+        if let Err(error) = store.delete_points(&collection, vec![row_pk.clone()]).await {
+            tracing::warn!(%error, "embedding row legacy point delete failed");
+            return false;
+        }
         service
-            .delete_embedding_row(
-                &job.project_id,
-                &collection,
+            .emit_source_event(
+                TOPIC_SOURCE_CHANGE_COMPLETED,
                 event_tenant,
+                &job.project_id,
                 &job.source.source_name,
-                &row_pk,
+                serde_json::json!({"source_event_id": job.event_id, "deleted": true}),
             )
             .await;
         return true;
@@ -871,34 +980,66 @@ async fn process_embedding_work_job(
     let row = source_change_row(&job.payload).unwrap_or(&job.payload);
     let text = extract_source_text(row, &text_fields);
     if text.trim().is_empty() {
-        return false;
-    }
-    // A re-embed (update) may produce a different chunk count than the prior
-    // version — clear the row's existing chunks before fanning out the new set so
-    // a shrunk row leaves no orphan tail chunk. A fresh insert has none to clear.
-    if !source_change_is_create(&job.payload) {
+        if let Some(filter) =
+            super::model::row_teardown_filter(event_tenant, &job.source.source_name, &row_pk)
+            && let Err(error) = store.delete_by_filter(&collection, filter).await
+        {
+            tracing::warn!(%error, "embedding empty-row filtered delete failed");
+            return false;
+        }
+        if let Err(error) = store.delete_points(&collection, vec![row_pk.clone()]).await {
+            tracing::warn!(%error, "embedding empty-row legacy point delete failed");
+            return false;
+        }
         service
-            .delete_embedding_row(
-                &job.project_id,
-                &collection,
+            .emit_source_event(
+                TOPIC_SOURCE_CHANGE_COMPLETED,
                 event_tenant,
+                &job.project_id,
                 &job.source.source_name,
-                &row_pk,
+                serde_json::json!({"source_event_id": job.event_id, "empty": true}),
             )
             .await;
+        return true;
     }
-    service
-        .emit_work_event_with_source_event(
-            event_tenant,
-            &job.project_id,
-            &job.source.source_name,
-            &row_pk,
-            &text,
-            &job.source.model_id,
-            &collection,
-            Some(&job.event_id),
-        )
-        .await;
+    let chunks = super::chunking::chunk_source_text_for_model(&text, &model);
+    let result = match service
+        .persist_and_emit_work_batch(WorkBatch {
+            tenant_id: event_tenant,
+            project_id: &job.project_id,
+            job_id: "",
+            source_name: &job.source.source_name,
+            parent_pk: &row_pk,
+            document_id: "",
+            doc_version: "1",
+            target_collection: &collection,
+            model: &model,
+            chunks: &chunks,
+            parent_text: &text,
+            force: false,
+        })
+        .await
+    {
+        Ok(result) => result,
+        Err(error) => {
+            tracing::warn!(%error, "embedding source work persistence failed");
+            return false;
+        }
+    };
+    if !result.stale_point_ids.is_empty() {
+        if let Err(error) = store
+            .delete_points(&collection, result.stale_point_ids)
+            .await
+        {
+            tracing::warn!(%error, "embedding stale tail chunk delete failed");
+            return false;
+        }
+    }
+    service.emit_source_event(
+        TOPIC_SOURCE_CHANGE_COMPLETED, event_tenant, &job.project_id,
+        &job.source.source_name,
+        serde_json::json!({"source_event_id": job.event_id, "chunks_emitted": result.emitted, "chunks_unchanged": result.unchanged}),
+    ).await;
     true
 }
 
@@ -943,97 +1084,62 @@ pub(crate) async fn run_embedding_work_emitter_once(
                 .await?,
         );
     }
-    Ok(acted)
-}
-
-/// Per-source change-driven WORK emitter (master-plan 9.11). For each event on the
-/// source entity's tenant-scoped CDC topic, drop anything outside the source's
-/// tenant scope (fail closed) before acting; a row delete removes the orphan vector
-/// via the shared vector seam, and any other change extracts the configured text
-/// field(s) and emits a `udb.embedding.work.v1` event (row pk + text + non-secret
-/// routing ONLY — never a credential) for the sidecar pool to embed. This channel
-/// form stays as a narrow injected-event test seam; production uses
-/// [`run_embedding_work_emitter_once`] over the durable CDC journal.
-#[allow(dead_code)]
-pub(crate) async fn run_embedding_work_emitter(
-    service: Arc<EmbeddingServiceImpl>,
-    source: StoredSource,
-    tenant_scope: String,
-    project_id: String,
-    mut events: tokio::sync::mpsc::Receiver<serde_json::Value>,
-) {
-    let collection = source.collection();
-    let text_fields = parse_source_text_fields(&source.text_fields_json);
-    while let Some(payload) = events.recv().await {
-        // Fail closed: a missing/foreign tenant_id payload is never acted on.
-        let event_tenant = payload
-            .get("tenant_id")
-            .and_then(serde_json::Value::as_str)
-            .unwrap_or_default()
-            .trim();
-        if tenant_scope.trim().is_empty() || event_tenant != tenant_scope.trim() {
-            continue;
+    let retry_items = load_retryable_work(pool, embedding_retry_sweep_limit())
+        .await
+        .map_err(|error| error.to_string())?;
+    // One model load per distinct (tenant, project, model) across the sweep —
+    // a retry batch is typically many items of ONE model, so per-item loads
+    // were pure N+1.
+    let mut sweep_models: std::collections::HashMap<(String, String, String), _> =
+        std::collections::HashMap::new();
+    for item in &retry_items {
+        let model_key = (
+            item.tenant_id.clone(),
+            item.project_id.clone(),
+            item.model_id.clone(),
+        );
+        if !sweep_models.contains_key(&model_key) {
+            let loaded =
+                load_active_model(&service, &item.tenant_id, &item.project_id, &item.model_id)
+                    .await?;
+            sweep_models.insert(model_key.clone(), loaded);
         }
-        let row_pk = payload
-            .get("row_pk")
-            .or_else(|| payload.get("id"))
-            .and_then(serde_json::Value::as_str)
-            .unwrap_or_default()
-            .to_string();
-        if row_pk.is_empty() {
-            continue;
-        }
-        // A delete change removes the orphan vector through the shared seam.
-        let op = payload
-            .get("op")
-            .and_then(serde_json::Value::as_str)
-            .unwrap_or_default();
-        if op.eq_ignore_ascii_case("delete") || op.eq_ignore_ascii_case("d") {
-            service
-                .delete_embedding_row(
-                    &project_id,
-                    &collection,
-                    event_tenant,
-                    &source.source_name,
-                    &row_pk,
-                )
-                .await;
-            continue;
-        }
-        // Extract the configured text field(s); empty text ⇒ nothing to embed.
-        let row = payload.get("after").unwrap_or(&payload);
-        let text = extract_source_text(row, &text_fields);
-        if text.trim().is_empty() {
-            continue;
-        }
-        // Re-embed (non-insert): clear the row's prior chunks before re-fanning
-        // out so a shrunk chunk count leaves no orphan (mirrors the journal path).
-        let is_create = op.eq_ignore_ascii_case("create")
-            || op.eq_ignore_ascii_case("c")
-            || op.eq_ignore_ascii_case("insert");
-        if !is_create {
-            service
-                .delete_embedding_row(
-                    &project_id,
-                    &collection,
-                    event_tenant,
-                    &source.source_name,
-                    &row_pk,
-                )
-                .await;
-        }
+        let model = sweep_models
+            .get(&model_key)
+            .expect("model cached by the branch above");
+        reemit_work_item(&service, item, model)
+            .await
+            .map_err(|error| error.to_string())?;
+        service.metrics.inc_embedding_work("retried");
+        acted = acted.saturating_add(1);
+    }
+    let exhausted = dead_letter_exhausted_work(pool, embedding_retry_sweep_limit())
+        .await
+        .map_err(|error| error.to_string())?;
+    for item in &exhausted {
         service
-            .emit_work_event(
-                &tenant_scope,
-                &project_id,
-                &source.source_name,
-                &row_pk,
-                &text,
-                &source.model_id,
-                &collection,
+            .emit_source_event(
+                TOPIC_WORK_DEAD_LETTER,
+                &item.tenant_id,
+                &item.project_id,
+                &item.source_name,
+                serde_json::json!({
+                    "work_item_id": item.work_item_id,
+                    "attempt_count": item.attempt_count,
+                    "error": "embedding work visibility timeout exhausted",
+                }),
             )
             .await;
+        acted = acted.saturating_add(1);
     }
+    let backlog: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM udb_embedding.embedding_work_items WHERE status = 'PENDING'",
+    )
+    .fetch_one(pool)
+    .await
+    .map_err(|error| format!("load embedding backlog failed: {error}"))?;
+    service.metrics.set_embedding_backlog(backlog);
+    Ok(acted)
 }
 
 /// Concatenate the configured source text field(s) from a change row. When no
@@ -1077,154 +1183,4 @@ fn extract_backfill_source_text(
         })
         .collect::<Vec<_>>()
         .join(" ")
-}
-
-impl EmbeddingServiceImpl {
-    /// Batch point deletion through the SHARED vector seam — the exact path
-    /// `asset_service::delete_embedding` wraps (`vector_delete_backend_target`),
-    /// never a second vector client. Errors are RETURNED (not swallowed) so the
-    /// source-teardown pass can withhold its completion marker and retry;
-    /// a missing runtime fails closed with a typed capability detail.
-    pub(crate) async fn delete_embedding_points(
-        &self,
-        project_id: &str,
-        collection: &str,
-        point_ids: Vec<String>,
-    ) -> Result<(), Status> {
-        let Some(runtime) = self.runtime.as_ref() else {
-            return Err(embedding_capability_status(
-                "embedding_vector_delete",
-                "runtime_vector_seam",
-                "embedding vector delete requires the runtime vector seam (no runtime configured)",
-            ));
-        };
-        if point_ids.is_empty() {
-            return Ok(());
-        }
-        runtime
-            .vector_delete_backend_target(None, project_id, collection, point_ids)
-            .await
-    }
-
-    /// Retention-independent source teardown: delete EVERY point tagged with this
-    /// `{tenant, source}` in the collection through the shared filter-delete seam
-    /// ([`DataBrokerRuntime::vector_delete_by_filter_backend_target`]). This closes
-    /// the GDPR erasure hole in the point-id enumeration path — a source whose
-    /// `udb.embedding.work.v1` journal events were purged by log retention was
-    /// otherwise un-erasable. Points written before `_source` tagging carry no
-    /// `_source` and are not matched here — the journal enumeration remains as the
-    /// legacy fallback for them. Fails closed: an empty tenant/source yields a
-    /// no-op (an under-scoped filter must never delete another tenant's vectors);
-    /// backend errors are RETURNED so teardown withholds its completion marker and
-    /// retries.
-    pub(crate) async fn delete_embedding_points_by_source(
-        &self,
-        project_id: &str,
-        collection: &str,
-        tenant_id: &str,
-        source_name: &str,
-    ) -> Result<(), Status> {
-        let Some(runtime) = self.runtime.as_ref() else {
-            return Err(embedding_capability_status(
-                "embedding_vector_delete",
-                "runtime_vector_seam",
-                "embedding vector delete requires the runtime vector seam (no runtime configured)",
-            ));
-        };
-        let Some(filter) = super::model::source_teardown_filter(tenant_id, source_name) else {
-            // Unscopeable (empty tenant or source) — refuse to issue an
-            // under-scoped filter-delete; the journal fallback still runs.
-            return Ok(());
-        };
-        runtime
-            .vector_delete_by_filter_backend_target(None, project_id, collection, filter)
-            .await
-    }
-
-    /// Delete EVERY chunk of one source row by the `{_tenant_id, _source,
-    /// _parent_pk}` payload filter — the correct primitive when a row is chunked
-    /// into N points whose count/ids may have changed (a re-embed that shrinks
-    /// the text must not leave stale tail chunks). Errors are RETURNED so the
-    /// caller can decide (the CDC delete path logs; the re-embed path proceeds).
-    /// Fails safe: an empty scope key yields a no-op rather than an under-scoped
-    /// delete.
-    pub(crate) async fn delete_embedding_points_by_parent(
-        &self,
-        project_id: &str,
-        collection: &str,
-        tenant_id: &str,
-        source_name: &str,
-        parent_pk: &str,
-    ) -> Result<(), Status> {
-        let Some(runtime) = self.runtime.as_ref() else {
-            return Err(embedding_capability_status(
-                "embedding_vector_delete",
-                "runtime_vector_seam",
-                "embedding vector delete requires the runtime vector seam (no runtime configured)",
-            ));
-        };
-        let Some(filter) = super::model::row_teardown_filter(tenant_id, source_name, parent_pk)
-        else {
-            return Ok(());
-        };
-        runtime
-            .vector_delete_by_filter_backend_target(None, project_id, collection, filter)
-            .await
-    }
-
-    /// Best-effort removal of ALL vectors for a source row (every chunk),
-    /// idempotent and never fatal to the caller. Runs the `_parent_pk` filter
-    /// delete (covers all `_source`-tagged chunk points) AND deletes the bare
-    /// `parent_pk` point id (covers a legacy pre-chunking single vector that
-    /// carries no `_parent_pk` tag). Used on a CDC row delete and before a
-    /// re-embed so a shrunk/replaced row leaves no orphan chunk.
-    pub(crate) async fn delete_embedding_row(
-        &self,
-        project_id: &str,
-        collection: &str,
-        tenant_id: &str,
-        source_name: &str,
-        parent_pk: &str,
-    ) {
-        if parent_pk.trim().is_empty() {
-            return;
-        }
-        if let Err(err) = self
-            .delete_embedding_points_by_parent(
-                project_id,
-                collection,
-                tenant_id,
-                source_name,
-                parent_pk,
-            )
-            .await
-        {
-            tracing::warn!(error = %err, collection, parent_pk, "embedding row chunk delete failed");
-        }
-        // Legacy fallback: a point stored before `_parent_pk` tagging has the bare
-        // row pk as its id and no tag to match the filter above.
-        self.delete_embedding_point(project_id, collection, parent_pk)
-            .await;
-    }
-
-    /// Best-effort: remove a source row's embedding (point id = row pk) through the
-    /// SHARED vector seam — the path `asset_service::delete_embedding` wraps. Used
-    /// by the leader work-emitter pass on a row delete so a deleted row leaves no
-    /// orphan vector. Never fails the caller (logs and continues).
-    pub(crate) async fn delete_embedding_point(
-        &self,
-        project_id: &str,
-        collection: &str,
-        row_pk: &str,
-    ) {
-        if row_pk.trim().is_empty() {
-            return;
-        }
-        if let Err(err) = self
-            .delete_embedding_points(project_id, collection, vec![row_pk.to_string()])
-            .await
-        {
-            tracing::warn!(error = %err, collection, row_pk, "embedding vector delete failed");
-        }
-    }
 }

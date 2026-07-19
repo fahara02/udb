@@ -60,4 +60,28 @@ public interface RetrieveResponseOrBuilder extends
    * <code>.udb.core.common.v1.ApiError error = 3 [json_name = "error"];</code>
    */
   com.udb.core.common.v1.ApiErrorOrBuilder getErrorOrBuilder();
+
+  /**
+   * <code>int64 index_lag_ms = 4 [json_name = "indexLagMs"];</code>
+   * @return The indexLagMs.
+   */
+  long getIndexLagMs();
+
+  /**
+   * <code>bool rerank_applied = 5 [json_name = "rerankApplied"];</code>
+   * @return The rerankApplied.
+   */
+  boolean getRerankApplied();
+
+  /**
+   * <code>string evaluation_id = 6 [json_name = "evaluationId"];</code>
+   * @return The evaluationId.
+   */
+  java.lang.String getEvaluationId();
+  /**
+   * <code>string evaluation_id = 6 [json_name = "evaluationId"];</code>
+   * @return The bytes for evaluationId.
+   */
+  com.google.protobuf.ByteString
+      getEvaluationIdBytes();
 }

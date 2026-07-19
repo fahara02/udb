@@ -120,4 +120,46 @@ public interface ReportEmbeddingRequestOrBuilder extends
    * @return The dims.
    */
   int getDims();
+
+  /**
+   * <code>string work_item_id = 7 [json_name = "workItemId"];</code>
+   * @return The workItemId.
+   */
+  java.lang.String getWorkItemId();
+  /**
+   * <code>string work_item_id = 7 [json_name = "workItemId"];</code>
+   * @return The bytes for workItemId.
+   */
+  com.google.protobuf.ByteString
+      getWorkItemIdBytes();
+
+  /**
+   * <code>string chunk_hash = 8 [json_name = "chunkHash"];</code>
+   * @return The chunkHash.
+   */
+  java.lang.String getChunkHash();
+  /**
+   * <code>string chunk_hash = 8 [json_name = "chunkHash"];</code>
+   * @return The bytes for chunkHash.
+   */
+  com.google.protobuf.ByteString
+      getChunkHashBytes();
+
+  /**
+   * <code>int64 token_count = 9 [json_name = "tokenCount"];</code>
+   * @return The tokenCount.
+   */
+  long getTokenCount();
+
+  /**
+   * <code>string vector_name = 10 [json_name = "vectorName"];</code>
+   * @return The vectorName.
+   */
+  java.lang.String getVectorName();
+  /**
+   * <code>string vector_name = 10 [json_name = "vectorName"];</code>
+   * @return The bytes for vectorName.
+   */
+  com.google.protobuf.ByteString
+      getVectorNameBytes();
 }

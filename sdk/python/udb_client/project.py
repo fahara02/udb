@@ -162,7 +162,7 @@ class UdbConfig:
             user_id=self.user_id,
             project_id=self.project_id,
             bearer_token=self.bearer_token,
-            api_key=self.api_key,
+            api_key="",
         )
 
     def effective_auth_target(self) -> str:
@@ -1518,6 +1518,9 @@ class UdbProject:
             else None
         )
 
+        if self.config.api_key and not self.config.bearer_token:
+            self.authenticate_api_key_and_adopt(self.config.api_key)
+
     # ── lifecycle ─────────────────────────────────────────────────────────
     @property
     def metadata(self) -> Metadata:
@@ -1545,6 +1548,41 @@ class UdbProject:
             replace(self._metadata, bearer_token=bearer_token, api_key=api_key)
         )
 
+    def authenticate_api_key_and_adopt(
+        self,
+        api_key: str | None = None,
+        *,
+        metadata: Metadata | None = None,
+    ) -> Any:
+        """Exchange a native API key for a short-lived bearer and adopt it.
+
+        The high-level project facade never sends raw ``x-api-key`` to
+        DataBroker. API keys are submitted only to Authn.Authenticate, then the
+        returned bearer + verified principal metadata are installed across all
+        future calls.
+        """
+        key = api_key or self.config.api_key
+        if not key:
+            raise UdbConfigurationError("api_key is required")
+        authn = self.auth.authenticate_api_key(key, metadata=metadata)
+        token = getattr(authn, "access_token", "")
+        if not token:
+            raise UdbConfigurationError("authenticate_api_key returned no access token")
+        principal = authn.principal
+        adopted = replace(
+            self._metadata,
+            tenant_id=principal.tenant_id or self._metadata.tenant_id,
+            project_id=principal.project_id or self._metadata.project_id,
+            user_id=principal.user_id or self._metadata.user_id,
+            service_identity=principal.service_identity or self._metadata.service_identity,
+            scopes=tuple(principal.scopes or ()),
+            bearer_token=token,
+            api_key="",
+        )
+        self.config.bearer_token = token
+        self.config.api_key = ""
+        self.bind_metadata(adopted)
+        return authn
     def login_and_adopt_tenant(
         self,
         username: str,
@@ -1630,7 +1668,7 @@ class UdbProject:
 
     def _with_config_credentials(self, metadata: Metadata) -> Metadata:
         bearer_token = metadata.bearer_token or self.config.bearer_token
-        api_key = metadata.api_key or self.config.api_key
+        api_key = "" if bearer_token else ""
         if bearer_token == metadata.bearer_token and api_key == metadata.api_key:
             return metadata
         return replace(metadata, bearer_token=bearer_token, api_key=api_key)
@@ -2004,7 +2042,7 @@ class UdbAsyncProject:
 
     def _with_config_credentials(self, metadata: Metadata) -> Metadata:
         bearer_token = metadata.bearer_token or self.config.bearer_token
-        api_key = metadata.api_key or self.config.api_key
+        api_key = "" if bearer_token else ""
         if bearer_token == metadata.bearer_token and api_key == metadata.api_key:
             return metadata
         return replace(metadata, bearer_token=bearer_token, api_key=api_key)

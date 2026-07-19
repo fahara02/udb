@@ -24,6 +24,9 @@ pub trait MetricsRecorder: Send + Sync + std::fmt::Debug {
     fn observe_pg_query(&self, _op: &str, _table: &str, _seconds: f64) {}
     fn inc_cache_op(&self, _op: &str, _hit: bool) {}
     fn inc_vector_op(&self, _collection: &str, _op: &str) {}
+    fn inc_embedding_work(&self, _status: &str) {}
+    fn observe_embedding_index_lag(&self, _seconds: f64) {}
+    fn set_embedding_backlog(&self, _count: i64) {}
     /// Scatter-gather fan-out width: `_count` backend targets were resolved for a
     /// single data-plane request to `_backend`.
     fn inc_backend_fanout(&self, _backend: &str, _count: u64) {}
@@ -414,6 +417,9 @@ pub struct PrometheusMetrics {
     pg_duration: prometheus::HistogramVec,
     cache_ops: prometheus::IntCounterVec,
     vector_ops: prometheus::IntCounterVec,
+    embedding_work: prometheus::IntCounterVec,
+    embedding_index_lag: prometheus::Histogram,
+    embedding_backlog: prometheus::IntGauge,
     backend_fanout: prometheus::IntCounterVec,
     object_ops: prometheus::IntCounterVec,
     cdc_events: prometheus::IntCounterVec,
@@ -525,6 +531,22 @@ impl PrometheusMetrics {
         let vector_ops = prometheus::IntCounterVec::new(
             prometheus::Opts::new("udb_vector_ops_total", "Vector backend operations"),
             &["collection", "op"],
+        )?;
+        let embedding_work = prometheus::IntCounterVec::new(
+            prometheus::Opts::new(
+                "udb_embedding_work_total",
+                "Embedding work items by lifecycle outcome",
+            ),
+            &["status"],
+        )?;
+        let embedding_index_lag =
+            prometheus::Histogram::with_opts(prometheus::HistogramOpts::new(
+                "udb_embedding_index_lag_seconds",
+                "Observed time from vector indexing to retrieval",
+            ))?;
+        let embedding_backlog = prometheus::IntGauge::new(
+            "udb_embedding_backlog",
+            "Pending durable embedding work items",
         )?;
         let backend_fanout = prometheus::IntCounterVec::new(
             prometheus::Opts::new(
@@ -892,6 +914,9 @@ impl PrometheusMetrics {
             Box::new(pg_duration.clone()),
             Box::new(cache_ops.clone()),
             Box::new(vector_ops.clone()),
+            Box::new(embedding_work.clone()),
+            Box::new(embedding_index_lag.clone()),
+            Box::new(embedding_backlog.clone()),
             Box::new(backend_fanout.clone()),
             Box::new(object_ops.clone()),
             Box::new(cdc_events.clone()),
@@ -966,6 +991,9 @@ impl PrometheusMetrics {
             pg_duration,
             cache_ops,
             vector_ops,
+            embedding_work,
+            embedding_index_lag,
+            embedding_backlog,
             backend_fanout,
             object_ops,
             cdc_events,
@@ -1059,6 +1087,18 @@ impl PrometheusMetrics {
         self.vector_ops
             .with_label_values(&[bounded_label("vector_collection", collection).as_ref(), op])
             .inc();
+    }
+
+    pub fn inc_embedding_work(&self, status: &str) {
+        self.embedding_work.with_label_values(&[status]).inc();
+    }
+
+    pub fn observe_embedding_index_lag(&self, seconds: f64) {
+        self.embedding_index_lag.observe(seconds.max(0.0));
+    }
+
+    pub fn set_embedding_backlog(&self, count: i64) {
+        self.embedding_backlog.set(count.max(0));
     }
 
     pub fn inc_backend_fanout(&self, backend: &str, count: u64) {
@@ -1276,6 +1316,18 @@ impl MetricsRecorder for PrometheusMetrics {
     }
     fn inc_vector_op(&self, collection: &str, op: &str) {
         PrometheusMetrics::inc_vector_op(self, collection, op);
+    }
+
+    fn inc_embedding_work(&self, status: &str) {
+        PrometheusMetrics::inc_embedding_work(self, status);
+    }
+
+    fn observe_embedding_index_lag(&self, seconds: f64) {
+        PrometheusMetrics::observe_embedding_index_lag(self, seconds);
+    }
+
+    fn set_embedding_backlog(&self, count: i64) {
+        PrometheusMetrics::set_embedding_backlog(self, count);
     }
     fn inc_backend_fanout(&self, backend: &str, count: u64) {
         PrometheusMetrics::inc_backend_fanout(self, backend, count);

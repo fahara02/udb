@@ -26,7 +26,7 @@ from google.protobuf import struct_pb2 as google_dot_protobuf_dot_struct__pb2
 from udb.entity.v1 import context_pb2 as udb_dot_entity_dot_v1_dot_context__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1audb/entity/v1/vector.proto\x12\rudb.entity.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1budb/entity/v1/context.proto\"\x99\x02\n\x13VectorSearchRequest\x12\x37\n\x07\x63ontext\x18\x01 \x01(\x0b\x32\x1d.udb.entity.v1.RequestContextR\x07\x63ontext\x12\x1e\n\ncollection\x18\x02 \x01(\tR\ncollection\x12\x16\n\x06vector\x18\x03 \x03(\x02R\x06vector\x12/\n\x06\x66ilter\x18\x04 \x01(\x0b\x32\x17.google.protobuf.StructR\x06\x66ilter\x12\x14\n\x05limit\x18\x05 \x01(\x05R\x05limit\x12\'\n\x0fscore_threshold\x18\x06 \x01(\x02R\x0escoreThreshold\x12!\n\x0cwith_payload\x18\x07 \x01(\x08R\x0bwithPayload\"\xbc\x02\n\x19VectorHybridSearchRequest\x12\x37\n\x07\x63ontext\x18\x01 \x01(\x0b\x32\x1d.udb.entity.v1.RequestContextR\x07\x63ontext\x12\x1e\n\ncollection\x18\x02 \x01(\tR\ncollection\x12\x16\n\x06vector\x18\x03 \x03(\x02R\x06vector\x12\x1d\n\ntext_query\x18\x04 \x01(\tR\ttextQuery\x12/\n\x06\x66ilter\x18\x05 \x01(\x0b\x32\x17.google.protobuf.StructR\x06\x66ilter\x12\x14\n\x05limit\x18\x06 \x01(\x05R\x05limit\x12%\n\x0e\x66usion_weights\x18\x07 \x03(\x02R\rfusionWeights\x12!\n\x0cwith_payload\x18\x08 \x01(\x08R\x0bwithPayload\"p\n\x13VectorPointMutation\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n\x06vector\x18\x02 \x03(\x02R\x06vector\x12\x31\n\x07payload\x18\x03 \x01(\x0b\x32\x17.google.protobuf.StructR\x07payload\"\xd3\x01\n\x13VectorUpsertRequest\x12\x37\n\x07\x63ontext\x18\x01 \x01(\x0b\x32\x1d.udb.entity.v1.RequestContextR\x07\x63ontext\x12\x1e\n\ncollection\x18\x02 \x01(\tR\ncollection\x12:\n\x06points\x18\x03 \x03(\x0b\x32\".udb.entity.v1.VectorPointMutationR\x06points\x12\'\n\x0fidempotency_key\x18\x04 \x01(\tR\x0eidempotencyKey\"f\n\x0bVectorPoint\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n\x05score\x18\x02 \x01(\x02R\x05score\x12\x31\n\x07payload\x18\x03 \x01(\x0b\x32\x17.google.protobuf.StructR\x07payload\"?\n\tVectorSet\x12\x32\n\x06points\x18\x01 \x03(\x0b\x32\x1a.udb.entity.v1.VectorPointR\x06pointsB\xb1\x01\n\x11\x63om.udb.entity.v1B\x0bVectorProtoP\x01Z9github.com/fahara02/udb/sdk/go/gen/udb/entity/v1;entityv1\xa2\x02\x03UEX\xaa\x02\rUdb.Entity.V1\xca\x02\rUdb\\Entity\\V1\xe2\x02\x19Udb\\GPBMetadata\\Entity\\V1\xea\x02\x0fUdb::Entity::V1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1audb/entity/v1/vector.proto\x12\rudb.entity.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1budb/entity/v1/context.proto\"\x8e\x03\n\x13VectorSearchRequest\x12\x37\n\x07\x63ontext\x18\x01 \x01(\x0b\x32\x1d.udb.entity.v1.RequestContextR\x07\x63ontext\x12\x1e\n\ncollection\x18\x02 \x01(\tR\ncollection\x12\x16\n\x06vector\x18\x03 \x03(\x02R\x06vector\x12/\n\x06\x66ilter\x18\x04 \x01(\x0b\x32\x17.google.protobuf.StructR\x06\x66ilter\x12\x14\n\x05limit\x18\x05 \x01(\x05R\x05limit\x12\'\n\x0fscore_threshold\x18\x06 \x01(\x02R\x0escoreThreshold\x12!\n\x0cwith_payload\x18\x07 \x01(\x08R\x0bwithPayload\x12\x1f\n\x0bwith_vector\x18\x08 \x01(\x08R\nwithVector\x12\x1f\n\x0bvector_name\x18\t \x01(\tR\nvectorName\x12\x31\n\x14quantization_rescore\x18\n \x01(\x08R\x13quantizationRescore\"\xa6\x04\n\x19VectorHybridSearchRequest\x12\x37\n\x07\x63ontext\x18\x01 \x01(\x0b\x32\x1d.udb.entity.v1.RequestContextR\x07\x63ontext\x12\x1e\n\ncollection\x18\x02 \x01(\tR\ncollection\x12\x16\n\x06vector\x18\x03 \x03(\x02R\x06vector\x12\x1d\n\ntext_query\x18\x04 \x01(\tR\ttextQuery\x12/\n\x06\x66ilter\x18\x05 \x01(\x0b\x32\x17.google.protobuf.StructR\x06\x66ilter\x12\x14\n\x05limit\x18\x06 \x01(\x05R\x05limit\x12%\n\x0e\x66usion_weights\x18\x07 \x03(\x02R\rfusionWeights\x12!\n\x0cwith_payload\x18\x08 \x01(\x08R\x0bwithPayload\x12\x1f\n\x0bwith_vector\x18\t \x01(\x08R\nwithVector\x12\x1f\n\x0bvector_name\x18\n \x01(\tR\nvectorName\x12L\n\x0f\x66usion_strategy\x18\x0b \x01(\x0e\x32#.udb.entity.v1.VectorFusionStrategyR\x0e\x66usionStrategy\x12%\n\x0eprefetch_limit\x18\x0c \x01(\x05R\rprefetchLimit\x12\x31\n\x14quantization_rescore\x18\r \x01(\x08R\x13quantizationRescore\"\x91\x01\n\x13VectorPointMutation\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n\x06vector\x18\x02 \x03(\x02R\x06vector\x12\x31\n\x07payload\x18\x03 \x01(\x0b\x32\x17.google.protobuf.StructR\x07payload\x12\x1f\n\x0bvector_name\x18\x04 \x01(\tR\nvectorName\"\xd3\x01\n\x13VectorUpsertRequest\x12\x37\n\x07\x63ontext\x18\x01 \x01(\x0b\x32\x1d.udb.entity.v1.RequestContextR\x07\x63ontext\x12\x1e\n\ncollection\x18\x02 \x01(\tR\ncollection\x12:\n\x06points\x18\x03 \x03(\x0b\x32\".udb.entity.v1.VectorPointMutationR\x06points\x12\'\n\x0fidempotency_key\x18\x04 \x01(\tR\x0eidempotencyKey\"\x9f\x01\n\x0bVectorPoint\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n\x05score\x18\x02 \x01(\x02R\x05score\x12\x31\n\x07payload\x18\x03 \x01(\x0b\x32\x17.google.protobuf.StructR\x07payload\x12\x16\n\x06vector\x18\x04 \x03(\x02R\x06vector\x12\x1f\n\x0bvector_name\x18\x05 \x01(\tR\nvectorName\"?\n\tVectorSet\x12\x32\n\x06points\x18\x01 \x03(\x0b\x32\x1a.udb.entity.v1.VectorPointR\x06points*\xa4\x01\n\x14VectorFusionStrategy\x12&\n\"VECTOR_FUSION_STRATEGY_UNSPECIFIED\x10\x00\x12\x1e\n\x1aVECTOR_FUSION_STRATEGY_RRF\x10\x01\x12#\n\x1fVECTOR_FUSION_STRATEGY_WEIGHTED\x10\x02\x12\x1f\n\x1bVECTOR_FUSION_STRATEGY_DBSF\x10\x03\x42\xb1\x01\n\x11\x63om.udb.entity.v1B\x0bVectorProtoP\x01Z9github.com/fahara02/udb/sdk/go/gen/udb/entity/v1;entityv1\xa2\x02\x03UEX\xaa\x02\rUdb.Entity.V1\xca\x02\rUdb\\Entity\\V1\xe2\x02\x19Udb\\GPBMetadata\\Entity\\V1\xea\x02\x0fUdb::Entity::V1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -34,16 +34,18 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'udb.entity.v1.vector_pb2', 
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
   _globals['DESCRIPTOR']._serialized_options = b'\n\021com.udb.entity.v1B\013VectorProtoP\001Z9github.com/fahara02/udb/sdk/go/gen/udb/entity/v1;entityv1\242\002\003UEX\252\002\rUdb.Entity.V1\312\002\rUdb\\Entity\\V1\342\002\031Udb\\GPBMetadata\\Entity\\V1\352\002\017Udb::Entity::V1'
+  _globals['_VECTORFUSIONSTRATEGY']._serialized_start=1648
+  _globals['_VECTORFUSIONSTRATEGY']._serialized_end=1812
   _globals['_VECTORSEARCHREQUEST']._serialized_start=105
-  _globals['_VECTORSEARCHREQUEST']._serialized_end=386
-  _globals['_VECTORHYBRIDSEARCHREQUEST']._serialized_start=389
-  _globals['_VECTORHYBRIDSEARCHREQUEST']._serialized_end=705
-  _globals['_VECTORPOINTMUTATION']._serialized_start=707
-  _globals['_VECTORPOINTMUTATION']._serialized_end=819
-  _globals['_VECTORUPSERTREQUEST']._serialized_start=822
-  _globals['_VECTORUPSERTREQUEST']._serialized_end=1033
-  _globals['_VECTORPOINT']._serialized_start=1035
-  _globals['_VECTORPOINT']._serialized_end=1137
-  _globals['_VECTORSET']._serialized_start=1139
-  _globals['_VECTORSET']._serialized_end=1202
+  _globals['_VECTORSEARCHREQUEST']._serialized_end=503
+  _globals['_VECTORHYBRIDSEARCHREQUEST']._serialized_start=506
+  _globals['_VECTORHYBRIDSEARCHREQUEST']._serialized_end=1056
+  _globals['_VECTORPOINTMUTATION']._serialized_start=1059
+  _globals['_VECTORPOINTMUTATION']._serialized_end=1204
+  _globals['_VECTORUPSERTREQUEST']._serialized_start=1207
+  _globals['_VECTORUPSERTREQUEST']._serialized_end=1418
+  _globals['_VECTORPOINT']._serialized_start=1421
+  _globals['_VECTORPOINT']._serialized_end=1580
+  _globals['_VECTORSET']._serialized_start=1582
+  _globals['_VECTORSET']._serialized_end=1645
 # @@protoc_insertion_point(module_scope)

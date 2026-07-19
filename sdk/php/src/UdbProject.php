@@ -133,6 +133,11 @@ final class UdbProject
         // Auth (authn/authz/apikey/tenant/notification/analytics) may live on a
         // separate control-plane listener; default it to the data target.
         $this->authTarget = trim((string) ($config['authTarget'] ?? $dataTarget)) ?: $dataTarget;
+        $initial = $this->defaultMetadata();
+        if ($initial->apiKey !== '' && $initial->bearerToken === '') {
+            $this->bindContext($initial);
+            $this->authenticateApiKeyAndAdopt($initial->apiKey);
+        }
     }
 
     /**
@@ -170,11 +175,57 @@ final class UdbProject
      */
     public function setCredentials(?string $bearerToken = null, ?string $apiKey = null): UdbProject
     {
-        $updated = $this->metadata()->withCredentials($bearerToken, $apiKey);
+        $updated = $this->metadata()->withCredentials(
+            $bearerToken,
+            ($bearerToken !== null && trim($bearerToken) !== '') ? '' : $apiKey,
+        );
 
         return $this->bindContext($updated);
     }
 
+    public function authenticateApiKeyAndAdopt(string $apiKey = '', ?UdbMetadata $metadata = null): \Udb\Core\Authn\Services\V1\AuthnResponse
+    {
+        $key = trim($apiKey) !== '' ? $apiKey : $this->metadata()->apiKey;
+        if (trim($key) === '') {
+            throw new UdbConfigurationException('api key is required');
+        }
+
+        $authn = $this->auth()->authenticateApiKey($key, $metadata);
+        $token = $authn->getAccessToken();
+        if ($token === '') {
+            throw new UdbConfigurationException('authenticateApiKey returned no access token');
+        }
+        $principal = $authn->getPrincipal();
+        if ($principal === null) {
+            throw new UdbConfigurationException('authenticateApiKey returned no principal');
+        }
+
+        $current = $this->metadata();
+        $scopes = [];
+        foreach ($principal->getScopes() as $scope) {
+            $scopes[] = (string) $scope;
+        }
+        $adopted = new UdbMetadata(
+            tenantId: $principal->getTenantId() !== '' ? $principal->getTenantId() : $current->tenantId,
+            userId: $principal->getUserId() !== '' ? $principal->getUserId() : $current->userId,
+            purpose: $current->purpose,
+            correlationId: $current->correlationId,
+            scopes: $scopes,
+            serviceIdentity: $principal->getServiceIdentity() !== '' ? $principal->getServiceIdentity() : $current->serviceIdentity,
+            projectId: $principal->getProjectId() !== '' ? $principal->getProjectId() : $current->projectId,
+            clientCatalogVersion: $current->clientCatalogVersion,
+            bearerToken: $token,
+            apiKey: '',
+            consistency: $current->consistency,
+            primaryRead: $current->primaryRead,
+            maxReplicaLagMs: $current->maxReplicaLagMs,
+            eventualConsistencyAllowed: $current->eventualConsistencyAllowed,
+            readFenceJson: $current->readFenceJson,
+        );
+        $this->bindContext($adopted);
+
+        return $authn;
+    }
     /**
      * Login, then adopt the canonical tenant/project from the VERIFIED principal.
      *
@@ -437,6 +488,9 @@ final class UdbProject
         /** @var array<string,mixed> $credentials */
         $credentials = (array) ($this->config['credentials'] ?? []);
 
+        $bearerToken = (string) ($credentials['bearerToken'] ?? $this->config['bearerToken'] ?? '');
+        $apiKey = $bearerToken !== '' ? '' : (string) ($credentials['apiKey'] ?? $this->config['apiKey'] ?? '');
+
         return new UdbMetadata(
             tenantId: (string) ($this->config['tenantId'] ?? ''),
             userId: (string) ($this->config['userId'] ?? ''),
@@ -446,8 +500,8 @@ final class UdbProject
             serviceIdentity: (string) ($this->config['serviceIdentity'] ?? ''),
             projectId: (string) ($this->config['projectId'] ?? 'default'),
             clientCatalogVersion: (string) ($this->config['clientCatalogVersion'] ?? '1.0.0'),
-            bearerToken: (string) ($credentials['bearerToken'] ?? $this->config['bearerToken'] ?? ''),
-            apiKey: (string) ($credentials['apiKey'] ?? $this->config['apiKey'] ?? ''),
+            bearerToken: $bearerToken,
+            apiKey: $apiKey,
         );
     }
 

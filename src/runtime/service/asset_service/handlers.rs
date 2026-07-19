@@ -503,7 +503,12 @@ pub(crate) async fn start_pipeline(
             match outcome {
                 StepOutcome::Completed(mut value) => {
                     if let Some(target) = svc
-                        .upsert_embedding(&asset_project_id, &req.asset_id, &value)
+                        .upsert_embedding(
+                            &tenant_id.to_string(),
+                            &asset_project_id,
+                            &req.asset_id,
+                            &value,
+                        )
                         .await
                     {
                         if let Some(object) = value.as_object_mut() {

@@ -56,13 +56,21 @@ use super::DataBrokerService;
 
 mod chunking;
 mod config;
+mod documents;
 mod errors;
 mod events;
+mod fresh_buffer;
 mod handlers;
+mod jobs;
 mod model;
+mod queue;
+mod registry;
+mod reports;
+mod retrieval;
 mod store;
 #[cfg(test)]
 mod tests;
+mod vector_store;
 mod workers;
 
 // Re-exported at the module root for `serve()`, which spawns the leader-elected
@@ -86,6 +94,7 @@ pub struct EmbeddingServiceImpl {
     /// Shared per-tenant fair-admission manager (same one the data plane uses).
     pub(crate) channels: Option<ChannelManager>,
     pub(crate) metrics: Arc<dyn MetricsRecorder>,
+    pub(crate) fresh_vectors: Arc<fresh_buffer::FreshVectorBuffer>,
 }
 
 impl EmbeddingServiceImpl {
@@ -97,6 +106,7 @@ impl EmbeddingServiceImpl {
             outbox_relation: None,
             channels: None,
             metrics: Arc::new(NoopMetrics),
+            fresh_vectors: Arc::new(fresh_buffer::FreshVectorBuffer::default()),
         }
     }
 
@@ -141,6 +151,16 @@ impl EmbeddingServiceImpl {
         })
     }
 
+    pub(crate) fn require_runtime_handle(&self) -> Result<Arc<DataBrokerRuntime>, Status> {
+        self.runtime.clone().ok_or_else(|| {
+            errors::embedding_capability_status(
+                "native_entity_dispatch",
+                "runtime_native_entity_dispatch",
+                "embedding service requires runtime native-entity dispatch (no runtime configured)",
+            )
+        })
+    }
+
     pub(crate) fn require_catalog(&self) -> Result<&CatalogManager, Status> {
         self.catalog.as_deref().ok_or_else(|| {
             errors::embedding_capability_status(
@@ -149,6 +169,52 @@ impl EmbeddingServiceImpl {
                 "embedding service requires the active catalog (no catalog configured)",
             )
         })
+    }
+
+    pub(crate) fn vector_store_for_model(
+        &self,
+        project_id: &str,
+        model: &model::StoredModel,
+    ) -> Result<vector_store::RuntimeVectorStore, Status> {
+        let runtime = self.runtime.as_ref().cloned().ok_or_else(|| {
+            errors::embedding_capability_status(
+                "vector_store",
+                "runtime_vector_dispatch",
+                "embedding service requires runtime vector dispatch",
+            )
+        })?;
+        Ok(vector_store::RuntimeVectorStore::for_model(
+            runtime, project_id, model,
+        ))
+    }
+
+    pub(crate) fn vector_store_for_routing(
+        &self,
+        project_id: &str,
+        backend: &str,
+        instance: &str,
+    ) -> Result<vector_store::RuntimeVectorStore, Status> {
+        let runtime = self.runtime.as_ref().cloned().ok_or_else(|| {
+            errors::embedding_capability_status(
+                "vector_store",
+                "runtime_vector_dispatch",
+                "embedding service requires runtime vector dispatch",
+            )
+        })?;
+        Ok(vector_store::RuntimeVectorStore::for_routing(
+            runtime, project_id, backend, instance,
+        ))
+    }
+
+    pub(crate) async fn swap_model_collection_alias(
+        &self,
+        project_id: &str,
+        model: &model::StoredModel,
+    ) -> Result<(), Status> {
+        use vector_store::VectorStore as _;
+        self.vector_store_for_model(project_id, model)?
+            .swap_alias(&model.collection_alias, &model.active_collection)
+            .await
     }
 }
 
@@ -192,14 +258,105 @@ impl EmbeddingService for EmbeddingServiceImpl {
         &self,
         request: Request<embedding_pb::ReportEmbeddingRequest>,
     ) -> Result<Response<embedding_pb::ReportEmbeddingResponse>, Status> {
-        handlers::report_embedding(self, request).await
+        reports::report_embedding(self, request).await
     }
 
     async fn retrieve(
         &self,
         request: Request<embedding_pb::RetrieveRequest>,
     ) -> Result<Response<embedding_pb::RetrieveResponse>, Status> {
-        handlers::retrieve(self, request).await
+        retrieval::retrieve(self, request).await
+    }
+
+    async fn register_model(
+        &self,
+        request: Request<embedding_pb::RegisterModelRequest>,
+    ) -> Result<Response<embedding_pb::RegisterModelResponse>, Status> {
+        registry::register_model(self, request).await
+    }
+
+    async fn list_models(
+        &self,
+        request: Request<embedding_pb::ListModelsRequest>,
+    ) -> Result<Response<embedding_pb::ListModelsResponse>, Status> {
+        registry::list_models(self, request).await
+    }
+
+    async fn delete_model(
+        &self,
+        request: Request<embedding_pb::DeleteModelRequest>,
+    ) -> Result<Response<embedding_pb::DeleteModelResponse>, Status> {
+        registry::delete_model(self, request).await
+    }
+
+    async fn set_model_status(
+        &self,
+        request: Request<embedding_pb::SetModelStatusRequest>,
+    ) -> Result<Response<embedding_pb::SetModelStatusResponse>, Status> {
+        registry::set_model_status(self, request).await
+    }
+
+    async fn cutover_model_alias(
+        &self,
+        request: Request<embedding_pb::CutoverModelAliasRequest>,
+    ) -> Result<Response<embedding_pb::CutoverModelAliasResponse>, Status> {
+        registry::cutover_model_alias(self, request).await
+    }
+
+    async fn get_embedding_job_status(
+        &self,
+        request: Request<embedding_pb::GetEmbeddingJobStatusRequest>,
+    ) -> Result<Response<embedding_pb::GetEmbeddingJobStatusResponse>, Status> {
+        jobs::get_embedding_job_status(self, request).await
+    }
+
+    async fn list_embedding_work_items(
+        &self,
+        request: Request<embedding_pb::ListEmbeddingWorkItemsRequest>,
+    ) -> Result<Response<embedding_pb::ListEmbeddingWorkItemsResponse>, Status> {
+        jobs::list_embedding_work_items(self, request).await
+    }
+
+    async fn report_embedding_batch(
+        &self,
+        request: Request<embedding_pb::ReportEmbeddingBatchRequest>,
+    ) -> Result<Response<embedding_pb::ReportEmbeddingBatchResponse>, Status> {
+        reports::report_embedding_batch(self, request).await
+    }
+
+    async fn report_embedding_failure(
+        &self,
+        request: Request<embedding_pb::ReportEmbeddingFailureRequest>,
+    ) -> Result<Response<embedding_pb::ReportEmbeddingFailureResponse>, Status> {
+        reports::report_embedding_failure(self, request).await
+    }
+
+    async fn ingest_document(
+        &self,
+        request: Request<embedding_pb::IngestDocumentRequest>,
+    ) -> Result<Response<embedding_pb::IngestDocumentResponse>, Status> {
+        documents::ingest_document(self, request).await
+    }
+
+    async fn ingest_document_batch(
+        &self,
+        request: Request<embedding_pb::IngestDocumentBatchRequest>,
+    ) -> Result<Response<embedding_pb::IngestDocumentBatchResponse>, Status> {
+        documents::ingest_document_batch(self, request).await
+    }
+
+    async fn report_parsed_document(
+        &self,
+        request: Request<embedding_pb::ReportParsedDocumentRequest>,
+    ) -> Result<Response<embedding_pb::ReportParsedDocumentResponse>, Status> {
+        documents::report_parsed_document(self, request).await
+    }
+
+    async fn report_retrieval_evaluation(
+        &self,
+        request: Request<embedding_pb::ReportRetrievalEvaluationRequest>,
+    ) -> Result<Response<embedding_pb::ReportRetrievalEvaluationResponse>, Status> {
+        retrieval::report_retrieval_evaluation(self, request).await
     }
 }
 

@@ -53,4 +53,16 @@ public interface VectorPointMutationOrBuilder extends
    * <code>.google.protobuf.Struct payload = 3 [json_name = "payload"];</code>
    */
   com.google.protobuf.StructOrBuilder getPayloadOrBuilder();
+
+  /**
+   * <code>string vector_name = 4 [json_name = "vectorName"];</code>
+   * @return The vectorName.
+   */
+  java.lang.String getVectorName();
+  /**
+   * <code>string vector_name = 4 [json_name = "vectorName"];</code>
+   * @return The bytes for vectorName.
+   */
+  com.google.protobuf.ByteString
+      getVectorNameBytes();
 }

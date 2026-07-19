@@ -94,10 +94,10 @@ function bareProject(opts) {
         const last = spy.calls.at(-1);
         node_assert_1.strict.ok(last, `${label} setCredentials was not called`);
         node_assert_1.strict.equal(last.bearerToken, "token-2", `${label} did not receive the refreshed bearer`);
-        node_assert_1.strict.equal(last.apiKey, "key-1", `${label} dropped the configured API key`);
+        node_assert_1.strict.equal(last.apiKey, undefined, `${label} retained raw API-key metadata`);
     }
 });
-(0, node_test_1.test)("logout clears active bearer credentials while preserving configured API key", async () => {
+(0, node_test_1.test)("logout clears active bearer credentials and raw API-key metadata", async () => {
     const auth = credSpy();
     const core = credSpy();
     const webrtcCore = credSpy();
@@ -117,7 +117,7 @@ function bareProject(opts) {
         const last = spy.calls.at(-1);
         node_assert_1.strict.ok(last, `${label} setCredentials was not called`);
         node_assert_1.strict.equal(last.bearerToken, undefined, `${label} retained the bearer token`);
-        node_assert_1.strict.equal(last.apiKey, "key-1", `${label} dropped the configured API key`);
+        node_assert_1.strict.equal(last.apiKey, undefined, `${label} retained raw API-key metadata`);
     }
 });
 (0, node_test_1.test)("refreshIfNeeded is a no-op while the token is still fresh", async () => {
@@ -170,7 +170,7 @@ function bareProject(opts) {
         const last = spy.calls.at(-1);
         node_assert_1.strict.ok(last, `${label} setCredentials was not called`);
         node_assert_1.strict.equal(last.bearerToken, undefined, `${label} still holds a bearer (not failed closed)`);
-        node_assert_1.strict.equal(last.apiKey, "key-1", `${label} dropped the configured API key`);
+        node_assert_1.strict.equal(last.apiKey, undefined, `${label} retained raw API-key metadata`);
     }
 });
 // A transient refresh blip while the token is STILL valid must NOT fail closed.

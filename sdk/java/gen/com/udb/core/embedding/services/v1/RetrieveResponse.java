@@ -30,6 +30,7 @@ private static final long serialVersionUID = 0L;
   private RetrieveResponse() {
     hits_ = java.util.Collections.emptyList();
     message_ = "";
+    evaluationId_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -152,6 +153,67 @@ private static final long serialVersionUID = 0L;
     return error_ == null ? com.udb.core.common.v1.ApiError.getDefaultInstance() : error_;
   }
 
+  public static final int INDEX_LAG_MS_FIELD_NUMBER = 4;
+  private long indexLagMs_ = 0L;
+  /**
+   * <code>int64 index_lag_ms = 4 [json_name = "indexLagMs"];</code>
+   * @return The indexLagMs.
+   */
+  @java.lang.Override
+  public long getIndexLagMs() {
+    return indexLagMs_;
+  }
+
+  public static final int RERANK_APPLIED_FIELD_NUMBER = 5;
+  private boolean rerankApplied_ = false;
+  /**
+   * <code>bool rerank_applied = 5 [json_name = "rerankApplied"];</code>
+   * @return The rerankApplied.
+   */
+  @java.lang.Override
+  public boolean getRerankApplied() {
+    return rerankApplied_;
+  }
+
+  public static final int EVALUATION_ID_FIELD_NUMBER = 6;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object evaluationId_ = "";
+  /**
+   * <code>string evaluation_id = 6 [json_name = "evaluationId"];</code>
+   * @return The evaluationId.
+   */
+  @java.lang.Override
+  public java.lang.String getEvaluationId() {
+    java.lang.Object ref = evaluationId_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      evaluationId_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string evaluation_id = 6 [json_name = "evaluationId"];</code>
+   * @return The bytes for evaluationId.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getEvaluationIdBytes() {
+    java.lang.Object ref = evaluationId_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      evaluationId_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -175,6 +237,15 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000001) != 0)) {
       output.writeMessage(3, getError());
     }
+    if (indexLagMs_ != 0L) {
+      output.writeInt64(4, indexLagMs_);
+    }
+    if (rerankApplied_ != false) {
+      output.writeBool(5, rerankApplied_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(evaluationId_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 6, evaluationId_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -194,6 +265,17 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000001) != 0)) {
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(3, getError());
+    }
+    if (indexLagMs_ != 0L) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeInt64Size(4, indexLagMs_);
+    }
+    if (rerankApplied_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(5, rerankApplied_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(evaluationId_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(6, evaluationId_);
     }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
@@ -219,6 +301,12 @@ private static final long serialVersionUID = 0L;
       if (!getError()
           .equals(other.getError())) return false;
     }
+    if (getIndexLagMs()
+        != other.getIndexLagMs()) return false;
+    if (getRerankApplied()
+        != other.getRerankApplied()) return false;
+    if (!getEvaluationId()
+        .equals(other.getEvaluationId())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -240,6 +328,14 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + ERROR_FIELD_NUMBER;
       hash = (53 * hash) + getError().hashCode();
     }
+    hash = (37 * hash) + INDEX_LAG_MS_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+        getIndexLagMs());
+    hash = (37 * hash) + RERANK_APPLIED_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getRerankApplied());
+    hash = (37 * hash) + EVALUATION_ID_FIELD_NUMBER;
+    hash = (53 * hash) + getEvaluationId().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -391,6 +487,9 @@ private static final long serialVersionUID = 0L;
         errorBuilder_.dispose();
         errorBuilder_ = null;
       }
+      indexLagMs_ = 0L;
+      rerankApplied_ = false;
+      evaluationId_ = "";
       return this;
     }
 
@@ -447,6 +546,15 @@ private static final long serialVersionUID = 0L;
             : errorBuilder_.build();
         to_bitField0_ |= 0x00000001;
       }
+      if (((from_bitField0_ & 0x00000008) != 0)) {
+        result.indexLagMs_ = indexLagMs_;
+      }
+      if (((from_bitField0_ & 0x00000010) != 0)) {
+        result.rerankApplied_ = rerankApplied_;
+      }
+      if (((from_bitField0_ & 0x00000020) != 0)) {
+        result.evaluationId_ = evaluationId_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -495,6 +603,17 @@ private static final long serialVersionUID = 0L;
       }
       if (other.hasError()) {
         mergeError(other.getError());
+      }
+      if (other.getIndexLagMs() != 0L) {
+        setIndexLagMs(other.getIndexLagMs());
+      }
+      if (other.getRerankApplied() != false) {
+        setRerankApplied(other.getRerankApplied());
+      }
+      if (!other.getEvaluationId().isEmpty()) {
+        evaluationId_ = other.evaluationId_;
+        bitField0_ |= 0x00000020;
+        onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -547,6 +666,21 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000004;
               break;
             } // case 26
+            case 32: {
+              indexLagMs_ = input.readInt64();
+              bitField0_ |= 0x00000008;
+              break;
+            } // case 32
+            case 40: {
+              rerankApplied_ = input.readBool();
+              bitField0_ |= 0x00000010;
+              break;
+            } // case 40
+            case 50: {
+              evaluationId_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000020;
+              break;
+            } // case 50
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -995,6 +1129,142 @@ private static final long serialVersionUID = 0L;
         error_ = null;
       }
       return errorBuilder_;
+    }
+
+    private long indexLagMs_ ;
+    /**
+     * <code>int64 index_lag_ms = 4 [json_name = "indexLagMs"];</code>
+     * @return The indexLagMs.
+     */
+    @java.lang.Override
+    public long getIndexLagMs() {
+      return indexLagMs_;
+    }
+    /**
+     * <code>int64 index_lag_ms = 4 [json_name = "indexLagMs"];</code>
+     * @param value The indexLagMs to set.
+     * @return This builder for chaining.
+     */
+    public Builder setIndexLagMs(long value) {
+
+      indexLagMs_ = value;
+      bitField0_ |= 0x00000008;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>int64 index_lag_ms = 4 [json_name = "indexLagMs"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearIndexLagMs() {
+      bitField0_ = (bitField0_ & ~0x00000008);
+      indexLagMs_ = 0L;
+      onChanged();
+      return this;
+    }
+
+    private boolean rerankApplied_ ;
+    /**
+     * <code>bool rerank_applied = 5 [json_name = "rerankApplied"];</code>
+     * @return The rerankApplied.
+     */
+    @java.lang.Override
+    public boolean getRerankApplied() {
+      return rerankApplied_;
+    }
+    /**
+     * <code>bool rerank_applied = 5 [json_name = "rerankApplied"];</code>
+     * @param value The rerankApplied to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRerankApplied(boolean value) {
+
+      rerankApplied_ = value;
+      bitField0_ |= 0x00000010;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>bool rerank_applied = 5 [json_name = "rerankApplied"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearRerankApplied() {
+      bitField0_ = (bitField0_ & ~0x00000010);
+      rerankApplied_ = false;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object evaluationId_ = "";
+    /**
+     * <code>string evaluation_id = 6 [json_name = "evaluationId"];</code>
+     * @return The evaluationId.
+     */
+    public java.lang.String getEvaluationId() {
+      java.lang.Object ref = evaluationId_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        evaluationId_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>string evaluation_id = 6 [json_name = "evaluationId"];</code>
+     * @return The bytes for evaluationId.
+     */
+    public com.google.protobuf.ByteString
+        getEvaluationIdBytes() {
+      java.lang.Object ref = evaluationId_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        evaluationId_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string evaluation_id = 6 [json_name = "evaluationId"];</code>
+     * @param value The evaluationId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setEvaluationId(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      evaluationId_ = value;
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string evaluation_id = 6 [json_name = "evaluationId"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearEvaluationId() {
+      evaluationId_ = getDefaultInstance().getEvaluationId();
+      bitField0_ = (bitField0_ & ~0x00000020);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string evaluation_id = 6 [json_name = "evaluationId"];</code>
+     * @param value The bytes for evaluationId to set.
+     * @return This builder for chaining.
+     */
+    public Builder setEvaluationIdBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      evaluationId_ = value;
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
     }
 
     // @@protoc_insertion_point(builder_scope:udb.core.embedding.services.v1.RetrieveResponse)

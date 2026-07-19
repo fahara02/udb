@@ -61,17 +61,17 @@ def wait_for_health(base_url: str, proc: subprocess.Popen[bytes] | None, deadlin
     raise TimeoutError(f"sidecar did not become healthy: {last_error}")
 
 
-def assert_report(payload: dict[str, Any], dims: int) -> str:
+def assert_report(payload: dict[str, Any], dims: int, work: dict[str, Any] | None = None) -> str:
     if payload.get("status") != "embedded":
         raise RuntimeError(f"unexpected status payload: {payload}")
     report = payload.get("report_embedding_request")
     if not isinstance(report, dict):
         raise RuntimeError(f"missing report_embedding_request: {payload}")
     expected = {
-        "tenant_id": "tenant-a",
-        "source_name": "contacts",
-        "row_pk": "contact-1",
-        "model": "deterministic-v1",
+        "tenant_id": (work or {}).get("tenant_id", "tenant-a"),
+        "source_name": (work or {}).get("source", "contacts"),
+        "row_pk": (work or {}).get("row_pk", "contact-1"),
+        "model": (work or {}).get("model_id", "deterministic-v1"),
         "dims": dims,
     }
     for key, value in expected.items():
@@ -166,18 +166,69 @@ def main() -> int:
             "text": "Ada Lovelace wrote the first algorithm.",
             "model_id": "deterministic-v1",
             "target_collection": "contacts_vec",
+            "work_item_id": "work-contact-1",
+            "job_id": "job-contact-1",
+            "chunk_hash": "hash-contact-1",
+            "token_count": 7,
+            "dimensions": dims,
+            "provider": "deterministic",
         }
         status, payload = request_json("POST", f"{base_url}/embed", work)
         if status != 200:
             raise RuntimeError(f"embed failed: status={status} payload={payload}")
-        first_report = assert_report(payload, dims)
+        first_report = assert_report(payload, dims, work)
 
         status, payload = request_json("POST", f"{base_url}/embed", work)
         if status != 200:
             raise RuntimeError(f"second embed failed: status={status} payload={payload}")
-        second_report = assert_report(payload, dims)
+        second_report = assert_report(payload, dims, work)
         if first_report != second_report:
             raise RuntimeError("deterministic provider returned different vectors for the same work")
+
+        report = json.loads(first_report)
+        for key in ("work_item_id", "chunk_hash", "token_count"):
+            if report.get(key) != work[key]:
+                raise RuntimeError(f"durable work identity {key!r} was not echoed")
+
+        contextual = dict(work, row_pk="contact-context", work_item_id="work-context",
+                          contextual_retrieval=True, parent_text="Ada worked on mathematics and engines.",
+                          char_start=0, char_end=len(work["text"]), token_start=0, token_end=7)
+        status, contextual_payload = request_json("POST", f"{base_url}/embed", contextual)
+        if status != 200:
+            raise RuntimeError(f"contextual embed failed: status={status} payload={contextual_payload}")
+        assert_report(contextual_payload, dims, contextual)
+
+        late = dict(work, row_pk="contact-late", work_item_id="work-late", late_chunking=True,
+                    parent_text="Ada designed an engine algorithm for computation.",
+                    text="engine algorithm", token_start=3, token_end=5, token_count=2)
+        status, late_payload = request_json("POST", f"{base_url}/embed", late)
+        if status != 200:
+            raise RuntimeError(f"late chunk embed failed: status={status} payload={late_payload}")
+        assert_report(late_payload, dims, late)
+
+        status, batch_payload = request_json("POST", f"{base_url}/embed-batch", {
+            "items": [dict(work, row_pk="batch-1", work_item_id="work-batch-1"),
+                      dict(work, row_pk="batch-2", work_item_id="work-batch-2")]
+        })
+        batch = batch_payload.get("report_embedding_batch_request")
+        if status != 200 or not isinstance(batch, dict) or len(batch.get("items", [])) != 2:
+            raise RuntimeError(f"batch embed contract failed: status={status} payload={batch_payload}")
+
+        status, rerank_payload = request_json("POST", f"{base_url}/rerank", {
+            "query": "first algorithm", "top_n": 2,
+            "candidates": [{"id": "weak", "text": "weather report", "score": 0.9},
+                           {"id": "strong", "text": "first algorithm", "score": 0.5}],
+        })
+        if status != 200 or rerank_payload.get("results", [{}])[0].get("id") != "strong":
+            raise RuntimeError(f"rerank contract failed: status={status} payload={rerank_payload}")
+
+        status, parse_payload = request_json("POST", f"{base_url}/parse", {
+            "tenant_id": "tenant-a", "document_id": "doc-1", "job_id": "job-1",
+            "text": "<h1>Title</h1><p>Useful body.</p>",
+        })
+        parsed = parse_payload.get("report_parsed_document_request")
+        if status != 200 or not isinstance(parsed, dict) or "Useful body" not in parsed.get("text", ""):
+            raise RuntimeError(f"parser contract failed: status={status} payload={parse_payload}")
 
         rejected = dict(work)
         rejected["api_key"] = "must-not-cross-the-broker-event"

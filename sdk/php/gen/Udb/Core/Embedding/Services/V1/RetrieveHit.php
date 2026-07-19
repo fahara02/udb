@@ -28,6 +28,38 @@ class RetrieveHit extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string payload_json = 3 [json_name = "payloadJson"];</code>
      */
     protected $payload_json = '';
+    /**
+     * Generated from protobuf field <code>repeated float vector = 4 [json_name = "vector"];</code>
+     */
+    private $vector;
+    /**
+     * Generated from protobuf field <code>string source_name = 5 [json_name = "sourceName"];</code>
+     */
+    protected $source_name = '';
+    /**
+     * Generated from protobuf field <code>string parent_pk = 6 [json_name = "parentPk"];</code>
+     */
+    protected $parent_pk = '';
+    /**
+     * Generated from protobuf field <code>int32 chunk_seq = 7 [json_name = "chunkSeq"];</code>
+     */
+    protected $chunk_seq = 0;
+    /**
+     * Generated from protobuf field <code>string document_id = 8 [json_name = "documentId"];</code>
+     */
+    protected $document_id = '';
+    /**
+     * Generated from protobuf field <code>string doc_version = 9 [json_name = "docVersion"];</code>
+     */
+    protected $doc_version = '';
+    /**
+     * Generated from protobuf field <code>string vector_name = 10 [json_name = "vectorName"];</code>
+     */
+    protected $vector_name = '';
+    /**
+     * Generated from protobuf field <code>double rerank_score = 11 [json_name = "rerankScore"];</code>
+     */
+    protected $rerank_score = 0.0;
 
     /**
      * Constructor.
@@ -39,6 +71,14 @@ class RetrieveHit extends \Google\Protobuf\Internal\Message
      *     @type float $score
      *     @type string $payload_json
      *           JSON
+     *     @type float[] $vector
+     *     @type string $source_name
+     *     @type string $parent_pk
+     *     @type int $chunk_seq
+     *     @type string $document_id
+     *     @type string $doc_version
+     *     @type string $vector_name
+     *     @type float $rerank_score
      * }
      */
     public function __construct($data = NULL) {
@@ -112,6 +152,182 @@ class RetrieveHit extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, True);
         $this->payload_json = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>repeated float vector = 4 [json_name = "vector"];</code>
+     * @return RepeatedField<float>
+     */
+    public function getVector()
+    {
+        return $this->vector;
+    }
+
+    /**
+     * Generated from protobuf field <code>repeated float vector = 4 [json_name = "vector"];</code>
+     * @param float[] $var
+     * @return $this
+     */
+    public function setVector($var)
+    {
+        $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::FLOAT);
+        $this->vector = $arr;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>string source_name = 5 [json_name = "sourceName"];</code>
+     * @return string
+     */
+    public function getSourceName()
+    {
+        return $this->source_name;
+    }
+
+    /**
+     * Generated from protobuf field <code>string source_name = 5 [json_name = "sourceName"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setSourceName($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->source_name = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>string parent_pk = 6 [json_name = "parentPk"];</code>
+     * @return string
+     */
+    public function getParentPk()
+    {
+        return $this->parent_pk;
+    }
+
+    /**
+     * Generated from protobuf field <code>string parent_pk = 6 [json_name = "parentPk"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setParentPk($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->parent_pk = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>int32 chunk_seq = 7 [json_name = "chunkSeq"];</code>
+     * @return int
+     */
+    public function getChunkSeq()
+    {
+        return $this->chunk_seq;
+    }
+
+    /**
+     * Generated from protobuf field <code>int32 chunk_seq = 7 [json_name = "chunkSeq"];</code>
+     * @param int $var
+     * @return $this
+     */
+    public function setChunkSeq($var)
+    {
+        GPBUtil::checkInt32($var);
+        $this->chunk_seq = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>string document_id = 8 [json_name = "documentId"];</code>
+     * @return string
+     */
+    public function getDocumentId()
+    {
+        return $this->document_id;
+    }
+
+    /**
+     * Generated from protobuf field <code>string document_id = 8 [json_name = "documentId"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setDocumentId($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->document_id = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>string doc_version = 9 [json_name = "docVersion"];</code>
+     * @return string
+     */
+    public function getDocVersion()
+    {
+        return $this->doc_version;
+    }
+
+    /**
+     * Generated from protobuf field <code>string doc_version = 9 [json_name = "docVersion"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setDocVersion($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->doc_version = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>string vector_name = 10 [json_name = "vectorName"];</code>
+     * @return string
+     */
+    public function getVectorName()
+    {
+        return $this->vector_name;
+    }
+
+    /**
+     * Generated from protobuf field <code>string vector_name = 10 [json_name = "vectorName"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setVectorName($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->vector_name = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>double rerank_score = 11 [json_name = "rerankScore"];</code>
+     * @return float
+     */
+    public function getRerankScore()
+    {
+        return $this->rerank_score;
+    }
+
+    /**
+     * Generated from protobuf field <code>double rerank_score = 11 [json_name = "rerankScore"];</code>
+     * @param float $var
+     * @return $this
+     */
+    public function setRerankScore($var)
+    {
+        GPBUtil::checkDouble($var);
+        $this->rerank_score = $var;
 
         return $this;
     }

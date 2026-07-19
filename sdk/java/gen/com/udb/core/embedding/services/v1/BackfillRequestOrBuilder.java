@@ -33,4 +33,24 @@ public interface BackfillRequestOrBuilder extends
    */
   com.google.protobuf.ByteString
       getSourceNameBytes();
+
+  /**
+   * <pre>
+   * INCREMENTAL skips unchanged chunk hashes; FULL re-emits every chunk.
+   * </pre>
+   *
+   * <code>string mode = 3 [json_name = "mode"];</code>
+   * @return The mode.
+   */
+  java.lang.String getMode();
+  /**
+   * <pre>
+   * INCREMENTAL skips unchanged chunk hashes; FULL re-emits every chunk.
+   * </pre>
+   *
+   * <code>string mode = 3 [json_name = "mode"];</code>
+   * @return The bytes for mode.
+   */
+  com.google.protobuf.ByteString
+      getModeBytes();
 }

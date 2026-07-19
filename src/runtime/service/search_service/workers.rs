@@ -538,6 +538,7 @@ async fn apply_search_freshness_job(
             payload: body
                 .get("payload")
                 .and_then(|value| crate::runtime::executor_utils::json_to_struct(value)),
+            vector_name: String::new(),
         }],
         idempotency_key: String::new(),
     };
@@ -659,6 +660,7 @@ async fn reindex_source_rows(
                 id: row_pk,
                 vector,
                 payload: reindex_point_payload(&row),
+                vector_name: String::new(),
             });
         }
         let page_points = points.len() as u64;

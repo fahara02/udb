@@ -15,7 +15,6 @@ use tonic::{Request, Response, Status};
 use uuid::Uuid;
 
 use crate::proto::udb::core::embedding::services::v1 as embedding_pb;
-use crate::proto::{VectorHybridSearchRequest, VectorSearchRequest, VectorSet};
 use crate::runtime::channels::OperationChannel;
 
 use super::super::native_helpers::{
@@ -24,17 +23,18 @@ use super::super::native_helpers::{
 };
 use super::EmbeddingServiceImpl;
 use super::config::{
-    EMBEDDING_SOURCE_MSG, MAX_SOURCES_PER_TENANT, STATUS_ACTIVE, STATUS_DELETED,
-    TOPIC_BACKFILL_REQUESTED, TOPIC_SOURCE_DELETED, TOPIC_SOURCE_REGISTERED, resolve_top_k,
-    retrieve_fusion_weights, retrieve_score_threshold,
+    EMBEDDING_JOB_MSG, EMBEDDING_SOURCE_MSG, JOB_PENDING, MAX_SOURCES_PER_TENANT, STATUS_ACTIVE,
+    STATUS_DELETED, TOPIC_BACKFILL_REQUESTED, TOPIC_SOURCE_DELETED, TOPIC_SOURCE_REGISTERED,
 };
 use super::errors::{
     embedding_field_violation, embedding_required_field, embedding_source_not_found_status,
     require_source_tenant_column, validate_register_source_required_fields,
-    validate_report_embedding_required_fields, validate_reported_vector,
 };
-use super::model::{build_embedding_point, merge_retrieve_filter, stored_source_from_json};
-use super::store::{active_sources_read, source_conflict, source_read_by_name, source_record};
+use super::model::{stored_model_from_json, stored_source_from_json};
+use super::store::{
+    active_sources_read, job_conflict, job_record, model_read_by_id, source_conflict,
+    source_read_by_name, source_record,
+};
 
 impl EmbeddingServiceImpl {
     /// Resolve the SOURCE entity's tenant column through the project-active
@@ -69,44 +69,6 @@ impl EmbeddingServiceImpl {
         let cdc_topic = table.cdc_topic.clone();
         Ok((tenant_column, cdc_topic))
     }
-
-    /// Upsert a reported embedding through the SHARED runtime vector seam — the
-    /// exact path `asset_service::AssetServiceImpl::upsert_embedding` wraps
-    /// ([`choose_instance_name_for_project`] + `vector_upsert_backend_target`) — so
-    /// there is no second vector-upsert. The point is tenant-tagged; an empty tenant
-    /// fails closed before any backend call (no fail-open).
-    pub(crate) async fn upsert_reported_embedding(
-        &self,
-        project_id: &str,
-        collection: &str,
-        tenant_id: &str,
-        source_name: &str,
-        row_pk: &str,
-        vector: Vec<f32>,
-        dims: i32,
-    ) -> Result<(), Status> {
-        // Dimension truth gate: empty vectors and a `dims` claim contradicting
-        // the actual vector length are rejected before any backend call.
-        validate_reported_vector(dims, &vector)?;
-        let runtime = self.require_runtime()?;
-        let dim = if dims > 0 { dims } else { vector.len() as i32 };
-        // Fail closed + tenant/source-tag (mirrors search's `_tenant_id` write
-        // stamp; `_source` scopes retention-independent teardown).
-        let point = build_embedding_point(row_pk, vector, tenant_id, source_name)?;
-        let vector_instance = runtime
-            .choose_instance_name_for_project("qdrant", true, project_id)
-            .map(str::to_string)
-            .unwrap_or_else(|| "default".to_string());
-        runtime
-            .vector_upsert_backend_target(
-                Some(&vector_instance),
-                project_id,
-                collection,
-                dim,
-                vec![point],
-            )
-            .await
-    }
 }
 
 /// Serialize a retrieved point's payload for a `RetrieveHit`: the internal
@@ -116,6 +78,7 @@ impl EmbeddingServiceImpl {
 /// citation fields, and the remaining user payload is serialized as JSON. No
 /// payload, a non-object payload, or a tag-only payload all yield an empty
 /// string. Pure — unit-tested.
+#[cfg(test)]
 pub(crate) fn retrieve_hit_payload_json(payload: Option<&prost_types::Struct>) -> String {
     let Some(payload) = payload else {
         return String::new();
@@ -264,6 +227,37 @@ pub(crate) async fn register_source(
         .collect();
     let text_fields_json = serde_json::to_string(&text_fields).unwrap_or_else(|_| "[]".to_string());
     let model_id = req.model_id.trim().to_string();
+    if model_id.is_empty() {
+        return Err(embedding_required_field(
+            "model_id",
+            "must identify a registered embedding model",
+            "model_id is required",
+        ));
+    }
+    let model = runtime
+        .native_entity_read_for_service(
+            "embedding",
+            &context,
+            model_read_by_id(&tenant_id, &model_id),
+        )
+        .await?
+        .first()
+        .map(stored_model_from_json)
+        .filter(|model| model.status == STATUS_ACTIVE && model.tenant_state == STATUS_ACTIVE)
+        .ok_or_else(|| {
+            embedding_field_violation(
+                "model_id",
+                "must identify an ACTIVE model registered to the verified tenant",
+                "embedding model not found or inactive",
+            )
+        })?;
+    if target_collection != model.active_collection {
+        return Err(embedding_field_violation(
+            "target_collection",
+            "must exactly match the registered model's versioned active_collection",
+            "target_collection does not match model vector identity",
+        ));
+    }
     let metadata_json = non_empty_json(&req.metadata_json);
 
     runtime
@@ -315,6 +309,24 @@ pub(crate) async fn register_source(
         let collection_changed = prev.target_collection.trim() != target_collection;
         if model_changed || collection_changed {
             let reindex_id = Uuid::new_v4().to_string();
+            runtime
+                .native_entity_write_for_service(
+                    "embedding",
+                    &context,
+                    EMBEDDING_JOB_MSG,
+                    job_record(
+                        &reindex_id,
+                        &tenant_id,
+                        &context.project_id,
+                        &source_name,
+                        "",
+                        "REINDEX",
+                        "FULL",
+                        JOB_PENDING,
+                    ),
+                    job_conflict(),
+                )
+                .await?;
             svc.emit_source_event(
                 TOPIC_BACKFILL_REQUESTED,
                 &tenant_id,
@@ -328,6 +340,7 @@ pub(crate) async fn register_source(
                     "reason": "model_or_collection_changed",
                     "previous_model_id": prev.model_id,
                     "previous_collection": prev.target_collection,
+                    "mode": "FULL",
                 }),
             )
             .await;
@@ -450,6 +463,22 @@ pub(crate) async fn delete_source(
             error: None,
         }));
     };
+    let model = runtime
+        .native_entity_read_for_service(
+            "embedding",
+            &context,
+            model_read_by_id(&tenant_id, &stored.model_id),
+        )
+        .await?
+        .first()
+        .map(stored_model_from_json)
+        .ok_or_else(|| {
+            embedding_field_violation(
+                "model_id",
+                "source teardown requires its registered vector model",
+                "embedding source model is unavailable",
+            )
+        })?;
 
     runtime
         .native_entity_write_for_service(
@@ -483,7 +512,12 @@ pub(crate) async fn delete_source(
         &tenant_id,
         &context.project_id,
         &source_name,
-        serde_json::json!({ "target_collection": stored.target_collection }),
+        serde_json::json!({
+            "target_collection": stored.target_collection,
+            "model_id": model.model_id,
+            "vector_backend": model.vector_backend,
+            "vector_instance": model.vector_instance,
+        }),
     )
     .await;
 
@@ -538,6 +572,29 @@ pub(crate) async fn backfill(
     // leader-spawned work emitter enumerates the source's existing rows through
     // the served DataBroker SELECT path and emits per-row work out-of-band.
     let backfill_id = Uuid::new_v4().to_string();
+    let mode = if req.mode.trim().eq_ignore_ascii_case("FULL") {
+        "FULL"
+    } else {
+        "INCREMENTAL"
+    };
+    runtime
+        .native_entity_write_for_service(
+            "embedding",
+            &context,
+            EMBEDDING_JOB_MSG,
+            job_record(
+                &backfill_id,
+                &tenant_id,
+                &context.project_id,
+                &source_name,
+                "",
+                "BACKFILL",
+                mode,
+                JOB_PENDING,
+            ),
+            job_conflict(),
+        )
+        .await?;
     svc.emit_source_event(
         TOPIC_BACKFILL_REQUESTED,
         &tenant_id,
@@ -548,6 +605,7 @@ pub(crate) async fn backfill(
             "source_message_type": stored.source_message_type,
             "target_collection": stored.target_collection,
             "model_id": stored.model_id,
+            "mode": mode,
         }),
     )
     .await;
@@ -556,229 +614,6 @@ pub(crate) async fn backfill(
         backfill_id,
         accepted: true,
         message: "embedding backfill requested".to_string(),
-        error: None,
-    }))
-}
-
-pub(crate) async fn report_embedding(
-    svc: &EmbeddingServiceImpl,
-    request: Request<embedding_pb::ReportEmbeddingRequest>,
-) -> Result<Response<embedding_pb::ReportEmbeddingResponse>, Status> {
-    let metadata = request.metadata().clone();
-    let req = request.into_inner();
-    // Cross-tenant guard FIRST: the body tenant_id must match the VERIFIED
-    // claim/header. After this passes the body value IS the verified tenant, so
-    // the stored vector is tagged from the verified claim, never raw body.
-    validate_request_tenant(&metadata, &req.tenant_id)?;
-    let tenant_id = req.tenant_id.trim().to_string();
-    let source_name = req.source_name.trim().to_string();
-    let row_pk = req.row_pk.trim().to_string();
-    validate_report_embedding_required_fields(&source_name, &row_pk)?;
-    // Dimension truth: empty vector / contradictory `dims` rejected up front.
-    validate_reported_vector(req.dims, &req.vector)?;
-    let _admit = native_admit_on(
-        svc.channels.as_ref(),
-        &svc.metrics,
-        "embedding",
-        OperationChannel::Vector,
-        &tenant_id,
-        None,
-    )
-    .await?;
-    let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &tenant_id, "");
-
-    // Resolve the source the sidecar reported against — bounded to THIS tenant
-    // (the read filters on the verified tenant), so a foreign source cannot be
-    // targeted. An unknown/deleted source is rejected (no blind upsert).
-    let stored = runtime
-        .native_entity_read_for_service(
-            "embedding",
-            &context,
-            source_read_by_name(&tenant_id, &source_name),
-        )
-        .await?
-        .first()
-        .map(stored_source_from_json)
-        .filter(|source| source.status == STATUS_ACTIVE)
-        .ok_or_else(|| embedding_source_not_found_status("report_embedding"))?;
-
-    svc.upsert_reported_embedding(
-        &context.project_id,
-        &stored.collection(),
-        &tenant_id,
-        &source_name,
-        &row_pk,
-        req.vector,
-        req.dims,
-    )
-    .await?;
-
-    Ok(Response::new(embedding_pb::ReportEmbeddingResponse {
-        upserted: true,
-        message: "embedding upserted".to_string(),
-        error: None,
-    }))
-}
-
-pub(crate) async fn retrieve(
-    svc: &EmbeddingServiceImpl,
-    request: Request<embedding_pb::RetrieveRequest>,
-) -> Result<Response<embedding_pb::RetrieveResponse>, Status> {
-    let metadata = request.metadata().clone();
-    // Derive the absolute deadline from the request's gRPC timeout BEFORE any
-    // work, so the budget covers the whole semantic-search delegation.
-    let deadline = metadata
-        .get("grpc-timeout")
-        .and_then(|value| value.to_str().ok())
-        .and_then(parse_grpc_timeout)
-        .map(|budget| Instant::now() + budget);
-    let req = request.into_inner();
-    validate_request_tenant(&metadata, &req.tenant_id)?;
-    let tenant_id = req.tenant_id.trim().to_string();
-    let source_name = req.source_name.trim().to_string();
-    if source_name.is_empty() {
-        return Err(embedding_required_field(
-            "source_name",
-            "must be a non-empty embedding source name",
-            "source_name is required",
-        ));
-    }
-    // The broker NEVER embeds the query: a Retrieve must carry an already-
-    // embedded query vector (the only mediated semantic path in this build).
-    if req.query_vector.is_empty() {
-        return Err(embedding_required_field(
-            "query_vector",
-            "must contain at least one embedding dimension",
-            "query_vector is required (the broker does not embed queries; supply a vector)",
-        ));
-    }
-    let _admit = native_admit_on(
-        svc.channels.as_ref(),
-        &svc.metrics,
-        "embedding",
-        OperationChannel::Vector,
-        &tenant_id,
-        None,
-    )
-    .await?;
-    let runtime = svc.require_runtime()?;
-    let catalog = svc.require_catalog()?;
-    let mut context = native_service_context(&metadata, &tenant_id, "");
-    context.scopes.push("udb:vector:read".to_string());
-    let top_k = resolve_top_k(req.top_k);
-    // Per-query minimum similarity: a positive request threshold RAISES the
-    // server-side floor (never lowers it), so a caller can demand higher-precision
-    // hits without being able to weaken the operator's minimum. Enforced uniformly
-    // on the returned hits below (and pushed into the vector engine as an
-    // optimization), so it applies to both the vector and hybrid paths.
-    let score_floor = {
-        let env_floor = retrieve_score_threshold();
-        let requested = req.score_threshold as f32;
-        if requested > 0.0 {
-            requested.max(env_floor)
-        } else {
-            env_floor
-        }
-    };
-
-    let stored = runtime
-        .native_entity_read_for_service(
-            "embedding",
-            &context,
-            source_read_by_name(&tenant_id, &source_name),
-        )
-        .await?
-        .first()
-        .map(stored_source_from_json)
-        .filter(|source| source.status == STATUS_ACTIVE)
-        .ok_or_else(|| embedding_source_not_found_status("retrieve"))?;
-
-    // SERVER-SIDE tenant filter built from the VERIFIED claim, injected into the
-    // delegated engine query (the `_tenant_id` must-clause). Never from the body.
-    // Any caller-supplied `filter_json` is merged UNDER this clause: the tenant
-    // condition stays first and authoritative and internal `_`-prefixed keys are
-    // rejected, so a caller filter can narrow but never broaden tenant scope.
-    let merged_filter = merge_retrieve_filter(&tenant_id, &req.filter_json)?;
-    let tenant_filter = crate::runtime::executor_utils::json_to_struct(&merged_filter);
-    let state = catalog.active_for(&context.project_id);
-    let manifest = &state.manifest;
-    let collection = stored.collection();
-
-    // Deadline gate before dispatch, then bound the delegated 9.5 hybrid search
-    // by the remaining budget. `query_text` present ⇒ hybrid fusion; otherwise
-    // a mediated vector search — never a raw engine query in either case.
-    let remaining = remaining_before_deadline(deadline, Instant::now())?;
-    let has_text = !req.query_text.trim().is_empty();
-    let result: VectorSet = if has_text {
-        let search = VectorHybridSearchRequest {
-            context: None,
-            collection,
-            vector: req.query_vector.clone(),
-            text_query: req.query_text.clone(),
-            filter: tenant_filter,
-            limit: top_k,
-            fusion_weights: retrieve_fusion_weights(),
-            // Hits carry the stored user payload (minus the internal
-            // `_tenant_id` write-stamp, stripped in the hit mapping below).
-            with_payload: true,
-        };
-        let fut = runtime.vector_hybrid_search(manifest, search, context.clone());
-        match remaining {
-            Some(budget) => tokio::time::timeout(budget, fut).await.map_err(|_| {
-                crate::runtime::executor_utils::deadline_exceeded_status(
-                    "embedding",
-                    "retrieve_hybrid_search",
-                    crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
-                    "retrieve exceeded its deadline during hybrid search",
-                )
-            })??,
-            None => fut.await?,
-        }
-    } else {
-        let search = VectorSearchRequest {
-            context: None,
-            collection,
-            vector: req.query_vector.clone(),
-            filter: tenant_filter,
-            limit: top_k,
-            score_threshold: score_floor,
-            // Hits carry the stored user payload (minus the internal
-            // `_tenant_id` write-stamp, stripped in the hit mapping below).
-            with_payload: true,
-        };
-        let fut = runtime.vector_search(manifest, search, context.clone());
-        match remaining {
-            Some(budget) => tokio::time::timeout(budget, fut).await.map_err(|_| {
-                crate::runtime::executor_utils::deadline_exceeded_status(
-                    "embedding",
-                    "retrieve_vector_search",
-                    crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
-                    "retrieve exceeded its deadline during vector search",
-                )
-            })??,
-            None => fut.await?,
-        }
-    };
-
-    let hits = result
-        .points
-        .into_iter()
-        // Enforce the (possibly per-request-raised) score floor uniformly — the
-        // hybrid path does not push a threshold into the engine, so this is where
-        // both paths honor it.
-        .filter(|point| point.score >= score_floor)
-        .take(top_k as usize)
-        .map(|point| embedding_pb::RetrieveHit {
-            payload_json: retrieve_hit_payload_json(point.payload.as_ref()),
-            id: point.id,
-            score: f64::from(point.score),
-        })
-        .collect::<Vec<_>>();
-
-    Ok(Response::new(embedding_pb::RetrieveResponse {
-        hits,
-        message: "ok".to_string(),
         error: None,
     }))
 }

@@ -23,6 +23,211 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type EmbeddingModelStatus int32
+
+const (
+	EmbeddingModelStatus_EMBEDDING_MODEL_STATUS_UNSPECIFIED EmbeddingModelStatus = 0
+	EmbeddingModelStatus_EMBEDDING_MODEL_STATUS_ACTIVE      EmbeddingModelStatus = 1
+	EmbeddingModelStatus_EMBEDDING_MODEL_STATUS_DEPRECATED  EmbeddingModelStatus = 2
+	EmbeddingModelStatus_EMBEDDING_MODEL_STATUS_RETIRED     EmbeddingModelStatus = 3
+)
+
+// Enum value maps for EmbeddingModelStatus.
+var (
+	EmbeddingModelStatus_name = map[int32]string{
+		0: "EMBEDDING_MODEL_STATUS_UNSPECIFIED",
+		1: "EMBEDDING_MODEL_STATUS_ACTIVE",
+		2: "EMBEDDING_MODEL_STATUS_DEPRECATED",
+		3: "EMBEDDING_MODEL_STATUS_RETIRED",
+	}
+	EmbeddingModelStatus_value = map[string]int32{
+		"EMBEDDING_MODEL_STATUS_UNSPECIFIED": 0,
+		"EMBEDDING_MODEL_STATUS_ACTIVE":      1,
+		"EMBEDDING_MODEL_STATUS_DEPRECATED":  2,
+		"EMBEDDING_MODEL_STATUS_RETIRED":     3,
+	}
+)
+
+func (x EmbeddingModelStatus) Enum() *EmbeddingModelStatus {
+	p := new(EmbeddingModelStatus)
+	*p = x
+	return p
+}
+
+func (x EmbeddingModelStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (EmbeddingModelStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_udb_core_embedding_services_v1_embedding_service_proto_enumTypes[0].Descriptor()
+}
+
+func (EmbeddingModelStatus) Type() protoreflect.EnumType {
+	return &file_udb_core_embedding_services_v1_embedding_service_proto_enumTypes[0]
+}
+
+func (x EmbeddingModelStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use EmbeddingModelStatus.Descriptor instead.
+func (EmbeddingModelStatus) EnumDescriptor() ([]byte, []int) {
+	return file_udb_core_embedding_services_v1_embedding_service_proto_rawDescGZIP(), []int{0}
+}
+
+type EmbeddingTenantState int32
+
+const (
+	EmbeddingTenantState_EMBEDDING_TENANT_STATE_UNSPECIFIED EmbeddingTenantState = 0
+	EmbeddingTenantState_EMBEDDING_TENANT_STATE_ACTIVE      EmbeddingTenantState = 1
+	EmbeddingTenantState_EMBEDDING_TENANT_STATE_INACTIVE    EmbeddingTenantState = 2
+	EmbeddingTenantState_EMBEDDING_TENANT_STATE_OFFLOADED   EmbeddingTenantState = 3
+)
+
+// Enum value maps for EmbeddingTenantState.
+var (
+	EmbeddingTenantState_name = map[int32]string{
+		0: "EMBEDDING_TENANT_STATE_UNSPECIFIED",
+		1: "EMBEDDING_TENANT_STATE_ACTIVE",
+		2: "EMBEDDING_TENANT_STATE_INACTIVE",
+		3: "EMBEDDING_TENANT_STATE_OFFLOADED",
+	}
+	EmbeddingTenantState_value = map[string]int32{
+		"EMBEDDING_TENANT_STATE_UNSPECIFIED": 0,
+		"EMBEDDING_TENANT_STATE_ACTIVE":      1,
+		"EMBEDDING_TENANT_STATE_INACTIVE":    2,
+		"EMBEDDING_TENANT_STATE_OFFLOADED":   3,
+	}
+)
+
+func (x EmbeddingTenantState) Enum() *EmbeddingTenantState {
+	p := new(EmbeddingTenantState)
+	*p = x
+	return p
+}
+
+func (x EmbeddingTenantState) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (EmbeddingTenantState) Descriptor() protoreflect.EnumDescriptor {
+	return file_udb_core_embedding_services_v1_embedding_service_proto_enumTypes[1].Descriptor()
+}
+
+func (EmbeddingTenantState) Type() protoreflect.EnumType {
+	return &file_udb_core_embedding_services_v1_embedding_service_proto_enumTypes[1]
+}
+
+func (x EmbeddingTenantState) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use EmbeddingTenantState.Descriptor instead.
+func (EmbeddingTenantState) EnumDescriptor() ([]byte, []int) {
+	return file_udb_core_embedding_services_v1_embedding_service_proto_rawDescGZIP(), []int{1}
+}
+
+type FusionStrategy int32
+
+const (
+	FusionStrategy_FUSION_STRATEGY_UNSPECIFIED FusionStrategy = 0
+	FusionStrategy_FUSION_STRATEGY_RRF         FusionStrategy = 1
+	FusionStrategy_FUSION_STRATEGY_WEIGHTED    FusionStrategy = 2
+	FusionStrategy_FUSION_STRATEGY_DBSF        FusionStrategy = 3
+)
+
+// Enum value maps for FusionStrategy.
+var (
+	FusionStrategy_name = map[int32]string{
+		0: "FUSION_STRATEGY_UNSPECIFIED",
+		1: "FUSION_STRATEGY_RRF",
+		2: "FUSION_STRATEGY_WEIGHTED",
+		3: "FUSION_STRATEGY_DBSF",
+	}
+	FusionStrategy_value = map[string]int32{
+		"FUSION_STRATEGY_UNSPECIFIED": 0,
+		"FUSION_STRATEGY_RRF":         1,
+		"FUSION_STRATEGY_WEIGHTED":    2,
+		"FUSION_STRATEGY_DBSF":        3,
+	}
+)
+
+func (x FusionStrategy) Enum() *FusionStrategy {
+	p := new(FusionStrategy)
+	*p = x
+	return p
+}
+
+func (x FusionStrategy) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (FusionStrategy) Descriptor() protoreflect.EnumDescriptor {
+	return file_udb_core_embedding_services_v1_embedding_service_proto_enumTypes[2].Descriptor()
+}
+
+func (FusionStrategy) Type() protoreflect.EnumType {
+	return &file_udb_core_embedding_services_v1_embedding_service_proto_enumTypes[2]
+}
+
+func (x FusionStrategy) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use FusionStrategy.Descriptor instead.
+func (FusionStrategy) EnumDescriptor() ([]byte, []int) {
+	return file_udb_core_embedding_services_v1_embedding_service_proto_rawDescGZIP(), []int{2}
+}
+
+type RerankStrategy int32
+
+const (
+	RerankStrategy_RERANK_STRATEGY_UNSPECIFIED      RerankStrategy = 0
+	RerankStrategy_RERANK_STRATEGY_CROSS_ENCODER    RerankStrategy = 1
+	RerankStrategy_RERANK_STRATEGY_LATE_INTERACTION RerankStrategy = 2
+)
+
+// Enum value maps for RerankStrategy.
+var (
+	RerankStrategy_name = map[int32]string{
+		0: "RERANK_STRATEGY_UNSPECIFIED",
+		1: "RERANK_STRATEGY_CROSS_ENCODER",
+		2: "RERANK_STRATEGY_LATE_INTERACTION",
+	}
+	RerankStrategy_value = map[string]int32{
+		"RERANK_STRATEGY_UNSPECIFIED":      0,
+		"RERANK_STRATEGY_CROSS_ENCODER":    1,
+		"RERANK_STRATEGY_LATE_INTERACTION": 2,
+	}
+)
+
+func (x RerankStrategy) Enum() *RerankStrategy {
+	p := new(RerankStrategy)
+	*p = x
+	return p
+}
+
+func (x RerankStrategy) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (RerankStrategy) Descriptor() protoreflect.EnumDescriptor {
+	return file_udb_core_embedding_services_v1_embedding_service_proto_enumTypes[3].Descriptor()
+}
+
+func (RerankStrategy) Type() protoreflect.EnumType {
+	return &file_udb_core_embedding_services_v1_embedding_service_proto_enumTypes[3]
+}
+
+func (x RerankStrategy) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use RerankStrategy.Descriptor instead.
+func (RerankStrategy) EnumDescriptor() ([]byte, []int) {
+	return file_udb_core_embedding_services_v1_embedding_service_proto_rawDescGZIP(), []int{3}
+}
+
 type RegisterSourceRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Verified against the bearer/claim tenant; cross-tenant values are rejected.
@@ -525,9 +730,11 @@ func (x *DeleteSourceResponse) GetError() *v1.ApiError {
 }
 
 type BackfillRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	SourceName    string                 `protobuf:"bytes,2,opt,name=source_name,json=sourceName,proto3" json:"source_name,omitempty"`
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	TenantId   string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	SourceName string                 `protobuf:"bytes,2,opt,name=source_name,json=sourceName,proto3" json:"source_name,omitempty"`
+	// INCREMENTAL skips unchanged chunk hashes; FULL re-emits every chunk.
+	Mode          string `protobuf:"bytes,3,opt,name=mode,proto3" json:"mode,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -572,6 +779,13 @@ func (x *BackfillRequest) GetTenantId() string {
 func (x *BackfillRequest) GetSourceName() string {
 	if x != nil {
 		return x.SourceName
+	}
+	return ""
+}
+
+func (x *BackfillRequest) GetMode() string {
+	if x != nil {
+		return x.Mode
 	}
 	return ""
 }
@@ -656,7 +870,11 @@ type ReportEmbeddingRequest struct {
 	// The model id the sidecar used (echo of the work event's model_id).
 	Model string `protobuf:"bytes,5,opt,name=model,proto3" json:"model,omitempty"`
 	// Embedding dimensionality (0 ⇒ inferred from `vector`).
-	Dims          int32 `protobuf:"varint,6,opt,name=dims,proto3" json:"dims,omitempty"`
+	Dims          int32  `protobuf:"varint,6,opt,name=dims,proto3" json:"dims,omitempty"`
+	WorkItemId    string `protobuf:"bytes,7,opt,name=work_item_id,json=workItemId,proto3" json:"work_item_id,omitempty"`
+	ChunkHash     string `protobuf:"bytes,8,opt,name=chunk_hash,json=chunkHash,proto3" json:"chunk_hash,omitempty"`
+	TokenCount    int64  `protobuf:"varint,9,opt,name=token_count,json=tokenCount,proto3" json:"token_count,omitempty"`
+	VectorName    string `protobuf:"bytes,10,opt,name=vector_name,json=vectorName,proto3" json:"vector_name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -731,6 +949,34 @@ func (x *ReportEmbeddingRequest) GetDims() int32 {
 		return x.Dims
 	}
 	return 0
+}
+
+func (x *ReportEmbeddingRequest) GetWorkItemId() string {
+	if x != nil {
+		return x.WorkItemId
+	}
+	return ""
+}
+
+func (x *ReportEmbeddingRequest) GetChunkHash() string {
+	if x != nil {
+		return x.ChunkHash
+	}
+	return ""
+}
+
+func (x *ReportEmbeddingRequest) GetTokenCount() int64 {
+	if x != nil {
+		return x.TokenCount
+	}
+	return 0
+}
+
+func (x *ReportEmbeddingRequest) GetVectorName() string {
+	if x != nil {
+		return x.VectorName
+	}
+	return ""
 }
 
 type ReportEmbeddingResponse struct {
@@ -814,9 +1060,17 @@ type RetrieveRequest struct {
 	// RAISES (never lowers) the server-side floor, so a caller can demand
 	// higher-precision results per query; <= 0 uses the server default. Applies to
 	// both the vector and hybrid paths.
-	ScoreThreshold float64 `protobuf:"fixed64,7,opt,name=score_threshold,json=scoreThreshold,proto3" json:"score_threshold,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	ScoreThreshold   float64        `protobuf:"fixed64,7,opt,name=score_threshold,json=scoreThreshold,proto3" json:"score_threshold,omitempty"`
+	IncludeVectors   bool           `protobuf:"varint,8,opt,name=include_vectors,json=includeVectors,proto3" json:"include_vectors,omitempty"`
+	Mmr              *MmrConfig     `protobuf:"bytes,9,opt,name=mmr,proto3" json:"mmr,omitempty"`
+	Fusion           FusionStrategy `protobuf:"varint,10,opt,name=fusion,proto3,enum=udb.core.embedding.services.v1.FusionStrategy" json:"fusion,omitempty"`
+	PrefetchLimit    int32          `protobuf:"varint,11,opt,name=prefetch_limit,json=prefetchLimit,proto3" json:"prefetch_limit,omitempty"`
+	Rerank           *RerankConfig  `protobuf:"bytes,12,opt,name=rerank,proto3" json:"rerank,omitempty"`
+	VectorName       string         `protobuf:"bytes,13,opt,name=vector_name,json=vectorName,proto3" json:"vector_name,omitempty"`
+	ParentWindow     int32          `protobuf:"varint,14,opt,name=parent_window,json=parentWindow,proto3" json:"parent_window,omitempty"`
+	IncludeCitations bool           `protobuf:"varint,15,opt,name=include_citations,json=includeCitations,proto3" json:"include_citations,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *RetrieveRequest) Reset() {
@@ -898,11 +1152,75 @@ func (x *RetrieveRequest) GetScoreThreshold() float64 {
 	return 0
 }
 
+func (x *RetrieveRequest) GetIncludeVectors() bool {
+	if x != nil {
+		return x.IncludeVectors
+	}
+	return false
+}
+
+func (x *RetrieveRequest) GetMmr() *MmrConfig {
+	if x != nil {
+		return x.Mmr
+	}
+	return nil
+}
+
+func (x *RetrieveRequest) GetFusion() FusionStrategy {
+	if x != nil {
+		return x.Fusion
+	}
+	return FusionStrategy_FUSION_STRATEGY_UNSPECIFIED
+}
+
+func (x *RetrieveRequest) GetPrefetchLimit() int32 {
+	if x != nil {
+		return x.PrefetchLimit
+	}
+	return 0
+}
+
+func (x *RetrieveRequest) GetRerank() *RerankConfig {
+	if x != nil {
+		return x.Rerank
+	}
+	return nil
+}
+
+func (x *RetrieveRequest) GetVectorName() string {
+	if x != nil {
+		return x.VectorName
+	}
+	return ""
+}
+
+func (x *RetrieveRequest) GetParentWindow() int32 {
+	if x != nil {
+		return x.ParentWindow
+	}
+	return 0
+}
+
+func (x *RetrieveRequest) GetIncludeCitations() bool {
+	if x != nil {
+		return x.IncludeCitations
+	}
+	return false
+}
+
 type RetrieveHit struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Score         float64                `protobuf:"fixed64,2,opt,name=score,proto3" json:"score,omitempty"`
 	PayloadJson   string                 `protobuf:"bytes,3,opt,name=payload_json,json=payloadJson,proto3" json:"payload_json,omitempty"` // JSON
+	Vector        []float32              `protobuf:"fixed32,4,rep,packed,name=vector,proto3" json:"vector,omitempty"`
+	SourceName    string                 `protobuf:"bytes,5,opt,name=source_name,json=sourceName,proto3" json:"source_name,omitempty"`
+	ParentPk      string                 `protobuf:"bytes,6,opt,name=parent_pk,json=parentPk,proto3" json:"parent_pk,omitempty"`
+	ChunkSeq      int32                  `protobuf:"varint,7,opt,name=chunk_seq,json=chunkSeq,proto3" json:"chunk_seq,omitempty"`
+	DocumentId    string                 `protobuf:"bytes,8,opt,name=document_id,json=documentId,proto3" json:"document_id,omitempty"`
+	DocVersion    string                 `protobuf:"bytes,9,opt,name=doc_version,json=docVersion,proto3" json:"doc_version,omitempty"`
+	VectorName    string                 `protobuf:"bytes,10,opt,name=vector_name,json=vectorName,proto3" json:"vector_name,omitempty"`
+	RerankScore   float64                `protobuf:"fixed64,11,opt,name=rerank_score,json=rerankScore,proto3" json:"rerank_score,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -958,11 +1276,70 @@ func (x *RetrieveHit) GetPayloadJson() string {
 	return ""
 }
 
+func (x *RetrieveHit) GetVector() []float32 {
+	if x != nil {
+		return x.Vector
+	}
+	return nil
+}
+
+func (x *RetrieveHit) GetSourceName() string {
+	if x != nil {
+		return x.SourceName
+	}
+	return ""
+}
+
+func (x *RetrieveHit) GetParentPk() string {
+	if x != nil {
+		return x.ParentPk
+	}
+	return ""
+}
+
+func (x *RetrieveHit) GetChunkSeq() int32 {
+	if x != nil {
+		return x.ChunkSeq
+	}
+	return 0
+}
+
+func (x *RetrieveHit) GetDocumentId() string {
+	if x != nil {
+		return x.DocumentId
+	}
+	return ""
+}
+
+func (x *RetrieveHit) GetDocVersion() string {
+	if x != nil {
+		return x.DocVersion
+	}
+	return ""
+}
+
+func (x *RetrieveHit) GetVectorName() string {
+	if x != nil {
+		return x.VectorName
+	}
+	return ""
+}
+
+func (x *RetrieveHit) GetRerankScore() float64 {
+	if x != nil {
+		return x.RerankScore
+	}
+	return 0
+}
+
 type RetrieveResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Hits          []*RetrieveHit         `protobuf:"bytes,1,rep,name=hits,proto3" json:"hits,omitempty"`
 	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
 	Error         *v1.ApiError           `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
+	IndexLagMs    int64                  `protobuf:"varint,4,opt,name=index_lag_ms,json=indexLagMs,proto3" json:"index_lag_ms,omitempty"`
+	RerankApplied bool                   `protobuf:"varint,5,opt,name=rerank_applied,json=rerankApplied,proto3" json:"rerank_applied,omitempty"`
+	EvaluationId  string                 `protobuf:"bytes,6,opt,name=evaluation_id,json=evaluationId,proto3" json:"evaluation_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1018,6 +1395,2635 @@ func (x *RetrieveResponse) GetError() *v1.ApiError {
 	return nil
 }
 
+func (x *RetrieveResponse) GetIndexLagMs() int64 {
+	if x != nil {
+		return x.IndexLagMs
+	}
+	return 0
+}
+
+func (x *RetrieveResponse) GetRerankApplied() bool {
+	if x != nil {
+		return x.RerankApplied
+	}
+	return false
+}
+
+func (x *RetrieveResponse) GetEvaluationId() string {
+	if x != nil {
+		return x.EvaluationId
+	}
+	return ""
+}
+
+type MmrConfig struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Enabled       bool                   `protobuf:"varint,1,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	Lambda        float64                `protobuf:"fixed64,2,opt,name=lambda,proto3" json:"lambda,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MmrConfig) Reset() {
+	*x = MmrConfig{}
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MmrConfig) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MmrConfig) ProtoMessage() {}
+
+func (x *MmrConfig) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MmrConfig.ProtoReflect.Descriptor instead.
+func (*MmrConfig) Descriptor() ([]byte, []int) {
+	return file_udb_core_embedding_services_v1_embedding_service_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *MmrConfig) GetEnabled() bool {
+	if x != nil {
+		return x.Enabled
+	}
+	return false
+}
+
+func (x *MmrConfig) GetLambda() float64 {
+	if x != nil {
+		return x.Lambda
+	}
+	return 0
+}
+
+type RerankConfig struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Enabled       bool                   `protobuf:"varint,1,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	Strategy      RerankStrategy         `protobuf:"varint,2,opt,name=strategy,proto3,enum=udb.core.embedding.services.v1.RerankStrategy" json:"strategy,omitempty"`
+	Model         string                 `protobuf:"bytes,3,opt,name=model,proto3" json:"model,omitempty"`
+	TopN          int32                  `protobuf:"varint,4,opt,name=top_n,json=topN,proto3" json:"top_n,omitempty"`
+	FailOpen      bool                   `protobuf:"varint,5,opt,name=fail_open,json=failOpen,proto3" json:"fail_open,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RerankConfig) Reset() {
+	*x = RerankConfig{}
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RerankConfig) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RerankConfig) ProtoMessage() {}
+
+func (x *RerankConfig) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RerankConfig.ProtoReflect.Descriptor instead.
+func (*RerankConfig) Descriptor() ([]byte, []int) {
+	return file_udb_core_embedding_services_v1_embedding_service_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *RerankConfig) GetEnabled() bool {
+	if x != nil {
+		return x.Enabled
+	}
+	return false
+}
+
+func (x *RerankConfig) GetStrategy() RerankStrategy {
+	if x != nil {
+		return x.Strategy
+	}
+	return RerankStrategy_RERANK_STRATEGY_UNSPECIFIED
+}
+
+func (x *RerankConfig) GetModel() string {
+	if x != nil {
+		return x.Model
+	}
+	return ""
+}
+
+func (x *RerankConfig) GetTopN() int32 {
+	if x != nil {
+		return x.TopN
+	}
+	return 0
+}
+
+func (x *RerankConfig) GetFailOpen() bool {
+	if x != nil {
+		return x.FailOpen
+	}
+	return false
+}
+
+type RegisterModelRequest struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	TenantId            string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	ModelId             string                 `protobuf:"bytes,2,opt,name=model_id,json=modelId,proto3" json:"model_id,omitempty"`
+	Provider            string                 `protobuf:"bytes,3,opt,name=provider,proto3" json:"provider,omitempty"`
+	ModelName           string                 `protobuf:"bytes,4,opt,name=model_name,json=modelName,proto3" json:"model_name,omitempty"`
+	Version             string                 `protobuf:"bytes,5,opt,name=version,proto3" json:"version,omitempty"`
+	Dimensions          int32                  `protobuf:"varint,6,opt,name=dimensions,proto3" json:"dimensions,omitempty"`
+	MatryoshkaDims      []int32                `protobuf:"varint,7,rep,packed,name=matryoshka_dims,json=matryoshkaDims,proto3" json:"matryoshka_dims,omitempty"`
+	DistanceMetric      string                 `protobuf:"bytes,8,opt,name=distance_metric,json=distanceMetric,proto3" json:"distance_metric,omitempty"`
+	Normalize           bool                   `protobuf:"varint,9,opt,name=normalize,proto3" json:"normalize,omitempty"`
+	OutputDtype         string                 `protobuf:"bytes,10,opt,name=output_dtype,json=outputDtype,proto3" json:"output_dtype,omitempty"`
+	Rescore             bool                   `protobuf:"varint,11,opt,name=rescore,proto3" json:"rescore,omitempty"`
+	MaxInputTokens      int32                  `protobuf:"varint,12,opt,name=max_input_tokens,json=maxInputTokens,proto3" json:"max_input_tokens,omitempty"`
+	Tokenizer           string                 `protobuf:"bytes,13,opt,name=tokenizer,proto3" json:"tokenizer,omitempty"`
+	TaskType            string                 `protobuf:"bytes,14,opt,name=task_type,json=taskType,proto3" json:"task_type,omitempty"`
+	Asymmetric          bool                   `protobuf:"varint,15,opt,name=asymmetric,proto3" json:"asymmetric,omitempty"`
+	ProviderEndpointRef string                 `protobuf:"bytes,16,opt,name=provider_endpoint_ref,json=providerEndpointRef,proto3" json:"provider_endpoint_ref,omitempty"`
+	VectorBackend       string                 `protobuf:"bytes,17,opt,name=vector_backend,json=vectorBackend,proto3" json:"vector_backend,omitempty"`
+	VectorInstance      string                 `protobuf:"bytes,18,opt,name=vector_instance,json=vectorInstance,proto3" json:"vector_instance,omitempty"`
+	CollectionAlias     string                 `protobuf:"bytes,19,opt,name=collection_alias,json=collectionAlias,proto3" json:"collection_alias,omitempty"`
+	ActiveCollection    string                 `protobuf:"bytes,20,opt,name=active_collection,json=activeCollection,proto3" json:"active_collection,omitempty"`
+	ChunkingStrategy    string                 `protobuf:"bytes,21,opt,name=chunking_strategy,json=chunkingStrategy,proto3" json:"chunking_strategy,omitempty"`
+	ChunkTokens         int32                  `protobuf:"varint,22,opt,name=chunk_tokens,json=chunkTokens,proto3" json:"chunk_tokens,omitempty"`
+	ChunkOverlapTokens  int32                  `protobuf:"varint,23,opt,name=chunk_overlap_tokens,json=chunkOverlapTokens,proto3" json:"chunk_overlap_tokens,omitempty"`
+	ContextualRetrieval bool                   `protobuf:"varint,24,opt,name=contextual_retrieval,json=contextualRetrieval,proto3" json:"contextual_retrieval,omitempty"`
+	LateChunking        bool                   `protobuf:"varint,25,opt,name=late_chunking,json=lateChunking,proto3" json:"late_chunking,omitempty"`
+	MetadataJson        string                 `protobuf:"bytes,26,opt,name=metadata_json,json=metadataJson,proto3" json:"metadata_json,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *RegisterModelRequest) Reset() {
+	*x = RegisterModelRequest{}
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RegisterModelRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RegisterModelRequest) ProtoMessage() {}
+
+func (x *RegisterModelRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RegisterModelRequest.ProtoReflect.Descriptor instead.
+func (*RegisterModelRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_embedding_services_v1_embedding_service_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *RegisterModelRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *RegisterModelRequest) GetModelId() string {
+	if x != nil {
+		return x.ModelId
+	}
+	return ""
+}
+
+func (x *RegisterModelRequest) GetProvider() string {
+	if x != nil {
+		return x.Provider
+	}
+	return ""
+}
+
+func (x *RegisterModelRequest) GetModelName() string {
+	if x != nil {
+		return x.ModelName
+	}
+	return ""
+}
+
+func (x *RegisterModelRequest) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+func (x *RegisterModelRequest) GetDimensions() int32 {
+	if x != nil {
+		return x.Dimensions
+	}
+	return 0
+}
+
+func (x *RegisterModelRequest) GetMatryoshkaDims() []int32 {
+	if x != nil {
+		return x.MatryoshkaDims
+	}
+	return nil
+}
+
+func (x *RegisterModelRequest) GetDistanceMetric() string {
+	if x != nil {
+		return x.DistanceMetric
+	}
+	return ""
+}
+
+func (x *RegisterModelRequest) GetNormalize() bool {
+	if x != nil {
+		return x.Normalize
+	}
+	return false
+}
+
+func (x *RegisterModelRequest) GetOutputDtype() string {
+	if x != nil {
+		return x.OutputDtype
+	}
+	return ""
+}
+
+func (x *RegisterModelRequest) GetRescore() bool {
+	if x != nil {
+		return x.Rescore
+	}
+	return false
+}
+
+func (x *RegisterModelRequest) GetMaxInputTokens() int32 {
+	if x != nil {
+		return x.MaxInputTokens
+	}
+	return 0
+}
+
+func (x *RegisterModelRequest) GetTokenizer() string {
+	if x != nil {
+		return x.Tokenizer
+	}
+	return ""
+}
+
+func (x *RegisterModelRequest) GetTaskType() string {
+	if x != nil {
+		return x.TaskType
+	}
+	return ""
+}
+
+func (x *RegisterModelRequest) GetAsymmetric() bool {
+	if x != nil {
+		return x.Asymmetric
+	}
+	return false
+}
+
+func (x *RegisterModelRequest) GetProviderEndpointRef() string {
+	if x != nil {
+		return x.ProviderEndpointRef
+	}
+	return ""
+}
+
+func (x *RegisterModelRequest) GetVectorBackend() string {
+	if x != nil {
+		return x.VectorBackend
+	}
+	return ""
+}
+
+func (x *RegisterModelRequest) GetVectorInstance() string {
+	if x != nil {
+		return x.VectorInstance
+	}
+	return ""
+}
+
+func (x *RegisterModelRequest) GetCollectionAlias() string {
+	if x != nil {
+		return x.CollectionAlias
+	}
+	return ""
+}
+
+func (x *RegisterModelRequest) GetActiveCollection() string {
+	if x != nil {
+		return x.ActiveCollection
+	}
+	return ""
+}
+
+func (x *RegisterModelRequest) GetChunkingStrategy() string {
+	if x != nil {
+		return x.ChunkingStrategy
+	}
+	return ""
+}
+
+func (x *RegisterModelRequest) GetChunkTokens() int32 {
+	if x != nil {
+		return x.ChunkTokens
+	}
+	return 0
+}
+
+func (x *RegisterModelRequest) GetChunkOverlapTokens() int32 {
+	if x != nil {
+		return x.ChunkOverlapTokens
+	}
+	return 0
+}
+
+func (x *RegisterModelRequest) GetContextualRetrieval() bool {
+	if x != nil {
+		return x.ContextualRetrieval
+	}
+	return false
+}
+
+func (x *RegisterModelRequest) GetLateChunking() bool {
+	if x != nil {
+		return x.LateChunking
+	}
+	return false
+}
+
+func (x *RegisterModelRequest) GetMetadataJson() string {
+	if x != nil {
+		return x.MetadataJson
+	}
+	return ""
+}
+
+type RegisterModelResponse struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	ModelId          string                 `protobuf:"bytes,1,opt,name=model_id,json=modelId,proto3" json:"model_id,omitempty"`
+	ActiveCollection string                 `protobuf:"bytes,2,opt,name=active_collection,json=activeCollection,proto3" json:"active_collection,omitempty"`
+	Message          string                 `protobuf:"bytes,3,opt,name=message,proto3" json:"message,omitempty"`
+	Error            *v1.ApiError           `protobuf:"bytes,4,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *RegisterModelResponse) Reset() {
+	*x = RegisterModelResponse{}
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RegisterModelResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RegisterModelResponse) ProtoMessage() {}
+
+func (x *RegisterModelResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RegisterModelResponse.ProtoReflect.Descriptor instead.
+func (*RegisterModelResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_embedding_services_v1_embedding_service_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *RegisterModelResponse) GetModelId() string {
+	if x != nil {
+		return x.ModelId
+	}
+	return ""
+}
+
+func (x *RegisterModelResponse) GetActiveCollection() string {
+	if x != nil {
+		return x.ActiveCollection
+	}
+	return ""
+}
+
+func (x *RegisterModelResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *RegisterModelResponse) GetError() *v1.ApiError {
+	if x != nil {
+		return x.Error
+	}
+	return nil
+}
+
+type ListModelsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	PageSize      int32                  `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	PageToken     string                 `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	Status        EmbeddingModelStatus   `protobuf:"varint,4,opt,name=status,proto3,enum=udb.core.embedding.services.v1.EmbeddingModelStatus" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListModelsRequest) Reset() {
+	*x = ListModelsRequest{}
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListModelsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListModelsRequest) ProtoMessage() {}
+
+func (x *ListModelsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListModelsRequest.ProtoReflect.Descriptor instead.
+func (*ListModelsRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_embedding_services_v1_embedding_service_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *ListModelsRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *ListModelsRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListModelsRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
+func (x *ListModelsRequest) GetStatus() EmbeddingModelStatus {
+	if x != nil {
+		return x.Status
+	}
+	return EmbeddingModelStatus_EMBEDDING_MODEL_STATUS_UNSPECIFIED
+}
+
+type EmbeddingModelSummary struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	ModelId          string                 `protobuf:"bytes,1,opt,name=model_id,json=modelId,proto3" json:"model_id,omitempty"`
+	Provider         string                 `protobuf:"bytes,2,opt,name=provider,proto3" json:"provider,omitempty"`
+	ModelName        string                 `protobuf:"bytes,3,opt,name=model_name,json=modelName,proto3" json:"model_name,omitempty"`
+	Version          string                 `protobuf:"bytes,4,opt,name=version,proto3" json:"version,omitempty"`
+	Dimensions       int32                  `protobuf:"varint,5,opt,name=dimensions,proto3" json:"dimensions,omitempty"`
+	DistanceMetric   string                 `protobuf:"bytes,6,opt,name=distance_metric,json=distanceMetric,proto3" json:"distance_metric,omitempty"`
+	OutputDtype      string                 `protobuf:"bytes,7,opt,name=output_dtype,json=outputDtype,proto3" json:"output_dtype,omitempty"`
+	TaskType         string                 `protobuf:"bytes,8,opt,name=task_type,json=taskType,proto3" json:"task_type,omitempty"`
+	Status           EmbeddingModelStatus   `protobuf:"varint,9,opt,name=status,proto3,enum=udb.core.embedding.services.v1.EmbeddingModelStatus" json:"status,omitempty"`
+	VectorBackend    string                 `protobuf:"bytes,10,opt,name=vector_backend,json=vectorBackend,proto3" json:"vector_backend,omitempty"`
+	CollectionAlias  string                 `protobuf:"bytes,11,opt,name=collection_alias,json=collectionAlias,proto3" json:"collection_alias,omitempty"`
+	ActiveCollection string                 `protobuf:"bytes,12,opt,name=active_collection,json=activeCollection,proto3" json:"active_collection,omitempty"`
+	TenantState      EmbeddingTenantState   `protobuf:"varint,13,opt,name=tenant_state,json=tenantState,proto3,enum=udb.core.embedding.services.v1.EmbeddingTenantState" json:"tenant_state,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *EmbeddingModelSummary) Reset() {
+	*x = EmbeddingModelSummary{}
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EmbeddingModelSummary) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EmbeddingModelSummary) ProtoMessage() {}
+
+func (x *EmbeddingModelSummary) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EmbeddingModelSummary.ProtoReflect.Descriptor instead.
+func (*EmbeddingModelSummary) Descriptor() ([]byte, []int) {
+	return file_udb_core_embedding_services_v1_embedding_service_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *EmbeddingModelSummary) GetModelId() string {
+	if x != nil {
+		return x.ModelId
+	}
+	return ""
+}
+
+func (x *EmbeddingModelSummary) GetProvider() string {
+	if x != nil {
+		return x.Provider
+	}
+	return ""
+}
+
+func (x *EmbeddingModelSummary) GetModelName() string {
+	if x != nil {
+		return x.ModelName
+	}
+	return ""
+}
+
+func (x *EmbeddingModelSummary) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+func (x *EmbeddingModelSummary) GetDimensions() int32 {
+	if x != nil {
+		return x.Dimensions
+	}
+	return 0
+}
+
+func (x *EmbeddingModelSummary) GetDistanceMetric() string {
+	if x != nil {
+		return x.DistanceMetric
+	}
+	return ""
+}
+
+func (x *EmbeddingModelSummary) GetOutputDtype() string {
+	if x != nil {
+		return x.OutputDtype
+	}
+	return ""
+}
+
+func (x *EmbeddingModelSummary) GetTaskType() string {
+	if x != nil {
+		return x.TaskType
+	}
+	return ""
+}
+
+func (x *EmbeddingModelSummary) GetStatus() EmbeddingModelStatus {
+	if x != nil {
+		return x.Status
+	}
+	return EmbeddingModelStatus_EMBEDDING_MODEL_STATUS_UNSPECIFIED
+}
+
+func (x *EmbeddingModelSummary) GetVectorBackend() string {
+	if x != nil {
+		return x.VectorBackend
+	}
+	return ""
+}
+
+func (x *EmbeddingModelSummary) GetCollectionAlias() string {
+	if x != nil {
+		return x.CollectionAlias
+	}
+	return ""
+}
+
+func (x *EmbeddingModelSummary) GetActiveCollection() string {
+	if x != nil {
+		return x.ActiveCollection
+	}
+	return ""
+}
+
+func (x *EmbeddingModelSummary) GetTenantState() EmbeddingTenantState {
+	if x != nil {
+		return x.TenantState
+	}
+	return EmbeddingTenantState_EMBEDDING_TENANT_STATE_UNSPECIFIED
+}
+
+type ListModelsResponse struct {
+	state         protoimpl.MessageState   `protogen:"open.v1"`
+	Models        []*EmbeddingModelSummary `protobuf:"bytes,1,rep,name=models,proto3" json:"models,omitempty"`
+	NextPageToken string                   `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	Message       string                   `protobuf:"bytes,3,opt,name=message,proto3" json:"message,omitempty"`
+	Error         *v1.ApiError             `protobuf:"bytes,4,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListModelsResponse) Reset() {
+	*x = ListModelsResponse{}
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListModelsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListModelsResponse) ProtoMessage() {}
+
+func (x *ListModelsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListModelsResponse.ProtoReflect.Descriptor instead.
+func (*ListModelsResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_embedding_services_v1_embedding_service_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *ListModelsResponse) GetModels() []*EmbeddingModelSummary {
+	if x != nil {
+		return x.Models
+	}
+	return nil
+}
+
+func (x *ListModelsResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
+func (x *ListModelsResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *ListModelsResponse) GetError() *v1.ApiError {
+	if x != nil {
+		return x.Error
+	}
+	return nil
+}
+
+type DeleteModelRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	ModelId       string                 `protobuf:"bytes,2,opt,name=model_id,json=modelId,proto3" json:"model_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteModelRequest) Reset() {
+	*x = DeleteModelRequest{}
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteModelRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteModelRequest) ProtoMessage() {}
+
+func (x *DeleteModelRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteModelRequest.ProtoReflect.Descriptor instead.
+func (*DeleteModelRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_embedding_services_v1_embedding_service_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *DeleteModelRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *DeleteModelRequest) GetModelId() string {
+	if x != nil {
+		return x.ModelId
+	}
+	return ""
+}
+
+type DeleteModelResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Deleted       bool                   `protobuf:"varint,1,opt,name=deleted,proto3" json:"deleted,omitempty"`
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	Error         *v1.ApiError           `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteModelResponse) Reset() {
+	*x = DeleteModelResponse{}
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteModelResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteModelResponse) ProtoMessage() {}
+
+func (x *DeleteModelResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteModelResponse.ProtoReflect.Descriptor instead.
+func (*DeleteModelResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_embedding_services_v1_embedding_service_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *DeleteModelResponse) GetDeleted() bool {
+	if x != nil {
+		return x.Deleted
+	}
+	return false
+}
+
+func (x *DeleteModelResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *DeleteModelResponse) GetError() *v1.ApiError {
+	if x != nil {
+		return x.Error
+	}
+	return nil
+}
+
+type SetModelStatusRequest struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	TenantId           string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	ModelId            string                 `protobuf:"bytes,2,opt,name=model_id,json=modelId,proto3" json:"model_id,omitempty"`
+	Status             EmbeddingModelStatus   `protobuf:"varint,3,opt,name=status,proto3,enum=udb.core.embedding.services.v1.EmbeddingModelStatus" json:"status,omitempty"`
+	ReplacementModelId string                 `protobuf:"bytes,4,opt,name=replacement_model_id,json=replacementModelId,proto3" json:"replacement_model_id,omitempty"`
+	RetireAfterUnixMs  int64                  `protobuf:"varint,5,opt,name=retire_after_unix_ms,json=retireAfterUnixMs,proto3" json:"retire_after_unix_ms,omitempty"`
+	TenantState        EmbeddingTenantState   `protobuf:"varint,6,opt,name=tenant_state,json=tenantState,proto3,enum=udb.core.embedding.services.v1.EmbeddingTenantState" json:"tenant_state,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *SetModelStatusRequest) Reset() {
+	*x = SetModelStatusRequest{}
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetModelStatusRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetModelStatusRequest) ProtoMessage() {}
+
+func (x *SetModelStatusRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetModelStatusRequest.ProtoReflect.Descriptor instead.
+func (*SetModelStatusRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_embedding_services_v1_embedding_service_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *SetModelStatusRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *SetModelStatusRequest) GetModelId() string {
+	if x != nil {
+		return x.ModelId
+	}
+	return ""
+}
+
+func (x *SetModelStatusRequest) GetStatus() EmbeddingModelStatus {
+	if x != nil {
+		return x.Status
+	}
+	return EmbeddingModelStatus_EMBEDDING_MODEL_STATUS_UNSPECIFIED
+}
+
+func (x *SetModelStatusRequest) GetReplacementModelId() string {
+	if x != nil {
+		return x.ReplacementModelId
+	}
+	return ""
+}
+
+func (x *SetModelStatusRequest) GetRetireAfterUnixMs() int64 {
+	if x != nil {
+		return x.RetireAfterUnixMs
+	}
+	return 0
+}
+
+func (x *SetModelStatusRequest) GetTenantState() EmbeddingTenantState {
+	if x != nil {
+		return x.TenantState
+	}
+	return EmbeddingTenantState_EMBEDDING_TENANT_STATE_UNSPECIFIED
+}
+
+type SetModelStatusResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Updated       bool                   `protobuf:"varint,1,opt,name=updated,proto3" json:"updated,omitempty"`
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	Error         *v1.ApiError           `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
+	TenantState   EmbeddingTenantState   `protobuf:"varint,4,opt,name=tenant_state,json=tenantState,proto3,enum=udb.core.embedding.services.v1.EmbeddingTenantState" json:"tenant_state,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetModelStatusResponse) Reset() {
+	*x = SetModelStatusResponse{}
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetModelStatusResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetModelStatusResponse) ProtoMessage() {}
+
+func (x *SetModelStatusResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetModelStatusResponse.ProtoReflect.Descriptor instead.
+func (*SetModelStatusResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_embedding_services_v1_embedding_service_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *SetModelStatusResponse) GetUpdated() bool {
+	if x != nil {
+		return x.Updated
+	}
+	return false
+}
+
+func (x *SetModelStatusResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *SetModelStatusResponse) GetError() *v1.ApiError {
+	if x != nil {
+		return x.Error
+	}
+	return nil
+}
+
+func (x *SetModelStatusResponse) GetTenantState() EmbeddingTenantState {
+	if x != nil {
+		return x.TenantState
+	}
+	return EmbeddingTenantState_EMBEDDING_TENANT_STATE_UNSPECIFIED
+}
+
+type CutoverModelAliasRequest struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	TenantId           string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	ModelId            string                 `protobuf:"bytes,2,opt,name=model_id,json=modelId,proto3" json:"model_id,omitempty"`
+	ExpectedCollection string                 `protobuf:"bytes,3,opt,name=expected_collection,json=expectedCollection,proto3" json:"expected_collection,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *CutoverModelAliasRequest) Reset() {
+	*x = CutoverModelAliasRequest{}
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CutoverModelAliasRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CutoverModelAliasRequest) ProtoMessage() {}
+
+func (x *CutoverModelAliasRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CutoverModelAliasRequest.ProtoReflect.Descriptor instead.
+func (*CutoverModelAliasRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_embedding_services_v1_embedding_service_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *CutoverModelAliasRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *CutoverModelAliasRequest) GetModelId() string {
+	if x != nil {
+		return x.ModelId
+	}
+	return ""
+}
+
+func (x *CutoverModelAliasRequest) GetExpectedCollection() string {
+	if x != nil {
+		return x.ExpectedCollection
+	}
+	return ""
+}
+
+type CutoverModelAliasResponse struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Cutover          bool                   `protobuf:"varint,1,opt,name=cutover,proto3" json:"cutover,omitempty"`
+	CollectionAlias  string                 `protobuf:"bytes,2,opt,name=collection_alias,json=collectionAlias,proto3" json:"collection_alias,omitempty"`
+	ActiveCollection string                 `protobuf:"bytes,3,opt,name=active_collection,json=activeCollection,proto3" json:"active_collection,omitempty"`
+	Message          string                 `protobuf:"bytes,4,opt,name=message,proto3" json:"message,omitempty"`
+	Error            *v1.ApiError           `protobuf:"bytes,5,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *CutoverModelAliasResponse) Reset() {
+	*x = CutoverModelAliasResponse{}
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CutoverModelAliasResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CutoverModelAliasResponse) ProtoMessage() {}
+
+func (x *CutoverModelAliasResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CutoverModelAliasResponse.ProtoReflect.Descriptor instead.
+func (*CutoverModelAliasResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_embedding_services_v1_embedding_service_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *CutoverModelAliasResponse) GetCutover() bool {
+	if x != nil {
+		return x.Cutover
+	}
+	return false
+}
+
+func (x *CutoverModelAliasResponse) GetCollectionAlias() string {
+	if x != nil {
+		return x.CollectionAlias
+	}
+	return ""
+}
+
+func (x *CutoverModelAliasResponse) GetActiveCollection() string {
+	if x != nil {
+		return x.ActiveCollection
+	}
+	return ""
+}
+
+func (x *CutoverModelAliasResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *CutoverModelAliasResponse) GetError() *v1.ApiError {
+	if x != nil {
+		return x.Error
+	}
+	return nil
+}
+
+type GetEmbeddingJobStatusRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	JobId         string                 `protobuf:"bytes,2,opt,name=job_id,json=jobId,proto3" json:"job_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetEmbeddingJobStatusRequest) Reset() {
+	*x = GetEmbeddingJobStatusRequest{}
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetEmbeddingJobStatusRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetEmbeddingJobStatusRequest) ProtoMessage() {}
+
+func (x *GetEmbeddingJobStatusRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetEmbeddingJobStatusRequest.ProtoReflect.Descriptor instead.
+func (*GetEmbeddingJobStatusRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_embedding_services_v1_embedding_service_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *GetEmbeddingJobStatusRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *GetEmbeddingJobStatusRequest) GetJobId() string {
+	if x != nil {
+		return x.JobId
+	}
+	return ""
+}
+
+type EmbeddingJobStatus struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	JobId            string                 `protobuf:"bytes,1,opt,name=job_id,json=jobId,proto3" json:"job_id,omitempty"`
+	SourceName       string                 `protobuf:"bytes,2,opt,name=source_name,json=sourceName,proto3" json:"source_name,omitempty"`
+	DocumentId       string                 `protobuf:"bytes,3,opt,name=document_id,json=documentId,proto3" json:"document_id,omitempty"`
+	JobType          string                 `protobuf:"bytes,4,opt,name=job_type,json=jobType,proto3" json:"job_type,omitempty"`
+	Mode             string                 `protobuf:"bytes,5,opt,name=mode,proto3" json:"mode,omitempty"`
+	Status           string                 `protobuf:"bytes,6,opt,name=status,proto3" json:"status,omitempty"`
+	RowsEnumerated   int64                  `protobuf:"varint,7,opt,name=rows_enumerated,json=rowsEnumerated,proto3" json:"rows_enumerated,omitempty"`
+	ChunksEmitted    int64                  `protobuf:"varint,8,opt,name=chunks_emitted,json=chunksEmitted,proto3" json:"chunks_emitted,omitempty"`
+	VectorsStored    int64                  `protobuf:"varint,9,opt,name=vectors_stored,json=vectorsStored,proto3" json:"vectors_stored,omitempty"`
+	Failed           int64                  `protobuf:"varint,10,opt,name=failed,proto3" json:"failed,omitempty"`
+	Error            string                 `protobuf:"bytes,11,opt,name=error,proto3" json:"error,omitempty"`
+	StartedAtUnixMs  int64                  `protobuf:"varint,12,opt,name=started_at_unix_ms,json=startedAtUnixMs,proto3" json:"started_at_unix_ms,omitempty"`
+	FinishedAtUnixMs int64                  `protobuf:"varint,13,opt,name=finished_at_unix_ms,json=finishedAtUnixMs,proto3" json:"finished_at_unix_ms,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *EmbeddingJobStatus) Reset() {
+	*x = EmbeddingJobStatus{}
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EmbeddingJobStatus) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EmbeddingJobStatus) ProtoMessage() {}
+
+func (x *EmbeddingJobStatus) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EmbeddingJobStatus.ProtoReflect.Descriptor instead.
+func (*EmbeddingJobStatus) Descriptor() ([]byte, []int) {
+	return file_udb_core_embedding_services_v1_embedding_service_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *EmbeddingJobStatus) GetJobId() string {
+	if x != nil {
+		return x.JobId
+	}
+	return ""
+}
+
+func (x *EmbeddingJobStatus) GetSourceName() string {
+	if x != nil {
+		return x.SourceName
+	}
+	return ""
+}
+
+func (x *EmbeddingJobStatus) GetDocumentId() string {
+	if x != nil {
+		return x.DocumentId
+	}
+	return ""
+}
+
+func (x *EmbeddingJobStatus) GetJobType() string {
+	if x != nil {
+		return x.JobType
+	}
+	return ""
+}
+
+func (x *EmbeddingJobStatus) GetMode() string {
+	if x != nil {
+		return x.Mode
+	}
+	return ""
+}
+
+func (x *EmbeddingJobStatus) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *EmbeddingJobStatus) GetRowsEnumerated() int64 {
+	if x != nil {
+		return x.RowsEnumerated
+	}
+	return 0
+}
+
+func (x *EmbeddingJobStatus) GetChunksEmitted() int64 {
+	if x != nil {
+		return x.ChunksEmitted
+	}
+	return 0
+}
+
+func (x *EmbeddingJobStatus) GetVectorsStored() int64 {
+	if x != nil {
+		return x.VectorsStored
+	}
+	return 0
+}
+
+func (x *EmbeddingJobStatus) GetFailed() int64 {
+	if x != nil {
+		return x.Failed
+	}
+	return 0
+}
+
+func (x *EmbeddingJobStatus) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+func (x *EmbeddingJobStatus) GetStartedAtUnixMs() int64 {
+	if x != nil {
+		return x.StartedAtUnixMs
+	}
+	return 0
+}
+
+func (x *EmbeddingJobStatus) GetFinishedAtUnixMs() int64 {
+	if x != nil {
+		return x.FinishedAtUnixMs
+	}
+	return 0
+}
+
+type GetEmbeddingJobStatusResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Job           *EmbeddingJobStatus    `protobuf:"bytes,1,opt,name=job,proto3" json:"job,omitempty"`
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	Error         *v1.ApiError           `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetEmbeddingJobStatusResponse) Reset() {
+	*x = GetEmbeddingJobStatusResponse{}
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetEmbeddingJobStatusResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetEmbeddingJobStatusResponse) ProtoMessage() {}
+
+func (x *GetEmbeddingJobStatusResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetEmbeddingJobStatusResponse.ProtoReflect.Descriptor instead.
+func (*GetEmbeddingJobStatusResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_embedding_services_v1_embedding_service_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *GetEmbeddingJobStatusResponse) GetJob() *EmbeddingJobStatus {
+	if x != nil {
+		return x.Job
+	}
+	return nil
+}
+
+func (x *GetEmbeddingJobStatusResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *GetEmbeddingJobStatusResponse) GetError() *v1.ApiError {
+	if x != nil {
+		return x.Error
+	}
+	return nil
+}
+
+type ListEmbeddingWorkItemsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	JobId         string                 `protobuf:"bytes,2,opt,name=job_id,json=jobId,proto3" json:"job_id,omitempty"`
+	Status        string                 `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
+	PageSize      int32                  `protobuf:"varint,4,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	PageToken     string                 `protobuf:"bytes,5,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListEmbeddingWorkItemsRequest) Reset() {
+	*x = ListEmbeddingWorkItemsRequest{}
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListEmbeddingWorkItemsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListEmbeddingWorkItemsRequest) ProtoMessage() {}
+
+func (x *ListEmbeddingWorkItemsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListEmbeddingWorkItemsRequest.ProtoReflect.Descriptor instead.
+func (*ListEmbeddingWorkItemsRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_embedding_services_v1_embedding_service_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *ListEmbeddingWorkItemsRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *ListEmbeddingWorkItemsRequest) GetJobId() string {
+	if x != nil {
+		return x.JobId
+	}
+	return ""
+}
+
+func (x *ListEmbeddingWorkItemsRequest) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *ListEmbeddingWorkItemsRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListEmbeddingWorkItemsRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
+type EmbeddingWorkItemSummary struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	WorkItemId          string                 `protobuf:"bytes,1,opt,name=work_item_id,json=workItemId,proto3" json:"work_item_id,omitempty"`
+	PointId             string                 `protobuf:"bytes,2,opt,name=point_id,json=pointId,proto3" json:"point_id,omitempty"`
+	SourceName          string                 `protobuf:"bytes,3,opt,name=source_name,json=sourceName,proto3" json:"source_name,omitempty"`
+	ParentPk            string                 `protobuf:"bytes,4,opt,name=parent_pk,json=parentPk,proto3" json:"parent_pk,omitempty"`
+	ChunkSeq            int32                  `protobuf:"varint,5,opt,name=chunk_seq,json=chunkSeq,proto3" json:"chunk_seq,omitempty"`
+	ChunkHash           string                 `protobuf:"bytes,6,opt,name=chunk_hash,json=chunkHash,proto3" json:"chunk_hash,omitempty"`
+	Status              string                 `protobuf:"bytes,7,opt,name=status,proto3" json:"status,omitempty"`
+	AttemptCount        int32                  `protobuf:"varint,8,opt,name=attempt_count,json=attemptCount,proto3" json:"attempt_count,omitempty"`
+	MaxAttempts         int32                  `protobuf:"varint,9,opt,name=max_attempts,json=maxAttempts,proto3" json:"max_attempts,omitempty"`
+	LastError           string                 `protobuf:"bytes,10,opt,name=last_error,json=lastError,proto3" json:"last_error,omitempty"`
+	NextAttemptAtUnixMs int64                  `protobuf:"varint,11,opt,name=next_attempt_at_unix_ms,json=nextAttemptAtUnixMs,proto3" json:"next_attempt_at_unix_ms,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *EmbeddingWorkItemSummary) Reset() {
+	*x = EmbeddingWorkItemSummary{}
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EmbeddingWorkItemSummary) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EmbeddingWorkItemSummary) ProtoMessage() {}
+
+func (x *EmbeddingWorkItemSummary) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EmbeddingWorkItemSummary.ProtoReflect.Descriptor instead.
+func (*EmbeddingWorkItemSummary) Descriptor() ([]byte, []int) {
+	return file_udb_core_embedding_services_v1_embedding_service_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *EmbeddingWorkItemSummary) GetWorkItemId() string {
+	if x != nil {
+		return x.WorkItemId
+	}
+	return ""
+}
+
+func (x *EmbeddingWorkItemSummary) GetPointId() string {
+	if x != nil {
+		return x.PointId
+	}
+	return ""
+}
+
+func (x *EmbeddingWorkItemSummary) GetSourceName() string {
+	if x != nil {
+		return x.SourceName
+	}
+	return ""
+}
+
+func (x *EmbeddingWorkItemSummary) GetParentPk() string {
+	if x != nil {
+		return x.ParentPk
+	}
+	return ""
+}
+
+func (x *EmbeddingWorkItemSummary) GetChunkSeq() int32 {
+	if x != nil {
+		return x.ChunkSeq
+	}
+	return 0
+}
+
+func (x *EmbeddingWorkItemSummary) GetChunkHash() string {
+	if x != nil {
+		return x.ChunkHash
+	}
+	return ""
+}
+
+func (x *EmbeddingWorkItemSummary) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *EmbeddingWorkItemSummary) GetAttemptCount() int32 {
+	if x != nil {
+		return x.AttemptCount
+	}
+	return 0
+}
+
+func (x *EmbeddingWorkItemSummary) GetMaxAttempts() int32 {
+	if x != nil {
+		return x.MaxAttempts
+	}
+	return 0
+}
+
+func (x *EmbeddingWorkItemSummary) GetLastError() string {
+	if x != nil {
+		return x.LastError
+	}
+	return ""
+}
+
+func (x *EmbeddingWorkItemSummary) GetNextAttemptAtUnixMs() int64 {
+	if x != nil {
+		return x.NextAttemptAtUnixMs
+	}
+	return 0
+}
+
+type ListEmbeddingWorkItemsResponse struct {
+	state         protoimpl.MessageState      `protogen:"open.v1"`
+	WorkItems     []*EmbeddingWorkItemSummary `protobuf:"bytes,1,rep,name=work_items,json=workItems,proto3" json:"work_items,omitempty"`
+	NextPageToken string                      `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	Message       string                      `protobuf:"bytes,3,opt,name=message,proto3" json:"message,omitempty"`
+	Error         *v1.ApiError                `protobuf:"bytes,4,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListEmbeddingWorkItemsResponse) Reset() {
+	*x = ListEmbeddingWorkItemsResponse{}
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListEmbeddingWorkItemsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListEmbeddingWorkItemsResponse) ProtoMessage() {}
+
+func (x *ListEmbeddingWorkItemsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListEmbeddingWorkItemsResponse.ProtoReflect.Descriptor instead.
+func (*ListEmbeddingWorkItemsResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_embedding_services_v1_embedding_service_proto_rawDescGZIP(), []int{32}
+}
+
+func (x *ListEmbeddingWorkItemsResponse) GetWorkItems() []*EmbeddingWorkItemSummary {
+	if x != nil {
+		return x.WorkItems
+	}
+	return nil
+}
+
+func (x *ListEmbeddingWorkItemsResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
+func (x *ListEmbeddingWorkItemsResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *ListEmbeddingWorkItemsResponse) GetError() *v1.ApiError {
+	if x != nil {
+		return x.Error
+	}
+	return nil
+}
+
+type ReportEmbeddingBatchRequest struct {
+	state            protoimpl.MessageState    `protogen:"open.v1"`
+	TenantId         string                    `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	Items            []*ReportEmbeddingRequest `protobuf:"bytes,2,rep,name=items,proto3" json:"items,omitempty"`
+	DeclaredCapacity int32                     `protobuf:"varint,3,opt,name=declared_capacity,json=declaredCapacity,proto3" json:"declared_capacity,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *ReportEmbeddingBatchRequest) Reset() {
+	*x = ReportEmbeddingBatchRequest{}
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReportEmbeddingBatchRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReportEmbeddingBatchRequest) ProtoMessage() {}
+
+func (x *ReportEmbeddingBatchRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReportEmbeddingBatchRequest.ProtoReflect.Descriptor instead.
+func (*ReportEmbeddingBatchRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_embedding_services_v1_embedding_service_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *ReportEmbeddingBatchRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *ReportEmbeddingBatchRequest) GetItems() []*ReportEmbeddingRequest {
+	if x != nil {
+		return x.Items
+	}
+	return nil
+}
+
+func (x *ReportEmbeddingBatchRequest) GetDeclaredCapacity() int32 {
+	if x != nil {
+		return x.DeclaredCapacity
+	}
+	return 0
+}
+
+type ReportEmbeddingBatchItemResult struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	WorkItemId    string                 `protobuf:"bytes,1,opt,name=work_item_id,json=workItemId,proto3" json:"work_item_id,omitempty"`
+	RowPk         string                 `protobuf:"bytes,2,opt,name=row_pk,json=rowPk,proto3" json:"row_pk,omitempty"`
+	Upserted      bool                   `protobuf:"varint,3,opt,name=upserted,proto3" json:"upserted,omitempty"`
+	Error         string                 `protobuf:"bytes,4,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReportEmbeddingBatchItemResult) Reset() {
+	*x = ReportEmbeddingBatchItemResult{}
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[34]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReportEmbeddingBatchItemResult) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReportEmbeddingBatchItemResult) ProtoMessage() {}
+
+func (x *ReportEmbeddingBatchItemResult) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[34]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReportEmbeddingBatchItemResult.ProtoReflect.Descriptor instead.
+func (*ReportEmbeddingBatchItemResult) Descriptor() ([]byte, []int) {
+	return file_udb_core_embedding_services_v1_embedding_service_proto_rawDescGZIP(), []int{34}
+}
+
+func (x *ReportEmbeddingBatchItemResult) GetWorkItemId() string {
+	if x != nil {
+		return x.WorkItemId
+	}
+	return ""
+}
+
+func (x *ReportEmbeddingBatchItemResult) GetRowPk() string {
+	if x != nil {
+		return x.RowPk
+	}
+	return ""
+}
+
+func (x *ReportEmbeddingBatchItemResult) GetUpserted() bool {
+	if x != nil {
+		return x.Upserted
+	}
+	return false
+}
+
+func (x *ReportEmbeddingBatchItemResult) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+type ReportEmbeddingBatchResponse struct {
+	state         protoimpl.MessageState            `protogen:"open.v1"`
+	Results       []*ReportEmbeddingBatchItemResult `protobuf:"bytes,1,rep,name=results,proto3" json:"results,omitempty"`
+	Upserted      int32                             `protobuf:"varint,2,opt,name=upserted,proto3" json:"upserted,omitempty"`
+	Failed        int32                             `protobuf:"varint,3,opt,name=failed,proto3" json:"failed,omitempty"`
+	Message       string                            `protobuf:"bytes,4,opt,name=message,proto3" json:"message,omitempty"`
+	Error         *v1.ApiError                      `protobuf:"bytes,5,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReportEmbeddingBatchResponse) Reset() {
+	*x = ReportEmbeddingBatchResponse{}
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReportEmbeddingBatchResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReportEmbeddingBatchResponse) ProtoMessage() {}
+
+func (x *ReportEmbeddingBatchResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReportEmbeddingBatchResponse.ProtoReflect.Descriptor instead.
+func (*ReportEmbeddingBatchResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_embedding_services_v1_embedding_service_proto_rawDescGZIP(), []int{35}
+}
+
+func (x *ReportEmbeddingBatchResponse) GetResults() []*ReportEmbeddingBatchItemResult {
+	if x != nil {
+		return x.Results
+	}
+	return nil
+}
+
+func (x *ReportEmbeddingBatchResponse) GetUpserted() int32 {
+	if x != nil {
+		return x.Upserted
+	}
+	return 0
+}
+
+func (x *ReportEmbeddingBatchResponse) GetFailed() int32 {
+	if x != nil {
+		return x.Failed
+	}
+	return 0
+}
+
+func (x *ReportEmbeddingBatchResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *ReportEmbeddingBatchResponse) GetError() *v1.ApiError {
+	if x != nil {
+		return x.Error
+	}
+	return nil
+}
+
+type ReportEmbeddingFailureRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	WorkItemId    string                 `protobuf:"bytes,2,opt,name=work_item_id,json=workItemId,proto3" json:"work_item_id,omitempty"`
+	Error         string                 `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
+	Retryable     bool                   `protobuf:"varint,4,opt,name=retryable,proto3" json:"retryable,omitempty"`
+	ErrorCode     string                 `protobuf:"bytes,5,opt,name=error_code,json=errorCode,proto3" json:"error_code,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReportEmbeddingFailureRequest) Reset() {
+	*x = ReportEmbeddingFailureRequest{}
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[36]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReportEmbeddingFailureRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReportEmbeddingFailureRequest) ProtoMessage() {}
+
+func (x *ReportEmbeddingFailureRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[36]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReportEmbeddingFailureRequest.ProtoReflect.Descriptor instead.
+func (*ReportEmbeddingFailureRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_embedding_services_v1_embedding_service_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *ReportEmbeddingFailureRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *ReportEmbeddingFailureRequest) GetWorkItemId() string {
+	if x != nil {
+		return x.WorkItemId
+	}
+	return ""
+}
+
+func (x *ReportEmbeddingFailureRequest) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+func (x *ReportEmbeddingFailureRequest) GetRetryable() bool {
+	if x != nil {
+		return x.Retryable
+	}
+	return false
+}
+
+func (x *ReportEmbeddingFailureRequest) GetErrorCode() string {
+	if x != nil {
+		return x.ErrorCode
+	}
+	return ""
+}
+
+type ReportEmbeddingFailureResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Recorded      bool                   `protobuf:"varint,1,opt,name=recorded,proto3" json:"recorded,omitempty"`
+	DeadLettered  bool                   `protobuf:"varint,2,opt,name=dead_lettered,json=deadLettered,proto3" json:"dead_lettered,omitempty"`
+	AttemptCount  int32                  `protobuf:"varint,3,opt,name=attempt_count,json=attemptCount,proto3" json:"attempt_count,omitempty"`
+	Message       string                 `protobuf:"bytes,4,opt,name=message,proto3" json:"message,omitempty"`
+	Error         *v1.ApiError           `protobuf:"bytes,5,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReportEmbeddingFailureResponse) Reset() {
+	*x = ReportEmbeddingFailureResponse{}
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[37]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReportEmbeddingFailureResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReportEmbeddingFailureResponse) ProtoMessage() {}
+
+func (x *ReportEmbeddingFailureResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[37]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReportEmbeddingFailureResponse.ProtoReflect.Descriptor instead.
+func (*ReportEmbeddingFailureResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_embedding_services_v1_embedding_service_proto_rawDescGZIP(), []int{37}
+}
+
+func (x *ReportEmbeddingFailureResponse) GetRecorded() bool {
+	if x != nil {
+		return x.Recorded
+	}
+	return false
+}
+
+func (x *ReportEmbeddingFailureResponse) GetDeadLettered() bool {
+	if x != nil {
+		return x.DeadLettered
+	}
+	return false
+}
+
+func (x *ReportEmbeddingFailureResponse) GetAttemptCount() int32 {
+	if x != nil {
+		return x.AttemptCount
+	}
+	return 0
+}
+
+func (x *ReportEmbeddingFailureResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *ReportEmbeddingFailureResponse) GetError() *v1.ApiError {
+	if x != nil {
+		return x.Error
+	}
+	return nil
+}
+
+type IngestDocumentRequest struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	TenantId         string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	ExternalId       string                 `protobuf:"bytes,2,opt,name=external_id,json=externalId,proto3" json:"external_id,omitempty"`
+	Title            string                 `protobuf:"bytes,3,opt,name=title,proto3" json:"title,omitempty"`
+	RawText          string                 `protobuf:"bytes,4,opt,name=raw_text,json=rawText,proto3" json:"raw_text,omitempty"`
+	StorageObjectRef string                 `protobuf:"bytes,5,opt,name=storage_object_ref,json=storageObjectRef,proto3" json:"storage_object_ref,omitempty"`
+	ContentType      string                 `protobuf:"bytes,6,opt,name=content_type,json=contentType,proto3" json:"content_type,omitempty"`
+	DocVersion       string                 `protobuf:"bytes,7,opt,name=doc_version,json=docVersion,proto3" json:"doc_version,omitempty"`
+	ModelId          string                 `protobuf:"bytes,8,opt,name=model_id,json=modelId,proto3" json:"model_id,omitempty"`
+	MetadataJson     string                 `protobuf:"bytes,9,opt,name=metadata_json,json=metadataJson,proto3" json:"metadata_json,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *IngestDocumentRequest) Reset() {
+	*x = IngestDocumentRequest{}
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[38]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *IngestDocumentRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*IngestDocumentRequest) ProtoMessage() {}
+
+func (x *IngestDocumentRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[38]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use IngestDocumentRequest.ProtoReflect.Descriptor instead.
+func (*IngestDocumentRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_embedding_services_v1_embedding_service_proto_rawDescGZIP(), []int{38}
+}
+
+func (x *IngestDocumentRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *IngestDocumentRequest) GetExternalId() string {
+	if x != nil {
+		return x.ExternalId
+	}
+	return ""
+}
+
+func (x *IngestDocumentRequest) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *IngestDocumentRequest) GetRawText() string {
+	if x != nil {
+		return x.RawText
+	}
+	return ""
+}
+
+func (x *IngestDocumentRequest) GetStorageObjectRef() string {
+	if x != nil {
+		return x.StorageObjectRef
+	}
+	return ""
+}
+
+func (x *IngestDocumentRequest) GetContentType() string {
+	if x != nil {
+		return x.ContentType
+	}
+	return ""
+}
+
+func (x *IngestDocumentRequest) GetDocVersion() string {
+	if x != nil {
+		return x.DocVersion
+	}
+	return ""
+}
+
+func (x *IngestDocumentRequest) GetModelId() string {
+	if x != nil {
+		return x.ModelId
+	}
+	return ""
+}
+
+func (x *IngestDocumentRequest) GetMetadataJson() string {
+	if x != nil {
+		return x.MetadataJson
+	}
+	return ""
+}
+
+type IngestDocumentResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	DocumentId    string                 `protobuf:"bytes,1,opt,name=document_id,json=documentId,proto3" json:"document_id,omitempty"`
+	JobId         string                 `protobuf:"bytes,2,opt,name=job_id,json=jobId,proto3" json:"job_id,omitempty"`
+	Accepted      bool                   `protobuf:"varint,3,opt,name=accepted,proto3" json:"accepted,omitempty"`
+	Message       string                 `protobuf:"bytes,4,opt,name=message,proto3" json:"message,omitempty"`
+	Error         *v1.ApiError           `protobuf:"bytes,5,opt,name=error,proto3" json:"error,omitempty"`
+	SourceName    string                 `protobuf:"bytes,6,opt,name=source_name,json=sourceName,proto3" json:"source_name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *IngestDocumentResponse) Reset() {
+	*x = IngestDocumentResponse{}
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[39]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *IngestDocumentResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*IngestDocumentResponse) ProtoMessage() {}
+
+func (x *IngestDocumentResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[39]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use IngestDocumentResponse.ProtoReflect.Descriptor instead.
+func (*IngestDocumentResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_embedding_services_v1_embedding_service_proto_rawDescGZIP(), []int{39}
+}
+
+func (x *IngestDocumentResponse) GetDocumentId() string {
+	if x != nil {
+		return x.DocumentId
+	}
+	return ""
+}
+
+func (x *IngestDocumentResponse) GetJobId() string {
+	if x != nil {
+		return x.JobId
+	}
+	return ""
+}
+
+func (x *IngestDocumentResponse) GetAccepted() bool {
+	if x != nil {
+		return x.Accepted
+	}
+	return false
+}
+
+func (x *IngestDocumentResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *IngestDocumentResponse) GetError() *v1.ApiError {
+	if x != nil {
+		return x.Error
+	}
+	return nil
+}
+
+func (x *IngestDocumentResponse) GetSourceName() string {
+	if x != nil {
+		return x.SourceName
+	}
+	return ""
+}
+
+type IngestDocumentBatchRequest struct {
+	state         protoimpl.MessageState   `protogen:"open.v1"`
+	TenantId      string                   `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	Documents     []*IngestDocumentRequest `protobuf:"bytes,2,rep,name=documents,proto3" json:"documents,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *IngestDocumentBatchRequest) Reset() {
+	*x = IngestDocumentBatchRequest{}
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[40]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *IngestDocumentBatchRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*IngestDocumentBatchRequest) ProtoMessage() {}
+
+func (x *IngestDocumentBatchRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[40]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use IngestDocumentBatchRequest.ProtoReflect.Descriptor instead.
+func (*IngestDocumentBatchRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_embedding_services_v1_embedding_service_proto_rawDescGZIP(), []int{40}
+}
+
+func (x *IngestDocumentBatchRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *IngestDocumentBatchRequest) GetDocuments() []*IngestDocumentRequest {
+	if x != nil {
+		return x.Documents
+	}
+	return nil
+}
+
+type IngestDocumentBatchResponse struct {
+	state         protoimpl.MessageState    `protogen:"open.v1"`
+	Documents     []*IngestDocumentResponse `protobuf:"bytes,1,rep,name=documents,proto3" json:"documents,omitempty"`
+	Accepted      int32                     `protobuf:"varint,2,opt,name=accepted,proto3" json:"accepted,omitempty"`
+	Failed        int32                     `protobuf:"varint,3,opt,name=failed,proto3" json:"failed,omitempty"`
+	Message       string                    `protobuf:"bytes,4,opt,name=message,proto3" json:"message,omitempty"`
+	Error         *v1.ApiError              `protobuf:"bytes,5,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *IngestDocumentBatchResponse) Reset() {
+	*x = IngestDocumentBatchResponse{}
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[41]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *IngestDocumentBatchResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*IngestDocumentBatchResponse) ProtoMessage() {}
+
+func (x *IngestDocumentBatchResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[41]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use IngestDocumentBatchResponse.ProtoReflect.Descriptor instead.
+func (*IngestDocumentBatchResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_embedding_services_v1_embedding_service_proto_rawDescGZIP(), []int{41}
+}
+
+func (x *IngestDocumentBatchResponse) GetDocuments() []*IngestDocumentResponse {
+	if x != nil {
+		return x.Documents
+	}
+	return nil
+}
+
+func (x *IngestDocumentBatchResponse) GetAccepted() int32 {
+	if x != nil {
+		return x.Accepted
+	}
+	return 0
+}
+
+func (x *IngestDocumentBatchResponse) GetFailed() int32 {
+	if x != nil {
+		return x.Failed
+	}
+	return 0
+}
+
+func (x *IngestDocumentBatchResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *IngestDocumentBatchResponse) GetError() *v1.ApiError {
+	if x != nil {
+		return x.Error
+	}
+	return nil
+}
+
+type ReportParsedDocumentRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	DocumentId    string                 `protobuf:"bytes,2,opt,name=document_id,json=documentId,proto3" json:"document_id,omitempty"`
+	JobId         string                 `protobuf:"bytes,3,opt,name=job_id,json=jobId,proto3" json:"job_id,omitempty"`
+	Text          string                 `protobuf:"bytes,4,opt,name=text,proto3" json:"text,omitempty"`
+	ContentHash   string                 `protobuf:"bytes,5,opt,name=content_hash,json=contentHash,proto3" json:"content_hash,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReportParsedDocumentRequest) Reset() {
+	*x = ReportParsedDocumentRequest{}
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[42]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReportParsedDocumentRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReportParsedDocumentRequest) ProtoMessage() {}
+
+func (x *ReportParsedDocumentRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[42]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReportParsedDocumentRequest.ProtoReflect.Descriptor instead.
+func (*ReportParsedDocumentRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_embedding_services_v1_embedding_service_proto_rawDescGZIP(), []int{42}
+}
+
+func (x *ReportParsedDocumentRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *ReportParsedDocumentRequest) GetDocumentId() string {
+	if x != nil {
+		return x.DocumentId
+	}
+	return ""
+}
+
+func (x *ReportParsedDocumentRequest) GetJobId() string {
+	if x != nil {
+		return x.JobId
+	}
+	return ""
+}
+
+func (x *ReportParsedDocumentRequest) GetText() string {
+	if x != nil {
+		return x.Text
+	}
+	return ""
+}
+
+func (x *ReportParsedDocumentRequest) GetContentHash() string {
+	if x != nil {
+		return x.ContentHash
+	}
+	return ""
+}
+
+type ReportParsedDocumentResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Accepted      bool                   `protobuf:"varint,1,opt,name=accepted,proto3" json:"accepted,omitempty"`
+	ChunksEmitted int32                  `protobuf:"varint,2,opt,name=chunks_emitted,json=chunksEmitted,proto3" json:"chunks_emitted,omitempty"`
+	Message       string                 `protobuf:"bytes,3,opt,name=message,proto3" json:"message,omitempty"`
+	Error         *v1.ApiError           `protobuf:"bytes,4,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReportParsedDocumentResponse) Reset() {
+	*x = ReportParsedDocumentResponse{}
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[43]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReportParsedDocumentResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReportParsedDocumentResponse) ProtoMessage() {}
+
+func (x *ReportParsedDocumentResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[43]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReportParsedDocumentResponse.ProtoReflect.Descriptor instead.
+func (*ReportParsedDocumentResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_embedding_services_v1_embedding_service_proto_rawDescGZIP(), []int{43}
+}
+
+func (x *ReportParsedDocumentResponse) GetAccepted() bool {
+	if x != nil {
+		return x.Accepted
+	}
+	return false
+}
+
+func (x *ReportParsedDocumentResponse) GetChunksEmitted() int32 {
+	if x != nil {
+		return x.ChunksEmitted
+	}
+	return 0
+}
+
+func (x *ReportParsedDocumentResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *ReportParsedDocumentResponse) GetError() *v1.ApiError {
+	if x != nil {
+		return x.Error
+	}
+	return nil
+}
+
+type ReportRetrievalEvaluationRequest struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	TenantId         string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	EvaluationId     string                 `protobuf:"bytes,2,opt,name=evaluation_id,json=evaluationId,proto3" json:"evaluation_id,omitempty"`
+	ContextRelevance float64                `protobuf:"fixed64,3,opt,name=context_relevance,json=contextRelevance,proto3" json:"context_relevance,omitempty"`
+	Groundedness     float64                `protobuf:"fixed64,4,opt,name=groundedness,proto3" json:"groundedness,omitempty"`
+	AnswerRelevance  float64                `protobuf:"fixed64,5,opt,name=answer_relevance,json=answerRelevance,proto3" json:"answer_relevance,omitempty"`
+	EvaluatorModel   string                 `protobuf:"bytes,6,opt,name=evaluator_model,json=evaluatorModel,proto3" json:"evaluator_model,omitempty"`
+	Error            string                 `protobuf:"bytes,7,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *ReportRetrievalEvaluationRequest) Reset() {
+	*x = ReportRetrievalEvaluationRequest{}
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[44]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReportRetrievalEvaluationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReportRetrievalEvaluationRequest) ProtoMessage() {}
+
+func (x *ReportRetrievalEvaluationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[44]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReportRetrievalEvaluationRequest.ProtoReflect.Descriptor instead.
+func (*ReportRetrievalEvaluationRequest) Descriptor() ([]byte, []int) {
+	return file_udb_core_embedding_services_v1_embedding_service_proto_rawDescGZIP(), []int{44}
+}
+
+func (x *ReportRetrievalEvaluationRequest) GetTenantId() string {
+	if x != nil {
+		return x.TenantId
+	}
+	return ""
+}
+
+func (x *ReportRetrievalEvaluationRequest) GetEvaluationId() string {
+	if x != nil {
+		return x.EvaluationId
+	}
+	return ""
+}
+
+func (x *ReportRetrievalEvaluationRequest) GetContextRelevance() float64 {
+	if x != nil {
+		return x.ContextRelevance
+	}
+	return 0
+}
+
+func (x *ReportRetrievalEvaluationRequest) GetGroundedness() float64 {
+	if x != nil {
+		return x.Groundedness
+	}
+	return 0
+}
+
+func (x *ReportRetrievalEvaluationRequest) GetAnswerRelevance() float64 {
+	if x != nil {
+		return x.AnswerRelevance
+	}
+	return 0
+}
+
+func (x *ReportRetrievalEvaluationRequest) GetEvaluatorModel() string {
+	if x != nil {
+		return x.EvaluatorModel
+	}
+	return ""
+}
+
+func (x *ReportRetrievalEvaluationRequest) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+type ReportRetrievalEvaluationResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Accepted      bool                   `protobuf:"varint,1,opt,name=accepted,proto3" json:"accepted,omitempty"`
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	Error         *v1.ApiError           `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReportRetrievalEvaluationResponse) Reset() {
+	*x = ReportRetrievalEvaluationResponse{}
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[45]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReportRetrievalEvaluationResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReportRetrievalEvaluationResponse) ProtoMessage() {}
+
+func (x *ReportRetrievalEvaluationResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes[45]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReportRetrievalEvaluationResponse.ProtoReflect.Descriptor instead.
+func (*ReportRetrievalEvaluationResponse) Descriptor() ([]byte, []int) {
+	return file_udb_core_embedding_services_v1_embedding_service_proto_rawDescGZIP(), []int{45}
+}
+
+func (x *ReportRetrievalEvaluationResponse) GetAccepted() bool {
+	if x != nil {
+		return x.Accepted
+	}
+	return false
+}
+
+func (x *ReportRetrievalEvaluationResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *ReportRetrievalEvaluationResponse) GetError() *v1.ApiError {
+	if x != nil {
+		return x.Error
+	}
+	return nil
+}
+
 var File_udb_core_embedding_services_v1_embedding_service_proto protoreflect.FileDescriptor
 
 const file_udb_core_embedding_services_v1_embedding_service_proto_rawDesc = "" +
@@ -1065,17 +4071,18 @@ const file_udb_core_embedding_services_v1_embedding_service_proto_rawDesc = "" +
 	"\x14DeleteSourceResponse\x12\x18\n" +
 	"\adeleted\x18\x01 \x01(\bR\adeleted\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x122\n" +
-	"\x05error\x18\x03 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tembeddingP\x01\"q\n" +
+	"\x05error\x18\x03 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tembeddingP\x01\"\x85\x01\n" +
 	"\x0fBackfillRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1f\n" +
 	"\vsource_name\x18\x02 \x01(\tR\n" +
-	"sourceName: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tembeddingP\x01\"\xbf\x01\n" +
+	"sourceName\x12\x12\n" +
+	"\x04mode\x18\x03 \x01(\tR\x04mode: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tembeddingP\x01\"\xbf\x01\n" +
 	"\x10BackfillResponse\x12\x1f\n" +
 	"\vbackfill_id\x18\x01 \x01(\tR\n" +
 	"backfillId\x12\x1a\n" +
 	"\baccepted\x18\x02 \x01(\bR\baccepted\x12\x18\n" +
 	"\amessage\x18\x03 \x01(\tR\amessage\x122\n" +
-	"\x05error\x18\x04 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tembeddingP\x01\"\xcd\x01\n" +
+	"\x05error\x18\x04 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tembeddingP\x01\"\xd0\x02\n" +
 	"\x16ReportEmbeddingRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1f\n" +
 	"\vsource_name\x18\x02 \x01(\tR\n" +
@@ -1083,11 +4090,20 @@ const file_udb_core_embedding_services_v1_embedding_service_proto_rawDesc = "" +
 	"\x06row_pk\x18\x03 \x01(\tR\x05rowPk\x12\x16\n" +
 	"\x06vector\x18\x04 \x03(\x02R\x06vector\x12\x14\n" +
 	"\x05model\x18\x05 \x01(\tR\x05model\x12\x12\n" +
-	"\x04dims\x18\x06 \x01(\x05R\x04dims:\x1c\x9a\xb2\x19\x18\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tembedding\"\xa1\x01\n" +
+	"\x04dims\x18\x06 \x01(\x05R\x04dims\x12 \n" +
+	"\fwork_item_id\x18\a \x01(\tR\n" +
+	"workItemId\x12\x1d\n" +
+	"\n" +
+	"chunk_hash\x18\b \x01(\tR\tchunkHash\x12\x1f\n" +
+	"\vtoken_count\x18\t \x01(\x03R\n" +
+	"tokenCount\x12\x1f\n" +
+	"\vvector_name\x18\n" +
+	" \x01(\tR\n" +
+	"vectorName:\x1c\x9a\xb2\x19\x18\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tembedding\"\xa1\x01\n" +
 	"\x17ReportEmbeddingResponse\x12\x1a\n" +
 	"\bupserted\x18\x01 \x01(\bR\bupserted\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x122\n" +
-	"\x05error\x18\x03 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tembedding\"\x92\x02\n" +
+	"\x05error\x18\x03 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tembedding\"\xa0\x05\n" +
 	"\x0fRetrieveRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1f\n" +
 	"\vsource_name\x18\x02 \x01(\tR\n" +
@@ -1098,15 +4114,304 @@ const file_udb_core_embedding_services_v1_embedding_service_proto_rawDesc = "" +
 	"\x05top_k\x18\x05 \x01(\x05R\x04topK\x12\x1f\n" +
 	"\vfilter_json\x18\x06 \x01(\tR\n" +
 	"filterJson\x12'\n" +
-	"\x0fscore_threshold\x18\a \x01(\x01R\x0escoreThreshold: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tembeddingP\x01\"V\n" +
+	"\x0fscore_threshold\x18\a \x01(\x01R\x0escoreThreshold\x12'\n" +
+	"\x0finclude_vectors\x18\b \x01(\bR\x0eincludeVectors\x12;\n" +
+	"\x03mmr\x18\t \x01(\v2).udb.core.embedding.services.v1.MmrConfigR\x03mmr\x12F\n" +
+	"\x06fusion\x18\n" +
+	" \x01(\x0e2..udb.core.embedding.services.v1.FusionStrategyR\x06fusion\x12%\n" +
+	"\x0eprefetch_limit\x18\v \x01(\x05R\rprefetchLimit\x12D\n" +
+	"\x06rerank\x18\f \x01(\v2,.udb.core.embedding.services.v1.RerankConfigR\x06rerank\x12\x1f\n" +
+	"\vvector_name\x18\r \x01(\tR\n" +
+	"vectorName\x12#\n" +
+	"\rparent_window\x18\x0e \x01(\x05R\fparentWindow\x12+\n" +
+	"\x11include_citations\x18\x0f \x01(\bR\x10includeCitations: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tembeddingP\x01\"\xcf\x02\n" +
 	"\vRetrieveHit\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05score\x18\x02 \x01(\x01R\x05score\x12!\n" +
-	"\fpayload_json\x18\x03 \x01(\tR\vpayloadJson\"\xc3\x01\n" +
+	"\fpayload_json\x18\x03 \x01(\tR\vpayloadJson\x12\x16\n" +
+	"\x06vector\x18\x04 \x03(\x02R\x06vector\x12\x1f\n" +
+	"\vsource_name\x18\x05 \x01(\tR\n" +
+	"sourceName\x12\x1b\n" +
+	"\tparent_pk\x18\x06 \x01(\tR\bparentPk\x12\x1b\n" +
+	"\tchunk_seq\x18\a \x01(\x05R\bchunkSeq\x12\x1f\n" +
+	"\vdocument_id\x18\b \x01(\tR\n" +
+	"documentId\x12\x1f\n" +
+	"\vdoc_version\x18\t \x01(\tR\n" +
+	"docVersion\x12\x1f\n" +
+	"\vvector_name\x18\n" +
+	" \x01(\tR\n" +
+	"vectorName\x12!\n" +
+	"\frerank_score\x18\v \x01(\x01R\vrerankScore\"\xb1\x02\n" +
 	"\x10RetrieveResponse\x12?\n" +
 	"\x04hits\x18\x01 \x03(\v2+.udb.core.embedding.services.v1.RetrieveHitR\x04hits\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x122\n" +
-	"\x05error\x18\x03 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tembeddingP\x012\xff\x16\n" +
+	"\x05error\x18\x03 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error\x12 \n" +
+	"\findex_lag_ms\x18\x04 \x01(\x03R\n" +
+	"indexLagMs\x12%\n" +
+	"\x0ererank_applied\x18\x05 \x01(\bR\rrerankApplied\x12#\n" +
+	"\revaluation_id\x18\x06 \x01(\tR\fevaluationId: \x9a\xb2\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tembeddingP\x01\"=\n" +
+	"\tMmrConfig\x12\x18\n" +
+	"\aenabled\x18\x01 \x01(\bR\aenabled\x12\x16\n" +
+	"\x06lambda\x18\x02 \x01(\x01R\x06lambda\"\xbc\x01\n" +
+	"\fRerankConfig\x12\x18\n" +
+	"\aenabled\x18\x01 \x01(\bR\aenabled\x12J\n" +
+	"\bstrategy\x18\x02 \x01(\x0e2..udb.core.embedding.services.v1.RerankStrategyR\bstrategy\x12\x14\n" +
+	"\x05model\x18\x03 \x01(\tR\x05model\x12\x13\n" +
+	"\x05top_n\x18\x04 \x01(\x05R\x04topN\x12\x1b\n" +
+	"\tfail_open\x18\x05 \x01(\bR\bfailOpen\"\xd0\a\n" +
+	"\x14RegisterModelRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x19\n" +
+	"\bmodel_id\x18\x02 \x01(\tR\amodelId\x12\x1a\n" +
+	"\bprovider\x18\x03 \x01(\tR\bprovider\x12\x1d\n" +
+	"\n" +
+	"model_name\x18\x04 \x01(\tR\tmodelName\x12\x18\n" +
+	"\aversion\x18\x05 \x01(\tR\aversion\x12\x1e\n" +
+	"\n" +
+	"dimensions\x18\x06 \x01(\x05R\n" +
+	"dimensions\x12'\n" +
+	"\x0fmatryoshka_dims\x18\a \x03(\x05R\x0ematryoshkaDims\x12'\n" +
+	"\x0fdistance_metric\x18\b \x01(\tR\x0edistanceMetric\x12\x1c\n" +
+	"\tnormalize\x18\t \x01(\bR\tnormalize\x12!\n" +
+	"\foutput_dtype\x18\n" +
+	" \x01(\tR\voutputDtype\x12\x18\n" +
+	"\arescore\x18\v \x01(\bR\arescore\x12(\n" +
+	"\x10max_input_tokens\x18\f \x01(\x05R\x0emaxInputTokens\x12\x1c\n" +
+	"\ttokenizer\x18\r \x01(\tR\ttokenizer\x12\x1b\n" +
+	"\ttask_type\x18\x0e \x01(\tR\btaskType\x12\x1e\n" +
+	"\n" +
+	"asymmetric\x18\x0f \x01(\bR\n" +
+	"asymmetric\x122\n" +
+	"\x15provider_endpoint_ref\x18\x10 \x01(\tR\x13providerEndpointRef\x12%\n" +
+	"\x0evector_backend\x18\x11 \x01(\tR\rvectorBackend\x12'\n" +
+	"\x0fvector_instance\x18\x12 \x01(\tR\x0evectorInstance\x12)\n" +
+	"\x10collection_alias\x18\x13 \x01(\tR\x0fcollectionAlias\x12+\n" +
+	"\x11active_collection\x18\x14 \x01(\tR\x10activeCollection\x12+\n" +
+	"\x11chunking_strategy\x18\x15 \x01(\tR\x10chunkingStrategy\x12!\n" +
+	"\fchunk_tokens\x18\x16 \x01(\x05R\vchunkTokens\x120\n" +
+	"\x14chunk_overlap_tokens\x18\x17 \x01(\x05R\x12chunkOverlapTokens\x121\n" +
+	"\x14contextual_retrieval\x18\x18 \x01(\bR\x13contextualRetrieval\x12#\n" +
+	"\rlate_chunking\x18\x19 \x01(\bR\flateChunking\x12#\n" +
+	"\rmetadata_json\x18\x1a \x01(\tR\fmetadataJson\"\xad\x01\n" +
+	"\x15RegisterModelResponse\x12\x19\n" +
+	"\bmodel_id\x18\x01 \x01(\tR\amodelId\x12+\n" +
+	"\x11active_collection\x18\x02 \x01(\tR\x10activeCollection\x12\x18\n" +
+	"\amessage\x18\x03 \x01(\tR\amessage\x122\n" +
+	"\x05error\x18\x04 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error\"\xba\x01\n" +
+	"\x11ListModelsRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1b\n" +
+	"\tpage_size\x18\x02 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x03 \x01(\tR\tpageToken\x12L\n" +
+	"\x06status\x18\x04 \x01(\x0e24.udb.core.embedding.services.v1.EmbeddingModelStatusR\x06status\"\xb6\x04\n" +
+	"\x15EmbeddingModelSummary\x12\x19\n" +
+	"\bmodel_id\x18\x01 \x01(\tR\amodelId\x12\x1a\n" +
+	"\bprovider\x18\x02 \x01(\tR\bprovider\x12\x1d\n" +
+	"\n" +
+	"model_name\x18\x03 \x01(\tR\tmodelName\x12\x18\n" +
+	"\aversion\x18\x04 \x01(\tR\aversion\x12\x1e\n" +
+	"\n" +
+	"dimensions\x18\x05 \x01(\x05R\n" +
+	"dimensions\x12'\n" +
+	"\x0fdistance_metric\x18\x06 \x01(\tR\x0edistanceMetric\x12!\n" +
+	"\foutput_dtype\x18\a \x01(\tR\voutputDtype\x12\x1b\n" +
+	"\ttask_type\x18\b \x01(\tR\btaskType\x12L\n" +
+	"\x06status\x18\t \x01(\x0e24.udb.core.embedding.services.v1.EmbeddingModelStatusR\x06status\x12%\n" +
+	"\x0evector_backend\x18\n" +
+	" \x01(\tR\rvectorBackend\x12)\n" +
+	"\x10collection_alias\x18\v \x01(\tR\x0fcollectionAlias\x12+\n" +
+	"\x11active_collection\x18\f \x01(\tR\x10activeCollection\x12W\n" +
+	"\ftenant_state\x18\r \x01(\x0e24.udb.core.embedding.services.v1.EmbeddingTenantStateR\vtenantState\"\xd9\x01\n" +
+	"\x12ListModelsResponse\x12M\n" +
+	"\x06models\x18\x01 \x03(\v25.udb.core.embedding.services.v1.EmbeddingModelSummaryR\x06models\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12\x18\n" +
+	"\amessage\x18\x03 \x01(\tR\amessage\x122\n" +
+	"\x05error\x18\x04 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error\"L\n" +
+	"\x12DeleteModelRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x19\n" +
+	"\bmodel_id\x18\x02 \x01(\tR\amodelId\"}\n" +
+	"\x13DeleteModelResponse\x12\x18\n" +
+	"\adeleted\x18\x01 \x01(\bR\adeleted\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\x122\n" +
+	"\x05error\x18\x03 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error\"\xd9\x02\n" +
+	"\x15SetModelStatusRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x19\n" +
+	"\bmodel_id\x18\x02 \x01(\tR\amodelId\x12L\n" +
+	"\x06status\x18\x03 \x01(\x0e24.udb.core.embedding.services.v1.EmbeddingModelStatusR\x06status\x120\n" +
+	"\x14replacement_model_id\x18\x04 \x01(\tR\x12replacementModelId\x12/\n" +
+	"\x14retire_after_unix_ms\x18\x05 \x01(\x03R\x11retireAfterUnixMs\x12W\n" +
+	"\ftenant_state\x18\x06 \x01(\x0e24.udb.core.embedding.services.v1.EmbeddingTenantStateR\vtenantState\"\xd9\x01\n" +
+	"\x16SetModelStatusResponse\x12\x18\n" +
+	"\aupdated\x18\x01 \x01(\bR\aupdated\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\x122\n" +
+	"\x05error\x18\x03 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error\x12W\n" +
+	"\ftenant_state\x18\x04 \x01(\x0e24.udb.core.embedding.services.v1.EmbeddingTenantStateR\vtenantState\"\x83\x01\n" +
+	"\x18CutoverModelAliasRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x19\n" +
+	"\bmodel_id\x18\x02 \x01(\tR\amodelId\x12/\n" +
+	"\x13expected_collection\x18\x03 \x01(\tR\x12expectedCollection\"\xdb\x01\n" +
+	"\x19CutoverModelAliasResponse\x12\x18\n" +
+	"\acutover\x18\x01 \x01(\bR\acutover\x12)\n" +
+	"\x10collection_alias\x18\x02 \x01(\tR\x0fcollectionAlias\x12+\n" +
+	"\x11active_collection\x18\x03 \x01(\tR\x10activeCollection\x12\x18\n" +
+	"\amessage\x18\x04 \x01(\tR\amessage\x122\n" +
+	"\x05error\x18\x05 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error\"R\n" +
+	"\x1cGetEmbeddingJobStatusRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x15\n" +
+	"\x06job_id\x18\x02 \x01(\tR\x05jobId\"\xb5\x03\n" +
+	"\x12EmbeddingJobStatus\x12\x15\n" +
+	"\x06job_id\x18\x01 \x01(\tR\x05jobId\x12\x1f\n" +
+	"\vsource_name\x18\x02 \x01(\tR\n" +
+	"sourceName\x12\x1f\n" +
+	"\vdocument_id\x18\x03 \x01(\tR\n" +
+	"documentId\x12\x19\n" +
+	"\bjob_type\x18\x04 \x01(\tR\ajobType\x12\x12\n" +
+	"\x04mode\x18\x05 \x01(\tR\x04mode\x12\x16\n" +
+	"\x06status\x18\x06 \x01(\tR\x06status\x12'\n" +
+	"\x0frows_enumerated\x18\a \x01(\x03R\x0erowsEnumerated\x12%\n" +
+	"\x0echunks_emitted\x18\b \x01(\x03R\rchunksEmitted\x12%\n" +
+	"\x0evectors_stored\x18\t \x01(\x03R\rvectorsStored\x12\x16\n" +
+	"\x06failed\x18\n" +
+	" \x01(\x03R\x06failed\x12\x14\n" +
+	"\x05error\x18\v \x01(\tR\x05error\x12+\n" +
+	"\x12started_at_unix_ms\x18\f \x01(\x03R\x0fstartedAtUnixMs\x12-\n" +
+	"\x13finished_at_unix_ms\x18\r \x01(\x03R\x10finishedAtUnixMs\"\xb3\x01\n" +
+	"\x1dGetEmbeddingJobStatusResponse\x12D\n" +
+	"\x03job\x18\x01 \x01(\v22.udb.core.embedding.services.v1.EmbeddingJobStatusR\x03job\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\x122\n" +
+	"\x05error\x18\x03 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error\"\xa7\x01\n" +
+	"\x1dListEmbeddingWorkItemsRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x15\n" +
+	"\x06job_id\x18\x02 \x01(\tR\x05jobId\x12\x16\n" +
+	"\x06status\x18\x03 \x01(\tR\x06status\x12\x1b\n" +
+	"\tpage_size\x18\x04 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x05 \x01(\tR\tpageToken\"\x86\x03\n" +
+	"\x18EmbeddingWorkItemSummary\x12 \n" +
+	"\fwork_item_id\x18\x01 \x01(\tR\n" +
+	"workItemId\x12\x19\n" +
+	"\bpoint_id\x18\x02 \x01(\tR\apointId\x12\x1f\n" +
+	"\vsource_name\x18\x03 \x01(\tR\n" +
+	"sourceName\x12\x1b\n" +
+	"\tparent_pk\x18\x04 \x01(\tR\bparentPk\x12\x1b\n" +
+	"\tchunk_seq\x18\x05 \x01(\x05R\bchunkSeq\x12\x1d\n" +
+	"\n" +
+	"chunk_hash\x18\x06 \x01(\tR\tchunkHash\x12\x16\n" +
+	"\x06status\x18\a \x01(\tR\x06status\x12#\n" +
+	"\rattempt_count\x18\b \x01(\x05R\fattemptCount\x12!\n" +
+	"\fmax_attempts\x18\t \x01(\x05R\vmaxAttempts\x12\x1d\n" +
+	"\n" +
+	"last_error\x18\n" +
+	" \x01(\tR\tlastError\x124\n" +
+	"\x17next_attempt_at_unix_ms\x18\v \x01(\x03R\x13nextAttemptAtUnixMs\"\xef\x01\n" +
+	"\x1eListEmbeddingWorkItemsResponse\x12W\n" +
+	"\n" +
+	"work_items\x18\x01 \x03(\v28.udb.core.embedding.services.v1.EmbeddingWorkItemSummaryR\tworkItems\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12\x18\n" +
+	"\amessage\x18\x03 \x01(\tR\amessage\x122\n" +
+	"\x05error\x18\x04 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error\"\xb5\x01\n" +
+	"\x1bReportEmbeddingBatchRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12L\n" +
+	"\x05items\x18\x02 \x03(\v26.udb.core.embedding.services.v1.ReportEmbeddingRequestR\x05items\x12+\n" +
+	"\x11declared_capacity\x18\x03 \x01(\x05R\x10declaredCapacity\"\x8b\x01\n" +
+	"\x1eReportEmbeddingBatchItemResult\x12 \n" +
+	"\fwork_item_id\x18\x01 \x01(\tR\n" +
+	"workItemId\x12\x15\n" +
+	"\x06row_pk\x18\x02 \x01(\tR\x05rowPk\x12\x1a\n" +
+	"\bupserted\x18\x03 \x01(\bR\bupserted\x12\x14\n" +
+	"\x05error\x18\x04 \x01(\tR\x05error\"\xfa\x01\n" +
+	"\x1cReportEmbeddingBatchResponse\x12X\n" +
+	"\aresults\x18\x01 \x03(\v2>.udb.core.embedding.services.v1.ReportEmbeddingBatchItemResultR\aresults\x12\x1a\n" +
+	"\bupserted\x18\x02 \x01(\x05R\bupserted\x12\x16\n" +
+	"\x06failed\x18\x03 \x01(\x05R\x06failed\x12\x18\n" +
+	"\amessage\x18\x04 \x01(\tR\amessage\x122\n" +
+	"\x05error\x18\x05 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error\"\xb1\x01\n" +
+	"\x1dReportEmbeddingFailureRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12 \n" +
+	"\fwork_item_id\x18\x02 \x01(\tR\n" +
+	"workItemId\x12\x14\n" +
+	"\x05error\x18\x03 \x01(\tR\x05error\x12\x1c\n" +
+	"\tretryable\x18\x04 \x01(\bR\tretryable\x12\x1d\n" +
+	"\n" +
+	"error_code\x18\x05 \x01(\tR\terrorCode\"\xd4\x01\n" +
+	"\x1eReportEmbeddingFailureResponse\x12\x1a\n" +
+	"\brecorded\x18\x01 \x01(\bR\brecorded\x12#\n" +
+	"\rdead_lettered\x18\x02 \x01(\bR\fdeadLettered\x12#\n" +
+	"\rattempt_count\x18\x03 \x01(\x05R\fattemptCount\x12\x18\n" +
+	"\amessage\x18\x04 \x01(\tR\amessage\x122\n" +
+	"\x05error\x18\x05 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error\"\xb8\x02\n" +
+	"\x15IngestDocumentRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1f\n" +
+	"\vexternal_id\x18\x02 \x01(\tR\n" +
+	"externalId\x12\x14\n" +
+	"\x05title\x18\x03 \x01(\tR\x05title\x12\x19\n" +
+	"\braw_text\x18\x04 \x01(\tR\arawText\x12,\n" +
+	"\x12storage_object_ref\x18\x05 \x01(\tR\x10storageObjectRef\x12!\n" +
+	"\fcontent_type\x18\x06 \x01(\tR\vcontentType\x12\x1f\n" +
+	"\vdoc_version\x18\a \x01(\tR\n" +
+	"docVersion\x12\x19\n" +
+	"\bmodel_id\x18\b \x01(\tR\amodelId\x12#\n" +
+	"\rmetadata_json\x18\t \x01(\tR\fmetadataJson\"\xdb\x01\n" +
+	"\x16IngestDocumentResponse\x12\x1f\n" +
+	"\vdocument_id\x18\x01 \x01(\tR\n" +
+	"documentId\x12\x15\n" +
+	"\x06job_id\x18\x02 \x01(\tR\x05jobId\x12\x1a\n" +
+	"\baccepted\x18\x03 \x01(\bR\baccepted\x12\x18\n" +
+	"\amessage\x18\x04 \x01(\tR\amessage\x122\n" +
+	"\x05error\x18\x05 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error\x12\x1f\n" +
+	"\vsource_name\x18\x06 \x01(\tR\n" +
+	"sourceName\"\x8e\x01\n" +
+	"\x1aIngestDocumentBatchRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12S\n" +
+	"\tdocuments\x18\x02 \x03(\v25.udb.core.embedding.services.v1.IngestDocumentRequestR\tdocuments\"\xf5\x01\n" +
+	"\x1bIngestDocumentBatchResponse\x12T\n" +
+	"\tdocuments\x18\x01 \x03(\v26.udb.core.embedding.services.v1.IngestDocumentResponseR\tdocuments\x12\x1a\n" +
+	"\baccepted\x18\x02 \x01(\x05R\baccepted\x12\x16\n" +
+	"\x06failed\x18\x03 \x01(\x05R\x06failed\x12\x18\n" +
+	"\amessage\x18\x04 \x01(\tR\amessage\x122\n" +
+	"\x05error\x18\x05 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error\"\xa9\x01\n" +
+	"\x1bReportParsedDocumentRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1f\n" +
+	"\vdocument_id\x18\x02 \x01(\tR\n" +
+	"documentId\x12\x15\n" +
+	"\x06job_id\x18\x03 \x01(\tR\x05jobId\x12\x12\n" +
+	"\x04text\x18\x04 \x01(\tR\x04text\x12!\n" +
+	"\fcontent_hash\x18\x05 \x01(\tR\vcontentHash\"\xaf\x01\n" +
+	"\x1cReportParsedDocumentResponse\x12\x1a\n" +
+	"\baccepted\x18\x01 \x01(\bR\baccepted\x12%\n" +
+	"\x0echunks_emitted\x18\x02 \x01(\x05R\rchunksEmitted\x12\x18\n" +
+	"\amessage\x18\x03 \x01(\tR\amessage\x122\n" +
+	"\x05error\x18\x04 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error\"\x9f\x02\n" +
+	" ReportRetrievalEvaluationRequest\x12\x1b\n" +
+	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12#\n" +
+	"\revaluation_id\x18\x02 \x01(\tR\fevaluationId\x12+\n" +
+	"\x11context_relevance\x18\x03 \x01(\x01R\x10contextRelevance\x12\"\n" +
+	"\fgroundedness\x18\x04 \x01(\x01R\fgroundedness\x12)\n" +
+	"\x10answer_relevance\x18\x05 \x01(\x01R\x0fanswerRelevance\x12'\n" +
+	"\x0fevaluator_model\x18\x06 \x01(\tR\x0eevaluatorModel\x12\x14\n" +
+	"\x05error\x18\a \x01(\tR\x05error\"\x8d\x01\n" +
+	"!ReportRetrievalEvaluationResponse\x12\x1a\n" +
+	"\baccepted\x18\x01 \x01(\bR\baccepted\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\x122\n" +
+	"\x05error\x18\x03 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error*\xac\x01\n" +
+	"\x14EmbeddingModelStatus\x12&\n" +
+	"\"EMBEDDING_MODEL_STATUS_UNSPECIFIED\x10\x00\x12!\n" +
+	"\x1dEMBEDDING_MODEL_STATUS_ACTIVE\x10\x01\x12%\n" +
+	"!EMBEDDING_MODEL_STATUS_DEPRECATED\x10\x02\x12\"\n" +
+	"\x1eEMBEDDING_MODEL_STATUS_RETIRED\x10\x03*\xac\x01\n" +
+	"\x14EmbeddingTenantState\x12&\n" +
+	"\"EMBEDDING_TENANT_STATE_UNSPECIFIED\x10\x00\x12!\n" +
+	"\x1dEMBEDDING_TENANT_STATE_ACTIVE\x10\x01\x12#\n" +
+	"\x1fEMBEDDING_TENANT_STATE_INACTIVE\x10\x02\x12$\n" +
+	" EMBEDDING_TENANT_STATE_OFFLOADED\x10\x03*\x82\x01\n" +
+	"\x0eFusionStrategy\x12\x1f\n" +
+	"\x1bFUSION_STRATEGY_UNSPECIFIED\x10\x00\x12\x17\n" +
+	"\x13FUSION_STRATEGY_RRF\x10\x01\x12\x1c\n" +
+	"\x18FUSION_STRATEGY_WEIGHTED\x10\x02\x12\x18\n" +
+	"\x14FUSION_STRATEGY_DBSF\x10\x03*z\n" +
+	"\x0eRerankStrategy\x12\x1f\n" +
+	"\x1bRERANK_STRATEGY_UNSPECIFIED\x10\x00\x12!\n" +
+	"\x1dRERANK_STRATEGY_CROSS_ENCODER\x10\x01\x12$\n" +
+	" RERANK_STRATEGY_LATE_INTERACTION\x10\x022\xa8>\n" +
 	"\x10EmbeddingService\x12\x82\x04\n" +
 	"\x0eRegisterSource\x125.udb.core.embedding.services.v1.RegisterSourceRequest\x1a6.udb.core.embedding.services.v1.RegisterSourceResponse\"\x80\x03\xca\xf3\x18D\b\x02\x1a\x1dudb:embedding:register-source \x01J\x02\x01\x02j\x18embedding.RegisterSource\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x18F\b\x01\x12\x0fregister_source\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tembeddingP\x01Z\x17registerEmbeddingSource\xea\xf3\x18l\n" +
 	"\x18embedding.RegisterSource\x12\"udb.embedding.source.registered.v1\x1a\vsource_name\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18C\n" +
@@ -1122,7 +4427,34 @@ const file_udb_core_embedding_services_v1_embedding_service_proto_rawDesc = "" +
 	"\x0fReportEmbedding\x126.udb.core.embedding.services.v1.ReportEmbeddingRequest\x1a7.udb.core.embedding.services.v1.ReportEmbeddingResponse\"\xc5\x01\xca\xf3\x18H\b\x02\x1a\x1eudb:embedding:report-embedding \x018\x01J\x02\x01\x02j\x19embedding.ReportEmbedding\x90\x01\x01\xda\xf3\x18*\x12\x10report_embedding\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tembedding\xf2\xf3\x18C\n" +
 	"\tembedding\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x12\xde\x02\n" +
 	"\bRetrieve\x12/.udb.core.embedding.services.v1.RetrieveRequest\x1a0.udb.core.embedding.services.v1.RetrieveResponse\"\xee\x01\xca\xf3\x187\b\x02\x1a\x16udb:embedding:retrieve \x01J\x02\x01\x02j\x12embedding.Retrieve\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x189\b\x01\x12\bretrieve\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tembeddingP\x01Z\x11retrieveEmbedding\xf2\xf3\x18C\n" +
-	"\tembedding\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02\x1b:\x01*\"\x16/v1/embedding:retrieve\x1a\xf9\x02\xca\xf0\x19t\n" +
+	"\tembedding\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02\x1b:\x01*\"\x16/v1/embedding:retrieve\x12\x80\x03\n" +
+	"\rRegisterModel\x124.udb.core.embedding.services.v1.RegisterModelRequest\x1a5.udb.core.embedding.services.v1.RegisterModelResponse\"\x81\x02\xca\xf3\x18B\b\x02\x1a\x1cudb:embedding:register-model \x01J\x02\x01\x02j\x17embedding.RegisterModel\x90\x01\x01\xda\xf3\x18D\b\x01\x12\x0eregister_model\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tembeddingP\x01Z\x16registerEmbeddingModel\xf2\xf3\x18C\n" +
+	"\tembedding\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02\":\x01*\"\x1d/v1/embedding/models:register\x12\xdf\x02\n" +
+	"\n" +
+	"ListModels\x121.udb.core.embedding.services.v1.ListModelsRequest\x1a2.udb.core.embedding.services.v1.ListModelsResponse\"\xe9\x01\xca\xf3\x18<\b\x02\x1a\x19udb:embedding:list-models \x01J\x02\x01\x02j\x14embedding.ListModels\x90\x01\x01\xda\xf3\x18>\b\x01\x12\vlist_models\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tembeddingP\x01Z\x13listEmbeddingModels\xf2\xf3\x18C\n" +
+	"\tembedding\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02\x16\x12\x14/v1/embedding/models\x12\xf0\x02\n" +
+	"\vDeleteModel\x122.udb.core.embedding.services.v1.DeleteModelRequest\x1a3.udb.core.embedding.services.v1.DeleteModelResponse\"\xf7\x01\xca\xf3\x18>\b\x02\x1a\x1audb:embedding:delete-model \x01J\x02\x01\x02j\x15embedding.DeleteModel\x90\x01\x01\xda\xf3\x18@\b\x01\x12\fdelete_model\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tembeddingP\x01Z\x14deleteEmbeddingModel\xf2\xf3\x18C\n" +
+	"\tembedding\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x03\x82\xd3\xe4\x93\x02 :\x01*\"\x1b/v1/embedding/models:delete\x12\x84\x03\n" +
+	"\x0eSetModelStatus\x125.udb.core.embedding.services.v1.SetModelStatusRequest\x1a6.udb.core.embedding.services.v1.SetModelStatusResponse\"\x82\x02\xca\xf3\x18A\b\x02\x1a\x1audb:embedding:update-model \x01J\x02\x01\x02j\x18embedding.SetModelStatus\x90\x01\x01\xda\xf3\x18E\b\x01\x12\x10set_model_status\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tembeddingZ\x17setEmbeddingModelStatus\xf2\xf3\x18C\n" +
+	"\tembedding\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02#:\x01*\"\x1e/v1/embedding/models:setStatus\x12\x95\x03\n" +
+	"\x11CutoverModelAlias\x128.udb.core.embedding.services.v1.CutoverModelAliasRequest\x1a9.udb.core.embedding.services.v1.CutoverModelAliasResponse\"\x8a\x02\xca\xf3\x18E\b\x02\x1a\x1budb:embedding:cutover-model \x01J\x02\x01\x02j\x1bembedding.CutoverModelAlias\x90\x01\x01\xda\xf3\x18K\b\x01\x12\x13cutover_model_alias\x1a\x03udb(\xb0\xea\x010\x01@\x01J\tembeddingZ\x1acutoverEmbeddingModelAlias\xf2\xf3\x18C\n" +
+	"\tembedding\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/v1/embedding/models:cutover\x12\x91\x03\n" +
+	"\x15GetEmbeddingJobStatus\x12<.udb.core.embedding.services.v1.GetEmbeddingJobStatusRequest\x1a=.udb.core.embedding.services.v1.GetEmbeddingJobStatusResponse\"\xfa\x01\xca\xf3\x18C\b\x02\x1a\x15udb:embedding:get-job \x01J\x02\x01\x02j\x1fembedding.GetEmbeddingJobStatus\x90\x01\x01\xda\xf3\x18A\b\x01\x12\x0eget_job_status\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tembeddingZ\x15getEmbeddingJobStatus\xf2\xf3\x18C\n" +
+	"\tembedding\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02\x1d\x12\x1b/v1/embedding/jobs/{job_id}\x12\xa4\x03\n" +
+	"\x16ListEmbeddingWorkItems\x12=.udb.core.embedding.services.v1.ListEmbeddingWorkItemsRequest\x1a>.udb.core.embedding.services.v1.ListEmbeddingWorkItemsResponse\"\x8a\x02\xca\xf3\x18F\b\x02\x1a\x17udb:embedding:list-work \x01J\x02\x01\x02j embedding.ListEmbeddingWorkItems\x90\x01\x01\xda\xf3\x18C\b\x01\x12\x0flist_work_items\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tembeddingZ\x16listEmbeddingWorkItems\xf2\xf3\x18C\n" +
+	"\tembedding\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02(\x12&/v1/embedding/jobs/{job_id}/work-items\x12\xe4\x02\n" +
+	"\x14ReportEmbeddingBatch\x12;.udb.core.embedding.services.v1.ReportEmbeddingBatchRequest\x1a<.udb.core.embedding.services.v1.ReportEmbeddingBatchResponse\"\xd0\x01\xca\xf3\x18M\b\x02\x1a\x1eudb:embedding:report-embedding \x018\x01J\x02\x01\x02j\x1eembedding.ReportEmbeddingBatch\x90\x01\x01\xda\xf3\x180\x12\x16report_embedding_batch\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tembedding\xf2\xf3\x18C\n" +
+	"\tembedding\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x12\xee\x02\n" +
+	"\x16ReportEmbeddingFailure\x12=.udb.core.embedding.services.v1.ReportEmbeddingFailureRequest\x1a>.udb.core.embedding.services.v1.ReportEmbeddingFailureResponse\"\xd4\x01\xca\xf3\x18O\b\x02\x1a\x1eudb:embedding:report-embedding \x018\x01J\x02\x01\x02j embedding.ReportEmbeddingFailure\x90\x01\x01\xda\xf3\x182\x12\x18report_embedding_failure\x1a\x03udb(\xb0\xea\x010\x01@\x01J\tembedding\xf2\xf3\x18C\n" +
+	"\tembedding\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x12\x88\x03\n" +
+	"\x0eIngestDocument\x125.udb.core.embedding.services.v1.IngestDocumentRequest\x1a6.udb.core.embedding.services.v1.IngestDocumentResponse\"\x86\x02\xca\xf3\x18D\b\x02\x1a\x1dudb:embedding:ingest-document \x01J\x02\x01\x02j\x18embedding.IngestDocument\x90\x01\x01\xda\xf3\x18F\b\x01\x12\x0fingest_document\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tembeddingP\x01Z\x17ingestEmbeddingDocument\xf2\xf3\x18C\n" +
+	"\tembedding\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02#:\x01*\"\x1e/v1/embedding/documents:ingest\x12\xaa\x03\n" +
+	"\x13IngestDocumentBatch\x12:.udb.core.embedding.services.v1.IngestDocumentBatchRequest\x1a;.udb.core.embedding.services.v1.IngestDocumentBatchResponse\"\x99\x02\xca\xf3\x18I\b\x02\x1a\x1dudb:embedding:ingest-document \x01J\x02\x01\x02j\x1dembedding.IngestDocumentBatch\x90\x01\x01\xda\xf3\x18O\b\x01\x12\x15ingest_document_batch\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tembeddingZ\x1cingestEmbeddingDocumentBatch\xf2\xf3\x18C\n" +
+	"\tembedding\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02(:\x01*\"#/v1/embedding/documents:batchIngest\x12\xe3\x02\n" +
+	"\x14ReportParsedDocument\x12;.udb.core.embedding.services.v1.ReportParsedDocumentRequest\x1a<.udb.core.embedding.services.v1.ReportParsedDocumentResponse\"\xcf\x01\xca\xf3\x18L\b\x02\x1a\x1dudb:embedding:report-document \x018\x01J\x02\x01\x02j\x1eembedding.ReportParsedDocument\x90\x01\x01\xda\xf3\x180\x12\x16report_parsed_document\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tembedding\xf2\xf3\x18C\n" +
+	"\tembedding\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x12\xfe\x02\n" +
+	"\x19ReportRetrievalEvaluation\x12@.udb.core.embedding.services.v1.ReportRetrievalEvaluationRequest\x1aA.udb.core.embedding.services.v1.ReportRetrievalEvaluationResponse\"\xdb\x01\xca\xf3\x18S\b\x02\x1a\x1fudb:embedding:report-evaluation \x018\x01J\x02\x01\x02j#embedding.ReportRetrievalEvaluation\x90\x01\x01\xda\xf3\x185\x12\x1breport_retrieval_evaluation\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tembedding\xf2\xf3\x18C\n" +
+	"\tembedding\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x1a\xf9\x02\xca\xf0\x19t\n" +
 	"\tembedding\x12\tembedding\x1a\tembedding\"\n" +
 	"Embeddings*\tembedding0\x018\x01h\x01z\tembedding\x82\x01\tembedding\x8a\x01\tembedding\x92\x01\x10native.embedding\xd2\xf0\x19\x1c\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\tembeddingP\x01\xda\xf0\x19\x95\x01\n" +
 	"\tembedding\x12\x14udb/native/embedding\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"\x1budb.native.embedding.config:\tembeddingJ\vUDB_API_KEYZ\x0fudb native lint\xe2\xf0\x19C\n" +
@@ -1141,50 +4473,143 @@ func file_udb_core_embedding_services_v1_embedding_service_proto_rawDescGZIP() [
 	return file_udb_core_embedding_services_v1_embedding_service_proto_rawDescData
 }
 
-var file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_udb_core_embedding_services_v1_embedding_service_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
+var file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes = make([]protoimpl.MessageInfo, 46)
 var file_udb_core_embedding_services_v1_embedding_service_proto_goTypes = []any{
-	(*RegisterSourceRequest)(nil),   // 0: udb.core.embedding.services.v1.RegisterSourceRequest
-	(*RegisterSourceResponse)(nil),  // 1: udb.core.embedding.services.v1.RegisterSourceResponse
-	(*ListSourcesRequest)(nil),      // 2: udb.core.embedding.services.v1.ListSourcesRequest
-	(*EmbeddingSourceSummary)(nil),  // 3: udb.core.embedding.services.v1.EmbeddingSourceSummary
-	(*ListSourcesResponse)(nil),     // 4: udb.core.embedding.services.v1.ListSourcesResponse
-	(*DeleteSourceRequest)(nil),     // 5: udb.core.embedding.services.v1.DeleteSourceRequest
-	(*DeleteSourceResponse)(nil),    // 6: udb.core.embedding.services.v1.DeleteSourceResponse
-	(*BackfillRequest)(nil),         // 7: udb.core.embedding.services.v1.BackfillRequest
-	(*BackfillResponse)(nil),        // 8: udb.core.embedding.services.v1.BackfillResponse
-	(*ReportEmbeddingRequest)(nil),  // 9: udb.core.embedding.services.v1.ReportEmbeddingRequest
-	(*ReportEmbeddingResponse)(nil), // 10: udb.core.embedding.services.v1.ReportEmbeddingResponse
-	(*RetrieveRequest)(nil),         // 11: udb.core.embedding.services.v1.RetrieveRequest
-	(*RetrieveHit)(nil),             // 12: udb.core.embedding.services.v1.RetrieveHit
-	(*RetrieveResponse)(nil),        // 13: udb.core.embedding.services.v1.RetrieveResponse
-	(*v1.ApiError)(nil),             // 14: udb.core.common.v1.ApiError
+	(EmbeddingModelStatus)(0),                 // 0: udb.core.embedding.services.v1.EmbeddingModelStatus
+	(EmbeddingTenantState)(0),                 // 1: udb.core.embedding.services.v1.EmbeddingTenantState
+	(FusionStrategy)(0),                       // 2: udb.core.embedding.services.v1.FusionStrategy
+	(RerankStrategy)(0),                       // 3: udb.core.embedding.services.v1.RerankStrategy
+	(*RegisterSourceRequest)(nil),             // 4: udb.core.embedding.services.v1.RegisterSourceRequest
+	(*RegisterSourceResponse)(nil),            // 5: udb.core.embedding.services.v1.RegisterSourceResponse
+	(*ListSourcesRequest)(nil),                // 6: udb.core.embedding.services.v1.ListSourcesRequest
+	(*EmbeddingSourceSummary)(nil),            // 7: udb.core.embedding.services.v1.EmbeddingSourceSummary
+	(*ListSourcesResponse)(nil),               // 8: udb.core.embedding.services.v1.ListSourcesResponse
+	(*DeleteSourceRequest)(nil),               // 9: udb.core.embedding.services.v1.DeleteSourceRequest
+	(*DeleteSourceResponse)(nil),              // 10: udb.core.embedding.services.v1.DeleteSourceResponse
+	(*BackfillRequest)(nil),                   // 11: udb.core.embedding.services.v1.BackfillRequest
+	(*BackfillResponse)(nil),                  // 12: udb.core.embedding.services.v1.BackfillResponse
+	(*ReportEmbeddingRequest)(nil),            // 13: udb.core.embedding.services.v1.ReportEmbeddingRequest
+	(*ReportEmbeddingResponse)(nil),           // 14: udb.core.embedding.services.v1.ReportEmbeddingResponse
+	(*RetrieveRequest)(nil),                   // 15: udb.core.embedding.services.v1.RetrieveRequest
+	(*RetrieveHit)(nil),                       // 16: udb.core.embedding.services.v1.RetrieveHit
+	(*RetrieveResponse)(nil),                  // 17: udb.core.embedding.services.v1.RetrieveResponse
+	(*MmrConfig)(nil),                         // 18: udb.core.embedding.services.v1.MmrConfig
+	(*RerankConfig)(nil),                      // 19: udb.core.embedding.services.v1.RerankConfig
+	(*RegisterModelRequest)(nil),              // 20: udb.core.embedding.services.v1.RegisterModelRequest
+	(*RegisterModelResponse)(nil),             // 21: udb.core.embedding.services.v1.RegisterModelResponse
+	(*ListModelsRequest)(nil),                 // 22: udb.core.embedding.services.v1.ListModelsRequest
+	(*EmbeddingModelSummary)(nil),             // 23: udb.core.embedding.services.v1.EmbeddingModelSummary
+	(*ListModelsResponse)(nil),                // 24: udb.core.embedding.services.v1.ListModelsResponse
+	(*DeleteModelRequest)(nil),                // 25: udb.core.embedding.services.v1.DeleteModelRequest
+	(*DeleteModelResponse)(nil),               // 26: udb.core.embedding.services.v1.DeleteModelResponse
+	(*SetModelStatusRequest)(nil),             // 27: udb.core.embedding.services.v1.SetModelStatusRequest
+	(*SetModelStatusResponse)(nil),            // 28: udb.core.embedding.services.v1.SetModelStatusResponse
+	(*CutoverModelAliasRequest)(nil),          // 29: udb.core.embedding.services.v1.CutoverModelAliasRequest
+	(*CutoverModelAliasResponse)(nil),         // 30: udb.core.embedding.services.v1.CutoverModelAliasResponse
+	(*GetEmbeddingJobStatusRequest)(nil),      // 31: udb.core.embedding.services.v1.GetEmbeddingJobStatusRequest
+	(*EmbeddingJobStatus)(nil),                // 32: udb.core.embedding.services.v1.EmbeddingJobStatus
+	(*GetEmbeddingJobStatusResponse)(nil),     // 33: udb.core.embedding.services.v1.GetEmbeddingJobStatusResponse
+	(*ListEmbeddingWorkItemsRequest)(nil),     // 34: udb.core.embedding.services.v1.ListEmbeddingWorkItemsRequest
+	(*EmbeddingWorkItemSummary)(nil),          // 35: udb.core.embedding.services.v1.EmbeddingWorkItemSummary
+	(*ListEmbeddingWorkItemsResponse)(nil),    // 36: udb.core.embedding.services.v1.ListEmbeddingWorkItemsResponse
+	(*ReportEmbeddingBatchRequest)(nil),       // 37: udb.core.embedding.services.v1.ReportEmbeddingBatchRequest
+	(*ReportEmbeddingBatchItemResult)(nil),    // 38: udb.core.embedding.services.v1.ReportEmbeddingBatchItemResult
+	(*ReportEmbeddingBatchResponse)(nil),      // 39: udb.core.embedding.services.v1.ReportEmbeddingBatchResponse
+	(*ReportEmbeddingFailureRequest)(nil),     // 40: udb.core.embedding.services.v1.ReportEmbeddingFailureRequest
+	(*ReportEmbeddingFailureResponse)(nil),    // 41: udb.core.embedding.services.v1.ReportEmbeddingFailureResponse
+	(*IngestDocumentRequest)(nil),             // 42: udb.core.embedding.services.v1.IngestDocumentRequest
+	(*IngestDocumentResponse)(nil),            // 43: udb.core.embedding.services.v1.IngestDocumentResponse
+	(*IngestDocumentBatchRequest)(nil),        // 44: udb.core.embedding.services.v1.IngestDocumentBatchRequest
+	(*IngestDocumentBatchResponse)(nil),       // 45: udb.core.embedding.services.v1.IngestDocumentBatchResponse
+	(*ReportParsedDocumentRequest)(nil),       // 46: udb.core.embedding.services.v1.ReportParsedDocumentRequest
+	(*ReportParsedDocumentResponse)(nil),      // 47: udb.core.embedding.services.v1.ReportParsedDocumentResponse
+	(*ReportRetrievalEvaluationRequest)(nil),  // 48: udb.core.embedding.services.v1.ReportRetrievalEvaluationRequest
+	(*ReportRetrievalEvaluationResponse)(nil), // 49: udb.core.embedding.services.v1.ReportRetrievalEvaluationResponse
+	(*v1.ApiError)(nil),                       // 50: udb.core.common.v1.ApiError
 }
 var file_udb_core_embedding_services_v1_embedding_service_proto_depIdxs = []int32{
-	14, // 0: udb.core.embedding.services.v1.RegisterSourceResponse.error:type_name -> udb.core.common.v1.ApiError
-	3,  // 1: udb.core.embedding.services.v1.ListSourcesResponse.sources:type_name -> udb.core.embedding.services.v1.EmbeddingSourceSummary
-	14, // 2: udb.core.embedding.services.v1.ListSourcesResponse.error:type_name -> udb.core.common.v1.ApiError
-	14, // 3: udb.core.embedding.services.v1.DeleteSourceResponse.error:type_name -> udb.core.common.v1.ApiError
-	14, // 4: udb.core.embedding.services.v1.BackfillResponse.error:type_name -> udb.core.common.v1.ApiError
-	14, // 5: udb.core.embedding.services.v1.ReportEmbeddingResponse.error:type_name -> udb.core.common.v1.ApiError
-	12, // 6: udb.core.embedding.services.v1.RetrieveResponse.hits:type_name -> udb.core.embedding.services.v1.RetrieveHit
-	14, // 7: udb.core.embedding.services.v1.RetrieveResponse.error:type_name -> udb.core.common.v1.ApiError
-	0,  // 8: udb.core.embedding.services.v1.EmbeddingService.RegisterSource:input_type -> udb.core.embedding.services.v1.RegisterSourceRequest
-	2,  // 9: udb.core.embedding.services.v1.EmbeddingService.ListSources:input_type -> udb.core.embedding.services.v1.ListSourcesRequest
-	5,  // 10: udb.core.embedding.services.v1.EmbeddingService.DeleteSource:input_type -> udb.core.embedding.services.v1.DeleteSourceRequest
-	7,  // 11: udb.core.embedding.services.v1.EmbeddingService.Backfill:input_type -> udb.core.embedding.services.v1.BackfillRequest
-	9,  // 12: udb.core.embedding.services.v1.EmbeddingService.ReportEmbedding:input_type -> udb.core.embedding.services.v1.ReportEmbeddingRequest
-	11, // 13: udb.core.embedding.services.v1.EmbeddingService.Retrieve:input_type -> udb.core.embedding.services.v1.RetrieveRequest
-	1,  // 14: udb.core.embedding.services.v1.EmbeddingService.RegisterSource:output_type -> udb.core.embedding.services.v1.RegisterSourceResponse
-	4,  // 15: udb.core.embedding.services.v1.EmbeddingService.ListSources:output_type -> udb.core.embedding.services.v1.ListSourcesResponse
-	6,  // 16: udb.core.embedding.services.v1.EmbeddingService.DeleteSource:output_type -> udb.core.embedding.services.v1.DeleteSourceResponse
-	8,  // 17: udb.core.embedding.services.v1.EmbeddingService.Backfill:output_type -> udb.core.embedding.services.v1.BackfillResponse
-	10, // 18: udb.core.embedding.services.v1.EmbeddingService.ReportEmbedding:output_type -> udb.core.embedding.services.v1.ReportEmbeddingResponse
-	13, // 19: udb.core.embedding.services.v1.EmbeddingService.Retrieve:output_type -> udb.core.embedding.services.v1.RetrieveResponse
-	14, // [14:20] is the sub-list for method output_type
-	8,  // [8:14] is the sub-list for method input_type
-	8,  // [8:8] is the sub-list for extension type_name
-	8,  // [8:8] is the sub-list for extension extendee
-	0,  // [0:8] is the sub-list for field type_name
+	50, // 0: udb.core.embedding.services.v1.RegisterSourceResponse.error:type_name -> udb.core.common.v1.ApiError
+	7,  // 1: udb.core.embedding.services.v1.ListSourcesResponse.sources:type_name -> udb.core.embedding.services.v1.EmbeddingSourceSummary
+	50, // 2: udb.core.embedding.services.v1.ListSourcesResponse.error:type_name -> udb.core.common.v1.ApiError
+	50, // 3: udb.core.embedding.services.v1.DeleteSourceResponse.error:type_name -> udb.core.common.v1.ApiError
+	50, // 4: udb.core.embedding.services.v1.BackfillResponse.error:type_name -> udb.core.common.v1.ApiError
+	50, // 5: udb.core.embedding.services.v1.ReportEmbeddingResponse.error:type_name -> udb.core.common.v1.ApiError
+	18, // 6: udb.core.embedding.services.v1.RetrieveRequest.mmr:type_name -> udb.core.embedding.services.v1.MmrConfig
+	2,  // 7: udb.core.embedding.services.v1.RetrieveRequest.fusion:type_name -> udb.core.embedding.services.v1.FusionStrategy
+	19, // 8: udb.core.embedding.services.v1.RetrieveRequest.rerank:type_name -> udb.core.embedding.services.v1.RerankConfig
+	16, // 9: udb.core.embedding.services.v1.RetrieveResponse.hits:type_name -> udb.core.embedding.services.v1.RetrieveHit
+	50, // 10: udb.core.embedding.services.v1.RetrieveResponse.error:type_name -> udb.core.common.v1.ApiError
+	3,  // 11: udb.core.embedding.services.v1.RerankConfig.strategy:type_name -> udb.core.embedding.services.v1.RerankStrategy
+	50, // 12: udb.core.embedding.services.v1.RegisterModelResponse.error:type_name -> udb.core.common.v1.ApiError
+	0,  // 13: udb.core.embedding.services.v1.ListModelsRequest.status:type_name -> udb.core.embedding.services.v1.EmbeddingModelStatus
+	0,  // 14: udb.core.embedding.services.v1.EmbeddingModelSummary.status:type_name -> udb.core.embedding.services.v1.EmbeddingModelStatus
+	1,  // 15: udb.core.embedding.services.v1.EmbeddingModelSummary.tenant_state:type_name -> udb.core.embedding.services.v1.EmbeddingTenantState
+	23, // 16: udb.core.embedding.services.v1.ListModelsResponse.models:type_name -> udb.core.embedding.services.v1.EmbeddingModelSummary
+	50, // 17: udb.core.embedding.services.v1.ListModelsResponse.error:type_name -> udb.core.common.v1.ApiError
+	50, // 18: udb.core.embedding.services.v1.DeleteModelResponse.error:type_name -> udb.core.common.v1.ApiError
+	0,  // 19: udb.core.embedding.services.v1.SetModelStatusRequest.status:type_name -> udb.core.embedding.services.v1.EmbeddingModelStatus
+	1,  // 20: udb.core.embedding.services.v1.SetModelStatusRequest.tenant_state:type_name -> udb.core.embedding.services.v1.EmbeddingTenantState
+	50, // 21: udb.core.embedding.services.v1.SetModelStatusResponse.error:type_name -> udb.core.common.v1.ApiError
+	1,  // 22: udb.core.embedding.services.v1.SetModelStatusResponse.tenant_state:type_name -> udb.core.embedding.services.v1.EmbeddingTenantState
+	50, // 23: udb.core.embedding.services.v1.CutoverModelAliasResponse.error:type_name -> udb.core.common.v1.ApiError
+	32, // 24: udb.core.embedding.services.v1.GetEmbeddingJobStatusResponse.job:type_name -> udb.core.embedding.services.v1.EmbeddingJobStatus
+	50, // 25: udb.core.embedding.services.v1.GetEmbeddingJobStatusResponse.error:type_name -> udb.core.common.v1.ApiError
+	35, // 26: udb.core.embedding.services.v1.ListEmbeddingWorkItemsResponse.work_items:type_name -> udb.core.embedding.services.v1.EmbeddingWorkItemSummary
+	50, // 27: udb.core.embedding.services.v1.ListEmbeddingWorkItemsResponse.error:type_name -> udb.core.common.v1.ApiError
+	13, // 28: udb.core.embedding.services.v1.ReportEmbeddingBatchRequest.items:type_name -> udb.core.embedding.services.v1.ReportEmbeddingRequest
+	38, // 29: udb.core.embedding.services.v1.ReportEmbeddingBatchResponse.results:type_name -> udb.core.embedding.services.v1.ReportEmbeddingBatchItemResult
+	50, // 30: udb.core.embedding.services.v1.ReportEmbeddingBatchResponse.error:type_name -> udb.core.common.v1.ApiError
+	50, // 31: udb.core.embedding.services.v1.ReportEmbeddingFailureResponse.error:type_name -> udb.core.common.v1.ApiError
+	50, // 32: udb.core.embedding.services.v1.IngestDocumentResponse.error:type_name -> udb.core.common.v1.ApiError
+	42, // 33: udb.core.embedding.services.v1.IngestDocumentBatchRequest.documents:type_name -> udb.core.embedding.services.v1.IngestDocumentRequest
+	43, // 34: udb.core.embedding.services.v1.IngestDocumentBatchResponse.documents:type_name -> udb.core.embedding.services.v1.IngestDocumentResponse
+	50, // 35: udb.core.embedding.services.v1.IngestDocumentBatchResponse.error:type_name -> udb.core.common.v1.ApiError
+	50, // 36: udb.core.embedding.services.v1.ReportParsedDocumentResponse.error:type_name -> udb.core.common.v1.ApiError
+	50, // 37: udb.core.embedding.services.v1.ReportRetrievalEvaluationResponse.error:type_name -> udb.core.common.v1.ApiError
+	4,  // 38: udb.core.embedding.services.v1.EmbeddingService.RegisterSource:input_type -> udb.core.embedding.services.v1.RegisterSourceRequest
+	6,  // 39: udb.core.embedding.services.v1.EmbeddingService.ListSources:input_type -> udb.core.embedding.services.v1.ListSourcesRequest
+	9,  // 40: udb.core.embedding.services.v1.EmbeddingService.DeleteSource:input_type -> udb.core.embedding.services.v1.DeleteSourceRequest
+	11, // 41: udb.core.embedding.services.v1.EmbeddingService.Backfill:input_type -> udb.core.embedding.services.v1.BackfillRequest
+	13, // 42: udb.core.embedding.services.v1.EmbeddingService.ReportEmbedding:input_type -> udb.core.embedding.services.v1.ReportEmbeddingRequest
+	15, // 43: udb.core.embedding.services.v1.EmbeddingService.Retrieve:input_type -> udb.core.embedding.services.v1.RetrieveRequest
+	20, // 44: udb.core.embedding.services.v1.EmbeddingService.RegisterModel:input_type -> udb.core.embedding.services.v1.RegisterModelRequest
+	22, // 45: udb.core.embedding.services.v1.EmbeddingService.ListModels:input_type -> udb.core.embedding.services.v1.ListModelsRequest
+	25, // 46: udb.core.embedding.services.v1.EmbeddingService.DeleteModel:input_type -> udb.core.embedding.services.v1.DeleteModelRequest
+	27, // 47: udb.core.embedding.services.v1.EmbeddingService.SetModelStatus:input_type -> udb.core.embedding.services.v1.SetModelStatusRequest
+	29, // 48: udb.core.embedding.services.v1.EmbeddingService.CutoverModelAlias:input_type -> udb.core.embedding.services.v1.CutoverModelAliasRequest
+	31, // 49: udb.core.embedding.services.v1.EmbeddingService.GetEmbeddingJobStatus:input_type -> udb.core.embedding.services.v1.GetEmbeddingJobStatusRequest
+	34, // 50: udb.core.embedding.services.v1.EmbeddingService.ListEmbeddingWorkItems:input_type -> udb.core.embedding.services.v1.ListEmbeddingWorkItemsRequest
+	37, // 51: udb.core.embedding.services.v1.EmbeddingService.ReportEmbeddingBatch:input_type -> udb.core.embedding.services.v1.ReportEmbeddingBatchRequest
+	40, // 52: udb.core.embedding.services.v1.EmbeddingService.ReportEmbeddingFailure:input_type -> udb.core.embedding.services.v1.ReportEmbeddingFailureRequest
+	42, // 53: udb.core.embedding.services.v1.EmbeddingService.IngestDocument:input_type -> udb.core.embedding.services.v1.IngestDocumentRequest
+	44, // 54: udb.core.embedding.services.v1.EmbeddingService.IngestDocumentBatch:input_type -> udb.core.embedding.services.v1.IngestDocumentBatchRequest
+	46, // 55: udb.core.embedding.services.v1.EmbeddingService.ReportParsedDocument:input_type -> udb.core.embedding.services.v1.ReportParsedDocumentRequest
+	48, // 56: udb.core.embedding.services.v1.EmbeddingService.ReportRetrievalEvaluation:input_type -> udb.core.embedding.services.v1.ReportRetrievalEvaluationRequest
+	5,  // 57: udb.core.embedding.services.v1.EmbeddingService.RegisterSource:output_type -> udb.core.embedding.services.v1.RegisterSourceResponse
+	8,  // 58: udb.core.embedding.services.v1.EmbeddingService.ListSources:output_type -> udb.core.embedding.services.v1.ListSourcesResponse
+	10, // 59: udb.core.embedding.services.v1.EmbeddingService.DeleteSource:output_type -> udb.core.embedding.services.v1.DeleteSourceResponse
+	12, // 60: udb.core.embedding.services.v1.EmbeddingService.Backfill:output_type -> udb.core.embedding.services.v1.BackfillResponse
+	14, // 61: udb.core.embedding.services.v1.EmbeddingService.ReportEmbedding:output_type -> udb.core.embedding.services.v1.ReportEmbeddingResponse
+	17, // 62: udb.core.embedding.services.v1.EmbeddingService.Retrieve:output_type -> udb.core.embedding.services.v1.RetrieveResponse
+	21, // 63: udb.core.embedding.services.v1.EmbeddingService.RegisterModel:output_type -> udb.core.embedding.services.v1.RegisterModelResponse
+	24, // 64: udb.core.embedding.services.v1.EmbeddingService.ListModels:output_type -> udb.core.embedding.services.v1.ListModelsResponse
+	26, // 65: udb.core.embedding.services.v1.EmbeddingService.DeleteModel:output_type -> udb.core.embedding.services.v1.DeleteModelResponse
+	28, // 66: udb.core.embedding.services.v1.EmbeddingService.SetModelStatus:output_type -> udb.core.embedding.services.v1.SetModelStatusResponse
+	30, // 67: udb.core.embedding.services.v1.EmbeddingService.CutoverModelAlias:output_type -> udb.core.embedding.services.v1.CutoverModelAliasResponse
+	33, // 68: udb.core.embedding.services.v1.EmbeddingService.GetEmbeddingJobStatus:output_type -> udb.core.embedding.services.v1.GetEmbeddingJobStatusResponse
+	36, // 69: udb.core.embedding.services.v1.EmbeddingService.ListEmbeddingWorkItems:output_type -> udb.core.embedding.services.v1.ListEmbeddingWorkItemsResponse
+	39, // 70: udb.core.embedding.services.v1.EmbeddingService.ReportEmbeddingBatch:output_type -> udb.core.embedding.services.v1.ReportEmbeddingBatchResponse
+	41, // 71: udb.core.embedding.services.v1.EmbeddingService.ReportEmbeddingFailure:output_type -> udb.core.embedding.services.v1.ReportEmbeddingFailureResponse
+	43, // 72: udb.core.embedding.services.v1.EmbeddingService.IngestDocument:output_type -> udb.core.embedding.services.v1.IngestDocumentResponse
+	45, // 73: udb.core.embedding.services.v1.EmbeddingService.IngestDocumentBatch:output_type -> udb.core.embedding.services.v1.IngestDocumentBatchResponse
+	47, // 74: udb.core.embedding.services.v1.EmbeddingService.ReportParsedDocument:output_type -> udb.core.embedding.services.v1.ReportParsedDocumentResponse
+	49, // 75: udb.core.embedding.services.v1.EmbeddingService.ReportRetrievalEvaluation:output_type -> udb.core.embedding.services.v1.ReportRetrievalEvaluationResponse
+	57, // [57:76] is the sub-list for method output_type
+	38, // [38:57] is the sub-list for method input_type
+	38, // [38:38] is the sub-list for extension type_name
+	38, // [38:38] is the sub-list for extension extendee
+	0,  // [0:38] is the sub-list for field type_name
 }
 
 func init() { file_udb_core_embedding_services_v1_embedding_service_proto_init() }
@@ -1197,13 +4622,14 @@ func file_udb_core_embedding_services_v1_embedding_service_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_udb_core_embedding_services_v1_embedding_service_proto_rawDesc), len(file_udb_core_embedding_services_v1_embedding_service_proto_rawDesc)),
-			NumEnums:      0,
-			NumMessages:   14,
+			NumEnums:      4,
+			NumMessages:   46,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_udb_core_embedding_services_v1_embedding_service_proto_goTypes,
 		DependencyIndexes: file_udb_core_embedding_services_v1_embedding_service_proto_depIdxs,
+		EnumInfos:         file_udb_core_embedding_services_v1_embedding_service_proto_enumTypes,
 		MessageInfos:      file_udb_core_embedding_services_v1_embedding_service_proto_msgTypes,
 	}.Build()
 	File_udb_core_embedding_services_v1_embedding_service_proto = out.File

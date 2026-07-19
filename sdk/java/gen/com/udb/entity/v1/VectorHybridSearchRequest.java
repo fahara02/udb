@@ -32,6 +32,8 @@ private static final long serialVersionUID = 0L;
     vector_ = emptyFloatList();
     textQuery_ = "";
     fusionWeights_ = emptyFloatList();
+    vectorName_ = "";
+    fusionStrategy_ = 0;
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -260,6 +262,96 @@ private static final long serialVersionUID = 0L;
     return withPayload_;
   }
 
+  public static final int WITH_VECTOR_FIELD_NUMBER = 9;
+  private boolean withVector_ = false;
+  /**
+   * <code>bool with_vector = 9 [json_name = "withVector"];</code>
+   * @return The withVector.
+   */
+  @java.lang.Override
+  public boolean getWithVector() {
+    return withVector_;
+  }
+
+  public static final int VECTOR_NAME_FIELD_NUMBER = 10;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object vectorName_ = "";
+  /**
+   * <code>string vector_name = 10 [json_name = "vectorName"];</code>
+   * @return The vectorName.
+   */
+  @java.lang.Override
+  public java.lang.String getVectorName() {
+    java.lang.Object ref = vectorName_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      vectorName_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string vector_name = 10 [json_name = "vectorName"];</code>
+   * @return The bytes for vectorName.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getVectorNameBytes() {
+    java.lang.Object ref = vectorName_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      vectorName_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int FUSION_STRATEGY_FIELD_NUMBER = 11;
+  private int fusionStrategy_ = 0;
+  /**
+   * <code>.udb.entity.v1.VectorFusionStrategy fusion_strategy = 11 [json_name = "fusionStrategy"];</code>
+   * @return The enum numeric value on the wire for fusionStrategy.
+   */
+  @java.lang.Override public int getFusionStrategyValue() {
+    return fusionStrategy_;
+  }
+  /**
+   * <code>.udb.entity.v1.VectorFusionStrategy fusion_strategy = 11 [json_name = "fusionStrategy"];</code>
+   * @return The fusionStrategy.
+   */
+  @java.lang.Override public com.udb.entity.v1.VectorFusionStrategy getFusionStrategy() {
+    com.udb.entity.v1.VectorFusionStrategy result = com.udb.entity.v1.VectorFusionStrategy.forNumber(fusionStrategy_);
+    return result == null ? com.udb.entity.v1.VectorFusionStrategy.UNRECOGNIZED : result;
+  }
+
+  public static final int PREFETCH_LIMIT_FIELD_NUMBER = 12;
+  private int prefetchLimit_ = 0;
+  /**
+   * <code>int32 prefetch_limit = 12 [json_name = "prefetchLimit"];</code>
+   * @return The prefetchLimit.
+   */
+  @java.lang.Override
+  public int getPrefetchLimit() {
+    return prefetchLimit_;
+  }
+
+  public static final int QUANTIZATION_RESCORE_FIELD_NUMBER = 13;
+  private boolean quantizationRescore_ = false;
+  /**
+   * <code>bool quantization_rescore = 13 [json_name = "quantizationRescore"];</code>
+   * @return The quantizationRescore.
+   */
+  @java.lang.Override
+  public boolean getQuantizationRescore() {
+    return quantizationRescore_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -306,6 +398,21 @@ private static final long serialVersionUID = 0L;
     }
     if (withPayload_ != false) {
       output.writeBool(8, withPayload_);
+    }
+    if (withVector_ != false) {
+      output.writeBool(9, withVector_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(vectorName_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 10, vectorName_);
+    }
+    if (fusionStrategy_ != com.udb.entity.v1.VectorFusionStrategy.VECTOR_FUSION_STRATEGY_UNSPECIFIED.getNumber()) {
+      output.writeEnum(11, fusionStrategy_);
+    }
+    if (prefetchLimit_ != 0) {
+      output.writeInt32(12, prefetchLimit_);
+    }
+    if (quantizationRescore_ != false) {
+      output.writeBool(13, quantizationRescore_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -360,6 +467,25 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeBoolSize(8, withPayload_);
     }
+    if (withVector_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(9, withVector_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(vectorName_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(10, vectorName_);
+    }
+    if (fusionStrategy_ != com.udb.entity.v1.VectorFusionStrategy.VECTOR_FUSION_STRATEGY_UNSPECIFIED.getNumber()) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeEnumSize(11, fusionStrategy_);
+    }
+    if (prefetchLimit_ != 0) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeInt32Size(12, prefetchLimit_);
+    }
+    if (quantizationRescore_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(13, quantizationRescore_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -397,6 +523,15 @@ private static final long serialVersionUID = 0L;
         .equals(other.getFusionWeightsList())) return false;
     if (getWithPayload()
         != other.getWithPayload()) return false;
+    if (getWithVector()
+        != other.getWithVector()) return false;
+    if (!getVectorName()
+        .equals(other.getVectorName())) return false;
+    if (fusionStrategy_ != other.fusionStrategy_) return false;
+    if (getPrefetchLimit()
+        != other.getPrefetchLimit()) return false;
+    if (getQuantizationRescore()
+        != other.getQuantizationRescore()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -433,6 +568,18 @@ private static final long serialVersionUID = 0L;
     hash = (37 * hash) + WITH_PAYLOAD_FIELD_NUMBER;
     hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
         getWithPayload());
+    hash = (37 * hash) + WITH_VECTOR_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getWithVector());
+    hash = (37 * hash) + VECTOR_NAME_FIELD_NUMBER;
+    hash = (53 * hash) + getVectorName().hashCode();
+    hash = (37 * hash) + FUSION_STRATEGY_FIELD_NUMBER;
+    hash = (53 * hash) + fusionStrategy_;
+    hash = (37 * hash) + PREFETCH_LIMIT_FIELD_NUMBER;
+    hash = (53 * hash) + getPrefetchLimit();
+    hash = (37 * hash) + QUANTIZATION_RESCORE_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getQuantizationRescore());
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -587,6 +734,11 @@ private static final long serialVersionUID = 0L;
       limit_ = 0;
       fusionWeights_ = emptyFloatList();
       withPayload_ = false;
+      withVector_ = false;
+      vectorName_ = "";
+      fusionStrategy_ = 0;
+      prefetchLimit_ = 0;
+      quantizationRescore_ = false;
       return this;
     }
 
@@ -653,6 +805,21 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000080) != 0)) {
         result.withPayload_ = withPayload_;
       }
+      if (((from_bitField0_ & 0x00000100) != 0)) {
+        result.withVector_ = withVector_;
+      }
+      if (((from_bitField0_ & 0x00000200) != 0)) {
+        result.vectorName_ = vectorName_;
+      }
+      if (((from_bitField0_ & 0x00000400) != 0)) {
+        result.fusionStrategy_ = fusionStrategy_;
+      }
+      if (((from_bitField0_ & 0x00000800) != 0)) {
+        result.prefetchLimit_ = prefetchLimit_;
+      }
+      if (((from_bitField0_ & 0x00001000) != 0)) {
+        result.quantizationRescore_ = quantizationRescore_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -711,6 +878,23 @@ private static final long serialVersionUID = 0L;
       }
       if (other.getWithPayload() != false) {
         setWithPayload(other.getWithPayload());
+      }
+      if (other.getWithVector() != false) {
+        setWithVector(other.getWithVector());
+      }
+      if (!other.getVectorName().isEmpty()) {
+        vectorName_ = other.vectorName_;
+        bitField0_ |= 0x00000200;
+        onChanged();
+      }
+      if (other.fusionStrategy_ != 0) {
+        setFusionStrategyValue(other.getFusionStrategyValue());
+      }
+      if (other.getPrefetchLimit() != 0) {
+        setPrefetchLimit(other.getPrefetchLimit());
+      }
+      if (other.getQuantizationRescore() != false) {
+        setQuantizationRescore(other.getQuantizationRescore());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -806,6 +990,31 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000080;
               break;
             } // case 64
+            case 72: {
+              withVector_ = input.readBool();
+              bitField0_ |= 0x00000100;
+              break;
+            } // case 72
+            case 82: {
+              vectorName_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000200;
+              break;
+            } // case 82
+            case 88: {
+              fusionStrategy_ = input.readEnum();
+              bitField0_ |= 0x00000400;
+              break;
+            } // case 88
+            case 96: {
+              prefetchLimit_ = input.readInt32();
+              bitField0_ |= 0x00000800;
+              break;
+            } // case 96
+            case 104: {
+              quantizationRescore_ = input.readBool();
+              bitField0_ |= 0x00001000;
+              break;
+            } // case 104
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1449,6 +1658,225 @@ private static final long serialVersionUID = 0L;
     public Builder clearWithPayload() {
       bitField0_ = (bitField0_ & ~0x00000080);
       withPayload_ = false;
+      onChanged();
+      return this;
+    }
+
+    private boolean withVector_ ;
+    /**
+     * <code>bool with_vector = 9 [json_name = "withVector"];</code>
+     * @return The withVector.
+     */
+    @java.lang.Override
+    public boolean getWithVector() {
+      return withVector_;
+    }
+    /**
+     * <code>bool with_vector = 9 [json_name = "withVector"];</code>
+     * @param value The withVector to set.
+     * @return This builder for chaining.
+     */
+    public Builder setWithVector(boolean value) {
+
+      withVector_ = value;
+      bitField0_ |= 0x00000100;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>bool with_vector = 9 [json_name = "withVector"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearWithVector() {
+      bitField0_ = (bitField0_ & ~0x00000100);
+      withVector_ = false;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object vectorName_ = "";
+    /**
+     * <code>string vector_name = 10 [json_name = "vectorName"];</code>
+     * @return The vectorName.
+     */
+    public java.lang.String getVectorName() {
+      java.lang.Object ref = vectorName_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        vectorName_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>string vector_name = 10 [json_name = "vectorName"];</code>
+     * @return The bytes for vectorName.
+     */
+    public com.google.protobuf.ByteString
+        getVectorNameBytes() {
+      java.lang.Object ref = vectorName_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        vectorName_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string vector_name = 10 [json_name = "vectorName"];</code>
+     * @param value The vectorName to set.
+     * @return This builder for chaining.
+     */
+    public Builder setVectorName(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      vectorName_ = value;
+      bitField0_ |= 0x00000200;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string vector_name = 10 [json_name = "vectorName"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearVectorName() {
+      vectorName_ = getDefaultInstance().getVectorName();
+      bitField0_ = (bitField0_ & ~0x00000200);
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string vector_name = 10 [json_name = "vectorName"];</code>
+     * @param value The bytes for vectorName to set.
+     * @return This builder for chaining.
+     */
+    public Builder setVectorNameBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      vectorName_ = value;
+      bitField0_ |= 0x00000200;
+      onChanged();
+      return this;
+    }
+
+    private int fusionStrategy_ = 0;
+    /**
+     * <code>.udb.entity.v1.VectorFusionStrategy fusion_strategy = 11 [json_name = "fusionStrategy"];</code>
+     * @return The enum numeric value on the wire for fusionStrategy.
+     */
+    @java.lang.Override public int getFusionStrategyValue() {
+      return fusionStrategy_;
+    }
+    /**
+     * <code>.udb.entity.v1.VectorFusionStrategy fusion_strategy = 11 [json_name = "fusionStrategy"];</code>
+     * @param value The enum numeric value on the wire for fusionStrategy to set.
+     * @return This builder for chaining.
+     */
+    public Builder setFusionStrategyValue(int value) {
+      fusionStrategy_ = value;
+      bitField0_ |= 0x00000400;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>.udb.entity.v1.VectorFusionStrategy fusion_strategy = 11 [json_name = "fusionStrategy"];</code>
+     * @return The fusionStrategy.
+     */
+    @java.lang.Override
+    public com.udb.entity.v1.VectorFusionStrategy getFusionStrategy() {
+      com.udb.entity.v1.VectorFusionStrategy result = com.udb.entity.v1.VectorFusionStrategy.forNumber(fusionStrategy_);
+      return result == null ? com.udb.entity.v1.VectorFusionStrategy.UNRECOGNIZED : result;
+    }
+    /**
+     * <code>.udb.entity.v1.VectorFusionStrategy fusion_strategy = 11 [json_name = "fusionStrategy"];</code>
+     * @param value The fusionStrategy to set.
+     * @return This builder for chaining.
+     */
+    public Builder setFusionStrategy(com.udb.entity.v1.VectorFusionStrategy value) {
+      if (value == null) { throw new NullPointerException(); }
+      bitField0_ |= 0x00000400;
+      fusionStrategy_ = value.getNumber();
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>.udb.entity.v1.VectorFusionStrategy fusion_strategy = 11 [json_name = "fusionStrategy"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearFusionStrategy() {
+      bitField0_ = (bitField0_ & ~0x00000400);
+      fusionStrategy_ = 0;
+      onChanged();
+      return this;
+    }
+
+    private int prefetchLimit_ ;
+    /**
+     * <code>int32 prefetch_limit = 12 [json_name = "prefetchLimit"];</code>
+     * @return The prefetchLimit.
+     */
+    @java.lang.Override
+    public int getPrefetchLimit() {
+      return prefetchLimit_;
+    }
+    /**
+     * <code>int32 prefetch_limit = 12 [json_name = "prefetchLimit"];</code>
+     * @param value The prefetchLimit to set.
+     * @return This builder for chaining.
+     */
+    public Builder setPrefetchLimit(int value) {
+
+      prefetchLimit_ = value;
+      bitField0_ |= 0x00000800;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>int32 prefetch_limit = 12 [json_name = "prefetchLimit"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearPrefetchLimit() {
+      bitField0_ = (bitField0_ & ~0x00000800);
+      prefetchLimit_ = 0;
+      onChanged();
+      return this;
+    }
+
+    private boolean quantizationRescore_ ;
+    /**
+     * <code>bool quantization_rescore = 13 [json_name = "quantizationRescore"];</code>
+     * @return The quantizationRescore.
+     */
+    @java.lang.Override
+    public boolean getQuantizationRescore() {
+      return quantizationRescore_;
+    }
+    /**
+     * <code>bool quantization_rescore = 13 [json_name = "quantizationRescore"];</code>
+     * @param value The quantizationRescore to set.
+     * @return This builder for chaining.
+     */
+    public Builder setQuantizationRescore(boolean value) {
+
+      quantizationRescore_ = value;
+      bitField0_ |= 0x00001000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>bool quantization_rescore = 13 [json_name = "quantizationRescore"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearQuantizationRescore() {
+      bitField0_ = (bitField0_ & ~0x00001000);
+      quantizationRescore_ = false;
       onChanged();
       return this;
     }

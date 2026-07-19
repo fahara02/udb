@@ -76,7 +76,7 @@
 ) <span class="k">as</span> udb:
     pdf = open(<span class="s">"invoice.pdf"</span>, <span class="s">"rb"</span>).read()
     udb.storage.upload_file(<span class="s">"invoice.pdf"</span>, pdf, {<span class="s">"content_type"</span>: <span class="s">"application/pdf"</span>})
-    udb.authz.allow_role(<span class="s">"reader"</span>, <span class="s">"invoice"</span>, <span class="s">"data.select"</span>)
+    udb.authz.allow_role(<span class="s">"reader"</span>, <span class="s">"invoice"</span>, <span class="s">"Select"</span>)
     rows = udb.data.table(<span class="s">"invoice"</span>).select(where={<span class="s">"status"</span>: <span class="s">"open"</span>})</pre></div>
           <div class="panel" id="p2"><pre><span class="k">import</span> (
     <span class="s">"os"</span>
@@ -104,7 +104,7 @@ rows, _ := invoices.<span class="fn">Select</span>(ctx, map[string]any{<span cla
 });
 <span class="k">const</span> pdf = <span class="k">await</span> readFile(<span class="s">"invoice.pdf"</span>);
 <span class="k">await</span> udb.storage.<span class="fn">uploadFile</span>(<span class="s">"invoice.pdf"</span>, pdf, { contentType: <span class="s">"application/pdf"</span> });
-<span class="k">await</span> udb.authz.<span class="fn">allowRole</span>(<span class="s">"reader"</span>, { resource: <span class="s">"invoice"</span>, action: <span class="s">"data.select"</span> });</pre></div>
+<span class="k">await</span> udb.authz.<span class="fn">allowRole</span>(<span class="s">"reader"</span>, { resource: <span class="s">"invoice"</span>, action: <span class="s">"Select"</span> });</pre></div>
           <div class="panel" id="p4"><pre><span class="k">use</span> Fahara02\UdbLaravel\UdbProject;
 
 $udb = UdbProject::<span class="fn">connect</span>([
@@ -116,7 +116,7 @@ $udb = UdbProject::<span class="fn">connect</span>([
 $pdf = file_get_contents(<span class="s">'invoice.pdf'</span>);
 $udb->storage()-><span class="fn">uploadFile</span>(<span class="s">'invoice.pdf'</span>, $pdf, [<span class="s">'contentType'</span> => <span class="s">'application/pdf'</span>]);
 $udb->authz()-><span class="fn">allowRole</span>(<span class="s">'reader'</span>, [
-    <span class="s">'resource'</span> => <span class="s">'invoice'</span>, <span class="s">'action'</span> => <span class="s">'data.select'</span>,
+    <span class="s">'resource'</span> => <span class="s">'invoice'</span>, <span class="s">'action'</span> => <span class="s">'Select'</span>,
 ]);</pre></div>
         </div>
       </div>
@@ -216,11 +216,11 @@ $udb->authz()-><span class="fn">allowRole</span>(<span class="s">'reader'</span>
             <tr><th>Language</th><th>Generated surface</th><th>Install path</th><th>Primary facade</th></tr>
           </thead>
           <tbody>
-            <tr><td><b>Go</b></td><td>DataBroker + native services</td><td><code>go get github.com/fahara02/udb/sdk/go@v0.3.6</code></td><td><code>udbclient.Connect</code></td></tr>
-            <tr><td><b>Python</b></td><td>DataBroker + native services</td><td><code>pip install udb-client==0.3.6</code></td><td><code>UdbProject.connect</code></td></tr>
-            <tr><td><b>TypeScript</b></td><td>DataBroker + native services</td><td><code>npm i @udb_plus/sdk@0.3.6</code></td><td><code>UdbProject.connect</code></td></tr>
-            <tr><td><b>PHP</b></td><td>DataBroker + native services</td><td><code>composer require fahara02/udb-laravel:^0.3.6</code></td><td><code>UdbProject::connect</code></td></tr>
-            <tr><td><b>C#</b></td><td>Generated client surface</td><td><code>dotnet add package Udb.Client --version 0.3.6</code></td><td>generated client + metadata helpers</td></tr>
+            <tr><td><b>Go</b></td><td>DataBroker + native services</td><td><code>go get github.com/fahara02/udb/sdk/go@v0.4.16</code></td><td><code>udbclient.Connect</code></td></tr>
+            <tr><td><b>Python</b></td><td>DataBroker + native services</td><td><code>pip install udb-client==0.4.16</code></td><td><code>UdbProject.connect</code></td></tr>
+            <tr><td><b>TypeScript</b></td><td>DataBroker + native services</td><td><code>npm i @udb_plus/sdk@0.4.16</code></td><td><code>UdbProject.connect</code></td></tr>
+            <tr><td><b>PHP</b></td><td>DataBroker + native services</td><td><code>composer require fahara02/udb-laravel:^0.4.16</code></td><td><code>UdbProject::connect</code></td></tr>
+            <tr><td><b>C#</b></td><td>Generated client surface</td><td><code>dotnet add package Udb.Client --version 0.4.16</code></td><td>generated client + metadata helpers</td></tr>
             <tr><td><b>Java</b></td><td>Generated client surface</td><td>build from checkout until Maven Central publishing lands</td><td>generated client + Spring-oriented helpers</td></tr>
           </tbody>
         </table>
@@ -264,7 +264,7 @@ $udb->authz()-><span class="fn">allowRole</span>(<span class="s">'reader'</span>
       <a href="https://github.com/fahara02/udb/blob/main/LICENSE">MIT</a>
     </nav>
   </div>
-  <div class="wrap" style="margin-top:16px"><small>UDB · crate v0.3.6 · protocol v1.0.0 · policy-aware data routing. Built in Rust.</small></div>
+  <div class="wrap" style="margin-top:16px"><small>UDB · crate v0.4.16 · protocol v1.0.0 · policy-aware data routing. Built in Rust.</small></div>
 </footer>
 
 <script defer src="./app.js"></script>

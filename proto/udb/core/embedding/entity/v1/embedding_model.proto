@@ -1,0 +1,78 @@
+syntax = "proto3";
+
+package udb.core.embedding.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Embedding.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/embedding/entity/v1;embeddingv1";
+option java_package = "com.udb.core.embedding.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Embedding\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Embedding\\Entity\\V1";
+
+// Durable vector-identity registry. Geometry-changing settings are immutable
+// while a model is ACTIVE; a changed identity gets a new model and collection.
+message EmbeddingModel {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "embedding_models"
+    schema_name: "udb_embedding"
+    migration_order: 1
+    is_table: true
+    comment: "Tenant-scoped embedding model and vector geometry registry"
+    audit_fields: true
+    enable_rls: true
+    rls_policies: { policy_name: "tenant_isolation" using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text)" permissive: true }
+    indexes: { index_name: "idx_embedding_models_identity_unique" index_type: "BTREE" unique: true columns: "tenant_id" columns: "provider" columns: "model_name" columns: "version" columns: "dimensions" columns: "distance_metric" columns: "normalize" columns: "output_dtype" columns: "task_type" }
+    indexes: { index_name: "idx_embedding_models_collection_unique" index_type: "BTREE" unique: true columns: "tenant_id" columns: "active_collection" }
+    foreign_keys: { columns: "replacement_model_id" columns: "tenant_id" references_table: "embedding_models" references_schema: "udb_embedding" references_column: "model_id" references_column: "tenant_id" on_delete: REFERENTIAL_ACTION_RESTRICT constraint_name: "fk_embedding_models_replacement" }
+    cdc_topic: "udb.embedding.embedding_models.cdc"
+    required_scope: "embedding:models:read"
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    retention_class: "embedding.configuration"
+    retention_days: 2555
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
+
+  string model_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "model_id" sql_type: "VARCHAR(255)" primary_key: true not_null: true }];
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(64)" primary_key: true not_null: true index: { index_name: "idx_embedding_models_tenant" index_type: "BTREE" } }];
+  string provider = 3 [(udb.core.common.v1.pg_column) = { column_name: "provider" sql_type: "VARCHAR(80)" not_null: true }];
+  string model_name = 4 [(udb.core.common.v1.pg_column) = { column_name: "model_name" sql_type: "VARCHAR(255)" not_null: true }];
+  string version = 5 [(udb.core.common.v1.pg_column) = { column_name: "version" sql_type: "VARCHAR(80)" not_null: true }];
+  int32 dimensions = 6 [(udb.core.common.v1.pg_column) = { column_name: "dimensions" sql_type: "INTEGER" not_null: true }];
+  string matryoshka_dims_json = 7 [(udb.core.common.v1.pg_column) = { column_name: "matryoshka_dims_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'[]'::jsonb" }];
+  string distance_metric = 8 [(udb.core.common.v1.pg_column) = { column_name: "distance_metric" sql_type: "VARCHAR(20)" not_null: true default_value: "'COSINE'" }];
+  bool normalize = 9 [(udb.core.common.v1.pg_column) = { column_name: "normalize" sql_type: "BOOLEAN" not_null: true default_value: "TRUE" }];
+  string output_dtype = 10 [(udb.core.common.v1.pg_column) = { column_name: "output_dtype" sql_type: "VARCHAR(20)" not_null: true default_value: "'FLOAT32'" }];
+  bool rescore = 11 [(udb.core.common.v1.pg_column) = { column_name: "rescore" sql_type: "BOOLEAN" not_null: true default_value: "FALSE" }];
+  int32 max_input_tokens = 12 [(udb.core.common.v1.pg_column) = { column_name: "max_input_tokens" sql_type: "INTEGER" not_null: true }];
+  string tokenizer = 13 [(udb.core.common.v1.pg_column) = { column_name: "tokenizer" sql_type: "VARCHAR(120)" not_null: true }];
+  string task_type = 14 [(udb.core.common.v1.pg_column) = { column_name: "task_type" sql_type: "VARCHAR(40)" not_null: true default_value: "'DOCUMENT'" }];
+  bool asymmetric = 15 [(udb.core.common.v1.pg_column) = { column_name: "asymmetric" sql_type: "BOOLEAN" not_null: true default_value: "FALSE" }];
+  string provider_endpoint_ref = 16 [(udb.core.common.v1.pg_column) = { column_name: "provider_endpoint_ref" sql_type: "VARCHAR(512)" not_null: true comment: "Vault secret reference, never provider credentials" }, (udb.core.common.v1.sensitive) = true, (udb.core.common.v1.log_redacted) = true, (udb.core.common.v1.db_column_security) = { secret_classification: SECRET_CLASSIFICATION_CREDENTIAL output_view: OUTPUT_VIEW_STORAGE_ONLY redaction_strategy: REDACTION_STRATEGY_REDACT }];
+  string status = 17 [(udb.core.common.v1.pg_column) = { column_name: "status" sql_type: "VARCHAR(20)" not_null: true default_value: "'ACTIVE'" index: { index_name: "idx_embedding_models_status" index_type: "BTREE" } }];
+  google.protobuf.Timestamp retire_after = 18 [(udb.core.common.v1.pg_column) = { column_name: "retire_after" sql_type: "TIMESTAMPTZ" }];
+  string replacement_model_id = 19 [(udb.core.common.v1.pg_column) = { column_name: "replacement_model_id" sql_type: "VARCHAR(255)" }];
+  string vector_backend = 20 [(udb.core.common.v1.pg_column) = { column_name: "vector_backend" sql_type: "VARCHAR(40)" not_null: true default_value: "'qdrant'" }];
+  string vector_instance = 21 [(udb.core.common.v1.pg_column) = { column_name: "vector_instance" sql_type: "VARCHAR(120)" not_null: true default_value: "'default'" }];
+  string collection_alias = 22 [(udb.core.common.v1.pg_column) = { column_name: "collection_alias" sql_type: "VARCHAR(255)" not_null: true }];
+  string active_collection = 23 [(udb.core.common.v1.pg_column) = { column_name: "active_collection" sql_type: "VARCHAR(255)" not_null: true }];
+  string chunking_strategy = 24 [(udb.core.common.v1.pg_column) = { column_name: "chunking_strategy" sql_type: "VARCHAR(40)" not_null: true default_value: "'TOKEN_RECURSIVE'" }];
+  int32 chunk_tokens = 25 [(udb.core.common.v1.pg_column) = { column_name: "chunk_tokens" sql_type: "INTEGER" not_null: true default_value: "512" }];
+  int32 chunk_overlap_tokens = 26 [(udb.core.common.v1.pg_column) = { column_name: "chunk_overlap_tokens" sql_type: "INTEGER" not_null: true default_value: "77" }];
+  bool contextual_retrieval = 27 [(udb.core.common.v1.pg_column) = { column_name: "contextual_retrieval" sql_type: "BOOLEAN" not_null: true default_value: "FALSE" }];
+  bool late_chunking = 28 [(udb.core.common.v1.pg_column) = { column_name: "late_chunking" sql_type: "BOOLEAN" not_null: true default_value: "FALSE" }];
+  string tenant_state = 29 [(udb.core.common.v1.pg_column) = { column_name: "tenant_state" sql_type: "VARCHAR(20)" not_null: true default_value: "'ACTIVE'" }];
+  string metadata_json = 30 [(udb.core.common.v1.pg_column) = { column_name: "metadata_json" sql_type: "JSONB" is_json: true not_null: true default_value: "'{}'::jsonb" }];
+  google.protobuf.Timestamp created_at = 31 [(udb.core.common.v1.pg_column) = { column_name: "created_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true exclude_from_update: true }];
+  google.protobuf.Timestamp updated_at = 32 [(udb.core.common.v1.pg_column) = { column_name: "updated_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" }];
+}

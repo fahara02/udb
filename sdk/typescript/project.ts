@@ -66,7 +66,7 @@ export type DataPlane = UdbGeneratedClient["DataBroker"] & {
 export interface UdbCredentials {
   /** Bearer token; sent as `authorization: Bearer <token>`. */
   bearerToken?: string;
-  /** API key; sent as `x-api-key`. */
+  /** API key; exchanged through Authn by `UdbProject.connect`; never sent to DataBroker by the project facade. */
   apiKey?: string;
 }
 
@@ -122,7 +122,7 @@ function metaFromConfig(config: UdbProjectConfig): UdbMetadata {
     projectId: config.projectId,
     clientCatalogVersion: UDB_PROTOCOL_VERSION,
     bearerToken: config.credentials?.bearerToken,
-    apiKey: config.credentials?.apiKey,
+    apiKey: undefined,
   };
 }
 
@@ -1159,8 +1159,13 @@ export class UdbProject {
    * extra round trip is performed. `createUdb()` / `Udb.project()` remain as
    * (synchronous) aliases.
    */
-  static connect(config: UdbProjectConfig): Promise<UdbProject> {
-    return Promise.resolve(new UdbProject(config));
+  static async connect(config: UdbProjectConfig): Promise<UdbProject> {
+    const udb = new UdbProject(config);
+    const apiKey = config.credentials?.apiKey;
+    if (apiKey && !config.credentials?.bearerToken) {
+      await udb.authenticateApiKeyAndAdopt(apiKey);
+    }
+    return udb;
   }
 
   /**
@@ -1205,7 +1210,7 @@ export class UdbProject {
       secure: config.secure,
       tls: config.tls,
       bearerToken: config.credentials?.bearerToken,
-      apiKey: config.credentials?.apiKey,
+      apiKey: undefined,
       deadlineMs: config.deadlineMs,
       retry: config.retry,
       protoRoot: config.protoRoot,
@@ -1220,7 +1225,7 @@ export class UdbProject {
         secure: config.secure,
         tls: config.tls,
         bearerToken: config.credentials?.bearerToken,
-        apiKey: config.credentials?.apiKey,
+        apiKey: undefined,
         deadlineMs: config.deadlineMs,
         retry: config.retry,
         protoRoot: config.protoRoot,
@@ -1269,7 +1274,7 @@ export class UdbProject {
         secure: config.secure,
         tls: config.tls,
         bearerToken: config.credentials?.bearerToken,
-        apiKey: config.credentials?.apiKey,
+        apiKey: undefined,
         deadlineMs: config.deadlineMs,
         retry: config.retry,
         protoRoot: config.protoRoot,
@@ -1372,6 +1377,24 @@ export class UdbProject {
    * tenant header. When `mfa_required` comes back, returns early (nothing
    * adopted, no second factor stored).
    */
+  async authenticateApiKeyAndAdopt(apiKey = this.config.credentials?.apiKey ?? ""): Promise<any> {
+    if (!apiKey) throw new Error("udb: api key is required");
+    const verified: any = await this.auth.authenticateApiKey(apiKey);
+    const token: string = verified?.access_token ?? "";
+    if (!token) throw new Error("udb: authenticate api key returned no access token");
+    const principal = verified?.principal ?? {};
+    const tenantId: string = principal?.tenant_id ?? "";
+    if (tenantId) this.setTenant(tenantId);
+    const projectId: string = principal?.project_id ?? "";
+    if (projectId) this.sharedMeta.projectId = projectId;
+    const userId: string = principal?.user_id ?? principal?.principal_id ?? "";
+    if (userId) this.sharedMeta.userId = userId;
+    const serviceIdentity: string = principal?.service_identity ?? "";
+    if (serviceIdentity) this.sharedMeta.serviceIdentity = serviceIdentity;
+    if (Array.isArray(principal?.scopes)) this.sharedMeta.scopes = [...principal.scopes];
+    this.applyCredentials(token);
+    return verified;
+  }
   async loginAndAdoptTenant(request: {
     username: string;
     password: string;
@@ -1391,25 +1414,28 @@ export class UdbProject {
     return resp;
   }
 
-  /** Push a refreshed bearer (keeping the configured API key) into every
-   *  outbound channel: the data core, the auth client, and — when separate —
-   *  the dedicated WebRTC core. */
+  /** Push a refreshed bearer into every outbound channel, clearing raw API-key metadata. */
   private applyCredentials(bearerToken: string): void {
-    const apiKey = this.config.credentials?.apiKey;
-    this.core.setCredentials({ bearerToken, apiKey });
-    this.authGenerated?.core.setCredentials({ bearerToken, apiKey });
-    this.auth.setCredentials({ bearerToken, apiKey });
-    this.webrtcGenerated?.core.setCredentials({ bearerToken, apiKey });
+    if (this.sharedMeta) {
+      this.sharedMeta.bearerToken = bearerToken;
+      this.sharedMeta.apiKey = undefined;
+    }
+    this.core.setCredentials({ bearerToken, apiKey: undefined });
+    this.authGenerated?.core.setCredentials({ bearerToken, apiKey: undefined });
+    this.auth.setCredentials({ bearerToken, apiKey: undefined });
+    this.webrtcGenerated?.core.setCredentials({ bearerToken, apiKey: undefined });
   }
 
-  /** Remove the active bearer from every outbound channel while preserving any
-   * configured API key. */
+  /** Remove the active bearer and raw API-key metadata from every outbound channel. */
   private clearBearerCredentials(): void {
-    const apiKey = this.config.credentials?.apiKey;
-    this.core.setCredentials({ bearerToken: undefined, apiKey });
-    this.authGenerated?.core.setCredentials({ bearerToken: undefined, apiKey });
-    this.auth.setCredentials({ bearerToken: undefined, apiKey });
-    this.webrtcGenerated?.core.setCredentials({ bearerToken: undefined, apiKey });
+    if (this.sharedMeta) {
+      this.sharedMeta.bearerToken = undefined;
+      this.sharedMeta.apiKey = undefined;
+    }
+    this.core.setCredentials({ bearerToken: undefined, apiKey: undefined });
+    this.authGenerated?.core.setCredentials({ bearerToken: undefined, apiKey: undefined });
+    this.auth.setCredentials({ bearerToken: undefined, apiKey: undefined });
+    this.webrtcGenerated?.core.setCredentials({ bearerToken: undefined, apiKey: undefined });
   }
 
   /**

@@ -3343,11 +3343,72 @@ def perf_seed(clients: dict, meta: Metadata):
     except grpc.RpcError:
         pass
 
-    # EmbeddingService: register the seeded record as a source + report one vector
-    # so the Retrieve/Backfill/DeleteSource read/mutate paths resolve real state.
+    # EmbeddingService: model registry, durable jobs, and one searchable vector.
     embedding = clients[EmbeddingServiceClient].stub
+    def register_embedding_model(model_id: str, collection: str, alias: str) -> None:
+        embedding.RegisterModel(
+            embedding_pb.RegisterModelRequest(
+                tenant_id=tenant, model_id=model_id, provider="deterministic",
+                model_name="text-embedding-3-small", version="1", dimensions=3,
+                matryoshka_dims=[3], distance_metric="COSINE", normalize=True,
+                output_dtype="FLOAT32", max_input_tokens=8192, tokenizer="cl100k_base",
+                task_type="DOCUMENT", provider_endpoint_ref="vault://embedding/sdk-live",
+                vector_backend="qdrant", vector_instance="default", collection_alias=alias,
+                active_collection=collection, chunking_strategy="TOKEN_RECURSIVE",
+                chunk_tokens=256, chunk_overlap_tokens=32,
+                metadata_json='{"suite":"sdk-live"}',
+            ), metadata=md, timeout=8.0,
+        )
+    try:
+        register_embedding_model("text-embedding-3-small", "sdk_live_records", "sdk_live_records_alias")
+    except grpc.RpcError:
+        pass
+    embedding_delete_model_id = f"sdk-live-delete-model-{suffix}"
+    fix.set("embedding_delete_model_id", embedding_delete_model_id)
+    try:
+        register_embedding_model(
+            embedding_delete_model_id,
+            f"sdk_live_delete_records_{suffix}",
+            f"sdk_live_delete_records_alias_{suffix}",
+        )
+    except grpc.RpcError:
+        pass
     try:
         embedding.RegisterSource(embedding_pb.RegisterSourceRequest(tenant_id=tenant, source_name="sdk_live_records", source_message_type=LIVE_MESSAGE_TYPE, text_fields=["payload"], target_collection="sdk_live_records", model_id="text-embedding-3-small", metadata_json="{}"), metadata=md, timeout=8.0)
+    except grpc.RpcError:
+        pass
+    try:
+        document = embedding.IngestDocument(
+            embedding_pb.IngestDocumentRequest(
+                tenant_id=tenant, external_id=f"sdk-live-work-{suffix}",
+                title="SDK benchmark work fixture",
+                raw_text="Durable embedding work is seeded from real document text for the SDK benchmark.",
+                content_type="text/plain", doc_version="1", model_id="text-embedding-3-small",
+                metadata_json='{"suite":"sdk-live","fixture":"work"}',
+            ), metadata=md, timeout=8.0,
+        )
+        fix.set("embedding_job_id", document.job_id)
+        work = embedding.ListEmbeddingWorkItems(
+            embedding_pb.ListEmbeddingWorkItemsRequest(
+                tenant_id=tenant, job_id=document.job_id, page_size=50,
+            ), metadata=md, timeout=8.0,
+        )
+        if work.work_items:
+            fix.set("embedding_work_item_id", work.work_items[0].work_item_id)
+    except grpc.RpcError:
+        pass
+    try:
+        parser = embedding.IngestDocument(
+            embedding_pb.IngestDocumentRequest(
+                tenant_id=tenant, external_id=f"sdk-live-parser-{suffix}",
+                title="SDK benchmark parser fixture",
+                storage_object_ref=f"udb://sdk-live/embedding-{suffix}.txt",
+                content_type="text/plain", doc_version="1", model_id="text-embedding-3-small",
+                metadata_json='{"suite":"sdk-live","fixture":"parser"}',
+            ), metadata=md, timeout=8.0,
+        )
+        fix.set("embedding_document_id", parser.document_id)
+        fix.set("embedding_document_job_id", parser.job_id)
     except grpc.RpcError:
         pass
     try:

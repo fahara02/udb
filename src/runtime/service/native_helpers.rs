@@ -706,6 +706,28 @@ fn topic_operation_and_resource(topic: &str) -> (String, String) {
 /// rejected BEFORE insert (parity with the auth lane's fail-closed validation),
 /// so a non-compliant native record never reaches the audit trail.
 #[allow(clippy::too_many_arguments)]
+/// Why [`build_enriched_outbox_envelope`] refused to produce an envelope.
+/// `TenantScopeMissing` mirrors the historical silent-skip (warn, no failure
+/// metric); `Compliance` mirrors the enterprise-audit fail-closed rejection
+/// (warn + `native_compliance` failure metric).
+pub(crate) enum OutboxEnvelopeReject {
+    TenantScopeMissing,
+    Compliance(String),
+}
+
+impl std::fmt::Display for OutboxEnvelopeReject {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::TenantScopeMissing => {
+                write!(f, "tenant-scoped native event is missing tenant_id")
+            }
+            Self::Compliance(missing) => {
+                write!(f, "native event failed compliance validation: {missing}")
+            }
+        }
+    }
+}
+
 pub(crate) async fn enqueue_outbox_event_with_context(
     pool: &PgPool,
     relation: Option<&str>,
@@ -720,12 +742,106 @@ pub(crate) async fn enqueue_outbox_event_with_context(
     let Some(rel) = relation else {
         return;
     };
+    let (event_uuid, envelope) = match build_enriched_outbox_envelope(
+        topic,
+        partition_key,
+        tenant_id,
+        project_id,
+        ctx,
+        payload,
+    ) {
+        Ok(built) => built,
+        Err(OutboxEnvelopeReject::TenantScopeMissing) => {
+            tracing::warn!(
+                topic,
+                "refusing to enqueue tenant-scoped native event without tenant_id"
+            );
+            return;
+        }
+        Err(OutboxEnvelopeReject::Compliance(missing)) => {
+            tracing::warn!(topic, error = %missing,
+                "refusing to enqueue non-compliant native event (enterprise audit mode)");
+            if let Some(m) = metrics {
+                m.inc_outbox_enqueue_failures_total("native_compliance");
+            }
+            return;
+        }
+    };
+    // ONE shared insert path (the auth lane uses the SAME `insert_outbox_row`), which
+    // takes `event_id: Uuid` — so the two lanes can NEVER again diverge on the `$1`
+    // bind type and re-introduce the sqlx prepared-statement collision that poisoned
+    // the pooled connection (§4). Native emission stays best-effort (WARN, not fatal).
+    if let Err(err) = crate::runtime::cdc::insert_outbox_row(
+        pool,
+        rel,
+        event_uuid,
+        topic,
+        partition_key,
+        &envelope,
+    )
+    .await
+    {
+        tracing::warn!(topic, error = %err, "native outbox enqueue failed");
+        if let Some(m) = metrics {
+            m.inc_outbox_enqueue_failures_total("native");
+        }
+    }
+}
+
+/// STRICT transactional native outbox enqueue for accounting-grade events
+/// (e.g. embedding metering): runs the SAME envelope enrichment + compliance
+/// validation as [`enqueue_outbox_event_with_context`], but inserts through the
+/// caller's executor/transaction and PROPAGATES every failure instead of
+/// swallowing it — so a billing event is either durably enqueued atomically
+/// with the caller's write or the caller's transaction rolls back. A `None`
+/// relation (outbox not configured for this deployment) is a no-op `Ok`.
+#[allow(clippy::too_many_arguments)]
+pub(crate) async fn enqueue_outbox_event_in_tx<'c, E>(
+    executor: E,
+    relation: Option<&str>,
+    topic: &str,
+    partition_key: &str,
+    tenant_id: &str,
+    project_id: &str,
+    payload: serde_json::Value,
+    ctx: NativeEventContext,
+) -> Result<(), String>
+where
+    E: sqlx::Executor<'c, Database = sqlx::Postgres>,
+{
+    let Some(rel) = relation else {
+        return Ok(());
+    };
+    let (event_uuid, envelope) =
+        build_enriched_outbox_envelope(topic, partition_key, tenant_id, project_id, ctx, payload)
+            .map_err(|reject| reject.to_string())?;
+    crate::runtime::cdc::insert_outbox_row(
+        executor,
+        rel,
+        event_uuid,
+        topic,
+        partition_key,
+        &envelope,
+    )
+    .await
+    .map_err(|err| format!("outbox insert failed: {err}"))
+}
+
+/// Shared envelope enrichment for the native outbox lanes: ambient
+/// trace/actor/decision autofill, dotted-topic operation/resource derivation,
+/// and enterprise-audit compliance validation. Both the best-effort pool path
+/// and the strict transactional path build through here so they can never
+/// diverge on envelope shape or validation.
+pub(crate) fn build_enriched_outbox_envelope(
+    topic: &str,
+    partition_key: &str,
+    tenant_id: &str,
+    project_id: &str,
+    ctx: NativeEventContext,
+    payload: serde_json::Value,
+) -> Result<(Uuid, serde_json::Value), OutboxEnvelopeReject> {
     if crate::runtime::cdc::tenant_scoped_topic(topic) && tenant_id.trim().is_empty() {
-        tracing::warn!(
-            topic,
-            "refusing to enqueue tenant-scoped native event without tenant_id"
-        );
-        return;
+        return Err(OutboxEnvelopeReject::TenantScopeMissing);
     }
 
     let (mut env, correlation) = ctx.into_envelope();
@@ -791,12 +907,7 @@ pub(crate) async fn enqueue_outbox_event_with_context(
             &correlation,
             true,
         ) {
-            tracing::warn!(topic, error = %missing,
-                "refusing to enqueue non-compliant native event (enterprise audit mode)");
-            if let Some(m) = metrics {
-                m.inc_outbox_enqueue_failures_total("native_compliance");
-            }
-            return;
+            return Err(OutboxEnvelopeReject::Compliance(missing));
         }
     }
 
@@ -815,25 +926,7 @@ pub(crate) async fn enqueue_outbox_event_with_context(
         &[],
         payload,
     );
-    // ONE shared insert path (the auth lane uses the SAME `insert_outbox_row`), which
-    // takes `event_id: Uuid` — so the two lanes can NEVER again diverge on the `$1`
-    // bind type and re-introduce the sqlx prepared-statement collision that poisoned
-    // the pooled connection (§4). Native emission stays best-effort (WARN, not fatal).
-    if let Err(err) = crate::runtime::cdc::insert_outbox_row(
-        pool,
-        rel,
-        event_uuid,
-        topic,
-        partition_key,
-        &envelope,
-    )
-    .await
-    {
-        tracing::warn!(topic, error = %err, "native outbox enqueue failed");
-        if let Some(m) = metrics {
-            m.inc_outbox_enqueue_failures_total("native");
-        }
-    }
+    Ok((event_uuid, envelope))
 }
 
 #[cfg(test)]

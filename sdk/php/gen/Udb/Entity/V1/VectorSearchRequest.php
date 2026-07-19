@@ -42,6 +42,18 @@ class VectorSearchRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>bool with_payload = 7 [json_name = "withPayload"];</code>
      */
     protected $with_payload = false;
+    /**
+     * Generated from protobuf field <code>bool with_vector = 8 [json_name = "withVector"];</code>
+     */
+    protected $with_vector = false;
+    /**
+     * Generated from protobuf field <code>string vector_name = 9 [json_name = "vectorName"];</code>
+     */
+    protected $vector_name = '';
+    /**
+     * Generated from protobuf field <code>bool quantization_rescore = 10 [json_name = "quantizationRescore"];</code>
+     */
+    protected $quantization_rescore = false;
 
     /**
      * Constructor.
@@ -56,6 +68,9 @@ class VectorSearchRequest extends \Google\Protobuf\Internal\Message
      *     @type int $limit
      *     @type float $score_threshold
      *     @type bool $with_payload
+     *     @type bool $with_vector
+     *     @type string $vector_name
+     *     @type bool $quantization_rescore
      * }
      */
     public function __construct($data = NULL) {
@@ -233,6 +248,72 @@ class VectorSearchRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkBool($var);
         $this->with_payload = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>bool with_vector = 8 [json_name = "withVector"];</code>
+     * @return bool
+     */
+    public function getWithVector()
+    {
+        return $this->with_vector;
+    }
+
+    /**
+     * Generated from protobuf field <code>bool with_vector = 8 [json_name = "withVector"];</code>
+     * @param bool $var
+     * @return $this
+     */
+    public function setWithVector($var)
+    {
+        GPBUtil::checkBool($var);
+        $this->with_vector = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>string vector_name = 9 [json_name = "vectorName"];</code>
+     * @return string
+     */
+    public function getVectorName()
+    {
+        return $this->vector_name;
+    }
+
+    /**
+     * Generated from protobuf field <code>string vector_name = 9 [json_name = "vectorName"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setVectorName($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->vector_name = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>bool quantization_rescore = 10 [json_name = "quantizationRescore"];</code>
+     * @return bool
+     */
+    public function getQuantizationRescore()
+    {
+        return $this->quantization_rescore;
+    }
+
+    /**
+     * Generated from protobuf field <code>bool quantization_rescore = 10 [json_name = "quantizationRescore"];</code>
+     * @param bool $var
+     * @return $this
+     */
+    public function setQuantizationRescore($var)
+    {
+        GPBUtil::checkBool($var);
+        $this->quantization_rescore = $var;
 
         return $this;
     }

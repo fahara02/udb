@@ -76,7 +76,10 @@ func TestLivePerfExplicitBodyCoverage(t *testing.T) {
 		"delete_policy_id": "delete-policy-1", "delete_role_id": "delete-role-1",
 		"ds_policy_id": "2", "egress_id": "egress-1", "endpoint_id": "endpoint-1", "external_identity_id": "external-1",
 		"finalize_file_id": "finalize-file-1", "gov_exp": "1900000000", "job_id": "job-1",
-		"join_session_room_id": "join-room-1", "leave_peer_id": "leave-peer-1", "mark_saga_id": "mark-saga-1",
+		"embedding_job_id": "11111111-1111-4111-8111-000000000101", "embedding_work_item_id": "11111111-1111-4111-8111-000000000102",
+		"embedding_document_id": "11111111-1111-4111-8111-000000000103", "embedding_document_job_id": "11111111-1111-4111-8111-000000000104",
+		"embedding_delete_model_id": "embedding-delete-model-1",
+		"join_session_room_id":      "join-room-1", "leave_peer_id": "leave-peer-1", "mark_saga_id": "mark-saga-1",
 		"otp_code": "123456", "otp_id": "otp-1", "owner_id": "owner-1", "quarantine_dlq_id": "quarantine-dlq-1",
 		"policy_version_id": "policy-version-1", "approve_draft_id": "approve-draft-1", "reject_draft_id": "reject-draft-1",
 		"refresh_session_id": "refresh-session-1", "reg_challenge_id": "reg-challenge-1", "replay_dlq_id": "replay-dlq-1",
@@ -1579,6 +1582,33 @@ func TestBuildManifestJSONBodyUsesSharedManifest(t *testing.T) {
 	deleteIndexFields := deleteIndexMsg.Descriptor().Fields()
 	if got := deleteIndexMsg.Get(deleteIndexFields.ByName("index_name")).String(); got != "sdk_live_records" {
 		t.Fatalf("search delete_index index_name = %q, want sdk_live_records", got)
+	}
+	embeddingRPCs := []string{
+		"EmbeddingService/Backfill",
+		"EmbeddingService/CutoverModelAlias",
+		"EmbeddingService/DeleteModel",
+		"EmbeddingService/DeleteSource",
+		"EmbeddingService/GetEmbeddingJobStatus",
+		"EmbeddingService/IngestDocument",
+		"EmbeddingService/IngestDocumentBatch",
+		"EmbeddingService/ListEmbeddingWorkItems",
+		"EmbeddingService/ListModels",
+		"EmbeddingService/ListSources",
+		"EmbeddingService/RegisterModel",
+		"EmbeddingService/RegisterSource",
+		"EmbeddingService/ReportEmbedding",
+		"EmbeddingService/ReportEmbeddingBatch",
+		"EmbeddingService/ReportEmbeddingFailure",
+		"EmbeddingService/ReportParsedDocument",
+		"EmbeddingService/ReportRetrievalEvaluation",
+		"EmbeddingService/Retrieve",
+		"EmbeddingService/SetModelStatus",
+	}
+	for _, rpc := range embeddingRPCs {
+		path := "/udb.core.embedding.services.v1." + rpc
+		if _, _, ok := buildManifestJSONBody(path, fix); !ok {
+			t.Fatalf("%s manifest JSON body was not hydrated", rpc)
+		}
 	}
 	embeddingIn, _, ok := buildManifestJSONBody("/udb.core.embedding.services.v1.EmbeddingService/Retrieve", fix)
 	if !ok {

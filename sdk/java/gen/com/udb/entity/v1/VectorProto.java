@@ -67,39 +67,54 @@ public final class VectorProto {
     java.lang.String[] descriptorData = {
       "\n\032udb/entity/v1/vector.proto\022\rudb.entity" +
       ".v1\032\034google/protobuf/struct.proto\032\033udb/e" +
-      "ntity/v1/context.proto\"\231\002\n\023VectorSearchR" +
+      "ntity/v1/context.proto\"\216\003\n\023VectorSearchR" +
       "equest\0227\n\007context\030\001 \001(\0132\035.udb.entity.v1." +
       "RequestContextR\007context\022\036\n\ncollection\030\002 " +
       "\001(\tR\ncollection\022\026\n\006vector\030\003 \003(\002R\006vector\022" +
       "/\n\006filter\030\004 \001(\0132\027.google.protobuf.Struct" +
       "R\006filter\022\024\n\005limit\030\005 \001(\005R\005limit\022\'\n\017score_" +
       "threshold\030\006 \001(\002R\016scoreThreshold\022!\n\014with_" +
-      "payload\030\007 \001(\010R\013withPayload\"\274\002\n\031VectorHyb" +
-      "ridSearchRequest\0227\n\007context\030\001 \001(\0132\035.udb." +
-      "entity.v1.RequestContextR\007context\022\036\n\ncol" +
-      "lection\030\002 \001(\tR\ncollection\022\026\n\006vector\030\003 \003(" +
-      "\002R\006vector\022\035\n\ntext_query\030\004 \001(\tR\ttextQuery" +
-      "\022/\n\006filter\030\005 \001(\0132\027.google.protobuf.Struc" +
-      "tR\006filter\022\024\n\005limit\030\006 \001(\005R\005limit\022%\n\016fusio" +
-      "n_weights\030\007 \003(\002R\rfusionWeights\022!\n\014with_p" +
-      "ayload\030\010 \001(\010R\013withPayload\"p\n\023VectorPoint" +
-      "Mutation\022\016\n\002id\030\001 \001(\tR\002id\022\026\n\006vector\030\002 \003(\002" +
-      "R\006vector\0221\n\007payload\030\003 \001(\0132\027.google.proto" +
-      "buf.StructR\007payload\"\323\001\n\023VectorUpsertRequ" +
-      "est\0227\n\007context\030\001 \001(\0132\035.udb.entity.v1.Req" +
-      "uestContextR\007context\022\036\n\ncollection\030\002 \001(\t" +
-      "R\ncollection\022:\n\006points\030\003 \003(\0132\".udb.entit" +
-      "y.v1.VectorPointMutationR\006points\022\'\n\017idem" +
-      "potency_key\030\004 \001(\tR\016idempotencyKey\"f\n\013Vec" +
-      "torPoint\022\016\n\002id\030\001 \001(\tR\002id\022\024\n\005score\030\002 \001(\002R" +
-      "\005score\0221\n\007payload\030\003 \001(\0132\027.google.protobu" +
-      "f.StructR\007payload\"?\n\tVectorSet\0222\n\006points" +
-      "\030\001 \003(\0132\032.udb.entity.v1.VectorPointR\006poin" +
-      "tsB\261\001\n\021com.udb.entity.v1B\013VectorProtoP\001Z" +
-      "9github.com/fahara02/udb/sdk/go/gen/udb/" +
-      "entity/v1;entityv1\242\002\003UEX\252\002\rUdb.Entity.V1" +
-      "\312\002\rUdb\\Entity\\V1\342\002\031Udb\\GPBMetadata\\Entit" +
-      "y\\V1\352\002\017Udb::Entity::V1b\006proto3"
+      "payload\030\007 \001(\010R\013withPayload\022\037\n\013with_vecto" +
+      "r\030\010 \001(\010R\nwithVector\022\037\n\013vector_name\030\t \001(\t" +
+      "R\nvectorName\0221\n\024quantization_rescore\030\n \001" +
+      "(\010R\023quantizationRescore\"\246\004\n\031VectorHybrid" +
+      "SearchRequest\0227\n\007context\030\001 \001(\0132\035.udb.ent" +
+      "ity.v1.RequestContextR\007context\022\036\n\ncollec" +
+      "tion\030\002 \001(\tR\ncollection\022\026\n\006vector\030\003 \003(\002R\006" +
+      "vector\022\035\n\ntext_query\030\004 \001(\tR\ttextQuery\022/\n" +
+      "\006filter\030\005 \001(\0132\027.google.protobuf.StructR\006" +
+      "filter\022\024\n\005limit\030\006 \001(\005R\005limit\022%\n\016fusion_w" +
+      "eights\030\007 \003(\002R\rfusionWeights\022!\n\014with_payl" +
+      "oad\030\010 \001(\010R\013withPayload\022\037\n\013with_vector\030\t " +
+      "\001(\010R\nwithVector\022\037\n\013vector_name\030\n \001(\tR\nve" +
+      "ctorName\022L\n\017fusion_strategy\030\013 \001(\0162#.udb." +
+      "entity.v1.VectorFusionStrategyR\016fusionSt" +
+      "rategy\022%\n\016prefetch_limit\030\014 \001(\005R\rprefetch" +
+      "Limit\0221\n\024quantization_rescore\030\r \001(\010R\023qua" +
+      "ntizationRescore\"\221\001\n\023VectorPointMutation" +
+      "\022\016\n\002id\030\001 \001(\tR\002id\022\026\n\006vector\030\002 \003(\002R\006vector" +
+      "\0221\n\007payload\030\003 \001(\0132\027.google.protobuf.Stru" +
+      "ctR\007payload\022\037\n\013vector_name\030\004 \001(\tR\nvector" +
+      "Name\"\323\001\n\023VectorUpsertRequest\0227\n\007context\030" +
+      "\001 \001(\0132\035.udb.entity.v1.RequestContextR\007co" +
+      "ntext\022\036\n\ncollection\030\002 \001(\tR\ncollection\022:\n" +
+      "\006points\030\003 \003(\0132\".udb.entity.v1.VectorPoin" +
+      "tMutationR\006points\022\'\n\017idempotency_key\030\004 \001" +
+      "(\tR\016idempotencyKey\"\237\001\n\013VectorPoint\022\016\n\002id" +
+      "\030\001 \001(\tR\002id\022\024\n\005score\030\002 \001(\002R\005score\0221\n\007payl" +
+      "oad\030\003 \001(\0132\027.google.protobuf.StructR\007payl" +
+      "oad\022\026\n\006vector\030\004 \003(\002R\006vector\022\037\n\013vector_na" +
+      "me\030\005 \001(\tR\nvectorName\"?\n\tVectorSet\0222\n\006poi" +
+      "nts\030\001 \003(\0132\032.udb.entity.v1.VectorPointR\006p" +
+      "oints*\244\001\n\024VectorFusionStrategy\022&\n\"VECTOR" +
+      "_FUSION_STRATEGY_UNSPECIFIED\020\000\022\036\n\032VECTOR" +
+      "_FUSION_STRATEGY_RRF\020\001\022#\n\037VECTOR_FUSION_" +
+      "STRATEGY_WEIGHTED\020\002\022\037\n\033VECTOR_FUSION_STR" +
+      "ATEGY_DBSF\020\003B\261\001\n\021com.udb.entity.v1B\013Vect" +
+      "orProtoP\001Z9github.com/fahara02/udb/sdk/g" +
+      "o/gen/udb/entity/v1;entityv1\242\002\003UEX\252\002\rUdb" +
+      ".Entity.V1\312\002\rUdb\\Entity\\V1\342\002\031Udb\\GPBMeta" +
+      "data\\Entity\\V1\352\002\017Udb::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -112,19 +127,19 @@ public final class VectorProto {
     internal_static_udb_entity_v1_VectorSearchRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_VectorSearchRequest_descriptor,
-        new java.lang.String[] { "Context", "Collection", "Vector", "Filter", "Limit", "ScoreThreshold", "WithPayload", });
+        new java.lang.String[] { "Context", "Collection", "Vector", "Filter", "Limit", "ScoreThreshold", "WithPayload", "WithVector", "VectorName", "QuantizationRescore", });
     internal_static_udb_entity_v1_VectorHybridSearchRequest_descriptor =
       getDescriptor().getMessageTypes().get(1);
     internal_static_udb_entity_v1_VectorHybridSearchRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_VectorHybridSearchRequest_descriptor,
-        new java.lang.String[] { "Context", "Collection", "Vector", "TextQuery", "Filter", "Limit", "FusionWeights", "WithPayload", });
+        new java.lang.String[] { "Context", "Collection", "Vector", "TextQuery", "Filter", "Limit", "FusionWeights", "WithPayload", "WithVector", "VectorName", "FusionStrategy", "PrefetchLimit", "QuantizationRescore", });
     internal_static_udb_entity_v1_VectorPointMutation_descriptor =
       getDescriptor().getMessageTypes().get(2);
     internal_static_udb_entity_v1_VectorPointMutation_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_VectorPointMutation_descriptor,
-        new java.lang.String[] { "Id", "Vector", "Payload", });
+        new java.lang.String[] { "Id", "Vector", "Payload", "VectorName", });
     internal_static_udb_entity_v1_VectorUpsertRequest_descriptor =
       getDescriptor().getMessageTypes().get(3);
     internal_static_udb_entity_v1_VectorUpsertRequest_fieldAccessorTable = new
@@ -136,7 +151,7 @@ public final class VectorProto {
     internal_static_udb_entity_v1_VectorPoint_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_VectorPoint_descriptor,
-        new java.lang.String[] { "Id", "Score", "Payload", });
+        new java.lang.String[] { "Id", "Score", "Payload", "Vector", "VectorName", });
     internal_static_udb_entity_v1_VectorSet_descriptor =
       getDescriptor().getMessageTypes().get(5);
     internal_static_udb_entity_v1_VectorSet_fieldAccessorTable = new

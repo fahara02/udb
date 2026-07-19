@@ -80,6 +80,58 @@ namespace udb.core.Embedding.Services.V1 {
     static readonly grpc::Marshaller<global::udb.core.Embedding.Services.V1.RetrieveRequest> __Marshaller_udb_core_embedding_services_v1_RetrieveRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Embedding.Services.V1.RetrieveRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::udb.core.Embedding.Services.V1.RetrieveResponse> __Marshaller_udb_core_embedding_services_v1_RetrieveResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Embedding.Services.V1.RetrieveResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Embedding.Services.V1.RegisterModelRequest> __Marshaller_udb_core_embedding_services_v1_RegisterModelRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Embedding.Services.V1.RegisterModelRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Embedding.Services.V1.RegisterModelResponse> __Marshaller_udb_core_embedding_services_v1_RegisterModelResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Embedding.Services.V1.RegisterModelResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Embedding.Services.V1.ListModelsRequest> __Marshaller_udb_core_embedding_services_v1_ListModelsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Embedding.Services.V1.ListModelsRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Embedding.Services.V1.ListModelsResponse> __Marshaller_udb_core_embedding_services_v1_ListModelsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Embedding.Services.V1.ListModelsResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Embedding.Services.V1.DeleteModelRequest> __Marshaller_udb_core_embedding_services_v1_DeleteModelRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Embedding.Services.V1.DeleteModelRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Embedding.Services.V1.DeleteModelResponse> __Marshaller_udb_core_embedding_services_v1_DeleteModelResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Embedding.Services.V1.DeleteModelResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Embedding.Services.V1.SetModelStatusRequest> __Marshaller_udb_core_embedding_services_v1_SetModelStatusRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Embedding.Services.V1.SetModelStatusRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Embedding.Services.V1.SetModelStatusResponse> __Marshaller_udb_core_embedding_services_v1_SetModelStatusResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Embedding.Services.V1.SetModelStatusResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Embedding.Services.V1.CutoverModelAliasRequest> __Marshaller_udb_core_embedding_services_v1_CutoverModelAliasRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Embedding.Services.V1.CutoverModelAliasRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Embedding.Services.V1.CutoverModelAliasResponse> __Marshaller_udb_core_embedding_services_v1_CutoverModelAliasResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Embedding.Services.V1.CutoverModelAliasResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Embedding.Services.V1.GetEmbeddingJobStatusRequest> __Marshaller_udb_core_embedding_services_v1_GetEmbeddingJobStatusRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Embedding.Services.V1.GetEmbeddingJobStatusRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Embedding.Services.V1.GetEmbeddingJobStatusResponse> __Marshaller_udb_core_embedding_services_v1_GetEmbeddingJobStatusResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Embedding.Services.V1.GetEmbeddingJobStatusResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Embedding.Services.V1.ListEmbeddingWorkItemsRequest> __Marshaller_udb_core_embedding_services_v1_ListEmbeddingWorkItemsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Embedding.Services.V1.ListEmbeddingWorkItemsRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Embedding.Services.V1.ListEmbeddingWorkItemsResponse> __Marshaller_udb_core_embedding_services_v1_ListEmbeddingWorkItemsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Embedding.Services.V1.ListEmbeddingWorkItemsResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Embedding.Services.V1.ReportEmbeddingBatchRequest> __Marshaller_udb_core_embedding_services_v1_ReportEmbeddingBatchRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Embedding.Services.V1.ReportEmbeddingBatchRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Embedding.Services.V1.ReportEmbeddingBatchResponse> __Marshaller_udb_core_embedding_services_v1_ReportEmbeddingBatchResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Embedding.Services.V1.ReportEmbeddingBatchResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Embedding.Services.V1.ReportEmbeddingFailureRequest> __Marshaller_udb_core_embedding_services_v1_ReportEmbeddingFailureRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Embedding.Services.V1.ReportEmbeddingFailureRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Embedding.Services.V1.ReportEmbeddingFailureResponse> __Marshaller_udb_core_embedding_services_v1_ReportEmbeddingFailureResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Embedding.Services.V1.ReportEmbeddingFailureResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Embedding.Services.V1.IngestDocumentRequest> __Marshaller_udb_core_embedding_services_v1_IngestDocumentRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Embedding.Services.V1.IngestDocumentRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Embedding.Services.V1.IngestDocumentResponse> __Marshaller_udb_core_embedding_services_v1_IngestDocumentResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Embedding.Services.V1.IngestDocumentResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Embedding.Services.V1.IngestDocumentBatchRequest> __Marshaller_udb_core_embedding_services_v1_IngestDocumentBatchRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Embedding.Services.V1.IngestDocumentBatchRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Embedding.Services.V1.IngestDocumentBatchResponse> __Marshaller_udb_core_embedding_services_v1_IngestDocumentBatchResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Embedding.Services.V1.IngestDocumentBatchResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Embedding.Services.V1.ReportParsedDocumentRequest> __Marshaller_udb_core_embedding_services_v1_ReportParsedDocumentRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Embedding.Services.V1.ReportParsedDocumentRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Embedding.Services.V1.ReportParsedDocumentResponse> __Marshaller_udb_core_embedding_services_v1_ReportParsedDocumentResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Embedding.Services.V1.ReportParsedDocumentResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Embedding.Services.V1.ReportRetrievalEvaluationRequest> __Marshaller_udb_core_embedding_services_v1_ReportRetrievalEvaluationRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Embedding.Services.V1.ReportRetrievalEvaluationRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Embedding.Services.V1.ReportRetrievalEvaluationResponse> __Marshaller_udb_core_embedding_services_v1_ReportRetrievalEvaluationResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Embedding.Services.V1.ReportRetrievalEvaluationResponse.Parser));
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Method<global::udb.core.Embedding.Services.V1.RegisterSourceRequest, global::udb.core.Embedding.Services.V1.RegisterSourceResponse> __Method_RegisterSource = new grpc::Method<global::udb.core.Embedding.Services.V1.RegisterSourceRequest, global::udb.core.Embedding.Services.V1.RegisterSourceResponse>(
@@ -128,6 +180,110 @@ namespace udb.core.Embedding.Services.V1 {
         "Retrieve",
         __Marshaller_udb_core_embedding_services_v1_RetrieveRequest,
         __Marshaller_udb_core_embedding_services_v1_RetrieveResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Embedding.Services.V1.RegisterModelRequest, global::udb.core.Embedding.Services.V1.RegisterModelResponse> __Method_RegisterModel = new grpc::Method<global::udb.core.Embedding.Services.V1.RegisterModelRequest, global::udb.core.Embedding.Services.V1.RegisterModelResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "RegisterModel",
+        __Marshaller_udb_core_embedding_services_v1_RegisterModelRequest,
+        __Marshaller_udb_core_embedding_services_v1_RegisterModelResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Embedding.Services.V1.ListModelsRequest, global::udb.core.Embedding.Services.V1.ListModelsResponse> __Method_ListModels = new grpc::Method<global::udb.core.Embedding.Services.V1.ListModelsRequest, global::udb.core.Embedding.Services.V1.ListModelsResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "ListModels",
+        __Marshaller_udb_core_embedding_services_v1_ListModelsRequest,
+        __Marshaller_udb_core_embedding_services_v1_ListModelsResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Embedding.Services.V1.DeleteModelRequest, global::udb.core.Embedding.Services.V1.DeleteModelResponse> __Method_DeleteModel = new grpc::Method<global::udb.core.Embedding.Services.V1.DeleteModelRequest, global::udb.core.Embedding.Services.V1.DeleteModelResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "DeleteModel",
+        __Marshaller_udb_core_embedding_services_v1_DeleteModelRequest,
+        __Marshaller_udb_core_embedding_services_v1_DeleteModelResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Embedding.Services.V1.SetModelStatusRequest, global::udb.core.Embedding.Services.V1.SetModelStatusResponse> __Method_SetModelStatus = new grpc::Method<global::udb.core.Embedding.Services.V1.SetModelStatusRequest, global::udb.core.Embedding.Services.V1.SetModelStatusResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "SetModelStatus",
+        __Marshaller_udb_core_embedding_services_v1_SetModelStatusRequest,
+        __Marshaller_udb_core_embedding_services_v1_SetModelStatusResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Embedding.Services.V1.CutoverModelAliasRequest, global::udb.core.Embedding.Services.V1.CutoverModelAliasResponse> __Method_CutoverModelAlias = new grpc::Method<global::udb.core.Embedding.Services.V1.CutoverModelAliasRequest, global::udb.core.Embedding.Services.V1.CutoverModelAliasResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "CutoverModelAlias",
+        __Marshaller_udb_core_embedding_services_v1_CutoverModelAliasRequest,
+        __Marshaller_udb_core_embedding_services_v1_CutoverModelAliasResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Embedding.Services.V1.GetEmbeddingJobStatusRequest, global::udb.core.Embedding.Services.V1.GetEmbeddingJobStatusResponse> __Method_GetEmbeddingJobStatus = new grpc::Method<global::udb.core.Embedding.Services.V1.GetEmbeddingJobStatusRequest, global::udb.core.Embedding.Services.V1.GetEmbeddingJobStatusResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "GetEmbeddingJobStatus",
+        __Marshaller_udb_core_embedding_services_v1_GetEmbeddingJobStatusRequest,
+        __Marshaller_udb_core_embedding_services_v1_GetEmbeddingJobStatusResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Embedding.Services.V1.ListEmbeddingWorkItemsRequest, global::udb.core.Embedding.Services.V1.ListEmbeddingWorkItemsResponse> __Method_ListEmbeddingWorkItems = new grpc::Method<global::udb.core.Embedding.Services.V1.ListEmbeddingWorkItemsRequest, global::udb.core.Embedding.Services.V1.ListEmbeddingWorkItemsResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "ListEmbeddingWorkItems",
+        __Marshaller_udb_core_embedding_services_v1_ListEmbeddingWorkItemsRequest,
+        __Marshaller_udb_core_embedding_services_v1_ListEmbeddingWorkItemsResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Embedding.Services.V1.ReportEmbeddingBatchRequest, global::udb.core.Embedding.Services.V1.ReportEmbeddingBatchResponse> __Method_ReportEmbeddingBatch = new grpc::Method<global::udb.core.Embedding.Services.V1.ReportEmbeddingBatchRequest, global::udb.core.Embedding.Services.V1.ReportEmbeddingBatchResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "ReportEmbeddingBatch",
+        __Marshaller_udb_core_embedding_services_v1_ReportEmbeddingBatchRequest,
+        __Marshaller_udb_core_embedding_services_v1_ReportEmbeddingBatchResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Embedding.Services.V1.ReportEmbeddingFailureRequest, global::udb.core.Embedding.Services.V1.ReportEmbeddingFailureResponse> __Method_ReportEmbeddingFailure = new grpc::Method<global::udb.core.Embedding.Services.V1.ReportEmbeddingFailureRequest, global::udb.core.Embedding.Services.V1.ReportEmbeddingFailureResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "ReportEmbeddingFailure",
+        __Marshaller_udb_core_embedding_services_v1_ReportEmbeddingFailureRequest,
+        __Marshaller_udb_core_embedding_services_v1_ReportEmbeddingFailureResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Embedding.Services.V1.IngestDocumentRequest, global::udb.core.Embedding.Services.V1.IngestDocumentResponse> __Method_IngestDocument = new grpc::Method<global::udb.core.Embedding.Services.V1.IngestDocumentRequest, global::udb.core.Embedding.Services.V1.IngestDocumentResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "IngestDocument",
+        __Marshaller_udb_core_embedding_services_v1_IngestDocumentRequest,
+        __Marshaller_udb_core_embedding_services_v1_IngestDocumentResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Embedding.Services.V1.IngestDocumentBatchRequest, global::udb.core.Embedding.Services.V1.IngestDocumentBatchResponse> __Method_IngestDocumentBatch = new grpc::Method<global::udb.core.Embedding.Services.V1.IngestDocumentBatchRequest, global::udb.core.Embedding.Services.V1.IngestDocumentBatchResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "IngestDocumentBatch",
+        __Marshaller_udb_core_embedding_services_v1_IngestDocumentBatchRequest,
+        __Marshaller_udb_core_embedding_services_v1_IngestDocumentBatchResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Embedding.Services.V1.ReportParsedDocumentRequest, global::udb.core.Embedding.Services.V1.ReportParsedDocumentResponse> __Method_ReportParsedDocument = new grpc::Method<global::udb.core.Embedding.Services.V1.ReportParsedDocumentRequest, global::udb.core.Embedding.Services.V1.ReportParsedDocumentResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "ReportParsedDocument",
+        __Marshaller_udb_core_embedding_services_v1_ReportParsedDocumentRequest,
+        __Marshaller_udb_core_embedding_services_v1_ReportParsedDocumentResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Embedding.Services.V1.ReportRetrievalEvaluationRequest, global::udb.core.Embedding.Services.V1.ReportRetrievalEvaluationResponse> __Method_ReportRetrievalEvaluation = new grpc::Method<global::udb.core.Embedding.Services.V1.ReportRetrievalEvaluationRequest, global::udb.core.Embedding.Services.V1.ReportRetrievalEvaluationResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "ReportRetrievalEvaluation",
+        __Marshaller_udb_core_embedding_services_v1_ReportRetrievalEvaluationRequest,
+        __Marshaller_udb_core_embedding_services_v1_ReportRetrievalEvaluationResponse);
 
     /// <summary>Service descriptor</summary>
     public static global::Google.Protobuf.Reflection.ServiceDescriptor Descriptor
@@ -219,6 +375,84 @@ namespace udb.core.Embedding.Services.V1 {
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::System.Threading.Tasks.Task<global::udb.core.Embedding.Services.V1.RetrieveResponse> Retrieve(global::udb.core.Embedding.Services.V1.RetrieveRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Embedding.Services.V1.RegisterModelResponse> RegisterModel(global::udb.core.Embedding.Services.V1.RegisterModelRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Embedding.Services.V1.ListModelsResponse> ListModels(global::udb.core.Embedding.Services.V1.ListModelsRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Embedding.Services.V1.DeleteModelResponse> DeleteModel(global::udb.core.Embedding.Services.V1.DeleteModelRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Embedding.Services.V1.SetModelStatusResponse> SetModelStatus(global::udb.core.Embedding.Services.V1.SetModelStatusRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Embedding.Services.V1.CutoverModelAliasResponse> CutoverModelAlias(global::udb.core.Embedding.Services.V1.CutoverModelAliasRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Embedding.Services.V1.GetEmbeddingJobStatusResponse> GetEmbeddingJobStatus(global::udb.core.Embedding.Services.V1.GetEmbeddingJobStatusRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Embedding.Services.V1.ListEmbeddingWorkItemsResponse> ListEmbeddingWorkItems(global::udb.core.Embedding.Services.V1.ListEmbeddingWorkItemsRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Embedding.Services.V1.ReportEmbeddingBatchResponse> ReportEmbeddingBatch(global::udb.core.Embedding.Services.V1.ReportEmbeddingBatchRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Embedding.Services.V1.ReportEmbeddingFailureResponse> ReportEmbeddingFailure(global::udb.core.Embedding.Services.V1.ReportEmbeddingFailureRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Embedding.Services.V1.IngestDocumentResponse> IngestDocument(global::udb.core.Embedding.Services.V1.IngestDocumentRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Embedding.Services.V1.IngestDocumentBatchResponse> IngestDocumentBatch(global::udb.core.Embedding.Services.V1.IngestDocumentBatchRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Embedding.Services.V1.ReportParsedDocumentResponse> ReportParsedDocument(global::udb.core.Embedding.Services.V1.ReportParsedDocumentRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Embedding.Services.V1.ReportRetrievalEvaluationResponse> ReportRetrievalEvaluation(global::udb.core.Embedding.Services.V1.ReportRetrievalEvaluationRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -588,6 +822,266 @@ namespace udb.core.Embedding.Services.V1 {
       {
         return CallInvoker.AsyncUnaryCall(__Method_Retrieve, null, options, request);
       }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Embedding.Services.V1.RegisterModelResponse RegisterModel(global::udb.core.Embedding.Services.V1.RegisterModelRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return RegisterModel(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Embedding.Services.V1.RegisterModelResponse RegisterModel(global::udb.core.Embedding.Services.V1.RegisterModelRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_RegisterModel, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Embedding.Services.V1.RegisterModelResponse> RegisterModelAsync(global::udb.core.Embedding.Services.V1.RegisterModelRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return RegisterModelAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Embedding.Services.V1.RegisterModelResponse> RegisterModelAsync(global::udb.core.Embedding.Services.V1.RegisterModelRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_RegisterModel, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Embedding.Services.V1.ListModelsResponse ListModels(global::udb.core.Embedding.Services.V1.ListModelsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ListModels(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Embedding.Services.V1.ListModelsResponse ListModels(global::udb.core.Embedding.Services.V1.ListModelsRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_ListModels, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Embedding.Services.V1.ListModelsResponse> ListModelsAsync(global::udb.core.Embedding.Services.V1.ListModelsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ListModelsAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Embedding.Services.V1.ListModelsResponse> ListModelsAsync(global::udb.core.Embedding.Services.V1.ListModelsRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_ListModels, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Embedding.Services.V1.DeleteModelResponse DeleteModel(global::udb.core.Embedding.Services.V1.DeleteModelRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return DeleteModel(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Embedding.Services.V1.DeleteModelResponse DeleteModel(global::udb.core.Embedding.Services.V1.DeleteModelRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_DeleteModel, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Embedding.Services.V1.DeleteModelResponse> DeleteModelAsync(global::udb.core.Embedding.Services.V1.DeleteModelRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return DeleteModelAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Embedding.Services.V1.DeleteModelResponse> DeleteModelAsync(global::udb.core.Embedding.Services.V1.DeleteModelRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_DeleteModel, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Embedding.Services.V1.SetModelStatusResponse SetModelStatus(global::udb.core.Embedding.Services.V1.SetModelStatusRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return SetModelStatus(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Embedding.Services.V1.SetModelStatusResponse SetModelStatus(global::udb.core.Embedding.Services.V1.SetModelStatusRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_SetModelStatus, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Embedding.Services.V1.SetModelStatusResponse> SetModelStatusAsync(global::udb.core.Embedding.Services.V1.SetModelStatusRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return SetModelStatusAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Embedding.Services.V1.SetModelStatusResponse> SetModelStatusAsync(global::udb.core.Embedding.Services.V1.SetModelStatusRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_SetModelStatus, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Embedding.Services.V1.CutoverModelAliasResponse CutoverModelAlias(global::udb.core.Embedding.Services.V1.CutoverModelAliasRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return CutoverModelAlias(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Embedding.Services.V1.CutoverModelAliasResponse CutoverModelAlias(global::udb.core.Embedding.Services.V1.CutoverModelAliasRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_CutoverModelAlias, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Embedding.Services.V1.CutoverModelAliasResponse> CutoverModelAliasAsync(global::udb.core.Embedding.Services.V1.CutoverModelAliasRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return CutoverModelAliasAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Embedding.Services.V1.CutoverModelAliasResponse> CutoverModelAliasAsync(global::udb.core.Embedding.Services.V1.CutoverModelAliasRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_CutoverModelAlias, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Embedding.Services.V1.GetEmbeddingJobStatusResponse GetEmbeddingJobStatus(global::udb.core.Embedding.Services.V1.GetEmbeddingJobStatusRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return GetEmbeddingJobStatus(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Embedding.Services.V1.GetEmbeddingJobStatusResponse GetEmbeddingJobStatus(global::udb.core.Embedding.Services.V1.GetEmbeddingJobStatusRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_GetEmbeddingJobStatus, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Embedding.Services.V1.GetEmbeddingJobStatusResponse> GetEmbeddingJobStatusAsync(global::udb.core.Embedding.Services.V1.GetEmbeddingJobStatusRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return GetEmbeddingJobStatusAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Embedding.Services.V1.GetEmbeddingJobStatusResponse> GetEmbeddingJobStatusAsync(global::udb.core.Embedding.Services.V1.GetEmbeddingJobStatusRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_GetEmbeddingJobStatus, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Embedding.Services.V1.ListEmbeddingWorkItemsResponse ListEmbeddingWorkItems(global::udb.core.Embedding.Services.V1.ListEmbeddingWorkItemsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ListEmbeddingWorkItems(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Embedding.Services.V1.ListEmbeddingWorkItemsResponse ListEmbeddingWorkItems(global::udb.core.Embedding.Services.V1.ListEmbeddingWorkItemsRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_ListEmbeddingWorkItems, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Embedding.Services.V1.ListEmbeddingWorkItemsResponse> ListEmbeddingWorkItemsAsync(global::udb.core.Embedding.Services.V1.ListEmbeddingWorkItemsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ListEmbeddingWorkItemsAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Embedding.Services.V1.ListEmbeddingWorkItemsResponse> ListEmbeddingWorkItemsAsync(global::udb.core.Embedding.Services.V1.ListEmbeddingWorkItemsRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_ListEmbeddingWorkItems, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Embedding.Services.V1.ReportEmbeddingBatchResponse ReportEmbeddingBatch(global::udb.core.Embedding.Services.V1.ReportEmbeddingBatchRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ReportEmbeddingBatch(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Embedding.Services.V1.ReportEmbeddingBatchResponse ReportEmbeddingBatch(global::udb.core.Embedding.Services.V1.ReportEmbeddingBatchRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_ReportEmbeddingBatch, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Embedding.Services.V1.ReportEmbeddingBatchResponse> ReportEmbeddingBatchAsync(global::udb.core.Embedding.Services.V1.ReportEmbeddingBatchRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ReportEmbeddingBatchAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Embedding.Services.V1.ReportEmbeddingBatchResponse> ReportEmbeddingBatchAsync(global::udb.core.Embedding.Services.V1.ReportEmbeddingBatchRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_ReportEmbeddingBatch, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Embedding.Services.V1.ReportEmbeddingFailureResponse ReportEmbeddingFailure(global::udb.core.Embedding.Services.V1.ReportEmbeddingFailureRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ReportEmbeddingFailure(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Embedding.Services.V1.ReportEmbeddingFailureResponse ReportEmbeddingFailure(global::udb.core.Embedding.Services.V1.ReportEmbeddingFailureRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_ReportEmbeddingFailure, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Embedding.Services.V1.ReportEmbeddingFailureResponse> ReportEmbeddingFailureAsync(global::udb.core.Embedding.Services.V1.ReportEmbeddingFailureRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ReportEmbeddingFailureAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Embedding.Services.V1.ReportEmbeddingFailureResponse> ReportEmbeddingFailureAsync(global::udb.core.Embedding.Services.V1.ReportEmbeddingFailureRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_ReportEmbeddingFailure, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Embedding.Services.V1.IngestDocumentResponse IngestDocument(global::udb.core.Embedding.Services.V1.IngestDocumentRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return IngestDocument(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Embedding.Services.V1.IngestDocumentResponse IngestDocument(global::udb.core.Embedding.Services.V1.IngestDocumentRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_IngestDocument, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Embedding.Services.V1.IngestDocumentResponse> IngestDocumentAsync(global::udb.core.Embedding.Services.V1.IngestDocumentRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return IngestDocumentAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Embedding.Services.V1.IngestDocumentResponse> IngestDocumentAsync(global::udb.core.Embedding.Services.V1.IngestDocumentRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_IngestDocument, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Embedding.Services.V1.IngestDocumentBatchResponse IngestDocumentBatch(global::udb.core.Embedding.Services.V1.IngestDocumentBatchRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return IngestDocumentBatch(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Embedding.Services.V1.IngestDocumentBatchResponse IngestDocumentBatch(global::udb.core.Embedding.Services.V1.IngestDocumentBatchRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_IngestDocumentBatch, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Embedding.Services.V1.IngestDocumentBatchResponse> IngestDocumentBatchAsync(global::udb.core.Embedding.Services.V1.IngestDocumentBatchRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return IngestDocumentBatchAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Embedding.Services.V1.IngestDocumentBatchResponse> IngestDocumentBatchAsync(global::udb.core.Embedding.Services.V1.IngestDocumentBatchRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_IngestDocumentBatch, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Embedding.Services.V1.ReportParsedDocumentResponse ReportParsedDocument(global::udb.core.Embedding.Services.V1.ReportParsedDocumentRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ReportParsedDocument(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Embedding.Services.V1.ReportParsedDocumentResponse ReportParsedDocument(global::udb.core.Embedding.Services.V1.ReportParsedDocumentRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_ReportParsedDocument, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Embedding.Services.V1.ReportParsedDocumentResponse> ReportParsedDocumentAsync(global::udb.core.Embedding.Services.V1.ReportParsedDocumentRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ReportParsedDocumentAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Embedding.Services.V1.ReportParsedDocumentResponse> ReportParsedDocumentAsync(global::udb.core.Embedding.Services.V1.ReportParsedDocumentRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_ReportParsedDocument, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Embedding.Services.V1.ReportRetrievalEvaluationResponse ReportRetrievalEvaluation(global::udb.core.Embedding.Services.V1.ReportRetrievalEvaluationRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ReportRetrievalEvaluation(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Embedding.Services.V1.ReportRetrievalEvaluationResponse ReportRetrievalEvaluation(global::udb.core.Embedding.Services.V1.ReportRetrievalEvaluationRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_ReportRetrievalEvaluation, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Embedding.Services.V1.ReportRetrievalEvaluationResponse> ReportRetrievalEvaluationAsync(global::udb.core.Embedding.Services.V1.ReportRetrievalEvaluationRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ReportRetrievalEvaluationAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Embedding.Services.V1.ReportRetrievalEvaluationResponse> ReportRetrievalEvaluationAsync(global::udb.core.Embedding.Services.V1.ReportRetrievalEvaluationRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_ReportRetrievalEvaluation, null, options, request);
+      }
       /// <summary>Creates a new instance of client from given <c>ClientBaseConfiguration</c>.</summary>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       protected override EmbeddingServiceClient NewInstance(ClientBaseConfiguration configuration)
@@ -607,7 +1101,20 @@ namespace udb.core.Embedding.Services.V1 {
           .AddMethod(__Method_DeleteSource, serviceImpl.DeleteSource)
           .AddMethod(__Method_Backfill, serviceImpl.Backfill)
           .AddMethod(__Method_ReportEmbedding, serviceImpl.ReportEmbedding)
-          .AddMethod(__Method_Retrieve, serviceImpl.Retrieve).Build();
+          .AddMethod(__Method_Retrieve, serviceImpl.Retrieve)
+          .AddMethod(__Method_RegisterModel, serviceImpl.RegisterModel)
+          .AddMethod(__Method_ListModels, serviceImpl.ListModels)
+          .AddMethod(__Method_DeleteModel, serviceImpl.DeleteModel)
+          .AddMethod(__Method_SetModelStatus, serviceImpl.SetModelStatus)
+          .AddMethod(__Method_CutoverModelAlias, serviceImpl.CutoverModelAlias)
+          .AddMethod(__Method_GetEmbeddingJobStatus, serviceImpl.GetEmbeddingJobStatus)
+          .AddMethod(__Method_ListEmbeddingWorkItems, serviceImpl.ListEmbeddingWorkItems)
+          .AddMethod(__Method_ReportEmbeddingBatch, serviceImpl.ReportEmbeddingBatch)
+          .AddMethod(__Method_ReportEmbeddingFailure, serviceImpl.ReportEmbeddingFailure)
+          .AddMethod(__Method_IngestDocument, serviceImpl.IngestDocument)
+          .AddMethod(__Method_IngestDocumentBatch, serviceImpl.IngestDocumentBatch)
+          .AddMethod(__Method_ReportParsedDocument, serviceImpl.ReportParsedDocument)
+          .AddMethod(__Method_ReportRetrievalEvaluation, serviceImpl.ReportRetrievalEvaluation).Build();
     }
 
     /// <summary>Register service method with a service binder with or without implementation. Useful when customizing the service binding logic.
@@ -623,6 +1130,19 @@ namespace udb.core.Embedding.Services.V1 {
       serviceBinder.AddMethod(__Method_Backfill, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Embedding.Services.V1.BackfillRequest, global::udb.core.Embedding.Services.V1.BackfillResponse>(serviceImpl.Backfill));
       serviceBinder.AddMethod(__Method_ReportEmbedding, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Embedding.Services.V1.ReportEmbeddingRequest, global::udb.core.Embedding.Services.V1.ReportEmbeddingResponse>(serviceImpl.ReportEmbedding));
       serviceBinder.AddMethod(__Method_Retrieve, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Embedding.Services.V1.RetrieveRequest, global::udb.core.Embedding.Services.V1.RetrieveResponse>(serviceImpl.Retrieve));
+      serviceBinder.AddMethod(__Method_RegisterModel, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Embedding.Services.V1.RegisterModelRequest, global::udb.core.Embedding.Services.V1.RegisterModelResponse>(serviceImpl.RegisterModel));
+      serviceBinder.AddMethod(__Method_ListModels, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Embedding.Services.V1.ListModelsRequest, global::udb.core.Embedding.Services.V1.ListModelsResponse>(serviceImpl.ListModels));
+      serviceBinder.AddMethod(__Method_DeleteModel, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Embedding.Services.V1.DeleteModelRequest, global::udb.core.Embedding.Services.V1.DeleteModelResponse>(serviceImpl.DeleteModel));
+      serviceBinder.AddMethod(__Method_SetModelStatus, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Embedding.Services.V1.SetModelStatusRequest, global::udb.core.Embedding.Services.V1.SetModelStatusResponse>(serviceImpl.SetModelStatus));
+      serviceBinder.AddMethod(__Method_CutoverModelAlias, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Embedding.Services.V1.CutoverModelAliasRequest, global::udb.core.Embedding.Services.V1.CutoverModelAliasResponse>(serviceImpl.CutoverModelAlias));
+      serviceBinder.AddMethod(__Method_GetEmbeddingJobStatus, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Embedding.Services.V1.GetEmbeddingJobStatusRequest, global::udb.core.Embedding.Services.V1.GetEmbeddingJobStatusResponse>(serviceImpl.GetEmbeddingJobStatus));
+      serviceBinder.AddMethod(__Method_ListEmbeddingWorkItems, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Embedding.Services.V1.ListEmbeddingWorkItemsRequest, global::udb.core.Embedding.Services.V1.ListEmbeddingWorkItemsResponse>(serviceImpl.ListEmbeddingWorkItems));
+      serviceBinder.AddMethod(__Method_ReportEmbeddingBatch, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Embedding.Services.V1.ReportEmbeddingBatchRequest, global::udb.core.Embedding.Services.V1.ReportEmbeddingBatchResponse>(serviceImpl.ReportEmbeddingBatch));
+      serviceBinder.AddMethod(__Method_ReportEmbeddingFailure, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Embedding.Services.V1.ReportEmbeddingFailureRequest, global::udb.core.Embedding.Services.V1.ReportEmbeddingFailureResponse>(serviceImpl.ReportEmbeddingFailure));
+      serviceBinder.AddMethod(__Method_IngestDocument, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Embedding.Services.V1.IngestDocumentRequest, global::udb.core.Embedding.Services.V1.IngestDocumentResponse>(serviceImpl.IngestDocument));
+      serviceBinder.AddMethod(__Method_IngestDocumentBatch, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Embedding.Services.V1.IngestDocumentBatchRequest, global::udb.core.Embedding.Services.V1.IngestDocumentBatchResponse>(serviceImpl.IngestDocumentBatch));
+      serviceBinder.AddMethod(__Method_ReportParsedDocument, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Embedding.Services.V1.ReportParsedDocumentRequest, global::udb.core.Embedding.Services.V1.ReportParsedDocumentResponse>(serviceImpl.ReportParsedDocument));
+      serviceBinder.AddMethod(__Method_ReportRetrievalEvaluation, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Embedding.Services.V1.ReportRetrievalEvaluationRequest, global::udb.core.Embedding.Services.V1.ReportRetrievalEvaluationResponse>(serviceImpl.ReportRetrievalEvaluation));
     }
 
   }

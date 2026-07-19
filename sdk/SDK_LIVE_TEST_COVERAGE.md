@@ -7,7 +7,7 @@ Inputs:
 - `sdk/go/udbclient/generated_client.go`
 - `docs/site/bench-results.json`
 
-Current generated RPC surface: 353 RPCs across 28 services.
+Current generated RPC surface: 366 RPCs across 28 services.
 
 The benchmark body manifest is checked against generated SDK metadata before this
 file is written. A missing row, extra row, alias drift, operationId drift, or
@@ -42,7 +42,7 @@ do not yet publish per-RPC live benchmark results.
 | ConfigService | 5 | 3 | 1 | 1 | 0 |
 | ControlPlaneService | 6 | 2 | 4 | 0 | 0 |
 | DataBroker | 77 | 35 | 35 | 7 | 0 |
-| EmbeddingService | 6 | 2 | 3 | 1 | 0 |
+| EmbeddingService | 19 | 5 | 12 | 2 | 0 |
 | IdentityProviderService | 27 | 6 | 21 | 0 | 0 |
 | LiveQueryService | 1 | 1 | 0 | 0 | 0 |
 | LockService | 5 | 2 | 3 | 0 | 0 |
@@ -287,11 +287,24 @@ benchmark harnesses.
 | DataBroker | `DataBroker/VectorUpsert` | `vector_upsert` | `vectorUpsert` | MUTATION | data_broker.md |
 | DataBroker | `DataBroker/VerifyAdminAuditLog` | `verify_admin_audit_log` | `verifyAdminAuditLog` | READ_ONLY | data_broker.md |
 | EmbeddingService | `EmbeddingService/Backfill` | `backfill` | `backfillEmbeddingSource` | MUTATION | embedding.md |
+| EmbeddingService | `EmbeddingService/CutoverModelAlias` | `cutover_model_alias` | `cutoverEmbeddingModelAlias` | MUTATION | embedding.md |
+| EmbeddingService | `EmbeddingService/DeleteModel` | `delete_model` | `deleteEmbeddingModel` | DESTRUCTIVE | embedding.md |
 | EmbeddingService | `EmbeddingService/DeleteSource` | `delete_source` | `deleteEmbeddingSource` | DESTRUCTIVE | embedding.md |
+| EmbeddingService | `EmbeddingService/GetEmbeddingJobStatus` | `get_job_status` | `getEmbeddingJobStatus` | READ_ONLY | embedding.md |
+| EmbeddingService | `EmbeddingService/IngestDocument` | `ingest_document` | `ingestEmbeddingDocument` | MUTATION | embedding.md |
+| EmbeddingService | `EmbeddingService/IngestDocumentBatch` | `ingest_document_batch` | `ingestEmbeddingDocumentBatch` | MUTATION | embedding.md |
+| EmbeddingService | `EmbeddingService/ListEmbeddingWorkItems` | `list_work_items` | `listEmbeddingWorkItems` | READ_ONLY | embedding.md |
+| EmbeddingService | `EmbeddingService/ListModels` | `list_models` | `listEmbeddingModels` | READ_ONLY | embedding.md |
 | EmbeddingService | `EmbeddingService/ListSources` | `list_sources` | `listEmbeddingSources` | READ_ONLY | embedding.md |
+| EmbeddingService | `EmbeddingService/RegisterModel` | `register_model` | `registerEmbeddingModel` | MUTATION | embedding.md |
 | EmbeddingService | `EmbeddingService/RegisterSource` | `register_source` | `registerEmbeddingSource` | MUTATION | embedding.md |
 | EmbeddingService | `EmbeddingService/ReportEmbedding` | `report_embedding` | `reportEmbedding` | MUTATION | embedding.md |
+| EmbeddingService | `EmbeddingService/ReportEmbeddingBatch` | `report_embedding_batch` | `reportEmbeddingBatch` | MUTATION | embedding.md |
+| EmbeddingService | `EmbeddingService/ReportEmbeddingFailure` | `report_embedding_failure` | `reportEmbeddingFailure` | MUTATION | embedding.md |
+| EmbeddingService | `EmbeddingService/ReportParsedDocument` | `report_parsed_document` | `reportParsedDocument` | MUTATION | embedding.md |
+| EmbeddingService | `EmbeddingService/ReportRetrievalEvaluation` | `report_retrieval_evaluation` | `reportRetrievalEvaluation` | MUTATION | embedding.md |
 | EmbeddingService | `EmbeddingService/Retrieve` | `retrieve` | `retrieveEmbedding` | READ_ONLY | embedding.md |
+| EmbeddingService | `EmbeddingService/SetModelStatus` | `set_model_status` | `setEmbeddingModelStatus` | MUTATION | embedding.md |
 | IdentityProviderService | `IdentityProviderService/CreateProvider` | `create_provider` | `createProvider` | MUTATION | idp.md |
 | IdentityProviderService | `IdentityProviderService/DisableProvider` | `disable_provider` | `disableProvider` | MUTATION | idp.md |
 | IdentityProviderService | `IdentityProviderService/ForceJwksRefresh` | `force_jwks_refresh` | `forceJwksRefresh` | MUTATION | idp.md |

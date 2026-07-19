@@ -1,0 +1,60 @@
+syntax = "proto3";
+
+package udb.core.embedding.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Embedding.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/embedding/entity/v1;embeddingv1";
+option java_package = "com.udb.core.embedding.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Embedding\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Embedding\\Entity\\V1";
+
+message EmbeddingWorkItem {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "embedding_work_items" schema_name: "udb_embedding" migration_order: 5 is_table: true
+    comment: "Durable visibility-timeout queue for embedding sidecars"
+    audit_fields: false enable_rls: true
+    rls_policies: { policy_name: "tenant_isolation" using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text)" permissive: true }
+    indexes: { index_name: "idx_embedding_work_retry" index_type: "BTREE" columns: "status" columns: "next_attempt_at" }
+    indexes: { index_name: "idx_embedding_work_job" index_type: "BTREE" columns: "tenant_id" columns: "job_id" columns: "status" }
+    indexes: { index_name: "idx_embedding_work_chunk_hash" index_type: "BTREE" columns: "tenant_id" columns: "source_name" columns: "parent_pk" columns: "chunk_seq" columns: "chunk_hash" }
+    foreign_keys: { columns: "model_id" columns: "tenant_id" references_table: "embedding_models" references_schema: "udb_embedding" references_column: "model_id" references_column: "tenant_id" on_delete: REFERENTIAL_ACTION_RESTRICT constraint_name: "fk_embedding_work_model" }
+    cdc_topic: "udb.embedding.embedding_work_items.cdc" required_scope: "embedding:jobs:read"
+  };
+  option (udb.core.common.v1.db_table_security) = { tenant_isolation_mode: "tenant" tenant_column: "tenant_id" rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')" retention_class: "embedding.operational" retention_days: 90 audit_mode: AUDIT_MODE_MUTATION encryption_profile: "tenant" pii_profile: "restricted" export_eligible: false data_residency_policy_ref: "tenant.data_residency" };
+
+  string work_item_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "work_item_id" sql_type: "VARCHAR(64)" primary_key: true not_null: true }];
+  string tenant_id = 2 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" tenant_column: true sql_type: "VARCHAR(64)" not_null: true }];
+  string project_id = 3 [(udb.core.common.v1.pg_column) = { column_name: "project_id" sql_type: "VARCHAR(120)" not_null: true }];
+  string job_id = 4 [(udb.core.common.v1.pg_column) = { column_name: "job_id" sql_type: "UUID" foreign_key: { references_table: "embedding_jobs" references_schema: "udb_embedding" references_column: "job_id" on_delete: REFERENTIAL_ACTION_CASCADE constraint_name: "fk_embedding_work_job" } }];
+  string source_name = 5 [(udb.core.common.v1.pg_column) = { column_name: "source_name" sql_type: "VARCHAR(255)" not_null: true }];
+  string parent_pk = 6 [(udb.core.common.v1.pg_column) = { column_name: "parent_pk" sql_type: "VARCHAR(512)" not_null: true }];
+  string point_id = 7 [(udb.core.common.v1.pg_column) = { column_name: "point_id" sql_type: "VARCHAR(600)" not_null: true }];
+  string document_id = 8 [(udb.core.common.v1.pg_column) = { column_name: "document_id" sql_type: "VARCHAR(255)" }];
+  string doc_version = 9 [(udb.core.common.v1.pg_column) = { column_name: "doc_version" sql_type: "VARCHAR(80)" not_null: true default_value: "'1'" }];
+  int32 chunk_seq = 10 [(udb.core.common.v1.pg_column) = { column_name: "chunk_seq" sql_type: "INTEGER" not_null: true }];
+  int32 chunk_count = 11 [(udb.core.common.v1.pg_column) = { column_name: "chunk_count" sql_type: "INTEGER" not_null: true }];
+  string chunk_hash = 12 [(udb.core.common.v1.pg_column) = { column_name: "chunk_hash" sql_type: "VARCHAR(64)" not_null: true }];
+  string chunk_text = 13 [(udb.core.common.v1.pg_column) = { column_name: "chunk_text" sql_type: "TEXT" not_null: true }, (udb.core.common.v1.sensitive) = true, (udb.core.common.v1.log_redacted) = true, (udb.core.common.v1.encrypted_security) = true, (udb.core.common.v1.db_column_security) = { secret_classification: SECRET_CLASSIFICATION_PII output_view: OUTPUT_VIEW_STORAGE_ONLY redaction_strategy: REDACTION_STRATEGY_REDACT encryption_key_class: "embedding-work" }];
+  string model_id = 14 [(udb.core.common.v1.pg_column) = { column_name: "model_id" sql_type: "VARCHAR(255)" not_null: true }];
+  string target_collection = 15 [(udb.core.common.v1.pg_column) = { column_name: "target_collection" sql_type: "VARCHAR(255)" not_null: true }];
+  string status = 16 [(udb.core.common.v1.pg_column) = { column_name: "status" sql_type: "VARCHAR(20)" not_null: true default_value: "'PENDING'" }];
+  int32 attempt_count = 17 [(udb.core.common.v1.pg_column) = { column_name: "attempt_count" sql_type: "INTEGER" not_null: true default_value: "0" }];
+  int32 max_attempts = 18 [(udb.core.common.v1.pg_column) = { column_name: "max_attempts" sql_type: "INTEGER" not_null: true default_value: "5" }];
+  string last_error = 19 [(udb.core.common.v1.pg_column) = { column_name: "last_error" sql_type: "TEXT" }];
+  bool retryable = 20 [(udb.core.common.v1.pg_column) = { column_name: "retryable" sql_type: "BOOLEAN" not_null: true default_value: "TRUE" }];
+  int64 token_count = 21 [(udb.core.common.v1.pg_column) = { column_name: "token_count" sql_type: "BIGINT" not_null: true default_value: "0" }];
+  google.protobuf.Timestamp next_attempt_at = 22 [(udb.core.common.v1.pg_column) = { column_name: "next_attempt_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" }];
+  google.protobuf.Timestamp created_at = 23 [(udb.core.common.v1.pg_column) = { column_name: "created_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" exclude_from_insert: true exclude_from_update: true }];
+  google.protobuf.Timestamp last_emitted_at = 24 [(udb.core.common.v1.pg_column) = { column_name: "last_emitted_at" sql_type: "TIMESTAMPTZ" }];
+  google.protobuf.Timestamp acked_at = 25 [(udb.core.common.v1.pg_column) = { column_name: "acked_at" sql_type: "TIMESTAMPTZ" }];
+  google.protobuf.Timestamp updated_at = 26 [(udb.core.common.v1.pg_column) = { column_name: "updated_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "CURRENT_TIMESTAMP" }];
+  string parent_text = 27 [(udb.core.common.v1.pg_column) = { column_name: "parent_text" sql_type: "TEXT" }, (udb.core.common.v1.sensitive) = true, (udb.core.common.v1.log_redacted) = true, (udb.core.common.v1.encrypted_security) = true, (udb.core.common.v1.db_column_security) = { secret_classification: SECRET_CLASSIFICATION_PII output_view: OUTPUT_VIEW_STORAGE_ONLY redaction_strategy: REDACTION_STRATEGY_REDACT encryption_key_class: "embedding-work" }];
+  int64 char_start = 28 [(udb.core.common.v1.pg_column) = { column_name: "char_start" sql_type: "BIGINT" not_null: true default_value: "0" }];
+  int64 char_end = 29 [(udb.core.common.v1.pg_column) = { column_name: "char_end" sql_type: "BIGINT" not_null: true default_value: "0" }];
+  int64 token_start = 30 [(udb.core.common.v1.pg_column) = { column_name: "token_start" sql_type: "BIGINT" not_null: true default_value: "0" }];
+  int64 token_end = 31 [(udb.core.common.v1.pg_column) = { column_name: "token_end" sql_type: "BIGINT" not_null: true default_value: "0" }];
+}

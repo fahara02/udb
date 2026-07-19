@@ -22,17 +22,72 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type VectorFusionStrategy int32
+
+const (
+	VectorFusionStrategy_VECTOR_FUSION_STRATEGY_UNSPECIFIED VectorFusionStrategy = 0
+	VectorFusionStrategy_VECTOR_FUSION_STRATEGY_RRF         VectorFusionStrategy = 1
+	VectorFusionStrategy_VECTOR_FUSION_STRATEGY_WEIGHTED    VectorFusionStrategy = 2
+	VectorFusionStrategy_VECTOR_FUSION_STRATEGY_DBSF        VectorFusionStrategy = 3
+)
+
+// Enum value maps for VectorFusionStrategy.
+var (
+	VectorFusionStrategy_name = map[int32]string{
+		0: "VECTOR_FUSION_STRATEGY_UNSPECIFIED",
+		1: "VECTOR_FUSION_STRATEGY_RRF",
+		2: "VECTOR_FUSION_STRATEGY_WEIGHTED",
+		3: "VECTOR_FUSION_STRATEGY_DBSF",
+	}
+	VectorFusionStrategy_value = map[string]int32{
+		"VECTOR_FUSION_STRATEGY_UNSPECIFIED": 0,
+		"VECTOR_FUSION_STRATEGY_RRF":         1,
+		"VECTOR_FUSION_STRATEGY_WEIGHTED":    2,
+		"VECTOR_FUSION_STRATEGY_DBSF":        3,
+	}
+)
+
+func (x VectorFusionStrategy) Enum() *VectorFusionStrategy {
+	p := new(VectorFusionStrategy)
+	*p = x
+	return p
+}
+
+func (x VectorFusionStrategy) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (VectorFusionStrategy) Descriptor() protoreflect.EnumDescriptor {
+	return file_udb_entity_v1_vector_proto_enumTypes[0].Descriptor()
+}
+
+func (VectorFusionStrategy) Type() protoreflect.EnumType {
+	return &file_udb_entity_v1_vector_proto_enumTypes[0]
+}
+
+func (x VectorFusionStrategy) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use VectorFusionStrategy.Descriptor instead.
+func (VectorFusionStrategy) EnumDescriptor() ([]byte, []int) {
+	return file_udb_entity_v1_vector_proto_rawDescGZIP(), []int{0}
+}
+
 type VectorSearchRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Context        *RequestContext        `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
-	Collection     string                 `protobuf:"bytes,2,opt,name=collection,proto3" json:"collection,omitempty"`
-	Vector         []float32              `protobuf:"fixed32,3,rep,packed,name=vector,proto3" json:"vector,omitempty"`
-	Filter         *structpb.Struct       `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
-	Limit          int32                  `protobuf:"varint,5,opt,name=limit,proto3" json:"limit,omitempty"`
-	ScoreThreshold float32                `protobuf:"fixed32,6,opt,name=score_threshold,json=scoreThreshold,proto3" json:"score_threshold,omitempty"`
-	WithPayload    bool                   `protobuf:"varint,7,opt,name=with_payload,json=withPayload,proto3" json:"with_payload,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	Context             *RequestContext        `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
+	Collection          string                 `protobuf:"bytes,2,opt,name=collection,proto3" json:"collection,omitempty"`
+	Vector              []float32              `protobuf:"fixed32,3,rep,packed,name=vector,proto3" json:"vector,omitempty"`
+	Filter              *structpb.Struct       `protobuf:"bytes,4,opt,name=filter,proto3" json:"filter,omitempty"`
+	Limit               int32                  `protobuf:"varint,5,opt,name=limit,proto3" json:"limit,omitempty"`
+	ScoreThreshold      float32                `protobuf:"fixed32,6,opt,name=score_threshold,json=scoreThreshold,proto3" json:"score_threshold,omitempty"`
+	WithPayload         bool                   `protobuf:"varint,7,opt,name=with_payload,json=withPayload,proto3" json:"with_payload,omitempty"`
+	WithVector          bool                   `protobuf:"varint,8,opt,name=with_vector,json=withVector,proto3" json:"with_vector,omitempty"`
+	VectorName          string                 `protobuf:"bytes,9,opt,name=vector_name,json=vectorName,proto3" json:"vector_name,omitempty"`
+	QuantizationRescore bool                   `protobuf:"varint,10,opt,name=quantization_rescore,json=quantizationRescore,proto3" json:"quantization_rescore,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *VectorSearchRequest) Reset() {
@@ -114,18 +169,44 @@ func (x *VectorSearchRequest) GetWithPayload() bool {
 	return false
 }
 
+func (x *VectorSearchRequest) GetWithVector() bool {
+	if x != nil {
+		return x.WithVector
+	}
+	return false
+}
+
+func (x *VectorSearchRequest) GetVectorName() string {
+	if x != nil {
+		return x.VectorName
+	}
+	return ""
+}
+
+func (x *VectorSearchRequest) GetQuantizationRescore() bool {
+	if x != nil {
+		return x.QuantizationRescore
+	}
+	return false
+}
+
 type VectorHybridSearchRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Context       *RequestContext        `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
-	Collection    string                 `protobuf:"bytes,2,opt,name=collection,proto3" json:"collection,omitempty"`
-	Vector        []float32              `protobuf:"fixed32,3,rep,packed,name=vector,proto3" json:"vector,omitempty"`
-	TextQuery     string                 `protobuf:"bytes,4,opt,name=text_query,json=textQuery,proto3" json:"text_query,omitempty"`
-	Filter        *structpb.Struct       `protobuf:"bytes,5,opt,name=filter,proto3" json:"filter,omitempty"`
-	Limit         int32                  `protobuf:"varint,6,opt,name=limit,proto3" json:"limit,omitempty"`
-	FusionWeights []float32              `protobuf:"fixed32,7,rep,packed,name=fusion_weights,json=fusionWeights,proto3" json:"fusion_weights,omitempty"`
-	WithPayload   bool                   `protobuf:"varint,8,opt,name=with_payload,json=withPayload,proto3" json:"with_payload,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	Context             *RequestContext        `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
+	Collection          string                 `protobuf:"bytes,2,opt,name=collection,proto3" json:"collection,omitempty"`
+	Vector              []float32              `protobuf:"fixed32,3,rep,packed,name=vector,proto3" json:"vector,omitempty"`
+	TextQuery           string                 `protobuf:"bytes,4,opt,name=text_query,json=textQuery,proto3" json:"text_query,omitempty"`
+	Filter              *structpb.Struct       `protobuf:"bytes,5,opt,name=filter,proto3" json:"filter,omitempty"`
+	Limit               int32                  `protobuf:"varint,6,opt,name=limit,proto3" json:"limit,omitempty"`
+	FusionWeights       []float32              `protobuf:"fixed32,7,rep,packed,name=fusion_weights,json=fusionWeights,proto3" json:"fusion_weights,omitempty"`
+	WithPayload         bool                   `protobuf:"varint,8,opt,name=with_payload,json=withPayload,proto3" json:"with_payload,omitempty"`
+	WithVector          bool                   `protobuf:"varint,9,opt,name=with_vector,json=withVector,proto3" json:"with_vector,omitempty"`
+	VectorName          string                 `protobuf:"bytes,10,opt,name=vector_name,json=vectorName,proto3" json:"vector_name,omitempty"`
+	FusionStrategy      VectorFusionStrategy   `protobuf:"varint,11,opt,name=fusion_strategy,json=fusionStrategy,proto3,enum=udb.entity.v1.VectorFusionStrategy" json:"fusion_strategy,omitempty"`
+	PrefetchLimit       int32                  `protobuf:"varint,12,opt,name=prefetch_limit,json=prefetchLimit,proto3" json:"prefetch_limit,omitempty"`
+	QuantizationRescore bool                   `protobuf:"varint,13,opt,name=quantization_rescore,json=quantizationRescore,proto3" json:"quantization_rescore,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *VectorHybridSearchRequest) Reset() {
@@ -214,11 +295,47 @@ func (x *VectorHybridSearchRequest) GetWithPayload() bool {
 	return false
 }
 
+func (x *VectorHybridSearchRequest) GetWithVector() bool {
+	if x != nil {
+		return x.WithVector
+	}
+	return false
+}
+
+func (x *VectorHybridSearchRequest) GetVectorName() string {
+	if x != nil {
+		return x.VectorName
+	}
+	return ""
+}
+
+func (x *VectorHybridSearchRequest) GetFusionStrategy() VectorFusionStrategy {
+	if x != nil {
+		return x.FusionStrategy
+	}
+	return VectorFusionStrategy_VECTOR_FUSION_STRATEGY_UNSPECIFIED
+}
+
+func (x *VectorHybridSearchRequest) GetPrefetchLimit() int32 {
+	if x != nil {
+		return x.PrefetchLimit
+	}
+	return 0
+}
+
+func (x *VectorHybridSearchRequest) GetQuantizationRescore() bool {
+	if x != nil {
+		return x.QuantizationRescore
+	}
+	return false
+}
+
 type VectorPointMutation struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Vector        []float32              `protobuf:"fixed32,2,rep,packed,name=vector,proto3" json:"vector,omitempty"`
 	Payload       *structpb.Struct       `protobuf:"bytes,3,opt,name=payload,proto3" json:"payload,omitempty"`
+	VectorName    string                 `protobuf:"bytes,4,opt,name=vector_name,json=vectorName,proto3" json:"vector_name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -272,6 +389,13 @@ func (x *VectorPointMutation) GetPayload() *structpb.Struct {
 		return x.Payload
 	}
 	return nil
+}
+
+func (x *VectorPointMutation) GetVectorName() string {
+	if x != nil {
+		return x.VectorName
+	}
+	return ""
 }
 
 type VectorUpsertRequest struct {
@@ -347,6 +471,8 @@ type VectorPoint struct {
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Score         float32                `protobuf:"fixed32,2,opt,name=score,proto3" json:"score,omitempty"`
 	Payload       *structpb.Struct       `protobuf:"bytes,3,opt,name=payload,proto3" json:"payload,omitempty"`
+	Vector        []float32              `protobuf:"fixed32,4,rep,packed,name=vector,proto3" json:"vector,omitempty"`
+	VectorName    string                 `protobuf:"bytes,5,opt,name=vector_name,json=vectorName,proto3" json:"vector_name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -402,6 +528,20 @@ func (x *VectorPoint) GetPayload() *structpb.Struct {
 	return nil
 }
 
+func (x *VectorPoint) GetVector() []float32 {
+	if x != nil {
+		return x.Vector
+	}
+	return nil
+}
+
+func (x *VectorPoint) GetVectorName() string {
+	if x != nil {
+		return x.VectorName
+	}
+	return ""
+}
+
 type VectorSet struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Points        []*VectorPoint         `protobuf:"bytes,1,rep,name=points,proto3" json:"points,omitempty"`
@@ -450,7 +590,7 @@ var File_udb_entity_v1_vector_proto protoreflect.FileDescriptor
 
 const file_udb_entity_v1_vector_proto_rawDesc = "" +
 	"\n" +
-	"\x1audb/entity/v1/vector.proto\x12\rudb.entity.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1budb/entity/v1/context.proto\"\x99\x02\n" +
+	"\x1audb/entity/v1/vector.proto\x12\rudb.entity.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1budb/entity/v1/context.proto\"\x8e\x03\n" +
 	"\x13VectorSearchRequest\x127\n" +
 	"\acontext\x18\x01 \x01(\v2\x1d.udb.entity.v1.RequestContextR\acontext\x12\x1e\n" +
 	"\n" +
@@ -460,7 +600,13 @@ const file_udb_entity_v1_vector_proto_rawDesc = "" +
 	"\x06filter\x18\x04 \x01(\v2\x17.google.protobuf.StructR\x06filter\x12\x14\n" +
 	"\x05limit\x18\x05 \x01(\x05R\x05limit\x12'\n" +
 	"\x0fscore_threshold\x18\x06 \x01(\x02R\x0escoreThreshold\x12!\n" +
-	"\fwith_payload\x18\a \x01(\bR\vwithPayload\"\xbc\x02\n" +
+	"\fwith_payload\x18\a \x01(\bR\vwithPayload\x12\x1f\n" +
+	"\vwith_vector\x18\b \x01(\bR\n" +
+	"withVector\x12\x1f\n" +
+	"\vvector_name\x18\t \x01(\tR\n" +
+	"vectorName\x121\n" +
+	"\x14quantization_rescore\x18\n" +
+	" \x01(\bR\x13quantizationRescore\"\xa6\x04\n" +
 	"\x19VectorHybridSearchRequest\x127\n" +
 	"\acontext\x18\x01 \x01(\v2\x1d.udb.entity.v1.RequestContextR\acontext\x12\x1e\n" +
 	"\n" +
@@ -472,24 +618,42 @@ const file_udb_entity_v1_vector_proto_rawDesc = "" +
 	"\x06filter\x18\x05 \x01(\v2\x17.google.protobuf.StructR\x06filter\x12\x14\n" +
 	"\x05limit\x18\x06 \x01(\x05R\x05limit\x12%\n" +
 	"\x0efusion_weights\x18\a \x03(\x02R\rfusionWeights\x12!\n" +
-	"\fwith_payload\x18\b \x01(\bR\vwithPayload\"p\n" +
+	"\fwith_payload\x18\b \x01(\bR\vwithPayload\x12\x1f\n" +
+	"\vwith_vector\x18\t \x01(\bR\n" +
+	"withVector\x12\x1f\n" +
+	"\vvector_name\x18\n" +
+	" \x01(\tR\n" +
+	"vectorName\x12L\n" +
+	"\x0ffusion_strategy\x18\v \x01(\x0e2#.udb.entity.v1.VectorFusionStrategyR\x0efusionStrategy\x12%\n" +
+	"\x0eprefetch_limit\x18\f \x01(\x05R\rprefetchLimit\x121\n" +
+	"\x14quantization_rescore\x18\r \x01(\bR\x13quantizationRescore\"\x91\x01\n" +
 	"\x13VectorPointMutation\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06vector\x18\x02 \x03(\x02R\x06vector\x121\n" +
-	"\apayload\x18\x03 \x01(\v2\x17.google.protobuf.StructR\apayload\"\xd3\x01\n" +
+	"\apayload\x18\x03 \x01(\v2\x17.google.protobuf.StructR\apayload\x12\x1f\n" +
+	"\vvector_name\x18\x04 \x01(\tR\n" +
+	"vectorName\"\xd3\x01\n" +
 	"\x13VectorUpsertRequest\x127\n" +
 	"\acontext\x18\x01 \x01(\v2\x1d.udb.entity.v1.RequestContextR\acontext\x12\x1e\n" +
 	"\n" +
 	"collection\x18\x02 \x01(\tR\n" +
 	"collection\x12:\n" +
 	"\x06points\x18\x03 \x03(\v2\".udb.entity.v1.VectorPointMutationR\x06points\x12'\n" +
-	"\x0fidempotency_key\x18\x04 \x01(\tR\x0eidempotencyKey\"f\n" +
+	"\x0fidempotency_key\x18\x04 \x01(\tR\x0eidempotencyKey\"\x9f\x01\n" +
 	"\vVectorPoint\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05score\x18\x02 \x01(\x02R\x05score\x121\n" +
-	"\apayload\x18\x03 \x01(\v2\x17.google.protobuf.StructR\apayload\"?\n" +
+	"\apayload\x18\x03 \x01(\v2\x17.google.protobuf.StructR\apayload\x12\x16\n" +
+	"\x06vector\x18\x04 \x03(\x02R\x06vector\x12\x1f\n" +
+	"\vvector_name\x18\x05 \x01(\tR\n" +
+	"vectorName\"?\n" +
 	"\tVectorSet\x122\n" +
-	"\x06points\x18\x01 \x03(\v2\x1a.udb.entity.v1.VectorPointR\x06pointsB\xb1\x01\n" +
+	"\x06points\x18\x01 \x03(\v2\x1a.udb.entity.v1.VectorPointR\x06points*\xa4\x01\n" +
+	"\x14VectorFusionStrategy\x12&\n" +
+	"\"VECTOR_FUSION_STRATEGY_UNSPECIFIED\x10\x00\x12\x1e\n" +
+	"\x1aVECTOR_FUSION_STRATEGY_RRF\x10\x01\x12#\n" +
+	"\x1fVECTOR_FUSION_STRATEGY_WEIGHTED\x10\x02\x12\x1f\n" +
+	"\x1bVECTOR_FUSION_STRATEGY_DBSF\x10\x03B\xb1\x01\n" +
 	"\x11com.udb.entity.v1B\vVectorProtoP\x01Z9github.com/fahara02/udb/sdk/go/gen/udb/entity/v1;entityv1\xa2\x02\x03UEX\xaa\x02\rUdb.Entity.V1\xca\x02\rUdb\\Entity\\V1\xe2\x02\x19Udb\\GPBMetadata\\Entity\\V1\xea\x02\x0fUdb::Entity::V1b\x06proto3"
 
 var (
@@ -504,32 +668,35 @@ func file_udb_entity_v1_vector_proto_rawDescGZIP() []byte {
 	return file_udb_entity_v1_vector_proto_rawDescData
 }
 
+var file_udb_entity_v1_vector_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_udb_entity_v1_vector_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_udb_entity_v1_vector_proto_goTypes = []any{
-	(*VectorSearchRequest)(nil),       // 0: udb.entity.v1.VectorSearchRequest
-	(*VectorHybridSearchRequest)(nil), // 1: udb.entity.v1.VectorHybridSearchRequest
-	(*VectorPointMutation)(nil),       // 2: udb.entity.v1.VectorPointMutation
-	(*VectorUpsertRequest)(nil),       // 3: udb.entity.v1.VectorUpsertRequest
-	(*VectorPoint)(nil),               // 4: udb.entity.v1.VectorPoint
-	(*VectorSet)(nil),                 // 5: udb.entity.v1.VectorSet
-	(*RequestContext)(nil),            // 6: udb.entity.v1.RequestContext
-	(*structpb.Struct)(nil),           // 7: google.protobuf.Struct
+	(VectorFusionStrategy)(0),         // 0: udb.entity.v1.VectorFusionStrategy
+	(*VectorSearchRequest)(nil),       // 1: udb.entity.v1.VectorSearchRequest
+	(*VectorHybridSearchRequest)(nil), // 2: udb.entity.v1.VectorHybridSearchRequest
+	(*VectorPointMutation)(nil),       // 3: udb.entity.v1.VectorPointMutation
+	(*VectorUpsertRequest)(nil),       // 4: udb.entity.v1.VectorUpsertRequest
+	(*VectorPoint)(nil),               // 5: udb.entity.v1.VectorPoint
+	(*VectorSet)(nil),                 // 6: udb.entity.v1.VectorSet
+	(*RequestContext)(nil),            // 7: udb.entity.v1.RequestContext
+	(*structpb.Struct)(nil),           // 8: google.protobuf.Struct
 }
 var file_udb_entity_v1_vector_proto_depIdxs = []int32{
-	6, // 0: udb.entity.v1.VectorSearchRequest.context:type_name -> udb.entity.v1.RequestContext
-	7, // 1: udb.entity.v1.VectorSearchRequest.filter:type_name -> google.protobuf.Struct
-	6, // 2: udb.entity.v1.VectorHybridSearchRequest.context:type_name -> udb.entity.v1.RequestContext
-	7, // 3: udb.entity.v1.VectorHybridSearchRequest.filter:type_name -> google.protobuf.Struct
-	7, // 4: udb.entity.v1.VectorPointMutation.payload:type_name -> google.protobuf.Struct
-	6, // 5: udb.entity.v1.VectorUpsertRequest.context:type_name -> udb.entity.v1.RequestContext
-	2, // 6: udb.entity.v1.VectorUpsertRequest.points:type_name -> udb.entity.v1.VectorPointMutation
-	7, // 7: udb.entity.v1.VectorPoint.payload:type_name -> google.protobuf.Struct
-	4, // 8: udb.entity.v1.VectorSet.points:type_name -> udb.entity.v1.VectorPoint
-	9, // [9:9] is the sub-list for method output_type
-	9, // [9:9] is the sub-list for method input_type
-	9, // [9:9] is the sub-list for extension type_name
-	9, // [9:9] is the sub-list for extension extendee
-	0, // [0:9] is the sub-list for field type_name
+	7,  // 0: udb.entity.v1.VectorSearchRequest.context:type_name -> udb.entity.v1.RequestContext
+	8,  // 1: udb.entity.v1.VectorSearchRequest.filter:type_name -> google.protobuf.Struct
+	7,  // 2: udb.entity.v1.VectorHybridSearchRequest.context:type_name -> udb.entity.v1.RequestContext
+	8,  // 3: udb.entity.v1.VectorHybridSearchRequest.filter:type_name -> google.protobuf.Struct
+	0,  // 4: udb.entity.v1.VectorHybridSearchRequest.fusion_strategy:type_name -> udb.entity.v1.VectorFusionStrategy
+	8,  // 5: udb.entity.v1.VectorPointMutation.payload:type_name -> google.protobuf.Struct
+	7,  // 6: udb.entity.v1.VectorUpsertRequest.context:type_name -> udb.entity.v1.RequestContext
+	3,  // 7: udb.entity.v1.VectorUpsertRequest.points:type_name -> udb.entity.v1.VectorPointMutation
+	8,  // 8: udb.entity.v1.VectorPoint.payload:type_name -> google.protobuf.Struct
+	5,  // 9: udb.entity.v1.VectorSet.points:type_name -> udb.entity.v1.VectorPoint
+	10, // [10:10] is the sub-list for method output_type
+	10, // [10:10] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_udb_entity_v1_vector_proto_init() }
@@ -543,13 +710,14 @@ func file_udb_entity_v1_vector_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_udb_entity_v1_vector_proto_rawDesc), len(file_udb_entity_v1_vector_proto_rawDesc)),
-			NumEnums:      0,
+			NumEnums:      1,
 			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_udb_entity_v1_vector_proto_goTypes,
 		DependencyIndexes: file_udb_entity_v1_vector_proto_depIdxs,
+		EnumInfos:         file_udb_entity_v1_vector_proto_enumTypes,
 		MessageInfos:      file_udb_entity_v1_vector_proto_msgTypes,
 	}.Build()
 	File_udb_entity_v1_vector_proto = out.File

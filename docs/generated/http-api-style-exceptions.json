@@ -1,12 +1,12 @@
 {
   "generated_by": "node scripts/check-http-api-style.mjs --write-report",
   "counts": {
-    "native_contract_http_operations": 271,
-    "proto_http_annotations": 271,
+    "native_contract_http_operations": 280,
+    "proto_http_annotations": 280,
     "generated_route_style_exceptions": 0,
     "source_route_style_exceptions": 0,
-    "resource_identity_contract_exceptions": 0,
-    "pagination_contract_exceptions": 0,
+    "resource_identity_contract_exceptions": 3,
+    "pagination_contract_exceptions": 2,
     "query_update_contract_exceptions": 0,
     "operation_id_collisions": 0,
     "allowlist_entries": 5
@@ -41,8 +41,78 @@
   },
   "route_style_exceptions_by_rule": {},
   "source_route_style_exceptions_by_rule": {},
-  "resource_identity_contract_exceptions_by_rule": {},
-  "pagination_contract_exceptions_by_rule": {},
+  "resource_identity_contract_exceptions_by_rule": {
+    "missing_path_identity_field": [
+      {
+        "rule": "missing_path_identity_field",
+        "category": "resource_identity_contract",
+        "message": "path variable \"{job_id}\" must bind to a request field with the same canonical identity",
+        "service": "udb.core.embedding.services.v1.EmbeddingService",
+        "rpc": "GetEmbeddingJobStatus",
+        "method": "GET",
+        "path": "/v1/embedding/jobs/{job_id}",
+        "source": "proto/udb/core/embedding/services/v1/embedding_service.proto",
+        "requestType": "GetEmbeddingJobStatusRequest",
+        "field": "job_id"
+      },
+      {
+        "rule": "missing_path_identity_field",
+        "category": "resource_identity_contract",
+        "message": "path variable \"{job_id}\" must bind to a request field with the same canonical identity",
+        "service": "udb.core.embedding.services.v1.EmbeddingService",
+        "rpc": "ListEmbeddingWorkItems",
+        "method": "GET",
+        "path": "/v1/embedding/jobs/{job_id}/work-items",
+        "source": "proto/udb/core/embedding/services/v1/embedding_service.proto",
+        "requestType": "ListEmbeddingWorkItemsRequest",
+        "field": "job_id"
+      }
+    ],
+    "user_chosen_id_format_undocumented": [
+      {
+        "rule": "user_chosen_id_format_undocumented",
+        "category": "resource_identity_contract",
+        "message": "caller-supplied identity field \"model_id\" must document allowed format or server-assigned semantics",
+        "service": "udb.core.embedding.services.v1.EmbeddingService",
+        "rpc": "RegisterModel",
+        "method": "POST",
+        "path": "/v1/embedding/models:register",
+        "source": "proto/udb/core/embedding/services/v1/embedding_service.proto",
+        "requestType": "RegisterModelRequest",
+        "field": "model_id"
+      }
+    ]
+  },
+  "pagination_contract_exceptions_by_rule": {
+    "missing_request_pagination": [
+      {
+        "rule": "missing_request_pagination",
+        "category": "pagination_contract",
+        "message": "list/search request must expose page_size plus page_token or shared PageRequest",
+        "service": "udb.core.embedding.services.v1.EmbeddingService",
+        "rpc": "ListEmbeddingWorkItems",
+        "method": "GET",
+        "path": "/v1/embedding/jobs/{job_id}/work-items",
+        "source": "proto/udb/core/embedding/services/v1/embedding_service.proto",
+        "requestType": "ListEmbeddingWorkItemsRequest",
+        "responseType": "ListEmbeddingWorkItemsResponse"
+      }
+    ],
+    "missing_response_pagination": [
+      {
+        "rule": "missing_response_pagination",
+        "category": "pagination_contract",
+        "message": "list/search response must expose next_page_token or shared PageResponse",
+        "service": "udb.core.embedding.services.v1.EmbeddingService",
+        "rpc": "ListEmbeddingWorkItems",
+        "method": "GET",
+        "path": "/v1/embedding/jobs/{job_id}/work-items",
+        "source": "proto/udb/core/embedding/services/v1/embedding_service.proto",
+        "requestType": "ListEmbeddingWorkItemsRequest",
+        "responseType": "ListEmbeddingWorkItemsResponse"
+      }
+    ]
+  },
   "query_update_contract_exceptions_by_rule": {},
   "operation_id_collisions": [],
   "not_yet_reported_by_this_guard": [

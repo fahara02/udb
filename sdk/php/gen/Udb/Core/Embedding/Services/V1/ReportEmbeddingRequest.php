@@ -48,6 +48,22 @@ class ReportEmbeddingRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>int32 dims = 6 [json_name = "dims"];</code>
      */
     protected $dims = 0;
+    /**
+     * Generated from protobuf field <code>string work_item_id = 7 [json_name = "workItemId"];</code>
+     */
+    protected $work_item_id = '';
+    /**
+     * Generated from protobuf field <code>string chunk_hash = 8 [json_name = "chunkHash"];</code>
+     */
+    protected $chunk_hash = '';
+    /**
+     * Generated from protobuf field <code>int64 token_count = 9 [json_name = "tokenCount"];</code>
+     */
+    protected $token_count = 0;
+    /**
+     * Generated from protobuf field <code>string vector_name = 10 [json_name = "vectorName"];</code>
+     */
+    protected $vector_name = '';
 
     /**
      * Constructor.
@@ -66,6 +82,10 @@ class ReportEmbeddingRequest extends \Google\Protobuf\Internal\Message
      *           The model id the sidecar used (echo of the work event's model_id).
      *     @type int $dims
      *           Embedding dimensionality (0 ⇒ inferred from `vector`).
+     *     @type string $work_item_id
+     *     @type string $chunk_hash
+     *     @type int|string $token_count
+     *     @type string $vector_name
      * }
      */
     public function __construct($data = NULL) {
@@ -221,6 +241,94 @@ class ReportEmbeddingRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkInt32($var);
         $this->dims = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>string work_item_id = 7 [json_name = "workItemId"];</code>
+     * @return string
+     */
+    public function getWorkItemId()
+    {
+        return $this->work_item_id;
+    }
+
+    /**
+     * Generated from protobuf field <code>string work_item_id = 7 [json_name = "workItemId"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setWorkItemId($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->work_item_id = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>string chunk_hash = 8 [json_name = "chunkHash"];</code>
+     * @return string
+     */
+    public function getChunkHash()
+    {
+        return $this->chunk_hash;
+    }
+
+    /**
+     * Generated from protobuf field <code>string chunk_hash = 8 [json_name = "chunkHash"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setChunkHash($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->chunk_hash = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>int64 token_count = 9 [json_name = "tokenCount"];</code>
+     * @return int|string
+     */
+    public function getTokenCount()
+    {
+        return $this->token_count;
+    }
+
+    /**
+     * Generated from protobuf field <code>int64 token_count = 9 [json_name = "tokenCount"];</code>
+     * @param int|string $var
+     * @return $this
+     */
+    public function setTokenCount($var)
+    {
+        GPBUtil::checkInt64($var);
+        $this->token_count = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>string vector_name = 10 [json_name = "vectorName"];</code>
+     * @return string
+     */
+    public function getVectorName()
+    {
+        return $this->vector_name;
+    }
+
+    /**
+     * Generated from protobuf field <code>string vector_name = 10 [json_name = "vectorName"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setVectorName($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->vector_name = $var;
 
         return $this;
     }

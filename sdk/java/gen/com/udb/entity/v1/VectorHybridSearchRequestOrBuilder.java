@@ -109,4 +109,45 @@ public interface VectorHybridSearchRequestOrBuilder extends
    * @return The withPayload.
    */
   boolean getWithPayload();
+
+  /**
+   * <code>bool with_vector = 9 [json_name = "withVector"];</code>
+   * @return The withVector.
+   */
+  boolean getWithVector();
+
+  /**
+   * <code>string vector_name = 10 [json_name = "vectorName"];</code>
+   * @return The vectorName.
+   */
+  java.lang.String getVectorName();
+  /**
+   * <code>string vector_name = 10 [json_name = "vectorName"];</code>
+   * @return The bytes for vectorName.
+   */
+  com.google.protobuf.ByteString
+      getVectorNameBytes();
+
+  /**
+   * <code>.udb.entity.v1.VectorFusionStrategy fusion_strategy = 11 [json_name = "fusionStrategy"];</code>
+   * @return The enum numeric value on the wire for fusionStrategy.
+   */
+  int getFusionStrategyValue();
+  /**
+   * <code>.udb.entity.v1.VectorFusionStrategy fusion_strategy = 11 [json_name = "fusionStrategy"];</code>
+   * @return The fusionStrategy.
+   */
+  com.udb.entity.v1.VectorFusionStrategy getFusionStrategy();
+
+  /**
+   * <code>int32 prefetch_limit = 12 [json_name = "prefetchLimit"];</code>
+   * @return The prefetchLimit.
+   */
+  int getPrefetchLimit();
+
+  /**
+   * <code>bool quantization_rescore = 13 [json_name = "quantizationRescore"];</code>
+   * @return The quantizationRescore.
+   */
+  boolean getQuantizationRescore();
 }

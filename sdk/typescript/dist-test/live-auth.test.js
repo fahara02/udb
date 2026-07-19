@@ -564,6 +564,11 @@ function fullSurfaceManifestFixtures() {
         device_id: "device-1", dismiss_dlq_id: "dismiss-dlq-1", dlq_id: "dlq-1",
         ds_policy_id: "2", egress_id: "eg-tenant-1-00000000-0000-4000-8000-000000000001", endpoint_id: "endpoint-1", external_identity_id: "external-1",
         fencing_token: "1", finalize_file_id: "finalize-file-1", gov_exp: "1900000000", job_id: "job-1",
+        embedding_job_id: "11111111-1111-4111-8111-000000000101",
+        embedding_work_item_id: "11111111-1111-4111-8111-000000000102",
+        embedding_document_id: "11111111-1111-4111-8111-000000000103",
+        embedding_document_job_id: "11111111-1111-4111-8111-000000000104",
+        embedding_delete_model_id: "embedding-delete-model-1",
         join_session_room_id: "join-room-1", leave_peer_id: "leave-peer-1", mark_saga_id: "mark-saga-1",
         otp_code: "123456", otp_id: "otp-1", owner_id: "owner-1", quarantine_dlq_id: "quarantine-dlq-1",
         refresh_session_id: "refresh-session-1", reg_challenge_id: "reg-challenge-1", replay_dlq_id: "replay-dlq-1",
@@ -2379,12 +2384,60 @@ async function seedPerfFixtures(gen, data, tenantId, projectId, uuidTenant) {
     await tryRun("SeedCacheKey", async () => {
         await gen.CacheService.cache_set({ tenant_id: tenantId, namespace: "sdk-perf-cache", key: objectKey, value: Buffer.from("perf", "utf8"), ttl_seconds: 300 }, opts);
     });
-    // ── EmbeddingService: source + reported vector for retrieve/backfill rows ─────
+    // ── EmbeddingService: model registry, durable jobs, and searchable vector ─────
+    const registerEmbeddingModel = async (modelId, collection, alias) => {
+        await gen.EmbeddingService.register_model({
+            tenant_id: tenantId, model_id: modelId, provider: "deterministic",
+            model_name: "text-embedding-3-small", version: "1", dimensions: 3,
+            matryoshka_dims: [3], distance_metric: "COSINE", normalize: true,
+            output_dtype: "FLOAT32", max_input_tokens: 8192, tokenizer: "cl100k_base",
+            task_type: "DOCUMENT", provider_endpoint_ref: "vault://embedding/sdk-live",
+            vector_backend: "qdrant", vector_instance: "default", collection_alias: alias,
+            active_collection: collection, chunking_strategy: "TOKEN_RECURSIVE",
+            chunk_tokens: 256, chunk_overlap_tokens: 32,
+            metadata_json: JSON.stringify({ suite: "sdk-live" }),
+        }, opts);
+    };
+    await tryRun("RegisterEmbeddingModel", async () => {
+        await registerEmbeddingModel("text-embedding-3-small", "sdk_live_records", "sdk_live_records_alias");
+    });
+    const embeddingDeleteModelId = `sdk-live-delete-model-${suffix}`;
+    fix.set("embedding_delete_model_id", embeddingDeleteModelId);
+    await tryRun("RegisterEmbeddingDeleteModel", async () => {
+        await registerEmbeddingModel(embeddingDeleteModelId, `sdk_live_delete_records_${suffix}`, `sdk_live_delete_records_alias_${suffix}`);
+    });
     await tryRun("RegisterEmbeddingSource", async () => {
         await gen.EmbeddingService.register_source({ tenant_id: tenantId, source_name: "sdk_live_records", source_message_type: LIVE_MESSAGE_TYPE, text_fields: ["payload"], target_collection: "sdk_live_records", model_id: "text-embedding-3-small", metadata_json: "{}" }, opts);
     });
     await tryRun("ReportEmbedding", async () => {
         await gen.EmbeddingService.report_embedding({ tenant_id: tenantId, source_name: "sdk_live_records", row_pk: recordId, vector: [0.1, 0.2, 0.3], model: "text-embedding-3-small", dims: 3 }, opts);
+    });
+    await tryRun("IngestEmbeddingWorkFixture", async () => {
+        const document = await gen.EmbeddingService.ingest_document({
+            tenant_id: tenantId, external_id: `sdk-live-work-${suffix}`,
+            title: "SDK benchmark work fixture",
+            raw_text: "Durable embedding work is seeded from real document text for the SDK benchmark.",
+            content_type: "text/plain", doc_version: "1", model_id: "text-embedding-3-small",
+            metadata_json: JSON.stringify({ suite: "sdk-live", fixture: "work" }),
+        }, opts);
+        if (document.job_id) {
+            fix.set("embedding_job_id", document.job_id);
+            const work = await gen.EmbeddingService.list_embedding_work_items({ tenant_id: tenantId, job_id: document.job_id, page_size: 50 }, opts);
+            if ((work.work_items ?? []).length > 0)
+                fix.set("embedding_work_item_id", work.work_items[0].work_item_id);
+        }
+    });
+    await tryRun("IngestEmbeddingParserFixture", async () => {
+        const document = await gen.EmbeddingService.ingest_document({
+            tenant_id: tenantId, external_id: `sdk-live-parser-${suffix}`,
+            title: "SDK benchmark parser fixture", storage_object_ref: `udb://sdk-live/embedding-${suffix}.txt`,
+            content_type: "text/plain", doc_version: "1", model_id: "text-embedding-3-small",
+            metadata_json: JSON.stringify({ suite: "sdk-live", fixture: "parser" }),
+        }, opts);
+        if (document.document_id)
+            fix.set("embedding_document_id", document.document_id);
+        if (document.job_id)
+            fix.set("embedding_document_job_id", document.job_id);
     });
     // ── LockService: separate held locks for renew and release ────────────────────
     const lockOwner = fix.lookup("user_id") ?? liveUuid();

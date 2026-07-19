@@ -3,6 +3,8 @@
 //! vector executor methods are kept in `core.rs`; this module owns the
 //! HTTP transport layer for the Qdrant API.
 
+use std::collections::{BTreeMap, BTreeSet};
+
 // Struct imported via prost_types in method signatures (reqwest bring it in transitively)
 use serde_json::{Value as JsonValue, json};
 use sha2::{Digest, Sha256};
@@ -35,7 +37,38 @@ fn point_to_vector_point(mut point: JsonValue) -> VectorPoint {
         .get_mut("payload")
         .map(JsonValue::take)
         .and_then(json_into_struct);
-    VectorPoint { id, score, payload }
+    let vector_value = point.get_mut("vector").map(JsonValue::take);
+    let (vector_name, vector) = match vector_value {
+        Some(JsonValue::Array(values)) => (String::new(), json_f32_array(&values)),
+        Some(JsonValue::Object(mut vectors)) => vectors
+            .iter_mut()
+            .next()
+            .map(|(name, values)| {
+                let name = name.clone();
+                let values = values.take();
+                let vector = values
+                    .as_array()
+                    .map_or_else(Vec::new, |values| json_f32_array(values));
+                (name, vector)
+            })
+            .unwrap_or_default(),
+        _ => (String::new(), Vec::new()),
+    };
+    VectorPoint {
+        id,
+        score,
+        payload,
+        vector,
+        vector_name,
+    }
+}
+
+fn json_f32_array(values: &[JsonValue]) -> Vec<f32> {
+    values
+        .iter()
+        .filter_map(JsonValue::as_f64)
+        .map(|value| value as f32)
+        .collect()
 }
 
 fn qdrant_point_id(id: &str) -> JsonValue {
@@ -204,6 +237,33 @@ fn normalize_qdrant_distance(raw: &str) -> String {
     .to_string()
 }
 
+fn configured_vector_names(store: &ManifestStore) -> Vec<String> {
+    serde_json::from_str::<Vec<String>>(&store_option(store, "vector_names_json"))
+        .unwrap_or_default()
+        .into_iter()
+        .map(|name| name.trim().to_string())
+        .filter(|name| !name.is_empty())
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect()
+}
+
+fn query_result_points(mut payload: JsonValue) -> Vec<VectorPoint> {
+    let result = payload.get_mut("result").map(JsonValue::take);
+    let points = match result {
+        Some(JsonValue::Array(points)) => points,
+        Some(JsonValue::Object(mut result)) => result
+            .remove("points")
+            .and_then(|points| match points {
+                JsonValue::Array(points) => Some(points),
+                _ => None,
+            })
+            .unwrap_or_default(),
+        _ => Vec::new(),
+    };
+    points.into_iter().map(point_to_vector_point).collect()
+}
+
 // ── QdrantHttpClient ──────────────────────────────────────────────────────────
 
 /// Lightweight reqwest-based HTTP client for the Qdrant REST API.
@@ -240,27 +300,41 @@ impl QdrantHttpClient {
         validate_collection_name(&store.resource_name)?;
         let dimension = store_option_i32(store, "dimension").max(1);
         let distance = normalize_qdrant_distance(&store_option(store, "distance"));
+        let output_dtype = store_option(store, "output_dtype")
+            .trim()
+            .to_ascii_uppercase();
+        let vector_names = configured_vector_names(store);
+        let quantization = match output_dtype.as_str() {
+            "INT8" | "UINT8" => json!({
+                "scalar": { "type": "int8", "quantile": 0.99, "always_ram": true }
+            }),
+            "BINARY" => json!({ "binary": { "always_ram": true } }),
+            _ => JsonValue::Null,
+        };
         let url = format!(
             "{}/collections/{}",
             self.base_url,
             encode_collection(&store.resource_name)
         );
+        let vector_params = json!({
+                "size": dimension,
+                "distance": distance.as_str(),
+        });
+        let mut create = json!({
+            "vectors": vector_params,
+            "hnsw_config": { "m": 0, "payload_m": 16 }
+        });
+        if !quantization.is_null() {
+            create["quantization_config"] = quantization;
+        }
         let response = self
             .auth(self.http.put(url))
-            .json(&json!({
-                "vectors": {
-                    "size": dimension,
-                    "distance": distance,
-                }
-            }))
+            .json(&create)
             .send()
             .await
             .map_err(|err| backend_transport_status("Qdrant", "collection create", err))?;
         let status = response.status();
-        if status == reqwest::StatusCode::CONFLICT {
-            return Ok(());
-        }
-        if !status.is_success() {
+        if status != reqwest::StatusCode::CONFLICT && !status.is_success() {
             let body = response.text().await.unwrap_or_default();
             let message = format!("Qdrant collection create failed: HTTP {status}: {body}");
             if status.is_server_error() {
@@ -279,7 +353,318 @@ impl QdrantHttpClient {
                 message,
             ));
         }
+        if !vector_names.is_empty() {
+            self.ensure_named_vectors(&store.resource_name, dimension, &distance, &vector_names)
+                .await?;
+        }
+        self.ensure_collection_policy(&store.resource_name).await?;
+        self.verify_collection_geometry(
+            &store.resource_name,
+            dimension,
+            &distance,
+            &output_dtype,
+            &vector_names,
+        )
+        .await?;
+        self.ensure_tenant_index(&store.resource_name).await
+    }
+
+    async fn ensure_collection_policy(&self, collection: &str) -> Result<(), tonic::Status> {
+        let url = format!(
+            "{}/collections/{}",
+            self.base_url,
+            encode_collection(collection)
+        );
+        let response = self
+            .auth(self.http.patch(url))
+            .json(&json!({ "hnsw_config": { "m": 0, "payload_m": 16 } }))
+            .send()
+            .await
+            .map_err(|err| backend_transport_status("Qdrant", "collection policy", err))?;
+        let status = response.status();
+        if status.is_success() {
+            return Ok(());
+        }
+        let body = response.text().await.unwrap_or_default();
+        Err(crate::runtime::executor_utils::schema_status(
+            tonic::Code::FailedPrecondition,
+            "Qdrant",
+            "collection policy",
+            "qdrant_collection_policy_rejected",
+            format!(
+                "Qdrant collection '{collection}' rejected tenant HNSW policy: HTTP {status}: {body}"
+            ),
+        ))
+    }
+
+    async fn ensure_named_vectors(
+        &self,
+        collection: &str,
+        dimensions: i32,
+        distance: &str,
+        vector_names: &[String],
+    ) -> Result<(), tonic::Status> {
+        let details_url = format!(
+            "{}/collections/{}",
+            self.base_url,
+            encode_collection(collection)
+        );
+        let details_response = self
+            .auth(self.http.get(details_url))
+            .send()
+            .await
+            .map_err(|err| backend_transport_status("Qdrant", "named vector inspect", err))?;
+        qdrant_status(details_response.status())?;
+        let details = details_response.json::<JsonValue>().await.map_err(|err| {
+            backend_transport_status("Qdrant", "named vector inspect decode", err)
+        })?;
+        let existing = details
+            .pointer("/result/config/params/vectors")
+            .and_then(JsonValue::as_object);
+        for name in vector_names {
+            validate_collection_name(name).map_err(|_| {
+                qdrant_invalid_field_status(
+                    "vector_name",
+                    "may only contain ASCII letters, digits, hyphens, and underscores",
+                    format!("invalid Qdrant vector name '{name}'"),
+                )
+            })?;
+            if existing.is_some_and(|vectors| vectors.contains_key(name)) {
+                continue;
+            }
+            let url = format!(
+                "{}/collections/{}/vectors/{}",
+                self.base_url,
+                encode_collection(collection),
+                encode_collection(name)
+            );
+            let response = self
+                .auth(self.http.put(url))
+                .json(&json!({
+                    "dense": { "size": dimensions, "distance": distance }
+                }))
+                .send()
+                .await
+                .map_err(|err| backend_transport_status("Qdrant", "named vector create", err))?;
+            let status = response.status();
+            if status == reqwest::StatusCode::CONFLICT || status.is_success() {
+                continue;
+            }
+            let body = response.text().await.unwrap_or_default();
+            return Err(crate::runtime::executor_utils::schema_status(
+                tonic::Code::FailedPrecondition,
+                "Qdrant",
+                "named vector create",
+                "qdrant_named_vector_create_rejected",
+                format!(
+                    "Qdrant named vector '{name}' creation failed for collection '{collection}': HTTP {status}: {body}"
+                ),
+            ));
+        }
         Ok(())
+    }
+
+    async fn verify_collection_geometry(
+        &self,
+        collection: &str,
+        dimensions: i32,
+        distance: &str,
+        output_dtype: &str,
+        vector_names: &[String],
+    ) -> Result<(), tonic::Status> {
+        let url = format!(
+            "{}/collections/{}",
+            self.base_url,
+            encode_collection(collection)
+        );
+        let response = self
+            .auth(self.http.get(url))
+            .send()
+            .await
+            .map_err(|err| backend_transport_status("Qdrant", "collection geometry", err))?;
+        qdrant_status(response.status())?;
+        let payload = response
+            .json::<JsonValue>()
+            .await
+            .map_err(|err| backend_transport_status("Qdrant", "collection geometry decode", err))?;
+        let vectors = payload
+            .pointer("/result/config/params/vectors")
+            .ok_or_else(|| {
+                qdrant_internal_status(
+                    "collection_geometry",
+                    "Qdrant collection response omitted vector configuration",
+                )
+            })?;
+        let configs = if vector_names.is_empty() {
+            vec![("", vectors)]
+        } else {
+            vector_names
+                .iter()
+                .map(|name| {
+                    vectors
+                        .get(name)
+                        .map(|config| (name.as_str(), config))
+                        .ok_or_else(|| {
+                            crate::runtime::executor_utils::schema_status(
+                                tonic::Code::FailedPrecondition,
+                                "Qdrant",
+                                "collection geometry",
+                                "qdrant_named_vector_missing",
+                                format!(
+                                    "Qdrant collection '{collection}' does not define named vector '{name}'"
+                                ),
+                            )
+                        })
+                })
+                .collect::<Result<Vec<_>, _>>()?
+        };
+        for (name, config) in configs {
+            let actual_dimensions = config
+                .get("size")
+                .and_then(JsonValue::as_i64)
+                .unwrap_or_default();
+            let actual_distance = config
+                .get("distance")
+                .and_then(JsonValue::as_str)
+                .unwrap_or_default();
+            if actual_dimensions != i64::from(dimensions)
+                || !actual_distance.eq_ignore_ascii_case(distance)
+            {
+                let vector_label = if name.is_empty() { "default" } else { name };
+                return Err(crate::runtime::executor_utils::schema_status(
+                    tonic::Code::FailedPrecondition,
+                    "Qdrant",
+                    "collection geometry",
+                    "qdrant_vector_geometry_mismatch",
+                    format!(
+                        "Qdrant collection '{collection}' vector '{vector_label}' has geometry \
+                         ({actual_dimensions}, {actual_distance}), expected ({dimensions}, {distance})"
+                    ),
+                ));
+            }
+        }
+        let quantization = payload.pointer("/result/config/quantization_config");
+        let quantization_matches = match output_dtype {
+            "INT8" | "UINT8" => quantization.and_then(|value| value.get("scalar")).is_some(),
+            "BINARY" => quantization.and_then(|value| value.get("binary")).is_some(),
+            _ => quantization.is_none_or(JsonValue::is_null),
+        };
+        if !quantization_matches {
+            return Err(crate::runtime::executor_utils::schema_status(
+                tonic::Code::FailedPrecondition,
+                "Qdrant",
+                "collection geometry",
+                "qdrant_quantization_mismatch",
+                format!(
+                    "Qdrant collection '{collection}' quantization does not match output dtype '{output_dtype}'"
+                ),
+            ));
+        }
+        let hnsw = payload
+            .pointer("/result/config/hnsw_config")
+            .ok_or_else(|| {
+                qdrant_internal_status(
+                    "collection_geometry",
+                    "Qdrant collection response omitted HNSW configuration",
+                )
+            })?;
+        if hnsw.get("m").and_then(JsonValue::as_i64) != Some(0)
+            || hnsw.get("payload_m").and_then(JsonValue::as_i64) != Some(16)
+        {
+            return Err(crate::runtime::executor_utils::schema_status(
+                tonic::Code::FailedPrecondition,
+                "Qdrant",
+                "collection geometry",
+                "qdrant_tenant_hnsw_mismatch",
+                format!("Qdrant collection '{collection}' must use hnsw m=0 and payload_m=16"),
+            ));
+        }
+        Ok(())
+    }
+
+    pub(crate) async fn ensure_tenant_index(&self, collection: &str) -> Result<(), tonic::Status> {
+        validate_collection_name(collection)?;
+        let url = format!(
+            "{}/collections/{}/index?wait=true",
+            self.base_url,
+            encode_collection(collection)
+        );
+        let response = self
+            .auth(self.http.put(url))
+            .json(&json!({
+                "field_name": "_tenant_id",
+                "field_schema": { "type": "keyword", "is_tenant": true }
+            }))
+            .send()
+            .await
+            .map_err(|err| backend_transport_status("Qdrant", "tenant payload index", err))?;
+        let status = response.status();
+        if status == reqwest::StatusCode::CONFLICT || status.is_success() {
+            return Ok(());
+        }
+        let body = response.text().await.unwrap_or_default();
+        Err(crate::runtime::executor_utils::schema_status(
+            tonic::Code::FailedPrecondition,
+            "Qdrant",
+            "tenant payload index",
+            "qdrant_tenant_index_rejected",
+            format!("Qdrant tenant payload index failed: HTTP {status}: {body}"),
+        ))
+    }
+
+    pub(crate) async fn swap_collection_alias(
+        &self,
+        alias: &str,
+        collection: &str,
+    ) -> Result<(), tonic::Status> {
+        validate_collection_name(alias)?;
+        validate_collection_name(collection)?;
+        self.collection_exists(collection).await?;
+        let aliases_url = format!("{}/aliases", self.base_url);
+        let aliases_response = self
+            .auth(self.http.get(&aliases_url))
+            .send()
+            .await
+            .map_err(|err| backend_transport_status("Qdrant", "list collection aliases", err))?;
+        let aliases_status = aliases_response.status();
+        if !aliases_status.is_success() {
+            return qdrant_status(aliases_status);
+        }
+        let aliases: JsonValue = aliases_response.json().await.map_err(|err| {
+            crate::runtime::executor_utils::schema_status(
+                tonic::Code::Internal,
+                "Qdrant",
+                "list collection aliases",
+                "qdrant_alias_response_invalid",
+                format!("invalid Qdrant alias response: {err}"),
+            )
+        })?;
+        let exists = aliases
+            .pointer("/result/aliases")
+            .and_then(JsonValue::as_array)
+            .is_some_and(|items| {
+                items
+                    .iter()
+                    .any(|item| item.get("alias_name").and_then(JsonValue::as_str) == Some(alias))
+            });
+        let url = format!("{}/collections/aliases", self.base_url);
+        let actions = if exists {
+            json!([
+                { "delete_alias": { "alias_name": alias } },
+                { "create_alias": { "collection_name": collection, "alias_name": alias } }
+            ])
+        } else {
+            json!([{ "create_alias": { "collection_name": collection, "alias_name": alias } }])
+        };
+        let response = self
+            .auth(self.http.post(url))
+            .json(&json!({
+                "actions": actions
+            }))
+            .send()
+            .await
+            .map_err(|err| backend_transport_status("Qdrant", "collection alias cutover", err))?;
+        qdrant_status(response.status())
     }
 
     pub(crate) async fn search(
@@ -289,22 +674,29 @@ impl QdrantHttpClient {
     ) -> Result<VectorSet, tonic::Status> {
         validate_collection_name(&request.collection)?;
         let mut body = json!({
-            "vector": request.vector,
+            "query": request.vector,
             "limit": if request.limit > 0 {
                 request.limit
             } else {
                 QDRANT_DEFAULT_SEARCH_LIMIT
             },
             "with_payload": request.with_payload,
+            "with_vector": request.with_vector,
         });
+        if !request.vector_name.trim().is_empty() {
+            body["using"] = json!(request.vector_name);
+        }
         if !filter.is_null() {
             body["filter"] = filter;
         }
         if request.score_threshold > 0.0 {
             body["score_threshold"] = json!(request.score_threshold);
         }
+        if request.quantization_rescore {
+            body["params"] = json!({ "quantization": { "rescore": true } });
+        }
         let url = format!(
-            "{}/collections/{}/points/search",
+            "{}/collections/{}/points/query",
             self.base_url,
             encode_collection(&request.collection)
         );
@@ -315,32 +707,70 @@ impl QdrantHttpClient {
             .await
             .map_err(|err| backend_transport_status("Qdrant", "search", err))?;
         qdrant_status(response.status())?;
-        let mut payload: JsonValue = response
+        let payload: JsonValue = response
             .json()
             .await
             .map_err(|err| backend_transport_status("Qdrant", "response decode", err))?;
-        let points = payload
-            .get_mut("result")
-            .and_then(JsonValue::as_array_mut)
-            .map(std::mem::take)
-            .unwrap_or_default()
-            .into_iter()
-            .map(point_to_vector_point)
-            .collect();
+        let points = query_result_points(payload);
         Ok(VectorSet { points })
     }
 
     pub(crate) async fn upsert(&self, request: &VectorUpsertRequest) -> Result<(), tonic::Status> {
         validate_collection_name(&request.collection)?;
-        let points = request
-            .points
-            .iter()
-            .map(|point| {
-                json!({
-                    "id": qdrant_point_id(&point.id),
-                    "vector": point.vector,
-                    "payload": point.payload.as_ref().map(struct_to_json).unwrap_or(JsonValue::Null),
-                })
+        let mut grouped = BTreeMap::<
+            String,
+            (
+                JsonValue,
+                JsonValue,
+                Option<Vec<f32>>,
+                serde_json::Map<String, JsonValue>,
+            ),
+        >::new();
+        for point in &request.points {
+            let entry = grouped.entry(point.id.clone()).or_insert_with(|| {
+                (
+                    qdrant_point_id(&point.id),
+                    point
+                        .payload
+                        .as_ref()
+                        .map(struct_to_json)
+                        .unwrap_or(JsonValue::Null),
+                    None,
+                    serde_json::Map::new(),
+                )
+            });
+            if let Some(payload) = point.payload.as_ref() {
+                entry.1 = struct_to_json(payload);
+            }
+            if point.vector_name.trim().is_empty() {
+                if !entry.3.is_empty() {
+                    return Err(qdrant_invalid_field_status(
+                        "points.vector_name",
+                        "a point cannot mix unnamed and named vectors",
+                        format!("point '{}' mixes unnamed and named vectors", point.id),
+                    ));
+                }
+                entry.2 = Some(point.vector.clone());
+            } else {
+                if entry.2.is_some() {
+                    return Err(qdrant_invalid_field_status(
+                        "points.vector_name",
+                        "a point cannot mix unnamed and named vectors",
+                        format!("point '{}' mixes unnamed and named vectors", point.id),
+                    ));
+                }
+                entry
+                    .3
+                    .insert(point.vector_name.trim().to_string(), json!(point.vector));
+            }
+        }
+        let points = grouped
+            .into_values()
+            .map(|(id, payload, unnamed, named)| {
+                let vector = unnamed
+                    .map(|vector| json!(vector))
+                    .unwrap_or_else(|| JsonValue::Object(named));
+                json!({ "id": id, "vector": vector, "payload": payload })
             })
             .collect::<Vec<_>>();
         let url = format!(
@@ -455,11 +885,19 @@ impl QdrantHttpClient {
 
         // ── Tier 1: Qdrant native /points/query with RRF ──────────────────────
         if !request.vector.is_empty() {
-            let prefetch_limit = (limit * 4).max(50);
-            let mut prefetch = vec![json!({
+            let prefetch_limit = if request.prefetch_limit > 0 {
+                request.prefetch_limit as usize
+            } else {
+                (limit * 4).max(50)
+            };
+            let mut dense_prefetch = json!({
                 "query": request.vector,
                 "limit": prefetch_limit
-            })];
+            });
+            if !request.vector_name.trim().is_empty() {
+                dense_prefetch["using"] = json!(request.vector_name);
+            }
+            let mut prefetch = vec![dense_prefetch];
 
             // Add a text-match prefetch if text_query is provided so Qdrant can
             // also score by lexical relevance in collections that have a
@@ -477,12 +915,20 @@ impl QdrantHttpClient {
                 }));
             }
 
+            let fusion = match request.fusion_strategy {
+                3 => "dbsf",
+                _ => "rrf",
+            };
             let mut query_body = json!({
                 "prefetch": prefetch,
-                "query": { "fusion": "rrf" },
+                "query": { "fusion": fusion },
                 "limit": (limit * 2).max(20),
-                "with_payload": true,
+                "with_payload": request.with_payload,
+                "with_vector": request.with_vector,
             });
+            if request.quantization_rescore {
+                query_body["params"] = json!({ "quantization": { "rescore": true } });
+            }
             if !filter.is_null() {
                 query_body["filter"] = filter.clone();
             }
@@ -500,7 +946,7 @@ impl QdrantHttpClient {
                 && resp.status().is_success()
                 && let Ok(payload) = resp.json::<JsonValue>().await
             {
-                let points = self.parse_query_response(payload);
+                let points = query_result_points(payload);
                 let reranked = if text_query.is_empty() {
                     points.into_iter().take(limit).collect()
                 } else {
@@ -524,6 +970,9 @@ impl QdrantHttpClient {
             limit: fetch_limit,
             score_threshold: 0.0,
             with_payload: true,
+            with_vector: request.with_vector,
+            vector_name: request.vector_name.clone(),
+            quantization_rescore: request.quantization_rescore,
         };
         let result = self.search(&dense_req, filter).await?;
         if text_query.is_empty() {
@@ -537,18 +986,6 @@ impl QdrantHttpClient {
             limit,
         );
         Ok(VectorSet { points: reranked })
-    }
-
-    /// Parse the result array from a Qdrant `/points/query` response.
-    fn parse_query_response(&self, mut payload: JsonValue) -> Vec<VectorPoint> {
-        payload
-            .get_mut("result")
-            .and_then(JsonValue::as_array_mut)
-            .map(std::mem::take)
-            .unwrap_or_default()
-            .into_iter()
-            .map(point_to_vector_point)
-            .collect()
     }
 
     pub(crate) fn auth(&self, builder: reqwest::RequestBuilder) -> reqwest::RequestBuilder {
@@ -748,6 +1185,27 @@ impl SearchExecutor for QdrantExecutor {
                 limit,
                 fusion_weights,
                 with_payload,
+                with_vector: spec
+                    .get("with_vector")
+                    .and_then(JsonValue::as_bool)
+                    .unwrap_or(false),
+                vector_name: spec
+                    .get("vector_name")
+                    .and_then(JsonValue::as_str)
+                    .unwrap_or_default()
+                    .to_string(),
+                fusion_strategy: spec
+                    .get("fusion_strategy")
+                    .and_then(JsonValue::as_i64)
+                    .unwrap_or_default() as i32,
+                prefetch_limit: spec
+                    .get("prefetch_limit")
+                    .and_then(JsonValue::as_i64)
+                    .unwrap_or_default() as i32,
+                quantization_rescore: spec
+                    .get("quantization_rescore")
+                    .and_then(JsonValue::as_bool)
+                    .unwrap_or(false),
             };
             self.0.hybrid_search(&request, filter).await?
         } else {
@@ -762,6 +1220,19 @@ impl SearchExecutor for QdrantExecutor {
                     .and_then(JsonValue::as_f64)
                     .unwrap_or_default() as f32,
                 with_payload,
+                with_vector: spec
+                    .get("with_vector")
+                    .and_then(JsonValue::as_bool)
+                    .unwrap_or(false),
+                vector_name: spec
+                    .get("vector_name")
+                    .and_then(JsonValue::as_str)
+                    .unwrap_or_default()
+                    .to_string(),
+                quantization_rescore: spec
+                    .get("quantization_rescore")
+                    .and_then(JsonValue::as_bool)
+                    .unwrap_or(false),
             };
             self.0.search(&request, filter).await?
         };
@@ -819,6 +1290,11 @@ impl MutationExecutor for QdrantExecutor {
                             .get_mut("payload")
                             .map(JsonValue::take)
                             .and_then(json_into_struct),
+                        vector_name: point
+                            .get("vector_name")
+                            .and_then(JsonValue::as_str)
+                            .unwrap_or_default()
+                            .to_string(),
                     });
                 }
                 let request = VectorUpsertRequest {
@@ -1122,6 +1598,24 @@ mod tests {
             assert_eq!(err.message(), message);
             assert_single_field(&err, "collection");
         }
+    }
+
+    #[test]
+    fn qdrant_query_response_reads_nested_points_and_named_vectors() {
+        let points = query_result_points(json!({
+            "result": {
+                "points": [{
+                    "id": "point-1",
+                    "score": 0.75,
+                    "payload": {"_tenant_id": "tenant-1"},
+                    "vector": {"body": [0.1, 0.2, 0.3]}
+                }]
+            }
+        }));
+
+        assert_eq!(points.len(), 1);
+        assert_eq!(points[0].vector_name, "body");
+        assert_eq!(points[0].vector, vec![0.1, 0.2, 0.3]);
     }
 
     #[tokio::test]

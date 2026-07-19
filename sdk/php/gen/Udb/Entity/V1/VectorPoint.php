@@ -26,6 +26,14 @@ class VectorPoint extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>.google.protobuf.Struct payload = 3 [json_name = "payload"];</code>
      */
     protected $payload = null;
+    /**
+     * Generated from protobuf field <code>repeated float vector = 4 [json_name = "vector"];</code>
+     */
+    private $vector;
+    /**
+     * Generated from protobuf field <code>string vector_name = 5 [json_name = "vectorName"];</code>
+     */
+    protected $vector_name = '';
 
     /**
      * Constructor.
@@ -36,6 +44,8 @@ class VectorPoint extends \Google\Protobuf\Internal\Message
      *     @type string $id
      *     @type float $score
      *     @type \Google\Protobuf\Struct $payload
+     *     @type float[] $vector
+     *     @type string $vector_name
      * }
      */
     public function __construct($data = NULL) {
@@ -115,6 +125,50 @@ class VectorPoint extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkMessage($var, \Google\Protobuf\Struct::class);
         $this->payload = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>repeated float vector = 4 [json_name = "vector"];</code>
+     * @return RepeatedField<float>
+     */
+    public function getVector()
+    {
+        return $this->vector;
+    }
+
+    /**
+     * Generated from protobuf field <code>repeated float vector = 4 [json_name = "vector"];</code>
+     * @param float[] $var
+     * @return $this
+     */
+    public function setVector($var)
+    {
+        $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::FLOAT);
+        $this->vector = $arr;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>string vector_name = 5 [json_name = "vectorName"];</code>
+     * @return string
+     */
+    public function getVectorName()
+    {
+        return $this->vector_name;
+    }
+
+    /**
+     * Generated from protobuf field <code>string vector_name = 5 [json_name = "vectorName"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setVectorName($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->vector_name = $var;
 
         return $this;
     }

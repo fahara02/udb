@@ -44,7 +44,7 @@ public final class EmbeddingSourceProto {
       "_source.proto\022\034udb.core.embedding.entity" +
       ".v1\032\037google/protobuf/timestamp.proto\032\033ud" +
       "b/core/common/v1/db.proto\032!udb/core/comm" +
-      "on/v1/security.proto\"\275\016\n\017EmbeddingSource" +
+      "on/v1/security.proto\"\313\017\n\017EmbeddingSource" +
       "\022I\n\tsource_id\030\001 \001(\tB,\202\267\030(\n\tsource_id\022\004UU" +
       "ID\030\001(\001:\021gen_random_uuid()R\010sourceId\022e\n\tt" +
       "enant_id\030\002 \001(\tBH\202\267\030D\n\ttenant_id\022\013VARCHAR" +
@@ -58,47 +58,50 @@ public final class EmbeddingSourceProto {
       "]\'::jsonbZ\033Source field names to embedx\001" +
       "R\016textFieldsJson\022T\n\021target_collection\030\006 " +
       "\001(\tB\'\202\267\030#\n\021target_collection\022\014VARCHAR(25" +
-      "5)\030\001R\020targetCollection\022=\n\010model_id\030\007 \001(\t" +
-      "B\"\202\267\030\036\n\010model_id\022\014VARCHAR(255)\030\001:\002\'\'R\007mo" +
-      "delId\022H\n\rtenant_column\030\010 \001(\tB#\202\267\030\037\n\rtena" +
-      "nt_column\022\014VARCHAR(255)\030\001R\014tenantColumn\022" +
-      "T\n\020source_cdc_topic\030\t \001(\tB*\202\267\030&\n\020source_" +
-      "cdc_topic\022\014VARCHAR(255)\030\001:\002\'\'R\016sourceCdc" +
-      "Topic\022d\n\006status\030\n \001(\tBL\202\267\030H\n\006status\022\013VAR" +
-      "CHAR(20)\030\001:\010\'ACTIVE\'R%\n\034idx_embedding_so" +
-      "urces_status\022\005BTREER\006status\022x\n\ncreated_a" +
-      "t\030\013 \001(\0132\032.google.protobuf.TimestampB=\202\267\030" +
-      "9\n\ncreated_at\022\013TIMESTAMPTZZ\036When the sou" +
-      "rce was registeredR\tcreatedAt\022y\n\nupdated" +
-      "_at\030\014 \001(\0132\032.google.protobuf.TimestampB>\202" +
-      "\267\030:\n\nupdated_at\022\013TIMESTAMPTZZ\037Last statu" +
-      "s/registration changeR\tupdatedAt\022z\n\rmeta" +
-      "data_json\030\r \001(\tBU\202\267\030Q\n\rmetadata_json\022\005JS" +
-      "ONB\030\001:\013\'{}\'::jsonbZ(Non-secret source co" +
-      "nfiguration metadatax\001R\014metadataJson:\325\004\372" +
-      "\266\030\267\003\n\021embedding_sources\022\rudb_embedding\030\001" +
-      " \001*WTenant-scoped source registrations f" +
-      "or change-driven vector indexing (master" +
-      "-plan 9.11)8\001@\001b^\n\020tenant_isolation\032H(te" +
-      "nant_id::text = current_setting(\'app.cur" +
-      "rent_tenant_id\', true)::text)(\001\212\001K\n(idx_" +
-      "embedding_sources_tenant_name_unique\022\005BT" +
-      "REE\030\001Z\ttenant_idZ\013source_name\212\001L\n#idx_em" +
-      "bedding_sources_tenant_source\022\005BTREEZ\tte" +
-      "nant_idZ\023source_message_type\362\001#udb.embed" +
-      "ding.embedding_sources.cdc\372\001\016embedding:r" +
-      "ead\212\262\031\224\001\n\006tenant\032\ttenant_id*4tenant_id =" +
-      " current_setting(\'app.current_tenant_id\'" +
-      ")2\004none:\025embedding.operational@\355\002H\002R\006ten" +
-      "antZ\010standardr\025tenant.data_residencyB\227\002\n" +
-      " com.udb.core.embedding.entity.v1B\024Embed" +
-      "dingSourceProtoP\001ZHgithub.com/fahara02/u" +
-      "db/sdk/go/gen/udb/core/embedding/entity/" +
-      "v1;entityv1\242\002\004UCEE\252\002\034udb.core.Embedding." +
-      "Entity.V1\312\002\034Udb\\Core\\Embedding\\Entity\\V1" +
-      "\342\002(Udb\\GPBMetadata\\Core\\Embedding\\Entity" +
-      "\\V1\352\002 Udb::Core::Embedding::Entity::V1b\006" +
-      "proto3"
+      "5)\030\001R\020targetCollection\022_\n\010model_id\030\007 \001(\t" +
+      "BD\202\267\030@\n\010model_id\022\014VARCHAR(255)\030\001R$\n\033idx_" +
+      "embedding_sources_model\022\005BTREER\007modelId\022" +
+      "H\n\rtenant_column\030\010 \001(\tB#\202\267\030\037\n\rtenant_col" +
+      "umn\022\014VARCHAR(255)\030\001R\014tenantColumn\022T\n\020sou" +
+      "rce_cdc_topic\030\t \001(\tB*\202\267\030&\n\020source_cdc_to" +
+      "pic\022\014VARCHAR(255)\030\001:\002\'\'R\016sourceCdcTopic\022" +
+      "d\n\006status\030\n \001(\tBL\202\267\030H\n\006status\022\013VARCHAR(2" +
+      "0)\030\001:\010\'ACTIVE\'R%\n\034idx_embedding_sources_" +
+      "status\022\005BTREER\006status\022x\n\ncreated_at\030\013 \001(" +
+      "\0132\032.google.protobuf.TimestampB=\202\267\0309\n\ncre" +
+      "ated_at\022\013TIMESTAMPTZZ\036When the source wa" +
+      "s registeredR\tcreatedAt\022y\n\nupdated_at\030\014 " +
+      "\001(\0132\032.google.protobuf.TimestampB>\202\267\030:\n\nu" +
+      "pdated_at\022\013TIMESTAMPTZZ\037Last status/regi" +
+      "stration changeR\tupdatedAt\022z\n\rmetadata_j" +
+      "son\030\r \001(\tBU\202\267\030Q\n\rmetadata_json\022\005JSONB\030\001:" +
+      "\013\'{}\'::jsonbZ(Non-secret source configur" +
+      "ation metadatax\001R\014metadataJson:\301\005\372\266\030\243\004\n\021" +
+      "embedding_sources\022\rudb_embedding\030\002 \001*WTe" +
+      "nant-scoped source registrations for cha" +
+      "nge-driven vector indexing (master-plan " +
+      "9.11)8\001@\001b^\n\020tenant_isolation\032H(tenant_i" +
+      "d::text = current_setting(\'app.current_t" +
+      "enant_id\', true)::text)(\001\212\001K\n(idx_embedd" +
+      "ing_sources_tenant_name_unique\022\005BTREE\030\001Z" +
+      "\ttenant_idZ\013source_name\212\001L\n#idx_embeddin" +
+      "g_sources_tenant_source\022\005BTREEZ\ttenant_i" +
+      "dZ\023source_message_type\222\001i\n\010model_id\n\tten" +
+      "ant_id\022\020embedding_models\032\010model_id\032\ttena" +
+      "nt_id\"\rudb_embedding(\002:\032fk_embedding_sou" +
+      "rces_model\362\001#udb.embedding.embedding_sou" +
+      "rces.cdc\372\001\016embedding:read\212\262\031\224\001\n\006tenant\032\t" +
+      "tenant_id*4tenant_id = current_setting(\'" +
+      "app.current_tenant_id\')2\004none:\025embedding" +
+      ".operational@\355\002H\002R\006tenantZ\010standardr\025ten" +
+      "ant.data_residencyB\227\002\n com.udb.core.embe" +
+      "dding.entity.v1B\024EmbeddingSourceProtoP\001Z" +
+      "Hgithub.com/fahara02/udb/sdk/go/gen/udb/" +
+      "core/embedding/entity/v1;entityv1\242\002\004UCEE" +
+      "\252\002\034udb.core.Embedding.Entity.V1\312\002\034Udb\\Co" +
+      "re\\Embedding\\Entity\\V1\342\002(Udb\\GPBMetadata" +
+      "\\Core\\Embedding\\Entity\\V1\352\002 Udb::Core::E" +
+      "mbedding::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

@@ -1508,6 +1508,9 @@ impl DataBrokerRuntime {
                     limit: request.limit,
                     score_threshold: 0.0,
                     with_payload: request.with_payload,
+                    with_vector: request.with_vector,
+                    vector_name: request.vector_name,
+                    quantization_rescore: request.quantization_rescore,
                 };
                 return self
                     .qdrant_for_instance_for_project(target_instance, &context.project_id)?
@@ -2002,6 +2005,24 @@ impl DataBrokerRuntime {
         #[cfg(feature = "qdrant")]
         {
             use crate::generation::manifest::{ManifestStore, ManifestStoreOption};
+            let mut vector_names = points
+                .iter()
+                .map(|point| point.vector_name.trim())
+                .filter(|name| !name.is_empty())
+                .collect::<Vec<_>>();
+            vector_names.sort_unstable();
+            vector_names.dedup();
+            if !vector_names.is_empty()
+                && points
+                    .iter()
+                    .any(|point| point.vector_name.trim().is_empty())
+            {
+                return Err(setup_data_invalid_field(
+                    "points.vector_name",
+                    "one collection upsert cannot mix unnamed and named vector spaces",
+                    "mixed unnamed and named vector batch",
+                ));
+            }
             let project = project_id.trim();
             let project = if project.is_empty() {
                 crate::runtime::catalog::DEFAULT_PROJECT_ID
@@ -2030,6 +2051,10 @@ impl DataBrokerRuntime {
                         key: "distance".to_string(),
                         value: "Cosine".to_string(),
                     },
+                    ManifestStoreOption {
+                        key: "vector_names_json".to_string(),
+                        value: serde_json::to_string(&vector_names).unwrap_or_default(),
+                    },
                 ],
             };
             client.ensure_collection(&store).await?;
@@ -2042,6 +2067,283 @@ impl DataBrokerRuntime {
                 })
                 .await?;
             Ok(())
+        }
+    }
+
+    pub async fn vector_ensure_backend_kind_target(
+        &self,
+        backend: &str,
+        instance: Option<&str>,
+        project_id: &str,
+        collection: &str,
+        dimension: i32,
+        distance: &str,
+        output_dtype: &str,
+        vector_names: &[String],
+    ) -> Result<(), tonic::Status> {
+        if backend.eq_ignore_ascii_case("qdrant") {
+            #[cfg(feature = "qdrant")]
+            {
+                use crate::generation::manifest::{ManifestStore, ManifestStoreOption};
+                let project = if project_id.trim().is_empty() {
+                    crate::runtime::catalog::DEFAULT_PROJECT_ID
+                } else {
+                    project_id.trim()
+                };
+                let client = self.qdrant_for_instance_for_project(instance, project)?;
+                let store = ManifestStore {
+                    store_kind: "vector".to_string(),
+                    backend: "qdrant".to_string(),
+                    logical_name: collection.to_string(),
+                    resource_name: collection.to_string(),
+                    options: vec![
+                        ManifestStoreOption {
+                            key: "dimension".to_string(),
+                            value: dimension.to_string(),
+                        },
+                        ManifestStoreOption {
+                            key: "distance".to_string(),
+                            value: distance.to_string(),
+                        },
+                        ManifestStoreOption {
+                            key: "output_dtype".to_string(),
+                            value: output_dtype.to_string(),
+                        },
+                        ManifestStoreOption {
+                            key: "vector_names_json".to_string(),
+                            value: serde_json::to_string(vector_names).unwrap_or_default(),
+                        },
+                    ],
+                    ..ManifestStore::default()
+                };
+                return client.ensure_collection(&store).await;
+            }
+            #[cfg(not(feature = "qdrant"))]
+            return Err(qdrant_vector_feature_status(
+                "vector_ensure_backend_kind_target",
+            ));
+        }
+        let spec = serde_json::json!({
+            "dimension": dimension,
+            "distance": distance,
+            "output_dtype": output_dtype,
+            "vector_names": vector_names,
+        });
+        self.ensure_resource_backend_target(
+            &backend.to_ascii_lowercase(),
+            instance,
+            collection,
+            &spec.to_string(),
+        )
+        .await
+    }
+
+    pub async fn vector_upsert_existing_backend_kind_target(
+        &self,
+        backend: &str,
+        instance: Option<&str>,
+        project_id: &str,
+        collection: &str,
+        points: Vec<VectorPointMutation>,
+    ) -> Result<(), tonic::Status> {
+        if backend.eq_ignore_ascii_case("qdrant") {
+            #[cfg(feature = "qdrant")]
+            {
+                let project = if project_id.trim().is_empty() {
+                    crate::runtime::catalog::DEFAULT_PROJECT_ID
+                } else {
+                    project_id.trim()
+                };
+                let client = self.qdrant_for_instance_for_project(instance, project)?;
+                return client
+                    .upsert(&VectorUpsertRequest {
+                        context: None,
+                        collection: collection.to_string(),
+                        points,
+                        idempotency_key: String::new(),
+                    })
+                    .await;
+            }
+            #[cfg(not(feature = "qdrant"))]
+            return Err(qdrant_vector_feature_status(
+                "vector_upsert_existing_backend_kind_target",
+            ));
+        }
+        let _ = project_id;
+        self.vector_upsert_dispatch_target(
+            &backend.to_ascii_lowercase(),
+            instance,
+            &VectorUpsertRequest {
+                context: None,
+                collection: collection.to_string(),
+                points,
+                idempotency_key: String::new(),
+            },
+        )
+        .await
+    }
+
+    /// Backend-neutral native vector upsert. Qdrant keeps its collection ensure
+    /// path; Elasticsearch/Weaviate/Pinecone reuse the existing typed dispatch.
+    pub async fn vector_upsert_backend_kind_target(
+        &self,
+        backend: &str,
+        instance: Option<&str>,
+        project_id: &str,
+        collection: &str,
+        dimension: i32,
+        distance: &str,
+        output_dtype: &str,
+        points: Vec<VectorPointMutation>,
+    ) -> Result<(), tonic::Status> {
+        if backend.eq_ignore_ascii_case("qdrant") {
+            let mut vector_names = points
+                .iter()
+                .map(|point| point.vector_name.trim().to_string())
+                .filter(|name| !name.is_empty())
+                .collect::<Vec<_>>();
+            vector_names.sort_unstable();
+            vector_names.dedup();
+            self.vector_ensure_backend_kind_target(
+                backend,
+                instance,
+                project_id,
+                collection,
+                dimension,
+                distance,
+                output_dtype,
+                &vector_names,
+            )
+            .await?;
+            return self
+                .vector_upsert_existing_backend_kind_target(
+                    backend, instance, project_id, collection, points,
+                )
+                .await;
+        }
+        let _ = (project_id, dimension, distance, output_dtype);
+        self.vector_upsert_dispatch_target(
+            &backend.to_ascii_lowercase(),
+            instance,
+            &VectorUpsertRequest {
+                context: None,
+                collection: collection.to_string(),
+                points,
+                idempotency_key: String::new(),
+            },
+        )
+        .await
+    }
+
+    pub async fn vector_search_backend_kind_target(
+        &self,
+        backend: &str,
+        instance: Option<&str>,
+        project_id: &str,
+        request: &VectorSearchRequest,
+    ) -> Result<VectorSet, tonic::Status> {
+        if backend.eq_ignore_ascii_case("qdrant") {
+            #[cfg(feature = "qdrant")]
+            {
+                let project = if project_id.trim().is_empty() {
+                    crate::runtime::catalog::DEFAULT_PROJECT_ID
+                } else {
+                    project_id.trim()
+                };
+                let client = self.qdrant_for_instance_for_project(instance, project)?;
+                let filter = request
+                    .filter
+                    .as_ref()
+                    .map(struct_to_json)
+                    .unwrap_or(JsonValue::Null);
+                return client.search(request, filter).await;
+            }
+            #[cfg(not(feature = "qdrant"))]
+            return Err(qdrant_vector_feature_status(
+                "vector_search_backend_kind_target",
+            ));
+        }
+        let _ = project_id;
+        self.vector_search_dispatch_target(&backend.to_ascii_lowercase(), instance, request)
+            .await
+    }
+
+    pub async fn vector_hybrid_backend_kind_target(
+        &self,
+        backend: &str,
+        instance: Option<&str>,
+        project_id: &str,
+        request: &VectorHybridSearchRequest,
+    ) -> Result<VectorSet, tonic::Status> {
+        if backend.eq_ignore_ascii_case("qdrant") {
+            #[cfg(feature = "qdrant")]
+            {
+                let project = if project_id.trim().is_empty() {
+                    crate::runtime::catalog::DEFAULT_PROJECT_ID
+                } else {
+                    project_id.trim()
+                };
+                let client = self.qdrant_for_instance_for_project(instance, project)?;
+                let filter = request
+                    .filter
+                    .as_ref()
+                    .map(struct_to_json)
+                    .unwrap_or(JsonValue::Null);
+                return client.hybrid_search(request, filter).await;
+            }
+            #[cfg(not(feature = "qdrant"))]
+            return Err(qdrant_vector_feature_status(
+                "vector_hybrid_backend_kind_target",
+            ));
+        }
+        // Portable stores without a native sparse fusion endpoint still provide
+        // the dense candidate stage; callers can request weighted/rerank stages
+        // above this seam without silently targeting Qdrant.
+        self.vector_search_backend_kind_target(
+            backend,
+            instance,
+            project_id,
+            &VectorSearchRequest {
+                context: request.context.clone(),
+                collection: request.collection.clone(),
+                vector: request.vector.clone(),
+                filter: request.filter.clone(),
+                limit: request.limit,
+                score_threshold: 0.0,
+                with_payload: request.with_payload,
+                with_vector: request.with_vector,
+                vector_name: request.vector_name.clone(),
+                quantization_rescore: request.quantization_rescore,
+            },
+        )
+        .await
+    }
+
+    pub async fn vector_swap_alias_backend_target(
+        &self,
+        instance: Option<&str>,
+        project_id: &str,
+        alias: &str,
+        collection: &str,
+    ) -> Result<(), tonic::Status> {
+        #[cfg(feature = "qdrant")]
+        {
+            let project = if project_id.trim().is_empty() {
+                crate::runtime::catalog::DEFAULT_PROJECT_ID
+            } else {
+                project_id.trim()
+            };
+            return self
+                .qdrant_for_instance_for_project(instance, project)?
+                .swap_collection_alias(alias, collection)
+                .await;
+        }
+        #[cfg(not(feature = "qdrant"))]
+        {
+            let _ = (instance, project_id, alias, collection);
+            Err(qdrant_vector_feature_status(
+                "vector_swap_alias_backend_target",
+            ))
         }
     }
 
@@ -3702,6 +4004,9 @@ mod setup_data_validation_tests {
                 limit: 10,
                 score_threshold: 0.0,
                 with_payload: false,
+                with_vector: false,
+                vector_name: String::new(),
+                quantization_rescore: false,
             },
         )
         .expect_err("unsupported typed vector backend must fail closed");
@@ -3720,6 +4025,7 @@ mod setup_data_validation_tests {
                 id: "p1".to_string(),
                 vector: vec![0.1, 0.2],
                 payload: None,
+                vector_name: String::new(),
             },
         )
         .expect_err("unsupported typed vector upsert backend must fail closed");
@@ -5218,6 +5524,7 @@ pub(crate) async fn register_postgres(ctx: &mut RegisterCtx<'_>) {
                 // ProjectionTaskStore / SagaStore / AdminAuditStore /
                 // MigrationAuditStore methods off the same trait
                 // object.
+                #[cfg(feature = "postgres")]
                 {
                     use crate::runtime::canonical_store::SystemStores;
                     use crate::runtime::canonical_store::postgres::PostgresCanonicalStore;
@@ -6729,6 +7036,8 @@ fn parse_vector_search_response(backend: &str, raw: &str) -> Result<VectorSet, t
                             .to_string(),
                         score: hit.get("_score").and_then(JsonValue::as_f64).unwrap_or(0.0) as f32,
                         payload: hit.get("_source").cloned().and_then(json_into_struct),
+                        vector: Vec::new(),
+                        vector_name: String::new(),
                     })
                     .collect()
             })
@@ -6747,6 +7056,18 @@ fn parse_vector_search_response(backend: &str, raw: &str) -> Result<VectorSet, t
                             .to_string(),
                         score: item.get("score").and_then(JsonValue::as_f64).unwrap_or(0.0) as f32,
                         payload: item.get("metadata").cloned().and_then(json_into_struct),
+                        vector: item
+                            .get("values")
+                            .and_then(JsonValue::as_array)
+                            .map(|values| {
+                                values
+                                    .iter()
+                                    .filter_map(JsonValue::as_f64)
+                                    .map(|value| value as f32)
+                                    .collect()
+                            })
+                            .unwrap_or_default(),
+                        vector_name: String::new(),
                     })
                     .collect()
             })

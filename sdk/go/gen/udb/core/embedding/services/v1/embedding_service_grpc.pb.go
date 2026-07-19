@@ -19,12 +19,25 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	EmbeddingService_RegisterSource_FullMethodName  = "/udb.core.embedding.services.v1.EmbeddingService/RegisterSource"
-	EmbeddingService_ListSources_FullMethodName     = "/udb.core.embedding.services.v1.EmbeddingService/ListSources"
-	EmbeddingService_DeleteSource_FullMethodName    = "/udb.core.embedding.services.v1.EmbeddingService/DeleteSource"
-	EmbeddingService_Backfill_FullMethodName        = "/udb.core.embedding.services.v1.EmbeddingService/Backfill"
-	EmbeddingService_ReportEmbedding_FullMethodName = "/udb.core.embedding.services.v1.EmbeddingService/ReportEmbedding"
-	EmbeddingService_Retrieve_FullMethodName        = "/udb.core.embedding.services.v1.EmbeddingService/Retrieve"
+	EmbeddingService_RegisterSource_FullMethodName            = "/udb.core.embedding.services.v1.EmbeddingService/RegisterSource"
+	EmbeddingService_ListSources_FullMethodName               = "/udb.core.embedding.services.v1.EmbeddingService/ListSources"
+	EmbeddingService_DeleteSource_FullMethodName              = "/udb.core.embedding.services.v1.EmbeddingService/DeleteSource"
+	EmbeddingService_Backfill_FullMethodName                  = "/udb.core.embedding.services.v1.EmbeddingService/Backfill"
+	EmbeddingService_ReportEmbedding_FullMethodName           = "/udb.core.embedding.services.v1.EmbeddingService/ReportEmbedding"
+	EmbeddingService_Retrieve_FullMethodName                  = "/udb.core.embedding.services.v1.EmbeddingService/Retrieve"
+	EmbeddingService_RegisterModel_FullMethodName             = "/udb.core.embedding.services.v1.EmbeddingService/RegisterModel"
+	EmbeddingService_ListModels_FullMethodName                = "/udb.core.embedding.services.v1.EmbeddingService/ListModels"
+	EmbeddingService_DeleteModel_FullMethodName               = "/udb.core.embedding.services.v1.EmbeddingService/DeleteModel"
+	EmbeddingService_SetModelStatus_FullMethodName            = "/udb.core.embedding.services.v1.EmbeddingService/SetModelStatus"
+	EmbeddingService_CutoverModelAlias_FullMethodName         = "/udb.core.embedding.services.v1.EmbeddingService/CutoverModelAlias"
+	EmbeddingService_GetEmbeddingJobStatus_FullMethodName     = "/udb.core.embedding.services.v1.EmbeddingService/GetEmbeddingJobStatus"
+	EmbeddingService_ListEmbeddingWorkItems_FullMethodName    = "/udb.core.embedding.services.v1.EmbeddingService/ListEmbeddingWorkItems"
+	EmbeddingService_ReportEmbeddingBatch_FullMethodName      = "/udb.core.embedding.services.v1.EmbeddingService/ReportEmbeddingBatch"
+	EmbeddingService_ReportEmbeddingFailure_FullMethodName    = "/udb.core.embedding.services.v1.EmbeddingService/ReportEmbeddingFailure"
+	EmbeddingService_IngestDocument_FullMethodName            = "/udb.core.embedding.services.v1.EmbeddingService/IngestDocument"
+	EmbeddingService_IngestDocumentBatch_FullMethodName       = "/udb.core.embedding.services.v1.EmbeddingService/IngestDocumentBatch"
+	EmbeddingService_ReportParsedDocument_FullMethodName      = "/udb.core.embedding.services.v1.EmbeddingService/ReportParsedDocument"
+	EmbeddingService_ReportRetrievalEvaluation_FullMethodName = "/udb.core.embedding.services.v1.EmbeddingService/ReportRetrievalEvaluation"
 )
 
 // EmbeddingServiceClient is the client API for EmbeddingService service.
@@ -65,6 +78,19 @@ type EmbeddingServiceClient interface {
 	// caller supplies an already-embedded `query_vector`); it never issues a raw
 	// engine query. Returns `deadline_exceeded` if the gRPC deadline is past.
 	Retrieve(ctx context.Context, in *RetrieveRequest, opts ...grpc.CallOption) (*RetrieveResponse, error)
+	RegisterModel(ctx context.Context, in *RegisterModelRequest, opts ...grpc.CallOption) (*RegisterModelResponse, error)
+	ListModels(ctx context.Context, in *ListModelsRequest, opts ...grpc.CallOption) (*ListModelsResponse, error)
+	DeleteModel(ctx context.Context, in *DeleteModelRequest, opts ...grpc.CallOption) (*DeleteModelResponse, error)
+	SetModelStatus(ctx context.Context, in *SetModelStatusRequest, opts ...grpc.CallOption) (*SetModelStatusResponse, error)
+	CutoverModelAlias(ctx context.Context, in *CutoverModelAliasRequest, opts ...grpc.CallOption) (*CutoverModelAliasResponse, error)
+	GetEmbeddingJobStatus(ctx context.Context, in *GetEmbeddingJobStatusRequest, opts ...grpc.CallOption) (*GetEmbeddingJobStatusResponse, error)
+	ListEmbeddingWorkItems(ctx context.Context, in *ListEmbeddingWorkItemsRequest, opts ...grpc.CallOption) (*ListEmbeddingWorkItemsResponse, error)
+	ReportEmbeddingBatch(ctx context.Context, in *ReportEmbeddingBatchRequest, opts ...grpc.CallOption) (*ReportEmbeddingBatchResponse, error)
+	ReportEmbeddingFailure(ctx context.Context, in *ReportEmbeddingFailureRequest, opts ...grpc.CallOption) (*ReportEmbeddingFailureResponse, error)
+	IngestDocument(ctx context.Context, in *IngestDocumentRequest, opts ...grpc.CallOption) (*IngestDocumentResponse, error)
+	IngestDocumentBatch(ctx context.Context, in *IngestDocumentBatchRequest, opts ...grpc.CallOption) (*IngestDocumentBatchResponse, error)
+	ReportParsedDocument(ctx context.Context, in *ReportParsedDocumentRequest, opts ...grpc.CallOption) (*ReportParsedDocumentResponse, error)
+	ReportRetrievalEvaluation(ctx context.Context, in *ReportRetrievalEvaluationRequest, opts ...grpc.CallOption) (*ReportRetrievalEvaluationResponse, error)
 }
 
 type embeddingServiceClient struct {
@@ -135,6 +161,136 @@ func (c *embeddingServiceClient) Retrieve(ctx context.Context, in *RetrieveReque
 	return out, nil
 }
 
+func (c *embeddingServiceClient) RegisterModel(ctx context.Context, in *RegisterModelRequest, opts ...grpc.CallOption) (*RegisterModelResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RegisterModelResponse)
+	err := c.cc.Invoke(ctx, EmbeddingService_RegisterModel_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *embeddingServiceClient) ListModels(ctx context.Context, in *ListModelsRequest, opts ...grpc.CallOption) (*ListModelsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListModelsResponse)
+	err := c.cc.Invoke(ctx, EmbeddingService_ListModels_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *embeddingServiceClient) DeleteModel(ctx context.Context, in *DeleteModelRequest, opts ...grpc.CallOption) (*DeleteModelResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteModelResponse)
+	err := c.cc.Invoke(ctx, EmbeddingService_DeleteModel_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *embeddingServiceClient) SetModelStatus(ctx context.Context, in *SetModelStatusRequest, opts ...grpc.CallOption) (*SetModelStatusResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetModelStatusResponse)
+	err := c.cc.Invoke(ctx, EmbeddingService_SetModelStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *embeddingServiceClient) CutoverModelAlias(ctx context.Context, in *CutoverModelAliasRequest, opts ...grpc.CallOption) (*CutoverModelAliasResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CutoverModelAliasResponse)
+	err := c.cc.Invoke(ctx, EmbeddingService_CutoverModelAlias_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *embeddingServiceClient) GetEmbeddingJobStatus(ctx context.Context, in *GetEmbeddingJobStatusRequest, opts ...grpc.CallOption) (*GetEmbeddingJobStatusResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetEmbeddingJobStatusResponse)
+	err := c.cc.Invoke(ctx, EmbeddingService_GetEmbeddingJobStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *embeddingServiceClient) ListEmbeddingWorkItems(ctx context.Context, in *ListEmbeddingWorkItemsRequest, opts ...grpc.CallOption) (*ListEmbeddingWorkItemsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListEmbeddingWorkItemsResponse)
+	err := c.cc.Invoke(ctx, EmbeddingService_ListEmbeddingWorkItems_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *embeddingServiceClient) ReportEmbeddingBatch(ctx context.Context, in *ReportEmbeddingBatchRequest, opts ...grpc.CallOption) (*ReportEmbeddingBatchResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReportEmbeddingBatchResponse)
+	err := c.cc.Invoke(ctx, EmbeddingService_ReportEmbeddingBatch_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *embeddingServiceClient) ReportEmbeddingFailure(ctx context.Context, in *ReportEmbeddingFailureRequest, opts ...grpc.CallOption) (*ReportEmbeddingFailureResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReportEmbeddingFailureResponse)
+	err := c.cc.Invoke(ctx, EmbeddingService_ReportEmbeddingFailure_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *embeddingServiceClient) IngestDocument(ctx context.Context, in *IngestDocumentRequest, opts ...grpc.CallOption) (*IngestDocumentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(IngestDocumentResponse)
+	err := c.cc.Invoke(ctx, EmbeddingService_IngestDocument_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *embeddingServiceClient) IngestDocumentBatch(ctx context.Context, in *IngestDocumentBatchRequest, opts ...grpc.CallOption) (*IngestDocumentBatchResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(IngestDocumentBatchResponse)
+	err := c.cc.Invoke(ctx, EmbeddingService_IngestDocumentBatch_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *embeddingServiceClient) ReportParsedDocument(ctx context.Context, in *ReportParsedDocumentRequest, opts ...grpc.CallOption) (*ReportParsedDocumentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReportParsedDocumentResponse)
+	err := c.cc.Invoke(ctx, EmbeddingService_ReportParsedDocument_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *embeddingServiceClient) ReportRetrievalEvaluation(ctx context.Context, in *ReportRetrievalEvaluationRequest, opts ...grpc.CallOption) (*ReportRetrievalEvaluationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReportRetrievalEvaluationResponse)
+	err := c.cc.Invoke(ctx, EmbeddingService_ReportRetrievalEvaluation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // EmbeddingServiceServer is the server API for EmbeddingService service.
 // All implementations should embed UnimplementedEmbeddingServiceServer
 // for forward compatibility.
@@ -173,6 +329,19 @@ type EmbeddingServiceServer interface {
 	// caller supplies an already-embedded `query_vector`); it never issues a raw
 	// engine query. Returns `deadline_exceeded` if the gRPC deadline is past.
 	Retrieve(context.Context, *RetrieveRequest) (*RetrieveResponse, error)
+	RegisterModel(context.Context, *RegisterModelRequest) (*RegisterModelResponse, error)
+	ListModels(context.Context, *ListModelsRequest) (*ListModelsResponse, error)
+	DeleteModel(context.Context, *DeleteModelRequest) (*DeleteModelResponse, error)
+	SetModelStatus(context.Context, *SetModelStatusRequest) (*SetModelStatusResponse, error)
+	CutoverModelAlias(context.Context, *CutoverModelAliasRequest) (*CutoverModelAliasResponse, error)
+	GetEmbeddingJobStatus(context.Context, *GetEmbeddingJobStatusRequest) (*GetEmbeddingJobStatusResponse, error)
+	ListEmbeddingWorkItems(context.Context, *ListEmbeddingWorkItemsRequest) (*ListEmbeddingWorkItemsResponse, error)
+	ReportEmbeddingBatch(context.Context, *ReportEmbeddingBatchRequest) (*ReportEmbeddingBatchResponse, error)
+	ReportEmbeddingFailure(context.Context, *ReportEmbeddingFailureRequest) (*ReportEmbeddingFailureResponse, error)
+	IngestDocument(context.Context, *IngestDocumentRequest) (*IngestDocumentResponse, error)
+	IngestDocumentBatch(context.Context, *IngestDocumentBatchRequest) (*IngestDocumentBatchResponse, error)
+	ReportParsedDocument(context.Context, *ReportParsedDocumentRequest) (*ReportParsedDocumentResponse, error)
+	ReportRetrievalEvaluation(context.Context, *ReportRetrievalEvaluationRequest) (*ReportRetrievalEvaluationResponse, error)
 }
 
 // UnimplementedEmbeddingServiceServer should be embedded to have
@@ -199,6 +368,45 @@ func (UnimplementedEmbeddingServiceServer) ReportEmbedding(context.Context, *Rep
 }
 func (UnimplementedEmbeddingServiceServer) Retrieve(context.Context, *RetrieveRequest) (*RetrieveResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Retrieve not implemented")
+}
+func (UnimplementedEmbeddingServiceServer) RegisterModel(context.Context, *RegisterModelRequest) (*RegisterModelResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RegisterModel not implemented")
+}
+func (UnimplementedEmbeddingServiceServer) ListModels(context.Context, *ListModelsRequest) (*ListModelsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListModels not implemented")
+}
+func (UnimplementedEmbeddingServiceServer) DeleteModel(context.Context, *DeleteModelRequest) (*DeleteModelResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteModel not implemented")
+}
+func (UnimplementedEmbeddingServiceServer) SetModelStatus(context.Context, *SetModelStatusRequest) (*SetModelStatusResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetModelStatus not implemented")
+}
+func (UnimplementedEmbeddingServiceServer) CutoverModelAlias(context.Context, *CutoverModelAliasRequest) (*CutoverModelAliasResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CutoverModelAlias not implemented")
+}
+func (UnimplementedEmbeddingServiceServer) GetEmbeddingJobStatus(context.Context, *GetEmbeddingJobStatusRequest) (*GetEmbeddingJobStatusResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetEmbeddingJobStatus not implemented")
+}
+func (UnimplementedEmbeddingServiceServer) ListEmbeddingWorkItems(context.Context, *ListEmbeddingWorkItemsRequest) (*ListEmbeddingWorkItemsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListEmbeddingWorkItems not implemented")
+}
+func (UnimplementedEmbeddingServiceServer) ReportEmbeddingBatch(context.Context, *ReportEmbeddingBatchRequest) (*ReportEmbeddingBatchResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ReportEmbeddingBatch not implemented")
+}
+func (UnimplementedEmbeddingServiceServer) ReportEmbeddingFailure(context.Context, *ReportEmbeddingFailureRequest) (*ReportEmbeddingFailureResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ReportEmbeddingFailure not implemented")
+}
+func (UnimplementedEmbeddingServiceServer) IngestDocument(context.Context, *IngestDocumentRequest) (*IngestDocumentResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method IngestDocument not implemented")
+}
+func (UnimplementedEmbeddingServiceServer) IngestDocumentBatch(context.Context, *IngestDocumentBatchRequest) (*IngestDocumentBatchResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method IngestDocumentBatch not implemented")
+}
+func (UnimplementedEmbeddingServiceServer) ReportParsedDocument(context.Context, *ReportParsedDocumentRequest) (*ReportParsedDocumentResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ReportParsedDocument not implemented")
+}
+func (UnimplementedEmbeddingServiceServer) ReportRetrievalEvaluation(context.Context, *ReportRetrievalEvaluationRequest) (*ReportRetrievalEvaluationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ReportRetrievalEvaluation not implemented")
 }
 func (UnimplementedEmbeddingServiceServer) testEmbeddedByValue() {}
 
@@ -328,6 +536,240 @@ func _EmbeddingService_Retrieve_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _EmbeddingService_RegisterModel_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RegisterModelRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EmbeddingServiceServer).RegisterModel(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EmbeddingService_RegisterModel_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EmbeddingServiceServer).RegisterModel(ctx, req.(*RegisterModelRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _EmbeddingService_ListModels_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListModelsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EmbeddingServiceServer).ListModels(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EmbeddingService_ListModels_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EmbeddingServiceServer).ListModels(ctx, req.(*ListModelsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _EmbeddingService_DeleteModel_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteModelRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EmbeddingServiceServer).DeleteModel(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EmbeddingService_DeleteModel_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EmbeddingServiceServer).DeleteModel(ctx, req.(*DeleteModelRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _EmbeddingService_SetModelStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetModelStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EmbeddingServiceServer).SetModelStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EmbeddingService_SetModelStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EmbeddingServiceServer).SetModelStatus(ctx, req.(*SetModelStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _EmbeddingService_CutoverModelAlias_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CutoverModelAliasRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EmbeddingServiceServer).CutoverModelAlias(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EmbeddingService_CutoverModelAlias_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EmbeddingServiceServer).CutoverModelAlias(ctx, req.(*CutoverModelAliasRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _EmbeddingService_GetEmbeddingJobStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetEmbeddingJobStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EmbeddingServiceServer).GetEmbeddingJobStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EmbeddingService_GetEmbeddingJobStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EmbeddingServiceServer).GetEmbeddingJobStatus(ctx, req.(*GetEmbeddingJobStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _EmbeddingService_ListEmbeddingWorkItems_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListEmbeddingWorkItemsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EmbeddingServiceServer).ListEmbeddingWorkItems(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EmbeddingService_ListEmbeddingWorkItems_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EmbeddingServiceServer).ListEmbeddingWorkItems(ctx, req.(*ListEmbeddingWorkItemsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _EmbeddingService_ReportEmbeddingBatch_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReportEmbeddingBatchRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EmbeddingServiceServer).ReportEmbeddingBatch(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EmbeddingService_ReportEmbeddingBatch_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EmbeddingServiceServer).ReportEmbeddingBatch(ctx, req.(*ReportEmbeddingBatchRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _EmbeddingService_ReportEmbeddingFailure_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReportEmbeddingFailureRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EmbeddingServiceServer).ReportEmbeddingFailure(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EmbeddingService_ReportEmbeddingFailure_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EmbeddingServiceServer).ReportEmbeddingFailure(ctx, req.(*ReportEmbeddingFailureRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _EmbeddingService_IngestDocument_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(IngestDocumentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EmbeddingServiceServer).IngestDocument(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EmbeddingService_IngestDocument_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EmbeddingServiceServer).IngestDocument(ctx, req.(*IngestDocumentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _EmbeddingService_IngestDocumentBatch_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(IngestDocumentBatchRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EmbeddingServiceServer).IngestDocumentBatch(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EmbeddingService_IngestDocumentBatch_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EmbeddingServiceServer).IngestDocumentBatch(ctx, req.(*IngestDocumentBatchRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _EmbeddingService_ReportParsedDocument_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReportParsedDocumentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EmbeddingServiceServer).ReportParsedDocument(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EmbeddingService_ReportParsedDocument_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EmbeddingServiceServer).ReportParsedDocument(ctx, req.(*ReportParsedDocumentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _EmbeddingService_ReportRetrievalEvaluation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReportRetrievalEvaluationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EmbeddingServiceServer).ReportRetrievalEvaluation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EmbeddingService_ReportRetrievalEvaluation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EmbeddingServiceServer).ReportRetrievalEvaluation(ctx, req.(*ReportRetrievalEvaluationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // EmbeddingService_ServiceDesc is the grpc.ServiceDesc for EmbeddingService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -358,6 +800,58 @@ var EmbeddingService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Retrieve",
 			Handler:    _EmbeddingService_Retrieve_Handler,
+		},
+		{
+			MethodName: "RegisterModel",
+			Handler:    _EmbeddingService_RegisterModel_Handler,
+		},
+		{
+			MethodName: "ListModels",
+			Handler:    _EmbeddingService_ListModels_Handler,
+		},
+		{
+			MethodName: "DeleteModel",
+			Handler:    _EmbeddingService_DeleteModel_Handler,
+		},
+		{
+			MethodName: "SetModelStatus",
+			Handler:    _EmbeddingService_SetModelStatus_Handler,
+		},
+		{
+			MethodName: "CutoverModelAlias",
+			Handler:    _EmbeddingService_CutoverModelAlias_Handler,
+		},
+		{
+			MethodName: "GetEmbeddingJobStatus",
+			Handler:    _EmbeddingService_GetEmbeddingJobStatus_Handler,
+		},
+		{
+			MethodName: "ListEmbeddingWorkItems",
+			Handler:    _EmbeddingService_ListEmbeddingWorkItems_Handler,
+		},
+		{
+			MethodName: "ReportEmbeddingBatch",
+			Handler:    _EmbeddingService_ReportEmbeddingBatch_Handler,
+		},
+		{
+			MethodName: "ReportEmbeddingFailure",
+			Handler:    _EmbeddingService_ReportEmbeddingFailure_Handler,
+		},
+		{
+			MethodName: "IngestDocument",
+			Handler:    _EmbeddingService_IngestDocument_Handler,
+		},
+		{
+			MethodName: "IngestDocumentBatch",
+			Handler:    _EmbeddingService_IngestDocumentBatch_Handler,
+		},
+		{
+			MethodName: "ReportParsedDocument",
+			Handler:    _EmbeddingService_ReportParsedDocument_Handler,
+		},
+		{
+			MethodName: "ReportRetrievalEvaluation",
+			Handler:    _EmbeddingService_ReportRetrievalEvaluation_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

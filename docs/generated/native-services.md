@@ -15,7 +15,7 @@ Contract version `4.0.0` · 27 native services.
 | `cache` | Cache | cache | yes | postgres, redis | 7 | control-plane |
 | `config` | Config | config | yes | postgres | 5 | control-plane |
 | `control` | Control Plane Distribution | control | yes | postgres | 6 | control-plane |
-| `embedding` | Embeddings | embedding | yes | postgres | 6 | control-plane |
+| `embedding` | Embeddings | embedding | yes | postgres | 19 | control-plane |
 | `idp` | Identity Providers | auth | yes | postgres | 27 | control-plane |
 | `livequery` | Live Query | livequery | yes | postgres | 1 | control-plane |
 | `lock` | Locks | lock | yes | postgres | 5 | control-plane |

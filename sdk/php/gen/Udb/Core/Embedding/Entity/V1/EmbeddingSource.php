@@ -67,9 +67,8 @@ class EmbeddingSource extends \Google\Protobuf\Internal\Message
      */
     protected $target_collection = '';
     /**
-     * Model identifier the SIDECAR must use to embed. Non-secret routing only; the
-     * model credentials/API keys live ONLY in the sidecar, never in the broker and
-     * never in a work-event payload.
+     * Registered model identity. The sidecar receives this non-secret id and a
+     * Vault reference; provider credentials never enter the broker or outbox.
      *
      * Generated from protobuf field <code>string model_id = 7 [json_name = "modelId", (.udb.core.common.v1.pg_column) = {</code>
      */
@@ -128,9 +127,8 @@ class EmbeddingSource extends \Google\Protobuf\Internal\Message
      *     @type string $target_collection
      *           Target vector collection the reported embedding is upserted into.
      *     @type string $model_id
-     *           Model identifier the SIDECAR must use to embed. Non-secret routing only; the
-     *           model credentials/API keys live ONLY in the sidecar, never in the broker and
-     *           never in a work-event payload.
+     *           Registered model identity. The sidecar receives this non-secret id and a
+     *           Vault reference; provider credentials never enter the broker or outbox.
      *     @type string $tenant_column
      *           The SOURCE table's resolved tenant column, captured at register time via the
      *           shared catalog resolver. An EmbeddingSource cannot exist without it, so every
@@ -305,9 +303,8 @@ class EmbeddingSource extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Model identifier the SIDECAR must use to embed. Non-secret routing only; the
-     * model credentials/API keys live ONLY in the sidecar, never in the broker and
-     * never in a work-event payload.
+     * Registered model identity. The sidecar receives this non-secret id and a
+     * Vault reference; provider credentials never enter the broker or outbox.
      *
      * Generated from protobuf field <code>string model_id = 7 [json_name = "modelId", (.udb.core.common.v1.pg_column) = {</code>
      * @return string
@@ -318,9 +315,8 @@ class EmbeddingSource extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Model identifier the SIDECAR must use to embed. Non-secret routing only; the
-     * model credentials/API keys live ONLY in the sidecar, never in the broker and
-     * never in a work-event payload.
+     * Registered model identity. The sidecar receives this non-secret id and a
+     * Vault reference; provider credentials never enter the broker or outbox.
      *
      * Generated from protobuf field <code>string model_id = 7 [json_name = "modelId", (.udb.core.common.v1.pg_column) = {</code>
      * @param string $var

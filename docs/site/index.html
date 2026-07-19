@@ -37,7 +37,7 @@
 <main>
   <div class="hero">
     <div class="wrap">
-      <span class="pill reveal"><span class="dot"></span> <b>v0.3.7</b> · 18 backends · 344 RPCs · six SDKs</span>
+      <span class="pill reveal"><span class="dot"></span> <b>v0.4.16</b> · 18 backends · 344 RPCs · six SDKs</span>
       <div class="reveal d1"><img class="logo" src="./assets/udb_logo.svg" alt="Universal Data Broker logo"></div>
       <h1 class="reveal d1">UDB is the typed control point for <span class="g">app data</span></h1>
       <p class="tagline reveal d2"><b>Declare once</b> · <b>enforce centrally</b> · <b>call from any SDK</b></p>
@@ -106,7 +106,7 @@
           <a href="./data-plane.html">Inspect the data plane</a>
         </article>
         <article class="surface reveal d1">
-          <span>Control plane</span><h3>188 native RPCs</h3>
+          <span>Control plane</span><h3>267 native RPCs</h3>
           <p>Auth, identity federation, tenancy, policy bundles, API keys, notifications, storage, realtime, analytics, audit, and operational services behind the native listener.</p>
           <a href="./control-plane.html">Inspect native services</a>
         </article>
@@ -180,7 +180,7 @@
 ) <span class="k">as</span> udb:
     pdf = open(<span class="s">"invoice.pdf"</span>, <span class="s">"rb"</span>).read()
     udb.storage.upload_file(<span class="s">"invoice.pdf"</span>, pdf, {<span class="s">"content_type"</span>: <span class="s">"application/pdf"</span>})
-    udb.authz.allow_role(<span class="s">"reader"</span>, <span class="s">"invoice"</span>, <span class="s">"data.select"</span>)
+    udb.authz.allow_role(<span class="s">"reader"</span>, <span class="s">"invoice"</span>, <span class="s">"Select"</span>)
     rows = udb.data.table(<span class="s">"invoice"</span>).select(where={<span class="s">"status"</span>: <span class="s">"open"</span>})</pre></div>
             <div class="panel" id="p2"><pre><span class="k">import</span> (
     <span class="s">"os"</span>
@@ -208,7 +208,7 @@ rows, _ := invoices.<span class="fn">Select</span>(ctx, map[string]any{<span cla
 });
 <span class="k">const</span> pdf = <span class="k">await</span> readFile(<span class="s">"invoice.pdf"</span>);
 <span class="k">await</span> udb.storage.<span class="fn">uploadFile</span>(<span class="s">"invoice.pdf"</span>, pdf, { contentType: <span class="s">"application/pdf"</span> });
-<span class="k">await</span> udb.authz.<span class="fn">allowRole</span>(<span class="s">"reader"</span>, { resource: <span class="s">"invoice"</span>, action: <span class="s">"data.select"</span> });
+<span class="k">await</span> udb.authz.<span class="fn">allowRole</span>(<span class="s">"reader"</span>, { resource: <span class="s">"invoice"</span>, action: <span class="s">"Select"</span> });
 <span class="k">const</span> rows = <span class="k">await</span> udb.data.table(<span class="s">"Invoice"</span>).select({ where: { status: <span class="s">"open"</span> } });</pre></div>
             <div class="panel" id="p4"><pre><span class="c"># scaffold a project, generate SDKs, run the broker</span>
 $ udb scaffold
@@ -262,7 +262,7 @@ $ udb native manifest | jq <span class="s">'.service_count'</span></pre></div>
       <div class="grid c3 mt28">
         <a class="card reveal" href="./architecture.html"><div class="ic">🧭</div><h3>Architecture</h3><p>Proto → catalog manifest → per-request runtime pipeline; the descriptor is the single source of truth.</p><span class="more">How it works</span></a>
         <a class="card warm reveal d1" href="./data-plane.html"><div class="ic">🗄️</div><h3>Data plane</h3><p>77 RPCs across every backend, plus 2PC/XA, sagas, CDC→Kafka, and migrations.</p><span class="more">Explore</span></a>
-        <a class="card reveal d2" href="./control-plane.html"><div class="ic">🔐</div><h3>Control plane</h3><p>15 native services, 188 RPCs — auth, identity, tenancy, and policy distribution.</p><span class="more">See services</span></a>
+        <a class="card reveal d2" href="./control-plane.html"><div class="ic">🔐</div><h3>Control plane</h3><p>27 native services, 267 RPCs — auth, identity, tenancy, and policy distribution.</p><span class="more">See services</span></a>
         <a class="card warm reveal" href="./security.html"><div class="ic">🛡️</div><h3>Security</h3><p>RLS, encryption, mTLS, fail-closed posture, and compliance profiles.</p><span class="more">Security model</span></a>
         <a class="card reveal d1" href="./enterprise.html"><div class="ic">⚙️</div><h3>Enterprise &amp; HA</h3><p>Leader election, recovery, observability, SLOs, and runbooks.</p><span class="more">Operate at scale</span></a>
         <a class="card reveal d2" href="./sdks.html"><div class="ic">🧩</div><h3>SDKs</h3><p>Workflow helpers for app code, raw generated clients for advanced protocol access.</p><span class="more">Get started</span></a>
@@ -285,7 +285,7 @@ $ udb native manifest | jq <span class="s">'.service_count'</span></pre></div>
       <a href="https://github.com/fahara02/udb/blob/main/LICENSE">MIT</a>
     </nav>
   </div>
-  <div class="wrap" style="margin-top:16px"><small>UDB · crate v0.3.7 · protocol v1.0.0 · policy-aware data routing. Built in Rust.</small></div>
+  <div class="wrap" style="margin-top:16px"><small>UDB · crate v0.4.16 · protocol v1.0.0 · policy-aware data routing. Built in Rust.</small></div>
 </footer>
 
 <script defer src="./app.js"></script>

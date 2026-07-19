@@ -67,8 +67,19 @@ function normalizeGeneratedText(text) {
     .replace(/\r?\n+$/u, "\n");
 }
 
+const GO_PRIVATE_GOOGLE_API_IMPORT = "github.com/fahara02/udb/sdk/go/gen/google/api";
+const GO_CANONICAL_GOOGLE_API_IMPORT = "google.golang.org/genproto/googleapis/api/annotations";
+const GO_PRIVATE_GOOGLE_API_DIR = path.normalize("sdk/go/gen/google/api");
+
+function dropPrivateGoGoogleApiStubs() {
+  if (fs.existsSync(GO_PRIVATE_GOOGLE_API_DIR)) {
+    fs.rmSync(GO_PRIVATE_GOOGLE_API_DIR, { recursive: true, force: true });
+  }
+}
+
 function normalizeGoGeneratedText(text) {
   return normalizeGeneratedText(text)
+    .replaceAll(GO_PRIVATE_GOOGLE_API_IMPORT, GO_CANONICAL_GOOGLE_API_IMPORT)
     .replace(
       /(\/\/ Hybrid model:\n)\/\/   (SERVER_SIDE:[^\n]+)\n\/\/   (JWT:[^\n]+)/gu,
       "$1//\n//\t$2\n//\t$3",
@@ -267,6 +278,8 @@ const PHP_COMMENT_DRIFT_FILES = new Set([
   path.normalize("sdk/php/gen/Udb/Core/Authz/Services/V1/PolicyBundleRequest.php"),
 ]);
 
+dropPrivateGoGoogleApiStubs();
+
 for (const root of GENERATED_ROOTS) {
   for (const file of walkFiles(root)) {
     if (GENERATED_TEXT_EXTENSIONS.has(path.extname(file))) {
@@ -289,4 +302,4 @@ for (const root of GENERATED_ROOTS) {
   }
 }
 
-console.log("sdk-codegen-postprocess: normalized generated SDK whitespace/import drift");
+console.log("sdk-codegen-postprocess: normalized generated SDK whitespace/import drift and Go google/api imports");

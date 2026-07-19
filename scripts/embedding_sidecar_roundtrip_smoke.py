@@ -66,16 +66,16 @@ def required_str(mapping: dict[str, Any], key: str) -> str:
     return value
 
 
-def normalize_work(value: dict[str, Any]) -> dict[str, str]:
+def normalize_work(value: dict[str, Any]) -> dict[str, Any]:
     check_no_credentials(value)
-    return {
-        "tenant_id": required_str(value, "tenant_id"),
-        "source": required_str(value, "source"),
-        "row_pk": required_str(value, "row_pk"),
-        "text": required_str(value, "text"),
-        "model_id": required_str(value, "model_id"),
-        "target_collection": str(value.get("target_collection", "")).strip(),
-    }
+    candidate = value
+    while not candidate.get("tenant_id") and isinstance(candidate.get("payload"), dict):
+        candidate = candidate["payload"]
+    normalized = dict(candidate)
+    for key in ("tenant_id", "source", "row_pk", "text", "model_id"):
+        normalized[key] = required_str(candidate, key)
+    normalized["target_collection"] = str(candidate.get("target_collection", "")).strip()
+    return normalized
 
 
 def request_json(method: str, url: str, body: dict[str, Any] | None = None) -> tuple[int, dict[str, Any]]:
@@ -93,7 +93,7 @@ def request_json(method: str, url: str, body: dict[str, Any] | None = None) -> t
         return exc.code, json.loads(exc.read().decode("utf-8") or "{}")
 
 
-def sidecar_embed(sidecar_url: str, work: dict[str, str]) -> dict[str, Any]:
+def sidecar_embed(sidecar_url: str, work: dict[str, Any]) -> dict[str, Any]:
     status, payload = request_json("POST", f"{sidecar_url.rstrip('/')}/embed", work)
     if status != 200:
         raise SmokeError(f"embedding sidecar failed: status={status} payload={payload}")
@@ -103,7 +103,7 @@ def sidecar_embed(sidecar_url: str, work: dict[str, str]) -> dict[str, Any]:
     return validate_report(work, report)
 
 
-def validate_report(work: dict[str, str], report: dict[str, Any]) -> dict[str, Any]:
+def validate_report(work: dict[str, Any], report: dict[str, Any]) -> dict[str, Any]:
     expected = {
         "tenant_id": work["tenant_id"],
         "source_name": work["source"],
@@ -121,7 +121,7 @@ def validate_report(work: dict[str, str], report: dict[str, Any]) -> dict[str, A
     dims = int(report.get("dims") or len(vector))
     if dims != len(vector):
         raise SmokeError(f"report dims={dims} does not match vector length={len(vector)}")
-    return {
+    normalized = {
         "tenant_id": report["tenant_id"],
         "source_name": report["source_name"],
         "row_pk": report["row_pk"],
@@ -129,6 +129,12 @@ def validate_report(work: dict[str, str], report: dict[str, Any]) -> dict[str, A
         "model": report["model"],
         "dims": dims,
     }
+    for key in ("work_item_id", "chunk_hash", "token_count", "vector_name"):
+        if key in work and report.get(key) != work[key]:
+            raise SmokeError(f"report field {key!r} did not echo durable work identity")
+        if key in report:
+            normalized[key] = report[key]
+    return normalized
 
 
 def assert_relation(value: str) -> str:
@@ -157,7 +163,7 @@ def psql_json(dsn: str, sql: str) -> dict[str, Any]:
     return json.loads(raw)
 
 
-def load_work_from_postgres(args: argparse.Namespace) -> dict[str, str]:
+def load_work_from_postgres(args: argparse.Namespace) -> dict[str, Any]:
     outbox_relation = assert_relation(args.outbox_relation)
     journal_relation = assert_relation(args.journal_relation)
     if args.work_source == "outbox":
@@ -183,7 +189,7 @@ def load_work_from_postgres(args: argparse.Namespace) -> dict[str, str]:
     return normalize_work(psql_json(args.pg_dsn, sql))
 
 
-def load_work(args: argparse.Namespace) -> dict[str, str]:
+def load_work(args: argparse.Namespace) -> dict[str, Any]:
     if args.work_json:
         return normalize_work(json.loads(args.work_json))
     if args.work_json_file:

@@ -6,7 +6,7 @@ Inputs:
 - `docs/generated/bench-bodies.json`
 - `docs/site/bench-results.json`
 
-Current generated RPC surface: 353 RPCs across 28 services.
+Current generated RPC surface: 366 RPCs across 28 services.
 
 Published benchmark artifact: not committed yet.
 Release tag: -.
@@ -54,7 +54,7 @@ Generated at: -.
 | ConfigService | 5 | 3 | 1 | 1 | 0 |
 | ControlPlaneService | 6 | 2 | 4 | 0 | 0 |
 | DataBroker | 77 | 35 | 35 | 7 | 0 |
-| EmbeddingService | 6 | 2 | 3 | 1 | 0 |
+| EmbeddingService | 19 | 5 | 12 | 2 | 0 |
 | IdentityProviderService | 27 | 6 | 21 | 0 | 0 |
 | LiveQueryService | 1 | 1 | 0 | 0 | 0 |
 | LockService | 5 | 2 | 3 | 0 | 0 |
@@ -300,11 +300,24 @@ identity surface available to benchmark reports.
 | `DataBroker/VectorUpsert` | `vector_upsert` | `vectorUpsert` | MUTATION |
 | `DataBroker/VerifyAdminAuditLog` | `verify_admin_audit_log` | `verifyAdminAuditLog` | READ_ONLY |
 | `EmbeddingService/Backfill` | `backfill` | `backfillEmbeddingSource` | MUTATION |
+| `EmbeddingService/CutoverModelAlias` | `cutover_model_alias` | `cutoverEmbeddingModelAlias` | MUTATION |
+| `EmbeddingService/DeleteModel` | `delete_model` | `deleteEmbeddingModel` | DESTRUCTIVE |
 | `EmbeddingService/DeleteSource` | `delete_source` | `deleteEmbeddingSource` | DESTRUCTIVE |
+| `EmbeddingService/GetEmbeddingJobStatus` | `get_job_status` | `getEmbeddingJobStatus` | READ_ONLY |
+| `EmbeddingService/IngestDocument` | `ingest_document` | `ingestEmbeddingDocument` | MUTATION |
+| `EmbeddingService/IngestDocumentBatch` | `ingest_document_batch` | `ingestEmbeddingDocumentBatch` | MUTATION |
+| `EmbeddingService/ListEmbeddingWorkItems` | `list_work_items` | `listEmbeddingWorkItems` | READ_ONLY |
+| `EmbeddingService/ListModels` | `list_models` | `listEmbeddingModels` | READ_ONLY |
 | `EmbeddingService/ListSources` | `list_sources` | `listEmbeddingSources` | READ_ONLY |
+| `EmbeddingService/RegisterModel` | `register_model` | `registerEmbeddingModel` | MUTATION |
 | `EmbeddingService/RegisterSource` | `register_source` | `registerEmbeddingSource` | MUTATION |
 | `EmbeddingService/ReportEmbedding` | `report_embedding` | `reportEmbedding` | MUTATION |
+| `EmbeddingService/ReportEmbeddingBatch` | `report_embedding_batch` | `reportEmbeddingBatch` | MUTATION |
+| `EmbeddingService/ReportEmbeddingFailure` | `report_embedding_failure` | `reportEmbeddingFailure` | MUTATION |
+| `EmbeddingService/ReportParsedDocument` | `report_parsed_document` | `reportParsedDocument` | MUTATION |
+| `EmbeddingService/ReportRetrievalEvaluation` | `report_retrieval_evaluation` | `reportRetrievalEvaluation` | MUTATION |
 | `EmbeddingService/Retrieve` | `retrieve` | `retrieveEmbedding` | READ_ONLY |
+| `EmbeddingService/SetModelStatus` | `set_model_status` | `setEmbeddingModelStatus` | MUTATION |
 | `IdentityProviderService/CreateProvider` | `create_provider` | `createProvider` | MUTATION |
 | `IdentityProviderService/DisableProvider` | `disable_provider` | `disableProvider` | MUTATION |
 | `IdentityProviderService/ForceJwksRefresh` | `force_jwks_refresh` | `forceJwksRefresh` | MUTATION |
