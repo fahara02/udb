@@ -71,10 +71,10 @@ public final class FieldBehaviorProto {
       "EFAULT\020\007\022\016\n\nIDENTIFIER\020\010:d\n\016field_behavi" +
       "or\022\035.google.protobuf.FieldOptions\030\234\010 \003(\016" +
       "2\031.google.api.FieldBehaviorB\002\020\000R\rfieldBe" +
-      "haviorBi\n\016com.google.apiB\022FieldBehaviorP" +
-      "rotoP\001Z-github.com/fahara02/udb/sdk/go/g" +
-      "en/google/api\242\002\003GAX\352\002\013Google::Apib\006proto" +
-      "3"
+      "haviorBp\n\016com.google.apiB\022FieldBehaviorP" +
+      "rotoP\001ZAgoogle.golang.org/genproto/googl" +
+      "eapis/api/annotations;annotations\242\002\004GAPI" +
+      "b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

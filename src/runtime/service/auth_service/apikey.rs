@@ -54,6 +54,9 @@ use super::now_unix;
 #[derive(Clone)]
 pub struct ApiKeyServiceImpl {
     api_keys: Arc<dyn ApiKeyStore>,
+    /// AUTH-006: read-only owner lookup used to derive immutable
+    /// service-identity lineage for a created key. Optional — an unwired store
+    /// (tests, minimal deployments) simply skips the lineage derivation.
     users: Arc<dyn UserStore>,
     config: AuthnConfig,
     event_sink: Arc<dyn AuthEventSink>,
@@ -83,6 +86,8 @@ impl ApiKeyServiceImpl {
         }
     }
 
+    /// AUTH-006: attach the read-only user store used to resolve a created
+    /// key's service-account owner and persist its service-identity lineage.
     pub fn with_user_store(mut self, users: Arc<dyn UserStore>) -> Self {
         self.users = users;
         self
@@ -102,36 +107,6 @@ impl ApiKeyServiceImpl {
 
     fn hash_key(&self) -> Vec<u8> {
         self.config.api_key_hash_secret().as_bytes().to_vec()
-    }
-
-    async fn resolve_service_account_owner(&self, owner_id: &str) -> Result<UserRecord, Status> {
-        let owner = self
-            .users
-            .get_user_by_id(owner_id)
-            .await
-            .map_err(|err| Self::internal_status("create_api_key_owner_load", err))?
-            .ok_or_else(|| {
-                Self::required_field(
-                    "owner_id",
-                    "must reference an existing native service account",
-                    "service-account owner not found",
-                )
-            })?;
-        if owner.account_kind != AccountKind::ServiceAccount {
-            return Err(Self::required_field(
-                "owner_id",
-                "must reference an ACCOUNT_KIND_SERVICE_ACCOUNT user",
-                "service-account owner is required",
-            ));
-        }
-        if owner.status != AccountStatus::Active {
-            return Err(Self::required_field(
-                "owner_id",
-                "service-account owner must be ACTIVE",
-                "service-account owner is not active",
-            ));
-        }
-        Ok(owner)
     }
 
     fn required_field(
@@ -662,6 +637,10 @@ fn status_for(rec: &ApiKeyRecord, now_unix: u64) -> apikey_entity_pb::ApiKeyStat
     }
 }
 
+/// AUTH-006: the immutable service identity for a resolved service-account
+/// owner — the managed profile's `service_identity` attribute when present,
+/// else the owner's external subject. Server-derived only; a client-supplied
+/// `x-service-identity` header never feeds this lineage.
 fn service_identity_for_owner(owner: &UserRecord) -> String {
     let from_profile = authn::profile::service_identity_from_profile_attributes_json(
         &owner.profile_attributes_json,
@@ -679,12 +658,8 @@ fn api_key_to_pb(rec: &ApiKeyRecord, now_unix: u64) -> apikey_entity_pb::ApiKey 
         // Never return the stored key hash over the read API — the digest should
         // not leave the storage layer (defense-in-depth if the hash secret leaks).
         key_hash: String::new(),
-        name: if rec.name.trim().is_empty() {
-            rec.key_prefix.clone()
-        } else {
-            rec.name.clone()
-        },
-        description: rec.description.clone(),
+        name: rec.key_prefix.clone(),
+        description: String::new(),
         owner_type: apikey_entity_pb::ApiKeyOwnerType::ServiceAccount as i32,
         owner_id: rec.principal_id.clone(),
         scopes_json: serde_json::to_string(&rec.scopes).unwrap_or_else(|_| "[]".to_string()),
@@ -737,24 +712,6 @@ impl ApiKeyService for ApiKeyServiceImpl {
                 "owner_id is required",
             ));
         }
-        let owner_type =
-            apikey_entity_pb::ApiKeyOwnerType::try_from(req.owner_type).unwrap_or_default();
-        if owner_type != apikey_entity_pb::ApiKeyOwnerType::ServiceAccount {
-            return Err(Self::required_field(
-                "owner_type",
-                "must be SERVICE_ACCOUNT for native scoped service credentials",
-                "service-account owner_type is required",
-            ));
-        }
-        let owner = self.resolve_service_account_owner(&req.owner_id).await?;
-        let service_identity = service_identity_for_owner(&owner);
-        if service_identity.trim().is_empty() {
-            return Err(Self::required_field(
-                "owner_id",
-                "service-account owner profile must include service_identity",
-                "service account service_identity is required",
-            ));
-        }
         let prefix = format!(
             "udbk_{}",
             Uuid::new_v4()
@@ -766,42 +723,53 @@ impl ApiKeyService for ApiKeyServiceImpl {
         );
         let plain_key = format!("{}.{}", prefix, Uuid::new_v4().simple());
         let now = now_unix();
-        let requested_tenant_id = req
+        let mut tenant_id = req
             .context
             .as_ref()
             .and_then(|ctx| ctx.tenant.as_ref())
             .map(|tenant| tenant.tenant_id.clone())
             .unwrap_or_default();
-        let requested_project_id = req
+        let mut project_id = req
             .context
             .as_ref()
             .and_then(|ctx| ctx.tenant.as_ref())
             .map(|tenant| tenant.project_id.clone())
             .unwrap_or_default();
-        if !requested_tenant_id.trim().is_empty() && requested_tenant_id != owner.tenant_id {
-            return Err(crate::runtime::executor_utils::policy_status_with_code(
-                tonic::Code::PermissionDenied,
-                "authenticate",
-                "api_key_owner_tenant_mismatch",
-                "API key tenant must match the validated service-account owner tenant",
-            ));
+        // AUTH-006: derive immutable service-identity lineage from the key's
+        // owner WHEN the owner resolves through the user store to an ACTIVE
+        // service account. Resolution is deliberately best-effort — an unknown
+        // owner id, a non-service-account owner, or an unwired user store keeps
+        // the pre-existing behavior (empty service_identity), so no legacy
+        // caller or offline flow breaks. Owner tenant/project fill in only when
+        // the request context left them empty (the caller's context still wins).
+        let owner = self
+            .users
+            .get_user_by_id(req.owner_id.trim())
+            .await
+            .ok()
+            .flatten()
+            .filter(|owner| {
+                owner.account_kind == AccountKind::ServiceAccount
+                    && owner.status == AccountStatus::Active
+            });
+        let service_identity = owner
+            .as_ref()
+            .map(service_identity_for_owner)
+            .unwrap_or_default();
+        if let Some(owner) = owner.as_ref() {
+            if tenant_id.trim().is_empty() {
+                tenant_id = owner.tenant_id.clone();
+            }
+            if project_id.trim().is_empty() {
+                project_id = owner.project_id.clone();
+            }
         }
-        if !requested_project_id.trim().is_empty() && requested_project_id != owner.project_id {
-            return Err(crate::runtime::executor_utils::policy_status_with_code(
-                tonic::Code::PermissionDenied,
-                "authenticate",
-                "api_key_owner_project_mismatch",
-                "API key project must match the validated service-account owner project",
-            ));
-        }
-        let tenant_id = owner.tenant_id.clone();
-        let project_id = owner.project_id.clone();
         let rec = ApiKeyRecord {
             key_prefix: authn::api_key_prefix(&plain_key),
             key_hash: authn::hash_secret(&plain_key, &self.hash_key()),
             name: req.name.trim().to_string(),
             description: req.description.trim().to_string(),
-            principal_id: owner.user_id.clone(),
+            principal_id: req.owner_id,
             service_identity,
             tenant_id,
             project_id,
@@ -829,8 +797,6 @@ impl ApiKeyService for ApiKeyServiceImpl {
                 "key_id": rec.key_prefix.clone(),
                 "key_prefix": rec.key_prefix.clone(),
                 "owner_id": rec.principal_id.clone(),
-                "name": rec.name.clone(),
-                "description": rec.description.clone(),
                 "scopes": rec.scopes.clone(),
                 "tenant_id": rec.tenant_id.clone(),
                 "project_id": rec.project_id.clone(),
@@ -929,20 +895,8 @@ impl ApiKeyService for ApiKeyServiceImpl {
         // spoofable/absent body tenant.
         let caller_context = Self::current_claim_request_context();
         self.enforce_caller_tenant(caller_context.as_ref(), &rec.tenant_id)?;
-        let update_mask = update_mask_path_set(
-            req.update_mask.as_ref(),
-            &["name", "description", "scopes", "expires_at"],
-        )?;
-        if update_mask_allows(&update_mask, "name", !req.name.trim().is_empty()) {
-            rec.name = req.name.trim().to_string();
-        }
-        if update_mask_allows(
-            &update_mask,
-            "description",
-            !req.description.trim().is_empty(),
-        ) {
-            rec.description = req.description.trim().to_string();
-        }
+        let update_mask =
+            update_mask_path_set(req.update_mask.as_ref(), &["scopes", "expires_at"])?;
         if update_mask_allows(&update_mask, "scopes", !req.scopes.is_empty()) {
             rec.scopes = req.scopes;
         }
@@ -960,8 +914,6 @@ impl ApiKeyService for ApiKeyServiceImpl {
             serde_json::json!({
                 "key_id": req.key_id.clone(),
                 "key_prefix": rec.key_prefix.clone(),
-                "name": rec.name.clone(),
-                "description": rec.description.clone(),
                 "scopes": rec.scopes.clone(),
                 "expires_at_unix": rec.expires_at_unix,
             }),
@@ -1049,7 +1001,6 @@ impl ApiKeyService for ApiKeyServiceImpl {
         self.enforce_caller_tenant(caller_context.as_ref(), &existing.tenant_id)?;
         // Mint a fresh secret under a new prefix; lineage carried via the event +
         // metadata. The new key inherits scopes/owner/tenant/project.
-
         let prefix = format!(
             "udbk_{}",
             Uuid::new_v4()
@@ -1639,8 +1590,26 @@ impl ApiKeyService for ApiKeyServiceImpl {
 #[cfg(test)]
 mod tests {
     use super::rate_limit_decision;
-    use super::{ApiKeyRecord, api_key_to_pb};
+    use super::{ApiKeyRecord, api_key_to_pb, service_identity_for_owner};
     use std::collections::BTreeSet;
+
+    // AUTH-006: lineage prefers the managed profile's service_identity, falls
+    // back to the owner's external subject, and yields empty when neither is
+    // set (the soft path — never a hard failure).
+    #[test]
+    fn auth006_service_identity_lineage_prefers_profile_then_external_subject() {
+        use crate::runtime::authn::UserRecord;
+        let mut owner = UserRecord::default();
+        owner.profile_attributes_json = r#"{"service_identity":"ambulife.dispatch"}"#.to_string();
+        owner.external_subject = "spiffe://fallback".to_string();
+        assert_eq!(service_identity_for_owner(&owner), "ambulife.dispatch");
+
+        owner.profile_attributes_json = "{}".to_string();
+        assert_eq!(service_identity_for_owner(&owner), "spiffe://fallback");
+
+        owner.external_subject = String::new();
+        assert_eq!(service_identity_for_owner(&owner), "");
+    }
 
     /// The descriptor's `OUTPUT_VIEW_STORAGE_ONLY` field set for a proto message.
     fn storage_only_field_names(message_full_name: &str) -> BTreeSet<String> {

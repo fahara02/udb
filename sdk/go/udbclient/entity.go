@@ -88,6 +88,7 @@ type UpsertOption func(*upsertOptions)
 type upsertOptions struct {
 	returnRecord   bool
 	idempotencyKey string
+	expected       map[string]any
 }
 
 // ReturnRecord requests that Upsert decode the MutationResponse.record_json the
@@ -102,6 +103,18 @@ func ReturnRecord() UpsertOption { return func(o *upsertOptions) { o.returnRecor
 // rejected; an unset key leaves the request's idempotency_key empty (unchanged).
 func WithIdempotencyKey(key string) UpsertOption {
 	return func(o *upsertOptions) { o.idempotencyKey = key }
+}
+
+// WithExpected makes the Upsert a compare-and-swap: each field -> value
+// assertion must equal the CURRENT row (located by the bound entity key and
+// row-locked) inside the same transaction and tenant/RLS context as the write.
+// If the row is absent or any assertion fails, the broker returns
+// FAILED_PRECONDITION and writes nothing — so an optimistic
+// "update WHERE version = N" is atomic without raw SQL or an external lock.
+// Combine with WithIdempotencyKey for replay-safety of the winning command.
+// A nil/empty map leaves the request unconditional (unchanged behavior).
+func WithExpected(expected map[string]any) UpsertOption {
+	return func(o *upsertOptions) { o.expected = expected }
 }
 
 // UpsertResult carries an Upsert outcome. Record is populated only when
@@ -133,6 +146,15 @@ func (e *Entity) Upsert(ctx context.Context, record any, opts ...UpsertOption) (
 	if err != nil {
 		return nil, err
 	}
+	// UDB-GO-005: an expected map becomes the request's compare-and-swap
+	// precondition (google.protobuf.Struct); nil stays unconditional.
+	var expected *structpb.Struct
+	if len(o.expected) > 0 {
+		expected, err = structFilter(o.expected)
+		if err != nil {
+			return nil, fmt.Errorf("udb: encode expected precondition: %w", err)
+		}
+	}
 	resp, err := e.client.Upsert(ctx, &entityv1.UpsertRequest{
 		Context:        e.requestContext(),
 		MessageType:    e.fqn,
@@ -140,6 +162,7 @@ func (e *Entity) Upsert(ctx context.Context, record any, opts ...UpsertOption) (
 		ConflictFields: []string(e.key),
 		ReturnRecord:   o.returnRecord,
 		IdempotencyKey: o.idempotencyKey,
+		Expected:       expected,
 	})
 	if err != nil {
 		return nil, err
