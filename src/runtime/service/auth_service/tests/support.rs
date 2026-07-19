@@ -210,6 +210,9 @@ pub(super) fn api_key_service(pool: sqlx::PgPool) -> ApiKeyServiceImpl {
         ..AuthnConfig::default()
     };
     ApiKeyServiceImpl::with_store(config, Arc::new(PostgresApiKeyStore::new(pool.clone(), "")))
+        // AUTH-006: wire the user store so live tests exercise the best-effort
+        // service-identity lineage derivation (soft — unknown owners still work).
+        .with_user_store(Arc::new(PostgresUserStore::new(pool.clone(), "")))
         .with_postgres(Some(pool))
 }
 

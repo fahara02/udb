@@ -297,6 +297,130 @@ async fn postgres_upsert_read_modify_write_round_trips_live() {
     pool.close().await;
 }
 
+/// UDB-GO-005 regression — the compare-and-swap precondition's row-lock
+/// mechanism. `enforce_upsert_precondition` locates the target row `FOR UPDATE`
+/// inside the write tx and proceeds only when the current value matches the
+/// caller's `expected` assertion. This proves the DB-level guarantee it stands
+/// on: two racing writers that both assert `version = 1` cannot both win — the
+/// `FOR UPDATE` lock serializes them, so the loser unblocks *after* the winner
+/// commits, observes the bumped version, and its precondition must fail (writing
+/// nothing). Before GO-005 the generic upsert had no such precondition and both
+/// writers silently lost-updated each other.
+#[cfg(feature = "postgres")]
+#[tokio::test]
+async fn postgres_go005_cas_precondition_serializes_racing_writers_live() {
+    let Ok(dsn) = std::env::var("UDB_PG_DSN") else {
+        eprintln!("UDB_PG_DSN unset — skipping GO-005 CAS precondition regression");
+        return;
+    };
+    use sqlx::Row;
+    use sqlx::postgres::PgPoolOptions;
+
+    let pool = PgPoolOptions::new()
+        .max_connections(4)
+        .connect(&dsn)
+        .await
+        .expect("connect to live Postgres (UDB_PG_DSN)");
+    let schema = format!("udb_cas_{}", uuid::Uuid::new_v4().simple());
+    sqlx::query(&format!("CREATE SCHEMA \"{schema}\""))
+        .execute(&pool)
+        .await
+        .expect("create throwaway schema");
+    sqlx::query(&format!(
+        "CREATE TABLE \"{schema}\".fleet (\
+            id uuid PRIMARY KEY, version bigint NOT NULL, status text NOT NULL)"
+    ))
+    .execute(&pool)
+    .await
+    .expect("create fleet");
+
+    let id = uuid::Uuid::new_v4();
+    sqlx::query(&format!(
+        "INSERT INTO \"{schema}\".fleet (id, version, status) VALUES ($1, 1, 'INIT')"
+    ))
+    .bind(id)
+    .execute(&pool)
+    .await
+    .expect("seed version 1");
+
+    let sel = format!("SELECT version FROM \"{schema}\".fleet WHERE id = $1 FOR UPDATE");
+
+    // Writer A takes the row lock at version 1 (its expected=1 precondition
+    // holds) but does not commit yet — it holds the lock so B must wait.
+    let mut tx_a = pool.begin().await.expect("begin A");
+    let ver_a: i64 = sqlx::query(&sel)
+        .bind(id)
+        .fetch_one(&mut *tx_a)
+        .await
+        .expect("A select for update")
+        .try_get("version")
+        .unwrap();
+    assert_eq!(
+        ver_a, 1,
+        "A observes version 1; its expected=1 precondition holds"
+    );
+
+    // Writer B races for the same row on its own connection; its SELECT … FOR
+    // UPDATE must block on A's lock until A commits.
+    let pool_b = pool.clone();
+    let schema_b = schema.clone();
+    let handle = tokio::spawn(async move {
+        let sel_b = format!("SELECT version FROM \"{schema_b}\".fleet WHERE id = $1 FOR UPDATE");
+        let mut tx_b = pool_b.begin().await.expect("begin B");
+        let ver_b: i64 = sqlx::query(&sel_b)
+            .bind(id)
+            .fetch_one(&mut *tx_b)
+            .await
+            .expect("B select for update")
+            .try_get("version")
+            .unwrap();
+        // B unblocks only after A commits, so it MUST observe the bumped version;
+        // its expected=1 precondition therefore fails and it writes nothing.
+        let _ = tx_b.rollback().await;
+        ver_b
+    });
+
+    // Give B time to actually reach and block on the row lock before A commits.
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+
+    // A's precondition held, so A proceeds with the write and commits.
+    sqlx::query(&format!(
+        "UPDATE \"{schema}\".fleet SET version = 2, status = 'A' WHERE id = $1"
+    ))
+    .bind(id)
+    .execute(&mut *tx_a)
+    .await
+    .expect("A conditional update");
+    tx_a.commit().await.expect("A commit");
+
+    let ver_b = handle.await.expect("B task join");
+    assert_eq!(
+        ver_b, 2,
+        "B unblocks after A commits and observes the bumped version — expected=1 fails"
+    );
+
+    // Exactly one writer won: the row is at version 2 with A's value.
+    let row = sqlx::query(&format!(
+        "SELECT version, status FROM \"{schema}\".fleet WHERE id = $1"
+    ))
+    .bind(id)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    let final_version: i64 = row.try_get("version").unwrap();
+    let final_status: String = row.try_get("status").unwrap();
+    assert_eq!(final_version, 2, "exactly one CAS writer committed");
+    assert_eq!(
+        final_status, "A",
+        "the winner committed; the loser wrote nothing"
+    );
+
+    let _ = sqlx::query(&format!("DROP SCHEMA IF EXISTS \"{schema}\" CASCADE"))
+        .execute(&pool)
+        .await;
+    pool.close().await;
+}
+
 #[cfg(feature = "mysql")]
 #[tokio::test]
 async fn mysql_canonical_store_satisfies_all_contracts_live() {

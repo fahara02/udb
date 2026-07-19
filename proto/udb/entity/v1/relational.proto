@@ -53,6 +53,16 @@ message UpsertRequest {
   bool return_record = 6;
   CacheOptions cache = 7;
   string idempotency_key = 8;
+  // Optional compare-and-swap precondition (UDB-GO-005). When set, each
+  // `field -> value` assertion is checked against the CURRENT row — located by
+  // `conflict_fields` (else the primary key) and locked FOR UPDATE — inside the
+  // same write transaction and tenant/RLS context as the upsert. If the row is
+  // absent or any asserted field does not match, the mutation is rejected with
+  // `FAILED_PRECONDITION` and nothing is written, projected, or emitted to CDC.
+  // This lets optimistic-concurrency callers make "update WHERE version = N"
+  // atomic without dropping to a service-specific command or external lock.
+  // Backwards-compatible: an unset/empty `expected` behaves exactly as before.
+  google.protobuf.Struct expected = 9;
 }
 
 message DeleteRequest {

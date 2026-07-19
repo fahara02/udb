@@ -103,7 +103,7 @@ public final class RelationalProto {
       "\035\n\npage_token\030\006 \001(\tR\tpageToken\022\'\n\004sort\030\007" +
       " \003(\0132\023.udb.entity.v1.SortR\004sort\0221\n\005cache" +
       "\030\010 \001(\0132\033.udb.entity.v1.CacheOptionsR\005cac" +
-      "he\"\351\002\n\rUpsertRequest\0227\n\007context\030\001 \001(\0132\035." +
+      "he\"\236\003\n\rUpsertRequest\0227\n\007context\030\001 \001(\0132\035." +
       "udb.entity.v1.RequestContextR\007context\022!\n" +
       "\014message_type\030\002 \001(\tR\013messageType\022\037\n\013reco" +
       "rd_json\030\003 \001(\014R\nrecordJson\0221\n\007payload\030\004 \001" +
@@ -112,21 +112,23 @@ public final class RelationalProto {
       "\rreturn_record\030\006 \001(\010R\014returnRecord\0221\n\005ca" +
       "che\030\007 \001(\0132\033.udb.entity.v1.CacheOptionsR\005" +
       "cache\022\'\n\017idempotency_key\030\010 \001(\tR\016idempote" +
-      "ncyKey\"\305\001\n\rDeleteRequest\0227\n\007context\030\001 \001(" +
-      "\0132\035.udb.entity.v1.RequestContextR\007contex" +
-      "t\022!\n\014message_type\030\002 \001(\tR\013messageType\022/\n\006" +
-      "filter\030\003 \001(\0132\027.google.protobuf.StructR\006f" +
-      "ilter\022\'\n\017idempotency_key\030\004 \001(\tR\016idempote" +
-      "ncyKey\"\303\001\n\016ViewDefinition\0227\n\007context\030\001 \001" +
-      "(\0132\035.udb.entity.v1.RequestContextR\007conte" +
-      "xt\022\026\n\006schema\030\002 \001(\tR\006schema\022\022\n\004name\030\003 \001(\t" +
-      "R\004name\022\024\n\005query\030\004 \001(\tR\005query\022\033\n\twith_dat" +
-      "a\030\005 \001(\010R\010withData\022\031\n\010ttl_days\030\006 \001(\005R\007ttl" +
-      "DaysB\265\001\n\021com.udb.entity.v1B\017RelationalPr" +
-      "otoP\001Z9github.com/fahara02/udb/sdk/go/ge" +
-      "n/udb/entity/v1;entityv1\242\002\003UEX\252\002\rUdb.Ent" +
-      "ity.V1\312\002\rUdb\\Entity\\V1\342\002\031Udb\\GPBMetadata" +
-      "\\Entity\\V1\352\002\017Udb::Entity::V1b\006proto3"
+      "ncyKey\0223\n\010expected\030\t \001(\0132\027.google.protob" +
+      "uf.StructR\010expected\"\305\001\n\rDeleteRequest\0227\n" +
+      "\007context\030\001 \001(\0132\035.udb.entity.v1.RequestCo" +
+      "ntextR\007context\022!\n\014message_type\030\002 \001(\tR\013me" +
+      "ssageType\022/\n\006filter\030\003 \001(\0132\027.google.proto" +
+      "buf.StructR\006filter\022\'\n\017idempotency_key\030\004 " +
+      "\001(\tR\016idempotencyKey\"\303\001\n\016ViewDefinition\0227" +
+      "\n\007context\030\001 \001(\0132\035.udb.entity.v1.RequestC" +
+      "ontextR\007context\022\026\n\006schema\030\002 \001(\tR\006schema\022" +
+      "\022\n\004name\030\003 \001(\tR\004name\022\024\n\005query\030\004 \001(\tR\005quer" +
+      "y\022\033\n\twith_data\030\005 \001(\010R\010withData\022\031\n\010ttl_da" +
+      "ys\030\006 \001(\005R\007ttlDaysB\265\001\n\021com.udb.entity.v1B" +
+      "\017RelationalProtoP\001Z9github.com/fahara02/" +
+      "udb/sdk/go/gen/udb/entity/v1;entityv1\242\002\003" +
+      "UEX\252\002\rUdb.Entity.V1\312\002\rUdb\\Entity\\V1\342\002\031Ud" +
+      "b\\GPBMetadata\\Entity\\V1\352\002\017Udb::Entity::V" +
+      "1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -175,7 +177,7 @@ public final class RelationalProto {
     internal_static_udb_entity_v1_UpsertRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_UpsertRequest_descriptor,
-        new java.lang.String[] { "Context", "MessageType", "RecordJson", "Payload", "ConflictFields", "ReturnRecord", "Cache", "IdempotencyKey", });
+        new java.lang.String[] { "Context", "MessageType", "RecordJson", "Payload", "ConflictFields", "ReturnRecord", "Cache", "IdempotencyKey", "Expected", });
     internal_static_udb_entity_v1_DeleteRequest_descriptor =
       getDescriptor().getMessageTypes().get(6);
     internal_static_udb_entity_v1_DeleteRequest_fieldAccessorTable = new

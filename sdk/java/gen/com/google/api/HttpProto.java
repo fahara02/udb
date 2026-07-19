@@ -64,9 +64,10 @@ public final class HttpProto {
       "bindings\030\013 \003(\0132\024.google.api.HttpRuleR\022ad" +
       "ditionalBindingsB\t\n\007pattern\";\n\021CustomHtt" +
       "pPattern\022\022\n\004kind\030\001 \001(\tR\004kind\022\022\n\004path\030\002 \001" +
-      "(\tR\004pathB`\n\016com.google.apiB\tHttpProtoP\001Z" +
-      "-github.com/fahara02/udb/sdk/go/gen/goog" +
-      "le/api\242\002\003GAX\352\002\013Google::Apib\006proto3"
+      "(\tR\004pathBg\n\016com.google.apiB\tHttpProtoP\001Z" +
+      "Agoogle.golang.org/genproto/googleapis/a" +
+      "pi/annotations;annotations\242\002\004GAPIb\006proto" +
+      "3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

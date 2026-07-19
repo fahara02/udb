@@ -46,6 +46,20 @@ class UpsertRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string idempotency_key = 8 [json_name = "idempotencyKey"];</code>
      */
     protected $idempotency_key = '';
+    /**
+     * Optional compare-and-swap precondition (UDB-GO-005). When set, each
+     * `field -> value` assertion is checked against the CURRENT row — located by
+     * `conflict_fields` (else the primary key) and locked FOR UPDATE — inside the
+     * same write transaction and tenant/RLS context as the upsert. If the row is
+     * absent or any asserted field does not match, the mutation is rejected with
+     * `FAILED_PRECONDITION` and nothing is written, projected, or emitted to CDC.
+     * This lets optimistic-concurrency callers make "update WHERE version = N"
+     * atomic without dropping to a service-specific command or external lock.
+     * Backwards-compatible: an unset/empty `expected` behaves exactly as before.
+     *
+     * Generated from protobuf field <code>.google.protobuf.Struct expected = 9 [json_name = "expected"];</code>
+     */
+    protected $expected = null;
 
     /**
      * Constructor.
@@ -61,6 +75,16 @@ class UpsertRequest extends \Google\Protobuf\Internal\Message
      *     @type bool $return_record
      *     @type \Udb\Entity\V1\CacheOptions $cache
      *     @type string $idempotency_key
+     *     @type \Google\Protobuf\Struct $expected
+     *           Optional compare-and-swap precondition (UDB-GO-005). When set, each
+     *           `field -> value` assertion is checked against the CURRENT row — located by
+     *           `conflict_fields` (else the primary key) and locked FOR UPDATE — inside the
+     *           same write transaction and tenant/RLS context as the upsert. If the row is
+     *           absent or any asserted field does not match, the mutation is rejected with
+     *           `FAILED_PRECONDITION` and nothing is written, projected, or emitted to CDC.
+     *           This lets optimistic-concurrency callers make "update WHERE version = N"
+     *           atomic without dropping to a service-specific command or external lock.
+     *           Backwards-compatible: an unset/empty `expected` behaves exactly as before.
      * }
      */
     public function __construct($data = NULL) {
@@ -270,6 +294,58 @@ class UpsertRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, True);
         $this->idempotency_key = $var;
+
+        return $this;
+    }
+
+    /**
+     * Optional compare-and-swap precondition (UDB-GO-005). When set, each
+     * `field -> value` assertion is checked against the CURRENT row — located by
+     * `conflict_fields` (else the primary key) and locked FOR UPDATE — inside the
+     * same write transaction and tenant/RLS context as the upsert. If the row is
+     * absent or any asserted field does not match, the mutation is rejected with
+     * `FAILED_PRECONDITION` and nothing is written, projected, or emitted to CDC.
+     * This lets optimistic-concurrency callers make "update WHERE version = N"
+     * atomic without dropping to a service-specific command or external lock.
+     * Backwards-compatible: an unset/empty `expected` behaves exactly as before.
+     *
+     * Generated from protobuf field <code>.google.protobuf.Struct expected = 9 [json_name = "expected"];</code>
+     * @return \Google\Protobuf\Struct|null
+     */
+    public function getExpected()
+    {
+        return $this->expected;
+    }
+
+    public function hasExpected()
+    {
+        return isset($this->expected);
+    }
+
+    public function clearExpected()
+    {
+        unset($this->expected);
+    }
+
+    /**
+     * Optional compare-and-swap precondition (UDB-GO-005). When set, each
+     * `field -> value` assertion is checked against the CURRENT row — located by
+     * `conflict_fields` (else the primary key) and locked FOR UPDATE — inside the
+     * same write transaction and tenant/RLS context as the upsert. If the row is
+     * absent or any asserted field does not match, the mutation is rejected with
+     * `FAILED_PRECONDITION` and nothing is written, projected, or emitted to CDC.
+     * This lets optimistic-concurrency callers make "update WHERE version = N"
+     * atomic without dropping to a service-specific command or external lock.
+     * Backwards-compatible: an unset/empty `expected` behaves exactly as before.
+     *
+     * Generated from protobuf field <code>.google.protobuf.Struct expected = 9 [json_name = "expected"];</code>
+     * @param \Google\Protobuf\Struct $var
+     * @return $this
+     */
+    public function setExpected($var)
+    {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Struct::class);
+        $this->expected = $var;
 
         return $this;
     }

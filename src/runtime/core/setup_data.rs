@@ -26,6 +26,21 @@ fn unknown_message_type_status() -> tonic::Status {
     )
 }
 
+/// GO-005: value equality for a compare-and-swap assertion that treats an
+/// integer and its float form as equal. A `google.protobuf.Struct` carries every
+/// number as an f64, so a JSON `8` decoded from an INTEGER column must still
+/// match an asserted `8.0` — the same int-vs-float trap the chunk-seq round trip
+/// hit. Non-numeric values fall back to exact structural equality.
+fn json_values_match(have: &JsonValue, want: &JsonValue) -> bool {
+    match (have, want) {
+        (JsonValue::Number(a), JsonValue::Number(b)) => match (a.as_f64(), b.as_f64()) {
+            (Some(x), Some(y)) => x == y,
+            _ => a == b,
+        },
+        _ => have == want,
+    }
+}
+
 fn empty_object_stream_status() -> tonic::Status {
     setup_data_invalid_field(
         "stream",
@@ -815,6 +830,15 @@ impl DataBrokerRuntime {
         // so encryption + binding (keyed by `plan.parameter_columns`, which the
         // planner already resolved) find each value.
         let record = crate::broker::normalize_record_keys(table, &record);
+        // GO-005 (compare-and-swap): when the caller asserts an `expected`
+        // column=value precondition, evaluate it in THIS write tx — after the
+        // tenant/RLS GUCs are installed (line above) and holding a row lock — so
+        // two racing writers with the same expected version cannot both commit.
+        // A mismatch or absent row returns FAILED_PRECONDITION and mutates
+        // nothing (no projection/CDC/outbox, since we return before the write).
+        // No-op (zero extra SQL) when `expected` is unset — the hot path.
+        self.enforce_upsert_precondition(&mut tx, table, &request, &record, &context)
+            .await?;
         let encrypted_record = self.encrypt_record_for_table(table, &record)?;
         // 2.4 merge: lower the ALREADY key-normalized, encrypted record so the
         // compiled parameter values match what the planner path binds; the
@@ -976,6 +1000,124 @@ impl DataBrokerRuntime {
             .cache_delete_pattern(&cache_invalidation_pattern("select", &request.message_type))
             .await;
         Ok(response)
+    }
+
+    /// GO-005: evaluate an optional compare-and-swap precondition for an upsert.
+    ///
+    /// Returns `Ok(())` immediately when `request.expected` is unset/empty, so
+    /// the hot path pays zero extra SQL. Otherwise it locates the target row by
+    /// the SAME key the upsert conflicts on — the caller's `conflict_fields`,
+    /// else the manifest primary key — locks it `FOR UPDATE` inside the caller's
+    /// write transaction (so concurrent CAS writers serialize on the row and the
+    /// already-installed tenant/RLS GUCs still apply), decrypts it, and asserts
+    /// each `expected` field equals the current value. A missing row or any
+    /// mismatch is a `FAILED_PRECONDITION`; the caller returns before the write,
+    /// so nothing is mutated, projected, or emitted to the CDC outbox.
+    async fn enforce_upsert_precondition(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        table: &ManifestTable,
+        request: &UpsertRequest,
+        normalized_record: &JsonValue,
+        context: &RequestContext,
+    ) -> Result<(), tonic::Status> {
+        let expected = match request
+            .expected
+            .as_ref()
+            .filter(|expected| !expected.fields.is_empty())
+        {
+            Some(expected) => expected,
+            None => return Ok(()),
+        };
+        let resolver = crate::planning::broker::column_resolver(table);
+        // The precondition key mirrors the upsert conflict target so it locks the
+        // exact row the write would touch.
+        let key_columns: Vec<String> = if request.conflict_fields.is_empty() {
+            table.primary_key.clone()
+        } else {
+            request
+                .conflict_fields
+                .iter()
+                .map(|field| crate::planning::broker::resolve_column(&resolver, field))
+                .collect()
+        };
+        if key_columns.is_empty() {
+            return Err(crate::runtime::executor_utils::failed_precondition_fields(
+                "compare-and-swap precondition requires conflict_fields or a manifest primary key",
+                [(
+                    "expected".to_string(),
+                    "no key columns are available to locate the current row".to_string(),
+                )],
+            ));
+        }
+        let key_values = record_values(normalized_record, &key_columns)?;
+        let predicate = key_columns
+            .iter()
+            .enumerate()
+            .map(|(idx, column)| format!("\"{column}\" = ${}", idx + 1))
+            .collect::<Vec<_>>()
+            .join(" AND ");
+        // FOR UPDATE takes the row lock that serializes racing CAS writers; the
+        // read runs under the tenant/RLS GUCs installed earlier in this tx.
+        let sql = format!(
+            "SELECT * FROM \"{schema}\".\"{table}\" WHERE {predicate} FOR UPDATE",
+            schema = table.schema,
+            table = table.table,
+        );
+        let query = bind_values(sqlx::query(&sql), table, &key_columns, &key_values)?;
+        let row = query.fetch_optional(&mut **tx).await.map_err(|err| {
+            crate::runtime::executor_utils::sqlx_error_to_status(
+                "compare-and-swap precondition read failed",
+                &err,
+            )
+        })?;
+        let Some(row) = row else {
+            return Err(crate::runtime::executor_utils::failed_precondition_fields(
+                "compare-and-swap precondition failed: the target row does not exist",
+                [(
+                    "expected".to_string(),
+                    "no row matches the upsert key".to_string(),
+                )],
+            ));
+        };
+        // Decrypt so the assertion compares plaintext, matching what the caller
+        // supplied — encrypted-at-rest columns are handled transparently here.
+        let record_set = rows_to_record_set(
+            vec![row],
+            Some(table),
+            &[],
+            context,
+            self.encryption.as_ref(),
+            &self.encryption_metrics,
+        )?;
+        let current: JsonValue = record_set
+            .records_json
+            .first()
+            .map(|bytes| serde_json::from_slice(bytes).unwrap_or(JsonValue::Null))
+            .unwrap_or(JsonValue::Null);
+        let current = current.as_object();
+        let expected_json = crate::runtime::executor_utils::struct_to_json(expected);
+        if let Some(expected_obj) = expected_json.as_object() {
+            for (field, want) in expected_obj {
+                // The decrypted row is keyed by physical column name; resolve the
+                // caller's field name and fall back to the raw key for callers
+                // that assert on a column name directly.
+                let column = crate::planning::broker::resolve_column(&resolver, field);
+                let have = current
+                    .and_then(|obj| obj.get(&column).or_else(|| obj.get(field)))
+                    .unwrap_or(&JsonValue::Null);
+                if !json_values_match(have, want) {
+                    return Err(crate::runtime::executor_utils::failed_precondition_fields(
+                        "compare-and-swap precondition failed: a field did not match the current row",
+                        [(
+                            field.clone(),
+                            "the current value differs from the expected value".to_string(),
+                        )],
+                    ));
+                }
+            }
+        }
+        Ok(())
     }
 
     /// mutations→CDC (bug_report.md §R "kafka is not used"): emit a transactional
@@ -3388,9 +3530,9 @@ fn assert_deployment_tier_floor(runtime: &DataBrokerRuntime) {
 mod setup_data_validation_tests {
     use super::{
         empty_object_stream_status, gcs_feature_status, invalid_part_count_status,
-        invalid_presign_ttl_status, no_object_store_feature_status, object_instance_missing_status,
-        qdrant_vector_feature_status, s3_object_feature_status, setup_data_internal_status,
-        unknown_message_type_status, unsupported_object_backend_status,
+        invalid_presign_ttl_status, json_values_match, no_object_store_feature_status,
+        object_instance_missing_status, qdrant_vector_feature_status, s3_object_feature_status,
+        setup_data_internal_status, unknown_message_type_status, unsupported_object_backend_status,
         unsupported_presign_method_status, vector_hybrid_qdrant_only_status,
         vector_search_dispatch_spec, vector_upsert_dispatch_spec,
     };
@@ -3444,6 +3586,26 @@ mod setup_data_validation_tests {
         assert!(!detail.retryable);
         assert_eq!(detail.retry_after_ms, 0);
         assert!(detail.field_violations.is_empty());
+    }
+
+    #[test]
+    fn go005_cas_value_match_is_numeric_coercing() {
+        use serde_json::json;
+        // The int-vs-float trap: a Struct-carried assertion arrives as f64, the
+        // decoded row column as an integer — they must still compare equal.
+        assert!(json_values_match(&json!(8), &json!(8.0)));
+        assert!(json_values_match(&json!(8.0), &json!(8)));
+        assert!(json_values_match(&json!(7), &json!(7)));
+        // Genuine mismatches (the losing CAS writer) must NOT match.
+        assert!(!json_values_match(&json!(7), &json!(8)));
+        assert!(!json_values_match(&json!(7), &json!(8.0)));
+        // Non-numeric values fall back to exact equality.
+        assert!(json_values_match(&json!("ACTIVE"), &json!("ACTIVE")));
+        assert!(!json_values_match(&json!("ACTIVE"), &json!("RETIRED")));
+        assert!(json_values_match(&json!(true), &json!(true)));
+        assert!(!json_values_match(&json!(true), &json!(false)));
+        // A present value never matches an absent (null) assertion target.
+        assert!(!json_values_match(&serde_json::Value::Null, &json!(1)));
     }
 
     #[test]

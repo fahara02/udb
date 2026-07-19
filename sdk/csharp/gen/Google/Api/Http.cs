@@ -36,9 +36,10 @@ namespace Google.Api {
             "GAwgASgJUgxyZXNwb25zZUJvZHkSRQoTYWRkaXRpb25hbF9iaW5kaW5ncxgL",
             "IAMoCzIULmdvb2dsZS5hcGkuSHR0cFJ1bGVSEmFkZGl0aW9uYWxCaW5kaW5n",
             "c0IJCgdwYXR0ZXJuIjsKEUN1c3RvbUh0dHBQYXR0ZXJuEhIKBGtpbmQYASAB",
-            "KAlSBGtpbmQSEgoEcGF0aBgCIAEoCVIEcGF0aEJgCg5jb20uZ29vZ2xlLmFw",
-            "aUIJSHR0cFByb3RvUAFaLWdpdGh1Yi5jb20vZmFoYXJhMDIvdWRiL3Nkay9n",
-            "by9nZW4vZ29vZ2xlL2FwaaICA0dBWOoCC0dvb2dsZTo6QXBpYgZwcm90bzM="));
+            "KAlSBGtpbmQSEgoEcGF0aBgCIAEoCVIEcGF0aEJnCg5jb20uZ29vZ2xlLmFw",
+            "aUIJSHR0cFByb3RvUAFaQWdvb2dsZS5nb2xhbmcub3JnL2dlbnByb3RvL2dv",
+            "b2dsZWFwaXMvYXBpL2Fubm90YXRpb25zO2Fubm90YXRpb25zogIER0FQSWIG",
+            "cHJvdG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {

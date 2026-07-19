@@ -264,6 +264,68 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int EXPECTED_FIELD_NUMBER = 9;
+  private com.google.protobuf.Struct expected_;
+  /**
+   * <pre>
+   * Optional compare-and-swap precondition (UDB-GO-005). When set, each
+   * `field -&gt; value` assertion is checked against the CURRENT row — located by
+   * `conflict_fields` (else the primary key) and locked FOR UPDATE — inside the
+   * same write transaction and tenant/RLS context as the upsert. If the row is
+   * absent or any asserted field does not match, the mutation is rejected with
+   * `FAILED_PRECONDITION` and nothing is written, projected, or emitted to CDC.
+   * This lets optimistic-concurrency callers make "update WHERE version = N"
+   * atomic without dropping to a service-specific command or external lock.
+   * Backwards-compatible: an unset/empty `expected` behaves exactly as before.
+   * </pre>
+   *
+   * <code>.google.protobuf.Struct expected = 9 [json_name = "expected"];</code>
+   * @return Whether the expected field is set.
+   */
+  @java.lang.Override
+  public boolean hasExpected() {
+    return ((bitField0_ & 0x00000008) != 0);
+  }
+  /**
+   * <pre>
+   * Optional compare-and-swap precondition (UDB-GO-005). When set, each
+   * `field -&gt; value` assertion is checked against the CURRENT row — located by
+   * `conflict_fields` (else the primary key) and locked FOR UPDATE — inside the
+   * same write transaction and tenant/RLS context as the upsert. If the row is
+   * absent or any asserted field does not match, the mutation is rejected with
+   * `FAILED_PRECONDITION` and nothing is written, projected, or emitted to CDC.
+   * This lets optimistic-concurrency callers make "update WHERE version = N"
+   * atomic without dropping to a service-specific command or external lock.
+   * Backwards-compatible: an unset/empty `expected` behaves exactly as before.
+   * </pre>
+   *
+   * <code>.google.protobuf.Struct expected = 9 [json_name = "expected"];</code>
+   * @return The expected.
+   */
+  @java.lang.Override
+  public com.google.protobuf.Struct getExpected() {
+    return expected_ == null ? com.google.protobuf.Struct.getDefaultInstance() : expected_;
+  }
+  /**
+   * <pre>
+   * Optional compare-and-swap precondition (UDB-GO-005). When set, each
+   * `field -&gt; value` assertion is checked against the CURRENT row — located by
+   * `conflict_fields` (else the primary key) and locked FOR UPDATE — inside the
+   * same write transaction and tenant/RLS context as the upsert. If the row is
+   * absent or any asserted field does not match, the mutation is rejected with
+   * `FAILED_PRECONDITION` and nothing is written, projected, or emitted to CDC.
+   * This lets optimistic-concurrency callers make "update WHERE version = N"
+   * atomic without dropping to a service-specific command or external lock.
+   * Backwards-compatible: an unset/empty `expected` behaves exactly as before.
+   * </pre>
+   *
+   * <code>.google.protobuf.Struct expected = 9 [json_name = "expected"];</code>
+   */
+  @java.lang.Override
+  public com.google.protobuf.StructOrBuilder getExpectedOrBuilder() {
+    return expected_ == null ? com.google.protobuf.Struct.getDefaultInstance() : expected_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -301,6 +363,9 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(idempotencyKey_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 8, idempotencyKey_);
+    }
+    if (((bitField0_ & 0x00000008) != 0)) {
+      output.writeMessage(9, getExpected());
     }
     getUnknownFields().writeTo(output);
   }
@@ -345,6 +410,10 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(idempotencyKey_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(8, idempotencyKey_);
     }
+    if (((bitField0_ & 0x00000008) != 0)) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(9, getExpected());
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -385,6 +454,11 @@ private static final long serialVersionUID = 0L;
     }
     if (!getIdempotencyKey()
         .equals(other.getIdempotencyKey())) return false;
+    if (hasExpected() != other.hasExpected()) return false;
+    if (hasExpected()) {
+      if (!getExpected()
+          .equals(other.getExpected())) return false;
+    }
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -421,6 +495,10 @@ private static final long serialVersionUID = 0L;
     }
     hash = (37 * hash) + IDEMPOTENCY_KEY_FIELD_NUMBER;
     hash = (53 * hash) + getIdempotencyKey().hashCode();
+    if (hasExpected()) {
+      hash = (37 * hash) + EXPECTED_FIELD_NUMBER;
+      hash = (53 * hash) + getExpected().hashCode();
+    }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -554,6 +632,7 @@ private static final long serialVersionUID = 0L;
         internalGetContextFieldBuilder();
         internalGetPayloadFieldBuilder();
         internalGetCacheFieldBuilder();
+        internalGetExpectedFieldBuilder();
       }
     }
     @java.lang.Override
@@ -581,6 +660,11 @@ private static final long serialVersionUID = 0L;
         cacheBuilder_ = null;
       }
       idempotencyKey_ = "";
+      expected_ = null;
+      if (expectedBuilder_ != null) {
+        expectedBuilder_.dispose();
+        expectedBuilder_ = null;
+      }
       return this;
     }
 
@@ -649,6 +733,12 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000080) != 0)) {
         result.idempotencyKey_ = idempotencyKey_;
       }
+      if (((from_bitField0_ & 0x00000100) != 0)) {
+        result.expected_ = expectedBuilder_ == null
+            ? expected_
+            : expectedBuilder_.build();
+        to_bitField0_ |= 0x00000008;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -698,6 +788,9 @@ private static final long serialVersionUID = 0L;
         idempotencyKey_ = other.idempotencyKey_;
         bitField0_ |= 0x00000080;
         onChanged();
+      }
+      if (other.hasExpected()) {
+        mergeExpected(other.getExpected());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -772,6 +865,13 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000080;
               break;
             } // case 66
+            case 74: {
+              input.readMessage(
+                  internalGetExpectedFieldBuilder().getBuilder(),
+                  extensionRegistry);
+              bitField0_ |= 0x00000100;
+              break;
+            } // case 74
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1469,6 +1569,235 @@ private static final long serialVersionUID = 0L;
       bitField0_ |= 0x00000080;
       onChanged();
       return this;
+    }
+
+    private com.google.protobuf.Struct expected_;
+    private com.google.protobuf.SingleFieldBuilder<
+        com.google.protobuf.Struct, com.google.protobuf.Struct.Builder, com.google.protobuf.StructOrBuilder> expectedBuilder_;
+    /**
+     * <pre>
+     * Optional compare-and-swap precondition (UDB-GO-005). When set, each
+     * `field -&gt; value` assertion is checked against the CURRENT row — located by
+     * `conflict_fields` (else the primary key) and locked FOR UPDATE — inside the
+     * same write transaction and tenant/RLS context as the upsert. If the row is
+     * absent or any asserted field does not match, the mutation is rejected with
+     * `FAILED_PRECONDITION` and nothing is written, projected, or emitted to CDC.
+     * This lets optimistic-concurrency callers make "update WHERE version = N"
+     * atomic without dropping to a service-specific command or external lock.
+     * Backwards-compatible: an unset/empty `expected` behaves exactly as before.
+     * </pre>
+     *
+     * <code>.google.protobuf.Struct expected = 9 [json_name = "expected"];</code>
+     * @return Whether the expected field is set.
+     */
+    public boolean hasExpected() {
+      return ((bitField0_ & 0x00000100) != 0);
+    }
+    /**
+     * <pre>
+     * Optional compare-and-swap precondition (UDB-GO-005). When set, each
+     * `field -&gt; value` assertion is checked against the CURRENT row — located by
+     * `conflict_fields` (else the primary key) and locked FOR UPDATE — inside the
+     * same write transaction and tenant/RLS context as the upsert. If the row is
+     * absent or any asserted field does not match, the mutation is rejected with
+     * `FAILED_PRECONDITION` and nothing is written, projected, or emitted to CDC.
+     * This lets optimistic-concurrency callers make "update WHERE version = N"
+     * atomic without dropping to a service-specific command or external lock.
+     * Backwards-compatible: an unset/empty `expected` behaves exactly as before.
+     * </pre>
+     *
+     * <code>.google.protobuf.Struct expected = 9 [json_name = "expected"];</code>
+     * @return The expected.
+     */
+    public com.google.protobuf.Struct getExpected() {
+      if (expectedBuilder_ == null) {
+        return expected_ == null ? com.google.protobuf.Struct.getDefaultInstance() : expected_;
+      } else {
+        return expectedBuilder_.getMessage();
+      }
+    }
+    /**
+     * <pre>
+     * Optional compare-and-swap precondition (UDB-GO-005). When set, each
+     * `field -&gt; value` assertion is checked against the CURRENT row — located by
+     * `conflict_fields` (else the primary key) and locked FOR UPDATE — inside the
+     * same write transaction and tenant/RLS context as the upsert. If the row is
+     * absent or any asserted field does not match, the mutation is rejected with
+     * `FAILED_PRECONDITION` and nothing is written, projected, or emitted to CDC.
+     * This lets optimistic-concurrency callers make "update WHERE version = N"
+     * atomic without dropping to a service-specific command or external lock.
+     * Backwards-compatible: an unset/empty `expected` behaves exactly as before.
+     * </pre>
+     *
+     * <code>.google.protobuf.Struct expected = 9 [json_name = "expected"];</code>
+     */
+    public Builder setExpected(com.google.protobuf.Struct value) {
+      if (expectedBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        expected_ = value;
+      } else {
+        expectedBuilder_.setMessage(value);
+      }
+      bitField0_ |= 0x00000100;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Optional compare-and-swap precondition (UDB-GO-005). When set, each
+     * `field -&gt; value` assertion is checked against the CURRENT row — located by
+     * `conflict_fields` (else the primary key) and locked FOR UPDATE — inside the
+     * same write transaction and tenant/RLS context as the upsert. If the row is
+     * absent or any asserted field does not match, the mutation is rejected with
+     * `FAILED_PRECONDITION` and nothing is written, projected, or emitted to CDC.
+     * This lets optimistic-concurrency callers make "update WHERE version = N"
+     * atomic without dropping to a service-specific command or external lock.
+     * Backwards-compatible: an unset/empty `expected` behaves exactly as before.
+     * </pre>
+     *
+     * <code>.google.protobuf.Struct expected = 9 [json_name = "expected"];</code>
+     */
+    public Builder setExpected(
+        com.google.protobuf.Struct.Builder builderForValue) {
+      if (expectedBuilder_ == null) {
+        expected_ = builderForValue.build();
+      } else {
+        expectedBuilder_.setMessage(builderForValue.build());
+      }
+      bitField0_ |= 0x00000100;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Optional compare-and-swap precondition (UDB-GO-005). When set, each
+     * `field -&gt; value` assertion is checked against the CURRENT row — located by
+     * `conflict_fields` (else the primary key) and locked FOR UPDATE — inside the
+     * same write transaction and tenant/RLS context as the upsert. If the row is
+     * absent or any asserted field does not match, the mutation is rejected with
+     * `FAILED_PRECONDITION` and nothing is written, projected, or emitted to CDC.
+     * This lets optimistic-concurrency callers make "update WHERE version = N"
+     * atomic without dropping to a service-specific command or external lock.
+     * Backwards-compatible: an unset/empty `expected` behaves exactly as before.
+     * </pre>
+     *
+     * <code>.google.protobuf.Struct expected = 9 [json_name = "expected"];</code>
+     */
+    public Builder mergeExpected(com.google.protobuf.Struct value) {
+      if (expectedBuilder_ == null) {
+        if (((bitField0_ & 0x00000100) != 0) &&
+          expected_ != null &&
+          expected_ != com.google.protobuf.Struct.getDefaultInstance()) {
+          getExpectedBuilder().mergeFrom(value);
+        } else {
+          expected_ = value;
+        }
+      } else {
+        expectedBuilder_.mergeFrom(value);
+      }
+      if (expected_ != null) {
+        bitField0_ |= 0x00000100;
+        onChanged();
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * Optional compare-and-swap precondition (UDB-GO-005). When set, each
+     * `field -&gt; value` assertion is checked against the CURRENT row — located by
+     * `conflict_fields` (else the primary key) and locked FOR UPDATE — inside the
+     * same write transaction and tenant/RLS context as the upsert. If the row is
+     * absent or any asserted field does not match, the mutation is rejected with
+     * `FAILED_PRECONDITION` and nothing is written, projected, or emitted to CDC.
+     * This lets optimistic-concurrency callers make "update WHERE version = N"
+     * atomic without dropping to a service-specific command or external lock.
+     * Backwards-compatible: an unset/empty `expected` behaves exactly as before.
+     * </pre>
+     *
+     * <code>.google.protobuf.Struct expected = 9 [json_name = "expected"];</code>
+     */
+    public Builder clearExpected() {
+      bitField0_ = (bitField0_ & ~0x00000100);
+      expected_ = null;
+      if (expectedBuilder_ != null) {
+        expectedBuilder_.dispose();
+        expectedBuilder_ = null;
+      }
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Optional compare-and-swap precondition (UDB-GO-005). When set, each
+     * `field -&gt; value` assertion is checked against the CURRENT row — located by
+     * `conflict_fields` (else the primary key) and locked FOR UPDATE — inside the
+     * same write transaction and tenant/RLS context as the upsert. If the row is
+     * absent or any asserted field does not match, the mutation is rejected with
+     * `FAILED_PRECONDITION` and nothing is written, projected, or emitted to CDC.
+     * This lets optimistic-concurrency callers make "update WHERE version = N"
+     * atomic without dropping to a service-specific command or external lock.
+     * Backwards-compatible: an unset/empty `expected` behaves exactly as before.
+     * </pre>
+     *
+     * <code>.google.protobuf.Struct expected = 9 [json_name = "expected"];</code>
+     */
+    public com.google.protobuf.Struct.Builder getExpectedBuilder() {
+      bitField0_ |= 0x00000100;
+      onChanged();
+      return internalGetExpectedFieldBuilder().getBuilder();
+    }
+    /**
+     * <pre>
+     * Optional compare-and-swap precondition (UDB-GO-005). When set, each
+     * `field -&gt; value` assertion is checked against the CURRENT row — located by
+     * `conflict_fields` (else the primary key) and locked FOR UPDATE — inside the
+     * same write transaction and tenant/RLS context as the upsert. If the row is
+     * absent or any asserted field does not match, the mutation is rejected with
+     * `FAILED_PRECONDITION` and nothing is written, projected, or emitted to CDC.
+     * This lets optimistic-concurrency callers make "update WHERE version = N"
+     * atomic without dropping to a service-specific command or external lock.
+     * Backwards-compatible: an unset/empty `expected` behaves exactly as before.
+     * </pre>
+     *
+     * <code>.google.protobuf.Struct expected = 9 [json_name = "expected"];</code>
+     */
+    public com.google.protobuf.StructOrBuilder getExpectedOrBuilder() {
+      if (expectedBuilder_ != null) {
+        return expectedBuilder_.getMessageOrBuilder();
+      } else {
+        return expected_ == null ?
+            com.google.protobuf.Struct.getDefaultInstance() : expected_;
+      }
+    }
+    /**
+     * <pre>
+     * Optional compare-and-swap precondition (UDB-GO-005). When set, each
+     * `field -&gt; value` assertion is checked against the CURRENT row — located by
+     * `conflict_fields` (else the primary key) and locked FOR UPDATE — inside the
+     * same write transaction and tenant/RLS context as the upsert. If the row is
+     * absent or any asserted field does not match, the mutation is rejected with
+     * `FAILED_PRECONDITION` and nothing is written, projected, or emitted to CDC.
+     * This lets optimistic-concurrency callers make "update WHERE version = N"
+     * atomic without dropping to a service-specific command or external lock.
+     * Backwards-compatible: an unset/empty `expected` behaves exactly as before.
+     * </pre>
+     *
+     * <code>.google.protobuf.Struct expected = 9 [json_name = "expected"];</code>
+     */
+    private com.google.protobuf.SingleFieldBuilder<
+        com.google.protobuf.Struct, com.google.protobuf.Struct.Builder, com.google.protobuf.StructOrBuilder>
+        internalGetExpectedFieldBuilder() {
+      if (expectedBuilder_ == null) {
+        expectedBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+            com.google.protobuf.Struct, com.google.protobuf.Struct.Builder, com.google.protobuf.StructOrBuilder>(
+                getExpected(),
+                getParentForChildren(),
+                isClean());
+        expected_ = null;
+      }
+      return expectedBuilder_;
     }
 
     // @@protoc_insertion_point(builder_scope:udb.entity.v1.UpsertRequest)

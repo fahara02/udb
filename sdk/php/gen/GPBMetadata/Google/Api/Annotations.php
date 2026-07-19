@@ -17,7 +17,7 @@ class Annotations
         }
         \GPBMetadata\Google\Api\Http::initOnce();
         $pool->internalAddGeneratedFile(
-            "\x0A\xBD\x01\x0A\x1Cgoogle/api/annotations.proto\x12\x0Agoogle.api\x1A google/protobuf/descriptor.protoBg\x0A\x0Ecom.google.apiB\x10AnnotationsProtoP\x01Z-github.com/fahara02/udb/sdk/go/gen/google/api\xA2\x02\x03GAX\xEA\x02\x0BGoogle::Apib\x06proto3"
+            "\x0A\xC4\x01\x0A\x1Cgoogle/api/annotations.proto\x12\x0Agoogle.api\x1A google/protobuf/descriptor.protoBn\x0A\x0Ecom.google.apiB\x10AnnotationsProtoP\x01ZAgoogle.golang.org/genproto/googleapis/api/annotations;annotations\xA2\x02\x04GAPIb\x06proto3"
         , true);
 
         static::$is_initialized = true;
