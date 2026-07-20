@@ -534,6 +534,7 @@ func TestBuildManifestJSONBodyUsesSharedManifest(t *testing.T) {
 		"AuthnService/GetServiceAccountGrant",
 		"AuthnService/ListServiceAccountGrants",
 		"AuthnService/ReplaceServiceAccountGrant",
+		"AuthnService/RotateServiceAccountIdentity",
 		"AuthnService/RevokeServiceAccountGrant",
 		"AuthnService/CreateCertificateBinding",
 		"AuthnService/ListCertificateBindings",

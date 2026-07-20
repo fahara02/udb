@@ -1248,7 +1248,10 @@ pub(crate) fn claims_from_verified_principal(
         project_id: Some(principal.project_id.clone()),
         scopes: Some(principal.scopes.clone()),
         roles: Some(principal.roles.clone()),
-        service_identity: Some(principal.service_identity.clone()),
+        // Empty ⇒ `None` so the JWT branch's `unwrap_or_else(|| "unknown")`
+        // renders "unknown" rather than an empty service identity (matches the
+        // pre-verified-principal claim mapping).
+        service_identity: non_empty(principal.service_identity.clone()),
         jti: Some(principal.credential_id.clone()),
         auth_method: Some(principal.auth_method.clone()),
         ..Default::default()
@@ -1708,6 +1711,67 @@ pub fn security_from_request<T>(request: &Request<T>) -> Result<SecurityContext,
             auth_method: bearer_lineage.auth_method,
             trace_id,
             project_id: claim_project.to_string(),
+            consistency,
+            max_replica_lag_ms,
+            client_catalog_version: client_catalog_version.clone(),
+            target_backend,
+            target_instance,
+            routing_policy,
+            primary_read,
+            eventual_consistency_allowed,
+            read_fence_json,
+        });
+    }
+
+    // Development / local-test identity — the original pre-verified-principal
+    // non-JWT tail, restored verbatim and gated on `allow_header_scopes`, which
+    // `SecurityConfig` validation FORBIDS under any production posture. A signed
+    // bearer / scoped API key / registered certificate was already fully
+    // resolved and returned above, so headers are never an authority when a real
+    // credential is present, and this block cannot execute in production
+    // (which always configures a JWT verifier and reaches the branch above). An
+    // optional verified peer certificate — or the legacy client-identity headers
+    // — names the service identity; header scopes hydrate the dev principal.
+    if config.allow_header_scopes {
+        let service_identity = if config.mtls_required {
+            request
+                .peer_certs()
+                .as_deref()
+                .and_then(|certs| certs.first())
+                .and_then(|cert| service_identity_from_der(cert.as_ref()))
+                .ok_or_else(|| {
+                    Status::unauthenticated(
+                        "mTLS client certificate required — header fallback disabled",
+                    )
+                })?
+        } else {
+            request
+                .peer_certs()
+                .as_deref()
+                .and_then(|certs| certs.first())
+                .and_then(|cert| service_identity_from_der(cert.as_ref()))
+                .or_else(|| non_empty(header("x-client-cert-cn")))
+                .or_else(|| non_empty(header("x-service-identity")))
+                .unwrap_or_else(|| "unknown".to_string())
+        };
+        let scopes = header("x-scopes")
+            .split(',')
+            .map(str::trim)
+            .filter(|scope| !scope.is_empty())
+            .map(ToString::to_string)
+            .collect();
+        return Ok(SecurityContext {
+            tenant_id: header("x-tenant-id"),
+            purpose: header("x-purpose"),
+            correlation_id,
+            user_id,
+            scopes,
+            service_identity,
+            credential_type: 0,
+            credential_id: String::new(),
+            auth_method: "header".to_string(),
+            trace_id,
+            project_id: project_id_header,
             consistency,
             max_replica_lag_ms,
             client_catalog_version: client_catalog_version.clone(),
