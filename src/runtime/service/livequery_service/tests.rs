@@ -224,7 +224,7 @@ fn unknown_source_fails_closed() {
     assert_eq!(detail.field_violations[0].field, "message_type");
     assert_eq!(
         detail.field_violations[0].description,
-        "must name a known tenant-scoped UDB entity"
+        "must name exactly one known tenant-scoped UDB entity"
     );
 }
 
