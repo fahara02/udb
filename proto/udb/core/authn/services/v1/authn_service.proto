@@ -875,8 +875,12 @@ service AuthnService {
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
       // Registered gateway/workload certificates may call this narrow read
-      // surface with scopes derived from their current typed grant.
+      // surface with scopes derived from their current typed grant — whether
+      // they authenticate with the certificate directly (MTLS) or present the
+      // service-account bearer minted for that same workload identity
+      // (SERVICE_ACCOUNT); when both are sent together their lineage must match.
       allowed_credential_types: CREDENTIAL_TYPE_MTLS
+      allowed_credential_types: CREDENTIAL_TYPE_SERVICE_ACCOUNT
       decision_resource: "authn.ValidateToken"
       request_context_required: true
       tenant_required: true

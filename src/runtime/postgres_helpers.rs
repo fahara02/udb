@@ -1038,7 +1038,7 @@ mod tests {
         assert_single_field_violation(
             &err,
             "message_type",
-            "must match a manifest table message type",
+            "must match exactly one manifest table message type",
         );
     }
 

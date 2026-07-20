@@ -24,9 +24,9 @@ pub(crate) struct SourceBinding {
 pub(crate) fn resolve_source(message_type: &str) -> Result<SourceBinding, Status> {
     let manifest = crate::runtime::native_catalog::native_manifest();
     let table =
-        crate::broker::resolve_table_for_message(manifest, message_type).map_err(|error| {
+        crate::broker::resolve_table_for_message(manifest, message_type).map_err(|_error| {
             crate::runtime::executor_utils::invalid_argument_fields(
-                error.to_string(),
+                format!("live query source '{message_type}' is not a known UDB entity"),
                 [(
                     "message_type",
                     "must name exactly one known tenant-scoped UDB entity",
