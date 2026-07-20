@@ -2087,6 +2087,12 @@ mod tests {
             http::HeaderValue::from_static("Bearer already-verified"),
         );
         headers.insert("x-tenant-id", http::HeaderValue::from_static("tenant-a"));
+        // ValidateToken requires request context (request_context_required); the
+        // sibling registered-mtls tests supply it too.
+        headers.insert(
+            "x-correlation-id",
+            http::HeaderValue::from_static("request-lineage"),
+        );
         let mut credentials = mtls_credentials(&["udb:authn:validate-token"]);
         credentials.bearer = Some(Ok(crate::runtime::credential_layer::VerifiedPrincipal {
             credential_type: CredentialType::BearerJwt as i32,
