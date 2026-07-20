@@ -43,7 +43,7 @@ jobs:
           node scripts/sdk-codegen-postprocess.mjs
           ./target/debug/udb sdk generate
           node scripts/gen-bench-bodies-json.mjs
-          node scripts/gen-bench-bodies-skeleton.mjs
+          node scripts/gen-bench-bodies-skeleton.mjs --write
           node scripts/gen-sdk-benchmark-docs.mjs
           node scripts/generate-authn-authz-inventory.mjs
           python3 scripts/generate-codebase-map.py
