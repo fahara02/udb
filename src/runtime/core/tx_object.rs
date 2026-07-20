@@ -278,18 +278,18 @@ impl DataBrokerRuntime {
                 match record {
                     Ok(record) => {
                         let encrypted_record =
-                            match table_for_message(manifest, &mutation.message_type) {
-                                Some(table) => {
+                            match resolve_table_for_message(manifest, &mutation.message_type) {
+                                Ok(table) => {
                                     // #117: resolve proto field_name record keys to
                                     // physical column_names before encrypt + bind.
                                     let record =
                                         crate::broker::normalize_record_keys(table, &record);
                                     self.encrypt_record_for_table(table, &record)
                                 }
-                                None => Err(tx_object_invalid_field(
+                                Err(error) => Err(tx_object_invalid_field(
                                     "message_type",
-                                    "must match a manifest table message type",
-                                    "unknown message_type",
+                                    "must match exactly one manifest table message type",
+                                    error.to_string(),
                                 )),
                             };
                         match encrypted_record {

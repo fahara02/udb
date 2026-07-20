@@ -53,15 +53,16 @@ where
 }
 
 /// The authenticated principal + authorization decision for the current request,
-/// established at the method-security gate: the validated `subject`, the credential
-/// type it authenticated with (`auth_method`), the `decision_id` of the gate
-/// authorization, and the `policy_revision` (contract version) whose
-/// endpoint-security rules the gate enforced. All four are scoped together and
-/// auto-filled onto native compliance events so a gate-authorized native event is
-/// traceable to the authorization that permitted it (Phase 10 audit completeness).
+/// established at the method-security gate. The immutable service identity and
+/// non-secret credential identifier are scoped with the authorization decision so
+/// native compliance events retain the lineage of the credential that was actually
+/// verified, rather than reconstructing identity from request headers.
 #[derive(Clone, Default)]
 pub struct RequestPrincipal {
     pub subject: String,
+    pub service_identity: String,
+    pub credential_type: i32,
+    pub credential_id: String,
     pub auth_method: String,
     pub decision_id: String,
     pub policy_revision: String,
@@ -90,6 +91,28 @@ pub fn current_actor() -> String {
 pub fn current_auth_method() -> String {
     CURRENT_PRINCIPAL
         .try_with(|p| p.auth_method.clone())
+        .unwrap_or_default()
+}
+
+/// The immutable service identity verified for the current request, when one was
+/// present on the credential or durable certificate binding.
+pub fn current_service_identity() -> String {
+    CURRENT_PRINCIPAL
+        .try_with(|p| p.service_identity.clone())
+        .unwrap_or_default()
+}
+
+/// Numeric `udb.core.common.v1.CredentialType` used for the current request.
+pub fn current_credential_type() -> i32 {
+    CURRENT_PRINCIPAL
+        .try_with(|p| p.credential_type)
+        .unwrap_or_default()
+}
+
+/// Non-secret credential lineage (`jti`, key prefix, or certificate binding id).
+pub fn current_credential_id() -> String {
+    CURRENT_PRINCIPAL
+        .try_with(|p| p.credential_id.clone())
         .unwrap_or_default()
 }
 

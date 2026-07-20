@@ -40,6 +40,18 @@ pub struct StartupLifecycleReport {
     pub dry_run_plan: Vec<String>,
     pub migration_metric_operations: Vec<MigrationMetricOperation>,
     pub pending_migration_files: i64,
+    /// UDB-CAT-002: the complete STRUCTURED combined-catalog lint findings
+    /// (severity, kind, schema/table/column, source file, description,
+    /// remediation suggestion) — populated whenever lint produced any finding
+    /// (blocking failure, force-sync bypass, or clean-with-warnings), so the
+    /// startup FSM JSON is machine-readable and not only flattened lines.
+    /// serde-defaulted for backward compatibility with older report consumers.
+    #[serde(default)]
+    pub lint_items: Vec<crate::generation::lint::LintItem>,
+    #[serde(default)]
+    pub lint_error_count: usize,
+    #[serde(default)]
+    pub lint_warning_count: usize,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -633,6 +645,14 @@ async fn run_startup_lifecycle_core(
         "validating catalog checksum and annotations",
     )?;
     let lint = lint_catalog(manifest);
+    // UDB-CAT-002: retain the structured findings on the report itself (every
+    // outcome — blocking, bypassed, or clean-with-warnings) so the FSM JSON
+    // carries machine-readable identity + remediation, not only rendered lines.
+    if !lint.items.is_empty() {
+        report.lint_items = lint.items.clone();
+        report.lint_error_count = lint.error_count;
+        report.lint_warning_count = lint.warning_count;
+    }
     if !lint.passed && !force_sync {
         runtime.emit_drift_metric("catalog_lint_failed");
         // Surface EVERY individual finding (kind, FQN/schema.table, source,
@@ -643,7 +663,22 @@ async fn run_startup_lifecycle_core(
         // a run. Each pushed line is also echoed per-error via tracing by
         // report_failure_json below.
         for item in &lint.items {
+            // The flattened string arrays are DERIVED from the structured
+            // findings (single source of truth: `report.lint_items`); the
+            // structured tracing event carries each identity/remediation field
+            // separately so log pipelines need not parse the rendered line.
             let line = item.display_line();
+            tracing::error!(
+                severity = ?item.severity,
+                kind = %item.kind,
+                schema = %item.schema,
+                table = %item.table,
+                column = %item.column,
+                source_file = %item.source_file,
+                description = %item.description,
+                suggestion = %item.suggestion,
+                "catalog lint finding"
+            );
             match item.severity {
                 LintSeverity::Error => report.errors.push(line),
                 _ => report.warnings.push(line),
@@ -671,10 +706,22 @@ async fn run_startup_lifecycle_core(
             .iter()
             .filter(|i| i.severity == LintSeverity::Error)
         {
-            report.warnings.push(format!(
-                "[force_sync bypass] lint error ignored: {} — {}",
-                item.kind, item.description
-            ));
+            // Medium (review): the bypass audit trail is structured too, not
+            // only a flattened warning line.
+            tracing::warn!(
+                severity = ?item.severity,
+                kind = %item.kind,
+                schema = %item.schema,
+                table = %item.table,
+                column = %item.column,
+                source_file = %item.source_file,
+                description = %item.description,
+                suggestion = %item.suggestion,
+                "catalog lint error BYPASSED by force_sync"
+            );
+            report
+                .warnings
+                .push(format!("[force_sync bypass] {}", item.display_line()));
         }
     }
     if lint.warning_count > 0 {
@@ -690,6 +737,17 @@ async fn run_startup_lifecycle_core(
             .iter()
             .filter(|item| item.severity == LintSeverity::Warning)
         {
+            tracing::warn!(
+                severity = ?item.severity,
+                kind = %item.kind,
+                schema = %item.schema,
+                table = %item.table,
+                column = %item.column,
+                source_file = %item.source_file,
+                description = %item.description,
+                suggestion = %item.suggestion,
+                "catalog lint finding"
+            );
             report.warnings.push(item.display_line());
         }
     }
@@ -2241,5 +2299,51 @@ mod tests {
         assert_eq!(rel_paths, vec!["seeds/001_alpha.sql", "seeds/010_beta.sql"]);
 
         let _ = fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn legacy_lifecycle_json_defaults_structured_lint_fields() {
+        let mut legacy = serde_json::to_value(StartupLifecycleReport::default())
+            .expect("serialize lifecycle fixture");
+        let object = legacy
+            .as_object_mut()
+            .expect("lifecycle report is an object");
+        object.remove("lint_items");
+        object.remove("lint_error_count");
+        object.remove("lint_warning_count");
+        let report: StartupLifecycleReport =
+            serde_json::from_value(legacy).expect("legacy lifecycle report remains readable");
+        assert!(report.lint_items.is_empty());
+        assert_eq!(report.lint_error_count, 0);
+        assert_eq!(report.lint_warning_count, 0);
+    }
+
+    #[test]
+    fn failure_json_preserves_complete_structured_lint_finding_and_remediation() {
+        let finding = LintItem {
+            severity: LintSeverity::Error,
+            kind: "ambiguous_catalog_identity".to_string(),
+            schema: "authn".to_string(),
+            table: "users".to_string(),
+            column: "tenant_id".to_string(),
+            description: "short message name User is ambiguous".to_string(),
+            suggestion: "use acme.authn.v1.User".to_string(),
+            source_file: "proto/acme/authn.proto".to_string(),
+        };
+        let report = StartupLifecycleReport {
+            run_id: "lint-failure".to_string(),
+            errors: vec![finding.display_line()],
+            lint_items: vec![finding.clone()],
+            lint_error_count: 1,
+            lint_warning_count: 0,
+            ..StartupLifecycleReport::default()
+        };
+
+        let encoded = report_failure_json(&report, "fallback".to_string());
+        let decoded: StartupLifecycleReport =
+            serde_json::from_str(&encoded).expect("failure result is report JSON");
+        assert_eq!(decoded.lint_items, vec![finding]);
+        assert_eq!(decoded.lint_error_count, 1);
+        assert!(decoded.errors[0].contains("fix: use acme.authn.v1.User"));
     }
 }

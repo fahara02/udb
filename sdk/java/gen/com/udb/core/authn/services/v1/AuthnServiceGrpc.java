@@ -1572,6 +1572,285 @@ public final class AuthnServiceGrpc {
     return getDeleteWebAuthnCredentialMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.CreateServiceAccountGrantRequest,
+      com.udb.core.authn.services.v1.CreateServiceAccountGrantResponse> getCreateServiceAccountGrantMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "CreateServiceAccountGrant",
+      requestType = com.udb.core.authn.services.v1.CreateServiceAccountGrantRequest.class,
+      responseType = com.udb.core.authn.services.v1.CreateServiceAccountGrantResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.CreateServiceAccountGrantRequest,
+      com.udb.core.authn.services.v1.CreateServiceAccountGrantResponse> getCreateServiceAccountGrantMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.CreateServiceAccountGrantRequest, com.udb.core.authn.services.v1.CreateServiceAccountGrantResponse> getCreateServiceAccountGrantMethod;
+    if ((getCreateServiceAccountGrantMethod = AuthnServiceGrpc.getCreateServiceAccountGrantMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getCreateServiceAccountGrantMethod = AuthnServiceGrpc.getCreateServiceAccountGrantMethod) == null) {
+          AuthnServiceGrpc.getCreateServiceAccountGrantMethod = getCreateServiceAccountGrantMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.CreateServiceAccountGrantRequest, com.udb.core.authn.services.v1.CreateServiceAccountGrantResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "CreateServiceAccountGrant"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.CreateServiceAccountGrantRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.CreateServiceAccountGrantResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("CreateServiceAccountGrant"))
+              .build();
+        }
+      }
+    }
+    return getCreateServiceAccountGrantMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.GetServiceAccountGrantRequest,
+      com.udb.core.authn.services.v1.GetServiceAccountGrantResponse> getGetServiceAccountGrantMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "GetServiceAccountGrant",
+      requestType = com.udb.core.authn.services.v1.GetServiceAccountGrantRequest.class,
+      responseType = com.udb.core.authn.services.v1.GetServiceAccountGrantResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.GetServiceAccountGrantRequest,
+      com.udb.core.authn.services.v1.GetServiceAccountGrantResponse> getGetServiceAccountGrantMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.GetServiceAccountGrantRequest, com.udb.core.authn.services.v1.GetServiceAccountGrantResponse> getGetServiceAccountGrantMethod;
+    if ((getGetServiceAccountGrantMethod = AuthnServiceGrpc.getGetServiceAccountGrantMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getGetServiceAccountGrantMethod = AuthnServiceGrpc.getGetServiceAccountGrantMethod) == null) {
+          AuthnServiceGrpc.getGetServiceAccountGrantMethod = getGetServiceAccountGrantMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.GetServiceAccountGrantRequest, com.udb.core.authn.services.v1.GetServiceAccountGrantResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "GetServiceAccountGrant"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.GetServiceAccountGrantRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.GetServiceAccountGrantResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("GetServiceAccountGrant"))
+              .build();
+        }
+      }
+    }
+    return getGetServiceAccountGrantMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.ListServiceAccountGrantsRequest,
+      com.udb.core.authn.services.v1.ListServiceAccountGrantsResponse> getListServiceAccountGrantsMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "ListServiceAccountGrants",
+      requestType = com.udb.core.authn.services.v1.ListServiceAccountGrantsRequest.class,
+      responseType = com.udb.core.authn.services.v1.ListServiceAccountGrantsResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.ListServiceAccountGrantsRequest,
+      com.udb.core.authn.services.v1.ListServiceAccountGrantsResponse> getListServiceAccountGrantsMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.ListServiceAccountGrantsRequest, com.udb.core.authn.services.v1.ListServiceAccountGrantsResponse> getListServiceAccountGrantsMethod;
+    if ((getListServiceAccountGrantsMethod = AuthnServiceGrpc.getListServiceAccountGrantsMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getListServiceAccountGrantsMethod = AuthnServiceGrpc.getListServiceAccountGrantsMethod) == null) {
+          AuthnServiceGrpc.getListServiceAccountGrantsMethod = getListServiceAccountGrantsMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.ListServiceAccountGrantsRequest, com.udb.core.authn.services.v1.ListServiceAccountGrantsResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "ListServiceAccountGrants"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.ListServiceAccountGrantsRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.ListServiceAccountGrantsResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("ListServiceAccountGrants"))
+              .build();
+        }
+      }
+    }
+    return getListServiceAccountGrantsMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.ReplaceServiceAccountGrantRequest,
+      com.udb.core.authn.services.v1.ReplaceServiceAccountGrantResponse> getReplaceServiceAccountGrantMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "ReplaceServiceAccountGrant",
+      requestType = com.udb.core.authn.services.v1.ReplaceServiceAccountGrantRequest.class,
+      responseType = com.udb.core.authn.services.v1.ReplaceServiceAccountGrantResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.ReplaceServiceAccountGrantRequest,
+      com.udb.core.authn.services.v1.ReplaceServiceAccountGrantResponse> getReplaceServiceAccountGrantMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.ReplaceServiceAccountGrantRequest, com.udb.core.authn.services.v1.ReplaceServiceAccountGrantResponse> getReplaceServiceAccountGrantMethod;
+    if ((getReplaceServiceAccountGrantMethod = AuthnServiceGrpc.getReplaceServiceAccountGrantMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getReplaceServiceAccountGrantMethod = AuthnServiceGrpc.getReplaceServiceAccountGrantMethod) == null) {
+          AuthnServiceGrpc.getReplaceServiceAccountGrantMethod = getReplaceServiceAccountGrantMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.ReplaceServiceAccountGrantRequest, com.udb.core.authn.services.v1.ReplaceServiceAccountGrantResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "ReplaceServiceAccountGrant"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.ReplaceServiceAccountGrantRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.ReplaceServiceAccountGrantResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("ReplaceServiceAccountGrant"))
+              .build();
+        }
+      }
+    }
+    return getReplaceServiceAccountGrantMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.RotateServiceAccountIdentityRequest,
+      com.udb.core.authn.services.v1.RotateServiceAccountIdentityResponse> getRotateServiceAccountIdentityMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "RotateServiceAccountIdentity",
+      requestType = com.udb.core.authn.services.v1.RotateServiceAccountIdentityRequest.class,
+      responseType = com.udb.core.authn.services.v1.RotateServiceAccountIdentityResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.RotateServiceAccountIdentityRequest,
+      com.udb.core.authn.services.v1.RotateServiceAccountIdentityResponse> getRotateServiceAccountIdentityMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.RotateServiceAccountIdentityRequest, com.udb.core.authn.services.v1.RotateServiceAccountIdentityResponse> getRotateServiceAccountIdentityMethod;
+    if ((getRotateServiceAccountIdentityMethod = AuthnServiceGrpc.getRotateServiceAccountIdentityMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getRotateServiceAccountIdentityMethod = AuthnServiceGrpc.getRotateServiceAccountIdentityMethod) == null) {
+          AuthnServiceGrpc.getRotateServiceAccountIdentityMethod = getRotateServiceAccountIdentityMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.RotateServiceAccountIdentityRequest, com.udb.core.authn.services.v1.RotateServiceAccountIdentityResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "RotateServiceAccountIdentity"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.RotateServiceAccountIdentityRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.RotateServiceAccountIdentityResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("RotateServiceAccountIdentity"))
+              .build();
+        }
+      }
+    }
+    return getRotateServiceAccountIdentityMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.RevokeServiceAccountGrantRequest,
+      com.udb.core.authn.services.v1.RevokeServiceAccountGrantResponse> getRevokeServiceAccountGrantMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "RevokeServiceAccountGrant",
+      requestType = com.udb.core.authn.services.v1.RevokeServiceAccountGrantRequest.class,
+      responseType = com.udb.core.authn.services.v1.RevokeServiceAccountGrantResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.RevokeServiceAccountGrantRequest,
+      com.udb.core.authn.services.v1.RevokeServiceAccountGrantResponse> getRevokeServiceAccountGrantMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.RevokeServiceAccountGrantRequest, com.udb.core.authn.services.v1.RevokeServiceAccountGrantResponse> getRevokeServiceAccountGrantMethod;
+    if ((getRevokeServiceAccountGrantMethod = AuthnServiceGrpc.getRevokeServiceAccountGrantMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getRevokeServiceAccountGrantMethod = AuthnServiceGrpc.getRevokeServiceAccountGrantMethod) == null) {
+          AuthnServiceGrpc.getRevokeServiceAccountGrantMethod = getRevokeServiceAccountGrantMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.RevokeServiceAccountGrantRequest, com.udb.core.authn.services.v1.RevokeServiceAccountGrantResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "RevokeServiceAccountGrant"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.RevokeServiceAccountGrantRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.RevokeServiceAccountGrantResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("RevokeServiceAccountGrant"))
+              .build();
+        }
+      }
+    }
+    return getRevokeServiceAccountGrantMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.CreateCertificateBindingRequest,
+      com.udb.core.authn.services.v1.CreateCertificateBindingResponse> getCreateCertificateBindingMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "CreateCertificateBinding",
+      requestType = com.udb.core.authn.services.v1.CreateCertificateBindingRequest.class,
+      responseType = com.udb.core.authn.services.v1.CreateCertificateBindingResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.CreateCertificateBindingRequest,
+      com.udb.core.authn.services.v1.CreateCertificateBindingResponse> getCreateCertificateBindingMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.CreateCertificateBindingRequest, com.udb.core.authn.services.v1.CreateCertificateBindingResponse> getCreateCertificateBindingMethod;
+    if ((getCreateCertificateBindingMethod = AuthnServiceGrpc.getCreateCertificateBindingMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getCreateCertificateBindingMethod = AuthnServiceGrpc.getCreateCertificateBindingMethod) == null) {
+          AuthnServiceGrpc.getCreateCertificateBindingMethod = getCreateCertificateBindingMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.CreateCertificateBindingRequest, com.udb.core.authn.services.v1.CreateCertificateBindingResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "CreateCertificateBinding"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.CreateCertificateBindingRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.CreateCertificateBindingResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("CreateCertificateBinding"))
+              .build();
+        }
+      }
+    }
+    return getCreateCertificateBindingMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.ListCertificateBindingsRequest,
+      com.udb.core.authn.services.v1.ListCertificateBindingsResponse> getListCertificateBindingsMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "ListCertificateBindings",
+      requestType = com.udb.core.authn.services.v1.ListCertificateBindingsRequest.class,
+      responseType = com.udb.core.authn.services.v1.ListCertificateBindingsResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.ListCertificateBindingsRequest,
+      com.udb.core.authn.services.v1.ListCertificateBindingsResponse> getListCertificateBindingsMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.ListCertificateBindingsRequest, com.udb.core.authn.services.v1.ListCertificateBindingsResponse> getListCertificateBindingsMethod;
+    if ((getListCertificateBindingsMethod = AuthnServiceGrpc.getListCertificateBindingsMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getListCertificateBindingsMethod = AuthnServiceGrpc.getListCertificateBindingsMethod) == null) {
+          AuthnServiceGrpc.getListCertificateBindingsMethod = getListCertificateBindingsMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.ListCertificateBindingsRequest, com.udb.core.authn.services.v1.ListCertificateBindingsResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "ListCertificateBindings"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.ListCertificateBindingsRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.ListCertificateBindingsResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("ListCertificateBindings"))
+              .build();
+        }
+      }
+    }
+    return getListCertificateBindingsMethod;
+  }
+
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.RevokeCertificateBindingRequest,
+      com.udb.core.authn.services.v1.RevokeCertificateBindingResponse> getRevokeCertificateBindingMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "RevokeCertificateBinding",
+      requestType = com.udb.core.authn.services.v1.RevokeCertificateBindingRequest.class,
+      responseType = com.udb.core.authn.services.v1.RevokeCertificateBindingResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.RevokeCertificateBindingRequest,
+      com.udb.core.authn.services.v1.RevokeCertificateBindingResponse> getRevokeCertificateBindingMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.RevokeCertificateBindingRequest, com.udb.core.authn.services.v1.RevokeCertificateBindingResponse> getRevokeCertificateBindingMethod;
+    if ((getRevokeCertificateBindingMethod = AuthnServiceGrpc.getRevokeCertificateBindingMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getRevokeCertificateBindingMethod = AuthnServiceGrpc.getRevokeCertificateBindingMethod) == null) {
+          AuthnServiceGrpc.getRevokeCertificateBindingMethod = getRevokeCertificateBindingMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.RevokeCertificateBindingRequest, com.udb.core.authn.services.v1.RevokeCertificateBindingResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "RevokeCertificateBinding"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.RevokeCertificateBindingRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.RevokeCertificateBindingResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("RevokeCertificateBinding"))
+              .build();
+        }
+      }
+    }
+    return getRevokeCertificateBindingMethod;
+  }
+
   /**
    * Creates a new async stub that supports all call types for the service
    */
@@ -2061,6 +2340,112 @@ public final class AuthnServiceGrpc {
     default void deleteWebAuthnCredential(com.udb.core.authn.services.v1.DeleteWebAuthnCredentialRequest request,
         io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.DeleteWebAuthnCredentialResponse> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getDeleteWebAuthnCredentialMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * ── Typed service-account grants + mTLS certificate bindings (UDB-AUTH-003/007) ──
+     * Create the single typed grant for a service account: immutable service
+     * identity, tenant/project binding, and operator-approved scopes.
+     * Admin/owner/wildcard scopes are rejected at write time (fail closed).
+     * </pre>
+     */
+    default void createServiceAccountGrant(com.udb.core.authn.services.v1.CreateServiceAccountGrantRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.CreateServiceAccountGrantResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getCreateServiceAccountGrantMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Read the current typed grant for a service account; NOT_FOUND when the
+     * account has no grant (the account then cannot authenticate — fail closed).
+     * </pre>
+     */
+    default void getServiceAccountGrant(com.udb.core.authn.services.v1.GetServiceAccountGrantRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.GetServiceAccountGrantResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getGetServiceAccountGrantMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Page through the tenant's typed service-account grants (tenant-scoped;
+     * cross-tenant reads are rejected).
+     * </pre>
+     */
+    default void listServiceAccountGrants(com.udb.core.authn.services.v1.ListServiceAccountGrantsRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ListServiceAccountGrantsResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getListServiceAccountGrantsMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Replace a grant's approved scopes/project atomically, bumping `revision` so
+     * dependent credentials and bindings detect staleness. A stale
+     * expected_revision fails with FAILED_PRECONDITION (fail closed).
+     * </pre>
+     */
+    default void replaceServiceAccountGrant(com.udb.core.authn.services.v1.ReplaceServiceAccountGrantRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ReplaceServiceAccountGrantResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getReplaceServiceAccountGrantMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Rotate the immutable service identity through an explicit audited CAS.
+     * The revision bump invalidates all API keys and certificate bindings
+     * reviewed against the prior identity; already-issued service JWTs fail the
+     * current-grant identity check immediately.
+     * </pre>
+     */
+    default void rotateServiceAccountIdentity(com.udb.core.authn.services.v1.RotateServiceAccountIdentityRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.RotateServiceAccountIdentityResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getRotateServiceAccountIdentityMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Revoke a service account's grant. The account (and every credential or
+     * certificate binding that resolves through the grant) stops authenticating
+     * immediately — fail closed, audited.
+     * </pre>
+     */
+    default void revokeServiceAccountGrant(com.udb.core.authn.services.v1.RevokeServiceAccountGrantRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.RevokeServiceAccountGrantResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getRevokeServiceAccountGrantMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Bind an mTLS certificate selector to a service account. The principal is
+     * always derived from the account's CURRENT grant at request time (optionally
+     * attenuated by scope_subset); an unknown or misbound certificate fails closed.
+     * </pre>
+     */
+    default void createCertificateBinding(com.udb.core.authn.services.v1.CreateCertificateBindingRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.CreateCertificateBindingResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getCreateCertificateBindingMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Page through the tenant's mTLS certificate bindings (tenant-scoped;
+     * cross-tenant reads are rejected).
+     * </pre>
+     */
+    default void listCertificateBindings(com.udb.core.authn.services.v1.ListCertificateBindingsRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ListCertificateBindingsResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getListCertificateBindingsMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Revoke a certificate binding. Certificates matching the selector stop
+     * authenticating immediately — fail closed, audited.
+     * </pre>
+     */
+    default void revokeCertificateBinding(com.udb.core.authn.services.v1.RevokeCertificateBindingRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.RevokeCertificateBindingResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getRevokeCertificateBindingMethod(), responseObserver);
     }
   }
 
@@ -2578,6 +2963,121 @@ public final class AuthnServiceGrpc {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getDeleteWebAuthnCredentialMethod(), getCallOptions()), request, responseObserver);
     }
+
+    /**
+     * <pre>
+     * ── Typed service-account grants + mTLS certificate bindings (UDB-AUTH-003/007) ──
+     * Create the single typed grant for a service account: immutable service
+     * identity, tenant/project binding, and operator-approved scopes.
+     * Admin/owner/wildcard scopes are rejected at write time (fail closed).
+     * </pre>
+     */
+    public void createServiceAccountGrant(com.udb.core.authn.services.v1.CreateServiceAccountGrantRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.CreateServiceAccountGrantResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getCreateServiceAccountGrantMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Read the current typed grant for a service account; NOT_FOUND when the
+     * account has no grant (the account then cannot authenticate — fail closed).
+     * </pre>
+     */
+    public void getServiceAccountGrant(com.udb.core.authn.services.v1.GetServiceAccountGrantRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.GetServiceAccountGrantResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getGetServiceAccountGrantMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Page through the tenant's typed service-account grants (tenant-scoped;
+     * cross-tenant reads are rejected).
+     * </pre>
+     */
+    public void listServiceAccountGrants(com.udb.core.authn.services.v1.ListServiceAccountGrantsRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ListServiceAccountGrantsResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getListServiceAccountGrantsMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Replace a grant's approved scopes/project atomically, bumping `revision` so
+     * dependent credentials and bindings detect staleness. A stale
+     * expected_revision fails with FAILED_PRECONDITION (fail closed).
+     * </pre>
+     */
+    public void replaceServiceAccountGrant(com.udb.core.authn.services.v1.ReplaceServiceAccountGrantRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ReplaceServiceAccountGrantResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getReplaceServiceAccountGrantMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Rotate the immutable service identity through an explicit audited CAS.
+     * The revision bump invalidates all API keys and certificate bindings
+     * reviewed against the prior identity; already-issued service JWTs fail the
+     * current-grant identity check immediately.
+     * </pre>
+     */
+    public void rotateServiceAccountIdentity(com.udb.core.authn.services.v1.RotateServiceAccountIdentityRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.RotateServiceAccountIdentityResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getRotateServiceAccountIdentityMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Revoke a service account's grant. The account (and every credential or
+     * certificate binding that resolves through the grant) stops authenticating
+     * immediately — fail closed, audited.
+     * </pre>
+     */
+    public void revokeServiceAccountGrant(com.udb.core.authn.services.v1.RevokeServiceAccountGrantRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.RevokeServiceAccountGrantResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getRevokeServiceAccountGrantMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Bind an mTLS certificate selector to a service account. The principal is
+     * always derived from the account's CURRENT grant at request time (optionally
+     * attenuated by scope_subset); an unknown or misbound certificate fails closed.
+     * </pre>
+     */
+    public void createCertificateBinding(com.udb.core.authn.services.v1.CreateCertificateBindingRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.CreateCertificateBindingResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getCreateCertificateBindingMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Page through the tenant's mTLS certificate bindings (tenant-scoped;
+     * cross-tenant reads are rejected).
+     * </pre>
+     */
+    public void listCertificateBindings(com.udb.core.authn.services.v1.ListCertificateBindingsRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ListCertificateBindingsResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getListCertificateBindingsMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Revoke a certificate binding. Certificates matching the selector stop
+     * authenticating immediately — fail closed, audited.
+     * </pre>
+     */
+    public void revokeCertificateBinding(com.udb.core.authn.services.v1.RevokeCertificateBindingRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.RevokeCertificateBindingResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getRevokeCertificateBindingMethod(), getCallOptions()), request, responseObserver);
+    }
   }
 
   /**
@@ -3023,6 +3523,112 @@ public final class AuthnServiceGrpc {
       return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
           getChannel(), getDeleteWebAuthnCredentialMethod(), getCallOptions(), request);
     }
+
+    /**
+     * <pre>
+     * ── Typed service-account grants + mTLS certificate bindings (UDB-AUTH-003/007) ──
+     * Create the single typed grant for a service account: immutable service
+     * identity, tenant/project binding, and operator-approved scopes.
+     * Admin/owner/wildcard scopes are rejected at write time (fail closed).
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.CreateServiceAccountGrantResponse createServiceAccountGrant(com.udb.core.authn.services.v1.CreateServiceAccountGrantRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getCreateServiceAccountGrantMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Read the current typed grant for a service account; NOT_FOUND when the
+     * account has no grant (the account then cannot authenticate — fail closed).
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.GetServiceAccountGrantResponse getServiceAccountGrant(com.udb.core.authn.services.v1.GetServiceAccountGrantRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getGetServiceAccountGrantMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Page through the tenant's typed service-account grants (tenant-scoped;
+     * cross-tenant reads are rejected).
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.ListServiceAccountGrantsResponse listServiceAccountGrants(com.udb.core.authn.services.v1.ListServiceAccountGrantsRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getListServiceAccountGrantsMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Replace a grant's approved scopes/project atomically, bumping `revision` so
+     * dependent credentials and bindings detect staleness. A stale
+     * expected_revision fails with FAILED_PRECONDITION (fail closed).
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.ReplaceServiceAccountGrantResponse replaceServiceAccountGrant(com.udb.core.authn.services.v1.ReplaceServiceAccountGrantRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getReplaceServiceAccountGrantMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Rotate the immutable service identity through an explicit audited CAS.
+     * The revision bump invalidates all API keys and certificate bindings
+     * reviewed against the prior identity; already-issued service JWTs fail the
+     * current-grant identity check immediately.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.RotateServiceAccountIdentityResponse rotateServiceAccountIdentity(com.udb.core.authn.services.v1.RotateServiceAccountIdentityRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getRotateServiceAccountIdentityMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Revoke a service account's grant. The account (and every credential or
+     * certificate binding that resolves through the grant) stops authenticating
+     * immediately — fail closed, audited.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.RevokeServiceAccountGrantResponse revokeServiceAccountGrant(com.udb.core.authn.services.v1.RevokeServiceAccountGrantRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getRevokeServiceAccountGrantMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Bind an mTLS certificate selector to a service account. The principal is
+     * always derived from the account's CURRENT grant at request time (optionally
+     * attenuated by scope_subset); an unknown or misbound certificate fails closed.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.CreateCertificateBindingResponse createCertificateBinding(com.udb.core.authn.services.v1.CreateCertificateBindingRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getCreateCertificateBindingMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Page through the tenant's mTLS certificate bindings (tenant-scoped;
+     * cross-tenant reads are rejected).
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.ListCertificateBindingsResponse listCertificateBindings(com.udb.core.authn.services.v1.ListCertificateBindingsRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getListCertificateBindingsMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Revoke a certificate binding. Certificates matching the selector stop
+     * authenticating immediately — fail closed, audited.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.RevokeCertificateBindingResponse revokeCertificateBinding(com.udb.core.authn.services.v1.RevokeCertificateBindingRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getRevokeCertificateBindingMethod(), getCallOptions(), request);
+    }
   }
 
   /**
@@ -3467,6 +4073,112 @@ public final class AuthnServiceGrpc {
     public com.udb.core.authn.services.v1.DeleteWebAuthnCredentialResponse deleteWebAuthnCredential(com.udb.core.authn.services.v1.DeleteWebAuthnCredentialRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getDeleteWebAuthnCredentialMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * ── Typed service-account grants + mTLS certificate bindings (UDB-AUTH-003/007) ──
+     * Create the single typed grant for a service account: immutable service
+     * identity, tenant/project binding, and operator-approved scopes.
+     * Admin/owner/wildcard scopes are rejected at write time (fail closed).
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.CreateServiceAccountGrantResponse createServiceAccountGrant(com.udb.core.authn.services.v1.CreateServiceAccountGrantRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getCreateServiceAccountGrantMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Read the current typed grant for a service account; NOT_FOUND when the
+     * account has no grant (the account then cannot authenticate — fail closed).
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.GetServiceAccountGrantResponse getServiceAccountGrant(com.udb.core.authn.services.v1.GetServiceAccountGrantRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getGetServiceAccountGrantMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Page through the tenant's typed service-account grants (tenant-scoped;
+     * cross-tenant reads are rejected).
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.ListServiceAccountGrantsResponse listServiceAccountGrants(com.udb.core.authn.services.v1.ListServiceAccountGrantsRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getListServiceAccountGrantsMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Replace a grant's approved scopes/project atomically, bumping `revision` so
+     * dependent credentials and bindings detect staleness. A stale
+     * expected_revision fails with FAILED_PRECONDITION (fail closed).
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.ReplaceServiceAccountGrantResponse replaceServiceAccountGrant(com.udb.core.authn.services.v1.ReplaceServiceAccountGrantRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getReplaceServiceAccountGrantMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Rotate the immutable service identity through an explicit audited CAS.
+     * The revision bump invalidates all API keys and certificate bindings
+     * reviewed against the prior identity; already-issued service JWTs fail the
+     * current-grant identity check immediately.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.RotateServiceAccountIdentityResponse rotateServiceAccountIdentity(com.udb.core.authn.services.v1.RotateServiceAccountIdentityRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getRotateServiceAccountIdentityMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Revoke a service account's grant. The account (and every credential or
+     * certificate binding that resolves through the grant) stops authenticating
+     * immediately — fail closed, audited.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.RevokeServiceAccountGrantResponse revokeServiceAccountGrant(com.udb.core.authn.services.v1.RevokeServiceAccountGrantRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getRevokeServiceAccountGrantMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Bind an mTLS certificate selector to a service account. The principal is
+     * always derived from the account's CURRENT grant at request time (optionally
+     * attenuated by scope_subset); an unknown or misbound certificate fails closed.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.CreateCertificateBindingResponse createCertificateBinding(com.udb.core.authn.services.v1.CreateCertificateBindingRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getCreateCertificateBindingMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Page through the tenant's mTLS certificate bindings (tenant-scoped;
+     * cross-tenant reads are rejected).
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.ListCertificateBindingsResponse listCertificateBindings(com.udb.core.authn.services.v1.ListCertificateBindingsRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getListCertificateBindingsMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Revoke a certificate binding. Certificates matching the selector stop
+     * authenticating immediately — fail closed, audited.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.RevokeCertificateBindingResponse revokeCertificateBinding(com.udb.core.authn.services.v1.RevokeCertificateBindingRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getRevokeCertificateBindingMethod(), getCallOptions(), request);
     }
   }
 
@@ -3963,6 +4675,121 @@ public final class AuthnServiceGrpc {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getDeleteWebAuthnCredentialMethod(), getCallOptions()), request);
     }
+
+    /**
+     * <pre>
+     * ── Typed service-account grants + mTLS certificate bindings (UDB-AUTH-003/007) ──
+     * Create the single typed grant for a service account: immutable service
+     * identity, tenant/project binding, and operator-approved scopes.
+     * Admin/owner/wildcard scopes are rejected at write time (fail closed).
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.CreateServiceAccountGrantResponse> createServiceAccountGrant(
+        com.udb.core.authn.services.v1.CreateServiceAccountGrantRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getCreateServiceAccountGrantMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * Read the current typed grant for a service account; NOT_FOUND when the
+     * account has no grant (the account then cannot authenticate — fail closed).
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.GetServiceAccountGrantResponse> getServiceAccountGrant(
+        com.udb.core.authn.services.v1.GetServiceAccountGrantRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getGetServiceAccountGrantMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * Page through the tenant's typed service-account grants (tenant-scoped;
+     * cross-tenant reads are rejected).
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.ListServiceAccountGrantsResponse> listServiceAccountGrants(
+        com.udb.core.authn.services.v1.ListServiceAccountGrantsRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getListServiceAccountGrantsMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * Replace a grant's approved scopes/project atomically, bumping `revision` so
+     * dependent credentials and bindings detect staleness. A stale
+     * expected_revision fails with FAILED_PRECONDITION (fail closed).
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.ReplaceServiceAccountGrantResponse> replaceServiceAccountGrant(
+        com.udb.core.authn.services.v1.ReplaceServiceAccountGrantRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getReplaceServiceAccountGrantMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * Rotate the immutable service identity through an explicit audited CAS.
+     * The revision bump invalidates all API keys and certificate bindings
+     * reviewed against the prior identity; already-issued service JWTs fail the
+     * current-grant identity check immediately.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.RotateServiceAccountIdentityResponse> rotateServiceAccountIdentity(
+        com.udb.core.authn.services.v1.RotateServiceAccountIdentityRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getRotateServiceAccountIdentityMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * Revoke a service account's grant. The account (and every credential or
+     * certificate binding that resolves through the grant) stops authenticating
+     * immediately — fail closed, audited.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.RevokeServiceAccountGrantResponse> revokeServiceAccountGrant(
+        com.udb.core.authn.services.v1.RevokeServiceAccountGrantRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getRevokeServiceAccountGrantMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * Bind an mTLS certificate selector to a service account. The principal is
+     * always derived from the account's CURRENT grant at request time (optionally
+     * attenuated by scope_subset); an unknown or misbound certificate fails closed.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.CreateCertificateBindingResponse> createCertificateBinding(
+        com.udb.core.authn.services.v1.CreateCertificateBindingRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getCreateCertificateBindingMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * Page through the tenant's mTLS certificate bindings (tenant-scoped;
+     * cross-tenant reads are rejected).
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.ListCertificateBindingsResponse> listCertificateBindings(
+        com.udb.core.authn.services.v1.ListCertificateBindingsRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getListCertificateBindingsMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * Revoke a certificate binding. Certificates matching the selector stop
+     * authenticating immediately — fail closed, audited.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.RevokeCertificateBindingResponse> revokeCertificateBinding(
+        com.udb.core.authn.services.v1.RevokeCertificateBindingRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getRevokeCertificateBindingMethod(), getCallOptions()), request);
+    }
   }
 
   private static final int METHODID_CREATE_USER = 0;
@@ -4015,6 +4842,15 @@ public final class AuthnServiceGrpc {
   private static final int METHODID_ADMIN_RESET_MFA = 47;
   private static final int METHODID_LIST_WEB_AUTHN_CREDENTIALS = 48;
   private static final int METHODID_DELETE_WEB_AUTHN_CREDENTIAL = 49;
+  private static final int METHODID_CREATE_SERVICE_ACCOUNT_GRANT = 50;
+  private static final int METHODID_GET_SERVICE_ACCOUNT_GRANT = 51;
+  private static final int METHODID_LIST_SERVICE_ACCOUNT_GRANTS = 52;
+  private static final int METHODID_REPLACE_SERVICE_ACCOUNT_GRANT = 53;
+  private static final int METHODID_ROTATE_SERVICE_ACCOUNT_IDENTITY = 54;
+  private static final int METHODID_REVOKE_SERVICE_ACCOUNT_GRANT = 55;
+  private static final int METHODID_CREATE_CERTIFICATE_BINDING = 56;
+  private static final int METHODID_LIST_CERTIFICATE_BINDINGS = 57;
+  private static final int METHODID_REVOKE_CERTIFICATE_BINDING = 58;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -4232,6 +5068,42 @@ public final class AuthnServiceGrpc {
         case METHODID_DELETE_WEB_AUTHN_CREDENTIAL:
           serviceImpl.deleteWebAuthnCredential((com.udb.core.authn.services.v1.DeleteWebAuthnCredentialRequest) request,
               (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.DeleteWebAuthnCredentialResponse>) responseObserver);
+          break;
+        case METHODID_CREATE_SERVICE_ACCOUNT_GRANT:
+          serviceImpl.createServiceAccountGrant((com.udb.core.authn.services.v1.CreateServiceAccountGrantRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.CreateServiceAccountGrantResponse>) responseObserver);
+          break;
+        case METHODID_GET_SERVICE_ACCOUNT_GRANT:
+          serviceImpl.getServiceAccountGrant((com.udb.core.authn.services.v1.GetServiceAccountGrantRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.GetServiceAccountGrantResponse>) responseObserver);
+          break;
+        case METHODID_LIST_SERVICE_ACCOUNT_GRANTS:
+          serviceImpl.listServiceAccountGrants((com.udb.core.authn.services.v1.ListServiceAccountGrantsRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ListServiceAccountGrantsResponse>) responseObserver);
+          break;
+        case METHODID_REPLACE_SERVICE_ACCOUNT_GRANT:
+          serviceImpl.replaceServiceAccountGrant((com.udb.core.authn.services.v1.ReplaceServiceAccountGrantRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ReplaceServiceAccountGrantResponse>) responseObserver);
+          break;
+        case METHODID_ROTATE_SERVICE_ACCOUNT_IDENTITY:
+          serviceImpl.rotateServiceAccountIdentity((com.udb.core.authn.services.v1.RotateServiceAccountIdentityRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.RotateServiceAccountIdentityResponse>) responseObserver);
+          break;
+        case METHODID_REVOKE_SERVICE_ACCOUNT_GRANT:
+          serviceImpl.revokeServiceAccountGrant((com.udb.core.authn.services.v1.RevokeServiceAccountGrantRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.RevokeServiceAccountGrantResponse>) responseObserver);
+          break;
+        case METHODID_CREATE_CERTIFICATE_BINDING:
+          serviceImpl.createCertificateBinding((com.udb.core.authn.services.v1.CreateCertificateBindingRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.CreateCertificateBindingResponse>) responseObserver);
+          break;
+        case METHODID_LIST_CERTIFICATE_BINDINGS:
+          serviceImpl.listCertificateBindings((com.udb.core.authn.services.v1.ListCertificateBindingsRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.ListCertificateBindingsResponse>) responseObserver);
+          break;
+        case METHODID_REVOKE_CERTIFICATE_BINDING:
+          serviceImpl.revokeCertificateBinding((com.udb.core.authn.services.v1.RevokeCertificateBindingRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.RevokeCertificateBindingResponse>) responseObserver);
           break;
         default:
           throw new AssertionError();
@@ -4601,6 +5473,69 @@ public final class AuthnServiceGrpc {
               com.udb.core.authn.services.v1.DeleteWebAuthnCredentialRequest,
               com.udb.core.authn.services.v1.DeleteWebAuthnCredentialResponse>(
                 service, METHODID_DELETE_WEB_AUTHN_CREDENTIAL)))
+        .addMethod(
+          getCreateServiceAccountGrantMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.CreateServiceAccountGrantRequest,
+              com.udb.core.authn.services.v1.CreateServiceAccountGrantResponse>(
+                service, METHODID_CREATE_SERVICE_ACCOUNT_GRANT)))
+        .addMethod(
+          getGetServiceAccountGrantMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.GetServiceAccountGrantRequest,
+              com.udb.core.authn.services.v1.GetServiceAccountGrantResponse>(
+                service, METHODID_GET_SERVICE_ACCOUNT_GRANT)))
+        .addMethod(
+          getListServiceAccountGrantsMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.ListServiceAccountGrantsRequest,
+              com.udb.core.authn.services.v1.ListServiceAccountGrantsResponse>(
+                service, METHODID_LIST_SERVICE_ACCOUNT_GRANTS)))
+        .addMethod(
+          getReplaceServiceAccountGrantMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.ReplaceServiceAccountGrantRequest,
+              com.udb.core.authn.services.v1.ReplaceServiceAccountGrantResponse>(
+                service, METHODID_REPLACE_SERVICE_ACCOUNT_GRANT)))
+        .addMethod(
+          getRotateServiceAccountIdentityMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.RotateServiceAccountIdentityRequest,
+              com.udb.core.authn.services.v1.RotateServiceAccountIdentityResponse>(
+                service, METHODID_ROTATE_SERVICE_ACCOUNT_IDENTITY)))
+        .addMethod(
+          getRevokeServiceAccountGrantMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.RevokeServiceAccountGrantRequest,
+              com.udb.core.authn.services.v1.RevokeServiceAccountGrantResponse>(
+                service, METHODID_REVOKE_SERVICE_ACCOUNT_GRANT)))
+        .addMethod(
+          getCreateCertificateBindingMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.CreateCertificateBindingRequest,
+              com.udb.core.authn.services.v1.CreateCertificateBindingResponse>(
+                service, METHODID_CREATE_CERTIFICATE_BINDING)))
+        .addMethod(
+          getListCertificateBindingsMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.ListCertificateBindingsRequest,
+              com.udb.core.authn.services.v1.ListCertificateBindingsResponse>(
+                service, METHODID_LIST_CERTIFICATE_BINDINGS)))
+        .addMethod(
+          getRevokeCertificateBindingMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.RevokeCertificateBindingRequest,
+              com.udb.core.authn.services.v1.RevokeCertificateBindingResponse>(
+                service, METHODID_REVOKE_CERTIFICATE_BINDING)))
         .build();
   }
 
@@ -4699,6 +5634,15 @@ public final class AuthnServiceGrpc {
               .addMethod(getAdminResetMfaMethod())
               .addMethod(getListWebAuthnCredentialsMethod())
               .addMethod(getDeleteWebAuthnCredentialMethod())
+              .addMethod(getCreateServiceAccountGrantMethod())
+              .addMethod(getGetServiceAccountGrantMethod())
+              .addMethod(getListServiceAccountGrantsMethod())
+              .addMethod(getReplaceServiceAccountGrantMethod())
+              .addMethod(getRotateServiceAccountIdentityMethod())
+              .addMethod(getRevokeServiceAccountGrantMethod())
+              .addMethod(getCreateCertificateBindingMethod())
+              .addMethod(getListCertificateBindingsMethod())
+              .addMethod(getRevokeCertificateBindingMethod())
               .build();
         }
       }

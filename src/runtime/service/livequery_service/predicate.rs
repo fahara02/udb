@@ -23,12 +23,16 @@ pub(crate) struct SourceBinding {
 /// cannot tenant-scope must never be served.
 pub(crate) fn resolve_source(message_type: &str) -> Result<SourceBinding, Status> {
     let manifest = crate::runtime::native_catalog::native_manifest();
-    let table = crate::broker::table_for_message(manifest, message_type).ok_or_else(|| {
-        crate::runtime::executor_utils::invalid_argument_fields(
-            format!("live query source '{message_type}' is not a known UDB entity"),
-            [("message_type", "must name a known tenant-scoped UDB entity")],
-        )
-    })?;
+    let table =
+        crate::broker::resolve_table_for_message(manifest, message_type).map_err(|error| {
+            crate::runtime::executor_utils::invalid_argument_fields(
+                error.to_string(),
+                [(
+                    "message_type",
+                    "must name exactly one known tenant-scoped UDB entity",
+                )],
+            )
+        })?;
     let column = crate::runtime::postgres_helpers::tenant_column_ref(table).ok_or_else(|| {
         crate::runtime::executor_utils::invalid_argument_fields(
             format!(

@@ -257,6 +257,42 @@ namespace udb.core.Authn.Services.V1 {
     static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.DeleteWebAuthnCredentialRequest> __Marshaller_udb_core_authn_services_v1_DeleteWebAuthnCredentialRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.DeleteWebAuthnCredentialRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.DeleteWebAuthnCredentialResponse> __Marshaller_udb_core_authn_services_v1_DeleteWebAuthnCredentialResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.DeleteWebAuthnCredentialResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.CreateServiceAccountGrantRequest> __Marshaller_udb_core_authn_services_v1_CreateServiceAccountGrantRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.CreateServiceAccountGrantRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.CreateServiceAccountGrantResponse> __Marshaller_udb_core_authn_services_v1_CreateServiceAccountGrantResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.CreateServiceAccountGrantResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.GetServiceAccountGrantRequest> __Marshaller_udb_core_authn_services_v1_GetServiceAccountGrantRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.GetServiceAccountGrantRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.GetServiceAccountGrantResponse> __Marshaller_udb_core_authn_services_v1_GetServiceAccountGrantResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.GetServiceAccountGrantResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.ListServiceAccountGrantsRequest> __Marshaller_udb_core_authn_services_v1_ListServiceAccountGrantsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.ListServiceAccountGrantsRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.ListServiceAccountGrantsResponse> __Marshaller_udb_core_authn_services_v1_ListServiceAccountGrantsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.ListServiceAccountGrantsResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.ReplaceServiceAccountGrantRequest> __Marshaller_udb_core_authn_services_v1_ReplaceServiceAccountGrantRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.ReplaceServiceAccountGrantRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.ReplaceServiceAccountGrantResponse> __Marshaller_udb_core_authn_services_v1_ReplaceServiceAccountGrantResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.ReplaceServiceAccountGrantResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.RotateServiceAccountIdentityRequest> __Marshaller_udb_core_authn_services_v1_RotateServiceAccountIdentityRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.RotateServiceAccountIdentityRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.RotateServiceAccountIdentityResponse> __Marshaller_udb_core_authn_services_v1_RotateServiceAccountIdentityResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.RotateServiceAccountIdentityResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.RevokeServiceAccountGrantRequest> __Marshaller_udb_core_authn_services_v1_RevokeServiceAccountGrantRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.RevokeServiceAccountGrantRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.RevokeServiceAccountGrantResponse> __Marshaller_udb_core_authn_services_v1_RevokeServiceAccountGrantResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.RevokeServiceAccountGrantResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.CreateCertificateBindingRequest> __Marshaller_udb_core_authn_services_v1_CreateCertificateBindingRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.CreateCertificateBindingRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.CreateCertificateBindingResponse> __Marshaller_udb_core_authn_services_v1_CreateCertificateBindingResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.CreateCertificateBindingResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.ListCertificateBindingsRequest> __Marshaller_udb_core_authn_services_v1_ListCertificateBindingsRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.ListCertificateBindingsRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.ListCertificateBindingsResponse> __Marshaller_udb_core_authn_services_v1_ListCertificateBindingsResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.ListCertificateBindingsResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.RevokeCertificateBindingRequest> __Marshaller_udb_core_authn_services_v1_RevokeCertificateBindingRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.RevokeCertificateBindingRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.RevokeCertificateBindingResponse> __Marshaller_udb_core_authn_services_v1_RevokeCertificateBindingResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.RevokeCertificateBindingResponse.Parser));
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Method<global::udb.core.Authn.Services.V1.CreateUserRequest, global::udb.core.Authn.Services.V1.CreateUserResponse> __Method_CreateUser = new grpc::Method<global::udb.core.Authn.Services.V1.CreateUserRequest, global::udb.core.Authn.Services.V1.CreateUserResponse>(
@@ -657,6 +693,78 @@ namespace udb.core.Authn.Services.V1 {
         "DeleteWebAuthnCredential",
         __Marshaller_udb_core_authn_services_v1_DeleteWebAuthnCredentialRequest,
         __Marshaller_udb_core_authn_services_v1_DeleteWebAuthnCredentialResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Authn.Services.V1.CreateServiceAccountGrantRequest, global::udb.core.Authn.Services.V1.CreateServiceAccountGrantResponse> __Method_CreateServiceAccountGrant = new grpc::Method<global::udb.core.Authn.Services.V1.CreateServiceAccountGrantRequest, global::udb.core.Authn.Services.V1.CreateServiceAccountGrantResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "CreateServiceAccountGrant",
+        __Marshaller_udb_core_authn_services_v1_CreateServiceAccountGrantRequest,
+        __Marshaller_udb_core_authn_services_v1_CreateServiceAccountGrantResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Authn.Services.V1.GetServiceAccountGrantRequest, global::udb.core.Authn.Services.V1.GetServiceAccountGrantResponse> __Method_GetServiceAccountGrant = new grpc::Method<global::udb.core.Authn.Services.V1.GetServiceAccountGrantRequest, global::udb.core.Authn.Services.V1.GetServiceAccountGrantResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "GetServiceAccountGrant",
+        __Marshaller_udb_core_authn_services_v1_GetServiceAccountGrantRequest,
+        __Marshaller_udb_core_authn_services_v1_GetServiceAccountGrantResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Authn.Services.V1.ListServiceAccountGrantsRequest, global::udb.core.Authn.Services.V1.ListServiceAccountGrantsResponse> __Method_ListServiceAccountGrants = new grpc::Method<global::udb.core.Authn.Services.V1.ListServiceAccountGrantsRequest, global::udb.core.Authn.Services.V1.ListServiceAccountGrantsResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "ListServiceAccountGrants",
+        __Marshaller_udb_core_authn_services_v1_ListServiceAccountGrantsRequest,
+        __Marshaller_udb_core_authn_services_v1_ListServiceAccountGrantsResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Authn.Services.V1.ReplaceServiceAccountGrantRequest, global::udb.core.Authn.Services.V1.ReplaceServiceAccountGrantResponse> __Method_ReplaceServiceAccountGrant = new grpc::Method<global::udb.core.Authn.Services.V1.ReplaceServiceAccountGrantRequest, global::udb.core.Authn.Services.V1.ReplaceServiceAccountGrantResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "ReplaceServiceAccountGrant",
+        __Marshaller_udb_core_authn_services_v1_ReplaceServiceAccountGrantRequest,
+        __Marshaller_udb_core_authn_services_v1_ReplaceServiceAccountGrantResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Authn.Services.V1.RotateServiceAccountIdentityRequest, global::udb.core.Authn.Services.V1.RotateServiceAccountIdentityResponse> __Method_RotateServiceAccountIdentity = new grpc::Method<global::udb.core.Authn.Services.V1.RotateServiceAccountIdentityRequest, global::udb.core.Authn.Services.V1.RotateServiceAccountIdentityResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "RotateServiceAccountIdentity",
+        __Marshaller_udb_core_authn_services_v1_RotateServiceAccountIdentityRequest,
+        __Marshaller_udb_core_authn_services_v1_RotateServiceAccountIdentityResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Authn.Services.V1.RevokeServiceAccountGrantRequest, global::udb.core.Authn.Services.V1.RevokeServiceAccountGrantResponse> __Method_RevokeServiceAccountGrant = new grpc::Method<global::udb.core.Authn.Services.V1.RevokeServiceAccountGrantRequest, global::udb.core.Authn.Services.V1.RevokeServiceAccountGrantResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "RevokeServiceAccountGrant",
+        __Marshaller_udb_core_authn_services_v1_RevokeServiceAccountGrantRequest,
+        __Marshaller_udb_core_authn_services_v1_RevokeServiceAccountGrantResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Authn.Services.V1.CreateCertificateBindingRequest, global::udb.core.Authn.Services.V1.CreateCertificateBindingResponse> __Method_CreateCertificateBinding = new grpc::Method<global::udb.core.Authn.Services.V1.CreateCertificateBindingRequest, global::udb.core.Authn.Services.V1.CreateCertificateBindingResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "CreateCertificateBinding",
+        __Marshaller_udb_core_authn_services_v1_CreateCertificateBindingRequest,
+        __Marshaller_udb_core_authn_services_v1_CreateCertificateBindingResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Authn.Services.V1.ListCertificateBindingsRequest, global::udb.core.Authn.Services.V1.ListCertificateBindingsResponse> __Method_ListCertificateBindings = new grpc::Method<global::udb.core.Authn.Services.V1.ListCertificateBindingsRequest, global::udb.core.Authn.Services.V1.ListCertificateBindingsResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "ListCertificateBindings",
+        __Marshaller_udb_core_authn_services_v1_ListCertificateBindingsRequest,
+        __Marshaller_udb_core_authn_services_v1_ListCertificateBindingsResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Authn.Services.V1.RevokeCertificateBindingRequest, global::udb.core.Authn.Services.V1.RevokeCertificateBindingResponse> __Method_RevokeCertificateBinding = new grpc::Method<global::udb.core.Authn.Services.V1.RevokeCertificateBindingRequest, global::udb.core.Authn.Services.V1.RevokeCertificateBindingResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "RevokeCertificateBinding",
+        __Marshaller_udb_core_authn_services_v1_RevokeCertificateBindingRequest,
+        __Marshaller_udb_core_authn_services_v1_RevokeCertificateBindingResponse);
 
     /// <summary>Service descriptor</summary>
     public static global::Google.Protobuf.Reflection.ServiceDescriptor Descriptor
@@ -1095,6 +1203,130 @@ namespace udb.core.Authn.Services.V1 {
 
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::System.Threading.Tasks.Task<global::udb.core.Authn.Services.V1.DeleteWebAuthnCredentialResponse> DeleteWebAuthnCredential(global::udb.core.Authn.Services.V1.DeleteWebAuthnCredentialRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// ── Typed service-account grants + mTLS certificate bindings (UDB-AUTH-003/007) ──
+      /// Create the single typed grant for a service account: immutable service
+      /// identity, tenant/project binding, and operator-approved scopes.
+      /// Admin/owner/wildcard scopes are rejected at write time (fail closed).
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authn.Services.V1.CreateServiceAccountGrantResponse> CreateServiceAccountGrant(global::udb.core.Authn.Services.V1.CreateServiceAccountGrantRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Read the current typed grant for a service account; NOT_FOUND when the
+      /// account has no grant (the account then cannot authenticate — fail closed).
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authn.Services.V1.GetServiceAccountGrantResponse> GetServiceAccountGrant(global::udb.core.Authn.Services.V1.GetServiceAccountGrantRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Page through the tenant's typed service-account grants (tenant-scoped;
+      /// cross-tenant reads are rejected).
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authn.Services.V1.ListServiceAccountGrantsResponse> ListServiceAccountGrants(global::udb.core.Authn.Services.V1.ListServiceAccountGrantsRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Replace a grant's approved scopes/project atomically, bumping `revision` so
+      /// dependent credentials and bindings detect staleness. A stale
+      /// expected_revision fails with FAILED_PRECONDITION (fail closed).
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authn.Services.V1.ReplaceServiceAccountGrantResponse> ReplaceServiceAccountGrant(global::udb.core.Authn.Services.V1.ReplaceServiceAccountGrantRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Rotate the immutable service identity through an explicit audited CAS.
+      /// The revision bump invalidates all API keys and certificate bindings
+      /// reviewed against the prior identity; already-issued service JWTs fail the
+      /// current-grant identity check immediately.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authn.Services.V1.RotateServiceAccountIdentityResponse> RotateServiceAccountIdentity(global::udb.core.Authn.Services.V1.RotateServiceAccountIdentityRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Revoke a service account's grant. The account (and every credential or
+      /// certificate binding that resolves through the grant) stops authenticating
+      /// immediately — fail closed, audited.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authn.Services.V1.RevokeServiceAccountGrantResponse> RevokeServiceAccountGrant(global::udb.core.Authn.Services.V1.RevokeServiceAccountGrantRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Bind an mTLS certificate selector to a service account. The principal is
+      /// always derived from the account's CURRENT grant at request time (optionally
+      /// attenuated by scope_subset); an unknown or misbound certificate fails closed.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authn.Services.V1.CreateCertificateBindingResponse> CreateCertificateBinding(global::udb.core.Authn.Services.V1.CreateCertificateBindingRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Page through the tenant's mTLS certificate bindings (tenant-scoped;
+      /// cross-tenant reads are rejected).
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authn.Services.V1.ListCertificateBindingsResponse> ListCertificateBindings(global::udb.core.Authn.Services.V1.ListCertificateBindingsRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Revoke a certificate binding. Certificates matching the selector stop
+      /// authenticating immediately — fail closed, audited.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authn.Services.V1.RevokeCertificateBindingResponse> RevokeCertificateBinding(global::udb.core.Authn.Services.V1.RevokeCertificateBindingRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -2736,6 +2968,502 @@ namespace udb.core.Authn.Services.V1 {
       {
         return CallInvoker.AsyncUnaryCall(__Method_DeleteWebAuthnCredential, null, options, request);
       }
+      /// <summary>
+      /// ── Typed service-account grants + mTLS certificate bindings (UDB-AUTH-003/007) ──
+      /// Create the single typed grant for a service account: immutable service
+      /// identity, tenant/project binding, and operator-approved scopes.
+      /// Admin/owner/wildcard scopes are rejected at write time (fail closed).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.CreateServiceAccountGrantResponse CreateServiceAccountGrant(global::udb.core.Authn.Services.V1.CreateServiceAccountGrantRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return CreateServiceAccountGrant(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// ── Typed service-account grants + mTLS certificate bindings (UDB-AUTH-003/007) ──
+      /// Create the single typed grant for a service account: immutable service
+      /// identity, tenant/project binding, and operator-approved scopes.
+      /// Admin/owner/wildcard scopes are rejected at write time (fail closed).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.CreateServiceAccountGrantResponse CreateServiceAccountGrant(global::udb.core.Authn.Services.V1.CreateServiceAccountGrantRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_CreateServiceAccountGrant, null, options, request);
+      }
+      /// <summary>
+      /// ── Typed service-account grants + mTLS certificate bindings (UDB-AUTH-003/007) ──
+      /// Create the single typed grant for a service account: immutable service
+      /// identity, tenant/project binding, and operator-approved scopes.
+      /// Admin/owner/wildcard scopes are rejected at write time (fail closed).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.CreateServiceAccountGrantResponse> CreateServiceAccountGrantAsync(global::udb.core.Authn.Services.V1.CreateServiceAccountGrantRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return CreateServiceAccountGrantAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// ── Typed service-account grants + mTLS certificate bindings (UDB-AUTH-003/007) ──
+      /// Create the single typed grant for a service account: immutable service
+      /// identity, tenant/project binding, and operator-approved scopes.
+      /// Admin/owner/wildcard scopes are rejected at write time (fail closed).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.CreateServiceAccountGrantResponse> CreateServiceAccountGrantAsync(global::udb.core.Authn.Services.V1.CreateServiceAccountGrantRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_CreateServiceAccountGrant, null, options, request);
+      }
+      /// <summary>
+      /// Read the current typed grant for a service account; NOT_FOUND when the
+      /// account has no grant (the account then cannot authenticate — fail closed).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.GetServiceAccountGrantResponse GetServiceAccountGrant(global::udb.core.Authn.Services.V1.GetServiceAccountGrantRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return GetServiceAccountGrant(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Read the current typed grant for a service account; NOT_FOUND when the
+      /// account has no grant (the account then cannot authenticate — fail closed).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.GetServiceAccountGrantResponse GetServiceAccountGrant(global::udb.core.Authn.Services.V1.GetServiceAccountGrantRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_GetServiceAccountGrant, null, options, request);
+      }
+      /// <summary>
+      /// Read the current typed grant for a service account; NOT_FOUND when the
+      /// account has no grant (the account then cannot authenticate — fail closed).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.GetServiceAccountGrantResponse> GetServiceAccountGrantAsync(global::udb.core.Authn.Services.V1.GetServiceAccountGrantRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return GetServiceAccountGrantAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Read the current typed grant for a service account; NOT_FOUND when the
+      /// account has no grant (the account then cannot authenticate — fail closed).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.GetServiceAccountGrantResponse> GetServiceAccountGrantAsync(global::udb.core.Authn.Services.V1.GetServiceAccountGrantRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_GetServiceAccountGrant, null, options, request);
+      }
+      /// <summary>
+      /// Page through the tenant's typed service-account grants (tenant-scoped;
+      /// cross-tenant reads are rejected).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.ListServiceAccountGrantsResponse ListServiceAccountGrants(global::udb.core.Authn.Services.V1.ListServiceAccountGrantsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ListServiceAccountGrants(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Page through the tenant's typed service-account grants (tenant-scoped;
+      /// cross-tenant reads are rejected).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.ListServiceAccountGrantsResponse ListServiceAccountGrants(global::udb.core.Authn.Services.V1.ListServiceAccountGrantsRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_ListServiceAccountGrants, null, options, request);
+      }
+      /// <summary>
+      /// Page through the tenant's typed service-account grants (tenant-scoped;
+      /// cross-tenant reads are rejected).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.ListServiceAccountGrantsResponse> ListServiceAccountGrantsAsync(global::udb.core.Authn.Services.V1.ListServiceAccountGrantsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ListServiceAccountGrantsAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Page through the tenant's typed service-account grants (tenant-scoped;
+      /// cross-tenant reads are rejected).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.ListServiceAccountGrantsResponse> ListServiceAccountGrantsAsync(global::udb.core.Authn.Services.V1.ListServiceAccountGrantsRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_ListServiceAccountGrants, null, options, request);
+      }
+      /// <summary>
+      /// Replace a grant's approved scopes/project atomically, bumping `revision` so
+      /// dependent credentials and bindings detect staleness. A stale
+      /// expected_revision fails with FAILED_PRECONDITION (fail closed).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.ReplaceServiceAccountGrantResponse ReplaceServiceAccountGrant(global::udb.core.Authn.Services.V1.ReplaceServiceAccountGrantRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ReplaceServiceAccountGrant(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Replace a grant's approved scopes/project atomically, bumping `revision` so
+      /// dependent credentials and bindings detect staleness. A stale
+      /// expected_revision fails with FAILED_PRECONDITION (fail closed).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.ReplaceServiceAccountGrantResponse ReplaceServiceAccountGrant(global::udb.core.Authn.Services.V1.ReplaceServiceAccountGrantRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_ReplaceServiceAccountGrant, null, options, request);
+      }
+      /// <summary>
+      /// Replace a grant's approved scopes/project atomically, bumping `revision` so
+      /// dependent credentials and bindings detect staleness. A stale
+      /// expected_revision fails with FAILED_PRECONDITION (fail closed).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.ReplaceServiceAccountGrantResponse> ReplaceServiceAccountGrantAsync(global::udb.core.Authn.Services.V1.ReplaceServiceAccountGrantRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ReplaceServiceAccountGrantAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Replace a grant's approved scopes/project atomically, bumping `revision` so
+      /// dependent credentials and bindings detect staleness. A stale
+      /// expected_revision fails with FAILED_PRECONDITION (fail closed).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.ReplaceServiceAccountGrantResponse> ReplaceServiceAccountGrantAsync(global::udb.core.Authn.Services.V1.ReplaceServiceAccountGrantRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_ReplaceServiceAccountGrant, null, options, request);
+      }
+      /// <summary>
+      /// Rotate the immutable service identity through an explicit audited CAS.
+      /// The revision bump invalidates all API keys and certificate bindings
+      /// reviewed against the prior identity; already-issued service JWTs fail the
+      /// current-grant identity check immediately.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.RotateServiceAccountIdentityResponse RotateServiceAccountIdentity(global::udb.core.Authn.Services.V1.RotateServiceAccountIdentityRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return RotateServiceAccountIdentity(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Rotate the immutable service identity through an explicit audited CAS.
+      /// The revision bump invalidates all API keys and certificate bindings
+      /// reviewed against the prior identity; already-issued service JWTs fail the
+      /// current-grant identity check immediately.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.RotateServiceAccountIdentityResponse RotateServiceAccountIdentity(global::udb.core.Authn.Services.V1.RotateServiceAccountIdentityRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_RotateServiceAccountIdentity, null, options, request);
+      }
+      /// <summary>
+      /// Rotate the immutable service identity through an explicit audited CAS.
+      /// The revision bump invalidates all API keys and certificate bindings
+      /// reviewed against the prior identity; already-issued service JWTs fail the
+      /// current-grant identity check immediately.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.RotateServiceAccountIdentityResponse> RotateServiceAccountIdentityAsync(global::udb.core.Authn.Services.V1.RotateServiceAccountIdentityRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return RotateServiceAccountIdentityAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Rotate the immutable service identity through an explicit audited CAS.
+      /// The revision bump invalidates all API keys and certificate bindings
+      /// reviewed against the prior identity; already-issued service JWTs fail the
+      /// current-grant identity check immediately.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.RotateServiceAccountIdentityResponse> RotateServiceAccountIdentityAsync(global::udb.core.Authn.Services.V1.RotateServiceAccountIdentityRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_RotateServiceAccountIdentity, null, options, request);
+      }
+      /// <summary>
+      /// Revoke a service account's grant. The account (and every credential or
+      /// certificate binding that resolves through the grant) stops authenticating
+      /// immediately — fail closed, audited.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.RevokeServiceAccountGrantResponse RevokeServiceAccountGrant(global::udb.core.Authn.Services.V1.RevokeServiceAccountGrantRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return RevokeServiceAccountGrant(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Revoke a service account's grant. The account (and every credential or
+      /// certificate binding that resolves through the grant) stops authenticating
+      /// immediately — fail closed, audited.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.RevokeServiceAccountGrantResponse RevokeServiceAccountGrant(global::udb.core.Authn.Services.V1.RevokeServiceAccountGrantRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_RevokeServiceAccountGrant, null, options, request);
+      }
+      /// <summary>
+      /// Revoke a service account's grant. The account (and every credential or
+      /// certificate binding that resolves through the grant) stops authenticating
+      /// immediately — fail closed, audited.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.RevokeServiceAccountGrantResponse> RevokeServiceAccountGrantAsync(global::udb.core.Authn.Services.V1.RevokeServiceAccountGrantRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return RevokeServiceAccountGrantAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Revoke a service account's grant. The account (and every credential or
+      /// certificate binding that resolves through the grant) stops authenticating
+      /// immediately — fail closed, audited.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.RevokeServiceAccountGrantResponse> RevokeServiceAccountGrantAsync(global::udb.core.Authn.Services.V1.RevokeServiceAccountGrantRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_RevokeServiceAccountGrant, null, options, request);
+      }
+      /// <summary>
+      /// Bind an mTLS certificate selector to a service account. The principal is
+      /// always derived from the account's CURRENT grant at request time (optionally
+      /// attenuated by scope_subset); an unknown or misbound certificate fails closed.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.CreateCertificateBindingResponse CreateCertificateBinding(global::udb.core.Authn.Services.V1.CreateCertificateBindingRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return CreateCertificateBinding(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Bind an mTLS certificate selector to a service account. The principal is
+      /// always derived from the account's CURRENT grant at request time (optionally
+      /// attenuated by scope_subset); an unknown or misbound certificate fails closed.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.CreateCertificateBindingResponse CreateCertificateBinding(global::udb.core.Authn.Services.V1.CreateCertificateBindingRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_CreateCertificateBinding, null, options, request);
+      }
+      /// <summary>
+      /// Bind an mTLS certificate selector to a service account. The principal is
+      /// always derived from the account's CURRENT grant at request time (optionally
+      /// attenuated by scope_subset); an unknown or misbound certificate fails closed.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.CreateCertificateBindingResponse> CreateCertificateBindingAsync(global::udb.core.Authn.Services.V1.CreateCertificateBindingRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return CreateCertificateBindingAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Bind an mTLS certificate selector to a service account. The principal is
+      /// always derived from the account's CURRENT grant at request time (optionally
+      /// attenuated by scope_subset); an unknown or misbound certificate fails closed.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.CreateCertificateBindingResponse> CreateCertificateBindingAsync(global::udb.core.Authn.Services.V1.CreateCertificateBindingRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_CreateCertificateBinding, null, options, request);
+      }
+      /// <summary>
+      /// Page through the tenant's mTLS certificate bindings (tenant-scoped;
+      /// cross-tenant reads are rejected).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.ListCertificateBindingsResponse ListCertificateBindings(global::udb.core.Authn.Services.V1.ListCertificateBindingsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ListCertificateBindings(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Page through the tenant's mTLS certificate bindings (tenant-scoped;
+      /// cross-tenant reads are rejected).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.ListCertificateBindingsResponse ListCertificateBindings(global::udb.core.Authn.Services.V1.ListCertificateBindingsRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_ListCertificateBindings, null, options, request);
+      }
+      /// <summary>
+      /// Page through the tenant's mTLS certificate bindings (tenant-scoped;
+      /// cross-tenant reads are rejected).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.ListCertificateBindingsResponse> ListCertificateBindingsAsync(global::udb.core.Authn.Services.V1.ListCertificateBindingsRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return ListCertificateBindingsAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Page through the tenant's mTLS certificate bindings (tenant-scoped;
+      /// cross-tenant reads are rejected).
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.ListCertificateBindingsResponse> ListCertificateBindingsAsync(global::udb.core.Authn.Services.V1.ListCertificateBindingsRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_ListCertificateBindings, null, options, request);
+      }
+      /// <summary>
+      /// Revoke a certificate binding. Certificates matching the selector stop
+      /// authenticating immediately — fail closed, audited.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.RevokeCertificateBindingResponse RevokeCertificateBinding(global::udb.core.Authn.Services.V1.RevokeCertificateBindingRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return RevokeCertificateBinding(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Revoke a certificate binding. Certificates matching the selector stop
+      /// authenticating immediately — fail closed, audited.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.RevokeCertificateBindingResponse RevokeCertificateBinding(global::udb.core.Authn.Services.V1.RevokeCertificateBindingRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_RevokeCertificateBinding, null, options, request);
+      }
+      /// <summary>
+      /// Revoke a certificate binding. Certificates matching the selector stop
+      /// authenticating immediately — fail closed, audited.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.RevokeCertificateBindingResponse> RevokeCertificateBindingAsync(global::udb.core.Authn.Services.V1.RevokeCertificateBindingRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return RevokeCertificateBindingAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Revoke a certificate binding. Certificates matching the selector stop
+      /// authenticating immediately — fail closed, audited.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.RevokeCertificateBindingResponse> RevokeCertificateBindingAsync(global::udb.core.Authn.Services.V1.RevokeCertificateBindingRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_RevokeCertificateBinding, null, options, request);
+      }
       /// <summary>Creates a new instance of client from given <c>ClientBaseConfiguration</c>.</summary>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       protected override AuthnServiceClient NewInstance(ClientBaseConfiguration configuration)
@@ -2799,7 +3527,16 @@ namespace udb.core.Authn.Services.V1 {
           .AddMethod(__Method_RevokeRecoveryCodes, serviceImpl.RevokeRecoveryCodes)
           .AddMethod(__Method_AdminResetMfa, serviceImpl.AdminResetMfa)
           .AddMethod(__Method_ListWebAuthnCredentials, serviceImpl.ListWebAuthnCredentials)
-          .AddMethod(__Method_DeleteWebAuthnCredential, serviceImpl.DeleteWebAuthnCredential).Build();
+          .AddMethod(__Method_DeleteWebAuthnCredential, serviceImpl.DeleteWebAuthnCredential)
+          .AddMethod(__Method_CreateServiceAccountGrant, serviceImpl.CreateServiceAccountGrant)
+          .AddMethod(__Method_GetServiceAccountGrant, serviceImpl.GetServiceAccountGrant)
+          .AddMethod(__Method_ListServiceAccountGrants, serviceImpl.ListServiceAccountGrants)
+          .AddMethod(__Method_ReplaceServiceAccountGrant, serviceImpl.ReplaceServiceAccountGrant)
+          .AddMethod(__Method_RotateServiceAccountIdentity, serviceImpl.RotateServiceAccountIdentity)
+          .AddMethod(__Method_RevokeServiceAccountGrant, serviceImpl.RevokeServiceAccountGrant)
+          .AddMethod(__Method_CreateCertificateBinding, serviceImpl.CreateCertificateBinding)
+          .AddMethod(__Method_ListCertificateBindings, serviceImpl.ListCertificateBindings)
+          .AddMethod(__Method_RevokeCertificateBinding, serviceImpl.RevokeCertificateBinding).Build();
     }
 
     /// <summary>Register service method with a service binder with or without implementation. Useful when customizing the service binding logic.
@@ -2859,6 +3596,15 @@ namespace udb.core.Authn.Services.V1 {
       serviceBinder.AddMethod(__Method_AdminResetMfa, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authn.Services.V1.AdminResetMfaRequest, global::udb.core.Authn.Services.V1.AdminResetMfaResponse>(serviceImpl.AdminResetMfa));
       serviceBinder.AddMethod(__Method_ListWebAuthnCredentials, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authn.Services.V1.ListWebAuthnCredentialsRequest, global::udb.core.Authn.Services.V1.ListWebAuthnCredentialsResponse>(serviceImpl.ListWebAuthnCredentials));
       serviceBinder.AddMethod(__Method_DeleteWebAuthnCredential, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authn.Services.V1.DeleteWebAuthnCredentialRequest, global::udb.core.Authn.Services.V1.DeleteWebAuthnCredentialResponse>(serviceImpl.DeleteWebAuthnCredential));
+      serviceBinder.AddMethod(__Method_CreateServiceAccountGrant, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authn.Services.V1.CreateServiceAccountGrantRequest, global::udb.core.Authn.Services.V1.CreateServiceAccountGrantResponse>(serviceImpl.CreateServiceAccountGrant));
+      serviceBinder.AddMethod(__Method_GetServiceAccountGrant, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authn.Services.V1.GetServiceAccountGrantRequest, global::udb.core.Authn.Services.V1.GetServiceAccountGrantResponse>(serviceImpl.GetServiceAccountGrant));
+      serviceBinder.AddMethod(__Method_ListServiceAccountGrants, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authn.Services.V1.ListServiceAccountGrantsRequest, global::udb.core.Authn.Services.V1.ListServiceAccountGrantsResponse>(serviceImpl.ListServiceAccountGrants));
+      serviceBinder.AddMethod(__Method_ReplaceServiceAccountGrant, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authn.Services.V1.ReplaceServiceAccountGrantRequest, global::udb.core.Authn.Services.V1.ReplaceServiceAccountGrantResponse>(serviceImpl.ReplaceServiceAccountGrant));
+      serviceBinder.AddMethod(__Method_RotateServiceAccountIdentity, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authn.Services.V1.RotateServiceAccountIdentityRequest, global::udb.core.Authn.Services.V1.RotateServiceAccountIdentityResponse>(serviceImpl.RotateServiceAccountIdentity));
+      serviceBinder.AddMethod(__Method_RevokeServiceAccountGrant, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authn.Services.V1.RevokeServiceAccountGrantRequest, global::udb.core.Authn.Services.V1.RevokeServiceAccountGrantResponse>(serviceImpl.RevokeServiceAccountGrant));
+      serviceBinder.AddMethod(__Method_CreateCertificateBinding, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authn.Services.V1.CreateCertificateBindingRequest, global::udb.core.Authn.Services.V1.CreateCertificateBindingResponse>(serviceImpl.CreateCertificateBinding));
+      serviceBinder.AddMethod(__Method_ListCertificateBindings, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authn.Services.V1.ListCertificateBindingsRequest, global::udb.core.Authn.Services.V1.ListCertificateBindingsResponse>(serviceImpl.ListCertificateBindings));
+      serviceBinder.AddMethod(__Method_RevokeCertificateBinding, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authn.Services.V1.RevokeCertificateBindingRequest, global::udb.core.Authn.Services.V1.RevokeCertificateBindingResponse>(serviceImpl.RevokeCertificateBinding));
     }
 
   }

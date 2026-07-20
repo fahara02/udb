@@ -324,6 +324,12 @@ pub struct ComplianceEnvelope {
     pub reason_code: String,
     /// Authentication method used (e.g. "password", "mfa_totp", "passkey").
     pub auth_method: String,
+    /// Verified `udb.core.common.v1.CredentialType` and its non-secret durable
+    /// lineage (`jti`, API-key prefix, or certificate-binding id).
+    pub credential_type: i32,
+    pub credential_id: String,
+    /// Immutable service identity carried by the verified credential/grant.
+    pub service_identity: String,
     /// Identity-assurance level (e.g. "aal1", "aal2").
     pub assurance_level: String,
     /// Identity-provider id, when the event originated from an IdP flow.
@@ -431,6 +437,15 @@ impl AuthEvent {
         }
         if env.target_resource.trim().is_empty() {
             env.target_resource = self.document_id.clone();
+        }
+        if env.credential_type == 0 {
+            env.credential_type = crate::runtime::otel::current_credential_type();
+        }
+        if env.credential_id.trim().is_empty() {
+            env.credential_id = crate::runtime::otel::current_credential_id();
+        }
+        if env.service_identity.trim().is_empty() {
+            env.service_identity = crate::runtime::otel::current_service_identity();
         }
         self.compliance = env;
         self
@@ -619,6 +634,21 @@ pub fn build_native_compliance_envelope(
         "target_tenant": if env.target_tenant.is_empty() { tenant_id } else { env.target_tenant.as_str() },
         "target_project": if env.target_project.is_empty() { project_id } else { env.target_project.as_str() },
         "auth_method": env.auth_method,
+        "credential_type": if env.credential_type == 0 {
+            crate::runtime::otel::current_credential_type()
+        } else {
+            env.credential_type
+        },
+        "credential_id": if env.credential_id.is_empty() {
+            crate::runtime::otel::current_credential_id()
+        } else {
+            env.credential_id.clone()
+        },
+        "service_identity": if env.service_identity.is_empty() {
+            crate::runtime::otel::current_service_identity()
+        } else {
+            env.service_identity.clone()
+        },
         "assurance_level": env.assurance_level,
         "provider_id": env.provider_id,
         "source_ip": mask_source_ip(&env.source_ip),
@@ -781,6 +811,9 @@ impl OutboxAuthEventSink {
             "target_project": env.target_project,
             // Auth context.
             "auth_method": env.auth_method,
+            "credential_type": env.credential_type,
+            "credential_id": env.credential_id,
+            "service_identity": env.service_identity,
             "assurance_level": env.assurance_level,
             "provider_id": env.provider_id,
             "source_ip": mask_source_ip(&env.source_ip),
@@ -1096,6 +1129,9 @@ mod tests {
             user_agent: "curl/8".to_string(),
             decision_id: "dec-1".to_string(),
             policy_version: "pv-7".to_string(),
+            credential_type: 3,
+            credential_id: "key_abc123".to_string(),
+            service_identity: "svc:orders".to_string(),
             ..complete_envelope()
         });
         let env = OutboxAuthEventSink::envelope(&Uuid::nil(), &event);
@@ -1106,6 +1142,9 @@ mod tests {
         assert!(env["user_agent_hash"].as_str().unwrap().starts_with("ua_"));
         assert_eq!(env["decision_id"], json!("dec-1"));
         assert_eq!(env["policy_version"], json!("pv-7"));
+        assert_eq!(env["credential_type"], json!(3));
+        assert_eq!(env["credential_id"], json!("key_abc123"));
+        assert_eq!(env["service_identity"], json!("svc:orders"));
         assert_eq!(env["redaction_profile"], json!(REDACTION_PROFILE_VERSION));
         assert_eq!(env["immutable_export_status"], json!("pending"));
         assert_eq!(env["outcome"], json!("deny"));
@@ -1122,6 +1161,9 @@ mod tests {
             target_resource: "object/abc".to_string(),
             trace_id: "0af7651916cd43dd8448eb211c80319c".to_string(),
             span_id: "b7ad6b7169203331".to_string(),
+            credential_type: 5,
+            credential_id: "binding-abc".to_string(),
+            service_identity: "spiffe://udb.test/storage".to_string(),
             ..ComplianceEnvelope::default()
         };
         let envelope = build_native_compliance_envelope(
@@ -1159,11 +1201,52 @@ mod tests {
             json!("0af7651916cd43dd8448eb211c80319c")
         );
         assert_eq!(envelope["span_id"], json!("b7ad6b7169203331"));
+        assert_eq!(envelope["credential_type"], json!(5));
+        assert_eq!(envelope["credential_id"], json!("binding-abc"));
+        assert_eq!(
+            envelope["service_identity"],
+            json!("spiffe://udb.test/storage")
+        );
         assert_eq!(
             envelope["redaction_profile"],
             json!(REDACTION_PROFILE_VERSION)
         );
         assert_eq!(envelope["payload"]["object_key"], json!("k1"));
+    }
+
+    #[tokio::test]
+    async fn native_envelope_inherits_verified_credential_lineage() {
+        let principal = crate::runtime::otel::RequestPrincipal {
+            subject: "service-account-a".to_string(),
+            service_identity: "spiffe://udb.test/orders".to_string(),
+            credential_type: 5,
+            credential_id: "binding-a".to_string(),
+            auth_method: "mtls".to_string(),
+            decision_id: "decision-a".to_string(),
+            policy_revision: "contract-a".to_string(),
+        };
+        crate::runtime::otel::scope_principal(principal, async {
+            let envelope = build_native_compliance_envelope(
+                "11111111-1111-4111-8111-111111111111",
+                "udb.storage.upload.registered.v1",
+                "object-1",
+                "acme",
+                "proj-1",
+                &ComplianceEnvelope::default(),
+                "corr-9",
+                "none",
+                1,
+                &[],
+                json!({}),
+            );
+            assert_eq!(envelope["credential_type"], json!(5));
+            assert_eq!(envelope["credential_id"], json!("binding-a"));
+            assert_eq!(
+                envelope["service_identity"],
+                json!("spiffe://udb.test/orders")
+            );
+        })
+        .await;
     }
 
     #[test]

@@ -35,14 +35,28 @@ func New(conn grpc.ClientConnInterface, meta Metadata) *Client {
 }
 
 func (c *Client) Context(ctx context.Context) context.Context {
+	// UDB-GO-006: merge REQUEST-SCOPED audit metadata (correlation id, bounded
+	// purpose, client catalog version) from the context set via WithMetadata,
+	// so two concurrent operations carry their own audit values without
+	// mutating the shared Client.Meta. Identity — tenant, user, project,
+	// scopes, service identity — stays AUTHORITATIVE from the connected client
+	// and is never overridable per request. Each header is emitted exactly once
+	// (this is the single point every Entity and direct op flows through).
+	req := MetadataFromContext(ctx)
+	firstNonEmpty := func(reqVal, clientVal string) string {
+		if reqVal != "" {
+			return reqVal
+		}
+		return clientVal
+	}
 	pairs := []string{
 		"x-tenant-id", c.Meta.TenantID,
 		"x-user-id", c.Meta.UserID,
-		"x-purpose", c.Meta.Purpose,
-		"x-correlation-id", c.Meta.CorrelationID,
+		"x-purpose", firstNonEmpty(req.Purpose, c.Meta.Purpose),
+		"x-correlation-id", firstNonEmpty(req.CorrelationID, c.Meta.CorrelationID),
 		"x-service-identity", c.Meta.ServiceIdentity,
 		"x-udb-project-id", c.Meta.ProjectID,
-		"x-udb-client-catalog-version", c.Meta.ClientCatalogVersion,
+		"x-udb-client-catalog-version", firstNonEmpty(req.ClientCatalogVersion, c.Meta.ClientCatalogVersion),
 	}
 	if len(c.Meta.Scopes) > 0 {
 		pairs = append(pairs, "x-scopes", joinScopes(c.Meta.Scopes))

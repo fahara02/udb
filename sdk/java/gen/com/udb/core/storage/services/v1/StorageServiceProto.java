@@ -229,180 +229,181 @@ public final class StorageServiceProto {
       "\013total_count\030\002 \001(\005R\ntotalCount\0222\n\005error\030" +
       "\003 \001(\0132\034.udb.core.common.v1.ApiErrorR\005err" +
       "or\022&\n\017next_page_token\030\004 \001(\tR\rnextPageTok" +
-      "en:\036\232\262\031\032\010\001\032\003udb(\260\352\0010\003@\001J\007storageP\0012\3423\n\016S" +
-      "torageService\022\213\006\n\016RegisterUpload\0223.udb.c" +
+      "en:\036\232\262\031\032\010\001\032\003udb(\260\352\0010\003@\001J\007storageP\0012\3533\n\016S" +
+      "torageService\022\214\006\n\016RegisterUpload\0223.udb.c" +
       "ore.storage.services.v1.RegisterUploadRe" +
       "quest\0324.udb.core.storage.services.v1.Reg" +
-      "isterUploadResponse\"\215\005\312\363\030@\010\002\032\033udb:storag" +
-      "e:register-upload \001J\002\001\002j\026storage.Registe" +
-      "rUpload\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030;\010\001\022\017register_upl" +
-      "oad\032\003udb(\260\352\0010\003@\001J\007storageP\001Z\016registerUpl" +
-      "oad\342\363\030\301\001\n\007storage\022\022udb/native/storage\032\033U" +
-      "DB_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TAR" +
-      "GET\".udb.native.storage.register_upload." +
-      "boilerplate*\017register_upload2\013udb_storag" +
-      "e:\007storageJ\013UDB_API_KEYZ\020udb native smok" +
-      "e\352\363\030\237\001\n\026storage.RegisterUpload\022\016storage." +
-      "events\032\ttenant_id\"\010standard*\rat_least_on" +
-      "ce2\006stable:I\n%udb.storage.file.upload_ur" +
-      "l_issued.v1\022\007file_id\032\rat_least_once\"\010sta" +
-      "ndard\362\363\030O\n\007storage\032\010postgres\032\014object_sto" +
-      "re2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRP" +
-      "C_TARGET\370\363\030\002\212\364\030\035\n\007file_id\022\007GetFile\032\007file" +
-      "_id(\001\202\323\344\223\002\030\"\023/v1/storage/uploads:\001*\022\351\007\n\016" +
-      "FinalizeUpload\0223.udb.core.storage.servic" +
-      "es.v1.FinalizeUploadRequest\0324.udb.core.s" +
-      "torage.services.v1.FinalizeUploadRespons" +
-      "e\"\353\006\312\363\030@\010\002\032\033udb:storage:finalize-upload " +
-      "\001J\002\001\002j\026storage.FinalizeUpload\220\001\001\322\363\030\006\010\001\020\001" +
-      " \001\332\363\030;\010\001\022\017finalize_upload\032\003udb(\260\352\0010\003@\001J\007" +
-      "storageP\001Z\016finalizeUpload\342\363\030\301\001\n\007storage\022" +
-      "\022udb/native/storage\032\033UDB_NATIVE_SERVICES" +
-      "_ENABLED\032\017UDB_GRPC_TARGET\".udb.native.st" +
-      "orage.finalize_upload.boilerplate*\017final" +
-      "ize_upload2\013udb_storage:\007storageJ\013UDB_AP" +
-      "I_KEYZ\020udb native smoke\352\363\030\231\001\n\026storage.Fi" +
-      "nalizeUpload\022\016storage.events\032\ttenant_id\"" +
-      "\010standard*\rat_least_once2\006stable:C\n\035udb." +
-      "storage.file.finalized.v1\022\007file_id\032\rat_l" +
-      "east_once\"\010standard(\001\362\363\030O\n\007storage\032\010post" +
-      "gres\032\014object_store2\033UDB_NATIVE_SERVICES_" +
-      "ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\212\364\030\024\022\007GetFil" +
-      "e\032\007file_id(\001\222\364\030!\n\004File\022\007PENDING\032\006ACTIVE\"" +
-      "\006ACTIVE(\001\242\364\030\260\001\n,\n\026STORAGE_QUOTA_EXCEEDED" +
-      "\022\022RESOURCE_EXHAUSTED\n(\n\021ALREADY_FINALIZE" +
-      "D\022\023FAILED_PRECONDITION\n)\n\022OBJECT_NOT_PRE" +
-      "SENT\022\023FAILED_PRECONDITION\n+\n\024UPLOAD_SIZE" +
-      "_MISMATCH\022\023FAILED_PRECONDITION\202\323\344\223\002+\"&/v" +
-      "1/storage/uploads/{file_id}:finalize:\001*\022" +
-      "\266\005\n\016GetDownloadUrl\0223.udb.core.storage.se" +
-      "rvices.v1.GetDownloadUrlRequest\0324.udb.co" +
-      "re.storage.services.v1.GetDownloadUrlRes" +
-      "ponse\"\270\004\312\363\030A\010\002\032\034udb:storage:get-download" +
-      "-url \001J\002\001\002j\026storage.GetDownloadUrl\220\001\001\322\363\030" +
-      "\006\010\001\020\001 \001\332\363\030<\010\001\022\020get_download_url\032\003udb(\260\352\001" +
-      "0\003@\001J\007storageP\001Z\016getDownloadUrl\342\363\030\303\001\n\007st" +
-      "orage\022\022udb/native/storage\032\033UDB_NATIVE_SE" +
-      "RVICES_ENABLED\032\017UDB_GRPC_TARGET\"/udb.nat" +
-      "ive.storage.get_download_url.boilerplate" +
-      "*\020get_download_url2\013udb_storage:\007storage" +
-      "J\013UDB_API_KEYZ\020udb native smoke\352\363\030T\n\026sto" +
-      "rage.GetDownloadUrl\022\016storage.events\032\tten" +
-      "ant_id\"\010standard*\rat_least_once2\006stable\362" +
-      "\363\030O\n\007storage\032\010postgres\032\014object_store2\033UD" +
-      "B_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARG" +
-      "ET\370\363\030\001\202\323\344\223\002,\022*/v1/storage/files/{file_id" +
-      "}:getDownloadUrl\022\246\003\n\020ReissueUploadUrl\0225." +
-      "udb.core.storage.services.v1.ReissueUplo" +
-      "adUrlRequest\0326.udb.core.storage.services" +
-      ".v1.ReissueUploadUrlResponse\"\242\002\312\363\030E\010\002\032\036u" +
-      "db:storage:reissue-upload-url \001J\002\001\002j\030sto" +
-      "rage.ReissueUploadUrl\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030@\010\001" +
-      "\022\022reissue_upload_url\032\003udb(\260\352\0010\003@\001J\007stora" +
-      "geP\001Z\020reissueUploadUrl\362\363\030O\n\007storage\032\010pos" +
+      "isterUploadResponse\"\216\005\312\363\030A\010\002\032\033udb:storag" +
+      "e:register-upload \001J\003\001\002\003j\026storage.Regist" +
+      "erUpload\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\030;\010\001\022\017register_up" +
+      "load\032\003udb(\260\352\0010\003@\001J\007storageP\001Z\016registerUp" +
+      "load\342\363\030\301\001\n\007storage\022\022udb/native/storage\032\033" +
+      "UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TA" +
+      "RGET\".udb.native.storage.register_upload" +
+      ".boilerplate*\017register_upload2\013udb_stora" +
+      "ge:\007storageJ\013UDB_API_KEYZ\020udb native smo" +
+      "ke\352\363\030\237\001\n\026storage.RegisterUpload\022\016storage" +
+      ".events\032\ttenant_id\"\010standard*\rat_least_o" +
+      "nce2\006stable:I\n%udb.storage.file.upload_u" +
+      "rl_issued.v1\022\007file_id\032\rat_least_once\"\010st" +
+      "andard\362\363\030O\n\007storage\032\010postgres\032\014object_st" +
+      "ore2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GR" +
+      "PC_TARGET\370\363\030\002\212\364\030\035\n\007file_id\022\007GetFile\032\007fil" +
+      "e_id(\001\202\323\344\223\002\030\"\023/v1/storage/uploads:\001*\022\352\007\n" +
+      "\016FinalizeUpload\0223.udb.core.storage.servi" +
+      "ces.v1.FinalizeUploadRequest\0324.udb.core." +
+      "storage.services.v1.FinalizeUploadRespon" +
+      "se\"\354\006\312\363\030A\010\002\032\033udb:storage:finalize-upload" +
+      " \001J\003\001\002\003j\026storage.FinalizeUpload\220\001\001\322\363\030\006\010\001" +
+      "\020\001 \001\332\363\030;\010\001\022\017finalize_upload\032\003udb(\260\352\0010\003@\001" +
+      "J\007storageP\001Z\016finalizeUpload\342\363\030\301\001\n\007storag" +
+      "e\022\022udb/native/storage\032\033UDB_NATIVE_SERVIC" +
+      "ES_ENABLED\032\017UDB_GRPC_TARGET\".udb.native." +
+      "storage.finalize_upload.boilerplate*\017fin" +
+      "alize_upload2\013udb_storage:\007storageJ\013UDB_" +
+      "API_KEYZ\020udb native smoke\352\363\030\231\001\n\026storage." +
+      "FinalizeUpload\022\016storage.events\032\ttenant_i" +
+      "d\"\010standard*\rat_least_once2\006stable:C\n\035ud" +
+      "b.storage.file.finalized.v1\022\007file_id\032\rat" +
+      "_least_once\"\010standard(\001\362\363\030O\n\007storage\032\010po" +
+      "stgres\032\014object_store2\033UDB_NATIVE_SERVICE" +
+      "S_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\212\364\030\024\022\007GetF" +
+      "ile\032\007file_id(\001\222\364\030!\n\004File\022\007PENDING\032\006ACTIV" +
+      "E\"\006ACTIVE(\001\242\364\030\260\001\n,\n\026STORAGE_QUOTA_EXCEED" +
+      "ED\022\022RESOURCE_EXHAUSTED\n(\n\021ALREADY_FINALI" +
+      "ZED\022\023FAILED_PRECONDITION\n)\n\022OBJECT_NOT_P" +
+      "RESENT\022\023FAILED_PRECONDITION\n+\n\024UPLOAD_SI" +
+      "ZE_MISMATCH\022\023FAILED_PRECONDITION\202\323\344\223\002+\"&" +
+      "/v1/storage/uploads/{file_id}:finalize:\001" +
+      "*\022\267\005\n\016GetDownloadUrl\0223.udb.core.storage." +
+      "services.v1.GetDownloadUrlRequest\0324.udb." +
+      "core.storage.services.v1.GetDownloadUrlR" +
+      "esponse\"\271\004\312\363\030B\010\002\032\034udb:storage:get-downlo" +
+      "ad-url \001J\003\001\002\003j\026storage.GetDownloadUrl\220\001\001" +
+      "\322\363\030\006\010\001\020\001 \001\332\363\030<\010\001\022\020get_download_url\032\003udb(" +
+      "\260\352\0010\003@\001J\007storageP\001Z\016getDownloadUrl\342\363\030\303\001\n" +
+      "\007storage\022\022udb/native/storage\032\033UDB_NATIVE" +
+      "_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"/udb." +
+      "native.storage.get_download_url.boilerpl" +
+      "ate*\020get_download_url2\013udb_storage:\007stor" +
+      "ageJ\013UDB_API_KEYZ\020udb native smoke\352\363\030T\n\026" +
+      "storage.GetDownloadUrl\022\016storage.events\032\t" +
+      "tenant_id\"\010standard*\rat_least_once2\006stab" +
+      "le\362\363\030O\n\007storage\032\010postgres\032\014object_store2" +
+      "\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_T" +
+      "ARGET\370\363\030\001\202\323\344\223\002,\022*/v1/storage/files/{file" +
+      "_id}:getDownloadUrl\022\247\003\n\020ReissueUploadUrl" +
+      "\0225.udb.core.storage.services.v1.ReissueU" +
+      "ploadUrlRequest\0326.udb.core.storage.servi" +
+      "ces.v1.ReissueUploadUrlResponse\"\243\002\312\363\030F\010\002" +
+      "\032\036udb:storage:reissue-upload-url \001J\003\001\002\003j" +
+      "\030storage.ReissueUploadUrl\220\001\001\322\363\030\006\010\001\020\001 \001\332\363" +
+      "\030@\010\001\022\022reissue_upload_url\032\003udb(\260\352\0010\003@\001J\007s" +
+      "torageP\001Z\020reissueUploadUrl\362\363\030O\n\007storage\032" +
+      "\010postgres\032\014object_store2\033UDB_NATIVE_SERV" +
+      "ICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002.\022" +
+      ",/v1/storage/files/{file_id}:reissueUplo" +
+      "adUrl\022\233\005\n\014DownloadFile\0221.udb.core.storag" +
+      "e.services.v1.DownloadFileRequest\032/.udb." +
+      "core.storage.services.v1.DownloadFileChu" +
+      "nk\"\244\004\312\363\030@\010\002\032\034udb:storage:get-download-ur" +
+      "l \001J\003\001\002\003j\024storage.DownloadFile\220\001\001\322\363\030\006\010\001\020" +
+      "\001 \001\332\363\0307\010\001\022\rdownload_file\032\003udb(\260\352\0010\003@\001J\007s" +
+      "torageP\001Z\014downloadFile\342\363\030\275\001\n\007storage\022\022ud" +
+      "b/native/storage\032\033UDB_NATIVE_SERVICES_EN" +
+      "ABLED\032\017UDB_GRPC_TARGET\",udb.native.stora" +
+      "ge.download_file.boilerplate*\rdownload_f" +
+      "ile2\013udb_storage:\007storageJ\013UDB_API_KEYZ\020" +
+      "udb native smoke\352\363\030R\n\024storage.DownloadFi" +
+      "le\022\016storage.events\032\ttenant_id\"\010standard*" +
+      "\rat_least_once2\006stable\362\363\030O\n\007storage\032\010pos" +
       "tgres\032\014object_store2\033UDB_NATIVE_SERVICES" +
-      "_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002.\022,/v1" +
-      "/storage/files/{file_id}:reissueUploadUr" +
-      "l\022\232\005\n\014DownloadFile\0221.udb.core.storage.se" +
-      "rvices.v1.DownloadFileRequest\032/.udb.core" +
-      ".storage.services.v1.DownloadFileChunk\"\243" +
-      "\004\312\363\030?\010\002\032\034udb:storage:get-download-url \001J" +
-      "\002\001\002j\024storage.DownloadFile\220\001\001\322\363\030\006\010\001\020\001 \001\332\363" +
-      "\0307\010\001\022\rdownload_file\032\003udb(\260\352\0010\003@\001J\007storag" +
-      "eP\001Z\014downloadFile\342\363\030\275\001\n\007storage\022\022udb/nat" +
+      "_ENABLED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002&\022$/v1" +
+      "/storage/files/{file_id}:download0\001\022\336\004\n\007" +
+      "GetFile\022,.udb.core.storage.services.v1.G" +
+      "etFileRequest\032-.udb.core.storage.service" +
+      "s.v1.GetFileResponse\"\365\003\312\363\0303\010\002\032\024udb:stora" +
+      "ge:get-file \001J\003\001\002\003j\017storage.GetFile\220\001\001\322\363" +
+      "\030\006\010\001\020\001 \001\332\363\030-\010\001\022\010get_file\032\003udb(\260\352\0010\003@\001J\007s" +
+      "torageP\001Z\007getFile\342\363\030\263\001\n\007storage\022\022udb/nat" +
       "ive/storage\032\033UDB_NATIVE_SERVICES_ENABLED" +
-      "\032\017UDB_GRPC_TARGET\",udb.native.storage.do" +
-      "wnload_file.boilerplate*\rdownload_file2\013" +
-      "udb_storage:\007storageJ\013UDB_API_KEYZ\020udb n" +
-      "ative smoke\352\363\030R\n\024storage.DownloadFile\022\016s" +
-      "torage.events\032\ttenant_id\"\010standard*\rat_l" +
-      "east_once2\006stable\362\363\030O\n\007storage\032\010postgres" +
-      "\032\014object_store2\033UDB_NATIVE_SERVICES_ENAB" +
-      "LED2\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002&\022$/v1/stor" +
-      "age/files/{file_id}:download0\001\022\335\004\n\007GetFi" +
-      "le\022,.udb.core.storage.services.v1.GetFil" +
-      "eRequest\032-.udb.core.storage.services.v1." +
-      "GetFileResponse\"\364\003\312\363\0302\010\002\032\024udb:storage:ge" +
-      "t-file \001J\002\001\002j\017storage.GetFile\220\001\001\322\363\030\006\010\001\020\001" +
-      " \001\332\363\030-\010\001\022\010get_file\032\003udb(\260\352\0010\003@\001J\007storage" +
-      "P\001Z\007getFile\342\363\030\263\001\n\007storage\022\022udb/native/st" +
-      "orage\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_" +
-      "GRPC_TARGET\"\'udb.native.storage.get_file" +
-      ".boilerplate*\010get_file2\013udb_storage:\007sto" +
-      "rageJ\013UDB_API_KEYZ\020udb native smoke\352\363\030M\n" +
-      "\017storage.GetFile\022\016storage.events\032\ttenant" +
-      "_id\"\010standard*\rat_least_once2\006stable\362\363\030O" +
+      "\032\017UDB_GRPC_TARGET\"\'udb.native.storage.ge" +
+      "t_file.boilerplate*\010get_file2\013udb_storag" +
+      "e:\007storageJ\013UDB_API_KEYZ\020udb native smok" +
+      "e\352\363\030M\n\017storage.GetFile\022\016storage.events\032\t" +
+      "tenant_id\"\010standard*\rat_least_once2\006stab" +
+      "le\362\363\030O\n\007storage\032\010postgres\032\014object_store2" +
+      "\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC_T" +
+      "ARGET\370\363\030\001\202\323\344\223\002\035\022\033/v1/storage/files/{file" +
+      "_id}\022\312\005\n\nUpdateFile\022/.udb.core.storage.s" +
+      "ervices.v1.UpdateFileRequest\0320.udb.core." +
+      "storage.services.v1.UpdateFileResponse\"\330" +
+      "\004\312\363\0309\010\002\032\027udb:storage:update-file \001J\003\001\002\003j" +
+      "\022storage.UpdateFile\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0303\010\001\022\013" +
+      "update_file\032\003udb(\260\352\0010\003@\001J\007storageP\001Z\nupd" +
+      "ateFile\342\363\030\271\001\n\007storage\022\022udb/native/storag" +
+      "e\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC" +
+      "_TARGET\"*udb.native.storage.update_file." +
+      "boilerplate*\013update_file2\013udb_storage:\007s" +
+      "torageJ\013UDB_API_KEYZ\020udb native smoke\352\363\030" +
+      "\232\001\n\022storage.UpdateFile\022\016storage.events\032\t" +
+      "tenant_id\"\010standard*\rat_least_once2\006stab" +
+      "le:H\n$udb.storage.file.metadata_updated." +
+      "v1\022\007file_id\032\rat_least_once\"\010standard\362\363\030O" +
       "\n\007storage\032\010postgres\032\014object_store2\033UDB_N" +
       "ATIVE_SERVICES_ENABLED2\017UDB_GRPC_TARGET\370" +
-      "\363\030\001\202\323\344\223\002\035\022\033/v1/storage/files/{file_id}\022\311" +
-      "\005\n\nUpdateFile\022/.udb.core.storage.service" +
-      "s.v1.UpdateFileRequest\0320.udb.core.storag" +
-      "e.services.v1.UpdateFileResponse\"\327\004\312\363\0308\010" +
-      "\002\032\027udb:storage:update-file \001J\002\001\002j\022storag" +
-      "e.UpdateFile\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0303\010\001\022\013update_" +
-      "file\032\003udb(\260\352\0010\003@\001J\007storageP\001Z\nupdateFile" +
-      "\342\363\030\271\001\n\007storage\022\022udb/native/storage\032\033UDB_" +
-      "NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TARGET" +
-      "\"*udb.native.storage.update_file.boilerp" +
-      "late*\013update_file2\013udb_storage:\007storageJ" +
-      "\013UDB_API_KEYZ\020udb native smoke\352\363\030\232\001\n\022sto" +
-      "rage.UpdateFile\022\016storage.events\032\ttenant_" +
-      "id\"\010standard*\rat_least_once2\006stable:H\n$u" +
-      "db.storage.file.metadata_updated.v1\022\007fil" +
-      "e_id\032\rat_least_once\"\010standard\362\363\030O\n\007stora" +
-      "ge\032\010postgres\032\014object_store2\033UDB_NATIVE_S" +
-      "ERVICES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223" +
-      "\002 2\033/v1/storage/files/{file_id}:\001*\022\275\005\n\nD" +
-      "eleteFile\022/.udb.core.storage.services.v1" +
-      ".DeleteFileRequest\0320.udb.core.storage.se" +
-      "rvices.v1.DeleteFileResponse\"\313\004\312\363\0308\010\002\032\027u" +
-      "db:storage:delete-file \001J\002\001\002j\022storage.De" +
-      "leteFile\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0303\010\001\022\013delete_file" +
-      "\032\003udb(\260\352\0010\003@\001J\007storageP\001Z\ndeleteFile\342\363\030\271" +
-      "\001\n\007storage\022\022udb/native/storage\032\033UDB_NATI" +
-      "VE_SERVICES_ENABLED\032\017UDB_GRPC_TARGET\"*ud" +
-      "b.native.storage.delete_file.boilerplate" +
-      "*\013delete_file2\013udb_storage:\007storageJ\013UDB" +
-      "_API_KEYZ\020udb native smoke\352\363\030\221\001\n\022storage" +
-      ".DeleteFile\022\016storage.events\032\ttenant_id\"\010" +
-      "standard*\rat_least_once2\006stable:?\n\033udb.s" +
-      "torage.file.deleted.v1\022\007file_id\032\rat_leas" +
-      "t_once\"\010standard\362\363\030O\n\007storage\032\010postgres\032" +
-      "\014object_store2\033UDB_NATIVE_SERVICES_ENABL" +
-      "ED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002\035*\033/v1/stora" +
-      "ge/files/{file_id}\022\347\004\n\tListFiles\022..udb.c" +
-      "ore.storage.services.v1.ListFilesRequest" +
-      "\032/.udb.core.storage.services.v1.ListFile" +
-      "sResponse\"\370\003\312\363\0306\010\002\032\026udb:storage:list-fil" +
-      "es \001J\002\001\002j\021storage.ListFiles\220\001\001\322\363\030\006\010\001\020\001 \001" +
-      "\332\363\0301\010\001\022\nlist_files\032\003udb(\260\352\0010\003@\001J\007storage" +
-      "P\001Z\tlistFiles\342\363\030\267\001\n\007storage\022\022udb/native/" +
-      "storage\032\033UDB_NATIVE_SERVICES_ENABLED\032\017UD" +
-      "B_GRPC_TARGET\")udb.native.storage.list_f" +
-      "iles.boilerplate*\nlist_files2\013udb_storag" +
-      "e:\007storageJ\013UDB_API_KEYZ\020udb native smok" +
-      "e\352\363\030O\n\021storage.ListFiles\022\016storage.events" +
-      "\032\ttenant_id\"\010standard*\rat_least_once2\006st" +
-      "able\362\363\030O\n\007storage\032\010postgres\032\014object_stor" +
-      "e2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GRPC" +
-      "_TARGET\370\363\030\001\202\323\344\223\002\023\022\021/v1/storage/files\032\200\003\312" +
-      "\360\031f\n\007storage\022\007storage\032\007storage\"\007Storage*" +
-      "\007storage0\0018\001H\001h\001z\007storage\202\001\007storage\212\001\007st" +
-      "orage\222\001\016native.storage\230\001\001\322\360\031\032\010\001\032\003udb(\260\352\001" +
-      "0\003@\001J\007storageP\001\332\360\031\222\001\n\007storage\022\022udb/nativ" +
-      "e/storage\032\033UDB_NATIVE_SERVICES_ENABLED\032\017" +
-      "UDB_GRPC_TARGET\"\036udb.native.storage.conf" +
-      "ig.json:\007storageJ\013UDB_API_KEYZ\017udb nativ" +
-      "e lint\342\360\031]\n\007storage\032\010postgres\032\014object_st" +
-      "ore2\033UDB_NATIVE_SERVICES_ENABLED2\017UDB_GR" +
-      "PC_TARGET:\014object_storeB\230\002\n com.udb.core" +
-      ".storage.services.v1B\023StorageServiceProt" +
-      "oP\001ZJgithub.com/fahara02/udb/sdk/go/gen/" +
-      "udb/core/storage/services/v1;servicesv1\242" +
-      "\002\004UCSS\252\002\034udb.core.Storage.Services.V1\312\002\034" +
-      "Udb\\Core\\Storage\\Services\\V1\342\002(Udb\\GPBMe" +
-      "tadata\\Core\\Storage\\Services\\V1\352\002 Udb::C" +
-      "ore::Storage::Services::V1b\006proto3"
+      "\363\030\002\202\323\344\223\002 2\033/v1/storage/files/{file_id}:\001" +
+      "*\022\276\005\n\nDeleteFile\022/.udb.core.storage.serv" +
+      "ices.v1.DeleteFileRequest\0320.udb.core.sto" +
+      "rage.services.v1.DeleteFileResponse\"\314\004\312\363" +
+      "\0309\010\002\032\027udb:storage:delete-file \001J\003\001\002\003j\022st" +
+      "orage.DeleteFile\220\001\001\322\363\030\006\010\001\020\001 \001\332\363\0303\010\001\022\013del" +
+      "ete_file\032\003udb(\260\352\0010\003@\001J\007storageP\001Z\ndelete" +
+      "File\342\363\030\271\001\n\007storage\022\022udb/native/storage\032\033" +
+      "UDB_NATIVE_SERVICES_ENABLED\032\017UDB_GRPC_TA" +
+      "RGET\"*udb.native.storage.delete_file.boi" +
+      "lerplate*\013delete_file2\013udb_storage:\007stor" +
+      "ageJ\013UDB_API_KEYZ\020udb native smoke\352\363\030\221\001\n" +
+      "\022storage.DeleteFile\022\016storage.events\032\tten" +
+      "ant_id\"\010standard*\rat_least_once2\006stable:" +
+      "?\n\033udb.storage.file.deleted.v1\022\007file_id\032" +
+      "\rat_least_once\"\010standard\362\363\030O\n\007storage\032\010p" +
+      "ostgres\032\014object_store2\033UDB_NATIVE_SERVIC" +
+      "ES_ENABLED2\017UDB_GRPC_TARGET\370\363\030\002\202\323\344\223\002\035*\033/" +
+      "v1/storage/files/{file_id}\022\350\004\n\tListFiles" +
+      "\022..udb.core.storage.services.v1.ListFile" +
+      "sRequest\032/.udb.core.storage.services.v1." +
+      "ListFilesResponse\"\371\003\312\363\0307\010\002\032\026udb:storage:" +
+      "list-files \001J\003\001\002\003j\021storage.ListFiles\220\001\001\322" +
+      "\363\030\006\010\001\020\001 \001\332\363\0301\010\001\022\nlist_files\032\003udb(\260\352\0010\003@\001" +
+      "J\007storageP\001Z\tlistFiles\342\363\030\267\001\n\007storage\022\022ud" +
+      "b/native/storage\032\033UDB_NATIVE_SERVICES_EN" +
+      "ABLED\032\017UDB_GRPC_TARGET\")udb.native.stora" +
+      "ge.list_files.boilerplate*\nlist_files2\013u" +
+      "db_storage:\007storageJ\013UDB_API_KEYZ\020udb na" +
+      "tive smoke\352\363\030O\n\021storage.ListFiles\022\016stora" +
+      "ge.events\032\ttenant_id\"\010standard*\rat_least" +
+      "_once2\006stable\362\363\030O\n\007storage\032\010postgres\032\014ob" +
+      "ject_store2\033UDB_NATIVE_SERVICES_ENABLED2" +
+      "\017UDB_GRPC_TARGET\370\363\030\001\202\323\344\223\002\023\022\021/v1/storage/" +
+      "files\032\200\003\312\360\031f\n\007storage\022\007storage\032\007storage\"" +
+      "\007Storage*\007storage0\0018\001H\001h\001z\007storage\202\001\007sto" +
+      "rage\212\001\007storage\222\001\016native.storage\230\001\001\322\360\031\032\010\001" +
+      "\032\003udb(\260\352\0010\003@\001J\007storageP\001\332\360\031\222\001\n\007storage\022\022" +
+      "udb/native/storage\032\033UDB_NATIVE_SERVICES_" +
+      "ENABLED\032\017UDB_GRPC_TARGET\"\036udb.native.sto" +
+      "rage.config.json:\007storageJ\013UDB_API_KEYZ\017" +
+      "udb native lint\342\360\031]\n\007storage\032\010postgres\032\014" +
+      "object_store2\033UDB_NATIVE_SERVICES_ENABLE" +
+      "D2\017UDB_GRPC_TARGET:\014object_storeB\230\002\n com" +
+      ".udb.core.storage.services.v1B\023StorageSe" +
+      "rviceProtoP\001ZJgithub.com/fahara02/udb/sd" +
+      "k/go/gen/udb/core/storage/services/v1;se" +
+      "rvicesv1\242\002\004UCSS\252\002\034udb.core.Storage.Servi" +
+      "ces.V1\312\002\034Udb\\Core\\Storage\\Services\\V1\342\002(" +
+      "Udb\\GPBMetadata\\Core\\Storage\\Services\\V1" +
+      "\352\002 Udb::Core::Storage::Services::V1b\006pro" +
+      "to3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

@@ -404,6 +404,64 @@ pub(super) async fn create_verified_user(
     .expect("verified user present")
 }
 
+/// Create and activate a service account, then install its canonical typed
+/// grant through the same Authn RPC surface production operators use. API-key,
+/// password, refresh, and certificate tests share this helper so none can
+/// accidentally rely on legacy profile attributes or a human owner.
+pub(super) async fn create_service_account_with_grant(
+    svc: &AuthnServiceImpl,
+    prefix: &str,
+    password: &str,
+    approved_scopes: &[&str],
+) -> (authn_entity_pb::User, authn_entity_pb::ServiceAccountGrant) {
+    let suffix = Uuid::new_v4().simple().to_string();
+    let created = svc
+        .create_user(Request::new(authn_pb::CreateUserRequest {
+            username: format!("{prefix}_{suffix}"),
+            email: format!("{prefix}_{suffix}@example.com"),
+            password: password.to_string(),
+            account_kind: authn_entity_pb::AccountKind::ServiceAccount as i32,
+            tenant_id: "acme".to_string(),
+            full_name: format!("{prefix} Service Account"),
+            project_id: "billing".to_string(),
+            ..Default::default()
+        }))
+        .await
+        .expect("create service account")
+        .into_inner();
+    let created_user = created.user.expect("created service account");
+    assert!(verify_issued_otp(svc, &created.otp_id).await.verified);
+    let user = svc
+        .get_user(Request::new(authn_pb::GetUserRequest {
+            user_id: created_user.user_id,
+            ..Default::default()
+        }))
+        .await
+        .expect("re-read active service account")
+        .into_inner()
+        .user
+        .expect("active service account present");
+    let service_identity = format!("spiffe://test.udb/{prefix}/{suffix}");
+    let grant = svc
+        .create_service_account_grant(Request::new(authn_pb::CreateServiceAccountGrantRequest {
+            tenant_id: user.tenant_id.clone(),
+            user_id: user.user_id.clone(),
+            service_identity,
+            project_id: user.project_id.clone(),
+            approved_scopes: approved_scopes
+                .iter()
+                .map(|scope| (*scope).to_string())
+                .collect(),
+            reason: "live test setup".to_string(),
+        }))
+        .await
+        .expect("create typed service-account grant")
+        .into_inner()
+        .grant
+        .expect("created typed grant");
+    (user, grant)
+}
+
 /// §1 read-after-write served-path assertion (13.7.1.3). A create-returning-id RPC
 /// must return a NON-EMPTY id that is IMMEDIATELY gettable on the SAME served path
 /// with the SAME tenant/project metadata (and, where applicable, the SAME validated

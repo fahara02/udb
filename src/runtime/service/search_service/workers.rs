@@ -485,10 +485,8 @@ fn source_table_and_pk<'a>(
     manifest: &'a crate::generation::CatalogManifest,
     source_message_type: &str,
 ) -> Result<(&'a crate::generation::ManifestTable, String), String> {
-    let table =
-        crate::broker::table_for_message(manifest, source_message_type).ok_or_else(|| {
-            format!("search source entity '{source_message_type}' is not present in active catalog")
-        })?;
+    let table = crate::broker::resolve_table_for_message(manifest, source_message_type)
+        .map_err(|error| format!("search source entity lookup failed: {error}"))?;
     let primary_key = table.primary_key.first().cloned().ok_or_else(|| {
         format!("search source entity '{source_message_type}' has no primary key")
     })?;

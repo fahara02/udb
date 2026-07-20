@@ -3,11 +3,11 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::{IpAddr, SocketAddr};
-use std::sync::{Arc, Mutex, OnceLock, RwLock};
+use std::sync::{Mutex, OnceLock, RwLock};
 use tonic::{Request, Status};
 use x509_parser::prelude::parse_x509_certificate;
 
-use crate::broker::table_for_message;
+use crate::broker::resolve_table_for_message;
 use crate::generation::{CatalogManifest, ManifestColumn};
 use crate::runtime::authz::{AuthzPolicy, Effect};
 
@@ -19,6 +19,15 @@ pub struct SecurityContext {
     pub user_id: String,
     pub scopes: Vec<String>,
     pub service_identity: String,
+    /// Verified credential kind (`udb.core.common.v1.CredentialType`).
+    #[serde(default)]
+    pub credential_type: i32,
+    /// Non-secret durable credential lineage (`jti`, key prefix, binding ID).
+    #[serde(default)]
+    pub credential_id: String,
+    /// Authentication method recorded by the verified credential issuer.
+    #[serde(default)]
+    pub auth_method: String,
     pub trace_id: String,
     /// Optional project identifier extracted from `x-udb-project-id` header.
     /// Empty string means single-project mode (default).
@@ -646,6 +655,9 @@ impl SecurityContext {
             purpose: self.purpose.clone(),
             correlation_id: self.correlation_id.clone(),
             service_identity: self.service_identity.clone(),
+            credential_type: self.credential_type,
+            credential_id: self.credential_id.clone(),
+            auth_method: self.auth_method.clone(),
             user_id: if self.user_id.is_empty() {
                 String::new()
             } else {
@@ -661,13 +673,16 @@ pub struct LogSafeSecurityContext {
     pub purpose: String,
     pub correlation_id: String,
     pub service_identity: String,
+    pub credential_type: i32,
+    pub credential_id: String,
+    pub auth_method: String,
     pub user_id: String,
 }
 
 use jsonwebtoken::jwk::JwkSet;
 use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode};
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize)]
 pub struct SecurityClaims {
     pub tenant_id: Option<String>,
     pub purpose: Option<String>,
@@ -1216,66 +1231,27 @@ pub fn validate_bearer_token_cached(
 }
 
 // ── API-key data-plane principal (UDB-AUTH-004) ───────────────────────────────
-// A scoped service `x-api-key` must be able to authenticate DataBroker CRUD, but
-// [`security_from_request`] is a synchronous, header-only layer with no runtime
-// handle or `ApiKeyStore` — it cannot itself run the async keyed-HMAC DB lookup
-// that `crate::runtime::authn::validate_api_key` performs. Following the same
-// async→sync idiom this module already uses for the signing-key registry
-// ([`install_signing_key_registry_snapshot`]), the async auth control plane
-// installs an [`ApiKeyPrincipalResolver`] once the Postgres-backed `ApiKeyStore`
-// is constructed; the sync data plane then resolves an `x-api-key` to a verified
-// principal without a second validator or any in-memory store.
+// A scoped service `x-api-key` authenticates DataBroker CRUD only after the
+// async credential layer has validated it against the durable key and grant
+// stores. This synchronous consumer never performs I/O or owns a fallback
+// resolver.
 
-/// A canonical API-key principal, derived ENTIRELY from UDB's stored key record
-/// (owner, tenant, project, scopes) — never from caller headers. Produced by the
-/// installed [`ApiKeyPrincipalResolver`] and consumed by [`security_from_request`].
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct ApiKeyPrincipal {
-    /// The key owner (`ApiKeyRecord.principal_id`). Becomes the request principal
-    /// (`SecurityContext.user_id`) so subject-bound ABAC policy for the owner applies.
-    pub subject: String,
-    /// The record's stored service identity (may be empty for a bare service key).
-    pub service_identity: String,
-    /// The tenant the key is bound to (`ApiKeyRecord.tenant_id`).
-    pub tenant_id: String,
-    /// The project the key is bound to (`ApiKeyRecord.project_id`).
-    pub project_id: String,
-    /// The key's stored scopes — the ONLY source of the request's scopes on this
-    /// path (caller `x-scopes` is never consulted, so a key cannot be widened).
-    pub scopes: Vec<String>,
-}
-
-/// Synchronously resolve a raw `x-api-key` to a verified [`ApiKeyPrincipal`].
-///
-/// The installed implementation MUST reuse the single key validator
-/// `crate::runtime::authn::validate_api_key` (keyed-HMAC prefix lookup +
-/// revoked/expired checks against the stored record) — this trait only bridges
-/// that async validator into the sync data-plane layer; it must never become a
-/// second validator or an in-memory key store. Contract:
-///   * `Ok(Some(principal))` — key is valid and active; the principal is derived
-///     from the stored record.
-///   * `Ok(None)` — key is unknown, revoked, or expired (fail closed → deny).
-///   * `Err(msg)` — the key store errored (fail closed → deny; `msg` is for logs
-///     only and must carry no key material).
-pub trait ApiKeyPrincipalResolver: Send + Sync {
-    fn resolve(&self, raw_api_key: &str) -> Result<Option<ApiKeyPrincipal>, String>;
-}
-
-static API_KEY_PRINCIPAL_RESOLVER: OnceLock<RwLock<Option<Arc<dyn ApiKeyPrincipalResolver>>>> =
-    OnceLock::new();
-
-fn api_key_principal_resolver_cell() -> &'static RwLock<Option<Arc<dyn ApiKeyPrincipalResolver>>> {
-    API_KEY_PRINCIPAL_RESOLVER.get_or_init(|| RwLock::new(None))
-}
-
-/// Install the process-global API-key principal resolver. Called by the async
-/// auth control plane once the Postgres-backed `ApiKeyStore` is available, so a
-/// scoped `x-api-key` can authenticate the DataBroker data plane. Until this is
-/// installed, the data plane FAILS CLOSED on `x-api-key` (deny with an actionable
-/// error) — it never falls back to header trust or fails open.
-pub fn install_api_key_principal_resolver(resolver: Arc<dyn ApiKeyPrincipalResolver>) {
-    if let Ok(mut guard) = api_key_principal_resolver_cell().write() {
-        *guard = Some(resolver);
+/// Project the shared verified-principal contract back into the claim shape
+/// consumed by existing scope/role/tenant gates. This performs no validation;
+/// the principal was already verified by the asynchronous credential layer.
+pub(crate) fn claims_from_verified_principal(
+    principal: &crate::runtime::credential_layer::VerifiedPrincipal,
+) -> SecurityClaims {
+    SecurityClaims {
+        sub: Some(principal.subject.clone()),
+        tenant_id: Some(principal.tenant_id.clone()),
+        project_id: Some(principal.project_id.clone()),
+        scopes: Some(principal.scopes.clone()),
+        roles: Some(principal.roles.clone()),
+        service_identity: Some(principal.service_identity.clone()),
+        jti: Some(principal.credential_id.clone()),
+        auth_method: Some(principal.auth_method.clone()),
+        ..Default::default()
     }
 }
 
@@ -1283,7 +1259,7 @@ pub fn install_api_key_principal_resolver(resolver: Arc<dyn ApiKeyPrincipalResol
 /// headers. Returns the canonical principal DERIVED FROM THE RECORD, or a denial.
 ///
 /// Security rules (mirroring the AUTH-005 `x-user-id` rule for the JWT path):
-///   * resolver not installed → `Unauthenticated` (API-key auth is not wired here).
+///   * async resolution not performed → `Unauthenticated`.
 ///   * unknown/revoked/expired key → `Unauthenticated`.
 ///   * key-store error → `Unauthenticated` (deny; never fail open, no key material).
 ///   * a non-empty `x-user-id`/`x-tenant-id`/`x-udb-project-id` that DISAGREES with
@@ -1291,16 +1267,16 @@ pub fn install_api_key_principal_resolver(resolver: Arc<dyn ApiKeyPrincipalResol
 ///     they can never redirect the principal or move the key to another
 ///     tenant/project. `x-scopes`/`x-service-identity` are ignored entirely.
 fn reconcile_api_key_principal(
-    resolved: Result<Option<ApiKeyPrincipal>, String>,
-    resolver_installed: bool,
+    resolved: Result<Option<crate::runtime::credential_layer::VerifiedPrincipal>, String>,
+    resolution_performed: bool,
     header_user_id: &str,
     header_tenant_id: &str,
     header_project_id: &str,
-) -> Result<ApiKeyPrincipal, Status> {
-    if !resolver_installed {
+) -> Result<crate::runtime::credential_layer::VerifiedPrincipal, Status> {
+    if !resolution_performed {
         return Err(Status::unauthenticated(
-            "x-api-key authentication is not available on this listener (the API-key principal \
-             resolver is not wired). Send 'authorization: Bearer <jwt>' instead, or enable \
+            "x-api-key authentication is not available on this listener (the async credential \
+             resolver did not run). Send 'authorization: Bearer <jwt>' instead, or enable \
              API-key authentication on the broker.",
         ));
     }
@@ -1350,6 +1326,39 @@ fn reconcile_api_key_principal(
     Ok(principal)
 }
 
+pub(crate) fn enforce_certificate_credential_composition(
+    binding: &crate::runtime::credential_layer::VerifiedPrincipal,
+    credential_service_identity: &str,
+    credential_tenant: &str,
+    credential_project: &str,
+) -> Result<(), Status> {
+    if credential_service_identity.trim() != binding.service_identity.trim() {
+        return Err(crate::runtime::executor_utils::policy_status_with_code(
+            tonic::Code::PermissionDenied,
+            "authenticate",
+            "certificate_credential_identity_mismatch",
+            "the client certificate binding belongs to a different service identity",
+        ));
+    }
+    if credential_tenant.trim() != binding.tenant_id.trim() {
+        return Err(crate::runtime::executor_utils::policy_status_with_code(
+            tonic::Code::PermissionDenied,
+            "authenticate",
+            "certificate_credential_tenant_mismatch",
+            "the client certificate binding belongs to a different tenant",
+        ));
+    }
+    if credential_project.trim() != binding.project_id.trim() {
+        return Err(crate::runtime::executor_utils::policy_status_with_code(
+            tonic::Code::PermissionDenied,
+            "authenticate",
+            "certificate_credential_project_mismatch",
+            "the client certificate binding belongs to a different project",
+        ));
+    }
+    Ok(())
+}
+
 pub fn security_from_request<T>(request: &Request<T>) -> Result<SecurityContext, Status> {
     let config = SecurityConfig::current();
     let metadata = request.metadata();
@@ -1386,15 +1395,53 @@ pub fn security_from_request<T>(request: &Request<T>) -> Result<SecurityContext,
     let max_replica_lag_ms = header("x-udb-max-replica-lag-ms")
         .parse::<u64>()
         .unwrap_or_default();
+    let auth_header = header("authorization");
+    let bearer = auth_header.strip_prefix("Bearer ");
+    let api_key_header =
+        non_empty(header("x-api-key")).or_else(|| non_empty(header("x-udb-api-key")));
+    let session_header = non_empty(header("x-udb-session"))
+        .or_else(|| non_empty(header("x-udb-session-id")))
+        .or_else(|| non_empty(header("x-session-id")));
+    if (bearer.is_some() && (api_key_header.is_some() || session_header.is_some()))
+        || (api_key_header.is_some() && session_header.is_some())
+    {
+        return Err(crate::runtime::executor_utils::policy_status_with_code(
+            tonic::Code::PermissionDenied,
+            "authenticate",
+            "multiple_credentials",
+            "send exactly one application credential; a bearer cannot be combined with an API key or session",
+        ));
+    }
+    if session_header.is_some() {
+        return Err(Status::unauthenticated(
+            "direct session credentials are not accepted by DataBroker; exchange the session for a bearer token",
+        ));
+    }
+    if request
+        .extensions()
+        .get::<crate::runtime::credential_layer::PreresolvedCredentials>()
+        .map(|resolved| {
+            resolved.certificate_resolution_failed
+                || (resolved.certificate_present && resolved.certificate_principal.is_none())
+        })
+        .unwrap_or(false)
+    {
+        return Err(Status::unauthenticated(
+            "client certificate binding could not be verified; request denied",
+        ));
+    }
 
-    if config.jwt_public_key.is_some() || config.jwt_jwks_url.is_some() {
-        // A JWT verifier is configured via either a static PEM or a JWKS URL.
-        // Both must enter this branch: gating on `jwt_public_key` alone let a
-        // JWKS-only deployment silently skip JWT validation and fall through to
-        // the mTLS/header path (fail-open). `validate_bearer_token` resolves the
-        // key from JWKS when no static PEM is present.
-        let auth_header = header("authorization");
-        let token = match auth_header.strip_prefix("Bearer ") {
+    if config.jwt_public_key.is_some()
+        || config.jwt_jwks_url.is_some()
+        || bearer.is_some()
+        || api_key_header.is_some()
+    {
+        // Every application credential enters this branch. API-key validation
+        // must not depend on JWT configuration, while a bearer presented
+        // without any verifier must fail closed instead of falling through to
+        // the insecure development/header path. JWKS-only deployments also
+        // belong here; `validate_bearer_token` resolves their key dynamically.
+        let token = match bearer {
             Some(token) => token,
             None => {
                 // UDB-AUTH-004: no Bearer JWT — a scoped service `x-api-key` may
@@ -1406,32 +1453,119 @@ pub fn security_from_request<T>(request: &Request<T>) -> Result<SecurityContext,
                 // key-store error, a mismatched tenant/project, or a resolver that
                 // is not wired. When neither a Bearer nor an `x-api-key` is present,
                 // name both supported paths.
-                let api_key = non_empty(header("x-api-key"))
-                    .or_else(|| non_empty(header("x-udb-api-key")))
-                    .unwrap_or_default();
+                let api_key = api_key_header.clone().unwrap_or_default();
                 if api_key.trim().is_empty() {
+                    // UDB-AUTH-007: a VERIFIED peer certificate may authenticate
+                    // an mTLS-only service even though JWT verification is
+                    // configured — but only through a SERVER-CONTROLLED
+                    // registration: the certificate identity must resolve (via
+                    // the installed grant resolver) to exactly one ACTIVE
+                    // service account, whose stored tenant/project/approved
+                    // scopes become the principal. No scope, tenant, or subject
+                    // ever comes from a header on this path; a disagreeing
+                    // header is rejected. Unregistered/unresolvable
+                    // certificates keep failing closed exactly as before.
+                    // fix_plan §3: the durable certificate-binding chain
+                    // (binding → current grant, resolved async by the layer)
+                    // is authoritative when present.
+                    if let Some(principal) = request
+                        .extensions()
+                        .get::<crate::runtime::credential_layer::PreresolvedCredentials>()
+                        .and_then(|pre| pre.certificate_principal.clone())
+                    {
+                        let header_tenant = header("x-tenant-id");
+                        if !user_id.trim().is_empty() && user_id.trim() != principal.subject {
+                            return Err(crate::runtime::executor_utils::policy_status_with_code(
+                                tonic::Code::PermissionDenied,
+                                "authenticate",
+                                "mtls_user_id_mismatch",
+                                "x-user-id disagrees with the certificate-bound service account",
+                            ));
+                        }
+                        if !header_tenant.trim().is_empty()
+                            && header_tenant.trim() != principal.tenant_id
+                        {
+                            return Err(crate::runtime::executor_utils::policy_status_with_code(
+                                tonic::Code::PermissionDenied,
+                                "authenticate",
+                                "mtls_tenant_mismatch",
+                                "x-tenant-id disagrees with the certificate-bound tenant",
+                            ));
+                        }
+                        if !project_id_header.trim().is_empty()
+                            && project_id_header.trim() != principal.project_id
+                        {
+                            return Err(crate::runtime::executor_utils::policy_status_with_code(
+                                tonic::Code::PermissionDenied,
+                                "authenticate",
+                                "mtls_project_mismatch",
+                                "x-udb-project-id disagrees with the certificate-bound project",
+                            ));
+                        }
+                        return Ok(SecurityContext {
+                            tenant_id: principal.tenant_id,
+                            purpose: header("x-purpose"),
+                            correlation_id: correlation_id.clone(),
+                            user_id: principal.subject,
+                            scopes: principal.scopes,
+                            service_identity: principal.service_identity,
+                            credential_type: principal.credential_type,
+                            credential_id: principal.credential_id,
+                            auth_method: principal.auth_method,
+                            trace_id: trace_id.clone(),
+                            project_id: principal.project_id,
+                            consistency: consistency.clone(),
+                            max_replica_lag_ms,
+                            client_catalog_version: client_catalog_version.clone(),
+                            target_backend: target_backend.clone(),
+                            target_instance: target_instance.clone(),
+                            routing_policy: routing_policy.clone(),
+                            primary_read,
+                            eventual_consistency_allowed,
+                            read_fence_json: read_fence_json.clone(),
+                        });
+                    }
+                    // CRIT-1: the durable certificate-binding chain (resolved
+                    // asynchronously by the credential layer above) is the ONLY
+                    // mTLS authority. There is deliberately NO weaker fallback —
+                    // a binding miss stays a fail-closed missing-credential
+                    // denial, never a lookup against mutable profile state.
                     return Err(Status::unauthenticated(
                         "missing credentials: send 'authorization: Bearer <jwt>' (obtain the JWT \
-                         via login) or a scoped 'x-api-key'.",
+                         via login), a scoped 'x-api-key', or connect with a REGISTERED mTLS \
+                         service certificate.",
                     ));
                 }
-                // Resolve the raw key to a verified principal. Clone the Arc out
-                // of the process-global so the lock is not held across resolution.
-                let resolver = api_key_principal_resolver_cell()
-                    .read()
-                    .ok()
-                    .and_then(|guard| guard.as_ref().map(Arc::clone));
-                let (resolver_installed, resolved) = match &resolver {
-                    Some(resolver) => (true, resolver.resolve(&api_key)),
-                    None => (false, Ok(None)),
-                };
+                // fix_plan §1: prefer the ASYNC layer's pre-resolved outcome
+                // (durable lookup already awaited before dispatch — no worker
+                // blocking). The sync trait seam below remains only for
+                // requests that never traversed the layer (direct handler
+                // construction in tests).
+                let preresolved = request
+                    .extensions()
+                    .get::<crate::runtime::credential_layer::PreresolvedCredentials>()
+                    .and_then(|pre| pre.api_key.clone());
+                let resolution_performed = preresolved.is_some();
+                let resolved = preresolved.unwrap_or(Ok(None));
                 let principal = reconcile_api_key_principal(
                     resolved,
-                    resolver_installed,
+                    resolution_performed,
                     user_id.trim(),
                     header("x-tenant-id").trim(),
                     project_id_header.trim(),
                 )?;
+                if let Some(binding) = request
+                    .extensions()
+                    .get::<crate::runtime::credential_layer::PreresolvedCredentials>()
+                    .and_then(|pre| pre.certificate_principal.as_ref())
+                {
+                    enforce_certificate_credential_composition(
+                        binding,
+                        &principal.service_identity,
+                        &principal.tenant_id,
+                        &principal.project_id,
+                    )?;
+                }
                 // Authz identity comes from the record: the owner is the request
                 // principal (`user_id`), so a subject-bound ABAC policy for the key
                 // owner applies. `service_identity` prefers the record's stored
@@ -1448,6 +1582,9 @@ pub fn security_from_request<T>(request: &Request<T>) -> Result<SecurityContext,
                     user_id: principal.subject,
                     scopes: principal.scopes,
                     service_identity,
+                    credential_type: principal.credential_type,
+                    credential_id: principal.credential_id,
+                    auth_method: principal.auth_method,
                     trace_id: trace_id.clone(),
                     project_id: principal.project_id,
                     consistency: consistency.clone(),
@@ -1463,12 +1600,26 @@ pub fn security_from_request<T>(request: &Request<T>) -> Result<SecurityContext,
             }
         };
 
-        // Single JWT validation path: reuse the CACHED validator (the data plane
-        // re-checks the same token on every request; the AuthnService RPCs still
-        // call the uncached `validate_bearer_token`). Semantically identical to a
-        // fresh verify on a cache miss.
-        let claims =
-            validate_bearer_token_cached(&config, token).map_err(Status::unauthenticated)?;
+        // Served requests consume the asynchronous layer's already-verified
+        // bearer principal. Direct in-process tests that do not traverse the
+        // layer retain the cached verifier fallback.
+        let (claims, bearer_lineage) = match request
+            .extensions()
+            .get::<crate::runtime::credential_layer::PreresolvedCredentials>()
+            .and_then(|resolved| resolved.bearer.as_ref())
+        {
+            Some(Ok(principal)) => (claims_from_verified_principal(principal), principal.clone()),
+            Some(Err(_)) => return Err(Status::unauthenticated("invalid bearer token")),
+            None => {
+                let claims = validate_bearer_token_cached(&config, token)
+                    .map_err(Status::unauthenticated)?;
+                let principal =
+                    crate::runtime::credential_layer::VerifiedPrincipal::from_verified_bearer_claims(
+                        &claims,
+                    );
+                (claims, principal)
+            }
+        };
 
         // AUTH-005: the authorization principal is the VERIFIED JWT `sub` — never
         // the untrusted `x-user-id` header. A bearer for subject A carrying
@@ -1492,11 +1643,59 @@ pub fn security_from_request<T>(request: &Request<T>) -> Result<SecurityContext,
             ));
         }
         let user_id = subject;
+        let claim_tenant = claims.tenant_id.as_deref().unwrap_or_default().trim();
+        if claim_tenant.is_empty() {
+            return Err(Status::unauthenticated("JWT tenant_id claim is required"));
+        }
+        let header_tenant = header("x-tenant-id");
+        if !header_tenant.trim().is_empty() && header_tenant.trim() != claim_tenant {
+            return Err(crate::runtime::executor_utils::policy_status_with_code(
+                tonic::Code::PermissionDenied,
+                "authenticate",
+                "tenant_claim_mismatch",
+                "x-tenant-id does not match the verified bearer tenant",
+            ));
+        }
+        let claim_project = claims.project_id.as_deref().unwrap_or_default().trim();
+        if !project_id_header.trim().is_empty() && project_id_header.trim() != claim_project {
+            return Err(crate::runtime::executor_utils::policy_status_with_code(
+                tonic::Code::PermissionDenied,
+                "authenticate",
+                "project_claim_mismatch",
+                "project metadata does not match the verified bearer project",
+            ));
+        }
+        // fix_plan §1.3: a verified peer certificate presented ALONGSIDE a
+        // bearer is transport identity — it may only AGREE with the bearer's
+        // service identity, never replace or widen it. A cert whose identity
+        // disagrees with a bearer-carried service identity is a spliced
+        // credential pair and is rejected. (A cert with no bearer-carried
+        // service identity to compare against composes silently — the bearer
+        // remains the authorization principal.)
+        let preresolved_cert = request
+            .extensions()
+            .get::<crate::runtime::credential_layer::PreresolvedCredentials>()
+            .cloned();
+        // HIGH-1: when the certificate resolves a SERVER-CONTROLLED binding,
+        // its bound service identity, tenant and project must all AGREE with
+        // the bearer. The selector text (fingerprint/SAN/CN) is not itself the
+        // service identity and must never be compared as though it were.
+        if let Some(binding) = preresolved_cert
+            .as_ref()
+            .and_then(|pre| pre.certificate_principal.as_ref())
+        {
+            enforce_certificate_credential_composition(
+                binding,
+                claims.service_identity.as_deref().unwrap_or_default(),
+                claims.tenant_id.as_deref().unwrap_or_default(),
+                claims.project_id.as_deref().unwrap_or_default(),
+            )?;
+        }
         // Compute before the struct literal: the literal partially moves `claims`.
         let resolved_scopes = claims.resolved_scopes();
 
         return Ok(SecurityContext {
-            tenant_id: claims.tenant_id.unwrap_or_else(|| header("x-tenant-id")),
+            tenant_id: claim_tenant.to_string(),
             purpose: claims.purpose.unwrap_or_else(|| header("x-purpose")),
             correlation_id,
             user_id,
@@ -1504,10 +1703,11 @@ pub fn security_from_request<T>(request: &Request<T>) -> Result<SecurityContext,
             service_identity: claims
                 .service_identity
                 .unwrap_or_else(|| "unknown".to_string()),
+            credential_type: bearer_lineage.credential_type,
+            credential_id: bearer_lineage.credential_id,
+            auth_method: bearer_lineage.auth_method,
             trace_id,
-            project_id: claims
-                .project_id
-                .unwrap_or_else(|| project_id_header.clone()),
+            project_id: claim_project.to_string(),
             consistency,
             max_replica_lag_ms,
             client_catalog_version: client_catalog_version.clone(),
@@ -1520,51 +1720,81 @@ pub fn security_from_request<T>(request: &Request<T>) -> Result<SecurityContext,
         });
     }
 
-    let mtls_required = config.mtls_required;
+    // The VERIFIED peer certificate (never a header) is the authoritative
+    // identity signal on this branch when present.
+    let cert_identity = request
+        .peer_certs()
+        .as_deref()
+        .and_then(|certs| certs.first())
+        .and_then(|cert| service_identity_from_der(cert.as_ref()));
+    cert_identity.as_ref().ok_or_else(|| {
+        Status::unauthenticated(
+            "a bearer, scoped API key, or registered mTLS client certificate is required",
+        )
+    })?;
 
-    let service_identity = if mtls_required {
-        request
-            .peer_certs()
-            .as_deref()
-            .and_then(|certs| certs.first())
-            .and_then(|cert| service_identity_from_der(cert.as_ref()))
-            .ok_or_else(|| {
-                Status::unauthenticated(
-                    "mTLS client certificate required — header fallback disabled",
-                )
-            })?
-    } else {
-        request
-            .peer_certs()
-            .as_deref()
-            .and_then(|certs| certs.first())
-            .and_then(|cert| service_identity_from_der(cert.as_ref()))
-            .or_else(|| non_empty(header("x-client-cert-cn")))
-            .or_else(|| non_empty(header("x-service-identity")))
-            .unwrap_or_else(|| "unknown".to_string())
-    };
+    // CRIT-1: the durable certificate-binding chain (resolved asynchronously
+    // by the credential layer) is the ONLY certificate authority — never a
+    // profile-derived lookup. Absent/failed resolution stays fail-closed.
+    let grant = request
+        .extensions()
+        .get::<crate::runtime::credential_layer::PreresolvedCredentials>()
+        .and_then(|pre| pre.certificate_principal.clone())
+        .ok_or_else(|| {
+            Status::unauthenticated(
+                "client certificate is not registered to an active service-account grant",
+            )
+        })?;
+    let service_identity = grant.service_identity.clone();
 
-    let allow_header_scopes = config.allow_header_scopes;
-    let scopes = if allow_header_scopes {
-        header("x-scopes")
-            .split(',')
-            .map(str::trim)
-            .filter(|scope| !scope.is_empty())
-            .map(ToString::to_string)
-            .collect()
-    } else {
-        vec![]
-    };
+    // A non-empty `x-user-id` may only echo the certificate-bound account; it
+    // never replaces the durable binding's subject.
+    let bound_user_id = grant.subject.clone();
+    if !user_id.trim().is_empty() && user_id.trim() != bound_user_id {
+        return Err(crate::runtime::executor_utils::policy_status_with_code(
+            tonic::Code::PermissionDenied,
+            "authenticate",
+            "mtls_user_id_mismatch",
+            "x-user-id disagrees with the certificate-verified identity",
+        ));
+    }
+    let user_id = bound_user_id;
+
+    // Tenant/project: the resolved grant is authoritative; headers may only
+    // echo it.
+    let header_tenant = header("x-tenant-id");
+    if !header_tenant.trim().is_empty() && header_tenant.trim() != grant.tenant_id {
+        return Err(crate::runtime::executor_utils::policy_status_with_code(
+            tonic::Code::PermissionDenied,
+            "authenticate",
+            "mtls_tenant_mismatch",
+            "x-tenant-id disagrees with the certificate-bound tenant",
+        ));
+    }
+    if !project_id_header.trim().is_empty() && project_id_header.trim() != grant.project_id {
+        return Err(crate::runtime::executor_utils::policy_status_with_code(
+            tonic::Code::PermissionDenied,
+            "authenticate",
+            "mtls_project_mismatch",
+            "x-udb-project-id disagrees with the certificate-bound project",
+        ));
+    }
+    let tenant_id = grant.tenant_id;
+    let project_id = grant.project_id;
+    let scopes = grant.scopes;
 
     Ok(SecurityContext {
-        tenant_id: header("x-tenant-id"),
+        tenant_id,
         purpose: header("x-purpose"),
         correlation_id,
         user_id,
         scopes,
         service_identity,
+        credential_type: grant.credential_type,
+        credential_id: grant.credential_id,
+        auth_method: grant.auth_method,
         trace_id,
-        project_id: project_id_header,
+        project_id,
         consistency,
         max_replica_lag_ms,
         client_catalog_version: client_catalog_version.clone(),
@@ -1616,6 +1846,48 @@ pub fn service_identity_from_der(der: &[u8]) -> Option<String> {
         .map(ToString::to_string)
 }
 
+/// Every relevant identity a client certificate carries, each under its REAL
+/// selector kind (HIGH-2): a URI SAN must never match a DNS/CN binding and vice
+/// versa. Parsed once per certificate.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct CertificateSelectors {
+    pub uri_sans: Vec<String>,
+    pub dns_sans: Vec<String>,
+    pub subject_cn: Option<String>,
+}
+
+/// Parse the DER once into the full typed selector set (all URI SANs, all DNS
+/// SANs, the subject CN). An unparseable certificate yields the empty set —
+/// callers fail closed on no selector match.
+pub fn certificate_selectors_from_der(der: &[u8]) -> CertificateSelectors {
+    use x509_parser::extensions::GeneralName;
+    let Ok((_, cert)) = parse_x509_certificate(der) else {
+        return CertificateSelectors::default();
+    };
+    let mut selectors = CertificateSelectors::default();
+    if let Ok(Some(san)) = cert.subject_alternative_name() {
+        for name in &san.value.general_names {
+            match name {
+                GeneralName::URI(uri) if !uri.is_empty() => {
+                    selectors.uri_sans.push(uri.to_string());
+                }
+                GeneralName::DNSName(dns) if !dns.is_empty() => {
+                    selectors.dns_sans.push(dns.to_string());
+                }
+                _ => {}
+            }
+        }
+    }
+    selectors.subject_cn = cert
+        .subject()
+        .iter_common_name()
+        .next()
+        .and_then(|cn| cn.as_str().ok())
+        .map(ToString::to_string)
+        .filter(|cn| !cn.trim().is_empty());
+    selectors
+}
+
 pub fn enforce_select_export_controls(
     manifest: &CatalogManifest,
     context: &SecurityContext,
@@ -1653,9 +1925,12 @@ pub fn enforce_select_export_controls(
         }
         return Ok(());
     }
-    let Some(table) = table_for_message(manifest, message_type) else {
-        return Ok(());
-    };
+    let table = resolve_table_for_message(manifest, message_type).map_err(|error| {
+        crate::runtime::executor_utils::invalid_argument_fields(
+            error.to_string(),
+            [("message_type", "must identify exactly one catalog entity")],
+        )
+    })?;
     let selected = if selected_fields.is_empty() {
         table
             .columns
@@ -1825,6 +2100,12 @@ pub struct AuditLogEntry {
     pub project_id: String,
     pub correlation_id: String,
     pub service_identity: String,
+    #[serde(default)]
+    pub credential_type: i32,
+    #[serde(default)]
+    pub credential_id: String,
+    #[serde(default)]
+    pub auth_method: String,
     pub timestamp: chrono::DateTime<chrono::Utc>,
     pub duration_ms: u64,
     pub error_message: Option<String>,
@@ -1848,6 +2129,9 @@ impl AuditLogEntry {
             project_id: context.project_id.clone(),
             correlation_id: context.correlation_id.clone(),
             service_identity: context.service_identity.clone(),
+            credential_type: context.credential_type,
+            credential_id: context.credential_id.clone(),
+            auth_method: context.auth_method.clone(),
             timestamp: chrono::Utc::now(),
             duration_ms: 0,
             error_message: None,
@@ -1890,6 +2174,10 @@ pub async fn send_audit_log(config: &SecurityConfig, entry: AuditLogEntry) -> Re
             result = %entry.result,
             tenant_id = %entry.tenant_id,
             correlation_id = %entry.correlation_id,
+            service_identity = %entry.service_identity,
+            credential_type = entry.credential_type,
+            credential_id = %entry.credential_id,
+            auth_method = %entry.auth_method,
             "audit_log"
         );
         return Ok(());
@@ -3181,13 +3469,18 @@ mod tests {
     // the security-critical decisions without the process-global resolver so they
     // stay deterministic under parallel test execution.
 
-    fn api_key_principal_fixture() -> ApiKeyPrincipal {
-        ApiKeyPrincipal {
+    fn api_key_principal_fixture() -> crate::runtime::credential_layer::VerifiedPrincipal {
+        crate::runtime::credential_layer::VerifiedPrincipal {
+            credential_type: 3,
             subject: "svc-owner-uuid".to_string(),
-            service_identity: "ambulife.partner".to_string(),
+            service_identity: "acme.partner".to_string(),
             tenant_id: "tenant-1".to_string(),
             project_id: "portal".to_string(),
             scopes: vec!["udb:read".to_string(), "udb:write".to_string()],
+            roles: Vec::new(),
+            credential_id: "udbk_test".to_string(),
+            auth_method: "api_key".to_string(),
+            certificate_identity: None,
         }
     }
 
@@ -3285,5 +3578,160 @@ mod tests {
         .expect("headers that match the record are accepted");
         assert_eq!(principal.subject, "svc-owner-uuid");
         assert_eq!(principal.scopes, vec!["udb:read", "udb:write"]);
+    }
+
+    fn request_with_verified_bearer(
+        principal: crate::runtime::credential_layer::VerifiedPrincipal,
+    ) -> Request<()> {
+        let mut request = Request::new(());
+        request.metadata_mut().insert(
+            "authorization",
+            "Bearer already-verified"
+                .parse()
+                .expect("authorization metadata"),
+        );
+        request
+            .extensions_mut()
+            .insert(crate::runtime::credential_layer::PreresolvedCredentials {
+                bearer: Some(Ok(principal)),
+                ..Default::default()
+            });
+        request
+    }
+
+    fn bearer_principal_fixture() -> crate::runtime::credential_layer::VerifiedPrincipal {
+        crate::runtime::credential_layer::VerifiedPrincipal {
+            credential_type: 1,
+            subject: "user-a".to_string(),
+            tenant_id: "tenant-a".to_string(),
+            project_id: "project-a".to_string(),
+            scopes: vec!["udb:read".to_string()],
+            credential_id: "jwt-a".to_string(),
+            auth_method: "password".to_string(),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn verified_bearer_headers_are_echo_only_and_cannot_widen_scopes() {
+        let mut request = request_with_verified_bearer(bearer_principal_fixture());
+        request
+            .metadata_mut()
+            .insert("x-user-id", "user-a".parse().unwrap());
+        request
+            .metadata_mut()
+            .insert("x-tenant-id", "tenant-a".parse().unwrap());
+        request
+            .metadata_mut()
+            .insert("x-udb-project-id", "project-a".parse().unwrap());
+        request
+            .metadata_mut()
+            .insert("x-scopes", "udb:admin".parse().unwrap());
+        request
+            .metadata_mut()
+            .insert("x-service-identity", "caller-controlled".parse().unwrap());
+
+        let context = security_from_request(&request).expect("matching echoes are accepted");
+        assert_eq!(context.user_id, "user-a");
+        assert_eq!(context.tenant_id, "tenant-a");
+        assert_eq!(context.project_id, "project-a");
+        assert_eq!(context.scopes, vec!["udb:read"]);
+        assert_eq!(context.service_identity, "unknown");
+        assert_eq!(context.credential_type, 1);
+        assert_eq!(context.credential_id, "jwt-a");
+        assert_eq!(context.auth_method, "password");
+
+        let audit = AuditLogEntry::new(
+            &context,
+            "select",
+            "acme.data.v1.Invoice",
+            serde_json::json!({"invoice_id": "inv-1"}),
+        );
+        assert_eq!(audit.credential_type, 1);
+        assert_eq!(audit.credential_id, "jwt-a");
+        assert_eq!(audit.auth_method, "password");
+        assert_eq!(audit.service_identity, "unknown");
+
+        let safe = context.log_safe();
+        assert_eq!(safe.credential_type, 1);
+        assert_eq!(safe.credential_id, "jwt-a");
+        assert_eq!(safe.auth_method, "password");
+    }
+
+    #[test]
+    fn verified_bearer_rejects_subject_tenant_and_project_header_mismatches() {
+        for (header, value) in [
+            ("x-user-id", "user-b"),
+            ("x-tenant-id", "tenant-b"),
+            ("x-udb-project-id", "project-b"),
+        ] {
+            let mut request = request_with_verified_bearer(bearer_principal_fixture());
+            request
+                .metadata_mut()
+                .insert(header, value.parse().unwrap());
+            let error = security_from_request(&request)
+                .expect_err("identity metadata may only echo verified bearer claims");
+            assert_eq!(error.code(), tonic::Code::PermissionDenied, "{header}");
+        }
+    }
+
+    #[test]
+    fn verified_bearer_missing_tenant_claim_fails_closed_even_with_header() {
+        let mut principal = bearer_principal_fixture();
+        principal.tenant_id.clear();
+        let mut request = request_with_verified_bearer(principal);
+        request
+            .metadata_mut()
+            .insert("x-tenant-id", "tenant-a".parse().unwrap());
+        let error = security_from_request(&request)
+            .expect_err("a caller header must not supply a missing tenant claim");
+        assert_eq!(error.code(), tonic::Code::Unauthenticated);
+        assert!(error.message().contains("tenant_id claim"));
+    }
+
+    #[test]
+    fn verified_bearer_cannot_hide_an_unbound_presented_certificate() {
+        let mut request = request_with_verified_bearer(bearer_principal_fixture());
+        request
+            .extensions_mut()
+            .insert(crate::runtime::credential_layer::PreresolvedCredentials {
+                bearer: Some(Ok(bearer_principal_fixture())),
+                certificate_present: true,
+                certificate_identity: Some("spiffe://test.udb/unbound".to_string()),
+                certificate_principal: None,
+                ..Default::default()
+            });
+
+        let error = security_from_request(&request)
+            .expect_err("a presented unbound certificate must fail credential composition");
+        assert_eq!(error.code(), tonic::Code::Unauthenticated);
+        assert!(error.message().contains("certificate binding"));
+    }
+
+    #[test]
+    fn certificate_composition_requires_exact_service_tenant_and_project_lineage() {
+        let binding = crate::runtime::credential_layer::VerifiedPrincipal {
+            service_identity: "spiffe://test.udb/workload".to_string(),
+            tenant_id: "tenant-a".to_string(),
+            project_id: "project-a".to_string(),
+            ..Default::default()
+        };
+        enforce_certificate_credential_composition(
+            &binding,
+            "spiffe://test.udb/workload",
+            "tenant-a",
+            "project-a",
+        )
+        .expect("matching credential lineage composes");
+        for (identity, tenant, project) in [
+            ("spiffe://test.udb/other", "tenant-a", "project-a"),
+            ("spiffe://test.udb/workload", "tenant-b", "project-a"),
+            ("spiffe://test.udb/workload", "tenant-a", "project-b"),
+        ] {
+            let error =
+                enforce_certificate_credential_composition(&binding, identity, tenant, project)
+                    .expect_err("spliced certificate/application credentials must be denied");
+            assert_eq!(error.code(), tonic::Code::PermissionDenied);
+        }
     }
 }

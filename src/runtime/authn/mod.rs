@@ -300,6 +300,10 @@ pub struct ApiKeyRecord {
     pub tenant_id: String,
     pub project_id: String,
     pub scopes: Vec<String>,
+    /// Typed service-account grant revision reviewed when this key was issued
+    /// or explicitly updated. Stored in `metadata_json` for compatibility with
+    /// the existing API-key table contract.
+    pub grant_revision: i64,
     pub created_at_unix: u64,
     pub last_used_at_unix: u64,
     pub expires_at_unix: u64,
@@ -912,6 +916,9 @@ fn api_key_from_row(row: &sqlx::postgres::PgRow) -> Result<ApiKeyRecord, sqlx::E
         tenant_id: row_string(row, "tenant_id")?,
         project_id: row_string(row, "project_id")?,
         scopes: string_list_from_json(&row.try_get::<String, _>("scopes")?),
+        grant_revision: row_string(row, "grant_revision")?
+            .parse::<i64>()
+            .unwrap_or_default(),
         created_at_unix: row.try_get::<i64, _>("created_at_unix")?.max(0) as u64,
         last_used_at_unix: row.try_get::<i64, _>("last_used_at_unix")?.max(0) as u64,
         expires_at_unix: row.try_get::<i64, _>("expires_at_unix")?.max(0) as u64,
@@ -2215,6 +2222,7 @@ pub struct PostgresApiKeyStore {
 fn api_key_write_op(record: &ApiKeyRecord, status: ApiKeyStatus) -> Result<LogicalWrite, String> {
     let metadata_json = serde_json::json!({
         "service_identity": record.service_identity,
+        "grant_revision": record.grant_revision,
     });
     let mut row = LogicalRecord::new();
     row.insert(
@@ -2428,6 +2436,7 @@ impl ApiKeyStore for PostgresApiKeyStore {
         let owner_id = m.select_as("owner_id", "principal_id");
         let service_identity =
             m.json_get_as("metadata_json", "service_identity", "service_identity");
+        let grant_revision = m.json_get_as("metadata_json", "grant_revision", "grant_revision");
         let tenant_id = m.select("tenant_id");
         let project_id = m.select("project_id");
         let scopes = m.json_text_as("scopes_json", "scopes");
@@ -2438,7 +2447,7 @@ impl ApiKeyStore for PostgresApiKeyStore {
         let created_at = m.q("created_at");
         let deleted_at = m.q("deleted_at");
         let row = sqlx::query(&format!(
-            "SELECT {key_prefix_col} AS key_prefix, {key_hash}, {name}, {description}, {owner_id}, {service_identity}, {tenant_id}, {project_id}, {scopes}, \
+            "SELECT {key_prefix_col} AS key_prefix, {key_hash}, {name}, {description}, {owner_id}, {service_identity}, {grant_revision}, {tenant_id}, {project_id}, {scopes}, \
                     {created_at_unix}, {last_used_at_unix}, {expires_at_unix}, {revoked_at_unix} \
              FROM {rel} WHERE {key_prefix_col} = $1 AND {deleted_at} IS NULL ORDER BY {created_at} DESC LIMIT 1"
         ))
@@ -2468,6 +2477,7 @@ impl ApiKeyStore for PostgresApiKeyStore {
         let owner_id_col = m.q("owner_id");
         let service_identity =
             m.json_get_as("metadata_json", "service_identity", "service_identity");
+        let grant_revision = m.json_get_as("metadata_json", "grant_revision", "grant_revision");
         let service_identity_expr = format!("{}->>'service_identity'", m.q("metadata_json"));
         let tenant_id = m.select("tenant_id");
         let project_id = m.select("project_id");
@@ -2488,7 +2498,7 @@ impl ApiKeyStore for PostgresApiKeyStore {
             String::new()
         };
         let sql = format!(
-            "SELECT {key_prefix_col}, {key_hash}, {name}, {description}, {owner_id}, {service_identity}, {tenant_id}, {project_id}, {scopes}, \
+            "SELECT {key_prefix_col}, {key_hash}, {name}, {description}, {owner_id}, {service_identity}, {grant_revision}, {tenant_id}, {project_id}, {scopes}, \
                     {created_at_unix}, {last_used_at_unix}, {expires_at_unix}, {revoked_at_unix} \
              FROM {rel} WHERE ({owner_id_col} = $1 OR {service_identity_expr} = $1) {active_clause} ORDER BY {created_at} DESC"
         );
@@ -2524,6 +2534,7 @@ impl ApiKeyStore for PostgresApiKeyStore {
         let owner_id_col = m.q("owner_id");
         let service_identity =
             m.json_get_as("metadata_json", "service_identity", "service_identity");
+        let grant_revision = m.json_get_as("metadata_json", "grant_revision", "grant_revision");
         let service_identity_expr = format!("{}->>'service_identity'", m.q("metadata_json"));
         let tenant_id = m.select("tenant_id");
         let project_id = m.select("project_id");
@@ -2563,7 +2574,7 @@ impl ApiKeyStore for PostgresApiKeyStore {
             ("$2", "$3")
         };
         let sql = format!(
-            "SELECT {key_prefix_col}, {key_hash}, {name}, {description}, {owner_id}, {service_identity}, {tenant_id}, {project_id}, {scopes}, \
+            "SELECT {key_prefix_col}, {key_hash}, {name}, {description}, {owner_id}, {service_identity}, {grant_revision}, {tenant_id}, {project_id}, {scopes}, \
                     {created_at_unix}, {last_used_at_unix}, {expires_at_unix}, {revoked_at_unix} \
              FROM {rel} WHERE ({owner_id_col} = $1 OR {service_identity_expr} = $1) {active_clause} ORDER BY {created_at} DESC LIMIT {limit_param} OFFSET {offset_param}"
         );
@@ -2603,6 +2614,7 @@ impl ApiKeyStore for PostgresApiKeyStore {
         let owner_id_col = m.q("owner_id");
         let service_identity =
             m.json_get_as("metadata_json", "service_identity", "service_identity");
+        let grant_revision = m.json_get_as("metadata_json", "grant_revision", "grant_revision");
         let service_identity_expr = format!("{}->>'service_identity'", m.q("metadata_json"));
         let tenant_id = m.select("tenant_id");
         let project_id = m.select("project_id");
@@ -2648,7 +2660,7 @@ impl ApiKeyStore for PostgresApiKeyStore {
                 ("$2", "$3")
             };
         let sql = format!(
-            "SELECT {key_prefix_col}, {key_hash}, {name}, {description}, {owner_id}, {service_identity}, {tenant_id}, {project_id}, {scopes}, \
+            "SELECT {key_prefix_col}, {key_hash}, {name}, {description}, {owner_id}, {service_identity}, {grant_revision}, {tenant_id}, {project_id}, {scopes}, \
                     {created_at_unix}, {last_used_at_unix}, {expires_at_unix}, {revoked_at_unix} \
              FROM {rel} WHERE ({owner_id_col} = $1 OR {service_identity_expr} = $1) {status_clause} ORDER BY {created_at} DESC LIMIT {limit_param} OFFSET {offset_param}"
         );

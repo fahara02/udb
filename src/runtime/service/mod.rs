@@ -88,7 +88,10 @@ pub use auth_service::auth_readiness_triples;
 /// — see `CdcConfig::normalize`. (The `auth_service` module is private to this
 /// `service` module, so this `pub(crate)` re-export is the reachable handle.)
 pub(crate) use auth_service::events::topics::AUTH_TOPIC_PATTERNS;
-pub use auth_service::{BootstrapAdmin, bootstrap_admin_user, served_bootstrap_admin};
+pub use auth_service::{
+    BootstrapAdmin, bootstrap_admin_user, cli_api_key_list, cli_api_key_revoke,
+    migrate_service_account_grants, served_bootstrap_admin,
+};
 // W17: native LiveQueryService (master-plan 9.7). Server-streaming tenant-scoped
 // live queries: an initial mediated Snapshot then a fail-closed-filtered stream
 // of CDC Change deltas. The leader wires `build_livequery_service`
@@ -1547,6 +1550,10 @@ fn spawn_uds_data_plane(
         // by the wrapped services + this timeout/concurrency envelope).
         let layer = tower::ServiceBuilder::new()
             .layer(crate::runtime::otel::TraceExtractLayer::new())
+            // fix_plan §1: ONE async credential-resolution pass (scoped API keys,
+            // registered mTLS bindings) whose verified outcome rides the request
+            // extensions; the sync security layer only consumes it.
+            .layer(crate::runtime::credential_layer::CredentialResolveLayer::new())
             .timeout(grpc_timeout)
             .concurrency_limit(grpc_max_concurrent)
             .into_inner();
@@ -2186,6 +2193,10 @@ pub async fn serve(
             // into the per-request trace-context task-local so compliance
             // envelopes carry trace/span ids and CDC publish can re-inject them.
             .layer(crate::runtime::otel::TraceExtractLayer::new())
+            // fix_plan §1: ONE async credential-resolution pass (scoped API keys,
+            // registered mTLS bindings) whose verified outcome rides the request
+            // extensions; the sync security layer only consumes it.
+            .layer(crate::runtime::credential_layer::CredentialResolveLayer::new())
             .timeout(grpc_timeout)
             .concurrency_limit(grpc_max_concurrent)
             .into_inner()
@@ -2206,6 +2217,22 @@ pub async fn serve(
             public_addr = %addr,
             "native services disabled or no native listener selected; only the public DataBroker listener will start"
         );
+        // UDB-AUTH-004/007: a DataBroker-only deployment must still authenticate
+        // scoped `x-api-key`s and REGISTERED mTLS service certificates — the
+        // resolver install used to live only in `build_auth_services`, which
+        // this early return skips, leaving the data plane fail-closed for want
+        // of wiring rather than by policy.
+        if let Some(pool) = service
+            .runtime
+            .load_full()
+            .native_store_pool_for_service("authn", true, "")
+            .ok()
+        {
+            crate::runtime::service::auth_service::install_data_plane_credential_resolvers(
+                pool,
+                &crate::runtime::authn::AuthnConfig::from_env(),
+            );
+        }
         // Optional co-located UDS data-plane (PERF_TODO §3) — clone before the
         // service is moved into the TCP builder below. No-op unless configured.
         #[cfg(unix)]

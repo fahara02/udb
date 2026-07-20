@@ -371,7 +371,8 @@ pub(crate) fn native_service_catalog_ddl() -> Vec<String> {
 }
 
 pub(crate) fn native_relation(message_type: &str) -> Option<(String, String)> {
-    crate::broker::table_for_message(native_manifest(), message_type)
+    crate::broker::resolve_table_for_message(native_manifest(), message_type)
+        .ok()
         .map(|table| (table.schema.clone(), table.table.clone()))
 }
 
@@ -555,10 +556,8 @@ fn model_column(name: &str, table: &ManifestTable) -> Option<String> {
 }
 
 pub(crate) fn native_model(message_type: &str, required_fields: &[&str]) -> NativeModel {
-    let table =
-        crate::broker::table_for_message(native_manifest(), message_type).unwrap_or_else(|| {
-            panic!("native model {message_type} is missing from embedded proto manifest")
-        });
+    let table = crate::broker::resolve_table_for_message(native_manifest(), message_type)
+        .unwrap_or_else(|error| panic!("native model lookup failed: {error}"));
     let model = NativeModel::from_table(message_type, table);
     model.required_columns(required_fields);
     model

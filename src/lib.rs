@@ -105,12 +105,12 @@ pub use broker::{
     AuditEvent, CachePolicyPlan, CachePolicyRequest, DeletePlanRequest, GenericDispatchPlan,
     GenericDispatchRequest, ObjectAccessDecision, ObjectAccessRequest, ObjectStreamPlan,
     ObjectStreamPlanRequest, QueryPlan, RequestContext, SelectPlanRequest, SortSpec,
-    SqlOperationPlan, TransactionMutation, TransactionPlan, TransactionPlanRequest,
-    UpsertPlanRequest, VectorQueryPlan, VectorSearchPlanRequest, VectorUpsertPlan,
-    VectorUpsertPlanRequest, build_audit_event, build_cache_policy_plan, build_delete_plan,
-    build_generic_dispatch_plan, build_object_stream_plan, build_select_query_plan,
-    build_transaction_plan, build_upsert_plan, build_vector_search_plan, build_vector_upsert_plan,
-    evaluate_object_access, table_for_message,
+    SqlOperationPlan, TableLookupError, TransactionMutation, TransactionPlan,
+    TransactionPlanRequest, UpsertPlanRequest, VectorQueryPlan, VectorSearchPlanRequest,
+    VectorUpsertPlan, VectorUpsertPlanRequest, build_audit_event, build_cache_policy_plan,
+    build_delete_plan, build_generic_dispatch_plan, build_object_stream_plan,
+    build_select_query_plan, build_transaction_plan, build_upsert_plan, build_vector_search_plan,
+    build_vector_upsert_plan, evaluate_object_access, resolve_table_for_message, table_for_message,
 };
 pub use config::{
     AuditSinkConfig, AuditSinkKind, ConfigValidationReport, DbConfig, FailoverConfig,

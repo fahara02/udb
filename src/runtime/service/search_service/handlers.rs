@@ -47,18 +47,14 @@ impl SearchServiceImpl {
         let catalog = self.require_catalog()?;
         let state = catalog.active_for(project_id);
         let manifest = &state.manifest;
-        let table = crate::broker::table_for_message(manifest, source_message_type).ok_or_else(
-            || {
+        let table = crate::broker::resolve_table_for_message(manifest, source_message_type)
+            .map_err(|error| {
                 search_field_violation(
                     "source_message_type",
-                    "must be present in the active catalog manifest",
-                    format!(
-                        "source_message_type '{source_message_type}' is not present in the active catalog \
-                         manifest"
-                    ),
+                    "must identify exactly one entity in the active catalog manifest",
+                    error.to_string(),
                 )
-            },
-        )?;
+            })?;
         // SHARED resolver (no duplicate): same `util::resolve_tenant_column` family
         // behind `native_catalog::NativeModel::tenant_column`.
         let resolved = crate::runtime::postgres_helpers::tenant_column_ref(table)

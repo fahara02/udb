@@ -26,6 +26,20 @@ fn unknown_message_type_status() -> tonic::Status {
     )
 }
 
+/// fix_plan §4.1: manifest-aware lookup failure — an AMBIGUOUS convenience
+/// identity (a short name shared by multiple catalog packages) names every
+/// candidate FQN so the caller can qualify, instead of a bare "unknown".
+fn message_type_lookup_status(
+    manifest: &crate::generation::CatalogManifest,
+    message_type: &str,
+) -> tonic::Status {
+    setup_data_invalid_field(
+        "message_type",
+        "must match exactly one manifest table message type",
+        crate::planning::broker::describe_table_lookup_miss(manifest, message_type),
+    )
+}
+
 /// GO-005: value equality for a compare-and-swap assertion that treats an
 /// integer and its float form as equal. A `google.protobuf.Struct` carries every
 /// number as an f64, so a JSON `8` decoded from an INTEGER column must still
@@ -569,8 +583,8 @@ impl DataBrokerRuntime {
             return Ok((cached_record_set(cached), None));
         }
 
-        let table = table_for_message(manifest, &request.message_type)
-            .ok_or_else(unknown_message_type_status)?;
+        let table = resolve_table_for_message(manifest, &request.message_type)
+            .map_err(|_| message_type_lookup_status(manifest, &request.message_type))?;
         let routed_pool = self
             .pg_select_pool_for_table_routed(table, &context)
             .await?;
@@ -824,8 +838,8 @@ impl DataBrokerRuntime {
                 None
             }
         };
-        let table = table_for_message(manifest, &request.message_type)
-            .ok_or_else(unknown_message_type_status)?;
+        let table = resolve_table_for_message(manifest, &request.message_type)
+            .map_err(|_| message_type_lookup_status(manifest, &request.message_type))?;
         // #117: rewrite proto `field_name` record keys to physical `column_name`s
         // so encryption + binding (keyed by `plan.parameter_columns`, which the
         // planner already resolved) find each value.
@@ -1140,9 +1154,8 @@ impl DataBrokerRuntime {
         // Resolve via the SAME index the mutation used (case-insensitive, full or
         // leaf message name) so the emit gate matches exactly what was written —
         // an exact `==` missed the entity and silently skipped the event.
-        let Some(table) = table_for_message(manifest, message_type) else {
-            return Ok(());
-        };
+        let table = resolve_table_for_message(manifest, message_type)
+            .map_err(|_| message_type_lookup_status(manifest, message_type))?;
         let topic = table.cdc_topic.trim();
         if topic.is_empty() {
             return Ok(());
@@ -1218,8 +1231,8 @@ impl DataBrokerRuntime {
         let plan = build_delete_plan(manifest, &plan_request);
         reject_plan(&plan.errors)?;
         let pool = self.pg_pool()?;
-        let table =
-            table_for_message(manifest, message_type).ok_or_else(unknown_message_type_status)?;
+        let table = resolve_table_for_message(manifest, message_type)
+            .map_err(|_| message_type_lookup_status(manifest, message_type))?;
         // 2.4 merge: prefer the bridged neutral-IR emission; the planner SQL
         // stays as the fallback for planner-only filter shapes (live row parity
         // pinned by the A-B oracle).

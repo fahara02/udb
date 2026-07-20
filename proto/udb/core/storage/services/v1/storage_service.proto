@@ -78,6 +78,7 @@ service StorageService {
       scopes: "udb:storage:register-upload"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_API_KEY // UDB-AUTH-008: scoped service keys
       decision_resource: "storage.RegisterUpload"
       request_context_required: true
       tenant_required: true
@@ -169,6 +170,7 @@ service StorageService {
       scopes: "udb:storage:finalize-upload"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_API_KEY // UDB-AUTH-008: scoped service keys
       decision_resource: "storage.FinalizeUpload"
       request_context_required: true
       tenant_required: true
@@ -230,6 +232,7 @@ service StorageService {
       scopes: "udb:storage:get-download-url"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_API_KEY // UDB-AUTH-008: scoped service keys
       decision_resource: "storage.GetDownloadUrl"
       request_context_required: true
       tenant_required: true
@@ -291,6 +294,7 @@ service StorageService {
       scopes: "udb:storage:reissue-upload-url"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_API_KEY // UDB-AUTH-008: scoped service keys
       decision_resource: "storage.ReissueUploadUrl"
       request_context_required: true
       tenant_required: true
@@ -331,6 +335,7 @@ service StorageService {
       scopes: "udb:storage:get-download-url"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_API_KEY // UDB-AUTH-008: scoped service keys
       decision_resource: "storage.DownloadFile"
       request_context_required: true
       tenant_required: true
@@ -388,6 +393,7 @@ service StorageService {
       scopes: "udb:storage:get-file"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_API_KEY // UDB-AUTH-008: scoped service keys
       decision_resource: "storage.GetFile"
       request_context_required: true
       tenant_required: true
@@ -445,6 +451,7 @@ service StorageService {
       scopes: "udb:storage:update-file"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_API_KEY // UDB-AUTH-008: scoped service keys
       decision_resource: "storage.UpdateFile"
       request_context_required: true
       tenant_required: true
@@ -506,6 +513,7 @@ service StorageService {
       scopes: "udb:storage:delete-file"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_API_KEY // UDB-AUTH-008: scoped service keys
       decision_resource: "storage.DeleteFile"
       request_context_required: true
       tenant_required: true
@@ -564,6 +572,7 @@ service StorageService {
       scopes: "udb:storage:list-files"
       allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
       allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      allowed_credential_types: CREDENTIAL_TYPE_API_KEY // UDB-AUTH-008: scoped service keys
       decision_resource: "storage.ListFiles"
       request_context_required: true
       tenant_required: true

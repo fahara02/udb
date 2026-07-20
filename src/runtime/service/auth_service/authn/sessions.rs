@@ -63,6 +63,21 @@ fn refresh_user_active_status() -> Status {
     )
 }
 
+fn refresh_service_grant_status() -> Status {
+    session_policy_status_with_code(
+        tonic::Code::PermissionDenied,
+        "refresh_token",
+        "service_account_grant_invalid",
+        "service account has no current valid typed grant",
+    )
+}
+
+struct RefreshGrants {
+    scopes: Vec<String>,
+    roles: Vec<String>,
+    service_identity: String,
+}
+
 fn session_internal_status(operation: impl Into<String>, message: impl Into<String>) -> Status {
     crate::runtime::executor_utils::internal_status("authn", operation, message)
 }
@@ -476,6 +491,72 @@ fn validate_api_key_response(rec: Option<authn::ApiKeyRecord>) -> authn_pb::Vali
 }
 
 impl AuthnServiceImpl {
+    async fn current_refresh_grants(
+        &self,
+        user_id: &str,
+        tenant_id: &str,
+        project_id: &str,
+        expected_service_identity: &str,
+        carried_scopes: &[String],
+    ) -> Result<RefreshGrants, Status> {
+        let user = self
+            .users
+            .get_user_by_id(user_id)
+            .await
+            .map_err(|error| session_internal_status("refresh_user_load", error))?
+            .ok_or_else(refresh_user_active_status)?;
+        if !user.status.is_active()
+            || user.tenant_id.trim() != tenant_id.trim()
+            || user.project_id.trim() != project_id.trim()
+        {
+            return Err(refresh_user_active_status());
+        }
+        if user.account_kind != authn::AccountKind::ServiceAccount {
+            if !expected_service_identity.trim().is_empty() {
+                return Err(refresh_service_grant_status());
+            }
+            let (scopes, roles) =
+                self.resolve_effective_grants(&user.user_id, &user.tenant_id, &user.project_id);
+            return Ok(RefreshGrants {
+                scopes,
+                roles,
+                service_identity: String::new(),
+            });
+        }
+
+        let grant = super::super::grants::get_grant_by_user(
+            self.require_pool()?,
+            &user.tenant_id,
+            &user.user_id,
+        )
+        .await?
+        .filter(|grant| grant.status.eq_ignore_ascii_case("ACTIVE"))
+        .ok_or_else(refresh_service_grant_status)?;
+        if grant.tenant_id.trim() != user.tenant_id.trim()
+            || grant.project_id.trim() != user.project_id.trim()
+            || grant.service_identity.trim().is_empty()
+            || (!expected_service_identity.trim().is_empty()
+                && expected_service_identity.trim() != grant.service_identity.trim())
+        {
+            return Err(refresh_service_grant_status());
+        }
+        // Refresh may preserve an attenuated service session, but it must never
+        // widen that session back to the grant's full approved set. A service
+        // refresh without carried scopes has no trustworthy attenuation state.
+        if carried_scopes.is_empty() {
+            return Err(refresh_service_grant_status());
+        }
+        let scopes = super::super::grants::validate_service_scopes(carried_scopes, &grant.scopes)?;
+        if scopes.is_empty() {
+            return Err(refresh_service_grant_status());
+        }
+        Ok(RefreshGrants {
+            scopes,
+            roles: Vec::new(),
+            service_identity: grant.service_identity,
+        })
+    }
+
     async fn authorize_list_sessions_target_user(&self, user_id: &str) -> Result<(), Status> {
         if !crate::runtime::service::method_security::claim_context_present() {
             return Ok(());
@@ -639,6 +720,19 @@ impl AuthnServiceImpl {
         .map_err(|err| session_internal_status("refresh_session", err))?
         {
             Some(rec) => {
+                // A server-side service session is still a credential. Recheck
+                // its owner and typed grant before extending it so revocation or
+                // identity rotation cannot preserve a stale refresh handle.
+                if !rec.service_identity.trim().is_empty() {
+                    self.current_refresh_grants(
+                        &rec.user_id,
+                        &rec.tenant_id,
+                        &rec.project_id,
+                        &rec.service_identity,
+                        &rec.scopes,
+                    )
+                    .await?;
+                }
                 // Phase L2: emit a session-refresh event (no raw token material —
                 // a public handle derived from the session-id hash is used).
                 let public_session_id = public_session_handle_from_hash(&authn::hash_secret(
@@ -800,30 +894,25 @@ impl AuthnServiceImpl {
         else {
             return Err(Status::unauthenticated("invalid credential"));
         };
-        // Phase 3: a suspended/deactivated user must not keep minting access
-        // tokens via a lingering session — gate refresh on live user status.
-        if !self.user_is_active(&rec.user_id).await? {
-            return Err(refresh_user_active_status());
-        }
-        // Block 1 (auth_fix.md, Decision E): re-resolve on refresh so a role
-        // revoked since login stops minting `udb:admin`. The `service_identity`
-        // discriminator (NOT emptiness) decides the source: a service-principal
-        // session carries scopes asserted at `CreateSession` that are not
-        // role-derived, so keep its stored set; a user session takes the freshly
-        // resolved grants verbatim (empty ⇒ empty drops admin on last-role
-        // revocation, which a "fall back when empty" rule would mask).
-        let (scopes, roles) = if rec.service_identity.trim().is_empty() {
-            self.resolve_effective_grants(&rec.user_id, &rec.tenant_id, &rec.project_id)
-        } else {
-            (rec.scopes.clone(), rec.roles.clone())
-        };
+        // Re-resolve every refresh against current durable authority. Human
+        // users get the latest role projection; service accounts must still
+        // own an ACTIVE typed grant with matching tenant/project/identity.
+        let grants = self
+            .current_refresh_grants(
+                &rec.user_id,
+                &rec.tenant_id,
+                &rec.project_id,
+                &rec.service_identity,
+                &rec.scopes,
+            )
+            .await?;
         let (access_token, access_exp) = self.issue_access_token(
             &rec.user_id,
             &rec.tenant_id,
             &rec.project_id,
-            &scopes,
-            &roles,
-            &rec.service_identity,
+            &grants.scopes,
+            &grants.roles,
+            &grants.service_identity,
             &session_ref,
             "refresh",
             now,
@@ -857,27 +946,22 @@ impl AuthnServiceImpl {
                 new_refresh_token,
                 family,
             } => {
-                // A suspended/deactivated user must not keep minting tokens via a
-                // lingering refresh family — gate on live user status.
-                if !self.user_is_active(&family.user_id).await? {
-                    return Err(refresh_user_active_status());
-                }
-                // Block 1 (auth_fix.md, Decision E): the token family stores no
-                // grants (`TokenFamilyRow` has no scopes/roles columns), so
-                // re-resolve from the warm snapshot — the `user_is_active` check
-                // above already touched this user, so the read is free.
-                let (scopes, roles) = self.resolve_effective_grants(
-                    &family.user_id,
-                    &family.tenant_id,
-                    &family.project_id,
-                );
+                let grants = self
+                    .current_refresh_grants(
+                        &family.user_id,
+                        &family.tenant_id,
+                        &family.project_id,
+                        "",
+                        &[],
+                    )
+                    .await?;
                 let (access_token, access_exp) = self.issue_access_token(
                     &family.user_id,
                     &family.tenant_id,
                     &family.project_id,
-                    &scopes,
-                    &roles,
-                    "",
+                    &grants.scopes,
+                    &grants.roles,
+                    &grants.service_identity,
                     &format!("rtf_{family_id}"),
                     "refresh",
                     now,
@@ -984,6 +1068,30 @@ impl AuthnServiceImpl {
                 )
                 .await
                 .map_err(|err| session_internal_status("validate_token_session", err))?;
+                let rec = match rec {
+                    Some(mut rec) if !rec.service_identity.trim().is_empty() => {
+                        match self
+                            .current_refresh_grants(
+                                &rec.user_id,
+                                &rec.tenant_id,
+                                &rec.project_id,
+                                &rec.service_identity,
+                                &rec.scopes,
+                            )
+                            .await
+                        {
+                            Ok(grants) => {
+                                rec.scopes = grants.scopes;
+                                rec.roles = grants.roles;
+                                rec.service_identity = grants.service_identity;
+                                Some(rec)
+                            }
+                            Err(_) => None,
+                        }
+                    }
+                    Some(rec) => Some(rec),
+                    None => None,
+                };
                 validate_session_response(rec, now)
             }
             authn_entity_pb::TokenType::ApiKey => {
@@ -995,6 +1103,33 @@ impl AuthnServiceImpl {
                 )
                 .await
                 .map_err(|err| session_internal_status("validate_token_api_key", err))?;
+                let rec = match rec {
+                    Some(mut rec) => {
+                        let pool = self.require_pool()?;
+                        match super::super::grants::attenuate_key_scopes_against_grant(
+                            pool,
+                            &rec.tenant_id,
+                            &rec.principal_id,
+                            rec.grant_revision,
+                            &rec.scopes,
+                        )
+                        .await
+                        {
+                            Ok(Some(scopes)) => {
+                                rec.scopes = scopes;
+                                Some(rec)
+                            }
+                            Ok(None) => None,
+                            Err(error) => {
+                                return Err(session_internal_status(
+                                    "validate_token_api_key_grant",
+                                    error,
+                                ));
+                            }
+                        }
+                    }
+                    None => None,
+                };
                 validate_api_key_response(rec)
             }
             authn_entity_pb::TokenType::JwtAccess | authn_entity_pb::TokenType::JwtRefresh => {

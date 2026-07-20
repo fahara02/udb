@@ -11,6 +11,7 @@ use tonic::transport::Channel;
 use udb::proto::udb::core::apikey::entity::v1 as apikey_entity_pb;
 use udb::proto::udb::core::apikey::services::v1 as apikey_pb;
 use udb::proto::udb::core::apikey::services::v1::api_key_service_client::ApiKeyServiceClient;
+use udb::proto::udb::core::authn::entity::v1 as authn_entity_pb;
 use udb::proto::udb::core::authn::services::v1 as authn_pb;
 use udb::proto::udb::core::authn::services::v1::authn_service_client::AuthnServiceClient;
 use udb::proto::udb::core::authz::services::v1 as authz_pb;
@@ -26,6 +27,53 @@ const METADATA_HEADERS: &[(&str, &str)] = &[
     ("x-scopes", "UDB_SCOPES"),
     ("x-purpose", "UDB_PURPOSE"),
 ];
+
+fn grant_json(grant: authn_entity_pb::ServiceAccountGrant) -> serde_json::Value {
+    json!({
+        "grant_id": grant.grant_id,
+        "user_id": grant.user_id,
+        "service_identity": grant.service_identity,
+        "tenant_id": grant.tenant_id,
+        "project_id": grant.project_id,
+        "approved_scopes": serde_json::from_str::<serde_json::Value>(&grant.approved_scopes_json)
+            .unwrap_or_else(|_| json!([])),
+        "status": grant.status,
+        "revision": grant.revision,
+        "updated_by": grant.updated_by,
+        "reason": grant.reason,
+    })
+}
+
+fn timestamp_json(timestamp: Option<prost_types::Timestamp>) -> serde_json::Value {
+    timestamp
+        .map(|value| json!({ "seconds": value.seconds, "nanos": value.nanos }))
+        .unwrap_or(serde_json::Value::Null)
+}
+
+fn binding_json(binding: authn_entity_pb::CertificateBinding) -> serde_json::Value {
+    json!({
+        "binding_id": binding.binding_id,
+        "selector_kind": binding.selector_kind,
+        "selector_value": binding.selector_value,
+        "user_id": binding.user_id,
+        "tenant_id": binding.tenant_id,
+        "grant_revision": binding.grant_revision,
+        "scope_subset": serde_json::from_str::<serde_json::Value>(&binding.scope_subset_json)
+            .unwrap_or_else(|_| json!([])),
+        "status": binding.status,
+        "not_before": timestamp_json(binding.not_before),
+        "not_after": timestamp_json(binding.not_after),
+        "updated_by": binding.updated_by,
+        "reason": binding.reason,
+    })
+}
+
+fn cli_timestamp(unix: u64) -> Option<prost_types::Timestamp> {
+    (unix != 0).then_some(prost_types::Timestamp {
+        seconds: unix as i64,
+        nanos: 0,
+    })
+}
 
 pub(crate) fn run_auth_command(command: AuthCommand) -> i32 {
     let runtime = match tokio::runtime::Runtime::new() {
@@ -64,11 +112,7 @@ async fn run_auth_command_async(command: AuthCommand) -> Result<serde_json::Valu
             if password.trim().len() < 8 {
                 return Err("--password is required (>= 8 chars)".to_string());
             }
-            let dsn = std::env::var("UDB_PG_DSN")
-                .or_else(|_| std::env::var("DATABASE_URL"))
-                .map_err(|_| {
-                    "set UDB_PG_DSN (or DATABASE_URL) to the target Postgres".to_string()
-                })?;
+            let dsn = require_pg_dsn()?;
             // 06.4.1.1 wiring: when the operator opts into the SERVED single-use
             // bootstrap path (`UDB_ALLOW_SERVED_BOOTSTRAP=1`), route the same CLI
             // through `served_bootstrap_admin`, which re-checks that env gate AND
@@ -107,6 +151,262 @@ async fn run_auth_command_async(command: AuthCommand) -> Result<serde_json::Valu
                 "project": project,
                 "note": "user is ACTIVE; clients can now Authenticate with these credentials",
             }))
+        }
+        AuthCommand::MigrateGrants { dry_run } => {
+            // fix_plan §2.3: offline against the database, mirroring bootstrap.
+            let dsn = require_pg_dsn()?;
+            udb::runtime::service::migrate_service_account_grants(&dsn, dry_run).await
+        }
+        // ── `udb auth grant …` / `udb auth cert-binding …` ────────────────────
+        // Typed-grant + certificate-binding management goes through the native
+        // Authn API, so descriptor scopes and claim tenant binding apply.
+        AuthCommand::GrantCreate {
+            tenant_id,
+            user_id,
+            service_identity,
+            project_id,
+            scopes,
+            reason,
+        } => {
+            require("tenant", &tenant_id)?;
+            require("user", &user_id)?;
+            require("identity", &service_identity)?;
+            if scopes.is_empty() {
+                return Err("--scope is required (repeat for multiple scopes)".to_string());
+            }
+            let mut client = authn_client().await?;
+            let response = client
+                .create_service_account_grant(with_metadata(
+                    authn_pb::CreateServiceAccountGrantRequest {
+                        tenant_id,
+                        user_id,
+                        service_identity,
+                        project_id,
+                        approved_scopes: scopes,
+                        reason,
+                    },
+                ))
+                .await
+                .map_err(|error| format!("grant create failed: {error}"))?
+                .into_inner();
+            response
+                .grant
+                .map(grant_json)
+                .ok_or_else(|| "grant create returned no grant".to_string())
+        }
+        AuthCommand::GrantGet { tenant_id, user_id } => {
+            require("tenant", &tenant_id)?;
+            require("user", &user_id)?;
+            let mut client = authn_client().await?;
+            let response = client
+                .get_service_account_grant(with_metadata(authn_pb::GetServiceAccountGrantRequest {
+                    tenant_id,
+                    user_id,
+                }))
+                .await
+                .map_err(|error| format!("grant get failed: {error}"))?
+                .into_inner();
+            response
+                .grant
+                .map(grant_json)
+                .ok_or_else(|| "grant get returned no grant".to_string())
+        }
+        AuthCommand::GrantList { tenant_id } => {
+            require("tenant", &tenant_id)?;
+            let mut client = authn_client().await?;
+            let response = client
+                .list_service_account_grants(with_metadata(
+                    authn_pb::ListServiceAccountGrantsRequest {
+                        tenant_id,
+                        page_size: 200,
+                        page_token: String::new(),
+                    },
+                ))
+                .await
+                .map_err(|error| format!("grant list failed: {error}"))?
+                .into_inner();
+            Ok(json!({
+                "grants": response.grants.into_iter().map(grant_json).collect::<Vec<_>>(),
+                "next_page_token": response.next_page_token,
+            }))
+        }
+        AuthCommand::GrantReplace {
+            tenant_id,
+            user_id,
+            scopes,
+            project_id,
+            reason,
+            expected_revision,
+        } => {
+            require("tenant", &tenant_id)?;
+            require("user", &user_id)?;
+            if scopes.is_empty() {
+                return Err("--scope is required (repeat for multiple scopes)".to_string());
+            }
+            if expected_revision <= 0 {
+                return Err(
+                    "--expected-revision is required (the grant's current revision, from \
+                     `auth grant get`)"
+                        .to_string(),
+                );
+            }
+            let mut client = authn_client().await?;
+            let response = client
+                .replace_service_account_grant(with_metadata(
+                    authn_pb::ReplaceServiceAccountGrantRequest {
+                        tenant_id,
+                        user_id,
+                        approved_scopes: scopes,
+                        project_id,
+                        reason,
+                        expected_revision,
+                    },
+                ))
+                .await
+                .map_err(|error| format!("grant replace failed: {error}"))?
+                .into_inner();
+            response
+                .grant
+                .map(grant_json)
+                .ok_or_else(|| "grant replace returned no grant".to_string())
+        }
+        AuthCommand::GrantRevoke {
+            tenant_id,
+            user_id,
+            reason,
+        } => {
+            require("tenant", &tenant_id)?;
+            require("user", &user_id)?;
+            let mut client = authn_client().await?;
+            let response = client
+                .revoke_service_account_grant(with_metadata(
+                    authn_pb::RevokeServiceAccountGrantRequest {
+                        tenant_id,
+                        user_id,
+                        reason,
+                    },
+                ))
+                .await
+                .map_err(|error| format!("grant revoke failed: {error}"))?
+                .into_inner();
+            Ok(json!({ "revoked": response.revoked, "message": response.message }))
+        }
+        AuthCommand::GrantRotateIdentity {
+            tenant_id,
+            user_id,
+            new_service_identity,
+            reason,
+            expected_revision,
+        } => {
+            require("tenant", &tenant_id)?;
+            require("user", &user_id)?;
+            require("identity", &new_service_identity)?;
+            if expected_revision <= 0 {
+                return Err(
+                    "--expected-revision is required (the grant's current revision, from \
+                     `auth grant get`)"
+                        .to_string(),
+                );
+            }
+            let mut client = authn_client().await?;
+            let response = client
+                .rotate_service_account_identity(with_metadata(
+                    authn_pb::RotateServiceAccountIdentityRequest {
+                        tenant_id,
+                        user_id,
+                        new_service_identity,
+                        expected_revision,
+                        reason,
+                    },
+                ))
+                .await
+                .map_err(|error| format!("grant identity rotation failed: {error}"))?
+                .into_inner();
+            let grant = response
+                .grant
+                .map(grant_json)
+                .ok_or_else(|| "grant identity rotation returned no grant".to_string())?;
+            Ok(json!({
+                "grant": grant,
+                "previous_service_identity": response.previous_service_identity,
+                "message": response.message,
+            }))
+        }
+        AuthCommand::CertBindingCreate {
+            tenant_id,
+            user_id,
+            selector_kind,
+            selector_value,
+            scope_subset,
+            not_before_unix,
+            not_after_unix,
+            reason,
+        } => {
+            require("tenant", &tenant_id)?;
+            require("user", &user_id)?;
+            require("selector-kind", &selector_kind)?;
+            require("selector-value", &selector_value)?;
+            let mut client = authn_client().await?;
+            let response = client
+                .create_certificate_binding(with_metadata(
+                    authn_pb::CreateCertificateBindingRequest {
+                        tenant_id,
+                        user_id,
+                        selector_kind,
+                        selector_value,
+                        scope_subset,
+                        reason,
+                        not_before: cli_timestamp(not_before_unix),
+                        not_after: cli_timestamp(not_after_unix),
+                    },
+                ))
+                .await
+                .map_err(|error| format!("certificate binding create failed: {error}"))?
+                .into_inner();
+            response
+                .binding
+                .map(binding_json)
+                .ok_or_else(|| "certificate binding create returned no binding".to_string())
+        }
+        AuthCommand::CertBindingList { tenant_id } => {
+            require("tenant", &tenant_id)?;
+            let mut client = authn_client().await?;
+            let response = client
+                .list_certificate_bindings(with_metadata(
+                    authn_pb::ListCertificateBindingsRequest {
+                        tenant_id,
+                        page_size: 200,
+                        page_token: String::new(),
+                    },
+                ))
+                .await
+                .map_err(|error| format!("certificate binding list failed: {error}"))?
+                .into_inner();
+            Ok(json!({
+                "bindings": response.bindings.into_iter().map(binding_json).collect::<Vec<_>>(),
+                "next_page_token": response.next_page_token,
+            }))
+        }
+        AuthCommand::CertBindingRevoke {
+            tenant_id,
+            binding_id,
+            reason,
+        } => {
+            require("tenant", &tenant_id)?;
+            require("binding", &binding_id)?;
+            let mut client = authn_client().await?;
+            let response = client
+                .revoke_certificate_binding(with_metadata(
+                    authn_pb::RevokeCertificateBindingRequest {
+                        tenant_id,
+                        binding_id,
+                        reason,
+                    },
+                ))
+                .await
+                .map_err(|error| format!("certificate binding revoke failed: {error}"))?
+                .into_inner();
+            Ok(json!({ "revoked": response.revoked, "message": response.message }))
         }
         AuthCommand::PrincipalList { tenant_id } => {
             let mut client = authn_client().await?;
@@ -194,6 +494,18 @@ async fn run_auth_command_async(command: AuthCommand) -> Result<serde_json::Valu
                 "revoked_count": response.revoked_count,
                 "operation_id": response.operation_id,
             }))
+        }
+        // UDB-AUTH-009: offline api-key rotation/reconciliation (direct DB, same
+        // operator trust model as `auth bootstrap user`).
+        AuthCommand::ApiKeyRevoke { key_prefix } => {
+            require("key", &key_prefix)?;
+            let dsn = require_pg_dsn()?;
+            udb::runtime::service::cli_api_key_revoke(&dsn, &key_prefix).await
+        }
+        AuthCommand::ApiKeyList { owner_id } => {
+            require("owner", &owner_id)?;
+            let dsn = require_pg_dsn()?;
+            udb::runtime::service::cli_api_key_list(&dsn, &owner_id).await
         }
         AuthCommand::ApiKeyCreate {
             owner_id,
@@ -407,6 +719,12 @@ fn request_context() -> common_pb::RequestContext {
 
 fn with_metadata<T>(message: T) -> Request<T> {
     let mut request = Request::new(message);
+    request.metadata_mut().insert(
+        "x-correlation-id",
+        format!("udb-cli-{}", uuid::Uuid::new_v4())
+            .parse()
+            .expect("generated correlation id is valid gRPC metadata"),
+    );
     if let Ok(token) = env::var("UDB_AUTH_TOKEN").or_else(|_| env::var("UDB_BEARER_TOKEN")) {
         let token = token.trim();
         if !token.is_empty() {
@@ -457,6 +775,15 @@ fn require(name: &str, value: &str) -> Result<(), String> {
     } else {
         Ok(())
     }
+}
+
+/// Resolve the offline-command Postgres DSN (UDB_PG_DSN, falling back to
+/// DATABASE_URL) — shared by every direct-DB `auth` verb (bootstrap,
+/// migrate-grants, grant, cert-binding).
+fn require_pg_dsn() -> Result<String, String> {
+    std::env::var("UDB_PG_DSN")
+        .or_else(|_| std::env::var("DATABASE_URL"))
+        .map_err(|_| "set UDB_PG_DSN (or DATABASE_URL) to the target Postgres".to_string())
 }
 
 /// Mask a secret/identifier in CLI output (item 105): keep a short prefix for

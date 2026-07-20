@@ -1,0 +1,105 @@
+syntax = "proto3";
+
+package udb.core.authn.entity.v1;
+
+import "google/protobuf/timestamp.proto";
+import "udb/core/common/v1/db.proto";
+import "udb/core/common/v1/security.proto";
+
+option csharp_namespace = "udb.core.Authn.Entity.V1";
+option go_package = "github.com/udb-project/udb/gen/go/udb/core/authn/entity/v1;authnv1";
+option java_package = "com.udb.core.authn.entity.v1";
+option php_metadata_namespace = "Udb\\GPBMetadata\\Core\\Authn\\Entity\\V1";
+option php_namespace = "Udb\\Core\\Authn\\Entity\\V1";
+
+// ---------------------------------------------------------------------------
+// CertificateBinding — the canonical, durable, server-controlled mTLS binding
+// (UDB-AUTH-007). Maps a TLS peer-certificate selector to a service-account
+// grant, so an mTLS-only request authenticates through server-side state: the
+// verified certificate resolves a binding, the binding resolves the account's
+// CURRENT ServiceAccountGrant, and the principal (tenant/project/scopes) is
+// derived from that grant — optionally attenuated by this binding's scope
+// subset. Free-form scopes are never copied into certificate metadata, and no
+// caller header can widen the result. Unknown, expired, revoked, misbound or
+// store-unavailable certificates fail closed.
+// ---------------------------------------------------------------------------
+message CertificateBinding {
+  option (udb.core.common.v1.pg_table) = {
+    table_name: "certificate_bindings"
+    schema_name: "udb_authn"
+    migration_order: 27
+    is_table: true
+    comment: "Server-controlled mTLS certificate-to-service-account bindings"
+    soft_delete: false
+    audit_fields: true
+    enable_rls: true
+    rls_policies: {
+      policy_name: "tenant_isolation"
+      using: "(tenant_id::text = current_setting('app.current_tenant_id', true)::text)"
+      permissive: true
+    }
+    indexes: {
+      index_name: "idx_certificate_bindings_selector"
+      columns: "selector_kind"
+      columns: "selector_value"
+      unique: true
+    }
+    cdc_topic: "udb.authn.certificate_bindings.cdc"
+    required_scope: "authn:grants:read"
+    replica_hint: "primary"
+  };
+  option (udb.core.common.v1.db_table_security) = {
+    tenant_isolation_mode: "tenant"
+    tenant_column: "tenant_id"
+    rls_policy_template: "tenant_id = current_setting('app.current_tenant_id')"
+    soft_delete_mode: "none"
+    retention_class: "authn.policy"
+    audit_mode: AUDIT_MODE_MUTATION
+    encryption_profile: "tenant"
+    pii_profile: "standard"
+    export_eligible: false
+    data_residency_policy_ref: "tenant.data_residency"
+  };
+
+  // Server-assigned UUID identifying this binding.
+  string binding_id = 1 [(udb.core.common.v1.pg_column) = { column_name: "binding_id" sql_type: "UUID" primary_key: true not_null: true default_value: "gen_random_uuid()" }];
+
+  // Certificate selector. SPIFFE_URI is preferred (matched against the URI
+  // SAN); DNS_SAN and SUBJECT_CN cover legacy issuance; FINGERPRINT_SHA256
+  // pins one exact certificate (hex digest of the DER).
+  string selector_kind = 2 [(udb.core.common.v1.pg_column) = { column_name: "selector_kind" sql_type: "VARCHAR(32)" not_null: true }];
+  string selector_value = 3 [(udb.core.common.v1.pg_column) = { column_name: "selector_value" sql_type: "VARCHAR(1024)" not_null: true }];
+
+  // The bound service-account owner. The principal's tenant/project/scopes are
+  // resolved from this account's CURRENT ServiceAccountGrant at request time.
+  string user_id = 4 [(udb.core.common.v1.pg_column) = { column_name: "user_id" sql_type: "UUID" not_null: true comment: "FK to udb_authn.users.user_id" foreign_key: { references_table: "users" references_column: "user_id" references_schema: "udb_authn" on_delete: REFERENTIAL_ACTION_CASCADE } index: { index_name: "idx_certificate_bindings_user" index_type: "BTREE" } }];
+
+  // Same canonical tenant identifier type as authn User.tenant_id.
+  string tenant_id = 5 [(udb.core.common.v1.pg_column) = { column_name: "tenant_id" sql_type: "VARCHAR(120)" not_null: true index: { index_name: "idx_certificate_bindings_tenant" index_type: "BTREE" } }];
+
+  // The grant revision this binding was reviewed against. A grant replace
+  // bumps its revision; operators re-review bindings after grant changes.
+  int64 grant_revision = 6 [(udb.core.common.v1.pg_column) = { column_name: "grant_revision" sql_type: "BIGINT" not_null: true default_value: "1" }];
+
+  // Optional attenuation: a JSON array subset of the grant's approved scopes.
+  // Empty array = the full current grant. Never a widening.
+  string scope_subset_json = 7 [(udb.core.common.v1.pg_column) = { column_name: "scope_subset_json" sql_type: "JSONB" not_null: true default_value: "'[]'" }];
+
+  // ACTIVE | REVOKED. Only ACTIVE bindings authenticate.
+  string status = 8 [(udb.core.common.v1.pg_column) = { column_name: "status" sql_type: "VARCHAR(20)" not_null: true default_value: "'ACTIVE'" index: { index_name: "idx_certificate_bindings_status" index_type: "BTREE" } }];
+
+  // Validity window (both optional; a request outside the window fails closed).
+  google.protobuf.Timestamp not_before = 9 [(udb.core.common.v1.pg_column) = { column_name: "not_before" sql_type: "TIMESTAMPTZ" }];
+  google.protobuf.Timestamp not_after = 10 [(udb.core.common.v1.pg_column) = { column_name: "not_after" sql_type: "TIMESTAMPTZ" }];
+
+  // Revocation metadata.
+  google.protobuf.Timestamp revoked_at = 11 [(udb.core.common.v1.pg_column) = { column_name: "revoked_at" sql_type: "TIMESTAMPTZ" }];
+  string revoke_reason = 12 [(udb.core.common.v1.pg_column) = { column_name: "revoke_reason" sql_type: "VARCHAR(1024)" not_null: true default_value: "''" }];
+
+  // Audit provenance.
+  string updated_by = 13 [(udb.core.common.v1.pg_column) = { column_name: "updated_by" sql_type: "VARCHAR(255)" not_null: true default_value: "''" }];
+  string reason = 14 [(udb.core.common.v1.pg_column) = { column_name: "reason" sql_type: "VARCHAR(1024)" not_null: true default_value: "''" }];
+
+  google.protobuf.Timestamp created_at = 15 [(udb.core.common.v1.pg_column) = { column_name: "created_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "now()" }];
+  google.protobuf.Timestamp updated_at = 16 [(udb.core.common.v1.pg_column) = { column_name: "updated_at" sql_type: "TIMESTAMPTZ" not_null: true default_value: "now()" }];
+}

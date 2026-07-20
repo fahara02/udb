@@ -131,7 +131,7 @@ fn work_event_text_is_bounded() {
     assert_eq!(hard.chars().count(), 5);
     // Multi-byte safety: char-based, never panics, stays within the char bound.
     assert!(
-        bound_embedding_text("café ☕ ambulance 🚑 dispatch", 8)
+        bound_embedding_text("café ☕ delivery 🚚 dispatch", 8)
             .chars()
             .count()
             <= 8
@@ -289,12 +289,12 @@ fn source_message_type_missing_from_catalog_carries_field_violation() {
     assert_eq!(err.code(), tonic::Code::InvalidArgument);
     assert_eq!(
         err.message(),
-        "source_message_type 'acme.crm.entity.v1.Contact' is not present in the active catalog manifest"
+        "unknown message_type acme.crm.entity.v1.Contact"
     );
     assert_single_field_violation(
         &err,
         "source_message_type",
-        "must be present in the active catalog manifest",
+        "must identify exactly one entity in the active catalog manifest",
     );
 }
 
@@ -559,7 +559,7 @@ fn chunk_text_splits_with_overlap_and_bounds() {
     assert!(capped.len() <= 2, "max_chunks caps the count");
     // Multibyte safety: char-based, never panics, each chunk within the bound.
     let mb = chunk_text(
-        "café ☕ ambulance 🚑 dispatch café ☕ ambulance 🚑 dispatch",
+        "café ☕ delivery 🚚 dispatch café ☕ delivery 🚚 dispatch",
         8,
         2,
         100,

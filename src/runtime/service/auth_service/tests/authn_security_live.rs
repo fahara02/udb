@@ -113,7 +113,14 @@ async fn live_postgres_authenticate_with_api_key() {
     migrate_native_auth_db(&pool).await;
     let authn = authn_service(pool.clone());
     let apikeys = api_key_service(pool.clone());
-    let owner_id = Uuid::new_v4().to_string();
+    let (owner, _) = create_service_account_with_grant(
+        &authn,
+        "authenticate_key",
+        "CorrectHorse1!",
+        &["data:read"],
+    )
+    .await;
+    let owner_id = owner.user_id;
 
     let created = apikeys
         .create_api_key(Request::new(apikey_pb::CreateApiKeyRequest {

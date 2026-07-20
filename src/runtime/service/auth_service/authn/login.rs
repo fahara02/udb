@@ -45,13 +45,6 @@ fn requested_scopes_from_metadata(metadata: &tonic::metadata::MetadataMap) -> Ve
         })
 }
 
-fn forbidden_service_scope(scope: &str) -> bool {
-    matches!(
-        scope.trim(),
-        "*" | "udb:*" | "udb:admin" | "organization_owner"
-    )
-}
-
 fn service_scope_policy_status(message: &'static str) -> Status {
     login_policy_status_with_code("password_login", "service_account_scope_grant", message)
 }
@@ -101,10 +94,14 @@ fn reset_password_request_valid_status() -> Status {
 }
 
 impl AuthnServiceImpl {
-    fn resolve_password_login_grants(
+    /// Service-account password login resolves only through the typed durable
+    /// grant. Legacy profile attributes are migration input, never a parallel
+    /// runtime authority.
+    fn resolve_password_login_grants_with_typed(
         &self,
         user: &UserRecord,
         requested_scopes: &[String],
+        typed_grant: Option<&super::super::grants::GrantRecord>,
     ) -> Result<PasswordLoginGrants, Status> {
         if user.account_kind != authn::AccountKind::ServiceAccount {
             let (scopes, roles) =
@@ -116,48 +113,32 @@ impl AuthnServiceImpl {
             });
         }
 
-        let service_identity = authn::profile::service_identity_from_profile_attributes_json(
-            &user.profile_attributes_json,
-        );
-        if service_identity.trim().is_empty() {
-            return Err(service_scope_policy_status(
-                "service account profile must include service_identity",
-            ));
-        }
-        let approved = authn::profile::service_scopes_from_profile_attributes_json(
-            &user.profile_attributes_json,
-        );
-        if approved.is_empty() {
-            return Err(service_scope_policy_status(
-                "service account has no approved scopes",
-            ));
-        }
-        if approved.iter().any(|scope| forbidden_service_scope(scope))
-            || requested_scopes
-                .iter()
-                .any(|scope| forbidden_service_scope(scope))
-        {
-            return Err(service_scope_policy_status(
-                "service account password login cannot issue admin or wildcard scopes",
-            ));
-        }
-        let scopes = if requested_scopes.is_empty() {
-            approved
-        } else {
-            for requested in requested_scopes {
-                if !approved.contains(requested) {
-                    return Err(service_scope_policy_status(
-                        "requested service-account scope is not approved",
-                    ));
-                }
+        if let Some(grant) = typed_grant {
+            if !grant.status.eq_ignore_ascii_case("ACTIVE") {
+                return Err(service_scope_policy_status(
+                    "service account grant is revoked",
+                ));
             }
-            requested_scopes.to_vec()
-        };
-        Ok(PasswordLoginGrants {
-            scopes,
-            roles: Vec::new(),
-            service_identity,
-        })
+            if grant.tenant_id.trim() != user.tenant_id.trim()
+                || grant.project_id.trim() != user.project_id.trim()
+                || grant.service_identity.trim().is_empty()
+            {
+                return Err(service_scope_policy_status(
+                    "service account grant lineage does not match the active account",
+                ));
+            }
+            let scopes =
+                super::super::grants::validate_service_scopes(requested_scopes, &grant.scopes)?;
+            return Ok(PasswordLoginGrants {
+                scopes,
+                roles: Vec::new(),
+                service_identity: grant.service_identity.clone(),
+            });
+        }
+
+        Err(service_scope_policy_status(
+            "service account has no active typed grant; run `udb auth migrate-grants` or create a grant",
+        ))
     }
     pub(super) async fn authenticate_impl(
         &self,
@@ -177,6 +158,33 @@ impl AuthnServiceImpl {
             .await
             .map_err(|err| login_internal_status("authenticate_api_key", err.to_string()))?
             .ok_or_else(|| Status::unauthenticated("invalid credential"))?;
+            // CRIT-4: attenuate the key's stored scopes against the owner's
+            // CURRENT typed grant — the same live check the data-plane
+            // credential layer applies. A revoked/replaced grant or inactive
+            // owner invalidates the key here too; the exchanged bearer can
+            // never carry scopes wider than the live grant.
+            let rec = {
+                let mut rec = rec;
+                let pool = self.require_pool()?;
+                match super::super::grants::attenuate_key_scopes_against_grant(
+                    pool,
+                    &rec.tenant_id,
+                    &rec.principal_id,
+                    rec.grant_revision,
+                    &rec.scopes,
+                )
+                .await
+                {
+                    Ok(Some(effective)) => rec.scopes = effective,
+                    Ok(None) => {
+                        return Err(Status::unauthenticated("invalid credential"));
+                    }
+                    Err(error) => {
+                        return Err(login_internal_status("authenticate_api_key", error));
+                    }
+                }
+                rec
+            };
             let mut principal = principal_from_api_key(&rec);
             let mut requested_scopes = req.requested_scopes.clone();
             requested_scopes.retain(|scope| !scope.trim().is_empty());
@@ -634,7 +642,24 @@ impl AuthnServiceImpl {
         // Block 1 (auth_fix.md, Decision E): resolve the user's role-derived
         // grants ONCE from the warm authz snapshot and thread them into both the
         // session record (the refresh carrier) and the issued JWT below.
-        let grants = self.resolve_password_login_grants(&user, &requested_scopes)?;
+        // fix_plan §2.2: for a service account, the TYPED durable grant (when
+        // one exists) is authoritative over profile attributes.
+        let typed_grant = if user.account_kind == authn::AccountKind::ServiceAccount {
+            match self.pg_pool.as_ref() {
+                Some(pool) => {
+                    super::super::grants::get_grant_by_user(pool, &user.tenant_id, &user.user_id)
+                        .await?
+                }
+                None => None,
+            }
+        } else {
+            None
+        };
+        let grants = self.resolve_password_login_grants_with_typed(
+            &user,
+            &requested_scopes,
+            typed_grant.as_ref(),
+        )?;
         let scopes = grants.scopes.clone();
         let roles = grants.roles.clone();
         let session_result = self

@@ -37,7 +37,7 @@ use uuid::Uuid;
 
 use crate::broker::{
     DeletePlanRequest, RequestContext, SelectPlanRequest, SortSpec, UpsertPlanRequest,
-    build_delete_plan, build_select_query_plan, build_upsert_plan, table_for_message,
+    build_delete_plan, build_select_query_plan, build_upsert_plan, resolve_table_for_message,
 };
 #[cfg(any(feature = "s3", feature = "gcs", feature = "azureblob"))]
 use crate::broker::{

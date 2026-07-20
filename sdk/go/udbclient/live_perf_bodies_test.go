@@ -79,6 +79,7 @@ func TestLivePerfExplicitBodyCoverage(t *testing.T) {
 		"embedding_job_id": "11111111-1111-4111-8111-000000000101", "embedding_work_item_id": "11111111-1111-4111-8111-000000000102",
 		"embedding_document_id": "11111111-1111-4111-8111-000000000103", "embedding_document_job_id": "11111111-1111-4111-8111-000000000104",
 		"embedding_delete_model_id": "embedding-delete-model-1",
+		"grant_binding_id":          "11111111-1111-4111-8111-000000000201",
 		"join_session_room_id":      "join-room-1", "leave_peer_id": "leave-peer-1", "mark_saga_id": "mark-saga-1",
 		"otp_code": "123456", "otp_id": "otp-1", "owner_id": "owner-1", "quarantine_dlq_id": "quarantine-dlq-1",
 		"policy_version_id": "policy-version-1", "approve_draft_id": "approve-draft-1", "reject_draft_id": "reject-draft-1",
@@ -524,6 +525,23 @@ func TestBuildManifestJSONBodyUsesSharedManifest(t *testing.T) {
 	}
 	if got := loginMsg.Get(loginFields.ByName("project_hint")).String(); got != "project-1" {
 		t.Fatalf("authn login project_hint = %q, want project-1", got)
+	}
+	// fix_plan Phases 2+3: typed service-account grant + mTLS certificate
+	// binding management RPCs — every one carries an explicit manifest body
+	// (no generic fill). Seeds for the grant id family are set above.
+	for _, rpc := range []string{
+		"AuthnService/CreateServiceAccountGrant",
+		"AuthnService/GetServiceAccountGrant",
+		"AuthnService/ListServiceAccountGrants",
+		"AuthnService/ReplaceServiceAccountGrant",
+		"AuthnService/RevokeServiceAccountGrant",
+		"AuthnService/CreateCertificateBinding",
+		"AuthnService/ListCertificateBindings",
+		"AuthnService/RevokeCertificateBinding",
+	} {
+		if _, _, ok := buildManifestJSONBody("/udb.core.authn.services.v1."+rpc, fix); !ok {
+			t.Fatalf("%s manifest JSON body was not hydrated", rpc)
+		}
 	}
 	refreshTokenIn, _, ok := buildManifestJSONBody("/udb.core.authn.services.v1.AuthnService/RefreshToken", fix)
 	if !ok {

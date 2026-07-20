@@ -147,12 +147,12 @@ mod tests {
     #[test]
     fn service_profile_extracts_identity_and_scopes() {
         let raw = r#"{
-            "serviceIdentity": "ambulife.authn",
+            "serviceIdentity": "acme.billing",
             "approvedScopes": "[\"udb:read\", \"udb:write\", \"udb:read\"]"
         }"#;
         assert_eq!(
             service_identity_from_profile_attributes_json(raw),
-            "ambulife.authn"
+            "acme.billing"
         );
         assert_eq!(
             service_scopes_from_profile_attributes_json(raw),

@@ -11,7 +11,7 @@ use sqlx::postgres::PgArguments;
 use sqlx::query::Query;
 use uuid::Uuid;
 
-use crate::broker::{RequestContext, table_for_message};
+use crate::broker::{RequestContext, resolve_table_for_message};
 use crate::generation::sql::{resolve_tenant_column_ref, table_requires_tenant_column};
 use crate::generation::{CatalogManifest, ManifestColumn, ManifestTable};
 use crate::proto::{Mutation, SelectRequest, UpsertRequest};
@@ -86,11 +86,11 @@ pub(crate) async fn execute_tx_plan(
     errors: &[String],
 ) -> Result<u64, tonic::Status> {
     reject_plan(errors)?;
-    let table = table_for_message(manifest, message_type).ok_or_else(|| {
+    let table = resolve_table_for_message(manifest, message_type).map_err(|error| {
         postgres_invalid_field(
             "message_type",
-            "must match a manifest table message type",
-            "unknown message_type",
+            "must match exactly one manifest table message type",
+            error.to_string(),
         )
     })?;
     let query = bind_values(sqlx::query(sql), table, columns, values)?;
@@ -134,11 +134,11 @@ pub(crate) fn build_join_fusion_sql(
     let tables = message_types
         .iter()
         .map(|message_type| {
-            table_for_message(manifest, message_type).ok_or_else(|| {
+            resolve_table_for_message(manifest, message_type).map_err(|error| {
                 postgres_invalid_field(
                     "message_type",
-                    "must match a manifest table message type",
-                    format!("unknown message_type {message_type}"),
+                    "must match exactly one manifest table message type",
+                    error.to_string(),
                 )
             })
         })

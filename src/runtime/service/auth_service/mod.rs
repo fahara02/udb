@@ -26,6 +26,12 @@ mod control_plane;
 // reuse the ONE shared compliance-envelope builder/validator (Phase 10 telemetry
 // coherence) instead of emitting a second divergent envelope shape.
 pub(crate) mod events;
+// Typed service-account grants + mTLS certificate bindings (fix_plan Phases
+// 2+3): central scope validation, grant/binding stores, profile→grant
+// migration, request-time certificate resolution, and the free handler fns the
+// AuthnService trait impl delegates to. `pub(crate)` so the security layer can
+// reach `resolve_certificate_grant` / `validate_service_scopes`.
+pub(crate) mod grants;
 mod idp;
 mod mappings;
 pub(crate) mod readiness;
@@ -80,41 +86,25 @@ pub(super) fn now_unix() -> u64 {
         .unwrap_or(0)
 }
 
-/// AUTH-004 producer: bridges the sync `security::ApiKeyPrincipalResolver` seam to
-/// the async keyed-HMAC validator so `x-api-key` authenticates DataBroker CRUD from
-/// the stored key record. Reuses `authn::validate_api_key` (no second validator);
-/// `block_in_place` yields the multi-thread runtime worker while the DB lookup runs
-/// (`resolve` only ever runs inside a tonic handler, i.e. on a runtime worker).
-struct ApiKeyPrincipalResolverImpl {
-    store: Arc<PostgresApiKeyStore>,
-    hash_key: Vec<u8>,
-}
-
-impl crate::runtime::security::ApiKeyPrincipalResolver for ApiKeyPrincipalResolverImpl {
-    fn resolve(
-        &self,
-        raw_api_key: &str,
-    ) -> Result<Option<crate::runtime::security::ApiKeyPrincipal>, String> {
-        let now = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_secs())
-            .unwrap_or(0);
-        let record = tokio::task::block_in_place(|| {
-            tokio::runtime::Handle::current().block_on(crate::runtime::authn::validate_api_key(
-                self.store.as_ref(),
-                raw_api_key,
-                &self.hash_key,
-                now,
-            ))
-        })?;
-        Ok(record.map(|rec| crate::runtime::security::ApiKeyPrincipal {
-            subject: rec.principal_id,
-            service_identity: rec.service_identity,
-            tenant_id: rec.tenant_id,
-            project_id: rec.project_id,
-            scopes: rec.scopes,
-        }))
-    }
+/// UDB-AUTH-004/007: install the data-plane credential dependencies for scoped
+/// `x-api-key` principals and certificate-verified service-identity grants.
+/// Extracted so a DataBroker-only deployment
+/// (native control plane disabled — `build_auth_services` never runs) still
+/// authenticates scoped keys and registered mTLS services instead of failing
+/// closed for want of wiring. Idempotent; safe to call from both paths.
+pub(crate) fn install_data_plane_credential_resolvers(
+    pool: sqlx::PgPool,
+    authn_config: &AuthnConfig,
+) {
+    // fix_plan §1.2: the async credential layer is the only request-time
+    // authority. No process-global synchronous database bridge is installed.
+    crate::runtime::credential_layer::install_auth_plane_deps(Arc::new(
+        crate::runtime::credential_layer::AuthPlaneDeps {
+            pool: pool.clone(),
+            api_key_store: Arc::new(PostgresApiKeyStore::new(pool.clone(), "")),
+            api_key_hash_key: authn_config.api_key_hash_secret().as_bytes().to_vec(),
+        },
+    ));
 }
 
 impl DataBrokerService {
@@ -174,18 +164,10 @@ impl DataBrokerService {
                 )
             });
             let api_key_store = Arc::new(PostgresApiKeyStore::new(pool.clone(), ""));
-            // AUTH-004: ACTIVATE `x-api-key` auth on the DataBroker data plane by
-            // installing the principal resolver over THIS key store. The sync,
-            // header-only `security_from_request` bridges to the async keyed-HMAC
-            // validator `authn::validate_api_key` (no second validator, no in-memory
-            // store); the principal/tenant/project/scopes come only from the stored
-            // record, so a caller cannot widen a key via headers.
-            crate::runtime::security::install_api_key_principal_resolver(Arc::new(
-                ApiKeyPrincipalResolverImpl {
-                    store: api_key_store.clone(),
-                    hash_key: authn_config.api_key_hash_secret().as_bytes().to_vec(),
-                },
-            ));
+            // Install the shared async request credential dependencies over this
+            // store. DataBroker and native method security consume the same
+            // pre-resolved principal; no handler performs a second key lookup.
+            install_data_plane_credential_resolvers(pool.clone(), &authn_config);
             let user_store: Arc<dyn UserStore> = Arc::new(PostgresUserStore::new(pool.clone(), ""));
             let session_store: Arc<dyn SessionStore> =
                 if authn_config.session_backend.eq_ignore_ascii_case("redis") {
@@ -228,8 +210,8 @@ impl DataBrokerService {
             (
                 authn,
                 ApiKeyServiceImpl::with_store(authn_config, api_key_store)
-                    // AUTH-006: owner lookup for service-identity lineage —
-                    // best-effort inside CreateApiKey, never a hard gate.
+                    // Owner and typed-grant lookup are mandatory for key
+                    // issuance and validation.
                     .with_user_store(user_store)
                     .with_postgres(Some(pool.clone()))
                     .with_event_sink(event_sink.clone()),
@@ -270,6 +252,79 @@ impl DataBrokerService {
 /// auth tests use, which bypasses the listener's per-action gate — `authorize_action`
 /// is permissive when no claim context is installed), creates the user, and marks
 /// it ACTIVE. After this, clients `Authenticate` normally. Returns the new user id.
+/// fix_plan §2.3: offline CLI entry (`udb auth migrate-grants`) — migrate
+/// legacy profile-attribute service grants into the typed durable
+/// `service_account_grants` table. Deterministic; `dry_run` reports every
+/// would-be migration/rejection without writing; profile attributes stay
+/// non-authoritative afterwards (the login path prefers the typed grant).
+/// UDB-AUTH-009: offline `udb auth api-key revoke` / `list` — the CLI had only
+/// create, so rotation/reconciliation was impossible without the SDK. Direct
+/// DB access (same operator trust model as `auth bootstrap user`); the served
+/// RPC path with its tenant/claim binding is unchanged.
+pub async fn cli_api_key_list(dsn: &str, owner_id: &str) -> Result<serde_json::Value, String> {
+    if owner_id.trim().is_empty() {
+        return Err("--owner is required".to_string());
+    }
+    let pool = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(2)
+        .connect(dsn)
+        .await
+        .map_err(|err| format!("postgres connect failed: {err}"))?;
+    let store = PostgresApiKeyStore::new(pool, "");
+    let now = now_unix();
+    let keys =
+        crate::runtime::authn::ApiKeyStore::list_for_principal(&store, owner_id.trim(), false, now)
+            .await?;
+    Ok(serde_json::json!({
+        "owner_id": owner_id.trim(),
+        "count": keys.len(),
+        "keys": keys.iter().map(|key| serde_json::json!({
+            "key_prefix": key.key_prefix,
+            "name": key.name,
+            "tenant_id": key.tenant_id,
+            "project_id": key.project_id,
+            "scopes": key.scopes,
+            "revoked": key.is_revoked(),
+        })).collect::<Vec<_>>(),
+    }))
+}
+
+pub async fn cli_api_key_revoke(dsn: &str, key_prefix: &str) -> Result<serde_json::Value, String> {
+    if key_prefix.trim().is_empty() {
+        return Err("--key (key prefix) is required".to_string());
+    }
+    let pool = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(2)
+        .connect(dsn)
+        .await
+        .map_err(|err| format!("postgres connect failed: {err}"))?;
+    let store = PostgresApiKeyStore::new(pool, "");
+    let now = now_unix();
+    let revoked =
+        crate::runtime::authn::ApiKeyStore::revoke(&store, key_prefix.trim(), now).await?;
+    Ok(serde_json::json!({ "key_prefix": key_prefix.trim(), "revoked": revoked }))
+}
+
+pub async fn migrate_service_account_grants(
+    dsn: &str,
+    dry_run: bool,
+) -> Result<serde_json::Value, String> {
+    let pool = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(2)
+        .connect(dsn)
+        .await
+        .map_err(|err| format!("postgres connect failed: {err}"))?;
+    let report = grants::migrate_profile_grants(&pool, dry_run)
+        .await
+        .map_err(|status| status.message().to_string())?;
+    Ok(serde_json::json!({
+        "dry_run": dry_run,
+        "migrated": report.migrated,
+        "skipped_existing": report.skipped_existing,
+        "rejected": report.rejected,
+    }))
+}
+
 pub async fn bootstrap_admin_user(
     dsn: &str,
     username: &str,

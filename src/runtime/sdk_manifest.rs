@@ -342,8 +342,7 @@ pub fn entity_manifest() -> Vec<EntityDescriptor> {
         .iter()
         .filter(|message| message.db_table_security.is_some())
     {
-        let Some(table) = crate::broker::table_for_message(catalog, &message.full_name)
-            .or_else(|| crate::broker::table_for_message(catalog, &message.name))
+        let Ok(table) = crate::broker::resolve_table_for_message(catalog, &message.full_name)
         else {
             continue;
         };

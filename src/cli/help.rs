@@ -114,6 +114,18 @@ const COMMANDS: &[CmdHelp] = &[
         details: "",
     },
     CmdHelp {
+        name: "auth migrate-grants",
+        group: "Auth & policy",
+        summary: "Migrate legacy profile-attribute service grants into the typed service_account_grants table.",
+        usage: "udb auth migrate-grants [--dry-run]",
+        details: "\
+  Needs UDB_PG_DSN. Deterministic: scans ACTIVE service accounts, validates each
+  profile grant (admin/wildcard scopes and duplicate identities are REJECTED and
+  reported, never partially written), and creates one typed grant per account.
+  --dry-run reports without writing. After migration the typed grant is the
+  authoritative source for password login, API keys, and mTLS bindings.",
+    },
+    CmdHelp {
         name: "auth bootstrap user",
         group: "Auth & policy",
         summary: "Mint the FIRST admin OFFLINE (no running broker needed); prints the canonical tenant UUID.",
@@ -130,6 +142,51 @@ const COMMANDS: &[CmdHelp] = &[
         summary: "Mint an API key (tenant-scoped).",
         usage: "udb auth api-key create --owner <id> --name <n> --scope <s> [--scope <s>…]",
         details: "",
+    },
+    CmdHelp {
+        name: "auth api-key list/revoke",
+        group: "Auth & policy",
+        summary: "List an owner's API keys or revoke one OFFLINE (UDB-AUTH-009 rotation/reconciliation).",
+        usage: "udb auth api-key list --owner <id>  |  udb auth api-key revoke --key <key_prefix>",
+        details: "  Needs UDB_PG_DSN (offline, same operator trust model as `auth bootstrap user`).
+  list prints every key for the owner (prefix/name/tenant/scopes/revoked) so a
+  provisioner can reconcile instead of minting duplicates; revoke deactivates by
+  key prefix. Create now rejects a duplicate ACTIVE name for the same owner.",
+    },
+    CmdHelp {
+        name: "auth grant",
+        group: "Auth & policy",
+        summary: "Manage typed service-account grants through the authenticated native API.",
+        usage: "udb auth grant <create|get|list|replace|rotate-identity|revoke> --tenant <tenant-id> [flags]",
+        details: "\
+  Needs UDB_AUTH_TARGET (or UDB_GRPC_TARGET) and UDB_AUTH_TOKEN.
+  create:  --tenant <tenant-id> --user <uuid> --identity <svc-id> --scope <s> [--scope <s>…]
+           [--project <p>] [--reason <r>]
+  get:     --tenant <tenant-id> --user <uuid>
+  list:    --tenant <tenant-id>
+  replace: --tenant <tenant-id> --user <uuid> --scope <s> [--scope <s>…]
+           --expected-revision <n> [--project <p>] [--reason <r>]
+  rotate-identity: --tenant <tenant-id> --user <uuid> --identity <new-id>
+           --expected-revision <n> [--reason <r>]
+  revoke:  --tenant <tenant-id> --user <uuid> [--reason <r>]
+  Wildcard/admin/owner scopes are always rejected. Replace and identity rotation
+  bump the revision, invalidating dependent keys and bindings until re-issued.",
+    },
+    CmdHelp {
+        name: "auth cert-binding",
+        group: "Auth & policy",
+        summary: "Manage mTLS certificate bindings through the authenticated native API.",
+        usage: "udb auth cert-binding <create|list|revoke> --tenant <tenant-id> [flags]",
+        details: "\
+  Needs UDB_AUTH_TARGET (or UDB_GRPC_TARGET) and UDB_AUTH_TOKEN.
+  create: --tenant <tenant-id> --user <uuid> --selector-kind <k> --selector-value <v>
+          [--scope <s>…] [--not-before-unix <seconds>] [--not-after-unix <seconds>]
+          [--reason <r>]
+  list:   --tenant <tenant-id>
+  revoke: --tenant <tenant-id> --binding <id> [--reason <r>]
+  Selector kinds: SPIFFE_URI, DNS_SAN, SUBJECT_CN, FINGERPRINT_SHA256. The
+  account must hold an ACTIVE grant; --scope attenuates it (empty = full grant).
+  Re-creating a REVOKED selector supersedes the old row in place (same id).",
     },
     CmdHelp {
         name: "auth policy put",

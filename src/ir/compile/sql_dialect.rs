@@ -99,11 +99,17 @@ impl<D: SqlDialect> SqlCompiler<D> {
         message_type: &str,
         manifest: &'a crate::generation::CatalogManifest,
     ) -> Result<&'a ManifestTable, CompileError> {
-        crate::broker::table_for_message(manifest, message_type).ok_or_else(|| {
-            CompileError::UnknownMessageType {
+        match crate::broker::table_lookup(manifest, message_type) {
+            crate::broker::TableLookup::Found(table) => Ok(table),
+            // fix_plan §4.1: an ambiguous short name names its candidates so the
+            // caller can FQN-qualify — never a silent first-wins misroute.
+            crate::broker::TableLookup::Ambiguous { .. } => Err(CompileError::Malformed {
+                reason: crate::broker::describe_table_lookup_miss(manifest, message_type),
+            }),
+            crate::broker::TableLookup::Missing => Err(CompileError::UnknownMessageType {
                 message_type: message_type.to_string(),
-            }
-        })
+            }),
+        }
     }
 
     /// Map an IR field name to the manifest column name (field-name or

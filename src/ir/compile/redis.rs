@@ -32,11 +32,17 @@ impl RedisCompiler {
         message_type: &str,
         ctx: &'a CompileContext<'_>,
     ) -> Result<&'a ManifestTable, CompileError> {
-        crate::broker::table_for_message(ctx.manifest, message_type).ok_or_else(|| {
-            CompileError::UnknownMessageType {
+        match crate::broker::table_lookup(ctx.manifest, message_type) {
+            crate::broker::TableLookup::Found(table) => Ok(table),
+            // fix_plan §4.1: an ambiguous short name names its candidates so the
+            // caller can FQN-qualify — never a silent first-wins misroute.
+            crate::broker::TableLookup::Ambiguous { .. } => Err(CompileError::Malformed {
+                reason: crate::broker::describe_table_lookup_miss(ctx.manifest, message_type),
+            }),
+            crate::broker::TableLookup::Missing => Err(CompileError::UnknownMessageType {
                 message_type: message_type.to_string(),
-            }
-        })
+            }),
+        }
     }
 
     /// Walk a filter for a primary-key equality and return the bound value.

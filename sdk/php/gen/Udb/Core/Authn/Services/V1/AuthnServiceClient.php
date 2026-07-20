@@ -752,4 +752,155 @@ class AuthnServiceClient extends \Grpc\BaseStub {
         $metadata, $options);
     }
 
+    /**
+     * ── Typed service-account grants + mTLS certificate bindings (UDB-AUTH-003/007) ──
+     * Create the single typed grant for a service account: immutable service
+     * identity, tenant/project binding, and operator-approved scopes.
+     * Admin/owner/wildcard scopes are rejected at write time (fail closed).
+     * @param \Udb\Core\Authn\Services\V1\CreateServiceAccountGrantRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authn\Services\V1\CreateServiceAccountGrantResponse>
+     */
+    public function CreateServiceAccountGrant(\Udb\Core\Authn\Services\V1\CreateServiceAccountGrantRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authn.services.v1.AuthnService/CreateServiceAccountGrant',
+        $argument,
+        ['\Udb\Core\Authn\Services\V1\CreateServiceAccountGrantResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * Read the current typed grant for a service account; NOT_FOUND when the
+     * account has no grant (the account then cannot authenticate — fail closed).
+     * @param \Udb\Core\Authn\Services\V1\GetServiceAccountGrantRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authn\Services\V1\GetServiceAccountGrantResponse>
+     */
+    public function GetServiceAccountGrant(\Udb\Core\Authn\Services\V1\GetServiceAccountGrantRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authn.services.v1.AuthnService/GetServiceAccountGrant',
+        $argument,
+        ['\Udb\Core\Authn\Services\V1\GetServiceAccountGrantResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * Page through the tenant's typed service-account grants (tenant-scoped;
+     * cross-tenant reads are rejected).
+     * @param \Udb\Core\Authn\Services\V1\ListServiceAccountGrantsRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authn\Services\V1\ListServiceAccountGrantsResponse>
+     */
+    public function ListServiceAccountGrants(\Udb\Core\Authn\Services\V1\ListServiceAccountGrantsRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authn.services.v1.AuthnService/ListServiceAccountGrants',
+        $argument,
+        ['\Udb\Core\Authn\Services\V1\ListServiceAccountGrantsResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * Replace a grant's approved scopes/project atomically, bumping `revision` so
+     * dependent credentials and bindings detect staleness. A stale
+     * expected_revision fails with FAILED_PRECONDITION (fail closed).
+     * @param \Udb\Core\Authn\Services\V1\ReplaceServiceAccountGrantRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authn\Services\V1\ReplaceServiceAccountGrantResponse>
+     */
+    public function ReplaceServiceAccountGrant(\Udb\Core\Authn\Services\V1\ReplaceServiceAccountGrantRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authn.services.v1.AuthnService/ReplaceServiceAccountGrant',
+        $argument,
+        ['\Udb\Core\Authn\Services\V1\ReplaceServiceAccountGrantResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * Rotate the immutable service identity through an explicit audited CAS.
+     * The revision bump invalidates all API keys and certificate bindings
+     * reviewed against the prior identity; already-issued service JWTs fail the
+     * current-grant identity check immediately.
+     * @param \Udb\Core\Authn\Services\V1\RotateServiceAccountIdentityRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authn\Services\V1\RotateServiceAccountIdentityResponse>
+     */
+    public function RotateServiceAccountIdentity(\Udb\Core\Authn\Services\V1\RotateServiceAccountIdentityRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authn.services.v1.AuthnService/RotateServiceAccountIdentity',
+        $argument,
+        ['\Udb\Core\Authn\Services\V1\RotateServiceAccountIdentityResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * Revoke a service account's grant. The account (and every credential or
+     * certificate binding that resolves through the grant) stops authenticating
+     * immediately — fail closed, audited.
+     * @param \Udb\Core\Authn\Services\V1\RevokeServiceAccountGrantRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authn\Services\V1\RevokeServiceAccountGrantResponse>
+     */
+    public function RevokeServiceAccountGrant(\Udb\Core\Authn\Services\V1\RevokeServiceAccountGrantRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authn.services.v1.AuthnService/RevokeServiceAccountGrant',
+        $argument,
+        ['\Udb\Core\Authn\Services\V1\RevokeServiceAccountGrantResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * Bind an mTLS certificate selector to a service account. The principal is
+     * always derived from the account's CURRENT grant at request time (optionally
+     * attenuated by scope_subset); an unknown or misbound certificate fails closed.
+     * @param \Udb\Core\Authn\Services\V1\CreateCertificateBindingRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authn\Services\V1\CreateCertificateBindingResponse>
+     */
+    public function CreateCertificateBinding(\Udb\Core\Authn\Services\V1\CreateCertificateBindingRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authn.services.v1.AuthnService/CreateCertificateBinding',
+        $argument,
+        ['\Udb\Core\Authn\Services\V1\CreateCertificateBindingResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * Page through the tenant's mTLS certificate bindings (tenant-scoped;
+     * cross-tenant reads are rejected).
+     * @param \Udb\Core\Authn\Services\V1\ListCertificateBindingsRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authn\Services\V1\ListCertificateBindingsResponse>
+     */
+    public function ListCertificateBindings(\Udb\Core\Authn\Services\V1\ListCertificateBindingsRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authn.services.v1.AuthnService/ListCertificateBindings',
+        $argument,
+        ['\Udb\Core\Authn\Services\V1\ListCertificateBindingsResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * Revoke a certificate binding. Certificates matching the selector stop
+     * authenticating immediately — fail closed, audited.
+     * @param \Udb\Core\Authn\Services\V1\RevokeCertificateBindingRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authn\Services\V1\RevokeCertificateBindingResponse>
+     */
+    public function RevokeCertificateBinding(\Udb\Core\Authn\Services\V1\RevokeCertificateBindingRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authn.services.v1.AuthnService/RevokeCertificateBinding',
+        $argument,
+        ['\Udb\Core\Authn\Services\V1\RevokeCertificateBindingResponse', 'decode'],
+        $metadata, $options);
+    }
+
 }

@@ -43,7 +43,7 @@ use apikey_pb::api_key_service_server::ApiKeyService;
 
 use crate::runtime::authn::{
     self, AccountKind, AccountStatus, ApiKeyRecord, ApiKeyStore, AuthnConfig,
-    UnavailableApiKeyStore, UnavailableUserStore, UserRecord, UserStore,
+    UnavailableApiKeyStore, UnavailableUserStore, UserStore,
 };
 use crate::runtime::service::native_helpers::{update_mask_allows, update_mask_path_set};
 
@@ -54,9 +54,8 @@ use super::now_unix;
 #[derive(Clone)]
 pub struct ApiKeyServiceImpl {
     api_keys: Arc<dyn ApiKeyStore>,
-    /// AUTH-006: read-only owner lookup used to derive immutable
-    /// service-identity lineage for a created key. Optional — an unwired store
-    /// (tests, minimal deployments) simply skips the lineage derivation.
+    /// Read-only owner lookup used to verify current service-account state.
+    /// An unwired store fails grant-backed key issuance closed.
     users: Arc<dyn UserStore>,
     config: AuthnConfig,
     event_sink: Arc<dyn AuthEventSink>,
@@ -156,6 +155,89 @@ impl ApiKeyServiceImpl {
 
     fn internal_status(operation: impl Into<String>, message: impl Into<String>) -> Status {
         crate::runtime::executor_utils::internal_status("api_key", operation, message)
+    }
+
+    fn grant_precondition_status(
+        message: impl Into<String>,
+        field: &'static str,
+        description: impl Into<String>,
+    ) -> Status {
+        crate::runtime::executor_utils::failed_precondition_fields(
+            message,
+            [(field.to_string(), description.into())],
+        )
+    }
+
+    /// Resolve the only owner kind this store actually persists. The durable
+    /// API-key row is written as `SERVICE_ACCOUNT`, so accepting another owner
+    /// kind or treating owner/grant lookup as best-effort would create a
+    /// credential with invented lineage.
+    async fn active_service_account_grant(
+        &self,
+        owner_id: &str,
+        expected_tenant: &str,
+        expected_project: &str,
+    ) -> Result<super::grants::GrantRecord, Status> {
+        let owner = self
+            .users
+            .get_user_by_id(owner_id.trim())
+            .await
+            .map_err(|err| Self::internal_status("api_key_owner_load", err))?
+            .ok_or_else(|| {
+                Self::grant_precondition_status(
+                    "API key owner must be an existing active service account",
+                    "owner_id",
+                    "no matching service account",
+                )
+            })?;
+        if owner.account_kind != AccountKind::ServiceAccount
+            || owner.status != AccountStatus::Active
+        {
+            return Err(Self::grant_precondition_status(
+                "API key owner must be an active service account",
+                "owner_id",
+                "account kind must be SERVICE_ACCOUNT and status must be ACTIVE",
+            ));
+        }
+        let pool = self.pg_pool.as_ref().ok_or_else(|| {
+            Self::capability_status(
+                "grant_resolution",
+                "postgres_auth_store",
+                "API key service-account grant resolution requires the durable Postgres auth store",
+            )
+        })?;
+        let grant = super::grants::get_grant_by_user(pool, &owner.tenant_id, &owner.user_id)
+            .await?
+            .filter(|grant| grant.status.eq_ignore_ascii_case("ACTIVE"))
+            .ok_or_else(|| {
+                Self::grant_precondition_status(
+                    "API key owner has no active typed service-account grant",
+                    "owner_id",
+                    "create or reactivate the typed grant before issuing a key",
+                )
+            })?;
+        if grant.tenant_id.trim() != owner.tenant_id.trim()
+            || grant.project_id.trim() != owner.project_id.trim()
+        {
+            return Err(Self::grant_precondition_status(
+                "service-account grant does not match the owner's tenant/project binding",
+                "owner_id",
+                "grant lineage is stale or misbound",
+            ));
+        }
+        if !expected_tenant.trim().is_empty() && expected_tenant.trim() != grant.tenant_id.trim() {
+            return Err(Self::tenant_mismatch_status());
+        }
+        if !expected_project.trim().is_empty() && expected_project.trim() != grant.project_id.trim()
+        {
+            return Err(Self::policy_status_with_code(
+                Code::PermissionDenied,
+                "api_key_project_scope",
+                "caller_project_mismatch",
+                "API key grant belongs to a different project",
+            ));
+        }
+        Ok(grant)
     }
 
     fn tenant_context_required_status() -> Status {
@@ -637,20 +719,6 @@ fn status_for(rec: &ApiKeyRecord, now_unix: u64) -> apikey_entity_pb::ApiKeyStat
     }
 }
 
-/// AUTH-006: the immutable service identity for a resolved service-account
-/// owner — the managed profile's `service_identity` attribute when present,
-/// else the owner's external subject. Server-derived only; a client-supplied
-/// `x-service-identity` header never feeds this lineage.
-fn service_identity_for_owner(owner: &UserRecord) -> String {
-    let from_profile = authn::profile::service_identity_from_profile_attributes_json(
-        &owner.profile_attributes_json,
-    );
-    if !from_profile.trim().is_empty() {
-        return from_profile;
-    }
-    owner.external_subject.trim().to_string()
-}
-
 fn api_key_to_pb(rec: &ApiKeyRecord, now_unix: u64) -> apikey_entity_pb::ApiKey {
     let mut dto = apikey_entity_pb::ApiKey {
         key_id: rec.key_prefix.clone(),
@@ -681,6 +749,7 @@ fn api_key_to_pb(rec: &ApiKeyRecord, now_unix: u64) -> apikey_entity_pb::ApiKey 
         allowed_resources_json: "[]".to_string(),
         metadata_json: serde_json::json!({
             "service_identity": rec.service_identity.clone(),
+            "grant_revision": rec.grant_revision,
             "native_model": "udb.core.apikey.entity.v1.ApiKey"
         })
         .to_string(),
@@ -712,6 +781,14 @@ impl ApiKeyService for ApiKeyServiceImpl {
                 "owner_id is required",
             ));
         }
+        if req.owner_type != apikey_entity_pb::ApiKeyOwnerType::Unspecified as i32
+            && req.owner_type != apikey_entity_pb::ApiKeyOwnerType::ServiceAccount as i32
+        {
+            return Err(crate::runtime::executor_utils::invalid_argument_fields(
+                "only service-account API keys are supported by the durable auth store",
+                [("owner_type", "must be API_KEY_OWNER_TYPE_SERVICE_ACCOUNT")],
+            ));
+        }
         let prefix = format!(
             "udbk_{}",
             Uuid::new_v4()
@@ -723,62 +800,67 @@ impl ApiKeyService for ApiKeyServiceImpl {
         );
         let plain_key = format!("{}.{}", prefix, Uuid::new_v4().simple());
         let now = now_unix();
-        let mut tenant_id = req
+        let requested_tenant = req
             .context
             .as_ref()
             .and_then(|ctx| ctx.tenant.as_ref())
             .map(|tenant| tenant.tenant_id.clone())
             .unwrap_or_default();
-        let mut project_id = req
+        let requested_project = req
             .context
             .as_ref()
             .and_then(|ctx| ctx.tenant.as_ref())
             .map(|tenant| tenant.project_id.clone())
             .unwrap_or_default();
-        // AUTH-006: derive immutable service-identity lineage from the key's
-        // owner WHEN the owner resolves through the user store to an ACTIVE
-        // service account. Resolution is deliberately best-effort — an unknown
-        // owner id, a non-service-account owner, or an unwired user store keeps
-        // the pre-existing behavior (empty service_identity), so no legacy
-        // caller or offline flow breaks. Owner tenant/project fill in only when
-        // the request context left them empty (the caller's context still wins).
-        let owner = self
-            .users
-            .get_user_by_id(req.owner_id.trim())
-            .await
-            .ok()
-            .flatten()
-            .filter(|owner| {
-                owner.account_kind == AccountKind::ServiceAccount
-                    && owner.status == AccountStatus::Active
-            });
-        let service_identity = owner
-            .as_ref()
-            .map(service_identity_for_owner)
-            .unwrap_or_default();
-        if let Some(owner) = owner.as_ref() {
-            if tenant_id.trim().is_empty() {
-                tenant_id = owner.tenant_id.clone();
-            }
-            if project_id.trim().is_empty() {
-                project_id = owner.project_id.clone();
-            }
-        }
+        let grant = self
+            .active_service_account_grant(
+                req.owner_id.trim(),
+                &requested_tenant,
+                &requested_project,
+            )
+            .await?;
+        let key_scopes = super::grants::validate_service_scopes(&req.scopes, &grant.scopes)?;
         let rec = ApiKeyRecord {
             key_prefix: authn::api_key_prefix(&plain_key),
             key_hash: authn::hash_secret(&plain_key, &self.hash_key()),
             name: req.name.trim().to_string(),
             description: req.description.trim().to_string(),
             principal_id: req.owner_id,
-            service_identity,
-            tenant_id,
-            project_id,
-            scopes: req.scopes,
+            service_identity: grant.service_identity,
+            tenant_id: grant.tenant_id,
+            project_id: grant.project_id,
+            scopes: key_scopes,
+            grant_revision: grant.revision,
             created_at_unix: now,
             last_used_at_unix: 0,
             expires_at_unix: expires_at_unix(req.expires_at),
             revoked_at_unix: 0,
         };
+        // UDB-AUTH-009: enforce ACTIVE-name uniqueness per owner so an
+        // idempotent provisioner reconciles instead of silently minting a
+        // duplicate active key. A non-empty name that already names an ACTIVE
+        // key for this owner is rejected with FailedPrecondition; blank names
+        // (which default to the key prefix) are inherently unique and skip the
+        // check.
+        if !rec.name.trim().is_empty() {
+            let existing = self
+                .api_keys
+                .list_for_principal(&rec.principal_id, true, now)
+                .await
+                .map_err(|err| Self::internal_status("create_api_key_uniqueness", err))?;
+            if existing
+                .iter()
+                .any(|key| key.name.trim().eq_ignore_ascii_case(rec.name.trim()))
+            {
+                return Err(crate::runtime::executor_utils::failed_precondition_fields(
+                    "an ACTIVE API key with this name already exists for the owner",
+                    [(
+                        "name".to_string(),
+                        "revoke or rotate the existing key, or choose a distinct name".to_string(),
+                    )],
+                ));
+            }
+        }
         // Q#16: persist through the SAME store the reads use (`self.api_keys` →
         // `self.pool`), exactly like update/revoke/rotate. Previously CreateApiKey
         // alone diverged to the runtime's native-entity write (a different instance
@@ -895,11 +977,22 @@ impl ApiKeyService for ApiKeyServiceImpl {
         // spoofable/absent body tenant.
         let caller_context = Self::current_claim_request_context();
         self.enforce_caller_tenant(caller_context.as_ref(), &rec.tenant_id)?;
+        let grant = self
+            .active_service_account_grant(&rec.principal_id, &rec.tenant_id, &rec.project_id)
+            .await?;
         let update_mask =
             update_mask_path_set(req.update_mask.as_ref(), &["scopes", "expires_at"])?;
         if update_mask_allows(&update_mask, "scopes", !req.scopes.is_empty()) {
-            rec.scopes = req.scopes;
+            rec.scopes = super::grants::validate_service_scopes(&req.scopes, &grant.scopes)?;
+            rec.grant_revision = grant.revision;
+        } else if rec.grant_revision != grant.revision {
+            return Err(Self::grant_precondition_status(
+                "API key was reviewed against an older service-account grant revision",
+                "scopes",
+                "include scopes in the update to explicitly review the current grant",
+            ));
         }
+        rec.service_identity = grant.service_identity;
         if update_mask_allows(&update_mask, "expires_at", req.expires_at.is_some()) {
             rec.expires_at_unix = expires_at_unix(req.expires_at);
         }
@@ -999,6 +1092,15 @@ impl ApiKeyService for ApiKeyServiceImpl {
         // Caller tenant from the VALIDATED claim, not the spoofable body context.
         let caller_context = Self::current_claim_request_context();
         self.enforce_caller_tenant(caller_context.as_ref(), &existing.tenant_id)?;
+        let grant = self
+            .active_service_account_grant(
+                &existing.principal_id,
+                &existing.tenant_id,
+                &existing.project_id,
+            )
+            .await?;
+        let rotated_scopes =
+            super::grants::validate_service_scopes(&existing.scopes, &grant.scopes)?;
         // Mint a fresh secret under a new prefix; lineage carried via the event +
         // metadata. The new key inherits scopes/owner/tenant/project.
         let prefix = format!(
@@ -1018,10 +1120,11 @@ impl ApiKeyService for ApiKeyServiceImpl {
             name: existing.name.clone(),
             description: existing.description.clone(),
             principal_id: existing.principal_id.clone(),
-            service_identity: existing.service_identity.clone(),
-            tenant_id: existing.tenant_id.clone(),
-            project_id: existing.project_id.clone(),
-            scopes: existing.scopes.clone(),
+            service_identity: grant.service_identity,
+            tenant_id: grant.tenant_id,
+            project_id: grant.project_id,
+            scopes: rotated_scopes,
+            grant_revision: grant.revision,
             created_at_unix: now,
             last_used_at_unix: 0,
             expires_at_unix: existing.expires_at_unix,
@@ -1266,7 +1369,7 @@ impl ApiKeyService for ApiKeyServiceImpl {
     ) -> Result<Response<apikey_pb::ValidateApiKeyResponse>, Status> {
         let req = request.into_inner();
         let now = now_unix();
-        let Some(rec) = authn::validate_api_key(
+        let Some(mut rec) = authn::validate_api_key(
             self.api_keys.as_ref(),
             &req.plain_key,
             &self.hash_key(),
@@ -1292,6 +1395,43 @@ impl ApiKeyService for ApiKeyServiceImpl {
                 valid: false,
                 ..Default::default()
             }));
+        };
+        let pool = self.pg_pool.as_ref().ok_or_else(|| {
+            Self::capability_status(
+                "validate_grant_resolution",
+                "postgres_auth_store",
+                "API key validation requires the durable Postgres auth store",
+            )
+        })?;
+        rec.scopes = match super::grants::attenuate_key_scopes_against_grant(
+            pool,
+            &rec.tenant_id,
+            &rec.principal_id,
+            rec.grant_revision,
+            &rec.scopes,
+        )
+        .await
+        {
+            Ok(Some(scopes)) => scopes,
+            Ok(None) => {
+                self.emit_validate_event(
+                    topics::API_KEY_VALIDATE_FAILED,
+                    &rec.key_prefix,
+                    &rec.tenant_id,
+                    &req.endpoint,
+                    &req.ip_address,
+                    "failure",
+                    "inactive_or_missing_service_account_grant",
+                )
+                .await;
+                return Ok(Response::new(apikey_pb::ValidateApiKeyResponse {
+                    valid: false,
+                    ..Default::default()
+                }));
+            }
+            Err(error) => {
+                return Err(Self::internal_status("validate_api_key_grant", error));
+            }
         };
         // Wildcard handling must match `SecurityContext::has_scope` (`*` and
         // `udb:*`) so an API key's scope semantics are uniform with the JWT/ABAC
@@ -1590,26 +1730,8 @@ impl ApiKeyService for ApiKeyServiceImpl {
 #[cfg(test)]
 mod tests {
     use super::rate_limit_decision;
-    use super::{ApiKeyRecord, api_key_to_pb, service_identity_for_owner};
+    use super::{ApiKeyRecord, api_key_to_pb};
     use std::collections::BTreeSet;
-
-    // AUTH-006: lineage prefers the managed profile's service_identity, falls
-    // back to the owner's external subject, and yields empty when neither is
-    // set (the soft path — never a hard failure).
-    #[test]
-    fn auth006_service_identity_lineage_prefers_profile_then_external_subject() {
-        use crate::runtime::authn::UserRecord;
-        let mut owner = UserRecord::default();
-        owner.profile_attributes_json = r#"{"service_identity":"ambulife.dispatch"}"#.to_string();
-        owner.external_subject = "spiffe://fallback".to_string();
-        assert_eq!(service_identity_for_owner(&owner), "ambulife.dispatch");
-
-        owner.profile_attributes_json = "{}".to_string();
-        assert_eq!(service_identity_for_owner(&owner), "spiffe://fallback");
-
-        owner.external_subject = String::new();
-        assert_eq!(service_identity_for_owner(&owner), "");
-    }
 
     /// The descriptor's `OUTPUT_VIEW_STORAGE_ONLY` field set for a proto message.
     fn storage_only_field_names(message_full_name: &str) -> BTreeSet<String> {

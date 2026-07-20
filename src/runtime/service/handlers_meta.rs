@@ -505,6 +505,26 @@ impl DataBrokerService {
                         Err(message_schema_not_found_status(&message_type, &project_id)),
                     );
                 }
+                Err(LookupError::MessageAmbiguous {
+                    message_type,
+                    candidates,
+                    ..
+                }) => {
+                    return self.record_grpc(
+                        "LookupMessageSchema",
+                        started,
+                        Err(crate::runtime::executor_utils::invalid_argument_fields(
+                            format!(
+                                "ambiguous message type '{message_type}': [{}]",
+                                candidates.join(", ")
+                            ),
+                            [(
+                                "message_type",
+                                "must use a fully-qualified protobuf name or schema.table",
+                            )],
+                        )),
+                    );
+                }
                 Err(LookupError::Incompatible { reason, .. }) => {
                     return self.record_grpc(
                         "LookupMessageSchema",

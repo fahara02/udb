@@ -189,12 +189,12 @@ fn source_message_type_missing_from_catalog_carries_field_violation() {
     assert_eq!(err.code(), tonic::Code::InvalidArgument);
     assert_eq!(
         err.message(),
-        "source_message_type 'acme.crm.entity.v1.Contact' is not present in the active catalog manifest"
+        "unknown message_type acme.crm.entity.v1.Contact"
     );
     assert_single_field_violation(
         &err,
         "source_message_type",
-        "must be present in the active catalog manifest",
+        "must identify exactly one entity in the active catalog manifest",
     );
 }
 

@@ -296,6 +296,7 @@ mod deny_reason {
     pub const PUBLIC_CRED: &str = "public_credential";
     pub const MISSING_BEARER: &str = "missing_bearer";
     pub const INVALID_BEARER: &str = "invalid_bearer";
+    pub const CREDENTIAL_STATE: &str = "credential_state";
     pub const CREDENTIAL_TYPE: &str = "credential_type";
     pub const SCOPE: &str = "scope";
     pub const ROLE: &str = "role";
@@ -545,23 +546,31 @@ fn request_context_required_status() -> Status {
 #[derive(Clone, Default, Debug)]
 pub struct VerifiedClaimContext {
     pub subject: String,
+    pub service_identity: String,
     pub tenant_id: String,
     pub project_id: String,
     pub scopes: Vec<String>,
     pub roles: Vec<String>,
+    pub credential_type: i32,
+    pub credential_id: String,
+    pub auth_method: String,
     /// True only for public bootstrap RPCs (no validated credential): handlers
     /// must NOT treat an empty context as a cross-tenant admin.
     pub authenticated: bool,
 }
 
 impl VerifiedClaimContext {
-    fn from_claims(claims: &SecurityClaims) -> Self {
+    fn from_principal(principal: &crate::runtime::credential_layer::VerifiedPrincipal) -> Self {
         Self {
-            subject: claims.sub.clone().unwrap_or_default(),
-            tenant_id: claims.tenant_id.clone().unwrap_or_default(),
-            project_id: claims.project_id.clone().unwrap_or_default(),
-            scopes: claims.resolved_scopes(),
-            roles: claims.roles.clone().unwrap_or_default(),
+            subject: principal.subject.clone(),
+            service_identity: principal.service_identity.clone(),
+            tenant_id: principal.tenant_id.clone(),
+            project_id: principal.project_id.clone(),
+            scopes: principal.scopes.clone(),
+            roles: principal.roles.clone(),
+            credential_type: principal.credential_type,
+            credential_id: principal.credential_id.clone(),
+            auth_method: principal.auth_method.clone(),
             authenticated: true,
         }
     }
@@ -672,10 +681,14 @@ pub fn test_claim_context(
 ) -> VerifiedClaimContext {
     VerifiedClaimContext {
         subject: subject.to_string(),
+        service_identity: String::new(),
         tenant_id: tenant_id.to_string(),
         project_id: project_id.to_string(),
         scopes: scopes.iter().map(|s| s.to_string()).collect(),
         roles: roles.iter().map(|r| r.to_string()).collect(),
+        credential_type: 1,
+        credential_id: String::new(),
+        auth_method: "test".to_string(),
         authenticated: true,
     }
 }
@@ -711,6 +724,9 @@ pub fn enforce_body_tenant_matches_claim(
         tracing::warn!(
             target: "udb.audit.authz",
             subject = %ctx.subject,
+            service_identity = %ctx.service_identity,
+            credential_type = ctx.credential_type,
+            credential_id = %ctx.credential_id,
             claim_tenant = %claim_tenant,
             body_tenant = %body_tenant,
             "DENY: request body tenant does not match the validated bearer tenant"
@@ -728,6 +744,9 @@ pub fn enforce_body_tenant_matches_claim(
         tracing::warn!(
             target: "udb.audit.authz",
             subject = %ctx.subject,
+            service_identity = %ctx.service_identity,
+            credential_type = ctx.credential_type,
+            credential_id = %ctx.credential_id,
             "DENY: tenant-scoped operation requires a tenant-bound bearer or cross-tenant admin"
         );
         return Err(method_security_policy_denied(
@@ -741,6 +760,9 @@ pub fn enforce_body_tenant_matches_claim(
         tracing::warn!(
             target: "udb.audit.authz",
             subject = %ctx.subject,
+            service_identity = %ctx.service_identity,
+            credential_type = ctx.credential_type,
+            credential_id = %ctx.credential_id,
             claim_project = %claim_project,
             body_project = %body_project,
             "DENY: request body project does not match the validated bearer project"
@@ -874,7 +896,7 @@ impl VerifiedClaimContext {
             principal_id: self.subject.clone(),
             subject: self.subject.clone(),
             user_id: self.subject.clone(),
-            service_identity: String::new(),
+            service_identity: self.service_identity.clone(),
             tenant_id: self.tenant_id.clone(),
             project_id: self.project_id.clone(),
             scopes: self.scopes.clone(),
@@ -916,17 +938,23 @@ impl VerifiedClaimContext {
 /// returns the `Status` plus a stable `reason` label so the caller can record
 /// `udb_method_security_denials_total{reason}` (and `udb_tenant_mismatch_total`
 /// for the tenant-mismatch reasons) — Phase 10 telemetry coherence.
-/// On success returns the authenticated principal `(subject, auth_method)` plus the
-/// full validated [`VerifiedClaimContext`] so the caller can scope both for audit
-/// `actor`/`auth_method` attribution AND post-decode body-tenant/per-action authz
-/// in handlers — all empty/unauthenticated for public bootstrap RPCs that carry no
-/// validated credential.
+/// On success returns the canonical verified principal plus the full validated
+/// [`VerifiedClaimContext`] so the caller can scope credential lineage for audit
+/// attribution and post-decode body-tenant/per-action authz in handlers. Public
+/// bootstrap RPCs return empty/default values because no credential was validated.
 fn enforce(
     security: &SecurityConfig,
     path: &str,
     headers: &http::HeaderMap,
     peer: &TransportPeer,
-) -> Result<(String, String, VerifiedClaimContext), (Status, &'static str)> {
+    preresolved: Option<&crate::runtime::credential_layer::PreresolvedCredentials>,
+) -> Result<
+    (
+        crate::runtime::credential_layer::VerifiedPrincipal,
+        VerifiedClaimContext,
+    ),
+    (Status, &'static str),
+> {
     if let Some(service_id) =
         crate::runtime::service::native_registry::native_service_for_grpc_path(path)
         && !crate::runtime::service::native_registry::native_service_enabled(&service_id)
@@ -963,14 +991,24 @@ fn enforce(
         }
         // Public bootstrap: no validated principal to attribute.
         return Ok((
-            String::new(),
-            String::new(),
+            crate::runtime::credential_layer::VerifiedPrincipal::default(),
             VerifiedClaimContext::default(),
         ));
     }
 
     // Annotated non-public, or unannotated (fail closed): require a valid bearer.
     let token = bearer_token(headers);
+    // UDB-AUTH-008: the credential layer's resolved API-key principal (derived
+    // ENTIRELY from the stored key record + owner grant), when present.
+    let api_key_principal = preresolved
+        .and_then(|resolved| resolved.api_key.as_ref())
+        .and_then(|outcome| outcome.as_ref().ok())
+        .and_then(|record| record.as_ref());
+    // Whether THIS method opts into scoped API-key workload credentials.
+    let method_allows_api_key = matches!(
+        declared,
+        Some(s) if s.allowed_credential_types.contains(&(CredentialType::ApiKey as i32))
+    );
     if let Some(credential) = direct_credential_type(headers) {
         if token.is_some() {
             return Err((
@@ -981,19 +1019,107 @@ fn enforce(
                 deny_reason::CREDENTIAL_TYPE,
             ));
         }
-        enforce_direct_credential_type(declared, credential)?;
+        // UDB-AUTH-008: a scoped service API key is a first-class credential on
+        // a method that declares CREDENTIAL_TYPE_API_KEY (the layer already
+        // validated it against the stored record + current grant). Only then
+        // do we skip the bearer-exchange denial; every other case still fails
+        // closed exactly as before.
+        let api_key_accepted = credential == CredentialType::ApiKey
+            && method_allows_api_key
+            && api_key_principal.is_some();
+        if !api_key_accepted {
+            enforce_direct_credential_type(declared, credential)?;
+        }
     }
-    let token = token.ok_or_else(|| {
+    // fix_plan §1.4/§3: a REGISTERED mTLS principal — resolved by the async
+    // credential layer through the durable certificate-binding → grant chain —
+    // authenticates a native method ONLY when the descriptor EXPLICITLY allows
+    // CREDENTIAL_TYPE_MTLS. No descriptor opt-in (or no registered binding) →
+    // fail closed exactly as before. Declared method scopes still apply; a
+    // grant can never carry admin/wildcard scopes (rejected at write time).
+    // HIGH-4: an mTLS principal does NOT return early — it synthesizes the
+    // same verified-claims shape a bearer produces and FALLS THROUGH every
+    // common post-authentication gate below (scope/admin, roles,
+    // internal-only, CSRF, request-context, tenant/project consistency), so
+    // certificate-authenticated requests face identical policy. Accepted ONLY
+    // when the descriptor EXPLICITLY allows CREDENTIAL_TYPE_MTLS; a grant can
+    // never carry admin/wildcard scopes (rejected at write time).
+    let (claims, verified_principal) = if token.is_none()
+        && let Some(principal) =
+            preresolved.and_then(|resolved| resolved.certificate_principal.as_ref())
+        && matches!(
+            declared,
+            Some(s) if s
+                .allowed_credential_types
+                .contains(&(CredentialType::Mtls as i32))
+        ) {
         (
-            Status::unauthenticated(
-                "missing or invalid authorization header (native control-plane bearer required)",
-            ),
-            deny_reason::MISSING_BEARER,
+            crate::runtime::security::claims_from_verified_principal(principal),
+            principal.clone(),
         )
-    })?;
-    let claims = validate_bearer_token(security, token)
-        .map_err(|e| (Status::unauthenticated(e), deny_reason::INVALID_BEARER))?;
-    enforce_bearer_credential_type(declared, &claims)?;
+    } else if token.is_none()
+        && method_allows_api_key
+        && let Some(principal) = api_key_principal
+    {
+        // UDB-AUTH-008: scoped service API key accepted on this native method.
+        // Same fall-through as mTLS — it synthesizes verified claims and faces
+        // every common post-authentication gate (scope/admin, roles,
+        // internal-only, CSRF, request-context, tenant/project). Its scopes are
+        // the stored key's grant-attenuated set, never admin/wildcard.
+        (
+            crate::runtime::security::claims_from_verified_principal(principal),
+            principal.clone(),
+        )
+    } else {
+        let token = token.ok_or_else(|| {
+            (
+                Status::unauthenticated(
+                    "missing or invalid authorization header (native control-plane bearer required)",
+                ),
+                deny_reason::MISSING_BEARER,
+            )
+        })?;
+        let (claims, principal) = match preresolved.and_then(|resolved| resolved.bearer.as_ref()) {
+            Some(Ok(principal)) => (
+                crate::runtime::security::claims_from_verified_principal(principal),
+                principal.clone(),
+            ),
+            Some(Err(_)) => {
+                return Err((
+                    Status::unauthenticated("invalid bearer token"),
+                    deny_reason::INVALID_BEARER,
+                ));
+            }
+            None => {
+                let claims = validate_bearer_token(security, token)
+                    .map_err(|e| (Status::unauthenticated(e), deny_reason::INVALID_BEARER))?;
+                let principal =
+                    crate::runtime::credential_layer::VerifiedPrincipal::from_verified_bearer_claims(
+                        &claims,
+                    );
+                (claims, principal)
+            }
+        };
+        enforce_bearer_credential_type(declared, &claims)?;
+        (claims, principal)
+    };
+    // A verified client certificate remains transport identity when a bearer
+    // is also present. Both credentials must resolve to the exact same service,
+    // tenant, and project; otherwise this is a credential splice. This runs on
+    // the native listener as well as DataBroker and consumes the same principal
+    // extension, so neither listener can silently ignore a bound certificate.
+    if token.is_some()
+        && let Some(binding) =
+            preresolved.and_then(|resolved| resolved.certificate_principal.as_ref())
+    {
+        crate::runtime::security::enforce_certificate_credential_composition(
+            binding,
+            claims.service_identity.as_deref().unwrap_or_default(),
+            claims.tenant_id.as_deref().unwrap_or_default(),
+            claims.project_id.as_deref().unwrap_or_default(),
+        )
+        .map_err(|status| (status, deny_reason::CREDENTIAL_STATE))?;
+    }
     let scopes = claims.resolved_scopes();
     let has_admin = scopes
         .iter()
@@ -1149,23 +1275,8 @@ fn enforce(
         ));
     }
 
-    // Validated: surface the authenticated subject + the actual authn method for
-    // audit `actor`/`auth_method` attribution on events the handler emits. The
-    // token's own `auth_method` claim (password / mfa_totp / passkey / api_key /
-    // service ...) is more precise than the transport ("bearer_jwt"); fall back to
-    // the transport when the claim is absent.
-    let auth_method = claims
-        .auth_method
-        .clone()
-        .map(|m| m.trim().to_string())
-        .filter(|m| !m.is_empty())
-        .unwrap_or_else(|| "bearer_jwt".to_string());
-    let claim_ctx = VerifiedClaimContext::from_claims(&claims);
-    Ok((
-        claims.sub.clone().unwrap_or_default(),
-        auth_method,
-        claim_ctx,
-    ))
+    let claim_ctx = VerifiedClaimContext::from_principal(&verified_principal);
+    Ok((verified_principal, claim_ctx))
 }
 
 /// Mirror of `udb.core.common.v1.CredentialType`.
@@ -1175,6 +1286,9 @@ enum CredentialType {
     Session = 2,
     ApiKey = 3,
     ServiceAccount = 4,
+    /// fix_plan §1.4: a request authenticated by a REGISTERED peer certificate
+    /// (durable binding → grant chain) — `CREDENTIAL_TYPE_MTLS = 5`.
+    Mtls = 5,
 }
 
 impl CredentialType {
@@ -1184,6 +1298,7 @@ impl CredentialType {
             CredentialType::Session => "session",
             CredentialType::ApiKey => "API key",
             CredentialType::ServiceAccount => "service account",
+            CredentialType::Mtls => "mTLS certificate",
         }
     }
 }
@@ -1311,8 +1426,42 @@ where
         // rate limiter and the internal_grpc_only gate key off them, never off
         // forgeable headers.
         let peer = transport_peer(req.extensions());
-        match enforce(&self.security, &path, req.headers(), &peer) {
-            Ok((subject, auth_method, claim_ctx)) => {
+        let certificate_resolution_failed = req
+            .extensions()
+            .get::<crate::runtime::credential_layer::PreresolvedCredentials>()
+            .map(|pre| {
+                pre.certificate_resolution_failed
+                    || (pre.certificate_present && pre.certificate_principal.is_none())
+            })
+            .unwrap_or(false);
+        if certificate_resolution_failed
+            && !matches!(method_security(&path), Some(s) if s.mode == AuthMode::Public)
+        {
+            if let Some(metrics) = self.metrics.as_ref() {
+                metrics.inc_method_security_denial(deny_reason::CREDENTIAL_STATE);
+            }
+            let status = Status::unauthenticated(
+                "client certificate binding could not be verified; request denied",
+            );
+            return Box::pin(async move { Ok(status.into_http()) });
+        }
+        let preresolved = req
+            .extensions()
+            .get::<crate::runtime::credential_layer::PreresolvedCredentials>();
+        let audit_principal = preresolved
+            .and_then(|resolved| {
+                if bearer_token(req.headers()).is_some() {
+                    resolved
+                        .bearer
+                        .as_ref()
+                        .and_then(|result| result.as_ref().ok())
+                } else {
+                    resolved.certificate_principal.as_ref()
+                }
+            })
+            .cloned();
+        match enforce(&self.security, &path, req.headers(), &peer, preresolved) {
+            Ok((verified, claim_ctx)) => {
                 // Phase 10: scope the authenticated principal + the gate
                 // authorization decision so native handlers' outbox events attribute
                 // the real `actor`/`auth_method`/`decision_id`/`policy_revision`
@@ -1321,7 +1470,7 @@ where
                 // record it with a fresh decision id + the contract revision whose
                 // rules it applied. Public/unauthenticated RPCs scope an empty
                 // principal (no validated decision to attribute).
-                let (decision_id, policy_revision) = if subject.is_empty() {
+                let (decision_id, policy_revision) = if verified.subject.is_empty() {
                     (String::new(), String::new())
                 } else {
                     (
@@ -1330,11 +1479,29 @@ where
                     )
                 };
                 let principal = crate::runtime::otel::RequestPrincipal {
-                    subject,
-                    auth_method,
+                    subject: verified.subject,
+                    service_identity: verified.service_identity,
+                    credential_type: verified.credential_type,
+                    credential_id: verified.credential_id,
+                    auth_method: verified.auth_method,
                     decision_id,
                     policy_revision,
                 };
+                if !principal.subject.is_empty() {
+                    tracing::info!(
+                        target: "udb.audit.authz",
+                        method = %path,
+                        outcome = "allow",
+                        subject = %principal.subject,
+                        service_identity = %principal.service_identity,
+                        credential_type = principal.credential_type,
+                        credential_id = %principal.credential_id,
+                        auth_method = %principal.auth_method,
+                        decision_id = %principal.decision_id,
+                        policy_revision = %principal.policy_revision,
+                        "native method authorization allowed"
+                    );
+                }
                 // Scope BOTH the audit principal (otel) AND the full validated
                 // claim context (this module) for the duration of the handler, so
                 // post-decode handlers can enforce body-tenant-vs-claim (D1) and
@@ -1352,6 +1519,19 @@ where
                         metrics.inc_tenant_mismatch();
                     }
                 }
+                let audit_principal = audit_principal.unwrap_or_default();
+                tracing::warn!(
+                    target: "udb.audit.authz",
+                    method = %path,
+                    outcome = "deny",
+                    reason,
+                    subject = %audit_principal.subject,
+                    service_identity = %audit_principal.service_identity,
+                    credential_type = audit_principal.credential_type,
+                    credential_id = %audit_principal.credential_id,
+                    auth_method = %audit_principal.auth_method,
+                    "native method authorization denied"
+                );
                 Box::pin(async move { Ok(status.into_http()) })
             }
         }
@@ -1472,6 +1652,16 @@ mod tests {
             "CreateUser must allow session-origin JWTs from the descriptor"
         );
 
+        let validate_token = reg
+            .get(&format!("{AUTHN}/ValidateToken"))
+            .expect("ValidateToken security must decode");
+        assert!(
+            validate_token
+                .allowed_credential_types
+                .contains(&(CredentialType::Mtls as i32)),
+            "ValidateToken must explicitly allow registered mTLS principals"
+        );
+
         let control_stream = reg
             .get("/udb.core.control.services.v1.ControlPlaneService/StreamResources")
             .expect("ControlPlaneService.StreamResources security must decode");
@@ -1494,6 +1684,7 @@ mod tests {
                     &format!("{AUTHN}/{method}"),
                     &headers,
                     &peer_from("198.51.100.7"),
+                    None,
                 )
                 .is_ok(),
                 "public {method} must be reachable without a bearer"
@@ -1517,9 +1708,10 @@ mod tests {
                 http::HeaderValue::from_str(&format!("10.9.{}.{}", i / 250, i % 250))
                     .expect("test header"),
             );
-            enforce(&security, &path, &headers, &peer).expect("within public bootstrap limit");
+            enforce(&security, &path, &headers, &peer, None)
+                .expect("within public bootstrap limit");
         }
-        let (err, reason) = enforce(&security, &path, &headers, &peer)
+        let (err, reason) = enforce(&security, &path, &headers, &peer, None)
             .expect_err("public bootstrap limit exceeded");
         assert_eq!(err.code(), tonic::Code::ResourceExhausted);
         assert_eq!(reason, deny_reason::PUBLIC_RATE_LIMIT);
@@ -1698,6 +1890,7 @@ mod tests {
             &format!("{AUTHN}/CreateUser"),
             &headers,
             &TransportPeer::default(),
+            None,
         )
         .expect_err("CreateUser must require a bearer");
         assert_eq!(err.code(), tonic::Code::Unauthenticated);
@@ -1713,6 +1906,7 @@ mod tests {
             "/unknown.Service/Method",
             &headers,
             &TransportPeer::default(),
+            None,
         )
         .expect_err("unknown methods must fail closed");
         assert_eq!(err.code(), tonic::Code::Unauthenticated);
@@ -1824,6 +2018,122 @@ mod tests {
         .expect("service-account JWT should satisfy a service-account credential contract");
     }
 
+    fn mtls_credentials(
+        scopes: &[&str],
+    ) -> crate::runtime::credential_layer::PreresolvedCredentials {
+        crate::runtime::credential_layer::PreresolvedCredentials {
+            certificate_identity: Some("spiffe://test.udb/workload".to_string()),
+            certificate_present: true,
+            certificate_principal: Some(crate::runtime::credential_layer::VerifiedPrincipal {
+                credential_type: CredentialType::Mtls as i32,
+                subject: "service-account-a".to_string(),
+                service_identity: "spiffe://test.udb/workload".to_string(),
+                tenant_id: "tenant-a".to_string(),
+                project_id: "project-a".to_string(),
+                scopes: scopes.iter().map(|scope| (*scope).to_string()).collect(),
+                credential_id: "binding-a".to_string(),
+                auth_method: "mtls".to_string(),
+                certificate_identity: Some("spiffe://test.udb/workload".to_string()),
+                ..Default::default()
+            }),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn registered_mtls_runs_the_common_scope_and_tenant_gates() {
+        let security = SecurityConfig::current();
+        let path = format!("{AUTHN}/ValidateToken");
+        let peer = peer_from("198.51.100.61");
+        let mut headers = http::HeaderMap::new();
+        headers.insert(
+            "x-correlation-id",
+            http::HeaderValue::from_static("request-a"),
+        );
+        headers.insert("x-tenant-id", http::HeaderValue::from_static("tenant-a"));
+
+        let allowed = mtls_credentials(&["udb:authn:validate-token"]);
+        let (principal, claim) = enforce(&security, &path, &headers, &peer, Some(&allowed))
+            .expect("descriptor-approved mTLS with the declared scope must pass");
+        assert_eq!(principal.auth_method, "mtls");
+        assert_eq!(principal.credential_type, CredentialType::Mtls as i32);
+        assert_eq!(principal.credential_id, "binding-a");
+        assert_eq!(principal.service_identity, "spiffe://test.udb/workload");
+        assert_eq!(claim.tenant_id, "tenant-a");
+        assert_eq!(claim.credential_id, "binding-a");
+        assert_eq!(claim.service_identity, "spiffe://test.udb/workload");
+
+        let missing_scope = mtls_credentials(&["udb:read"]);
+        let (error, reason) = enforce(&security, &path, &headers, &peer, Some(&missing_scope))
+            .expect_err("mTLS must not return before the common scope gate");
+        assert_eq!(error.code(), tonic::Code::PermissionDenied);
+        assert_eq!(reason, deny_reason::SCOPE);
+
+        headers.insert("x-tenant-id", http::HeaderValue::from_static("tenant-b"));
+        let (error, reason) = enforce(&security, &path, &headers, &peer, Some(&allowed))
+            .expect_err("mTLS must not return before the common tenant gate");
+        assert_eq!(error.code(), tonic::Code::PermissionDenied);
+        assert_eq!(reason, deny_reason::TENANT_MISMATCH);
+    }
+
+    #[test]
+    fn native_bearer_and_certificate_require_identical_lineage() {
+        let security = SecurityConfig::current();
+        let path = format!("{AUTHN}/ValidateToken");
+        let peer = peer_from("198.51.100.62");
+        let mut headers = http::HeaderMap::new();
+        headers.insert(
+            "authorization",
+            http::HeaderValue::from_static("Bearer already-verified"),
+        );
+        headers.insert("x-tenant-id", http::HeaderValue::from_static("tenant-a"));
+        let mut credentials = mtls_credentials(&["udb:authn:validate-token"]);
+        credentials.bearer = Some(Ok(crate::runtime::credential_layer::VerifiedPrincipal {
+            credential_type: CredentialType::BearerJwt as i32,
+            subject: "service-account-a".to_string(),
+            service_identity: "spiffe://test.udb/workload".to_string(),
+            tenant_id: "tenant-a".to_string(),
+            project_id: "project-a".to_string(),
+            scopes: vec!["udb:authn:validate-token".to_string()],
+            credential_id: "jwt-a".to_string(),
+            auth_method: "password".to_string(),
+            ..Default::default()
+        }));
+        enforce(&security, &path, &headers, &peer, Some(&credentials))
+            .expect("matching bearer/certificate lineage must compose");
+
+        credentials
+            .certificate_principal
+            .as_mut()
+            .expect("certificate principal")
+            .project_id = "project-b".to_string();
+        let (error, reason) = enforce(&security, &path, &headers, &peer, Some(&credentials))
+            .expect_err("native listener must reject bearer/certificate splicing");
+        assert_eq!(error.code(), tonic::Code::PermissionDenied);
+        assert_eq!(reason, deny_reason::CREDENTIAL_STATE);
+    }
+
+    #[test]
+    fn registered_mtls_is_denied_when_descriptor_does_not_opt_in() {
+        let security = SecurityConfig::current();
+        let mut headers = http::HeaderMap::new();
+        headers.insert(
+            "x-correlation-id",
+            http::HeaderValue::from_static("request-b"),
+        );
+        let credentials = mtls_credentials(&["udb:authn:user:create"]);
+        let (error, reason) = enforce(
+            &security,
+            &format!("{AUTHN}/CreateUser"),
+            &headers,
+            &peer_from("198.51.100.62"),
+            Some(&credentials),
+        )
+        .expect_err("mTLS requires an explicit descriptor credential-type opt-in");
+        assert_eq!(error.code(), tonic::Code::Unauthenticated);
+        assert_eq!(reason, deny_reason::MISSING_BEARER);
+    }
+
     #[test]
     fn direct_session_header_fails_closed_until_exchanged_for_jwt() {
         let security = SecurityConfig::current();
@@ -1834,6 +2144,7 @@ mod tests {
             &format!("{AUTHN}/CreateUser"),
             &headers,
             &TransportPeer::default(),
+            None,
         )
         .expect_err("raw session credentials must not bypass JWT validation");
         assert_eq!(err.code(), tonic::Code::Unauthenticated);
@@ -1853,6 +2164,7 @@ mod tests {
             &format!("{AUTHN}/CreateUser"),
             &headers,
             &TransportPeer::default(),
+            None,
         )
         .expect_err("raw API keys must not be accepted for bearer/session methods");
         assert_eq!(err.code(), tonic::Code::PermissionDenied);
@@ -1961,6 +2273,7 @@ mod tests {
             scopes: scopes.iter().map(|s| s.to_string()).collect(),
             roles: roles.iter().map(|r| r.to_string()).collect(),
             authenticated: true,
+            ..VerifiedClaimContext::default()
         }
     }
 

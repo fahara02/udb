@@ -2335,10 +2335,33 @@ impl AuthnServiceImpl {
             .service_identity
             .as_deref()
             .is_some_and(|s| !s.is_empty());
-        if !is_service
-            && !self
-                .user_is_active(&claims.sub.clone().unwrap_or_default())
-                .await?
+        if is_service {
+            let subject = claims.sub.as_deref().unwrap_or_default().trim();
+            let tenant = claims.tenant_id.as_deref().unwrap_or_default().trim();
+            let project = claims.project_id.as_deref().unwrap_or_default().trim();
+            let Some(pool) = self.pg_pool.as_ref() else {
+                return Err(authn_capability_status(
+                    "jwt_service_grant_validation",
+                    "native_postgres_auth_store",
+                    "service bearer validation requires the durable typed-grant store",
+                ));
+            };
+            let valid = super::grants::validate_service_principal_against_grant(
+                pool,
+                tenant,
+                subject,
+                project,
+                claims.service_identity.as_deref().unwrap_or_default(),
+                &claims.resolved_scopes(),
+            )
+            .await
+            .map_err(|error| authn_internal_status("jwt_service_grant_validate", error))?;
+            if !valid {
+                return Ok(false);
+            }
+        } else if !self
+            .user_is_active(claims.sub.as_deref().unwrap_or_default())
+            .await?
         {
             return Ok(false);
         }
@@ -3746,6 +3769,71 @@ impl AuthnService for AuthnServiceImpl {
         request: Request<authn_pb::AdminResetPasswordRequest>,
     ) -> Result<Response<authn_pb::AdminResetPasswordResponse>, Status> {
         self.admin_reset_password_impl(request).await
+    }
+    // ── Typed service-account grants + mTLS certificate bindings
+    //    (fix_plan Phases 2+3) — delegating to the grants module. ──
+    async fn create_service_account_grant(
+        &self,
+        request: Request<authn_pb::CreateServiceAccountGrantRequest>,
+    ) -> Result<Response<authn_pb::CreateServiceAccountGrantResponse>, Status> {
+        let pool = self.require_pool()?.clone();
+        super::grants::create_service_account_grant(self, &pool, request).await
+    }
+    async fn get_service_account_grant(
+        &self,
+        request: Request<authn_pb::GetServiceAccountGrantRequest>,
+    ) -> Result<Response<authn_pb::GetServiceAccountGrantResponse>, Status> {
+        let pool = self.require_pool()?.clone();
+        super::grants::get_service_account_grant(self, &pool, request).await
+    }
+    async fn list_service_account_grants(
+        &self,
+        request: Request<authn_pb::ListServiceAccountGrantsRequest>,
+    ) -> Result<Response<authn_pb::ListServiceAccountGrantsResponse>, Status> {
+        let pool = self.require_pool()?.clone();
+        super::grants::list_service_account_grants(self, &pool, request).await
+    }
+    async fn replace_service_account_grant(
+        &self,
+        request: Request<authn_pb::ReplaceServiceAccountGrantRequest>,
+    ) -> Result<Response<authn_pb::ReplaceServiceAccountGrantResponse>, Status> {
+        let pool = self.require_pool()?.clone();
+        super::grants::replace_service_account_grant(self, &pool, request).await
+    }
+    async fn rotate_service_account_identity(
+        &self,
+        request: Request<authn_pb::RotateServiceAccountIdentityRequest>,
+    ) -> Result<Response<authn_pb::RotateServiceAccountIdentityResponse>, Status> {
+        let pool = self.require_pool()?.clone();
+        super::grants::rotate_service_account_identity(self, &pool, request).await
+    }
+    async fn revoke_service_account_grant(
+        &self,
+        request: Request<authn_pb::RevokeServiceAccountGrantRequest>,
+    ) -> Result<Response<authn_pb::RevokeServiceAccountGrantResponse>, Status> {
+        let pool = self.require_pool()?.clone();
+        super::grants::revoke_service_account_grant(self, &pool, request).await
+    }
+    async fn create_certificate_binding(
+        &self,
+        request: Request<authn_pb::CreateCertificateBindingRequest>,
+    ) -> Result<Response<authn_pb::CreateCertificateBindingResponse>, Status> {
+        let pool = self.require_pool()?.clone();
+        super::grants::create_certificate_binding(self, &pool, request).await
+    }
+    async fn list_certificate_bindings(
+        &self,
+        request: Request<authn_pb::ListCertificateBindingsRequest>,
+    ) -> Result<Response<authn_pb::ListCertificateBindingsResponse>, Status> {
+        let pool = self.require_pool()?.clone();
+        super::grants::list_certificate_bindings(self, &pool, request).await
+    }
+    async fn revoke_certificate_binding(
+        &self,
+        request: Request<authn_pb::RevokeCertificateBindingRequest>,
+    ) -> Result<Response<authn_pb::RevokeCertificateBindingResponse>, Status> {
+        let pool = self.require_pool()?.clone();
+        super::grants::revoke_certificate_binding(self, &pool, request).await
     }
     async fn send_otp(
         &self,

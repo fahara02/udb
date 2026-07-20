@@ -439,12 +439,8 @@ pub(crate) fn build_select_logical_read(
     manifest: &CatalogManifest,
     request: &SelectPlanRequest,
 ) -> Result<LogicalRead, Vec<String>> {
-    let Some(table) = table_for_message(manifest, &request.message_type) else {
-        return Err(vec![format!(
-            "unknown message_type {}",
-            request.message_type
-        )]);
-    };
+    let table = resolve_table_for_message(manifest, &request.message_type)
+        .map_err(|error| vec![error.to_string()])?;
 
     let mut errors = Vec::new();
     if request.context.tenant_id.trim().is_empty() {
@@ -540,11 +536,14 @@ fn build_select_query_plan_uncached(
     manifest: &CatalogManifest,
     request: &SelectPlanRequest,
 ) -> QueryPlan {
-    let Some(table) = table_for_message(manifest, &request.message_type) else {
-        return QueryPlan {
-            errors: vec![format!("unknown message_type {}", request.message_type)],
-            ..QueryPlan::default()
-        };
+    let table = match resolve_table_for_message(manifest, &request.message_type) {
+        Ok(table) => table,
+        Err(error) => {
+            return QueryPlan {
+                errors: vec![error.to_string()],
+                ..QueryPlan::default()
+            };
+        }
     };
 
     let mut errors = Vec::new();
@@ -687,12 +686,15 @@ pub fn build_upsert_plan(
     manifest: &CatalogManifest,
     request: &UpsertPlanRequest,
 ) -> SqlOperationPlan {
-    let Some(table) = table_for_message(manifest, &request.message_type) else {
-        return SqlOperationPlan {
-            operation: "upsert".to_string(),
-            errors: vec![format!("unknown message_type {}", request.message_type)],
-            ..SqlOperationPlan::default()
-        };
+    let table = match resolve_table_for_message(manifest, &request.message_type) {
+        Ok(table) => table,
+        Err(error) => {
+            return SqlOperationPlan {
+                operation: "upsert".to_string(),
+                errors: vec![error.to_string()],
+                ..SqlOperationPlan::default()
+            };
+        }
     };
 
     let mut errors = validate_write_context(&request.context);
@@ -855,12 +857,8 @@ pub(crate) fn build_upsert_logical_write(
     manifest: &CatalogManifest,
     request: &UpsertPlanRequest,
 ) -> Result<LogicalWrite, Vec<String>> {
-    let Some(table) = table_for_message(manifest, &request.message_type) else {
-        return Err(vec![format!(
-            "unknown message_type {}",
-            request.message_type
-        )]);
-    };
+    let table = resolve_table_for_message(manifest, &request.message_type)
+        .map_err(|error| vec![error.to_string()])?;
 
     let mut errors = validate_write_context(&request.context);
     let allowed = allowed_columns(table);
@@ -985,12 +983,15 @@ pub fn build_delete_plan(
     manifest: &CatalogManifest,
     request: &DeletePlanRequest,
 ) -> SqlOperationPlan {
-    let Some(table) = table_for_message(manifest, &request.message_type) else {
-        return SqlOperationPlan {
-            operation: "delete".to_string(),
-            errors: vec![format!("unknown message_type {}", request.message_type)],
-            ..SqlOperationPlan::default()
-        };
+    let table = match resolve_table_for_message(manifest, &request.message_type) {
+        Ok(table) => table,
+        Err(error) => {
+            return SqlOperationPlan {
+                operation: "delete".to_string(),
+                errors: vec![error.to_string()],
+                ..SqlOperationPlan::default()
+            };
+        }
     };
 
     let mut errors = validate_write_context(&request.context);
@@ -1063,12 +1064,8 @@ pub(crate) fn build_delete_logical_delete(
     manifest: &CatalogManifest,
     request: &DeletePlanRequest,
 ) -> Result<LogicalDelete, Vec<String>> {
-    let Some(table) = table_for_message(manifest, &request.message_type) else {
-        return Err(vec![format!(
-            "unknown message_type {}",
-            request.message_type
-        )]);
-    };
+    let table = resolve_table_for_message(manifest, &request.message_type)
+        .map_err(|error| vec![error.to_string()])?;
 
     let mut errors = validate_write_context(&request.context);
     let allowed = allowed_columns(table);
@@ -1164,11 +1161,14 @@ pub fn build_cache_policy_plan(
     manifest: &CatalogManifest,
     request: &CachePolicyRequest,
 ) -> CachePolicyPlan {
-    let Some(table) = table_for_message(manifest, &request.message_type) else {
-        return CachePolicyPlan {
-            errors: vec![format!("unknown message_type {}", request.message_type)],
-            ..CachePolicyPlan::default()
-        };
+    let table = match resolve_table_for_message(manifest, &request.message_type) {
+        Ok(table) => table,
+        Err(error) => {
+            return CachePolicyPlan {
+                errors: vec![error.to_string()],
+                ..CachePolicyPlan::default()
+            };
+        }
     };
     let Some(store) = manifest.stores.iter().find(|store| {
         store.store_kind == "cache"
@@ -1500,7 +1500,10 @@ pub fn build_generic_dispatch_plan(
 // (the one broker fn the IR→SQL compilers call) without this native module.
 // Re-exported here so server call-sites (`crate::broker::table_for_message`,
 // `crate::planning::broker::table_for_message`) are unchanged.
-pub use crate::generation::manifest_index::table_for_message;
+pub use crate::generation::manifest_index::{
+    TableLookup, TableLookupError, describe_table_lookup_miss, resolve_table_for_message,
+    table_for_message, table_lookup,
+};
 
 fn filter_columns(
     value: &Value,
@@ -2142,6 +2145,32 @@ mod tests {
         }
     }
 
+    fn colliding_auth_catalog() -> CatalogManifest {
+        let mut tables = Vec::new();
+        for (package, schema) in [
+            ("ambulife.authn.entity.v1", "ambulife_authn"),
+            ("udb.core.authn.entity.v1", "udb_authn"),
+        ] {
+            for (message, physical) in [("OTP", "otps"), ("User", "users"), ("Session", "sessions")]
+            {
+                tables.push(ManifestTable {
+                    message_name: message.to_string(),
+                    proto_package: package.to_string(),
+                    schema: schema.to_string(),
+                    table: physical.to_string(),
+                    primary_key: vec!["id".to_string()],
+                    columns: vec![test_column("id"), test_column("status")],
+                    ..ManifestTable::default()
+                });
+            }
+        }
+        CatalogManifest {
+            checksum_sha256: "catalog-fqn-planner-acceptance".to_string(),
+            tables,
+            ..CatalogManifest::default()
+        }
+    }
+
     fn read_context() -> RequestContext {
         RequestContext {
             tenant_id: "tenant-a".to_string(),
@@ -2203,6 +2232,78 @@ mod tests {
         };
         assert!(!eventual.requires_primary_read());
         assert_eq!(eventual.replica_lag_override(), None);
+    }
+
+    #[test]
+    fn colliding_catalog_select_and_upsert_route_only_by_exact_fqn() {
+        let manifest = colliding_auth_catalog();
+        for (message_type, expected_schema) in [
+            ("ambulife.authn.entity.v1.OTP", "ambulife_authn"),
+            ("udb.core.authn.entity.v1.OTP", "udb_authn"),
+        ] {
+            let select = build_select_query_plan(
+                &manifest,
+                &SelectPlanRequest {
+                    context: read_context(),
+                    message_type: message_type.to_string(),
+                    filter: json!({"status": "pending"}),
+                    ..SelectPlanRequest::default()
+                },
+            );
+            assert!(select.errors.is_empty(), "{:?}", select.errors);
+            assert_eq!(select.schema, expected_schema);
+            assert_eq!(select.table, "otps");
+
+            let upsert = build_upsert_plan(
+                &manifest,
+                &UpsertPlanRequest {
+                    context: write_context(),
+                    message_type: message_type.to_string(),
+                    record: json!({"id": "otp-1", "status": "pending"}),
+                    ..UpsertPlanRequest::default()
+                },
+            );
+            assert!(upsert.errors.is_empty(), "{:?}", upsert.errors);
+            assert_eq!(upsert.resource_uri, format!("sql://{expected_schema}/otps"));
+        }
+
+        let ambiguous_select = build_select_query_plan(
+            &manifest,
+            &SelectPlanRequest {
+                context: read_context(),
+                message_type: "OTP".to_string(),
+                ..SelectPlanRequest::default()
+            },
+        );
+        assert!(
+            ambiguous_select
+                .errors
+                .iter()
+                .any(|error| error.contains("ambiguous message type 'OTP'")
+                    && error.contains("ambulife.authn.entity.v1.OTP")
+                    && error.contains("udb.core.authn.entity.v1.OTP")),
+            "{:?}",
+            ambiguous_select.errors
+        );
+
+        let ambiguous_upsert = build_upsert_plan(
+            &manifest,
+            &UpsertPlanRequest {
+                context: write_context(),
+                message_type: "OTP".to_string(),
+                record: json!({"id": "otp-1"}),
+                ..UpsertPlanRequest::default()
+            },
+        );
+        assert!(
+            ambiguous_upsert
+                .errors
+                .iter()
+                .any(|error| error.contains("ambiguous message type 'OTP'")),
+            "{:?}",
+            ambiguous_upsert.errors
+        );
+        assert!(ambiguous_upsert.resource_uri.is_empty());
     }
 
     #[test]

@@ -688,9 +688,13 @@ async fn live_postgres_ha_apikey_revocation_propagation() {
     let pool = live_pg_pool().await;
     migrate_native_auth_db(&pool).await;
 
+    let authn = authn_service(pool.clone());
     let node1 = api_key_service(pool.clone());
     let node2 = api_key_service(pool.clone());
-    let principal_id = Uuid::new_v4().to_string();
+    let (owner, _) =
+        create_service_account_with_grant(&authn, "ha_apikey", "CorrectHorse1!", &["data:read"])
+            .await;
+    let principal_id = owner.user_id;
 
     let created = node1
         .create_api_key(Request::new(apikey_pb::CreateApiKeyRequest {

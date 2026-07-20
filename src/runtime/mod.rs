@@ -27,6 +27,7 @@ pub mod backend_context; // NW-deep: uniform request-context applicator across a
 pub mod canonical_store; // P2P: pluggable canonical-store trait + Postgres/MySQL/SQLite impls
 pub mod consistency;
 pub mod consistency_fence;
+pub mod credential_layer; // fix_plan §1: async verified-principal resolution before dispatch
 pub mod drift_reconciliation;
 pub mod native_catalog; // Native-service entity protos (embedded) → CatalogManifest (proto-driven migration; no hand-written DDL)
 #[cfg(feature = "runtime-logging")]

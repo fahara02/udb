@@ -727,13 +727,9 @@ async fn process_embedding_backfill_job(
         .as_ref()
         .ok_or_else(|| "embedding backfill requires active catalog".to_string())?;
     let state = catalog.active_for(&job.project_id);
-    let table = crate::broker::table_for_message(&state.manifest, &job.source.source_message_type)
-        .ok_or_else(|| {
-            format!(
-                "embedding backfill source entity '{}' is not present in active catalog",
-                job.source.source_message_type
-            )
-        })?;
+    let table =
+        crate::broker::resolve_table_for_message(&state.manifest, &job.source.source_message_type)
+            .map_err(|error| format!("embedding backfill source entity lookup failed: {error}"))?;
     let primary_key = table.primary_key.first().cloned().ok_or_else(|| {
         format!(
             "embedding backfill source entity '{}' has no primary key",

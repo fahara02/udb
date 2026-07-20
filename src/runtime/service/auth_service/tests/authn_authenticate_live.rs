@@ -1,6 +1,7 @@
 use super::support::*;
 use crate::proto::udb::core::apikey::services::v1 as apikey_pb;
 use crate::proto::udb::core::apikey::services::v1::api_key_service_server::ApiKeyService;
+use crate::proto::udb::core::authn::entity::v1 as authn_entity_pb;
 use crate::proto::udb::core::authn::services::v1 as authn_pb;
 use crate::proto::udb::core::authn::services::v1::authn_service_server::AuthnService;
 use crate::proto::udb::core::common::v1 as common_pb;
@@ -99,15 +100,21 @@ async fn live_postgres_authn_authenticate_api_key() {
     let _guard = live_auth_db_lock().lock().await;
     let pool = live_pg_pool().await;
     migrate_native_auth_db(&pool).await;
-    let authn = authn_service(pool.clone());
+    let authn = authn_service_with_jwt(pool.clone());
     let apikey = api_key_service(pool.clone());
-    let user = create_verified_user(&authn, "authn_apikey", "CorrectHorse1!").await;
+    let (user, grant) = create_service_account_with_grant(
+        &authn,
+        "authn_apikey",
+        "CorrectHorse1!",
+        &["data:read", "data:write"],
+    )
+    .await;
 
     let created = apikey
         .create_api_key(Request::new(apikey_pb::CreateApiKeyRequest {
             name: "authenticate-key".to_string(),
             owner_id: user.user_id.clone(),
-            scopes: vec!["data:read".to_string()],
+            scopes: vec!["data:read".to_string(), "data:write".to_string()],
             context: Some(common_pb::RequestContext {
                 principal_id: user.user_id.clone(),
                 tenant: Some(common_pb::TenantContext {
@@ -123,18 +130,46 @@ async fn live_postgres_authn_authenticate_api_key() {
         .expect("create API key for authenticate")
         .into_inner();
 
-    let principal = authn
+    let exchanged = authn
         .authenticate(Request::new(authn_pb::AuthnRequest {
             api_key: created.plain_key,
+            requested_scopes: vec!["data:read".to_string()],
             ..Default::default()
         }))
         .await
         .expect("authenticate via API key")
-        .into_inner()
-        .principal
-        .expect("api-key principal");
+        .into_inner();
+    let principal = exchanged.principal.expect("api-key principal");
     assert_eq!(principal.principal_id, user.user_id);
-    assert!(principal.scopes.iter().any(|scope| scope == "data:read"));
+    assert_eq!(principal.scopes, vec!["data:read"]);
+    assert_eq!(principal.service_identity, grant.service_identity);
+    assert!(!exchanged.access_token.is_empty());
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("system clock after unix epoch")
+        .as_secs() as i64;
+    assert!(exchanged.expires_at_unix > now);
+    assert!(exchanged.expires_at_unix <= now + 3_600);
+    let validated = authn
+        .validate_token(Request::new(authn_pb::ValidateTokenRequest {
+            token: exchanged.access_token,
+            token_type: authn_entity_pb::TokenType::JwtAccess as i32,
+        }))
+        .await
+        .expect("validate exchanged API-key bearer")
+        .into_inner();
+    assert!(validated.valid);
+    assert_eq!(validated.user_id, user.user_id);
+    assert_eq!(validated.tenant_id, "acme");
+    assert_eq!(validated.project_id, "billing");
+    assert_eq!(validated.scopes, vec!["data:read"]);
+    assert_eq!(
+        validated
+            .principal
+            .expect("validated API-key bearer principal")
+            .service_identity,
+        grant.service_identity
+    );
 
     let err = authn
         .authenticate(Request::new(authn_pb::AuthnRequest {
@@ -227,7 +262,13 @@ async fn live_postgres_revoked_api_key_cannot_obtain_broker_principal() {
     migrate_native_auth_db(&pool).await;
     let authn = authn_service(pool.clone());
     let apikey = api_key_service(pool.clone());
-    let user = create_verified_user(&authn, "revoked_apikey", "CorrectHorse1!").await;
+    let (user, _) = create_service_account_with_grant(
+        &authn,
+        "revoked_apikey",
+        "CorrectHorse1!",
+        &["data:read"],
+    )
+    .await;
 
     let created = apikey
         .create_api_key(Request::new(apikey_pb::CreateApiKeyRequest {

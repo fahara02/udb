@@ -133,6 +133,12 @@ pub enum LookupError {
         project_id: String,
         message_type: String,
     },
+    /// A convenience name matched more than one composed-catalog entity.
+    MessageAmbiguous {
+        project_id: String,
+        message_type: String,
+        candidates: Vec<String>,
+    },
     /// The client's version isn't compatible with the active catalog.
     Incompatible {
         project_id: String,
@@ -215,13 +221,22 @@ impl SchemaRegistry {
         }
 
         let active = self.catalog.active_for(project_id);
-        let table =
-            crate::broker::table_for_message(&active.manifest, message_type).ok_or_else(|| {
-                LookupError::MessageNotFound {
+        let table = match crate::broker::resolve_table_for_message(&active.manifest, message_type) {
+            Ok(table) => table,
+            Err(crate::broker::TableLookupError::Missing { .. }) => {
+                return Err(LookupError::MessageNotFound {
                     project_id: project_id.to_string(),
                     message_type: message_type.to_string(),
-                }
-            })?;
+                });
+            }
+            Err(crate::broker::TableLookupError::Ambiguous { candidates, .. }) => {
+                return Err(LookupError::MessageAmbiguous {
+                    project_id: project_id.to_string(),
+                    message_type: message_type.to_string(),
+                    candidates,
+                });
+            }
+        };
 
         Ok(MessageDescriptor {
             message_type: table.message_name.clone(),
@@ -399,6 +414,48 @@ mod tests {
             .lookup_message("billing", "acme.billing.v1.UnknownThing", "1.0.0")
             .unwrap_err();
         assert!(matches!(err, LookupError::MessageNotFound { .. }));
+    }
+
+    #[tokio::test]
+    async fn lookup_ambiguous_short_name_returns_candidates_and_exact_fqns_route() {
+        let mut manifest = manifest_with_customer("ambiguous-default");
+        let customer_columns = manifest.tables[0].columns.clone();
+        manifest.tables.push(ManifestTable {
+            message_name: "udb.core.billing.v1.Customer".to_string(),
+            schema: "udb_billing".to_string(),
+            table: "customers".to_string(),
+            primary_key: vec!["id".to_string()],
+            columns: customer_columns,
+            ..Default::default()
+        });
+        let registry = SchemaRegistry::new(Arc::new(CatalogManager::new(manifest)));
+
+        let error = registry
+            .lookup_message("default", "Customer", "")
+            .expect_err("colliding short names must not route first-wins");
+        let LookupError::MessageAmbiguous { candidates, .. } = error else {
+            panic!("short-name collision must remain typed as ambiguous");
+        };
+        assert_eq!(candidates.len(), 2);
+        assert!(
+            candidates
+                .iter()
+                .any(|candidate| candidate.contains("acme.billing.v1.Customer"))
+        );
+        assert!(
+            candidates
+                .iter()
+                .any(|candidate| candidate.contains("udb.core.billing.v1.Customer"))
+        );
+
+        let consumer = registry
+            .lookup_message("default", "acme.billing.v1.Customer", "")
+            .expect("consumer FQN routes exactly");
+        assert_eq!(consumer.schema, "public");
+        let embedded = registry
+            .lookup_message("default", "udb.core.billing.v1.Customer", "")
+            .expect("embedded FQN routes exactly");
+        assert_eq!(embedded.schema, "udb_billing");
     }
 
     #[tokio::test]

@@ -295,6 +295,13 @@ pub(crate) enum AuthCommand {
         name: String,
         scopes: Vec<String>,
     },
+    /// UDB-AUTH-009: offline API-key rotation/reconciliation the CLI lacked.
+    ApiKeyRevoke {
+        key_prefix: String,
+    },
+    ApiKeyList {
+        owner_id: String,
+    },
     /// urgent_fix #20: OFFLINE root bootstrap. Creates an initial verified user
     /// directly against the database (constructing the authn service in-process,
     /// bypassing the PEP-fronted internal listener — the same path the live tests
@@ -306,6 +313,66 @@ pub(crate) enum AuthCommand {
         password: String,
         tenant: String,
         project: String,
+    },
+    /// fix_plan §2.3: migrate legacy profile-attribute service grants into the
+    /// typed durable `service_account_grants` table (offline, deterministic).
+    MigrateGrants {
+        dry_run: bool,
+    },
+    /// Typed-grant management through the authenticated native Authn API.
+    GrantCreate {
+        tenant_id: String,
+        user_id: String,
+        service_identity: String,
+        project_id: String,
+        scopes: Vec<String>,
+        reason: String,
+    },
+    GrantGet {
+        tenant_id: String,
+        user_id: String,
+    },
+    GrantList {
+        tenant_id: String,
+    },
+    GrantReplace {
+        tenant_id: String,
+        user_id: String,
+        scopes: Vec<String>,
+        project_id: String,
+        reason: String,
+        expected_revision: i64,
+    },
+    GrantRotateIdentity {
+        tenant_id: String,
+        user_id: String,
+        new_service_identity: String,
+        reason: String,
+        expected_revision: i64,
+    },
+    GrantRevoke {
+        tenant_id: String,
+        user_id: String,
+        reason: String,
+    },
+    /// mTLS certificate-binding management through the authenticated native API.
+    CertBindingCreate {
+        tenant_id: String,
+        user_id: String,
+        selector_kind: String,
+        selector_value: String,
+        scope_subset: Vec<String>,
+        not_before_unix: u64,
+        not_after_unix: u64,
+        reason: String,
+    },
+    CertBindingList {
+        tenant_id: String,
+    },
+    CertBindingRevoke {
+        tenant_id: String,
+        binding_id: String,
+        reason: String,
     },
     RoleBind {
         user_id: String,
@@ -563,6 +630,79 @@ fn parse_auth_subcommand(args: &[String]) -> Option<(AuthCommand, usize)> {
             owner_id: flag_value("--owner").unwrap_or_default(),
             name: flag_value("--name").unwrap_or_default(),
             scopes: flag_values("--scope"),
+        },
+        (Some("api-key"), Some("revoke")) => AuthCommand::ApiKeyRevoke {
+            key_prefix: flag_value("--key").unwrap_or_default(),
+        },
+        (Some("api-key"), Some("list")) => AuthCommand::ApiKeyList {
+            owner_id: flag_value("--owner").unwrap_or_default(),
+        },
+        (Some("migrate-grants"), _) => AuthCommand::MigrateGrants {
+            dry_run: has_flag("--dry-run"),
+        },
+        (Some("grant"), Some("create")) => AuthCommand::GrantCreate {
+            tenant_id: flag_value("--tenant").unwrap_or_default(),
+            user_id: flag_value("--user").unwrap_or_default(),
+            service_identity: flag_value("--identity").unwrap_or_default(),
+            project_id: flag_value("--project").unwrap_or_default(),
+            scopes: flag_values("--scope"),
+            reason: flag_value("--reason").unwrap_or_default(),
+        },
+        (Some("grant"), Some("get")) => AuthCommand::GrantGet {
+            tenant_id: flag_value("--tenant").unwrap_or_default(),
+            user_id: flag_value("--user").unwrap_or_default(),
+        },
+        (Some("grant"), Some("list")) => AuthCommand::GrantList {
+            tenant_id: flag_value("--tenant").unwrap_or_default(),
+        },
+        (Some("grant"), Some("replace")) => AuthCommand::GrantReplace {
+            tenant_id: flag_value("--tenant").unwrap_or_default(),
+            user_id: flag_value("--user").unwrap_or_default(),
+            scopes: flag_values("--scope"),
+            project_id: flag_value("--project").unwrap_or_default(),
+            reason: flag_value("--reason").unwrap_or_default(),
+            // Unparseable/missing ⇒ 0, which the dispatcher rejects with a
+            // typed "--expected-revision is required" error (revisions start
+            // at 1, so 0 can never be a real CAS target).
+            expected_revision: flag_value("--expected-revision")
+                .and_then(|value| value.trim().parse::<i64>().ok())
+                .unwrap_or(0),
+        },
+        (Some("grant"), Some("revoke")) => AuthCommand::GrantRevoke {
+            tenant_id: flag_value("--tenant").unwrap_or_default(),
+            user_id: flag_value("--user").unwrap_or_default(),
+            reason: flag_value("--reason").unwrap_or_default(),
+        },
+        (Some("grant"), Some("rotate-identity")) => AuthCommand::GrantRotateIdentity {
+            tenant_id: flag_value("--tenant").unwrap_or_default(),
+            user_id: flag_value("--user").unwrap_or_default(),
+            new_service_identity: flag_value("--identity").unwrap_or_default(),
+            reason: flag_value("--reason").unwrap_or_default(),
+            expected_revision: flag_value("--expected-revision")
+                .and_then(|value| value.trim().parse::<i64>().ok())
+                .unwrap_or(0),
+        },
+        (Some("cert-binding"), Some("create")) => AuthCommand::CertBindingCreate {
+            tenant_id: flag_value("--tenant").unwrap_or_default(),
+            user_id: flag_value("--user").unwrap_or_default(),
+            selector_kind: flag_value("--selector-kind").unwrap_or_default(),
+            selector_value: flag_value("--selector-value").unwrap_or_default(),
+            scope_subset: flag_values("--scope"),
+            not_before_unix: flag_value("--not-before-unix")
+                .and_then(|value| value.trim().parse::<u64>().ok())
+                .unwrap_or(0),
+            not_after_unix: flag_value("--not-after-unix")
+                .and_then(|value| value.trim().parse::<u64>().ok())
+                .unwrap_or(0),
+            reason: flag_value("--reason").unwrap_or_default(),
+        },
+        (Some("cert-binding"), Some("list")) => AuthCommand::CertBindingList {
+            tenant_id: flag_value("--tenant").unwrap_or_default(),
+        },
+        (Some("cert-binding"), Some("revoke")) => AuthCommand::CertBindingRevoke {
+            tenant_id: flag_value("--tenant").unwrap_or_default(),
+            binding_id: flag_value("--binding").unwrap_or_default(),
+            reason: flag_value("--reason").unwrap_or_default(),
         },
         (Some("bootstrap"), Some("user")) => AuthCommand::Bootstrap {
             username: flag_value("--username").unwrap_or_else(|| "admin".to_string()),

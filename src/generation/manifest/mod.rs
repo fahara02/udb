@@ -184,7 +184,7 @@ pub struct ManifestProjection {
     /// collision detection can key by the FULLY-QUALIFIED message name
     /// (`proto_package` + `message_type`) instead of the bare short name — two
     /// different packages that reuse a short name (e.g. consumer
-    /// `ambulife.authn.entity.v1.User` vs embedded `udb.core.authn.entity.v1.User`)
+    /// `acme.authn.entity.v1.User` vs embedded `udb.core.authn.entity.v1.User`)
     /// are distinct identities and must not collide. Empty on manifests loaded
     /// from pre-FQN JSON, where the FQN degrades to the bare `message_type`.
     pub proto_package: String,

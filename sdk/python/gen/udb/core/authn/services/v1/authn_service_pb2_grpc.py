@@ -2,6 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
+from udb.core.authn.services.v1 import authn_service_pb2 as udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2
 from udb.core.authn.services.v1 import core_pb2 as udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2
 
 
@@ -273,6 +274,51 @@ class AuthnServiceStub(object):
                 '/udb.core.authn.services.v1.AuthnService/DeleteWebAuthnCredential',
                 request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.DeleteWebAuthnCredentialRequest.SerializeToString,
                 response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.DeleteWebAuthnCredentialResponse.FromString,
+                _registered_method=True)
+        self.CreateServiceAccountGrant = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/CreateServiceAccountGrant',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.CreateServiceAccountGrantRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.CreateServiceAccountGrantResponse.FromString,
+                _registered_method=True)
+        self.GetServiceAccountGrant = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/GetServiceAccountGrant',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.GetServiceAccountGrantRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.GetServiceAccountGrantResponse.FromString,
+                _registered_method=True)
+        self.ListServiceAccountGrants = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/ListServiceAccountGrants',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ListServiceAccountGrantsRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ListServiceAccountGrantsResponse.FromString,
+                _registered_method=True)
+        self.ReplaceServiceAccountGrant = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/ReplaceServiceAccountGrant',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ReplaceServiceAccountGrantRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ReplaceServiceAccountGrantResponse.FromString,
+                _registered_method=True)
+        self.RotateServiceAccountIdentity = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/RotateServiceAccountIdentity',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.RotateServiceAccountIdentityRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.RotateServiceAccountIdentityResponse.FromString,
+                _registered_method=True)
+        self.RevokeServiceAccountGrant = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/RevokeServiceAccountGrant',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.RevokeServiceAccountGrantRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.RevokeServiceAccountGrantResponse.FromString,
+                _registered_method=True)
+        self.CreateCertificateBinding = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/CreateCertificateBinding',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.CreateCertificateBindingRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.CreateCertificateBindingResponse.FromString,
+                _registered_method=True)
+        self.ListCertificateBindings = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/ListCertificateBindings',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ListCertificateBindingsRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ListCertificateBindingsResponse.FromString,
+                _registered_method=True)
+        self.RevokeCertificateBinding = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/RevokeCertificateBinding',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.RevokeCertificateBindingRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.RevokeCertificateBindingResponse.FromString,
                 _registered_method=True)
 
 
@@ -615,6 +661,85 @@ class AuthnServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def CreateServiceAccountGrant(self, request, context):
+        """── Typed service-account grants + mTLS certificate bindings (UDB-AUTH-003/007) ──
+        Create the single typed grant for a service account: immutable service
+        identity, tenant/project binding, and operator-approved scopes.
+        Admin/owner/wildcard scopes are rejected at write time (fail closed).
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetServiceAccountGrant(self, request, context):
+        """Read the current typed grant for a service account; NOT_FOUND when the
+        account has no grant (the account then cannot authenticate — fail closed).
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ListServiceAccountGrants(self, request, context):
+        """Page through the tenant's typed service-account grants (tenant-scoped;
+        cross-tenant reads are rejected).
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ReplaceServiceAccountGrant(self, request, context):
+        """Replace a grant's approved scopes/project atomically, bumping `revision` so
+        dependent credentials and bindings detect staleness. A stale
+        expected_revision fails with FAILED_PRECONDITION (fail closed).
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def RotateServiceAccountIdentity(self, request, context):
+        """Rotate the immutable service identity through an explicit audited CAS.
+        The revision bump invalidates all API keys and certificate bindings
+        reviewed against the prior identity; already-issued service JWTs fail the
+        current-grant identity check immediately.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def RevokeServiceAccountGrant(self, request, context):
+        """Revoke a service account's grant. The account (and every credential or
+        certificate binding that resolves through the grant) stops authenticating
+        immediately — fail closed, audited.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def CreateCertificateBinding(self, request, context):
+        """Bind an mTLS certificate selector to a service account. The principal is
+        always derived from the account's CURRENT grant at request time (optionally
+        attenuated by scope_subset); an unknown or misbound certificate fails closed.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ListCertificateBindings(self, request, context):
+        """Page through the tenant's mTLS certificate bindings (tenant-scoped;
+        cross-tenant reads are rejected).
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def RevokeCertificateBinding(self, request, context):
+        """Revoke a certificate binding. Certificates matching the selector stop
+        authenticating immediately — fail closed, audited.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_AuthnServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -867,6 +992,51 @@ def add_AuthnServiceServicer_to_server(servicer, server):
                     servicer.DeleteWebAuthnCredential,
                     request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.DeleteWebAuthnCredentialRequest.FromString,
                     response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.DeleteWebAuthnCredentialResponse.SerializeToString,
+            ),
+            'CreateServiceAccountGrant': grpc.unary_unary_rpc_method_handler(
+                    servicer.CreateServiceAccountGrant,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.CreateServiceAccountGrantRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.CreateServiceAccountGrantResponse.SerializeToString,
+            ),
+            'GetServiceAccountGrant': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetServiceAccountGrant,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.GetServiceAccountGrantRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.GetServiceAccountGrantResponse.SerializeToString,
+            ),
+            'ListServiceAccountGrants': grpc.unary_unary_rpc_method_handler(
+                    servicer.ListServiceAccountGrants,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ListServiceAccountGrantsRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ListServiceAccountGrantsResponse.SerializeToString,
+            ),
+            'ReplaceServiceAccountGrant': grpc.unary_unary_rpc_method_handler(
+                    servicer.ReplaceServiceAccountGrant,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ReplaceServiceAccountGrantRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ReplaceServiceAccountGrantResponse.SerializeToString,
+            ),
+            'RotateServiceAccountIdentity': grpc.unary_unary_rpc_method_handler(
+                    servicer.RotateServiceAccountIdentity,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.RotateServiceAccountIdentityRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.RotateServiceAccountIdentityResponse.SerializeToString,
+            ),
+            'RevokeServiceAccountGrant': grpc.unary_unary_rpc_method_handler(
+                    servicer.RevokeServiceAccountGrant,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.RevokeServiceAccountGrantRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.RevokeServiceAccountGrantResponse.SerializeToString,
+            ),
+            'CreateCertificateBinding': grpc.unary_unary_rpc_method_handler(
+                    servicer.CreateCertificateBinding,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.CreateCertificateBindingRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.CreateCertificateBindingResponse.SerializeToString,
+            ),
+            'ListCertificateBindings': grpc.unary_unary_rpc_method_handler(
+                    servicer.ListCertificateBindings,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ListCertificateBindingsRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ListCertificateBindingsResponse.SerializeToString,
+            ),
+            'RevokeCertificateBinding': grpc.unary_unary_rpc_method_handler(
+                    servicer.RevokeCertificateBinding,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.RevokeCertificateBindingRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.RevokeCertificateBindingResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -2229,6 +2399,249 @@ class AuthnService(object):
             '/udb.core.authn.services.v1.AuthnService/DeleteWebAuthnCredential',
             udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.DeleteWebAuthnCredentialRequest.SerializeToString,
             udb_dot_core_dot_authn_dot_services_dot_v1_dot_core__pb2.DeleteWebAuthnCredentialResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def CreateServiceAccountGrant(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/CreateServiceAccountGrant',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.CreateServiceAccountGrantRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.CreateServiceAccountGrantResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetServiceAccountGrant(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/GetServiceAccountGrant',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.GetServiceAccountGrantRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.GetServiceAccountGrantResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ListServiceAccountGrants(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/ListServiceAccountGrants',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ListServiceAccountGrantsRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ListServiceAccountGrantsResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ReplaceServiceAccountGrant(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/ReplaceServiceAccountGrant',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ReplaceServiceAccountGrantRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ReplaceServiceAccountGrantResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def RotateServiceAccountIdentity(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/RotateServiceAccountIdentity',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.RotateServiceAccountIdentityRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.RotateServiceAccountIdentityResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def RevokeServiceAccountGrant(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/RevokeServiceAccountGrant',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.RevokeServiceAccountGrantRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.RevokeServiceAccountGrantResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def CreateCertificateBinding(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/CreateCertificateBinding',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.CreateCertificateBindingRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.CreateCertificateBindingResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ListCertificateBindings(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/ListCertificateBindings',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ListCertificateBindingsRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.ListCertificateBindingsResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def RevokeCertificateBinding(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/RevokeCertificateBinding',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.RevokeCertificateBindingRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.RevokeCertificateBindingResponse.FromString,
             options,
             channel_credentials,
             insecure,

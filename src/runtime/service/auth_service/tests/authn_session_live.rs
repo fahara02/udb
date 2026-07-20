@@ -86,13 +86,20 @@ async fn live_postgres_authn_session_token_lifecycle() {
         AuthnConfig::default().session_ttl_secs as i32
     );
 
+    let (key_owner, _) = create_service_account_with_grant(
+        &authn,
+        "session_api_key",
+        "CorrectHorse1!",
+        &["authn:test"],
+    )
+    .await;
     let created_key = apikey
         .create_api_key(Request::new(apikey_pb::CreateApiKeyRequest {
             name: "authn-token-key".to_string(),
-            owner_id: user.user_id.clone(),
+            owner_id: key_owner.user_id.clone(),
             scopes: vec!["authn:test".to_string()],
             context: Some(common_pb::RequestContext {
-                principal_id: user.user_id.clone(),
+                principal_id: key_owner.user_id.clone(),
                 tenant: Some(common_pb::TenantContext {
                     tenant_id: "acme".to_string(),
                     project_id: "billing".to_string(),
@@ -120,7 +127,7 @@ async fn live_postgres_authn_session_token_lifecycle() {
             .as_ref()
             .expect("api-key principal")
             .principal_id,
-        user.user_id
+        key_owner.user_id
     );
     assert!(
         api_key_token

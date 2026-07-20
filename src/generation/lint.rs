@@ -63,8 +63,16 @@ impl LintItem {
         } else {
             format!(" [{}]", self.source_file)
         };
+        // UDB-CAT-002: carry the remediation with the finding — the startup
+        // failure path renders these lines, and a finding without its fix
+        // forces the operator back to source.
+        let remediation = if self.suggestion.trim().is_empty() {
+            String::new()
+        } else {
+            format!(" (fix: {})", self.suggestion.trim())
+        };
         format!(
-            "[{severity}] {kind}{location}{source}: {description}",
+            "[{severity}] {kind}{location}{source}: {description}{remediation}",
             kind = self.kind,
             description = self.description
         )
@@ -124,22 +132,33 @@ pub fn lint_catalog(manifest: &CatalogManifest) -> LintReport {
         lint_table(table, &mut items);
     }
 
-    // ── Cross-table: duplicate base table name across schemas ────────────────
-    let mut table_name_counts = BTreeMap::<&str, usize>::new();
+    // ── Cross-table: duplicate PHYSICAL identity ─────────────────────────────
+    // UDB-CAT-001: keyed by (schema, table) — a duplicate within ONE schema is a
+    // real DDL collision (Error). Reusing a table name across DIFFERENT schemas
+    // is legal PostgreSQL (`authn.otps` vs `udb_authn.otps`) and is exactly how
+    // a consumer catalog composes with the embedded native schemas, so the old
+    // schema-blind Warning fabricated findings for valid catalogs; the runtime
+    // resolver already refuses ambiguous BARE names (see
+    // `generation::manifest_index`), which is the actual misroute risk.
+    let mut physical_identity_counts = BTreeMap::<(&str, &str), usize>::new();
     for table in &manifest.tables {
-        *table_name_counts.entry(table.table.as_str()).or_default() += 1;
+        *physical_identity_counts
+            .entry((table.schema.as_str(), table.table.as_str()))
+            .or_default() += 1;
     }
-    for (table_name, count) in &table_name_counts {
+    for ((schema, table_name), count) in &physical_identity_counts {
         if *count > 1 {
             items.push(LintItem {
-                severity: LintSeverity::Warning,
-                kind: "duplicate_table_name_across_schemas".to_string(),
+                severity: LintSeverity::Error,
+                kind: "duplicate_physical_table_identity".to_string(),
+                schema: schema.to_string(),
                 table: table_name.to_string(),
                 description: format!(
-                    "Table name '{}' is used in {} different schemas; this may cause confusion in cross-schema joins.",
-                    table_name, count
+                    "Physical table '{schema}.{table_name}' is declared by {count} manifest tables; the DDL for one would clobber the other."
                 ),
-                suggestion: "Use schema-specific prefixes or rely on fully-qualified identifiers.".to_string(),
+                suggestion:
+                    "Give each message its own table_name, or move one message to a different schema."
+                        .to_string(),
                 ..LintItem::default()
             });
         }
@@ -657,7 +676,7 @@ fn lint_manifest_routing(manifest: &CatalogManifest, items: &mut Vec<LintItem>) 
     // Routing identity is the FULLY-QUALIFIED message name (`proto_package` +
     // message), never the bare short name. Keying by the short name conflated
     // unrelated packages that happen to reuse a name (e.g. consumer
-    // `ambulife.authn.entity.v1.User` and embedded `udb.core.authn.entity.v1.User`),
+    // `acme.authn.entity.v1.User` and embedded `udb.core.authn.entity.v1.User`),
     // fabricating `ambiguous_projection_write_owner` collisions across two
     // legitimately-distinct tables. A genuine same-FQN conflict is still grouped
     // together and still reported — only different FQNs are now separated.
@@ -1225,23 +1244,37 @@ mod tests {
     }
 
     /// Embedded `udb.core.authn.entity.v1.User` and consumer
-    /// `ambulife.authn.entity.v1.User` (same SHORT name, different package) compose
+    /// `acme.authn.entity.v1.User` (same SHORT name, different package) compose
     /// cleanly: no fabricated write-owner collision, and each maps to a DISTINCT
     /// resource keyed by its FQN. Reverting the FQN keying re-collapses both under
     /// bare `User`, which fails with `ambiguous_projection_write_owner`.
     #[test]
     fn distinct_fqns_sharing_short_name_compose_without_collision() {
-        let consumer = fqn_table("ambulife.authn.entity.v1", "User", "authn", "users");
+        let consumer = fqn_table("acme.authn.entity.v1", "User", "authn", "users");
         let embedded = fqn_table("udb.core.authn.entity.v1", "User", "udb_authn", "users");
-        let session_c = fqn_table("ambulife.authn.entity.v1", "Session", "authn", "sessions");
+        let session_c = fqn_table("acme.authn.entity.v1", "Session", "authn", "sessions");
         let session_e = fqn_table(
             "udb.core.authn.entity.v1",
             "Session",
             "udb_authn",
             "sessions",
         );
+        // UDB-CAT-001 acceptance pair: the exact message the consumer's A/B
+        // probe renamed to unbrick v0.4.14 startup — it must now compose as-is.
+        let otp_c = fqn_table("acme.authn.entity.v1", "OTP", "authn", "otps");
+        let otp_e = fqn_table("udb.core.authn.entity.v1", "OTP", "udb_authn", "otps");
 
-        let report = lint_catalog(&manifest_of(vec![consumer, embedded, session_c, session_e]));
+        let report = lint_catalog(&manifest_of(vec![
+            consumer, embedded, session_c, session_e, otp_c, otp_e,
+        ]));
+
+        // Cross-schema physical-name reuse is legal — the old schema-blind
+        // duplicate warning must not fire for a valid composed catalog.
+        assert!(
+            !has_kind(&report, "duplicate_physical_table_identity"),
+            "cross-schema table-name reuse is legal: {:#?}",
+            report.items
+        );
 
         assert!(
             !has_kind(&report, "ambiguous_projection_write_owner"),
@@ -1258,7 +1291,7 @@ mod tests {
 
         // Distinct mapped resources, keyed by FQN.
         let resources: std::collections::BTreeSet<_> = manifest_of(vec![
-            fqn_table("ambulife.authn.entity.v1", "User", "authn", "users"),
+            fqn_table("acme.authn.entity.v1", "User", "authn", "users"),
             fqn_table("udb.core.authn.entity.v1", "User", "udb_authn", "users"),
         ])
         .projections
@@ -1266,7 +1299,7 @@ mod tests {
         .map(|p| (p.message_fqn(), p.resource_name.clone()))
         .collect();
         assert!(resources.contains(&(
-            "ambulife.authn.entity.v1.User".to_string(),
+            "acme.authn.entity.v1.User".to_string(),
             "authn.users".to_string()
         )));
         assert!(resources.contains(&(
@@ -1275,17 +1308,64 @@ mod tests {
         )));
     }
 
+    /// UDB-CAT-001 full acceptance: the consumer's `User`/`Session`/`OTP` twins
+    /// composed with the REAL embedded native catalog (all native schemas, not a
+    /// synthetic pair) must lint with zero errors — i.e. `udb serve` would pass
+    /// `PROTO_CHECKSUM_LINT` without renaming any consumer message — and the
+    /// runtime resolver must route each FQN to its own table while refusing the
+    /// ambiguous bare name instead of first-wins misrouting.
+    #[test]
+    fn consumer_short_name_twins_compose_with_real_embedded_native_catalog() {
+        let native = crate::runtime::native_catalog::native_manifest();
+        let mut tables = vec![
+            fqn_table("acme.authn.entity.v1", "User", "authn", "users"),
+            fqn_table("acme.authn.entity.v1", "Session", "authn", "sessions"),
+            fqn_table("acme.authn.entity.v1", "OTP", "authn", "otps"),
+        ];
+        tables.extend(native.tables.iter().cloned());
+        let mut manifest = manifest_of(tables);
+        manifest.checksum_sha256 = "cat001-real-native-compose".to_string();
+
+        let report = lint_catalog(&manifest);
+        let errors: Vec<_> = report
+            .items
+            .iter()
+            .filter(|item| matches!(item.severity, LintSeverity::Error))
+            .collect();
+        assert_eq!(
+            report.error_count, 0,
+            "composed consumer+native catalog must lint clean: {errors:#?}"
+        );
+
+        let consumer_otp = crate::generation::manifest_index::table_for_message(
+            &manifest,
+            "acme.authn.entity.v1.OTP",
+        )
+        .expect("consumer OTP FQN resolves");
+        assert_eq!(consumer_otp.schema, "authn");
+        let native_otp = crate::generation::manifest_index::table_for_message(
+            &manifest,
+            "udb.core.authn.entity.v1.OTP",
+        )
+        .expect("embedded OTP FQN resolves");
+        assert_eq!(native_otp.schema, "udb_authn");
+        assert!(
+            crate::generation::manifest_index::table_for_message(&manifest, "OTP").is_none(),
+            "ambiguous bare short name must refuse, not first-wins"
+        );
+    }
+
     /// The real collision guard is preserved: two write-owner projections that
     /// resolve to the SAME FQN with no multi-write fan-out are still an error
     /// before migration. FQN keying separates different FQNs; it does not soften a
     /// genuine same-identity conflict.
     #[test]
     fn same_fqn_incompatible_projections_still_fail() {
-        let mut table = fqn_table("ambulife.authn.entity.v1", "User", "authn", "users");
+        let mut table = fqn_table("acme.authn.entity.v1", "User", "authn", "users");
         // A second, conflicting write-owner projection for the SAME message FQN.
         table.projections.push(ManifestProjection {
             message_type: "User".to_string(),
-            proto_package: "ambulife.authn.entity.v1".to_string(),
+            proto_package: "acme.authn.entity.v1".to_string(),
             projection_kind: "document".to_string(),
             backend: "mongodb".to_string(),
             resource_name: "authn.users_doc".to_string(),
@@ -1311,10 +1391,10 @@ mod tests {
     /// data the startup lifecycle / `udb admin dry-run` now surface per finding.
     #[test]
     fn failing_lint_surfaces_individual_findings_with_fqn() {
-        let mut table = fqn_table("ambulife.authn.entity.v1", "User", "authn", "users");
+        let mut table = fqn_table("acme.authn.entity.v1", "User", "authn", "users");
         table.projections.push(ManifestProjection {
             message_type: "User".to_string(),
-            proto_package: "ambulife.authn.entity.v1".to_string(),
+            proto_package: "acme.authn.entity.v1".to_string(),
             projection_kind: "document".to_string(),
             backend: "mongodb".to_string(),
             resource_name: "authn.users_doc".to_string(),
@@ -1339,7 +1419,7 @@ mod tests {
         );
         assert!(line.contains("authn.users"), "schema/table missing: {line}");
         assert!(
-            line.contains("ambulife.authn.entity.v1.User"),
+            line.contains("acme.authn.entity.v1.User"),
             "fully-qualified message name missing: {line}"
         );
     }

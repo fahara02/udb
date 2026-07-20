@@ -69,6 +69,15 @@ const (
 	AuthnService_AdminResetMfa_FullMethodName                = "/udb.core.authn.services.v1.AuthnService/AdminResetMfa"
 	AuthnService_ListWebAuthnCredentials_FullMethodName      = "/udb.core.authn.services.v1.AuthnService/ListWebAuthnCredentials"
 	AuthnService_DeleteWebAuthnCredential_FullMethodName     = "/udb.core.authn.services.v1.AuthnService/DeleteWebAuthnCredential"
+	AuthnService_CreateServiceAccountGrant_FullMethodName    = "/udb.core.authn.services.v1.AuthnService/CreateServiceAccountGrant"
+	AuthnService_GetServiceAccountGrant_FullMethodName       = "/udb.core.authn.services.v1.AuthnService/GetServiceAccountGrant"
+	AuthnService_ListServiceAccountGrants_FullMethodName     = "/udb.core.authn.services.v1.AuthnService/ListServiceAccountGrants"
+	AuthnService_ReplaceServiceAccountGrant_FullMethodName   = "/udb.core.authn.services.v1.AuthnService/ReplaceServiceAccountGrant"
+	AuthnService_RotateServiceAccountIdentity_FullMethodName = "/udb.core.authn.services.v1.AuthnService/RotateServiceAccountIdentity"
+	AuthnService_RevokeServiceAccountGrant_FullMethodName    = "/udb.core.authn.services.v1.AuthnService/RevokeServiceAccountGrant"
+	AuthnService_CreateCertificateBinding_FullMethodName     = "/udb.core.authn.services.v1.AuthnService/CreateCertificateBinding"
+	AuthnService_ListCertificateBindings_FullMethodName      = "/udb.core.authn.services.v1.AuthnService/ListCertificateBindings"
+	AuthnService_RevokeCertificateBinding_FullMethodName     = "/udb.core.authn.services.v1.AuthnService/RevokeCertificateBinding"
 )
 
 // AuthnServiceClient is the client API for AuthnService service.
@@ -162,6 +171,40 @@ type AuthnServiceClient interface {
 	// ── WebAuthn enterprise credential lifecycle (Phase 3 / I2.7) ────────────
 	ListWebAuthnCredentials(ctx context.Context, in *ListWebAuthnCredentialsRequest, opts ...grpc.CallOption) (*ListWebAuthnCredentialsResponse, error)
 	DeleteWebAuthnCredential(ctx context.Context, in *DeleteWebAuthnCredentialRequest, opts ...grpc.CallOption) (*DeleteWebAuthnCredentialResponse, error)
+	// ── Typed service-account grants + mTLS certificate bindings (UDB-AUTH-003/007) ──
+	// Create the single typed grant for a service account: immutable service
+	// identity, tenant/project binding, and operator-approved scopes.
+	// Admin/owner/wildcard scopes are rejected at write time (fail closed).
+	CreateServiceAccountGrant(ctx context.Context, in *CreateServiceAccountGrantRequest, opts ...grpc.CallOption) (*CreateServiceAccountGrantResponse, error)
+	// Read the current typed grant for a service account; NOT_FOUND when the
+	// account has no grant (the account then cannot authenticate — fail closed).
+	GetServiceAccountGrant(ctx context.Context, in *GetServiceAccountGrantRequest, opts ...grpc.CallOption) (*GetServiceAccountGrantResponse, error)
+	// Page through the tenant's typed service-account grants (tenant-scoped;
+	// cross-tenant reads are rejected).
+	ListServiceAccountGrants(ctx context.Context, in *ListServiceAccountGrantsRequest, opts ...grpc.CallOption) (*ListServiceAccountGrantsResponse, error)
+	// Replace a grant's approved scopes/project atomically, bumping `revision` so
+	// dependent credentials and bindings detect staleness. A stale
+	// expected_revision fails with FAILED_PRECONDITION (fail closed).
+	ReplaceServiceAccountGrant(ctx context.Context, in *ReplaceServiceAccountGrantRequest, opts ...grpc.CallOption) (*ReplaceServiceAccountGrantResponse, error)
+	// Rotate the immutable service identity through an explicit audited CAS.
+	// The revision bump invalidates all API keys and certificate bindings
+	// reviewed against the prior identity; already-issued service JWTs fail the
+	// current-grant identity check immediately.
+	RotateServiceAccountIdentity(ctx context.Context, in *RotateServiceAccountIdentityRequest, opts ...grpc.CallOption) (*RotateServiceAccountIdentityResponse, error)
+	// Revoke a service account's grant. The account (and every credential or
+	// certificate binding that resolves through the grant) stops authenticating
+	// immediately — fail closed, audited.
+	RevokeServiceAccountGrant(ctx context.Context, in *RevokeServiceAccountGrantRequest, opts ...grpc.CallOption) (*RevokeServiceAccountGrantResponse, error)
+	// Bind an mTLS certificate selector to a service account. The principal is
+	// always derived from the account's CURRENT grant at request time (optionally
+	// attenuated by scope_subset); an unknown or misbound certificate fails closed.
+	CreateCertificateBinding(ctx context.Context, in *CreateCertificateBindingRequest, opts ...grpc.CallOption) (*CreateCertificateBindingResponse, error)
+	// Page through the tenant's mTLS certificate bindings (tenant-scoped;
+	// cross-tenant reads are rejected).
+	ListCertificateBindings(ctx context.Context, in *ListCertificateBindingsRequest, opts ...grpc.CallOption) (*ListCertificateBindingsResponse, error)
+	// Revoke a certificate binding. Certificates matching the selector stop
+	// authenticating immediately — fail closed, audited.
+	RevokeCertificateBinding(ctx context.Context, in *RevokeCertificateBindingRequest, opts ...grpc.CallOption) (*RevokeCertificateBindingResponse, error)
 }
 
 type authnServiceClient struct {
@@ -672,6 +715,96 @@ func (c *authnServiceClient) DeleteWebAuthnCredential(ctx context.Context, in *D
 	return out, nil
 }
 
+func (c *authnServiceClient) CreateServiceAccountGrant(ctx context.Context, in *CreateServiceAccountGrantRequest, opts ...grpc.CallOption) (*CreateServiceAccountGrantResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateServiceAccountGrantResponse)
+	err := c.cc.Invoke(ctx, AuthnService_CreateServiceAccountGrant_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) GetServiceAccountGrant(ctx context.Context, in *GetServiceAccountGrantRequest, opts ...grpc.CallOption) (*GetServiceAccountGrantResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetServiceAccountGrantResponse)
+	err := c.cc.Invoke(ctx, AuthnService_GetServiceAccountGrant_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) ListServiceAccountGrants(ctx context.Context, in *ListServiceAccountGrantsRequest, opts ...grpc.CallOption) (*ListServiceAccountGrantsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListServiceAccountGrantsResponse)
+	err := c.cc.Invoke(ctx, AuthnService_ListServiceAccountGrants_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) ReplaceServiceAccountGrant(ctx context.Context, in *ReplaceServiceAccountGrantRequest, opts ...grpc.CallOption) (*ReplaceServiceAccountGrantResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReplaceServiceAccountGrantResponse)
+	err := c.cc.Invoke(ctx, AuthnService_ReplaceServiceAccountGrant_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) RotateServiceAccountIdentity(ctx context.Context, in *RotateServiceAccountIdentityRequest, opts ...grpc.CallOption) (*RotateServiceAccountIdentityResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RotateServiceAccountIdentityResponse)
+	err := c.cc.Invoke(ctx, AuthnService_RotateServiceAccountIdentity_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) RevokeServiceAccountGrant(ctx context.Context, in *RevokeServiceAccountGrantRequest, opts ...grpc.CallOption) (*RevokeServiceAccountGrantResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RevokeServiceAccountGrantResponse)
+	err := c.cc.Invoke(ctx, AuthnService_RevokeServiceAccountGrant_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) CreateCertificateBinding(ctx context.Context, in *CreateCertificateBindingRequest, opts ...grpc.CallOption) (*CreateCertificateBindingResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateCertificateBindingResponse)
+	err := c.cc.Invoke(ctx, AuthnService_CreateCertificateBinding_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) ListCertificateBindings(ctx context.Context, in *ListCertificateBindingsRequest, opts ...grpc.CallOption) (*ListCertificateBindingsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListCertificateBindingsResponse)
+	err := c.cc.Invoke(ctx, AuthnService_ListCertificateBindings_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authnServiceClient) RevokeCertificateBinding(ctx context.Context, in *RevokeCertificateBindingRequest, opts ...grpc.CallOption) (*RevokeCertificateBindingResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RevokeCertificateBindingResponse)
+	err := c.cc.Invoke(ctx, AuthnService_RevokeCertificateBinding_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AuthnServiceServer is the server API for AuthnService service.
 // All implementations should embed UnimplementedAuthnServiceServer
 // for forward compatibility.
@@ -763,6 +896,40 @@ type AuthnServiceServer interface {
 	// ── WebAuthn enterprise credential lifecycle (Phase 3 / I2.7) ────────────
 	ListWebAuthnCredentials(context.Context, *ListWebAuthnCredentialsRequest) (*ListWebAuthnCredentialsResponse, error)
 	DeleteWebAuthnCredential(context.Context, *DeleteWebAuthnCredentialRequest) (*DeleteWebAuthnCredentialResponse, error)
+	// ── Typed service-account grants + mTLS certificate bindings (UDB-AUTH-003/007) ──
+	// Create the single typed grant for a service account: immutable service
+	// identity, tenant/project binding, and operator-approved scopes.
+	// Admin/owner/wildcard scopes are rejected at write time (fail closed).
+	CreateServiceAccountGrant(context.Context, *CreateServiceAccountGrantRequest) (*CreateServiceAccountGrantResponse, error)
+	// Read the current typed grant for a service account; NOT_FOUND when the
+	// account has no grant (the account then cannot authenticate — fail closed).
+	GetServiceAccountGrant(context.Context, *GetServiceAccountGrantRequest) (*GetServiceAccountGrantResponse, error)
+	// Page through the tenant's typed service-account grants (tenant-scoped;
+	// cross-tenant reads are rejected).
+	ListServiceAccountGrants(context.Context, *ListServiceAccountGrantsRequest) (*ListServiceAccountGrantsResponse, error)
+	// Replace a grant's approved scopes/project atomically, bumping `revision` so
+	// dependent credentials and bindings detect staleness. A stale
+	// expected_revision fails with FAILED_PRECONDITION (fail closed).
+	ReplaceServiceAccountGrant(context.Context, *ReplaceServiceAccountGrantRequest) (*ReplaceServiceAccountGrantResponse, error)
+	// Rotate the immutable service identity through an explicit audited CAS.
+	// The revision bump invalidates all API keys and certificate bindings
+	// reviewed against the prior identity; already-issued service JWTs fail the
+	// current-grant identity check immediately.
+	RotateServiceAccountIdentity(context.Context, *RotateServiceAccountIdentityRequest) (*RotateServiceAccountIdentityResponse, error)
+	// Revoke a service account's grant. The account (and every credential or
+	// certificate binding that resolves through the grant) stops authenticating
+	// immediately — fail closed, audited.
+	RevokeServiceAccountGrant(context.Context, *RevokeServiceAccountGrantRequest) (*RevokeServiceAccountGrantResponse, error)
+	// Bind an mTLS certificate selector to a service account. The principal is
+	// always derived from the account's CURRENT grant at request time (optionally
+	// attenuated by scope_subset); an unknown or misbound certificate fails closed.
+	CreateCertificateBinding(context.Context, *CreateCertificateBindingRequest) (*CreateCertificateBindingResponse, error)
+	// Page through the tenant's mTLS certificate bindings (tenant-scoped;
+	// cross-tenant reads are rejected).
+	ListCertificateBindings(context.Context, *ListCertificateBindingsRequest) (*ListCertificateBindingsResponse, error)
+	// Revoke a certificate binding. Certificates matching the selector stop
+	// authenticating immediately — fail closed, audited.
+	RevokeCertificateBinding(context.Context, *RevokeCertificateBindingRequest) (*RevokeCertificateBindingResponse, error)
 }
 
 // UnimplementedAuthnServiceServer should be embedded to have
@@ -921,6 +1088,33 @@ func (UnimplementedAuthnServiceServer) ListWebAuthnCredentials(context.Context, 
 }
 func (UnimplementedAuthnServiceServer) DeleteWebAuthnCredential(context.Context, *DeleteWebAuthnCredentialRequest) (*DeleteWebAuthnCredentialResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteWebAuthnCredential not implemented")
+}
+func (UnimplementedAuthnServiceServer) CreateServiceAccountGrant(context.Context, *CreateServiceAccountGrantRequest) (*CreateServiceAccountGrantResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateServiceAccountGrant not implemented")
+}
+func (UnimplementedAuthnServiceServer) GetServiceAccountGrant(context.Context, *GetServiceAccountGrantRequest) (*GetServiceAccountGrantResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetServiceAccountGrant not implemented")
+}
+func (UnimplementedAuthnServiceServer) ListServiceAccountGrants(context.Context, *ListServiceAccountGrantsRequest) (*ListServiceAccountGrantsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListServiceAccountGrants not implemented")
+}
+func (UnimplementedAuthnServiceServer) ReplaceServiceAccountGrant(context.Context, *ReplaceServiceAccountGrantRequest) (*ReplaceServiceAccountGrantResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ReplaceServiceAccountGrant not implemented")
+}
+func (UnimplementedAuthnServiceServer) RotateServiceAccountIdentity(context.Context, *RotateServiceAccountIdentityRequest) (*RotateServiceAccountIdentityResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RotateServiceAccountIdentity not implemented")
+}
+func (UnimplementedAuthnServiceServer) RevokeServiceAccountGrant(context.Context, *RevokeServiceAccountGrantRequest) (*RevokeServiceAccountGrantResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RevokeServiceAccountGrant not implemented")
+}
+func (UnimplementedAuthnServiceServer) CreateCertificateBinding(context.Context, *CreateCertificateBindingRequest) (*CreateCertificateBindingResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateCertificateBinding not implemented")
+}
+func (UnimplementedAuthnServiceServer) ListCertificateBindings(context.Context, *ListCertificateBindingsRequest) (*ListCertificateBindingsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListCertificateBindings not implemented")
+}
+func (UnimplementedAuthnServiceServer) RevokeCertificateBinding(context.Context, *RevokeCertificateBindingRequest) (*RevokeCertificateBindingResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RevokeCertificateBinding not implemented")
 }
 func (UnimplementedAuthnServiceServer) testEmbeddedByValue() {}
 
@@ -1842,6 +2036,168 @@ func _AuthnService_DeleteWebAuthnCredential_Handler(srv interface{}, ctx context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthnService_CreateServiceAccountGrant_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateServiceAccountGrantRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).CreateServiceAccountGrant(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_CreateServiceAccountGrant_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).CreateServiceAccountGrant(ctx, req.(*CreateServiceAccountGrantRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_GetServiceAccountGrant_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetServiceAccountGrantRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).GetServiceAccountGrant(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_GetServiceAccountGrant_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).GetServiceAccountGrant(ctx, req.(*GetServiceAccountGrantRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_ListServiceAccountGrants_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListServiceAccountGrantsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).ListServiceAccountGrants(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_ListServiceAccountGrants_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).ListServiceAccountGrants(ctx, req.(*ListServiceAccountGrantsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_ReplaceServiceAccountGrant_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReplaceServiceAccountGrantRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).ReplaceServiceAccountGrant(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_ReplaceServiceAccountGrant_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).ReplaceServiceAccountGrant(ctx, req.(*ReplaceServiceAccountGrantRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_RotateServiceAccountIdentity_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RotateServiceAccountIdentityRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).RotateServiceAccountIdentity(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_RotateServiceAccountIdentity_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).RotateServiceAccountIdentity(ctx, req.(*RotateServiceAccountIdentityRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_RevokeServiceAccountGrant_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RevokeServiceAccountGrantRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).RevokeServiceAccountGrant(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_RevokeServiceAccountGrant_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).RevokeServiceAccountGrant(ctx, req.(*RevokeServiceAccountGrantRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_CreateCertificateBinding_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateCertificateBindingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).CreateCertificateBinding(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_CreateCertificateBinding_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).CreateCertificateBinding(ctx, req.(*CreateCertificateBindingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_ListCertificateBindings_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListCertificateBindingsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).ListCertificateBindings(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_ListCertificateBindings_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).ListCertificateBindings(ctx, req.(*ListCertificateBindingsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthnService_RevokeCertificateBinding_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RevokeCertificateBindingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).RevokeCertificateBinding(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_RevokeCertificateBinding_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).RevokeCertificateBinding(ctx, req.(*RevokeCertificateBindingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AuthnService_ServiceDesc is the grpc.ServiceDesc for AuthnService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -2048,6 +2404,42 @@ var AuthnService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteWebAuthnCredential",
 			Handler:    _AuthnService_DeleteWebAuthnCredential_Handler,
+		},
+		{
+			MethodName: "CreateServiceAccountGrant",
+			Handler:    _AuthnService_CreateServiceAccountGrant_Handler,
+		},
+		{
+			MethodName: "GetServiceAccountGrant",
+			Handler:    _AuthnService_GetServiceAccountGrant_Handler,
+		},
+		{
+			MethodName: "ListServiceAccountGrants",
+			Handler:    _AuthnService_ListServiceAccountGrants_Handler,
+		},
+		{
+			MethodName: "ReplaceServiceAccountGrant",
+			Handler:    _AuthnService_ReplaceServiceAccountGrant_Handler,
+		},
+		{
+			MethodName: "RotateServiceAccountIdentity",
+			Handler:    _AuthnService_RotateServiceAccountIdentity_Handler,
+		},
+		{
+			MethodName: "RevokeServiceAccountGrant",
+			Handler:    _AuthnService_RevokeServiceAccountGrant_Handler,
+		},
+		{
+			MethodName: "CreateCertificateBinding",
+			Handler:    _AuthnService_CreateCertificateBinding_Handler,
+		},
+		{
+			MethodName: "ListCertificateBindings",
+			Handler:    _AuthnService_ListCertificateBindings_Handler,
+		},
+		{
+			MethodName: "RevokeCertificateBinding",
+			Handler:    _AuthnService_RevokeCertificateBinding_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

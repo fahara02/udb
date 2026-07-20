@@ -155,7 +155,9 @@ pub mod backend {
 /// `generation::manifest_index` leaf so `crate::broker::table_for_message`
 /// resolves identically to the server.
 pub mod broker {
-    pub use crate::generation::manifest_index::table_for_message;
+    pub use crate::generation::manifest_index::{
+        TableLookup, describe_table_lookup_miss, table_for_message, table_lookup,
+    };
 }
 
 /// **The IR → backend query compiler — the big prize.** Lowers neutral

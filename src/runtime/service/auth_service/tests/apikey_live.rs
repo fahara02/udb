@@ -13,8 +13,16 @@ async fn live_postgres_apikey_roundtrip() {
     let _guard = live_auth_db_lock().lock().await;
     let pool = live_pg_pool().await;
     migrate_native_auth_db(&pool).await;
+    let authn = authn_service(pool.clone());
     let svc = api_key_service(pool.clone());
-    let principal_id = Uuid::new_v4().to_string();
+    let (owner, grant) = create_service_account_with_grant(
+        &authn,
+        "apikey_roundtrip",
+        "CorrectHorse1!",
+        &["data:read"],
+    )
+    .await;
+    let principal_id = owner.user_id;
 
     let created = svc
         .create_api_key(Request::new(apikey_pb::CreateApiKeyRequest {
@@ -37,6 +45,18 @@ async fn live_postgres_apikey_roundtrip() {
         .into_inner();
     let key = created.key.expect("created API key");
     assert!(created.plain_key.starts_with("udbk_"));
+    assert_eq!(key.owner_id, principal_id);
+    // AUTH-006: `service_identity` is OUTPUT_VIEW_STORAGE_ONLY on the ApiKey
+    // entity (never returned over the wire), so the lineage is asserted against
+    // the STORED record — it must carry the grant's immutable service identity.
+    let stored_identity: String = sqlx::query_scalar(
+        "SELECT service_identity FROM udb_authn.api_keys WHERE key_prefix = $1",
+    )
+    .bind(&key.key_prefix)
+    .fetch_one(&pool)
+    .await
+    .expect("read stored api key service_identity");
+    assert_eq!(stored_identity, grant.service_identity);
 
     let valid = svc
         .validate_api_key(Request::new(apikey_pb::ValidateApiKeyRequest {
@@ -49,6 +69,8 @@ async fn live_postgres_apikey_roundtrip() {
         .into_inner();
     assert!(valid.valid);
     assert_eq!(valid.owner_id, principal_id);
+    // CRIT-4: the validated scopes are the grant-attenuated set.
+    assert!(valid.scopes.contains(&"data:read".to_string()));
 
     // Revoke runs as the authenticated tenant-`acme` admin — the same validated
     // claim `MethodSecurityLayer` installs from the bearer token over the wire.
@@ -123,8 +145,12 @@ async fn live_postgres_apikey_validate_records_usage() {
     let _guard = live_auth_db_lock().lock().await;
     let pool = live_pg_pool().await;
     migrate_native_auth_db(&pool).await;
+    let authn = authn_service(pool.clone());
     let svc = api_key_service(pool.clone());
-    let principal_id = Uuid::new_v4().to_string();
+    let (owner, _) =
+        create_service_account_with_grant(&authn, "apikey_usage", "CorrectHorse1!", &["data:read"])
+            .await;
+    let principal_id = owner.user_id;
     let created = svc
         .create_api_key(Request::new(apikey_pb::CreateApiKeyRequest {
             name: "usage-key".to_string(),
@@ -191,8 +217,16 @@ async fn live_postgres_apikey_admin_lifecycle() {
     let _guard = live_auth_db_lock().lock().await;
     let pool = live_pg_pool().await;
     migrate_native_auth_db(&pool).await;
+    let authn = authn_service(pool.clone());
     let svc = api_key_service(pool.clone());
-    let owner_id = Uuid::new_v4().to_string();
+    let (owner, _) = create_service_account_with_grant(
+        &authn,
+        "apikey_admin",
+        "CorrectHorse1!",
+        &["data:read", "data:write"],
+    )
+    .await;
+    let owner_id = owner.user_id;
 
     let created = svc
         .create_api_key(Request::new(apikey_pb::CreateApiKeyRequest {
@@ -294,8 +328,12 @@ async fn live_postgres_apikey_read_after_write() {
     let _guard = live_auth_db_lock().lock().await;
     let pool = live_pg_pool().await;
     migrate_native_auth_db(&pool).await;
+    let authn = authn_service(pool.clone());
     let svc = api_key_service(pool.clone());
-    let owner_id = Uuid::new_v4().to_string();
+    let (owner, _) =
+        create_service_account_with_grant(&authn, "apikey_ryw", "CorrectHorse1!", &["data:read"])
+            .await;
+    let owner_id = owner.user_id;
 
     let created = svc
         .create_api_key(Request::new(apikey_pb::CreateApiKeyRequest {
