@@ -49,13 +49,12 @@ async fn live_postgres_apikey_roundtrip() {
     // AUTH-006: `service_identity` is OUTPUT_VIEW_STORAGE_ONLY on the ApiKey
     // entity (never returned over the wire), so the lineage is asserted against
     // the STORED record — it must carry the grant's immutable service identity.
-    let stored_identity: String = sqlx::query_scalar(
-        "SELECT service_identity FROM udb_authn.api_keys WHERE key_prefix = $1",
-    )
-    .bind(&key.key_prefix)
-    .fetch_one(&pool)
-    .await
-    .expect("read stored api key service_identity");
+    let stored_identity: String =
+        sqlx::query_scalar("SELECT service_identity FROM udb_authn.api_keys WHERE key_prefix = $1")
+            .bind(&key.key_prefix)
+            .fetch_one(&pool)
+            .await
+            .expect("read stored api key service_identity");
     assert_eq!(stored_identity, grant.service_identity);
 
     let valid = svc
