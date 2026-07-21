@@ -529,6 +529,7 @@ func TestBuildManifestJSONBodyUsesSharedManifest(t *testing.T) {
 	// fix_plan Phases 2+3: typed service-account grant + mTLS certificate
 	// binding management RPCs — every one carries an explicit manifest body
 	// (no generic fill). Seeds for the grant id family are set above.
+	fix.set("grant_binding_id", "11111111-1111-4111-8111-000000000201")
 	for _, rpc := range []string{
 		"AuthnService/CreateServiceAccountGrant",
 		"AuthnService/GetServiceAccountGrant",
