@@ -50,7 +50,7 @@ async fn live_postgres_apikey_roundtrip() {
     // entity (never returned over the wire), so the lineage is asserted against
     // the STORED record — it must carry the grant's immutable service identity.
     let stored_identity: String =
-        sqlx::query_scalar("SELECT service_identity FROM udb_authn.api_keys WHERE key_prefix = $1")
+        sqlx::query_scalar("SELECT metadata_json->>'service_identity' FROM udb_authn.api_keys WHERE key_prefix = $1")
             .bind(&key.key_prefix)
             .fetch_one(&pool)
             .await
