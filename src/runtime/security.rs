@@ -1298,7 +1298,10 @@ fn reconcile_api_key_principal(
             // masquerades as "your credential is bad" (UDB-DB-READINESS-001).
             // Still fail closed: never fall back to header trust or fail open;
             // the caller-facing status carries no key material or store detail.
-            return Err(Status::unavailable(
+            return Err(crate::runtime::executor_utils::retryable_status(
+                "authn",
+                "api_key_validate",
+                1000,
                 "x-api-key could not be validated (key store unavailable); retry once the \
                  credential store is reachable",
             ));
