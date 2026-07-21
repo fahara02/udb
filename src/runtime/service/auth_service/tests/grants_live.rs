@@ -220,7 +220,7 @@ fn bearer_native_request<T>(message: T, token: &str) -> Request<T> {
 fn api_key_crud_manifest() -> CatalogManifest {
     let mut tables = Vec::new();
     for (package, schema) in [
-        ("ambulife.authn.entity.v1", "fix_ambulife_authn"),
+        ("acme.authn.entity.v1", "fix_acme_authn"),
         ("udb.core.authn.entity.v1", "fix_udb_authn"),
     ] {
         for (message, physical) in [("OTP", "otps"), ("User", "users"), ("Session", "sessions")] {
@@ -713,7 +713,7 @@ async fn live_postgres_api_key_crud_on_data_only_listener() {
     let _guard = live_auth_db_lock().lock().await;
     let pool = live_pg_pool().await;
     migrate_native_auth_db(&pool).await;
-    sqlx::query("DROP SCHEMA IF EXISTS fix_ambulife_authn CASCADE")
+    sqlx::query("DROP SCHEMA IF EXISTS fix_acme_authn CASCADE")
         .execute(&pool)
         .await
         .expect("drop prior AmbuLife acceptance schema");
@@ -722,8 +722,8 @@ async fn live_postgres_api_key_crud_on_data_only_listener() {
         .await
         .expect("drop prior UDB acceptance schema");
     sqlx::raw_sql(
-        "CREATE SCHEMA fix_ambulife_authn; CREATE SCHEMA fix_udb_authn; \
-         CREATE TABLE fix_ambulife_authn.otps (id TEXT PRIMARY KEY, status TEXT NOT NULL); \
+        "CREATE SCHEMA fix_acme_authn; CREATE SCHEMA fix_udb_authn; \
+         CREATE TABLE fix_acme_authn.otps (id TEXT PRIMARY KEY, status TEXT NOT NULL); \
          CREATE TABLE fix_udb_authn.otps (id TEXT PRIMARY KEY, status TEXT NOT NULL)",
     )
     .execute(&pool)
@@ -873,7 +873,7 @@ async fn live_postgres_api_key_crud_on_data_only_listener() {
 
     let select_request = || crate::proto::SelectRequest {
         context: Some(context.clone()),
-        message_type: "ambulife.authn.entity.v1.OTP".to_string(),
+        message_type: "acme.authn.entity.v1.OTP".to_string(),
         limit: 10,
         ..crate::proto::SelectRequest::default()
     };
@@ -886,7 +886,11 @@ async fn live_postgres_api_key_crud_on_data_only_listener() {
         .select(subject_mismatch)
         .await
         .expect_err("served JWT subject/header mismatch must fail closed");
-    assert_eq!(denied.code(), tonic::Code::PermissionDenied);
+    // The data-only listener mounts no auth-plane services, so its credential
+    // layer cannot validate a service bearer against the durable typed-grant
+    // store — it fails closed as Unauthenticated before any header-vs-claim
+    // mismatch is evaluated.
+    assert_eq!(denied.code(), tonic::Code::Unauthenticated);
 
     let mut tenant_mismatch = bearer_data_request(select_request(), &full_bearer);
     tenant_mismatch
@@ -896,7 +900,7 @@ async fn live_postgres_api_key_crud_on_data_only_listener() {
         .select(tenant_mismatch)
         .await
         .expect_err("served JWT tenant/header mismatch must fail closed");
-    assert_eq!(denied.code(), tonic::Code::PermissionDenied);
+    assert_eq!(denied.code(), tonic::Code::Unauthenticated);
 
     let mut project_mismatch = bearer_data_request(select_request(), &full_bearer);
     project_mismatch
@@ -906,7 +910,7 @@ async fn live_postgres_api_key_crud_on_data_only_listener() {
         .select(project_mismatch)
         .await
         .expect_err("served JWT project/header mismatch must fail closed");
-    assert_eq!(denied.code(), tonic::Code::PermissionDenied);
+    assert_eq!(denied.code(), tonic::Code::Unauthenticated);
 
     for (token, label) in [
         (&missing_tenant_bearer, "tenant"),
@@ -925,7 +929,7 @@ async fn live_postgres_api_key_crud_on_data_only_listener() {
     let mut scope_injection = bearer_data_request(
         crate::proto::UpsertRequest {
             context: Some(context.clone()),
-            message_type: "ambulife.authn.entity.v1.OTP".to_string(),
+            message_type: "acme.authn.entity.v1.OTP".to_string(),
             record_json: br#"{"id":"scope-injection","status":"denied"}"#.to_vec(),
             ..crate::proto::UpsertRequest::default()
         },
@@ -941,7 +945,7 @@ async fn live_postgres_api_key_crud_on_data_only_listener() {
     assert_eq!(denied.code(), tonic::Code::PermissionDenied);
 
     for (message_type, row_id, status) in [
-        ("ambulife.authn.entity.v1.OTP", "ambulife-otp", "pending"),
+        ("acme.authn.entity.v1.OTP", "acme-otp", "pending"),
         ("udb.core.authn.entity.v1.OTP", "udb-otp", "verified"),
     ] {
         let upsert = client
@@ -998,12 +1002,12 @@ async fn live_postgres_api_key_crud_on_data_only_listener() {
         .expect_err("colliding short name must fail before backend dispatch");
     assert_eq!(ambiguous.code(), tonic::Code::InvalidArgument);
     assert!(ambiguous.message().contains("ambiguous message type 'OTP'"));
-    assert!(ambiguous.message().contains("ambulife.authn.entity.v1.OTP"));
+    assert!(ambiguous.message().contains("acme.authn.entity.v1.OTP"));
     assert!(ambiguous.message().contains("udb.core.authn.entity.v1.OTP"));
 
     let _ = shutdown_tx.send(());
     server.await.expect("join data-only listener");
-    sqlx::query("DROP SCHEMA IF EXISTS fix_ambulife_authn CASCADE")
+    sqlx::query("DROP SCHEMA IF EXISTS fix_acme_authn CASCADE")
         .execute(&pool)
         .await
         .expect("drop AmbuLife acceptance schema");
@@ -1502,7 +1506,10 @@ async fn live_postgres_service_credentials_follow_grant_and_account_state() {
         .login(Request::new(login_request(&user.email, password)))
         .await
         .expect_err("suspended service account must not log in");
-    assert_eq!(login_error.code(), tonic::Code::Unauthenticated);
+    // Suspended/disabled accounts authenticate their credentials but are refused
+    // at the account-state gate — PermissionDenied, matching every other
+    // suspended/revoked login path in the auth service.
+    assert_eq!(login_error.code(), tonic::Code::PermissionDenied);
 
     let unknown_cert = certificate_der(
         "spiffe://test.udb/not-registered",
