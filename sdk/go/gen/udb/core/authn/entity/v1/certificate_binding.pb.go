@@ -217,7 +217,7 @@ var File_udb_core_authn_entity_v1_certificate_binding_proto protoreflect.FileDes
 
 const file_udb_core_authn_entity_v1_certificate_binding_proto_rawDesc = "" +
 	"\n" +
-	"2udb/core/authn/entity/v1/certificate_binding.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\x87\x0f\n" +
+	"2udb/core/authn/entity/v1/certificate_binding.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\x8c\x0f\n" +
 	"\x12CertificateBinding\x12L\n" +
 	"\n" +
 	"binding_id\x18\x01 \x01(\tB-\x82\xb7\x18)\n" +
@@ -230,14 +230,14 @@ const file_udb_core_authn_entity_v1_certificate_binding_proto_rawDesc = "" +
 	"\auser_id\x18\x04 \x01(\tB{\x82\xb7\x18w\n" +
 	"\auser_id\x12\x04UUID\x18\x01J\x1d\n" +
 	"\x05users\x12\auser_id\x1a\tudb_authn \x03R&\n" +
-	"\x1didx_certificate_bindings_user\x12\x05BTREEZ\x1dFK to udb_authn.users.user_idR\x06userId\x12f\n" +
-	"\ttenant_id\x18\x05 \x01(\tBI\x82\xb7\x18E\n" +
+	"\x1didx_certificate_bindings_user\x12\x05BTREEZ\x1dFK to udb_authn.users.user_idR\x06userId\x12i\n" +
+	"\ttenant_id\x18\x05 \x01(\tBL\x82\xb7\x18H\n" +
 	"\ttenant_id\x12\fVARCHAR(120)\x18\x01R(\n" +
-	"\x1fidx_certificate_bindings_tenant\x12\x05BTREER\btenantId\x12H\n" +
+	"\x1fidx_certificate_bindings_tenant\x12\x05BTREE\x98\x02\x01R\btenantId\x12H\n" +
 	"\x0egrant_revision\x18\x06 \x01(\x03B!\x82\xb7\x18\x1d\n" +
-	"\x0egrant_revision\x12\x06BIGINT\x18\x01:\x011R\rgrantRevision\x12R\n" +
-	"\x11scope_subset_json\x18\a \x01(\tB&\x82\xb7\x18\"\n" +
-	"\x11scope_subset_json\x12\x05JSONB\x18\x01:\x04'[]'R\x0fscopeSubsetJson\x12g\n" +
+	"\x0egrant_revision\x12\x06BIGINT\x18\x01:\x011R\rgrantRevision\x12T\n" +
+	"\x11scope_subset_json\x18\a \x01(\tB(\x82\xb7\x18$\n" +
+	"\x11scope_subset_json\x12\x05JSONB\x18\x01:\x04'[]'x\x01R\x0fscopeSubsetJson\x12g\n" +
 	"\x06status\x18\b \x01(\tBO\x82\xb7\x18K\n" +
 	"\x06status\x12\vVARCHAR(20)\x18\x01:\b'ACTIVE'R(\n" +
 	"\x1fidx_certificate_bindings_status\x12\x05BTREER\x06status\x12X\n" +

@@ -44,7 +44,7 @@ public final class CertificateBindingProto {
       "inding.proto\022\030udb.core.authn.entity.v1\032\037" +
       "google/protobuf/timestamp.proto\032\033udb/cor" +
       "e/common/v1/db.proto\032!udb/core/common/v1" +
-      "/security.proto\"\207\017\n\022CertificateBinding\022L" +
+      "/security.proto\"\214\017\n\022CertificateBinding\022L" +
       "\n\nbinding_id\030\001 \001(\tB-\202\267\030)\n\nbinding_id\022\004UU" +
       "ID\030\001(\001:\021gen_random_uuid()R\tbindingId\022G\n\r" +
       "selector_kind\030\002 \001(\tB\"\202\267\030\036\n\rselector_kind" +
@@ -54,52 +54,52 @@ public final class CertificateBindingProto {
       "\004 \001(\tB{\202\267\030w\n\007user_id\022\004UUID\030\001J\035\n\005users\022\007u" +
       "ser_id\032\tudb_authn \003R&\n\035idx_certificate_b" +
       "indings_user\022\005BTREEZ\035FK to udb_authn.use" +
-      "rs.user_idR\006userId\022f\n\ttenant_id\030\005 \001(\tBI\202" +
-      "\267\030E\n\ttenant_id\022\014VARCHAR(120)\030\001R(\n\037idx_ce" +
-      "rtificate_bindings_tenant\022\005BTREER\010tenant" +
-      "Id\022H\n\016grant_revision\030\006 \001(\003B!\202\267\030\035\n\016grant_" +
-      "revision\022\006BIGINT\030\001:\0011R\rgrantRevision\022R\n\021" +
-      "scope_subset_json\030\007 \001(\tB&\202\267\030\"\n\021scope_sub" +
-      "set_json\022\005JSONB\030\001:\004\'[]\'R\017scopeSubsetJson" +
-      "\022g\n\006status\030\010 \001(\tBO\202\267\030K\n\006status\022\013VARCHAR(" +
-      "20)\030\001:\010\'ACTIVE\'R(\n\037idx_certificate_bindi" +
-      "ngs_status\022\005BTREER\006status\022X\n\nnot_before\030" +
-      "\t \001(\0132\032.google.protobuf.TimestampB\035\202\267\030\031\n" +
-      "\nnot_before\022\013TIMESTAMPTZR\tnotBefore\022U\n\tn" +
-      "ot_after\030\n \001(\0132\032.google.protobuf.Timesta" +
-      "mpB\034\202\267\030\030\n\tnot_after\022\013TIMESTAMPTZR\010notAft" +
-      "er\022X\n\nrevoked_at\030\013 \001(\0132\032.google.protobuf" +
-      ".TimestampB\035\202\267\030\031\n\nrevoked_at\022\013TIMESTAMPT" +
-      "ZR\trevokedAt\022M\n\rrevoke_reason\030\014 \001(\tB(\202\267\030" +
-      "$\n\rrevoke_reason\022\rVARCHAR(1024)\030\001:\002\'\'R\014r" +
-      "evokeReason\022C\n\nupdated_by\030\r \001(\tB$\202\267\030 \n\nu" +
-      "pdated_by\022\014VARCHAR(255)\030\001:\002\'\'R\tupdatedBy" +
-      "\0229\n\006reason\030\016 \001(\tB!\202\267\030\035\n\006reason\022\rVARCHAR(" +
-      "1024)\030\001:\002\'\'R\006reason\022a\n\ncreated_at\030\017 \001(\0132" +
-      "\032.google.protobuf.TimestampB&\202\267\030\"\n\ncreat" +
-      "ed_at\022\013TIMESTAMPTZ\030\001:\005now()R\tcreatedAt\022a" +
-      "\n\nupdated_at\030\020 \001(\0132\032.google.protobuf.Tim" +
-      "estampB&\202\267\030\"\n\nupdated_at\022\013TIMESTAMPTZ\030\001:" +
-      "\005now()R\tupdatedAt:\345\003\372\266\030\323\002\n\024certificate_b" +
-      "indings\022\tudb_authn\030\033 \001*>Server-controlle" +
-      "d mTLS certificate-to-service-account bi" +
-      "ndings8\001@\001b^\n\020tenant_isolation\032H(tenant_" +
-      "id::text = current_setting(\'app.current_" +
-      "tenant_id\', true)::text)(\001\212\001D\n!idx_certi" +
-      "ficate_bindings_selector\030\001Z\rselector_kin" +
-      "dZ\016selector_value\352\001\007primary\362\001\"udb.authn." +
-      "certificate_bindings.cdc\372\001\021authn:grants:" +
-      "read\212\262\031\210\001\n\006tenant\032\ttenant_id*4tenant_id " +
-      "= current_setting(\'app.current_tenant_id" +
-      "\')2\004none:\014authn.policyH\002R\006tenantZ\010standa" +
-      "rdr\025tenant.data_residencyB\202\002\n\034com.udb.co" +
-      "re.authn.entity.v1B\027CertificateBindingPr" +
-      "otoP\001ZDgithub.com/fahara02/udb/sdk/go/ge" +
-      "n/udb/core/authn/entity/v1;entityv1\242\002\004UC" +
-      "AE\252\002\030udb.core.Authn.Entity.V1\312\002\030Udb\\Core" +
-      "\\Authn\\Entity\\V1\342\002$Udb\\GPBMetadata\\Core\\" +
-      "Authn\\Entity\\V1\352\002\034Udb::Core::Authn::Enti" +
-      "ty::V1b\006proto3"
+      "rs.user_idR\006userId\022i\n\ttenant_id\030\005 \001(\tBL\202" +
+      "\267\030H\n\ttenant_id\022\014VARCHAR(120)\030\001R(\n\037idx_ce" +
+      "rtificate_bindings_tenant\022\005BTREE\230\002\001R\010ten" +
+      "antId\022H\n\016grant_revision\030\006 \001(\003B!\202\267\030\035\n\016gra" +
+      "nt_revision\022\006BIGINT\030\001:\0011R\rgrantRevision\022" +
+      "T\n\021scope_subset_json\030\007 \001(\tB(\202\267\030$\n\021scope_" +
+      "subset_json\022\005JSONB\030\001:\004\'[]\'x\001R\017scopeSubse" +
+      "tJson\022g\n\006status\030\010 \001(\tBO\202\267\030K\n\006status\022\013VAR" +
+      "CHAR(20)\030\001:\010\'ACTIVE\'R(\n\037idx_certificate_" +
+      "bindings_status\022\005BTREER\006status\022X\n\nnot_be" +
+      "fore\030\t \001(\0132\032.google.protobuf.TimestampB\035" +
+      "\202\267\030\031\n\nnot_before\022\013TIMESTAMPTZR\tnotBefore" +
+      "\022U\n\tnot_after\030\n \001(\0132\032.google.protobuf.Ti" +
+      "mestampB\034\202\267\030\030\n\tnot_after\022\013TIMESTAMPTZR\010n" +
+      "otAfter\022X\n\nrevoked_at\030\013 \001(\0132\032.google.pro" +
+      "tobuf.TimestampB\035\202\267\030\031\n\nrevoked_at\022\013TIMES" +
+      "TAMPTZR\trevokedAt\022M\n\rrevoke_reason\030\014 \001(\t" +
+      "B(\202\267\030$\n\rrevoke_reason\022\rVARCHAR(1024)\030\001:\002" +
+      "\'\'R\014revokeReason\022C\n\nupdated_by\030\r \001(\tB$\202\267" +
+      "\030 \n\nupdated_by\022\014VARCHAR(255)\030\001:\002\'\'R\tupda" +
+      "tedBy\0229\n\006reason\030\016 \001(\tB!\202\267\030\035\n\006reason\022\rVAR" +
+      "CHAR(1024)\030\001:\002\'\'R\006reason\022a\n\ncreated_at\030\017" +
+      " \001(\0132\032.google.protobuf.TimestampB&\202\267\030\"\n\n" +
+      "created_at\022\013TIMESTAMPTZ\030\001:\005now()R\tcreate" +
+      "dAt\022a\n\nupdated_at\030\020 \001(\0132\032.google.protobu" +
+      "f.TimestampB&\202\267\030\"\n\nupdated_at\022\013TIMESTAMP" +
+      "TZ\030\001:\005now()R\tupdatedAt:\345\003\372\266\030\323\002\n\024certific" +
+      "ate_bindings\022\tudb_authn\030\033 \001*>Server-cont" +
+      "rolled mTLS certificate-to-service-accou" +
+      "nt bindings8\001@\001b^\n\020tenant_isolation\032H(te" +
+      "nant_id::text = current_setting(\'app.cur" +
+      "rent_tenant_id\', true)::text)(\001\212\001D\n!idx_" +
+      "certificate_bindings_selector\030\001Z\rselecto" +
+      "r_kindZ\016selector_value\352\001\007primary\362\001\"udb.a" +
+      "uthn.certificate_bindings.cdc\372\001\021authn:gr" +
+      "ants:read\212\262\031\210\001\n\006tenant\032\ttenant_id*4tenan" +
+      "t_id = current_setting(\'app.current_tena" +
+      "nt_id\')2\004none:\014authn.policyH\002R\006tenantZ\010s" +
+      "tandardr\025tenant.data_residencyB\202\002\n\034com.u" +
+      "db.core.authn.entity.v1B\027CertificateBind" +
+      "ingProtoP\001ZDgithub.com/fahara02/udb/sdk/" +
+      "go/gen/udb/core/authn/entity/v1;entityv1" +
+      "\242\002\004UCAE\252\002\030udb.core.Authn.Entity.V1\312\002\030Udb" +
+      "\\Core\\Authn\\Entity\\V1\342\002$Udb\\GPBMetadata\\" +
+      "Core\\Authn\\Entity\\V1\352\002\034Udb::Core::Authn:" +
+      ":Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

@@ -185,7 +185,7 @@ var File_udb_core_authn_entity_v1_service_account_grant_proto protoreflect.FileD
 
 const file_udb_core_authn_entity_v1_service_account_grant_proto_rawDesc = "" +
 	"\n" +
-	"4udb/core/authn/entity/v1/service_account_grant.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\x9f\f\n" +
+	"4udb/core/authn/entity/v1/service_account_grant.proto\x12\x18udb.core.authn.entity.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1budb/core/common/v1/db.proto\x1a!udb/core/common/v1/security.proto\"\xa4\f\n" +
 	"\x13ServiceAccountGrant\x12F\n" +
 	"\bgrant_id\x18\x01 \x01(\tB+\x82\xb7\x18'\n" +
 	"\bgrant_id\x12\x04UUID\x18\x01(\x01:\x11gen_random_uuid()R\agrantId\x12l\n" +
@@ -193,16 +193,16 @@ const file_udb_core_authn_entity_v1_service_account_grant_proto_rawDesc = "" +
 	"\auser_id\x12\x04UUID\x18\x01J\x1d\n" +
 	"\x05users\x12\auser_id\x1a\tudb_authn \x03Z\x1dFK to udb_authn.users.user_idR\x06userId\x12Q\n" +
 	"\x10service_identity\x18\x03 \x01(\tB&\x82\xb7\x18\"\n" +
-	"\x10service_identity\x12\fVARCHAR(512)\x18\x01R\x0fserviceIdentity\x12h\n" +
-	"\ttenant_id\x18\x04 \x01(\tBK\x82\xb7\x18G\n" +
+	"\x10service_identity\x12\fVARCHAR(512)\x18\x01R\x0fserviceIdentity\x12k\n" +
+	"\ttenant_id\x18\x04 \x01(\tBN\x82\xb7\x18J\n" +
 	"\ttenant_id\x12\fVARCHAR(120)\x18\x01R*\n" +
-	"!idx_service_account_grants_tenant\x12\x05BTREER\btenantId\x12C\n" +
+	"!idx_service_account_grants_tenant\x12\x05BTREE\x98\x02\x01R\btenantId\x12C\n" +
 	"\n" +
 	"project_id\x18\x05 \x01(\tB$\x82\xb7\x18 \n" +
 	"\n" +
-	"project_id\x12\fVARCHAR(255)\x18\x01:\x02''R\tprojectId\x12[\n" +
-	"\x14approved_scopes_json\x18\x06 \x01(\tB)\x82\xb7\x18%\n" +
-	"\x14approved_scopes_json\x12\x05JSONB\x18\x01:\x04'[]'R\x12approvedScopesJson\x12i\n" +
+	"project_id\x12\fVARCHAR(255)\x18\x01:\x02''R\tprojectId\x12]\n" +
+	"\x14approved_scopes_json\x18\x06 \x01(\tB+\x82\xb7\x18'\n" +
+	"\x14approved_scopes_json\x12\x05JSONB\x18\x01:\x04'[]'x\x01R\x12approvedScopesJson\x12i\n" +
 	"\x06status\x18\a \x01(\tBQ\x82\xb7\x18M\n" +
 	"\x06status\x12\vVARCHAR(20)\x18\x01:\b'ACTIVE'R*\n" +
 	"!idx_service_account_grants_status\x12\x05BTREER\x06status\x127\n" +
