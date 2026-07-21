@@ -7,7 +7,7 @@ Inputs:
 - `sdk/go/udbclient/generated_client.go`
 - `docs/site/bench-results.json`
 
-Current generated RPC surface: 366 RPCs across 28 services.
+Current generated RPC surface: 375 RPCs across 28 services.
 
 The benchmark body manifest is checked against generated SDK metadata before this
 file is written. A missing row, extra row, alias drift, operationId drift, or
@@ -35,7 +35,7 @@ do not yet publish per-RPC live benchmark results.
 | AnalyticsService | 7 | 5 | 2 | 0 | 0 |
 | ApiKeyService | 9 | 4 | 4 | 1 | 0 |
 | AssetService | 8 | 4 | 4 | 0 | 0 |
-| AuthnService | 50 | 15 | 28 | 7 | 0 |
+| AuthnService | 59 | 18 | 31 | 10 | 0 |
 | AuthzService | 41 | 18 | 17 | 6 | 0 |
 | BackupService | 8 | 4 | 3 | 1 | 0 |
 | CacheService | 7 | 3 | 3 | 1 | 0 |
@@ -101,6 +101,8 @@ benchmark harnesses.
 | AuthnService | `AuthnService/ChangePassword` | `change_password` | `changePassword` | MUTATION | authn.md |
 | AuthnService | `AuthnService/ChangeUserStatus` | `change_user_status` | `changeUserStatus` | DESTRUCTIVE | authn.md |
 | AuthnService | `AuthnService/ConfirmMFAEnrollment` | `confirm_mfaenrollment` | `confirmMfaenrollment` | MUTATION | authn.md |
+| AuthnService | `AuthnService/CreateCertificateBinding` | `create_certificate_binding` | `createCertificateBinding` | MUTATION | authn.md |
+| AuthnService | `AuthnService/CreateServiceAccountGrant` | `create_service_account_grant` | `createServiceAccountGrant` | MUTATION | authn.md |
 | AuthnService | `AuthnService/CreateSession` | `create_session` | `createSession` | MUTATION | authn.md |
 | AuthnService | `AuthnService/CreateUser` | `create_user` | `createUser` | MUTATION | authn.md |
 | AuthnService | `AuthnService/DeleteWebAuthnCredential` | `delete_web_authn_credential` | `deleteWebAuthnCredential` | MUTATION | authn.md |
@@ -113,12 +115,15 @@ benchmark harnesses.
 | AuthnService | `AuthnService/GenerateRecoveryCodes` | `generate_recovery_codes` | `generateRecoveryCodes` | MUTATION | authn.md |
 | AuthnService | `AuthnService/GetJwks` | `get_jwks` | `getJwks` | READ_ONLY | authn.md |
 | AuthnService | `AuthnService/GetMfaPolicy` | `get_mfa_policy` | `getMfaPolicy` | READ_ONLY | authn.md |
+| AuthnService | `AuthnService/GetServiceAccountGrant` | `get_service_account_grant` | `getServiceAccountGrant` | READ_ONLY | authn.md |
 | AuthnService | `AuthnService/GetSession` | `get_session` | `getSession` | READ_ONLY | authn.md |
 | AuthnService | `AuthnService/GetUser` | `get_user` | `getUser` | READ_ONLY | authn.md |
 | AuthnService | `AuthnService/IntrospectToken` | `introspect_token` | `introspectToken` | READ_ONLY | authn.md |
 | AuthnService | `AuthnService/IssueMfaChallenge` | `issue_mfa_challenge` | `issueMfaChallenge` | MUTATION | authn.md |
+| AuthnService | `AuthnService/ListCertificateBindings` | `list_certificate_bindings` | `listCertificateBindings` | READ_ONLY | authn.md |
 | AuthnService | `AuthnService/ListDevices` | `list_devices` | `listDevices` | READ_ONLY | authn.md |
 | AuthnService | `AuthnService/ListMfaFactors` | `list_mfa_factors` | `listMfaFactors` | READ_ONLY | authn.md |
+| AuthnService | `AuthnService/ListServiceAccountGrants` | `list_service_account_grants` | `listServiceAccountGrants` | READ_ONLY | authn.md |
 | AuthnService | `AuthnService/ListSessions` | `list_sessions` | `listSessions` | READ_ONLY | authn.md |
 | AuthnService | `AuthnService/ListUsers` | `list_users` | `listUsers` | READ_ONLY | authn.md |
 | AuthnService | `AuthnService/ListWebAuthnCredentials` | `list_web_authn_credentials` | `listWebAuthnCredentials` | READ_ONLY | authn.md |
@@ -128,11 +133,15 @@ benchmark harnesses.
 | AuthnService | `AuthnService/RefreshSession` | `refresh_session` | `refreshSession` | MUTATION | authn.md |
 | AuthnService | `AuthnService/RefreshToken` | `refresh_token` | `refreshToken` | MUTATION | authn.md |
 | AuthnService | `AuthnService/RenamePasskey` | `rename_passkey` | `renamePasskey` | MUTATION | authn.md |
+| AuthnService | `AuthnService/ReplaceServiceAccountGrant` | `replace_service_account_grant` | `replaceServiceAccountGrant` | MUTATION | authn.md |
 | AuthnService | `AuthnService/ResendOTP` | `resend_otp` | `resendOtp` | MUTATION | authn.md |
 | AuthnService | `AuthnService/ResetPassword` | `reset_password` | `resetPassword` | MUTATION | authn.md |
+| AuthnService | `AuthnService/RevokeCertificateBinding` | `revoke_certificate_binding` | `revokeCertificateBinding` | DESTRUCTIVE | authn.md |
 | AuthnService | `AuthnService/RevokeDevice` | `revoke_device` | `revokeDevice` | MUTATION | authn.md |
 | AuthnService | `AuthnService/RevokeRecoveryCodes` | `revoke_recovery_codes` | `revokeRecoveryCodes` | MUTATION | authn.md |
+| AuthnService | `AuthnService/RevokeServiceAccountGrant` | `revoke_service_account_grant` | `revokeServiceAccountGrant` | DESTRUCTIVE | authn.md |
 | AuthnService | `AuthnService/RevokeSession` | `revoke_session` | `revokeSession` | MUTATION | authn.md |
+| AuthnService | `AuthnService/RotateServiceAccountIdentity` | `rotate_service_account_identity` | `rotateServiceAccountIdentity` | DESTRUCTIVE | authn.md |
 | AuthnService | `AuthnService/SendOTP` | `send_otp` | `sendOtp` | MUTATION | authn.md |
 | AuthnService | `AuthnService/SendPhoneVerification` | `send_phone_verification` | `sendPhoneVerification` | MUTATION | authn.md |
 | AuthnService | `AuthnService/StartWebAuthnAuthentication` | `start_web_authn_authentication` | `startWebAuthnAuthentication` | MUTATION | authn.md |

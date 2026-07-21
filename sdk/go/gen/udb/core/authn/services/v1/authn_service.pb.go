@@ -1345,7 +1345,7 @@ const file_udb_core_authn_services_v1_authn_service_proto_rawDesc = "" +
 	" RevokeCertificateBindingResponse\x12\x18\n" +
 	"\arevoked\x18\x01 \x01(\bR\arevoked\x12\x18\n" +
 	"\amessage\x18\x02 \x01(\tR\amessage\x122\n" +
-	"\x05error\x18\x03 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x012ȓ\x02\n" +
+	"\x05error\x18\x03 \x01(\v2\x1c.udb.core.common.v1.ApiErrorR\x05error:\x1c\x9a\xb2\x19\x18\b\x01\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x05authnP\x012ɓ\x02\n" +
 	"\fAuthnService\x12\xc4\x04\n" +
 	"\n" +
 	"CreateUser\x12-.udb.core.authn.services.v1.CreateUserRequest\x1a..udb.core.authn.services.v1.CreateUserResponse\"\xd6\x03\xca\xf3\x184\b\x02\x1a\x15udb:authn:create-user \x01J\x02\x01\x02j\x10authn.CreateUser\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x180\b\x01\x12\vcreate_user\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04authP\x01Z\n" +
@@ -1412,8 +1412,8 @@ const file_udb_core_authn_services_v1_authn_service_proto_rawDesc = "" +
 	"\x0eChangePassword\x121.udb.core.authn.services.v1.ChangePasswordRequest\x1a2.udb.core.authn.services.v1.ChangePasswordResponse\"\xfd\x03\xca\xf3\x18<\b\x02\x1a\x19udb:authn:change-password \x01J\x02\x01\x02j\x14authn.ChangePassword\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x188\b\x01\x12\x0fchange_password\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04authP\x01Z\x0echangePassword\xe2\xf3\x18\xb3\x01\n" +
 	"\x04auth\x12\x0fudb/native/auth\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"+udb.native.auth.change_password.boilerplate*\x0fchange_password2\budb_auth:\x05authnJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18P\n" +
 	"\x14authn.ChangePassword\x12\fauthn.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18?\n" +
-	"\x05authn\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02\x1e:\x01*\"\x19/v1/auth/passwords:change\x12\xed\x04\n" +
-	"\rValidateToken\x120.udb.core.authn.services.v1.ValidateTokenRequest\x1a1.udb.core.authn.services.v1.ValidateTokenResponse\"\xf6\x03\xca\xf3\x18;\b\x02\x1a\x18udb:authn:validate-token \x01J\x03\x01\x02\x05j\x13authn.ValidateToken\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x186\b\x01\x12\x0evalidate_token\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04authP\x01Z\rvalidateToken\xe2\xf3\x18\xb1\x01\n" +
+	"\x05authn\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x02\x82\xd3\xe4\x93\x02\x1e:\x01*\"\x19/v1/auth/passwords:change\x12\xee\x04\n" +
+	"\rValidateToken\x120.udb.core.authn.services.v1.ValidateTokenRequest\x1a1.udb.core.authn.services.v1.ValidateTokenResponse\"\xf7\x03\xca\xf3\x18<\b\x02\x1a\x18udb:authn:validate-token \x01J\x04\x01\x02\x05\x04j\x13authn.ValidateToken\x90\x01\x01\xd2\xf3\x18\x06\b\x01\x10\x01 \x01\xda\xf3\x186\b\x01\x12\x0evalidate_token\x1a\x03udb(\xb0\xea\x010\x03@\x01J\x04authP\x01Z\rvalidateToken\xe2\xf3\x18\xb1\x01\n" +
 	"\x04auth\x12\x0fudb/native/auth\x1a\x1bUDB_NATIVE_SERVICES_ENABLED\x1a\x0fUDB_GRPC_TARGET\"*udb.native.auth.validate_token.boilerplate*\x0evalidate_token2\budb_auth:\x05authnJ\vUDB_API_KEYZ\x10udb native smoke\xea\xf3\x18O\n" +
 	"\x13authn.ValidateToken\x12\fauthn.events\x1a\ttenant_id\"\bstandard*\rat_least_once2\x06stable\xf2\xf3\x18?\n" +
 	"\x05authn\x1a\bpostgres2\x1bUDB_NATIVE_SERVICES_ENABLED2\x0fUDB_GRPC_TARGET\xf8\xf3\x18\x01\x82\xd3\xe4\x93\x02\x1d:\x01*\"\x18/v1/auth/tokens:validate\x12\xe5\x04\n" +

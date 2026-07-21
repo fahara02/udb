@@ -397,6 +397,30 @@
   },
   {
     "file": "authn.md",
+    "rpc": "CreateCertificateBinding",
+    "service": "AuthnService",
+    "wire_rpc": "AuthnService/CreateCertificateBinding",
+    "api_alias": "create_certificate_binding",
+    "operation_id": "createCertificateBinding",
+    "op_kind": "MUTATION",
+    "request_msg": "CreateCertificateBindingRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"user_id\": \"<seed:user_id>\", \"selector_kind\": \"SPIFFE_URI\", \"selector_value\": \"spiffe://bench/svc-grant\", \"scope_subset\": [], \"reason\": \"bench binding\" }`",
+    "notes": "Requires an ACTIVE grant; empty scope_subset = full current grant (never widening)."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "CreateServiceAccountGrant",
+    "service": "AuthnService",
+    "wire_rpc": "AuthnService/CreateServiceAccountGrant",
+    "api_alias": "create_service_account_grant",
+    "operation_id": "createServiceAccountGrant",
+    "op_kind": "MUTATION",
+    "request_msg": "CreateServiceAccountGrantRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"user_id\": \"<seed:user_id>\", \"service_identity\": \"spiffe://bench/svc-grant\", \"project_id\": \"<seed:project>\", \"approved_scopes\": [\"udb:read\", \"udb:write\"], \"reason\": \"bench seed grant\" }`",
+    "notes": "fix_plan §2: typed operator-approved grant; admin/wildcard scopes are rejected at write."
+  },
+  {
+    "file": "authn.md",
     "rpc": "CreateSession",
     "service": "AuthnService",
     "wire_rpc": "AuthnService/CreateSession",
@@ -541,6 +565,18 @@
   },
   {
     "file": "authn.md",
+    "rpc": "GetServiceAccountGrant",
+    "service": "AuthnService",
+    "wire_rpc": "AuthnService/GetServiceAccountGrant",
+    "api_alias": "get_service_account_grant",
+    "operation_id": "getServiceAccountGrant",
+    "op_kind": "READ_ONLY",
+    "request_msg": "GetServiceAccountGrantRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"user_id\": \"<seed:user_id>\" }`",
+    "notes": "Reads the single typed grant for the account."
+  },
+  {
+    "file": "authn.md",
     "rpc": "GetSession",
     "service": "AuthnService",
     "wire_rpc": "AuthnService/GetSession",
@@ -589,6 +625,18 @@
   },
   {
     "file": "authn.md",
+    "rpc": "ListCertificateBindings",
+    "service": "AuthnService",
+    "wire_rpc": "AuthnService/ListCertificateBindings",
+    "api_alias": "list_certificate_bindings",
+    "operation_id": "listCertificateBindings",
+    "op_kind": "READ_ONLY",
+    "request_msg": "ListCertificateBindingsRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"page_size\": 50 }`",
+    "notes": "Numeric-offset page_token; next_page_token on full pages."
+  },
+  {
+    "file": "authn.md",
     "rpc": "ListDevices",
     "service": "AuthnService",
     "wire_rpc": "AuthnService/ListDevices",
@@ -610,6 +658,18 @@
     "request_msg": "ListMfaFactorsRequest",
     "body": "`{ \"user_id\": \"<seed:user_id>\" }`",
     "notes": "Optional `context`."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "ListServiceAccountGrants",
+    "service": "AuthnService",
+    "wire_rpc": "AuthnService/ListServiceAccountGrants",
+    "api_alias": "list_service_account_grants",
+    "operation_id": "listServiceAccountGrants",
+    "op_kind": "READ_ONLY",
+    "request_msg": "ListServiceAccountGrantsRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"page_size\": 50 }`",
+    "notes": "Numeric-offset page_token; next_page_token on full pages."
   },
   {
     "file": "authn.md",
@@ -721,6 +781,18 @@
   },
   {
     "file": "authn.md",
+    "rpc": "ReplaceServiceAccountGrant",
+    "service": "AuthnService",
+    "wire_rpc": "AuthnService/ReplaceServiceAccountGrant",
+    "api_alias": "replace_service_account_grant",
+    "operation_id": "replaceServiceAccountGrant",
+    "op_kind": "MUTATION",
+    "request_msg": "ReplaceServiceAccountGrantRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"user_id\": \"<seed:user_id>\", \"approved_scopes\": [\"udb:read\"], \"reason\": \"bench replace\", \"expected_revision\": 1 }`",
+    "notes": "Revision CAS: mismatch fails FAILED_PRECONDITION; revision bumps on success."
+  },
+  {
+    "file": "authn.md",
     "rpc": "ResendOTP",
     "service": "AuthnService",
     "wire_rpc": "AuthnService/ResendOTP",
@@ -742,6 +814,18 @@
     "request_msg": "ResetPasswordRequest",
     "body": "`{ \"otp_id\": \"<seed:reset_otp_id>\", \"code\": \"<seed:reset_otp_code>\", \"new_password\": \"N3w!Passw0rd9\" }`",
     "notes": "PUBLIC. `otp_id`/`code` from a runtime-issued PASSWORD_RESET OTP. Optional `context`."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "RevokeCertificateBinding",
+    "service": "AuthnService",
+    "wire_rpc": "AuthnService/RevokeCertificateBinding",
+    "api_alias": "revoke_certificate_binding",
+    "operation_id": "revokeCertificateBinding",
+    "op_kind": "DESTRUCTIVE",
+    "request_msg": "RevokeCertificateBindingRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"binding_id\": \"<seed:grant_binding_id>\", \"reason\": \"bench revoke\" }`",
+    "notes": "binding_id from CreateCertificateBinding (server-assigned UUID); revoked bindings fail closed at the TLS gate."
   },
   {
     "file": "authn.md",
@@ -769,6 +853,18 @@
   },
   {
     "file": "authn.md",
+    "rpc": "RevokeServiceAccountGrant",
+    "service": "AuthnService",
+    "wire_rpc": "AuthnService/RevokeServiceAccountGrant",
+    "api_alias": "revoke_service_account_grant",
+    "operation_id": "revokeServiceAccountGrant",
+    "op_kind": "DESTRUCTIVE",
+    "request_msg": "RevokeServiceAccountGrantRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"user_id\": \"<seed:user_id>\", \"reason\": \"bench revoke\" }`",
+    "notes": "Idempotent; only ACTIVE grants flip."
+  },
+  {
+    "file": "authn.md",
     "rpc": "RevokeSession",
     "service": "AuthnService",
     "wire_rpc": "AuthnService/RevokeSession",
@@ -778,6 +874,18 @@
     "request_msg": "RevokeSessionRequest",
     "body": "`{ \"session_id\": \"<seed:session_id>\", \"revoke_reason\": \"perf\" }`",
     "notes": "Or revoke all for a principal: `principal_id: \"<seed:subject>\"`, `all_for_principal: true`. Optional `context`."
+  },
+  {
+    "file": "authn.md",
+    "rpc": "RotateServiceAccountIdentity",
+    "service": "AuthnService",
+    "wire_rpc": "AuthnService/RotateServiceAccountIdentity",
+    "api_alias": "rotate_service_account_identity",
+    "operation_id": "rotateServiceAccountIdentity",
+    "op_kind": "DESTRUCTIVE",
+    "request_msg": "RotateServiceAccountIdentityRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"user_id\": \"<seed:user_id>\", \"new_service_identity\": \"spiffe://bench/svc-grant-rotated\", \"expected_revision\": 1, \"reason\": \"bench rotate identity\" }`",
+    "notes": "Revision CAS: rebinds the grant to a new service identity; supersedes prior certificate bindings."
   },
   {
     "file": "authn.md",
