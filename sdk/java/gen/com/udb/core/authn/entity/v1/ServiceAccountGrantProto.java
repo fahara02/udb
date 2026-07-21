@@ -44,53 +44,53 @@ public final class ServiceAccountGrantProto {
       "nt_grant.proto\022\030udb.core.authn.entity.v1" +
       "\032\037google/protobuf/timestamp.proto\032\033udb/c" +
       "ore/common/v1/db.proto\032!udb/core/common/" +
-      "v1/security.proto\"\237\014\n\023ServiceAccountGran" +
+      "v1/security.proto\"\244\014\n\023ServiceAccountGran" +
       "t\022F\n\010grant_id\030\001 \001(\tB+\202\267\030\'\n\010grant_id\022\004UUI" +
       "D\030\001(\001:\021gen_random_uuid()R\007grantId\022l\n\007use" +
       "r_id\030\002 \001(\tBS\202\267\030O\n\007user_id\022\004UUID\030\001J\035\n\005use" +
       "rs\022\007user_id\032\tudb_authn \003Z\035FK to udb_auth" +
       "n.users.user_idR\006userId\022Q\n\020service_ident" +
       "ity\030\003 \001(\tB&\202\267\030\"\n\020service_identity\022\014VARCH" +
-      "AR(512)\030\001R\017serviceIdentity\022h\n\ttenant_id\030" +
-      "\004 \001(\tBK\202\267\030G\n\ttenant_id\022\014VARCHAR(120)\030\001R*" +
+      "AR(512)\030\001R\017serviceIdentity\022k\n\ttenant_id\030" +
+      "\004 \001(\tBN\202\267\030J\n\ttenant_id\022\014VARCHAR(120)\030\001R*" +
       "\n!idx_service_account_grants_tenant\022\005BTR" +
-      "EER\010tenantId\022C\n\nproject_id\030\005 \001(\tB$\202\267\030 \n\n" +
-      "project_id\022\014VARCHAR(255)\030\001:\002\'\'R\tprojectI" +
-      "d\022[\n\024approved_scopes_json\030\006 \001(\tB)\202\267\030%\n\024a" +
-      "pproved_scopes_json\022\005JSONB\030\001:\004\'[]\'R\022appr" +
-      "ovedScopesJson\022i\n\006status\030\007 \001(\tBQ\202\267\030M\n\006st" +
-      "atus\022\013VARCHAR(20)\030\001:\010\'ACTIVE\'R*\n!idx_ser" +
-      "vice_account_grants_status\022\005BTREER\006statu" +
-      "s\0227\n\010revision\030\010 \001(\003B\033\202\267\030\027\n\010revision\022\006BIG" +
-      "INT\030\001:\0011R\010revision\022C\n\nupdated_by\030\t \001(\tB$" +
-      "\202\267\030 \n\nupdated_by\022\014VARCHAR(255)\030\001:\002\'\'R\tup" +
-      "datedBy\0229\n\006reason\030\n \001(\tB!\202\267\030\035\n\006reason\022\rV" +
-      "ARCHAR(1024)\030\001:\002\'\'R\006reason\022a\n\ncreated_at" +
-      "\030\013 \001(\0132\032.google.protobuf.TimestampB&\202\267\030\"" +
-      "\n\ncreated_at\022\013TIMESTAMPTZ\030\001:\005now()R\tcrea" +
-      "tedAt\022a\n\nupdated_at\030\014 \001(\0132\032.google.proto" +
-      "buf.TimestampB&\202\267\030\"\n\nupdated_at\022\013TIMESTA" +
-      "MPTZ\030\001:\005now()R\tupdatedAt:\210\004\372\266\030\366\002\n\026servic" +
-      "e_account_grants\022\tudb_authn\030\032 \001*9Typed o" +
-      "perator-approved scope grants for servic" +
-      "e accounts8\001@\001b^\n\020tenant_isolation\032H(ten" +
-      "ant_id::text = current_setting(\'app.curr" +
-      "ent_tenant_id\', true)::text)(\001\212\0019\n#idx_s" +
-      "ervice_account_grants_identity\030\001Z\020servic" +
-      "e_identity\212\001,\n\037idx_service_account_grant" +
-      "s_user\030\001Z\007user_id\352\001\007primary\362\001$udb.authn." +
-      "service_account_grants.cdc\372\001\021authn:grant" +
-      "s:read\212\262\031\210\001\n\006tenant\032\ttenant_id*4tenant_i" +
-      "d = current_setting(\'app.current_tenant_" +
-      "id\')2\004none:\014authn.policyH\002R\006tenantZ\010stan" +
-      "dardr\025tenant.data_residencyB\203\002\n\034com.udb." +
-      "core.authn.entity.v1B\030ServiceAccountGran" +
-      "tProtoP\001ZDgithub.com/fahara02/udb/sdk/go" +
-      "/gen/udb/core/authn/entity/v1;entityv1\242\002" +
-      "\004UCAE\252\002\030udb.core.Authn.Entity.V1\312\002\030Udb\\C" +
-      "ore\\Authn\\Entity\\V1\342\002$Udb\\GPBMetadata\\Co" +
-      "re\\Authn\\Entity\\V1\352\002\034Udb::Core::Authn::E" +
-      "ntity::V1b\006proto3"
+      "EE\230\002\001R\010tenantId\022C\n\nproject_id\030\005 \001(\tB$\202\267\030" +
+      " \n\nproject_id\022\014VARCHAR(255)\030\001:\002\'\'R\tproje" +
+      "ctId\022]\n\024approved_scopes_json\030\006 \001(\tB+\202\267\030\'" +
+      "\n\024approved_scopes_json\022\005JSONB\030\001:\004\'[]\'x\001R" +
+      "\022approvedScopesJson\022i\n\006status\030\007 \001(\tBQ\202\267\030" +
+      "M\n\006status\022\013VARCHAR(20)\030\001:\010\'ACTIVE\'R*\n!id" +
+      "x_service_account_grants_status\022\005BTREER\006" +
+      "status\0227\n\010revision\030\010 \001(\003B\033\202\267\030\027\n\010revision" +
+      "\022\006BIGINT\030\001:\0011R\010revision\022C\n\nupdated_by\030\t " +
+      "\001(\tB$\202\267\030 \n\nupdated_by\022\014VARCHAR(255)\030\001:\002\'" +
+      "\'R\tupdatedBy\0229\n\006reason\030\n \001(\tB!\202\267\030\035\n\006reas" +
+      "on\022\rVARCHAR(1024)\030\001:\002\'\'R\006reason\022a\n\ncreat" +
+      "ed_at\030\013 \001(\0132\032.google.protobuf.TimestampB" +
+      "&\202\267\030\"\n\ncreated_at\022\013TIMESTAMPTZ\030\001:\005now()R" +
+      "\tcreatedAt\022a\n\nupdated_at\030\014 \001(\0132\032.google." +
+      "protobuf.TimestampB&\202\267\030\"\n\nupdated_at\022\013TI" +
+      "MESTAMPTZ\030\001:\005now()R\tupdatedAt:\210\004\372\266\030\366\002\n\026s" +
+      "ervice_account_grants\022\tudb_authn\030\032 \001*9Ty" +
+      "ped operator-approved scope grants for s" +
+      "ervice accounts8\001@\001b^\n\020tenant_isolation\032" +
+      "H(tenant_id::text = current_setting(\'app" +
+      ".current_tenant_id\', true)::text)(\001\212\0019\n#" +
+      "idx_service_account_grants_identity\030\001Z\020s" +
+      "ervice_identity\212\001,\n\037idx_service_account_" +
+      "grants_user\030\001Z\007user_id\352\001\007primary\362\001$udb.a" +
+      "uthn.service_account_grants.cdc\372\001\021authn:" +
+      "grants:read\212\262\031\210\001\n\006tenant\032\ttenant_id*4ten" +
+      "ant_id = current_setting(\'app.current_te" +
+      "nant_id\')2\004none:\014authn.policyH\002R\006tenantZ" +
+      "\010standardr\025tenant.data_residencyB\203\002\n\034com" +
+      ".udb.core.authn.entity.v1B\030ServiceAccoun" +
+      "tGrantProtoP\001ZDgithub.com/fahara02/udb/s" +
+      "dk/go/gen/udb/core/authn/entity/v1;entit" +
+      "yv1\242\002\004UCAE\252\002\030udb.core.Authn.Entity.V1\312\002\030" +
+      "Udb\\Core\\Authn\\Entity\\V1\342\002$Udb\\GPBMetada" +
+      "ta\\Core\\Authn\\Entity\\V1\352\002\034Udb::Core::Aut" +
+      "hn::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
