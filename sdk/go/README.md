@@ -7,7 +7,7 @@
 
 <p align="center">
   <strong>UDB :: Universal Data Broker</strong><br>
-  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.4.17 | protocol v1.0.0</sub>
+  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.4.18 | protocol v1.0.0</sub>
 </p>
 <!-- UDB_BRAND_HEADER_END -->
 
@@ -18,13 +18,13 @@ version-matched CLI launcher.
 ## Install
 
 ```bash
-go get github.com/fahara02/udb/sdk/go@v0.4.17
+go get github.com/fahara02/udb/sdk/go@v0.4.18
 ```
 
 Install the `udb` CLI launcher:
 
 ```bash
-go install github.com/fahara02/udb/sdk/go/cmd/udb@v0.4.17
+go install github.com/fahara02/udb/sdk/go/cmd/udb@v0.4.18
 ```
 
 The launcher finds or downloads the matching UDB release binary, then forwards

@@ -1291,11 +1291,16 @@ fn reconcile_api_key_principal(
             ));
         }
         Err(_) => {
-            // Fail closed on a key-store error: never fall back to header trust or
-            // fail open. The underlying error is logged by the resolver; the
-            // caller-facing status carries no key material or store detail.
-            return Err(Status::unauthenticated(
-                "x-api-key could not be validated (key store unavailable); request denied",
+            // Fail closed on a key-store error, but signal it as a DEPENDENCY
+            // outage, not an auth failure: a key that cannot be validated because
+            // the store is unreachable (e.g. Postgres down) is UNAVAILABLE
+            // (retryable), never UNAUTHENTICATED — otherwise a database outage
+            // masquerades as "your credential is bad" (UDB-DB-READINESS-001).
+            // Still fail closed: never fall back to header trust or fail open;
+            // the caller-facing status carries no key material or store detail.
+            return Err(Status::unavailable(
+                "x-api-key could not be validated (key store unavailable); retry once the \
+                 credential store is reachable",
             ));
         }
     };
@@ -3581,10 +3586,13 @@ mod tests {
     }
 
     #[test]
-    fn api_key_store_error_fails_closed() {
+    fn api_key_store_error_fails_closed_as_unavailable() {
         let err = reconcile_api_key_principal(Err("db down".to_string()), true, "", "", "")
             .expect_err("a key-store error must deny (fail closed), never fall back to headers");
-        assert_eq!(err.code(), tonic::Code::Unauthenticated);
+        // UDB-DB-READINESS-001: a store outage is a DEPENDENCY failure (retryable
+        // UNAVAILABLE), never UNAUTHENTICATED — a DB outage must not look like a
+        // bad credential. Still fail closed.
+        assert_eq!(err.code(), tonic::Code::Unavailable);
         // The caller-facing message must not leak the underlying store error.
         assert!(!err.message().contains("db down"));
     }
