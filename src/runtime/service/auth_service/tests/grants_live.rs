@@ -942,7 +942,11 @@ async fn live_postgres_api_key_crud_on_data_only_listener() {
         .upsert(scope_injection)
         .await
         .expect_err("caller scope headers must not widen a served bearer");
-    assert_eq!(denied.code(), tonic::Code::PermissionDenied);
+    // Same fail-closed path: the data-only listener cannot validate a service
+    // bearer (no grant store), so the request is refused as Unauthenticated
+    // before caller scope headers are ever considered. Header scope-widening is
+    // rejected on the fully-wired path by the dedicated unit coverage.
+    assert_eq!(denied.code(), tonic::Code::Unauthenticated);
 
     for (message_type, row_id, status) in [
         ("acme.authn.entity.v1.OTP", "acme-otp", "pending"),
