@@ -4965,7 +4965,7 @@
     "/v1/auth/certificate-bindings": {
       "get": {
         "summary": "Page through the tenant's mTLS certificate bindings (tenant-scoped;\ncross-tenant reads are rejected).",
-        "operationId": "AuthnService_ListCertificateBindings",
+        "operationId": "listCertificateBindings",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -5101,11 +5101,24 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "list_certificate_bindings",
+        "x-udb-scope": [
+          "udb:authn:read-grants"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "read_only"
       },
       "post": {
         "summary": "Bind an mTLS certificate selector to a service account. The principal is\nalways derived from the account's CURRENT grant at request time (optionally\nattenuated by scope_subset); an unknown or misbound certificate fails closed.",
-        "operationId": "AuthnService_CreateCertificateBinding",
+        "operationId": "createCertificateBinding",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -5229,13 +5242,26 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "create_certificate_binding",
+        "x-udb-scope": [
+          "udb:authn:manage-grants"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/auth/certificate-bindings/{bindingId}:revoke": {
       "post": {
         "summary": "Revoke a certificate binding. Certificates matching the selector stop\nauthenticating immediately — fail closed, audited.",
-        "operationId": "AuthnService_RevokeCertificateBinding",
+        "operationId": "revokeCertificateBinding",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -5366,7 +5392,20 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "revoke_certificate_binding",
+        "x-udb-scope": [
+          "udb:authn:manage-grants"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "destructive"
       }
     },
     "/v1/auth/credentials:authenticate": {
@@ -7257,7 +7296,7 @@
     "/v1/auth/service-account-grants": {
       "get": {
         "summary": "Page through the tenant's typed service-account grants (tenant-scoped;\ncross-tenant reads are rejected).",
-        "operationId": "AuthnService_ListServiceAccountGrants",
+        "operationId": "listServiceAccountGrants",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -7393,13 +7432,26 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "list_service_account_grants",
+        "x-udb-scope": [
+          "udb:authn:read-grants"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "read_only"
       }
     },
     "/v1/auth/service-accounts/{userId}/grant": {
       "get": {
         "summary": "Read the current typed grant for a service account; NOT_FOUND when the\naccount has no grant (the account then cannot authenticate — fail closed).",
-        "operationId": "AuthnService_GetServiceAccountGrant",
+        "operationId": "getServiceAccountGrant",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -7527,11 +7579,24 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "get_service_account_grant",
+        "x-udb-scope": [
+          "udb:authn:read-grants"
+        ],
+        "x-udb-retry-safe": true,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "read_only"
       },
       "post": {
         "summary": "── Typed service-account grants + mTLS certificate bindings (UDB-AUTH-003/007) ──\nCreate the single typed grant for a service account: immutable service\nidentity, tenant/project binding, and operator-approved scopes.\nAdmin/owner/wildcard scopes are rejected at write time (fail closed).",
-        "operationId": "AuthnService_CreateServiceAccountGrant",
+        "operationId": "createServiceAccountGrant",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -7661,13 +7726,26 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "create_service_account_grant",
+        "x-udb-scope": [
+          "udb:authn:manage-grants"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/auth/service-accounts/{userId}/grant:replace": {
       "post": {
         "summary": "Replace a grant's approved scopes/project atomically, bumping `revision` so\ndependent credentials and bindings detect staleness. A stale\nexpected_revision fails with FAILED_PRECONDITION (fail closed).",
-        "operationId": "AuthnService_ReplaceServiceAccountGrant",
+        "operationId": "replaceServiceAccountGrant",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -7797,13 +7875,26 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "replace_service_account_grant",
+        "x-udb-scope": [
+          "udb:authn:manage-grants"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "mutation"
       }
     },
     "/v1/auth/service-accounts/{userId}/grant:revoke": {
       "post": {
         "summary": "Revoke a service account's grant. The account (and every credential or\ncertificate binding that resolves through the grant) stops authenticating\nimmediately — fail closed, audited.",
-        "operationId": "AuthnService_RevokeServiceAccountGrant",
+        "operationId": "revokeServiceAccountGrant",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -7933,13 +8024,26 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "revoke_service_account_grant",
+        "x-udb-scope": [
+          "udb:authn:manage-grants"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "destructive"
       }
     },
     "/v1/auth/service-accounts/{userId}/grant:rotateIdentity": {
       "post": {
         "summary": "Rotate the immutable service identity through an explicit audited CAS.\nThe revision bump invalidates all API keys and certificate bindings\nreviewed against the prior identity; already-issued service JWTs fail the\ncurrent-grant identity check immediately.",
-        "operationId": "AuthnService_RotateServiceAccountIdentity",
+        "operationId": "rotateServiceAccountIdentity",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -8069,7 +8173,20 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "rotate_service_account_identity",
+        "x-udb-scope": [
+          "udb:authn:manage-grants"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "destructive"
       }
     },
     "/v1/auth/sessions": {

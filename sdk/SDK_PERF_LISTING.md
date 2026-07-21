@@ -6,7 +6,7 @@ Inputs:
 - `docs/generated/bench-bodies.json`
 - `docs/site/bench-results.json`
 
-Current generated RPC surface: 366 RPCs across 28 services.
+Current generated RPC surface: 375 RPCs across 28 services.
 
 Published benchmark artifact: not committed yet.
 Release tag: -.
@@ -47,7 +47,7 @@ Generated at: -.
 | AnalyticsService | 7 | 5 | 2 | 0 | 0 |
 | ApiKeyService | 9 | 4 | 4 | 1 | 0 |
 | AssetService | 8 | 4 | 4 | 0 | 0 |
-| AuthnService | 50 | 15 | 28 | 7 | 0 |
+| AuthnService | 59 | 18 | 31 | 10 | 0 |
 | AuthzService | 41 | 18 | 17 | 6 | 0 |
 | BackupService | 8 | 4 | 3 | 1 | 0 |
 | CacheService | 7 | 3 | 3 | 1 | 0 |
@@ -114,6 +114,8 @@ identity surface available to benchmark reports.
 | `AuthnService/ChangePassword` | `change_password` | `changePassword` | MUTATION |
 | `AuthnService/ChangeUserStatus` | `change_user_status` | `changeUserStatus` | DESTRUCTIVE |
 | `AuthnService/ConfirmMFAEnrollment` | `confirm_mfaenrollment` | `confirmMfaenrollment` | MUTATION |
+| `AuthnService/CreateCertificateBinding` | `create_certificate_binding` | `createCertificateBinding` | MUTATION |
+| `AuthnService/CreateServiceAccountGrant` | `create_service_account_grant` | `createServiceAccountGrant` | MUTATION |
 | `AuthnService/CreateSession` | `create_session` | `createSession` | MUTATION |
 | `AuthnService/CreateUser` | `create_user` | `createUser` | MUTATION |
 | `AuthnService/DeleteWebAuthnCredential` | `delete_web_authn_credential` | `deleteWebAuthnCredential` | MUTATION |
@@ -126,12 +128,15 @@ identity surface available to benchmark reports.
 | `AuthnService/GenerateRecoveryCodes` | `generate_recovery_codes` | `generateRecoveryCodes` | MUTATION |
 | `AuthnService/GetJwks` | `get_jwks` | `getJwks` | READ_ONLY |
 | `AuthnService/GetMfaPolicy` | `get_mfa_policy` | `getMfaPolicy` | READ_ONLY |
+| `AuthnService/GetServiceAccountGrant` | `get_service_account_grant` | `getServiceAccountGrant` | READ_ONLY |
 | `AuthnService/GetSession` | `get_session` | `getSession` | READ_ONLY |
 | `AuthnService/GetUser` | `get_user` | `getUser` | READ_ONLY |
 | `AuthnService/IntrospectToken` | `introspect_token` | `introspectToken` | READ_ONLY |
 | `AuthnService/IssueMfaChallenge` | `issue_mfa_challenge` | `issueMfaChallenge` | MUTATION |
+| `AuthnService/ListCertificateBindings` | `list_certificate_bindings` | `listCertificateBindings` | READ_ONLY |
 | `AuthnService/ListDevices` | `list_devices` | `listDevices` | READ_ONLY |
 | `AuthnService/ListMfaFactors` | `list_mfa_factors` | `listMfaFactors` | READ_ONLY |
+| `AuthnService/ListServiceAccountGrants` | `list_service_account_grants` | `listServiceAccountGrants` | READ_ONLY |
 | `AuthnService/ListSessions` | `list_sessions` | `listSessions` | READ_ONLY |
 | `AuthnService/ListUsers` | `list_users` | `listUsers` | READ_ONLY |
 | `AuthnService/ListWebAuthnCredentials` | `list_web_authn_credentials` | `listWebAuthnCredentials` | READ_ONLY |
@@ -141,11 +146,15 @@ identity surface available to benchmark reports.
 | `AuthnService/RefreshSession` | `refresh_session` | `refreshSession` | MUTATION |
 | `AuthnService/RefreshToken` | `refresh_token` | `refreshToken` | MUTATION |
 | `AuthnService/RenamePasskey` | `rename_passkey` | `renamePasskey` | MUTATION |
+| `AuthnService/ReplaceServiceAccountGrant` | `replace_service_account_grant` | `replaceServiceAccountGrant` | MUTATION |
 | `AuthnService/ResendOTP` | `resend_otp` | `resendOtp` | MUTATION |
 | `AuthnService/ResetPassword` | `reset_password` | `resetPassword` | MUTATION |
+| `AuthnService/RevokeCertificateBinding` | `revoke_certificate_binding` | `revokeCertificateBinding` | DESTRUCTIVE |
 | `AuthnService/RevokeDevice` | `revoke_device` | `revokeDevice` | MUTATION |
 | `AuthnService/RevokeRecoveryCodes` | `revoke_recovery_codes` | `revokeRecoveryCodes` | MUTATION |
+| `AuthnService/RevokeServiceAccountGrant` | `revoke_service_account_grant` | `revokeServiceAccountGrant` | DESTRUCTIVE |
 | `AuthnService/RevokeSession` | `revoke_session` | `revokeSession` | MUTATION |
+| `AuthnService/RotateServiceAccountIdentity` | `rotate_service_account_identity` | `rotateServiceAccountIdentity` | DESTRUCTIVE |
 | `AuthnService/SendOTP` | `send_otp` | `sendOtp` | MUTATION |
 | `AuthnService/SendPhoneVerification` | `send_phone_verification` | `sendPhoneVerification` | MUTATION |
 | `AuthnService/StartWebAuthnAuthentication` | `start_web_authn_authentication` | `startWebAuthnAuthentication` | MUTATION |
