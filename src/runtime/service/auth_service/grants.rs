@@ -490,8 +490,11 @@ async fn verify_grant_owner(
     // Raw escape hatch: `FOR UPDATE` row-locking is not expressible in the
     // typed read IR; the lock is what prevents a concurrent deactivation from
     // racing the grant INSERT in this same transaction scope.
+    // `text_or_empty_as` already emits `COALESCE(col::TEXT,'') AS <alias>`, so the
+    // select list must NOT add a second `AS <alias>` (that renders `… AS x AS x`,
+    // a Postgres syntax error at the second `AS`).
     let sql = format!(
-        "SELECT {project} AS project_id, {kind} AS account_kind, {status} AS status \
+        "SELECT {project}, {kind}, {status} \
          FROM {rel} WHERE {uid} = $1 AND {tenant} = $2 FOR UPDATE",
         project = um.text_or_empty_as("project_id", "project_id"),
         kind = um.text_or_empty_as("account_kind", "account_kind"),
