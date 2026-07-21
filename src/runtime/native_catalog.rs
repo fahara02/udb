@@ -636,6 +636,24 @@ mod tests {
     }
 
     #[test]
+    fn embedded_native_manifest_passes_startup_manifest_validation() {
+        // The broker runs this exact validation at `serve` startup
+        // (PROTO_CHECKSUM_LINT). Any entry here makes `udb serve` dead-on-arrival
+        // against a real database — the SDK/lib tests never boot the broker, so
+        // this is the gate that catches the class of regression where a new
+        // entity declares db_table_security tenant isolation but omits
+        // `tenant_column: true` on its pg_column, or a JSONB column omits
+        // `is_json: true` (UDB-CAT-003).
+        let manifest = native_manifest();
+        assert!(
+            manifest.validation_errors.is_empty(),
+            "embedded native catalog FAILS startup manifest validation \
+             (`udb serve` would abort at PROTO_CHECKSUM_LINT):\n{}",
+            manifest.validation_errors.join("\n")
+        );
+    }
+
+    #[test]
     fn native_service_catalog_ddl_is_generated_from_embedded_proto() {
         let ddl = native_service_catalog_ddl();
         let joined = ddl.join("\n");

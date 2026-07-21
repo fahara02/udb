@@ -26,7 +26,7 @@ package udbclient
 // hatches for RPCs that don't yet have a typed helper.
 //
 // Covers 375 RPCs across 28 services
-// (UDB v0.4.17, wire protocol 1.0.0).
+// (UDB v0.4.18, wire protocol 1.0.0).
 
 import (
 	"bytes"
@@ -63,7 +63,7 @@ const (
 // SDKVersion is the UDB release this generated layer was rendered from. It is
 // baked at generation time and is the version the bundled `udb` CLI launcher
 // (cmd/udb) will resolve.
-const SDKVersion = "0.4.17"
+const SDKVersion = "0.4.18"
 
 // GeneratedProtocolVersion mirrors the wire protocol this layer targets. It is
 // the generated companion to the hand-written udbclient.ProtocolVersion and is
