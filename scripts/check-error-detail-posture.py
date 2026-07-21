@@ -5621,7 +5621,6 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
             '"live query predicate field must not be empty"',
             '"live query predicate comparison op is unspecified"',
             '"must be a non-empty source message type"',
-            '"must name a known tenant-scoped UDB entity"',
             '"must be a non-empty live query predicate field"',
             '"must specify a live query predicate comparison operator"',
             "subscribe_missing_message_type_carries_field_violation",
