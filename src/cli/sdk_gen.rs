@@ -980,7 +980,19 @@ fn render_go_entities_file(entities: &[EntityDescriptor], package: &str) -> Stri
          //\n\
          // Typed UDB record marshalling for your entities. Replaces hand-written\n\
          // proto <-> map[string]any conversion (e.g. protorecord, udb_record.go,\n\
-         // udb_helpers.go, and the `map[string]any{…}` in each repository).\n\n",
+         // udb_helpers.go, and the `map[string]any{…}` in each repository).\n\
+         //\n\
+         // NULL handling — read this before using the full-record write path:\n\
+         //   * proto3 `optional` fields have explicit presence (a pointer). Unset\n\
+         //     means the key is OMITTED from the record, so the column keeps its\n\
+         //     SQL NULL.\n\
+         //   * A NULLABLE string WITHOUT `optional` cannot express \"unset\" in Go —\n\
+         //     \"\" and unset are the same value. To avoid silently replacing SQL\n\
+         //     NULL with \"\" (unique indexes treat two \"\"s as duplicates while two\n\
+         //     NULLs coexist, and format CHECKs reject \"\"), an empty string is\n\
+         //     OMITTED from the record too.\n\
+         //   * So: to store a genuine empty string, declare the field `optional`\n\
+         //     (or NOT NULL). Otherwise \"\" is indistinguishable from NULL here.\n\n",
     );
     out.push_str(&format!("package {package}\n\n"));
 
@@ -1105,8 +1117,11 @@ fn enum_common_prefix(values: &[String]) -> String {
 /// The `r["field"] = …` statement for one column (proto -> record).
 fn go_to_record_stmt(column: &EntityColumnDescriptor) -> String {
     let key = &column.field_name;
-    let getter = format!("Get{}", go_pascal(&column.field_name));
+    let field = go_pascal(&column.field_name);
+    let getter = format!("Get{field}");
     if is_go_timestamp(&column.proto_type) {
+        // timestamppb is already a pointer, so nil covers unset for both the
+        // presence and non-presence cases.
         return format!(
             "\tif v := m.{getter}(); v != nil {{\n\
              \t\tr[\"{key}\"] = v.AsTime().UTC().Format(time.RFC3339Nano)\n\t}}\n",
@@ -1114,11 +1129,27 @@ fn go_to_record_stmt(column: &EntityColumnDescriptor) -> String {
     }
     if !column.enum_values.is_empty() {
         let prefix = enum_common_prefix(&column.enum_values);
-        return format!(
-            "\tr[\"{key}\"] = strings.TrimPrefix(m.{getter}().String(), \"{prefix}\")\n",
-        );
+        let expr = format!("strings.TrimPrefix(m.{getter}().String(), \"{prefix}\")");
+        if column.has_presence {
+            return format!("\tif m.{field} != nil {{\n\t\tr[\"{key}\"] = {expr}\n\t}}\n");
+        }
+        return format!("\tr[\"{key}\"] = {expr}\n");
     }
-    // Scalars (string/int*/bool/bytes/float) map straight into `any`.
+    // proto3 `optional` renders as a pointer: an unset field must be OMITTED from
+    // the record, never flattened to a zero value.
+    if column.has_presence && !matches!(go_scalar_kind(&column.proto_type), GoScalar::Bytes) {
+        return format!("\tif m.{field} != nil {{\n\t\tr[\"{key}\"] = m.{getter}()\n\t}}\n");
+    }
+    // Nullable string WITHOUT presence: Go cannot distinguish "" from unset, and
+    // writing "" where the row held SQL NULL changes meaning — a unique index
+    // treats two ""s as duplicates while two NULLs coexist, and format CHECKs
+    // reject "". Omit the key so NULL round-trips as NULL. A column that must be
+    // written as an empty string should be declared `optional` (presence) or
+    // NOT NULL.
+    if !column.not_null && matches!(go_scalar_kind(&column.proto_type), GoScalar::String) {
+        return format!("\tif v := m.{getter}(); v != \"\" {{\n\t\tr[\"{key}\"] = v\n\t}}\n");
+    }
+    // Scalars (int*/bool/bytes/float, and NOT NULL strings) map straight into `any`.
     format!("\tr[\"{key}\"] = m.{getter}()\n")
 }
 
@@ -1142,11 +1173,38 @@ fn go_from_row_stmt(column: &EntityColumnDescriptor, alias: &str) -> String {
         // would need its own import alias (a follow-up if a consumer hits it).
         let enum_type = go_enum_type_name(&column.proto_type);
         let prefix = enum_common_prefix(&column.enum_values);
+        if column.has_presence {
+            return format!(
+                "\tif s := udbAsString(row[\"{key}\"]); s != \"\" {{\n\
+                 \t\tif v, ok := {alias}.{enum_type}_value[\"{prefix}\"+s]; ok {{\n\
+                 \t\t\te := {alias}.{enum_type}(v)\n\t\t\tm.{field} = &e\n\t\t}}\n\t}}\n",
+            );
+        }
         return format!(
             "\tif s := udbAsString(row[\"{key}\"]); s != \"\" {{\n\
              \t\tif v, ok := {alias}.{enum_type}_value[\"{prefix}\"+s]; ok {{\n\
              \t\t\tm.{field} = {alias}.{enum_type}(v)\n\t\t}}\n\t}}\n",
         );
+    }
+    // proto3 `optional` scalars are pointers: only assign when the row actually
+    // carried the key, so an absent column stays nil rather than becoming a zero.
+    // (`bytes` is already nilable and keeps the plain-slice form.)
+    if column.has_presence {
+        let conv = match go_scalar_kind(&column.proto_type) {
+            GoScalar::String => Some("udbAsString(raw)"),
+            GoScalar::Bool => Some("udbAsBool(raw)"),
+            GoScalar::Int32 => Some("int32(udbAsInt64(raw))"),
+            GoScalar::Int64 => Some("udbAsInt64(raw)"),
+            GoScalar::Float64 => Some("udbAsFloat64(raw)"),
+            GoScalar::Float32 => Some("float32(udbAsFloat64(raw))"),
+            GoScalar::Bytes | GoScalar::Unknown => None,
+        };
+        if let Some(conv) = conv {
+            return format!(
+                "\tif raw, ok := row[\"{key}\"]; ok && raw != nil {{\n\
+                 \t\tv := {conv}\n\t\tm.{field} = &v\n\t}}\n",
+            );
+        }
     }
     match go_scalar_kind(&column.proto_type) {
         GoScalar::String => format!("\tm.{field} = udbAsString(row[\"{key}\"])\n"),
@@ -1204,7 +1262,12 @@ fn go_coercion_helpers(needs_time: bool) -> String {
     );
     if needs_time {
         out.push_str(
-            "func udbAsTime(v any) (time.Time, bool) {\n\ts, ok := v.(string)\n\tif !ok || s == \"\" {\n\t\treturn time.Time{}, false\n\t}\n\tt, err := time.Parse(time.RFC3339Nano, s)\n\tif err != nil {\n\t\treturn time.Time{}, false\n\t}\n\treturn t, true\n}\n",
+            // The broker renders timestamps in more than one layout across column
+            // types (offset form for TIMESTAMPTZ, space-separated for some
+            // TIMESTAMP renderings, bare dates for DATE). Try the canonical form
+            // first, then fall back through the observed set rather than dropping
+            // the value — a failed parse would silently zero the field.
+            "func udbAsTime(v any) (time.Time, bool) {\n\ts, ok := v.(string)\n\tif !ok || s == \"\" {\n\t\treturn time.Time{}, false\n\t}\n\tfor _, layout := range []string{\n\t\ttime.RFC3339Nano,\n\t\ttime.RFC3339,\n\t\t\"2006-01-02T15:04:05\",\n\t\t\"2006-01-02 15:04:05.999999999Z07:00\",\n\t\t\"2006-01-02 15:04:05\",\n\t\t\"2006-01-02\",\n\t} {\n\t\tif t, err := time.Parse(layout, s); err == nil {\n\t\t\treturn t, true\n\t\t}\n\t}\n\treturn time.Time{}, false\n}\n",
         );
     }
     out
@@ -2369,6 +2432,94 @@ impl Fsm {
 mod tests {
     use super::*;
     use udb::runtime::sdk_manifest::EntityRelationDescriptor;
+
+    fn column(field_name: &str, proto_type: &str) -> EntityColumnDescriptor {
+        EntityColumnDescriptor {
+            field_name: field_name.to_string(),
+            column_name: field_name.to_string(),
+            proto_type: proto_type.to_string(),
+            sql_type: String::new(),
+            not_null: true,
+            is_array: false,
+            has_presence: false,
+            enum_values: Vec::new(),
+            is_json: false,
+            is_jsonb: false,
+            exclude_from_insert: false,
+            is_blind_index: false,
+            is_pii: false,
+        }
+    }
+
+    // proto3 `optional` renders as a Go pointer. Emitting a plain assignment
+    // produced code that did not compile (`string` vs `*string`) for any consumer
+    // proto using presence.
+    #[test]
+    fn presence_column_emits_pointer_aware_go() {
+        let mut col = column("created_by", "string");
+        col.has_presence = true;
+
+        let write = go_to_record_stmt(&col);
+        assert!(
+            write.contains("if m.CreatedBy != nil {"),
+            "presence write must be nil-guarded, got: {write}"
+        );
+
+        let read = go_from_row_stmt(&col, "acmev1");
+        assert!(
+            read.contains("m.CreatedBy = &v"),
+            "presence read must assign a pointer, got: {read}"
+        );
+        assert!(
+            read.contains("ok && raw != nil"),
+            "presence read must only assign when the row carried the key, got: {read}"
+        );
+    }
+
+    // A nullable string without presence cannot express "unset" in Go, so writing
+    // "" would replace SQL NULL — which unique indexes and CHECK constraints treat
+    // very differently. The key must be omitted instead.
+    #[test]
+    fn nullable_string_without_presence_omits_empty_value() {
+        let mut col = column("mobile_number", "string");
+        col.not_null = false;
+        let write = go_to_record_stmt(&col);
+        assert!(
+            write.contains("if v := m.GetMobileNumber(); v != \"\" {"),
+            "nullable string must omit empty, got: {write}"
+        );
+    }
+
+    // A NOT NULL string has no NULL to preserve, so it keeps the direct assignment.
+    #[test]
+    fn not_null_string_writes_directly() {
+        let write = go_to_record_stmt(&column("user_id", "string"));
+        assert_eq!(write, "\tr[\"user_id\"] = m.GetUserId()\n");
+    }
+
+    // Numeric zero is a legitimate value; only strings carry the ""/NULL ambiguity.
+    #[test]
+    fn nullable_numeric_still_writes_zero() {
+        let mut col = column("login_attempts", "int32");
+        col.not_null = false;
+        let write = go_to_record_stmt(&col);
+        assert_eq!(write, "\tr[\"login_attempts\"] = m.GetLoginAttempts()\n");
+    }
+
+    #[test]
+    fn presence_enum_emits_pointer_aware_go() {
+        let mut col = column("status", "acme.authn.entity.v1.UserStatus");
+        col.has_presence = true;
+        col.enum_values = vec![
+            "USER_STATUS_ACTIVE".to_string(),
+            "USER_STATUS_SUSPENDED".to_string(),
+        ];
+        let read = go_from_row_stmt(&col, "authnv1");
+        assert!(
+            read.contains("e := authnv1.UserStatus(v)") && read.contains("m.Status = &e"),
+            "presence enum read must assign a pointer, got: {read}"
+        );
+    }
 
     fn sample_manifest() -> Vec<RpcDescriptor> {
         vec![

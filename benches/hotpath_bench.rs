@@ -18,8 +18,6 @@ use criterion::{Criterion, Throughput, black_box, criterion_group, criterion_mai
 use serde_json::Value as JsonValue;
 use udb::bench_internals as bi;
 
-const AUTHZ_POLICY_COUNTS: [usize; 2] = [32, 512];
-
 // ── Dataset loading (bounded, representative sample) ──────────────────────────
 
 fn data_dir() -> PathBuf {
@@ -101,6 +99,61 @@ fn bench_struct_json(c: &mut Criterion) {
         b.iter(|| {
             for v in &values {
                 black_box(bi::json_to_prost_value(black_box(v)));
+            }
+        });
+    });
+    group.finish();
+}
+
+// ── RecordSet row build (the per-row cost of populating `rows`) ───────────────
+
+// The live relational read path serialises each row into `records_json` and
+// pushes an EMPTY `ProtoRow`, while the cache path already builds real proto
+// fields — so the same query answers differently on a cache hit than on a miss.
+// Making the live path populate `rows` re-adds a per-row map plus one
+// `json_to_prost_value` per column, and that cost is currently unmeasured.
+//
+// It cannot be measured end to end from a CPU-only bench: the row-build function
+// takes `Vec<PgRow>` (it needs a live database) and depends on a private metrics
+// type, so driving it here would mean widening visibility purely for
+// benchmarking — which is exactly what the bench-internals doctrine warns
+// against. Instead this group measures the work the change ADDS, through the
+// same shipped conversion the runtime calls, by contrasting the two shapes on
+// identical records.
+//
+// Scope, stated plainly so the number is not over-read: decryption, PII masking
+// and the `PgRow` -> JSON step are NOT included. Treat this as a lower bound on
+// the per-row cost, not as coverage of the whole row-build path.
+fn bench_record_set_rows(c: &mut Criterion) {
+    let lines = load_lines("records.ndjson", 8000);
+    let values = parse_values(&lines);
+    let bytes = total_bytes(&lines);
+
+    let mut group = c.benchmark_group("record_set_rows");
+    group.throughput(Throughput::Bytes(bytes));
+    // Current live path: records_json only, empty proto rows.
+    group.bench_function("records_json only (empty rows)", |b| {
+        b.iter(|| {
+            for v in &values {
+                black_box(serde_json::to_vec(black_box(v)).expect("record serialises"));
+            }
+        });
+    });
+    // Populated shape: the same serialise plus the per-row proto field map that
+    // the cache path already builds.
+    group.bench_function("records_json + populated rows", |b| {
+        b.iter(|| {
+            for v in &values {
+                black_box(serde_json::to_vec(black_box(v)).expect("record serialises"));
+                let fields: std::collections::HashMap<String, bi::ProstValue> = v
+                    .as_object()
+                    .expect("record is a JSON object")
+                    .iter()
+                    .filter_map(|(key, val)| {
+                        bi::json_to_prost_value(val).map(|value| (key.clone(), value))
+                    })
+                    .collect();
+                black_box(fields);
             }
         });
     });
@@ -219,55 +272,18 @@ fn bench_merge_context(c: &mut Criterion) {
     group.finish();
 }
 
-// ── Authz snapshot rebuild + descriptor-derived scope map ───────────────────
+// ── Descriptor-derived method-security scope map ────────────────────────────
+//
+// The former `authz_snapshot_rebuild` group benched `bi::AbacPolicy` /
+// `rebuild_authz_snapshot_from_abac`. That ABAC shape was replaced wholesale by
+// the v2 engine (`runtime::authz::AuthzPolicy` / `Effect` / `AuthzSnapshot`),
+// and neither the type nor the function exists any more — so this bench file
+// did not compile at all. The group is removed rather than guessed at: the v2
+// decision path exposes no public entry point to bench, so re-adding authz
+// coverage needs a deliberate `bench_internals` shim over the real per-request
+// decision, not a reconstruction of a measurement whose subject is gone.
 
-fn sample_abac_policies(count: usize) -> Vec<bi::AbacPolicy> {
-    (0..count)
-        .map(|i| bi::AbacPolicy {
-            effect: if i % 17 == 0 {
-                bi::PolicyEffect::Deny
-            } else {
-                bi::PolicyEffect::Allow
-            },
-            service_identity: format!("svc-{}", i % 8),
-            tenant_id: format!("tenant-{}", i % 16),
-            purpose: if i % 3 == 0 { "audit" } else { "read" }.to_string(),
-            message_type: format!("udb.bench.Entity{}", i % 24),
-            operation: match i % 5 {
-                0 => "data.select",
-                1 => "data.upsert",
-                2 => "data.delete",
-                3 => "object.read",
-                _ => "backend.dispatch",
-            }
-            .to_string(),
-            required_scope: match i % 4 {
-                0 => "udb:read",
-                1 => "udb:write",
-                2 => "udb:admin",
-                _ => "",
-            }
-            .to_string(),
-        })
-        .collect()
-}
-
-fn bench_authz_and_scope_maps(c: &mut Criterion) {
-    let mut authz = c.benchmark_group("authz_snapshot_rebuild");
-    for count in AUTHZ_POLICY_COUNTS {
-        let policies = sample_abac_policies(count);
-        authz.throughput(Throughput::Elements(count as u64));
-        authz.bench_function(format!("from_abac_policies/{count}"), |b| {
-            b.iter(|| {
-                black_box(bi::rebuild_authz_snapshot_from_abac(
-                    black_box("bench-policy-version"),
-                    black_box(&policies),
-                ));
-            });
-        });
-    }
-    authz.finish();
-
+fn bench_scope_maps(c: &mut Criterion) {
     let paths = bi::method_security_scope_paths();
     assert!(
         !paths.is_empty(),
@@ -333,10 +349,11 @@ fn bench_simd_vs_scalar(c: &mut Criterion) {
 criterion_group!(
     benches,
     bench_struct_json,
+    bench_record_set_rows,
     bench_dispatch_parse,
     bench_base64,
     bench_merge_context,
-    bench_authz_and_scope_maps,
+    bench_scope_maps,
     bench_simd_vs_scalar,
 );
 criterion_main!(benches);

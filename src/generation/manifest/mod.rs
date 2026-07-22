@@ -221,6 +221,13 @@ pub struct ManifestColumn {
     pub is_primary: bool,
     pub auto_increment: bool,
     pub is_array: bool,
+    /// proto3 `optional` (explicit presence). Deliberately NOT serialized: the
+    /// manifest JSON feeds `checksum_sha256`, and UDB's own protos use `optional`,
+    /// so serializing it would change embedded-manifest checksums and trip the
+    /// startup manifest-validation gate. Codegen reads it in-process from freshly
+    /// parsed source (`--project-proto`), which never round-trips through JSON.
+    #[serde(skip)]
+    pub has_presence: bool,
     pub default_value: String,
     pub check_constraint: String,
     pub collation: String,

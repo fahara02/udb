@@ -26,7 +26,7 @@ package udbclient
 // hatches for RPCs that don't yet have a typed helper.
 //
 // Covers 375 RPCs across 28 services
-// (UDB v0.4.18, wire protocol 1.0.0).
+// (UDB v0.4.20, wire protocol 1.0.0).
 
 import (
 	"bytes"
@@ -63,7 +63,7 @@ const (
 // SDKVersion is the UDB release this generated layer was rendered from. It is
 // baked at generation time and is the version the bundled `udb` CLI launcher
 // (cmd/udb) will resolve.
-const SDKVersion = "0.4.18"
+const SDKVersion = "0.4.20"
 
 // GeneratedProtocolVersion mirrors the wire protocol this layer targets. It is
 // the generated companion to the hand-written udbclient.ProtocolVersion and is
@@ -337,11 +337,19 @@ func (g *GeneratedClient) Conn() grpc.ClientConnInterface { return g.conn }
 func (g *GeneratedClient) Meta() Metadata { return g.options().Meta }
 
 // outgoingContext attaches the 8 UDB headers plus optional auth / api-key /
-// request-id, reusing joinScopes from the hand-written client.go.
+// request-id, reusing joinScopes and MergeRequestScopedAudit from the
+// hand-written client.go.
+//
+// This interceptor carries EVERY native-service call (storage, asset, webrtc,
+// notification, tenant, api-key, analytics), so it must resolve request-scoped
+// audit metadata the same way Client.Context does. Reading only the
+// connection-level Metadata here is what previously stripped a per-request
+// correlation id from native calls, leaving them to be rejected for a missing
+// request context or audited against a stale connection-level id.
 func (g *GeneratedClient) outgoingContext(ctx context.Context) context.Context {
 	// Single atomic snapshot so meta + auth + api-key are read all-or-nothing.
 	o := g.options()
-	m := o.Meta
+	m := MergeRequestScopedAudit(ctx, o.Meta)
 	pairs := []string{
 		"x-tenant-id", m.TenantID,
 		"x-user-id", m.UserID,
@@ -363,6 +371,8 @@ func (g *GeneratedClient) outgoingContext(ctx context.Context) context.Context {
 	if rid := o.RequestID; rid != "" {
 		pairs = append(pairs, "x-request-id", rid)
 	} else if m.CorrelationID != "" {
+		// m is the MERGED metadata, so a per-request correlation id also
+		// satisfies the server's request-context requirement here.
 		pairs = append(pairs, "x-request-id", m.CorrelationID)
 	}
 	return metadata.AppendToOutgoingContext(ctx, pairs...)
