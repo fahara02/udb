@@ -1431,6 +1431,22 @@ pub fn security_from_request<T>(request: &Request<T>) -> Result<SecurityContext,
     if request
         .extensions()
         .get::<crate::runtime::credential_layer::PreresolvedCredentials>()
+        .map(|resolved| resolved.certificate_resolution_unavailable)
+        .unwrap_or(false)
+    {
+        // A transient DB outage while resolving the certificate binding is a
+        // retryable dependency failure, not a bad certificate. See
+        // UDB-DB-READINESS-001.
+        return Err(crate::runtime::executor_utils::retryable_status(
+            "authn",
+            "certificate_resolution",
+            crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
+            "credential store temporarily unavailable",
+        ));
+    }
+    if request
+        .extensions()
+        .get::<crate::runtime::credential_layer::PreresolvedCredentials>()
         .map(|resolved| {
             resolved.certificate_resolution_failed
                 || (resolved.certificate_present && resolved.certificate_principal.is_none())
@@ -1620,7 +1636,19 @@ pub fn security_from_request<T>(request: &Request<T>) -> Result<SecurityContext,
             .and_then(|resolved| resolved.bearer.as_ref())
         {
             Some(Ok(principal)) => (claims_from_verified_principal(principal), principal.clone()),
-            Some(Err(_)) => return Err(Status::unauthenticated("invalid bearer token")),
+            Some(Err(reason)) => {
+                // A transient outage while consulting the durable typed-grant
+                // store is a retryable dependency failure, not a bad credential.
+                // The resolver TAGS a store outage as Unavailable; a genuine
+                // invalid/ungranted bearer is an untagged string that stays
+                // Unauthenticated (fail closed). See UDB-DB-READINESS-001.
+                let status =
+                    crate::runtime::executor_utils::status_from_store_string(reason.clone());
+                if status.code() == tonic::Code::Unavailable {
+                    return Err(status);
+                }
+                return Err(Status::unauthenticated("invalid bearer token"));
+            }
             None => {
                 let claims = validate_bearer_token_cached(&config, token)
                     .map_err(Status::unauthenticated)?;

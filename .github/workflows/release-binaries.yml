@@ -247,10 +247,17 @@ jobs:
             exit 1
           fi
 
-      - name: Attach to GitHub Release
+      - name: Attach to GitHub Release (kept DRAFT until every asset lands)
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
+          # Attach to a DRAFT release so a consumer polling the Releases API can
+          # never observe a published release with only some platforms' binaries.
+          # The final `manifest` job flips draft:false once all binaries + the
+          # manifest are present, so the release appears atomically-complete or not
+          # at all. A failed platform leaves the release a draft (never a partial
+          # publish).
+          draft: true
           files: |
             dist/${{ matrix.asset }}
             dist/${{ matrix.asset }}.sha256
@@ -302,9 +309,14 @@ jobs:
           node scripts/gen-release-manifest.mjs dist > dist/manifest.json
           ( cd dist && sha256sum manifest.json > manifest.json.sha256 )
           echo "── manifest.json ──"; cat dist/manifest.json
-      - name: Attach manifest to GitHub Release
+      - name: Attach manifest and PUBLISH the release atomically
         uses: softprops/action-gh-release@v2
         with:
+          # This is the LAST asset. Flipping draft:false here publishes the release
+          # only now that every platform binary, its checksum, and the manifest are
+          # all attached — so a consumer's Releases-API poll never sees a published
+          # release with a partial asset set.
+          draft: false
           files: |
             dist/manifest.json
             dist/manifest.json.sha256

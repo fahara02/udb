@@ -45,11 +45,14 @@
 //!     per service, with `{{SERVICE_NAME}}`, `{{SERVICE_PKG}}`, `{{SERVICE_FULL}}`,
 //!     `{{SERVICE_RPC_COUNT}}`.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 use std::process::Command as ProcessCommand;
 
-use udb::runtime::sdk_manifest::{EntityDescriptor, RpcDescriptor, entity_manifest, rpc_manifest};
+use udb::runtime::sdk_manifest::{
+    EntityColumnDescriptor, EntityDescriptor, RpcDescriptor, entity_manifest,
+    entity_manifest_from_proto_dir, rpc_manifest,
+};
 
 use super::{SdkAction, SdkSelector};
 
@@ -792,7 +795,25 @@ fn generate(
         Ok(filtered) => filtered,
         Err(err) => return fsm.fail(err),
     };
-    let entities = match select_entities(entity_manifest(), entity_filter) {
+    // B1: source the ENTITY manifest from the consumer's own proto tree when
+    // `--project-proto <dir>` is given (the RPC surface above stays UDB's). This is
+    // what lets `udb sdk generate` emit typed repositories for a consumer's
+    // entities instead of only UDB's embedded ones.
+    let base_entities = if let Some(proto_root) = selector.project_proto.as_deref() {
+        match entity_manifest_from_proto_dir(Path::new(proto_root)) {
+            Ok(entities) => {
+                fsm.note(format!(
+                    "loaded {} consumer entity(ies) from --project-proto {proto_root}",
+                    entities.len()
+                ));
+                entities
+            }
+            Err(err) => return fsm.fail(err),
+        }
+    } else {
+        entity_manifest()
+    };
+    let entities = match select_entities(base_entities, entity_filter) {
         Ok(entities) => entities,
         Err(err) => return fsm.fail(err),
     };
@@ -881,6 +902,29 @@ fn generate(
             }
             Err(err) => return fsm.fail(format!("{lang_name}: {err}")),
         }
+
+        // B3: for `--project-proto` + Go, also emit a typed proto<->record
+        // marshalling file INTO the consumer's package. Rendered directly (not via
+        // the string-template engine) because it must aggregate file-level Go
+        // imports of the consumer's own proto packages — which the per-entity block
+        // expander cannot do. This is what deletes the hand-written marshalling
+        // (protorecord, udb_record/udb_helpers, and the `map[string]any{…}` in each
+        // repository).
+        if selector.project_proto.is_some() && lang_name == "go" {
+            let go_pkg = selector.go_package.as_deref().unwrap_or("udbentities");
+            let content = render_go_entities_file(&entities, go_pkg);
+            let file_path = lang_out_dir.join("udb_entities_gen.go");
+            if let Err(err) = std::fs::create_dir_all(&lang_out_dir)
+                .and_then(|_| std::fs::write(&file_path, content))
+            {
+                return fsm.fail(format!("failed to write {}: {err}", file_path.display()));
+            }
+            total_rendered += 1;
+            fsm.note(format!(
+                "go: typed entity marshalling → {}",
+                file_path.to_string_lossy().replace('\\', "/")
+            ));
+        }
     }
 
     // ── Render ─▶ Completed ─────────────────────────────────────────────────
@@ -894,6 +938,276 @@ fn generate(
         langs.len()
     );
     0
+}
+
+/// B3: render a self-contained Go file of TYPED marshalling for the consumer's
+/// entities. Emits, per entity, `<Entity>ToUDBRecord(*T) map[string]any` and
+/// `<Entity>FromUDBRow(row) *T`, plus a small set of once-per-file coercion
+/// helpers. Derived entirely from [`EntityColumnDescriptor`] (B2). This replaces a
+/// consumer's hand-written proto<->record conversion. Correctness of the GENERATED
+/// Go is verified by the litmus compile (`go build` on the output); the Rust here
+/// is the emitter.
+fn render_go_entities_file(entities: &[EntityDescriptor], package: &str) -> String {
+    // First pass: which entities are renderable + what imports/helpers are needed.
+    let mut proto_imports: BTreeMap<String, String> = BTreeMap::new();
+    let mut needs_time = false;
+    let mut needs_timestamppb = false;
+    let mut needs_strings = false;
+    let mut renderable: Vec<(&EntityDescriptor, String, String)> = Vec::new();
+    for entity in entities {
+        let Some(go_type) = entity.language_classes.get("go") else {
+            continue;
+        };
+        let Some((path, alias, type_name)) = parse_go_type(go_type) else {
+            continue;
+        };
+        proto_imports.insert(path, alias.clone());
+        for column in &entity.columns {
+            if is_go_timestamp(&column.proto_type) {
+                needs_time = true;
+                needs_timestamppb = true;
+            }
+            if !column.enum_values.is_empty() {
+                needs_strings = true;
+            }
+        }
+        renderable.push((entity, alias, type_name));
+    }
+
+    let mut out = String::new();
+    out.push_str(
+        "// Code generated by `udb sdk generate --project-proto`. DO NOT EDIT.\n\
+         //\n\
+         // Typed UDB record marshalling for your entities. Replaces hand-written\n\
+         // proto <-> map[string]any conversion (e.g. protorecord, udb_record.go,\n\
+         // udb_helpers.go, and the `map[string]any{…}` in each repository).\n\n",
+    );
+    out.push_str(&format!("package {package}\n\n"));
+
+    // Imports (std first, then the consumer's proto packages, deterministic order).
+    out.push_str("import (\n");
+    if needs_strings {
+        out.push_str("\t\"strings\"\n");
+    }
+    if needs_time {
+        out.push_str("\t\"time\"\n");
+    }
+    let has_std = needs_strings || needs_time;
+    if has_std && (!proto_imports.is_empty() || needs_timestamppb) {
+        out.push('\n');
+    }
+    if needs_timestamppb {
+        out.push_str("\t\"google.golang.org/protobuf/types/known/timestamppb\"\n");
+    }
+    for (path, alias) in &proto_imports {
+        out.push_str(&format!("\t{alias} \"{path}\"\n"));
+    }
+    out.push_str(")\n\n");
+
+    for (entity, alias, type_name) in &renderable {
+        let qualified = format!("{alias}.{type_name}");
+        // ── ToUDBRecord (write path) ──────────────────────────────────────────
+        out.push_str(&format!(
+            "// {name}ToUDBRecord converts a *{qualified} into a UDB record.\n\
+             func {name}ToUDBRecord(m *{qualified}) map[string]any {{\n\
+             \tif m == nil {{\n\t\treturn nil\n\t}}\n\tr := map[string]any{{}}\n",
+            name = entity.short_name,
+        ));
+        for column in &entity.columns {
+            out.push_str(&go_to_record_stmt(column));
+        }
+        out.push_str("\treturn r\n}\n\n");
+
+        // ── FromUDBRow (read path) ────────────────────────────────────────────
+        out.push_str(&format!(
+            "// {name}FromUDBRow converts a UDB row into a *{qualified}.\n\
+             func {name}FromUDBRow(row map[string]any) *{qualified} {{\n\
+             \tm := &{qualified}{{}}\n",
+            name = entity.short_name,
+        ));
+        for column in &entity.columns {
+            out.push_str(&go_from_row_stmt(column, alias));
+        }
+        out.push_str("\treturn m\n}\n\n");
+    }
+
+    out.push_str(&go_coercion_helpers(needs_time));
+    out
+}
+
+/// Parse an `EntityDescriptor` Go type token `"import/path;alias.TypeName"` into
+/// `(import_path, alias, TypeName)`.
+fn parse_go_type(go_type: &str) -> Option<(String, String, String)> {
+    let (path, rest) = go_type.split_once(';')?;
+    let (alias, type_name) = rest.rsplit_once('.')?;
+    if path.trim().is_empty() || alias.trim().is_empty() || type_name.trim().is_empty() {
+        return None;
+    }
+    Some((path.to_string(), alias.to_string(), type_name.to_string()))
+}
+
+/// The Go enum type name from a proto type token (its last dotted segment):
+/// `acme.authn.entity.v1.UserStatus` -> `UserStatus`, `UserStatus` -> `UserStatus`.
+fn go_enum_type_name(proto_type: &str) -> &str {
+    proto_type
+        .trim_start_matches('.')
+        .rsplit('.')
+        .next()
+        .unwrap_or(proto_type)
+}
+
+/// Whether a proto type token denotes a `google.protobuf.Timestamp`.
+fn is_go_timestamp(proto_type: &str) -> bool {
+    proto_type.trim_start_matches('.').ends_with("google.protobuf.Timestamp")
+        || proto_type == "Timestamp"
+}
+
+/// `user_id` -> `UserId` (protoc-gen-go field naming).
+fn go_pascal(field_name: &str) -> String {
+    field_name
+        .split('_')
+        .filter(|seg| !seg.is_empty())
+        .map(|seg| {
+            let mut chars = seg.chars();
+            match chars.next() {
+                Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
+                None => String::new(),
+            }
+        })
+        .collect()
+}
+
+/// Longest common `UPPER_SNAKE_` prefix of an enum's value names (e.g.
+/// `USER_STATUS_` from `USER_STATUS_ACTIVE`/`USER_STATUS_SUSPENDED`), so the
+/// generated code can trim it to the DB short token (`ACTIVE`).
+fn enum_common_prefix(values: &[String]) -> String {
+    if values.is_empty() {
+        return String::new();
+    }
+    let first = &values[0];
+    let mut end = first.len();
+    for value in &values[1..] {
+        let common = first
+            .bytes()
+            .zip(value.bytes())
+            .take_while(|(a, b)| a == b)
+            .count();
+        end = end.min(common);
+    }
+    // Trim back to the last `_` so we cut whole segments, not mid-token.
+    let prefix = &first[..end];
+    match prefix.rfind('_') {
+        Some(idx) => first[..=idx].to_string(),
+        None => String::new(),
+    }
+}
+
+/// The `r["field"] = …` statement for one column (proto -> record).
+fn go_to_record_stmt(column: &EntityColumnDescriptor) -> String {
+    let key = &column.field_name;
+    let getter = format!("Get{}", go_pascal(&column.field_name));
+    if is_go_timestamp(&column.proto_type) {
+        return format!(
+            "\tif v := m.{getter}(); v != nil {{\n\
+             \t\tr[\"{key}\"] = v.AsTime().UTC().Format(time.RFC3339Nano)\n\t}}\n",
+        );
+    }
+    if !column.enum_values.is_empty() {
+        let prefix = enum_common_prefix(&column.enum_values);
+        return format!(
+            "\tr[\"{key}\"] = strings.TrimPrefix(m.{getter}().String(), \"{prefix}\")\n",
+        );
+    }
+    // Scalars (string/int*/bool/bytes/float) map straight into `any`.
+    format!("\tr[\"{key}\"] = m.{getter}()\n")
+}
+
+/// The `m.Field = …` statement for one column (record -> proto). `alias` is the
+/// entity's Go package alias, used to qualify enum types (which share the entity's
+/// package in the common co-located-proto case).
+fn go_from_row_stmt(column: &EntityColumnDescriptor, alias: &str) -> String {
+    let key = &column.field_name;
+    let field = go_pascal(&column.field_name);
+    if is_go_timestamp(&column.proto_type) {
+        return format!(
+            "\tif t, ok := udbAsTime(row[\"{key}\"]); ok {{\n\
+             \t\tm.{field} = timestamppb.New(t)\n\t}}\n",
+        );
+    }
+    if !column.enum_values.is_empty() {
+        // The DB stores the enum SHORT token (the write path trims the prefix);
+        // read it back through protoc-gen-go's `<Type>_value` map. Assumes the
+        // enum's Go type is in the entity's package — the common case, since
+        // co-located entity/enum protos share a `go_package`. A cross-package enum
+        // would need its own import alias (a follow-up if a consumer hits it).
+        let enum_type = go_enum_type_name(&column.proto_type);
+        let prefix = enum_common_prefix(&column.enum_values);
+        return format!(
+            "\tif s := udbAsString(row[\"{key}\"]); s != \"\" {{\n\
+             \t\tif v, ok := {alias}.{enum_type}_value[\"{prefix}\"+s]; ok {{\n\
+             \t\t\tm.{field} = {alias}.{enum_type}(v)\n\t\t}}\n\t}}\n",
+        );
+    }
+    match go_scalar_kind(&column.proto_type) {
+        GoScalar::String => format!("\tm.{field} = udbAsString(row[\"{key}\"])\n"),
+        GoScalar::Bool => format!("\tm.{field} = udbAsBool(row[\"{key}\"])\n"),
+        GoScalar::Int32 => format!("\tm.{field} = int32(udbAsInt64(row[\"{key}\"]))\n"),
+        GoScalar::Int64 => format!("\tm.{field} = udbAsInt64(row[\"{key}\"])\n"),
+        GoScalar::Float64 => format!("\tm.{field} = udbAsFloat64(row[\"{key}\"])\n"),
+        GoScalar::Float32 => format!("\tm.{field} = float32(udbAsFloat64(row[\"{key}\"]))\n"),
+        GoScalar::Bytes => format!("\tm.{field} = udbAsBytes(row[\"{key}\"])\n"),
+        GoScalar::Unknown => format!("\t// TODO(udb-b3): unsupported read for \"{key}\" ({})\n", column.proto_type),
+    }
+}
+
+enum GoScalar {
+    String,
+    Bool,
+    Int32,
+    Int64,
+    Float32,
+    Float64,
+    Bytes,
+    Unknown,
+}
+
+fn go_scalar_kind(proto_type: &str) -> GoScalar {
+    match proto_type.trim_start_matches('.') {
+        "string" => GoScalar::String,
+        "bool" => GoScalar::Bool,
+        "int32" | "sint32" | "sfixed32" | "uint32" | "fixed32" => GoScalar::Int32,
+        "int64" | "sint64" | "sfixed64" | "uint64" | "fixed64" => GoScalar::Int64,
+        "float" => GoScalar::Float32,
+        "double" => GoScalar::Float64,
+        "bytes" => GoScalar::Bytes,
+        _ => GoScalar::Unknown,
+    }
+}
+
+/// Once-per-file safe `any` -> typed coercion helpers used by `…FromUDBRow`.
+fn go_coercion_helpers(needs_time: bool) -> String {
+    let mut out = String::new();
+    out.push_str(
+        "func udbAsString(v any) string {\n\tif s, ok := v.(string); ok {\n\t\treturn s\n\t}\n\treturn \"\"\n}\n\n",
+    );
+    out.push_str(
+        "func udbAsBool(v any) bool {\n\tif b, ok := v.(bool); ok {\n\t\treturn b\n\t}\n\treturn false\n}\n\n",
+    );
+    out.push_str(
+        "func udbAsInt64(v any) int64 {\n\tswitch n := v.(type) {\n\tcase int64:\n\t\treturn n\n\tcase int32:\n\t\treturn int64(n)\n\tcase int:\n\t\treturn int64(n)\n\tcase float64:\n\t\treturn int64(n)\n\t}\n\treturn 0\n}\n\n",
+    );
+    out.push_str(
+        "func udbAsFloat64(v any) float64 {\n\tswitch n := v.(type) {\n\tcase float64:\n\t\treturn n\n\tcase float32:\n\t\treturn float64(n)\n\tcase int64:\n\t\treturn float64(n)\n\t}\n\treturn 0\n}\n\n",
+    );
+    out.push_str(
+        "func udbAsBytes(v any) []byte {\n\tif b, ok := v.([]byte); ok {\n\t\treturn b\n\t}\n\tif s, ok := v.(string); ok {\n\t\treturn []byte(s)\n\t}\n\treturn nil\n}\n\n",
+    );
+    if needs_time {
+        out.push_str(
+            "func udbAsTime(v any) (time.Time, bool) {\n\ts, ok := v.(string)\n\tif !ok || s == \"\" {\n\t\treturn time.Time{}, false\n\t}\n\tt, err := time.Parse(time.RFC3339Nano, s)\n\tif err != nil {\n\t\treturn time.Time{}, false\n\t}\n\treturn t, true\n}\n",
+        );
+    }
+    out
 }
 
 /// Apply the `udb sdk generate` selectors to the full RPC manifest.
@@ -2469,6 +2783,7 @@ public function {{PHP_RPC_METHOD_CAMEL}}(): void {}
                 on_delete: "cascade".to_string(),
                 on_update: String::new(),
             }],
+            columns: Vec::new(),
         }];
         let tmpl = "// @@UDB_ENTITY_BEGIN\n\
                     {{ENTITY_MESSAGE_TYPE}} {{ENTITY_TABLE}} []string{ {{ENTITY_PRIMARY_KEYS}} } \
@@ -2519,6 +2834,7 @@ public function {{PHP_RPC_METHOD_CAMEL}}(): void {}
             language_classes: std::collections::BTreeMap::new(),
             json_field_names: vec!["id".to_string()],
             relations: Vec::new(),
+            columns: Vec::new(),
         };
         vec![
             entity("User", "myapp.v1", "users"),

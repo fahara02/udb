@@ -718,11 +718,7 @@ pub async fn build_listener_health_service(
     config: &crate::runtime::config::UdbConfig,
     runtime: Option<&crate::runtime::DataBrokerRuntime>,
 ) -> tonic_health::pb::health_server::HealthServer<impl tonic_health::pb::health_server::Health> {
-    use crate::runtime::service::native_registry::NativeListenerKind;
-    use tonic_health::ServingStatus;
-
     let (mut reporter, health_service) = tonic_health::server::health_reporter();
-    let mut any_serving = false;
     let statuses =
         crate::runtime::service::native_registry::resolved_native_service_statuses(config);
     let readiness_passed = if let Some(runtime) = runtime {
@@ -736,6 +732,79 @@ pub async fn build_listener_health_service(
         true
     };
 
+    mark_listener_health(&mut reporter, plane, &statuses, readiness_passed).await;
+
+    // A8 (UDB-DB-READINESS-001): keep readiness LIVE, not boot-only. Spawn a
+    // per-listener task that re-probes PostgreSQL reachability and flips the gRPC
+    // serving status at runtime, so a load balancer stops routing to a broker
+    // that has lost its database (the boot gate covers only startup). Per-node —
+    // each broker reports its OWN readiness, so no leader election. Conservative:
+    // a listener already degraded at boot for a non-DB reason
+    // (`readiness_passed == false`) is never marked serving; a lost database only
+    // DOWNGRADES, and recovery restores exactly the boot verdict.
+    if runtime.is_some() {
+        let boot_ready = readiness_passed;
+        tokio::spawn(async move {
+            let mut consecutive_failures = 0u32;
+            let mut last_marked = boot_ready;
+            loop {
+                tokio::time::sleep(std::time::Duration::from_secs(
+                    READINESS_REFRESH_INTERVAL_SECS,
+                ))
+                .await;
+                // `None` → the auth-plane deps are not installed on this listener;
+                // do not spuriously downgrade — leave the boot status in place.
+                let Some(pg_ok) =
+                    crate::runtime::credential_layer::auth_plane_pg_reachable().await
+                else {
+                    continue;
+                };
+                if pg_ok {
+                    consecutive_failures = 0;
+                } else {
+                    consecutive_failures = consecutive_failures.saturating_add(1);
+                }
+                // Downgrade only after a short run of failures (do not flap on one
+                // transient blip); recover immediately once the probe succeeds.
+                let live_ok = pg_ok || consecutive_failures < READINESS_FAILURE_GRACE;
+                let want_ready = boot_ready && live_ok;
+                if want_ready != last_marked {
+                    mark_listener_health(&mut reporter, plane, &statuses, want_ready).await;
+                    last_marked = want_ready;
+                    tracing::warn!(
+                        plane = ?plane,
+                        serving = want_ready,
+                        "listener readiness changed from live PostgreSQL probe",
+                    );
+                }
+            }
+        });
+    }
+
+    health_service
+}
+
+/// How often the live readiness-refresh task (A8) re-probes PostgreSQL.
+const READINESS_REFRESH_INTERVAL_SECS: u64 = 5;
+/// Consecutive failed probes tolerated before a listener is marked NotServing —
+/// so a single transient blip does not flap the serving status.
+const READINESS_FAILURE_GRACE: u32 = 2;
+
+/// Mark every gRPC service on a listener `Serving`/`NotServing` from a single
+/// `readiness_passed` verdict. Shared by the boot marking and the live
+/// readiness-refresh task (A8) so both apply identical rules. The overall-server
+/// entry (`""`) is `Serving` iff at least one service on the listener is serving,
+/// so an LB empty-name probe fails closed when the listener is fully degraded.
+async fn mark_listener_health(
+    reporter: &mut tonic_health::server::HealthReporter,
+    plane: HealthPlane,
+    statuses: &[crate::runtime::service::native_registry::NativeServiceStatus],
+    readiness_passed: bool,
+) {
+    use crate::runtime::service::native_registry::NativeListenerKind;
+    use tonic_health::ServingStatus;
+
+    let mut any_serving = false;
     match plane {
         HealthPlane::DataBroker => {
             if readiness_passed {
@@ -790,8 +859,6 @@ pub async fn build_listener_health_service(
             },
         )
         .await;
-
-    health_service
 }
 
 fn message_descriptor_to_proto(

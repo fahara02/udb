@@ -126,6 +126,34 @@ pub struct EntityDescriptor {
     pub language_classes: BTreeMap<String, String>,
     pub json_field_names: Vec<String>,
     pub relations: Vec<EntityRelationDescriptor>,
+    /// Per-column type/security metadata (B2) — what a typed-marshalling generator
+    /// (e.g. the Go `toUDBRecord`/`fromUDBRow` emitter) needs to turn a proto
+    /// message into a UDB record and back without hand-written `map[string]any`.
+    pub columns: Vec<EntityColumnDescriptor>,
+}
+
+/// Per-column metadata for typed codegen (B2). Sourced from `ManifestColumn`.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+pub struct EntityColumnDescriptor {
+    /// proto field name (snake_case) — the record key.
+    pub field_name: String,
+    pub column_name: String,
+    /// proto scalar/message type token (e.g. `string`, `int64`, `bool`,
+    /// `.google.protobuf.Timestamp`, or an enum type name).
+    pub proto_type: String,
+    pub sql_type: String,
+    pub not_null: bool,
+    pub is_array: bool,
+    /// Non-empty ⇒ this column is a proto enum; the generator emits a
+    /// short-token ⇄ enum map from these values.
+    pub enum_values: Vec<String>,
+    pub is_json: bool,
+    pub is_jsonb: bool,
+    /// Column is server-populated (e.g. default/PK); omit from generated INSERTs.
+    pub exclude_from_insert: bool,
+    /// PII blind-index column — the generator scaffolds the HMAC lookup plumbing.
+    pub is_blind_index: bool,
+    pub is_pii: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
@@ -346,28 +374,12 @@ pub fn entity_manifest() -> Vec<EntityDescriptor> {
         else {
             continue;
         };
-        out.push(EntityDescriptor {
-            message_type: message.full_name.clone(),
-            short_name: message.name.clone(),
-            table: table.table.clone(),
-            primary_keys: table.primary_key.clone(),
-            tenant_field: table.table_security.tenant_column.clone(),
-            project_field: table.table_security.project_column.clone(),
-            soft_delete_field: if table.soft_delete {
-                table.soft_delete_column.clone()
-            } else {
-                String::new()
-            },
-            version_field: entity_version_field(table).unwrap_or_default(),
-            proto_package: table.proto_package.clone(),
-            language_classes: table.language_classes.clone(),
-            json_field_names: table
-                .columns
-                .iter()
-                .map(|column| column.field_name.clone())
-                .collect(),
-            relations: entity_relations(table, &catalog.tables),
-        });
+        out.push(entity_descriptor_from_table(
+            message.full_name.clone(),
+            message.name.clone(),
+            table,
+            &catalog.tables,
+        ));
     }
     out.sort_by(|a, b| {
         a.message_type
@@ -375,6 +387,127 @@ pub fn entity_manifest() -> Vec<EntityDescriptor> {
             .then_with(|| a.table.cmp(&b.table))
     });
     out
+}
+
+/// Build one [`EntityDescriptor`] from a resolved [`ManifestTable`]. Shared by the
+/// embedded [`entity_manifest`] and the consumer-proto [`entity_manifest_from_proto_dir`]
+/// so both emit identically-shaped entities.
+fn entity_descriptor_from_table(
+    message_type: String,
+    short_name: String,
+    table: &crate::generation::manifest::ManifestTable,
+    all_tables: &[crate::generation::manifest::ManifestTable],
+) -> EntityDescriptor {
+    EntityDescriptor {
+        message_type,
+        short_name,
+        table: table.table.clone(),
+        primary_keys: table.primary_key.clone(),
+        tenant_field: table.table_security.tenant_column.clone(),
+        project_field: table.table_security.project_column.clone(),
+        soft_delete_field: if table.soft_delete {
+            table.soft_delete_column.clone()
+        } else {
+            String::new()
+        },
+        version_field: entity_version_field(table).unwrap_or_default(),
+        proto_package: table.proto_package.clone(),
+        language_classes: table.language_classes.clone(),
+        json_field_names: table
+            .columns
+            .iter()
+            .map(|column| column.field_name.clone())
+            .collect(),
+        relations: entity_relations(table, all_tables),
+        columns: table
+            .columns
+            .iter()
+            .map(|column| EntityColumnDescriptor {
+                field_name: column.field_name.clone(),
+                column_name: column.column_name.clone(),
+                proto_type: column.proto_type.clone(),
+                sql_type: column.sql_type.clone(),
+                not_null: column.not_null,
+                is_array: column.is_array,
+                enum_values: column.enum_values.clone(),
+                is_json: column.is_json,
+                is_jsonb: column.is_jsonb,
+                exclude_from_insert: column.exclude_from_insert,
+                is_blind_index: column.security.is_blind_index,
+                is_pii: column.security.is_pii,
+            })
+            .collect(),
+    }
+}
+
+/// Build the entity manifest from a CONSUMER's own `.proto` tree (B1 —
+/// `udb sdk generate --project-proto <dir>`). Every `*.proto` under `dir` is parsed
+/// for `pg_table`/`pg_column`-style annotations (namespace-agnostic — the consumer
+/// may use their OWN annotation package, e.g. `acme.common.v1.table`), a
+/// [`CatalogManifest`](crate::generation::CatalogManifest) is built from the parsed
+/// schemas, and one typed [`EntityDescriptor`] is derived per table. Only the ENTITY
+/// surface is sourced from the consumer; the RPC surface stays UDB's own DataBroker
+/// contract (the generated typed repositories call those RPCs with the consumer's
+/// message types).
+pub fn entity_manifest_from_proto_dir(
+    dir: &std::path::Path,
+) -> Result<Vec<EntityDescriptor>, String> {
+    let config = crate::parser::ParserConfig::default();
+    let mut schemas = Vec::new();
+    parse_project_proto_dir(dir, &config, &mut schemas)?;
+    let catalog = crate::generation::CatalogManifest::from_schemas(&schemas)
+        .map_err(|err| format!("failed to build catalog from project protos: {err}"))?;
+    let mut out = Vec::new();
+    for table in &catalog.tables {
+        let message_type = if table.proto_package.trim().is_empty() {
+            table.message_name.clone()
+        } else {
+            format!("{}.{}", table.proto_package, table.message_name)
+        };
+        out.push(entity_descriptor_from_table(
+            message_type,
+            table.message_name.clone(),
+            table,
+            &catalog.tables,
+        ));
+    }
+    if out.is_empty() {
+        return Err(format!(
+            "no entity-annotated messages found under {} (expected pg_table/table annotations)",
+            dir.display()
+        ));
+    }
+    out.sort_by(|a, b| {
+        a.message_type
+            .cmp(&b.message_type)
+            .then_with(|| a.table.cmp(&b.table))
+    });
+    Ok(out)
+}
+
+/// Recursively parse every `*.proto` under `dir` into [`ProtoSchema`]s.
+fn parse_project_proto_dir(
+    dir: &std::path::Path,
+    config: &crate::parser::ParserConfig,
+    out: &mut Vec<crate::ast::ProtoSchema>,
+) -> Result<(), String> {
+    let entries = std::fs::read_dir(dir)
+        .map_err(|err| format!("cannot read project proto directory {}: {err}", dir.display()))?;
+    for entry in entries {
+        let entry = entry.map_err(|err| format!("cannot read directory entry: {err}"))?;
+        let path = entry.path();
+        if path.is_dir() {
+            parse_project_proto_dir(&path, config, out)?;
+        } else if path.extension().and_then(|ext| ext.to_str()) == Some("proto") {
+            let source = std::fs::read(&path)
+                .map_err(|err| format!("cannot read {}: {err}", path.display()))?;
+            let report =
+                crate::parser::parse_proto_source(&source, path.to_string_lossy().to_string(), config)
+                    .map_err(|err| format!("failed to parse {}: {err}", path.display()))?;
+            out.extend(report.schemas);
+        }
+    }
+    Ok(())
 }
 
 fn entity_relations(

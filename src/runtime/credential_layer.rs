@@ -124,6 +124,12 @@ pub struct PreresolvedCredentials {
     /// clean `Ok(None)` miss: consumers must reject credential composition when
     /// server-controlled certificate state is unavailable.
     pub certificate_resolution_failed: bool,
+    /// The certificate binding/grant store could not be consulted because of a
+    /// transient OUTAGE — as opposed to deps-absent/unconfigured, which stays
+    /// `certificate_resolution_failed`. Routed to a retryable `Unavailable` so a
+    /// DB blip during mTLS resolution is not reported as a bad certificate
+    /// (UDB-DB-READINESS-001).
+    pub certificate_resolution_unavailable: bool,
 }
 
 /// Durable-store handles for async credential resolution. Installed once at
@@ -153,6 +159,25 @@ fn auth_plane_deps() -> Option<Arc<AuthPlaneDeps>> {
         .read()
         .ok()
         .and_then(|guard| guard.as_ref().map(Arc::clone))
+}
+
+/// A8 (UDB-DB-READINESS-001): is the auth-plane PostgreSQL reachable right now?
+/// A short-timeout `SELECT 1` on the shared pool. Returns `None` when the
+/// auth-plane deps are not installed on this listener — the caller MUST NOT treat
+/// that as an outage. Used by the per-listener live readiness-refresh task to flip
+/// the gRPC serving status when the database is lost at runtime (the boot gate
+/// only covers startup).
+pub(crate) async fn auth_plane_pg_reachable() -> Option<bool> {
+    let deps = auth_plane_deps()?;
+    let reachable = matches!(
+        tokio::time::timeout(
+            std::time::Duration::from_secs(2),
+            sqlx::query("SELECT 1").execute(&deps.pool),
+        )
+        .await,
+        Ok(Ok(_))
+    );
+    Some(reachable)
 }
 
 fn now_unix() -> u64 {
@@ -338,7 +363,18 @@ async fn resolve_credentials(
                         // silently ignoring the certificate during composition.
                     }
                     Err(error) => {
-                        resolved.certificate_resolution_failed = true;
+                        // A transient store OUTAGE (tagged Unavailable by the
+                        // resolver) is retryable, not a bad certificate; any
+                        // non-transient failure stays a terminal fail-closed
+                        // denial. See UDB-DB-READINESS-001.
+                        if crate::runtime::executor_utils::status_from_store_string(error.clone())
+                            .code()
+                            == tonic::Code::Unavailable
+                        {
+                            resolved.certificate_resolution_unavailable = true;
+                        } else {
+                            resolved.certificate_resolution_failed = true;
+                        }
                         tracing::warn!(error = %error,
                             "certificate binding resolution failed (fail closed)");
                     }

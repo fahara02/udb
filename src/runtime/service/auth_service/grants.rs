@@ -1689,7 +1689,9 @@ pub(crate) async fn attenuate_key_scopes_against_grant(
 ) -> Result<Option<Vec<String>>, String> {
     let grant = get_grant_by_user(pool, tenant_id, owner_user_id)
         .await
-        .map_err(|status| format!("grant lookup failed: {status}"))?;
+        .map_err(|status| {
+            crate::runtime::executor_utils::store_string_from_status("grant lookup failed", &status)
+        })?;
     let Some(grant) = grant else {
         return Ok(None);
     };
@@ -1739,7 +1741,9 @@ pub(crate) async fn validate_service_principal_against_grant(
     }
     let grant = get_grant_by_user(pool, tenant_id, owner_user_id)
         .await
-        .map_err(|status| format!("grant lookup failed: {status}"))?;
+        .map_err(|status| {
+            crate::runtime::executor_utils::store_string_from_status("grant lookup failed", &status)
+        })?;
     let Some(grant) = grant.filter(|grant| grant.status == STATUS_ACTIVE) else {
         return Ok(false);
     };
@@ -1781,7 +1785,12 @@ async fn owner_is_active_service_account(
         .bind(tenant)
         .fetch_optional(pool)
         .await
-        .map_err(|error| format!("grant owner status check failed: {error}"))?;
+        .map_err(|error| {
+            crate::runtime::executor_utils::sqlx_error_to_tagged_string(
+                "grant owner status check failed",
+                &error,
+            )
+        })?;
     Ok(row.is_some())
 }
 
@@ -1818,7 +1827,12 @@ pub(crate) async fn resolve_certificate_grant(
     for (kind, value) in candidates {
         let binding = find_binding_candidate(pool, kind, &value)
             .await
-            .map_err(|status| format!("certificate binding lookup failed: {status}"))?;
+            .map_err(|status| {
+                crate::runtime::executor_utils::store_string_from_status(
+                    "certificate binding lookup failed",
+                    &status,
+                )
+            })?;
         let Some((binding, binding_usable)) = binding else {
             continue;
         };
@@ -1830,7 +1844,12 @@ pub(crate) async fn resolve_certificate_grant(
         // read is still tenant-scoped by the binding's own tenant column).
         let grant = get_grant_by_user(pool, &binding.tenant_id, &binding.user_id)
             .await
-            .map_err(|status| format!("service-account grant lookup failed: {status}"))?;
+            .map_err(|status| {
+                crate::runtime::executor_utils::store_string_from_status(
+                    "service-account grant lookup failed",
+                    &status,
+                )
+            })?;
         let Some(grant) = grant else {
             // Fail closed: an orphaned binding never authenticates.
             return Ok(None);

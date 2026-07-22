@@ -296,6 +296,10 @@ mod deny_reason {
     pub const PUBLIC_CRED: &str = "public_credential";
     pub const MISSING_BEARER: &str = "missing_bearer";
     pub const INVALID_BEARER: &str = "invalid_bearer";
+    /// The credential could not be validated because the durable auth store was
+    /// unavailable (a dependency outage, not a credential rejection). Surfaced as
+    /// a retryable UNAVAILABLE, not an auth denial (UDB-DB-READINESS-001).
+    pub const STORE_UNAVAILABLE: &str = "store_unavailable";
     pub const CREDENTIAL_STATE: &str = "credential_state";
     pub const CREDENTIAL_TYPE: &str = "credential_type";
     pub const SCOPE: &str = "scope";
@@ -1000,10 +1004,20 @@ fn enforce(
     let token = bearer_token(headers);
     // UDB-AUTH-008: the credential layer's resolved API-key principal (derived
     // ENTIRELY from the stored key record + owner grant), when present.
-    let api_key_principal = preresolved
-        .and_then(|resolved| resolved.api_key.as_ref())
+    let api_key_outcome = preresolved.and_then(|resolved| resolved.api_key.as_ref());
+    let api_key_principal = api_key_outcome
         .and_then(|outcome| outcome.as_ref().ok())
         .and_then(|record| record.as_ref());
+    // UDB-DB-READINESS-001: distinguish a durable-store OUTAGE during api-key
+    // validation (resolver Err tagged Unavailable) from a clean miss (Ok(None)).
+    // The `.ok()` above intentionally treats a miss as "no key"; an OUTAGE must
+    // instead surface as a retryable Unavailable, never a missing/invalid key.
+    let api_key_store_unavailable = matches!(
+        api_key_outcome,
+        Some(Err(reason))
+            if crate::runtime::executor_utils::status_from_store_string(reason.clone()).code()
+                == tonic::Code::Unavailable
+    );
     // Whether THIS method opts into scoped API-key workload credentials.
     let method_allows_api_key = matches!(
         declared,
@@ -1071,6 +1085,21 @@ fn enforce(
             principal.clone(),
         )
     } else {
+        // A5: an api-key request on a method that accepts api-keys, whose durable
+        // store was UNAVAILABLE (outage — not a bad/missing key), surfaces a
+        // retryable Unavailable rather than a misleading missing-bearer
+        // Unauthenticated (UDB-DB-READINESS-001).
+        if token.is_none() && method_allows_api_key && api_key_store_unavailable {
+            return Err((
+                crate::runtime::executor_utils::retryable_status(
+                    "authn",
+                    "api_key_validate",
+                    crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
+                    "credential store temporarily unavailable",
+                ),
+                deny_reason::STORE_UNAVAILABLE,
+            ));
+        }
         let token = token.ok_or_else(|| {
             (
                 Status::unauthenticated(
@@ -1084,7 +1113,17 @@ fn enforce(
                 crate::runtime::security::claims_from_verified_principal(principal),
                 principal.clone(),
             ),
-            Some(Err(_)) => {
+            Some(Err(reason)) => {
+                // A transient outage while validating the service bearer's grant
+                // is a retryable dependency failure, not a bad credential. The
+                // resolver tags a store outage as Unavailable; a genuine
+                // invalid/ungranted bearer stays Unauthenticated (fail closed).
+                // See UDB-DB-READINESS-001.
+                let status =
+                    crate::runtime::executor_utils::status_from_store_string(reason.clone());
+                if status.code() == tonic::Code::Unavailable {
+                    return Err((status, deny_reason::STORE_UNAVAILABLE));
+                }
                 return Err((
                     Status::unauthenticated("invalid bearer token"),
                     deny_reason::INVALID_BEARER,
@@ -1426,17 +1465,36 @@ where
         // rate limiter and the internal_grpc_only gate key off them, never off
         // forgeable headers.
         let peer = transport_peer(req.extensions());
-        let certificate_resolution_failed = req
+        let pre_cred = req
             .extensions()
-            .get::<crate::runtime::credential_layer::PreresolvedCredentials>()
+            .get::<crate::runtime::credential_layer::PreresolvedCredentials>();
+        let certificate_resolution_unavailable = pre_cred
+            .map(|pre| pre.certificate_resolution_unavailable)
+            .unwrap_or(false);
+        let certificate_resolution_failed = pre_cred
             .map(|pre| {
                 pre.certificate_resolution_failed
                     || (pre.certificate_present && pre.certificate_principal.is_none())
             })
             .unwrap_or(false);
-        if certificate_resolution_failed
-            && !matches!(method_security(&path), Some(s) if s.mode == AuthMode::Public)
-        {
+        let is_public_method =
+            matches!(method_security(&path), Some(s) if s.mode == AuthMode::Public);
+        if certificate_resolution_unavailable && !is_public_method {
+            // A transient DB outage while resolving the certificate binding is a
+            // retryable dependency failure, not a bad certificate. See
+            // UDB-DB-READINESS-001.
+            if let Some(metrics) = self.metrics.as_ref() {
+                metrics.inc_method_security_denial(deny_reason::STORE_UNAVAILABLE);
+            }
+            let status = crate::runtime::executor_utils::retryable_status(
+                "authn",
+                "certificate_resolution",
+                crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
+                "credential store temporarily unavailable",
+            );
+            return Box::pin(async move { Ok(status.into_http()) });
+        }
+        if certificate_resolution_failed && !is_public_method {
             if let Some(metrics) = self.metrics.as_ref() {
                 metrics.inc_method_security_denial(deny_reason::CREDENTIAL_STATE);
             }
