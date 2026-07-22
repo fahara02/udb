@@ -642,6 +642,26 @@ pub(crate) fn sqlx_error_to_status(context: &str, err: &sqlx::Error) -> tonic::S
                 "23503" => {
                     return referential_constraint_status();
                 }
+                // Connection loss surfaced AS a database error (Postgres class 08
+                // "connection exception" and the 57P0x shutdown/cannot-connect
+                // states). These are infrastructure outages, not logic errors, so
+                // they must be a retryable UNAVAILABLE — otherwise a mid-request PG
+                // restart reaches the client as an opaque Internal (or, on the auth
+                // path, as a bogus Unauthenticated). See UDB-DB-READINESS-001.
+                "08000" | "08003" | "08006" | "08001" | "08004" | "08007" | "08P01"
+                | "57P01" | "57P02" | "57P03" => {
+                    tracing::warn!(
+                        context = %context,
+                        sqlstate = %code.as_ref(),
+                        "database connection lost; returning retryable Unavailable"
+                    );
+                    return retryable_status(
+                        "database",
+                        context,
+                        HTTP_RETRYABLE_BACKOFF_MS,
+                        format!("{context}: database temporarily unavailable"),
+                    );
+                }
                 _ => {}
             }
         }
@@ -682,10 +702,40 @@ pub(crate) fn sqlx_error_to_status(context: &str, err: &sqlx::Error) -> tonic::S
         }
         return internal_status("database", context, format!("{context}{detail}"));
     }
-    // Not a database error at all (pool acquire / IO / protocol). Still log it —
-    // these were equally invisible before — and keep the generic Internal.
+    // Not a database error at all (pool acquire / IO / protocol). A transient
+    // TRANSPORT failure (pool exhausted/closed, socket IO) is an outage the caller
+    // may retry — surface it as a retryable UNAVAILABLE so a dropped pool never
+    // masquerades as a server bug or a bad credential (UDB-DB-READINESS-001).
+    if is_transient_transport_error(err) {
+        tracing::warn!(
+            context = %context,
+            error = %err,
+            "database transport unavailable (pool/IO); returning retryable Unavailable"
+        );
+        return retryable_status(
+            "database",
+            context,
+            HTTP_RETRYABLE_BACKOFF_MS,
+            format!("{context}: database temporarily unavailable"),
+        );
+    }
+    // A genuinely non-transient non-database error (decode/column/protocol bug).
+    // Still log it — these were equally invisible before — and keep Internal.
     tracing::error!(context = %context, error = %err, "database call failed (non-database error)");
     internal_status("database", context, context.to_string())
+}
+
+/// Whether a `sqlx::Error` is a transient TRANSPORT failure — a connection-pool
+/// or socket-level outage the caller may retry — as opposed to a logic/schema
+/// error. Used by [`sqlx_error_to_status`] to route outages to a retryable
+/// `UNAVAILABLE` instead of an opaque `Internal` (UDB-DB-READINESS-001). Kept
+/// conservative: only pool exhaustion/closure and IO are classified transient;
+/// ambiguous protocol/decode errors stay `Internal`.
+fn is_transient_transport_error(err: &sqlx::Error) -> bool {
+    matches!(
+        err,
+        sqlx::Error::PoolTimedOut | sqlx::Error::PoolClosed | sqlx::Error::Io(_)
+    )
 }
 
 /// Whether to ALSO echo the raw driver message in client-facing `Internal` DB
@@ -752,6 +802,27 @@ pub(crate) fn sqlx_error_to_tagged_string(context: &str, err: &sqlx::Error) -> S
         status.code() as i32,
         status.message()
     )
+}
+
+/// Render a downstream `tonic::Status` as a String for the `Result<_, String>`
+/// authn resolver boundary, PRESERVING a retryable `Unavailable` code via the
+/// [`STATUS_TAG_PREFIX`] tag so [`status_from_store_string`] can reconstruct it.
+/// A durable-store OUTAGE (classified `Unavailable` by [`sqlx_error_to_status`])
+/// must not be flattened into an opaque string the enforcement layer then treats
+/// as a bad credential — the tag keeps the outage a retryable `Unavailable`
+/// (UDB-DB-READINESS-001). Non-retryable statuses render as the plain
+/// `{context}: {message}` (untagged → the enforcement layer fails closed as an
+/// authentication denial exactly as before).
+pub(crate) fn store_string_from_status(context: &str, status: &tonic::Status) -> String {
+    if status.code() == tonic::Code::Unavailable {
+        format!(
+            "{STATUS_TAG_PREFIX}{}:{context}: {}",
+            tonic::Code::Unavailable as i32,
+            status.message()
+        )
+    } else {
+        format!("{context}: {}", status.message())
+    }
 }
 
 /// Decode a String produced by [`sqlx_error_to_tagged_string`] (or any other
@@ -2947,15 +3018,35 @@ mod error_detail_tests {
     }
 
     #[test]
-    fn sqlx_non_database_error_preserves_internal_code_with_detail() {
-        let err = sqlx::Error::PoolClosed;
-        let status = sqlx_error_to_status("pool acquire failed", &err);
+    fn sqlx_transient_transport_error_maps_to_retryable_unavailable() {
+        // Pool/connection loss is an infrastructure outage, not a logic error, so
+        // it must be a retryable UNAVAILABLE — an outage can never masquerade as a
+        // bad credential or a server bug (UDB-DB-READINESS-001).
+        for err in [sqlx::Error::PoolClosed, sqlx::Error::PoolTimedOut] {
+            let status = sqlx_error_to_status("pool acquire failed", &err);
+            assert_eq!(status.code(), tonic::Code::Unavailable, "{err:?}");
+            let detail = decode_detail(&status);
+            assert_eq!(detail.kind, ErrorKind::Retryable as i32, "{err:?}");
+            assert_eq!(detail.backend, "database");
+            assert_eq!(detail.operation, "pool acquire failed");
+            assert!(detail.retryable, "{err:?}");
+            assert!(detail.retry_after_ms > 0, "{err:?}");
+            assert!(detail.field_violations.is_empty());
+        }
+    }
+
+    #[test]
+    fn sqlx_non_transient_non_database_error_preserves_internal_code_with_detail() {
+        // A code/schema-level non-database error (NOT a transport outage) stays a
+        // non-retryable Internal so real bugs are not silently marked retryable.
+        let err = sqlx::Error::ColumnNotFound("missing_col".to_string());
+        let status = sqlx_error_to_status("decode row", &err);
         assert_eq!(status.code(), tonic::Code::Internal);
-        assert_eq!(status.message(), "pool acquire failed");
+        assert_eq!(status.message(), "decode row");
         let detail = decode_detail(&status);
         assert_eq!(detail.kind, ErrorKind::Internal as i32);
         assert_eq!(detail.backend, "database");
-        assert_eq!(detail.operation, "pool acquire failed");
+        assert_eq!(detail.operation, "decode row");
         assert!(!detail.retryable);
         assert_eq!(detail.retry_after_ms, 0);
         assert!(detail.field_violations.is_empty());

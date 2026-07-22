@@ -237,6 +237,15 @@ pub(crate) struct SdkSelector {
     pub include_deps: bool,
     /// `--strict-server-capabilities` — drop RPCs lacking required backends.
     pub strict_server_capabilities: bool,
+    /// `--project-proto <dir>` — generate typed entity code for the CONSUMER's own
+    /// `.proto` tree (parsed for `pg_table`/`pg_column`-style annotations) instead
+    /// of only UDB's embedded entities. The RPC surface stays UDB's; only the
+    /// entity manifest is sourced from the consumer protos.
+    pub project_proto: Option<String>,
+    /// `--go-package <name>` — Go package name for the generated typed-entity
+    /// marshalling file (B3). Defaults to `udbentities`. Only used with
+    /// `--project-proto` + Go.
+    pub go_package: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -833,6 +842,8 @@ const VALUE_FLAGS: &[&str] = &[
     "--surface",
     "--service",
     "--services",
+    "--project-proto",
+    "--go-package",
     "--framework",
     "--auth",
     "--package-manager",
@@ -1128,6 +1139,8 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
                     native_only: has_flag("--native-services"),
                     include_deps: has_flag("--include-deps"),
                     strict_server_capabilities: has_flag("--strict-server-capabilities"),
+                    project_proto: flag_value("--project-proto"),
+                    go_package: flag_value("--go-package"),
                 },
             }
         }

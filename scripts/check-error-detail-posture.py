@@ -131,7 +131,8 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
             "pub(crate) fn internal_status(",
             "status_with_error_detail(tonic::Code::Internal, message, detail)",
             "internal_status_carries_internal_kind_with_identity",
-            "sqlx_non_database_error_preserves_internal_code_with_detail",
+            "sqlx_transient_transport_error_maps_to_retryable_unavailable",
+            "sqlx_non_transient_non_database_error_preserves_internal_code_with_detail",
             "untagged_store_string_preserves_internal_code_with_detail",
             "fn referential_constraint_status() -> tonic::Status",
             '"database"',
@@ -4008,7 +4009,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
             'internal_status("database", context, format!("{context}{detail}"))',
             'internal_status("database", context, context.to_string())',
             'internal_status("database", error_prefix, format!("{error_prefix}: {err}"))',
-            "sqlx_non_database_error_preserves_internal_code_with_detail",
+            "sqlx_non_transient_non_database_error_preserves_internal_code_with_detail",
         ),
     ),
     TokenCheck(

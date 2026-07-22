@@ -84,6 +84,20 @@ fn token_family_internal_status(
 }
 
 impl AuthnServiceImpl {
+    /// Shared handle to the raw auth Postgres pool for the token-family lineage
+    /// operations.
+    ///
+    /// RLS contract: `token_families` enables row-level security with a
+    /// `tenant_id = current_setting('app.current_tenant_id')` policy. Several of
+    /// these operations are inherently CROSS-TENANT — `rotate_refresh_family` and
+    /// the session/principal revokes locate a row by `family_id`/`session_id`/
+    /// `principal_id`, not by tenant, and do not know the tenant until the row is
+    /// read. They therefore rely on the auth-plane role operating across tenants
+    /// (table owner, or a role granted `BYPASSRLS`); a deployment that `FORCE`s
+    /// row-level security MUST grant that, or refresh-token rotation cannot see its
+    /// own rows. The tenant-AWARE writes (`mint_refresh_family`,
+    /// `revoke_family_on_reuse`) additionally install `app.current_tenant_id` so
+    /// they remain correct even under FORCE row-level security.
     fn require_family_pool(&self) -> Result<&PgPool, Status> {
         self.pg_pool.as_ref().ok_or_else(|| {
             authn_capability_status(
@@ -178,6 +192,25 @@ impl AuthnServiceImpl {
             device = m.q("device_id"),
             cur = m.q("current_refresh_jti_hash"),
         );
+        // Install the tenant as the RLS context around the INSERT so the row's
+        // WITH CHECK policy is satisfied even under FORCE ROW LEVEL SECURITY (not
+        // only where the auth role bypasses RLS as table owner). Transaction-local
+        // (`true`) → auto-resets on commit. No behavior change under owner-bypass.
+        let mut tx = pool.begin().await.map_err(|err| {
+            token_family_internal_status("mint_refresh_family", format!("begin failed: {err}"))
+        })?;
+        if !tenant_id.trim().is_empty() {
+            sqlx::query("SELECT set_config('app.current_tenant_id', $1, true)")
+                .bind(tenant_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|err| {
+                    token_family_internal_status(
+                        "mint_refresh_family",
+                        format!("set tenant context failed: {err}"),
+                    )
+                })?;
+        }
         sqlx::query(&sql)
             .bind(&family_id)
             .bind(&session_hash)
@@ -187,7 +220,7 @@ impl AuthnServiceImpl {
             .bind(project_id)
             .bind(device_id)
             .bind(&jti_hash)
-            .execute(pool)
+            .execute(&mut *tx)
             .await
             .map_err(|err| {
                 token_family_internal_status(
@@ -195,6 +228,9 @@ impl AuthnServiceImpl {
                     format!("mint refresh family failed: {err}"),
                 )
             })?;
+        tx.commit().await.map_err(|err| {
+            token_family_internal_status("mint_refresh_family", format!("commit failed: {err}"))
+        })?;
         Ok(authn::token_family::format_refresh_token(&family_id, &jti))
     }
 
@@ -479,16 +515,52 @@ impl AuthnServiceImpl {
             reason = m.q("revocation_reason"),
             id = m.q("family_id"),
         );
-        sqlx::query(&sql)
+        // Reuse detection is security-critical: the compromised family MUST be
+        // revoked. Two hardening guarantees over a bare `execute(pool)`:
+        //   1. Run inside a transaction that installs the row's tenant as the RLS
+        //      context (`app.current_tenant_id`), so the UPDATE targets the family
+        //      even where row-level security is FORCED (not only where the auth
+        //      role bypasses RLS as table owner). Transaction-local (`true`), so it
+        //      auto-resets on commit.
+        //   2. REFUSE to report success on zero rows affected — a hidden/absent
+        //      family means the reused token chain was NOT revoked, which must fail
+        //      loud, never silently.
+        let mut tx = pool.begin().await.map_err(|err| {
+            token_family_internal_status("revoke_reused_family", format!("begin failed: {err}"))
+        })?;
+        if !family.tenant_id.trim().is_empty() {
+            sqlx::query("SELECT set_config('app.current_tenant_id', $1, true)")
+                .bind(&family.tenant_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|err| {
+                    token_family_internal_status(
+                        "revoke_reused_family",
+                        format!("set tenant context failed: {err}"),
+                    )
+                })?;
+        }
+        let affected = sqlx::query(&sql)
             .bind(&family.family_id)
-            .execute(pool)
+            .execute(&mut *tx)
             .await
             .map_err(|err| {
                 token_family_internal_status(
                     "revoke_reused_family",
                     format!("revoke reused family failed: {err}"),
                 )
-            })?;
+            })?
+            .rows_affected();
+        tx.commit().await.map_err(|err| {
+            token_family_internal_status("revoke_reused_family", format!("commit failed: {err}"))
+        })?;
+        if affected == 0 {
+            return Err(token_family_internal_status(
+                "revoke_reused_family",
+                "reuse-detected token family was not revoked (0 rows affected); \
+                 refusing to report success",
+            ));
+        }
         // Kill every active session for the principal — refresh-token theft means
         // the chain is compromised; the legitimate user must re-authenticate.
         let principal = if family.principal_id.is_empty() {
