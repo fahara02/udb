@@ -1070,7 +1070,9 @@ fn go_enum_type_name(proto_type: &str) -> &str {
 
 /// Whether a proto type token denotes a `google.protobuf.Timestamp`.
 fn is_go_timestamp(proto_type: &str) -> bool {
-    proto_type.trim_start_matches('.').ends_with("google.protobuf.Timestamp")
+    proto_type
+        .trim_start_matches('.')
+        .ends_with("google.protobuf.Timestamp")
         || proto_type == "Timestamp"
 }
 
@@ -1214,7 +1216,10 @@ fn go_from_row_stmt(column: &EntityColumnDescriptor, alias: &str) -> String {
         GoScalar::Float64 => format!("\tm.{field} = udbAsFloat64(row[\"{key}\"])\n"),
         GoScalar::Float32 => format!("\tm.{field} = float32(udbAsFloat64(row[\"{key}\"]))\n"),
         GoScalar::Bytes => format!("\tm.{field} = udbAsBytes(row[\"{key}\"])\n"),
-        GoScalar::Unknown => format!("\t// TODO(udb-b3): unsupported read for \"{key}\" ({})\n", column.proto_type),
+        GoScalar::Unknown => format!(
+            "\t// TODO(udb-b3): unsupported read for \"{key}\" ({})\n",
+            column.proto_type
+        ),
     }
 }
 

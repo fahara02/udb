@@ -495,8 +495,12 @@ fn parse_project_proto_dir(
     config: &crate::parser::ParserConfig,
     out: &mut Vec<crate::ast::ProtoSchema>,
 ) -> Result<(), String> {
-    let entries = std::fs::read_dir(dir)
-        .map_err(|err| format!("cannot read project proto directory {}: {err}", dir.display()))?;
+    let entries = std::fs::read_dir(dir).map_err(|err| {
+        format!(
+            "cannot read project proto directory {}: {err}",
+            dir.display()
+        )
+    })?;
     for entry in entries {
         let entry = entry.map_err(|err| format!("cannot read directory entry: {err}"))?;
         let path = entry.path();
@@ -505,9 +509,12 @@ fn parse_project_proto_dir(
         } else if path.extension().and_then(|ext| ext.to_str()) == Some("proto") {
             let source = std::fs::read(&path)
                 .map_err(|err| format!("cannot read {}: {err}", path.display()))?;
-            let report =
-                crate::parser::parse_proto_source(&source, path.to_string_lossy().to_string(), config)
-                    .map_err(|err| format!("failed to parse {}: {err}", path.display()))?;
+            let report = crate::parser::parse_proto_source(
+                &source,
+                path.to_string_lossy().to_string(),
+                config,
+            )
+            .map_err(|err| format!("failed to parse {}: {err}", path.display()))?;
             out.extend(report.schemas);
         }
     }
