@@ -726,8 +726,16 @@ fn api_key_to_pb(rec: &ApiKeyRecord, now_unix: u64) -> apikey_entity_pb::ApiKey 
         // Never return the stored key hash over the read API — the digest should
         // not leave the storage layer (defense-in-depth if the hash secret leaks).
         key_hash: String::new(),
-        name: rec.key_prefix.clone(),
-        description: String::new(),
+        // Return the STORED name so a provisioner that reconciles by exact name
+        // can match an existing key. Falling back to the prefix (the persisted
+        // store applies the same fallback) keeps unnamed legacy rows non-empty
+        // instead of reconciling against "".
+        name: if rec.name.trim().is_empty() {
+            rec.key_prefix.clone()
+        } else {
+            rec.name.clone()
+        },
+        description: rec.description.clone(),
         owner_type: apikey_entity_pb::ApiKeyOwnerType::ServiceAccount as i32,
         owner_id: rec.principal_id.clone(),
         scopes_json: serde_json::to_string(&rec.scopes).unwrap_or_else(|_| "[]".to_string()),
@@ -1787,6 +1795,36 @@ mod tests {
                 other => panic!("ApiKey mapper has no storage-only assertion for {other}"),
             }
         }
+    }
+
+    // A provisioner reconciles keys by the exact name it created them with, so the
+    // read API must echo the STORED name rather than the generated key prefix —
+    // otherwise reconcile never matches, create is retried, and the duplicate-name
+    // precondition deadlocks provisioning.
+    #[test]
+    fn api_key_mapper_returns_stored_name_and_description() {
+        let rec = ApiKeyRecord {
+            key_prefix: "udbk_abc123".to_string(),
+            name: "billing-projector".to_string(),
+            description: "issues invoices".to_string(),
+            ..Default::default()
+        };
+        let pb = api_key_to_pb(&rec, 100);
+        assert_eq!(pb.name, "billing-projector");
+        assert_eq!(pb.description, "issues invoices");
+        assert_eq!(pb.key_prefix, "udbk_abc123");
+    }
+
+    // Legacy rows persisted before names were captured must still round-trip a
+    // non-empty identifier instead of reconciling against an empty string.
+    #[test]
+    fn api_key_mapper_falls_back_to_prefix_when_name_blank() {
+        let rec = ApiKeyRecord {
+            key_prefix: "udbk_abc123".to_string(),
+            name: "   ".to_string(),
+            ..Default::default()
+        };
+        assert_eq!(api_key_to_pb(&rec, 100).name, "udbk_abc123");
     }
 
     #[test]

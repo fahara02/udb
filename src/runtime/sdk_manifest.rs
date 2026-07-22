@@ -144,6 +144,9 @@ pub struct EntityColumnDescriptor {
     pub sql_type: String,
     pub not_null: bool,
     pub is_array: bool,
+    /// proto3 `optional` ⇒ protoc-gen-go renders this field as a POINTER, and an
+    /// unset value must be omitted from the record rather than written as a zero.
+    pub has_presence: bool,
     /// Non-empty ⇒ this column is a proto enum; the generator emits a
     /// short-token ⇄ enum map from these values.
     pub enum_values: Vec<String>,
@@ -429,6 +432,7 @@ fn entity_descriptor_from_table(
                 sql_type: column.sql_type.clone(),
                 not_null: column.not_null,
                 is_array: column.is_array,
+                has_presence: column.has_presence,
                 enum_values: column.enum_values.clone(),
                 is_json: column.is_json,
                 is_jsonb: column.is_jsonb,

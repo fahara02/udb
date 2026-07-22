@@ -388,6 +388,12 @@ pub struct ProtoColumn {
     pub is_primary: bool,
     pub auto_increment: bool,
     pub is_array: bool,
+    /// proto3 `optional` — the field has explicit presence and protoc-gen-go
+    /// renders it as a pointer. Skipped from serialization so adding it cannot
+    /// perturb any existing manifest/AST checksum; it is consumed in-process by
+    /// codegen, which parses `.proto` source fresh on every run.
+    #[serde(skip)]
+    pub has_presence: bool,
     pub default_value: String,
     pub check_constraint: String,
     pub collation: String,

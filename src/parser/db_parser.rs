@@ -407,11 +407,18 @@ impl<'a> ProtoParser<'a> {
 
     fn parse_field_with_oneof(&mut self, oneof_group: &str) -> Option<ProtoColumn> {
         let mut is_array = false;
+        // proto3 `optional` gives the field explicit presence, which protoc-gen-go
+        // renders as a POINTER. Codegen must know this to emit `*T` handling and to
+        // distinguish "unset" from "zero value" — writing a zero for an unset
+        // nullable column silently replaces SQL NULL with `""`, which unique
+        // indexes and CHECK constraints treat very differently.
+        let mut has_presence = false;
         if matches!(
             self.cur().value.as_str(),
             "optional" | "required" | "repeated"
         ) {
             is_array = self.cur().is_ident("repeated");
+            has_presence = self.cur().is_ident("optional");
             self.consume();
         }
 
@@ -483,6 +490,7 @@ impl<'a> ProtoParser<'a> {
             proto_type: proto_type.clone(),
             sql_type: infer_sql_type(&proto_type),
             is_array,
+            has_presence,
             field_number,
             oneof_group: oneof_group.to_string(),
             ..ProtoColumn::default()

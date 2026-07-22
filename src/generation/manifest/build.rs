@@ -844,6 +844,7 @@ pub(crate) fn column_from_proto(column: &ProtoColumn) -> ManifestColumn {
         is_primary: column.is_primary,
         auto_increment: column.auto_increment,
         is_array: column.is_array,
+        has_presence: column.has_presence,
         default_value: column.default_value.trim().to_string(),
         check_constraint: column.check_constraint.trim().to_string(),
         collation: column.collation.trim().to_string(),

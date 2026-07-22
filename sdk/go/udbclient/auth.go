@@ -43,19 +43,23 @@ func NewAuthClient(conn grpc.ClientConnInterface, meta Metadata) *AuthClient {
 	}
 }
 
-// Context attaches the caller Metadata as gRPC headers, matching Client.Context.
+// Context attaches the caller Metadata as gRPC headers, matching Client.Context
+// — including the request-scoped audit merge, so an auth call made for a given
+// inbound request carries that request's correlation id rather than the
+// connection-level baseline.
 func (c *AuthClient) Context(ctx context.Context) context.Context {
+	m := MergeRequestScopedAudit(ctx, c.Meta)
 	pairs := []string{
-		"x-tenant-id", c.Meta.TenantID,
-		"x-user-id", c.Meta.UserID,
-		"x-purpose", c.Meta.Purpose,
-		"x-correlation-id", c.Meta.CorrelationID,
-		"x-service-identity", c.Meta.ServiceIdentity,
-		"x-udb-project-id", c.Meta.ProjectID,
-		"x-udb-client-catalog-version", c.Meta.ClientCatalogVersion,
+		"x-tenant-id", m.TenantID,
+		"x-user-id", m.UserID,
+		"x-purpose", m.Purpose,
+		"x-correlation-id", m.CorrelationID,
+		"x-service-identity", m.ServiceIdentity,
+		"x-udb-project-id", m.ProjectID,
+		"x-udb-client-catalog-version", m.ClientCatalogVersion,
 	}
-	if len(c.Meta.Scopes) > 0 {
-		pairs = append(pairs, "x-scopes", joinScopes(c.Meta.Scopes))
+	if len(m.Scopes) > 0 {
+		pairs = append(pairs, "x-scopes", joinScopes(m.Scopes))
 	}
 	return metadata.AppendToOutgoingContext(ctx, pairs...)
 }
