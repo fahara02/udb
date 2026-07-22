@@ -3022,17 +3022,28 @@ mod error_detail_tests {
         // Pool/connection loss is an infrastructure outage, not a logic error, so
         // it must be a retryable UNAVAILABLE — an outage can never masquerade as a
         // bad credential or a server bug (UDB-DB-READINESS-001).
+        // Callers pass a snake_case operation token, matching every real call site.
         for err in [sqlx::Error::PoolClosed, sqlx::Error::PoolTimedOut] {
-            let status = sqlx_error_to_status("pool acquire failed", &err);
+            let status = sqlx_error_to_status("pool_acquire", &err);
             assert_eq!(status.code(), tonic::Code::Unavailable, "{err:?}");
             let detail = decode_detail(&status);
             assert_eq!(detail.kind, ErrorKind::Retryable as i32, "{err:?}");
             assert_eq!(detail.backend, "database");
-            assert_eq!(detail.operation, "pool acquire failed");
+            assert_eq!(detail.operation, "pool_acquire");
             assert!(detail.retryable, "{err:?}");
             assert!(detail.retry_after_ms > 0, "{err:?}");
             assert!(detail.field_violations.is_empty());
         }
+    }
+
+    // `operation` is a STABLE MACHINE TOKEN, not prose: the sanitizer collapses
+    // whitespace into `_` so a consumer can switch on it. Pinned here because the
+    // transient-transport path forwards its caller-supplied context straight into
+    // that field, and prose there would silently become an unstable token.
+    #[test]
+    fn error_detail_operation_is_normalized_to_a_token() {
+        let status = sqlx_error_to_status("pool acquire failed", &sqlx::Error::PoolClosed);
+        assert_eq!(decode_detail(&status).operation, "pool_acquire_failed");
     }
 
     #[test]
