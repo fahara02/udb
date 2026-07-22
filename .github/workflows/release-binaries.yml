@@ -309,7 +309,7 @@ jobs:
           node scripts/gen-release-manifest.mjs dist > dist/manifest.json
           ( cd dist && sha256sum manifest.json > manifest.json.sha256 )
           echo "── manifest.json ──"; cat dist/manifest.json
-      - name: Attach manifest and PUBLISH the release atomically
+      - name: Attach manifest to GitHub Release (and PUBLISH atomically)
         uses: softprops/action-gh-release@v2
         with:
           # This is the LAST asset. Flipping draft:false here publishes the release
