@@ -754,8 +754,7 @@ pub async fn build_listener_health_service(
                 .await;
                 // `None` → the auth-plane deps are not installed on this listener;
                 // do not spuriously downgrade — leave the boot status in place.
-                let Some(pg_ok) =
-                    crate::runtime::credential_layer::auth_plane_pg_reachable().await
+                let Some(pg_ok) = crate::runtime::credential_layer::auth_plane_pg_reachable().await
                 else {
                     continue;
                 };

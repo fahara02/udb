@@ -648,8 +648,8 @@ pub(crate) fn sqlx_error_to_status(context: &str, err: &sqlx::Error) -> tonic::S
                 // they must be a retryable UNAVAILABLE — otherwise a mid-request PG
                 // restart reaches the client as an opaque Internal (or, on the auth
                 // path, as a bogus Unauthenticated). See UDB-DB-READINESS-001.
-                "08000" | "08003" | "08006" | "08001" | "08004" | "08007" | "08P01"
-                | "57P01" | "57P02" | "57P03" => {
+                "08000" | "08003" | "08006" | "08001" | "08004" | "08007" | "08P01" | "57P01"
+                | "57P02" | "57P03" => {
                     tracing::warn!(
                         context = %context,
                         sqlstate = %code.as_ref(),
