@@ -1157,7 +1157,7 @@ disk free. Proto-changing items are therefore doable in-environment via the real
 pipeline; they are no longer "blocked", only larger. The list below is now
 ordered by SIZE/RISK, not by a false environment gate.
 
-**Total landed this session: 19 items across 12 commits** (13 integrity + T-4 both
+**Total landed this session: 20 items** (13 integrity + T-4 both
 halves + X-3/F-4/F-9/F-7 + G-2 the first full proto-pipeline feature).
 
 **NOT YET done — larger or needing live infra (ordered by tractability):**
@@ -1174,7 +1174,7 @@ halves + X-3/F-4/F-9/F-7 + G-2 the first full proto-pipeline feature).
 - **C-1/C-2/G-2/P-1** expression-UPDATE, aggregates, conditional delete, keyset
   pagination — all require **proto + buf regen (Docker, 13 pinned plugins)** and,
   for C-1/C-2, 18-backend IR work + the S-1 tenant-predicate fix
-- **T-1/T-5/T-6/T-7/T-8** template embedding, error-contract proto, six-language
+- **T-5/T-6/T-7/T-8** error-contract proto, six-language
   transaction + facade codegen
 - **E-1/E-6** provider request templates + the flow-hook gRPC contract
 - **Z-4** broker-side blind-index derivation (crypto + filter rewrite)
