@@ -315,6 +315,31 @@ pub(crate) fn capability_status(
     status_with_error_detail(tonic::Code::FailedPrecondition, message, detail)
 }
 
+/// Like [`capability_status`] but preserves a caller-chosen gRPC code. Some
+/// dispatch paths select a context-specific code (Unimplemented vs Internal vs
+/// NotFound) yet still need a typed capability `ErrorDetail` on the wire so SDKs
+/// see `kind`/`capability_required` instead of a bare status (R-7).
+pub(crate) fn capability_status_with_code(
+    code: tonic::Code,
+    backend: impl Into<String>,
+    operation: impl Into<String>,
+    capability_required: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    let detail = crate::proto::ErrorDetail {
+        backend: backend.into(),
+        operation: operation.into(),
+        capability_required: capability_required.into(),
+        retryable: false,
+        retry_after_ms: 0,
+        policy_decision_id: String::new(),
+        correlation_id: String::new(),
+        kind: crate::proto::ErrorKind::Capability as i32,
+        field_violations: Vec::new(),
+    };
+    status_with_error_detail(code, message, detail)
+}
+
 /// Policy-decision refusal: the request was syntactically valid, but a local or
 /// external policy rejected it. `FailedPrecondition`, `kind = POLICY`, not
 /// retryable. `policy_decision_id` is the stable machine-readable reason SDKs
