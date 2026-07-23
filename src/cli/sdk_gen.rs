@@ -218,6 +218,55 @@ struct SdkPreflight {
 
 const UDB_PACKAGE_VERSION: &str = env!("CARGO_PKG_VERSION");
 
+/// T-1: the SDK templates embedded into the binary, so `udb sdk generate` works
+/// from an INSTALLED binary in any directory — previously it read `sdk-templates/`
+/// relative to CWD, so the flagship command only worked inside a UDB source
+/// checkout. Mirrors the proto-catalog embedding in `native_catalog.rs`.
+static EMBEDDED_SDK_TEMPLATES: include_dir::Dir<'_> =
+    include_dir::include_dir!("$CARGO_MANIFEST_DIR/sdk-templates");
+
+/// Resolve the templates directory to use. If `templates_dir` exists on disk
+/// (source checkout, or an explicit `--templates <dir>` override), use it as-is.
+/// Otherwise extract the embedded templates once to a version-keyed temp dir and
+/// use that, so an installed binary is self-contained. The existing filesystem
+/// render logic then runs unchanged against the returned path.
+fn resolve_effective_templates_dir(templates_dir: &str) -> Result<PathBuf, String> {
+    let fs_path = Path::new(templates_dir);
+    if fs_path.is_dir() {
+        return Ok(fs_path.to_path_buf());
+    }
+    let base = std::env::temp_dir().join(format!("udb-sdk-templates-{UDB_PACKAGE_VERSION}"));
+    let sentinel = base.join(".udb-extracted");
+    if !sentinel.exists() {
+        std::fs::create_dir_all(&base)
+            .map_err(|err| format!("create embedded-template cache `{}`: {err}", base.display()))?;
+        // Manual recursive extraction rather than `Dir::extract`, so the output
+        // layout is deterministic: `include_dir` file paths are relative to the
+        // embedded root (`sdk-templates`), so each writes to `<base>/<lang>/…` and
+        // the caller can use `<base>` directly (no crate-version-dependent nesting).
+        extract_embedded_dir(&EMBEDDED_SDK_TEMPLATES, &base)
+            .map_err(|err| format!("extract embedded SDK templates: {err}"))?;
+        let _ = std::fs::write(&sentinel, b"1");
+    }
+    Ok(base)
+}
+
+/// Recursively write an embedded `include_dir::Dir` to `base`, preserving the
+/// relative layout. Idempotent per file (overwrites), safe to re-run.
+fn extract_embedded_dir(dir: &include_dir::Dir<'_>, base: &Path) -> std::io::Result<()> {
+    for file in dir.files() {
+        let path = base.join(file.path());
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        std::fs::write(path, file.contents())?;
+    }
+    for sub in dir.dirs() {
+        extract_embedded_dir(sub, base)?;
+    }
+    Ok(())
+}
+
 fn init_sdk(lang: &str) -> i32 {
     let languages = match resolve_init_languages(lang) {
         Ok(languages) => languages,
@@ -739,7 +788,15 @@ fn rpc_to_json(rpc: &RpcDescriptor) -> serde_json::Value {
 
 /// List the language template directories available under `templates_dir`.
 fn list_languages(templates_dir: &str) -> i32 {
-    let root = Path::new(templates_dir);
+    // T-1: fall back to the embedded templates when no on-disk dir exists.
+    let root = match resolve_effective_templates_dir(templates_dir) {
+        Ok(root) => root,
+        Err(err) => {
+            eprintln!("sdk list-langs: {err}");
+            return 1;
+        }
+    };
+    let root = root.as_path();
     if !root.is_dir() {
         eprintln!("sdk list-langs: template dir `{templates_dir}` not found");
         return 1;
@@ -853,11 +910,15 @@ fn generate(
     if fsm.go(SdkGenState::ResolveTemplates).is_err() {
         return 1;
     }
-    let templates_root = Path::new(templates_dir);
+    // T-1: use the on-disk dir if present, else the embedded templates.
+    let templates_root = match resolve_effective_templates_dir(templates_dir) {
+        Ok(root) => root,
+        Err(err) => return fsm.fail(err),
+    };
+    let templates_root = templates_root.as_path();
     if !templates_root.is_dir() {
         return fsm.fail(format!(
-            "template dir `{templates_dir}` not found — author templates under \
-             `{templates_dir}/<lang>/` (see `udb sdk list-langs`)"
+            "template dir `{templates_dir}` not found and no embedded templates available"
         ));
     }
     let langs = match resolve_langs(templates_root, lang) {
@@ -2644,6 +2705,34 @@ mod tests {
                 replay_safe: false,
             },
         ]
+    }
+
+    // T-1: `udb sdk generate` must work from an installed binary with no
+    // `sdk-templates/` on disk — the templates are embedded and extracted with a
+    // deterministic layout (`<base>/<lang>/…`). This exercises the extraction the
+    // FS-path tests never reach.
+    #[test]
+    fn embedded_templates_extract_with_language_layout() {
+        let base =
+            std::env::temp_dir().join(format!("udb-sdk-templates-test-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&base);
+        std::fs::create_dir_all(&base).expect("create test extract dir");
+        extract_embedded_dir(&EMBEDDED_SDK_TEMPLATES, &base).expect("extract embedded templates");
+
+        // A known template lands at <base>/<lang>/…, not nested under sdk-templates/.
+        let go_tmpl = base.join("go/udbclient/generated_client.go.tmpl");
+        assert!(
+            go_tmpl.is_file(),
+            "embedded Go client template missing at {}",
+            go_tmpl.display()
+        );
+        // resolve_langs must see the language dirs directly under the extract root.
+        let langs = resolve_langs(&base, "all").expect("resolve langs from embedded");
+        assert!(
+            langs.contains(&"go".to_string()),
+            "go lang not found: {langs:?}"
+        );
+        let _ = std::fs::remove_dir_all(&base);
     }
 
     #[test]
