@@ -34,6 +34,7 @@ include = [
     "/docs/generated/contract-baseline.bin",
     "/docs/generated/udb-native-contract.json",
     "/proto/udb/**",
+    "/sdk-templates/**",
     "/src/**",
     "/third_party/googleapis/**",
 ]
