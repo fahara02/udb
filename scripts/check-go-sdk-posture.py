@@ -117,7 +117,7 @@ CHECKS: tuple[SourceCheck, ...] = (
             "ConflictFields: []string(e.key)",
             "func (e *Entity) Select(ctx context.Context, where map[string]any)",
             "structpb.NewStruct(where)",
-            "func (e *Entity) Delete(ctx context.Context, where map[string]any)",
+            "func (e *Entity) Delete(ctx context.Context, where map[string]any, opts ...DeleteOption)",
             "type EntityDescriptor struct",
         ),
     ),
