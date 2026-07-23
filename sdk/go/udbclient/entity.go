@@ -263,18 +263,47 @@ func (e *Entity) SelectPage(ctx context.Context, where map[string]any, opts Page
 	}, nil
 }
 
+// DeleteOption configures Delete.
+type DeleteOption func(*deleteOptions)
+
+type deleteOptions struct {
+	expected map[string]any
+}
+
+// WithDeleteExpected makes the Delete a compare-and-swap (G-2): the row the filter
+// targets is removed only if each field -> value still equals the CURRENT row
+// (row-locked, in the same tenant/RLS transaction). If the row is absent or any
+// assertion fails, the broker returns FAILED_PRECONDITION and deletes nothing.
+// Requires the filter to pin every primary-key column by equality. A nil/empty
+// map leaves the delete unconditional (unchanged behavior).
+func WithDeleteExpected(expected map[string]any) DeleteOption {
+	return func(o *deleteOptions) { o.expected = expected }
+}
+
 // Delete issues exactly ONE Delete RPC for the bound FQN with a Struct filter
 // built from where. Delete is a mutation/destructive RPC and is never
-// auto-retried (see retryableForRPC).
-func (e *Entity) Delete(ctx context.Context, where map[string]any) (*entityv1.MutationResponse, error) {
+// auto-retried (see retryableForRPC). Pass WithDeleteExpected for compare-and-swap.
+func (e *Entity) Delete(ctx context.Context, where map[string]any, opts ...DeleteOption) (*entityv1.MutationResponse, error) {
+	var o deleteOptions
+	for _, opt := range opts {
+		opt(&o)
+	}
 	filter, err := structFilter(where)
 	if err != nil {
 		return nil, err
+	}
+	var expected *structpb.Struct
+	if len(o.expected) > 0 {
+		expected, err = structFilter(o.expected)
+		if err != nil {
+			return nil, fmt.Errorf("udb: encode delete expected precondition: %w", err)
+		}
 	}
 	return e.client.Delete(ctx, &entityv1.DeleteRequest{
 		Context:     e.requestContext(),
 		MessageType: e.fqn,
 		Filter:      filter,
+		Expected:    expected,
 	})
 }
 
