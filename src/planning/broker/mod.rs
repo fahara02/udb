@@ -2180,8 +2180,10 @@ mod tests {
     // OR arm does not constrain every returned row.
     #[test]
     fn mandatory_and_columns_excludes_or_branches() {
-        let allowed: BTreeSet<String> =
-            ["tenant_id", "status", "id"].into_iter().map(String::from).collect();
+        let allowed: BTreeSet<String> = ["tenant_id", "status", "id"]
+            .into_iter()
+            .map(String::from)
+            .collect();
 
         // Top-level AND context: tenant_id is mandatory.
         let top = json!({"tenant_id": "t1", "status": "open"});

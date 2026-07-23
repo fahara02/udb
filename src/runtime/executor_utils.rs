@@ -3616,7 +3616,14 @@ mod merge_context_scope_authority_tests {
         let filter = json!({"eq": {"id": 1}});
         let fields = vec!["id".to_string(), "email".to_string()];
         let key_with = cache_key(
-            "select", "udb.Person", &with_body, "chk", &filter, &fields, 100, "id:false",
+            "select",
+            "udb.Person",
+            &with_body,
+            "chk",
+            &filter,
+            &fields,
+            100,
+            "id:false",
         );
         let key_without = cache_key(
             "select",
@@ -3634,10 +3641,24 @@ mod merge_context_scope_authority_tests {
         );
         // X-1: limit and sort ARE part of the key — differing values must not collide.
         let key_limit_1000 = cache_key(
-            "select", "udb.Person", &with_body, "chk", &filter, &fields, 1000, "id:false",
+            "select",
+            "udb.Person",
+            &with_body,
+            "chk",
+            &filter,
+            &fields,
+            1000,
+            "id:false",
         );
         let key_sort_desc = cache_key(
-            "select", "udb.Person", &with_body, "chk", &filter, &fields, 100, "id:true",
+            "select",
+            "udb.Person",
+            &with_body,
+            "chk",
+            &filter,
+            &fields,
+            100,
+            "id:true",
         );
         assert_ne!(
             key_with, key_limit_1000,
