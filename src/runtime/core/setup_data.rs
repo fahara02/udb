@@ -503,6 +503,11 @@ impl DataBrokerRuntime {
         tonic::Status,
     > {
         let mut request = request;
+        // P-1: keyset pagination engages only for an EXPLICITLY bounded read
+        // (`limit > 0` BEFORE the default-limit clamp below), so unbounded selects
+        // are unchanged. `page_token` continues an existing walk.
+        let paginate = request.limit > 0;
+        let page_token = request.page_token.trim().to_string();
         // GAP 16: Prevent unbounded SELECT queries that return millions of rows.
         let default_limit = if self.config.default_limit > 0 {
             self.config.default_limit
@@ -531,19 +536,79 @@ impl DataBrokerRuntime {
                 .select_join_fusion(manifest, request, context, filter)
                 .await;
         }
-        let sort = request
-            .sort
-            .iter()
-            .map(|sort| SortSpec {
-                field: sort.field.clone(),
-                descending: sort.descending,
-            })
-            .collect::<Vec<_>>();
+        // P-1: when paginating, resolve the physical sort keys, extend them with
+        // primary-key tiebreakers for a TOTAL order, decode any incoming cursor,
+        // and inject the lexicographic "after" predicate into the filter (reusing
+        // the validated wire grammar + tenant/RLS scoping, not new SQL).
+        use crate::runtime::core::pagination;
+        let mut filter = filter;
+        let mut fields = request.fields.clone();
+        let cursor_keys: Option<Vec<pagination::CursorKey>> = if paginate {
+            let table_for_keys = resolve_table_for_message(manifest, &request.message_type)
+                .map_err(|_| message_type_lookup_status(manifest, &request.message_type))?;
+            let resolver = crate::planning::broker::column_resolver(table_for_keys);
+            let resolved_sort: Vec<(String, bool)> = request
+                .sort
+                .iter()
+                .map(|s| {
+                    (
+                        crate::planning::broker::resolve_column(&resolver, &s.field),
+                        s.descending,
+                    )
+                })
+                .collect();
+            let keys = pagination::total_order_keys(&resolved_sort, &table_for_keys.primary_key);
+            // The cursor + next-token need every key column present in the row, so
+            // force them into an explicit projection (SELECT * already has them).
+            if !fields.is_empty() {
+                for key in &keys {
+                    if !fields.iter().any(|f| f == &key.column) {
+                        fields.push(key.column.clone());
+                    }
+                }
+            }
+            if !page_token.is_empty() {
+                let decoded = pagination::decode_page_token(
+                    &page_token,
+                    &context.tenant_id,
+                    &request.message_type,
+                )
+                .map_err(|msg| setup_data_invalid_field("page_token", &msg, &msg))?;
+                let values = pagination::cursor_values_for_keys(&keys, &decoded)
+                    .map_err(|msg| setup_data_invalid_field("page_token", &msg, &msg))?;
+                let cursor_pred = pagination::build_cursor_predicate(&keys, &values);
+                filter = match filter {
+                    JsonValue::Null => cursor_pred,
+                    existing => serde_json::json!({ "$and": [existing, cursor_pred] }),
+                };
+            }
+            Some(keys)
+        } else {
+            None
+        };
+        // The SQL sort is the total-order keys when paginating, else the caller's.
+        let sort = match &cursor_keys {
+            Some(keys) => keys
+                .iter()
+                .map(|key| SortSpec {
+                    field: key.column.clone(),
+                    descending: key.descending,
+                })
+                .collect::<Vec<_>>(),
+            None => request
+                .sort
+                .iter()
+                .map(|sort| SortSpec {
+                    field: sort.field.clone(),
+                    descending: sort.descending,
+                })
+                .collect::<Vec<_>>(),
+        };
         let plan_request = SelectPlanRequest {
             context: context.clone(),
             message_type: request.message_type.clone(),
             filter: filter.clone(),
-            fields: request.fields.clone(),
+            fields: fields.clone(),
             limit: request.limit,
             sort,
         };
@@ -599,7 +664,10 @@ impl DataBrokerRuntime {
                 },
             )
             .await?;
+        // P-1: paginated reads skip the read cache — a cache hit returns
+        // `cached_record_set` with no next_page_token, which would break the walk.
         if !bypass_read
+            && !paginate
             && let Some(cache_key) = cache_key.as_deref()
             && let Some(cached) = self
                 .cache_get_fresh(cache_key, &manifest.checksum_sha256, &context)
@@ -679,7 +747,7 @@ impl DataBrokerRuntime {
         }
         let rows = rows_result?;
         reset_result?;
-        let record_set = rows_to_record_set(
+        let mut record_set = rows_to_record_set(
             rows,
             Some(table),
             &plan.masked_columns,
@@ -687,7 +755,23 @@ impl DataBrokerRuntime {
             self.encryption.as_ref(),
             &self.encryption_metrics,
         )?;
-        if !bypass_write && let Some(cache_key) = cache_key.as_deref() {
+        // P-1: mint next_page_token when this is a FULL page (more rows may exist)
+        // and every cursor key is present in the last row. An empty token signals
+        // the last page (AIP-158). Paginated reads never touch the read cache
+        // (below), so a cache hit can't drop the cursor.
+        if let Some(keys) = &cursor_keys
+            && (record_set.records_json.len() as i32) >= request.limit
+            && let Some(last) = record_set.records_json.last()
+            && let Ok(JsonValue::Object(row)) = serde_json::from_slice::<JsonValue>(last)
+            && let Some(cursor) = pagination::cursor_values_from_row(keys, &row)
+        {
+            record_set.next_page_token =
+                pagination::encode_page_token(&context.tenant_id, &request.message_type, &cursor);
+        }
+        if !bypass_write
+            && !paginate
+            && let Some(cache_key) = cache_key.as_deref()
+        {
             let ttl = request
                 .cache
                 .as_ref()

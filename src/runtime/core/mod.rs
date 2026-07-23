@@ -546,6 +546,7 @@ impl EncryptionMetrics {
 
 // Phase F: God-impl split into continuation impl blocks.
 mod helpers;
+pub(crate) mod pagination;
 pub(crate) use helpers::*;
 mod accessors;
 pub(crate) use accessors::RoutedReadPool;
