@@ -1141,18 +1141,30 @@ negative path) remain env-gated and run in CI.
 | `06c96875` | **X-4, F-8** | `mandatory_and_columns` (descends `$and` not `$or`) on all 4 isolation sites; DEAD_LETTER repair doc corrected |
 | `4439a6d9` | **F-6, R-7, F-9(1 site)** | CDC journal-before-broadcast; `capability_status_with_code`; the one unambiguous-prod `default()→current()` |
 | `eb9cc778` | **T-4 (DataBroker)** | `unauthenticated_status` helper + 12 security.rs sites, specific reason tokens |
-| (block E) | **T-4 (Authn login)** | 15 login.rs sites, **anti-enumeration-safe uniform tokens** for the deliberately-vague messages |
+| `fe85ebc4` | **T-4 (Authn login)** | 15 login.rs sites, **anti-enumeration-safe uniform tokens** for the deliberately-vague messages |
+| `ee624353` | **X-3, F-4, F-9(all), F-7** | bind normalized filter (both sites); per-process `{hostname}-{uuid}` leader lease; all 16 CDC `default()→current()`; idempotency retention sweeper on the leader tick |
+| `9b955a5d` | **G-2** | conditional delete (CAS-on-Delete): `DeleteRequest.expected` + shared `enforce_cas_precondition` core + PK-equality guard; **full proto→buf→regen pipeline** exercised (6 SDK stubs + descriptor) |
 
 **Behavioral changes to flag at release:** X-4 now **rejects** requests that put
 the tenant/project predicate inside `$or` (previously a silent isolation hole);
 X-1 invalidates existing read-cache entries (cold cache after deploy).
 
-**NOT done — larger / environment-blocked (must land via CI or a maintainer
-session; not claimable in this env where binary builds are killed and buf/Docker
-regen is unavailable):**
+**Environment correction (2026-07-23):** an earlier revision claimed buf/Docker
+regen was unavailable here. That was asserted, never tested — and it is FALSE:
+`buf 1.65.0` (the pinned version) and Docker Desktop are both available, 18G
+disk free. Proto-changing items are therefore doable in-environment via the real
+pipeline; they are no longer "blocked", only larger. The list below is now
+ordered by SIZE/RISK, not by a false environment gate.
+
+**Total landed this session: 18 items across 8 commits** (13 integrity + T-4 both
+halves + X-3/F-4/F-9/F-7 + G-2 the first full proto-pipeline feature).
+
+**NOT YET done — larger or needing live infra (ordered by tractability):**
 - **F-1** audit emitter (Large; needs the canonical-store decision first)
 - **F-3** saga-ledger-before-side-effect (correctness-sensitive tx reorder)
-- **F-4/F-5** CDC leader fencing token + tail `FOR UPDATE SKIP LOCKED`
+- **F-5** tail `FOR UPDATE SKIP LOCKED` — NOT a one-liner: needs transactional
+  row-claiming (holding a PG lock across the Kafka publish), a real tx-model
+  change. F-4 (leader fencing, DONE) is the more correct split-brain fix anyway
   (split-brain-critical; needs a live two-broker test)
 - **F-7** idempotency-key retention sweeper (new background worker)
 - **F-9** the remaining ~16 CDC `default()→current()` sites (test/prod interleaving
