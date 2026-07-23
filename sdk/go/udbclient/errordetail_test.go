@@ -158,3 +158,18 @@ func TestErrorRetryAfterAndReason(t *testing.T) {
 		t.Error("empty Error RetryAfter/Reason must be zero values")
 	}
 }
+
+// IsCASConflict must recognise a FAILED_PRECONDITION (the broker's CAS-mismatch
+// signal) and reject anything else, so a WithExpected retry loop is precise.
+func TestIsCASConflict(t *testing.T) {
+	cas := &Error{Code: codes.FailedPrecondition, Message: "compare-and-swap precondition failed"}
+	if !IsCASConflict(cas) {
+		t.Error("IsCASConflict(FailedPrecondition) = false, want true")
+	}
+	if IsCASConflict(&Error{Code: codes.Unavailable}) {
+		t.Error("IsCASConflict(Unavailable) = true, want false")
+	}
+	if IsCASConflict(nil) || IsCASConflict(status.Error(codes.Internal, "boom")) {
+		t.Error("IsCASConflict must be false for nil and non-*Error")
+	}
+}

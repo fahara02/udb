@@ -1,9 +1,11 @@
 package udbclient
 
 import (
+	"errors"
 	"time"
 
 	entityv1 "github.com/fahara02/udb/sdk/go/gen/udb/entity/v1"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
@@ -119,4 +121,18 @@ func stringValue(msg protoreflect.Message, fd protoreflect.FieldDescriptor) stri
 		return ""
 	}
 	return msg.Get(fd).String()
+}
+
+// IsCASConflict reports whether err is a compare-and-swap precondition failure —
+// the target row was absent or a field no longer matched the expected value.
+// Check it after Upsert(WithExpected) or Delete(WithDeleteExpected) to decide
+// whether to re-read and retry the optimistic operation. Detected by the
+// FAILED_PRECONDITION code the broker returns for a CAS mismatch (it writes
+// nothing on failure), so a retry loop is safe.
+func IsCASConflict(err error) bool {
+	var e *Error
+	if !errors.As(err, &e) {
+		return false
+	}
+	return e.Code == codes.FailedPrecondition
 }
