@@ -1,6 +1,8 @@
 package udbclient
 
 import (
+	"time"
+
 	entityv1 "github.com/fahara02/udb/sdk/go/gen/udb/entity/v1"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -48,6 +50,30 @@ func (e *Error) Kind() entityv1.ErrorKind {
 		return entityv1.ErrorKind_ERROR_KIND_UNSPECIFIED
 	}
 	return d.GetKind()
+}
+
+// RetryAfter is the broker-suggested backoff before retrying, or 0 when none was
+// provided (or no typed detail was attached). Pair with Retryable().
+func (e *Error) RetryAfter() time.Duration {
+	d, ok := e.Detail()
+	if !ok {
+		return 0
+	}
+	return time.Duration(d.GetRetryAfterMs()) * time.Millisecond
+}
+
+// Reason returns the stable machine-readable reason a caller can branch on: the
+// policy decision id for auth/policy denials, else the capability token, else "".
+// Prefer this over matching the human-readable message, which may change.
+func (e *Error) Reason() string {
+	d, ok := e.Detail()
+	if !ok {
+		return ""
+	}
+	if r := d.GetPolicyDecisionId(); r != "" {
+		return r
+	}
+	return d.GetCapabilityRequired()
 }
 
 // FieldViolation is the SDK-level view of one structured validation failure.

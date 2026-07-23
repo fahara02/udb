@@ -124,3 +124,37 @@ func TestErrorDetailAbsent(t *testing.T) {
 		t.Fatalf("FieldViolations() should be nil with no detail: %+v", got)
 	}
 }
+
+// T-2: the RetryAfter and Reason accessors decode the trailer so a consumer
+// reads a backoff and a stable machine token instead of parsing the message.
+func TestErrorRetryAfterAndReason(t *testing.T) {
+	bin := marshalDetail(t, &entityv1.ErrorDetail{
+		Retryable:        true,
+		RetryAfterMs:     250,
+		Kind:             entityv1.ErrorKind_ERROR_KIND_RETRYABLE,
+		PolicyDecisionId: "store_unavailable",
+	})
+	e := &Error{Code: codes.Unavailable, Message: "temporarily unavailable", DetailBin: bin}
+	if got := e.RetryAfter().Milliseconds(); got != 250 {
+		t.Errorf("RetryAfter() = %dms, want 250", got)
+	}
+	if e.Reason() != "store_unavailable" {
+		t.Errorf("Reason() = %q, want store_unavailable", e.Reason())
+	}
+
+	// capability_required is the fallback reason when no policy decision id.
+	capBin := marshalDetail(t, &entityv1.ErrorDetail{
+		Kind:               entityv1.ErrorKind_ERROR_KIND_CAPABILITY,
+		CapabilityRequired: "generic_dispatch_executor",
+	})
+	capErr := &Error{Code: codes.FailedPrecondition, DetailBin: capBin}
+	if capErr.Reason() != "generic_dispatch_executor" {
+		t.Errorf("Reason() fallback = %q, want generic_dispatch_executor", capErr.Reason())
+	}
+
+	// No trailer → zero values, no panic.
+	empty := &Error{Code: codes.Internal, Message: "boom"}
+	if empty.RetryAfter() != 0 || empty.Reason() != "" {
+		t.Error("empty Error RetryAfter/Reason must be zero values")
+	}
+}
