@@ -1144,6 +1144,7 @@ negative path) remain env-gated and run in CI.
 | `fe85ebc4` | **T-4 (Authn login)** | 15 login.rs sites, **anti-enumeration-safe uniform tokens** for the deliberately-vague messages |
 | `ee624353` | **X-3, F-4, F-9(all), F-7** | bind normalized filter (both sites); per-process `{hostname}-{uuid}` leader lease; all 16 CDC `default()→current()`; idempotency retention sweeper on the leader tick |
 | `9b955a5d` | **G-2** | conditional delete (CAS-on-Delete): `DeleteRequest.expected` + shared `enforce_cas_precondition` core + PK-equality guard; **full proto→buf→regen pipeline** exercised (6 SDK stubs + descriptor) |
+| `07b46251` | **R-6** | readiness refresh probes the DataBroker plane's OWN pool (was the auth-plane pool for every plane); shared `pg_pool_reachable` |
 
 **Behavioral changes to flag at release:** X-4 now **rejects** requests that put
 the tenant/project predicate inside `$or` (previously a silent isolation hole);
@@ -1156,7 +1157,7 @@ disk free. Proto-changing items are therefore doable in-environment via the real
 pipeline; they are no longer "blocked", only larger. The list below is now
 ordered by SIZE/RISK, not by a false environment gate.
 
-**Total landed this session: 18 items across 8 commits** (13 integrity + T-4 both
+**Total landed this session: 19 items across 12 commits** (13 integrity + T-4 both
 halves + X-3/F-4/F-9/F-7 + G-2 the first full proto-pipeline feature).
 
 **NOT YET done — larger or needing live infra (ordered by tractability):**
@@ -1169,7 +1170,6 @@ halves + X-3/F-4/F-9/F-7 + G-2 the first full proto-pipeline feature).
 - **F-7** idempotency-key retention sweeper (new background worker)
 - **F-9** the remaining ~16 CDC `default()→current()` sites (test/prod interleaving
   needs per-site reading)
-- **R-6** readiness data-plane pool probe (needs pool plumbing)
 - **X-3** bind-from-normalized-filter (planner)
 - **C-1/C-2/G-2/P-1** expression-UPDATE, aggregates, conditional delete, keyset
   pagination — all require **proto + buf regen (Docker, 13 pinned plugins)** and,
