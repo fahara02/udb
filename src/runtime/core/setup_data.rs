@@ -634,7 +634,18 @@ impl DataBrokerRuntime {
         // pinned by the planner/IR A-B oracle); the planner SQL stays as the
         // fallback for planner-only filter shapes neutral IR cannot represent.
         let bridged = bridged_pg_select_statement(manifest, &plan_request);
-        let values = filter_bind_values(&filter);
+        // X-3: bind from the NORMALIZED filter (physical column keys), matching
+        // what the planner compiled into `plan.sql`. The runtime filter carries
+        // proto FIELD names, and BTreeMap iteration is lexical — so an alias whose
+        // `field_name` and `column_name` sort differently made `plan.parameter_columns`
+        // (normalized order) disagree with the raw-filter value order, binding the
+        // wrong value to the wrong column. The bridged path binds its own params
+        // and is unaffected.
+        let normalized_filter = crate::planning::broker::normalize_filter_keys(
+            &crate::planning::broker::column_resolver(table),
+            &filter,
+        );
+        let values = filter_bind_values(&normalized_filter);
         let query = match bridged.as_ref() {
             Some(stmt) => bind_typed_generic_pg_params(
                 sqlx::query(&stmt.sql),
@@ -1249,7 +1260,18 @@ impl DataBrokerRuntime {
         // stays as the fallback for planner-only filter shapes (live row parity
         // pinned by the A-B oracle).
         let bridged = bridged_pg_delete_statement(manifest, &plan_request);
-        let values = filter_bind_values(&filter);
+        // X-3: bind from the NORMALIZED filter (physical column keys), matching
+        // what the planner compiled into `plan.sql`. The runtime filter carries
+        // proto FIELD names, and BTreeMap iteration is lexical — so an alias whose
+        // `field_name` and `column_name` sort differently made `plan.parameter_columns`
+        // (normalized order) disagree with the raw-filter value order, binding the
+        // wrong value to the wrong column. The bridged path binds its own params
+        // and is unaffected.
+        let normalized_filter = crate::planning::broker::normalize_filter_keys(
+            &crate::planning::broker::column_resolver(table),
+            &filter,
+        );
+        let values = filter_bind_values(&normalized_filter);
         let query = match bridged.as_ref() {
             Some(stmt) => bind_typed_generic_pg_params(
                 sqlx::query(&stmt.sql),
