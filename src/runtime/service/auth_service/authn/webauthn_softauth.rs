@@ -1,4 +1,4 @@
-//! Dev-only software WebAuthn authenticator (bug_report.md Q#9-11).
+//! Dev-only software WebAuthn authenticator.
 //!
 //! REAL cryptography, NOT an accept-any bypass: a per-user P-256 keypair produces
 //! a genuine `"none"`-attestation registration credential and an ES256 assertion

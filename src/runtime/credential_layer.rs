@@ -1,4 +1,4 @@
-//! Phase-1 verified-principal pipeline (fix_plan.md §1).
+//! Phase-1 verified-principal pipeline.
 //!
 //! ONE asynchronous credential-resolution pass runs as a Tower layer BEFORE
 //! DataBroker handlers or native method security execute, and its result rides
@@ -29,7 +29,7 @@ use tower::Service;
 
 use crate::runtime::authn::PostgresApiKeyStore;
 
-/// The canonical verified principal (fix_plan.md §1.1): one contract carrying
+/// The canonical verified principal: one contract carrying
 /// everything enforcement layers need, derived ONLY from verified credentials
 /// and server-controlled records. Constructed by [`CredentialResolveLayer`]
 /// (async paths) or by `security_from_request` (sync JWT path) — never from
