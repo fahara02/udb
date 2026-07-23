@@ -4239,6 +4239,7 @@ mod setup_data_consistency_tests {
     use super::{
         RequestContext, full_canonical_store_requires_opt_in, idempotency_claim_sql,
         idempotency_dedup_claim_status, idempotency_dedup_key, idempotency_key_for_dedup,
+        pk_equality_values_from_filter,
         idempotency_response_persist_row_count_status, idempotency_response_persist_sql,
         merge_runtime_backend_instances, mutation_response_from_idempotency_json,
         mutation_response_from_idempotency_json_for_claim, mutation_response_idempotency_json,
