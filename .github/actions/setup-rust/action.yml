@@ -45,6 +45,10 @@ runs:
         "CARGO_NET_RETRY=10" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         "CARGO_HTTP_MULTIPLEXING=false" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
         "CARGO_HTTP_TIMEOUT=120" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        # Incremental compilation is useless in CI (each run is a fresh build) and
+        # only bloats the Swatinem cache; disabling it speeds builds and shrinks
+        # the cache (per the rust-cache README recommendation).
+        "CARGO_INCREMENTAL=0" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
     # Native build deps. aws-lc-sys (s3) needs cmake + NASM; WebAuthn pulls
     # vendored OpenSSL and requires a platform-native Perl plus compiler tools.

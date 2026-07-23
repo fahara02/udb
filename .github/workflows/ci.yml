@@ -25,6 +25,14 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # Heavy validation (full Rust matrix incl. Windows, live-DB integration,
+  # cross-platform auth binaries, the 18-feature plugin matrix, optimized/aarch64)
+  # runs nightly and on demand — NOT on every push — so push-to-main releases
+  # gate on the fast set only. Run the full matrix before a release with:
+  #   gh workflow run ci.yml --ref main
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch: {}
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -206,7 +214,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        # Linux on every push/PR (fast gate). Windows Rust — the ~23-min long
+        # pole — runs only nightly + on demand, keeping push-to-main releases fast.
+        os: ${{ fromJSON((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && '["ubuntu-latest","windows-latest"]' || '["ubuntu-latest"]') }}
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
@@ -430,7 +440,7 @@ jobs:
   # feature signal is feature-check below.
   auth-release-binary:
     name: Auth binary (${{ matrix.asset }})
-    if: github.event_name == 'push'
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     strategy:
@@ -512,7 +522,7 @@ jobs:
   # (integration), fail-fast:false so one failing leg never hides the others.
   plugin-feature-matrix:
     name: Plugin feature (${{ matrix.feature }})
-    if: github.event_name == 'push'
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     needs: quick-gate
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -550,7 +560,7 @@ jobs:
   # (15.8.1) SIMD acceleration + scalar-equivalence tests. Integration-only.
   optimized:
     name: Optimized (SIMD accel)
-    if: github.event_name == 'push'
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     needs: quick-gate
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -566,7 +576,7 @@ jobs:
   # non-x86 target. Integration-only.
   aarch64-scalar:
     name: AArch64 scalar
-    if: github.event_name == 'push'
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     needs: quick-gate
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -934,7 +944,7 @@ jobs:
   # run, gated on real infrastructure (no in-memory fakes).
   native-integration:
     name: Native services + canonical stores (live)
-    if: github.event_name == 'push'
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     needs: quick-gate
     runs-on: ubuntu-latest
     timeout-minutes: 75
