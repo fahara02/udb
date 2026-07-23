@@ -176,6 +176,50 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int EXPECTED_FIELD_NUMBER = 5;
+  private com.google.protobuf.Struct expected_;
+  /**
+   * <pre>
+   * G-2: optional compare-and-swap precondition — delete only if the matched
+   * row's fields still equal these values (mirrors UpsertRequest.expected,
+   * UDB-GO-005). Unset/empty = unconditional delete (unchanged behaviour).
+   * </pre>
+   *
+   * <code>.google.protobuf.Struct expected = 5 [json_name = "expected"];</code>
+   * @return Whether the expected field is set.
+   */
+  @java.lang.Override
+  public boolean hasExpected() {
+    return ((bitField0_ & 0x00000004) != 0);
+  }
+  /**
+   * <pre>
+   * G-2: optional compare-and-swap precondition — delete only if the matched
+   * row's fields still equal these values (mirrors UpsertRequest.expected,
+   * UDB-GO-005). Unset/empty = unconditional delete (unchanged behaviour).
+   * </pre>
+   *
+   * <code>.google.protobuf.Struct expected = 5 [json_name = "expected"];</code>
+   * @return The expected.
+   */
+  @java.lang.Override
+  public com.google.protobuf.Struct getExpected() {
+    return expected_ == null ? com.google.protobuf.Struct.getDefaultInstance() : expected_;
+  }
+  /**
+   * <pre>
+   * G-2: optional compare-and-swap precondition — delete only if the matched
+   * row's fields still equal these values (mirrors UpsertRequest.expected,
+   * UDB-GO-005). Unset/empty = unconditional delete (unchanged behaviour).
+   * </pre>
+   *
+   * <code>.google.protobuf.Struct expected = 5 [json_name = "expected"];</code>
+   */
+  @java.lang.Override
+  public com.google.protobuf.StructOrBuilder getExpectedOrBuilder() {
+    return expected_ == null ? com.google.protobuf.Struct.getDefaultInstance() : expected_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -202,6 +246,9 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(idempotencyKey_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 4, idempotencyKey_);
     }
+    if (((bitField0_ & 0x00000004) != 0)) {
+      output.writeMessage(5, getExpected());
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -224,6 +271,10 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(idempotencyKey_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(4, idempotencyKey_);
+    }
+    if (((bitField0_ & 0x00000004) != 0)) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(5, getExpected());
     }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
@@ -254,6 +305,11 @@ private static final long serialVersionUID = 0L;
     }
     if (!getIdempotencyKey()
         .equals(other.getIdempotencyKey())) return false;
+    if (hasExpected() != other.hasExpected()) return false;
+    if (hasExpected()) {
+      if (!getExpected()
+          .equals(other.getExpected())) return false;
+    }
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -277,6 +333,10 @@ private static final long serialVersionUID = 0L;
     }
     hash = (37 * hash) + IDEMPOTENCY_KEY_FIELD_NUMBER;
     hash = (53 * hash) + getIdempotencyKey().hashCode();
+    if (hasExpected()) {
+      hash = (37 * hash) + EXPECTED_FIELD_NUMBER;
+      hash = (53 * hash) + getExpected().hashCode();
+    }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -409,6 +469,7 @@ private static final long serialVersionUID = 0L;
               .alwaysUseFieldBuilders) {
         internalGetContextFieldBuilder();
         internalGetFilterFieldBuilder();
+        internalGetExpectedFieldBuilder();
       }
     }
     @java.lang.Override
@@ -427,6 +488,11 @@ private static final long serialVersionUID = 0L;
         filterBuilder_ = null;
       }
       idempotencyKey_ = "";
+      expected_ = null;
+      if (expectedBuilder_ != null) {
+        expectedBuilder_.dispose();
+        expectedBuilder_ = null;
+      }
       return this;
     }
 
@@ -479,6 +545,12 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000008) != 0)) {
         result.idempotencyKey_ = idempotencyKey_;
       }
+      if (((from_bitField0_ & 0x00000010) != 0)) {
+        result.expected_ = expectedBuilder_ == null
+            ? expected_
+            : expectedBuilder_.build();
+        to_bitField0_ |= 0x00000004;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -509,6 +581,9 @@ private static final long serialVersionUID = 0L;
         idempotencyKey_ = other.idempotencyKey_;
         bitField0_ |= 0x00000008;
         onChanged();
+      }
+      if (other.hasExpected()) {
+        mergeExpected(other.getExpected());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -560,6 +635,13 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000008;
               break;
             } // case 34
+            case 42: {
+              input.readMessage(
+                  internalGetExpectedFieldBuilder().getBuilder(),
+                  extensionRegistry);
+              bitField0_ |= 0x00000010;
+              break;
+            } // case 42
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -961,6 +1043,181 @@ private static final long serialVersionUID = 0L;
       bitField0_ |= 0x00000008;
       onChanged();
       return this;
+    }
+
+    private com.google.protobuf.Struct expected_;
+    private com.google.protobuf.SingleFieldBuilder<
+        com.google.protobuf.Struct, com.google.protobuf.Struct.Builder, com.google.protobuf.StructOrBuilder> expectedBuilder_;
+    /**
+     * <pre>
+     * G-2: optional compare-and-swap precondition — delete only if the matched
+     * row's fields still equal these values (mirrors UpsertRequest.expected,
+     * UDB-GO-005). Unset/empty = unconditional delete (unchanged behaviour).
+     * </pre>
+     *
+     * <code>.google.protobuf.Struct expected = 5 [json_name = "expected"];</code>
+     * @return Whether the expected field is set.
+     */
+    public boolean hasExpected() {
+      return ((bitField0_ & 0x00000010) != 0);
+    }
+    /**
+     * <pre>
+     * G-2: optional compare-and-swap precondition — delete only if the matched
+     * row's fields still equal these values (mirrors UpsertRequest.expected,
+     * UDB-GO-005). Unset/empty = unconditional delete (unchanged behaviour).
+     * </pre>
+     *
+     * <code>.google.protobuf.Struct expected = 5 [json_name = "expected"];</code>
+     * @return The expected.
+     */
+    public com.google.protobuf.Struct getExpected() {
+      if (expectedBuilder_ == null) {
+        return expected_ == null ? com.google.protobuf.Struct.getDefaultInstance() : expected_;
+      } else {
+        return expectedBuilder_.getMessage();
+      }
+    }
+    /**
+     * <pre>
+     * G-2: optional compare-and-swap precondition — delete only if the matched
+     * row's fields still equal these values (mirrors UpsertRequest.expected,
+     * UDB-GO-005). Unset/empty = unconditional delete (unchanged behaviour).
+     * </pre>
+     *
+     * <code>.google.protobuf.Struct expected = 5 [json_name = "expected"];</code>
+     */
+    public Builder setExpected(com.google.protobuf.Struct value) {
+      if (expectedBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        expected_ = value;
+      } else {
+        expectedBuilder_.setMessage(value);
+      }
+      bitField0_ |= 0x00000010;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * G-2: optional compare-and-swap precondition — delete only if the matched
+     * row's fields still equal these values (mirrors UpsertRequest.expected,
+     * UDB-GO-005). Unset/empty = unconditional delete (unchanged behaviour).
+     * </pre>
+     *
+     * <code>.google.protobuf.Struct expected = 5 [json_name = "expected"];</code>
+     */
+    public Builder setExpected(
+        com.google.protobuf.Struct.Builder builderForValue) {
+      if (expectedBuilder_ == null) {
+        expected_ = builderForValue.build();
+      } else {
+        expectedBuilder_.setMessage(builderForValue.build());
+      }
+      bitField0_ |= 0x00000010;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * G-2: optional compare-and-swap precondition — delete only if the matched
+     * row's fields still equal these values (mirrors UpsertRequest.expected,
+     * UDB-GO-005). Unset/empty = unconditional delete (unchanged behaviour).
+     * </pre>
+     *
+     * <code>.google.protobuf.Struct expected = 5 [json_name = "expected"];</code>
+     */
+    public Builder mergeExpected(com.google.protobuf.Struct value) {
+      if (expectedBuilder_ == null) {
+        if (((bitField0_ & 0x00000010) != 0) &&
+          expected_ != null &&
+          expected_ != com.google.protobuf.Struct.getDefaultInstance()) {
+          getExpectedBuilder().mergeFrom(value);
+        } else {
+          expected_ = value;
+        }
+      } else {
+        expectedBuilder_.mergeFrom(value);
+      }
+      if (expected_ != null) {
+        bitField0_ |= 0x00000010;
+        onChanged();
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * G-2: optional compare-and-swap precondition — delete only if the matched
+     * row's fields still equal these values (mirrors UpsertRequest.expected,
+     * UDB-GO-005). Unset/empty = unconditional delete (unchanged behaviour).
+     * </pre>
+     *
+     * <code>.google.protobuf.Struct expected = 5 [json_name = "expected"];</code>
+     */
+    public Builder clearExpected() {
+      bitField0_ = (bitField0_ & ~0x00000010);
+      expected_ = null;
+      if (expectedBuilder_ != null) {
+        expectedBuilder_.dispose();
+        expectedBuilder_ = null;
+      }
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * G-2: optional compare-and-swap precondition — delete only if the matched
+     * row's fields still equal these values (mirrors UpsertRequest.expected,
+     * UDB-GO-005). Unset/empty = unconditional delete (unchanged behaviour).
+     * </pre>
+     *
+     * <code>.google.protobuf.Struct expected = 5 [json_name = "expected"];</code>
+     */
+    public com.google.protobuf.Struct.Builder getExpectedBuilder() {
+      bitField0_ |= 0x00000010;
+      onChanged();
+      return internalGetExpectedFieldBuilder().getBuilder();
+    }
+    /**
+     * <pre>
+     * G-2: optional compare-and-swap precondition — delete only if the matched
+     * row's fields still equal these values (mirrors UpsertRequest.expected,
+     * UDB-GO-005). Unset/empty = unconditional delete (unchanged behaviour).
+     * </pre>
+     *
+     * <code>.google.protobuf.Struct expected = 5 [json_name = "expected"];</code>
+     */
+    public com.google.protobuf.StructOrBuilder getExpectedOrBuilder() {
+      if (expectedBuilder_ != null) {
+        return expectedBuilder_.getMessageOrBuilder();
+      } else {
+        return expected_ == null ?
+            com.google.protobuf.Struct.getDefaultInstance() : expected_;
+      }
+    }
+    /**
+     * <pre>
+     * G-2: optional compare-and-swap precondition — delete only if the matched
+     * row's fields still equal these values (mirrors UpsertRequest.expected,
+     * UDB-GO-005). Unset/empty = unconditional delete (unchanged behaviour).
+     * </pre>
+     *
+     * <code>.google.protobuf.Struct expected = 5 [json_name = "expected"];</code>
+     */
+    private com.google.protobuf.SingleFieldBuilder<
+        com.google.protobuf.Struct, com.google.protobuf.Struct.Builder, com.google.protobuf.StructOrBuilder>
+        internalGetExpectedFieldBuilder() {
+      if (expectedBuilder_ == null) {
+        expectedBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+            com.google.protobuf.Struct, com.google.protobuf.Struct.Builder, com.google.protobuf.StructOrBuilder>(
+                getExpected(),
+                getParentForChildren(),
+                isClean());
+        expected_ = null;
+      }
+      return expectedBuilder_;
     }
 
     // @@protoc_insertion_point(builder_scope:udb.entity.v1.DeleteRequest)

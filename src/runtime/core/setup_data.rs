@@ -1088,6 +1088,53 @@ impl DataBrokerRuntime {
             ));
         }
         let key_values = record_values(normalized_record, &key_columns)?;
+        self.enforce_cas_precondition(tx, table, expected, &key_columns, &key_values, context)
+            .await
+    }
+
+    /// G-2: evaluate an optional compare-and-swap precondition for a DELETE.
+    /// Unset/empty `expected` returns immediately. Otherwise the delete filter
+    /// must pin EVERY primary-key column by equality (so the precondition targets
+    /// exactly one row); that row is locked `FOR UPDATE` and each `expected` field
+    /// asserted, identically to the upsert CAS. On mismatch or a missing row the
+    /// caller returns before the delete, so nothing is removed.
+    async fn enforce_delete_precondition(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        table: &ManifestTable,
+        expected: &prost_types::Struct,
+        normalized_filter: &JsonValue,
+        context: &RequestContext,
+    ) -> Result<(), tonic::Status> {
+        let key_columns = table.primary_key.clone();
+        if key_columns.is_empty() {
+            return Err(crate::runtime::executor_utils::failed_precondition_fields(
+                "conditional delete requires a manifest primary key to locate the row",
+                [(
+                    "expected".to_string(),
+                    "table has no primary key".to_string(),
+                )],
+            ));
+        }
+        let key_values = pk_equality_values_from_filter(normalized_filter, &key_columns)?;
+        self.enforce_cas_precondition(tx, table, expected, &key_columns, &key_values, context)
+            .await
+    }
+
+    /// Shared compare-and-swap core (upsert GO-005 + delete G-2): locate the row
+    /// by `key_columns = key_values` with `FOR UPDATE` inside the caller's tx,
+    /// decrypt it, and assert each `expected` field equals the current value.
+    /// `FAILED_PRECONDITION` on a missing row or any mismatch.
+    async fn enforce_cas_precondition(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        table: &ManifestTable,
+        expected: &prost_types::Struct,
+        key_columns: &[String],
+        key_values: &[JsonValue],
+        context: &RequestContext,
+    ) -> Result<(), tonic::Status> {
+        let resolver = crate::planning::broker::column_resolver(table);
         let predicate = key_columns
             .iter()
             .enumerate()
@@ -1101,7 +1148,7 @@ impl DataBrokerRuntime {
             schema = table.schema,
             table = table.table,
         );
-        let query = bind_values(sqlx::query(&sql), table, &key_columns, &key_values)?;
+        let query = bind_values(sqlx::query(&sql), table, key_columns, key_values)?;
         let row = query.fetch_optional(&mut **tx).await.map_err(|err| {
             crate::runtime::executor_utils::sqlx_error_to_status(
                 "compare-and-swap precondition read failed",
@@ -1113,7 +1160,7 @@ impl DataBrokerRuntime {
                 "compare-and-swap precondition failed: the target row does not exist",
                 [(
                     "expected".to_string(),
-                    "no row matches the upsert key".to_string(),
+                    "no row matches the compare-and-swap key".to_string(),
                 )],
             ));
         };
@@ -1245,6 +1292,9 @@ impl DataBrokerRuntime {
         filter: JsonValue,
         context: RequestContext,
         idempotency_key: String,
+        // G-2: optional compare-and-swap precondition — delete only if the
+        // primary-key-identified row still equals these fields.
+        expected: Option<prost_types::Struct>,
     ) -> Result<MutationResponse, tonic::Status> {
         let plan_request = DeletePlanRequest {
             context: context.clone(),
@@ -1292,6 +1342,17 @@ impl DataBrokerRuntime {
             )
         })?;
         set_request_local_settings(&mut tx, &context).await?;
+        // G-2: enforce the compare-and-swap precondition (if any) BEFORE claiming
+        // the idempotency key or executing the delete, so a stale precondition
+        // fails fast and the tx rolls back with nothing removed or claimed. Uses
+        // the normalized filter so key columns resolve to physical names.
+        if let Some(expected) = expected
+            .as_ref()
+            .filter(|expected| !expected.fields.is_empty())
+        {
+            self.enforce_delete_precondition(&mut tx, table, expected, &normalized_filter, &context)
+                .await?;
+        }
         // KEYSTONE (lane 05): keyed-only durable dedup, same-tx, fail-closed.
         // Keyless deletes are unaffected.
         let dedup_ctx = {
@@ -2785,6 +2846,52 @@ fn idempotency_dedup_claim_status(err: &sqlx::Error) -> tonic::Status {
         250,
         "idempotency dedup claim failed: dedup store unavailable (fail-closed)",
     )
+}
+
+/// Extract the equality value for each key column from a normalized filter, for
+/// conditional delete (G-2). Every key column MUST be pinned by equality — bare
+/// (`{"col": v}`) or `{"col": {"$eq": v}}` — otherwise the precondition cannot
+/// target a single row deterministically and the delete is refused. This is the
+/// deliberately conservative semantic: CAS-delete is "remove THIS row if it still
+/// looks like this", not "remove whatever this range matches, conditionally".
+fn pk_equality_values_from_filter(
+    filter: &JsonValue,
+    key_columns: &[String],
+) -> Result<Vec<JsonValue>, tonic::Status> {
+    let reject = |column: &str, why: &str| {
+        crate::runtime::executor_utils::failed_precondition_fields(
+            "conditional delete requires an equality filter on every primary-key column",
+            [(column.to_string(), why.to_string())],
+        )
+    };
+    let object = filter
+        .as_object()
+        .ok_or_else(|| reject("filter", "filter must be a JSON object"))?;
+    let mut values = Vec::with_capacity(key_columns.len());
+    for column in key_columns {
+        let raw = object
+            .get(column)
+            .ok_or_else(|| reject(column, "primary-key column is not constrained by the filter"))?;
+        let value = match raw {
+            JsonValue::Object(inner) => {
+                // Only a lone {"$eq": v} is a single-row equality; any other
+                // operator (ranges, IN, …) can match multiple rows and is unsafe
+                // for a single-row compare-and-swap.
+                match (inner.len(), inner.get("$eq").or_else(|| inner.get("eq"))) {
+                    (1, Some(v)) => v.clone(),
+                    _ => {
+                        return Err(reject(
+                            column,
+                            "primary-key column must be pinned by equality, not an operator",
+                        ));
+                    }
+                }
+            }
+            other => other.clone(),
+        };
+        values.push(value);
+    }
+    Ok(values)
 }
 
 fn idempotency_claim_sql(rel: &str) -> String {
@@ -4458,6 +4565,38 @@ mod setup_data_consistency_tests {
         .expect_err("keyed first-writer summary must require data-plane resource URI");
         assert_eq!(keyed.code(), tonic::Code::Internal);
         assert!(keyed.message().contains("mutation response resource_uri"));
+    }
+
+    // G-2: conditional delete must refuse to run unless every PK column is pinned
+    // by equality — otherwise the CAS cannot target one row deterministically.
+    #[test]
+    fn pk_equality_values_from_filter_requires_equality_on_every_pk() {
+        let pk = vec!["id".to_string(), "tenant_id".to_string()];
+
+        // Bare equality on both PK columns → extracted in column order.
+        let ok = serde_json::json!({"id": "r1", "tenant_id": "t1", "extra": 9});
+        let vals = pk_equality_values_from_filter(&ok, &pk).expect("bare equality ok");
+        assert_eq!(vals, vec![serde_json::json!("r1"), serde_json::json!("t1")]);
+
+        // {"$eq": v} form is accepted.
+        let eqform = serde_json::json!({"id": {"$eq": "r1"}, "tenant_id": "t1"});
+        assert!(pk_equality_values_from_filter(&eqform, &pk).is_ok());
+
+        // A missing PK column is refused.
+        let missing = serde_json::json!({"id": "r1"});
+        assert_eq!(
+            pk_equality_values_from_filter(&missing, &pk)
+                .unwrap_err()
+                .code(),
+            tonic::Code::FailedPrecondition
+        );
+
+        // A non-equality operator on a PK column is refused (could match many rows).
+        let range = serde_json::json!({"id": {"$gt": "r0"}, "tenant_id": "t1"});
+        assert_eq!(
+            pk_equality_values_from_filter(&range, &pk).unwrap_err().code(),
+            tonic::Code::FailedPrecondition
+        );
     }
 
     #[test]

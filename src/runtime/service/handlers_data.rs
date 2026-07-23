@@ -412,6 +412,9 @@ impl DataBrokerService {
         // so it threads into setup_data::delete for durable keyed dedup. Empty key
         // = keyless delete (no dedup, hot path unaffected).
         let idempotency_key = req.idempotency_key.clone();
+        // G-2: capture the optional compare-and-swap precondition before the moved
+        // closure, mirroring idempotency_key.
+        let expected = req.expected.clone();
         // Authorize against the concrete target table (not "*"), so per-table
         // ABAC Allow/Deny policies actually match — matching Select/Upsert.
         let decision_id = match self.authorize(&security, &message_type, "Delete").await {
@@ -432,7 +435,14 @@ impl DataBrokerService {
                 crate::runtime::channels::OperationChannel::Write,
                 || async move {
                     runtime
-                        .delete(manifest, &message_type, filter, context, idempotency_key)
+                        .delete(
+                            manifest,
+                            &message_type,
+                            filter,
+                            context,
+                            idempotency_key,
+                            expected,
+                        )
                         .await
                 },
             )
