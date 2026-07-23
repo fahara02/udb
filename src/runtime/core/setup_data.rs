@@ -1350,8 +1350,14 @@ impl DataBrokerRuntime {
             .as_ref()
             .filter(|expected| !expected.fields.is_empty())
         {
-            self.enforce_delete_precondition(&mut tx, table, expected, &normalized_filter, &context)
-                .await?;
+            self.enforce_delete_precondition(
+                &mut tx,
+                table,
+                expected,
+                &normalized_filter,
+                &context,
+            )
+            .await?;
         }
         // KEYSTONE (lane 05): keyed-only durable dedup, same-tx, fail-closed.
         // Keyless deletes are unaffected.
@@ -2869,9 +2875,12 @@ fn pk_equality_values_from_filter(
         .ok_or_else(|| reject("filter", "filter must be a JSON object"))?;
     let mut values = Vec::with_capacity(key_columns.len());
     for column in key_columns {
-        let raw = object
-            .get(column)
-            .ok_or_else(|| reject(column, "primary-key column is not constrained by the filter"))?;
+        let raw = object.get(column).ok_or_else(|| {
+            reject(
+                column,
+                "primary-key column is not constrained by the filter",
+            )
+        })?;
         let value = match raw {
             JsonValue::Object(inner) => {
                 // Only a lone {"$eq": v} is a single-row equality; any other
@@ -4239,14 +4248,13 @@ mod setup_data_consistency_tests {
     use super::{
         RequestContext, full_canonical_store_requires_opt_in, idempotency_claim_sql,
         idempotency_dedup_claim_status, idempotency_dedup_key, idempotency_key_for_dedup,
-        pk_equality_values_from_filter,
         idempotency_response_persist_row_count_status, idempotency_response_persist_sql,
         merge_runtime_backend_instances, mutation_response_from_idempotency_json,
         mutation_response_from_idempotency_json_for_claim, mutation_response_idempotency_json,
         mutation_response_resource_uri, mutation_response_resource_uri_or_fallback,
-        pg_outbox_receipt_store_mismatch, projection_system_store_opt_in_value,
-        returned_record_json_or_status, validate_deployment_tier_floor,
-        write_receipt_json_or_status,
+        pg_outbox_receipt_store_mismatch, pk_equality_values_from_filter,
+        projection_system_store_opt_in_value, returned_record_json_or_status,
+        validate_deployment_tier_floor, write_receipt_json_or_status,
     };
     use crate::backend::ControlPlaneHaLevel;
     use crate::proto::{ErrorDetail, ErrorKind, MutationResponse};
@@ -4595,7 +4603,9 @@ mod setup_data_consistency_tests {
         // A non-equality operator on a PK column is refused (could match many rows).
         let range = serde_json::json!({"id": {"$gt": "r0"}, "tenant_id": "t1"});
         assert_eq!(
-            pk_equality_values_from_filter(&range, &pk).unwrap_err().code(),
+            pk_equality_values_from_filter(&range, &pk)
+                .unwrap_err()
+                .code(),
             tonic::Code::FailedPrecondition
         );
     }

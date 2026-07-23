@@ -1288,7 +1288,7 @@ fn reconcile_api_key_principal(
         Ok(Some(principal)) => principal,
         Ok(None) => {
             return Err(crate::runtime::executor_utils::unauthenticated_status(
-            "api_key_invalid",
+                "api_key_invalid",
                 "x-api-key is invalid, revoked, or expired",
             ));
         }
@@ -1562,7 +1562,7 @@ pub fn security_from_request<T>(request: &Request<T>) -> Result<SecurityContext,
                     // a binding miss stays a fail-closed missing-credential
                     // denial, never a lookup against mutable profile state.
                     return Err(crate::runtime::executor_utils::unauthenticated_status(
-            "missing_credentials",
+                        "missing_credentials",
                         "missing credentials: send 'authorization: Bearer <jwt>' (obtain the JWT \
                          via login), a scoped 'x-api-key', or connect with a REGISTERED mTLS \
                          service certificate.",
@@ -1653,11 +1653,17 @@ pub fn security_from_request<T>(request: &Request<T>) -> Result<SecurityContext,
                     return Err(status);
                 }
                 return Err(crate::runtime::executor_utils::unauthenticated_status(
-            "invalid_bearer_token","invalid bearer token"));
+                    "invalid_bearer_token",
+                    "invalid bearer token",
+                ));
             }
             None => {
-                let claims = validate_bearer_token_cached(&config, token)
-                    .map_err(|e| crate::runtime::executor_utils::unauthenticated_status("bearer_verification_failed", e.to_string()))?;
+                let claims = validate_bearer_token_cached(&config, token).map_err(|e| {
+                    crate::runtime::executor_utils::unauthenticated_status(
+                        "bearer_verification_failed",
+                        e.to_string(),
+                    )
+                })?;
                 let principal =
                     crate::runtime::credential_layer::VerifiedPrincipal::from_verified_bearer_claims(
                         &claims,
@@ -1676,7 +1682,9 @@ pub fn security_from_request<T>(request: &Request<T>) -> Result<SecurityContext,
         let subject = claims.sub.clone().unwrap_or_default();
         if subject.trim().is_empty() {
             return Err(crate::runtime::executor_utils::unauthenticated_status(
-            "jwt_subject_missing","JWT subject claim is required"));
+                "jwt_subject_missing",
+                "JWT subject claim is required",
+            ));
         }
         if !user_id.trim().is_empty() && user_id.trim() != subject {
             return Err(crate::runtime::executor_utils::policy_status_with_code(
@@ -1692,7 +1700,9 @@ pub fn security_from_request<T>(request: &Request<T>) -> Result<SecurityContext,
         let claim_tenant = claims.tenant_id.as_deref().unwrap_or_default().trim();
         if claim_tenant.is_empty() {
             return Err(crate::runtime::executor_utils::unauthenticated_status(
-            "jwt_tenant_missing","JWT tenant_id claim is required"));
+                "jwt_tenant_missing",
+                "JWT tenant_id claim is required",
+            ));
         }
         let header_tenant = header("x-tenant-id");
         if !header_tenant.trim().is_empty() && header_tenant.trim() != claim_tenant {
@@ -1785,7 +1795,7 @@ pub fn security_from_request<T>(request: &Request<T>) -> Result<SecurityContext,
                 .and_then(|cert| service_identity_from_der(cert.as_ref()))
                 .ok_or_else(|| {
                     crate::runtime::executor_utils::unauthenticated_status(
-            "mtls_certificate_required",
+                        "mtls_certificate_required",
                         "mTLS client certificate required — header fallback disabled",
                     )
                 })?
@@ -1852,7 +1862,7 @@ pub fn security_from_request<T>(request: &Request<T>) -> Result<SecurityContext,
         .and_then(|pre| pre.certificate_principal.clone())
         .ok_or_else(|| {
             crate::runtime::executor_utils::unauthenticated_status(
-            "certificate_not_registered",
+                "certificate_not_registered",
                 "client certificate is not registered to an active service-account grant",
             )
         })?;
