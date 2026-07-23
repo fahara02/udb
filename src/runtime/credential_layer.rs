@@ -169,15 +169,22 @@ fn auth_plane_deps() -> Option<Arc<AuthPlaneDeps>> {
 /// only covers startup).
 pub(crate) async fn auth_plane_pg_reachable() -> Option<bool> {
     let deps = auth_plane_deps()?;
-    let reachable = matches!(
+    Some(pg_pool_reachable(&deps.pool).await)
+}
+
+/// Short-timeout `SELECT 1` reachability probe for an arbitrary pool. Used by the
+/// live readiness-refresh task so each listener probes the pool its own services
+/// actually use — the DataBroker plane probes the data-plane pool, not the
+/// auth-plane pool (R-6).
+pub(crate) async fn pg_pool_reachable(pool: &sqlx::PgPool) -> bool {
+    matches!(
         tokio::time::timeout(
             std::time::Duration::from_secs(2),
-            sqlx::query("SELECT 1").execute(&deps.pool),
+            sqlx::query("SELECT 1").execute(pool),
         )
         .await,
         Ok(Ok(_))
-    );
-    Some(reachable)
+    )
 }
 
 fn now_unix() -> u64 {

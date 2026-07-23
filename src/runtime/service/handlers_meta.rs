@@ -744,6 +744,15 @@ pub async fn build_listener_health_service(
     // DOWNGRADES, and recovery restores exactly the boot verdict.
     if runtime.is_some() {
         let boot_ready = readiness_passed;
+        // R-6: probe the pool THIS listener's services actually use. The DataBroker
+        // plane serves the data plane, so it must probe the data-plane pool — the
+        // previous code probed the auth-plane pool for every plane, so a lost
+        // DataBroker database would not downgrade the DataBroker listener. Cloned
+        // before the spawn because the task is 'static (PgPool is Arc-backed).
+        let data_pool = match plane {
+            HealthPlane::DataBroker => runtime.and_then(|r| r.pg_pool_clone()),
+            _ => None,
+        };
         tokio::spawn(async move {
             let mut consecutive_failures = 0u32;
             let mut last_marked = boot_ready;
@@ -752,11 +761,15 @@ pub async fn build_listener_health_service(
                     READINESS_REFRESH_INTERVAL_SECS,
                 ))
                 .await;
-                // `None` → the auth-plane deps are not installed on this listener;
-                // do not spuriously downgrade — leave the boot status in place.
-                let Some(pg_ok) = crate::runtime::credential_layer::auth_plane_pg_reachable().await
-                else {
-                    continue;
+                // Probe the plane's own pool. `None`/no-pool → deps not installed
+                // on this listener; do not spuriously downgrade — hold boot status.
+                let pg_ok = match &data_pool {
+                    Some(pool) => crate::runtime::credential_layer::pg_pool_reachable(pool).await,
+                    None => match crate::runtime::credential_layer::auth_plane_pg_reachable().await
+                    {
+                        Some(ok) => ok,
+                        None => continue,
+                    },
                 };
                 if pg_ok {
                     consecutive_failures = 0;
