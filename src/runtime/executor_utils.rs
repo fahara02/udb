@@ -315,6 +315,32 @@ pub(crate) fn capability_status(
     status_with_error_detail(tonic::Code::FailedPrecondition, message, detail)
 }
 
+/// Authentication failure carrying a typed `ErrorDetail` (kind = POLICY) with a
+/// stable machine reason in `policy_decision_id`, so a consumer can branch on
+/// WHY auth failed — rotate a key vs re-login vs supply a missing claim — instead
+/// of pattern-matching a prose message. `Unauthenticated`, never retryable.
+///
+/// This is the first error most integrations hit, and it previously shipped bare
+/// (no `ErrorDetail` at all), contradicting the SDK guidance to read typed fields
+/// rather than message strings (T-4).
+pub(crate) fn unauthenticated_status(
+    reason: impl Into<String>,
+    message: impl Into<String>,
+) -> tonic::Status {
+    let detail = crate::proto::ErrorDetail {
+        backend: String::new(),
+        operation: String::new(),
+        capability_required: String::new(),
+        retryable: false,
+        retry_after_ms: 0,
+        policy_decision_id: reason.into(),
+        correlation_id: String::new(),
+        kind: crate::proto::ErrorKind::Policy as i32,
+        field_violations: Vec::new(),
+    };
+    status_with_error_detail(tonic::Code::Unauthenticated, message, detail)
+}
+
 /// Like [`capability_status`] but preserves a caller-chosen gRPC code. Some
 /// dispatch paths select a context-specific code (Unimplemented vs Internal vs
 /// NotFound) yet still need a typed capability `ErrorDetail` on the wire so SDKs
