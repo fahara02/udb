@@ -13,7 +13,7 @@
 │    UNIVERSAL DATA BROKER                                                   │
 │    gRPC data plane | native control plane | tenant/project scope guard     │
 │                                                                            │
-│    crate v0.4.20 | protocol v1.0.0                                          │
+│    crate v0.4.19 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 This guide is for developers defining the data model their app stores in UDB.
