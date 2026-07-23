@@ -113,22 +113,23 @@ public final class RelationalProto {
       "che\030\007 \001(\0132\033.udb.entity.v1.CacheOptionsR\005" +
       "cache\022\'\n\017idempotency_key\030\010 \001(\tR\016idempote" +
       "ncyKey\0223\n\010expected\030\t \001(\0132\027.google.protob" +
-      "uf.StructR\010expected\"\305\001\n\rDeleteRequest\0227\n" +
+      "uf.StructR\010expected\"\372\001\n\rDeleteRequest\0227\n" +
       "\007context\030\001 \001(\0132\035.udb.entity.v1.RequestCo" +
       "ntextR\007context\022!\n\014message_type\030\002 \001(\tR\013me" +
       "ssageType\022/\n\006filter\030\003 \001(\0132\027.google.proto" +
       "buf.StructR\006filter\022\'\n\017idempotency_key\030\004 " +
-      "\001(\tR\016idempotencyKey\"\303\001\n\016ViewDefinition\0227" +
-      "\n\007context\030\001 \001(\0132\035.udb.entity.v1.RequestC" +
-      "ontextR\007context\022\026\n\006schema\030\002 \001(\tR\006schema\022" +
-      "\022\n\004name\030\003 \001(\tR\004name\022\024\n\005query\030\004 \001(\tR\005quer" +
-      "y\022\033\n\twith_data\030\005 \001(\010R\010withData\022\031\n\010ttl_da" +
-      "ys\030\006 \001(\005R\007ttlDaysB\265\001\n\021com.udb.entity.v1B" +
-      "\017RelationalProtoP\001Z9github.com/fahara02/" +
-      "udb/sdk/go/gen/udb/entity/v1;entityv1\242\002\003" +
-      "UEX\252\002\rUdb.Entity.V1\312\002\rUdb\\Entity\\V1\342\002\031Ud" +
-      "b\\GPBMetadata\\Entity\\V1\352\002\017Udb::Entity::V" +
-      "1b\006proto3"
+      "\001(\tR\016idempotencyKey\0223\n\010expected\030\005 \001(\0132\027." +
+      "google.protobuf.StructR\010expected\"\303\001\n\016Vie" +
+      "wDefinition\0227\n\007context\030\001 \001(\0132\035.udb.entit" +
+      "y.v1.RequestContextR\007context\022\026\n\006schema\030\002" +
+      " \001(\tR\006schema\022\022\n\004name\030\003 \001(\tR\004name\022\024\n\005quer" +
+      "y\030\004 \001(\tR\005query\022\033\n\twith_data\030\005 \001(\010R\010withD" +
+      "ata\022\031\n\010ttl_days\030\006 \001(\005R\007ttlDaysB\265\001\n\021com.u" +
+      "db.entity.v1B\017RelationalProtoP\001Z9github." +
+      "com/fahara02/udb/sdk/go/gen/udb/entity/v" +
+      "1;entityv1\242\002\003UEX\252\002\rUdb.Entity.V1\312\002\rUdb\\E" +
+      "ntity\\V1\342\002\031Udb\\GPBMetadata\\Entity\\V1\352\002\017U" +
+      "db::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -183,7 +184,7 @@ public final class RelationalProto {
     internal_static_udb_entity_v1_DeleteRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_DeleteRequest_descriptor,
-        new java.lang.String[] { "Context", "MessageType", "Filter", "IdempotencyKey", });
+        new java.lang.String[] { "Context", "MessageType", "Filter", "IdempotencyKey", "Expected", });
     internal_static_udb_entity_v1_ViewDefinition_descriptor =
       getDescriptor().getMessageTypes().get(7);
     internal_static_udb_entity_v1_ViewDefinition_fieldAccessorTable = new

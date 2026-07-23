@@ -63,4 +63,37 @@ public interface DeleteRequestOrBuilder extends
    */
   com.google.protobuf.ByteString
       getIdempotencyKeyBytes();
+
+  /**
+   * <pre>
+   * G-2: optional compare-and-swap precondition — delete only if the matched
+   * row's fields still equal these values (mirrors UpsertRequest.expected,
+   * UDB-GO-005). Unset/empty = unconditional delete (unchanged behaviour).
+   * </pre>
+   *
+   * <code>.google.protobuf.Struct expected = 5 [json_name = "expected"];</code>
+   * @return Whether the expected field is set.
+   */
+  boolean hasExpected();
+  /**
+   * <pre>
+   * G-2: optional compare-and-swap precondition — delete only if the matched
+   * row's fields still equal these values (mirrors UpsertRequest.expected,
+   * UDB-GO-005). Unset/empty = unconditional delete (unchanged behaviour).
+   * </pre>
+   *
+   * <code>.google.protobuf.Struct expected = 5 [json_name = "expected"];</code>
+   * @return The expected.
+   */
+  com.google.protobuf.Struct getExpected();
+  /**
+   * <pre>
+   * G-2: optional compare-and-swap precondition — delete only if the matched
+   * row's fields still equal these values (mirrors UpsertRequest.expected,
+   * UDB-GO-005). Unset/empty = unconditional delete (unchanged behaviour).
+   * </pre>
+   *
+   * <code>.google.protobuf.Struct expected = 5 [json_name = "expected"];</code>
+   */
+  com.google.protobuf.StructOrBuilder getExpectedOrBuilder();
 }

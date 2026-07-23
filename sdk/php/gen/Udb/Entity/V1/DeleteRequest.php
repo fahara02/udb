@@ -30,6 +30,14 @@ class DeleteRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string idempotency_key = 4 [json_name = "idempotencyKey"];</code>
      */
     protected $idempotency_key = '';
+    /**
+     * G-2: optional compare-and-swap precondition — delete only if the matched
+     * row's fields still equal these values (mirrors UpsertRequest.expected,
+     * UDB-GO-005). Unset/empty = unconditional delete (unchanged behaviour).
+     *
+     * Generated from protobuf field <code>.google.protobuf.Struct expected = 5 [json_name = "expected"];</code>
+     */
+    protected $expected = null;
 
     /**
      * Constructor.
@@ -41,6 +49,10 @@ class DeleteRequest extends \Google\Protobuf\Internal\Message
      *     @type string $message_type
      *     @type \Google\Protobuf\Struct $filter
      *     @type string $idempotency_key
+     *     @type \Google\Protobuf\Struct $expected
+     *           G-2: optional compare-and-swap precondition — delete only if the matched
+     *           row's fields still equal these values (mirrors UpsertRequest.expected,
+     *           UDB-GO-005). Unset/empty = unconditional delete (unchanged behaviour).
      * }
      */
     public function __construct($data = NULL) {
@@ -152,6 +164,46 @@ class DeleteRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, True);
         $this->idempotency_key = $var;
+
+        return $this;
+    }
+
+    /**
+     * G-2: optional compare-and-swap precondition — delete only if the matched
+     * row's fields still equal these values (mirrors UpsertRequest.expected,
+     * UDB-GO-005). Unset/empty = unconditional delete (unchanged behaviour).
+     *
+     * Generated from protobuf field <code>.google.protobuf.Struct expected = 5 [json_name = "expected"];</code>
+     * @return \Google\Protobuf\Struct|null
+     */
+    public function getExpected()
+    {
+        return $this->expected;
+    }
+
+    public function hasExpected()
+    {
+        return isset($this->expected);
+    }
+
+    public function clearExpected()
+    {
+        unset($this->expected);
+    }
+
+    /**
+     * G-2: optional compare-and-swap precondition — delete only if the matched
+     * row's fields still equal these values (mirrors UpsertRequest.expected,
+     * UDB-GO-005). Unset/empty = unconditional delete (unchanged behaviour).
+     *
+     * Generated from protobuf field <code>.google.protobuf.Struct expected = 5 [json_name = "expected"];</code>
+     * @param \Google\Protobuf\Struct $var
+     * @return $this
+     */
+    public function setExpected($var)
+    {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Struct::class);
+        $this->expected = $var;
 
         return $this;
     }

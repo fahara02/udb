@@ -469,8 +469,12 @@ type DeleteRequest struct {
 	MessageType    string                 `protobuf:"bytes,2,opt,name=message_type,json=messageType,proto3" json:"message_type,omitempty"`
 	Filter         *structpb.Struct       `protobuf:"bytes,3,opt,name=filter,proto3" json:"filter,omitempty"`
 	IdempotencyKey string                 `protobuf:"bytes,4,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// G-2: optional compare-and-swap precondition — delete only if the matched
+	// row's fields still equal these values (mirrors UpsertRequest.expected,
+	// UDB-GO-005). Unset/empty = unconditional delete (unchanged behaviour).
+	Expected      *structpb.Struct `protobuf:"bytes,5,opt,name=expected,proto3" json:"expected,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *DeleteRequest) Reset() {
@@ -529,6 +533,13 @@ func (x *DeleteRequest) GetIdempotencyKey() string {
 		return x.IdempotencyKey
 	}
 	return ""
+}
+
+func (x *DeleteRequest) GetExpected() *structpb.Struct {
+	if x != nil {
+		return x.Expected
+	}
+	return nil
 }
 
 type ViewDefinition struct {
@@ -662,12 +673,13 @@ const file_udb_entity_v1_relational_proto_rawDesc = "" +
 	"\rreturn_record\x18\x06 \x01(\bR\freturnRecord\x121\n" +
 	"\x05cache\x18\a \x01(\v2\x1b.udb.entity.v1.CacheOptionsR\x05cache\x12'\n" +
 	"\x0fidempotency_key\x18\b \x01(\tR\x0eidempotencyKey\x123\n" +
-	"\bexpected\x18\t \x01(\v2\x17.google.protobuf.StructR\bexpected\"\xc5\x01\n" +
+	"\bexpected\x18\t \x01(\v2\x17.google.protobuf.StructR\bexpected\"\xfa\x01\n" +
 	"\rDeleteRequest\x127\n" +
 	"\acontext\x18\x01 \x01(\v2\x1d.udb.entity.v1.RequestContextR\acontext\x12!\n" +
 	"\fmessage_type\x18\x02 \x01(\tR\vmessageType\x12/\n" +
 	"\x06filter\x18\x03 \x01(\v2\x17.google.protobuf.StructR\x06filter\x12'\n" +
-	"\x0fidempotency_key\x18\x04 \x01(\tR\x0eidempotencyKey\"\xc3\x01\n" +
+	"\x0fidempotency_key\x18\x04 \x01(\tR\x0eidempotencyKey\x123\n" +
+	"\bexpected\x18\x05 \x01(\v2\x17.google.protobuf.StructR\bexpected\"\xc3\x01\n" +
 	"\x0eViewDefinition\x127\n" +
 	"\acontext\x18\x01 \x01(\v2\x1d.udb.entity.v1.RequestContextR\acontext\x12\x16\n" +
 	"\x06schema\x18\x02 \x01(\tR\x06schema\x12\x12\n" +
@@ -717,13 +729,14 @@ var file_udb_entity_v1_relational_proto_depIdxs = []int32{
 	10, // 9: udb.entity.v1.UpsertRequest.expected:type_name -> google.protobuf.Struct
 	9,  // 10: udb.entity.v1.DeleteRequest.context:type_name -> udb.entity.v1.RequestContext
 	10, // 11: udb.entity.v1.DeleteRequest.filter:type_name -> google.protobuf.Struct
-	9,  // 12: udb.entity.v1.ViewDefinition.context:type_name -> udb.entity.v1.RequestContext
-	11, // 13: udb.entity.v1.Row.FieldsEntry.value:type_name -> google.protobuf.Value
-	14, // [14:14] is the sub-list for method output_type
-	14, // [14:14] is the sub-list for method input_type
-	14, // [14:14] is the sub-list for extension type_name
-	14, // [14:14] is the sub-list for extension extendee
-	0,  // [0:14] is the sub-list for field type_name
+	10, // 12: udb.entity.v1.DeleteRequest.expected:type_name -> google.protobuf.Struct
+	9,  // 13: udb.entity.v1.ViewDefinition.context:type_name -> udb.entity.v1.RequestContext
+	11, // 14: udb.entity.v1.Row.FieldsEntry.value:type_name -> google.protobuf.Value
+	15, // [15:15] is the sub-list for method output_type
+	15, // [15:15] is the sub-list for method input_type
+	15, // [15:15] is the sub-list for extension type_name
+	15, // [15:15] is the sub-list for extension extendee
+	0,  // [0:15] is the sub-list for field type_name
 }
 
 func init() { file_udb_entity_v1_relational_proto_init() }

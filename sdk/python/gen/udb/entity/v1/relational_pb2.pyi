@@ -94,16 +94,18 @@ class UpsertRequest(_message.Message):
     def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., message_type: _Optional[str] = ..., record_json: _Optional[bytes] = ..., payload: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., conflict_fields: _Optional[_Iterable[str]] = ..., return_record: bool = ..., cache: _Optional[_Union[CacheOptions, _Mapping]] = ..., idempotency_key: _Optional[str] = ..., expected: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ...) -> None: ...
 
 class DeleteRequest(_message.Message):
-    __slots__ = ("context", "message_type", "filter", "idempotency_key")
+    __slots__ = ("context", "message_type", "filter", "idempotency_key", "expected")
     CONTEXT_FIELD_NUMBER: _ClassVar[int]
     MESSAGE_TYPE_FIELD_NUMBER: _ClassVar[int]
     FILTER_FIELD_NUMBER: _ClassVar[int]
     IDEMPOTENCY_KEY_FIELD_NUMBER: _ClassVar[int]
+    EXPECTED_FIELD_NUMBER: _ClassVar[int]
     context: _context_pb2.RequestContext
     message_type: str
     filter: _struct_pb2.Struct
     idempotency_key: str
-    def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., message_type: _Optional[str] = ..., filter: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., idempotency_key: _Optional[str] = ...) -> None: ...
+    expected: _struct_pb2.Struct
+    def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., message_type: _Optional[str] = ..., filter: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., idempotency_key: _Optional[str] = ..., expected: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ...) -> None: ...
 
 class ViewDefinition(_message.Message):
     __slots__ = ("context", "schema", "name", "query", "with_data", "ttl_days")

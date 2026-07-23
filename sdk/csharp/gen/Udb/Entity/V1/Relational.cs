@@ -53,20 +53,22 @@ namespace Udb.Entity.V1 {
             "Y29yZBgGIAEoCFIMcmV0dXJuUmVjb3JkEjEKBWNhY2hlGAcgASgLMhsudWRi",
             "LmVudGl0eS52MS5DYWNoZU9wdGlvbnNSBWNhY2hlEicKD2lkZW1wb3RlbmN5",
             "X2tleRgIIAEoCVIOaWRlbXBvdGVuY3lLZXkSMwoIZXhwZWN0ZWQYCSABKAsy",
-            "Fy5nb29nbGUucHJvdG9idWYuU3RydWN0UghleHBlY3RlZCLFAQoNRGVsZXRl",
+            "Fy5nb29nbGUucHJvdG9idWYuU3RydWN0UghleHBlY3RlZCL6AQoNRGVsZXRl",
             "UmVxdWVzdBI3Cgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1",
             "ZXN0Q29udGV4dFIHY29udGV4dBIhCgxtZXNzYWdlX3R5cGUYAiABKAlSC21l",
             "c3NhZ2VUeXBlEi8KBmZpbHRlchgDIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5T",
             "dHJ1Y3RSBmZpbHRlchInCg9pZGVtcG90ZW5jeV9rZXkYBCABKAlSDmlkZW1w",
-            "b3RlbmN5S2V5IsMBCg5WaWV3RGVmaW5pdGlvbhI3Cgdjb250ZXh0GAEgASgL",
-            "Mh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dFIHY29udGV4dBIWCgZz",
-            "Y2hlbWEYAiABKAlSBnNjaGVtYRISCgRuYW1lGAMgASgJUgRuYW1lEhQKBXF1",
-            "ZXJ5GAQgASgJUgVxdWVyeRIbCgl3aXRoX2RhdGEYBSABKAhSCHdpdGhEYXRh",
-            "EhkKCHR0bF9kYXlzGAYgASgFUgd0dGxEYXlzQrUBChFjb20udWRiLmVudGl0",
-            "eS52MUIPUmVsYXRpb25hbFByb3RvUAFaOWdpdGh1Yi5jb20vZmFoYXJhMDIv",
-            "dWRiL3Nkay9nby9nZW4vdWRiL2VudGl0eS92MTtlbnRpdHl2MaICA1VFWKoC",
-            "DVVkYi5FbnRpdHkuVjHKAg1VZGJcRW50aXR5XFYx4gIZVWRiXEdQQk1ldGFk",
-            "YXRhXEVudGl0eVxWMeoCD1VkYjo6RW50aXR5OjpWMWIGcHJvdG8z"));
+            "b3RlbmN5S2V5EjMKCGV4cGVjdGVkGAUgASgLMhcuZ29vZ2xlLnByb3RvYnVm",
+            "LlN0cnVjdFIIZXhwZWN0ZWQiwwEKDlZpZXdEZWZpbml0aW9uEjcKB2NvbnRl",
+            "eHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Ugdjb250",
+            "ZXh0EhYKBnNjaGVtYRgCIAEoCVIGc2NoZW1hEhIKBG5hbWUYAyABKAlSBG5h",
+            "bWUSFAoFcXVlcnkYBCABKAlSBXF1ZXJ5EhsKCXdpdGhfZGF0YRgFIAEoCFII",
+            "d2l0aERhdGESGQoIdHRsX2RheXMYBiABKAVSB3R0bERheXNCtQEKEWNvbS51",
+            "ZGIuZW50aXR5LnYxQg9SZWxhdGlvbmFsUHJvdG9QAVo5Z2l0aHViLmNvbS9m",
+            "YWhhcmEwMi91ZGIvc2RrL2dvL2dlbi91ZGIvZW50aXR5L3YxO2VudGl0eXYx",
+            "ogIDVUVYqgINVWRiLkVudGl0eS5WMcoCDVVkYlxFbnRpdHlcVjHiAhlVZGJc",
+            "R1BCTWV0YWRhdGFcRW50aXR5XFYx6gIPVWRiOjpFbnRpdHk6OlYxYgZwcm90",
+            "bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.StructReflection.Descriptor, global::Udb.Entity.V1.ContextReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
@@ -76,7 +78,7 @@ namespace Udb.Entity.V1 {
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.RecordSet), global::Udb.Entity.V1.RecordSet.Parser, new[]{ "RecordsJson", "Rows", "NextPageToken", "TotalCount" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.SelectRequest), global::Udb.Entity.V1.SelectRequest.Parser, new[]{ "Context", "MessageType", "Filter", "Fields", "Limit", "PageToken", "Sort", "Cache" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.UpsertRequest), global::Udb.Entity.V1.UpsertRequest.Parser, new[]{ "Context", "MessageType", "RecordJson", "Payload", "ConflictFields", "ReturnRecord", "Cache", "IdempotencyKey", "Expected" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.DeleteRequest), global::Udb.Entity.V1.DeleteRequest.Parser, new[]{ "Context", "MessageType", "Filter", "IdempotencyKey" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.DeleteRequest), global::Udb.Entity.V1.DeleteRequest.Parser, new[]{ "Context", "MessageType", "Filter", "IdempotencyKey", "Expected" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.ViewDefinition), global::Udb.Entity.V1.ViewDefinition.Parser, new[]{ "Context", "Schema", "Name", "Query", "WithData", "TtlDays" }, null, null, null, null)
           }));
     }
@@ -2096,6 +2098,7 @@ namespace Udb.Entity.V1 {
       messageType_ = other.messageType_;
       filter_ = other.filter_ != null ? other.filter_.Clone() : null;
       idempotencyKey_ = other.idempotencyKey_;
+      expected_ = other.expected_ != null ? other.expected_.Clone() : null;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -2153,6 +2156,23 @@ namespace Udb.Entity.V1 {
       }
     }
 
+    /// <summary>Field number for the "expected" field.</summary>
+    public const int ExpectedFieldNumber = 5;
+    private global::Google.Protobuf.WellKnownTypes.Struct expected_;
+    /// <summary>
+    /// G-2: optional compare-and-swap precondition — delete only if the matched
+    /// row's fields still equal these values (mirrors UpsertRequest.expected,
+    /// UDB-GO-005). Unset/empty = unconditional delete (unchanged behaviour).
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Google.Protobuf.WellKnownTypes.Struct Expected {
+      get { return expected_; }
+      set {
+        expected_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -2172,6 +2192,7 @@ namespace Udb.Entity.V1 {
       if (MessageType != other.MessageType) return false;
       if (!object.Equals(Filter, other.Filter)) return false;
       if (IdempotencyKey != other.IdempotencyKey) return false;
+      if (!object.Equals(Expected, other.Expected)) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -2183,6 +2204,7 @@ namespace Udb.Entity.V1 {
       if (MessageType.Length != 0) hash ^= MessageType.GetHashCode();
       if (filter_ != null) hash ^= Filter.GetHashCode();
       if (IdempotencyKey.Length != 0) hash ^= IdempotencyKey.GetHashCode();
+      if (expected_ != null) hash ^= Expected.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -2217,6 +2239,10 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(34);
         output.WriteString(IdempotencyKey);
       }
+      if (expected_ != null) {
+        output.WriteRawTag(42);
+        output.WriteMessage(Expected);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -2243,6 +2269,10 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(34);
         output.WriteString(IdempotencyKey);
       }
+      if (expected_ != null) {
+        output.WriteRawTag(42);
+        output.WriteMessage(Expected);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -2264,6 +2294,9 @@ namespace Udb.Entity.V1 {
       }
       if (IdempotencyKey.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(IdempotencyKey);
+      }
+      if (expected_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Expected);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -2294,6 +2327,12 @@ namespace Udb.Entity.V1 {
       }
       if (other.IdempotencyKey.Length != 0) {
         IdempotencyKey = other.IdempotencyKey;
+      }
+      if (other.expected_ != null) {
+        if (expected_ == null) {
+          Expected = new global::Google.Protobuf.WellKnownTypes.Struct();
+        }
+        Expected.MergeFrom(other.Expected);
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -2336,6 +2375,13 @@ namespace Udb.Entity.V1 {
             IdempotencyKey = input.ReadString();
             break;
           }
+          case 42: {
+            if (expected_ == null) {
+              Expected = new global::Google.Protobuf.WellKnownTypes.Struct();
+            }
+            input.ReadMessage(Expected);
+            break;
+          }
         }
       }
     #endif
@@ -2375,6 +2421,13 @@ namespace Udb.Entity.V1 {
           }
           case 34: {
             IdempotencyKey = input.ReadString();
+            break;
+          }
+          case 42: {
+            if (expected_ == null) {
+              Expected = new global::Google.Protobuf.WellKnownTypes.Struct();
+            }
+            input.ReadMessage(Expected);
             break;
           }
         }

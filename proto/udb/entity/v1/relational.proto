@@ -70,6 +70,10 @@ message DeleteRequest {
   string message_type = 2;
   google.protobuf.Struct filter = 3;
   string idempotency_key = 4;
+  // G-2: optional compare-and-swap precondition — delete only if the matched
+  // row's fields still equal these values (mirrors UpsertRequest.expected,
+  // UDB-GO-005). Unset/empty = unconditional delete (unchanged behaviour).
+  google.protobuf.Struct expected = 5;
 }
 
 message ViewDefinition {
