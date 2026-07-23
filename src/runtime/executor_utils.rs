@@ -1366,13 +1366,21 @@ pub(crate) fn cache_key(
     manifest_checksum: &str,
     filter: &JsonValue,
     fields: &[String],
+    limit: i32,
+    sort_repr: &str,
 ) -> String {
     let mut scopes = context.scopes.clone();
     scopes.sort();
     let mut fields = fields.to_vec();
     fields.sort();
+    // `limit` and `sort` are part of a read's identity: `LIMIT 10` and
+    // `LIMIT 1000` (and ASC vs DESC) are different result sets and must not share
+    // a cache entry (X-1 — the planner memo key `select_plan_cache_key` already
+    // folds these in; the two caches previously disagreed on query identity).
+    // Appended at the END so `cache_invalidation_pattern`'s trailing `:*` still
+    // globs the whole tail.
     format!(
-        "udb:{}:{}:{}:{}:{}:{}:{}:{}",
+        "udb:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}",
         kind,
         sanitize_cache_part(&context.tenant_id),
         sanitize_cache_part(&context.purpose),
@@ -1380,7 +1388,9 @@ pub(crate) fn cache_key(
         message_type,
         sanitize_cache_part(manifest_checksum),
         checksum_json(filter),
-        checksum_str(&fields.join(","))
+        checksum_str(&fields.join(",")),
+        limit,
+        checksum_str(sort_repr),
     )
 }
 
@@ -3554,7 +3564,9 @@ mod merge_context_scope_authority_tests {
         let without_body = merge_context(Some(&proto_ctx(&[])), metadata_ctx(&["udb:read"]));
         let filter = json!({"eq": {"id": 1}});
         let fields = vec!["id".to_string(), "email".to_string()];
-        let key_with = cache_key("select", "udb.Person", &with_body, "chk", &filter, &fields);
+        let key_with = cache_key(
+            "select", "udb.Person", &with_body, "chk", &filter, &fields, 100, "id:false",
+        );
         let key_without = cache_key(
             "select",
             "udb.Person",
@@ -3562,10 +3574,27 @@ mod merge_context_scope_authority_tests {
             "chk",
             &filter,
             &fields,
+            100,
+            "id:false",
         );
         assert_eq!(
             key_with, key_without,
             "cache_key must not depend on caller-supplied body scopes"
+        );
+        // X-1: limit and sort ARE part of the key — differing values must not collide.
+        let key_limit_1000 = cache_key(
+            "select", "udb.Person", &with_body, "chk", &filter, &fields, 1000, "id:false",
+        );
+        let key_sort_desc = cache_key(
+            "select", "udb.Person", &with_body, "chk", &filter, &fields, 100, "id:true",
+        );
+        assert_ne!(
+            key_with, key_limit_1000,
+            "different LIMIT must not share a cache entry"
+        );
+        assert_ne!(
+            key_with, key_sort_desc,
+            "different sort direction must not share a cache entry"
         );
     }
 }

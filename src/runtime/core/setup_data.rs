@@ -562,6 +562,13 @@ impl DataBrokerRuntime {
         // Only compute the read cache key (filter JSON serialize + SHA256) when the
         // cache will actually be consulted (read) or populated (write). When both are
         // bypassed the key is pure waste, so skip the hashing entirely.
+        // `limit`/`sort` are part of the read cache identity (X-1).
+        let sort_repr = request
+            .sort
+            .iter()
+            .map(|sort| format!("{}:{}", sort.field, sort.descending))
+            .collect::<Vec<_>>()
+            .join(",");
         let cache_key = if bypass_read && bypass_write {
             None
         } else {
@@ -572,26 +579,15 @@ impl DataBrokerRuntime {
                 &manifest.checksum_sha256,
                 &filter,
                 &request.fields,
+                request.limit,
+                &sort_repr,
             ))
         };
-        if !bypass_read
-            && let Some(cache_key) = cache_key.as_deref()
-            && let Some(cached) = self
-                .cache_get_fresh(cache_key, &manifest.checksum_sha256, &context)
-                .await
-        {
-            return Ok((cached_record_set(cached), None));
-        }
-
-        let table = resolve_table_for_message(manifest, &request.message_type)
-            .map_err(|_| message_type_lookup_status(manifest, &request.message_type))?;
-        let routed_pool = self
-            .pg_select_pool_for_table_routed(table, &context)
-            .await?;
-        let routed_warning = routed_pool.warning().cloned();
-        let pool = routed_pool.pool();
         // 03.2.1.2: capture the typed stale-read warning side-channel (the proto
         // `RecordSet` cannot carry it) so the handler can emit the response header.
+        // Enforced BEFORE the cache-hit return (X-2): a cache hit must not skip the
+        // consistency fence or silently drop the stale-read warning. The fence
+        // needs only `context`, so it runs ahead of table/pool resolution.
         let fence_warning = self
             .enforce_read_fence(
                 &context,
@@ -603,6 +599,22 @@ impl DataBrokerRuntime {
                 },
             )
             .await?;
+        if !bypass_read
+            && let Some(cache_key) = cache_key.as_deref()
+            && let Some(cached) = self
+                .cache_get_fresh(cache_key, &manifest.checksum_sha256, &context)
+                .await
+        {
+            return Ok((cached_record_set(cached), fence_warning));
+        }
+
+        let table = resolve_table_for_message(manifest, &request.message_type)
+            .map_err(|_| message_type_lookup_status(manifest, &request.message_type))?;
+        let routed_pool = self
+            .pg_select_pool_for_table_routed(table, &context)
+            .await?;
+        let routed_warning = routed_pool.warning().cloned();
+        let pool = routed_pool.pool();
         let stale_warning = routed_warning.or(fence_warning);
         // READ fast-path: a read-only SELECT does NOT need a transaction. We
         // acquire ONE pooled connection, install the RLS context as SESSION
@@ -2754,25 +2766,37 @@ fn idempotency_dedup_claim_status(err: &sqlx::Error) -> tonic::Status {
 }
 
 fn idempotency_claim_sql(rel: &str) -> String {
+    // Single-statement claim that ALWAYS returns exactly one row for the winner's
+    // scope, and blocks correctly under READ COMMITTED.
+    //
+    // The previous `DO NOTHING` + `UNION ALL SELECT` form had a concurrent-
+    // duplicate race: when T2 conflicts, `DO NOTHING` returns nothing and the
+    // `SELECT` half still runs on T2's PRE-COMMIT snapshot, so it does not see
+    // T1's row → zero rows → the caller returned INTERNAL for the exact case
+    // idempotency exists to handle (UDB-DB-READINESS / F-2).
+    //
+    // `ON CONFLICT DO UPDATE` instead takes a row lock on the conflicting tuple,
+    // so T2 WAITS for T1 to commit or abort. On T1 commit, the touch fires on the
+    // now-visible row and RETURNING yields T1's committed `response_json` (T1
+    // persists it earlier in the same tx). On T1 abort, T2's INSERT succeeds.
+    // `xmax = 0` distinguishes a fresh insert (this statement) from a replay.
+    //
+    // The scope predicate on the UPDATE preserves the old behaviour for a genuine
+    // cross-scope `dedup_key` collision: the touch is skipped, RETURNING is empty,
+    // and the caller still surfaces the "no row for matching scope" error.
+    // `idem.response_json = idem.response_json` is a self-touch that never
+    // overwrites the winner's stored body.
     format!(
-        "WITH ins AS (
-             INSERT INTO {rel}
-                 (dedup_key, tenant_id, project_id, message_type, operation, response_json)
-             VALUES ($1, $2, $3, $4, $5, '{{}}'::jsonb)
-             ON CONFLICT (dedup_key) DO NOTHING
-             RETURNING true AS inserted, response_json
-         )
-         SELECT inserted, response_json FROM ins
-         UNION ALL
-         SELECT false AS inserted, response_json
-         FROM {rel}
-         WHERE dedup_key = $1
-           AND tenant_id = $2
-           AND project_id = $3
-           AND message_type = $4
-           AND operation = $5
-           AND NOT EXISTS (SELECT 1 FROM ins)
-         LIMIT 1"
+        "INSERT INTO {rel} AS idem
+             (dedup_key, tenant_id, project_id, message_type, operation, response_json)
+         VALUES ($1, $2, $3, $4, $5, '{{}}'::jsonb)
+         ON CONFLICT (dedup_key) DO UPDATE
+             SET response_json = idem.response_json
+             WHERE idem.tenant_id = $2
+               AND idem.project_id = $3
+               AND idem.message_type = $4
+               AND idem.operation = $5
+         RETURNING (xmax = 0) AS inserted, response_json"
     )
 }
 
@@ -4415,18 +4439,21 @@ mod setup_data_consistency_tests {
     }
 
     #[test]
-    fn idempotency_claim_sql_suppresses_replay_arm_after_insert() {
+    fn idempotency_claim_sql_uses_blocking_do_update_returning_one_row() {
+        // F-2: the claim must ALWAYS return exactly one row and block on a
+        // concurrent uncommitted inserter, so a concurrent duplicate replays the
+        // winner's response instead of erroring INTERNAL. `DO UPDATE` (not
+        // `DO NOTHING`) takes the row lock; `xmax = 0` flags a fresh insert.
         let sql = idempotency_claim_sql("udb_idempotency_keys");
-        assert!(sql.contains("WITH ins AS ("));
-        assert!(sql.contains("ON CONFLICT (dedup_key) DO NOTHING"));
-        assert!(sql.contains("RETURNING true AS inserted, response_json"));
-        assert!(sql.contains("SELECT false AS inserted, response_json"));
-        assert!(sql.contains("AND NOT EXISTS (SELECT 1 FROM ins)"));
-        assert!(
-            sql.find("RETURNING true AS inserted, response_json")
-                < sql.find("AND NOT EXISTS (SELECT 1 FROM ins)"),
-            "fresh insert claim must suppress the fallback replay arm"
-        );
+        assert!(sql.contains("ON CONFLICT (dedup_key) DO UPDATE"));
+        assert!(sql.contains("RETURNING (xmax = 0) AS inserted, response_json"));
+        // A self-touch that never overwrites the winner's stored body.
+        assert!(sql.contains("SET response_json = idem.response_json"));
+        // The old racy form must be gone.
+        assert!(!sql.contains("DO NOTHING"));
+        assert!(!sql.contains("NOT EXISTS (SELECT 1 FROM ins)"));
+        // The scope guard is preserved for a genuine cross-scope key collision.
+        assert!(sql.contains("WHERE idem.tenant_id = $2"));
     }
 
     #[test]
