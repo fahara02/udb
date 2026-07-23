@@ -64,6 +64,36 @@ pub(crate) struct NotificationDeliveryProvider {
     /// The provider's HTTPS API endpoint (SSRF-validated at delivery time).
     pub endpoint_url: String,
     pub wrapped_credential: String,
+    /// E-1: optional JSON request-body template so a provider whose API is not the
+    /// default `{to,subject,body}` shape (e.g. a regional SMS gateway) works from
+    /// config, without a translating sidecar. Placeholders `{{to}}`, `{{subject}}`,
+    /// `{{body}}` are substituted with JSON-escaped values, then parsed as JSON.
+    /// `None`/empty keeps the default body shape.
+    pub body_template: Option<String>,
+}
+
+/// Render a provider's `body_template` into the JSON request body by substituting
+/// the JSON-escaped recipient/subject/body, then parsing the result. Returns an
+/// error (never a silent default) when the template does not produce valid JSON,
+/// so a misconfigured template is caught rather than silently mis-sending.
+pub(crate) fn render_provider_body(
+    template: &str,
+    to: &str,
+    subject: &str,
+    body: &str,
+) -> Result<serde_json::Value, String> {
+    // JSON-escaped inner form (no surrounding quotes), safe to splice inside the
+    // template's existing string quotes.
+    let esc = |s: &str| -> String {
+        let quoted = serde_json::to_string(s).unwrap_or_else(|_| "\"\"".to_string());
+        quoted[1..quoted.len().saturating_sub(1)].to_string()
+    };
+    let rendered = template
+        .replace("{{to}}", &esc(to))
+        .replace("{{subject}}", &esc(subject))
+        .replace("{{body}}", &esc(body));
+    serde_json::from_str(&rendered)
+        .map_err(|err| format!("notification body_template did not render to valid JSON: {err}"))
 }
 
 // Redacting Debug so a provider config never leaks its wrapped credential.
@@ -140,11 +170,18 @@ pub(crate) fn parse_notification_delivery_providers_json(
             if provider.is_empty() || endpoint_url.is_empty() || wrapped_credential.is_empty() {
                 return None;
             }
+            let body_template = obj
+                .get("body_template")
+                .and_then(serde_json::Value::as_str)
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .map(str::to_string);
             Some(NotificationDeliveryProvider {
                 channel,
                 provider,
                 endpoint_url,
                 wrapped_credential,
+                body_template,
             })
         })
         .collect()
@@ -395,16 +432,49 @@ pub(crate) async fn run_notification_delivery_once(
                 continue;
             }
         };
+        // E-1: build the request body from the provider's template when set, else
+        // the default `{to,subject,body}` shape. A template that renders to invalid
+        // JSON fails the attempt (recorded) rather than silently mis-sending.
+        let request_body = match provider
+            .body_template
+            .as_deref()
+            .filter(|t| !t.trim().is_empty())
+        {
+            Some(template) => match render_provider_body(
+                template,
+                &intent.recipient_address,
+                &intent.rendered_subject,
+                &intent.rendered_body,
+            ) {
+                Ok(body) => body,
+                Err(err) => {
+                    record_attempt_outcome(
+                        pool,
+                        outbox_relation,
+                        metrics,
+                        notification_id,
+                        intent,
+                        &provider.provider,
+                        "FAILED",
+                        &err,
+                        "",
+                    )
+                    .await;
+                    continue;
+                }
+            },
+            None => serde_json::json!({
+                "to": intent.recipient_address,
+                "subject": intent.rendered_subject,
+                "body": intent.rendered_body,
+            }),
+        };
         // Attempt delivery: POST the rendered message to the provider API,
         // authenticated with the decrypted credential (used, never logged).
         let outcome = http
             .post(provider.endpoint_url.as_str())
             .bearer_auth(credential.0.as_str())
-            .json(&serde_json::json!({
-                "to": intent.recipient_address,
-                "subject": intent.rendered_subject,
-                "body": intent.rendered_body,
-            }))
+            .json(&request_body)
             .send()
             .await;
         match outcome {
@@ -500,4 +570,34 @@ pub(crate) async fn run_notification_delivery_worker_once(
     )
     .await?;
     Ok(i64::try_from(delivered).unwrap_or(i64::MAX))
+}
+
+#[cfg(test)]
+mod delivery_tests {
+    use super::render_provider_body;
+
+    #[test]
+    fn template_substitutes_and_parses_a_non_default_shape() {
+        // A regional SMS gateway whose API is NOT {to,subject,body}.
+        let tmpl = r#"{"msisdn": "{{to}}", "text": "{{body}}", "sender": "UDB"}"#;
+        let body =
+            render_provider_body(tmpl, "+8801700000000", "ignored", "your code is 4242").unwrap();
+        assert_eq!(body["msisdn"], "+8801700000000");
+        assert_eq!(body["text"], "your code is 4242");
+        assert_eq!(body["sender"], "UDB");
+    }
+
+    #[test]
+    fn template_escapes_values_to_stay_valid_json() {
+        // A body with quotes/newlines must not break the JSON.
+        let body = render_provider_body(r#"{"text": "{{body}}"}"#, "x", "y", "he said \"hi\"\nl2")
+            .unwrap();
+        assert_eq!(body["text"], "he said \"hi\"\nl2");
+    }
+
+    #[test]
+    fn invalid_template_errors_rather_than_silently_sending() {
+        let err = render_provider_body(r#"{"text": "{{body}}""#, "x", "y", "z").unwrap_err();
+        assert!(err.contains("valid JSON"), "got: {err}");
+    }
 }

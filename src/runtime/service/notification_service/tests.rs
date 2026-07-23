@@ -571,6 +571,7 @@ fn provider_credentials_never_appear_in_debug() {
         provider: "SES".to_string(),
         endpoint_url: "https://email.example.com/send".to_string(),
         wrapped_credential: canary.to_string(),
+        body_template: None,
     };
     let rendered = format!("{provider:?}");
     assert!(
