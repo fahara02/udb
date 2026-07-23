@@ -1157,7 +1157,7 @@ disk free. Proto-changing items are therefore doable in-environment via the real
 pipeline; they are no longer "blocked", only larger. The list below is now
 ordered by SIZE/RISK, not by a false environment gate.
 
-**Total landed this session: 22 items** (incl. G-2 + P-1 the two flagship features; + 3 audit false-gaps corrected: X-11, T-2, T-3) (13 integrity + T-4 both
+**Total landed this session: 24 items** — both flagship consumer features END-TO-END (G-2 conditional delete: server CAS core + `WithDeleteExpected`; P-1 keyset pagination: `pagination.rs` + wiring + `Entity.SelectPage`); + 3 audit false-gaps corrected (X-11, T-2, T-3); + every CI-gate regression fixed. (13 integrity + T-4 both
 halves + X-3/F-4/F-9/F-7 + G-2 the first full proto-pipeline feature).
 
 **NOT YET done — larger or needing live infra (ordered by tractability):**
