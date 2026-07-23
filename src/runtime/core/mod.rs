@@ -545,6 +545,7 @@ impl EncryptionMetrics {
 }
 
 // Phase F: God-impl split into continuation impl blocks.
+pub(crate) mod audit;
 mod helpers;
 pub(crate) mod pagination;
 pub(crate) use helpers::*;

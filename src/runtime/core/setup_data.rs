@@ -1120,6 +1120,17 @@ impl DataBrokerRuntime {
         let _ = self
             .cache_delete_pattern(&cache_invalidation_pattern("select", &request.message_type))
             .await;
+        // F-1: audit the committed mutation to the configured sink (was a total
+        // no-op — build_audit_event had no emitter).
+        crate::runtime::core::audit::emit_audit(
+            &self.config.audit_sink,
+            &crate::planning::broker::build_audit_event(
+                &context,
+                "upsert",
+                &response.resource_uri,
+                &manifest.checksum_sha256,
+            ),
+        );
         Ok(response)
     }
 
@@ -1575,6 +1586,16 @@ impl DataBrokerRuntime {
         let _ = self
             .cache_delete_pattern(&cache_invalidation_pattern("select", message_type))
             .await;
+        // F-1: audit the committed delete to the configured sink.
+        crate::runtime::core::audit::emit_audit(
+            &self.config.audit_sink,
+            &crate::planning::broker::build_audit_event(
+                &context,
+                "delete",
+                &response.resource_uri,
+                &manifest.checksum_sha256,
+            ),
+        );
         Ok(response)
     }
 
