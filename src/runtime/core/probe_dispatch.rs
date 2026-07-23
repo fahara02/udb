@@ -891,8 +891,11 @@ impl DataBrokerRuntime {
             .as_ref()
             .and_then(crate::runtime::executors::handle::dispatch_factory_for)
             .ok_or_else(|| {
-                tonic::Status::new(
+                crate::runtime::executor_utils::capability_status_with_code(
                     unknown_code,
+                    backend,
+                    "generic_dispatch",
+                    "generic_dispatch_executor",
                     format!("backend '{backend}' has no generic-dispatch executor"),
                 )
             })?;

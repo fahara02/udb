@@ -2273,35 +2273,19 @@ impl CdcEngine {
             event_id, partition, offset
         );
 
-        // Live-subscription fan-out is best-effort, but a send error means zero
-        // receivers / full buffer — surface it (the subscriber logs Lagged; the
-        // publisher was silent). Durability is unaffected (Kafka already has it).
-        if self
-            .broadcast_tx
-            .send(CdcEnvelope {
-                event_id: event_id.to_string(),
-                topic: topic.to_string(),
-                partition_key: partition_key.to_string(),
-                payload_json: payload_string.to_string(),
-                published_at: Utc::now(),
-            })
-            .is_err()
-        {
-            tracing::debug!(
-                event_id = %event_id,
-                topic = %topic,
-                "[cdc] live broadcast dropped (no active subscribers / buffer full)"
-            );
-        }
-
-        let publish_duration = (Utc::now() - created_at).num_milliseconds() as f64 / 1000.0;
-        self.metrics
-            .observe_cdc_publish_duration_seconds(publish_duration);
-        self.metrics.inc_cdc_events_published_total(topic);
-
+        // F-6: write the JOURNAL (the only replay source) BEFORE broadcasting to
+        // live subscribers. The journal insert is durable; the broadcast is
+        // best-effort. If we broadcast first and the journal insert then fails, a
+        // reconnecting subscriber that anchors on the journal never sees the
+        // event, while live subscribers already did — a silent per-subscriber
+        // loss. Ordering journal→broadcast means a journal failure returns before
+        // anyone is told the event happened. (F-9: resolve the system-catalog
+        // config the same way the writer does — `current()`, not `default()` —
+        // so a schema override does not point writer and tailer at different
+        // relations.)
         {
             use crate::runtime::system::SystemCatalogConfig;
-            let sys = SystemCatalogConfig::default();
+            let sys = SystemCatalogConfig::current();
             let journal = sys.cdc_journal_relation();
             if let Err(err) = sqlx::query(&format!(
                 "INSERT INTO {journal} \
@@ -2330,6 +2314,33 @@ impl CdcEngine {
                 return;
             }
         }
+
+        // Live-subscription fan-out is best-effort, but a send error means zero
+        // receivers / full buffer — surface it (the subscriber logs Lagged; the
+        // publisher was silent). Durability is unaffected (Kafka + journal already
+        // have it).
+        if self
+            .broadcast_tx
+            .send(CdcEnvelope {
+                event_id: event_id.to_string(),
+                topic: topic.to_string(),
+                partition_key: partition_key.to_string(),
+                payload_json: payload_string.to_string(),
+                published_at: Utc::now(),
+            })
+            .is_err()
+        {
+            tracing::debug!(
+                event_id = %event_id,
+                topic = %topic,
+                "[cdc] live broadcast dropped (no active subscribers / buffer full)"
+            );
+        }
+
+        let publish_duration = (Utc::now() - created_at).num_milliseconds() as f64 / 1000.0;
+        self.metrics
+            .observe_cdc_publish_duration_seconds(publish_duration);
+        self.metrics.inc_cdc_events_published_total(topic);
 
         if let Err(err) = self
             .try_mark_cdc_delivery_state(event_id, "published", Some(partition), Some(offset), None)
