@@ -157,7 +157,7 @@ impl AuthnServiceImpl {
             )
             .await
             .map_err(|err| login_internal_status("authenticate_api_key", err.to_string()))?
-            .ok_or_else(|| Status::unauthenticated("invalid credential"))?;
+            .ok_or_else(|| crate::runtime::executor_utils::unauthenticated_status("invalid_credential", "invalid credential"))?;
             // CRIT-4: attenuate the key's stored scopes against the owner's
             // CURRENT typed grant — the same live check the data-plane
             // credential layer applies. A revoked/replaced grant or inactive
@@ -177,7 +177,7 @@ impl AuthnServiceImpl {
                 {
                     Ok(Some(effective)) => rec.scopes = effective,
                     Ok(None) => {
-                        return Err(Status::unauthenticated("invalid credential"));
+                        return Err(crate::runtime::executor_utils::unauthenticated_status("invalid_credential", "invalid credential"));
                     }
                     Err(error) => {
                         return Err(login_internal_status("authenticate_api_key", error));
@@ -242,7 +242,7 @@ impl AuthnServiceImpl {
             )
             .await
             .map_err(|err| login_internal_status("authenticate_session", err.to_string()))?
-            .ok_or_else(|| Status::unauthenticated("invalid credential"))?;
+            .ok_or_else(|| crate::runtime::executor_utils::unauthenticated_status("invalid_credential", "invalid credential"))?;
             let principal = principal_from_session(&rec);
             return Ok(Response::new(authn_pb::AuthnResponse {
                 principal: Some(authn_principal_to_pb(
@@ -283,19 +283,19 @@ impl AuthnServiceImpl {
         // here; trusted PEPs must pass a bearer token validated by UDB.
         if !req.external_provider_id.trim().is_empty() {
             if req.external_token.matches('.').count() != 2 {
-                return Err(Status::unauthenticated("invalid credential"));
+                return Err(crate::runtime::executor_utils::unauthenticated_status("invalid_credential", "invalid credential"));
             }
             let claims = validate_bearer_token(&self.security, &req.external_token)
-                .map_err(|_| Status::unauthenticated("invalid credential"))?;
+                .map_err(|_| crate::runtime::executor_utils::unauthenticated_status("invalid_credential", "invalid credential"))?;
             if !req.issuer.trim().is_empty()
                 && claims.iss.as_deref().unwrap_or_default() != req.issuer
             {
-                return Err(Status::unauthenticated("invalid credential"));
+                return Err(crate::runtime::executor_utils::unauthenticated_status("invalid_credential", "invalid credential"));
             }
             if !req.audience.trim().is_empty()
                 && self.security.jwt_audience.as_deref() != Some(req.audience.as_str())
             {
-                return Err(Status::unauthenticated("invalid credential"));
+                return Err(crate::runtime::executor_utils::unauthenticated_status("invalid_credential", "invalid credential"));
             }
             let subject = claims.sub.clone().unwrap_or_default();
             let verified_claims = serde_json::json!({
@@ -311,7 +311,7 @@ impl AuthnServiceImpl {
             });
             let principal = provider
                 .map_identity(&subject, &verified_claims.to_string())
-                .map_err(|_| Status::unauthenticated("invalid credential"))?;
+                .map_err(|_| crate::runtime::executor_utils::unauthenticated_status("invalid_credential", "invalid credential"))?;
             return Ok(Response::new(authn_pb::AuthnResponse {
                 principal: Some(authn_principal_to_pb(&principal, 0)),
                 session_id: String::new(),
@@ -327,12 +327,12 @@ impl AuthnServiceImpl {
         // Native UDB JWT.
         if !req.bearer_token.trim().is_empty() {
             let claims = validate_bearer_token(&self.security, &req.bearer_token)
-                .map_err(Status::unauthenticated)?;
+                .map_err(|e| crate::runtime::executor_utils::unauthenticated_status("bearer_verification_failed", e.to_string()))?;
             // Phase 3: a UDB-issued JWT must still be backed by live persisted
             // state — reject it here too if the subject user was suspended or the
             // issuing session revoked (same rule as ValidateToken).
             if !self.jwt_persisted_state_valid(&claims, now_unix()).await? {
-                return Err(Status::unauthenticated("token subject is no longer active"));
+                return Err(crate::runtime::executor_utils::unauthenticated_status("subject_inactive", "token subject is no longer active"));
             }
             let subject = claims.sub.clone().unwrap_or_default();
             let principal = Principal {
@@ -398,7 +398,7 @@ impl AuthnServiceImpl {
                 .map_err(|err| {
                     login_internal_status("password_login_email_lookup", err.to_string())
                 })?
-                .ok_or_else(|| Status::unauthenticated("invalid username or password"))?,
+                .ok_or_else(|| crate::runtime::executor_utils::unauthenticated_status("invalid_login", "invalid username or password"))?,
         };
         // Brute-force lockout: reject while locked, using the same opaque
         // error as a bad password so the lock state is not an enumeration
@@ -407,7 +407,7 @@ impl AuthnServiceImpl {
         const LOCKOUT_SECONDS: u64 = 15 * 60;
         if user.locked_until_unix > now {
             self.metrics.record_auth_login(false);
-            return Err(Status::unauthenticated("invalid username or password"));
+            return Err(crate::runtime::executor_utils::unauthenticated_status("invalid_login", "invalid username or password"));
         }
         // First factor: the password is ALWAYS verified, before any account
         // status is revealed (so a caller without the password cannot tell
@@ -492,7 +492,7 @@ impl AuthnServiceImpl {
                 .await;
             }
             self.metrics.record_auth_login(false);
-            return Err(Status::unauthenticated("invalid username or password"));
+            return Err(crate::runtime::executor_utils::unauthenticated_status("invalid_login", "invalid username or password"));
         }
         // Password proven — now it is safe to surface account status.
         if user.status != crate::runtime::authn::AccountStatus::Active
@@ -636,7 +636,7 @@ impl AuthnServiceImpl {
                     }),
                 )
                 .await;
-                return Err(Status::unauthenticated("invalid second factor"));
+                return Err(crate::runtime::executor_utils::unauthenticated_status("invalid_second_factor", "invalid second factor"));
             }
         }
         // Block 1 (auth_fix.md, Decision E): resolve the user's role-derived
@@ -822,7 +822,7 @@ impl AuthnServiceImpl {
             &self.password_hash_key(),
             &user.password_hash,
         ) {
-            return Err(Status::unauthenticated("invalid current password"));
+            return Err(crate::runtime::executor_utils::unauthenticated_status("invalid_current_password", "invalid current password"));
         }
         if !req.otp_id.trim().is_empty() {
             let otp = self

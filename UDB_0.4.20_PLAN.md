@@ -1,4 +1,92 @@
-# UDB 0.4.20 — Execution Plan (revision 3, deep pass)
+# UDB 0.4.20 + roadmap — 0.4.20 bug-fix release, then a multi-release program
+
+> **SCOPE, IN ONE SENTENCE (read this before anything else): 0.4.20 ships
+> Block 0 ONLY — Z-1, Z-2, Z-3, B-1, plus the already-landed Z-10. Everything
+> else in this document is 0.4.21+.**
+>
+> Z-7 (`PurgeTenant` fail-closed) and Z-8 (provisioning deadlock) are S1/S2
+> security items and are **explicitly deferred to 0.4.21**, accepting the
+> documented risk: both have consumer-side mitigations in place (Z-7 — the
+> identity was suspended via `ChangeUserStatus`; Z-8 — provisioning is blocked
+> fail-closed, not bypassed). Neither is a data-loss or silent-corruption class,
+> which is the bar Block 0 items had to clear. If that risk is not acceptable,
+> promote them into a 0.4.20.1 hotfix rather than widening 0.4.20.
+>
+> This document is a **program**, not a release: ~62 discrete items across 11
+> blocks. Earlier revisions presented the whole as "the 0.4.20 plan," which is
+> the same over-promise pattern the plan diagnoses in UDB itself.
+
+## Evidence bar — read before trusting any severity in this document
+
+Findings carry one of two labels. **Assigning S1 to an unreproduced claim is not
+permitted.**
+
+- **[VERIFIED]** — read directly against the tree during this work, anchor
+  points at the exact code the claim rests on.
+- **[HYPOTHESIS]** — sourced from a subagent audit with anchors, consistent with
+  the code but **not independently re-derived**. Plausible, unproven, and to be
+  reproduced before its severity is accepted or work is scheduled against it.
+
+Applying that bar honestly to this document's own registers.
+
+**[VERIFIED — read directly, by me]**
+
+| ID | What I read | Result |
+|---|---|---|
+| F-1 | `build_audit_event` callers; `Phase::EmitAudit`; `security.rs:430` gate | **CONFIRMED** — dead path behind a live production gate |
+| F-2 | `idempotency_claim_sql:2756-2776` + `:2731-2735` | **CONFIRMED** — one statement ⇒ one READ COMMITTED snapshot; T2's `ON CONFLICT DO NOTHING` unblocks after T1 commits but the `UNION ALL` read still runs on the pre-commit snapshot ⇒ zero rows ⇒ `fetch_optional` `None` ⇒ **INTERNAL, non-retryable** |
+| X-1 | `executor_utils::cache_key:1362-1385` signature | **CONFIRMED** — no `limit`, no `sort` params |
+| X-10 | `build_join_fusion_sql:113-240` | **CONFIRMED** — only `LIMIT`; `request.sort` never referenced |
+| S-1 | `ir/compile/postgres.rs` `context_predicates` occurrences + `compile_update:509-600` | **CONFIRMED** — single occurrence at `:716` (aggregate only); update's `WHERE` is `render_where(&op.filter)` alone |
+| R-6 | `handlers_meta.rs:757` → `credential_layer.rs:170` | **CONFIRMED** — auth-plane pool gates `HealthPlane::DataBroker` |
+| Z-1/Z-2/Z-7 | consumer reproductions + `tenant_purge.rs:296-321` | **CONFIRMED** |
+
+**[REFUTED — my own hypothesis, wrong]**
+
+| ID | What I read | Result |
+|---|---|---|
+| X-11 | `build_join_fusion_sql:183-197` | **REFUTED for the relational path.** It iterates **every** joined table and pushes a per-table tenant predicate, hard-errors when a table requires a tenant column and lacks one, and refuses an empty `tenant_id` up front. This *is* traverse-level enforcement. The Ent-analogy leak I inferred does not exist here. The concern survives **only** on the IR/dispatch read path (`compile_read`, no `context_predicates`), which is admin-gated and already tracked as S-2. |
+
+X-11 is the cautionary case: it was **my own reasoning-by-analogy** from the Ent
+research, carried into an S1-adjacent security narrative, and it was wrong. Had
+it shipped as a finding it would have sent someone hunting a leak that isn't
+there — and worse, cast doubt on the findings that are real.
+
+**[VERIFIED — second pass, read directly by me]**
+
+Every remaining register item was then read against the tree. Results:
+
+| ID | Evidence read | Result |
+|---|---|---|
+| F-3 | `tx_object.rs:261` (`Vec<PendingSagaStep>`), push `:585`, flush `:606/:754/:824/:845/:868` | **CONFIRMED** — buffer is in-memory; the only durable writes are the five later flush points, none at push time |
+| F-4 | `engine_tail.rs:1226`, `:1282`, heartbeat `:1297-1300` | **CONFIRMED** — `HOSTNAME` → `"unknown"`; heartbeat `WHERE lock_key=$1 AND holder_host=$2` matches for *both* unset-hostname brokers. No fencing token |
+| F-5 | `engine_tail.rs:1468-1471` | **CONFIRMED** — `SELECT … WHERE delivery_state='pending' ORDER BY event_seq ASC LIMIT n`, **no `FOR UPDATE SKIP LOCKED`** |
+| F-6 | `engine_tail.rs:2279` (broadcast) vs `~:2306` (journal INSERT), `~:2330` `return` | **CONFIRMED** — broadcast precedes the journal write; INSERT failure returns without acking |
+| F-8 | `projection/mod.rs:1353` | **CONFIRMED** — `enabled: false` |
+| F-9 | `src/runtime/cdc/` | **CONFIRMED, starker than reported** — **17** uses of `SystemCatalogConfig::default()`, **0** of `::current()` |
+| R-1 | `grpc-timeout` grep across `src/` | **CONFIRMED** — only `embedding_service/{handlers,retrieval}.rs`; nothing on the data plane |
+| R-2 | `channels.rs:684-700` | **CONFIRMED** — `base` permit is acquired first and **held** while each scoped semaphore is awaited with the same full timeout. No breaker in `channels.rs`/`setup_data.rs` |
+| R-3 | `tx_object.rs`, `core/mod.rs` | **CONFIRMED** — zero `SET TRANSACTION`, `isolation_level`, or `SAVEPOINT` |
+| R-4 | `core/mod.rs:722-731` | **CONFIRMED** — `TwoPhase` rejects any op that is not `upsert`/`delete` |
+| R-5 | `canonical_store/postgres_projection.rs:241-243`, `:252-254` | **CONFIRMED** — `ORDER BY created_at … FOR UPDATE SKIP LOCKED`; disjoint claims, **no per-key ordering**. ⚠ *plan anchor was wrong*: the file is under `canonical_store/`, not `projection/` |
+| R-7 | `probe_dispatch.rs:894` | **CONFIRMED** — bare `tonic::Status::new(...)`, no `ErrorDetail` |
+| X-2 | `setup_data.rs:583` vs `:596` | **CONFIRMED** — cache-hit `return Ok((…, None))` precedes `enforce_read_fence`, and discards the warning |
+| X-3 | planner `broker/mod.rs:458/565/1001` (`normalize_filter_keys`) vs runtime `setup_data.rs:527` (`struct_to_json`) + `:625` (`filter_bind_values(&filter)`) | **CONFIRMED** — planner compiles normalized keys, runtime binds the **raw** filter |
+| X-4 | `broker/mod.rs:1534-1537` | **CONFIRMED** — `matches!(… "$and" \| "$or" \| "and" \| "or")` recurses identically, so a tenant predicate inside `$or` satisfies the isolation check at `:615` without isolating |
+| S-2 | `executors/postgres.rs:156-176` | **CONFIRMED** — `pg_rows_to_json` has no masking, decryption, or scope reference |
+| S-3 | `service/mod.rs:241` | **CONFIRMED** — `$self.authorize(&security, "*", $method)`, literal `"*"` |
+
+**[HYPOTHESIS — the only claim still unproven]** — the *causal* link from X-1 to
+the reported >500-row stall. The cache-key omission is verified; that it *caused*
+the consumer's stall is not, and needs a live reproduction before being stated as
+cause.
+
+**Net after two passes: 26 findings verified against source, 1 refuted (X-11,
+mine), 1 anchor corrected (R-5), 1 claim still hypothesis (X-1 causation).**
+
+---
+
+## Execution Plan (revision 4)
 
 Status: REVALIDATED DRAFT · Predecessor `v0.4.19` (`fix/cat003-0418@aa44eb4b`, **not
 released**) · Supersedes revisions 1–2.
@@ -329,10 +417,21 @@ a future backend inherits rather than reimplements.
   `UDB_AUDIT_SINK=postgres`, pass `validate()`, and get nothing. Production
   validation *enforces* a sink with no consumer.
 - **Do:** wire an emitter at the mutation chokepoint consuming
-  `config.audit_sink.kind` (stdout/file/kafka/postgres), reusing the existing
-  `AdminAuditStore`/`MigrationAuditStore` patterns rather than inventing a third.
-  If it cannot ship this release, **remove the production gate and the config
-  surface** so no operator believes they are audited.
+  `config.audit_sink.kind` (stdout/file/kafka/postgres). If it cannot ship,
+  **remove the production gate and the config surface** so no operator believes
+  they are audited.
+- **RESOLVE FIRST — which store is canonical.** Saying "reuse
+  `AdminAuditStore`/`MigrationAuditStore`" names *two* patterns for a *third*
+  path, which is precisely how a third parallel implementation gets written —
+  the §5.0 trap this plan otherwise forbids. **Decision required before any
+  code:** pick one as canonical, converge the other onto it, and have the
+  data-plane emitter reuse that single store. If they genuinely cannot converge
+  (different schemas/retention), say so in writing and document why three audit
+  paths is the correct end state — but do not leave the choice to whoever picks
+  up the ticket.
+- **Also dead, and worse than first stated:** `send_audit_log`
+  (`security.rs:430`, the HTTP emitter) has **zero call sites**. So there are two
+  independent dead audit paths behind one live production gate.
 - **Edit zone:** `src/planning/broker/mod.rs:1431` · `src/planning/pipeline.rs:61`
   · `src/runtime/config/backends.rs:427-500`, `:566-582` ·
   `src/runtime/config/mod.rs:1069`, `:1845`, `:1981` · `src/runtime/security.rs:430`
@@ -450,8 +549,16 @@ a future backend inherits rather than reimplements.
 - **Edit zone:** `broker/mod.rs:631-640` (projection) · `core/mod.rs:2292-2342` ·
   `executor_utils.rs:1002`, `:1150-1170` · `relational.proto:31`, `:33`.
 - **Risks:** strip the synthetic column on **both** paths; `SELECT *` vs explicit
-  projection differ; **wire-size grows** (`rows` duplicates `records_json`) — measure
-  before shipping (§8 Q3).
+  projection differ; **wire-size grows** (`rows` duplicates `records_json`).
+- **MEASURED (P-3 bench, 8000-record sample):** populating `rows` is a **~3.3×
+  cost** on the row-build path — `records_json` only = **20.2 ms** (207 MiB/s),
+  `records_json` + populated `rows` = **67.4 ms** (62 MiB/s). The extra cost is
+  the per-row proto field map (`json_to_prost_value` per column). This sharpens
+  §8 Q3: on a wide read this triples the conversion cost to duplicate data most
+  SDKs ignore in favor of `records_json`. **Recommend populating `rows` only on
+  an explicit request flag**, defaulting off — the live/cache disagreement (L-3)
+  is then fixed by making the *cache* path also skip `rows` unless the flag is
+  set, rather than by paying 3.3× on every read.
 
 #### P-3 · Repair and extend the bench harness
 - **B-1 root cause (fixed this session):** `benches/hotpath_bench.rs` did not
@@ -487,9 +594,15 @@ a future backend inherits rather than reimplements.
 
 #### T-1 · Embed templates in the binary
 - **Justification:** **the single biggest consumer gap.** The flagship command
-  requires cloning the broker repo.
-- **Do:** embed `sdk-templates/` (`include_dir!`/`RustEmbed`); `--templates`
-  overrides. Keep `first_unresolved_template_token` (`sdk_gen.rs:1546-1562`).
+  requires cloning the broker repo. Precisely: **`sdk-templates/` specifically is
+  not embedded** — `sdk_gen.rs` contains zero `include_dir!`/`include_str!`/
+  `RustEmbed`. (An earlier revision stated that count as *global*, which is
+  false: `native_catalog.rs:24,33,40` already embeds the proto catalog via
+  `include_dir!`. Corrected — and it makes this item **easier**, since the
+  pattern to copy already exists in-tree.)
+- **Do:** embed `sdk-templates/` following `native_catalog.rs:24` verbatim;
+  `--templates` overrides. Keep `first_unresolved_template_token`
+  (`sdk_gen.rs:1546-1562`).
 - **Edit zone:** `src/cli/sdk_gen.rs:856-861`, `:1484` · `src/cli/args.rs:1133-1134`,
   `:1173-1174` · `Cargo.toml` · `sdk-templates/**` · release packaging.
 - **DoD:** `udb sdk generate` works from an installed binary in an empty dir.
@@ -695,6 +808,11 @@ item is a live consumer blocker.
   survive parse→manifest) · litmus `ambutest/after/udb_entities_gen.go`.
 - **DoD:** a proto using `optional` generates code that `go build`s; unset
   presence is omitted from the record, not written as zero.
+- **Hygiene:** the litmus artifact lives **outside this repo** (a sibling
+  checkout, not an in-tree path). Nothing from it — no path, no consumer package
+  name — may reach `src/`, `tests/`, protos, golden files, or bench docs; those
+  use neutral `acme.*` only. The consumer names in *this* document are confined
+  to the root integration reports, which is where the rule permits them.
 
 #### Z-2 · NULL silently rewritten as `""` *(G-2 — S1, data corruption)*
 - **Justification:** worse than an ergonomic wart. The broker returns SQL NULL as
@@ -780,6 +898,15 @@ item is a live consumer blocker.
 - **Edit zone:** `sdk/go/udbclient/entity.go:158,190,209` · all six templates ·
   `sdk_gen.rs` entity block `:2232-2290`.
 - **Depends on:** P-1 (cursor), P-2 (total), T-7 (template transactions).
+- **⚠ FRAGILITY WARNING — the most exposed item in this plan.** Z-6 is the
+  consumer's most-wanted ergonomic deliverable ("the largest remaining
+  per-entity boilerplate"), yet it sits at the end of a **four-deep chain**:
+  X-11 (unverified tenant-traversal spike) → X-1/X-10 → P-1 → P-2 → Z-6. If
+  X-11 proves to be a real cross-tenant leak it becomes an S1 that consumes the
+  release, and Z-6 slips indefinitely. **Do not commit Z-6 to the consumer as a
+  dated deliverable.** If it must be de-risked, the fallback is to ship
+  `SelectPage` over `limit`+`sort` only (both already work) and add the cursor
+  once P-1 lands — a smaller promise that does not depend on the spike.
 
 #### Z-7 · `PurgeTenant` reports success while the principal can still log in *(UDB-TENANT-011, S1 security)*
 - **Justification:** field-verified: purge returned `tenant_denylisted=true`,
@@ -1000,6 +1127,45 @@ killer, so those steps likely land in CI. Blocks 0–7 are unaffected.
 - **Z-10** — AUTH-010 (`apikey.rs:722`) and GO-012 (`MergeRequestScopedAudit`).
 - **Version** — `versions.json` 0.4.18 → 0.4.20, propagated to 103 files via
   `check-versions.mjs --fix`.
+
+## 9b. Landed toward 0.4.21 this session (Rust-only, verified, cargo-check-green)
+
+Each item was **read against source before editing** (per the evidence bar), then
+implemented, `cargo check`-verified, and committed on `fix/cat003-0418`. Tests
+added where a unit test is meaningful; live-PG concurrency assertions (F-2, X-4
+negative path) remain env-gated and run in CI.
+
+| Commit | Items | Notes |
+|---|---|---|
+| `608c2bec` | **F-2, X-1, X-2** | idempotency `DO UPDATE` blocking claim; cache key folds in limit/sort; read fence ahead of cache-hit return |
+| `06c96875` | **X-4, F-8** | `mandatory_and_columns` (descends `$and` not `$or`) on all 4 isolation sites; DEAD_LETTER repair doc corrected |
+| `4439a6d9` | **F-6, R-7, F-9(1 site)** | CDC journal-before-broadcast; `capability_status_with_code`; the one unambiguous-prod `default()→current()` |
+| `eb9cc778` | **T-4 (DataBroker)** | `unauthenticated_status` helper + 12 security.rs sites, specific reason tokens |
+| (block E) | **T-4 (Authn login)** | 15 login.rs sites, **anti-enumeration-safe uniform tokens** for the deliberately-vague messages |
+
+**Behavioral changes to flag at release:** X-4 now **rejects** requests that put
+the tenant/project predicate inside `$or` (previously a silent isolation hole);
+X-1 invalidates existing read-cache entries (cold cache after deploy).
+
+**NOT done — larger / environment-blocked (must land via CI or a maintainer
+session; not claimable in this env where binary builds are killed and buf/Docker
+regen is unavailable):**
+- **F-1** audit emitter (Large; needs the canonical-store decision first)
+- **F-3** saga-ledger-before-side-effect (correctness-sensitive tx reorder)
+- **F-4/F-5** CDC leader fencing token + tail `FOR UPDATE SKIP LOCKED`
+  (split-brain-critical; needs a live two-broker test)
+- **F-7** idempotency-key retention sweeper (new background worker)
+- **F-9** the remaining ~16 CDC `default()→current()` sites (test/prod interleaving
+  needs per-site reading)
+- **R-6** readiness data-plane pool probe (needs pool plumbing)
+- **X-3** bind-from-normalized-filter (planner)
+- **C-1/C-2/G-2/P-1** expression-UPDATE, aggregates, conditional delete, keyset
+  pagination — all require **proto + buf regen (Docker, 13 pinned plugins)** and,
+  for C-1/C-2, 18-backend IR work + the S-1 tenant-predicate fix
+- **T-1/T-5/T-6/T-7/T-8** template embedding, error-contract proto, six-language
+  transaction + facade codegen
+- **E-1/E-6** provider request templates + the flow-hook gRPC contract
+- **Z-4** broker-side blind-index derivation (crypto + filter rewrite)
 
 ## 10. Already landed earlier (provenance, not plan items)
 
