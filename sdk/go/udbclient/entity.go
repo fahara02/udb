@@ -198,6 +198,71 @@ func (e *Entity) Select(ctx context.Context, where map[string]any) ([]map[string
 	return decodeRecordSet(rs)
 }
 
+// SortKey is one ordering key for a paged Select.
+type SortKey struct {
+	Field      string
+	Descending bool
+}
+
+// PageOptions configures a keyset-paginated Select.
+type PageOptions struct {
+	// Fields restricts the projection; empty selects every column.
+	Fields []string
+	// Sort defines the order; the primary key is appended as a tiebreaker
+	// server-side so the cursor is stable.
+	Sort []SortKey
+	// Limit is the page size. A non-zero limit engages keyset pagination.
+	Limit int32
+	// PageToken continues a walk; empty requests the first page.
+	PageToken string
+}
+
+// Page is one page of a keyset-paginated read.
+type Page struct {
+	Rows []map[string]any
+	// NextPageToken is the cursor for the following page — empty on the last
+	// page. Feed it back verbatim as PageOptions.PageToken; it is opaque.
+	NextPageToken string
+	// TotalCount is the number of rows in THIS page (see decodeRecordSet).
+	TotalCount int32
+}
+
+// SelectPage issues a single keyset-paginated Select for the bound FQN. Pass an
+// empty PageToken for the first page, then feed each returned NextPageToken back
+// until it comes back empty (P-1). This replaces the hand-built structpb filter +
+// manual RecordSet decode a consumer otherwise writes for every listing endpoint.
+func (e *Entity) SelectPage(ctx context.Context, where map[string]any, opts PageOptions) (*Page, error) {
+	filter, err := structFilter(where)
+	if err != nil {
+		return nil, err
+	}
+	sort := make([]*entityv1.Sort, 0, len(opts.Sort))
+	for _, s := range opts.Sort {
+		sort = append(sort, &entityv1.Sort{Field: s.Field, Descending: s.Descending})
+	}
+	rs, err := e.client.Select(ctx, &entityv1.SelectRequest{
+		Context:     e.requestContext(),
+		MessageType: e.fqn,
+		Filter:      filter,
+		Fields:      opts.Fields,
+		Limit:       opts.Limit,
+		PageToken:   opts.PageToken,
+		Sort:        sort,
+	})
+	if err != nil {
+		return nil, err
+	}
+	rows, err := decodeRecordSet(rs)
+	if err != nil {
+		return nil, err
+	}
+	return &Page{
+		Rows:          rows,
+		NextPageToken: rs.GetNextPageToken(),
+		TotalCount:    rs.GetTotalCount(),
+	}, nil
+}
+
 // Delete issues exactly ONE Delete RPC for the bound FQN with a Struct filter
 // built from where. Delete is a mutation/destructive RPC and is never
 // auto-retried (see retryableForRPC).
