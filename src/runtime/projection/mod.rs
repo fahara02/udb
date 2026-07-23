@@ -12,8 +12,11 @@
 //! * [`ProjectionEngine`] – lightweight enqueue-only handle (hold in service).
 //! * [`ProjectionWorker`] – background loop: claims PENDING tasks, dispatches
 //!   to backend executors, marks COMPLETED / FAILED / DEAD_LETTER.
-//! * [`ReconciliationWorker`] – background loop: detects DEAD_LETTER tasks
-//!   and re-enqueues them as PENDING (repair).
+//! * [`ReconciliationWorker`] – OPT-IN background loop (off by default; enable
+//!   via `ReconciliationSettings.enabled`): detects DEAD_LETTER tasks and
+//!   re-enqueues them as PENDING (repair). With it disabled — the default —
+//!   a task that exhausts `max_retries` stays DEAD_LETTER and is NOT repaired,
+//!   so operators relying on automatic repair must turn it on explicitly (F-8).
 
 use std::sync::Arc;
 use std::time::Duration;

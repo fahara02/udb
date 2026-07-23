@@ -456,17 +456,21 @@ pub(crate) fn build_select_logical_read(
     let allowed = allowed_columns(table);
     let resolver = column_resolver(table);
     let filter_json = normalize_filter_keys(&resolver, &request.filter);
-    let filter_columns = filter_columns(&filter_json, &allowed, &mut errors);
+    // Validate fields (incl. unknowns nested inside $or) via the broad scan, then
+    // use the MANDATORY set for isolation (X-4) — the broad set counts a column
+    // inside an $or branch, which does not isolate.
+    let _ = filter_columns(&filter_json, &allowed, &mut errors);
+    let mandatory_columns = mandatory_and_columns(&filter_json, &allowed);
     let tenant = tenant_column(table);
     if tenant.is_empty() {
         if table_requires_tenant_column(table) {
             errors.push(unresolved_tenant_column_error(table));
         }
-    } else if !filter_columns.contains(&tenant) {
+    } else if !mandatory_columns.contains(&tenant) {
         errors.push(format!("tenant isolation requires filter on {}", tenant));
     }
     let project = project_column(table);
-    if !project.is_empty() && !filter_columns.contains(&project) {
+    if !project.is_empty() && !mandatory_columns.contains(&project) {
         errors.push(format!("project isolation requires filter on {}", project));
     }
 
@@ -597,6 +601,7 @@ fn build_select_query_plan_uncached(
         &backend_kind,
     );
     let filter_columns = filter_columns(&filter, &allowed, &mut errors);
+    let mandatory_columns = mandatory_and_columns(&filter, &allowed);
     let sort_columns = request
         .sort
         .iter()
@@ -612,7 +617,7 @@ fn build_select_query_plan_uncached(
         if table_requires_tenant_column(table) {
             errors.push(unresolved_tenant_column_error(table));
         }
-    } else if !filter_columns.contains(&tenant_column) {
+    } else if !mandatory_columns.contains(&tenant_column) {
         errors.push(format!(
             "tenant isolation requires filter on {}",
             tenant_column
@@ -621,7 +626,7 @@ fn build_select_query_plan_uncached(
     // Project isolation (mirrors tenant): when the table declares a project key,
     // the read must filter on it so a query cannot span projects.
     let project_column = project_column(table);
-    if !project_column.is_empty() && !filter_columns.contains(&project_column) {
+    if !project_column.is_empty() && !mandatory_columns.contains(&project_column) {
         errors.push(format!(
             "project isolation requires filter on {}",
             project_column
@@ -1010,16 +1015,17 @@ pub fn build_delete_plan(
         &backend_kind,
     );
     let filter_columns = filter_columns(&filter, &allowed, &mut errors);
+    let mandatory_columns = mandatory_and_columns(&filter, &allowed);
     let tenant = tenant_column(table);
     if tenant.is_empty() {
         if table_requires_tenant_column(table) {
             errors.push(unresolved_tenant_column_error(table));
         }
-    } else if !filter_columns.contains(&tenant) {
+    } else if !mandatory_columns.contains(&tenant) {
         errors.push(format!("tenant isolation requires filter on {}", tenant));
     }
     let project = project_column(table);
-    if !project.is_empty() && !filter_columns.contains(&project) {
+    if !project.is_empty() && !mandatory_columns.contains(&project) {
         errors.push(format!("project isolation requires filter on {}", project));
     }
     if compiled.sql.is_empty() {
@@ -1071,18 +1077,22 @@ pub(crate) fn build_delete_logical_delete(
     let allowed = allowed_columns(table);
     let resolver = column_resolver(table);
     let filter_json = normalize_filter_keys(&resolver, &request.filter);
-    let filter_columns = filter_columns(&filter_json, &allowed, &mut errors);
+    // Validate fields (incl. unknowns nested inside $or) via the broad scan, then
+    // use the MANDATORY set for isolation (X-4) — the broad set counts a column
+    // inside an $or branch, which does not isolate.
+    let _ = filter_columns(&filter_json, &allowed, &mut errors);
+    let mandatory_columns = mandatory_and_columns(&filter_json, &allowed);
 
     let tenant = tenant_column(table);
     if tenant.is_empty() {
         if table_requires_tenant_column(table) {
             errors.push(unresolved_tenant_column_error(table));
         }
-    } else if !filter_columns.contains(&tenant) {
+    } else if !mandatory_columns.contains(&tenant) {
         errors.push(format!("tenant isolation requires filter on {}", tenant));
     }
     let project = project_column(table);
-    if !project.is_empty() && !filter_columns.contains(&project) {
+    if !project.is_empty() && !mandatory_columns.contains(&project) {
         errors.push(format!("project isolation requires filter on {}", project));
     }
 
@@ -1546,6 +1556,48 @@ fn collect_filter_columns(
         Value::Array(items) => {
             for item in items {
                 collect_filter_columns(item, allowed, errors, out);
+            }
+        }
+        _ => {}
+    }
+}
+
+/// Columns that constrain EVERY row a read returns or a delete affects — i.e.
+/// those in the top-level AND context, descending through `$and` but NOT `$or`.
+///
+/// Tenant/project isolation MUST check this set, not the broad `filter_columns`
+/// (which collects a column appearing anywhere, including inside an `$or`
+/// branch). A predicate inside `$or` does not isolate — `{"$or":[{tenant_id:a},
+/// {status:open}]}` returns rows that satisfy EITHER arm, so it can leak rows of
+/// other tenants while still "mentioning" `tenant_id` (X-4).
+fn mandatory_and_columns(value: &Value, allowed: &BTreeSet<String>) -> Vec<String> {
+    let mut out = Vec::new();
+    collect_mandatory_and_columns(value, allowed, &mut out);
+    out.sort();
+    out.dedup();
+    out
+}
+
+fn collect_mandatory_and_columns(value: &Value, allowed: &BTreeSet<String>, out: &mut Vec<String>) {
+    match value {
+        Value::Object(map) => {
+            for (key, nested) in map {
+                let normalized = key.to_ascii_lowercase();
+                if matches!(normalized.as_str(), "$and" | "and") {
+                    // Every arm of an AND constrains every row → still mandatory.
+                    collect_mandatory_and_columns(nested, allowed, out);
+                } else if matches!(normalized.as_str(), "$or" | "or") {
+                    // An OR arm does NOT constrain every row → not mandatory. Skip.
+                    continue;
+                } else if allowed.contains(&normalized) {
+                    out.push(normalized);
+                }
+            }
+        }
+        Value::Array(items) => {
+            // Reached only as an `$and`'s array value → every item is mandatory.
+            for item in items {
+                collect_mandatory_and_columns(item, allowed, out);
             }
         }
         _ => {}
@@ -2123,6 +2175,30 @@ mod tests {
         CompileContext, CompileOperation, CompiledRendering, compile_for_backend,
     };
     use serde_json::json;
+
+    // X-4: a tenant predicate inside `$or` must NOT satisfy isolation, because an
+    // OR arm does not constrain every returned row.
+    #[test]
+    fn mandatory_and_columns_excludes_or_branches() {
+        let allowed: BTreeSet<String> =
+            ["tenant_id", "status", "id"].into_iter().map(String::from).collect();
+
+        // Top-level AND context: tenant_id is mandatory.
+        let top = json!({"tenant_id": "t1", "status": "open"});
+        assert!(mandatory_and_columns(&top, &allowed).contains(&"tenant_id".to_string()));
+
+        // tenant_id ANDed with an $or group: still mandatory.
+        let anded = json!({"tenant_id": "t1", "$or": [{"status": "open"}, {"id": 1}]});
+        assert!(mandatory_and_columns(&anded, &allowed).contains(&"tenant_id".to_string()));
+
+        // tenant_id buried INSIDE an $or: NOT mandatory (the leak X-4 closes).
+        let in_or = json!({"$or": [{"tenant_id": "t1"}, {"status": "open"}]});
+        assert!(!mandatory_and_columns(&in_or, &allowed).contains(&"tenant_id".to_string()));
+
+        // Nested $and inside the tree keeps its columns mandatory.
+        let nested_and = json!({"$and": [{"tenant_id": "t1"}, {"status": "open"}]});
+        assert!(mandatory_and_columns(&nested_and, &allowed).contains(&"tenant_id".to_string()));
+    }
 
     fn test_column(name: &str) -> ManifestColumn {
         ManifestColumn {
