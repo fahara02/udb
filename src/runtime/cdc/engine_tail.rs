@@ -29,6 +29,23 @@ fn cdc_stream_policy_status(
     )
 }
 
+/// Per-process CDC leader-lease identity (F-4). `HOSTNAME` alone is not a fencing
+/// token: two brokers with `HOSTNAME` unset both resolve to `"unknown"`, so each
+/// satisfies the other's heartbeat `WHERE holder_host = $2` and both believe they
+/// hold the single-tailer lock — split-brain, i.e. two active publishers emitting
+/// duplicate events (and breaking the KafkaTransactional exactly-once assumption).
+/// Appending a per-process UUID makes the identity unique regardless of hostname,
+/// while the hostname prefix keeps leader attribution human-readable.
+fn cdc_lease_identity() -> String {
+    static LEASE_ID: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+    LEASE_ID
+        .get_or_init(|| {
+            let host = std::env::var("HOSTNAME").unwrap_or_else(|_| "unknown".to_string());
+            format!("{host}-{}", uuid::Uuid::new_v4())
+        })
+        .clone()
+}
+
 /// Process-global rate gate for the CDC "failed to publish to kafka" log. The
 /// tailer is leader-elected (one active publisher), so a single shared gate
 /// correctly collapses the flood. Cooldown from
@@ -391,6 +408,17 @@ fn journal_retention_sweep_sql(journal_relation: &str) -> String {
         "DELETE FROM {journal_relation} j \
          WHERE j.published_at < NOW() - make_interval(secs => $1::double precision) \
            AND j.delivery_state = 'acked'"
+    )
+}
+
+/// F-7: prune idempotency-dedup rows older than the dedup window. After the TTL a
+/// replay is treated as fresh anyway, so keeping the row is pure unbounded growth
+/// (the table previously had NO sweeper — the `(tenant_id, project_id, created_at)`
+/// index existed as if a purge were planned but was never written).
+fn idempotency_retention_sweep_sql(idempotency_relation: &str) -> String {
+    format!(
+        "DELETE FROM {idempotency_relation} \
+         WHERE created_at < NOW() - make_interval(secs => $1::double precision)"
     )
 }
 
@@ -987,7 +1015,7 @@ impl CdcEngine {
     /// failures are logged and retried on the next maintenance tick.
     #[cfg(feature = "kafka")]
     pub(crate) async fn run_journal_retention_sweep(&self) {
-        let journal_relation = SystemCatalogConfig::default().cdc_journal_relation();
+        let journal_relation = SystemCatalogConfig::current().cdc_journal_relation();
         let sweep_sql = journal_retention_sweep_sql(&journal_relation);
         let ttl_secs = self.config.idempotency_ttl_secs.max(1) as f64;
         match sqlx::query(&sweep_sql)
@@ -1005,6 +1033,34 @@ impl CdcEngine {
             Ok(_) => {}
             Err(err) => {
                 warn!("[cdc] journal retention sweep failed: {err}");
+            }
+        }
+    }
+
+    /// F-7: prune expired idempotency-dedup rows. Runs on the leader-elected
+    /// tailer's maintenance tick (single cluster-wide sweeper, no coordination
+    /// needed) at the same TTL as the dedup window. Best-effort: a failure is
+    /// logged and retried on the next tick.
+    #[cfg(feature = "kafka")]
+    pub(crate) async fn run_idempotency_retention_sweep(&self) {
+        let relation = SystemCatalogConfig::current().idempotency_keys_relation();
+        let sweep_sql = idempotency_retention_sweep_sql(&relation);
+        let ttl_secs = self.config.idempotency_ttl_secs.max(1) as f64;
+        match sqlx::query(&sweep_sql)
+            .bind(ttl_secs)
+            .execute(&self.pool)
+            .await
+        {
+            Ok(res) if res.rows_affected() > 0 => {
+                info!(
+                    "[cdc] idempotency retention sweep removed {} rows older than {}s",
+                    res.rows_affected(),
+                    ttl_secs
+                );
+            }
+            Ok(_) => {}
+            Err(err) => {
+                warn!("[cdc] idempotency retention sweep failed: {err}");
             }
         }
     }
@@ -1068,7 +1124,7 @@ impl CdcEngine {
         let pool = self.pool.clone();
         // #19: replay reads the durable cdc_journal — outbox rows are
         // deleted on ack, so the outbox cannot serve a reconnect gap.
-        let journal_relation = SystemCatalogConfig::default().cdc_journal_relation();
+        let journal_relation = SystemCatalogConfig::current().cdc_journal_relation();
 
         Ok(Box::pin(try_stream! {
             // Hybrid delivery (bug_report.md §R "kafka is not used"): an in-process
@@ -1223,7 +1279,7 @@ impl CdcEngine {
     pub async fn run_advisory_lock_loop(&self) {
         let mut check_interval = interval(Duration::from_secs(30));
         let lock_rel = self.config.lock_log_relation();
-        let hostname = std::env::var("HOSTNAME").unwrap_or_else(|_| "unknown".to_string());
+        let hostname = cdc_lease_identity();
 
         loop {
             check_interval.tick().await;
@@ -1279,7 +1335,7 @@ impl CdcEngine {
         let pool = self.pool.clone();
         let metrics = self.metrics.clone();
         let lock_rel = self.config.lock_log_relation();
-        let hostname = std::env::var("HOSTNAME").unwrap_or_else(|_| "unknown".to_string());
+        let hostname = cdc_lease_identity();
         // GAP 9c: Exponential backoff for replication tailer restarts.
         let mut backoff_secs: u64 = 1;
         const MAX_BACKOFF_SECS: u64 = 60;
@@ -1319,7 +1375,7 @@ impl CdcEngine {
                     // Paused-state check: query udb_cdc_control for this slot
                     {
                         use crate::runtime::system::SystemCatalogConfig;
-                        let control_rel = SystemCatalogConfig::default().cdc_control_relation();
+                        let control_rel = SystemCatalogConfig::current().cdc_control_relation();
                         let paused: Option<(bool,)> = match sqlx::query_as(&format!(
                             "SELECT paused FROM {control_rel} WHERE slot_name = $1 LIMIT 1"
                         ))
@@ -1380,6 +1436,9 @@ impl CdcEngine {
                         // #26: prune terminal journal rows past the
                         // idempotency TTL so the journal doesn't grow forever.
                         self.run_journal_retention_sweep().await;
+                        // F-7: prune expired idempotency-dedup rows on the same
+                        // leader-only tick so the dedup table doesn't grow forever.
+                        self.run_idempotency_retention_sweep().await;
                     }
                 }
                 res = &mut tail_loop => {
@@ -1685,7 +1744,7 @@ impl CdcEngine {
 
         if matches!(state, "published" | "acked" | "dlq") {
             use crate::runtime::system::SystemCatalogConfig;
-            let sys = SystemCatalogConfig::default();
+            let sys = SystemCatalogConfig::current();
             let journal_sql = format!(
                 "UPDATE {} SET delivery_state = $2, \
                  producer_epoch = $3, transactional_id = $4, \
@@ -2246,7 +2305,7 @@ impl CdcEngine {
     #[cfg(feature = "kafka")]
     async fn was_durably_published(&self, event_id: Uuid) -> bool {
         use crate::runtime::system::SystemCatalogConfig;
-        let journal = SystemCatalogConfig::default().cdc_journal_relation();
+        let journal = SystemCatalogConfig::current().cdc_journal_relation();
         let state: Result<Option<(String,)>, _> = sqlx::query_as(&format!(
             "SELECT delivery_state FROM {journal} WHERE event_id = $1"
         ))
@@ -2578,7 +2637,7 @@ impl CdcEngine {
             // If the journal write fails, do NOT advance the offset; the
             // source may replay and downstream consumers can dedupe by the
             // deterministic source_event_id.
-            let sys = SystemCatalogConfig::default();
+            let sys = SystemCatalogConfig::current();
             let journal = sys.cdc_journal_relation();
             let journal_sql = format!(
                 "INSERT INTO {journal} \

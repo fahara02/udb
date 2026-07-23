@@ -97,7 +97,7 @@ impl CdcEngine {
 
         if self.config.exactly_once_mode != CdcExactlyOnceMode::AtLeastOnce {
             use crate::runtime::system::SystemCatalogConfig;
-            let sys = SystemCatalogConfig::default();
+            let sys = SystemCatalogConfig::current();
             let journal_sql = format!(
                 "UPDATE {} SET delivery_state = 'acked', acked_at = NOW(), \
                  producer_epoch = $2, transactional_id = $3 WHERE event_id = $1",
@@ -172,7 +172,7 @@ impl CdcEngine {
         let payload_string = serde_json::to_string(&dlq_env).unwrap_or_default();
         {
             use crate::runtime::system::SystemCatalogConfig;
-            let sys = SystemCatalogConfig::default();
+            let sys = SystemCatalogConfig::current();
             let dlq_rel = sys.dlq_relation();
             let retry_delay = cdc_retry_delay_secs(&self.config.retry_delay_secs, 0);
             if let Err(e) = sqlx::query(&durable_dlq_insert_sql(&dlq_rel))
@@ -226,7 +226,7 @@ impl CdcEngine {
     /// in this engine instance. Call once after construction; reload on SIGHUP if needed.
     pub async fn load_topic_policies(&mut self) -> Result<(), String> {
         use crate::runtime::system::SystemCatalogConfig;
-        let sys = SystemCatalogConfig::default();
+        let sys = SystemCatalogConfig::current();
         let rel = sys.topic_policy_relation();
 
         let rows = sqlx::query(&format!(
@@ -340,7 +340,7 @@ impl CdcEngine {
         offset: i64,
     ) -> Result<Vec<DlqEvent>, String> {
         use crate::runtime::system::SystemCatalogConfig;
-        let sys = SystemCatalogConfig::default();
+        let sys = SystemCatalogConfig::current();
         let dlq_rel = sys.dlq_relation();
 
         // Parameterized filters (no string interpolation of caller-supplied
@@ -402,7 +402,7 @@ impl CdcEngine {
     #[cfg(feature = "kafka")]
     pub async fn replay_dlq_event(&self, dlq_id: Uuid) -> Result<String, String> {
         use crate::runtime::system::SystemCatalogConfig;
-        let sys = SystemCatalogConfig::default();
+        let sys = SystemCatalogConfig::current();
         let dlq_rel = sys.dlq_relation();
 
         // Fetch the DLQ event
@@ -490,7 +490,7 @@ impl CdcEngine {
         max_events: i64,
     ) -> Result<String, String> {
         use crate::runtime::system::SystemCatalogConfig;
-        let sys = SystemCatalogConfig::default();
+        let sys = SystemCatalogConfig::current();
         let dlq_rel = sys.dlq_relation();
 
         let mut query = format!(
@@ -543,7 +543,7 @@ impl CdcEngine {
 
     async fn schedule_dlq_retry(&self, dlq_id: Uuid, error: &str) -> Result<(), String> {
         use crate::runtime::system::SystemCatalogConfig;
-        let sys = SystemCatalogConfig::default();
+        let sys = SystemCatalogConfig::current();
         let dlq_rel = sys.dlq_relation();
         let row = sqlx::query(&format!(
             "SELECT topic, retry_count FROM {dlq_rel} WHERE dlq_id = $1"
@@ -624,7 +624,7 @@ impl CdcEngine {
     /// Phase 7: Dismiss a DLQ event (mark as resolved without replay)
     pub async fn dismiss_dlq_event(&self, dlq_id: Uuid, reason: String) -> Result<String, String> {
         use crate::runtime::system::SystemCatalogConfig;
-        let sys = SystemCatalogConfig::default();
+        let sys = SystemCatalogConfig::current();
         let dlq_rel = sys.dlq_relation();
 
         sqlx::query(&format!(
@@ -644,7 +644,7 @@ impl CdcEngine {
     /// Use when the event is known-bad and should not clutter the open queue or be retried.
     pub async fn mark_dlq_ignored(&self, dlq_id: Uuid, reason: String) -> Result<String, String> {
         use crate::runtime::system::SystemCatalogConfig;
-        let sys = SystemCatalogConfig::default();
+        let sys = SystemCatalogConfig::current();
         let dlq_rel = sys.dlq_relation();
 
         let affected = sqlx::query(&format!(
@@ -676,7 +676,7 @@ impl CdcEngine {
     /// Phase 7: Get CDC monitoring metrics
     pub async fn get_cdc_metrics(&self) -> Result<CdcMetrics, String> {
         use crate::runtime::system::SystemCatalogConfig;
-        let sys = SystemCatalogConfig::default();
+        let sys = SystemCatalogConfig::current();
 
         // Outbox depth and lag
         let outbox_sql = format!(
