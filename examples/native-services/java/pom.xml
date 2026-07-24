@@ -5,7 +5,7 @@
 
   <groupId>dev.udb.examples</groupId>
   <artifactId>udb-native-services-java</artifactId>
-  <version>0.4.24-SNAPSHOT</version>
+  <version>0.4.25-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <properties>
@@ -23,7 +23,7 @@
     <dependency>
       <groupId>dev.udb</groupId>
       <artifactId>udb-java-client</artifactId>
-      <version>0.4.24-SNAPSHOT</version>
+      <version>0.4.25-SNAPSHOT</version>
     </dependency>
 
     <!-- gRPC runtime (a real transport — the SDK only compile-depends on grpc-api). -->

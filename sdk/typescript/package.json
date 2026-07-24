@@ -1,6 +1,6 @@
 {
   "name": "@udb_plus/sdk",
-  "version": "0.4.24",
+  "version": "0.4.25",
   "description": "TypeScript/Node gRPC client for the Universal Data Broker (UDB) — DataBroker data plane plus the native Authn/Authz control plane.",
   "keywords": ["udb", "grpc", "database", "broker", "multi-tenant", "sdk"],
   "type": "commonjs",

@@ -5,6 +5,24 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.4.25] - 2026-07-25
+
+The embedding-retrieval fix release: a freshly registered embedding model is
+now immediately retrievable.
+
+### Breaking / wire changes
+- None.
+
+### Fixed
+- `EmbeddingService.RegisterModel` created the physical vector collection but
+  not the Qdrant alias that the model advertises as its query target
+  (`StoredModel::collection()` prefers `collection_alias`). Every
+  `EmbeddingService.Retrieve` against a just-registered model therefore
+  returned `FailedPrecondition` (Qdrant HTTP 404) until an unrelated
+  activation/cutover happened to create the alias — a divergence that only
+  surfaced against a fresh vector store. RegisterModel now points the alias at
+  the active collection on registration (Qdrant-only; idempotent).
+
 ## [0.4.24] - 2026-07-25
 
 The Update-verb hardening release: the 0.4.23 `DataBroker.Update` verb now
