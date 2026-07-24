@@ -345,8 +345,27 @@ impl AuthzSnapshot {
             effect: if allowed { Effect::Allow } else { Effect::Deny },
             deny_reason: if allowed {
                 String::new()
+            } else if applicable.is_empty() {
+                // W5 (consumer tip 2): name the evaluated tuple and the miss
+                // class so a denial is diagnosable from the error alone.
+                // Anti-enumeration-safe: echoes only the caller's own request
+                // (their action/resource/tenant) plus counts — never another
+                // principal's policies.
+                format!(
+                    "denied by Casbin PERM model: no applicable allow policy for action '{}' on '{}' (tenant '{}') — likely missing an exact-entity ABAC policy for this resource",
+                    req.action,
+                    selectors.join("|"),
+                    principal.tenant_id,
+                )
             } else {
-                "denied by Casbin PERM model".to_string()
+                format!(
+                    "denied by Casbin PERM model: {} candidate polic{} evaluated, none granted action '{}' on '{}' (tenant '{}') for the caller's identities/roles",
+                    applicable.len(),
+                    if applicable.len() == 1 { "y" } else { "ies" },
+                    req.action,
+                    selectors.join("|"),
+                    principal.tenant_id,
+                )
             },
             // Candidate policy set Casbin evaluated (post ABAC pre-filter).
             matched_policy_ids: applicable.iter().map(|p| p.id.clone()).collect(),

@@ -146,6 +146,8 @@ pub(crate) enum Command {
         action: SdkAction,
         /// Language to generate for, or `all`. Defaults to `all`.
         lang: String,
+        /// `diff` only: the committed generated file to byte-compare against.
+        against: String,
         /// Template root. Defaults to `sdk-templates`.
         templates_dir: String,
         /// SDK output root. Defaults to `sdk`.
@@ -254,6 +256,9 @@ pub(crate) enum SdkAction {
     Manifest,
     ListLangs,
     Init,
+    /// W3 (tip 9): regenerate the project-proto entities file in memory and
+    /// byte-compare against a committed file — the consumer CI staleness gate.
+    Diff,
 }
 
 /// Sub-action of `udb orm`. Currently only `scaffold` (model generation), kept
@@ -537,6 +542,7 @@ const SDK_ACTIONS: &[&str] = &[
     "init/doctor/preflight",
     "manifest",
     "list-langs/languages",
+    "diff",
 ];
 
 const ORM_ACTIONS: &[&str] = &["scaffold"];
@@ -1110,6 +1116,7 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
                 Some("generate") | Some("gen") => SdkAction::Generate,
                 Some("init") | Some("doctor") | Some("preflight") => SdkAction::Init,
                 Some("manifest") => SdkAction::Manifest,
+                Some("diff") => SdkAction::Diff,
                 Some("list-langs") | Some("languages") => SdkAction::ListLangs,
                 Some(other) => {
                     return (
@@ -1130,6 +1137,7 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
             Command::Sdk {
                 action,
                 lang: flag_value("--lang").unwrap_or_else(|| "all".to_string()),
+                against: flag_value("--against").unwrap_or_default(),
                 templates_dir: flag_value("--templates")
                     .unwrap_or_else(|| "sdk-templates".to_string()),
                 out_dir: flag_value("--out").unwrap_or_else(|| "sdk".to_string()),

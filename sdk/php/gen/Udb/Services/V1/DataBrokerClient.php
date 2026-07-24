@@ -104,8 +104,10 @@ class DataBrokerClient extends \Grpc\BaseStub {
     /**
      * Partial update: SET named columns and/or apply atomic increments on the
      * matched rows — no full-record resend, no read-modify-write counter window.
-     * Same filter language, tenant isolation, CAS (`expected`) and keyed-replay
-     * semantics as Upsert/Delete.
+     * Same filter language, tenant isolation and CAS (`expected`) as
+     * Upsert/Delete. A retried keyed Update is deduped in the write tx
+     * (fail-closed, tenant+project-scoped durable dedup) and returns
+     * was_duplicate=true with the original body.
      * @param \Udb\Entity\V1\UpdateRequest $argument input argument
      * @param array $metadata metadata
      * @param array $options call options

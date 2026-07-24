@@ -606,9 +606,11 @@ fn build_select_query_plan_uncached(
 
     let mut parameter_columns = Vec::new();
     let backend_kind = effective_sql_backend(&request.context);
+    let encrypted = encrypted_filter_columns(table);
     let compiled_filter = compile_filter_predicates(
         &filter,
         &allowed,
+        &encrypted,
         &mut errors,
         &mut parameter_columns,
         1,
@@ -1020,9 +1022,11 @@ pub fn build_delete_plan(
     let filter = normalize_filter_keys(&resolver, &request.filter);
     let mut parameter_columns = Vec::new();
     let backend_kind = effective_sql_backend(&request.context);
+    let encrypted = encrypted_filter_columns(table);
     let compiled = compile_filter_predicates(
         &filter,
         &allowed,
+        &encrypted,
         &mut errors,
         &mut parameter_columns,
         1,
@@ -1170,9 +1174,11 @@ pub fn build_update_plan(
 
     // ── WHERE clause: identical machinery + isolation posture to delete ──────
     let backend_kind = effective_sql_backend(&request.context);
+    let encrypted = encrypted_filter_columns(table);
     let compiled = compile_filter_predicates(
         &filter,
         &allowed,
+        &encrypted,
         &mut errors,
         &mut parameter_columns,
         next_param,
@@ -1911,6 +1917,7 @@ struct CompiledFilter {
 fn compile_filter_predicates(
     value: &Value,
     allowed: &BTreeSet<String>,
+    encrypted: &std::collections::BTreeMap<String, String>,
     errors: &mut Vec<String>,
     parameter_columns: &mut Vec<String>,
     start_param: usize,
@@ -1935,6 +1942,7 @@ fn compile_filter_predicates(
                     let compiled = compile_filter_group(
                         nested,
                         allowed,
+                        encrypted,
                         errors,
                         parameter_columns,
                         next_param,
@@ -1950,6 +1958,24 @@ fn compile_filter_predicates(
                 if !allowed.contains(&normalized) {
                     if !is_operator(&normalized) {
                         errors.push(format!("unknown filter field {}", key));
+                    }
+                    continue;
+                }
+                // W2: FAIL CLOSED on encrypted columns — AEAD ciphertext is
+                // randomized, so this predicate silently matches nothing.
+                if let Some(index_column) = encrypted.get(&normalized) {
+                    if index_column.is_empty() {
+                        errors.push(format!(
+                            "filter on encrypted column \"{normalized}\" cannot match (AEAD \
+                             ciphertext is randomized); declare a blind-index column to make \
+                             this column filterable"
+                        ));
+                    } else {
+                        errors.push(format!(
+                            "filter on encrypted column \"{normalized}\" cannot match (AEAD \
+                             ciphertext is randomized); filter on \"{index_column}\" (its blind \
+                             index) instead"
+                        ));
                     }
                     continue;
                 }
@@ -1985,6 +2011,7 @@ fn compile_filter_predicates(
 fn compile_filter_group(
     value: &Value,
     allowed: &BTreeSet<String>,
+    encrypted: &std::collections::BTreeMap<String, String>,
     errors: &mut Vec<String>,
     parameter_columns: &mut Vec<String>,
     start_param: usize,
@@ -1998,6 +2025,7 @@ fn compile_filter_group(
             let compiled = compile_filter_predicates(
                 item,
                 allowed,
+                encrypted,
                 errors,
                 parameter_columns,
                 next_param,
@@ -2441,6 +2469,8 @@ mod tests {
             &UpdatePlanRequest {
                 context: RequestContext {
                     tenant_id: "t1".to_string(),
+                    purpose: "unit-test".to_string(),
+                    scopes: vec!["udb:write".to_string()],
                     ..RequestContext::default()
                 },
                 message_type: "acme.test.v1.Widget".to_string(),
@@ -2476,6 +2506,8 @@ mod tests {
             &UpdatePlanRequest {
                 context: RequestContext {
                     tenant_id: "t1".to_string(),
+                    purpose: "unit-test".to_string(),
+                    scopes: vec!["udb:write".to_string()],
                     ..RequestContext::default()
                 },
                 message_type: "acme.test.v1.Widget".to_string(),
@@ -2495,6 +2527,8 @@ mod tests {
         let base = UpdatePlanRequest {
             context: RequestContext {
                 tenant_id: "t1".to_string(),
+                purpose: "unit-test".to_string(),
+                scopes: vec!["udb:write".to_string()],
                 ..RequestContext::default()
             },
             message_type: "acme.test.v1.Widget".to_string(),
@@ -2584,6 +2618,103 @@ mod tests {
         );
     }
 
+    // W2 (tip 3 stage 1): equality on an encrypted column must FAIL CLOSED with
+    // a typed error naming the blind-index sibling — never silently match
+    // nothing. Applies at every depth of the filter tree and to every verb that
+    // compiles filters (select/delete/update share the compiler).
+    #[test]
+    fn encrypted_filter_fails_closed_naming_blind_index() {
+        let mut mobile = test_column("mobile_number");
+        mobile.security = ManifestColumnSecurity {
+            is_encrypted: true,
+            ..ManifestColumnSecurity::default()
+        };
+        let mut mobile_idx = test_column("mobile_number_idx");
+        mobile_idx.security = ManifestColumnSecurity {
+            is_blind_index: true,
+            ..ManifestColumnSecurity::default()
+        };
+        let mut ssn = test_column("ssn");
+        ssn.security = ManifestColumnSecurity {
+            is_encrypted: true,
+            ..ManifestColumnSecurity::default()
+        };
+        let table = ManifestTable {
+            columns: vec![
+                test_column("id"),
+                test_column("tenant_id"),
+                mobile,
+                mobile_idx,
+                ssn,
+            ],
+            table_security: ManifestTableSecurity {
+                tenant_column: "tenant_id".to_string(),
+                ..ManifestTableSecurity::default()
+            },
+            ..ManifestTable::default()
+        };
+        let manifest = test_manifest(table);
+        let request = |filter: Value| DeletePlanRequest {
+            context: RequestContext {
+                tenant_id: "t1".to_string(),
+                purpose: "unit-test".to_string(),
+                scopes: vec!["udb:write".to_string()],
+                ..RequestContext::default()
+            },
+            message_type: "acme.test.v1.Widget".to_string(),
+            filter,
+        };
+
+        // Top-level predicate on the encrypted column: typed error names the idx.
+        let plan = build_delete_plan(
+            &manifest,
+            &request(json!({"tenant_id": "t1", "mobile_number": "+15550100"})),
+        );
+        assert!(
+            plan.errors
+                .iter()
+                .any(|e| e.contains("encrypted column \"mobile_number\"")
+                    && e.contains("\"mobile_number_idx\"")),
+            "{:?}",
+            plan.errors
+        );
+
+        // Nested inside $or: still caught.
+        let plan = build_delete_plan(
+            &manifest,
+            &request(json!({"tenant_id": "t1", "$or": [{"mobile_number": "x"}, {"id": "w1"}]})),
+        );
+        assert!(
+            plan.errors
+                .iter()
+                .any(|e| e.contains("encrypted column \"mobile_number\"")),
+            "{:?}",
+            plan.errors
+        );
+
+        // Encrypted column WITHOUT a blind index: generic guidance.
+        let plan = build_delete_plan(&manifest, &request(json!({"tenant_id": "t1", "ssn": "x"})));
+        assert!(
+            plan.errors
+                .iter()
+                .any(|e| e.contains("encrypted column \"ssn\"")
+                    && e.contains("declare a blind-index column")),
+            "{:?}",
+            plan.errors
+        );
+
+        // Filtering on the blind-index sibling itself is legal.
+        let plan = build_delete_plan(
+            &manifest,
+            &request(json!({"tenant_id": "t1", "mobile_number_idx": "hmac-token"})),
+        );
+        assert!(
+            !plan.errors.iter().any(|e| e.contains("encrypted column")),
+            "{:?}",
+            plan.errors
+        );
+    }
+
     fn test_manifest(mut table: ManifestTable) -> CatalogManifest {
         table.message_name = "acme.test.v1.Widget".to_string();
         table.schema = "public".to_string();
@@ -2598,7 +2729,7 @@ mod tests {
     fn colliding_auth_catalog() -> CatalogManifest {
         let mut tables = Vec::new();
         for (package, schema) in [
-            ("ambulife.authn.entity.v1", "ambulife_authn"),
+            ("acme.authn.entity.v1", "acme_authn"),
             ("udb.core.authn.entity.v1", "udb_authn"),
         ] {
             for (message, physical) in [("OTP", "otps"), ("User", "users"), ("Session", "sessions")]
@@ -2688,7 +2819,7 @@ mod tests {
     fn colliding_catalog_select_and_upsert_route_only_by_exact_fqn() {
         let manifest = colliding_auth_catalog();
         for (message_type, expected_schema) in [
-            ("ambulife.authn.entity.v1.OTP", "ambulife_authn"),
+            ("acme.authn.entity.v1.OTP", "acme_authn"),
             ("udb.core.authn.entity.v1.OTP", "udb_authn"),
         ] {
             let select = build_select_query_plan(
@@ -2730,7 +2861,7 @@ mod tests {
                 .errors
                 .iter()
                 .any(|error| error.contains("ambiguous message type 'OTP'")
-                    && error.contains("ambulife.authn.entity.v1.OTP")
+                    && error.contains("acme.authn.entity.v1.OTP")
                     && error.contains("udb.core.authn.entity.v1.OTP")),
             "{:?}",
             ambiguous_select.errors

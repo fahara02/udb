@@ -944,8 +944,10 @@ namespace Udb.Services.V1 {
       /// <summary>
       /// Partial update: SET named columns and/or apply atomic increments on the
       /// matched rows — no full-record resend, no read-modify-write counter window.
-      /// Same filter language, tenant isolation, CAS (`expected`) and keyed-replay
-      /// semantics as Upsert/Delete.
+      /// Same filter language, tenant isolation and CAS (`expected`) as
+      /// Upsert/Delete. A retried keyed Update is deduped in the write tx
+      /// (fail-closed, tenant+project-scoped durable dedup) and returns
+      /// was_duplicate=true with the original body.
       /// </summary>
       /// <param name="request">The request received from the client.</param>
       /// <param name="context">The context of the server-side call handler being invoked.</param>
@@ -1804,8 +1806,10 @@ namespace Udb.Services.V1 {
       /// <summary>
       /// Partial update: SET named columns and/or apply atomic increments on the
       /// matched rows — no full-record resend, no read-modify-write counter window.
-      /// Same filter language, tenant isolation, CAS (`expected`) and keyed-replay
-      /// semantics as Upsert/Delete.
+      /// Same filter language, tenant isolation and CAS (`expected`) as
+      /// Upsert/Delete. A retried keyed Update is deduped in the write tx
+      /// (fail-closed, tenant+project-scoped durable dedup) and returns
+      /// was_duplicate=true with the original body.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
@@ -1820,8 +1824,10 @@ namespace Udb.Services.V1 {
       /// <summary>
       /// Partial update: SET named columns and/or apply atomic increments on the
       /// matched rows — no full-record resend, no read-modify-write counter window.
-      /// Same filter language, tenant isolation, CAS (`expected`) and keyed-replay
-      /// semantics as Upsert/Delete.
+      /// Same filter language, tenant isolation and CAS (`expected`) as
+      /// Upsert/Delete. A retried keyed Update is deduped in the write tx
+      /// (fail-closed, tenant+project-scoped durable dedup) and returns
+      /// was_duplicate=true with the original body.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="options">The options for the call.</param>
@@ -1834,8 +1840,10 @@ namespace Udb.Services.V1 {
       /// <summary>
       /// Partial update: SET named columns and/or apply atomic increments on the
       /// matched rows — no full-record resend, no read-modify-write counter window.
-      /// Same filter language, tenant isolation, CAS (`expected`) and keyed-replay
-      /// semantics as Upsert/Delete.
+      /// Same filter language, tenant isolation and CAS (`expected`) as
+      /// Upsert/Delete. A retried keyed Update is deduped in the write tx
+      /// (fail-closed, tenant+project-scoped durable dedup) and returns
+      /// was_duplicate=true with the original body.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
@@ -1850,8 +1858,10 @@ namespace Udb.Services.V1 {
       /// <summary>
       /// Partial update: SET named columns and/or apply atomic increments on the
       /// matched rows — no full-record resend, no read-modify-write counter window.
-      /// Same filter language, tenant isolation, CAS (`expected`) and keyed-replay
-      /// semantics as Upsert/Delete.
+      /// Same filter language, tenant isolation and CAS (`expected`) as
+      /// Upsert/Delete. A retried keyed Update is deduped in the write tx
+      /// (fail-closed, tenant+project-scoped durable dedup) and returns
+      /// was_duplicate=true with the original body.
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="options">The options for the call.</param>

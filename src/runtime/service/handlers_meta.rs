@@ -270,6 +270,23 @@ impl DataBrokerService {
         let mut errors = Vec::new();
         let mut warnings = init.warnings.clone();
 
+        // W4: surface a degraded rate limiter (Redis unreachable; serving under
+        // the declared `local`/`open` failure mode) so operators see the
+        // degradation from the health report, Stripe-style, until it recovers.
+        if self
+            .rate_limit_degraded
+            .load(std::sync::atomic::Ordering::Relaxed)
+        {
+            warnings.push(format!(
+                "rate limiter DEGRADED: Redis unreachable; serving under \
+                 rate_limit_failure_mode='{}' fallback",
+                self.runtime_snapshot()
+                    .config()
+                    .service
+                    .rate_limit_failure_mode
+            ));
+        }
+
         // Privilege check
         let priv_report = if init.postgres_configured {
             let pr = self.runtime_snapshot().check_postgres_privileges().await;

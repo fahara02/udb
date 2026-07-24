@@ -361,6 +361,7 @@ pub fn run() {
         Command::Sdk {
             action,
             lang,
+            against,
             templates_dir,
             out_dir,
             selector,
@@ -368,6 +369,7 @@ pub fn run() {
             process::exit(sdk_gen::run(
                 action,
                 &lang,
+                &against,
                 &templates_dir,
                 &out_dir,
                 &selector,

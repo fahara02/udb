@@ -413,6 +413,8 @@ pub fn safety_label(safety: &str) -> &str {
 pub struct PrometheusMetrics {
     registry: prometheus::Registry,
     grpc_requests: prometheus::IntCounterVec,
+    /// W4: limiter running on its declared failure-mode fallback, by mode.
+    rate_limit_degraded: prometheus::IntCounterVec,
     grpc_duration: prometheus::HistogramVec,
     pg_duration: prometheus::HistogramVec,
     cache_ops: prometheus::IntCounterVec,
@@ -509,6 +511,13 @@ impl PrometheusMetrics {
                 "UDB gRPC requests by method and status",
             ),
             &["method", "status"],
+        )?;
+        let rate_limit_degraded = prometheus::IntCounterVec::new(
+            prometheus::Opts::new(
+                "udb_rate_limit_degraded_total",
+                "Data-plane requests served under the rate limiter's declared                  failure-mode fallback (Redis unreachable), by mode",
+            ),
+            &["mode"],
         )?;
         let grpc_duration = prometheus::HistogramVec::new(
             prometheus::HistogramOpts::new(
@@ -910,6 +919,7 @@ impl PrometheusMetrics {
 
         for collector in [
             Box::new(grpc_requests.clone()) as Box<dyn prometheus::core::Collector>,
+            Box::new(rate_limit_degraded.clone()) as Box<dyn prometheus::core::Collector>,
             Box::new(grpc_duration.clone()),
             Box::new(pg_duration.clone()),
             Box::new(cache_ops.clone()),
@@ -987,6 +997,7 @@ impl PrometheusMetrics {
         Ok(Self {
             registry,
             grpc_requests,
+            rate_limit_degraded,
             grpc_duration,
             pg_duration,
             cache_ops,
@@ -1058,6 +1069,11 @@ impl PrometheusMetrics {
             canary_active,
             raw_dispatch,
         })
+    }
+
+    /// W4: count a request served under the limiter's failure-mode fallback.
+    pub fn record_rate_limit_degraded(&self, mode: &str) {
+        self.rate_limit_degraded.with_label_values(&[mode]).inc();
     }
 
     pub fn record_grpc(&self, method: &str, status: &str, seconds: f64) {

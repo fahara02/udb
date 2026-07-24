@@ -2558,8 +2558,10 @@ public final class DataBrokerGrpc {
      * <pre>
      * Partial update: SET named columns and/or apply atomic increments on the
      * matched rows — no full-record resend, no read-modify-write counter window.
-     * Same filter language, tenant isolation, CAS (`expected`) and keyed-replay
-     * semantics as Upsert/Delete.
+     * Same filter language, tenant isolation and CAS (`expected`) as
+     * Upsert/Delete. A retried keyed Update is deduped in the write tx
+     * (fail-closed, tenant+project-scoped durable dedup) and returns
+     * was_duplicate=true with the original body.
      * </pre>
      */
     default void update(com.udb.entity.v1.UpdateRequest request,
@@ -3289,8 +3291,10 @@ public final class DataBrokerGrpc {
      * <pre>
      * Partial update: SET named columns and/or apply atomic increments on the
      * matched rows — no full-record resend, no read-modify-write counter window.
-     * Same filter language, tenant isolation, CAS (`expected`) and keyed-replay
-     * semantics as Upsert/Delete.
+     * Same filter language, tenant isolation and CAS (`expected`) as
+     * Upsert/Delete. A retried keyed Update is deduped in the write tx
+     * (fail-closed, tenant+project-scoped durable dedup) and returns
+     * was_duplicate=true with the original body.
      * </pre>
      */
     public void update(com.udb.entity.v1.UpdateRequest request,
@@ -4077,8 +4081,10 @@ public final class DataBrokerGrpc {
      * <pre>
      * Partial update: SET named columns and/or apply atomic increments on the
      * matched rows — no full-record resend, no read-modify-write counter window.
-     * Same filter language, tenant isolation, CAS (`expected`) and keyed-replay
-     * semantics as Upsert/Delete.
+     * Same filter language, tenant isolation and CAS (`expected`) as
+     * Upsert/Delete. A retried keyed Update is deduped in the write tx
+     * (fail-closed, tenant+project-scoped durable dedup) and returns
+     * was_duplicate=true with the original body.
      * </pre>
      */
     public com.udb.entity.v1.MutationResponse update(com.udb.entity.v1.UpdateRequest request) throws io.grpc.StatusException {
@@ -4784,8 +4790,10 @@ public final class DataBrokerGrpc {
      * <pre>
      * Partial update: SET named columns and/or apply atomic increments on the
      * matched rows — no full-record resend, no read-modify-write counter window.
-     * Same filter language, tenant isolation, CAS (`expected`) and keyed-replay
-     * semantics as Upsert/Delete.
+     * Same filter language, tenant isolation and CAS (`expected`) as
+     * Upsert/Delete. A retried keyed Update is deduped in the write tx
+     * (fail-closed, tenant+project-scoped durable dedup) and returns
+     * was_duplicate=true with the original body.
      * </pre>
      */
     public com.udb.entity.v1.MutationResponse update(com.udb.entity.v1.UpdateRequest request) {
@@ -5446,8 +5454,10 @@ public final class DataBrokerGrpc {
      * <pre>
      * Partial update: SET named columns and/or apply atomic increments on the
      * matched rows — no full-record resend, no read-modify-write counter window.
-     * Same filter language, tenant isolation, CAS (`expected`) and keyed-replay
-     * semantics as Upsert/Delete.
+     * Same filter language, tenant isolation and CAS (`expected`) as
+     * Upsert/Delete. A retried keyed Update is deduped in the write tx
+     * (fail-closed, tenant+project-scoped durable dedup) and returns
+     * was_duplicate=true with the original body.
      * </pre>
      */
     public com.google.common.util.concurrent.ListenableFuture<com.udb.entity.v1.MutationResponse> update(

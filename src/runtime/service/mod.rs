@@ -277,6 +277,14 @@ pub struct DataBrokerService {
     projection_engine: Option<Arc<crate::runtime::projection::ProjectionEngine>>,
     #[cfg(feature = "redis")]
     rate_limit_redis: Arc<tokio::sync::Mutex<Option<redis::aio::MultiplexedConnection>>>,
+    /// W4: set while the limiter is running on its declared failure-mode
+    /// fallback (Redis unreachable, mode `local`/`open`); surfaced as a
+    /// health-report warning + the rate_limit_degraded metric.
+    rate_limit_degraded: Arc<std::sync::atomic::AtomicBool>,
+    /// W4 `local` mode: per-process fixed windows (`key -> (window, count)`),
+    /// pruned per hit; enforcement loosens to N×limit across N replicas while
+    /// Redis is down instead of vanishing (open) or refusing (closed).
+    rate_limit_local: Arc<tokio::sync::Mutex<std::collections::HashMap<String, (u64, u64)>>>,
 }
 
 pub(crate) const UDB_PROTOCOL_VERSION: &str = "1.0.0";
@@ -302,6 +310,7 @@ pub(crate) const SUPPORTED_RPC_NAMES: &[&str] = &[
     "Upsert",
     "BatchUpsert",
     "Delete",
+    "Update",
     "VectorSearch",
     "VectorHybridSearch",
     "VectorUpsert",
@@ -391,6 +400,8 @@ impl DataBrokerService {
             projection_engine: None,
             #[cfg(feature = "redis")]
             rate_limit_redis: Arc::new(tokio::sync::Mutex::new(None)),
+            rate_limit_degraded: Arc::new(std::sync::atomic::AtomicBool::new(false)),
+            rate_limit_local: Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new())),
         }
     }
 
@@ -409,6 +420,8 @@ impl DataBrokerService {
             projection_engine: None,
             #[cfg(feature = "redis")]
             rate_limit_redis: Arc::new(tokio::sync::Mutex::new(None)),
+            rate_limit_degraded: Arc::new(std::sync::atomic::AtomicBool::new(false)),
+            rate_limit_local: Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new())),
         }
     }
 
@@ -436,6 +449,8 @@ impl DataBrokerService {
             projection_engine: None,
             #[cfg(feature = "redis")]
             rate_limit_redis: Arc::new(tokio::sync::Mutex::new(None)),
+            rate_limit_degraded: Arc::new(std::sync::atomic::AtomicBool::new(false)),
+            rate_limit_local: Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new())),
         }
     }
 
@@ -797,47 +812,74 @@ impl DataBrokerService {
             .invoke_async(&mut conn)
             .await;
         let count: u64 = match first_attempt {
-            Ok(count) => count,
+            Ok(count) => {
+                self.rate_limit_degraded
+                    .store(false, std::sync::atomic::Ordering::Relaxed);
+                count
+            }
             Err(_) => {
                 // The cached multiplexed connection is likely dead (a Redis
                 // restart leaves it broken-pipe FOREVER — it never reconnects
                 // on its own, so keeping it turns one blip into a full outage
                 // until broker restart). Drop the corpse and re-dial ONCE
-                // in-call; a persistent failure still returns the typed
-                // retryable status, with the cache cleared so the next request
-                // dials fresh.
+                // in-call. A persistent failure takes the DECLARED failure
+                // mode (W4): closed = typed retryable status (today's stance,
+                // now explicit), local = per-process fixed window, open =
+                // allow — the latter two with the degraded flag set.
                 {
                     let mut guard = self.rate_limit_redis.lock().await;
                     *guard = None;
                 }
-                let mut fresh = redis
-                    .get_multiplexed_async_connection()
-                    .await
-                    .map_err(|e| {
-                        crate::runtime::executor_utils::retryable_status(
-                            "redis",
-                            "rate_limit_connection",
-                            crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
-                            format!("rate limit redis error: {e}"),
-                        )
-                    })?;
-                let count = script
-                    .key(&key)
-                    .arg(window_secs)
-                    .invoke_async(&mut fresh)
-                    .await
-                    .map_err(|e| {
-                        crate::runtime::executor_utils::retryable_status(
-                            "redis",
-                            "rate_limit_eval",
-                            crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
-                            format!("rate limit redis error: {e}"),
-                        )
-                    })?;
-                // The fresh dial worked — cache it for subsequent requests.
-                let mut guard = self.rate_limit_redis.lock().await;
-                *guard = Some(fresh);
-                count
+                let retry: Result<u64, Status> = async {
+                    let mut fresh =
+                        redis
+                            .get_multiplexed_async_connection()
+                            .await
+                            .map_err(|e| {
+                                crate::runtime::executor_utils::retryable_status(
+                                    "redis",
+                                    "rate_limit_connection",
+                                    crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
+                                    format!("rate limit redis error: {e}"),
+                                )
+                            })?;
+                    let count: u64 = script
+                        .key(&key)
+                        .arg(window_secs)
+                        .invoke_async(&mut fresh)
+                        .await
+                        .map_err(|e| {
+                            crate::runtime::executor_utils::retryable_status(
+                                "redis",
+                                "rate_limit_eval",
+                                crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
+                                format!("rate limit redis error: {e}"),
+                            )
+                        })?;
+                    // The fresh dial worked — cache it for subsequent requests.
+                    let mut guard = self.rate_limit_redis.lock().await;
+                    *guard = Some(fresh);
+                    Ok(count)
+                }
+                .await;
+                match retry {
+                    Ok(count) => {
+                        self.rate_limit_degraded
+                            .store(false, std::sync::atomic::Ordering::Relaxed);
+                        count
+                    }
+                    Err(status) => {
+                        return self
+                            .rate_limit_failure_fallback(
+                                &key,
+                                window_secs,
+                                max_rps,
+                                unix_epoch,
+                                status,
+                            )
+                            .await;
+                    }
+                }
             }
         };
 
@@ -855,6 +897,70 @@ impl DataBrokerService {
             ));
         }
         Ok(())
+    }
+
+    /// W4: the limiter's DECLARED behavior when Redis stays unreachable after
+    /// the in-call re-dial (`service.rate_limit_failure_mode`):
+    /// `closed` returns the typed retryable status; `local` enforces a
+    /// per-process fixed window (N×limit across N replicas — degraded but not
+    /// absent); `open` allows. `local`/`open` set the degraded flag, which the
+    /// health report surfaces as a warning until Redis recovers.
+    #[cfg(feature = "redis")]
+    async fn rate_limit_failure_fallback(
+        &self,
+        key: &str,
+        window_secs: u64,
+        max_rps: u32,
+        unix_epoch: u64,
+        closed_status: Status,
+    ) -> Result<(), Status> {
+        let mode = self
+            .runtime_snapshot()
+            .config()
+            .service
+            .rate_limit_failure_mode
+            .clone();
+        match mode.as_str() {
+            "local" => {
+                self.rate_limit_degraded
+                    .store(true, std::sync::atomic::Ordering::Relaxed);
+                self.metrics.record_rate_limit_degraded("local");
+                let window = unix_epoch / window_secs;
+                let count = {
+                    let mut windows = self.rate_limit_local.lock().await;
+                    // Prune expired windows so an outage never grows the map
+                    // beyond the currently-active keys.
+                    windows.retain(|_, (w, _)| *w == window);
+                    let entry = windows.entry(key.to_string()).or_insert((window, 0));
+                    entry.1 += 1;
+                    entry.1
+                };
+                if count > u64::from(max_rps) {
+                    let retry_after_ms =
+                        (window_secs.saturating_sub(unix_epoch % window_secs).max(1) as i64)
+                            * 1_000;
+                    return Err(crate::runtime::executor_utils::quota_status(
+                        "data_broker",
+                        "local rate limit (degraded)",
+                        retry_after_ms,
+                        format!(
+                            "rate limit exceeded: {}/{} requests per {}s window \
+                             (per-process fallback while Redis is unreachable)",
+                            count, max_rps, window_secs
+                        ),
+                    ));
+                }
+                Ok(())
+            }
+            "open" => {
+                self.rate_limit_degraded
+                    .store(true, std::sync::atomic::Ordering::Relaxed);
+                self.metrics.record_rate_limit_degraded("open");
+                Ok(())
+            }
+            // "closed" and anything unrecognized keep the fail-closed stance.
+            _ => Err(closed_status),
+        }
     }
 
     pub(crate) fn record_grpc<T>(

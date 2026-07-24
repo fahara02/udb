@@ -62,6 +62,31 @@ pub(crate) fn allowed_columns(table: &ManifestTable) -> BTreeSet<String> {
 /// accept proto `field_name` aliases; the broker planner must resolve them too,
 /// or a column override / identifier normalization (`field_name != column_name`)
 /// makes a valid request reject or bind the wrong column.
+/// W2 (consumer tip 3, stage 1): the encrypted columns of a table mapped to
+/// their blind-index sibling (`<col>_idx` declared with `is_blind_index`), or
+/// "" when none exists. Filter compilation FAILS CLOSED on any predicate that
+/// references one of these — AEAD ciphertext is randomized, so equality on the
+/// encrypted column silently matches nothing, which is worse than an error.
+pub(crate) fn encrypted_filter_columns(
+    table: &ManifestTable,
+) -> std::collections::BTreeMap<String, String> {
+    let mut out = std::collections::BTreeMap::new();
+    for column in &table.columns {
+        if !column.security.is_encrypted {
+            continue;
+        }
+        let idx_name = format!("{}_idx", column.column_name);
+        let sibling = table
+            .columns
+            .iter()
+            .find(|c| c.column_name == idx_name && c.security.is_blind_index)
+            .map(|c| c.column_name.clone())
+            .unwrap_or_default();
+        out.insert(column.column_name.clone(), sibling);
+    }
+    out
+}
+
 pub(crate) fn column_resolver(table: &ManifestTable) -> std::collections::HashMap<String, String> {
     let mut map = std::collections::HashMap::new();
     for column in &table.columns {

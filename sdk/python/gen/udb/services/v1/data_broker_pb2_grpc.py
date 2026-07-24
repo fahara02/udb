@@ -468,8 +468,10 @@ class DataBrokerServicer(object):
     def Update(self, request, context):
         """Partial update: SET named columns and/or apply atomic increments on the
         matched rows — no full-record resend, no read-modify-write counter window.
-        Same filter language, tenant isolation, CAS (`expected`) and keyed-replay
-        semantics as Upsert/Delete.
+        Same filter language, tenant isolation and CAS (`expected`) as
+        Upsert/Delete. A retried keyed Update is deduped in the write tx
+        (fail-closed, tenant+project-scoped durable dedup) and returns
+        was_duplicate=true with the original body.
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')

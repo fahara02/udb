@@ -121,8 +121,10 @@ type DataBrokerClient interface {
 	Delete(ctx context.Context, in *v1.DeleteRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error)
 	// Partial update: SET named columns and/or apply atomic increments on the
 	// matched rows — no full-record resend, no read-modify-write counter window.
-	// Same filter language, tenant isolation, CAS (`expected`) and keyed-replay
-	// semantics as Upsert/Delete.
+	// Same filter language, tenant isolation and CAS (`expected`) as
+	// Upsert/Delete. A retried keyed Update is deduped in the write tx
+	// (fail-closed, tenant+project-scoped durable dedup) and returns
+	// was_duplicate=true with the original body.
 	Update(ctx context.Context, in *v1.UpdateRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error)
 	// ── Vector ──────────────────────────────────────────────────────────────────
 	VectorSearch(ctx context.Context, in *v1.VectorSearchRequest, opts ...grpc.CallOption) (*v1.VectorSet, error)
@@ -1107,8 +1109,10 @@ type DataBrokerServer interface {
 	Delete(context.Context, *v1.DeleteRequest) (*v1.MutationResponse, error)
 	// Partial update: SET named columns and/or apply atomic increments on the
 	// matched rows — no full-record resend, no read-modify-write counter window.
-	// Same filter language, tenant isolation, CAS (`expected`) and keyed-replay
-	// semantics as Upsert/Delete.
+	// Same filter language, tenant isolation and CAS (`expected`) as
+	// Upsert/Delete. A retried keyed Update is deduped in the write tx
+	// (fail-closed, tenant+project-scoped durable dedup) and returns
+	// was_duplicate=true with the original body.
 	Update(context.Context, *v1.UpdateRequest) (*v1.MutationResponse, error)
 	// ── Vector ──────────────────────────────────────────────────────────────────
 	VectorSearch(context.Context, *v1.VectorSearchRequest) (*v1.VectorSet, error)

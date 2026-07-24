@@ -353,6 +353,16 @@ pub struct ServiceSettings {
     pub rate_limit_enabled: bool,
     pub rate_limit_window_secs: u64,
     pub rate_limit_max_per_window: u32,
+    /// W4 (consumer tip 4): the DECLARED limiter-outage posture. What happens
+    /// to data-plane requests when the rate-limit Redis is unreachable (after
+    /// the in-call re-dial):
+    ///   "closed" (default) — typed retryable UNAVAILABLE; Redis is a hard
+    ///     data-plane dependency (today's fail-closed stance, now explicit).
+    ///   "local" — degrade to an in-process fixed window (enforcement loosens
+    ///     to N×limit across N replicas instead of vanishing), with a
+    ///     rate_limit_degraded metric + health-report flag.
+    ///   "open" — allow, with the same degraded metric/flag.
+    pub rate_limit_failure_mode: String,
     pub require_secure_transport: bool,
     pub mtls_required: bool,
     pub broker_to_broker_mtls_required: bool,
@@ -375,6 +385,7 @@ impl Default for ServiceSettings {
             rate_limit_enabled: true,
             rate_limit_window_secs: 60,
             rate_limit_max_per_window: 1000,
+            rate_limit_failure_mode: "closed".to_string(),
             require_secure_transport: false,
             mtls_required: false,
             broker_to_broker_mtls_required: false,
@@ -473,6 +484,18 @@ impl ServiceSettings {
         }
         if let Some(value) = env_u32("UDB_RATE_LIMIT_MAX_PER_WINDOW") {
             self.rate_limit_max_per_window = value;
+        }
+        if let Ok(value) = std::env::var("UDB_RATE_LIMIT_FAILURE_MODE") {
+            let normalized = value.trim().to_ascii_lowercase();
+            match normalized.as_str() {
+                "closed" | "local" | "open" => self.rate_limit_failure_mode = normalized,
+                "" => {}
+                other => tracing::warn!(
+                    "UDB_RATE_LIMIT_FAILURE_MODE '{other}' is not one of closed|local|open; \
+                     keeping '{}'",
+                    self.rate_limit_failure_mode
+                ),
+            }
         }
         let explicit_secure =
             bool_env("UDB_REQUIRE_SECURE_TRANSPORT").or_else(|| bool_env("UDB_TLS_REQUIRED"));

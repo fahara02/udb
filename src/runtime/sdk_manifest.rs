@@ -112,7 +112,7 @@ pub struct RpcDescriptor {
     pub replay_safe: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
 pub struct EntityDescriptor {
     pub message_type: String,
     pub short_name: String,
@@ -157,6 +157,9 @@ pub struct EntityColumnDescriptor {
     /// PII blind-index column — the generator scaffolds the HMAC lookup plumbing.
     pub is_blind_index: bool,
     pub is_pii: bool,
+    /// AEAD-encrypted at rest — equality filters on this column fail closed;
+    /// filter on the blind-index sibling instead (W2/W6).
+    pub is_encrypted: bool,
     /// Whether the consumer's PROTO MESSAGE declares this field. UDB injects
     /// audit columns (`created_at`/`updated_at`/`created_by`) into the TABLE
     /// when the proto lacks them; those have no Go getter, so typed marshalling
@@ -465,6 +468,7 @@ fn entity_descriptor_from_table(
                 exclude_from_insert: column.exclude_from_insert,
                 is_blind_index: column.security.is_blind_index,
                 is_pii: column.security.is_pii,
+                is_encrypted: column.security.is_encrypted,
                 declared_in_proto: declared_fields
                     .map(|fields| fields.contains(&column.field_name))
                     .unwrap_or(true),
