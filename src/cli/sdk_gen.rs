@@ -1169,13 +1169,16 @@ fn render_go_entities_file(entities: &[EntityDescriptor], package: &str) -> Stri
 
     // Imports (std first, then the consumer's proto packages, deterministic order).
     out.push_str("import (\n");
+    // W8: the typed repositories always need context + the SDK package.
+    out.push_str("\t\"context\"\n");
     if needs_strings {
         out.push_str("\t\"strings\"\n");
     }
     if needs_time {
         out.push_str("\t\"time\"\n");
     }
-    let has_std = needs_strings || needs_time;
+    out.push_str("\n\t\"github.com/fahara02/udb/sdk/go/udbclient\"\n");
+    let has_std = true;
     if has_std && (!proto_imports.is_empty() || needs_timestamppb) {
         out.push('\n');
     }
@@ -1310,6 +1313,60 @@ fn render_go_entities_file(entities: &[EntityDescriptor], package: &str) -> Stri
             ));
         }
         out.push_str("}\n\n");
+    }
+
+    // W8 (tip 6): typed repositories on the new surface — List/Get compose
+    // SelectPage/Select with the typed decode above; the guarded writes
+    // delegate to the SDK's CAS verbs. Kills the hand-written per-entity
+    // data-access layer (filters, paging, tenant threading, CAS plumbing).
+    out.push_str(
+        "// ── Typed repositories (generated) ───────────────────────────────────\n\n",
+    );
+    for (entity, alias, type_name) in &renderable {
+        let name = &entity.short_name;
+        let qualified = format!("{alias}.{type_name}");
+        let keys = entity
+            .primary_keys
+            .iter()
+            .map(|k| format!("{k:?}"))
+            .collect::<Vec<_>>()
+            .join(", ");
+        out.push_str(&format!(
+"// {name}Repo is a typed data-access layer for {name}: paged typed lists,\n\
+// typed point reads, and CAS-guarded writes — zero hand-written glue.\n\
+type {name}Repo struct {{ E *udbclient.Entity }}\n\n\
+// New{name}Repo binds a UDB client to typed {name} access.\n\
+func New{name}Repo(c *udbclient.Client) {name}Repo {{\n\
+\treturn {name}Repo{{E: c.Entity({fqn:?}, udbclient.Key({keys}))}}\n\
+}}\n\n\
+// List pages through rows matching where, decoded to typed messages.\n\
+func (r {name}Repo) List(ctx context.Context, where map[string]any, opts udbclient.PageOptions) ([]*{qualified}, string, int64, error) {{\n\
+\tpage, err := r.E.SelectPage(ctx, where, opts)\n\
+\tif err != nil {{\n\t\treturn nil, \"\", 0, err\n\t}}\n\
+\tout := make([]*{qualified}, 0, len(page.Rows))\n\
+\tfor _, row := range page.Rows {{\n\t\tout = append(out, {name}FromUDBRow(row))\n\t}}\n\
+\treturn out, page.NextPageToken, page.TotalCount, nil\n\
+}}\n\n\
+// Get returns the single row matching where (typically the primary key), or\n\
+// nil when absent.\n\
+func (r {name}Repo) Get(ctx context.Context, where map[string]any) (*{qualified}, error) {{\n\
+\trows, err := r.E.Select(ctx, where)\n\
+\tif err != nil || len(rows) == 0 {{\n\t\treturn nil, err\n\t}}\n\
+\treturn {name}FromUDBRow(rows[0]), nil\n\
+}}\n\n\
+// UpdateGuarded is a CAS partial update: SET only changes on the rows matched\n\
+// by where, only if expected still equals the current row.\n\
+func (r {name}Repo) UpdateGuarded(ctx context.Context, where, changes, expected map[string]any) error {{\n\
+\t_, err := r.E.Update(ctx, where, changes, udbclient.WithUpdateExpected(expected))\n\
+\treturn err\n\
+}}\n\n\
+// DeleteGuarded deletes the matched row only if expected still equals it.\n\
+func (r {name}Repo) DeleteGuarded(ctx context.Context, where, expected map[string]any) error {{\n\
+\t_, err := r.E.Delete(ctx, where, udbclient.WithDeleteExpected(expected))\n\
+\treturn err\n\
+}}\n\n",
+            fqn = entity.message_type,
+        ));
     }
 
     out.push_str(&go_coercion_helpers(needs_time));

@@ -26,6 +26,16 @@ on:
         required: false
         type: string
         default: latest
+      checkout-ref:
+        description: >-
+          Git ref to check out for the harness tree. Post-release benchmarks MUST
+          pass the released tag so the bench manifest/SDK stubs match the binary
+          under test — checking out main here once ran a newer RPC surface
+          against an older release binary and failed 27 RPCs. Empty = default
+          (the triggering ref), correct for CI shadow runs.
+        required: false
+        type: string
+        default: ""
       release-asset:
         description: "Linux release asset name to download (perf / release-asset)."
         required: false
@@ -81,6 +91,8 @@ jobs:
           --health-retries 20
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.checkout-ref }}
 
       - name: Initialize benchmark output
         shell: bash

@@ -137,5 +137,9 @@ jobs:
       # On workflow_run (post-release), benchmark the tag that just released
       # (head_branch = the v* tag). On dispatch, use the provided tag (or latest).
       release-tag: ${{ github.event.workflow_run.head_branch || inputs.release_tag || 'latest' }}
+      # Pin the harness tree to the SAME tag as the binary under test (see
+      # _live-sdk-suite checkout-ref): bench manifest + stubs must match the
+      # released surface, not main's.
+      checkout-ref: ${{ github.event.workflow_run.head_branch || (inputs.release_tag != 'latest' && inputs.release_tag) || '' }}
       release-asset: ${{ inputs.release_asset || 'udb-linux-amd64-full' }}
     secrets: inherit
