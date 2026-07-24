@@ -727,6 +727,24 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 	if svcOwner == "" {
 		svcOwner = svcName // fall back; CreateApiKey will fail typed, not INTERNAL
 	}
+	// A SECOND ACTIVE service account WITHOUT a grant: the measured
+	// CreateServiceAccountGrant makes its revision-1 grant here, and the
+	// destructive-phase RotateServiceAccountIdentity rotates that same grant.
+	svcBName := "sdk-perf-svc-b-" + suffix
+	if svcB, err := authn.CreateUser(base, &authnpb.CreateUserRequest{
+		Username: svcBName, Email: svcBName + "@example.com", Password: pw,
+		TenantId: tenant, ProjectId: project, FullName: "SDK Perf Service Account B",
+		AccountKind: authnentpb.AccountKind_ACCOUNT_KIND_SERVICE_ACCOUNT,
+	}); err != nil {
+		t.Logf("perf seed: service-account-B CreateUser failed (grant-create RPCs fall back): %v", err)
+	} else {
+		bid := svcB.GetUser().GetUserId()
+		_, _ = authn.ChangeUserStatus(base, &authnpb.ChangeUserStatusRequest{
+			UserId: bid, NewStatus: authnentpb.UserStatus_USER_STATUS_ACTIVE, Reason: "perf seed activate",
+			Context: &commonpb.RequestContext{Tenant: &commonpb.TenantContext{TenantId: tenant, ProjectId: project}},
+		})
+		fix.set("grant_create_user_id", bid)
+	}
 	keyCtx := &commonpb.RequestContext{UserId: svcOwner, Tenant: &commonpb.TenantContext{TenantId: tenant, ProjectId: project}}
 	if key, err := apikey.CreateApiKey(base, &apikeypb.CreateApiKeyRequest{
 		Name: "sdk-perf-key-" + suffix, OwnerId: svcOwner, Scopes: []string{"data:read"}, Context: keyCtx,

@@ -379,9 +379,23 @@ function run_native_service_e2e(GeneratedClient $authGenerated, GeneratedClient 
 
     // ApiKeyService — create/validate/list/revoke lifecycle.
     $principal = "sdk-live-svc-$suffix";
-    $keyCtx = (new \Udb\Core\Common\V1\RequestContext())
-        ->setUserId($principal)
+    $keyCtx = (new \Udb\Core\Common\V1\RequestContext())->setUserId($principal)
         ->setTenant((new \Udb\Core\Common\V1\TenantContext())->setTenantId($tenant)->setProjectId($project));
+    // A SECOND ACTIVE service account WITHOUT a grant: the measured
+    // CreateServiceAccountGrant makes its revision-1 grant here, and the
+    // destructive-phase RotateServiceAccountIdentity rotates that same grant.
+    $svcBName = "sdk-perf-svc-b-$suffix";
+    $svcB = $try('SeedServiceAccountB', fn () => $authGen->create_user((new \Udb\Core\Authn\Services\V1\CreateUserRequest())
+        ->setUsername($svcBName)->setEmail("$svcBName@example.com")->setPassword('CorrectHorse1!')
+        ->setTenantId($tenant)->setProjectId($project)->setFullName('SDK Perf Service Account B')
+        ->setAccountKind(\Udb\Core\Authn\Entity\V1\AccountKind::ACCOUNT_KIND_SERVICE_ACCOUNT), $meta));
+    if ($svcB) {
+        $bid = $svcB->getUser()->getUserId();
+        $try('SeedServiceAccountBActivate', fn () => $authGen->change_user_status((new \Udb\Core\Authn\Services\V1\ChangeUserStatusRequest())
+            ->setUserId($bid)->setNewStatus(\Udb\Core\Authn\Entity\V1\UserStatus::USER_STATUS_ACTIVE)->setReason('perf seed activate')
+            ->setContext((new \Udb\Core\Common\V1\RequestContext())->setTenant((new \Udb\Core\Common\V1\TenantContext())->setTenantId($tenant)->setProjectId($project))), $meta));
+        $fix->set('grant_create_user_id', $bid);
+    }
     $createdKey = $authGenerated->create_api_key((new \Udb\Core\Apikey\Services\V1\CreateApiKeyRequest())
         ->setName("sdk-live-key-$suffix")->setOwnerId($principal)->setScopes(['data:read'])->setContext($keyCtx), $meta);
     expect(str_starts_with($createdKey->getPlainKey(), 'udbk_'))->toBeTrue();

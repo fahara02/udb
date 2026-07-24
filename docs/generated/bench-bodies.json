@@ -404,7 +404,7 @@
     "operation_id": "createCertificateBinding",
     "op_kind": "MUTATION",
     "request_msg": "CreateCertificateBindingRequest",
-    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"user_id\": \"<seed:user_id>\", \"selector_kind\": \"SPIFFE_URI\", \"selector_value\": \"spiffe://bench/svc-grant\", \"scope_subset\": [], \"reason\": \"bench binding\" }`",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"user_id\": \"<seed:owner_id>\", \"selector_kind\": \"SPIFFE_URI\", \"selector_value\": \"spiffe://bench/svc-grant\", \"scope_subset\": [], \"reason\": \"bench binding\" }`",
     "notes": "Requires an ACTIVE grant; empty scope_subset = full current grant (never widening)."
   },
   {
@@ -416,7 +416,7 @@
     "operation_id": "createServiceAccountGrant",
     "op_kind": "MUTATION",
     "request_msg": "CreateServiceAccountGrantRequest",
-    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"user_id\": \"<seed:user_id>\", \"service_identity\": \"spiffe://bench/svc-grant\", \"project_id\": \"<seed:project>\", \"approved_scopes\": [\"udb:read\", \"udb:write\"], \"reason\": \"bench seed grant\" }`",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"user_id\": \"<seed:grant_create_user_id>\", \"service_identity\": \"spiffe://bench/svc-grant-b\", \"project_id\": \"<seed:project>\", \"approved_scopes\": [\"udb:read\", \"udb:write\"], \"reason\": \"bench seed grant\" }`",
     "notes": "fix_plan §2: typed operator-approved grant; admin/wildcard scopes are rejected at write."
   },
   {
@@ -788,7 +788,7 @@
     "operation_id": "replaceServiceAccountGrant",
     "op_kind": "MUTATION",
     "request_msg": "ReplaceServiceAccountGrantRequest",
-    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"user_id\": \"<seed:user_id>\", \"approved_scopes\": [\"udb:read\"], \"reason\": \"bench replace\", \"expected_revision\": 1 }`",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"user_id\": \"<seed:owner_id>\", \"approved_scopes\": [\"udb:read\", \"data:read\", \"resource:read\"], \"reason\": \"bench replace\", \"expected_revision\": 1 }`",
     "notes": "Revision CAS: mismatch fails FAILED_PRECONDITION; revision bumps on success."
   },
   {
@@ -860,7 +860,7 @@
     "operation_id": "revokeServiceAccountGrant",
     "op_kind": "DESTRUCTIVE",
     "request_msg": "RevokeServiceAccountGrantRequest",
-    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"user_id\": \"<seed:user_id>\", \"reason\": \"bench revoke\" }`",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"user_id\": \"<seed:owner_id>\", \"reason\": \"bench revoke\" }`",
     "notes": "Idempotent; only ACTIVE grants flip."
   },
   {
@@ -884,7 +884,7 @@
     "operation_id": "rotateServiceAccountIdentity",
     "op_kind": "DESTRUCTIVE",
     "request_msg": "RotateServiceAccountIdentityRequest",
-    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"user_id\": \"<seed:user_id>\", \"new_service_identity\": \"spiffe://bench/svc-grant-rotated\", \"expected_revision\": 1, \"reason\": \"bench rotate identity\" }`",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"user_id\": \"<seed:grant_create_user_id>\", \"new_service_identity\": \"spiffe://bench/svc-grant-rotated\", \"expected_revision\": 1, \"reason\": \"bench rotate identity\" }`",
     "notes": "Revision CAS: rebinds the grant to a new service identity; supersedes prior certificate bindings."
   },
   {
