@@ -718,7 +718,7 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 		})
 		if _, err := authn.CreateServiceAccountGrant(base, &authnpb.CreateServiceAccountGrantRequest{
 			TenantId: tenant, UserId: svcOwner, ServiceIdentity: svcName,
-			ProjectId: project, ApprovedScopes: []string{"data:read"},
+			ProjectId: project, ApprovedScopes: []string{"data:read", "resource:read"},
 			Reason: "sdk perf seed",
 		}); err != nil {
 			t.Logf("perf seed: CreateServiceAccountGrant failed (apikey RPCs fall back): %v", err)

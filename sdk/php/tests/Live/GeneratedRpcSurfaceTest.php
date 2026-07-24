@@ -3489,7 +3489,7 @@ function perfSeedPhp(array $s): array
             ->setContext((new \Udb\Core\Common\V1\RequestContext())->setTenant((new \Udb\Core\Common\V1\TenantContext())->setTenantId($tenant)->setProjectId($project))), $meta));
         $try('SeedServiceAccountGrant', fn () => $authGen->create_service_account_grant((new \Udb\Core\Authn\Services\V1\CreateServiceAccountGrantRequest())
             ->setTenantId($tenant)->setUserId($principal)->setServiceIdentity($svcName)
-            ->setProjectId($project)->setApprovedScopes(['data:read'])->setReason('sdk perf seed'), $meta));
+            ->setProjectId($project)->setApprovedScopes(['data:read', 'resource:read'])->setReason('sdk perf seed'), $meta));
     }
     $keyCtx = (new \Udb\Core\Common\V1\RequestContext())->setUserId($principal)
         ->setTenant((new \Udb\Core\Common\V1\TenantContext())->setTenantId($tenant)->setProjectId($project));

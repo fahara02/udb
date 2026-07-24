@@ -572,8 +572,8 @@
     "operation_id": "getServiceAccountGrant",
     "op_kind": "READ_ONLY",
     "request_msg": "GetServiceAccountGrantRequest",
-    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"user_id\": \"<seed:user_id>\" }`",
-    "notes": "Reads the single typed grant for the account."
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"user_id\": \"<seed:owner_id>\" }`",
+    "notes": "Reads the typed grant for the SEEDED SERVICE ACCOUNT (`<seed:owner_id>` — the human `<seed:user_id>` has no grant)."
   },
   {
     "file": "authn.md",

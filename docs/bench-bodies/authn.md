@@ -29,7 +29,7 @@ All request/response message bodies live in `core/authn/services/v1/core.proto`.
 | [ ] | GenerateRecoveryCodes | MUTATION | GenerateRecoveryCodesRequest | `{ "user_id": "<seed:user_id>", "count": 10 }` | `count` clamped server-side (default 10). Optional `context`. |
 | [ ] | GetJwks | READ_ONLY | GetJwksRequest | `{}` | PUBLIC. Only optional `context`; no required fields. |
 | [ ] | GetMfaPolicy | READ_ONLY | GetMfaPolicyRequest | `{ "tenant_id": "<seed:tenant_id>" }` | Optional `context`. |
-| [ ] | GetServiceAccountGrant | READ_ONLY | GetServiceAccountGrantRequest | `{ "tenant_id": "<seed:tenant_id>", "user_id": "<seed:user_id>" }` | Reads the single typed grant for the account. |
+| [ ] | GetServiceAccountGrant | READ_ONLY | GetServiceAccountGrantRequest | `{ "tenant_id": "<seed:tenant_id>", "user_id": "<seed:owner_id>" }` | Reads the typed grant for the SEEDED SERVICE ACCOUNT (`<seed:owner_id>` — the human `<seed:user_id>` has no grant). |
 | [ ] | GetSession | READ_ONLY | GetSessionRequest | `{ "session_id": "<seed:session_id>" }` | session_id ref. |
 | [ ] | GetUser | READ_ONLY | GetUserRequest | `{ "user_id": "<seed:user_id>" }` | Lookup-by oneof-style: provide ONE of `user_id` / `username` / `email` (not a proto oneof, but only one needed). |
 | [ ] | IntrospectToken | READ_ONLY | IntrospectTokenRequest | `{ "token": "<seed:token>" }` | Optional `context`. |
