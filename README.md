@@ -59,7 +59,7 @@ staleness test fails if it drifts.
 | Area | Surface |
 |---|---|
 | Data plane | 77 `DataBroker` RPCs |
-| Native control plane | 27 services, 267 RPCs |
+| Native control plane | 27 services, 298 RPCs |
 
 Per-service RPC counts (native control plane):
 
@@ -68,23 +68,23 @@ Per-service RPC counts (native control plane):
 | `analytics` | 7 |
 | `apikey` | 9 |
 | `asset` | 8 |
-| `authn` | 50 |
+| `authn` | 59 |
 | `authz` | 41 |
 | `backup` | 8 |
 | `cache` | 7 |
 | `config` | 5 |
 | `control` | 6 |
-| `embedding` | 6 |
+| `embedding` | 19 |
 | `idp` | 27 |
 | `livequery` | 1 |
-| `lock` | 3 |
+| `lock` | 5 |
 | `metering` | 6 |
 | `notification` | 12 |
 | `scheduler` | 6 |
 | `search` | 5 |
-| `storage` | 8 |
+| `storage` | 9 |
 | `tenant` | 7 |
-| `vault` | 14 |
+| `vault` | 20 |
 | `webhook` | 6 |
 | `webrtc_peer` | 5 |
 | `webrtc_room` | 9 |
