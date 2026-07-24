@@ -18,7 +18,7 @@ use Grpc\ChannelCredentials;
  * the embedded proto descriptor set by `udb sdk generate`, so its surface can
  * never drift from the wire contract.
  *
- *   UDB version ...... 0.4.21
+ *   UDB version ...... 0.4.22
  *   Protocol version . 1.0.0
  *   Services ......... 28
  *   RPCs ............. 375
