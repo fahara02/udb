@@ -5,6 +5,33 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.4.24] - 2026-07-25
+
+The Update-verb hardening release: the 0.4.23 `DataBroker.Update` verb now
+survives projected entities, and the SDK benchmark measures the full 376-RPC
+surface with per-language service-account seeding.
+
+### Breaking / wire changes
+- None. All changes are fixes to existing surfaces.
+
+### Fixed
+- `DataBroker.Update` on an entity with projection targets (vector / cache /
+  object) returned INTERNAL: the projection task was enqueued under an
+  `operation` the task table's CHECK constraint rejects, with the request
+  FILTER as its payload. Update now returns the post-update rows and enqueues
+  each one as an `upsert` task with the real row payload, so projections
+  re-materialize correctly.
+- AuthnService lookups that receive a non-UUID `user_id` (for example a
+  service NAME) return typed not-found instead of a raw database INTERNAL.
+
+### Benchmarks / conformance
+- The Python and TypeScript live harnesses seed a real ACTIVE service
+  account (owner UUID + typed grant + certificate binding) for the
+  apikey/grant RPC family, matching Go and PHP — the benchmark's measured
+  bodies no longer fall back to unseeded placeholder values.
+- The Go perf report's failure table carries the server error message
+  (detail column), so a CI-only failure is diagnosable from the artifact.
+
 ## [0.4.23] - 2026-07-24
 
 The consumption-seam wave: every improvement from the AmbuLife consumer
