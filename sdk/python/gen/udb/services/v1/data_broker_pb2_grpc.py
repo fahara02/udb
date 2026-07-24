@@ -57,6 +57,11 @@ class DataBrokerStub(object):
                 request_serializer=udb_dot_entity_dot_v1_dot_relational__pb2.DeleteRequest.SerializeToString,
                 response_deserializer=udb_dot_entity_dot_v1_dot_mutation__pb2.MutationResponse.FromString,
                 _registered_method=True)
+        self.Update = channel.unary_unary(
+                '/udb.services.v1.DataBroker/Update',
+                request_serializer=udb_dot_entity_dot_v1_dot_relational__pb2.UpdateRequest.SerializeToString,
+                response_deserializer=udb_dot_entity_dot_v1_dot_mutation__pb2.MutationResponse.FromString,
+                _registered_method=True)
         self.VectorSearch = channel.unary_unary(
                 '/udb.services.v1.DataBroker/VectorSearch',
                 request_serializer=udb_dot_entity_dot_v1_dot_vector__pb2.VectorSearchRequest.SerializeToString,
@@ -455,6 +460,16 @@ class DataBrokerServicer(object):
 
     def Delete(self, request, context):
         """Delete rows without raw SQL.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def Update(self, request, context):
+        """Partial update: SET named columns and/or apply atomic increments on the
+        matched rows — no full-record resend, no read-modify-write counter window.
+        Same filter language, tenant isolation, CAS (`expected`) and keyed-replay
+        semantics as Upsert/Delete.
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -979,6 +994,11 @@ def add_DataBrokerServicer_to_server(servicer, server):
                     request_deserializer=udb_dot_entity_dot_v1_dot_relational__pb2.DeleteRequest.FromString,
                     response_serializer=udb_dot_entity_dot_v1_dot_mutation__pb2.MutationResponse.SerializeToString,
             ),
+            'Update': grpc.unary_unary_rpc_method_handler(
+                    servicer.Update,
+                    request_deserializer=udb_dot_entity_dot_v1_dot_relational__pb2.UpdateRequest.FromString,
+                    response_serializer=udb_dot_entity_dot_v1_dot_mutation__pb2.MutationResponse.SerializeToString,
+            ),
             'VectorSearch': grpc.unary_unary_rpc_method_handler(
                     servicer.VectorSearch,
                     request_deserializer=udb_dot_entity_dot_v1_dot_vector__pb2.VectorSearchRequest.FromString,
@@ -1498,6 +1518,33 @@ class DataBroker(object):
             target,
             '/udb.services.v1.DataBroker/Delete',
             udb_dot_entity_dot_v1_dot_relational__pb2.DeleteRequest.SerializeToString,
+            udb_dot_entity_dot_v1_dot_mutation__pb2.MutationResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def Update(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.services.v1.DataBroker/Update',
+            udb_dot_entity_dot_v1_dot_relational__pb2.UpdateRequest.SerializeToString,
             udb_dot_entity_dot_v1_dot_mutation__pb2.MutationResponse.FromString,
             options,
             channel_credentials,

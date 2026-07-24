@@ -115,6 +115,20 @@ pub struct DeletePlanRequest {
     pub filter: Value,
 }
 
+/// Planner input for the partial-update verb: SET the named `changes` columns
+/// and/or apply atomic `increments` on the rows matched by `filter`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub struct UpdatePlanRequest {
+    pub context: RequestContext,
+    pub message_type: String,
+    pub filter: Value,
+    /// Columns to SET (proto field or physical column names; JSON null ⇒ SQL NULL).
+    pub changes: Value,
+    /// Atomic `col = col + delta` deltas applied in the same statement.
+    pub increments: Vec<(String, f64)>,
+    pub return_record: bool,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct CachePolicyRequest {
     pub message_type: String,
@@ -1060,6 +1074,192 @@ pub fn build_delete_plan(
         errors,
         ..SqlOperationPlan::default()
     }
+}
+
+/// Compile the partial-update verb: `UPDATE s.t SET a=$1[, cnt=cnt+$2] WHERE …`.
+/// SET parameters come FIRST ($1..$k in `parameter_columns` order: changes then
+/// increments), the filter predicate's parameters start at $k+1 — the executor
+/// binds `changes ++ increments ++ filter` values in exactly that order. Shares
+/// every safety property with the delete plan: field-name aliasing, tenant AND
+/// project isolation on the MANDATORY column set, safe-predicate requirement,
+/// and the encrypted-filter posture of `compile_filter_predicates`. Isolation
+/// and primary-key columns are IMMUTABLE through this verb (identity changes
+/// belong to Upsert), and increment columns must not also appear in `changes`.
+pub fn build_update_plan(
+    manifest: &CatalogManifest,
+    request: &UpdatePlanRequest,
+) -> SqlOperationPlan {
+    let table = match resolve_table_for_message(manifest, &request.message_type) {
+        Ok(table) => table,
+        Err(error) => {
+            return SqlOperationPlan {
+                operation: "update".to_string(),
+                errors: vec![error.to_string()],
+                ..SqlOperationPlan::default()
+            };
+        }
+    };
+
+    let mut errors = validate_write_context(&request.context);
+    let allowed = allowed_columns(table);
+    let resolver = column_resolver(table);
+    let filter = normalize_filter_keys(&resolver, &request.filter);
+
+    // ── SET clause: changes (typed binds by column) then increments ──────────
+    let tenant = tenant_column(table);
+    let project = project_column(table);
+    let immutable: BTreeSet<String> = table
+        .primary_key
+        .iter()
+        .cloned()
+        .chain([tenant.clone(), project.clone()])
+        .filter(|column| !column.is_empty())
+        .collect();
+    let mut set_fragments: Vec<String> = Vec::new();
+    let mut parameter_columns: Vec<String> = Vec::new();
+    let mut next_param = 1usize;
+    // NORMALIZE-then-SORT: the executor rebuilds the bind-value order from the
+    // normalized physical column names (BTreeMap iteration), so the plan must
+    // order SET parameters by the NORMALIZED name — sorting raw keys would
+    // diverge whenever a field alias sorts differently from its column.
+    for (normalized, key) in normalized_update_changes(&request.changes, &resolver, &mut errors) {
+        if !allowed.contains(&normalized) {
+            errors.push(format!("unknown update column {key}"));
+            continue;
+        }
+        if immutable.contains(&normalized) {
+            errors.push(format!(
+                "column {normalized} is immutable through Update (primary key / tenant / project); use Upsert for identity changes"
+            ));
+            continue;
+        }
+        set_fragments.push(format!("{} = ${next_param}", qi(&normalized)));
+        parameter_columns.push(normalized);
+        next_param += 1;
+    }
+    let change_columns: BTreeSet<String> = parameter_columns.iter().cloned().collect();
+    for (column, _delta) in &request.increments {
+        let normalized = resolver
+            .get(&column.to_ascii_lowercase())
+            .cloned()
+            .unwrap_or_else(|| column.to_ascii_lowercase());
+        if !allowed.contains(&normalized) {
+            errors.push(format!("unknown increment column {column}"));
+            continue;
+        }
+        if immutable.contains(&normalized) {
+            errors.push(format!("column {normalized} is immutable through Update"));
+            continue;
+        }
+        if change_columns.contains(&normalized) {
+            errors.push(format!(
+                "column {normalized} appears in both changes and increments"
+            ));
+            continue;
+        }
+        set_fragments.push(format!(
+            "{col} = {col} + ${next_param}",
+            col = qi(&normalized)
+        ));
+        parameter_columns.push(normalized);
+        next_param += 1;
+    }
+    if set_fragments.is_empty() {
+        errors.push("update requires at least one change or increment".to_string());
+    }
+
+    // ── WHERE clause: identical machinery + isolation posture to delete ──────
+    let backend_kind = effective_sql_backend(&request.context);
+    let compiled = compile_filter_predicates(
+        &filter,
+        &allowed,
+        &mut errors,
+        &mut parameter_columns,
+        next_param,
+        &backend_kind,
+    );
+    let filter_columns = filter_columns(&filter, &allowed, &mut errors);
+    let mandatory_columns = mandatory_and_columns(&filter, &allowed);
+    if tenant.is_empty() {
+        if table_requires_tenant_column(table) {
+            errors.push(unresolved_tenant_column_error(table));
+        }
+    } else if !mandatory_columns.contains(&tenant) {
+        errors.push(format!("tenant isolation requires filter on {}", tenant));
+    }
+    if !project.is_empty() && !mandatory_columns.contains(&project) {
+        errors.push(format!("project isolation requires filter on {}", project));
+    }
+    if compiled.sql.is_empty() {
+        errors.push("update requires at least one safe filter predicate".to_string());
+    }
+
+    let sql = format!(
+        "UPDATE {}.{} SET {} WHERE {}{}",
+        qi(&table.schema),
+        qi(&table.table),
+        set_fragments.join(", "),
+        if compiled.sql.is_empty() {
+            "FALSE".to_string()
+        } else {
+            compiled.sql
+        },
+        if request.return_record {
+            " RETURNING *"
+        } else {
+            ""
+        },
+    );
+
+    SqlOperationPlan {
+        operation: "update".to_string(),
+        resource_uri: format!("sql://{}/{}", table.schema, table.table),
+        sql,
+        parameter_columns,
+        filter_columns,
+        cache_policy: build_cache_policy_plan(
+            manifest,
+            &CachePolicyRequest {
+                message_type: request.message_type.clone(),
+                operation: "update".to_string(),
+                ..CachePolicyRequest::default()
+            },
+        ),
+        audit_event_type: "udb.sql.update".to_string(),
+        errors,
+        ..SqlOperationPlan::default()
+    }
+}
+
+/// Normalize an Update `changes` object into `(physical_column, raw_key)`
+/// pairs SORTED by physical column — the shared ordering contract between
+/// [`build_update_plan`] (which numbers the SET parameters) and the executor
+/// (which binds the values). Duplicate normalizations (a field alias and its
+/// physical column both present) are an error, not a silent overwrite.
+pub fn normalized_update_changes(
+    changes: &Value,
+    resolver: &std::collections::HashMap<String, String>,
+    errors: &mut Vec<String>,
+) -> Vec<(String, String)> {
+    let mut out: std::collections::BTreeMap<String, String> = std::collections::BTreeMap::new();
+    match changes {
+        Value::Object(map) => {
+            for key in map.keys() {
+                let normalized = resolver
+                    .get(&key.to_ascii_lowercase())
+                    .cloned()
+                    .unwrap_or_else(|| key.to_ascii_lowercase());
+                if let Some(previous) = out.insert(normalized.clone(), key.clone()) {
+                    errors.push(format!(
+                        "update changes name column {normalized} twice ({previous} and {key})"
+                    ));
+                }
+            }
+        }
+        Value::Null => {}
+        _ => errors.push("update changes must be a JSON object of column -> value".to_string()),
+    }
+    out.into_iter().collect()
 }
 
 /// Convert the data-plane Delete planner input into the canonical neutral
@@ -2210,6 +2410,178 @@ mod tests {
             is_primary: name == "id",
             ..ManifestColumn::default()
         }
+    }
+
+    // ── W7: partial-update planner ───────────────────────────────────────────
+
+    fn update_test_manifest() -> CatalogManifest {
+        let mut attempts = test_column("login_attempts");
+        attempts.sql_type = "INTEGER".to_string();
+        let table = ManifestTable {
+            columns: vec![
+                test_column("id"),
+                test_column("tenant_id"),
+                test_column("status"),
+                attempts,
+            ],
+            table_security: ManifestTableSecurity {
+                tenant_column: "tenant_id".to_string(),
+                ..ManifestTableSecurity::default()
+            },
+            ..ManifestTable::default()
+        };
+        test_manifest(table)
+    }
+
+    #[test]
+    fn update_plan_compiles_set_increment_where_with_isolation() {
+        let manifest = update_test_manifest();
+        let plan = build_update_plan(
+            &manifest,
+            &UpdatePlanRequest {
+                context: RequestContext {
+                    tenant_id: "t1".to_string(),
+                    ..RequestContext::default()
+                },
+                message_type: "acme.test.v1.Widget".to_string(),
+                filter: json!({"id": "w1", "tenant_id": "t1"}),
+                changes: json!({"status": "closed"}),
+                increments: vec![("login_attempts".to_string(), 1.0)],
+                return_record: false,
+            },
+        );
+        assert_eq!(plan.errors, Vec::<String>::new());
+        // SET params first (changes sorted by column, then increments), filter after.
+        assert!(
+            plan.sql.starts_with(
+                "UPDATE \"public\".\"widgets\" SET \"status\" = $1, \"login_attempts\" = \"login_attempts\" + $2 WHERE "
+            ),
+            "unexpected sql: {}",
+            plan.sql
+        );
+        assert_eq!(
+            plan.parameter_columns,
+            ["status", "login_attempts", "id", "tenant_id"]
+        );
+        assert!(!plan.sql.contains("RETURNING"));
+        assert_eq!(plan.operation, "update");
+        assert_eq!(plan.audit_event_type, "udb.sql.update");
+    }
+
+    #[test]
+    fn update_plan_return_record_appends_returning() {
+        let manifest = update_test_manifest();
+        let plan = build_update_plan(
+            &manifest,
+            &UpdatePlanRequest {
+                context: RequestContext {
+                    tenant_id: "t1".to_string(),
+                    ..RequestContext::default()
+                },
+                message_type: "acme.test.v1.Widget".to_string(),
+                filter: json!({"id": "w1", "tenant_id": "t1"}),
+                changes: json!({"status": "open"}),
+                increments: Vec::new(),
+                return_record: true,
+            },
+        );
+        assert_eq!(plan.errors, Vec::<String>::new());
+        assert!(plan.sql.ends_with(" RETURNING *"), "sql: {}", plan.sql);
+    }
+
+    #[test]
+    fn update_plan_fail_closed_shapes() {
+        let manifest = update_test_manifest();
+        let base = UpdatePlanRequest {
+            context: RequestContext {
+                tenant_id: "t1".to_string(),
+                ..RequestContext::default()
+            },
+            message_type: "acme.test.v1.Widget".to_string(),
+            filter: json!({"id": "w1", "tenant_id": "t1"}),
+            changes: json!({"status": "x"}),
+            increments: Vec::new(),
+            return_record: false,
+        };
+
+        // Identity/isolation columns are immutable through Update.
+        for immutable in ["id", "tenant_id"] {
+            let plan = build_update_plan(
+                &manifest,
+                &UpdatePlanRequest {
+                    changes: json!({ immutable: "nope" }),
+                    ..base.clone()
+                },
+            );
+            assert!(
+                plan.errors.iter().any(|e| e.contains("immutable")),
+                "{immutable}: {:?}",
+                plan.errors
+            );
+        }
+
+        // A column cannot be both set and incremented.
+        let plan = build_update_plan(
+            &manifest,
+            &UpdatePlanRequest {
+                changes: json!({"login_attempts": 5}),
+                increments: vec![("login_attempts".to_string(), 1.0)],
+                ..base.clone()
+            },
+        );
+        assert!(
+            plan.errors
+                .iter()
+                .any(|e| e.contains("both changes and increments")),
+            "{:?}",
+            plan.errors
+        );
+
+        // Unknown columns and empty updates are rejected.
+        let plan = build_update_plan(
+            &manifest,
+            &UpdatePlanRequest {
+                changes: json!({"no_such_column": 1}),
+                ..base.clone()
+            },
+        );
+        assert!(
+            plan.errors
+                .iter()
+                .any(|e| e.contains("unknown update column")),
+            "{:?}",
+            plan.errors
+        );
+        let plan = build_update_plan(
+            &manifest,
+            &UpdatePlanRequest {
+                changes: json!({}),
+                ..base.clone()
+            },
+        );
+        assert!(
+            plan.errors
+                .iter()
+                .any(|e| e.contains("at least one change or increment")),
+            "{:?}",
+            plan.errors
+        );
+
+        // X-4 posture carries over: tenant inside $or does NOT satisfy isolation.
+        let plan = build_update_plan(
+            &manifest,
+            &UpdatePlanRequest {
+                filter: json!({"$or": [{"tenant_id": "t1"}, {"id": "w1"}]}),
+                ..base.clone()
+            },
+        );
+        assert!(
+            plan.errors
+                .iter()
+                .any(|e| e.contains("tenant isolation requires filter on tenant_id")),
+            "{:?}",
+            plan.errors
+        );
     }
 
     fn test_manifest(mut table: ManifestTable) -> CatalogManifest {

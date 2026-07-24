@@ -73,6 +73,20 @@ service DataBroker {
     };
   }
 
+  // Partial update: SET named columns and/or apply atomic increments on the
+  // matched rows — no full-record resend, no read-modify-write counter window.
+  // Same filter language, tenant isolation, CAS (`expected`) and keyed-replay
+  // semantics as Upsert/Delete.
+  rpc Update(udb.entity.v1.UpdateRequest) returns (udb.entity.v1.MutationResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "update" rest_operation_id: "update" };
+    option (udb.core.common.v1.method_idempotency_contract) = {
+      request_key_field: "idempotency_key"
+      duplicate_response_field: "was_duplicate"
+      replay_safe: true
+    };
+  }
+
   // ── Vector ──────────────────────────────────────────────────────────────────
   rpc VectorSearch(udb.entity.v1.VectorSearchRequest) returns (udb.entity.v1.VectorSet) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;

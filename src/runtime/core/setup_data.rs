@@ -1599,6 +1599,274 @@ impl DataBrokerRuntime {
         Ok(response)
     }
 
+    /// Partial update (W7): SET the named columns and/or apply atomic
+    /// increments on the rows matched by `filter` — one UPDATE statement, no
+    /// full-record resend, no read-modify-write counter window. Shares the
+    /// delete/upsert machinery end to end: planner isolation checks, typed
+    /// binds, CAS precondition, keyed idempotent replay, projection enqueue,
+    /// CDC outbox, consistency receipt, cache invalidation, audit emission.
+    #[allow(clippy::too_many_arguments)]
+    pub async fn update(
+        &self,
+        manifest: &CatalogManifest,
+        message_type: &str,
+        filter: JsonValue,
+        changes: JsonValue,
+        increments: Vec<(String, f64)>,
+        context: RequestContext,
+        idempotency_key: String,
+        expected: Option<prost_types::Struct>,
+        return_record: bool,
+    ) -> Result<MutationResponse, tonic::Status> {
+        let plan_request = crate::planning::broker::UpdatePlanRequest {
+            context: context.clone(),
+            message_type: message_type.to_string(),
+            filter: filter.clone(),
+            changes: changes.clone(),
+            increments: increments.clone(),
+            return_record,
+        };
+        let plan = crate::planning::broker::build_update_plan(manifest, &plan_request);
+        reject_plan(&plan.errors)?;
+        let pool = self.pg_pool()?;
+        let table = resolve_table_for_message(manifest, message_type)
+            .map_err(|_| message_type_lookup_status(manifest, message_type))?;
+        let resolver = crate::planning::broker::column_resolver(table);
+        let normalized_filter = crate::planning::broker::normalize_filter_keys(&resolver, &filter);
+        // Bind order is the plan's contract: changes (sorted by physical
+        // column — the same normalized_update_changes the planner used), then
+        // increments in request order, then the filter values.
+        let mut bind_errors = Vec::new();
+        let ordered_changes = crate::planning::broker::normalized_update_changes(
+            &changes,
+            &resolver,
+            &mut bind_errors,
+        );
+        if !bind_errors.is_empty() {
+            // Unreachable after reject_plan, but never bind on a divergent view.
+            return Err(setup_data_invalid_field(
+                "changes",
+                bind_errors.join("; "),
+                "update changes rejected",
+            ));
+        }
+        let empty = serde_json::Map::new();
+        let changes_object = changes.as_object().unwrap_or(&empty);
+        let mut values: Vec<JsonValue> = ordered_changes
+            .iter()
+            .map(|(_, raw_key)| {
+                changes_object
+                    .get(raw_key)
+                    .cloned()
+                    .unwrap_or(JsonValue::Null)
+            })
+            .collect();
+        values.extend(increments.iter().map(|(_, delta)| serde_json::json!(delta)));
+        values.extend(filter_bind_values(&normalized_filter));
+        let query = bind_values(
+            sqlx::query(&plan.sql),
+            table,
+            &plan.parameter_columns,
+            &values,
+        )?;
+
+        let mut tx = pool.begin().await.map_err(|e| {
+            setup_data_internal_status(
+                "update_transaction_begin",
+                format!("PG transaction begin failed: {e}"),
+            )
+        })?;
+        set_request_local_settings(&mut tx, &context).await?;
+        // CAS precondition BEFORE claiming the key or writing — a stale
+        // precondition fails fast with nothing written or claimed. Row located
+        // by primary key from the normalized filter (same as delete).
+        if let Some(expected) = expected
+            .as_ref()
+            .filter(|expected| !expected.fields.is_empty())
+        {
+            self.enforce_delete_precondition(
+                &mut tx,
+                table,
+                expected,
+                &normalized_filter,
+                &context,
+            )
+            .await?;
+        }
+        // Keyed-only durable dedup, same-tx, fail-closed (lane 05).
+        let dedup_ctx = {
+            let key = idempotency_key_for_dedup(&idempotency_key)?;
+            if let Some(key) = key {
+                let config = crate::runtime::system::SystemCatalogConfig::current();
+                let dedup_key = idempotency_dedup_key(
+                    &context.tenant_id,
+                    &context.project_id,
+                    message_type,
+                    "update",
+                    key,
+                );
+                let claim = claim_idempotency_key_in_tx(
+                    &mut tx,
+                    &config,
+                    &dedup_key,
+                    &context.tenant_id,
+                    &context.project_id,
+                    message_type,
+                    "update",
+                )
+                .await?;
+                if !claim.fresh {
+                    drop(tx);
+                    return mutation_response_from_idempotency_json_for_claim(
+                        &claim.prior_response_json,
+                        &context.tenant_id,
+                        &context.project_id,
+                        message_type,
+                    );
+                }
+                Some(IdempotencyPersistContext {
+                    config,
+                    dedup_key,
+                    tenant_id: context.tenant_id.clone(),
+                    project_id: context.project_id.clone(),
+                    message_type: message_type.to_string(),
+                    operation: "update",
+                })
+            } else {
+                None
+            }
+        };
+        let (affected_rows, record_json) = if return_record {
+            let row = query.fetch_optional(&mut *tx).await.map_err(|err| {
+                crate::runtime::executor_utils::sqlx_error_to_status(
+                    "PostgreSQL update failed",
+                    &err,
+                )
+            })?;
+            match row {
+                Some(row) => {
+                    let record_set = rows_to_record_set(
+                        vec![row],
+                        Some(table),
+                        &[],
+                        &context,
+                        self.encryption.as_ref(),
+                        &self.encryption_metrics,
+                    )?;
+                    (1, returned_record_json_or_status(&record_set.records_json)?)
+                }
+                None => (0, Vec::new()),
+            }
+        } else {
+            let result = query.execute(&mut *tx).await.map_err(|err| {
+                crate::runtime::executor_utils::sqlx_error_to_status(
+                    "PostgreSQL update failed",
+                    &err,
+                )
+            })?;
+            (result.rows_affected() as i64, Vec::new())
+        };
+        let mut projection_task_ids = Vec::new();
+        if affected_rows > 0 {
+            let projection_plans =
+                crate::runtime::projection::ProjectionPlan::from_manifest(manifest);
+            projection_task_ids =
+                crate::runtime::projection::ProjectionEngine::enqueue_write_tasks_tx(
+                    &mut tx,
+                    &crate::runtime::system::SystemCatalogConfig::current(),
+                    &context.tenant_id,
+                    message_type,
+                    "update",
+                    &filter,
+                    &projection_plans,
+                )
+                .await
+                .map_err(|err| {
+                    setup_data_internal_status(
+                        "update_projection_task_enqueue",
+                        format!("projection task enqueue failed: {err}"),
+                    )
+                })?;
+            // CDC change event carries the row identity AND the delta so
+            // consumers see what changed without a read-back.
+            let cdc_payload = serde_json::json!({
+                "filter": filter,
+                "changes": changes,
+                "increments": increments
+                    .iter()
+                    .map(|(column, delta)| serde_json::json!({"column": column, "delta": delta}))
+                    .collect::<Vec<_>>(),
+            });
+            self.emit_cdc_outbox_on_mutation(
+                &mut tx,
+                manifest,
+                message_type,
+                "update",
+                &cdc_payload,
+                &context,
+            )
+            .await?;
+        }
+        let receipt = match self.default_system_stores_clone() {
+            Some(store) => {
+                crate::runtime::consistency_fence::build_write_receipt(
+                    store.as_ref(),
+                    &manifest.checksum_sha256,
+                    projection_task_ids,
+                )
+                .await
+            }
+            None => crate::runtime::consistency::WriteReceipt {
+                source_lsn: String::new(),
+                outbox_seq: 0,
+                projection_task_ids,
+                manifest_checksum: manifest.checksum_sha256.clone(),
+                written_at_unix_ms: unix_millis(),
+            },
+        };
+        let write_receipt_json = write_receipt_json_or_status(&receipt)?;
+        let resource_uri = mutation_response_resource_uri_or_fallback(
+            &context,
+            message_type,
+            table,
+            &filter,
+            &plan.resource_uri,
+            dedup_ctx.is_some(),
+        )?;
+        let response = MutationResponse {
+            mutation_id: Uuid::new_v4().to_string(),
+            resource_uri,
+            affected_rows,
+            was_duplicate: false,
+            record_json,
+            write_receipt_json,
+            write_receipt: Some(receipt.to_proto()),
+            ..MutationResponse::default()
+        };
+        if let Some(dedup_ctx) = dedup_ctx.as_ref() {
+            persist_idempotency_response_in_tx(&mut tx, dedup_ctx, &response).await?;
+        }
+        tx.commit().await.map_err(|err| {
+            setup_data_internal_status(
+                "update_commit",
+                format!("PostgreSQL update commit failed: {err}"),
+            )
+        })?;
+        let _ = self
+            .cache_delete_pattern(&cache_invalidation_pattern("select", message_type))
+            .await;
+        crate::runtime::core::audit::emit_audit(
+            &self.config.audit_sink,
+            &crate::planning::broker::build_audit_event(
+                &context,
+                "update",
+                &response.resource_uri,
+                &manifest.checksum_sha256,
+            ),
+        );
+        Ok(response)
+    }
+
     pub async fn vector_search(
         &self,
         manifest: &CatalogManifest,

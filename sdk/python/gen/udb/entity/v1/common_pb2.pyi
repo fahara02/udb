@@ -12,6 +12,7 @@ from udb.entity.v1.relational_pb2 import RecordSet as RecordSet
 from udb.entity.v1.relational_pb2 import SelectRequest as SelectRequest
 from udb.entity.v1.relational_pb2 import UpsertRequest as UpsertRequest
 from udb.entity.v1.relational_pb2 import DeleteRequest as DeleteRequest
+from udb.entity.v1.relational_pb2 import UpdateRequest as UpdateRequest
 from udb.entity.v1.relational_pb2 import ViewDefinition as ViewDefinition
 
 DESCRIPTOR: _descriptor.FileDescriptor

@@ -107,6 +107,33 @@ class DeleteRequest(_message.Message):
     expected: _struct_pb2.Struct
     def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., message_type: _Optional[str] = ..., filter: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., idempotency_key: _Optional[str] = ..., expected: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ...) -> None: ...
 
+class UpdateRequest(_message.Message):
+    __slots__ = ("context", "message_type", "filter", "changes", "expected", "increments", "idempotency_key", "return_record")
+    class Increment(_message.Message):
+        __slots__ = ("column", "delta")
+        COLUMN_FIELD_NUMBER: _ClassVar[int]
+        DELTA_FIELD_NUMBER: _ClassVar[int]
+        column: str
+        delta: float
+        def __init__(self, column: _Optional[str] = ..., delta: _Optional[float] = ...) -> None: ...
+    CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_TYPE_FIELD_NUMBER: _ClassVar[int]
+    FILTER_FIELD_NUMBER: _ClassVar[int]
+    CHANGES_FIELD_NUMBER: _ClassVar[int]
+    EXPECTED_FIELD_NUMBER: _ClassVar[int]
+    INCREMENTS_FIELD_NUMBER: _ClassVar[int]
+    IDEMPOTENCY_KEY_FIELD_NUMBER: _ClassVar[int]
+    RETURN_RECORD_FIELD_NUMBER: _ClassVar[int]
+    context: _context_pb2.RequestContext
+    message_type: str
+    filter: _struct_pb2.Struct
+    changes: _struct_pb2.Struct
+    expected: _struct_pb2.Struct
+    increments: _containers.RepeatedCompositeFieldContainer[UpdateRequest.Increment]
+    idempotency_key: str
+    return_record: bool
+    def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., message_type: _Optional[str] = ..., filter: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., changes: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., expected: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., increments: _Optional[_Iterable[_Union[UpdateRequest.Increment, _Mapping]]] = ..., idempotency_key: _Optional[str] = ..., return_record: bool = ...) -> None: ...
+
 class ViewDefinition(_message.Message):
     __slots__ = ("context", "schema", "name", "query", "with_data", "ttl_days")
     CONTEXT_FIELD_NUMBER: _ClassVar[int]

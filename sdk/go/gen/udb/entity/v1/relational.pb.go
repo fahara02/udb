@@ -542,6 +542,119 @@ func (x *DeleteRequest) GetExpected() *structpb.Struct {
 	return nil
 }
 
+// Partial update: set only the named columns (and/or apply atomic increments)
+// on the rows matched by `filter`, without resending the full record. Closes
+// the Select → merge → full-record Upsert pattern every consumer carried, and
+// the read-modify-write lost-update window on counters.
+type UpdateRequest struct {
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Context     *RequestContext        `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
+	MessageType string                 `protobuf:"bytes,2,opt,name=message_type,json=messageType,proto3" json:"message_type,omitempty"`
+	// Row selector: primary-key equality or a compiled predicate — same filter
+	// language and tenant-isolation rules as SelectRequest/DeleteRequest.
+	Filter *structpb.Struct `protobuf:"bytes,3,opt,name=filter,proto3" json:"filter,omitempty"`
+	// Columns to SET. A JSON null value writes SQL NULL. Columns not named are
+	// untouched — NOT-NULL columns absent from `changes` are never rewritten,
+	// so partial updates cannot trip 23502 the way full-record resends did.
+	Changes *structpb.Struct `protobuf:"bytes,4,opt,name=changes,proto3" json:"changes,omitempty"`
+	// Optional compare-and-swap precondition (same semantics as
+	// UpsertRequest.expected / DeleteRequest.expected): every asserted
+	// field must equal the CURRENT row inside the write transaction, else
+	// FAILED_PRECONDITION and nothing is written, projected, or emitted.
+	Expected       *structpb.Struct           `protobuf:"bytes,5,opt,name=expected,proto3" json:"expected,omitempty"`
+	Increments     []*UpdateRequest_Increment `protobuf:"bytes,6,rep,name=increments,proto3" json:"increments,omitempty"`
+	IdempotencyKey string                     `protobuf:"bytes,7,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	ReturnRecord   bool                       `protobuf:"varint,8,opt,name=return_record,json=returnRecord,proto3" json:"return_record,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *UpdateRequest) Reset() {
+	*x = UpdateRequest{}
+	mi := &file_udb_entity_v1_relational_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateRequest) ProtoMessage() {}
+
+func (x *UpdateRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_entity_v1_relational_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateRequest.ProtoReflect.Descriptor instead.
+func (*UpdateRequest) Descriptor() ([]byte, []int) {
+	return file_udb_entity_v1_relational_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *UpdateRequest) GetContext() *RequestContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
+func (x *UpdateRequest) GetMessageType() string {
+	if x != nil {
+		return x.MessageType
+	}
+	return ""
+}
+
+func (x *UpdateRequest) GetFilter() *structpb.Struct {
+	if x != nil {
+		return x.Filter
+	}
+	return nil
+}
+
+func (x *UpdateRequest) GetChanges() *structpb.Struct {
+	if x != nil {
+		return x.Changes
+	}
+	return nil
+}
+
+func (x *UpdateRequest) GetExpected() *structpb.Struct {
+	if x != nil {
+		return x.Expected
+	}
+	return nil
+}
+
+func (x *UpdateRequest) GetIncrements() []*UpdateRequest_Increment {
+	if x != nil {
+		return x.Increments
+	}
+	return nil
+}
+
+func (x *UpdateRequest) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
+}
+
+func (x *UpdateRequest) GetReturnRecord() bool {
+	if x != nil {
+		return x.ReturnRecord
+	}
+	return false
+}
+
 type ViewDefinition struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Context       *RequestContext        `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
@@ -556,7 +669,7 @@ type ViewDefinition struct {
 
 func (x *ViewDefinition) Reset() {
 	*x = ViewDefinition{}
-	mi := &file_udb_entity_v1_relational_proto_msgTypes[7]
+	mi := &file_udb_entity_v1_relational_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -568,7 +681,7 @@ func (x *ViewDefinition) String() string {
 func (*ViewDefinition) ProtoMessage() {}
 
 func (x *ViewDefinition) ProtoReflect() protoreflect.Message {
-	mi := &file_udb_entity_v1_relational_proto_msgTypes[7]
+	mi := &file_udb_entity_v1_relational_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -581,7 +694,7 @@ func (x *ViewDefinition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ViewDefinition.ProtoReflect.Descriptor instead.
 func (*ViewDefinition) Descriptor() ([]byte, []int) {
-	return file_udb_entity_v1_relational_proto_rawDescGZIP(), []int{7}
+	return file_udb_entity_v1_relational_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ViewDefinition) GetContext() *RequestContext {
@@ -622,6 +735,60 @@ func (x *ViewDefinition) GetWithData() bool {
 func (x *ViewDefinition) GetTtlDays() int32 {
 	if x != nil {
 		return x.TtlDays
+	}
+	return 0
+}
+
+// Atomic counter deltas compiled as `col = col + delta` in the same UPDATE
+// statement — no read-modify-write window (login_attempts, retry_count).
+type UpdateRequest_Increment struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Column        string                 `protobuf:"bytes,1,opt,name=column,proto3" json:"column,omitempty"`
+	Delta         float64                `protobuf:"fixed64,2,opt,name=delta,proto3" json:"delta,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateRequest_Increment) Reset() {
+	*x = UpdateRequest_Increment{}
+	mi := &file_udb_entity_v1_relational_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateRequest_Increment) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateRequest_Increment) ProtoMessage() {}
+
+func (x *UpdateRequest_Increment) ProtoReflect() protoreflect.Message {
+	mi := &file_udb_entity_v1_relational_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateRequest_Increment.ProtoReflect.Descriptor instead.
+func (*UpdateRequest_Increment) Descriptor() ([]byte, []int) {
+	return file_udb_entity_v1_relational_proto_rawDescGZIP(), []int{7, 0}
+}
+
+func (x *UpdateRequest_Increment) GetColumn() string {
+	if x != nil {
+		return x.Column
+	}
+	return ""
+}
+
+func (x *UpdateRequest_Increment) GetDelta() float64 {
+	if x != nil {
+		return x.Delta
 	}
 	return 0
 }
@@ -679,7 +846,21 @@ const file_udb_entity_v1_relational_proto_rawDesc = "" +
 	"\fmessage_type\x18\x02 \x01(\tR\vmessageType\x12/\n" +
 	"\x06filter\x18\x03 \x01(\v2\x17.google.protobuf.StructR\x06filter\x12'\n" +
 	"\x0fidempotency_key\x18\x04 \x01(\tR\x0eidempotencyKey\x123\n" +
-	"\bexpected\x18\x05 \x01(\v2\x17.google.protobuf.StructR\bexpected\"\xc3\x01\n" +
+	"\bexpected\x18\x05 \x01(\v2\x17.google.protobuf.StructR\bexpected\"\xd5\x03\n" +
+	"\rUpdateRequest\x127\n" +
+	"\acontext\x18\x01 \x01(\v2\x1d.udb.entity.v1.RequestContextR\acontext\x12!\n" +
+	"\fmessage_type\x18\x02 \x01(\tR\vmessageType\x12/\n" +
+	"\x06filter\x18\x03 \x01(\v2\x17.google.protobuf.StructR\x06filter\x121\n" +
+	"\achanges\x18\x04 \x01(\v2\x17.google.protobuf.StructR\achanges\x123\n" +
+	"\bexpected\x18\x05 \x01(\v2\x17.google.protobuf.StructR\bexpected\x12F\n" +
+	"\n" +
+	"increments\x18\x06 \x03(\v2&.udb.entity.v1.UpdateRequest.IncrementR\n" +
+	"increments\x12'\n" +
+	"\x0fidempotency_key\x18\a \x01(\tR\x0eidempotencyKey\x12#\n" +
+	"\rreturn_record\x18\b \x01(\bR\freturnRecord\x1a9\n" +
+	"\tIncrement\x12\x16\n" +
+	"\x06column\x18\x01 \x01(\tR\x06column\x12\x14\n" +
+	"\x05delta\x18\x02 \x01(\x01R\x05delta\"\xc3\x01\n" +
 	"\x0eViewDefinition\x127\n" +
 	"\acontext\x18\x01 \x01(\v2\x1d.udb.entity.v1.RequestContextR\acontext\x12\x16\n" +
 	"\x06schema\x18\x02 \x01(\tR\x06schema\x12\x12\n" +
@@ -701,42 +882,49 @@ func file_udb_entity_v1_relational_proto_rawDescGZIP() []byte {
 	return file_udb_entity_v1_relational_proto_rawDescData
 }
 
-var file_udb_entity_v1_relational_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_udb_entity_v1_relational_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_udb_entity_v1_relational_proto_goTypes = []any{
-	(*Sort)(nil),            // 0: udb.entity.v1.Sort
-	(*CacheOptions)(nil),    // 1: udb.entity.v1.CacheOptions
-	(*Row)(nil),             // 2: udb.entity.v1.Row
-	(*RecordSet)(nil),       // 3: udb.entity.v1.RecordSet
-	(*SelectRequest)(nil),   // 4: udb.entity.v1.SelectRequest
-	(*UpsertRequest)(nil),   // 5: udb.entity.v1.UpsertRequest
-	(*DeleteRequest)(nil),   // 6: udb.entity.v1.DeleteRequest
-	(*ViewDefinition)(nil),  // 7: udb.entity.v1.ViewDefinition
-	nil,                     // 8: udb.entity.v1.Row.FieldsEntry
-	(*RequestContext)(nil),  // 9: udb.entity.v1.RequestContext
-	(*structpb.Struct)(nil), // 10: google.protobuf.Struct
-	(*structpb.Value)(nil),  // 11: google.protobuf.Value
+	(*Sort)(nil),                    // 0: udb.entity.v1.Sort
+	(*CacheOptions)(nil),            // 1: udb.entity.v1.CacheOptions
+	(*Row)(nil),                     // 2: udb.entity.v1.Row
+	(*RecordSet)(nil),               // 3: udb.entity.v1.RecordSet
+	(*SelectRequest)(nil),           // 4: udb.entity.v1.SelectRequest
+	(*UpsertRequest)(nil),           // 5: udb.entity.v1.UpsertRequest
+	(*DeleteRequest)(nil),           // 6: udb.entity.v1.DeleteRequest
+	(*UpdateRequest)(nil),           // 7: udb.entity.v1.UpdateRequest
+	(*ViewDefinition)(nil),          // 8: udb.entity.v1.ViewDefinition
+	nil,                             // 9: udb.entity.v1.Row.FieldsEntry
+	(*UpdateRequest_Increment)(nil), // 10: udb.entity.v1.UpdateRequest.Increment
+	(*RequestContext)(nil),          // 11: udb.entity.v1.RequestContext
+	(*structpb.Struct)(nil),         // 12: google.protobuf.Struct
+	(*structpb.Value)(nil),          // 13: google.protobuf.Value
 }
 var file_udb_entity_v1_relational_proto_depIdxs = []int32{
-	8,  // 0: udb.entity.v1.Row.fields:type_name -> udb.entity.v1.Row.FieldsEntry
+	9,  // 0: udb.entity.v1.Row.fields:type_name -> udb.entity.v1.Row.FieldsEntry
 	2,  // 1: udb.entity.v1.RecordSet.rows:type_name -> udb.entity.v1.Row
-	9,  // 2: udb.entity.v1.SelectRequest.context:type_name -> udb.entity.v1.RequestContext
-	10, // 3: udb.entity.v1.SelectRequest.filter:type_name -> google.protobuf.Struct
+	11, // 2: udb.entity.v1.SelectRequest.context:type_name -> udb.entity.v1.RequestContext
+	12, // 3: udb.entity.v1.SelectRequest.filter:type_name -> google.protobuf.Struct
 	0,  // 4: udb.entity.v1.SelectRequest.sort:type_name -> udb.entity.v1.Sort
 	1,  // 5: udb.entity.v1.SelectRequest.cache:type_name -> udb.entity.v1.CacheOptions
-	9,  // 6: udb.entity.v1.UpsertRequest.context:type_name -> udb.entity.v1.RequestContext
-	10, // 7: udb.entity.v1.UpsertRequest.payload:type_name -> google.protobuf.Struct
+	11, // 6: udb.entity.v1.UpsertRequest.context:type_name -> udb.entity.v1.RequestContext
+	12, // 7: udb.entity.v1.UpsertRequest.payload:type_name -> google.protobuf.Struct
 	1,  // 8: udb.entity.v1.UpsertRequest.cache:type_name -> udb.entity.v1.CacheOptions
-	10, // 9: udb.entity.v1.UpsertRequest.expected:type_name -> google.protobuf.Struct
-	9,  // 10: udb.entity.v1.DeleteRequest.context:type_name -> udb.entity.v1.RequestContext
-	10, // 11: udb.entity.v1.DeleteRequest.filter:type_name -> google.protobuf.Struct
-	10, // 12: udb.entity.v1.DeleteRequest.expected:type_name -> google.protobuf.Struct
-	9,  // 13: udb.entity.v1.ViewDefinition.context:type_name -> udb.entity.v1.RequestContext
-	11, // 14: udb.entity.v1.Row.FieldsEntry.value:type_name -> google.protobuf.Value
-	15, // [15:15] is the sub-list for method output_type
-	15, // [15:15] is the sub-list for method input_type
-	15, // [15:15] is the sub-list for extension type_name
-	15, // [15:15] is the sub-list for extension extendee
-	0,  // [0:15] is the sub-list for field type_name
+	12, // 9: udb.entity.v1.UpsertRequest.expected:type_name -> google.protobuf.Struct
+	11, // 10: udb.entity.v1.DeleteRequest.context:type_name -> udb.entity.v1.RequestContext
+	12, // 11: udb.entity.v1.DeleteRequest.filter:type_name -> google.protobuf.Struct
+	12, // 12: udb.entity.v1.DeleteRequest.expected:type_name -> google.protobuf.Struct
+	11, // 13: udb.entity.v1.UpdateRequest.context:type_name -> udb.entity.v1.RequestContext
+	12, // 14: udb.entity.v1.UpdateRequest.filter:type_name -> google.protobuf.Struct
+	12, // 15: udb.entity.v1.UpdateRequest.changes:type_name -> google.protobuf.Struct
+	12, // 16: udb.entity.v1.UpdateRequest.expected:type_name -> google.protobuf.Struct
+	10, // 17: udb.entity.v1.UpdateRequest.increments:type_name -> udb.entity.v1.UpdateRequest.Increment
+	11, // 18: udb.entity.v1.ViewDefinition.context:type_name -> udb.entity.v1.RequestContext
+	13, // 19: udb.entity.v1.Row.FieldsEntry.value:type_name -> google.protobuf.Value
+	20, // [20:20] is the sub-list for method output_type
+	20, // [20:20] is the sub-list for method input_type
+	20, // [20:20] is the sub-list for extension type_name
+	20, // [20:20] is the sub-list for extension extendee
+	0,  // [0:20] is the sub-list for field type_name
 }
 
 func init() { file_udb_entity_v1_relational_proto_init() }
@@ -751,7 +939,7 @@ func file_udb_entity_v1_relational_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_udb_entity_v1_relational_proto_rawDesc), len(file_udb_entity_v1_relational_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

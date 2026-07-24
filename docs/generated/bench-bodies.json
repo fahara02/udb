@@ -2641,6 +2641,18 @@
   },
   {
     "file": "data_broker.md",
+    "rpc": "Update",
+    "service": "DataBroker",
+    "wire_rpc": "DataBroker/Update",
+    "api_alias": "update",
+    "operation_id": "update",
+    "op_kind": "MUTATION",
+    "request_msg": "UpdateRequest",
+    "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\" }, \"message_type\": \"<seed:message_type>\", \"filter\": { \"record_id\": \"<seed:record_id>\", \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\" }, \"changes\": { \"payload\": \"perf-update\" } }`",
+    "notes": "partial update: SET only `changes` columns on the matched rows; `increments` (repeated {column,delta}) applies atomic counter deltas; `expected` (CAS), `idempotency_key`, `return_record` optional. Never name a column in both `changes` and `increments`."
+  },
+  {
+    "file": "data_broker.md",
     "rpc": "Upsert",
     "service": "DataBroker",
     "wire_rpc": "DataBroker/Upsert",

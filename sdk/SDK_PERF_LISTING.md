@@ -6,7 +6,7 @@ Inputs:
 - `docs/generated/bench-bodies.json`
 - `docs/site/bench-results.json`
 
-Current generated RPC surface: 375 RPCs across 28 services.
+Current generated RPC surface: 376 RPCs across 28 services.
 
 Published benchmark artifact: not committed yet.
 Release tag: -.
@@ -53,7 +53,7 @@ Generated at: -.
 | CacheService | 7 | 3 | 3 | 1 | 0 |
 | ConfigService | 5 | 3 | 1 | 1 | 0 |
 | ControlPlaneService | 6 | 2 | 4 | 0 | 0 |
-| DataBroker | 77 | 35 | 35 | 7 | 0 |
+| DataBroker | 78 | 35 | 36 | 7 | 0 |
 | EmbeddingService | 19 | 5 | 12 | 2 | 0 |
 | IdentityProviderService | 27 | 6 | 21 | 0 | 0 |
 | LiveQueryService | 1 | 1 | 0 | 0 | 0 |
@@ -301,6 +301,7 @@ identity surface available to benchmark reports.
 | `DataBroker/StepDownCdcLeader` | `step_down_cdc_leader` | `stepDownCdcLeader` | MUTATION |
 | `DataBroker/TimeSeriesQuery` | `time_series_query` | `timeSeriesQuery` | READ_ONLY |
 | `DataBroker/TimeSeriesWrite` | `time_series_write` | `timeSeriesWrite` | MUTATION |
+| `DataBroker/Update` | `update` | `update` | MUTATION |
 | `DataBroker/Upsert` | `upsert` | `upsert` | MUTATION |
 | `DataBroker/ValidateCatalog` | `validate_catalog` | `validateCatalog` | DESTRUCTIVE |
 | `DataBroker/VectorBatchUpsert` | `vector_batch_upsert` | `vectorBatchUpsert` | MUTATION |

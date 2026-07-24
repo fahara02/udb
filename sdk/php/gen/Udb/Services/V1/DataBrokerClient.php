@@ -102,6 +102,24 @@ class DataBrokerClient extends \Grpc\BaseStub {
     }
 
     /**
+     * Partial update: SET named columns and/or apply atomic increments on the
+     * matched rows — no full-record resend, no read-modify-write counter window.
+     * Same filter language, tenant isolation, CAS (`expected`) and keyed-replay
+     * semantics as Upsert/Delete.
+     * @param \Udb\Entity\V1\UpdateRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Entity\V1\MutationResponse>
+     */
+    public function Update(\Udb\Entity\V1\UpdateRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.services.v1.DataBroker/Update',
+        $argument,
+        ['\Udb\Entity\V1\MutationResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
      * ── Vector ──────────────────────────────────────────────────────────────────
      * @param \Udb\Entity\V1\VectorSearchRequest $argument input argument
      * @param array $metadata metadata

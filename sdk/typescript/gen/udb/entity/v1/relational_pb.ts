@@ -14,7 +14,7 @@ import type { JsonObject, Message } from "@bufbuild/protobuf";
  * Describes the file udb/entity/v1/relational.proto.
  */
 export const file_udb_entity_v1_relational: GenFile = /*@__PURE__*/
-  fileDesc("Ch51ZGIvZW50aXR5L3YxL3JlbGF0aW9uYWwucHJvdG8SDXVkYi5lbnRpdHkudjEiKQoEU29ydBINCgVmaWVsZBgBIAEoCRISCgpkZXNjZW5kaW5nGAIgASgIIk4KDENhY2hlT3B0aW9ucxITCgtieXBhc3NfcmVhZBgBIAEoCBIUCgxieXBhc3Nfd3JpdGUYAiABKAgSEwoLdHRsX3NlY29uZHMYAyABKAUifAoDUm93Ei4KBmZpZWxkcxgBIAMoCzIeLnVkYi5lbnRpdHkudjEuUm93LkZpZWxkc0VudHJ5GkUKC0ZpZWxkc0VudHJ5EgsKA2tleRgBIAEoCRIlCgV2YWx1ZRgCIAEoCzIWLmdvb2dsZS5wcm90b2J1Zi5WYWx1ZToCOAEicQoJUmVjb3JkU2V0EhQKDHJlY29yZHNfanNvbhgBIAMoDBIgCgRyb3dzGAIgAygLMhIudWRiLmVudGl0eS52MS5Sb3cSFwoPbmV4dF9wYWdlX3Rva2VuGAMgASgJEhMKC3RvdGFsX2NvdW50GAQgASgFIoACCg1TZWxlY3RSZXF1ZXN0Ei4KB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0EhQKDG1lc3NhZ2VfdHlwZRgCIAEoCRInCgZmaWx0ZXIYAyABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0Eg4KBmZpZWxkcxgEIAMoCRINCgVsaW1pdBgFIAEoBRISCgpwYWdlX3Rva2VuGAYgASgJEiEKBHNvcnQYByADKAsyEy51ZGIuZW50aXR5LnYxLlNvcnQSKgoFY2FjaGUYCCABKAsyGy51ZGIuZW50aXR5LnYxLkNhY2hlT3B0aW9ucyK0AgoNVXBzZXJ0UmVxdWVzdBIuCgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dBIUCgxtZXNzYWdlX3R5cGUYAiABKAkSEwoLcmVjb3JkX2pzb24YAyABKAwSKAoHcGF5bG9hZBgEIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSFwoPY29uZmxpY3RfZmllbGRzGAUgAygJEhUKDXJldHVybl9yZWNvcmQYBiABKAgSKgoFY2FjaGUYByABKAsyGy51ZGIuZW50aXR5LnYxLkNhY2hlT3B0aW9ucxIXCg9pZGVtcG90ZW5jeV9rZXkYCCABKAkSKQoIZXhwZWN0ZWQYCSABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0IsIBCg1EZWxldGVSZXF1ZXN0Ei4KB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0EhQKDG1lc3NhZ2VfdHlwZRgCIAEoCRInCgZmaWx0ZXIYAyABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EhcKD2lkZW1wb3RlbmN5X2tleRgEIAEoCRIpCghleHBlY3RlZBgFIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QikgEKDlZpZXdEZWZpbml0aW9uEi4KB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Eg4KBnNjaGVtYRgCIAEoCRIMCgRuYW1lGAMgASgJEg0KBXF1ZXJ5GAQgASgJEhEKCXdpdGhfZGF0YRgFIAEoCBIQCgh0dGxfZGF5cxgGIAEoBUK1AQoRY29tLnVkYi5lbnRpdHkudjFCD1JlbGF0aW9uYWxQcm90b1ABWjlnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9lbnRpdHkvdjE7ZW50aXR5djGiAgNVRViqAg1VZGIuRW50aXR5LlYxygINVWRiXEVudGl0eVxWMeICGVVkYlxHUEJNZXRhZGF0YVxFbnRpdHlcVjHqAg9VZGI6OkVudGl0eTo6VjFiBnByb3RvMw", [file_google_protobuf_struct, file_udb_entity_v1_context]);
+  fileDesc("Ch51ZGIvZW50aXR5L3YxL3JlbGF0aW9uYWwucHJvdG8SDXVkYi5lbnRpdHkudjEiKQoEU29ydBINCgVmaWVsZBgBIAEoCRISCgpkZXNjZW5kaW5nGAIgASgIIk4KDENhY2hlT3B0aW9ucxITCgtieXBhc3NfcmVhZBgBIAEoCBIUCgxieXBhc3Nfd3JpdGUYAiABKAgSEwoLdHRsX3NlY29uZHMYAyABKAUifAoDUm93Ei4KBmZpZWxkcxgBIAMoCzIeLnVkYi5lbnRpdHkudjEuUm93LkZpZWxkc0VudHJ5GkUKC0ZpZWxkc0VudHJ5EgsKA2tleRgBIAEoCRIlCgV2YWx1ZRgCIAEoCzIWLmdvb2dsZS5wcm90b2J1Zi5WYWx1ZToCOAEicQoJUmVjb3JkU2V0EhQKDHJlY29yZHNfanNvbhgBIAMoDBIgCgRyb3dzGAIgAygLMhIudWRiLmVudGl0eS52MS5Sb3cSFwoPbmV4dF9wYWdlX3Rva2VuGAMgASgJEhMKC3RvdGFsX2NvdW50GAQgASgFIoACCg1TZWxlY3RSZXF1ZXN0Ei4KB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0EhQKDG1lc3NhZ2VfdHlwZRgCIAEoCRInCgZmaWx0ZXIYAyABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0Eg4KBmZpZWxkcxgEIAMoCRINCgVsaW1pdBgFIAEoBRISCgpwYWdlX3Rva2VuGAYgASgJEiEKBHNvcnQYByADKAsyEy51ZGIuZW50aXR5LnYxLlNvcnQSKgoFY2FjaGUYCCABKAsyGy51ZGIuZW50aXR5LnYxLkNhY2hlT3B0aW9ucyK0AgoNVXBzZXJ0UmVxdWVzdBIuCgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dBIUCgxtZXNzYWdlX3R5cGUYAiABKAkSEwoLcmVjb3JkX2pzb24YAyABKAwSKAoHcGF5bG9hZBgEIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSFwoPY29uZmxpY3RfZmllbGRzGAUgAygJEhUKDXJldHVybl9yZWNvcmQYBiABKAgSKgoFY2FjaGUYByABKAsyGy51ZGIuZW50aXR5LnYxLkNhY2hlT3B0aW9ucxIXCg9pZGVtcG90ZW5jeV9rZXkYCCABKAkSKQoIZXhwZWN0ZWQYCSABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0IsIBCg1EZWxldGVSZXF1ZXN0Ei4KB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0EhQKDG1lc3NhZ2VfdHlwZRgCIAEoCRInCgZmaWx0ZXIYAyABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EhcKD2lkZW1wb3RlbmN5X2tleRgEIAEoCRIpCghleHBlY3RlZBgFIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3Qi6wIKDVVwZGF0ZVJlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHQSFAoMbWVzc2FnZV90eXBlGAIgASgJEicKBmZpbHRlchgDIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSKAoHY2hhbmdlcxgEIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSKQoIZXhwZWN0ZWQYBSABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EjoKCmluY3JlbWVudHMYBiADKAsyJi51ZGIuZW50aXR5LnYxLlVwZGF0ZVJlcXVlc3QuSW5jcmVtZW50EhcKD2lkZW1wb3RlbmN5X2tleRgHIAEoCRIVCg1yZXR1cm5fcmVjb3JkGAggASgIGioKCUluY3JlbWVudBIOCgZjb2x1bW4YASABKAkSDQoFZGVsdGEYAiABKAEikgEKDlZpZXdEZWZpbml0aW9uEi4KB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Eg4KBnNjaGVtYRgCIAEoCRIMCgRuYW1lGAMgASgJEg0KBXF1ZXJ5GAQgASgJEhEKCXdpdGhfZGF0YRgFIAEoCBIQCgh0dGxfZGF5cxgGIAEoBUK1AQoRY29tLnVkYi5lbnRpdHkudjFCD1JlbGF0aW9uYWxQcm90b1ABWjlnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9lbnRpdHkvdjE7ZW50aXR5djGiAgNVRViqAg1VZGIuRW50aXR5LlYxygINVWRiXEVudGl0eVxWMeICGVVkYlxHUEJNZXRhZGF0YVxFbnRpdHlcVjHqAg9VZGI6OkVudGl0eTo6VjFiBnByb3RvMw", [file_google_protobuf_struct, file_udb_entity_v1_context]);
 
 /**
  * @generated from message udb.entity.v1.Sort
@@ -275,6 +275,100 @@ export const DeleteRequestSchema: GenMessage<DeleteRequest> = /*@__PURE__*/
   messageDesc(file_udb_entity_v1_relational, 6);
 
 /**
+ * Partial update: set only the named columns (and/or apply atomic increments)
+ * on the rows matched by `filter`, without resending the full record. Closes
+ * the Select → merge → full-record Upsert pattern every consumer carried, and
+ * the read-modify-write lost-update window on counters.
+ *
+ * @generated from message udb.entity.v1.UpdateRequest
+ */
+export type UpdateRequest = Message<"udb.entity.v1.UpdateRequest"> & {
+  /**
+   * @generated from field: udb.entity.v1.RequestContext context = 1;
+   */
+  context?: RequestContext | undefined;
+
+  /**
+   * @generated from field: string message_type = 2;
+   */
+  messageType: string;
+
+  /**
+   * Row selector: primary-key equality or a compiled predicate — same filter
+   * language and tenant-isolation rules as SelectRequest/DeleteRequest.
+   *
+   * @generated from field: google.protobuf.Struct filter = 3;
+   */
+  filter?: JsonObject | undefined;
+
+  /**
+   * Columns to SET. A JSON null value writes SQL NULL. Columns not named are
+   * untouched — NOT-NULL columns absent from `changes` are never rewritten,
+   * so partial updates cannot trip 23502 the way full-record resends did.
+   *
+   * @generated from field: google.protobuf.Struct changes = 4;
+   */
+  changes?: JsonObject | undefined;
+
+  /**
+   * Optional compare-and-swap precondition (same semantics as
+   * UpsertRequest.expected / DeleteRequest.expected): every asserted
+   * field must equal the CURRENT row inside the write transaction, else
+   * FAILED_PRECONDITION and nothing is written, projected, or emitted.
+   *
+   * @generated from field: google.protobuf.Struct expected = 5;
+   */
+  expected?: JsonObject | undefined;
+
+  /**
+   * @generated from field: repeated udb.entity.v1.UpdateRequest.Increment increments = 6;
+   */
+  increments: UpdateRequest_Increment[];
+
+  /**
+   * @generated from field: string idempotency_key = 7;
+   */
+  idempotencyKey: string;
+
+  /**
+   * @generated from field: bool return_record = 8;
+   */
+  returnRecord: boolean;
+};
+
+/**
+ * Describes the message udb.entity.v1.UpdateRequest.
+ * Use `create(UpdateRequestSchema)` to create a new message.
+ */
+export const UpdateRequestSchema: GenMessage<UpdateRequest> = /*@__PURE__*/
+  messageDesc(file_udb_entity_v1_relational, 7);
+
+/**
+ * Atomic counter deltas compiled as `col = col + delta` in the same UPDATE
+ * statement — no read-modify-write window (login_attempts, retry_count).
+ *
+ * @generated from message udb.entity.v1.UpdateRequest.Increment
+ */
+export type UpdateRequest_Increment = Message<"udb.entity.v1.UpdateRequest.Increment"> & {
+  /**
+   * @generated from field: string column = 1;
+   */
+  column: string;
+
+  /**
+   * @generated from field: double delta = 2;
+   */
+  delta: number;
+};
+
+/**
+ * Describes the message udb.entity.v1.UpdateRequest.Increment.
+ * Use `create(UpdateRequest_IncrementSchema)` to create a new message.
+ */
+export const UpdateRequest_IncrementSchema: GenMessage<UpdateRequest_Increment> = /*@__PURE__*/
+  messageDesc(file_udb_entity_v1_relational, 7, 0);
+
+/**
  * @generated from message udb.entity.v1.ViewDefinition
  */
 export type ViewDefinition = Message<"udb.entity.v1.ViewDefinition"> & {
@@ -314,4 +408,4 @@ export type ViewDefinition = Message<"udb.entity.v1.ViewDefinition"> & {
  * Use `create(ViewDefinitionSchema)` to create a new message.
  */
 export const ViewDefinitionSchema: GenMessage<ViewDefinition> = /*@__PURE__*/
-  messageDesc(file_udb_entity_v1_relational, 7);
+  messageDesc(file_udb_entity_v1_relational, 8);

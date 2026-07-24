@@ -27,6 +27,7 @@ const (
 	DataBroker_Upsert_FullMethodName                  = "/udb.services.v1.DataBroker/Upsert"
 	DataBroker_BatchUpsert_FullMethodName             = "/udb.services.v1.DataBroker/BatchUpsert"
 	DataBroker_Delete_FullMethodName                  = "/udb.services.v1.DataBroker/Delete"
+	DataBroker_Update_FullMethodName                  = "/udb.services.v1.DataBroker/Update"
 	DataBroker_VectorSearch_FullMethodName            = "/udb.services.v1.DataBroker/VectorSearch"
 	DataBroker_VectorHybridSearch_FullMethodName      = "/udb.services.v1.DataBroker/VectorHybridSearch"
 	DataBroker_VectorUpsert_FullMethodName            = "/udb.services.v1.DataBroker/VectorUpsert"
@@ -118,6 +119,11 @@ type DataBrokerClient interface {
 	BatchUpsert(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[v1.UpsertRequest, v1.MutationResponse], error)
 	// Delete rows without raw SQL.
 	Delete(ctx context.Context, in *v1.DeleteRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error)
+	// Partial update: SET named columns and/or apply atomic increments on the
+	// matched rows — no full-record resend, no read-modify-write counter window.
+	// Same filter language, tenant isolation, CAS (`expected`) and keyed-replay
+	// semantics as Upsert/Delete.
+	Update(ctx context.Context, in *v1.UpdateRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error)
 	// ── Vector ──────────────────────────────────────────────────────────────────
 	VectorSearch(ctx context.Context, in *v1.VectorSearchRequest, opts ...grpc.CallOption) (*v1.VectorSet, error)
 	VectorHybridSearch(ctx context.Context, in *v1.VectorHybridSearchRequest, opts ...grpc.CallOption) (*v1.VectorSet, error)
@@ -328,6 +334,16 @@ func (c *dataBrokerClient) Delete(ctx context.Context, in *v1.DeleteRequest, opt
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.MutationResponse)
 	err := c.cc.Invoke(ctx, DataBroker_Delete_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dataBrokerClient) Update(ctx context.Context, in *v1.UpdateRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.MutationResponse)
+	err := c.cc.Invoke(ctx, DataBroker_Update_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1089,6 +1105,11 @@ type DataBrokerServer interface {
 	BatchUpsert(grpc.BidiStreamingServer[v1.UpsertRequest, v1.MutationResponse]) error
 	// Delete rows without raw SQL.
 	Delete(context.Context, *v1.DeleteRequest) (*v1.MutationResponse, error)
+	// Partial update: SET named columns and/or apply atomic increments on the
+	// matched rows — no full-record resend, no read-modify-write counter window.
+	// Same filter language, tenant isolation, CAS (`expected`) and keyed-replay
+	// semantics as Upsert/Delete.
+	Update(context.Context, *v1.UpdateRequest) (*v1.MutationResponse, error)
 	// ── Vector ──────────────────────────────────────────────────────────────────
 	VectorSearch(context.Context, *v1.VectorSearchRequest) (*v1.VectorSet, error)
 	VectorHybridSearch(context.Context, *v1.VectorHybridSearchRequest) (*v1.VectorSet, error)
@@ -1246,6 +1267,9 @@ func (UnimplementedDataBrokerServer) BatchUpsert(grpc.BidiStreamingServer[v1.Ups
 }
 func (UnimplementedDataBrokerServer) Delete(context.Context, *v1.DeleteRequest) (*v1.MutationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Delete not implemented")
+}
+func (UnimplementedDataBrokerServer) Update(context.Context, *v1.UpdateRequest) (*v1.MutationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Update not implemented")
 }
 func (UnimplementedDataBrokerServer) VectorSearch(context.Context, *v1.VectorSearchRequest) (*v1.VectorSet, error) {
 	return nil, status.Error(codes.Unimplemented, "method VectorSearch not implemented")
@@ -1555,6 +1579,24 @@ func _DataBroker_Delete_Handler(srv interface{}, ctx context.Context, dec func(i
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DataBrokerServer).Delete(ctx, req.(*v1.DeleteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DataBroker_Update_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.UpdateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataBrokerServer).Update(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DataBroker_Update_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataBrokerServer).Update(ctx, req.(*v1.UpdateRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2808,6 +2850,10 @@ var DataBroker_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Delete",
 			Handler:    _DataBroker_Delete_Handler,
+		},
+		{
+			MethodName: "Update",
+			Handler:    _DataBroker_Update_Handler,
 		},
 		{
 			MethodName: "VectorSearch",

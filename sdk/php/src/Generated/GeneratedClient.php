@@ -21,7 +21,7 @@ use Grpc\ChannelCredentials;
  *   UDB version ...... 0.4.22
  *   Protocol version . 1.0.0
  *   Services ......... 28
- *   RPCs ............. 375
+ *   RPCs ............. 376
  *
  * This class COMPOSES WITH the hand-written layer; it does not replace it:
  *   - it reuses {@see UdbMetadata} for the eight broker headers,
@@ -430,6 +430,7 @@ final class GeneratedClient
         "StepDownCdcLeader" => "mutation",
         "TimeSeriesQuery" => "read_only",
         "TimeSeriesWrite" => "mutation",
+        "Update" => "mutation",
         "Upsert" => "mutation",
         "ValidateCatalog" => "destructive",
         "VectorBatchUpsert" => "mutation",
@@ -814,6 +815,7 @@ final class GeneratedClient
         "DataBroker/StepDownCdcLeader" => "mutation",
         "DataBroker/TimeSeriesQuery" => "read_only",
         "DataBroker/TimeSeriesWrite" => "mutation",
+        "DataBroker/Update" => "mutation",
         "DataBroker/Upsert" => "mutation",
         "DataBroker/ValidateCatalog" => "destructive",
         "DataBroker/VectorBatchUpsert" => "mutation",
@@ -1198,6 +1200,7 @@ final class GeneratedClient
         "DataBroker/StepDownCdcLeader" => "step_down_cdc_leader",
         "DataBroker/TimeSeriesQuery" => "time_series_query",
         "DataBroker/TimeSeriesWrite" => "time_series_write",
+        "DataBroker/Update" => "update",
         "DataBroker/Upsert" => "upsert",
         "DataBroker/ValidateCatalog" => "validate_catalog",
         "DataBroker/VectorBatchUpsert" => "vector_batch_upsert",
@@ -1581,6 +1584,7 @@ final class GeneratedClient
         "DataBroker/StepDownCdcLeader" => "stepDownCdcLeader",
         "DataBroker/TimeSeriesQuery" => "timeSeriesQuery",
         "DataBroker/TimeSeriesWrite" => "timeSeriesWrite",
+        "DataBroker/Update" => "update",
         "DataBroker/Upsert" => "upsert",
         "DataBroker/ValidateCatalog" => "validateCatalog",
         "DataBroker/VectorBatchUpsert" => "vectorBatchUpsert",
@@ -1964,6 +1968,7 @@ final class GeneratedClient
         "DataBroker/StepDownCdcLeader" => "",
         "DataBroker/TimeSeriesQuery" => "",
         "DataBroker/TimeSeriesWrite" => "",
+        "DataBroker/Update" => "",
         "DataBroker/Upsert" => "",
         "DataBroker/ValidateCatalog" => "",
         "DataBroker/VectorBatchUpsert" => "",
@@ -2347,6 +2352,7 @@ final class GeneratedClient
         "DataBroker/StepDownCdcLeader" => "",
         "DataBroker/TimeSeriesQuery" => "",
         "DataBroker/TimeSeriesWrite" => "",
+        "DataBroker/Update" => "",
         "DataBroker/Upsert" => "",
         "DataBroker/ValidateCatalog" => "",
         "DataBroker/VectorBatchUpsert" => "",
@@ -2836,6 +2842,7 @@ final class GeneratedClient
         "step_down_cdc_leader" => "stepDownCdcLeader",
         "time_series_query" => "timeSeriesQuery",
         "time_series_write" => "timeSeriesWrite",
+        "update" => "update",
         "upsert" => "upsert",
         "validate_catalog" => "validateCatalog",
         "vector_batch_upsert" => "vectorBatchUpsert",
@@ -10402,6 +10409,27 @@ final class GeneratedClient
         );
     }
     /**
+     * udb.services.v1.DataBroker / Update (unary), public alias update.
+     *
+     * Forwards to {@see stubFor()}->Update(); retries transient codes.
+     * Path: /udb.services.v1.DataBroker/Update
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded MutationResponse
+     */
+    public function update($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'Update',
+            'DataBroker',
+            'udb.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->Update($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
      * udb.services.v1.DataBroker / Upsert (unary), public alias upsert.
      *
      * Forwards to {@see stubFor()}->Upsert(); retries transient codes.
@@ -10982,7 +11010,7 @@ final class GeneratedClient
         return $this->stubFor('WorkflowService', 'udb.core.workflow.services.v1');
     }
     /**
-     * Underlying buf-generated stub for udb.services.v1.DataBroker (77 RPC(s)).
+     * Underlying buf-generated stub for udb.services.v1.DataBroker (78 RPC(s)).
      * Channel is shared with every other service stub on this client.
      *
      * @return BaseStub  a DataBrokerClient

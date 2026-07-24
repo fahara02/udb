@@ -460,6 +460,79 @@ impl DataBrokerService {
         }
     }
 
+    /// W7: partial update — SET named columns / apply atomic increments on the
+    /// matched rows. Mirrors delete_inner's authorize/context/channel shape and
+    /// threads CAS + keyed idempotency into setup_data::update.
+    pub(crate) async fn update_inner(
+        &self,
+        request: Request<UpdateRequest>,
+    ) -> Result<Response<MutationResponse>, Status> {
+        let started = Instant::now();
+        let security = match security_from_request(&request) {
+            Ok(s) => s,
+            Err(e) => return self.record_grpc("Update", started, Err(e)),
+        };
+        let req = request.into_inner();
+        let message_type = req.message_type.clone();
+        let idempotency_key = req.idempotency_key.clone();
+        let expected = req.expected.clone();
+        let return_record = req.return_record;
+        let decision_id = match self.authorize(&security, &message_type, "Update").await {
+            Ok(id) => id,
+            Err(err) => return self.record_grpc("Update", started, Err(err)),
+        };
+        let context = security.request_context_with_decision(&decision_id);
+        let response_context = context.clone();
+        let filter = req
+            .filter
+            .as_ref()
+            .map(crate::runtime::executor_utils::struct_to_json)
+            .unwrap_or(serde_json::Value::Null);
+        let changes = req
+            .changes
+            .as_ref()
+            .map(crate::runtime::executor_utils::struct_to_json)
+            .unwrap_or(serde_json::Value::Null);
+        let increments: Vec<(String, f64)> = req
+            .increments
+            .iter()
+            .map(|increment| (increment.column.clone(), increment.delta))
+            .collect();
+        let manifest = &self.catalog.active_for(&security.project_id).manifest;
+        let runtime = self.runtime_snapshot();
+        let result = self
+            .execute_with_channel(
+                crate::runtime::channels::OperationChannel::Write,
+                || async move {
+                    runtime
+                        .update(
+                            manifest,
+                            &message_type,
+                            filter,
+                            changes,
+                            increments,
+                            context,
+                            idempotency_key,
+                            expected,
+                            return_record,
+                        )
+                        .await
+                },
+            )
+            .await;
+
+        match result {
+            Ok(res) => self.record_grpc(
+                "Update",
+                started,
+                Ok(self
+                    .with_mutation_response_headers(res, &response_context)
+                    .await),
+            ),
+            Err(err) => self.record_grpc("Update", started, Err(err)),
+        }
+    }
+
     pub(crate) async fn generic_dispatch_inner(
         &self,
         request: Request<GenericDispatchRequest>,

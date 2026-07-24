@@ -25,7 +25,7 @@ package udbclient
 // connection (interceptors) those wrappers run on, plus low-level escape
 // hatches for RPCs that don't yet have a typed helper.
 //
-// Covers 375 RPCs across 28 services
+// Covers 376 RPCs across 28 services
 // (UDB v0.4.22, wire protocol 1.0.0).
 
 import (
@@ -995,6 +995,7 @@ var AllRPCs = []RPCInfo{
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/StepDownCdcLeader", Name: "StepDownCdcLeader", APIAlias: "step_down_cdc_leader", OperationID: "stepDownCdcLeader", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/TimeSeriesQuery", Name: "TimeSeriesQuery", APIAlias: "time_series_query", OperationID: "timeSeriesQuery", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/TimeSeriesWrite", Name: "TimeSeriesWrite", APIAlias: "time_series_write", OperationID: "timeSeriesWrite", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/Update", Name: "Update", APIAlias: "update", OperationID: "update", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: true},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/Upsert", Name: "Upsert", APIAlias: "upsert", OperationID: "upsert", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: true},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/ValidateCatalog", Name: "ValidateCatalog", APIAlias: "validate_catalog", OperationID: "validateCatalog", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive", ReplaySafe: false},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/VectorBatchUpsert", Name: "VectorBatchUpsert", APIAlias: "vector_batch_upsert", OperationID: "vectorBatchUpsert", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("bidi"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
@@ -1033,7 +1034,7 @@ var ServiceRPCCounts = map[string]int{
 	"udb.core.webrtc.services.v1.TrackService": 4,
 	"udb.core.webrtc.services.v1.TurnService": 1,
 	"udb.core.workflow.services.v1.WorkflowService": 5,
-	"udb.services.v1.DataBroker": 77,
+	"udb.services.v1.DataBroker": 78,
 }
 
 // Entities is the catalog-derived entity registry, generated from the annotated

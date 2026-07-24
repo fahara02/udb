@@ -7,7 +7,7 @@ Inputs:
 - `sdk/go/udbclient/generated_client.go`
 - `docs/site/bench-results.json`
 
-Current generated RPC surface: 375 RPCs across 28 services.
+Current generated RPC surface: 376 RPCs across 28 services.
 
 The benchmark body manifest is checked against generated SDK metadata before this
 file is written. A missing row, extra row, alias drift, operationId drift, or
@@ -41,7 +41,7 @@ do not yet publish per-RPC live benchmark results.
 | CacheService | 7 | 3 | 3 | 1 | 0 |
 | ConfigService | 5 | 3 | 1 | 1 | 0 |
 | ControlPlaneService | 6 | 2 | 4 | 0 | 0 |
-| DataBroker | 77 | 35 | 35 | 7 | 0 |
+| DataBroker | 78 | 35 | 36 | 7 | 0 |
 | EmbeddingService | 19 | 5 | 12 | 2 | 0 |
 | IdentityProviderService | 27 | 6 | 21 | 0 | 0 |
 | LiveQueryService | 1 | 1 | 0 | 0 | 0 |
@@ -288,6 +288,7 @@ benchmark harnesses.
 | DataBroker | `DataBroker/StepDownCdcLeader` | `step_down_cdc_leader` | `stepDownCdcLeader` | MUTATION | data_broker.md |
 | DataBroker | `DataBroker/TimeSeriesQuery` | `time_series_query` | `timeSeriesQuery` | READ_ONLY | data_broker.md |
 | DataBroker | `DataBroker/TimeSeriesWrite` | `time_series_write` | `timeSeriesWrite` | MUTATION | data_broker.md |
+| DataBroker | `DataBroker/Update` | `update` | `update` | MUTATION | data_broker.md |
 | DataBroker | `DataBroker/Upsert` | `upsert` | `upsert` | MUTATION | data_broker.md |
 | DataBroker | `DataBroker/ValidateCatalog` | `validate_catalog` | `validateCatalog` | DESTRUCTIVE | data_broker.md |
 | DataBroker | `DataBroker/VectorBatchUpsert` | `vector_batch_upsert` | `vectorBatchUpsert` | MUTATION | data_broker.md |

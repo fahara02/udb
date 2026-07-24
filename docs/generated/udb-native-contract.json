@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "descriptor_sha256": "79881b22c9a009346aacfe3b0b52fab1cbbfda8c3cd39824c61359bb730355a3",
+  "descriptor_sha256": "3590d9a9050b28a329dcc5b0436b26201e925a9badb0ac3c3aa909462fc1f741",
   "contract_version": "4.1.0",
   "udb_version": "0.4.22",
   "protocol_version": "1.0.0",
@@ -29074,7 +29074,7 @@
       "sdk_surface": null,
       "cli_scaffold": null,
       "dependency_contract": null,
-      "rpc_count": 77,
+      "rpc_count": 78,
       "rpcs": [
         {
           "method": "ActivateCatalog",
@@ -31990,6 +31990,52 @@
           "http": null
         },
         {
+          "method": "Update",
+          "method_alias": "update",
+          "rest_operation_id": "update",
+          "path": "/udb.services.v1.DataBroker/Update",
+          "kind": "unary",
+          "operation_kind": "mutation",
+          "read_only": false,
+          "input": ".udb.entity.v1.UpdateRequest",
+          "output": ".udb.entity.v1.MutationResponse",
+          "auth_mode": "unspecified",
+          "scopes": [],
+          "roles": [],
+          "policy_ref": "",
+          "tenant_required": false,
+          "tenant_field": "",
+          "project_field": "",
+          "endpoint_security": null,
+          "event_contract": null,
+          "emits": [],
+          "sdk_surface": {
+            "include_in_facade": true,
+            "method_alias": "update",
+            "rest_operation_id": "update",
+            "required_credential_provider": "",
+            "streaming_helper_type": "",
+            "default_deadline_ms": 0,
+            "default_max_attempts": 0,
+            "browser_safe": false,
+            "server_only": false,
+            "boilerplate_recipe_tags": [],
+            "generate_minimal_example": false
+          },
+          "dependency_contract": null,
+          "precondition_contract": null,
+          "readback_contract": null,
+          "lifecycle_contract": null,
+          "idempotency_contract": {
+            "request_key_field": "idempotency_key",
+            "server_generated_key": false,
+            "duplicate_response_field": "was_duplicate",
+            "replay_safe": true
+          },
+          "error_contract": null,
+          "http": null
+        },
+        {
           "method": "Upsert",
           "method_alias": "upsert",
           "rest_operation_id": "upsert",
@@ -32284,7 +32330,7 @@
       ]
     }
   ],
-  "message_count": 1026,
+  "message_count": 1028,
   "messages": [
     {
       "message": "udb.core.analytics.entity.v1.ExecutorPerformanceSummary",
@@ -154024,6 +154070,218 @@
           "name": "message",
           "number": 4,
           "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
+      "message": "udb.entity.v1.UpdateRequest",
+      "file": "udb/entity/v1/relational.proto",
+      "sdk_surface": null,
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 8,
+      "fields": [
+        {
+          "name": "context",
+          "number": 1,
+          "type": ".udb.entity.v1.RequestContext",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "message_type",
+          "number": 2,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "filter",
+          "number": 3,
+          "type": ".google.protobuf.Struct",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "changes",
+          "number": 4,
+          "type": ".google.protobuf.Struct",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "expected",
+          "number": 5,
+          "type": ".google.protobuf.Struct",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "increments",
+          "number": 6,
+          "type": ".udb.entity.v1.UpdateRequest.Increment",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "idempotency_key",
+          "number": 7,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "return_record",
+          "number": 8,
+          "type": "8",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
+      "message": "udb.entity.v1.UpdateRequest.Increment",
+      "file": "udb/entity/v1/relational.proto",
+      "sdk_surface": null,
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 2,
+      "fields": [
+        {
+          "name": "column",
+          "number": 1,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "delta",
+          "number": 2,
+          "type": "1",
           "column_security": null,
           "scalar_security": {
             "pii": false,

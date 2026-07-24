@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 
 	entityv1 "github.com/fahara02/udb/sdk/go/gen/udb/entity/v1"
@@ -304,6 +305,99 @@ func (e *Entity) Delete(ctx context.Context, where map[string]any, opts ...Delet
 		MessageType: e.fqn,
 		Filter:      filter,
 		Expected:    expected,
+	})
+}
+
+// UpdateOption configures Update / Increment.
+type UpdateOption func(*updateOptions)
+
+type updateOptions struct {
+	expected       map[string]any
+	idempotencyKey string
+	returnRecord   bool
+}
+
+// WithUpdateExpected makes the Update a compare-and-swap: every field -> value
+// must still equal the CURRENT row (row-locked, same tenant/RLS transaction) or
+// the broker returns FAILED_PRECONDITION and writes nothing. Requires the
+// filter to pin every primary-key column by equality.
+func WithUpdateExpected(expected map[string]any) UpdateOption {
+	return func(o *updateOptions) { o.expected = expected }
+}
+
+// WithUpdateIdempotencyKey enables durable keyed replay: a retried Update with
+// the same key returns the original response with was_duplicate=true.
+func WithUpdateIdempotencyKey(key string) UpdateOption {
+	return func(o *updateOptions) { o.idempotencyKey = key }
+}
+
+// WithUpdateReturnRecord asks the broker to return the post-update row.
+func WithUpdateReturnRecord() UpdateOption {
+	return func(o *updateOptions) { o.returnRecord = true }
+}
+
+// Update issues exactly ONE partial-update RPC: SET only the columns named in
+// changes (a JSON null value writes SQL NULL; columns not named are untouched)
+// on the rows matched by where. This replaces the Select -> merge -> full-record
+// Upsert pattern — no merge helper, no NOT-NULL resend hazard, and combined
+// with WithUpdateExpected it is an atomic guarded write.
+func (e *Entity) Update(ctx context.Context, where map[string]any, changes map[string]any, opts ...UpdateOption) (*entityv1.MutationResponse, error) {
+	return e.update(ctx, where, changes, nil, opts...)
+}
+
+// Increment applies atomic counter deltas (`column = column + delta`) on the
+// matched rows in ONE statement — no read-modify-write lost-update window.
+// Combine with Update by calling update via separate RPCs only when the two
+// column sets are disjoint; a single call never names a column in both.
+func (e *Entity) Increment(ctx context.Context, where map[string]any, deltas map[string]float64, opts ...UpdateOption) (*entityv1.MutationResponse, error) {
+	return e.update(ctx, where, nil, deltas, opts...)
+}
+
+func (e *Entity) update(ctx context.Context, where map[string]any, changes map[string]any, deltas map[string]float64, opts ...UpdateOption) (*entityv1.MutationResponse, error) {
+	var o updateOptions
+	for _, opt := range opts {
+		opt(&o)
+	}
+	filter, err := structFilter(where)
+	if err != nil {
+		return nil, err
+	}
+	var changesStruct *structpb.Struct
+	if len(changes) > 0 {
+		changesStruct, err = structFilter(changes)
+		if err != nil {
+			return nil, fmt.Errorf("udb: encode update changes: %w", err)
+		}
+	}
+	var expected *structpb.Struct
+	if len(o.expected) > 0 {
+		expected, err = structFilter(o.expected)
+		if err != nil {
+			return nil, fmt.Errorf("udb: encode update expected precondition: %w", err)
+		}
+	}
+	// Deterministic wire order for the increments (sorted by column).
+	columns := make([]string, 0, len(deltas))
+	for column := range deltas {
+		columns = append(columns, column)
+	}
+	sort.Strings(columns)
+	increments := make([]*entityv1.UpdateRequest_Increment, 0, len(columns))
+	for _, column := range columns {
+		increments = append(increments, &entityv1.UpdateRequest_Increment{
+			Column: column,
+			Delta:  deltas[column],
+		})
+	}
+	return e.client.Update(ctx, &entityv1.UpdateRequest{
+		Context:        e.requestContext(),
+		MessageType:    e.fqn,
+		Filter:         filter,
+		Changes:        changesStruct,
+		Expected:       expected,
+		Increments:     increments,
+		IdempotencyKey: o.idempotencyKey,
+		ReturnRecord:   o.returnRecord,
 	})
 }
 

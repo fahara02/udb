@@ -101,6 +101,12 @@ func (c *Client) Delete(ctx context.Context, req *entityv1.DeleteRequest) (*enti
 	return c.Broker.Delete(c.Context(ctx), req)
 }
 
+// Update issues the partial-update RPC (W7): SET named columns and/or apply
+// atomic increments on the matched rows — no full-record resend.
+func (c *Client) Update(ctx context.Context, req *entityv1.UpdateRequest) (*entityv1.MutationResponse, error) {
+	return c.Broker.Update(c.Context(ctx), req)
+}
+
 func joinScopes(scopes []string) string {
 	if len(scopes) == 0 {
 		return ""

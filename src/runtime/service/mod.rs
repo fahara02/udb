@@ -41,8 +41,9 @@ use crate::proto::{
     ProjectionDriftDivergentRow, ProjectionDriftScanRequest, ProjectionDriftScanResponse,
     ProjectionDriftTargetReport, PutPolicyRequest, RecordSet, ResourceAdminRequest,
     ResourceListResponse, SagaListRequest, SagaListResponse, SagaRecord, SagaRequest, SagaResponse,
-    SelectRequest, StageCatalogRequest, TxStatus, UpsertRequest, UrlRequest, UrlResponse,
-    VectorHybridSearchRequest, VectorSearchRequest, VectorSet, VectorUpsertRequest, ViewDefinition,
+    SelectRequest, StageCatalogRequest, TxStatus, UpdateRequest, UpsertRequest, UrlRequest,
+    UrlResponse, VectorHybridSearchRequest, VectorSearchRequest, VectorSet, VectorUpsertRequest,
+    ViewDefinition,
 };
 use crate::runtime::DataBrokerRuntime;
 use crate::runtime::authz::{AuthzQuery, AuthzSnapshot, Principal, ResourceRef};
@@ -3941,6 +3942,13 @@ impl DataBroker for DataBrokerService {
         request: Request<DeleteRequest>,
     ) -> Result<Response<MutationResponse>, Status> {
         self.delete_inner(request).await
+    }
+
+    async fn update(
+        &self,
+        request: Request<UpdateRequest>,
+    ) -> Result<Response<MutationResponse>, Status> {
+        self.update_inner(request).await
     }
 
     async fn generic_dispatch(

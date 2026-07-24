@@ -6,7 +6,7 @@
 //   UDB version:      0.4.22
 //   Protocol version: 1.0.0
 //   Services:         28
-//   RPCs:             375
+//   RPCs:             376
 //
 // This file is RENDERED by `udb sdk generate` from
 //   sdk-templates/csharp/Udb.Client/GeneratedClient.cs.tmpl
@@ -431,6 +431,7 @@ public static class GeneratedRpcIdentities
         map["/udb.services.v1.DataBroker/StepDownCdcLeader"] = new RpcIdentity("/udb.services.v1.DataBroker/StepDownCdcLeader", "DataBroker", "StepDownCdcLeader", "step_down_cdc_leader", "stepDownCdcLeader", "mutation", "", "");
         map["/udb.services.v1.DataBroker/TimeSeriesQuery"] = new RpcIdentity("/udb.services.v1.DataBroker/TimeSeriesQuery", "DataBroker", "TimeSeriesQuery", "time_series_query", "timeSeriesQuery", "read_only", "", "");
         map["/udb.services.v1.DataBroker/TimeSeriesWrite"] = new RpcIdentity("/udb.services.v1.DataBroker/TimeSeriesWrite", "DataBroker", "TimeSeriesWrite", "time_series_write", "timeSeriesWrite", "mutation", "", "");
+        map["/udb.services.v1.DataBroker/Update"] = new RpcIdentity("/udb.services.v1.DataBroker/Update", "DataBroker", "Update", "update", "update", "mutation", "", "");
         map["/udb.services.v1.DataBroker/Upsert"] = new RpcIdentity("/udb.services.v1.DataBroker/Upsert", "DataBroker", "Upsert", "upsert", "upsert", "mutation", "", "");
         map["/udb.services.v1.DataBroker/ValidateCatalog"] = new RpcIdentity("/udb.services.v1.DataBroker/ValidateCatalog", "DataBroker", "ValidateCatalog", "validate_catalog", "validateCatalog", "destructive", "", "");
         map["/udb.services.v1.DataBroker/VectorBatchUpsert"] = new RpcIdentity("/udb.services.v1.DataBroker/VectorBatchUpsert", "DataBroker", "VectorBatchUpsert", "vector_batch_upsert", "vectorBatchUpsert", "mutation", "", "");
@@ -1179,7 +1180,7 @@ public sealed partial class GeneratedWorkflowServiceClient : GeneratedServiceBas
 }
 /// <summary>
 /// Robustness wrapper for the <c>udb.services.v1.DataBroker</c> service
-/// (77 RPCs). Forwards to the buf-generated
+/// (78 RPCs). Forwards to the buf-generated
 /// <c>DataBrokerClient</c> stub.
 /// </summary>
 public sealed partial class GeneratedDataBrokerClient : GeneratedServiceBase
@@ -9391,6 +9392,29 @@ public sealed partial class GeneratedDataBrokerClient
             cancellationToken,
             "mutation" == "read_only",
             "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedDataBrokerClient
+{
+    /// <summary>
+    /// <c>update</c> (unary) — forwards to <c>DataBrokerClient.UpdateAsync</c>.
+    /// gRPC path: <c>/udb.services.v1.DataBroker/Update</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> UpdateAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.UpdateAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.services.v1.DataBroker/Update",
+            co => (object)_stub.UpdateAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "true" == "true",
             (object)request);
     }
 }

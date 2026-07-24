@@ -202,6 +202,37 @@ public final class DataBrokerGrpc {
     return getDeleteMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.udb.entity.v1.UpdateRequest,
+      com.udb.entity.v1.MutationResponse> getUpdateMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "Update",
+      requestType = com.udb.entity.v1.UpdateRequest.class,
+      responseType = com.udb.entity.v1.MutationResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.entity.v1.UpdateRequest,
+      com.udb.entity.v1.MutationResponse> getUpdateMethod() {
+    io.grpc.MethodDescriptor<com.udb.entity.v1.UpdateRequest, com.udb.entity.v1.MutationResponse> getUpdateMethod;
+    if ((getUpdateMethod = DataBrokerGrpc.getUpdateMethod) == null) {
+      synchronized (DataBrokerGrpc.class) {
+        if ((getUpdateMethod = DataBrokerGrpc.getUpdateMethod) == null) {
+          DataBrokerGrpc.getUpdateMethod = getUpdateMethod =
+              io.grpc.MethodDescriptor.<com.udb.entity.v1.UpdateRequest, com.udb.entity.v1.MutationResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "Update"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.entity.v1.UpdateRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.entity.v1.MutationResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new DataBrokerMethodDescriptorSupplier("Update"))
+              .build();
+        }
+      }
+    }
+    return getUpdateMethod;
+  }
+
   private static volatile io.grpc.MethodDescriptor<com.udb.entity.v1.VectorSearchRequest,
       com.udb.entity.v1.VectorSet> getVectorSearchMethod;
 
@@ -2525,6 +2556,19 @@ public final class DataBrokerGrpc {
 
     /**
      * <pre>
+     * Partial update: SET named columns and/or apply atomic increments on the
+     * matched rows — no full-record resend, no read-modify-write counter window.
+     * Same filter language, tenant isolation, CAS (`expected`) and keyed-replay
+     * semantics as Upsert/Delete.
+     * </pre>
+     */
+    default void update(com.udb.entity.v1.UpdateRequest request,
+        io.grpc.stub.StreamObserver<com.udb.entity.v1.MutationResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getUpdateMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
      * ── Vector ──────────────────────────────────────────────────────────────────
      * </pre>
      */
@@ -3239,6 +3283,20 @@ public final class DataBrokerGrpc {
         io.grpc.stub.StreamObserver<com.udb.entity.v1.MutationResponse> responseObserver) {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getDeleteMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * Partial update: SET named columns and/or apply atomic increments on the
+     * matched rows — no full-record resend, no read-modify-write counter window.
+     * Same filter language, tenant isolation, CAS (`expected`) and keyed-replay
+     * semantics as Upsert/Delete.
+     * </pre>
+     */
+    public void update(com.udb.entity.v1.UpdateRequest request,
+        io.grpc.stub.StreamObserver<com.udb.entity.v1.MutationResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getUpdateMethod(), getCallOptions()), request, responseObserver);
     }
 
     /**
@@ -4017,6 +4075,19 @@ public final class DataBrokerGrpc {
 
     /**
      * <pre>
+     * Partial update: SET named columns and/or apply atomic increments on the
+     * matched rows — no full-record resend, no read-modify-write counter window.
+     * Same filter language, tenant isolation, CAS (`expected`) and keyed-replay
+     * semantics as Upsert/Delete.
+     * </pre>
+     */
+    public com.udb.entity.v1.MutationResponse update(com.udb.entity.v1.UpdateRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getUpdateMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
      * ── Vector ──────────────────────────────────────────────────────────────────
      * </pre>
      */
@@ -4711,6 +4782,19 @@ public final class DataBrokerGrpc {
 
     /**
      * <pre>
+     * Partial update: SET named columns and/or apply atomic increments on the
+     * matched rows — no full-record resend, no read-modify-write counter window.
+     * Same filter language, tenant isolation, CAS (`expected`) and keyed-replay
+     * semantics as Upsert/Delete.
+     * </pre>
+     */
+    public com.udb.entity.v1.MutationResponse update(com.udb.entity.v1.UpdateRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getUpdateMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
      * ── Vector ──────────────────────────────────────────────────────────────────
      * </pre>
      */
@@ -5356,6 +5440,20 @@ public final class DataBrokerGrpc {
         com.udb.entity.v1.DeleteRequest request) {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getDeleteMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
+     * Partial update: SET named columns and/or apply atomic increments on the
+     * matched rows — no full-record resend, no read-modify-write counter window.
+     * Same filter language, tenant isolation, CAS (`expected`) and keyed-replay
+     * semantics as Upsert/Delete.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.entity.v1.MutationResponse> update(
+        com.udb.entity.v1.UpdateRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getUpdateMethod(), getCallOptions()), request);
     }
 
     /**
@@ -6011,79 +6109,80 @@ public final class DataBrokerGrpc {
   private static final int METHODID_SELECT_V2 = 1;
   private static final int METHODID_UPSERT = 2;
   private static final int METHODID_DELETE = 3;
-  private static final int METHODID_VECTOR_SEARCH = 4;
-  private static final int METHODID_VECTOR_HYBRID_SEARCH = 5;
-  private static final int METHODID_VECTOR_UPSERT = 6;
-  private static final int METHODID_GET_OBJECT = 7;
-  private static final int METHODID_GENERATE_PRESIGNED_URL = 8;
-  private static final int METHODID_INITIATE_MULTIPART_UPLOAD = 9;
-  private static final int METHODID_CACHE_GET = 10;
-  private static final int METHODID_CACHE_SET = 11;
-  private static final int METHODID_CACHE_DELETE = 12;
-  private static final int METHODID_CACHE_SCAN = 13;
-  private static final int METHODID_DOCUMENT_GET = 14;
-  private static final int METHODID_DOCUMENT_FIND = 15;
-  private static final int METHODID_DOCUMENT_UPSERT = 16;
-  private static final int METHODID_DOCUMENT_DELETE = 17;
-  private static final int METHODID_GRAPH_QUERY = 18;
-  private static final int METHODID_GRAPH_MUTATE = 19;
-  private static final int METHODID_TIME_SERIES_WRITE = 20;
-  private static final int METHODID_TIME_SERIES_QUERY = 21;
-  private static final int METHODID_ANALYTICAL_QUERY = 22;
-  private static final int METHODID_PUBLISH_CDC = 23;
-  private static final int METHODID_CREATE_MATERIALIZED_VIEW = 24;
-  private static final int METHODID_ENQUEUE_OUTBOX_EVENT = 25;
-  private static final int METHODID_GENERIC_DISPATCH = 26;
-  private static final int METHODID_ENSURE_RESOURCE = 27;
-  private static final int METHODID_DROP_RESOURCE = 28;
-  private static final int METHODID_LIST_RESOURCES = 29;
-  private static final int METHODID_STAGE_CATALOG = 30;
-  private static final int METHODID_ACTIVATE_CATALOG = 31;
-  private static final int METHODID_ROLLBACK_CATALOG = 32;
-  private static final int METHODID_VALIDATE_CATALOG = 33;
-  private static final int METHODID_GET_CATALOG_VERSIONS = 34;
-  private static final int METHODID_GET_CATALOG_VERSION = 35;
-  private static final int METHODID_PLAN_MIGRATION = 36;
-  private static final int METHODID_APPLY_MIGRATION = 37;
-  private static final int METHODID_GET_MIGRATION_STATUS = 38;
-  private static final int METHODID_LIST_MIGRATION_RUNS = 39;
-  private static final int METHODID_APPROVE_MIGRATION_PLAN = 40;
-  private static final int METHODID_LIST_DLQ_EVENTS = 41;
-  private static final int METHODID_GET_DLQ_EVENT = 42;
-  private static final int METHODID_REPLAY_DLQ_EVENT = 43;
-  private static final int METHODID_DISMISS_DLQ_EVENT = 44;
-  private static final int METHODID_QUARANTINE_DLQ_EVENT = 45;
-  private static final int METHODID_GET_CDC_STATUS = 46;
-  private static final int METHODID_PAUSE_CDC = 47;
-  private static final int METHODID_RESUME_CDC = 48;
-  private static final int METHODID_STEP_DOWN_CDC_LEADER = 49;
-  private static final int METHODID_PREVIEW_CDC_REDACTION = 50;
-  private static final int METHODID_SCAN_PROJECTION_DRIFT = 51;
-  private static final int METHODID_LIST_SAGAS = 52;
-  private static final int METHODID_GET_SAGA = 53;
-  private static final int METHODID_RETRY_SAGA_COMPENSATION = 54;
-  private static final int METHODID_MARK_SAGA_REVIEWED = 55;
-  private static final int METHODID_ENSURE_BASELINE = 56;
-  private static final int METHODID_LIST_POLICIES = 57;
-  private static final int METHODID_PUT_POLICY = 58;
-  private static final int METHODID_DELETE_POLICY = 59;
-  private static final int METHODID_RELOAD_POLICIES = 60;
-  private static final int METHODID_LINT_POLICIES = 61;
-  private static final int METHODID_GET_CAPABILITIES = 62;
-  private static final int METHODID_GET_CATALOG_MANIFEST = 63;
-  private static final int METHODID_LOOKUP_MESSAGE_SCHEMA = 64;
-  private static final int METHODID_LIST_MESSAGE_SCHEMAS = 65;
-  private static final int METHODID_GET_HEALTH_REPORT = 66;
-  private static final int METHODID_ENSURE_PROJECT = 67;
-  private static final int METHODID_LIST_PROJECTS = 68;
-  private static final int METHODID_GET_ADMIN_SUMMARY = 69;
-  private static final int METHODID_LIST_ADMIN_AUDIT_LOGS = 70;
-  private static final int METHODID_VERIFY_ADMIN_AUDIT_LOG = 71;
-  private static final int METHODID_BATCH_SELECT = 72;
-  private static final int METHODID_BATCH_UPSERT = 73;
-  private static final int METHODID_VECTOR_BATCH_UPSERT = 74;
-  private static final int METHODID_PUT_OBJECT = 75;
-  private static final int METHODID_BEGIN_TX = 76;
+  private static final int METHODID_UPDATE = 4;
+  private static final int METHODID_VECTOR_SEARCH = 5;
+  private static final int METHODID_VECTOR_HYBRID_SEARCH = 6;
+  private static final int METHODID_VECTOR_UPSERT = 7;
+  private static final int METHODID_GET_OBJECT = 8;
+  private static final int METHODID_GENERATE_PRESIGNED_URL = 9;
+  private static final int METHODID_INITIATE_MULTIPART_UPLOAD = 10;
+  private static final int METHODID_CACHE_GET = 11;
+  private static final int METHODID_CACHE_SET = 12;
+  private static final int METHODID_CACHE_DELETE = 13;
+  private static final int METHODID_CACHE_SCAN = 14;
+  private static final int METHODID_DOCUMENT_GET = 15;
+  private static final int METHODID_DOCUMENT_FIND = 16;
+  private static final int METHODID_DOCUMENT_UPSERT = 17;
+  private static final int METHODID_DOCUMENT_DELETE = 18;
+  private static final int METHODID_GRAPH_QUERY = 19;
+  private static final int METHODID_GRAPH_MUTATE = 20;
+  private static final int METHODID_TIME_SERIES_WRITE = 21;
+  private static final int METHODID_TIME_SERIES_QUERY = 22;
+  private static final int METHODID_ANALYTICAL_QUERY = 23;
+  private static final int METHODID_PUBLISH_CDC = 24;
+  private static final int METHODID_CREATE_MATERIALIZED_VIEW = 25;
+  private static final int METHODID_ENQUEUE_OUTBOX_EVENT = 26;
+  private static final int METHODID_GENERIC_DISPATCH = 27;
+  private static final int METHODID_ENSURE_RESOURCE = 28;
+  private static final int METHODID_DROP_RESOURCE = 29;
+  private static final int METHODID_LIST_RESOURCES = 30;
+  private static final int METHODID_STAGE_CATALOG = 31;
+  private static final int METHODID_ACTIVATE_CATALOG = 32;
+  private static final int METHODID_ROLLBACK_CATALOG = 33;
+  private static final int METHODID_VALIDATE_CATALOG = 34;
+  private static final int METHODID_GET_CATALOG_VERSIONS = 35;
+  private static final int METHODID_GET_CATALOG_VERSION = 36;
+  private static final int METHODID_PLAN_MIGRATION = 37;
+  private static final int METHODID_APPLY_MIGRATION = 38;
+  private static final int METHODID_GET_MIGRATION_STATUS = 39;
+  private static final int METHODID_LIST_MIGRATION_RUNS = 40;
+  private static final int METHODID_APPROVE_MIGRATION_PLAN = 41;
+  private static final int METHODID_LIST_DLQ_EVENTS = 42;
+  private static final int METHODID_GET_DLQ_EVENT = 43;
+  private static final int METHODID_REPLAY_DLQ_EVENT = 44;
+  private static final int METHODID_DISMISS_DLQ_EVENT = 45;
+  private static final int METHODID_QUARANTINE_DLQ_EVENT = 46;
+  private static final int METHODID_GET_CDC_STATUS = 47;
+  private static final int METHODID_PAUSE_CDC = 48;
+  private static final int METHODID_RESUME_CDC = 49;
+  private static final int METHODID_STEP_DOWN_CDC_LEADER = 50;
+  private static final int METHODID_PREVIEW_CDC_REDACTION = 51;
+  private static final int METHODID_SCAN_PROJECTION_DRIFT = 52;
+  private static final int METHODID_LIST_SAGAS = 53;
+  private static final int METHODID_GET_SAGA = 54;
+  private static final int METHODID_RETRY_SAGA_COMPENSATION = 55;
+  private static final int METHODID_MARK_SAGA_REVIEWED = 56;
+  private static final int METHODID_ENSURE_BASELINE = 57;
+  private static final int METHODID_LIST_POLICIES = 58;
+  private static final int METHODID_PUT_POLICY = 59;
+  private static final int METHODID_DELETE_POLICY = 60;
+  private static final int METHODID_RELOAD_POLICIES = 61;
+  private static final int METHODID_LINT_POLICIES = 62;
+  private static final int METHODID_GET_CAPABILITIES = 63;
+  private static final int METHODID_GET_CATALOG_MANIFEST = 64;
+  private static final int METHODID_LOOKUP_MESSAGE_SCHEMA = 65;
+  private static final int METHODID_LIST_MESSAGE_SCHEMAS = 66;
+  private static final int METHODID_GET_HEALTH_REPORT = 67;
+  private static final int METHODID_ENSURE_PROJECT = 68;
+  private static final int METHODID_LIST_PROJECTS = 69;
+  private static final int METHODID_GET_ADMIN_SUMMARY = 70;
+  private static final int METHODID_LIST_ADMIN_AUDIT_LOGS = 71;
+  private static final int METHODID_VERIFY_ADMIN_AUDIT_LOG = 72;
+  private static final int METHODID_BATCH_SELECT = 73;
+  private static final int METHODID_BATCH_UPSERT = 74;
+  private static final int METHODID_VECTOR_BATCH_UPSERT = 75;
+  private static final int METHODID_PUT_OBJECT = 76;
+  private static final int METHODID_BEGIN_TX = 77;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -6116,6 +6215,10 @@ public final class DataBrokerGrpc {
           break;
         case METHODID_DELETE:
           serviceImpl.delete((com.udb.entity.v1.DeleteRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.entity.v1.MutationResponse>) responseObserver);
+          break;
+        case METHODID_UPDATE:
+          serviceImpl.update((com.udb.entity.v1.UpdateRequest) request,
               (io.grpc.stub.StreamObserver<com.udb.entity.v1.MutationResponse>) responseObserver);
           break;
         case METHODID_VECTOR_SEARCH:
@@ -6465,6 +6568,13 @@ public final class DataBrokerGrpc {
               com.udb.entity.v1.DeleteRequest,
               com.udb.entity.v1.MutationResponse>(
                 service, METHODID_DELETE)))
+        .addMethod(
+          getUpdateMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.entity.v1.UpdateRequest,
+              com.udb.entity.v1.MutationResponse>(
+                service, METHODID_UPDATE)))
         .addMethod(
           getVectorSearchMethod(),
           io.grpc.stub.ServerCalls.asyncUnaryCall(
@@ -7016,6 +7126,7 @@ public final class DataBrokerGrpc {
               .addMethod(getUpsertMethod())
               .addMethod(getBatchUpsertMethod())
               .addMethod(getDeleteMethod())
+              .addMethod(getUpdateMethod())
               .addMethod(getVectorSearchMethod())
               .addMethod(getVectorHybridSearchMethod())
               .addMethod(getVectorUpsertMethod())
