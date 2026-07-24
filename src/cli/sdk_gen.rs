@@ -1319,9 +1319,7 @@ fn render_go_entities_file(entities: &[EntityDescriptor], package: &str) -> Stri
     // SelectPage/Select with the typed decode above; the guarded writes
     // delegate to the SDK's CAS verbs. Kills the hand-written per-entity
     // data-access layer (filters, paging, tenant threading, CAS plumbing).
-    out.push_str(
-        "// ── Typed repositories (generated) ───────────────────────────────────\n\n",
-    );
+    out.push_str("// ── Typed repositories (generated) ───────────────────────────────────\n\n");
     for (entity, alias, type_name) in &renderable {
         let name = &entity.short_name;
         let qualified = format!("{alias}.{type_name}");
