@@ -328,3 +328,10 @@ jobs:
             dist/manifest.json.sha256
             docker-compose.consumer.yml
           fail_on_unmatched_files: true
+      - name: Set release notes (authoritative)
+        # softprops can preserve an existing (empty) body on update; PATCH the
+        # notes explicitly so the published page always carries the CHANGELOG
+        # section (W1).
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release edit "${GITHUB_REF_NAME}" --notes-file dist/release-notes.md
