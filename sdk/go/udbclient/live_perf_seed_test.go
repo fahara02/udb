@@ -710,6 +710,12 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 		t.Logf("perf seed: service-account CreateUser failed (apikey RPCs fall back): %v", err)
 	} else {
 		svcOwner = svcUser.GetUser().GetUserId()
+		// CreateUser persists PENDING_VERIFICATION; the typed grant and
+		// CreateApiKey both require an ACTIVE service account.
+		_, _ = authn.ChangeUserStatus(base, &authnpb.ChangeUserStatusRequest{
+			UserId: svcOwner, NewStatus: authnentpb.UserStatus_USER_STATUS_ACTIVE, Reason: "perf seed activate",
+			Context: &commonpb.RequestContext{Tenant: &commonpb.TenantContext{TenantId: tenant, ProjectId: project}},
+		})
 		if _, err := authn.CreateServiceAccountGrant(base, &authnpb.CreateServiceAccountGrantRequest{
 			TenantId: tenant, UserId: svcOwner, ServiceIdentity: svcName,
 			ProjectId: project, ApprovedScopes: []string{"data:read"},

@@ -3482,6 +3482,11 @@ function perfSeedPhp(array $s): array
         ->setAccountKind(\Udb\Core\Authn\Entity\V1\AccountKind::ACCOUNT_KIND_SERVICE_ACCOUNT), $meta));
     if ($svcUser) {
         $principal = $svcUser->getUser()->getUserId();
+        // CreateUser persists PENDING_VERIFICATION; the typed grant and
+        // CreateApiKey both require an ACTIVE service account.
+        $try('SeedServiceAccountActivate', fn () => $authGen->change_user_status((new \Udb\Core\Authn\Services\V1\ChangeUserStatusRequest())
+            ->setUserId($principal)->setNewStatus(\Udb\Core\Authn\Entity\V1\UserStatus::USER_STATUS_ACTIVE)->setReason('perf seed activate')
+            ->setContext((new \Udb\Core\Common\V1\RequestContext())->setTenant((new \Udb\Core\Common\V1\TenantContext())->setTenantId($tenant)->setProjectId($project))), $meta));
         $try('SeedServiceAccountGrant', fn () => $authGen->create_service_account_grant((new \Udb\Core\Authn\Services\V1\CreateServiceAccountGrantRequest())
             ->setTenantId($tenant)->setUserId($principal)->setServiceIdentity($svcName)
             ->setProjectId($project)->setApprovedScopes(['data:read'])->setReason('sdk perf seed'), $meta));
