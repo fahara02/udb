@@ -329,13 +329,18 @@ async fn send_lifecycle_webhook(
     }
 }
 
-/// Served input schemas in UDB SYSTEM namespaces (`udb`, `udb_*`) that do NOT
-/// match the embedded system catalog. Matching is on the semantic projection
-/// (schema, table, sorted `(field_name, field_number, proto_type)`) — never on
-/// file paths, so self-hosting the UDB repo's own proto tree (identical
-/// content) passes while a vendored `udb proto export` from another release
-/// (different columns/field numbers, or a table the embedded catalog no longer
-/// has) is reported.
+/// Served input schemas in UDB SYSTEM namespaces (`udb`, `udb_*`) that
+/// CONFLICT with the embedded system catalog: same message identity
+/// (`proto_package` + `message_name`) but a different semantic projection
+/// (schema, table, sorted `(field_name, field_number, proto_type)`). This is
+/// the vendored-`udb proto export` corruption class — the input silently
+/// SHADOWS the embedded copy in the merge and later fails as cryptic
+/// field-number reuse. Never matched on file paths, so self-hosting the UDB
+/// repo's own proto tree passes. A `udb_*` table the embedded catalog does
+/// not know at all is deliberately ALLOWED: the repo itself carries
+/// auxiliary system-namespace tables outside the embedded core catalog
+/// (e.g. the live-SDK harness's `udb_sdk_live.sdk_live_records`), and an
+/// additive unknown table cannot shadow anything.
 fn stale_system_schema_inputs(schemas: &[ProtoSchema]) -> Vec<String> {
     type Projection = (String, String, Vec<(String, i32, String)>);
     fn projection(schema: &ProtoSchema) -> Projection {
@@ -367,10 +372,10 @@ fn stale_system_schema_inputs(schemas: &[ProtoSchema]) -> Vec<String> {
         .filter(|schema| {
             match native.get(&(schema.proto_package.clone(), schema.message_name.clone())) {
                 Some(embedded) => *embedded != projection(schema),
-                // A udb_* table the embedded catalog does not know at all is a
-                // leftover from another version's export (or a reserved-namespace
-                // collision) — equally stale.
-                None => true,
+                // Unknown identity: additive, cannot shadow an embedded schema —
+                // allowed (see doc comment; proven necessary by the repo's own
+                // smoke, which serves auxiliary udb_* tables).
+                None => false,
             }
         })
         .map(|schema| format!("{}.{}", schema.schema_name, schema.table_name))
@@ -2256,12 +2261,13 @@ mod tests {
             ..ProtoSchema::default()
         };
         assert!(stale_system_schema_inputs(&[app.clone()]).is_empty());
-        // An app schema whose OWNER chose a udb_-prefixed name with no embedded
-        // counterpart is reported (reserved namespace).
+        // A udb_* table UNKNOWN to the embedded catalog is additive — it cannot
+        // shadow an embedded schema, and the repo's own smoke serves auxiliary
+        // system-namespace tables (udb_sdk_live.*). Allowed.
         app.schema_name = "udb_myapp".to_string();
-        assert_eq!(
-            stale_system_schema_inputs(&[app]),
-            ["udb_myapp.orders".to_string()]
+        assert!(
+            stale_system_schema_inputs(&[app]).is_empty(),
+            "unknown-identity udb_* tables must pass (additive, non-shadowing)"
         );
 
         // Self-hosting: an EXACT copy of an embedded native schema passes,
