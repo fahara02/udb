@@ -20,6 +20,7 @@ from google.protobuf.message_factory import GetMessageClass
 
 from udb.services.v1 import data_broker_pb2, data_broker_pb2_grpc
 from udb.core.authn.services.v1 import core_pb2 as authn_pb2
+from udb.core.authn.services.v1 import authn_service_pb2 as authn_svc_pb2
 from udb.core.authn.services.v1 import authn_service_pb2_grpc as authn_grpc
 from udb.entity.v1 import admin_pb2, blob_pb2, cdc_pb2, operation_pb2, relational_pb2, stores_pb2, vector_pb2
 
@@ -2984,7 +2985,7 @@ def perf_seed(clients: dict, meta: Metadata):
             metadata=md, timeout=8.0,
         )
         authn.CreateServiceAccountGrant(
-            authn_pb2.CreateServiceAccountGrantRequest(
+            authn_svc_pb2.CreateServiceAccountGrantRequest(
                 tenant_id=tenant, user_id=svc_owner, service_identity=svc_name,
                 project_id=project, approved_scopes=["data:read", "resource:read"], reason="sdk perf seed",
             ),
@@ -2992,7 +2993,7 @@ def perf_seed(clients: dict, meta: Metadata):
         )
         # The measured RevokeCertificateBinding revokes THIS seeded binding.
         binding = authn.CreateCertificateBinding(
-            authn_pb2.CreateCertificateBindingRequest(
+            authn_svc_pb2.CreateCertificateBindingRequest(
                 tenant_id=tenant, user_id=svc_owner, selector_kind="SPIFFE_URI",
                 selector_value=f"spiffe://bench/seed-binding-{suffix}", reason="perf seed binding",
             ),
