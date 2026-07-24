@@ -21,6 +21,8 @@
 /// in your preferred metrics backend (Prometheus, OTEL, Datadog, etc.).
 pub trait MetricsRecorder: Send + Sync + std::fmt::Debug {
     fn record_grpc(&self, _method: &str, _status: &str, _seconds: f64) {}
+    /// W4: a request served under the rate limiter's failure-mode fallback.
+    fn record_rate_limit_degraded(&self, _mode: &str) {}
     fn observe_pg_query(&self, _op: &str, _table: &str, _seconds: f64) {}
     fn inc_cache_op(&self, _op: &str, _hit: bool) {}
     fn inc_vector_op(&self, _collection: &str, _op: &str) {}
@@ -1323,6 +1325,9 @@ fn bounded_label(scope: &'static str, raw: &str) -> std::borrow::Cow<'static, st
 impl MetricsRecorder for PrometheusMetrics {
     fn record_grpc(&self, method: &str, status: &str, seconds: f64) {
         PrometheusMetrics::record_grpc(self, method, status, seconds);
+    }
+    fn record_rate_limit_degraded(&self, mode: &str) {
+        PrometheusMetrics::record_rate_limit_degraded(self, mode);
     }
     fn observe_pg_query(&self, op: &str, table: &str, seconds: f64) {
         PrometheusMetrics::observe_pg_query(self, op, table, seconds);
