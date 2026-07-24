@@ -1592,7 +1592,12 @@ pub(crate) fn logical_value_to_json(value: &crate::ir::value::LogicalValue) -> s
             use base64::{Engine as _, engine::general_purpose::STANDARD as B64};
             serde_json::Value::String(format!("base64:{}", B64.encode(value)))
         }
-        LogicalValue::Timestamp(value) => serde_json::Value::String(value.to_rfc3339()),
+        LogicalValue::Timestamp(value) => serde_json::Value::String(
+            // Canonical wire form: `Z` suffix, not `+00:00` — chrono's plain
+            // `to_rfc3339()` renders the offset form, which every SDK decoder
+            // has to special-case. AutoSi keeps the stored sub-second precision.
+            value.to_rfc3339_opts(chrono::SecondsFormat::AutoSi, true),
+        ),
         LogicalValue::Json(value) => value.clone(),
         LogicalValue::Array(values) => {
             serde_json::Value::Array(values.iter().map(logical_value_to_json).collect())

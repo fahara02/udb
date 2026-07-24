@@ -855,7 +855,12 @@ fn prepare_outbox_envelope(
     }
     enriched_obj
         .entry("timestamp".to_string())
-        .or_insert_with(|| serde_json::Value::String(Utc::now().to_rfc3339()));
+        .or_insert_with(|| {
+            // Canonical `Z` wire form (see logical_value_to_json).
+            serde_json::Value::String(
+                Utc::now().to_rfc3339_opts(chrono::SecondsFormat::AutoSi, true),
+            )
+        });
     enriched_obj
         .entry("payload".to_string())
         .or_insert_with(|| serde_json::Value::Object(serde_json::Map::new()));
@@ -2537,7 +2542,12 @@ fn row_value_to_json(row: &PgRow, idx: usize, type_name: &str) -> Result<JsonVal
             .try_get::<Option<DateTime<Utc>>, _>(idx)
             .map(|value| {
                 value
-                    .map(|dt| JsonValue::String(dt.to_rfc3339()))
+                    // Canonical `Z` wire form, not `+00:00` (Z-3): consumers
+                    // parse the broker's timestamp rendering across six SDKs;
+                    // one canonical shape beats per-SDK layout ladders.
+                    .map(|dt| {
+                        JsonValue::String(dt.to_rfc3339_opts(chrono::SecondsFormat::AutoSi, true))
+                    })
                     .unwrap_or(JsonValue::Null)
             })
             .unwrap_or(JsonValue::Null));
