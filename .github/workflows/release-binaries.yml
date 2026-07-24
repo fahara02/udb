@@ -309,15 +309,22 @@ jobs:
           node scripts/gen-release-manifest.mjs dist > dist/manifest.json
           ( cd dist && sha256sum manifest.json > manifest.json.sha256 )
           echo "── manifest.json ──"; cat dist/manifest.json
+      - name: Extract consumer release notes (W1 — fail closed without them)
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          node scripts/extract-changelog-section.mjs "${version}" --out dist/release-notes.md
       - name: Attach manifest to GitHub Release (and PUBLISH atomically)
         uses: softprops/action-gh-release@v2
         with:
           # This is the LAST asset. Flipping draft:false here publishes the release
           # only now that every platform binary, its checksum, and the manifest are
           # all attached — so a consumer's Releases-API poll never sees a published
-          # release with a partial asset set.
+          # release with a partial asset set. The body is the version's
+          # CHANGELOG section: what breaks, what to regenerate, what's new.
           draft: false
+          body_path: dist/release-notes.md
           files: |
             dist/manifest.json
             dist/manifest.json.sha256
+            docker-compose.consumer.yml
           fail_on_unmatched_files: true

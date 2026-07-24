@@ -294,11 +294,21 @@ pub fn run() {
             with_probes,
             enterprise,
             fix,
+            consumer,
+            key,
+            entity,
+            action,
         } => {
             let runtime = tokio::runtime::Runtime::new().unwrap_or_else(|err| {
                 eprintln!("failed to create tokio runtime: {err}");
                 process::exit(1);
             });
+            if consumer {
+                let json = matches!(output_mode, DoctorOutputMode::Json);
+                let exit_code =
+                    runtime.block_on(doctor::run_consumer_doctor(&key, &entity, &action, json));
+                process::exit(exit_code);
+            }
             let report = runtime.block_on(run_doctor(
                 with_probes,
                 enterprise,
@@ -683,6 +693,145 @@ pub fn run() {
             let artifacts = generate_bootstrap_sql(&schemas, &SqlGenerationConfig::default())
                 .unwrap_or_else(|err| fatal_json("failed to generate SQL artifacts", err));
             output_json(&artifacts, "SQL artifacts");
+        }
+        // W9 (0.4.23 tip 5): batched, idempotent rewrite of persisted enum
+        // values to the generator's short-token convention. Dry-run prints the
+        // per-convention histogram; apply rewrites via ctid-batched UPDATEs so
+        // it is resumable and safe to re-run (a re-run matches 0 rows).
+        Command::MigrateEnumTokens {
+            entity,
+            column,
+            dry_run,
+            batch,
+        } => {
+            let manifest = CatalogManifest::from_schemas(&schemas)
+                .unwrap_or_else(|err| fatal_json("failed to build catalog manifest", err));
+            let table = manifest
+                .tables
+                .iter()
+                .find(|t| {
+                    t.message_name == entity
+                        || format!("{}.{}", t.proto_package, t.message_name) == entity
+                })
+                .unwrap_or_else(|| {
+                    eprintln!("migrate-enum-tokens: unknown entity '{entity}'");
+                    process::exit(2);
+                });
+            let col = table
+                .columns
+                .iter()
+                .find(|c| c.column_name == column || c.field_name == column)
+                .unwrap_or_else(|| {
+                    eprintln!("migrate-enum-tokens: unknown column '{column}' on {entity}");
+                    process::exit(2);
+                });
+            if col.enum_values.is_empty() {
+                eprintln!(
+                    "migrate-enum-tokens: column '{}' has no enum tokens in the manifest",
+                    col.column_name
+                );
+                process::exit(2);
+            }
+            let prefix = sdk_gen::enum_common_prefix(&col.enum_values);
+            // full name -> short token (the generator's wire convention).
+            let pairs: Vec<(String, String)> = col
+                .enum_values
+                .iter()
+                .map(|full| {
+                    (
+                        full.clone(),
+                        full.strip_prefix(&prefix).unwrap_or(full).to_string(),
+                    )
+                })
+                .collect();
+            let relation = format!("\"{}\".\"{}\"", table.schema, table.table);
+            let column_ident = format!("\"{}\"", col.column_name);
+            let runtime = tokio::runtime::Runtime::new().unwrap_or_else(|err| {
+                eprintln!("failed to create tokio runtime: {err}");
+                process::exit(1);
+            });
+            let exit_code = runtime.block_on(async {
+                let rt = udb::runtime::DataBrokerRuntime::from_env().await;
+                let Some(pool) = rt.pg_pool_clone() else {
+                    eprintln!("migrate-enum-tokens: PostgreSQL not configured");
+                    return 1i32;
+                };
+                // Histogram first, in both modes: operators see exactly what
+                // conventions live in the data before anything rewrites.
+                let hist_sql = format!(
+                    "SELECT {column_ident}::text, COUNT(*) FROM {relation} \
+                     WHERE {column_ident} IS NOT NULL GROUP BY 1 ORDER BY 2 DESC"
+                );
+                let rows: Vec<(String, i64)> =
+                    match sqlx::query_as(&hist_sql).fetch_all(&pool).await {
+                        Ok(rows) => rows,
+                        Err(err) => {
+                            eprintln!("migrate-enum-tokens: histogram query failed: {err}");
+                            return 1;
+                        }
+                    };
+                let shorts: std::collections::BTreeSet<&str> =
+                    pairs.iter().map(|(_, s)| s.as_str()).collect();
+                let fulls: std::collections::BTreeSet<&str> =
+                    pairs.iter().map(|(f, _)| f.as_str()).collect();
+                let mut to_rewrite = 0i64;
+                for (value, count) in &rows {
+                    let class = if shorts.contains(value.as_str()) {
+                        "short (target)"
+                    } else if fulls.contains(value.as_str()) {
+                        to_rewrite += count;
+                        "FULL NAME (will rewrite)"
+                    } else {
+                        "UNKNOWN (left untouched — review manually)"
+                    };
+                    println!("{count:>10}  {value}  [{class}]");
+                }
+                if dry_run {
+                    println!(
+                        "dry-run: {to_rewrite} row(s) would be rewritten to short tokens \
+                         in {relation}.{column_ident}"
+                    );
+                    return 0;
+                }
+                let mut rewritten = 0i64;
+                for (full, short) in &pairs {
+                    loop {
+                        let update_sql = format!(
+                            "UPDATE {relation} SET {column_ident} = $1 \
+                             WHERE ctid IN (SELECT ctid FROM {relation} \
+                             WHERE {column_ident} = $2 LIMIT {batch})"
+                        );
+                        match sqlx::query(&update_sql)
+                            .bind(short)
+                            .bind(full)
+                            .execute(&pool)
+                            .await
+                        {
+                            Ok(result) => {
+                                let n = result.rows_affected() as i64;
+                                rewritten += n;
+                                if n < batch {
+                                    break;
+                                }
+                                println!("… {rewritten} rewritten so far ({full} -> {short})");
+                            }
+                            Err(err) => {
+                                eprintln!(
+                                    "migrate-enum-tokens: batch update failed for {full}: {err} \
+                                     (safe to re-run; completed batches are durable)"
+                                );
+                                return 1;
+                            }
+                        }
+                    }
+                }
+                println!(
+                    "migrate-enum-tokens: {rewritten} row(s) rewritten to short tokens in \
+                     {relation}.{column_ident}; re-run with --dry-run to verify convergence"
+                );
+                0
+            });
+            process::exit(exit_code);
         }
         Command::Plan => {
             // Load prior manifest from --prior <path> or UDB_PRIOR_MANIFEST_PATH,

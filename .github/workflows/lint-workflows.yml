@@ -50,6 +50,7 @@ on:
       - "scripts/rest_route_gateway_smoke.py"
       - "scripts/http-api-style.allow.json"
       - "scripts/openapi-postprocess.mjs"
+      - "scripts/extract-changelog-section.mjs"
       - "scripts/sdk-codegen-postprocess.mjs"
       - "scripts/generate-authn-authz-inventory.mjs"
       - "scripts/native_load_gate.py"
@@ -142,6 +143,7 @@ on:
       - "scripts/rest_route_gateway_smoke.py"
       - "scripts/http-api-style.allow.json"
       - "scripts/openapi-postprocess.mjs"
+      - "scripts/extract-changelog-section.mjs"
       - "scripts/sdk-codegen-postprocess.mjs"
       - "scripts/generate-authn-authz-inventory.mjs"
       - "scripts/native_load_gate.py"
@@ -224,6 +226,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m pip install -e sdk/python
+          node --check scripts/extract-changelog-section.mjs
           node --check scripts/ci-inventory.mjs
           node scripts/ci-inventory.mjs --selftest
           node scripts/ci-inventory.mjs

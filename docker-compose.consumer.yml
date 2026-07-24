@@ -1,0 +1,74 @@
+# The canonical CONSUMER dev stack (W12, 0.4.23 tip 10) — shipped as a release
+# asset. Everything a consumer's broker needs, with the pitfalls pre-solved:
+#   * postgis/postgis:16 (plain postgres lacks the geography type consumers hit
+#     on their first geo column)
+#   * named volumes — ephemeral containers silently lose ALL runtime state on
+#     restart (a full re-bootstrap day for one consumer)
+#   * redis with AOF persistence
+#   * minio + a bootstrap sidecar that provisions the StorageService bucket
+#     `udb requirements` reports (presigned PUTs 404 without it)
+#   * loopback-only port bindings and healthchecks
+# Usage: docker compose -f docker-compose.consumer.yml up -d
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: udb
+      POSTGRES_PASSWORD: udb-dev-password
+      POSTGRES_DB: udb
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - udb-consumer-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U udb -d udb"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - udb-consumer-redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  minio:
+    image: minio/minio:latest
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: udb-dev
+      MINIO_ROOT_PASSWORD: udb-dev-password
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    volumes:
+      - udb-consumer-minio:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  minio-bootstrap:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >-
+      /bin/sh -c "
+      mc alias set local http://minio:9000 udb-dev udb-dev-password &&
+      mc mb --ignore-existing local/udb-storage &&
+      mc mb --ignore-existing local/udb-objects &&
+      echo 'buckets ready: udb-storage udb-objects'"
+
+volumes:
+  udb-consumer-pg:
+  udb-consumer-redis:
+  udb-consumer-minio:

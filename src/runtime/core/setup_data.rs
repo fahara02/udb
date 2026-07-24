@@ -542,6 +542,17 @@ impl DataBrokerRuntime {
         // the validated wire grammar + tenant/RLS scoping, not new SQL).
         use crate::runtime::core::pagination;
         let mut filter = filter;
+        // W11: route plaintext equality on encrypted columns through the
+        // blind index before planning (planner still fails closed on shapes
+        // the rewrite cannot express).
+        if let Ok(table_for_encryption) = resolve_table_for_message(manifest, &request.message_type)
+        {
+            filter = self.rewrite_encrypted_equality_filters(
+                table_for_encryption,
+                &filter,
+                &context.tenant_id,
+            );
+        }
         let mut fields = request.fields.clone();
         let cursor_keys: Option<Vec<pagination::CursorKey>> = if paginate {
             let table_for_keys = resolve_table_for_message(manifest, &request.message_type)
@@ -1391,6 +1402,14 @@ impl DataBrokerRuntime {
         // primary-key-identified row still equals these fields.
         expected: Option<prost_types::Struct>,
     ) -> Result<MutationResponse, tonic::Status> {
+        let filter = match resolve_table_for_message(manifest, message_type) {
+            Ok(table_for_encryption) => self.rewrite_encrypted_equality_filters(
+                table_for_encryption,
+                &filter,
+                &context.tenant_id,
+            ),
+            Err(_) => filter,
+        };
         let plan_request = DeletePlanRequest {
             context: context.clone(),
             message_type: message_type.to_string(),
@@ -1618,6 +1637,14 @@ impl DataBrokerRuntime {
         expected: Option<prost_types::Struct>,
         return_record: bool,
     ) -> Result<MutationResponse, tonic::Status> {
+        let filter = match resolve_table_for_message(manifest, message_type) {
+            Ok(table_for_encryption) => self.rewrite_encrypted_equality_filters(
+                table_for_encryption,
+                &filter,
+                &context.tenant_id,
+            ),
+            Err(_) => filter,
+        };
         let plan_request = crate::planning::broker::UpdatePlanRequest {
             context: context.clone(),
             message_type: message_type.to_string(),

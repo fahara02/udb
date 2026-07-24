@@ -4119,6 +4119,7 @@ RETRY_SAFE_SERVED_SMOKE_REQUIREMENTS = (
 )
 
 LINT_WORKFLOW_TRIGGER_PATHS = (
+    ("scripts/extract-changelog-section.mjs", "release-notes extractor"),
     (".github/workflows/**", "workflow files"),
     (".github/actions/**", "composite action files"),
     ("docs/ci-architecture.md", "CI architecture contract"),

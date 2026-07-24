@@ -462,3 +462,23 @@ mod tests {
         assert!(!key_debug.contains("[7, 7"));
     }
 }
+
+impl EncryptionRuntime {
+    /// W11 (0.4.23 tip 3 stage 2): the deterministic blind-index token for an
+    /// encrypted column's plaintext — hex(HMAC-SHA256(k_bi, tenant ∥ 0x1F ∥
+    /// plaintext)) with `k_bi = HMAC-SHA256(root_key, "udb.blind-index.v1")`.
+    /// Derived from the LOWEST-version key so tokens stay stable across
+    /// data-encryption key rotation (old keys are already retained for
+    /// decryption). Tenant-scoped: equal plaintexts in different tenants yield
+    /// different tokens, so the index leaks no cross-tenant equality.
+    pub(super) fn blind_index_token(&self, tenant_id: &str, plaintext: &str) -> Option<String> {
+        let root = self.keys.iter().min_by_key(|key| key.version)?;
+        let k_bi = crate::runtime::security::hmac_sha256(&root.key, b"udb.blind-index.v1");
+        let mut message = Vec::with_capacity(tenant_id.len() + 1 + plaintext.len());
+        message.extend_from_slice(tenant_id.as_bytes());
+        message.push(0x1F);
+        message.extend_from_slice(plaintext.as_bytes());
+        let mac = crate::runtime::security::hmac_sha256(&k_bi, &message);
+        Some(mac.iter().map(|byte| format!("{byte:02x}")).collect())
+    }
+}

@@ -25,6 +25,14 @@ pub(crate) enum Command {
         /// remote/DB/network state and never applies a finding whose correct edit
         /// is ambiguous or would loosen posture — those stay advisory-only.
         fix: bool,
+        /// W10 (0.4.23 tip 2): `--consumer` — diagnose from a CONSUMER's seat
+        /// against a RUNNING broker: reachability, broker-side backend health,
+        /// and (with `--key`) the full authn→authz chain for `--entity` +
+        /// `--action`, surfacing the enriched denial explanation.
+        consumer: bool,
+        key: String,
+        entity: String,
+        action: String,
     },
     /// Emit the resolved runtime backend contract for the current project's
     /// manifest (required backends, env vars, current status) so application
@@ -142,6 +150,14 @@ pub(crate) enum Command {
     /// proto RPC manifest (descriptor set = source of truth) and the editable
     /// `sdk-templates/<lang>/` templates. `manifest` dumps the RPC surface as
     /// JSON; `list-langs` prints which template dirs are available.
+    /// W9 (0.4.23 tip 5): rewrite persisted enum values to the generator's
+    /// short-token convention, batched + idempotent, with a dry-run histogram.
+    MigrateEnumTokens {
+        entity: String,
+        column: String,
+        dry_run: bool,
+        batch: i64,
+    },
     Sdk {
         action: SdkAction,
         /// Language to generate for, or `all`. Defaults to `all`.
@@ -947,6 +963,10 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
                 with_probes,
                 enterprise: doctor_enterprise,
                 fix: doctor_fix,
+                consumer: has_flag("--consumer"),
+                key: flag_value("--key").unwrap_or_default(),
+                entity: flag_value("--entity").unwrap_or_default(),
+                action: flag_value("--action").unwrap_or_else(|| "Select".to_string()),
             }
         }
         Some("requirements") | Some("requires") => {
@@ -1108,6 +1128,18 @@ pub(crate) fn parse_args(args: &[String]) -> (Command, String, String, String) {
         // `udb sdk <init|generate|manifest|list-langs> [--lang <name>] [--templates <dir>] [--out <dir>]
         //    [--surface <s>] [--service <id,...>] [--native-services] [--include-deps]
         //    [--strict-server-capabilities]`
+        Some("migrate-enum-tokens") => {
+            offset = 1;
+            Command::MigrateEnumTokens {
+                entity: flag_value("--entity").unwrap_or_default(),
+                column: flag_value("--column").unwrap_or_default(),
+                dry_run: has_flag("--dry-run"),
+                batch: flag_value("--batch")
+                    .and_then(|value| value.parse::<i64>().ok())
+                    .unwrap_or(5000)
+                    .max(1),
+            }
+        }
         Some("sdk") => {
             offset = 2;
             let action = match args.get(1).map(|value| value.as_str()) {

@@ -1241,3 +1241,180 @@ pub(crate) fn print_lint_human(report: &LintReport) {
         println!();
     }
 }
+
+// ── W10 (0.4.23 tip 2): the consumer-seat doctor ─────────────────────────────
+
+/// Diagnose a RUNNING broker from a consumer's seat: reachability, the
+/// broker's own backend health (including the W4 degraded-limiter warning),
+/// and — with `--key` — the authn→authz chain for `--entity`, surfacing the
+/// enriched Casbin denial explanation (W5) so the failing artifact (key state,
+/// scope, grant, or the exact missing policy class) is named in one command.
+/// Mutation actions are never probed with live writes; the Select chain plus
+/// the denial explanation covers the diagnosis without side effects.
+pub(crate) async fn run_consumer_doctor(key: &str, entity: &str, action: &str, json: bool) -> i32 {
+    use udb::proto::data_broker_client::DataBrokerClient;
+    use udb::proto::udb::entity::v1 as entity_pb;
+
+    let mut stages: Vec<(String, String, bool)> = Vec::new(); // (stage, detail, ok)
+    let raw = std::env::var("UDB_GRPC_TARGET")
+        .or_else(|_| std::env::var("UDB_GRPC_ADDR"))
+        .unwrap_or_else(|_| "127.0.0.1:50051".to_string());
+    let target = if raw.starts_with("http://") || raw.starts_with("https://") {
+        raw.clone()
+    } else {
+        format!("http://{raw}")
+    };
+
+    let mut client = match DataBrokerClient::connect(target.clone()).await {
+        Ok(client) => {
+            stages.push((
+                "reachability".into(),
+                format!("connected to {target}"),
+                true,
+            ));
+            client
+        }
+        Err(err) => {
+            stages.push((
+                "reachability".into(),
+                format!("cannot reach broker at {target}: {err}"),
+                false,
+            ));
+            return finish_consumer_doctor(&stages, json);
+        }
+    };
+
+    let with_key = |mut request: tonic::Request<entity_pb::HealthReportRequest>| {
+        if !key.is_empty()
+            && let Ok(value) = key.parse()
+        {
+            request.metadata_mut().insert("x-api-key", value);
+        }
+        request
+    };
+    match client
+        .get_health_report(with_key(tonic::Request::new(
+            entity_pb::HealthReportRequest {
+                with_probes: true,
+                ..Default::default()
+            },
+        )))
+        .await
+    {
+        Ok(response) => {
+            let report = response.into_inner();
+            let mut detail = format!(
+                "passed={} errors={} warnings={}",
+                report.passed,
+                report.errors.len(),
+                report.warnings.len()
+            );
+            for warning in &report.warnings {
+                detail.push_str(&format!("; WARN: {warning}"));
+            }
+            for error in &report.errors {
+                detail.push_str(&format!("; ERROR: {error}"));
+            }
+            stages.push(("broker-health".into(), detail, report.passed));
+        }
+        Err(status) => {
+            stages.push((
+                "broker-health".into(),
+                format!(
+                    "GetHealthReport {}: {} (an Unauthenticated here means the key \
+                     failed BEFORE authorization — check key value/state)",
+                    format!("{:?}", status.code()).to_ascii_lowercase(),
+                    status.message()
+                ),
+                false,
+            ));
+        }
+    }
+
+    if !entity.is_empty() {
+        if key.is_empty() {
+            stages.push((
+                "authz-chain".into(),
+                "skipped: pass --key <api-key> to probe the authn/authz chain".into(),
+                false,
+            ));
+        } else {
+            let mut request = tonic::Request::new(entity_pb::SelectRequest {
+                message_type: entity.to_string(),
+                limit: 1,
+                context: Some(entity_pb::RequestContext {
+                    purpose: "doctor.consumer".to_string(),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            });
+            if let Ok(value) = key.parse() {
+                request.metadata_mut().insert("x-api-key", value);
+            }
+            match client.select(request).await {
+                Ok(_) => stages.push((
+                    "authz-chain".into(),
+                    format!("Select on {entity}: ALLOWED (key authenticates, grant active, policy grants read)"),
+                    true,
+                )),
+                Err(status) => {
+                    let code = format!("{:?}", status.code()).to_ascii_lowercase();
+                    let hint = match status.code() {
+                        tonic::Code::Unauthenticated =>
+                            "AUTHN stage failed: the key itself was rejected (state/type/expiry)",
+                        tonic::Code::PermissionDenied =>
+                            "AUTHZ stage failed: the denial below names the evaluated tuple and the missing artifact class",
+                        tonic::Code::InvalidArgument =>
+                            "request shape rejected (entity FQN or filter posture)",
+                        _ => "transport/broker-side failure — see broker-health above",
+                    };
+                    stages.push((
+                        "authz-chain".into(),
+                        format!("Select on {entity}: {code}: {} — {hint}", status.message()),
+                        false,
+                    ));
+                }
+            }
+            if !action.eq_ignore_ascii_case("select") {
+                stages.push((
+                    "authz-chain-note".into(),
+                    format!(
+                        "action '{action}' is a mutation; the doctor never probes mutations with \
+                         live writes. Policy coverage for it mirrors the Select denial output — \
+                         check the named policy grants '{action}' on this entity."
+                    ),
+                    true,
+                ));
+            }
+        }
+    }
+    finish_consumer_doctor(&stages, json)
+}
+
+fn finish_consumer_doctor(stages: &[(String, String, bool)], json: bool) -> i32 {
+    let ok = stages.iter().all(|(_, _, ok)| *ok);
+    if json {
+        let value = serde_json::json!({
+            "passed": ok,
+            "stages": stages
+                .iter()
+                .map(|(stage, detail, ok)| {
+                    serde_json::json!({"stage": stage, "detail": detail, "ok": ok})
+                })
+                .collect::<Vec<_>>(),
+        });
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&value).unwrap_or_default()
+        );
+    } else {
+        for (stage, detail, stage_ok) in stages {
+            println!(
+                "[{}] {stage}: {detail}",
+                if *stage_ok { "ok" } else { "!!" }
+            );
+        }
+        println!("consumer doctor: {}", if ok { "PASSED" } else { "FAILED" });
+    }
+    if ok { 0 } else { 1 }
+}

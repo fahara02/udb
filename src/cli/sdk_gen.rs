@@ -1418,7 +1418,7 @@ fn go_pascal(field_name: &str) -> String {
 /// Longest common `UPPER_SNAKE_` prefix of an enum's value names (e.g.
 /// `USER_STATUS_` from `USER_STATUS_ACTIVE`/`USER_STATUS_SUSPENDED`), so the
 /// generated code can trim it to the DB short token (`ACTIVE`).
-fn enum_common_prefix(values: &[String]) -> String {
+pub(crate) fn enum_common_prefix(values: &[String]) -> String {
     if values.is_empty() {
         return String::new();
     }
@@ -1537,16 +1537,25 @@ fn go_from_row_stmt(column: &EntityColumnDescriptor, alias: &str) -> String {
         // would need its own import alias (a follow-up if a consumer hits it).
         let enum_type = go_enum_type_name(&column.proto_type);
         let prefix = enum_common_prefix(&column.enum_values);
+        // W9 dual-read tolerance: probe the SHORT token first (the wire
+        // convention), then the FULL enum name — so readers deployed before a
+        // legacy-data `migrate-enum-tokens` rewrite decode both forms
+        // (Stripe-phase dual-read; full names always carry the prefix, so the
+        // second probe can never misclassify a short token).
         if column.has_presence {
             return format!(
                 "\tif s := udbAsString(row[\"{key}\"]); s != \"\" {{\n\
                  \t\tif v, ok := {alias}.{enum_type}_value[\"{prefix}\"+s]; ok {{\n\
+                 \t\t\te := {alias}.{enum_type}(v)\n\t\t\tm.{field} = &e\n\
+                 \t\t}} else if v, ok := {alias}.{enum_type}_value[s]; ok {{\n\
                  \t\t\te := {alias}.{enum_type}(v)\n\t\t\tm.{field} = &e\n\t\t}}\n\t}}\n",
             );
         }
         return format!(
             "\tif s := udbAsString(row[\"{key}\"]); s != \"\" {{\n\
              \t\tif v, ok := {alias}.{enum_type}_value[\"{prefix}\"+s]; ok {{\n\
+             \t\t\tm.{field} = {alias}.{enum_type}(v)\n\
+             \t\t}} else if v, ok := {alias}.{enum_type}_value[s]; ok {{\n\
              \t\t\tm.{field} = {alias}.{enum_type}(v)\n\t\t}}\n\t}}\n",
         );
     }

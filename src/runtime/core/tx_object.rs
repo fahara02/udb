@@ -1325,6 +1325,87 @@ impl DataBrokerRuntime {
         Ok(())
     }
 
+    /// W11 read side: transparently rewrite STRING-equality predicates on
+    /// encrypted columns to their blind-index sibling + tenant-scoped HMAC
+    /// token, at every depth of the filter tree. Consumers filter plaintext;
+    /// the broker routes the lookup through the index. Shapes the rewrite
+    /// cannot express (operators, non-string values, no declared sibling)
+    /// fall through untouched and take the planner's fail-closed typed error.
+    pub(crate) fn rewrite_encrypted_equality_filters(
+        &self,
+        table: &ManifestTable,
+        filter: &JsonValue,
+        tenant_id: &str,
+    ) -> JsonValue {
+        let Some(encryption) = &self.encryption else {
+            return filter.clone();
+        };
+        let mut index_by_column: std::collections::BTreeMap<String, String> =
+            std::collections::BTreeMap::new();
+        for column in table.columns.iter().filter(|c| is_encrypted_column(c)) {
+            let index_column = format!("{}_idx", column.column_name);
+            if table
+                .columns
+                .iter()
+                .any(|c| c.column_name == index_column && c.security.is_blind_index)
+            {
+                index_by_column.insert(column.column_name.clone(), index_column);
+                if column.field_name != column.column_name {
+                    index_by_column.insert(
+                        column.field_name.clone(),
+                        format!("{}_idx", column.column_name),
+                    );
+                }
+            }
+        }
+        if index_by_column.is_empty() {
+            return filter.clone();
+        }
+        fn walk(
+            value: &JsonValue,
+            map: &std::collections::BTreeMap<String, String>,
+            encryption: &crate::runtime::encryption::EncryptionRuntime,
+            tenant: &str,
+        ) -> JsonValue {
+            match value {
+                JsonValue::Object(object) => {
+                    let mut out = serde_json::Map::new();
+                    for (key, nested) in object {
+                        let lowered = key.to_ascii_lowercase();
+                        if matches!(lowered.as_str(), "$and" | "and" | "$or" | "or") {
+                            out.insert(key.clone(), walk(nested, map, encryption, tenant));
+                            continue;
+                        }
+                        match (map.get(&lowered), nested.as_str()) {
+                            (Some(index_column), Some(plaintext)) => {
+                                match encryption.blind_index_token(tenant, plaintext) {
+                                    Some(token) => {
+                                        out.insert(index_column.clone(), JsonValue::String(token));
+                                    }
+                                    None => {
+                                        out.insert(key.clone(), nested.clone());
+                                    }
+                                }
+                            }
+                            _ => {
+                                out.insert(key.clone(), nested.clone());
+                            }
+                        }
+                    }
+                    JsonValue::Object(out)
+                }
+                JsonValue::Array(items) => JsonValue::Array(
+                    items
+                        .iter()
+                        .map(|item| walk(item, map, encryption, tenant))
+                        .collect(),
+                ),
+                other => other.clone(),
+            }
+        }
+        walk(filter, &index_by_column, encryption, tenant_id)
+    }
+
     pub(crate) fn encrypt_record_for_table(
         &self,
         table: &ManifestTable,
@@ -1354,6 +1435,26 @@ impl DataBrokerRuntime {
             };
             if value.is_null() || json_is_ciphertext(&value) {
                 continue;
+            }
+            // W11: populate the blind-index sibling (`<col>_idx`, declared
+            // is_blind_index) from the PLAINTEXT before encryption, so equality
+            // lookups go through the deterministic tenant-scoped HMAC token and
+            // consumers stop hand-deriving it. Caller-provided idx values win.
+            let index_column = format!("{}_idx", column.column_name);
+            if table
+                .columns
+                .iter()
+                .any(|c| c.column_name == index_column && c.security.is_blind_index)
+                && encrypted
+                    .get(&index_column)
+                    .map(|existing| existing.is_null())
+                    .unwrap_or(true)
+                && let Some(plaintext) = value.as_str()
+            {
+                let tenant = table_tenant_value(table, &encrypted);
+                if let Some(token) = encryption.blind_index_token(&tenant, plaintext) {
+                    encrypted.insert(index_column, JsonValue::String(token));
+                }
             }
             match encryption.encrypt_json_value(&value) {
                 Ok(ciphertext) => {
@@ -2054,4 +2155,21 @@ mod materialized_view_refresh_tests {
 
         assert_single_field_violation(&err, "query", "must match the proto AST declaration");
     }
+}
+
+/// The record's tenant value (empty when the table has no tenant column or the
+/// record does not carry it) — the blind-index token's tenant scope (W11).
+fn table_tenant_value(
+    table: &ManifestTable,
+    record: &serde_json::Map<String, JsonValue>,
+) -> String {
+    let tenant_column = table.table_security.tenant_column.trim();
+    if tenant_column.is_empty() {
+        return String::new();
+    }
+    record
+        .get(tenant_column)
+        .and_then(|value| value.as_str())
+        .unwrap_or_default()
+        .to_string()
 }

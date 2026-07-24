@@ -385,6 +385,32 @@ if (JSON_OUT) {
   console.log("─".repeat(92));
 }
 
+// W1 (0.4.23): fail closed when CHANGELOG.md lacks a non-empty section for the
+// version under release - a release page must explain itself. Same posture as
+// the version guard; --fix does not write prose for you.
+if (!FIX) {
+  const changelog = fs
+    .readFileSync(path.join(ROOT, "CHANGELOG.md"), "utf8")
+    .replaceAll("\r\n", "\n");
+  const version = spec.components.udb.version;
+  const escaped = version.replace(/[.]/g, "\\.");
+  const heading = new RegExp("^## \\[?" + escaped + "\\]?[^\n]*$", "m");
+  const match = heading.exec(changelog);
+  let hasNotes = false;
+  if (match) {
+    const rest = changelog.slice(match.index + match[0].length);
+    const next = rest.search(/^## /m);
+    hasNotes = (next === -1 ? rest : rest.slice(0, next)).trim().length > 0;
+  }
+  if (!hasNotes) {
+    failures.push({
+      file: "CHANGELOG.md",
+      note: "missing or empty section for " + version,
+    });
+    console.error("CHANGELOG.md: missing or empty section for " + version);
+  }
+}
+
 if (!FIX && failures.length > 0) {
   console.error(
     `\n✖ ${failures.length} version mismatch(es). Edit versions.json then run ` +

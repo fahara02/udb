@@ -5,6 +5,100 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.4.23] - 2026-07-24
+
+The consumption-seam wave: every improvement from the AmbuLife consumer
+deep-dive, in one release.
+
+### Breaking / wire changes
+- None. The `Update` verb and all new surfaces are additive.
+
+### Generated-output changes (regenerate with `udb sdk generate --project-proto`)
+- The entities file now stamps `udb <version> - project-proto manifest sha256`
+  plus a `GeneratedManifestHash` const; verify freshness in CI with the new
+  `udb sdk diff --project-proto <dir> --against <file>`.
+- Typed repositories are generated per entity (`List`/`Get`/`UpdateGuarded`/
+  `DeleteGuarded`) plus a per-entity `UDBColumn` column-policy table.
+- Enum reads tolerate BOTH short tokens and full enum names (dual-read window
+  for `udb migrate-enum-tokens`).
+
+### New surface
+- `DataBroker.Update`: partial update (`changes`) + atomic `increments`, with
+  CAS (`expected`) and keyed idempotent replay. SDK: `Entity.Update`,
+  `Entity.Increment`.
+- Filters on AEAD-encrypted columns now FAIL CLOSED with the blind-index
+  column named — and string-equality lookups are transparently rewritten
+  through the blind index, which the broker now populates server-side on
+  write (consumers delete their hand-rolled HMAC derivation).
+- Authorization denials name the evaluated (action, resource, tenant) tuple
+  and the miss class.
+- `rate_limit_failure_mode = closed|local|open` declares the limiter's
+  Redis-outage posture (default stays `closed`), with a degraded metric and
+  health-report warning.
+- `udb migrate-enum-tokens --entity <FQN> --column <col> [--dry-run]`:
+  batched, idempotent rewrite of legacy enum wire forms to short tokens.
+- `udb doctor --consumer --key <api-key> --entity <FQN>`: one-command
+  reachability + broker-health + authn/authz-chain diagnosis.
+- Post-release SDK benchmarks now pin the harness tree to the released tag
+  (results always match the release they are labeled with).
+
+## [0.4.22] - 2026-07-24
+
+### New surface
+- Drift/blocked-migration errors and the startup log name the migration
+  LEDGER database (host/database/relation) and prior checksum.
+- Serving a vendored `udb proto export` tree that conflicts with the embedded
+  system catalog fails at intake with the actual fix.
+- A serve whose input has zero custom schemas while the prior manifest still
+  records custom tables aborts BEFORE planning a drop-everything migration
+  (`UDB_ALLOW_EMPTY_CUSTOM_INPUT=1` overrides).
+- `udb requirements` surfaces the native StorageService bucket contract so a
+  green run cannot be followed by a presigned-PUT 404 on a missing bucket.
+
+## [0.4.21] - 2026-07-24
+
+### Breaking / wire changes
+- Broker-rendered timestamps now use the canonical `Z` suffix instead of
+  `+00:00`. All shipped SDK decoders already parse both forms.
+
+### Generated-output changes
+- Enum columns resolve from file-level enum declarations (same package); an
+  unresolved enum, message-typed, or repeated column is now skipped with a
+  TODO on BOTH write and read — never written raw.
+- Marshalling covers only proto-declared fields (no more phantom audit-column
+  getters); DATE columns write date-only values.
+
+### New surface
+- The rate-limit Redis connection recovers automatically after a Redis
+  restart (no more broker-restart-to-heal).
+
+## [0.4.20] - 2026-07-23
+
+### New surface
+- `DeleteRequest.expected`: compare-and-swap deletes (`WithDeleteExpected`).
+- Keyset pagination on the relational read path + `Entity.SelectPage`.
+- Go SDK: `IsCASConflict`, `Error.RetryAfter()`, `Error.Reason()`.
+- SDK templates are embedded in the binary — `udb sdk generate` works from an
+  installed binary without a source checkout.
+- Notification providers accept a `body_template` for non-default APIs.
+
+## [0.4.19] - 2026-07-23
+
+### Generated-output changes
+- proto3 `optional` fields marshal presence-aware (pointer reads, omitted
+  unset writes).
+- Empty nullable strings are omitted so SQL NULL round-trips as NULL.
+- Generated `udbAsTime` carries the six-layout timestamp ladder.
+
+### New surface
+- Typed `ErrorDetail` on DataBroker and Authn authentication failures;
+  api-key store outages surface as retryable UNAVAILABLE, never
+  Unauthenticated.
+- CDC leader fencing, journal-before-broadcast ordering, idempotency-key
+  retention sweeping, and the data-plane audit emitter.
+- Cache keys fold in limit/sort; tenant isolation requires the tenant
+  predicate OUTSIDE any `$or`.
+
 ## Unreleased - hardening (from v0.3.7)
 
 The private masterplan/todo board re-grounded every tracked item in real v0.3.7
