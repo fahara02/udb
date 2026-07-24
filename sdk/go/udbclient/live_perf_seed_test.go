@@ -722,6 +722,14 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 			Reason: "sdk perf seed",
 		}); err != nil {
 			t.Logf("perf seed: CreateServiceAccountGrant failed (apikey RPCs fall back): %v", err)
+		} else if binding, err := authn.CreateCertificateBinding(base, &authnpb.CreateCertificateBindingRequest{
+			TenantId: tenant, UserId: svcOwner, SelectorKind: "SPIFFE_URI",
+			SelectorValue: "spiffe://bench/seed-binding-" + suffix, Reason: "perf seed binding",
+		}); err != nil {
+			t.Logf("perf seed: CreateCertificateBinding failed (RevokeCertificateBinding falls back): %v", err)
+		} else {
+			// The measured RevokeCertificateBinding revokes THIS seeded binding.
+			fix.set("grant_binding_id", binding.GetBinding().GetBindingId())
 		}
 	}
 	if svcOwner == "" {
