@@ -366,20 +366,35 @@ pub(crate) async fn register_model(
     } else {
         req.chunk_overlap_tokens
     };
-    RuntimeVectorStore::for_routing(
+    let vector_store = RuntimeVectorStore::for_routing(
         runtime.clone(),
         &context.project_id,
         vector_backend,
         vector_instance,
-    )
-    .ensure_collection(
-        req.active_collection.trim(),
-        req.dimensions,
-        distance_metric,
-        output_dtype,
-        &[],
-    )
-    .await?;
+    );
+    vector_store
+        .ensure_collection(
+            req.active_collection.trim(),
+            req.dimensions,
+            distance_metric,
+            output_dtype,
+            &[],
+        )
+        .await?;
+    // The model advertises collection() = the ALIAS (see StoredModel::collection),
+    // and the whole read path (Retrieve/search) queries that alias. Point it at
+    // the physical collection NOW, so a freshly registered model is immediately
+    // retrievable — otherwise the alias only appears on a later activation/cutover
+    // and every Retrieve 404s until then (a divergence that only shows up against
+    // a fresh vector store, e.g. CI). Idempotent: creates the alias when absent.
+    // Qdrant-only: it is the sole backend with a named-alias cutover primitive
+    // (swap_alias is `qdrant_only`); other backends address the physical
+    // collection directly, so there is no alias to pre-create.
+    if vector_backend == "qdrant" {
+        vector_store
+            .swap_alias(&collection_alias, req.active_collection.trim())
+            .await?;
+    }
     runtime
         .native_entity_write_for_service(
             "embedding",
