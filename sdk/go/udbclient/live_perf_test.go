@@ -143,6 +143,7 @@ func TestLivePerf(t *testing.T) {
 		iters   int
 		note    string
 		errCode string
+		errText string
 	}
 
 	isCapabilitySkip := func(rpc RPCInfo, errCode, errText string) bool {
@@ -287,7 +288,7 @@ func TestLivePerf(t *testing.T) {
 			sum += d
 		}
 		s := sample{
-			rpc: rpc, iters: iters, note: note, errCode: errCode,
+			rpc: rpc, iters: iters, note: note, errCode: errCode, errText: firstErrText,
 			p50:  measured[pct(len(measured), 50)],
 			p99:  measured[pct(len(measured), 99)],
 			mean: sum / time.Duration(len(measured)),
@@ -366,14 +367,22 @@ func TestLivePerf(t *testing.T) {
 		out.WriteString("These RPCs still returned a non-OK gRPC status on their last iteration: the " +
 			"seed phase could not construct a fully-valid request for them. They are reported (not " +
 			"silently sampled) so the maintainer can finish their seeding/fixtures.\n\n")
-		out.WriteString("| RPC | api_alias | operation_id | kind | err | p99 | mean | iters |\n|---|---|---|---|---|---:|---:|---:|\n")
+		out.WriteString("| RPC | api_alias | operation_id | kind | err | detail | p99 | mean | iters |\n|---|---|---|---|---|---|---:|---:|---:|\n")
 		sort.Slice(failed, func(i, j int) bool {
 			return failed[i].rpc.Service+"/"+failed[i].rpc.Name < failed[j].rpc.Service+"/"+failed[j].rpc.Name
 		})
 		for _, s := range failed {
-			out.WriteString(fmt.Sprintf("| %s/%s | %s | %s | %s | %s | %s | %s | %d |\n",
+			// The detail column carries the server's error MESSAGE (not just the
+			// code) so a CI-only failure is diagnosable from the report artifact
+			// alone — the -v log lines are not captured on a passing test binary.
+			detail := strings.ReplaceAll(s.errText, "|", "\\|")
+			detail = strings.ReplaceAll(detail, "\n", " ")
+			if len(detail) > 220 {
+				detail = detail[:220] + "…"
+			}
+			out.WriteString(fmt.Sprintf("| %s/%s | %s | %s | %s | %s | %s | %s | %s | %d |\n",
 				s.rpc.Service, s.rpc.Name, rpcAPIAlias(s.rpc), rpcOperationID(s.rpc), s.rpc.OperationKind, errOf(s),
-				s.p99.Round(time.Microsecond), s.mean.Round(time.Microsecond), s.iters))
+				detail, s.p99.Round(time.Microsecond), s.mean.Round(time.Microsecond), s.iters))
 		}
 	}
 

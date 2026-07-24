@@ -1645,13 +1645,22 @@ impl DataBrokerRuntime {
             ),
             Err(_) => filter,
         };
+        // Projection targets re-materialize from the task's source_payload, so an
+        // update that feeds projections must return the post-update rows: plan
+        // RETURNING whenever this message type has projection targets, not only
+        // when the caller asked for the record back.
+        let projection_plans = crate::runtime::projection::ProjectionPlan::from_manifest(manifest);
+        let has_projections = projection_plans.iter().any(|plan| {
+            crate::runtime::projection::message_type_matches(&plan.message_type, message_type)
+        });
+        let need_rows = return_record || has_projections;
         let plan_request = crate::planning::broker::UpdatePlanRequest {
             context: context.clone(),
             message_type: message_type.to_string(),
             filter: filter.clone(),
             changes: changes.clone(),
             increments: increments.clone(),
-            return_record,
+            return_record: need_rows,
         };
         let plan = crate::planning::broker::build_update_plan(manifest, &plan_request);
         reject_plan(&plan.errors)?;
@@ -1763,26 +1772,45 @@ impl DataBrokerRuntime {
                 None
             }
         };
-        let (affected_rows, record_json) = if return_record {
-            let row = query.fetch_optional(&mut *tx).await.map_err(|err| {
+        let (affected_rows, record_json, updated_rows_json) = if need_rows {
+            let rows = query.fetch_all(&mut *tx).await.map_err(|err| {
                 crate::runtime::executor_utils::sqlx_error_to_status(
                     "PostgreSQL update failed",
                     &err,
                 )
             })?;
-            match row {
-                Some(row) => {
-                    let record_set = rows_to_record_set(
-                        vec![row],
-                        Some(table),
-                        &[],
-                        &context,
-                        self.encryption.as_ref(),
-                        &self.encryption_metrics,
-                    )?;
-                    (1, returned_record_json_or_status(&record_set.records_json)?)
-                }
-                None => (0, Vec::new()),
+            if rows.is_empty() {
+                (0, Vec::new(), Vec::new())
+            } else {
+                let record_set = rows_to_record_set(
+                    rows,
+                    Some(table),
+                    &[],
+                    &context,
+                    self.encryption.as_ref(),
+                    &self.encryption_metrics,
+                )?;
+                let record_json = if return_record {
+                    returned_record_json_or_status(&record_set.records_json)?
+                } else {
+                    Vec::new()
+                };
+                let updated_rows_json = record_set
+                    .records_json
+                    .iter()
+                    .map(|bytes| serde_json::from_slice::<JsonValue>(bytes))
+                    .collect::<Result<Vec<_>, _>>()
+                    .map_err(|err| {
+                        setup_data_internal_status(
+                            "update_projection_row_decode",
+                            format!("updated row decode failed: {err}"),
+                        )
+                    })?;
+                (
+                    record_set.records_json.len() as i64,
+                    record_json,
+                    updated_rows_json,
+                )
             }
         } else {
             let result = query.execute(&mut *tx).await.map_err(|err| {
@@ -1791,29 +1819,38 @@ impl DataBrokerRuntime {
                     &err,
                 )
             })?;
-            (result.rows_affected() as i64, Vec::new())
+            (result.rows_affected() as i64, Vec::new(), Vec::new())
         };
         let mut projection_task_ids = Vec::new();
         if affected_rows > 0 {
-            let projection_plans =
-                crate::runtime::projection::ProjectionPlan::from_manifest(manifest);
-            projection_task_ids =
-                crate::runtime::projection::ProjectionEngine::enqueue_write_tasks_tx(
-                    &mut tx,
-                    &crate::runtime::system::SystemCatalogConfig::current(),
-                    &context.tenant_id,
-                    message_type,
-                    "update",
-                    &filter,
-                    &projection_plans,
-                )
-                .await
-                .map_err(|err| {
-                    setup_data_internal_status(
-                        "update_projection_task_enqueue",
-                        format!("projection task enqueue failed: {err}"),
+            // Projection tasks know two operations, 'upsert' (re-materialize the
+            // row) and 'delete' (remove it) — the task table's CHECK constraint
+            // enforces exactly that pair, and the worker writes source_payload
+            // through verbatim. An update therefore enqueues each POST-UPDATE row
+            // as an 'upsert' task; enqueuing the filter under a third operation
+            // name would both violate the constraint and project garbage.
+            for row_json in &updated_rows_json {
+                projection_task_ids.extend(
+                    crate::runtime::projection::ProjectionEngine::enqueue_write_tasks_tx(
+                        &mut tx,
+                        &crate::runtime::system::SystemCatalogConfig::current(),
+                        &context.tenant_id,
+                        message_type,
+                        "upsert",
+                        row_json,
+                        &projection_plans,
                     )
-                })?;
+                    .await
+                    .map_err(|err| {
+                        setup_data_internal_status(
+                            "update_projection_task_enqueue",
+                            format!("projection task enqueue failed: {err}"),
+                        )
+                    })?,
+                );
+            }
+            projection_task_ids.sort();
+            projection_task_ids.dedup();
             // CDC change event carries the row identity AND the delta so
             // consumers see what changed without a read-back.
             let cdc_payload = serde_json::json!({
