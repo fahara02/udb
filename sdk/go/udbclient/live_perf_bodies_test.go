@@ -80,6 +80,7 @@ func TestLivePerfExplicitBodyCoverage(t *testing.T) {
 		"embedding_document_id": "11111111-1111-4111-8111-000000000103", "embedding_document_job_id": "11111111-1111-4111-8111-000000000104",
 		"embedding_delete_model_id": "embedding-delete-model-1",
 		"grant_binding_id":          "11111111-1111-4111-8111-000000000201",
+		"grant_create_user_id":      "11111111-1111-4111-8111-000000000202",
 		"join_session_room_id":      "join-room-1", "leave_peer_id": "leave-peer-1", "mark_saga_id": "mark-saga-1",
 		"otp_code": "123456", "otp_id": "otp-1", "owner_id": "owner-1", "quarantine_dlq_id": "quarantine-dlq-1",
 		"policy_version_id": "policy-version-1", "approve_draft_id": "approve-draft-1", "reject_draft_id": "reject-draft-1",
@@ -530,6 +531,7 @@ func TestBuildManifestJSONBodyUsesSharedManifest(t *testing.T) {
 	// binding management RPCs — every one carries an explicit manifest body
 	// (no generic fill). Seeds for the grant id family are set above.
 	fix.set("grant_binding_id", "11111111-1111-4111-8111-000000000201")
+	fix.set("grant_create_user_id", "11111111-1111-4111-8111-000000000202")
 	for _, rpc := range []string{
 		"AuthnService/CreateServiceAccountGrant",
 		"AuthnService/GetServiceAccountGrant",

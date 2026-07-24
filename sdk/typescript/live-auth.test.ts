@@ -542,7 +542,7 @@ function fullSurfaceManifestFixtures(): PerfFixtures {
     message_type: LIVE_MESSAGE_TYPE, record_id: "record-1", bucket: "bucket-1", object_key: "object-1",
     document_id: "document-1", mongo_collection: "collection_1", node_id: "node-1",
     user_id: "user-1", subject: "user:user-1", session_id: "session-1", token: "token-1",
-    grant_binding_id: "grant-binding-1",
+    grant_binding_id: "grant-binding-1", grant_create_user_id: "grant-create-user-1",
     refresh_token: "refresh-1", csrf_token: "csrf-1", code: "123456", role_id: "role-1",
     admin_reset_mfa_user_id: "admin-reset-mfa-user-1",
     admin_reset_password_user_id: "admin-reset-password-user-1",
