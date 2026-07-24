@@ -696,28 +696,52 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 	}
 
 	// ── ApiKeyService: a real key → key_id + plain_key ────────────────────────────
+	// Canonical-identity model: the key owner must be an EXISTING ACTIVE
+	// SERVICE_ACCOUNT with an active typed grant, addressed by its UUID — a
+	// bare service NAME is not a user_id and never was one.
 	apikey := apikeypb.NewApiKeyServiceClient(authConn)
-	keyCtx := &commonpb.RequestContext{UserId: "sdk-perf-svc-" + suffix, Tenant: &commonpb.TenantContext{TenantId: tenant, ProjectId: project}}
+	svcName := "sdk-perf-svc-" + suffix
+	svcOwner := ""
+	if svcUser, err := authn.CreateUser(base, &authnpb.CreateUserRequest{
+		Username: svcName, Email: svcName + "@example.com", Password: pw,
+		TenantId: tenant, ProjectId: project, FullName: "SDK Perf Service Account",
+		AccountKind: authnentpb.AccountKind_ACCOUNT_KIND_SERVICE_ACCOUNT,
+	}); err != nil {
+		t.Logf("perf seed: service-account CreateUser failed (apikey RPCs fall back): %v", err)
+	} else {
+		svcOwner = svcUser.GetUser().GetUserId()
+		if _, err := authn.CreateServiceAccountGrant(base, &authnpb.CreateServiceAccountGrantRequest{
+			TenantId: tenant, UserId: svcOwner, ServiceIdentity: svcName,
+			ProjectId: project, ApprovedScopes: []string{"data:read"},
+			Reason: "sdk perf seed",
+		}); err != nil {
+			t.Logf("perf seed: CreateServiceAccountGrant failed (apikey RPCs fall back): %v", err)
+		}
+	}
+	if svcOwner == "" {
+		svcOwner = svcName // fall back; CreateApiKey will fail typed, not INTERNAL
+	}
+	keyCtx := &commonpb.RequestContext{UserId: svcOwner, Tenant: &commonpb.TenantContext{TenantId: tenant, ProjectId: project}}
 	if key, err := apikey.CreateApiKey(base, &apikeypb.CreateApiKeyRequest{
-		Name: "sdk-perf-key-" + suffix, OwnerId: "sdk-perf-svc-" + suffix, Scopes: []string{"data:read"}, Context: keyCtx,
+		Name: "sdk-perf-key-" + suffix, OwnerId: svcOwner, Scopes: []string{"data:read"}, Context: keyCtx,
 	}); err != nil {
 		t.Logf("perf seed: CreateApiKey failed: %v", err)
 	} else {
 		fix.set("key_id", key.GetKey().GetKeyId())
 		fix.set("plain_key", key.GetPlainKey())
-		fix.set("owner_id", "sdk-perf-svc-"+suffix)
+		fix.set("owner_id", svcOwner)
 	}
 	// A SEPARATE disposable key for the destructive RevokeApiKey, so revoking it does
 	// not invalidate the primary key_id that RotateApiKey/UpdateApiKey/GetApiKey read.
 	if rk, err := apikey.CreateApiKey(base, &apikeypb.CreateApiKeyRequest{
-		Name: "sdk-perf-revoke-" + suffix, OwnerId: "sdk-perf-svc-" + suffix, Scopes: []string{"data:read"}, Context: keyCtx,
+		Name: "sdk-perf-revoke-" + suffix, OwnerId: svcOwner, Scopes: []string{"data:read"}, Context: keyCtx,
 	}); err == nil {
 		fix.set("revoke_key_id", rk.GetKey().GetKeyId())
 	}
 	// A SEPARATE disposable key for UpdateApiKey, so the measured RotateApiKey (which
 	// rotates the primary key_id) can't invalidate the key UpdateApiKey targets.
 	if uk, err := apikey.CreateApiKey(base, &apikeypb.CreateApiKeyRequest{
-		Name: "sdk-perf-update-" + suffix, OwnerId: "sdk-perf-svc-" + suffix, Scopes: []string{"data:read"}, Context: keyCtx,
+		Name: "sdk-perf-update-" + suffix, OwnerId: svcOwner, Scopes: []string{"data:read"}, Context: keyCtx,
 	}); err == nil {
 		fix.set("update_key_id", uk.GetKey().GetKeyId())
 	}

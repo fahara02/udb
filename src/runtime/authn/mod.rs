@@ -3523,6 +3523,13 @@ impl UserStore for PostgresUserStore {
 
 impl PostgresUserStore {
     async fn get_user_by(&self, column: &str, value: &str) -> Result<Option<UserRecord>, String> {
+        // A non-UUID value can never match the UUID user_id column - return
+        // "no such user" instead of letting the $1::UUID cast surface as a raw
+        // DB INTERNAL (22P02), so callers produce their typed precondition
+        // errors rather than an opaque 500.
+        if column == "user_id" && uuid::Uuid::parse_str(value.trim()).is_err() {
+            return Ok(None);
+        }
         let rel = self.users_relation();
         let col = self.users_model.q(column);
         let projection = self.user_select_projection();
@@ -3552,6 +3559,13 @@ impl PostgresUserStore {
         tenant_id: &str,
     ) -> Result<Option<UserRecord>, String> {
         if tenant_id.trim().is_empty() {
+            return Ok(None);
+        }
+        // A non-UUID value can never match the UUID user_id column - return
+        // "no such user" instead of letting the $1::UUID cast surface as a raw
+        // DB INTERNAL (22P02), so callers produce their typed precondition
+        // errors rather than an opaque 500.
+        if column == "user_id" && uuid::Uuid::parse_str(value.trim()).is_err() {
             return Ok(None);
         }
         let rel = self.users_relation();

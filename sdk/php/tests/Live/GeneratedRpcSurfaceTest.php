@@ -3471,8 +3471,21 @@ function perfSeedPhp(array $s): array
     $fix->set('resource', 'invoice');
     $fix->set('action', 'data.select');
 
-    // ApiKeyService: a real key.
-    $principal = "sdk-perf-svc-$suffix";
+    // ApiKeyService: a real key. Canonical-identity model: the owner must be
+    // an EXISTING ACTIVE SERVICE_ACCOUNT with an active typed grant, addressed
+    // by its UUID — a bare service NAME is not a user_id.
+    $svcName = "sdk-perf-svc-$suffix";
+    $principal = $svcName;
+    $svcUser = $try('SeedServiceAccount', fn () => $authGen->create_user((new \Udb\Core\Authn\Services\V1\CreateUserRequest())
+        ->setUsername($svcName)->setEmail("$svcName@example.com")->setPassword('CorrectHorse1!')
+        ->setTenantId($tenant)->setProjectId($project)->setFullName('SDK Perf Service Account')
+        ->setAccountKind(\Udb\Core\Authn\Entity\V1\AccountKind::ACCOUNT_KIND_SERVICE_ACCOUNT), $meta));
+    if ($svcUser) {
+        $principal = $svcUser->getUser()->getUserId();
+        $try('SeedServiceAccountGrant', fn () => $authGen->create_service_account_grant((new \Udb\Core\Authn\Services\V1\CreateServiceAccountGrantRequest())
+            ->setTenantId($tenant)->setUserId($principal)->setServiceIdentity($svcName)
+            ->setProjectId($project)->setApprovedScopes(['data:read'])->setReason('sdk perf seed'), $meta));
+    }
     $keyCtx = (new \Udb\Core\Common\V1\RequestContext())->setUserId($principal)
         ->setTenant((new \Udb\Core\Common\V1\TenantContext())->setTenantId($tenant)->setProjectId($project));
     $key = $try('CreateApiKey', fn () => $authGen->create_api_key((new \Udb\Core\Apikey\Services\V1\CreateApiKeyRequest())
