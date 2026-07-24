@@ -776,19 +776,56 @@ impl DataBrokerService {
         const RATE_LIMIT_LUA: &str = "local c = redis.call('INCR', KEYS[1]) \
              if c == 1 then redis.call('EXPIRE', KEYS[1], ARGV[1]) end \
              return c";
-        let count: u64 = redis::Script::new(RATE_LIMIT_LUA)
+        let script = redis::Script::new(RATE_LIMIT_LUA);
+        let first_attempt: Result<u64, redis::RedisError> = script
             .key(&key)
             .arg(window_secs)
             .invoke_async(&mut conn)
-            .await
-            .map_err(|e| {
-                crate::runtime::executor_utils::retryable_status(
-                    "redis",
-                    "rate_limit_eval",
-                    crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
-                    format!("rate limit redis error: {e}"),
-                )
-            })?;
+            .await;
+        let count: u64 = match first_attempt {
+            Ok(count) => count,
+            Err(_) => {
+                // The cached multiplexed connection is likely dead (a Redis
+                // restart leaves it broken-pipe FOREVER — it never reconnects
+                // on its own, so keeping it turns one blip into a full outage
+                // until broker restart). Drop the corpse and re-dial ONCE
+                // in-call; a persistent failure still returns the typed
+                // retryable status, with the cache cleared so the next request
+                // dials fresh.
+                {
+                    let mut guard = self.rate_limit_redis.lock().await;
+                    *guard = None;
+                }
+                let mut fresh = redis
+                    .get_multiplexed_async_connection()
+                    .await
+                    .map_err(|e| {
+                        crate::runtime::executor_utils::retryable_status(
+                            "redis",
+                            "rate_limit_connection",
+                            crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
+                            format!("rate limit redis error: {e}"),
+                        )
+                    })?;
+                let count = script
+                    .key(&key)
+                    .arg(window_secs)
+                    .invoke_async(&mut fresh)
+                    .await
+                    .map_err(|e| {
+                        crate::runtime::executor_utils::retryable_status(
+                            "redis",
+                            "rate_limit_eval",
+                            crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
+                            format!("rate limit redis error: {e}"),
+                        )
+                    })?;
+                // The fresh dial worked — cache it for subsequent requests.
+                let mut guard = self.rate_limit_redis.lock().await;
+                *guard = Some(fresh);
+                count
+            }
+        };
 
         if count > u64::from(max_rps) {
             let retry_after_ms =
