@@ -2131,27 +2131,72 @@ async function seedPerfFixtures(
   fix.set("action", "data.select");
 
   // ── ApiKeyService: a real key → key_id + plain_key ─────────────────────────────
-  const principal = `sdk-perf-svc-${suffix}`;
+  // Canonical-identity model: the key owner must be an EXISTING ACTIVE
+  // SERVICE_ACCOUNT with an active typed grant, addressed by its UUID — a
+  // bare service NAME is not a user_id and never was one.
+  const svcName = `sdk-perf-svc-${suffix}`;
+  let svcOwner = "";
+  await tryRun("SeedServiceAccount", async () => {
+    const svcUser = (await gen.AuthnService.create_user({
+      username: svcName, email: `${svcName}@example.com`, password: pw,
+      tenant_id: tenantId, project_id: projectId, full_name: "SDK Perf Service Account",
+      account_kind: "ACCOUNT_KIND_SERVICE_ACCOUNT",
+    }, opts)).user;
+    svcOwner = svcUser.user_id;
+    // CreateUser persists PENDING_VERIFICATION; the typed grant and
+    // CreateApiKey both require an ACTIVE service account.
+    await gen.AuthnService.change_user_status({
+      user_id: svcOwner, new_status: "USER_STATUS_ACTIVE", reason: "perf seed activate",
+      context: { tenant: { tenant_id: tenantId, project_id: projectId } },
+    }, opts);
+    await gen.AuthnService.create_service_account_grant({
+      tenant_id: tenantId, user_id: svcOwner, service_identity: svcName,
+      project_id: projectId, approved_scopes: ["data:read", "resource:read"], reason: "sdk perf seed",
+    }, opts);
+    // The measured RevokeCertificateBinding revokes THIS seeded binding.
+    const binding = await gen.AuthnService.create_certificate_binding({
+      tenant_id: tenantId, user_id: svcOwner, selector_kind: "SPIFFE_URI",
+      selector_value: `spiffe://bench/seed-binding-${suffix}`, reason: "perf seed binding",
+    }, opts);
+    if (binding?.binding?.binding_id) fix.set("grant_binding_id", binding.binding.binding_id);
+  });
+  if (!svcOwner) svcOwner = svcName; // fall back; CreateApiKey fails typed, not INTERNAL
+  // A SECOND ACTIVE service account WITHOUT a grant: the measured
+  // CreateServiceAccountGrant makes its revision-1 grant here, and the
+  // destructive-phase RotateServiceAccountIdentity rotates that same grant.
+  const svcBName = `sdk-perf-svc-b-${suffix}`;
+  await tryRun("SeedServiceAccountB", async () => {
+    const svcB = (await gen.AuthnService.create_user({
+      username: svcBName, email: `${svcBName}@example.com`, password: pw,
+      tenant_id: tenantId, project_id: projectId, full_name: "SDK Perf Service Account B",
+      account_kind: "ACCOUNT_KIND_SERVICE_ACCOUNT",
+    }, opts)).user;
+    await gen.AuthnService.change_user_status({
+      user_id: svcB.user_id, new_status: "USER_STATUS_ACTIVE", reason: "perf seed activate",
+      context: { tenant: { tenant_id: tenantId, project_id: projectId } },
+    }, opts);
+    fix.set("grant_create_user_id", svcB.user_id);
+  });
   await tryRun("CreateApiKey", async () => {
-    const key = await gen.ApiKeyService.create_api_key({ name: `sdk-perf-key-${suffix}`, owner_id: principal, scopes: ["data:read"], context: { user_id: principal, tenant: { tenant_id: tenantId, project_id: projectId } } }, opts);
+    const key = await gen.ApiKeyService.create_api_key({ name: `sdk-perf-key-${suffix}`, owner_id: svcOwner, scopes: ["data:read"], context: { user_id: svcOwner, tenant: { tenant_id: tenantId, project_id: projectId } } }, opts);
     fix.set("key_id", key.key.key_id);
     // revoke/rotate/update look up by key_PREFIX (get_by_prefix), not the key_id UUID.
     // Derive it from plain_key ("udbk_xxxx.yyyy" → "udbk_xxxx") — robust vs an unset field.
     fix.set("key_prefix", (key.key.key_prefix || String(key.plain_key).split(".")[0]));
     fix.set("plain_key", key.plain_key);
-    fix.set("owner_id", principal);
+    fix.set("owner_id", svcOwner);
   });
   // A SEPARATE disposable key for the destructive RevokeApiKey → real 200, so the
   // primary key_id survives for RotateApiKey/UpdateApiKey/GetApiKey/ValidateApiKey.
   await tryRun("CreateRevokeKey", async () => {
-    const rk = await gen.ApiKeyService.create_api_key({ name: `sdk-perf-revoke-${suffix}`, owner_id: principal, scopes: ["data:read"], context: { user_id: principal, tenant: { tenant_id: tenantId, project_id: projectId } } }, opts);
+    const rk = await gen.ApiKeyService.create_api_key({ name: `sdk-perf-revoke-${suffix}`, owner_id: svcOwner, scopes: ["data:read"], context: { user_id: svcOwner, tenant: { tenant_id: tenantId, project_id: projectId } } }, opts);
     fix.set("revoke_key_id", rk.key.key_id);
     fix.set("revoke_key_prefix", (rk.key.key_prefix || String(rk.plain_key).split(".")[0]));
   });
   // A SEPARATE disposable key for UpdateApiKey, so the measured RotateApiKey (which
   // rotates the primary key_id) can't invalidate the key UpdateApiKey targets.
   await tryRun("CreateUpdateKey", async () => {
-    const uk = await gen.ApiKeyService.create_api_key({ name: `sdk-perf-update-${suffix}`, owner_id: principal, scopes: ["data:read"], context: { user_id: principal, tenant: { tenant_id: tenantId, project_id: projectId } } }, opts);
+    const uk = await gen.ApiKeyService.create_api_key({ name: `sdk-perf-update-${suffix}`, owner_id: svcOwner, scopes: ["data:read"], context: { user_id: svcOwner, tenant: { tenant_id: tenantId, project_id: projectId } } }, opts);
     fix.set("update_key_id", uk.key.key_id);
     fix.set("update_key_prefix", (uk.key.key_prefix || String(uk.plain_key).split(".")[0]));
   });
@@ -2457,7 +2502,7 @@ async function seedPerfFixtures(
     }, opts);
     if (document.job_id) {
       fix.set("embedding_job_id", document.job_id);
-      const work = await gen.EmbeddingService.list_embedding_work_items({ tenant_id: tenantId, job_id: document.job_id, page_size: 50 }, opts);
+      const work = await gen.EmbeddingService.list_work_items({ tenant_id: tenantId, job_id: document.job_id, page_size: 50 }, opts);
       if ((work.work_items ?? []).length > 0) fix.set("embedding_work_item_id", work.work_items[0].work_item_id);
     }
   });

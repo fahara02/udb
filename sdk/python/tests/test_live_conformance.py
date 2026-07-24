@@ -2958,22 +2958,89 @@ def perf_seed(clients: dict, meta: Metadata):
         pass
 
     # ── ApiKeyService: a real key -> key_id + plain_key ───────────────────────────
+    # Canonical-identity model: the key owner must be an EXISTING ACTIVE
+    # SERVICE_ACCOUNT with an active typed grant, addressed by its UUID — a
+    # bare service NAME is not a user_id and never was one.
     apikey = clients[ApiKeyServiceClient].stub
-    principal = f"sdk-perf-svc-{suffix}"
+    svc_name = f"sdk-perf-svc-{suffix}"
+    svc_owner = ""
+    try:
+        svc_user = authn.CreateUser(
+            authn_pb2.CreateUserRequest(
+                username=svc_name, email=f"{svc_name}@example.com", password=pw,
+                tenant_id=tenant, project_id=project, full_name="SDK Perf Service Account",
+                account_kind=2,  # ACCOUNT_KIND_SERVICE_ACCOUNT
+            ),
+            metadata=md, timeout=8.0,
+        )
+        svc_owner = svc_user.user.user_id
+        # CreateUser persists PENDING_VERIFICATION; the typed grant and
+        # CreateApiKey both require an ACTIVE service account.
+        authn.ChangeUserStatus(
+            authn_pb2.ChangeUserStatusRequest(
+                user_id=svc_owner, new_status=2, reason="perf seed activate",
+                context=common_pb.RequestContext(tenant=common_pb.TenantContext(tenant_id=tenant, project_id=project)),
+            ),
+            metadata=md, timeout=8.0,
+        )
+        authn.CreateServiceAccountGrant(
+            authn_pb2.CreateServiceAccountGrantRequest(
+                tenant_id=tenant, user_id=svc_owner, service_identity=svc_name,
+                project_id=project, approved_scopes=["data:read", "resource:read"], reason="sdk perf seed",
+            ),
+            metadata=md, timeout=8.0,
+        )
+        # The measured RevokeCertificateBinding revokes THIS seeded binding.
+        binding = authn.CreateCertificateBinding(
+            authn_pb2.CreateCertificateBindingRequest(
+                tenant_id=tenant, user_id=svc_owner, selector_kind="SPIFFE_URI",
+                selector_value=f"spiffe://bench/seed-binding-{suffix}", reason="perf seed binding",
+            ),
+            metadata=md, timeout=8.0,
+        )
+        if binding.binding.binding_id:
+            fix.set("grant_binding_id", binding.binding.binding_id)
+    except grpc.RpcError:
+        pass
+    if not svc_owner:
+        svc_owner = svc_name  # fall back; CreateApiKey fails typed, not INTERNAL
+    # A SECOND ACTIVE service account WITHOUT a grant: the measured
+    # CreateServiceAccountGrant makes its revision-1 grant here, and the
+    # destructive-phase RotateServiceAccountIdentity rotates that same grant.
+    svc_b_name = f"sdk-perf-svc-b-{suffix}"
+    try:
+        svc_b = authn.CreateUser(
+            authn_pb2.CreateUserRequest(
+                username=svc_b_name, email=f"{svc_b_name}@example.com", password=pw,
+                tenant_id=tenant, project_id=project, full_name="SDK Perf Service Account B",
+                account_kind=2,  # ACCOUNT_KIND_SERVICE_ACCOUNT
+            ),
+            metadata=md, timeout=8.0,
+        )
+        authn.ChangeUserStatus(
+            authn_pb2.ChangeUserStatusRequest(
+                user_id=svc_b.user.user_id, new_status=2, reason="perf seed activate",
+                context=common_pb.RequestContext(tenant=common_pb.TenantContext(tenant_id=tenant, project_id=project)),
+            ),
+            metadata=md, timeout=8.0,
+        )
+        fix.set("grant_create_user_id", svc_b.user.user_id)
+    except grpc.RpcError:
+        pass
+    key_ctx = common_pb.RequestContext(user_id=svc_owner, tenant=common_pb.TenantContext(tenant_id=tenant, project_id=project))
     try:
         key = apikey.CreateApiKey(
-            apikey_pb.CreateApiKeyRequest(name=f"sdk-perf-key-{suffix}", owner_id=principal, scopes=["data:read"], context=common_pb.RequestContext(user_id=principal, tenant=common_pb.TenantContext(tenant_id=tenant, project_id=project))),
+            apikey_pb.CreateApiKeyRequest(name=f"sdk-perf-key-{suffix}", owner_id=svc_owner, scopes=["data:read"], context=key_ctx),
             metadata=md, timeout=8.0,
         )
         fix.set("key_id", key.key.key_id)
         fix.set("plain_key", key.plain_key)
-        fix.set("owner_id", principal)
+        fix.set("owner_id", svc_owner)
     except grpc.RpcError:
         pass
-    key_ctx = common_pb.RequestContext(user_id=principal, tenant=common_pb.TenantContext(tenant_id=tenant, project_id=project))
     try:
         revoke_key = apikey.CreateApiKey(
-            apikey_pb.CreateApiKeyRequest(name=f"sdk-perf-revoke-{suffix}", owner_id=principal, scopes=["data:read"], context=key_ctx),
+            apikey_pb.CreateApiKeyRequest(name=f"sdk-perf-revoke-{suffix}", owner_id=svc_owner, scopes=["data:read"], context=key_ctx),
             metadata=md, timeout=8.0,
         )
         fix.set("revoke_key_id", revoke_key.key.key_id)
@@ -2981,7 +3048,7 @@ def perf_seed(clients: dict, meta: Metadata):
         pass
     try:
         update_key = apikey.CreateApiKey(
-            apikey_pb.CreateApiKeyRequest(name=f"sdk-perf-update-{suffix}", owner_id=principal, scopes=["data:read"], context=key_ctx),
+            apikey_pb.CreateApiKeyRequest(name=f"sdk-perf-update-{suffix}", owner_id=svc_owner, scopes=["data:read"], context=key_ctx),
             metadata=md, timeout=8.0,
         )
         fix.set("update_key_id", update_key.key.key_id)
