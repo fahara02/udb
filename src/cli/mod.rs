@@ -899,6 +899,38 @@ pub fn run() {
                 },
             });
 
+            // Native StorageService bucket contract: `requirements` used to
+            // validate only MANIFEST-declared buckets, so the storage service's
+            // own default bucket could be missing while everything reported OK —
+            // RegisterUpload then succeeded and the presigned PUT 404'd. Surface
+            // the exact bucket the service will presign against.
+            {
+                let (object_backend, object_bucket) =
+                    udb::runtime::service::storage_service_object_contract();
+                let bucket_env_set = env_set(&["UDB_STORAGE_BUCKET"]);
+                rows.push(RequirementStatus {
+                    backend: object_backend.clone(),
+                    resource_kind: "bucket (native StorageService)".to_string(),
+                    resource_name: object_bucket.clone(),
+                    owner: "native:storage".to_string(),
+                    env_keys: vec![
+                        "UDB_STORAGE_BUCKET".to_string(),
+                        "UDB_STORAGE_OBJECT_BACKEND".to_string(),
+                    ],
+                    configured: bucket_env_set,
+                    fatal: false,
+                    suggested_fix: format!(
+                        "ensure bucket '{object_bucket}' exists in the {object_backend} \
+                         object store before uploads (presigned PUTs 404 otherwise){}",
+                        if bucket_env_set {
+                            ""
+                        } else {
+                            "; this is the built-in default — set UDB_STORAGE_BUCKET to override"
+                        }
+                    ),
+                });
+            }
+
             let mut unmet_fatal = if pg_configured { 0 } else { 1 };
             for r in udb::required_backends(&manifest) {
                 let configured = env_set(&r.env_keys);

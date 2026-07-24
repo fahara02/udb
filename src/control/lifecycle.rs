@@ -329,6 +329,54 @@ async fn send_lifecycle_webhook(
     }
 }
 
+/// Served input schemas in UDB SYSTEM namespaces (`udb`, `udb_*`) that do NOT
+/// match the embedded system catalog. Matching is on the semantic projection
+/// (schema, table, sorted `(field_name, field_number, proto_type)`) — never on
+/// file paths, so self-hosting the UDB repo's own proto tree (identical
+/// content) passes while a vendored `udb proto export` from another release
+/// (different columns/field numbers, or a table the embedded catalog no longer
+/// has) is reported.
+fn stale_system_schema_inputs(schemas: &[ProtoSchema]) -> Vec<String> {
+    type Projection = (String, String, Vec<(String, i32, String)>);
+    fn projection(schema: &ProtoSchema) -> Projection {
+        let mut columns: Vec<(String, i32, String)> = schema
+            .columns
+            .iter()
+            .map(|c| (c.field_name.clone(), c.field_number, c.proto_type.clone()))
+            .collect();
+        columns.sort();
+        (
+            schema.schema_name.clone(),
+            schema.table_name.clone(),
+            columns,
+        )
+    }
+    let native: std::collections::HashMap<(String, String), Projection> =
+        crate::runtime::native_catalog::native_schemas()
+            .iter()
+            .map(|schema| {
+                (
+                    (schema.proto_package.clone(), schema.message_name.clone()),
+                    projection(schema),
+                )
+            })
+            .collect();
+    schemas
+        .iter()
+        .filter(|schema| schema.schema_name == "udb" || schema.schema_name.starts_with("udb_"))
+        .filter(|schema| {
+            match native.get(&(schema.proto_package.clone(), schema.message_name.clone())) {
+                Some(embedded) => *embedded != projection(schema),
+                // A udb_* table the embedded catalog does not know at all is a
+                // leftover from another version's export (or a reserved-namespace
+                // collision) — equally stale.
+                None => true,
+            }
+        })
+        .map(|schema| format!("{}.{}", schema.schema_name, schema.table_name))
+        .collect()
+}
+
 async fn run_startup_lifecycle_core(
     runtime: &DataBrokerRuntime,
     manifest: &CatalogManifest,
@@ -348,6 +396,14 @@ async fn run_startup_lifecycle_core(
     // loaded zero custom schemas (e.g. an over-eager UDB_PROTO_NAMESPACE filter
     // silently produced a UDB-only broker).
     let custom_schema_count = schemas.len();
+    // Served input declaring tables in UDB SYSTEM schemas (`udb`, `udb_*`) is
+    // legal ONLY when it matches the embedded system catalog (the self-hosting
+    // case: serving the UDB repo's own proto tree). A vendored `udb proto
+    // export` from an OLDER release silently SHADOWS the embedded copy in the
+    // merge and then fails later in cryptic ways (e.g. field-number reuse
+    // between an old export's synthetic audit columns and the current system
+    // protos). Detect the mismatch at intake and fail with the actual fix.
+    let system_schema_tables = stale_system_schema_inputs(schemas);
     let (merged_manifest, merged_schemas) =
         crate::runtime::native_catalog::merge_native(manifest, schemas);
     let manifest: &CatalogManifest = &merged_manifest;
@@ -382,6 +438,27 @@ async fn run_startup_lifecycle_core(
         dry_run,
         ..StartupLifecycleReport::default()
     };
+
+    if !system_schema_tables.is_empty() {
+        let message = format!(
+            "served proto input declares {} table(s) in UDB system schemas that do not match \
+             this broker's embedded system catalog: {}. The broker embeds its own system \
+             catalog — do NOT serve `udb proto export` output (a vendored export from another \
+             UDB version shadows the embedded copy and corrupts the catalog). Remove the \
+             vendored udb/** protos from the served proto root; the export exists only for \
+             imports and codegen.",
+            system_schema_tables.len(),
+            system_schema_tables
+                .iter()
+                .take(5)
+                .cloned()
+                .collect::<Vec<_>>()
+                .join(", "),
+        );
+        runtime.emit_drift_metric("system_schema_in_input");
+        report.errors.push(message.clone());
+        return Err(report_failure_json(&report, message));
+    }
 
     transition(
         &mut engine,
@@ -871,6 +948,66 @@ async fn run_startup_lifecycle_core(
         load_prior_manifest_for_apply(runtime, manifest, &mut report).await?
     };
 
+    // Name the LEDGER SOURCE whenever a prior manifest is in play. Operators
+    // with multiple DSN env vars (UDB_PG_DSN vs DATABASE_URL) have inspected
+    // the WRONG database for hours because nothing said which database the
+    // prior manifest was read from.
+    let ledger_identity = if let Some(prior) = prior_manifest.as_ref() {
+        let identity = runtime.manifest_ledger_identity().await;
+        report.step(
+            FsmState::PlanProtoDiff,
+            format!(
+                "prior manifest ledger: {identity} checksum={}",
+                prior.checksum_sha256
+            ),
+        );
+        identity
+    } else {
+        String::new()
+    };
+
+    // A run whose INPUT contains zero custom schemas while the prior manifest
+    // still records custom tables would plan a DropTable for every previously
+    // known app table. That is virtually always a misconfiguration (an
+    // over-eager namespace filter or a wrong proto root), not an intentional
+    // teardown — abort BEFORE planning instead of producing a drop-everything
+    // plan. An operator who really means it sets UDB_ALLOW_EMPTY_CUSTOM_INPUT=1.
+    if custom_schema_count == 0
+        && std::env::var("UDB_ALLOW_EMPTY_CUSTOM_INPUT")
+            .ok()
+            .as_deref()
+            != Some("1")
+        && let Some(prior) = prior_manifest.as_ref()
+    {
+        let prior_custom: Vec<String> = prior
+            .tables
+            .iter()
+            .filter(|t| !(t.schema == "udb" || t.schema.starts_with("udb_")))
+            .map(|t| format!("{}.{}", t.schema, t.table))
+            .collect();
+        if !prior_custom.is_empty() {
+            return Err(fail(
+                runtime,
+                &mut report,
+                "empty_custom_input_with_prior_tables",
+                format!(
+                    "the served proto input contains 0 custom schemas but the prior manifest \
+                     ({ledger_identity}) records {} custom table(s) (e.g. {}). Planning would \
+                     drop every previously-known app table. Check the proto root and \
+                     UDB_PROTO_NAMESPACE; set UDB_ALLOW_EMPTY_CUSTOM_INPUT=1 only if removing \
+                     all custom tables is intentional.",
+                    prior_custom.len(),
+                    prior_custom
+                        .iter()
+                        .take(5)
+                        .cloned()
+                        .collect::<Vec<_>>()
+                        .join(", "),
+                ),
+            ));
+        }
+    }
+
     let checksum_unchanged = prior_manifest
         .as_ref()
         .map(|p| p.checksum_sha256 == manifest.checksum_sha256)
@@ -1256,9 +1393,11 @@ async fn run_startup_lifecycle_core(
                         &mut report,
                         "blocked_schema_change",
                         format!(
-                            "{} schema change(s) require manual review and cannot be auto-applied: {}",
+                            "{} schema change(s) require manual review and cannot be auto-applied: {}; \
+                             prior manifest: {ledger_identity} checksum={}",
                             needs_review.len(),
-                            needs_review.join("; ")
+                            needs_review.join("; "),
+                            prior.checksum_sha256,
                         ),
                     ));
                 }
@@ -2101,6 +2240,54 @@ fn parse_seed_identity(file_name: &str) -> (String, String) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // The system-schema intake guard must pass the SELF-HOSTING case (input
+    // identical to the embedded catalog, as when the UDB repo serves its own
+    // proto tree) and fail vendored-export drift: a changed field number on a
+    // udb_* table, and a udb_* table the embedded catalog does not know.
+    #[test]
+    fn stale_system_schema_inputs_discriminates_selfhost_from_vendored_export() {
+        // Non-udb schemas are never reported.
+        let mut app = ProtoSchema {
+            schema_name: "public".to_string(),
+            table_name: "orders".to_string(),
+            message_name: "Order".to_string(),
+            proto_package: "acme.v1".to_string(),
+            ..ProtoSchema::default()
+        };
+        assert!(stale_system_schema_inputs(&[app.clone()]).is_empty());
+        // An app schema whose OWNER chose a udb_-prefixed name with no embedded
+        // counterpart is reported (reserved namespace).
+        app.schema_name = "udb_myapp".to_string();
+        assert_eq!(
+            stale_system_schema_inputs(&[app]),
+            ["udb_myapp.orders".to_string()]
+        );
+
+        // Self-hosting: an EXACT copy of an embedded native schema passes,
+        // even from a different file path.
+        let native = crate::runtime::native_catalog::native_schemas()
+            .iter()
+            .find(|schema| schema.schema_name.starts_with("udb_"))
+            .expect("embedded catalog has udb_* schemas")
+            .clone();
+        let mut selfhost = native.clone();
+        selfhost.file = "/consumer/checkout/some/other/path.proto".to_string();
+        assert!(
+            stale_system_schema_inputs(&[selfhost]).is_empty(),
+            "identical system schema from a different path must pass"
+        );
+
+        // Vendored old export: same identity, drifted field number → reported.
+        let mut vendored = native.clone();
+        if let Some(column) = vendored.columns.first_mut() {
+            column.field_number += 100;
+        }
+        assert_eq!(
+            stale_system_schema_inputs(&[vendored]),
+            [format!("{}.{}", native.schema_name, native.table_name)]
+        );
+    }
 
     #[test]
     fn review_required_sql_artifacts_are_detected_from_render_marker() {

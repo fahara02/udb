@@ -141,6 +141,19 @@ pub(crate) mod native_entity_store;
 #[cfg(test)]
 mod native_entity_store_tests;
 mod native_helpers;
+
+/// The native StorageService object-store contract as the broker will resolve
+/// it at startup: `(backend, bucket)` from `UDB_STORAGE_OBJECT_BACKEND` /
+/// `UDB_STORAGE_BUCKET` with the built-in defaults. Public so the CLI
+/// `requirements` command surfaces the SAME bucket the service will presign
+/// against — a green `requirements` run followed by an HTTP 404 on the first
+/// presigned PUT (bucket never provisioned) cost a consumer hours.
+pub fn storage_service_object_contract() -> (String, String) {
+    native_helpers::storage_object_defaults(
+        std::env::var("UDB_STORAGE_OBJECT_BACKEND").ok(),
+        std::env::var("UDB_STORAGE_BUCKET").ok(),
+    )
+}
 pub mod native_registry;
 pub(crate) mod native_runtime;
 pub(crate) mod native_store_binding;

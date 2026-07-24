@@ -1230,6 +1230,37 @@ impl DataBrokerRuntime {
             })
     }
 
+    /// Human-readable identity of the migration LEDGER database — which
+    /// database/host the prior manifest is read from and the ledger relation
+    /// name. Surfaced in drift errors and the startup FSM log so an operator
+    /// with several DSN env vars (`UDB_PG_DSN` vs `DATABASE_URL`) never
+    /// inspects the wrong database. Asks the POOL itself (`current_database()`)
+    /// rather than re-parsing env DSNs, so it reports where the broker is
+    /// actually connected. Best-effort: falls back to a placeholder on error.
+    pub async fn manifest_ledger_identity(&self) -> String {
+        let relation = ledger_relation(
+            &self.config.migration.ledger_schema,
+            "proto_schema_versions",
+        );
+        let Ok(pool) = self.pg_pool() else {
+            return format!("db=(unavailable) table={relation}");
+        };
+        let row: Result<(String, Option<String>), _> = sqlx::query_as(
+            "SELECT current_database()::text, \
+             CASE WHEN inet_server_addr() IS NULL THEN NULL \
+                  ELSE host(inet_server_addr()) || ':' || inet_server_port()::text END",
+        )
+        .fetch_one(pool)
+        .await;
+        match row {
+            Ok((database, host)) => format!(
+                "db={database} host={} table={relation}",
+                host.unwrap_or_else(|| "(local socket)".to_string())
+            ),
+            Err(err) => format!("db=(identity query failed: {err}) table={relation}"),
+        }
+    }
+
     /// Load a specific manifest by checksum.
     pub async fn load_manifest_by_checksum(
         &self,
