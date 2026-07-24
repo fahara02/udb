@@ -1024,6 +1024,12 @@ fn render_go_entities_file(entities: &[EntityDescriptor], package: &str) -> Stri
         };
         proto_imports.insert(path, alias.clone());
         for column in &entity.columns {
+            // Mirror the emit rules exactly: a column that emits no marshalling
+            // (injected audit column, repeated field) must not count toward the
+            // imports, or the generated file carries an unused import.
+            if !column.declared_in_proto || column.is_array {
+                continue;
+            }
             if is_go_timestamp(&column.proto_type) {
                 needs_time = true;
                 needs_timestamppb = true;
@@ -1087,6 +1093,11 @@ fn render_go_entities_file(entities: &[EntityDescriptor], package: &str) -> Stri
             name = entity.short_name,
         ));
         for column in &entity.columns {
+            // Broker-injected audit columns (created_at/…) have no getter on the
+            // consumer's message — the broker fills their defaults server-side.
+            if !column.declared_in_proto {
+                continue;
+            }
             out.push_str(&go_to_record_stmt(column));
         }
         out.push_str("\treturn r\n}\n\n");
@@ -1099,6 +1110,9 @@ fn render_go_entities_file(entities: &[EntityDescriptor], package: &str) -> Stri
             name = entity.short_name,
         ));
         for column in &entity.columns {
+            if !column.declared_in_proto {
+                continue;
+            }
             out.push_str(&go_from_row_stmt(column, alias));
         }
         out.push_str("\treturn m\n}\n\n");
@@ -1178,16 +1192,37 @@ fn enum_common_prefix(values: &[String]) -> String {
 }
 
 /// The `r["field"] = …` statement for one column (proto -> record).
+///
+/// THE SYMMETRY RULE: this function must never write a column that
+/// [`go_from_row_stmt`] cannot read back. An unsupported column (repeated
+/// field, message type, unresolved enum) is omitted with a TODO on BOTH sides —
+/// a raw `m.Get…()` write of an unsupported Go value silently corrupts the
+/// column (enum → JSON number in a VARCHAR CHECK, message → struct into a
+/// numeric column).
 fn go_to_record_stmt(column: &EntityColumnDescriptor) -> String {
     let key = &column.field_name;
     let field = go_pascal(&column.field_name);
     let getter = format!("Get{field}");
+    if column.is_array {
+        // Repeated fields (TEXT[] etc.) have no scalar round-trip yet; skipped
+        // on write AND read.
+        return format!(
+            "\t// TODO(udb-b3): unsupported write for \"{key}\" (repeated {}) — field skipped\n",
+            column.proto_type
+        );
+    }
     if is_go_timestamp(&column.proto_type) {
         // timestamppb is already a pointer, so nil covers unset for both the
-        // presence and non-presence cases.
+        // presence and non-presence cases. A DATE column takes the date-only
+        // form — RFC3339Nano fails a strict DATE bind.
+        let layout = if column.sql_type.trim().eq_ignore_ascii_case("DATE") {
+            "\"2006-01-02\"".to_string()
+        } else {
+            "time.RFC3339Nano".to_string()
+        };
         return format!(
             "\tif v := m.{getter}(); v != nil {{\n\
-             \t\tr[\"{key}\"] = v.AsTime().UTC().Format(time.RFC3339Nano)\n\t}}\n",
+             \t\tr[\"{key}\"] = v.AsTime().UTC().Format({layout})\n\t}}\n",
         );
     }
     if !column.enum_values.is_empty() {
@@ -1197,6 +1232,16 @@ fn go_to_record_stmt(column: &EntityColumnDescriptor) -> String {
             return format!("\tif m.{field} != nil {{\n\t\tr[\"{key}\"] = {expr}\n\t}}\n");
         }
         return format!("\tr[\"{key}\"] = {expr}\n");
+    }
+    if matches!(go_scalar_kind(&column.proto_type), GoScalar::Unknown) {
+        // Message-typed (or unresolved-enum) column: no scalar round-trip.
+        // Skipped on write AND read — go_from_row_stmt emits the matching TODO.
+        // Checked BEFORE the presence arm: an `optional` message field would
+        // otherwise write a raw struct pointer.
+        return format!(
+            "\t// TODO(udb-b3): unsupported write for \"{key}\" ({}) — field skipped\n",
+            column.proto_type
+        );
     }
     // proto3 `optional` renders as a pointer: an unset field must be OMITTED from
     // the record, never flattened to a zero value.
@@ -1222,6 +1267,13 @@ fn go_to_record_stmt(column: &EntityColumnDescriptor) -> String {
 fn go_from_row_stmt(column: &EntityColumnDescriptor, alias: &str) -> String {
     let key = &column.field_name;
     let field = go_pascal(&column.field_name);
+    if column.is_array {
+        // Mirrors go_to_record_stmt's repeated-field skip (symmetry rule).
+        return format!(
+            "\t// TODO(udb-b3): unsupported read for \"{key}\" (repeated {}) — field skipped\n",
+            column.proto_type
+        );
+    }
     if is_go_timestamp(&column.proto_type) {
         return format!(
             "\tif t, ok := udbAsTime(row[\"{key}\"]); ok {{\n\
@@ -1278,7 +1330,7 @@ fn go_from_row_stmt(column: &EntityColumnDescriptor, alias: &str) -> String {
         GoScalar::Float32 => format!("\tm.{field} = float32(udbAsFloat64(row[\"{key}\"]))\n"),
         GoScalar::Bytes => format!("\tm.{field} = udbAsBytes(row[\"{key}\"])\n"),
         GoScalar::Unknown => format!(
-            "\t// TODO(udb-b3): unsupported read for \"{key}\" ({})\n",
+            "\t// TODO(udb-b3): unsupported read for \"{key}\" ({}) — field skipped\n",
             column.proto_type
         ),
     }
@@ -2514,6 +2566,7 @@ mod tests {
             exclude_from_insert: false,
             is_blind_index: false,
             is_pii: false,
+            declared_in_proto: true,
         }
     }
 
@@ -2584,6 +2637,145 @@ mod tests {
         assert!(
             read.contains("e := authnv1.UserStatus(v)") && read.contains("m.Status = &e"),
             "presence enum read must assign a pointer, got: {read}"
+        );
+    }
+
+    // THE SYMMETRY RULE (V19-1/V19-2): a column the read path cannot decode must
+    // not be written either — a raw enum write puts a JSON number into a VARCHAR
+    // CHECK column; a raw message write puts a struct into a scalar column.
+    #[test]
+    fn message_typed_column_is_skipped_on_both_sides() {
+        let col = column("wallet_balance", "acme.common.v1.Money");
+        let write = go_to_record_stmt(&col);
+        assert!(
+            write.contains("TODO(udb-b3): unsupported write for \"wallet_balance\""),
+            "message-typed write must be a TODO, got: {write}"
+        );
+        assert!(
+            !write.contains("m.GetWalletBalance()"),
+            "message-typed column must never be written raw, got: {write}"
+        );
+        let read = go_from_row_stmt(&col, "acmev1");
+        assert!(
+            read.contains("TODO(udb-b3): unsupported read for \"wallet_balance\""),
+            "message-typed read must be a TODO, got: {read}"
+        );
+    }
+
+    // `optional` on an unsupported type must not fall into the pointer-guarded
+    // raw write — the Unknown check has to run before the presence arm.
+    #[test]
+    fn optional_message_typed_column_still_skips_write() {
+        let mut col = column("wallet_balance", "acme.common.v1.Money");
+        col.has_presence = true;
+        let write = go_to_record_stmt(&col);
+        assert!(
+            write.contains("TODO(udb-b3): unsupported write"),
+            "optional message column must be a TODO, got: {write}"
+        );
+        assert!(!write.contains("m.GetWalletBalance()"), "got: {write}");
+    }
+
+    // V19-4: `repeated string` hit the scalar-string paths and produced Go that
+    // does not compile (`v != ""` on []string). Repeated fields are skipped on
+    // both sides until TEXT[] round-trip lands.
+    #[test]
+    fn repeated_column_is_skipped_on_both_sides() {
+        let mut col = column("mfa_methods", "string");
+        col.is_array = true;
+        let write = go_to_record_stmt(&col);
+        assert!(
+            write.contains("unsupported write for \"mfa_methods\" (repeated string)"),
+            "repeated write must be a TODO, got: {write}"
+        );
+        assert!(!write.contains("m.GetMfaMethods()"), "got: {write}");
+        let read = go_from_row_stmt(&col, "acmev1");
+        assert!(
+            read.contains("unsupported read for \"mfa_methods\" (repeated string)"),
+            "repeated read must be a TODO, got: {read}"
+        );
+        assert!(!read.contains("udbAsString"), "got: {read}");
+    }
+
+    // G-13: a DATE column takes the date-only layout — RFC3339Nano fails a
+    // strict DATE bind. TIMESTAMPTZ keeps the full form.
+    #[test]
+    fn date_column_writes_date_only_layout() {
+        let mut col = column("date_of_birth", "google.protobuf.Timestamp");
+        col.sql_type = "DATE".to_string();
+        let write = go_to_record_stmt(&col);
+        assert!(
+            write.contains("Format(\"2006-01-02\")"),
+            "DATE column must use the date-only layout, got: {write}"
+        );
+        assert!(!write.contains("RFC3339Nano"), "got: {write}");
+
+        let mut tz = column("created_at", "google.protobuf.Timestamp");
+        tz.sql_type = "TIMESTAMPTZ".to_string();
+        let write = go_to_record_stmt(&tz);
+        assert!(
+            write.contains("time.RFC3339Nano"),
+            "TIMESTAMPTZ keeps the full layout, got: {write}"
+        );
+    }
+
+    // V19-1 regression guard: a resolved enum keeps the short-token round-trip
+    // (write trims the common prefix; read reconstructs via <Type>_value).
+    #[test]
+    fn resolved_enum_round_trips_short_tokens() {
+        let mut col = column("status", "acme.order.v1.OrderStatus");
+        col.enum_values = vec![
+            "ORDER_STATUS_ACTIVE".to_string(),
+            "ORDER_STATUS_CLOSED".to_string(),
+        ];
+        let write = go_to_record_stmt(&col);
+        assert!(
+            write.contains("strings.TrimPrefix(m.GetStatus().String(), \"ORDER_STATUS_\")"),
+            "enum write must trim to the short token, got: {write}"
+        );
+        let read = go_from_row_stmt(&col, "orderv1");
+        assert!(
+            read.contains("orderv1.OrderStatus_value[\"ORDER_STATUS_\"+s]"),
+            "enum read must rebuild the full name, got: {read}"
+        );
+    }
+
+    // V19-3: broker-injected audit columns have no getter on the consumer's
+    // message — marshalling must cover only proto-declared fields, and the
+    // import scan must agree (an unused `time` import fails `go build`).
+    #[test]
+    fn undeclared_columns_are_omitted_from_marshalling_and_imports() {
+        let mut language_classes = std::collections::BTreeMap::new();
+        language_classes.insert(
+            "go".to_string(),
+            "example.com/gen/acmev1;acmev1.Profile".to_string(),
+        );
+        let mut phantom = column("updated_at", "google.protobuf.Timestamp");
+        phantom.declared_in_proto = false;
+        let entities = vec![EntityDescriptor {
+            message_type: "acme.v1.Profile".to_string(),
+            short_name: "Profile".to_string(),
+            table: "profiles".to_string(),
+            primary_keys: vec!["id".to_string()],
+            tenant_field: String::new(),
+            project_field: String::new(),
+            soft_delete_field: String::new(),
+            version_field: String::new(),
+            proto_package: "acme.v1".to_string(),
+            language_classes,
+            json_field_names: vec!["id".to_string(), "updated_at".to_string()],
+            relations: Vec::new(),
+            columns: vec![column("id", "string"), phantom],
+        }];
+        let out = render_go_entities_file(&entities, "acmegen");
+        assert!(out.contains("m.GetId()"), "declared field must marshal");
+        assert!(
+            !out.contains("GetUpdatedAt"),
+            "injected audit column must not invent a getter, got:\n{out}"
+        );
+        assert!(
+            !out.contains("\"time\""),
+            "no emitted timestamp code ⇒ no time import, got:\n{out}"
         );
     }
 

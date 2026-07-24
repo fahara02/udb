@@ -23,7 +23,7 @@ use selection::dedupe_canonical_table_schemas;
 use naming::{infer_sql_type, to_plural, to_snake_case};
 
 pub use facade::{
-    AnnotationParserMode, ParseError, ParseReport, ParserConfig, ParserDiagnostic,
+    AnnotationParserMode, FileEnumDecl, ParseError, ParseReport, ParserConfig, ParserDiagnostic,
     UDB_ANNOTATION_VERSION,
 };
 
@@ -48,12 +48,14 @@ pub fn parse_directory_report(
 
     let mut schemas = Vec::new();
     let mut diagnostics = Vec::new();
+    let mut file_enums = Vec::new();
     let mut errors = Vec::new();
     for path in paths {
         match parse_file_report(&path, config) {
             Ok(mut report) => {
                 schemas.append(&mut report.schemas);
                 diagnostics.append(&mut report.diagnostics);
+                file_enums.append(&mut report.file_enums);
             }
             Err(err) => errors.push(format!("{}: {err}", path.display())),
         }
@@ -64,6 +66,7 @@ pub fn parse_directory_report(
         Ok(ParseReport {
             schemas,
             diagnostics,
+            file_enums,
         })
     } else {
         Err(ParseError::Directory {

@@ -157,6 +157,14 @@ pub struct EntityColumnDescriptor {
     /// PII blind-index column — the generator scaffolds the HMAC lookup plumbing.
     pub is_blind_index: bool,
     pub is_pii: bool,
+    /// Whether the consumer's PROTO MESSAGE declares this field. UDB injects
+    /// audit columns (`created_at`/`updated_at`/`created_by`) into the TABLE
+    /// when the proto lacks them; those have no Go getter, so typed marshalling
+    /// must skip them (the broker fills their defaults server-side). `true` on
+    /// the embedded-descriptor path, whose entities declare audit fields
+    /// in-proto. `#[serde(skip)]`: the sdk-manifest JSON surface is unchanged.
+    #[serde(skip)]
+    pub declared_in_proto: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
@@ -382,6 +390,8 @@ pub fn entity_manifest() -> Vec<EntityDescriptor> {
             message.name.clone(),
             table,
             &catalog.tables,
+            None,
+            None,
         ));
     }
     out.sort_by(|a, b| {
@@ -392,14 +402,26 @@ pub fn entity_manifest() -> Vec<EntityDescriptor> {
     out
 }
 
+/// Enum registry for typed codegen: `(proto_package, enum_name)` → the enum's
+/// full value NAMES (e.g. `ORDER_STATUS_ACTIVE`), harvested from file-level and
+/// message-nested enum declarations across the parsed proto set.
+type EnumRegistry = BTreeMap<(String, String), Vec<String>>;
+
 /// Build one [`EntityDescriptor`] from a resolved [`ManifestTable`]. Shared by the
 /// embedded [`entity_manifest`] and the consumer-proto [`entity_manifest_from_proto_dir`]
 /// so both emit identically-shaped entities.
+///
+/// `declared_fields` — the field names the entity's PROTO MESSAGE actually
+/// declares (None ⇒ treat every column as declared, the embedded-descriptor
+/// case). `enum_registry` — parsed enum declarations used to auto-fill
+/// `enum_values` for enum-typed columns without an explicit annotation.
 fn entity_descriptor_from_table(
     message_type: String,
     short_name: String,
     table: &crate::generation::manifest::ManifestTable,
     all_tables: &[crate::generation::manifest::ManifestTable],
+    declared_fields: Option<&std::collections::BTreeSet<String>>,
+    enum_registry: Option<&EnumRegistry>,
 ) -> EntityDescriptor {
     EntityDescriptor {
         message_type,
@@ -433,12 +455,19 @@ fn entity_descriptor_from_table(
                 not_null: column.not_null,
                 is_array: column.is_array,
                 has_presence: column.has_presence,
-                enum_values: column.enum_values.clone(),
+                enum_values: if column.enum_values.is_empty() {
+                    resolve_enum_values(&column.proto_type, &table.proto_package, enum_registry)
+                } else {
+                    column.enum_values.clone()
+                },
                 is_json: column.is_json,
                 is_jsonb: column.is_jsonb,
                 exclude_from_insert: column.exclude_from_insert,
                 is_blind_index: column.security.is_blind_index,
                 is_pii: column.security.is_pii,
+                declared_in_proto: declared_fields
+                    .map(|fields| fields.contains(&column.field_name))
+                    .unwrap_or(true),
             })
             .collect(),
     }
@@ -458,7 +487,53 @@ pub fn entity_manifest_from_proto_dir(
 ) -> Result<Vec<EntityDescriptor>, String> {
     let config = crate::parser::ParserConfig::default();
     let mut schemas = Vec::new();
-    parse_project_proto_dir(dir, &config, &mut schemas)?;
+    let mut file_enums = Vec::new();
+    parse_project_proto_dir(dir, &config, &mut schemas, &mut file_enums)?;
+
+    // The proto-DECLARED field set per message, captured BEFORE the catalog
+    // build injects audit columns into tables. Typed marshalling must only
+    // cover fields the message actually has a getter for (V19-3).
+    let mut declared: BTreeMap<(String, String), std::collections::BTreeSet<String>> =
+        BTreeMap::new();
+    // Enum registry from file-level AND message-nested enum declarations, so an
+    // enum-typed column resolves without an explicit `enum_values` annotation
+    // (V19-1). Same-package only — a cross-package enum falls back to the
+    // symmetric unsupported-column TODO (its Go type needs its own import
+    // alias, a documented follow-up).
+    let mut enum_registry: EnumRegistry = BTreeMap::new();
+    for decl in &file_enums {
+        enum_registry
+            .entry((decl.proto_package.clone(), decl.enum_def.name.clone()))
+            .or_insert_with(|| {
+                decl.enum_def
+                    .values
+                    .iter()
+                    .map(|value| value.name.clone())
+                    .collect()
+            });
+    }
+    for schema in &schemas {
+        declared.insert(
+            (schema.proto_package.clone(), schema.message_name.clone()),
+            schema
+                .columns
+                .iter()
+                .map(|column| column.field_name.clone())
+                .collect(),
+        );
+        for nested in &schema.nested_enums {
+            enum_registry
+                .entry((schema.proto_package.clone(), nested.name.clone()))
+                .or_insert_with(|| {
+                    nested
+                        .values
+                        .iter()
+                        .map(|value| value.name.clone())
+                        .collect()
+                });
+        }
+    }
+
     let catalog = crate::generation::CatalogManifest::from_schemas(&schemas)
         .map_err(|err| format!("failed to build catalog from project protos: {err}"))?;
     let mut out = Vec::new();
@@ -468,11 +543,15 @@ pub fn entity_manifest_from_proto_dir(
         } else {
             format!("{}.{}", table.proto_package, table.message_name)
         };
+        let declared_fields =
+            declared.get(&(table.proto_package.clone(), table.message_name.clone()));
         out.push(entity_descriptor_from_table(
             message_type,
             table.message_name.clone(),
             table,
             &catalog.tables,
+            declared_fields,
+            Some(&enum_registry),
         ));
     }
     if out.is_empty() {
@@ -489,11 +568,37 @@ pub fn entity_manifest_from_proto_dir(
     Ok(out)
 }
 
-/// Recursively parse every `*.proto` under `dir` into [`ProtoSchema`]s.
+/// Resolve an enum-typed column against the parsed enum registry by the type's
+/// trailing name segment. Fills value names only for a SAME-PACKAGE enum (bare
+/// or package-qualified reference); a cross-package enum stays empty so the
+/// emitter's symmetric unsupported-column TODO applies instead of emitting a
+/// Go type lookup under the wrong import alias.
+fn resolve_enum_values(
+    proto_type: &str,
+    entity_package: &str,
+    enum_registry: Option<&EnumRegistry>,
+) -> Vec<String> {
+    let Some(registry) = enum_registry else {
+        return Vec::new();
+    };
+    let trimmed = proto_type.trim_start_matches('.');
+    let Some(name) = trimmed.rsplit('.').next() else {
+        return Vec::new();
+    };
+    // Scalars/messages never resolve: registry keys are enum declarations only.
+    registry
+        .get(&(entity_package.to_string(), name.to_string()))
+        .cloned()
+        .unwrap_or_default()
+}
+
+/// Recursively parse every `*.proto` under `dir` into [`ProtoSchema`]s, also
+/// collecting file-level enum declarations for the codegen enum registry.
 fn parse_project_proto_dir(
     dir: &std::path::Path,
     config: &crate::parser::ParserConfig,
     out: &mut Vec<crate::ast::ProtoSchema>,
+    file_enums: &mut Vec<crate::parser::FileEnumDecl>,
 ) -> Result<(), String> {
     let entries = std::fs::read_dir(dir).map_err(|err| {
         format!(
@@ -505,17 +610,18 @@ fn parse_project_proto_dir(
         let entry = entry.map_err(|err| format!("cannot read directory entry: {err}"))?;
         let path = entry.path();
         if path.is_dir() {
-            parse_project_proto_dir(&path, config, out)?;
+            parse_project_proto_dir(&path, config, out, file_enums)?;
         } else if path.extension().and_then(|ext| ext.to_str()) == Some("proto") {
             let source = std::fs::read(&path)
                 .map_err(|err| format!("cannot read {}: {err}", path.display()))?;
-            let report = crate::parser::parse_proto_source(
+            let mut report = crate::parser::parse_proto_source(
                 &source,
                 path.to_string_lossy().to_string(),
                 config,
             )
             .map_err(|err| format!("failed to parse {}: {err}", path.display()))?;
             out.extend(report.schemas);
+            file_enums.append(&mut report.file_enums);
         }
     }
     Ok(())
@@ -776,6 +882,102 @@ mod tests {
             field_name: field_name.to_string(),
             column_name: column_name.to_string(),
             ..ManifestColumn::default()
+        }
+    }
+
+    // End-to-end V19-1/V19-3/V19-4 shapes through the REAL `--project-proto`
+    // path: file-level same-package enum resolves; cross-package enum does not;
+    // broker-injected audit columns are marked undeclared; repeated stays
+    // `is_array`. Uses a scratch proto tree on disk because this is exactly how
+    // consumers invoke it.
+    #[test]
+    fn project_proto_descriptors_resolve_enums_and_mark_injected_columns() {
+        let root = std::env::temp_dir().join(format!(
+            "udb-sdkm-projproto-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&root).expect("create scratch proto dir");
+        std::fs::write(
+            root.join("common.proto"),
+            r#"syntax = "proto3";
+package acme.order.v1;
+enum OrderStatus {
+  ORDER_STATUS_UNSPECIFIED = 0;
+  ORDER_STATUS_ACTIVE = 1;
+  ORDER_STATUS_CLOSED = 2;
+}
+"#,
+        )
+        .expect("write common.proto");
+        std::fs::write(
+            root.join("region.proto"),
+            r#"syntax = "proto3";
+package acme.geo.v1;
+enum Region {
+  REGION_UNSPECIFIED = 0;
+  REGION_EAST = 1;
+}
+"#,
+        )
+        .expect("write region.proto");
+        std::fs::write(
+            root.join("order.proto"),
+            r#"syntax = "proto3";
+package acme.order.v1;
+message Order {
+  option (table) = { table_name: "orders" schema_name: "acme" migration_order: 1 audit_fields: true };
+  string id = 1;
+  OrderStatus status = 2;
+  acme.geo.v1.Region region = 3;
+  repeated string tags = 4;
+}
+"#,
+        )
+        .expect("write order.proto");
+
+        let entities = entity_manifest_from_proto_dir(&root).expect("build descriptors");
+        std::fs::remove_dir_all(&root).ok();
+        let order = entities
+            .iter()
+            .find(|e| e.short_name == "Order")
+            .expect("Order entity");
+        let col = |name: &str| {
+            order
+                .columns
+                .iter()
+                .find(|c| c.field_name == name)
+                .unwrap_or_else(|| panic!("column {name} missing"))
+        };
+
+        // V19-1: same-package file-level enum resolves without an annotation.
+        assert_eq!(
+            col("status").enum_values,
+            [
+                "ORDER_STATUS_UNSPECIFIED",
+                "ORDER_STATUS_ACTIVE",
+                "ORDER_STATUS_CLOSED"
+            ],
+            "same-package file-level enum must auto-resolve"
+        );
+        // Cross-package enum stays unresolved → symmetric TODO downstream.
+        assert!(
+            col("region").enum_values.is_empty(),
+            "cross-package enum must NOT resolve (wrong import alias otherwise)"
+        );
+        // V19-4 input: repeated survives as is_array for the emitter's skip.
+        assert!(col("tags").is_array, "repeated field must carry is_array");
+        // V19-3: proto-declared vs broker-injected audit columns.
+        assert!(col("id").declared_in_proto);
+        assert!(col("status").declared_in_proto);
+        for injected in ["created_at", "updated_at", "created_by"] {
+            assert!(
+                !col(injected).declared_in_proto,
+                "injected {injected} must be marked undeclared"
+            );
         }
     }
 

@@ -256,8 +256,8 @@ pub mod parser {
     use selection::dedupe_canonical_table_schemas;
 
     pub use facade::{
-        AnnotationParserMode, ParseError, ParseReport, ParserConfig, ParserDiagnostic,
-        UDB_ANNOTATION_VERSION,
+        AnnotationParserMode, FileEnumDecl, ParseError, ParseReport, ParserConfig,
+        ParserDiagnostic, UDB_ANNOTATION_VERSION,
     };
     pub use options::{ParserOptionMetadata, documented_option_metadata, parser_option_kind_name};
 

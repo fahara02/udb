@@ -40,6 +40,11 @@ pub(super) struct ProtoParser<'a> {
     /// above, which made non-PHP codegen impossible. The legacy
     /// `php_*` fields stay populated for back-compat.
     language_options: BTreeMap<String, String>,
+    /// FILE-level enums (declared outside any message). Collected during the
+    /// top-level scan and attached to the [`ParseReport`] with the file's
+    /// package once parsing finishes (the `package` statement may lexically
+    /// follow an enum, so the package is resolved at report time).
+    file_enums: Vec<crate::ast::ProtoNestedEnum>,
 }
 
 impl<'a> ProtoParser<'a> {
@@ -56,6 +61,7 @@ impl<'a> ProtoParser<'a> {
             php_class_prefix: String::new(),
             php_metadata_namespace: String::new(),
             language_options: BTreeMap::new(),
+            file_enums: Vec::new(),
         }
     }
 
@@ -77,6 +83,13 @@ impl<'a> ProtoParser<'a> {
         Ok(ParseReport {
             schemas,
             diagnostics: std::mem::take(&mut self.diagnostics),
+            file_enums: std::mem::take(&mut self.file_enums)
+                .into_iter()
+                .map(|enum_def| crate::parser::FileEnumDecl {
+                    proto_package: self.proto_package.clone(),
+                    enum_def,
+                })
+                .collect(),
         })
     }
 
@@ -116,6 +129,19 @@ impl<'a> ProtoParser<'a> {
                 self.proto_package = self.read_type_name();
                 if self.cur().kind == TokenKind::Semicolon {
                     self.consume();
+                }
+                continue;
+            }
+
+            if self.cur().is_ident("enum") {
+                // FILE-level enum: capture name + values so typed codegen can
+                // resolve entity columns whose proto type is an enum declared
+                // outside the entity's message (the standard consumer layout).
+                // Kept off ProtoSchema — see ParseReport::file_enums.
+                self.consume();
+                let enum_name = self.consume_ident().unwrap_or_default();
+                if let Some(parsed) = self.parse_nested_enum_body(enum_name) {
+                    self.file_enums.push(parsed);
                 }
                 continue;
             }

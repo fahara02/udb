@@ -370,6 +370,61 @@ message M {
     assert!(parse_str(src)[0].nested_enums.is_empty());
 }
 
+// FILE-level enums (the standard consumer layout: `enum` beside the message,
+// not nested in it) were silently skipped by the top-level block matcher, so
+// typed codegen had no values to resolve an enum-typed column against — the
+// generated write then emitted the raw Go enum. They land on the ParseReport,
+// NOT on ProtoSchema, so per-message checksums are unchanged.
+#[test]
+fn parser_captures_file_level_enums_on_the_report() {
+    let src = r#"
+// enum BEFORE the package statement exercises report-time package attachment.
+enum OrderStatus {
+  ORDER_STATUS_UNSPECIFIED = 0;
+  ORDER_STATUS_ACTIVE = 1;
+  ORDER_STATUS_CLOSED = 2;
+}
+package acme.order.v1;
+message Order {
+  option (table) = { table_name: "orders" schema_name: "acme" migration_order: 1 };
+  string id = 1;
+  OrderStatus status = 2;
+}
+enum Priority {
+  PRIORITY_UNSPECIFIED = 0;
+  PRIORITY_HIGH = 1;
+}
+"#;
+    let cfg = ParserConfig::default();
+    let tokens = Lexer::new(src.as_bytes(), "<test>".to_string())
+        .tokenize()
+        .expect("lex test source");
+    let report = ProtoParser::new(tokens, "<test>".to_string(), &cfg)
+        .parse_report()
+        .expect("parse test source");
+    assert_eq!(report.file_enums.len(), 2, "both file-level enums captured");
+    let status = &report.file_enums[0];
+    assert_eq!(status.proto_package, "acme.order.v1");
+    assert_eq!(status.enum_def.name, "OrderStatus");
+    let names: Vec<&str> = status
+        .enum_def
+        .values
+        .iter()
+        .map(|v| v.name.as_str())
+        .collect();
+    assert_eq!(
+        names,
+        [
+            "ORDER_STATUS_UNSPECIFIED",
+            "ORDER_STATUS_ACTIVE",
+            "ORDER_STATUS_CLOSED"
+        ]
+    );
+    assert_eq!(report.file_enums[1].enum_def.name, "Priority");
+    // The message schema itself is untouched (checksum stability).
+    assert!(report.schemas[0].nested_enums.is_empty());
+}
+
 #[test]
 fn schema_without_language_options_returns_none_namespace() {
     let src = r#"

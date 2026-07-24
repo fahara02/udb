@@ -73,6 +73,21 @@ impl fmt::Display for ParserDiagnostic {
 pub struct ParseReport {
     pub schemas: Vec<ProtoSchema>,
     pub diagnostics: Vec<ParserDiagnostic>,
+    /// FILE-level `enum` declarations (declared outside any message), with the
+    /// file's proto package. Carried on the report — NOT on [`ProtoSchema`] —
+    /// because schema serialization feeds per-message checksums, which must not
+    /// change when an unrelated file-level enum exists. Consumers: typed-codegen
+    /// enum resolution (`enum_values` auto-fill for entity columns whose proto
+    /// type is an enum declared elsewhere in the same package).
+    pub file_enums: Vec<FileEnumDecl>,
+}
+
+/// One file-level `enum` declaration: the declaring file's proto package plus
+/// the parsed enum body (name + values).
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct FileEnumDecl {
+    pub proto_package: String,
+    pub enum_def: crate::ast::ProtoNestedEnum,
 }
 
 impl ParseReport {

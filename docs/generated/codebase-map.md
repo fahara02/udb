@@ -270,7 +270,7 @@ graph LR
 
 - **src/parser/ast_parser.rs** — types: `ProtoAstParser` · fns: `new`, `parse`
 - **src/parser/db_parser.rs** — types: `ProtoParser` · fns: `new`, `parse_report`
-- **src/parser/facade.rs** — types: `AnnotationParserMode`, `ParserConfig`, `ParserDiagnostic`, `ParseReport`, `ParseError` · fns: `new`, `with_annotation_mode`, `with_expected_annotation_version`, `passed` · consts: `UDB_ANNOTATION_VERSION`
+- **src/parser/facade.rs** — types: `AnnotationParserMode`, `ParserConfig`, `ParserDiagnostic`, `ParseReport`, `FileEnumDecl`, `ParseError` · fns: `new`, `with_annotation_mode`, `with_expected_annotation_version`, `passed` · consts: `UDB_ANNOTATION_VERSION`
 - **src/parser/lexer.rs** — types: `TokenKind`, `Token`, `LexError`, `Lexer` · fns: `is_ident`, `new`, `tokenize`
 - **src/parser/mod.rs** — (no public items)
 - **src/parser/naming.rs** — fns: `infer_sql_type`, `normalize_referential_action`, `normalize_index_type`, `normalize_enum`, `normalize_store_kind`, `normalize_backend`, `parse_bool`, `parse_i32`, `to_snake_case`, `to_plural`
