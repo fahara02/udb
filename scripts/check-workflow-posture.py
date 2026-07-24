@@ -10371,9 +10371,17 @@ jobs:
         (wf / "new-helper.yml").unlink()
 
         (wf / "lint-workflows.yml").write_text(
+            # Drop the workflow-files glob from the pull_request block ONLY.
+            # Anchoring on the full rendered paths list (instead of assuming
+            # ".github/workflows/**" is the FIRST entry) keeps this case valid
+            # when new paths are prepended to LINT_WORKFLOW_TRIGGER_PATHS.
             lint_good.replace(
-                '  pull_request:\n    paths:\n      - ".github/workflows/**"',
-                '  pull_request:\n    paths:\n      - "scripts/check-workflow-posture.py"',
+                f"  pull_request:\n    paths:\n{lint_paths}",
+                "  pull_request:\n    paths:\n"
+                + lint_paths.replace(
+                    '      - ".github/workflows/**"',
+                    '      - "scripts/check-workflow-posture.py"',
+                ),
             ),
             encoding="utf-8",
         )
