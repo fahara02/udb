@@ -1318,7 +1318,7 @@ impl DataBrokerRuntime {
     /// top-level `tenant_id`/`project_id` so `stream_cdc`'s scope filter admits it,
     /// and the operation + record so subscribers see the change. A DB failure here
     /// rolls back the whole mutation (transactional-outbox atomicity).
-    async fn emit_cdc_outbox_on_mutation(
+    pub(crate) async fn emit_cdc_outbox_on_mutation(
         &self,
         tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
         manifest: &CatalogManifest,
@@ -2235,8 +2235,17 @@ impl DataBrokerRuntime {
             let backend = plan.backend.trim().to_ascii_lowercase();
             let bucket = first.bucket.clone();
             let object_key = first.object_key.clone();
-            let request_json =
+            let mut request_json =
                 object_request_json("put", &bucket, &object_key, &first.content_type);
+            // Enforce the object store's `server_side_encryption` annotation on the
+            // wire: the S3/MinIO executor honors this flag (SSE-S3/AES-256); GCS
+            // and Azure Blob encrypt at rest unconditionally by platform default,
+            // so the requirement is satisfied there without an explicit header.
+            // Previously the planner computed `requires_server_side_encryption`
+            // but nothing consumed it, so the annotation was a silent no-op.
+            if plan.requires_server_side_encryption {
+                request_json = object_request_json_require_sse(&request_json);
+            }
             let max_bytes = crate::runtime::config::max_object_bytes();
             let first_data = first.data;
             let project = context.project_id.clone();
@@ -4452,6 +4461,26 @@ mod setup_data_validation_tests {
     };
     use crate::proto::{ErrorDetail, ErrorKind, VectorPointMutation, VectorSearchRequest};
     use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+
+    /// Pin: the PUT handler stamps `server_side_encryption: true` into the object
+    /// request spec only when the plan requires it, without disturbing the other
+    /// spec fields. The S3 executor reads exactly this flag to request SSE-S3, so
+    /// dropping the stamp reintroduces the silent-plaintext bug.
+    #[test]
+    fn object_request_json_require_sse_sets_the_flag() {
+        let base = super::object_request_json("put", "bkt", "key/1", "text/plain");
+        // Pre-fix shape carries no SSE flag.
+        let before: serde_json::Value = serde_json::from_str(&base).unwrap();
+        assert!(before.get("server_side_encryption").is_none());
+
+        let stamped = super::object_request_json_require_sse(&base);
+        let after: serde_json::Value = serde_json::from_str(&stamped).unwrap();
+        assert_eq!(after["server_side_encryption"], serde_json::json!(true));
+        // Other fields survive the stamp.
+        assert_eq!(after["bucket"], serde_json::json!("bkt"));
+        assert_eq!(after["object_key"], serde_json::json!("key/1"));
+        assert_eq!(after["content_type"], serde_json::json!("text/plain"));
+    }
 
     fn decode_detail(status: &tonic::Status) -> ErrorDetail {
         let raw = status
@@ -7823,6 +7852,22 @@ pub(crate) fn object_request_json(
         value["content_type"] = serde_json::Value::String(content_type.to_string());
     }
     value.to_string()
+}
+
+/// Stamp an object PUT request spec with the server-side-encryption requirement
+/// so the backend executor applies it on write. Kept separate from
+/// `object_request_json` so the many non-PUT / non-SSE call sites are untouched;
+/// only the object PUT path (which resolves `ObjectStreamPlan`) opts in, gated
+/// on `requires_server_side_encryption`. A parse failure returns the input
+/// unchanged rather than dropping the request.
+pub(crate) fn object_request_json_require_sse(request_json: &str) -> String {
+    match serde_json::from_str::<serde_json::Value>(request_json) {
+        Ok(mut value) => {
+            value["server_side_encryption"] = serde_json::Value::Bool(true);
+            value.to_string()
+        }
+        Err(_) => request_json.to_string(),
+    }
 }
 
 /// Adapt a gRPC `Streaming<Chunk>` (first chunk already pulled, to read

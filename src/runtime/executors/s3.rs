@@ -8,7 +8,7 @@
 
 use aws_sdk_s3::Client;
 use aws_sdk_s3::primitives::ByteStream;
-use aws_sdk_s3::types::{CompletedMultipartUpload, CompletedPart};
+use aws_sdk_s3::types::{CompletedMultipartUpload, CompletedPart, ServerSideEncryption};
 use bytes::Bytes;
 use serde_json::Value as JsonValue;
 
@@ -103,6 +103,18 @@ fn s3_internal_status(operation: impl Into<String>, message: impl Into<String>) 
     internal_status("S3", operation, message)
 }
 
+/// Whether the request spec demands server-side encryption. Set from an object
+/// store's `server_side_encryption` annotation (the planner surfaces it as
+/// `ObjectStreamPlan.requires_server_side_encryption`). When true, every S3
+/// upload path requests SSE-S3 (AES-256) so the annotation is actually enforced
+/// on the wire instead of being a silent no-op; a backend that cannot honor SSE
+/// then fails the write loudly (fail-closed) rather than storing plaintext.
+fn spec_requires_sse(spec: &JsonValue) -> bool {
+    spec.get("server_side_encryption")
+        .and_then(JsonValue::as_bool)
+        .unwrap_or(false)
+}
+
 impl ObjectExecutor for S3Executor {
     /// `{"bucket":"b","object_key"|"key":"k"}`.
     async fn get_object(&self, request_json: &str) -> Result<Vec<u8>, tonic::Status> {
@@ -161,6 +173,9 @@ impl ObjectExecutor for S3Executor {
             .filter(|value| !value.trim().is_empty())
         {
             request = request.content_type(content_type);
+        }
+        if spec_requires_sse(&spec) {
+            request = request.server_side_encryption(ServerSideEncryption::Aes256);
         }
         request
             .send()
@@ -233,6 +248,9 @@ impl ObjectExecutor for S3Executor {
             .and_then(JsonValue::as_str)
             .filter(|value| !value.trim().is_empty())
             .map(str::to_string);
+        // Same SSE requirement as put_object; set on CreateMultipartUpload (the
+        // whole object inherits it) and on the single-PutObject small-object path.
+        let require_sse = spec_requires_sse(&spec);
 
         let part_size = s3_multipart_part_bytes();
         let mut stream = stream;
@@ -254,6 +272,9 @@ impl ObjectExecutor for S3Executor {
                     .key(&object_key);
                 if let Some(ct) = &content_type {
                     create = create.content_type(ct);
+                }
+                if require_sse {
+                    create = create.server_side_encryption(ServerSideEncryption::Aes256);
                 }
                 let created = create
                     .send()
@@ -320,6 +341,9 @@ impl ObjectExecutor for S3Executor {
                     .body(ByteStream::from(buf));
                 if let Some(ct) = &content_type {
                     request = request.content_type(ct);
+                }
+                if require_sse {
+                    request = request.server_side_encryption(ServerSideEncryption::Aes256);
                 }
                 request
                     .send()
@@ -436,6 +460,24 @@ mod tests {
         assert_eq!(detail.backend, "S3");
         assert_eq!(detail.operation, operation);
         assert!(!detail.retryable);
+    }
+
+    /// Pin: the upload paths request SSE iff the spec carries
+    /// `server_side_encryption: true`. Reverting the planner→request wiring (so
+    /// the flag is absent) leaves this false and uploads go out unencrypted —
+    /// the capability-lie this fix closes.
+    #[test]
+    fn spec_requires_sse_reads_the_flag() {
+        assert!(spec_requires_sse(
+            &serde_json::json!({"bucket": "b", "key": "k", "server_side_encryption": true})
+        ));
+        assert!(!spec_requires_sse(
+            &serde_json::json!({"bucket": "b", "key": "k", "server_side_encryption": false})
+        ));
+        // Absent flag (the pre-fix request shape) must not request SSE.
+        assert!(!spec_requires_sse(
+            &serde_json::json!({"bucket": "b", "key": "k"})
+        ));
     }
 
     #[test]

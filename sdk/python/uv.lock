@@ -974,7 +974,7 @@ wheels = [
 
 [[package]]
 name = "udb-client"
-version = "0.4.26"
+version = "0.4.27"
 source = { editable = "." }
 dependencies = [
     { name = "grpcio" },

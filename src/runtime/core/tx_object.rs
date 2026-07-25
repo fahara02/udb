@@ -18,6 +18,43 @@ struct PendingSagaStep {
     compensation_json: String,
 }
 
+/// The distinct select-cache invalidation patterns for the tables a
+/// transaction mutated. Mirrors the unary upsert/update/delete paths, which
+/// each drop `cache_invalidation_pattern("select", message_type)` after their
+/// own commit; the transaction path must drop the same set or a cached Select
+/// keeps serving pre-transaction rows. `tx_mutations` is already filtered to
+/// the applied (non-`commit`) mutations. Empty message types are skipped and
+/// duplicates collapsed so one pattern is issued per touched table.
+fn select_invalidation_patterns(tx_mutations: &[&Mutation]) -> Vec<String> {
+    let mut types: Vec<String> = tx_mutations
+        .iter()
+        .map(|mutation| mutation.message_type.clone())
+        .filter(|message_type| !message_type.trim().is_empty())
+        .collect();
+    types.sort();
+    types.dedup();
+    types
+        .iter()
+        .map(|message_type| {
+            crate::runtime::executor_utils::cache_invalidation_pattern("select", message_type)
+        })
+        .collect()
+}
+
+/// True when a `begin_tx` run actually committed (plain COMMIT or 2PC). Both
+/// success arms push `TxStateCommitted`; a rolled-back / in-doubt / failed run
+/// never does, so cache invalidation gates on this to avoid dropping cache for
+/// a transaction whose writes were not durable.
+fn transaction_committed(statuses: &[Result<TxStatus, tonic::Status>]) -> bool {
+    statuses.iter().any(|entry| {
+        matches!(
+            entry,
+            Ok(tx_status)
+                if tx_status.state == crate::proto::tx_status::State::TxStateCommitted as i32
+        )
+    })
+}
+
 fn tx_object_invalid_field(
     field: impl Into<String>,
     description: impl Into<String>,
@@ -323,8 +360,9 @@ impl DataBrokerRuntime {
                                             mysql_xa_statements
                                                 .push((plan.sql.clone(), bind_values.clone()));
                                         }
-                                        if affected > 0
-                                            && let Err(err) = crate::runtime::projection::ProjectionEngine::enqueue_write_tasks_tx(
+                                        if affected == 0 {
+                                            Ok(affected)
+                                        } else if let Err(err) = crate::runtime::projection::ProjectionEngine::enqueue_write_tasks_tx(
                                                 &mut tx,
                                                 &projection_config,
                                                 &context.tenant_id,
@@ -339,6 +377,26 @@ impl DataBrokerRuntime {
                                                 "enqueue_projection_tasks",
                                                 format!("projection task enqueue failed: {err}"),
                                             ))
+                                        // mutations→CDC: emit the transactional-outbox
+                                        // change event IN THE SAME TX, exactly as the
+                                        // unary upsert does (setup_data.rs). Without
+                                        // this, CDC-enabled entities written through
+                                        // BeginTx emit no event — subscribers, journal
+                                        // readers, and CDC-driven projections silently
+                                        // miss every transactional write. A failure
+                                        // rolls back the mutation (outbox atomicity).
+                                        } else if let Err(err) = self
+                                            .emit_cdc_outbox_on_mutation(
+                                                &mut tx,
+                                                manifest,
+                                                &mutation.message_type,
+                                                "upsert",
+                                                &record,
+                                                &context,
+                                            )
+                                            .await
+                                        {
+                                            Err(err)
                                         } else {
                                             Ok(affected)
                                         }
@@ -382,8 +440,10 @@ impl DataBrokerRuntime {
                         if mysql_xa_capture {
                             mysql_xa_statements.push((plan.sql.clone(), bind_values.clone()));
                         }
-                        if affected > 0
-                            && let Err(err) = crate::runtime::projection::ProjectionEngine::enqueue_write_tasks_tx(
+                        if affected == 0 {
+                            Ok(affected)
+                        } else if let Err(err) =
+                            crate::runtime::projection::ProjectionEngine::enqueue_write_tasks_tx(
                                 &mut tx,
                                 &projection_config,
                                 &context.tenant_id,
@@ -398,6 +458,22 @@ impl DataBrokerRuntime {
                                 "enqueue_projection_tasks",
                                 format!("projection task enqueue failed: {err}"),
                             ))
+                        // mutations→CDC: emit the delete change event in the same
+                        // tx (filter carries the deleted row's key), matching the
+                        // unary delete path so BeginTx deletes are not invisible
+                        // to CDC subscribers and journal readers.
+                        } else if let Err(err) = self
+                            .emit_cdc_outbox_on_mutation(
+                                &mut tx,
+                                manifest,
+                                &mutation.message_type,
+                                "delete",
+                                &filter,
+                                &context,
+                            )
+                            .await
+                        {
+                            Err(err)
                         } else {
                             Ok(affected)
                         }
@@ -880,6 +956,49 @@ impl DataBrokerRuntime {
                 }),
                 ..TxStatus::default()
             }));
+        }
+        // Read-your-writes through cache: the unary upsert/update/delete paths
+        // each drop their message_type's cached selects right after commit
+        // (setup_data.rs). A transaction mutates the same rows through this
+        // separate path, so it must invalidate the same select-cache entries on
+        // commit — otherwise a cached full-key Select keeps serving the
+        // pre-transaction row until the entry's TTL lapses (the exact staleness
+        // an admin edit-then-read hit through BeginTx). Gate on an actual
+        // commit (both plain COMMIT and 2PC push TxStateCommitted; a rolled-back
+        // / in-doubt / failed run never does). Best-effort like the unary paths'
+        // `let _ =`: a Redis hiccup must not fail an already-committed write —
+        // the stamped entries still expire on TTL and the checksum guards
+        // migrations.
+        if transaction_committed(&statuses) {
+            for pattern in select_invalidation_patterns(&tx_mutations) {
+                let _ = self.cache_delete_pattern(&pattern).await;
+            }
+            // Audit each committed SQL mutation to the configured sink, mirroring
+            // the unary upsert/delete paths (setup_data.rs) — a write through
+            // BeginTx must leave the same audit trail, or transactional writes
+            // are a compliance blind spot. Resource URI is the table-level
+            // sql://schema/table (a transaction spans multiple records, so a
+            // record-level URI like the unary path's is not meaningful here).
+            for mutation in &tx_mutations {
+                let operation = mutation.operation.to_ascii_lowercase();
+                if !matches!(operation.as_str(), "upsert" | "delete") {
+                    continue;
+                }
+                let audit_context =
+                    merge_context(mutation.context.as_ref(), metadata_context.clone());
+                let resource_uri = resolve_table_for_message(manifest, &mutation.message_type)
+                    .map(|table| format!("sql://{}/{}", table.schema, table.table))
+                    .unwrap_or_else(|_| mutation.message_type.clone());
+                crate::runtime::core::audit::emit_audit(
+                    &self.config.audit_sink,
+                    &crate::planning::broker::build_audit_event(
+                        &audit_context,
+                        &operation,
+                        &resource_uri,
+                        &manifest.checksum_sha256,
+                    ),
+                );
+            }
         }
         statuses
     }
@@ -1522,7 +1641,8 @@ impl DataBrokerRuntime {
                 Some(context.target_instance.as_str())
             };
             let s3 = self.s3_for_instance_for_project(target_instance, &context.project_id)?;
-            s3.put_object()
+            let mut put = s3
+                .put_object()
                 .bucket(&mutation.bucket)
                 .key(&mutation.object_key)
                 .set_content_type(if mutation.content_type.is_empty() {
@@ -1530,16 +1650,15 @@ impl DataBrokerRuntime {
                 } else {
                     Some(mutation.content_type.clone())
                 })
-                .body(ByteStream::from(mutation.object_data.clone()))
-                .send()
-                .await
-                .map_err(|err| {
-                    crate::runtime::executor_utils::backend_transport_status(
-                        "S3",
-                        "put_object",
-                        err,
-                    )
-                })?;
+                .body(ByteStream::from(mutation.object_data.clone()));
+            // Enforce the store's server_side_encryption annotation on the wire,
+            // matching the non-transactional put_object path (SSE-S3/AES-256).
+            if plan.requires_server_side_encryption {
+                put = put.server_side_encryption(aws_sdk_s3::types::ServerSideEncryption::Aes256);
+            }
+            put.send().await.map_err(|err| {
+                crate::runtime::executor_utils::backend_transport_status("S3", "put_object", err)
+            })?;
             Ok((
                 1,
                 target_instance.map(str::to_string),
@@ -2154,6 +2273,74 @@ mod materialized_view_refresh_tests {
             .expect_err("mismatched materialized view query must fail before pg pool");
 
         assert_single_field_violation(&err, "query", "must match the proto AST declaration");
+    }
+
+    /// Pin: a transaction issues exactly one select-cache invalidation pattern
+    /// per distinct table it touched — the same drop the unary upsert/update/
+    /// delete paths do — with empty message types skipped. Reverting the
+    /// begin_tx invalidation (or narrowing it to the wrong scope) regresses the
+    /// read-your-writes-through-cache guarantee this pins.
+    #[test]
+    fn select_invalidation_patterns_dedups_and_skips_empty_message_types() {
+        let invoice = Mutation {
+            message_type: "acme.billing.v1.Invoice".to_string(),
+            operation: "upsert".to_string(),
+            ..Mutation::default()
+        };
+        // Same table touched twice in one tx -> a single pattern.
+        let invoice_again = invoice.clone();
+        let product = Mutation {
+            message_type: "acme.billing.v1.Product".to_string(),
+            operation: "delete".to_string(),
+            ..Mutation::default()
+        };
+        // A whitespace/empty message type (non-entity op) contributes nothing.
+        let empty = Mutation {
+            message_type: "   ".to_string(),
+            operation: "upsert".to_string(),
+            ..Mutation::default()
+        };
+        let refs: Vec<&Mutation> = vec![&invoice, &product, &invoice_again, &empty];
+        assert_eq!(
+            select_invalidation_patterns(&refs),
+            vec![
+                "udb:select:*:*:*:acme.billing.v1.Invoice:*".to_string(),
+                "udb:select:*:*:*:acme.billing.v1.Product:*".to_string(),
+            ],
+            "one deduped select pattern per touched table, empties skipped"
+        );
+    }
+
+    /// Pin: cache invalidation fires ONLY for a transaction that actually
+    /// committed (plain COMMIT or 2PC both push TxStateCommitted). A rolled-back
+    /// / failed run must not drop cache for writes that never became durable.
+    #[test]
+    fn transaction_committed_is_true_only_when_a_commit_status_is_present() {
+        let committed = vec![Ok(TxStatus {
+            state: crate::proto::tx_status::State::TxStateCommitted as i32,
+            ..TxStatus::default()
+        })];
+        assert!(transaction_committed(&committed));
+
+        let rolled_back = vec![Ok(TxStatus {
+            state: crate::proto::tx_status::State::TxStateRolledBack as i32,
+            ..TxStatus::default()
+        })];
+        assert!(!transaction_committed(&rolled_back));
+
+        let errored: Vec<Result<TxStatus, tonic::Status>> =
+            vec![Err(tx_object_internal_status("commit", "commit failed"))];
+        assert!(!transaction_committed(&errored));
+
+        // A committed status anywhere in the batch counts.
+        let mixed = vec![
+            Err(tx_object_internal_status("commit", "partial")),
+            Ok(TxStatus {
+                state: crate::proto::tx_status::State::TxStateCommitted as i32,
+                ..TxStatus::default()
+            }),
+        ];
+        assert!(transaction_committed(&mixed));
     }
 }
 

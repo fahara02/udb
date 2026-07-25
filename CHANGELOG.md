@@ -5,6 +5,40 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.4.27] - 2026-07-26
+
+The transaction-parity release: writes through `BeginTx` now perform the same
+post-commit side-effects as the unary DataBroker verbs, and the object-store
+`server_side_encryption` annotation is finally enforced on the wire.
+
+### Breaking / wire changes
+- None.
+
+### Fixed
+- `BeginTx` transactional writes did not invalidate the SELECT read-cache, so a
+  cached full-primary-key `Select` kept serving the pre-transaction row after a
+  committed transactional upsert/delete — a read-your-writes violation that
+  persisted until the cache entry's TTL lapsed. The transaction commit path now
+  drops the same select-cache entries the unary upsert/update/delete paths do,
+  one per touched table, gated on an actual commit (plain COMMIT and 2PC alike).
+- `BeginTx` transactional writes emitted no CDC change event: a CDC-enabled
+  entity written inside a transaction never reached the outbox → tailer →
+  subscribers/journal, unlike the identical write over the unary RPC. The
+  transaction path now emits the transactional-outbox event in the same tx for
+  each committed upsert/delete.
+- `BeginTx` transactional writes left no audit trail: they were never recorded
+  to the configured audit sink — a compliance blind spot for exactly the batched
+  writes that belong in a transaction. Each committed transactional
+  upsert/delete is now audited like the unary paths.
+- The object-store `server_side_encryption` annotation was computed by the
+  planner (`ObjectStreamPlan.requires_server_side_encryption`) but never applied:
+  S3/MinIO uploads went out with no server-side encryption requested. The S3
+  executor and both object PUT paths (streaming and transactional) now request
+  SSE-S3 (AES-256) when the annotation is set, so at-rest encryption is enforced
+  on the wire instead of being a silent no-op; a backend that cannot honor SSE
+  now fails the write loudly rather than storing plaintext. (GCS and Azure Blob
+  encrypt at rest by platform default, satisfying the requirement there.)
+
 ## [0.4.26] - 2026-07-25
 
 The migration-gate release: the documented four-eyes plan-approval flow now
