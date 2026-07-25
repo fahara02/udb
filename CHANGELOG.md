@@ -5,6 +5,40 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.4.26] - 2026-07-25
+
+The migration-gate release: the documented four-eyes plan-approval flow now
+actually governs schema-diff changes, and `udb plan` produces a diff that
+hash-matches what `serve` applies.
+
+### Breaking / wire changes
+- None.
+
+### Fixed
+- Startup schema-diff migrations aborted on ANY non-`SafeAuto` change *before*
+  the `migration.require_approval_plan` gate was consulted, so the documented
+  export-plan → approve → apply flow was unreachable for `RequiresReview`
+  schema changes (drop-unique / drop-index / drop-column / drop-table): the
+  gate only ever governed review-required SQL artifacts. The startup path now
+  runs a single gate mirroring the SQL-artifact branch — `Blocked` changes
+  always abort, while `RequiresReview` changes apply when (and only when) a
+  configured approved plan matches the current diff. Removing a column-level
+  `unique: true` (a drop-unique) now also honors an `allow_drop` annotation,
+  matching drop-column / drop-index.
+- `udb plan`, `udb drift`, and `udb manifest-export` built their "new" manifest
+  from the application proto root only, while `serve` merges the embedded
+  internal `udb_*` schemas before diffing. A CLI-exported plan therefore listed
+  dozens of phantom drop-table operations against the internal schemas and
+  could never hash-match the serve-side diff the approval gate verifies
+  against. The three CLI commands now merge the embedded native schemas exactly
+  as `serve` does.
+
+### CI / release integrity
+- Two posture guards still pinned pre-fix strings left by the 0.4.25 release (a
+  stale benchmark-listing placeholder token, and a Pages benchmark-fallback URL
+  that was intentionally removed to stop republishing a stale board), which had
+  held `main` CI red. Both guards now assert the shipped state.
+
 ## [0.4.25] - 2026-07-25
 
 The embedding-retrieval fix release: a freshly registered embedding model is
