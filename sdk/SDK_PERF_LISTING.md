@@ -8,26 +8,30 @@ Inputs:
 
 Current generated RPC surface: 376 RPCs across 28 services.
 
-Published benchmark artifact: not committed yet.
-Release tag: -.
-Generated at: -.
+Published benchmark artifact: present.
+Release tag: v0.4.25.
+Generated at: 2026-07-25T01:24:20+00:00.
 
 ## Published Result Summary
 
 | Metric | Value |
 |---|---:|
-| SDKs OK | 0 |
+| SDKs OK | 4 |
 | SDKs failed | 0 |
-| SDKs skipped | 0 |
-| Measured RPC rows | 0 |
+| SDKs skipped | 2 |
+| Measured RPC rows | 1504 |
 | Failed RPC rows | 0 |
 
 ## SDK Result Status
 
 | SDK | Status | Measured RPCs | Failed RPCs | Note |
 |---|---|---:|---:|---|
-| _none committed_ | - | - | - | - |
-
+| Go | ok | - | - |  |
+| Python | ok | - | - |  |
+| TypeScript | ok | - | - |  |
+| PHP | ok | - | - |  |
+| C# | skipped | - | - | No live per-RPC benchmark harness exists yet; SDK build/unit conformance still runs in CI. |
+| Java | skipped | - | - | No live per-RPC benchmark harness exists yet; SDK compile/unit conformance still runs in CI. |
 
 ## Benchmark Harness Ownership
 
