@@ -1463,7 +1463,7 @@ PAGES_PLAYGROUND_REQUIREMENTS = (
     ("docs/site/bench-results.json", "site benchmark JSON destination"),
     ("got_fresh=0", "benchmark fallback state initialization"),
     ("got_fresh=1", "benchmark fresh artifact state"),
-    ('https://${GITHUB_REPOSITORY_OWNER}.github.io/udb/bench-results.json', "published benchmark fallback URL"),
+    ("keeping committed docs/site/bench-results.json", "no-stale-republish benchmark fallback"),
     ("Build UDB's parser to WebAssembly", "fresh wasm build step"),
     ("rustup target add wasm32-unknown-unknown", "wasm target install"),
     ("cargo build -p udb-wasm --release --target wasm32-unknown-unknown", "real udb-wasm build"),
@@ -7159,7 +7159,7 @@ jobs:
           gh run download "${TRIGGER_RUN_ID}" --repo "${GITHUB_REPOSITORY}" --name sdk-benchmark-results --dir bench-artifact
           cp -v bench-artifact/docs/site/bench-results.json docs/site/bench-results.json
           got_fresh=1
-          curl -fsSL "https://${GITHUB_REPOSITORY_OWNER}.github.io/udb/bench-results.json" -o docs/site/bench-results.json || true
+          if [ "$got_fresh" != 1 ]; then echo "keeping committed docs/site/bench-results.json"; fi
       - name: Build UDB's parser to WebAssembly
         run: |
           rustup target add wasm32-unknown-unknown
@@ -10156,7 +10156,7 @@ jobs:
           gh run download "${TRIGGER_RUN_ID}" --repo "${GITHUB_REPOSITORY}" --name sdk-benchmark-results --dir bench-artifact
           cp -v bench-artifact/docs/site/bench-results.json docs/site/bench-results.json
           got_fresh=1
-          curl -fsSL "https://${GITHUB_REPOSITORY_OWNER}.github.io/udb/bench-results.json" -o docs/site/bench-results.json || true
+          if [ "$got_fresh" != 1 ]; then echo "keeping committed docs/site/bench-results.json"; fi
 """
         (wf / "pages.yml").write_text(
             pages_good.replace(benchmark_block, "").replace(
