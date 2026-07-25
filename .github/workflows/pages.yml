@@ -77,18 +77,31 @@ jobs:
           mkdir -p docs/site
           got_fresh=0
           if [ -n "${TRIGGER_RUN_ID:-}" ]; then
-            if gh run download "${TRIGGER_RUN_ID}" \
-                 --repo "${GITHUB_REPOSITORY}" \
-                 --name sdk-benchmark-results \
-                 --dir bench-artifact 2>/dev/null \
-               && [ -s bench-artifact/docs/site/bench-results.json ]; then
-              cp -v bench-artifact/docs/site/bench-results.json docs/site/bench-results.json
-              got_fresh=1
-            fi
+            # The uploaded artifact can lag a few seconds behind the triggering
+            # run's `completed` event, so retry before giving up. A premature
+            # miss used to fall through to re-publishing the already-live board,
+            # which permanently re-pinned it to whatever was last served.
+            for attempt in 1 2 3 4 5 6; do
+              rm -rf bench-artifact
+              if gh run download "${TRIGGER_RUN_ID}" \
+                   --repo "${GITHUB_REPOSITORY}" \
+                   --name sdk-benchmark-results \
+                   --dir bench-artifact 2>/dev/null \
+                 && [ -s bench-artifact/docs/site/bench-results.json ]; then
+                cp -v bench-artifact/docs/site/bench-results.json docs/site/bench-results.json
+                got_fresh=1
+                break
+              fi
+              echo "benchmark artifact not ready yet (attempt ${attempt}/6); retrying in 15s…"
+              sleep 15
+            done
           fi
           if [ "$got_fresh" != 1 ]; then
-            curl -fsSL "https://${GITHUB_REPOSITORY_OWNER}.github.io/udb/bench-results.json" \
-              -o docs/site/bench-results.json || true
+            # No fresh artifact (a docs-only / wasm push, or a benchmark run that
+            # produced none). Keep the COMMITTED docs/site/bench-results.json.
+            # Do NOT re-fetch the currently-published board: if it ever went
+            # stale, curling it back would republish the stale copy forever.
+            echo "no fresh benchmark artifact; keeping committed docs/site/bench-results.json"
           fi
       - name: Build UDB's parser to WebAssembly (real udb-portable, not a mock)
         run: |
