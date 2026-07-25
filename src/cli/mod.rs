@@ -838,9 +838,21 @@ pub fn run() {
             // mirroring the Drift handler. Hardcoding None always emitted a
             // full-create diff, contradicting the documented --prior behaviour.
             let prior = load_prior_manifest_from_args(&args);
-            let plan =
-                build_migration_plan(prior.as_ref(), &schemas, &MigrationPlanConfig::default())
-                    .unwrap_or_else(|err| fatal_json("failed to build migration plan", err));
+            // Merge the embedded native `udb_*` schemas exactly as `serve` does
+            // before it diffs/stores its manifest — otherwise the plan's "new"
+            // manifest omits them and emits spurious DropTable/DropStore ops that
+            // can never hash-match the serve-side diff (and thus the approval gate).
+            let (_, effective_schemas) = udb::runtime::native_catalog::merge_native(
+                &CatalogManifest::from_schemas(&schemas)
+                    .unwrap_or_else(|err| fatal_json("failed to build catalog manifest", err)),
+                &schemas,
+            );
+            let plan = build_migration_plan(
+                prior.as_ref(),
+                &effective_schemas,
+                &MigrationPlanConfig::default(),
+            )
+            .unwrap_or_else(|err| fatal_json("failed to build migration plan", err));
             output_json(&plan, "migration plan");
         }
         Command::Lint => {
@@ -884,6 +896,10 @@ pub fn run() {
         Command::Drift => {
             let manifest = CatalogManifest::from_schemas(&schemas)
                 .unwrap_or_else(|err| fatal_json("failed to build catalog manifest", err));
+            // Merge embedded native schemas so the drift diff matches serve's
+            // (same reason as `plan`): the CLI's own manifest must include the
+            // `udb_*` tables the ledger manifest carries.
+            let (manifest, _) = udb::runtime::native_catalog::merge_native(&manifest, &schemas);
             // Load prior manifest from --prior <path> or UDB_PRIOR_MANIFEST_PATH.
             let prior = load_prior_manifest_from_args(&args);
             let report = build_drift_report(prior.as_ref(), &manifest);
@@ -1217,6 +1233,11 @@ pub fn run() {
         Command::ManifestExport => {
             let manifest = CatalogManifest::from_schemas(&schemas)
                 .unwrap_or_else(|err| fatal_json("failed to build catalog manifest", err));
+            // Export the SAME effective manifest serve stores in the ledger
+            // (app schemas + embedded native `udb_*` schemas). A ledger-shaped
+            // export is what feeds `udb plan --prior` and the approval workflow;
+            // an app-only export diverges and produces phantom DropTable ops.
+            let (manifest, _) = udb::runtime::native_catalog::merge_native(&manifest, &schemas);
             let path = env::var("UDB_MANIFEST_EXPORT_PATH")
                 .unwrap_or_else(|_| "udb_catalog_manifest.json".to_string());
             let json = serde_json::to_string_pretty(&manifest)

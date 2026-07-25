@@ -345,7 +345,10 @@ fn classify_allow_drop_hints(
                     && o.table == table.table
                     && matches!(
                         o.kind,
-                        ChangeKind::DropIndex | ChangeKind::DropForeignKey | ChangeKind::DropColumn
+                        ChangeKind::DropIndex
+                            | ChangeKind::DropForeignKey
+                            | ChangeKind::DropColumn
+                            | ChangeKind::DropUnique
                     )
             })
             .collect();
@@ -372,6 +375,9 @@ fn classify_allow_drop_hints(
                     .get(&o.object_name)
                     .map(|cols| cols.iter().any(|c| c.as_str() == column))
                     .unwrap_or(false),
+                // A DropUnique is column-scoped (its object_name IS the column),
+                // so an allow_drop on that retained column is what freed it.
+                ChangeKind::DropUnique => o.object_name == column,
                 _ => false,
             }
         };
@@ -948,15 +954,30 @@ fn diff_column(
             "",
         ));
     } else if old.unique && !new.unique {
+        // Mirror DropColumn: an explicit `allow_drop` on the column is the
+        // operator's reviewed opt-in, so promote the drop to SafeAuto; otherwise
+        // it needs review (approved plan or manual apply). Without this, a
+        // column-level `unique: true → false` had NO annotation route and could
+        // only ever go through the review gate.
+        let safety = if old.allow_drop || new.allow_drop {
+            ChangeSafety::SafeAuto
+        } else {
+            ChangeSafety::RequiresReview
+        };
+        let blocked = if safety == ChangeSafety::SafeAuto {
+            ""
+        } else {
+            "drop_unique requires explicit review (or add allow_drop to the column)"
+        };
         ops.push(op(
             ChangeKind::DropUnique,
-            ChangeSafety::RequiresReview,
+            safety,
             &table.schema,
             &table.table,
             &new.column_name,
             &new.column_name,
             "column is no longer unique",
-            "drop_unique requires explicit review",
+            blocked,
         ));
     }
 }
@@ -2465,6 +2486,64 @@ mod tests {
         assert!(
             !changes.iter().any(|c| c.kind == ChangeKind::HintWarning),
             "no allow_drop annotation means no hint warning"
+        );
+    }
+
+    #[test]
+    fn drop_unique_without_allow_drop_requires_review() {
+        // A column-level `unique: true → false` with no annotation must stay
+        // RequiresReview (the operator opts in via allow_drop or an approved plan).
+        let mut old_col = column("email", "TEXT");
+        old_col.unique = true;
+        let new_col = column("email", "TEXT"); // unique = false
+        let old_manifest = manifest(table(vec![old_col]), "m-old", "t-old");
+        let new_manifest = manifest(table(vec![new_col]), "m-new", "t-new");
+        let changes = diff_manifests(Some(&old_manifest), &new_manifest);
+
+        let drop = changes
+            .iter()
+            .find(|c| c.kind == ChangeKind::DropUnique)
+            .expect("drop-unique must be present");
+        assert_eq!(drop.safety, ChangeSafety::RequiresReview);
+        assert!(
+            !changes.iter().any(|c| c.kind == ChangeKind::HintWarning),
+            "no allow_drop means no consumed/stale hint"
+        );
+    }
+
+    #[test]
+    fn drop_unique_with_allow_drop_is_safe_and_consumes_the_hint() {
+        // The report's exact case: replacing a column-level unique with a
+        // composite one drops the column unique. An explicit allow_drop on the
+        // column is the reviewed opt-in, so the DropUnique is SafeAuto AND the
+        // allow_drop is recognized as consumed (no stale-annotation warning).
+        let mut old_col = column("name", "TEXT");
+        old_col.unique = true;
+        old_col.allow_drop = true;
+        let mut new_col = column("name", "TEXT"); // unique = false
+        new_col.allow_drop = true;
+        let old_manifest = manifest(table(vec![old_col]), "m-old", "t-old");
+        let new_manifest = manifest(table(vec![new_col]), "m-new", "t-new");
+        let changes = diff_manifests(Some(&old_manifest), &new_manifest);
+
+        let drop = changes
+            .iter()
+            .find(|c| c.kind == ChangeKind::DropUnique)
+            .expect("drop-unique must be present");
+        assert_eq!(
+            drop.safety,
+            ChangeSafety::SafeAuto,
+            "allow_drop must promote a column DropUnique to SafeAuto"
+        );
+        let hint = changes
+            .iter()
+            .find(|c| c.kind == ChangeKind::HintWarning)
+            .expect("consumed allow_drop must emit exactly one hint");
+        assert_eq!(hint.safety, ChangeSafety::SafeAuto);
+        assert!(
+            hint.reason.contains("consumed this run by"),
+            "hint must record the DropUnique as consuming the allow_drop, got: {}",
+            hint.reason
         );
     }
 }

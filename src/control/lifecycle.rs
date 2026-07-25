@@ -1377,109 +1377,79 @@ async fn run_startup_lifecycle_core(
             let changes = diff_manifests(Some(prior), manifest);
             record_change_metric_operations(&mut report, &changes);
 
-            // Fail-closed: a RequiresReview/Blocked change must never be silently
-            // dropped while the manifest checksum advances — that would mark the
-            // migration "done" and never retry it. Surface them and abort so an
-            // operator handles the change explicitly (apply manually / approve).
+            // Fail-closed schema-diff gate (single source of truth).
+            //
+            // A `Blocked` change can never be applied — abort. A `RequiresReview`
+            // change is applied ONLY when a configured approved plan matches the
+            // current diff (the documented four-eyes flow), exactly like the
+            // bootstrap SQL-artifact branch above. Without a matching plan it
+            // aborts too, so the manifest checksum never advances past an
+            // unreviewed change. `approved_via_plan` lets the delta apply below
+            // skip the artifact-marker re-gate for changes the operator approved.
+            //
+            // Previously the review abort was UNCONDITIONAL and sat ABOVE the
+            // approval gate, so `require_approval_plan` could never authorize a
+            // DropUnique/DropIndex/DropTable and was dead for schema diffs.
+            let mut approved_via_plan = false;
             if !dry_run {
-                let needs_review: Vec<String> = changes
+                let blocked: Vec<String> = changes
                     .iter()
-                    .filter(|c| c.safety != ChangeSafety::SafeAuto)
+                    .filter(|c| c.safety == ChangeSafety::Blocked)
                     .map(|c| {
                         format!(
-                            "{:?} {}.{}({}) [{:?}: {}]",
-                            c.kind, c.schema, c.table, c.column, c.safety, c.blocked_reason
+                            "{:?} {}.{}({}) [Blocked: {}]",
+                            c.kind, c.schema, c.table, c.column, c.blocked_reason
                         )
                     })
                     .collect();
-                if !needs_review.is_empty() {
+                if !blocked.is_empty() {
                     return Err(fail(
                         runtime,
                         &mut report,
                         "blocked_schema_change",
                         format!(
-                            "{} schema change(s) require manual review and cannot be auto-applied: {}; \
+                            "{} schema change(s) are blocked and cannot be applied even with an approved plan: {}; \
                              prior manifest: {ledger_identity} checksum={}",
-                            needs_review.len(),
-                            needs_review.join("; "),
+                            blocked.len(),
+                            blocked.join("; "),
                             prior.checksum_sha256,
                         ),
                     ));
                 }
-            }
-
-            // Approval gate: when an approved-plan file is configured the current
-            // diff must exactly match it before any DDL is applied (four-eyes).
-            let approval_plan_path = runtime
-                .config()
-                .migration
-                .require_approval_plan
-                .trim()
-                .to_string();
-            if !approval_plan_path.is_empty() && !dry_run {
-                let raw = fs::read_to_string(&approval_plan_path).map_err(|err| {
-                    fail(
+                let review_count = changes
+                    .iter()
+                    .filter(|c| c.safety == ChangeSafety::RequiresReview)
+                    .count();
+                let approval_plan_configured = !runtime
+                    .config()
+                    .migration
+                    .require_approval_plan
+                    .trim()
+                    .is_empty();
+                // Consult the approval gate when there is review-required work OR
+                // when a plan is configured for an otherwise auto-safe diff. The
+                // shared helper reads/verifies the plan against the FULL current
+                // diff and fails closed (no plan + review work, or a mismatch);
+                // on a match the review-required changes are authorized.
+                if review_count > 0 || approval_plan_configured {
+                    require_approved_plan_for_changes(
                         runtime,
                         &mut report,
-                        "load_approved_plan",
-                        format!("cannot read approved plan {approval_plan_path}: {err}"),
-                    )
-                })?;
-                let approval_config = ApprovalConfig::from_env();
-                let require_signed_plan = approval_policy_requires_signed_plan(
-                    &approval_config,
-                    std::env::var_os("UDB_APPROVAL_SIGNING_KEY").is_some(),
-                );
-                let approval_plan =
-                    parse_approval_plan_file(&raw, require_signed_plan).map_err(|err| {
-                        fail(
-                            runtime,
-                            &mut report,
-                            "load_approved_plan",
-                            format!("approved plan {approval_plan_path} rejected: {err}"),
-                        )
-                    })?;
-                let verdict = match approval_plan {
-                    ApprovalPlanFile::Sealed(sealed) => sealed
-                        .ready_to_apply(&approval_config, manifest, &changes, current_unix_ms())
-                        .map_err(|err| {
-                            fail(
-                                runtime,
-                                &mut report,
-                                "approval_plan_rejected",
+                        manifest,
+                        &changes,
+                        "blocked_schema_change",
+                        |path| {
+                            if review_count > 0 {
                                 format!(
-                                    "sealed approval plan {approval_plan_path} rejected: {err:?}"
-                                ),
-                            )
-                        })?,
-                    ApprovalPlanFile::Legacy(approved) => {
-                        if require_signed_plan {
-                            return Err(fail(
-                                runtime,
-                                &mut report,
-                                "approval_plan_rejected",
-                                format!(
-                                    "approval policy requires signed ApprovedPlan {approval_plan_path}; unsigned ExportedPlan fallback is disabled"
-                                ),
-                            ));
-                        }
-                        plan_matches_current_diff(&approved, manifest, &changes)
-                    }
-                };
-                if !verdict.is_match() {
-                    return Err(fail(
-                        runtime,
-                        &mut report,
-                        "approval_plan_mismatch",
-                        format!(
-                            "current diff does not match approved plan {approval_plan_path}: {verdict:?}"
-                        ),
-                    ));
+                                    "approved plan {path} accepted for {review_count} review-required schema change(s)"
+                                )
+                            } else {
+                                format!("approved plan {path} accepted (diff matches)")
+                            }
+                        },
+                    )?;
+                    approved_via_plan = true;
                 }
-                report.step(
-                    FsmState::Applying,
-                    format!("approved plan {approval_plan_path} accepted (diff matches)"),
-                );
             }
 
             let delta = generate_delta_sql(manifest, &changes, &SqlGenerationConfig::default());
@@ -1496,10 +1466,14 @@ async fn run_startup_lifecycle_core(
             if !delta.is_empty() && !dry_run {
                 // Same shared review gate as the first-bootstrap branch: a
                 // changed review-required artifact must abort BEFORE the delta
-                // execute list runs. The non-SafeAuto check above already
-                // rejects such diffs at the change level; this keeps the
+                // execute list runs — UNLESS an approved plan already authorized
+                // this diff above, in which case re-blocking its own delta would
+                // defeat the four-eyes apply. Without approval, the change-level
+                // gate already rejected any RequiresReview diff; this keeps the
                 // artifact-marker gate fail-closed with one source of truth.
-                reject_review_required_sql_artifacts(runtime, &mut report, &delta)?;
+                if !approved_via_plan {
+                    reject_review_required_sql_artifacts(runtime, &mut report, &delta)?;
+                }
                 // Apply the delta (ALTER TABLE, ADD COLUMN, …) against the live DB.
                 runtime
                     .execute_sql_artifacts(&delta, mode_label)

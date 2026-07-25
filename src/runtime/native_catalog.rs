@@ -232,7 +232,14 @@ pub(crate) fn native_schema_names() -> Vec<String> {
 /// single [`CatalogManifest`], so native tables migrate through the same
 /// diff/apply engine as user tables. Returns the inputs unchanged when native
 /// services are disabled or the merged manifest fails to build.
-pub(crate) fn merge_native(
+///
+/// Public so the offline `udb plan` / `drift` / `manifest-export` CLI can build
+/// the SAME effective manifest `serve` diffs and stores in the ledger. Without
+/// it the CLI's "new" manifest omitted the embedded `udb_*` schemas and produced
+/// spurious `DropTable udb_*` ops that could never hash-match the serve-side diff
+/// (breaking the approval-plan workflow). Uses env-derived settings when no
+/// runtime is installed, matching how `serve` resolves them.
+pub fn merge_native(
     manifest: &CatalogManifest,
     schemas: &[ProtoSchema],
 ) -> (CatalogManifest, Vec<ProtoSchema>) {
