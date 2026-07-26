@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "descriptor_sha256": "8f703d5d8eb1e61393eaa4ed92e52da9d3fc8af488dc27baeb91c70f6f6e6bdc",
+  "descriptor_sha256": "2a28fd5ed98edaf2b33924d7fbf037d0fc5549c927539568074991d666975828",
   "contract_version": "4.1.0",
   "udb_version": "0.4.28",
   "protocol_version": "1.0.0",
@@ -148569,7 +148569,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 16,
+      "field_count": 18,
       "fields": [
         {
           "name": "context",
@@ -148860,6 +148860,44 @@
           "name": "idempotency_key",
           "number": 16,
           "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "changes",
+          "number": 17,
+          "type": ".google.protobuf.Struct",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "increments",
+          "number": 18,
+          "type": ".udb.entity.v1.UpdateRequest.Increment",
           "column_security": null,
           "scalar_security": {
             "pii": false,
@@ -154007,7 +154045,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 4,
+      "field_count": 5,
       "fields": [
         {
           "name": "state",
@@ -154070,6 +154108,25 @@
           "name": "message",
           "number": 4,
           "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "write_receipt",
+          "number": 5,
+          "type": ".udb.entity.v1.WriteReceipt",
           "column_security": null,
           "scalar_security": {
             "pii": false,
