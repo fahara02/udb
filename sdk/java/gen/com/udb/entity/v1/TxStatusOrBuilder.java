@@ -56,4 +56,43 @@ public interface TxStatusOrBuilder extends
    */
   com.google.protobuf.ByteString
       getMessageBytes();
+
+  /**
+   * <pre>
+   * Read-your-writes fence for a COMMITTED transaction: the source LSN, outbox
+   * sequence, and projection task IDs the transaction produced, so a client can
+   * fence a following read exactly as it does with MutationResponse.write_receipt
+   * on the unary verbs. Set only on the TX_STATE_COMMITTED status; unset for
+   * open/rolled-back/error statuses.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.WriteReceipt write_receipt = 5 [json_name = "writeReceipt"];</code>
+   * @return Whether the writeReceipt field is set.
+   */
+  boolean hasWriteReceipt();
+  /**
+   * <pre>
+   * Read-your-writes fence for a COMMITTED transaction: the source LSN, outbox
+   * sequence, and projection task IDs the transaction produced, so a client can
+   * fence a following read exactly as it does with MutationResponse.write_receipt
+   * on the unary verbs. Set only on the TX_STATE_COMMITTED status; unset for
+   * open/rolled-back/error statuses.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.WriteReceipt write_receipt = 5 [json_name = "writeReceipt"];</code>
+   * @return The writeReceipt.
+   */
+  com.udb.entity.v1.WriteReceipt getWriteReceipt();
+  /**
+   * <pre>
+   * Read-your-writes fence for a COMMITTED transaction: the source LSN, outbox
+   * sequence, and projection task IDs the transaction produced, so a client can
+   * fence a following read exactly as it does with MutationResponse.write_receipt
+   * on the unary verbs. Set only on the TX_STATE_COMMITTED status; unset for
+   * open/rolled-back/error statuses.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.WriteReceipt write_receipt = 5 [json_name = "writeReceipt"];</code>
+   */
+  com.udb.entity.v1.WriteReceiptOrBuilder getWriteReceiptOrBuilder();
 }

@@ -95,8 +95,17 @@ type Mutation struct {
 	ObjectData     []byte                 `protobuf:"bytes,14,opt,name=object_data,json=objectData,proto3" json:"object_data,omitempty"`
 	ContentType    string                 `protobuf:"bytes,15,opt,name=content_type,json=contentType,proto3" json:"content_type,omitempty"`
 	IdempotencyKey string                 `protobuf:"bytes,16,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// Partial-update payload for `operation = "update"` — the SET columns and the
+	// atomic increments. Same semantics as the unary UpdateRequest (SETs named
+	// columns / applies counter deltas on the rows matched by `filter`), atomic
+	// with the rest of the transaction; ignored for other operations. Note: the
+	// unary UpdateRequest.expected compare-and-swap precondition is intentionally
+	// NOT carried here — transactional updates do not support CAS (rather than
+	// silently ignore an `expected` a caller might set).
+	Changes       *structpb.Struct           `protobuf:"bytes,17,opt,name=changes,proto3" json:"changes,omitempty"`
+	Increments    []*UpdateRequest_Increment `protobuf:"bytes,18,rep,name=increments,proto3" json:"increments,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Mutation) Reset() {
@@ -241,12 +250,32 @@ func (x *Mutation) GetIdempotencyKey() string {
 	return ""
 }
 
+func (x *Mutation) GetChanges() *structpb.Struct {
+	if x != nil {
+		return x.Changes
+	}
+	return nil
+}
+
+func (x *Mutation) GetIncrements() []*UpdateRequest_Increment {
+	if x != nil {
+		return x.Increments
+	}
+	return nil
+}
+
 type TxStatus struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	State         TxStatus_State         `protobuf:"varint,1,opt,name=state,proto3,enum=udb.entity.v1.TxStatus_State" json:"state,omitempty"`
-	TxId          string                 `protobuf:"bytes,2,opt,name=tx_id,json=txId,proto3" json:"tx_id,omitempty"`
-	MutationId    string                 `protobuf:"bytes,3,opt,name=mutation_id,json=mutationId,proto3" json:"mutation_id,omitempty"`
-	Message       string                 `protobuf:"bytes,4,opt,name=message,proto3" json:"message,omitempty"`
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	State      TxStatus_State         `protobuf:"varint,1,opt,name=state,proto3,enum=udb.entity.v1.TxStatus_State" json:"state,omitempty"`
+	TxId       string                 `protobuf:"bytes,2,opt,name=tx_id,json=txId,proto3" json:"tx_id,omitempty"`
+	MutationId string                 `protobuf:"bytes,3,opt,name=mutation_id,json=mutationId,proto3" json:"mutation_id,omitempty"`
+	Message    string                 `protobuf:"bytes,4,opt,name=message,proto3" json:"message,omitempty"`
+	// Read-your-writes fence for a COMMITTED transaction: the source LSN, outbox
+	// sequence, and projection task IDs the transaction produced, so a client can
+	// fence a following read exactly as it does with MutationResponse.write_receipt
+	// on the unary verbs. Set only on the TX_STATE_COMMITTED status; unset for
+	// open/rolled-back/error statuses.
+	WriteReceipt  *WriteReceipt `protobuf:"bytes,5,opt,name=write_receipt,json=writeReceipt,proto3" json:"write_receipt,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -309,11 +338,18 @@ func (x *TxStatus) GetMessage() string {
 	return ""
 }
 
+func (x *TxStatus) GetWriteReceipt() *WriteReceipt {
+	if x != nil {
+		return x.WriteReceipt
+	}
+	return nil
+}
+
 var File_udb_entity_v1_tx_proto protoreflect.FileDescriptor
 
 const file_udb_entity_v1_tx_proto_rawDesc = "" +
 	"\n" +
-	"\x16udb/entity/v1/tx.proto\x12\rudb.entity.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1budb/entity/v1/context.proto\x1a\x1audb/entity/v1/vector.proto\"\xdf\x04\n" +
+	"\x16udb/entity/v1/tx.proto\x12\rudb.entity.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1budb/entity/v1/context.proto\x1a\x1audb/entity/v1/vector.proto\x1a\x1eudb/entity/v1/relational.proto\x1a\x1fudb/entity/v1/consistency.proto\"\xda\x05\n" +
 	"\bMutation\x127\n" +
 	"\acontext\x18\x01 \x01(\v2\x1d.udb.entity.v1.RequestContextR\acontext\x12\x13\n" +
 	"\x05tx_id\x18\x02 \x01(\tR\x04txId\x12\x1c\n" +
@@ -336,13 +372,18 @@ const file_udb_entity_v1_tx_proto_rawDesc = "" +
 	"\vobject_data\x18\x0e \x01(\fR\n" +
 	"objectData\x12!\n" +
 	"\fcontent_type\x18\x0f \x01(\tR\vcontentType\x12'\n" +
-	"\x0fidempotency_key\x18\x10 \x01(\tR\x0eidempotencyKey\"\x8b\x02\n" +
+	"\x0fidempotency_key\x18\x10 \x01(\tR\x0eidempotencyKey\x121\n" +
+	"\achanges\x18\x11 \x01(\v2\x17.google.protobuf.StructR\achanges\x12F\n" +
+	"\n" +
+	"increments\x18\x12 \x03(\v2&.udb.entity.v1.UpdateRequest.IncrementR\n" +
+	"increments\"\xcd\x02\n" +
 	"\bTxStatus\x123\n" +
 	"\x05state\x18\x01 \x01(\x0e2\x1d.udb.entity.v1.TxStatus.StateR\x05state\x12\x13\n" +
 	"\x05tx_id\x18\x02 \x01(\tR\x04txId\x12\x1f\n" +
 	"\vmutation_id\x18\x03 \x01(\tR\n" +
 	"mutationId\x12\x18\n" +
-	"\amessage\x18\x04 \x01(\tR\amessage\"z\n" +
+	"\amessage\x18\x04 \x01(\tR\amessage\x12@\n" +
+	"\rwrite_receipt\x18\x05 \x01(\v2\x1b.udb.entity.v1.WriteReceiptR\fwriteReceipt\"z\n" +
 	"\x05State\x12\x18\n" +
 	"\x14TX_STATE_UNSPECIFIED\x10\x00\x12\x11\n" +
 	"\rTX_STATE_OPEN\x10\x01\x12\x16\n" +
@@ -366,24 +407,29 @@ func file_udb_entity_v1_tx_proto_rawDescGZIP() []byte {
 var file_udb_entity_v1_tx_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_udb_entity_v1_tx_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_udb_entity_v1_tx_proto_goTypes = []any{
-	(TxStatus_State)(0),         // 0: udb.entity.v1.TxStatus.State
-	(*Mutation)(nil),            // 1: udb.entity.v1.Mutation
-	(*TxStatus)(nil),            // 2: udb.entity.v1.TxStatus
-	(*RequestContext)(nil),      // 3: udb.entity.v1.RequestContext
-	(*structpb.Struct)(nil),     // 4: google.protobuf.Struct
-	(*VectorPointMutation)(nil), // 5: udb.entity.v1.VectorPointMutation
+	(TxStatus_State)(0),             // 0: udb.entity.v1.TxStatus.State
+	(*Mutation)(nil),                // 1: udb.entity.v1.Mutation
+	(*TxStatus)(nil),                // 2: udb.entity.v1.TxStatus
+	(*RequestContext)(nil),          // 3: udb.entity.v1.RequestContext
+	(*structpb.Struct)(nil),         // 4: google.protobuf.Struct
+	(*VectorPointMutation)(nil),     // 5: udb.entity.v1.VectorPointMutation
+	(*UpdateRequest_Increment)(nil), // 6: udb.entity.v1.UpdateRequest.Increment
+	(*WriteReceipt)(nil),            // 7: udb.entity.v1.WriteReceipt
 }
 var file_udb_entity_v1_tx_proto_depIdxs = []int32{
 	3, // 0: udb.entity.v1.Mutation.context:type_name -> udb.entity.v1.RequestContext
 	4, // 1: udb.entity.v1.Mutation.payload:type_name -> google.protobuf.Struct
 	4, // 2: udb.entity.v1.Mutation.filter:type_name -> google.protobuf.Struct
 	5, // 3: udb.entity.v1.Mutation.vector_points:type_name -> udb.entity.v1.VectorPointMutation
-	0, // 4: udb.entity.v1.TxStatus.state:type_name -> udb.entity.v1.TxStatus.State
-	5, // [5:5] is the sub-list for method output_type
-	5, // [5:5] is the sub-list for method input_type
-	5, // [5:5] is the sub-list for extension type_name
-	5, // [5:5] is the sub-list for extension extendee
-	0, // [0:5] is the sub-list for field type_name
+	4, // 4: udb.entity.v1.Mutation.changes:type_name -> google.protobuf.Struct
+	6, // 5: udb.entity.v1.Mutation.increments:type_name -> udb.entity.v1.UpdateRequest.Increment
+	0, // 6: udb.entity.v1.TxStatus.state:type_name -> udb.entity.v1.TxStatus.State
+	7, // 7: udb.entity.v1.TxStatus.write_receipt:type_name -> udb.entity.v1.WriteReceipt
+	8, // [8:8] is the sub-list for method output_type
+	8, // [8:8] is the sub-list for method input_type
+	8, // [8:8] is the sub-list for extension type_name
+	8, // [8:8] is the sub-list for extension extendee
+	0, // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_udb_entity_v1_tx_proto_init() }
@@ -393,6 +439,8 @@ func file_udb_entity_v1_tx_proto_init() {
 	}
 	file_udb_entity_v1_context_proto_init()
 	file_udb_entity_v1_vector_proto_init()
+	file_udb_entity_v1_relational_proto_init()
+	file_udb_entity_v1_consistency_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

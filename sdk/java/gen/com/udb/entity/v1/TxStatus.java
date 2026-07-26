@@ -191,6 +191,7 @@ private static final long serialVersionUID = 0L;
     // @@protoc_insertion_point(enum_scope:udb.entity.v1.TxStatus.State)
   }
 
+  private int bitField0_;
   public static final int STATE_FIELD_NUMBER = 1;
   private int state_ = 0;
   /**
@@ -326,6 +327,56 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int WRITE_RECEIPT_FIELD_NUMBER = 5;
+  private com.udb.entity.v1.WriteReceipt writeReceipt_;
+  /**
+   * <pre>
+   * Read-your-writes fence for a COMMITTED transaction: the source LSN, outbox
+   * sequence, and projection task IDs the transaction produced, so a client can
+   * fence a following read exactly as it does with MutationResponse.write_receipt
+   * on the unary verbs. Set only on the TX_STATE_COMMITTED status; unset for
+   * open/rolled-back/error statuses.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.WriteReceipt write_receipt = 5 [json_name = "writeReceipt"];</code>
+   * @return Whether the writeReceipt field is set.
+   */
+  @java.lang.Override
+  public boolean hasWriteReceipt() {
+    return ((bitField0_ & 0x00000001) != 0);
+  }
+  /**
+   * <pre>
+   * Read-your-writes fence for a COMMITTED transaction: the source LSN, outbox
+   * sequence, and projection task IDs the transaction produced, so a client can
+   * fence a following read exactly as it does with MutationResponse.write_receipt
+   * on the unary verbs. Set only on the TX_STATE_COMMITTED status; unset for
+   * open/rolled-back/error statuses.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.WriteReceipt write_receipt = 5 [json_name = "writeReceipt"];</code>
+   * @return The writeReceipt.
+   */
+  @java.lang.Override
+  public com.udb.entity.v1.WriteReceipt getWriteReceipt() {
+    return writeReceipt_ == null ? com.udb.entity.v1.WriteReceipt.getDefaultInstance() : writeReceipt_;
+  }
+  /**
+   * <pre>
+   * Read-your-writes fence for a COMMITTED transaction: the source LSN, outbox
+   * sequence, and projection task IDs the transaction produced, so a client can
+   * fence a following read exactly as it does with MutationResponse.write_receipt
+   * on the unary verbs. Set only on the TX_STATE_COMMITTED status; unset for
+   * open/rolled-back/error statuses.
+   * </pre>
+   *
+   * <code>.udb.entity.v1.WriteReceipt write_receipt = 5 [json_name = "writeReceipt"];</code>
+   */
+  @java.lang.Override
+  public com.udb.entity.v1.WriteReceiptOrBuilder getWriteReceiptOrBuilder() {
+    return writeReceipt_ == null ? com.udb.entity.v1.WriteReceipt.getDefaultInstance() : writeReceipt_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -352,6 +403,9 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(message_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 4, message_);
     }
+    if (((bitField0_ & 0x00000001) != 0)) {
+      output.writeMessage(5, getWriteReceipt());
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -373,6 +427,10 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(message_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(4, message_);
+    }
+    if (((bitField0_ & 0x00000001) != 0)) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(5, getWriteReceipt());
     }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
@@ -396,6 +454,11 @@ private static final long serialVersionUID = 0L;
         .equals(other.getMutationId())) return false;
     if (!getMessage()
         .equals(other.getMessage())) return false;
+    if (hasWriteReceipt() != other.hasWriteReceipt()) return false;
+    if (hasWriteReceipt()) {
+      if (!getWriteReceipt()
+          .equals(other.getWriteReceipt())) return false;
+    }
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -415,6 +478,10 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getMutationId().hashCode();
     hash = (37 * hash) + MESSAGE_FIELD_NUMBER;
     hash = (53 * hash) + getMessage().hashCode();
+    if (hasWriteReceipt()) {
+      hash = (37 * hash) + WRITE_RECEIPT_FIELD_NUMBER;
+      hash = (53 * hash) + getWriteReceipt().hashCode();
+    }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -534,13 +601,19 @@ private static final long serialVersionUID = 0L;
 
     // Construct using com.udb.entity.v1.TxStatus.newBuilder()
     private Builder() {
-
+      maybeForceBuilderInitialization();
     }
 
     private Builder(
         com.google.protobuf.GeneratedMessage.BuilderParent parent) {
       super(parent);
-
+      maybeForceBuilderInitialization();
+    }
+    private void maybeForceBuilderInitialization() {
+      if (com.google.protobuf.GeneratedMessage
+              .alwaysUseFieldBuilders) {
+        internalGetWriteReceiptFieldBuilder();
+      }
     }
     @java.lang.Override
     public Builder clear() {
@@ -550,6 +623,11 @@ private static final long serialVersionUID = 0L;
       txId_ = "";
       mutationId_ = "";
       message_ = "";
+      writeReceipt_ = null;
+      if (writeReceiptBuilder_ != null) {
+        writeReceiptBuilder_.dispose();
+        writeReceiptBuilder_ = null;
+      }
       return this;
     }
 
@@ -595,6 +673,14 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000008) != 0)) {
         result.message_ = message_;
       }
+      int to_bitField0_ = 0;
+      if (((from_bitField0_ & 0x00000010) != 0)) {
+        result.writeReceipt_ = writeReceiptBuilder_ == null
+            ? writeReceipt_
+            : writeReceiptBuilder_.build();
+        to_bitField0_ |= 0x00000001;
+      }
+      result.bitField0_ |= to_bitField0_;
     }
 
     @java.lang.Override
@@ -626,6 +712,9 @@ private static final long serialVersionUID = 0L;
         message_ = other.message_;
         bitField0_ |= 0x00000008;
         onChanged();
+      }
+      if (other.hasWriteReceipt()) {
+        mergeWriteReceipt(other.getWriteReceipt());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -673,6 +762,13 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000008;
               break;
             } // case 34
+            case 42: {
+              input.readMessage(
+                  internalGetWriteReceiptFieldBuilder().getBuilder(),
+                  extensionRegistry);
+              bitField0_ |= 0x00000010;
+              break;
+            } // case 42
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -955,6 +1051,199 @@ private static final long serialVersionUID = 0L;
       bitField0_ |= 0x00000008;
       onChanged();
       return this;
+    }
+
+    private com.udb.entity.v1.WriteReceipt writeReceipt_;
+    private com.google.protobuf.SingleFieldBuilder<
+        com.udb.entity.v1.WriteReceipt, com.udb.entity.v1.WriteReceipt.Builder, com.udb.entity.v1.WriteReceiptOrBuilder> writeReceiptBuilder_;
+    /**
+     * <pre>
+     * Read-your-writes fence for a COMMITTED transaction: the source LSN, outbox
+     * sequence, and projection task IDs the transaction produced, so a client can
+     * fence a following read exactly as it does with MutationResponse.write_receipt
+     * on the unary verbs. Set only on the TX_STATE_COMMITTED status; unset for
+     * open/rolled-back/error statuses.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.WriteReceipt write_receipt = 5 [json_name = "writeReceipt"];</code>
+     * @return Whether the writeReceipt field is set.
+     */
+    public boolean hasWriteReceipt() {
+      return ((bitField0_ & 0x00000010) != 0);
+    }
+    /**
+     * <pre>
+     * Read-your-writes fence for a COMMITTED transaction: the source LSN, outbox
+     * sequence, and projection task IDs the transaction produced, so a client can
+     * fence a following read exactly as it does with MutationResponse.write_receipt
+     * on the unary verbs. Set only on the TX_STATE_COMMITTED status; unset for
+     * open/rolled-back/error statuses.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.WriteReceipt write_receipt = 5 [json_name = "writeReceipt"];</code>
+     * @return The writeReceipt.
+     */
+    public com.udb.entity.v1.WriteReceipt getWriteReceipt() {
+      if (writeReceiptBuilder_ == null) {
+        return writeReceipt_ == null ? com.udb.entity.v1.WriteReceipt.getDefaultInstance() : writeReceipt_;
+      } else {
+        return writeReceiptBuilder_.getMessage();
+      }
+    }
+    /**
+     * <pre>
+     * Read-your-writes fence for a COMMITTED transaction: the source LSN, outbox
+     * sequence, and projection task IDs the transaction produced, so a client can
+     * fence a following read exactly as it does with MutationResponse.write_receipt
+     * on the unary verbs. Set only on the TX_STATE_COMMITTED status; unset for
+     * open/rolled-back/error statuses.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.WriteReceipt write_receipt = 5 [json_name = "writeReceipt"];</code>
+     */
+    public Builder setWriteReceipt(com.udb.entity.v1.WriteReceipt value) {
+      if (writeReceiptBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        writeReceipt_ = value;
+      } else {
+        writeReceiptBuilder_.setMessage(value);
+      }
+      bitField0_ |= 0x00000010;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Read-your-writes fence for a COMMITTED transaction: the source LSN, outbox
+     * sequence, and projection task IDs the transaction produced, so a client can
+     * fence a following read exactly as it does with MutationResponse.write_receipt
+     * on the unary verbs. Set only on the TX_STATE_COMMITTED status; unset for
+     * open/rolled-back/error statuses.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.WriteReceipt write_receipt = 5 [json_name = "writeReceipt"];</code>
+     */
+    public Builder setWriteReceipt(
+        com.udb.entity.v1.WriteReceipt.Builder builderForValue) {
+      if (writeReceiptBuilder_ == null) {
+        writeReceipt_ = builderForValue.build();
+      } else {
+        writeReceiptBuilder_.setMessage(builderForValue.build());
+      }
+      bitField0_ |= 0x00000010;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Read-your-writes fence for a COMMITTED transaction: the source LSN, outbox
+     * sequence, and projection task IDs the transaction produced, so a client can
+     * fence a following read exactly as it does with MutationResponse.write_receipt
+     * on the unary verbs. Set only on the TX_STATE_COMMITTED status; unset for
+     * open/rolled-back/error statuses.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.WriteReceipt write_receipt = 5 [json_name = "writeReceipt"];</code>
+     */
+    public Builder mergeWriteReceipt(com.udb.entity.v1.WriteReceipt value) {
+      if (writeReceiptBuilder_ == null) {
+        if (((bitField0_ & 0x00000010) != 0) &&
+          writeReceipt_ != null &&
+          writeReceipt_ != com.udb.entity.v1.WriteReceipt.getDefaultInstance()) {
+          getWriteReceiptBuilder().mergeFrom(value);
+        } else {
+          writeReceipt_ = value;
+        }
+      } else {
+        writeReceiptBuilder_.mergeFrom(value);
+      }
+      if (writeReceipt_ != null) {
+        bitField0_ |= 0x00000010;
+        onChanged();
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * Read-your-writes fence for a COMMITTED transaction: the source LSN, outbox
+     * sequence, and projection task IDs the transaction produced, so a client can
+     * fence a following read exactly as it does with MutationResponse.write_receipt
+     * on the unary verbs. Set only on the TX_STATE_COMMITTED status; unset for
+     * open/rolled-back/error statuses.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.WriteReceipt write_receipt = 5 [json_name = "writeReceipt"];</code>
+     */
+    public Builder clearWriteReceipt() {
+      bitField0_ = (bitField0_ & ~0x00000010);
+      writeReceipt_ = null;
+      if (writeReceiptBuilder_ != null) {
+        writeReceiptBuilder_.dispose();
+        writeReceiptBuilder_ = null;
+      }
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Read-your-writes fence for a COMMITTED transaction: the source LSN, outbox
+     * sequence, and projection task IDs the transaction produced, so a client can
+     * fence a following read exactly as it does with MutationResponse.write_receipt
+     * on the unary verbs. Set only on the TX_STATE_COMMITTED status; unset for
+     * open/rolled-back/error statuses.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.WriteReceipt write_receipt = 5 [json_name = "writeReceipt"];</code>
+     */
+    public com.udb.entity.v1.WriteReceipt.Builder getWriteReceiptBuilder() {
+      bitField0_ |= 0x00000010;
+      onChanged();
+      return internalGetWriteReceiptFieldBuilder().getBuilder();
+    }
+    /**
+     * <pre>
+     * Read-your-writes fence for a COMMITTED transaction: the source LSN, outbox
+     * sequence, and projection task IDs the transaction produced, so a client can
+     * fence a following read exactly as it does with MutationResponse.write_receipt
+     * on the unary verbs. Set only on the TX_STATE_COMMITTED status; unset for
+     * open/rolled-back/error statuses.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.WriteReceipt write_receipt = 5 [json_name = "writeReceipt"];</code>
+     */
+    public com.udb.entity.v1.WriteReceiptOrBuilder getWriteReceiptOrBuilder() {
+      if (writeReceiptBuilder_ != null) {
+        return writeReceiptBuilder_.getMessageOrBuilder();
+      } else {
+        return writeReceipt_ == null ?
+            com.udb.entity.v1.WriteReceipt.getDefaultInstance() : writeReceipt_;
+      }
+    }
+    /**
+     * <pre>
+     * Read-your-writes fence for a COMMITTED transaction: the source LSN, outbox
+     * sequence, and projection task IDs the transaction produced, so a client can
+     * fence a following read exactly as it does with MutationResponse.write_receipt
+     * on the unary verbs. Set only on the TX_STATE_COMMITTED status; unset for
+     * open/rolled-back/error statuses.
+     * </pre>
+     *
+     * <code>.udb.entity.v1.WriteReceipt write_receipt = 5 [json_name = "writeReceipt"];</code>
+     */
+    private com.google.protobuf.SingleFieldBuilder<
+        com.udb.entity.v1.WriteReceipt, com.udb.entity.v1.WriteReceipt.Builder, com.udb.entity.v1.WriteReceiptOrBuilder>
+        internalGetWriteReceiptFieldBuilder() {
+      if (writeReceiptBuilder_ == null) {
+        writeReceiptBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+            com.udb.entity.v1.WriteReceipt, com.udb.entity.v1.WriteReceipt.Builder, com.udb.entity.v1.WriteReceiptOrBuilder>(
+                getWriteReceipt(),
+                getParentForChildren(),
+                isClean());
+        writeReceipt_ = null;
+      }
+      return writeReceiptBuilder_;
     }
 
     // @@protoc_insertion_point(builder_scope:udb.entity.v1.TxStatus)

@@ -198,4 +198,73 @@ public interface MutationOrBuilder extends
    */
   com.google.protobuf.ByteString
       getIdempotencyKeyBytes();
+
+  /**
+   * <pre>
+   * Partial-update payload for `operation = "update"` — the SET columns and the
+   * atomic increments. Same semantics as the unary UpdateRequest (SETs named
+   * columns / applies counter deltas on the rows matched by `filter`), atomic
+   * with the rest of the transaction; ignored for other operations. Note: the
+   * unary UpdateRequest.expected compare-and-swap precondition is intentionally
+   * NOT carried here — transactional updates do not support CAS (rather than
+   * silently ignore an `expected` a caller might set).
+   * </pre>
+   *
+   * <code>.google.protobuf.Struct changes = 17 [json_name = "changes"];</code>
+   * @return Whether the changes field is set.
+   */
+  boolean hasChanges();
+  /**
+   * <pre>
+   * Partial-update payload for `operation = "update"` — the SET columns and the
+   * atomic increments. Same semantics as the unary UpdateRequest (SETs named
+   * columns / applies counter deltas on the rows matched by `filter`), atomic
+   * with the rest of the transaction; ignored for other operations. Note: the
+   * unary UpdateRequest.expected compare-and-swap precondition is intentionally
+   * NOT carried here — transactional updates do not support CAS (rather than
+   * silently ignore an `expected` a caller might set).
+   * </pre>
+   *
+   * <code>.google.protobuf.Struct changes = 17 [json_name = "changes"];</code>
+   * @return The changes.
+   */
+  com.google.protobuf.Struct getChanges();
+  /**
+   * <pre>
+   * Partial-update payload for `operation = "update"` — the SET columns and the
+   * atomic increments. Same semantics as the unary UpdateRequest (SETs named
+   * columns / applies counter deltas on the rows matched by `filter`), atomic
+   * with the rest of the transaction; ignored for other operations. Note: the
+   * unary UpdateRequest.expected compare-and-swap precondition is intentionally
+   * NOT carried here — transactional updates do not support CAS (rather than
+   * silently ignore an `expected` a caller might set).
+   * </pre>
+   *
+   * <code>.google.protobuf.Struct changes = 17 [json_name = "changes"];</code>
+   */
+  com.google.protobuf.StructOrBuilder getChangesOrBuilder();
+
+  /**
+   * <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 18 [json_name = "increments"];</code>
+   */
+  java.util.List<com.udb.entity.v1.UpdateRequest.Increment>
+      getIncrementsList();
+  /**
+   * <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 18 [json_name = "increments"];</code>
+   */
+  com.udb.entity.v1.UpdateRequest.Increment getIncrements(int index);
+  /**
+   * <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 18 [json_name = "increments"];</code>
+   */
+  int getIncrementsCount();
+  /**
+   * <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 18 [json_name = "increments"];</code>
+   */
+  java.util.List<? extends com.udb.entity.v1.UpdateRequest.IncrementOrBuilder>
+      getIncrementsOrBuilderList();
+  /**
+   * <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 18 [json_name = "increments"];</code>
+   */
+  com.udb.entity.v1.UpdateRequest.IncrementOrBuilder getIncrementsOrBuilder(
+      int index);
 }

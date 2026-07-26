@@ -78,6 +78,22 @@ class Mutation extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string idempotency_key = 16 [json_name = "idempotencyKey"];</code>
      */
     protected $idempotency_key = '';
+    /**
+     * Partial-update payload for `operation = "update"` — the SET columns and the
+     * atomic increments. Same semantics as the unary UpdateRequest (SETs named
+     * columns / applies counter deltas on the rows matched by `filter`), atomic
+     * with the rest of the transaction; ignored for other operations. Note: the
+     * unary UpdateRequest.expected compare-and-swap precondition is intentionally
+     * NOT carried here — transactional updates do not support CAS (rather than
+     * silently ignore an `expected` a caller might set).
+     *
+     * Generated from protobuf field <code>.google.protobuf.Struct changes = 17 [json_name = "changes"];</code>
+     */
+    protected $changes = null;
+    /**
+     * Generated from protobuf field <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 18 [json_name = "increments"];</code>
+     */
+    private $increments;
 
     /**
      * Constructor.
@@ -101,6 +117,15 @@ class Mutation extends \Google\Protobuf\Internal\Message
      *     @type string $object_data
      *     @type string $content_type
      *     @type string $idempotency_key
+     *     @type \Google\Protobuf\Struct $changes
+     *           Partial-update payload for `operation = "update"` — the SET columns and the
+     *           atomic increments. Same semantics as the unary UpdateRequest (SETs named
+     *           columns / applies counter deltas on the rows matched by `filter`), atomic
+     *           with the rest of the transaction; ignored for other operations. Note: the
+     *           unary UpdateRequest.expected compare-and-swap precondition is intentionally
+     *           NOT carried here — transactional updates do not support CAS (rather than
+     *           silently ignore an `expected` a caller might set).
+     *     @type \Udb\Entity\V1\UpdateRequest\Increment[] $increments
      * }
      */
     public function __construct($data = NULL) {
@@ -486,6 +511,76 @@ class Mutation extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, True);
         $this->idempotency_key = $var;
+
+        return $this;
+    }
+
+    /**
+     * Partial-update payload for `operation = "update"` — the SET columns and the
+     * atomic increments. Same semantics as the unary UpdateRequest (SETs named
+     * columns / applies counter deltas on the rows matched by `filter`), atomic
+     * with the rest of the transaction; ignored for other operations. Note: the
+     * unary UpdateRequest.expected compare-and-swap precondition is intentionally
+     * NOT carried here — transactional updates do not support CAS (rather than
+     * silently ignore an `expected` a caller might set).
+     *
+     * Generated from protobuf field <code>.google.protobuf.Struct changes = 17 [json_name = "changes"];</code>
+     * @return \Google\Protobuf\Struct|null
+     */
+    public function getChanges()
+    {
+        return $this->changes;
+    }
+
+    public function hasChanges()
+    {
+        return isset($this->changes);
+    }
+
+    public function clearChanges()
+    {
+        unset($this->changes);
+    }
+
+    /**
+     * Partial-update payload for `operation = "update"` — the SET columns and the
+     * atomic increments. Same semantics as the unary UpdateRequest (SETs named
+     * columns / applies counter deltas on the rows matched by `filter`), atomic
+     * with the rest of the transaction; ignored for other operations. Note: the
+     * unary UpdateRequest.expected compare-and-swap precondition is intentionally
+     * NOT carried here — transactional updates do not support CAS (rather than
+     * silently ignore an `expected` a caller might set).
+     *
+     * Generated from protobuf field <code>.google.protobuf.Struct changes = 17 [json_name = "changes"];</code>
+     * @param \Google\Protobuf\Struct $var
+     * @return $this
+     */
+    public function setChanges($var)
+    {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Struct::class);
+        $this->changes = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 18 [json_name = "increments"];</code>
+     * @return RepeatedField<\Udb\Entity\V1\UpdateRequest\Increment>
+     */
+    public function getIncrements()
+    {
+        return $this->increments;
+    }
+
+    /**
+     * Generated from protobuf field <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 18 [json_name = "increments"];</code>
+     * @param \Udb\Entity\V1\UpdateRequest\Increment[] $var
+     * @return $this
+     */
+    public function setIncrements($var)
+    {
+        $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Entity\V1\UpdateRequest\Increment::class);
+        $this->increments = $arr;
 
         return $this;
     }

@@ -11,6 +11,8 @@ option php_metadata_namespace = "Udb\\GPBMetadata\\Entity\\V1";
 import "google/protobuf/struct.proto";
 import "udb/entity/v1/context.proto";
 import "udb/entity/v1/vector.proto";
+import "udb/entity/v1/relational.proto";
+import "udb/entity/v1/consistency.proto";
 
 message Mutation {
   RequestContext context = 1;
@@ -29,6 +31,15 @@ message Mutation {
   bytes object_data = 14;
   string content_type = 15;
   string idempotency_key = 16;
+  // Partial-update payload for `operation = "update"` — the SET columns and the
+  // atomic increments. Same semantics as the unary UpdateRequest (SETs named
+  // columns / applies counter deltas on the rows matched by `filter`), atomic
+  // with the rest of the transaction; ignored for other operations. Note: the
+  // unary UpdateRequest.expected compare-and-swap precondition is intentionally
+  // NOT carried here — transactional updates do not support CAS (rather than
+  // silently ignore an `expected` a caller might set).
+  google.protobuf.Struct changes = 17;
+  repeated UpdateRequest.Increment increments = 18;
 }
 
 message TxStatus {
@@ -44,4 +55,10 @@ message TxStatus {
   string tx_id = 2;
   string mutation_id = 3;
   string message = 4;
+  // Read-your-writes fence for a COMMITTED transaction: the source LSN, outbox
+  // sequence, and projection task IDs the transaction produced, so a client can
+  // fence a following read exactly as it does with MutationResponse.write_receipt
+  // on the unary verbs. Set only on the TX_STATE_COMMITTED status; unset for
+  // open/rolled-back/error statuses.
+  WriteReceipt write_receipt = 5;
 }

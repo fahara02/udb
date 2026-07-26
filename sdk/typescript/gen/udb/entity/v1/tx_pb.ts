@@ -9,13 +9,17 @@ import type { RequestContext } from "./context_pb";
 import { file_udb_entity_v1_context } from "./context_pb";
 import type { VectorPointMutation } from "./vector_pb";
 import { file_udb_entity_v1_vector } from "./vector_pb";
+import type { UpdateRequest_Increment } from "./relational_pb";
+import { file_udb_entity_v1_relational } from "./relational_pb";
+import type { WriteReceipt } from "./consistency_pb";
+import { file_udb_entity_v1_consistency } from "./consistency_pb";
 import type { JsonObject, Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file udb/entity/v1/tx.proto.
  */
 export const file_udb_entity_v1_tx: GenFile = /*@__PURE__*/
-  fileDesc("ChZ1ZGIvZW50aXR5L3YxL3R4LnByb3RvEg11ZGIuZW50aXR5LnYxIrMDCghNdXRhdGlvbhIuCgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dBINCgV0eF9pZBgCIAEoCRIRCglvcGVyYXRpb24YAyABKAkSFAoMbWVzc2FnZV90eXBlGAQgASgJEhMKC3JlY29yZF9qc29uGAUgASgMEigKB3BheWxvYWQYBiABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EicKBmZpbHRlchgHIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSEgoKY29sbGVjdGlvbhgIIAEoCRI5Cg12ZWN0b3JfcG9pbnRzGAkgAygLMiIudWRiLmVudGl0eS52MS5WZWN0b3JQb2ludE11dGF0aW9uEg4KBmNvbW1pdBgKIAEoCBIQCghyb2xsYmFjaxgLIAEoCBIOCgZidWNrZXQYDCABKAkSEgoKb2JqZWN0X2tleRgNIAEoCRITCgtvYmplY3RfZGF0YRgOIAEoDBIUCgxjb250ZW50X3R5cGUYDyABKAkSFwoPaWRlbXBvdGVuY3lfa2V5GBAgASgJIukBCghUeFN0YXR1cxIsCgVzdGF0ZRgBIAEoDjIdLnVkYi5lbnRpdHkudjEuVHhTdGF0dXMuU3RhdGUSDQoFdHhfaWQYAiABKAkSEwoLbXV0YXRpb25faWQYAyABKAkSDwoHbWVzc2FnZRgEIAEoCSJ6CgVTdGF0ZRIYChRUWF9TVEFURV9VTlNQRUNJRklFRBAAEhEKDVRYX1NUQVRFX09QRU4QARIWChJUWF9TVEFURV9DT01NSVRURUQQAhIYChRUWF9TVEFURV9ST0xMRURfQkFDSxADEhIKDlRYX1NUQVRFX0VSUk9SEARCrQEKEWNvbS51ZGIuZW50aXR5LnYxQgdUeFByb3RvUAFaOWdpdGh1Yi5jb20vZmFoYXJhMDIvdWRiL3Nkay9nby9nZW4vdWRiL2VudGl0eS92MTtlbnRpdHl2MaICA1VFWKoCDVVkYi5FbnRpdHkuVjHKAg1VZGJcRW50aXR5XFYx4gIZVWRiXEdQQk1ldGFkYXRhXEVudGl0eVxWMeoCD1VkYjo6RW50aXR5OjpWMWIGcHJvdG8z", [file_google_protobuf_struct, file_udb_entity_v1_context, file_udb_entity_v1_vector]);
+  fileDesc("ChZ1ZGIvZW50aXR5L3YxL3R4LnByb3RvEg11ZGIuZW50aXR5LnYxIpkECghNdXRhdGlvbhIuCgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dBINCgV0eF9pZBgCIAEoCRIRCglvcGVyYXRpb24YAyABKAkSFAoMbWVzc2FnZV90eXBlGAQgASgJEhMKC3JlY29yZF9qc29uGAUgASgMEigKB3BheWxvYWQYBiABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EicKBmZpbHRlchgHIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSEgoKY29sbGVjdGlvbhgIIAEoCRI5Cg12ZWN0b3JfcG9pbnRzGAkgAygLMiIudWRiLmVudGl0eS52MS5WZWN0b3JQb2ludE11dGF0aW9uEg4KBmNvbW1pdBgKIAEoCBIQCghyb2xsYmFjaxgLIAEoCBIOCgZidWNrZXQYDCABKAkSEgoKb2JqZWN0X2tleRgNIAEoCRITCgtvYmplY3RfZGF0YRgOIAEoDBIUCgxjb250ZW50X3R5cGUYDyABKAkSFwoPaWRlbXBvdGVuY3lfa2V5GBAgASgJEigKB2NoYW5nZXMYESABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EjoKCmluY3JlbWVudHMYEiADKAsyJi51ZGIuZW50aXR5LnYxLlVwZGF0ZVJlcXVlc3QuSW5jcmVtZW50Ip0CCghUeFN0YXR1cxIsCgVzdGF0ZRgBIAEoDjIdLnVkYi5lbnRpdHkudjEuVHhTdGF0dXMuU3RhdGUSDQoFdHhfaWQYAiABKAkSEwoLbXV0YXRpb25faWQYAyABKAkSDwoHbWVzc2FnZRgEIAEoCRIyCg13cml0ZV9yZWNlaXB0GAUgASgLMhsudWRiLmVudGl0eS52MS5Xcml0ZVJlY2VpcHQiegoFU3RhdGUSGAoUVFhfU1RBVEVfVU5TUEVDSUZJRUQQABIRCg1UWF9TVEFURV9PUEVOEAESFgoSVFhfU1RBVEVfQ09NTUlUVEVEEAISGAoUVFhfU1RBVEVfUk9MTEVEX0JBQ0sQAxISCg5UWF9TVEFURV9FUlJPUhAEQq0BChFjb20udWRiLmVudGl0eS52MUIHVHhQcm90b1ABWjlnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9lbnRpdHkvdjE7ZW50aXR5djGiAgNVRViqAg1VZGIuRW50aXR5LlYxygINVWRiXEVudGl0eVxWMeICGVVkYlxHUEJNZXRhZGF0YVxFbnRpdHlcVjHqAg9VZGI6OkVudGl0eTo6VjFiBnByb3RvMw", [file_google_protobuf_struct, file_udb_entity_v1_context, file_udb_entity_v1_vector, file_udb_entity_v1_relational, file_udb_entity_v1_consistency]);
 
 /**
  * @generated from message udb.entity.v1.Mutation
@@ -100,6 +104,24 @@ export type Mutation = Message<"udb.entity.v1.Mutation"> & {
    * @generated from field: string idempotency_key = 16;
    */
   idempotencyKey: string;
+
+  /**
+   * Partial-update payload for `operation = "update"` — the SET columns and the
+   * atomic increments. Same semantics as the unary UpdateRequest (SETs named
+   * columns / applies counter deltas on the rows matched by `filter`), atomic
+   * with the rest of the transaction; ignored for other operations. Note: the
+   * unary UpdateRequest.expected compare-and-swap precondition is intentionally
+   * NOT carried here — transactional updates do not support CAS (rather than
+   * silently ignore an `expected` a caller might set).
+   *
+   * @generated from field: google.protobuf.Struct changes = 17;
+   */
+  changes?: JsonObject | undefined;
+
+  /**
+   * @generated from field: repeated udb.entity.v1.UpdateRequest.Increment increments = 18;
+   */
+  increments: UpdateRequest_Increment[];
 };
 
 /**
@@ -132,6 +154,17 @@ export type TxStatus = Message<"udb.entity.v1.TxStatus"> & {
    * @generated from field: string message = 4;
    */
   message: string;
+
+  /**
+   * Read-your-writes fence for a COMMITTED transaction: the source LSN, outbox
+   * sequence, and projection task IDs the transaction produced, so a client can
+   * fence a following read exactly as it does with MutationResponse.write_receipt
+   * on the unary verbs. Set only on the TX_STATE_COMMITTED status; unset for
+   * open/rolled-back/error statuses.
+   *
+   * @generated from field: udb.entity.v1.WriteReceipt write_receipt = 5;
+   */
+  writeReceipt?: WriteReceipt | undefined;
 };
 
 /**

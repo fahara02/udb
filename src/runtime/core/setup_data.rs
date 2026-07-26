@@ -1625,26 +1625,31 @@ impl DataBrokerRuntime {
     /// binds, CAS precondition, keyed idempotent replay, projection enqueue,
     /// CDC outbox, consistency receipt, cache invalidation, audit emission.
     #[allow(clippy::too_many_arguments)]
-    pub async fn update(
+    /// Shared core of a partial UPDATE inside an ALREADY-OPEN PG transaction:
+    /// plan → bind → execute (RETURNING when projections exist or a record is
+    /// wanted) → enqueue projection tasks (each post-update row as an `upsert`)
+    /// → emit the CDC change event. Both the unary [`update`](Self::update) and
+    /// the `BeginTx` `update` operation call this, so the two write paths cannot
+    /// diverge on the post-write side-effects (side-effect parity).
+    ///
+    /// `filter` MUST already be encryption-rewritten by the caller (via
+    /// `rewrite_encrypted_equality_filters`); the helper does not re-apply it,
+    /// as that rewrite is not idempotent. Returns
+    /// `(affected_rows, record_json, projection_task_ids)`; `record_json` is
+    /// empty unless `return_record` is set. Runs no CAS / idempotency / commit —
+    /// those stay with the caller that owns the transaction lifecycle.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) async fn execute_update_in_tx(
         &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
         manifest: &CatalogManifest,
         message_type: &str,
-        filter: JsonValue,
-        changes: JsonValue,
-        increments: Vec<(String, f64)>,
-        context: RequestContext,
-        idempotency_key: String,
-        expected: Option<prost_types::Struct>,
+        filter: &JsonValue,
+        changes: &JsonValue,
+        increments: &[(String, f64)],
+        context: &RequestContext,
         return_record: bool,
-    ) -> Result<MutationResponse, tonic::Status> {
-        let filter = match resolve_table_for_message(manifest, message_type) {
-            Ok(table_for_encryption) => self.rewrite_encrypted_equality_filters(
-                table_for_encryption,
-                &filter,
-                &context.tenant_id,
-            ),
-            Err(_) => filter,
-        };
+    ) -> Result<(i64, Vec<u8>, Vec<String>), tonic::Status> {
         // Projection targets re-materialize from the task's source_payload, so an
         // update that feeds projections must return the post-update rows: plan
         // RETURNING whenever this message type has projection targets, not only
@@ -1659,22 +1664,21 @@ impl DataBrokerRuntime {
             message_type: message_type.to_string(),
             filter: filter.clone(),
             changes: changes.clone(),
-            increments: increments.clone(),
+            increments: increments.to_vec(),
             return_record: need_rows,
         };
         let plan = crate::planning::broker::build_update_plan(manifest, &plan_request);
         reject_plan(&plan.errors)?;
-        let pool = self.pg_pool()?;
         let table = resolve_table_for_message(manifest, message_type)
             .map_err(|_| message_type_lookup_status(manifest, message_type))?;
         let resolver = crate::planning::broker::column_resolver(table);
-        let normalized_filter = crate::planning::broker::normalize_filter_keys(&resolver, &filter);
+        let normalized_filter = crate::planning::broker::normalize_filter_keys(&resolver, filter);
         // Bind order is the plan's contract: changes (sorted by physical
         // column — the same normalized_update_changes the planner used), then
         // increments in request order, then the filter values.
         let mut bind_errors = Vec::new();
         let ordered_changes = crate::planning::broker::normalized_update_changes(
-            &changes,
+            changes,
             &resolver,
             &mut bind_errors,
         );
@@ -1705,6 +1709,133 @@ impl DataBrokerRuntime {
             &plan.parameter_columns,
             &values,
         )?;
+
+        let (affected_rows, record_json, updated_rows_json) = if need_rows {
+            let rows = query.fetch_all(&mut **tx).await.map_err(|err| {
+                crate::runtime::executor_utils::sqlx_error_to_status(
+                    "PostgreSQL update failed",
+                    &err,
+                )
+            })?;
+            if rows.is_empty() {
+                (0, Vec::new(), Vec::new())
+            } else {
+                let record_set = rows_to_record_set(
+                    rows,
+                    Some(table),
+                    &[],
+                    context,
+                    self.encryption.as_ref(),
+                    &self.encryption_metrics,
+                )?;
+                let record_json = if return_record {
+                    returned_record_json_or_status(&record_set.records_json)?
+                } else {
+                    Vec::new()
+                };
+                let updated_rows_json = record_set
+                    .records_json
+                    .iter()
+                    .map(|bytes| serde_json::from_slice::<JsonValue>(bytes))
+                    .collect::<Result<Vec<_>, _>>()
+                    .map_err(|err| {
+                        setup_data_internal_status(
+                            "update_projection_row_decode",
+                            format!("updated row decode failed: {err}"),
+                        )
+                    })?;
+                (
+                    record_set.records_json.len() as i64,
+                    record_json,
+                    updated_rows_json,
+                )
+            }
+        } else {
+            let result = query.execute(&mut **tx).await.map_err(|err| {
+                crate::runtime::executor_utils::sqlx_error_to_status(
+                    "PostgreSQL update failed",
+                    &err,
+                )
+            })?;
+            (result.rows_affected() as i64, Vec::new(), Vec::new())
+        };
+
+        let mut projection_task_ids = Vec::new();
+        if affected_rows > 0 {
+            // Projection tasks know two operations, 'upsert' and 'delete'; an
+            // update enqueues each POST-UPDATE row as an 'upsert' task (the table
+            // CHECK enforces that pair and the worker projects source_payload
+            // verbatim).
+            for row_json in &updated_rows_json {
+                projection_task_ids.extend(
+                    crate::runtime::projection::ProjectionEngine::enqueue_write_tasks_tx(
+                        &mut *tx,
+                        &crate::runtime::system::SystemCatalogConfig::current(),
+                        &context.tenant_id,
+                        message_type,
+                        "upsert",
+                        row_json,
+                        &projection_plans,
+                    )
+                    .await
+                    .map_err(|err| {
+                        setup_data_internal_status(
+                            "update_projection_task_enqueue",
+                            format!("projection task enqueue failed: {err}"),
+                        )
+                    })?,
+                );
+            }
+            projection_task_ids.sort();
+            projection_task_ids.dedup();
+            // CDC change event carries the row identity AND the delta so
+            // consumers see what changed without a read-back.
+            let cdc_payload = serde_json::json!({
+                "filter": filter,
+                "changes": changes,
+                "increments": increments
+                    .iter()
+                    .map(|(column, delta)| serde_json::json!({"column": column, "delta": delta}))
+                    .collect::<Vec<_>>(),
+            });
+            self.emit_cdc_outbox_on_mutation(
+                &mut *tx,
+                manifest,
+                message_type,
+                "update",
+                &cdc_payload,
+                context,
+            )
+            .await?;
+        }
+        Ok((affected_rows, record_json, projection_task_ids))
+    }
+
+    pub async fn update(
+        &self,
+        manifest: &CatalogManifest,
+        message_type: &str,
+        filter: JsonValue,
+        changes: JsonValue,
+        increments: Vec<(String, f64)>,
+        context: RequestContext,
+        idempotency_key: String,
+        expected: Option<prost_types::Struct>,
+        return_record: bool,
+    ) -> Result<MutationResponse, tonic::Status> {
+        let filter = match resolve_table_for_message(manifest, message_type) {
+            Ok(table_for_encryption) => self.rewrite_encrypted_equality_filters(
+                table_for_encryption,
+                &filter,
+                &context.tenant_id,
+            ),
+            Err(_) => filter,
+        };
+        let pool = self.pg_pool()?;
+        let table = resolve_table_for_message(manifest, message_type)
+            .map_err(|_| message_type_lookup_status(manifest, message_type))?;
+        let resolver = crate::planning::broker::column_resolver(table);
+        let normalized_filter = crate::planning::broker::normalize_filter_keys(&resolver, &filter);
 
         let mut tx = pool.begin().await.map_err(|e| {
             setup_data_internal_status(
@@ -1772,105 +1903,21 @@ impl DataBrokerRuntime {
                 None
             }
         };
-        let (affected_rows, record_json, updated_rows_json) = if need_rows {
-            let rows = query.fetch_all(&mut *tx).await.map_err(|err| {
-                crate::runtime::executor_utils::sqlx_error_to_status(
-                    "PostgreSQL update failed",
-                    &err,
-                )
-            })?;
-            if rows.is_empty() {
-                (0, Vec::new(), Vec::new())
-            } else {
-                let record_set = rows_to_record_set(
-                    rows,
-                    Some(table),
-                    &[],
-                    &context,
-                    self.encryption.as_ref(),
-                    &self.encryption_metrics,
-                )?;
-                let record_json = if return_record {
-                    returned_record_json_or_status(&record_set.records_json)?
-                } else {
-                    Vec::new()
-                };
-                let updated_rows_json = record_set
-                    .records_json
-                    .iter()
-                    .map(|bytes| serde_json::from_slice::<JsonValue>(bytes))
-                    .collect::<Result<Vec<_>, _>>()
-                    .map_err(|err| {
-                        setup_data_internal_status(
-                            "update_projection_row_decode",
-                            format!("updated row decode failed: {err}"),
-                        )
-                    })?;
-                (
-                    record_set.records_json.len() as i64,
-                    record_json,
-                    updated_rows_json,
-                )
-            }
-        } else {
-            let result = query.execute(&mut *tx).await.map_err(|err| {
-                crate::runtime::executor_utils::sqlx_error_to_status(
-                    "PostgreSQL update failed",
-                    &err,
-                )
-            })?;
-            (result.rows_affected() as i64, Vec::new(), Vec::new())
-        };
-        let mut projection_task_ids = Vec::new();
-        if affected_rows > 0 {
-            // Projection tasks know two operations, 'upsert' (re-materialize the
-            // row) and 'delete' (remove it) — the task table's CHECK constraint
-            // enforces exactly that pair, and the worker writes source_payload
-            // through verbatim. An update therefore enqueues each POST-UPDATE row
-            // as an 'upsert' task; enqueuing the filter under a third operation
-            // name would both violate the constraint and project garbage.
-            for row_json in &updated_rows_json {
-                projection_task_ids.extend(
-                    crate::runtime::projection::ProjectionEngine::enqueue_write_tasks_tx(
-                        &mut tx,
-                        &crate::runtime::system::SystemCatalogConfig::current(),
-                        &context.tenant_id,
-                        message_type,
-                        "upsert",
-                        row_json,
-                        &projection_plans,
-                    )
-                    .await
-                    .map_err(|err| {
-                        setup_data_internal_status(
-                            "update_projection_task_enqueue",
-                            format!("projection task enqueue failed: {err}"),
-                        )
-                    })?,
-                );
-            }
-            projection_task_ids.sort();
-            projection_task_ids.dedup();
-            // CDC change event carries the row identity AND the delta so
-            // consumers see what changed without a read-back.
-            let cdc_payload = serde_json::json!({
-                "filter": filter,
-                "changes": changes,
-                "increments": increments
-                    .iter()
-                    .map(|(column, delta)| serde_json::json!({"column": column, "delta": delta}))
-                    .collect::<Vec<_>>(),
-            });
-            self.emit_cdc_outbox_on_mutation(
+        // Plan → bind → execute → projection enqueue → CDC emit, shared verbatim
+        // with the BeginTx `update` operation so neither path can drift on the
+        // post-write side-effects.
+        let (affected_rows, record_json, projection_task_ids) = self
+            .execute_update_in_tx(
                 &mut tx,
                 manifest,
                 message_type,
-                "update",
-                &cdc_payload,
+                &filter,
+                &changes,
+                &increments,
                 &context,
+                return_record,
             )
             .await?;
-        }
         let receipt = match self.default_system_stores_clone() {
             Some(store) => {
                 crate::runtime::consistency_fence::build_write_receipt(
@@ -1889,12 +1936,15 @@ impl DataBrokerRuntime {
             },
         };
         let write_receipt_json = write_receipt_json_or_status(&receipt)?;
+        // Plan-level resource URI (sql://schema/table) — the plan is now built
+        // inside `execute_update_in_tx`, so recompute the same value here.
+        let plan_resource_uri = format!("sql://{}/{}", table.schema, table.table);
         let resource_uri = mutation_response_resource_uri_or_fallback(
             &context,
             message_type,
             table,
             &filter,
-            &plan.resource_uri,
+            &plan_resource_uri,
             dedup_ctx.is_some(),
         )?;
         let response = MutationResponse {

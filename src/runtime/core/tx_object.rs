@@ -480,6 +480,53 @@ impl DataBrokerRuntime {
                     }
                     Err(err) => Err(err),
                 }
+            } else if operation == "update" {
+                // Partial update inside the transaction: SET named columns and/or
+                // apply atomic increments on the rows matched by `filter`. Shares
+                // the exact plan→bind→execute→projection→CDC core with the unary
+                // update() via `execute_update_in_tx`, so a transactional update
+                // performs the same side-effects (projection enqueue + CDC event)
+                // and cannot diverge. Select-cache invalidation + audit for the
+                // touched message_type happen in the post-commit block below.
+                let filter_raw = mutation
+                    .filter
+                    .as_ref()
+                    .map(struct_to_json)
+                    .unwrap_or(JsonValue::Null);
+                let changes = mutation
+                    .changes
+                    .as_ref()
+                    .map(struct_to_json)
+                    .unwrap_or(JsonValue::Null);
+                let increments: Vec<(String, f64)> = mutation
+                    .increments
+                    .iter()
+                    .map(|inc| (inc.column.clone(), inc.delta))
+                    .collect();
+                // Encryption-rewrite the equality filter exactly as unary update()
+                // does before planning; the shared helper does not re-apply it.
+                let filter = match resolve_table_for_message(manifest, &mutation.message_type) {
+                    Ok(table) => self.rewrite_encrypted_equality_filters(
+                        table,
+                        &filter_raw,
+                        &context.tenant_id,
+                    ),
+                    Err(_) => filter_raw,
+                };
+                // return_record=false: a TxStatus carries no per-row body; the
+                // helper still RETURNs internally when projections need the rows.
+                self.execute_update_in_tx(
+                    &mut tx,
+                    manifest,
+                    &mutation.message_type,
+                    &filter,
+                    &changes,
+                    &increments,
+                    &context,
+                    false,
+                )
+                .await
+                .map(|(affected, _record_json, _task_ids)| affected as u64)
             } else if operation == "vector_upsert" {
                 let request = VectorUpsertRequest {
                     context: mutation.context.clone(),
@@ -652,7 +699,7 @@ impl DataBrokerRuntime {
             } else {
                 Err(tx_object_invalid_field(
                     "operation",
-                    "must be one of upsert, delete, vector_upsert, put_object, or enqueue_outbox_event",
+                    "must be one of upsert, update, delete, vector_upsert, put_object, or enqueue_outbox_event",
                     format!("unsupported transaction operation {}", mutation.operation),
                 ))
             };
@@ -669,6 +716,7 @@ impl DataBrokerRuntime {
                         tx_id: tx_id.clone(),
                         mutation_id: Uuid::new_v4().to_string(),
                         message: format!("{affected} row(s) affected"),
+                        ..TxStatus::default()
                     }))
                 }
                 Err(err) => {
@@ -699,6 +747,7 @@ impl DataBrokerRuntime {
                                 "not executed because an earlier mutation failed: {} {}",
                                 skipped.operation, skipped.message_type
                             ),
+                            ..TxStatus::default()
                         }));
                     }
                     return statuses;
@@ -970,6 +1019,34 @@ impl DataBrokerRuntime {
         // the stamped entries still expire on TTL and the checksum guards
         // migrations.
         if transaction_committed(&statuses) {
+            // Read-your-writes fence for the committed transaction: attach a
+            // WriteReceipt (source LSN + outbox seq + manifest checksum) to the
+            // committed TxStatus so a client can fence a following read exactly
+            // as it does with MutationResponse.write_receipt on the unary verbs
+            // (previously BeginTx returned no receipt at all). The source LSN is
+            // read post-commit, so it reflects this transaction's durable
+            // position. projection_task_ids are left empty: the per-task fence is
+            // not threaded through the multi-mutation loop, and the LSN fence is
+            // the primary read-your-writes guarantee.
+            let receipt = match self.default_system_stores_clone() {
+                Some(store) => {
+                    crate::runtime::consistency_fence::build_write_receipt(
+                        store.as_ref(),
+                        &manifest.checksum_sha256,
+                        Vec::new(),
+                    )
+                    .await
+                }
+                None => crate::runtime::consistency::WriteReceipt::empty(),
+            };
+            let receipt_proto = receipt.to_proto();
+            for status in statuses.iter_mut() {
+                if let Ok(tx_status) = status
+                    && tx_status.state == crate::proto::tx_status::State::TxStateCommitted as i32
+                {
+                    tx_status.write_receipt = Some(receipt_proto.clone());
+                }
+            }
             for pattern in select_invalidation_patterns(&tx_mutations) {
                 let _ = self.cache_delete_pattern(&pattern).await;
             }
@@ -981,7 +1058,7 @@ impl DataBrokerRuntime {
             // record-level URI like the unary path's is not meaningful here).
             for mutation in &tx_mutations {
                 let operation = mutation.operation.to_ascii_lowercase();
-                if !matches!(operation.as_str(), "upsert" | "delete") {
+                if !matches!(operation.as_str(), "upsert" | "update" | "delete") {
                     continue;
                 }
                 let audit_context =
@@ -2134,13 +2211,13 @@ mod materialized_view_refresh_tests {
 
         let err = tx_object_invalid_field(
             "operation",
-            "must be one of upsert, delete, vector_upsert, put_object, or enqueue_outbox_event",
+            "must be one of upsert, update, delete, vector_upsert, put_object, or enqueue_outbox_event",
             "unsupported transaction operation noop",
         );
         assert_single_field_violation(
             &err,
             "operation",
-            "must be one of upsert, delete, vector_upsert, put_object, or enqueue_outbox_event",
+            "must be one of upsert, update, delete, vector_upsert, put_object, or enqueue_outbox_event",
         );
     }
 

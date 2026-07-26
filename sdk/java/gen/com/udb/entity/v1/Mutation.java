@@ -39,6 +39,7 @@ private static final long serialVersionUID = 0L;
     objectData_ = com.google.protobuf.ByteString.EMPTY;
     contentType_ = "";
     idempotencyKey_ = "";
+    increments_ = java.util.Collections.emptyList();
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -530,6 +531,103 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int CHANGES_FIELD_NUMBER = 17;
+  private com.google.protobuf.Struct changes_;
+  /**
+   * <pre>
+   * Partial-update payload for `operation = "update"` — the SET columns and the
+   * atomic increments. Same semantics as the unary UpdateRequest (SETs named
+   * columns / applies counter deltas on the rows matched by `filter`), atomic
+   * with the rest of the transaction; ignored for other operations. Note: the
+   * unary UpdateRequest.expected compare-and-swap precondition is intentionally
+   * NOT carried here — transactional updates do not support CAS (rather than
+   * silently ignore an `expected` a caller might set).
+   * </pre>
+   *
+   * <code>.google.protobuf.Struct changes = 17 [json_name = "changes"];</code>
+   * @return Whether the changes field is set.
+   */
+  @java.lang.Override
+  public boolean hasChanges() {
+    return ((bitField0_ & 0x00000008) != 0);
+  }
+  /**
+   * <pre>
+   * Partial-update payload for `operation = "update"` — the SET columns and the
+   * atomic increments. Same semantics as the unary UpdateRequest (SETs named
+   * columns / applies counter deltas on the rows matched by `filter`), atomic
+   * with the rest of the transaction; ignored for other operations. Note: the
+   * unary UpdateRequest.expected compare-and-swap precondition is intentionally
+   * NOT carried here — transactional updates do not support CAS (rather than
+   * silently ignore an `expected` a caller might set).
+   * </pre>
+   *
+   * <code>.google.protobuf.Struct changes = 17 [json_name = "changes"];</code>
+   * @return The changes.
+   */
+  @java.lang.Override
+  public com.google.protobuf.Struct getChanges() {
+    return changes_ == null ? com.google.protobuf.Struct.getDefaultInstance() : changes_;
+  }
+  /**
+   * <pre>
+   * Partial-update payload for `operation = "update"` — the SET columns and the
+   * atomic increments. Same semantics as the unary UpdateRequest (SETs named
+   * columns / applies counter deltas on the rows matched by `filter`), atomic
+   * with the rest of the transaction; ignored for other operations. Note: the
+   * unary UpdateRequest.expected compare-and-swap precondition is intentionally
+   * NOT carried here — transactional updates do not support CAS (rather than
+   * silently ignore an `expected` a caller might set).
+   * </pre>
+   *
+   * <code>.google.protobuf.Struct changes = 17 [json_name = "changes"];</code>
+   */
+  @java.lang.Override
+  public com.google.protobuf.StructOrBuilder getChangesOrBuilder() {
+    return changes_ == null ? com.google.protobuf.Struct.getDefaultInstance() : changes_;
+  }
+
+  public static final int INCREMENTS_FIELD_NUMBER = 18;
+  @SuppressWarnings("serial")
+  private java.util.List<com.udb.entity.v1.UpdateRequest.Increment> increments_;
+  /**
+   * <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 18 [json_name = "increments"];</code>
+   */
+  @java.lang.Override
+  public java.util.List<com.udb.entity.v1.UpdateRequest.Increment> getIncrementsList() {
+    return increments_;
+  }
+  /**
+   * <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 18 [json_name = "increments"];</code>
+   */
+  @java.lang.Override
+  public java.util.List<? extends com.udb.entity.v1.UpdateRequest.IncrementOrBuilder>
+      getIncrementsOrBuilderList() {
+    return increments_;
+  }
+  /**
+   * <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 18 [json_name = "increments"];</code>
+   */
+  @java.lang.Override
+  public int getIncrementsCount() {
+    return increments_.size();
+  }
+  /**
+   * <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 18 [json_name = "increments"];</code>
+   */
+  @java.lang.Override
+  public com.udb.entity.v1.UpdateRequest.Increment getIncrements(int index) {
+    return increments_.get(index);
+  }
+  /**
+   * <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 18 [json_name = "increments"];</code>
+   */
+  @java.lang.Override
+  public com.udb.entity.v1.UpdateRequest.IncrementOrBuilder getIncrementsOrBuilder(
+      int index) {
+    return increments_.get(index);
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -591,6 +689,12 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(idempotencyKey_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 16, idempotencyKey_);
+    }
+    if (((bitField0_ & 0x00000008) != 0)) {
+      output.writeMessage(17, getChanges());
+    }
+    for (int i = 0; i < increments_.size(); i++) {
+      output.writeMessage(18, increments_.get(i));
     }
     getUnknownFields().writeTo(output);
   }
@@ -657,6 +761,14 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(idempotencyKey_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(16, idempotencyKey_);
     }
+    if (((bitField0_ & 0x00000008) != 0)) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(17, getChanges());
+    }
+    for (int i = 0; i < increments_.size(); i++) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(18, increments_.get(i));
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -713,6 +825,13 @@ private static final long serialVersionUID = 0L;
         .equals(other.getContentType())) return false;
     if (!getIdempotencyKey()
         .equals(other.getIdempotencyKey())) return false;
+    if (hasChanges() != other.hasChanges()) return false;
+    if (hasChanges()) {
+      if (!getChanges()
+          .equals(other.getChanges())) return false;
+    }
+    if (!getIncrementsList()
+        .equals(other.getIncrementsList())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -766,6 +885,14 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getContentType().hashCode();
     hash = (37 * hash) + IDEMPOTENCY_KEY_FIELD_NUMBER;
     hash = (53 * hash) + getIdempotencyKey().hashCode();
+    if (hasChanges()) {
+      hash = (37 * hash) + CHANGES_FIELD_NUMBER;
+      hash = (53 * hash) + getChanges().hashCode();
+    }
+    if (getIncrementsCount() > 0) {
+      hash = (37 * hash) + INCREMENTS_FIELD_NUMBER;
+      hash = (53 * hash) + getIncrementsList().hashCode();
+    }
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -900,6 +1027,8 @@ private static final long serialVersionUID = 0L;
         internalGetPayloadFieldBuilder();
         internalGetFilterFieldBuilder();
         internalGetVectorPointsFieldBuilder();
+        internalGetChangesFieldBuilder();
+        internalGetIncrementsFieldBuilder();
       }
     }
     @java.lang.Override
@@ -940,6 +1069,18 @@ private static final long serialVersionUID = 0L;
       objectData_ = com.google.protobuf.ByteString.EMPTY;
       contentType_ = "";
       idempotencyKey_ = "";
+      changes_ = null;
+      if (changesBuilder_ != null) {
+        changesBuilder_.dispose();
+        changesBuilder_ = null;
+      }
+      if (incrementsBuilder_ == null) {
+        increments_ = java.util.Collections.emptyList();
+      } else {
+        increments_ = null;
+        incrementsBuilder_.clear();
+      }
+      bitField0_ = (bitField0_ & ~0x00020000);
       return this;
     }
 
@@ -981,6 +1122,15 @@ private static final long serialVersionUID = 0L;
         result.vectorPoints_ = vectorPoints_;
       } else {
         result.vectorPoints_ = vectorPointsBuilder_.build();
+      }
+      if (incrementsBuilder_ == null) {
+        if (((bitField0_ & 0x00020000) != 0)) {
+          increments_ = java.util.Collections.unmodifiableList(increments_);
+          bitField0_ = (bitField0_ & ~0x00020000);
+        }
+        result.increments_ = increments_;
+      } else {
+        result.increments_ = incrementsBuilder_.build();
       }
     }
 
@@ -1040,6 +1190,12 @@ private static final long serialVersionUID = 0L;
       }
       if (((from_bitField0_ & 0x00008000) != 0)) {
         result.idempotencyKey_ = idempotencyKey_;
+      }
+      if (((from_bitField0_ & 0x00010000) != 0)) {
+        result.changes_ = changesBuilder_ == null
+            ? changes_
+            : changesBuilder_.build();
+        to_bitField0_ |= 0x00000008;
       }
       result.bitField0_ |= to_bitField0_;
     }
@@ -1142,6 +1298,35 @@ private static final long serialVersionUID = 0L;
         idempotencyKey_ = other.idempotencyKey_;
         bitField0_ |= 0x00008000;
         onChanged();
+      }
+      if (other.hasChanges()) {
+        mergeChanges(other.getChanges());
+      }
+      if (incrementsBuilder_ == null) {
+        if (!other.increments_.isEmpty()) {
+          if (increments_.isEmpty()) {
+            increments_ = other.increments_;
+            bitField0_ = (bitField0_ & ~0x00020000);
+          } else {
+            ensureIncrementsIsMutable();
+            increments_.addAll(other.increments_);
+          }
+          onChanged();
+        }
+      } else {
+        if (!other.increments_.isEmpty()) {
+          if (incrementsBuilder_.isEmpty()) {
+            incrementsBuilder_.dispose();
+            incrementsBuilder_ = null;
+            increments_ = other.increments_;
+            bitField0_ = (bitField0_ & ~0x00020000);
+            incrementsBuilder_ =
+              com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                 internalGetIncrementsFieldBuilder() : null;
+          } else {
+            incrementsBuilder_.addAllMessages(other.increments_);
+          }
+        }
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -1263,6 +1448,26 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00008000;
               break;
             } // case 130
+            case 138: {
+              input.readMessage(
+                  internalGetChangesFieldBuilder().getBuilder(),
+                  extensionRegistry);
+              bitField0_ |= 0x00010000;
+              break;
+            } // case 138
+            case 146: {
+              com.udb.entity.v1.UpdateRequest.Increment m =
+                  input.readMessage(
+                      com.udb.entity.v1.UpdateRequest.Increment.parser(),
+                      extensionRegistry);
+              if (incrementsBuilder_ == null) {
+                ensureIncrementsIsMutable();
+                increments_.add(m);
+              } else {
+                incrementsBuilder_.addMessage(m);
+              }
+              break;
+            } // case 146
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -2585,6 +2790,457 @@ private static final long serialVersionUID = 0L;
       bitField0_ |= 0x00008000;
       onChanged();
       return this;
+    }
+
+    private com.google.protobuf.Struct changes_;
+    private com.google.protobuf.SingleFieldBuilder<
+        com.google.protobuf.Struct, com.google.protobuf.Struct.Builder, com.google.protobuf.StructOrBuilder> changesBuilder_;
+    /**
+     * <pre>
+     * Partial-update payload for `operation = "update"` — the SET columns and the
+     * atomic increments. Same semantics as the unary UpdateRequest (SETs named
+     * columns / applies counter deltas on the rows matched by `filter`), atomic
+     * with the rest of the transaction; ignored for other operations. Note: the
+     * unary UpdateRequest.expected compare-and-swap precondition is intentionally
+     * NOT carried here — transactional updates do not support CAS (rather than
+     * silently ignore an `expected` a caller might set).
+     * </pre>
+     *
+     * <code>.google.protobuf.Struct changes = 17 [json_name = "changes"];</code>
+     * @return Whether the changes field is set.
+     */
+    public boolean hasChanges() {
+      return ((bitField0_ & 0x00010000) != 0);
+    }
+    /**
+     * <pre>
+     * Partial-update payload for `operation = "update"` — the SET columns and the
+     * atomic increments. Same semantics as the unary UpdateRequest (SETs named
+     * columns / applies counter deltas on the rows matched by `filter`), atomic
+     * with the rest of the transaction; ignored for other operations. Note: the
+     * unary UpdateRequest.expected compare-and-swap precondition is intentionally
+     * NOT carried here — transactional updates do not support CAS (rather than
+     * silently ignore an `expected` a caller might set).
+     * </pre>
+     *
+     * <code>.google.protobuf.Struct changes = 17 [json_name = "changes"];</code>
+     * @return The changes.
+     */
+    public com.google.protobuf.Struct getChanges() {
+      if (changesBuilder_ == null) {
+        return changes_ == null ? com.google.protobuf.Struct.getDefaultInstance() : changes_;
+      } else {
+        return changesBuilder_.getMessage();
+      }
+    }
+    /**
+     * <pre>
+     * Partial-update payload for `operation = "update"` — the SET columns and the
+     * atomic increments. Same semantics as the unary UpdateRequest (SETs named
+     * columns / applies counter deltas on the rows matched by `filter`), atomic
+     * with the rest of the transaction; ignored for other operations. Note: the
+     * unary UpdateRequest.expected compare-and-swap precondition is intentionally
+     * NOT carried here — transactional updates do not support CAS (rather than
+     * silently ignore an `expected` a caller might set).
+     * </pre>
+     *
+     * <code>.google.protobuf.Struct changes = 17 [json_name = "changes"];</code>
+     */
+    public Builder setChanges(com.google.protobuf.Struct value) {
+      if (changesBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        changes_ = value;
+      } else {
+        changesBuilder_.setMessage(value);
+      }
+      bitField0_ |= 0x00010000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Partial-update payload for `operation = "update"` — the SET columns and the
+     * atomic increments. Same semantics as the unary UpdateRequest (SETs named
+     * columns / applies counter deltas on the rows matched by `filter`), atomic
+     * with the rest of the transaction; ignored for other operations. Note: the
+     * unary UpdateRequest.expected compare-and-swap precondition is intentionally
+     * NOT carried here — transactional updates do not support CAS (rather than
+     * silently ignore an `expected` a caller might set).
+     * </pre>
+     *
+     * <code>.google.protobuf.Struct changes = 17 [json_name = "changes"];</code>
+     */
+    public Builder setChanges(
+        com.google.protobuf.Struct.Builder builderForValue) {
+      if (changesBuilder_ == null) {
+        changes_ = builderForValue.build();
+      } else {
+        changesBuilder_.setMessage(builderForValue.build());
+      }
+      bitField0_ |= 0x00010000;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Partial-update payload for `operation = "update"` — the SET columns and the
+     * atomic increments. Same semantics as the unary UpdateRequest (SETs named
+     * columns / applies counter deltas on the rows matched by `filter`), atomic
+     * with the rest of the transaction; ignored for other operations. Note: the
+     * unary UpdateRequest.expected compare-and-swap precondition is intentionally
+     * NOT carried here — transactional updates do not support CAS (rather than
+     * silently ignore an `expected` a caller might set).
+     * </pre>
+     *
+     * <code>.google.protobuf.Struct changes = 17 [json_name = "changes"];</code>
+     */
+    public Builder mergeChanges(com.google.protobuf.Struct value) {
+      if (changesBuilder_ == null) {
+        if (((bitField0_ & 0x00010000) != 0) &&
+          changes_ != null &&
+          changes_ != com.google.protobuf.Struct.getDefaultInstance()) {
+          getChangesBuilder().mergeFrom(value);
+        } else {
+          changes_ = value;
+        }
+      } else {
+        changesBuilder_.mergeFrom(value);
+      }
+      if (changes_ != null) {
+        bitField0_ |= 0x00010000;
+        onChanged();
+      }
+      return this;
+    }
+    /**
+     * <pre>
+     * Partial-update payload for `operation = "update"` — the SET columns and the
+     * atomic increments. Same semantics as the unary UpdateRequest (SETs named
+     * columns / applies counter deltas on the rows matched by `filter`), atomic
+     * with the rest of the transaction; ignored for other operations. Note: the
+     * unary UpdateRequest.expected compare-and-swap precondition is intentionally
+     * NOT carried here — transactional updates do not support CAS (rather than
+     * silently ignore an `expected` a caller might set).
+     * </pre>
+     *
+     * <code>.google.protobuf.Struct changes = 17 [json_name = "changes"];</code>
+     */
+    public Builder clearChanges() {
+      bitField0_ = (bitField0_ & ~0x00010000);
+      changes_ = null;
+      if (changesBuilder_ != null) {
+        changesBuilder_.dispose();
+        changesBuilder_ = null;
+      }
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Partial-update payload for `operation = "update"` — the SET columns and the
+     * atomic increments. Same semantics as the unary UpdateRequest (SETs named
+     * columns / applies counter deltas on the rows matched by `filter`), atomic
+     * with the rest of the transaction; ignored for other operations. Note: the
+     * unary UpdateRequest.expected compare-and-swap precondition is intentionally
+     * NOT carried here — transactional updates do not support CAS (rather than
+     * silently ignore an `expected` a caller might set).
+     * </pre>
+     *
+     * <code>.google.protobuf.Struct changes = 17 [json_name = "changes"];</code>
+     */
+    public com.google.protobuf.Struct.Builder getChangesBuilder() {
+      bitField0_ |= 0x00010000;
+      onChanged();
+      return internalGetChangesFieldBuilder().getBuilder();
+    }
+    /**
+     * <pre>
+     * Partial-update payload for `operation = "update"` — the SET columns and the
+     * atomic increments. Same semantics as the unary UpdateRequest (SETs named
+     * columns / applies counter deltas on the rows matched by `filter`), atomic
+     * with the rest of the transaction; ignored for other operations. Note: the
+     * unary UpdateRequest.expected compare-and-swap precondition is intentionally
+     * NOT carried here — transactional updates do not support CAS (rather than
+     * silently ignore an `expected` a caller might set).
+     * </pre>
+     *
+     * <code>.google.protobuf.Struct changes = 17 [json_name = "changes"];</code>
+     */
+    public com.google.protobuf.StructOrBuilder getChangesOrBuilder() {
+      if (changesBuilder_ != null) {
+        return changesBuilder_.getMessageOrBuilder();
+      } else {
+        return changes_ == null ?
+            com.google.protobuf.Struct.getDefaultInstance() : changes_;
+      }
+    }
+    /**
+     * <pre>
+     * Partial-update payload for `operation = "update"` — the SET columns and the
+     * atomic increments. Same semantics as the unary UpdateRequest (SETs named
+     * columns / applies counter deltas on the rows matched by `filter`), atomic
+     * with the rest of the transaction; ignored for other operations. Note: the
+     * unary UpdateRequest.expected compare-and-swap precondition is intentionally
+     * NOT carried here — transactional updates do not support CAS (rather than
+     * silently ignore an `expected` a caller might set).
+     * </pre>
+     *
+     * <code>.google.protobuf.Struct changes = 17 [json_name = "changes"];</code>
+     */
+    private com.google.protobuf.SingleFieldBuilder<
+        com.google.protobuf.Struct, com.google.protobuf.Struct.Builder, com.google.protobuf.StructOrBuilder>
+        internalGetChangesFieldBuilder() {
+      if (changesBuilder_ == null) {
+        changesBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+            com.google.protobuf.Struct, com.google.protobuf.Struct.Builder, com.google.protobuf.StructOrBuilder>(
+                getChanges(),
+                getParentForChildren(),
+                isClean());
+        changes_ = null;
+      }
+      return changesBuilder_;
+    }
+
+    private java.util.List<com.udb.entity.v1.UpdateRequest.Increment> increments_ =
+      java.util.Collections.emptyList();
+    private void ensureIncrementsIsMutable() {
+      if (!((bitField0_ & 0x00020000) != 0)) {
+        increments_ = new java.util.ArrayList<com.udb.entity.v1.UpdateRequest.Increment>(increments_);
+        bitField0_ |= 0x00020000;
+       }
+    }
+
+    private com.google.protobuf.RepeatedFieldBuilder<
+        com.udb.entity.v1.UpdateRequest.Increment, com.udb.entity.v1.UpdateRequest.Increment.Builder, com.udb.entity.v1.UpdateRequest.IncrementOrBuilder> incrementsBuilder_;
+
+    /**
+     * <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 18 [json_name = "increments"];</code>
+     */
+    public java.util.List<com.udb.entity.v1.UpdateRequest.Increment> getIncrementsList() {
+      if (incrementsBuilder_ == null) {
+        return java.util.Collections.unmodifiableList(increments_);
+      } else {
+        return incrementsBuilder_.getMessageList();
+      }
+    }
+    /**
+     * <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 18 [json_name = "increments"];</code>
+     */
+    public int getIncrementsCount() {
+      if (incrementsBuilder_ == null) {
+        return increments_.size();
+      } else {
+        return incrementsBuilder_.getCount();
+      }
+    }
+    /**
+     * <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 18 [json_name = "increments"];</code>
+     */
+    public com.udb.entity.v1.UpdateRequest.Increment getIncrements(int index) {
+      if (incrementsBuilder_ == null) {
+        return increments_.get(index);
+      } else {
+        return incrementsBuilder_.getMessage(index);
+      }
+    }
+    /**
+     * <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 18 [json_name = "increments"];</code>
+     */
+    public Builder setIncrements(
+        int index, com.udb.entity.v1.UpdateRequest.Increment value) {
+      if (incrementsBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureIncrementsIsMutable();
+        increments_.set(index, value);
+        onChanged();
+      } else {
+        incrementsBuilder_.setMessage(index, value);
+      }
+      return this;
+    }
+    /**
+     * <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 18 [json_name = "increments"];</code>
+     */
+    public Builder setIncrements(
+        int index, com.udb.entity.v1.UpdateRequest.Increment.Builder builderForValue) {
+      if (incrementsBuilder_ == null) {
+        ensureIncrementsIsMutable();
+        increments_.set(index, builderForValue.build());
+        onChanged();
+      } else {
+        incrementsBuilder_.setMessage(index, builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 18 [json_name = "increments"];</code>
+     */
+    public Builder addIncrements(com.udb.entity.v1.UpdateRequest.Increment value) {
+      if (incrementsBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureIncrementsIsMutable();
+        increments_.add(value);
+        onChanged();
+      } else {
+        incrementsBuilder_.addMessage(value);
+      }
+      return this;
+    }
+    /**
+     * <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 18 [json_name = "increments"];</code>
+     */
+    public Builder addIncrements(
+        int index, com.udb.entity.v1.UpdateRequest.Increment value) {
+      if (incrementsBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureIncrementsIsMutable();
+        increments_.add(index, value);
+        onChanged();
+      } else {
+        incrementsBuilder_.addMessage(index, value);
+      }
+      return this;
+    }
+    /**
+     * <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 18 [json_name = "increments"];</code>
+     */
+    public Builder addIncrements(
+        com.udb.entity.v1.UpdateRequest.Increment.Builder builderForValue) {
+      if (incrementsBuilder_ == null) {
+        ensureIncrementsIsMutable();
+        increments_.add(builderForValue.build());
+        onChanged();
+      } else {
+        incrementsBuilder_.addMessage(builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 18 [json_name = "increments"];</code>
+     */
+    public Builder addIncrements(
+        int index, com.udb.entity.v1.UpdateRequest.Increment.Builder builderForValue) {
+      if (incrementsBuilder_ == null) {
+        ensureIncrementsIsMutable();
+        increments_.add(index, builderForValue.build());
+        onChanged();
+      } else {
+        incrementsBuilder_.addMessage(index, builderForValue.build());
+      }
+      return this;
+    }
+    /**
+     * <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 18 [json_name = "increments"];</code>
+     */
+    public Builder addAllIncrements(
+        java.lang.Iterable<? extends com.udb.entity.v1.UpdateRequest.Increment> values) {
+      if (incrementsBuilder_ == null) {
+        ensureIncrementsIsMutable();
+        com.google.protobuf.AbstractMessageLite.Builder.addAll(
+            values, increments_);
+        onChanged();
+      } else {
+        incrementsBuilder_.addAllMessages(values);
+      }
+      return this;
+    }
+    /**
+     * <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 18 [json_name = "increments"];</code>
+     */
+    public Builder clearIncrements() {
+      if (incrementsBuilder_ == null) {
+        increments_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00020000);
+        onChanged();
+      } else {
+        incrementsBuilder_.clear();
+      }
+      return this;
+    }
+    /**
+     * <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 18 [json_name = "increments"];</code>
+     */
+    public Builder removeIncrements(int index) {
+      if (incrementsBuilder_ == null) {
+        ensureIncrementsIsMutable();
+        increments_.remove(index);
+        onChanged();
+      } else {
+        incrementsBuilder_.remove(index);
+      }
+      return this;
+    }
+    /**
+     * <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 18 [json_name = "increments"];</code>
+     */
+    public com.udb.entity.v1.UpdateRequest.Increment.Builder getIncrementsBuilder(
+        int index) {
+      return internalGetIncrementsFieldBuilder().getBuilder(index);
+    }
+    /**
+     * <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 18 [json_name = "increments"];</code>
+     */
+    public com.udb.entity.v1.UpdateRequest.IncrementOrBuilder getIncrementsOrBuilder(
+        int index) {
+      if (incrementsBuilder_ == null) {
+        return increments_.get(index);  } else {
+        return incrementsBuilder_.getMessageOrBuilder(index);
+      }
+    }
+    /**
+     * <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 18 [json_name = "increments"];</code>
+     */
+    public java.util.List<? extends com.udb.entity.v1.UpdateRequest.IncrementOrBuilder>
+         getIncrementsOrBuilderList() {
+      if (incrementsBuilder_ != null) {
+        return incrementsBuilder_.getMessageOrBuilderList();
+      } else {
+        return java.util.Collections.unmodifiableList(increments_);
+      }
+    }
+    /**
+     * <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 18 [json_name = "increments"];</code>
+     */
+    public com.udb.entity.v1.UpdateRequest.Increment.Builder addIncrementsBuilder() {
+      return internalGetIncrementsFieldBuilder().addBuilder(
+          com.udb.entity.v1.UpdateRequest.Increment.getDefaultInstance());
+    }
+    /**
+     * <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 18 [json_name = "increments"];</code>
+     */
+    public com.udb.entity.v1.UpdateRequest.Increment.Builder addIncrementsBuilder(
+        int index) {
+      return internalGetIncrementsFieldBuilder().addBuilder(
+          index, com.udb.entity.v1.UpdateRequest.Increment.getDefaultInstance());
+    }
+    /**
+     * <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 18 [json_name = "increments"];</code>
+     */
+    public java.util.List<com.udb.entity.v1.UpdateRequest.Increment.Builder>
+         getIncrementsBuilderList() {
+      return internalGetIncrementsFieldBuilder().getBuilderList();
+    }
+    private com.google.protobuf.RepeatedFieldBuilder<
+        com.udb.entity.v1.UpdateRequest.Increment, com.udb.entity.v1.UpdateRequest.Increment.Builder, com.udb.entity.v1.UpdateRequest.IncrementOrBuilder>
+        internalGetIncrementsFieldBuilder() {
+      if (incrementsBuilder_ == null) {
+        incrementsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+            com.udb.entity.v1.UpdateRequest.Increment, com.udb.entity.v1.UpdateRequest.Increment.Builder, com.udb.entity.v1.UpdateRequest.IncrementOrBuilder>(
+                increments_,
+                ((bitField0_ & 0x00020000) != 0),
+                getParentForChildren(),
+                isClean());
+        increments_ = null;
+      }
+      return incrementsBuilder_;
     }
 
     // @@protoc_insertion_point(builder_scope:udb.entity.v1.Mutation)

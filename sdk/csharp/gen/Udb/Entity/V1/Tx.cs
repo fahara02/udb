@@ -26,36 +26,42 @@ namespace Udb.Entity.V1 {
           string.Concat(
             "ChZ1ZGIvZW50aXR5L3YxL3R4LnByb3RvEg11ZGIuZW50aXR5LnYxGhxnb29n",
             "bGUvcHJvdG9idWYvc3RydWN0LnByb3RvGht1ZGIvZW50aXR5L3YxL2NvbnRl",
-            "eHQucHJvdG8aGnVkYi9lbnRpdHkvdjEvdmVjdG9yLnByb3RvIt8ECghNdXRh",
-            "dGlvbhI3Cgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0",
-            "Q29udGV4dFIHY29udGV4dBITCgV0eF9pZBgCIAEoCVIEdHhJZBIcCglvcGVy",
-            "YXRpb24YAyABKAlSCW9wZXJhdGlvbhIhCgxtZXNzYWdlX3R5cGUYBCABKAlS",
-            "C21lc3NhZ2VUeXBlEh8KC3JlY29yZF9qc29uGAUgASgMUgpyZWNvcmRKc29u",
-            "EjEKB3BheWxvYWQYBiABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0Ugdw",
-            "YXlsb2FkEi8KBmZpbHRlchgHIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1",
-            "Y3RSBmZpbHRlchIeCgpjb2xsZWN0aW9uGAggASgJUgpjb2xsZWN0aW9uEkcK",
-            "DXZlY3Rvcl9wb2ludHMYCSADKAsyIi51ZGIuZW50aXR5LnYxLlZlY3RvclBv",
-            "aW50TXV0YXRpb25SDHZlY3RvclBvaW50cxIWCgZjb21taXQYCiABKAhSBmNv",
-            "bW1pdBIaCghyb2xsYmFjaxgLIAEoCFIIcm9sbGJhY2sSFgoGYnVja2V0GAwg",
-            "ASgJUgZidWNrZXQSHQoKb2JqZWN0X2tleRgNIAEoCVIJb2JqZWN0S2V5Eh8K",
-            "C29iamVjdF9kYXRhGA4gASgMUgpvYmplY3REYXRhEiEKDGNvbnRlbnRfdHlw",
-            "ZRgPIAEoCVILY29udGVudFR5cGUSJwoPaWRlbXBvdGVuY3lfa2V5GBAgASgJ",
-            "Ug5pZGVtcG90ZW5jeUtleSKLAgoIVHhTdGF0dXMSMwoFc3RhdGUYASABKA4y",
-            "HS51ZGIuZW50aXR5LnYxLlR4U3RhdHVzLlN0YXRlUgVzdGF0ZRITCgV0eF9p",
-            "ZBgCIAEoCVIEdHhJZBIfCgttdXRhdGlvbl9pZBgDIAEoCVIKbXV0YXRpb25J",
-            "ZBIYCgdtZXNzYWdlGAQgASgJUgdtZXNzYWdlInoKBVN0YXRlEhgKFFRYX1NU",
-            "QVRFX1VOU1BFQ0lGSUVEEAASEQoNVFhfU1RBVEVfT1BFThABEhYKElRYX1NU",
-            "QVRFX0NPTU1JVFRFRBACEhgKFFRYX1NUQVRFX1JPTExFRF9CQUNLEAMSEgoO",
-            "VFhfU1RBVEVfRVJST1IQBEKtAQoRY29tLnVkYi5lbnRpdHkudjFCB1R4UHJv",
-            "dG9QAVo5Z2l0aHViLmNvbS9mYWhhcmEwMi91ZGIvc2RrL2dvL2dlbi91ZGIv",
-            "ZW50aXR5L3YxO2VudGl0eXYxogIDVUVYqgINVWRiLkVudGl0eS5WMcoCDVVk",
-            "YlxFbnRpdHlcVjHiAhlVZGJcR1BCTWV0YWRhdGFcRW50aXR5XFYx6gIPVWRi",
-            "OjpFbnRpdHk6OlYxYgZwcm90bzM="));
+            "eHQucHJvdG8aGnVkYi9lbnRpdHkvdjEvdmVjdG9yLnByb3RvGh51ZGIvZW50",
+            "aXR5L3YxL3JlbGF0aW9uYWwucHJvdG8aH3VkYi9lbnRpdHkvdjEvY29uc2lz",
+            "dGVuY3kucHJvdG8i2gUKCE11dGF0aW9uEjcKB2NvbnRleHQYASABKAsyHS51",
+            "ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Ugdjb250ZXh0EhMKBXR4X2lk",
+            "GAIgASgJUgR0eElkEhwKCW9wZXJhdGlvbhgDIAEoCVIJb3BlcmF0aW9uEiEK",
+            "DG1lc3NhZ2VfdHlwZRgEIAEoCVILbWVzc2FnZVR5cGUSHwoLcmVjb3JkX2pz",
+            "b24YBSABKAxSCnJlY29yZEpzb24SMQoHcGF5bG9hZBgGIAEoCzIXLmdvb2ds",
+            "ZS5wcm90b2J1Zi5TdHJ1Y3RSB3BheWxvYWQSLwoGZmlsdGVyGAcgASgLMhcu",
+            "Z29vZ2xlLnByb3RvYnVmLlN0cnVjdFIGZmlsdGVyEh4KCmNvbGxlY3Rpb24Y",
+            "CCABKAlSCmNvbGxlY3Rpb24SRwoNdmVjdG9yX3BvaW50cxgJIAMoCzIiLnVk",
+            "Yi5lbnRpdHkudjEuVmVjdG9yUG9pbnRNdXRhdGlvblIMdmVjdG9yUG9pbnRz",
+            "EhYKBmNvbW1pdBgKIAEoCFIGY29tbWl0EhoKCHJvbGxiYWNrGAsgASgIUghy",
+            "b2xsYmFjaxIWCgZidWNrZXQYDCABKAlSBmJ1Y2tldBIdCgpvYmplY3Rfa2V5",
+            "GA0gASgJUglvYmplY3RLZXkSHwoLb2JqZWN0X2RhdGEYDiABKAxSCm9iamVj",
+            "dERhdGESIQoMY29udGVudF90eXBlGA8gASgJUgtjb250ZW50VHlwZRInCg9p",
+            "ZGVtcG90ZW5jeV9rZXkYECABKAlSDmlkZW1wb3RlbmN5S2V5EjEKB2NoYW5n",
+            "ZXMYESABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0UgdjaGFuZ2VzEkYK",
+            "CmluY3JlbWVudHMYEiADKAsyJi51ZGIuZW50aXR5LnYxLlVwZGF0ZVJlcXVl",
+            "c3QuSW5jcmVtZW50UgppbmNyZW1lbnRzIs0CCghUeFN0YXR1cxIzCgVzdGF0",
+            "ZRgBIAEoDjIdLnVkYi5lbnRpdHkudjEuVHhTdGF0dXMuU3RhdGVSBXN0YXRl",
+            "EhMKBXR4X2lkGAIgASgJUgR0eElkEh8KC211dGF0aW9uX2lkGAMgASgJUgpt",
+            "dXRhdGlvbklkEhgKB21lc3NhZ2UYBCABKAlSB21lc3NhZ2USQAoNd3JpdGVf",
+            "cmVjZWlwdBgFIAEoCzIbLnVkYi5lbnRpdHkudjEuV3JpdGVSZWNlaXB0Ugx3",
+            "cml0ZVJlY2VpcHQiegoFU3RhdGUSGAoUVFhfU1RBVEVfVU5TUEVDSUZJRUQQ",
+            "ABIRCg1UWF9TVEFURV9PUEVOEAESFgoSVFhfU1RBVEVfQ09NTUlUVEVEEAIS",
+            "GAoUVFhfU1RBVEVfUk9MTEVEX0JBQ0sQAxISCg5UWF9TVEFURV9FUlJPUhAE",
+            "Qq0BChFjb20udWRiLmVudGl0eS52MUIHVHhQcm90b1ABWjlnaXRodWIuY29t",
+            "L2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9lbnRpdHkvdjE7ZW50aXR5",
+            "djGiAgNVRViqAg1VZGIuRW50aXR5LlYxygINVWRiXEVudGl0eVxWMeICGVVk",
+            "YlxHUEJNZXRhZGF0YVxFbnRpdHlcVjHqAg9VZGI6OkVudGl0eTo6VjFiBnBy",
+            "b3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
-          new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.StructReflection.Descriptor, global::Udb.Entity.V1.ContextReflection.Descriptor, global::Udb.Entity.V1.VectorReflection.Descriptor, },
+          new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.StructReflection.Descriptor, global::Udb.Entity.V1.ContextReflection.Descriptor, global::Udb.Entity.V1.VectorReflection.Descriptor, global::Udb.Entity.V1.RelationalReflection.Descriptor, global::Udb.Entity.V1.ConsistencyReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.Mutation), global::Udb.Entity.V1.Mutation.Parser, new[]{ "Context", "TxId", "Operation", "MessageType", "RecordJson", "Payload", "Filter", "Collection", "VectorPoints", "Commit", "Rollback", "Bucket", "ObjectKey", "ObjectData", "ContentType", "IdempotencyKey" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.TxStatus), global::Udb.Entity.V1.TxStatus.Parser, new[]{ "State", "TxId", "MutationId", "Message" }, null, new[]{ typeof(global::Udb.Entity.V1.TxStatus.Types.State) }, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.Mutation), global::Udb.Entity.V1.Mutation.Parser, new[]{ "Context", "TxId", "Operation", "MessageType", "RecordJson", "Payload", "Filter", "Collection", "VectorPoints", "Commit", "Rollback", "Bucket", "ObjectKey", "ObjectData", "ContentType", "IdempotencyKey", "Changes", "Increments" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.TxStatus), global::Udb.Entity.V1.TxStatus.Parser, new[]{ "State", "TxId", "MutationId", "Message", "WriteReceipt" }, null, new[]{ typeof(global::Udb.Entity.V1.TxStatus.Types.State) }, null, null)
           }));
     }
     #endregion
@@ -113,6 +119,8 @@ namespace Udb.Entity.V1 {
       objectData_ = other.objectData_;
       contentType_ = other.contentType_;
       idempotencyKey_ = other.idempotencyKey_;
+      changes_ = other.changes_ != null ? other.changes_.Clone() : null;
+      increments_ = other.increments_.Clone();
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -313,6 +321,38 @@ namespace Udb.Entity.V1 {
       }
     }
 
+    /// <summary>Field number for the "changes" field.</summary>
+    public const int ChangesFieldNumber = 17;
+    private global::Google.Protobuf.WellKnownTypes.Struct changes_;
+    /// <summary>
+    /// Partial-update payload for `operation = "update"` — the SET columns and the
+    /// atomic increments. Same semantics as the unary UpdateRequest (SETs named
+    /// columns / applies counter deltas on the rows matched by `filter`), atomic
+    /// with the rest of the transaction; ignored for other operations. Note: the
+    /// unary UpdateRequest.expected compare-and-swap precondition is intentionally
+    /// NOT carried here — transactional updates do not support CAS (rather than
+    /// silently ignore an `expected` a caller might set).
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Google.Protobuf.WellKnownTypes.Struct Changes {
+      get { return changes_; }
+      set {
+        changes_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "increments" field.</summary>
+    public const int IncrementsFieldNumber = 18;
+    private static readonly pb::FieldCodec<global::Udb.Entity.V1.UpdateRequest.Types.Increment> _repeated_increments_codec
+        = pb::FieldCodec.ForMessage(146, global::Udb.Entity.V1.UpdateRequest.Types.Increment.Parser);
+    private readonly pbc::RepeatedField<global::Udb.Entity.V1.UpdateRequest.Types.Increment> increments_ = new pbc::RepeatedField<global::Udb.Entity.V1.UpdateRequest.Types.Increment>();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::RepeatedField<global::Udb.Entity.V1.UpdateRequest.Types.Increment> Increments {
+      get { return increments_; }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -344,6 +384,8 @@ namespace Udb.Entity.V1 {
       if (ObjectData != other.ObjectData) return false;
       if (ContentType != other.ContentType) return false;
       if (IdempotencyKey != other.IdempotencyKey) return false;
+      if (!object.Equals(Changes, other.Changes)) return false;
+      if(!increments_.Equals(other.increments_)) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -367,6 +409,8 @@ namespace Udb.Entity.V1 {
       if (ObjectData.Length != 0) hash ^= ObjectData.GetHashCode();
       if (ContentType.Length != 0) hash ^= ContentType.GetHashCode();
       if (IdempotencyKey.Length != 0) hash ^= IdempotencyKey.GetHashCode();
+      if (changes_ != null) hash ^= Changes.GetHashCode();
+      hash ^= increments_.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -446,6 +490,11 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(130, 1);
         output.WriteString(IdempotencyKey);
       }
+      if (changes_ != null) {
+        output.WriteRawTag(138, 1);
+        output.WriteMessage(Changes);
+      }
+      increments_.WriteTo(output, _repeated_increments_codec);
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -517,6 +566,11 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(130, 1);
         output.WriteString(IdempotencyKey);
       }
+      if (changes_ != null) {
+        output.WriteRawTag(138, 1);
+        output.WriteMessage(Changes);
+      }
+      increments_.WriteTo(ref output, _repeated_increments_codec);
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -573,6 +627,10 @@ namespace Udb.Entity.V1 {
       if (IdempotencyKey.Length != 0) {
         size += 2 + pb::CodedOutputStream.ComputeStringSize(IdempotencyKey);
       }
+      if (changes_ != null) {
+        size += 2 + pb::CodedOutputStream.ComputeMessageSize(Changes);
+      }
+      size += increments_.CalculateSize(_repeated_increments_codec);
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
       }
@@ -640,6 +698,13 @@ namespace Udb.Entity.V1 {
       if (other.IdempotencyKey.Length != 0) {
         IdempotencyKey = other.IdempotencyKey;
       }
+      if (other.changes_ != null) {
+        if (changes_ == null) {
+          Changes = new global::Google.Protobuf.WellKnownTypes.Struct();
+        }
+        Changes.MergeFrom(other.Changes);
+      }
+      increments_.Add(other.increments_);
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
 
@@ -730,6 +795,17 @@ namespace Udb.Entity.V1 {
           }
           case 130: {
             IdempotencyKey = input.ReadString();
+            break;
+          }
+          case 138: {
+            if (changes_ == null) {
+              Changes = new global::Google.Protobuf.WellKnownTypes.Struct();
+            }
+            input.ReadMessage(Changes);
+            break;
+          }
+          case 146: {
+            increments_.AddEntriesFrom(input, _repeated_increments_codec);
             break;
           }
         }
@@ -824,6 +900,17 @@ namespace Udb.Entity.V1 {
             IdempotencyKey = input.ReadString();
             break;
           }
+          case 138: {
+            if (changes_ == null) {
+              Changes = new global::Google.Protobuf.WellKnownTypes.Struct();
+            }
+            input.ReadMessage(Changes);
+            break;
+          }
+          case 146: {
+            increments_.AddEntriesFrom(ref input, _repeated_increments_codec);
+            break;
+          }
         }
       }
     }
@@ -870,6 +957,7 @@ namespace Udb.Entity.V1 {
       txId_ = other.txId_;
       mutationId_ = other.mutationId_;
       message_ = other.message_;
+      writeReceipt_ = other.writeReceipt_ != null ? other.writeReceipt_.Clone() : null;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -927,6 +1015,25 @@ namespace Udb.Entity.V1 {
       }
     }
 
+    /// <summary>Field number for the "write_receipt" field.</summary>
+    public const int WriteReceiptFieldNumber = 5;
+    private global::Udb.Entity.V1.WriteReceipt writeReceipt_;
+    /// <summary>
+    /// Read-your-writes fence for a COMMITTED transaction: the source LSN, outbox
+    /// sequence, and projection task IDs the transaction produced, so a client can
+    /// fence a following read exactly as it does with MutationResponse.write_receipt
+    /// on the unary verbs. Set only on the TX_STATE_COMMITTED status; unset for
+    /// open/rolled-back/error statuses.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Udb.Entity.V1.WriteReceipt WriteReceipt {
+      get { return writeReceipt_; }
+      set {
+        writeReceipt_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
@@ -946,6 +1053,7 @@ namespace Udb.Entity.V1 {
       if (TxId != other.TxId) return false;
       if (MutationId != other.MutationId) return false;
       if (Message != other.Message) return false;
+      if (!object.Equals(WriteReceipt, other.WriteReceipt)) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -957,6 +1065,7 @@ namespace Udb.Entity.V1 {
       if (TxId.Length != 0) hash ^= TxId.GetHashCode();
       if (MutationId.Length != 0) hash ^= MutationId.GetHashCode();
       if (Message.Length != 0) hash ^= Message.GetHashCode();
+      if (writeReceipt_ != null) hash ^= WriteReceipt.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -991,6 +1100,10 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(34);
         output.WriteString(Message);
       }
+      if (writeReceipt_ != null) {
+        output.WriteRawTag(42);
+        output.WriteMessage(WriteReceipt);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -1017,6 +1130,10 @@ namespace Udb.Entity.V1 {
         output.WriteRawTag(34);
         output.WriteString(Message);
       }
+      if (writeReceipt_ != null) {
+        output.WriteRawTag(42);
+        output.WriteMessage(WriteReceipt);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -1038,6 +1155,9 @@ namespace Udb.Entity.V1 {
       }
       if (Message.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(Message);
+      }
+      if (writeReceipt_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(WriteReceipt);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -1062,6 +1182,12 @@ namespace Udb.Entity.V1 {
       }
       if (other.Message.Length != 0) {
         Message = other.Message;
+      }
+      if (other.writeReceipt_ != null) {
+        if (writeReceipt_ == null) {
+          WriteReceipt = new global::Udb.Entity.V1.WriteReceipt();
+        }
+        WriteReceipt.MergeFrom(other.WriteReceipt);
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -1098,6 +1224,13 @@ namespace Udb.Entity.V1 {
             Message = input.ReadString();
             break;
           }
+          case 42: {
+            if (writeReceipt_ == null) {
+              WriteReceipt = new global::Udb.Entity.V1.WriteReceipt();
+            }
+            input.ReadMessage(WriteReceipt);
+            break;
+          }
         }
       }
     #endif
@@ -1131,6 +1264,13 @@ namespace Udb.Entity.V1 {
           }
           case 34: {
             Message = input.ReadString();
+            break;
+          }
+          case 42: {
+            if (writeReceipt_ == null) {
+              WriteReceipt = new global::Udb.Entity.V1.WriteReceipt();
+            }
+            input.ReadMessage(WriteReceipt);
             break;
           }
         }

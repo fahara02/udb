@@ -30,6 +30,16 @@ class TxStatus extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string message = 4 [json_name = "message"];</code>
      */
     protected $message = '';
+    /**
+     * Read-your-writes fence for a COMMITTED transaction: the source LSN, outbox
+     * sequence, and projection task IDs the transaction produced, so a client can
+     * fence a following read exactly as it does with MutationResponse.write_receipt
+     * on the unary verbs. Set only on the TX_STATE_COMMITTED status; unset for
+     * open/rolled-back/error statuses.
+     *
+     * Generated from protobuf field <code>.udb.entity.v1.WriteReceipt write_receipt = 5 [json_name = "writeReceipt"];</code>
+     */
+    protected $write_receipt = null;
 
     /**
      * Constructor.
@@ -41,6 +51,12 @@ class TxStatus extends \Google\Protobuf\Internal\Message
      *     @type string $tx_id
      *     @type string $mutation_id
      *     @type string $message
+     *     @type \Udb\Entity\V1\WriteReceipt $write_receipt
+     *           Read-your-writes fence for a COMMITTED transaction: the source LSN, outbox
+     *           sequence, and projection task IDs the transaction produced, so a client can
+     *           fence a following read exactly as it does with MutationResponse.write_receipt
+     *           on the unary verbs. Set only on the TX_STATE_COMMITTED status; unset for
+     *           open/rolled-back/error statuses.
      * }
      */
     public function __construct($data = NULL) {
@@ -132,6 +148,50 @@ class TxStatus extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, True);
         $this->message = $var;
+
+        return $this;
+    }
+
+    /**
+     * Read-your-writes fence for a COMMITTED transaction: the source LSN, outbox
+     * sequence, and projection task IDs the transaction produced, so a client can
+     * fence a following read exactly as it does with MutationResponse.write_receipt
+     * on the unary verbs. Set only on the TX_STATE_COMMITTED status; unset for
+     * open/rolled-back/error statuses.
+     *
+     * Generated from protobuf field <code>.udb.entity.v1.WriteReceipt write_receipt = 5 [json_name = "writeReceipt"];</code>
+     * @return \Udb\Entity\V1\WriteReceipt|null
+     */
+    public function getWriteReceipt()
+    {
+        return $this->write_receipt;
+    }
+
+    public function hasWriteReceipt()
+    {
+        return isset($this->write_receipt);
+    }
+
+    public function clearWriteReceipt()
+    {
+        unset($this->write_receipt);
+    }
+
+    /**
+     * Read-your-writes fence for a COMMITTED transaction: the source LSN, outbox
+     * sequence, and projection task IDs the transaction produced, so a client can
+     * fence a following read exactly as it does with MutationResponse.write_receipt
+     * on the unary verbs. Set only on the TX_STATE_COMMITTED status; unset for
+     * open/rolled-back/error statuses.
+     *
+     * Generated from protobuf field <code>.udb.entity.v1.WriteReceipt write_receipt = 5 [json_name = "writeReceipt"];</code>
+     * @param \Udb\Entity\V1\WriteReceipt $var
+     * @return $this
+     */
+    public function setWriteReceipt($var)
+    {
+        GPBUtil::checkMessage($var, \Udb\Entity\V1\WriteReceipt::class);
+        $this->write_receipt = $var;
 
         return $this;
     }

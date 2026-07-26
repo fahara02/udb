@@ -5,6 +5,36 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.4.28] - 2026-07-26
+
+The transaction-completeness release: `BeginTx` now supports partial `update`
+mutations and returns a read-your-writes write-receipt, closing the two deferred
+BeginTx-vs-unary parity gaps left after 0.4.27.
+
+### Breaking / wire changes
+- None. Additive proto fields only: `Mutation.changes` + `Mutation.increments`
+  (the partial-update payload for a transactional update) and
+  `TxStatus.write_receipt` (the read-your-writes fence). Existing clients that
+  do not set or read these fields are unaffected.
+
+### Added
+- `update` is now a supported `BeginTx` operation. A transactional mutation with
+  `operation = "update"` SETs the named `changes` columns and/or applies atomic
+  `increments` on the rows matched by `filter`, atomically with the rest of the
+  transaction. The unary `Update` and the transactional update now share one
+  `execute_update_in_tx` core (plan → bind → execute → projection enqueue → CDC
+  emit), so the two paths cannot diverge on side-effects. Scope: runs under the
+  default saga / best-effort strategy; an explicit `two_phase` strategy with an
+  update mutation fails closed, and the unary `expected` compare-and-swap
+  precondition is intentionally not carried on the transactional path (rather
+  than silently ignored).
+- `TxStatus.write_receipt`: a committed `BeginTx` now returns a `WriteReceipt`
+  (source LSN + outbox sequence + manifest checksum), so a client can fence a
+  following read for read-your-writes exactly as `MutationResponse.write_receipt`
+  does on the unary verbs. Previously `BeginTx` returned no receipt at all. The
+  LSN is read post-commit so it reflects the transaction's durable position;
+  per-projection-task fencing for transactions is left for a follow-up.
+
 ## [0.4.27] - 2026-07-26
 
 The transaction-parity release: writes through `BeginTx` now perform the same
