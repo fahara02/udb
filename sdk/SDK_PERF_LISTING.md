@@ -9,8 +9,8 @@ Inputs:
 Current generated RPC surface: 376 RPCs across 28 services.
 
 Published benchmark artifact: present.
-Release tag: v0.4.25.
-Generated at: 2026-07-25T01:24:20+00:00.
+Release tag: v0.4.28.
+Generated at: 2026-07-26T17:46:09+00:00.
 
 ## Published Result Summary
 
