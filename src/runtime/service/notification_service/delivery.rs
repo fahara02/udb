@@ -32,7 +32,10 @@ use crate::runtime::DataBrokerRuntime;
 #[cfg(feature = "http-client")]
 use super::super::native_helpers::{NativeEventContext, enqueue_outbox_event_with_context};
 #[cfg(feature = "http-client")]
-use super::config::{NOTIFICATION_DELIVERY_PROVIDERS_ENV, delivery_event_topic};
+use super::config::{
+    NOTIFICATION_DELIVERY_PROVIDERS_ENV, delivery_event_topic, delivery_exhausted_retries,
+    max_delivery_attempts,
+};
 #[cfg(feature = "http-client")]
 use super::model::{channel_from_db, channel_to_db, delivery_attempt_model, log_model};
 #[cfg(feature = "http-client")]
@@ -308,7 +311,9 @@ async fn record_attempt_outcome(
     provider_message_id: &str,
 ) {
     let channel_db = channel_to_db(intent.channel);
-    if let Err(err) = write_delivery_attempt(
+    // Capture the stored attempt row: its `attempt_count` (bumped by the upsert on
+    // every attempt) drives the bounded-retry FAILED transition below.
+    let attempt_row = match write_delivery_attempt(
         pool,
         notification_id,
         &intent.tenant_id,
@@ -320,9 +325,12 @@ async fn record_attempt_outcome(
     )
     .await
     {
-        tracing::warn!(log_id = %intent.log_id, error = %err, "notification delivery attempt write failed");
-        return;
-    }
+        Ok(row) => row,
+        Err(err) => {
+            tracing::warn!(log_id = %intent.log_id, error = %err, "notification delivery attempt write failed");
+            return;
+        }
+    };
     // Reflect a successful delivery on the parent log (PENDING→SENT→DELIVERED) so
     // GetNotification/GetDeliveryStats stop reporting a delivered notification as
     // PENDING. Best-effort: a transition failure is logged, never aborts the pass.
@@ -338,6 +346,31 @@ async fn record_attempt_outcome(
         .await
         {
             tracing::warn!(log_id = %intent.log_id, error = %err, "notification log status transition failed");
+        }
+    } else if status_db == "FAILED" {
+        // Bounded-retry (F7): a FAILED attempt leaves the log PENDING (the loader
+        // only excludes SENT/DELIVERED), so a permanently-failing provider would be
+        // re-POSTed every interval forever. Once the stored `attempt_count` reaches
+        // `max_delivery_attempts()`, move the log to the terminal FAILED state so it
+        // drops out of the PENDING queue. Below the ceiling it stays PENDING for the
+        // next bounded auto-retry. FAILED can be reached from PENDING or SENT (never
+        // downgrade a DELIVERED). Best-effort: a transition failure is logged.
+        let attempt_count = attempt_row
+            .as_ref()
+            .and_then(|row| row.try_get::<i32, _>("attempt_count").ok())
+            .unwrap_or(0);
+        if delivery_exhausted_retries(attempt_count, max_delivery_attempts()) {
+            if let Err(err) = transition_log_status(
+                pool,
+                notification_id,
+                &intent.tenant_id,
+                "FAILED",
+                &["PENDING", "SENT"],
+            )
+            .await
+            {
+                tracing::warn!(log_id = %intent.log_id, error = %err, "notification log FAILED transition failed");
+            }
         }
     }
     let outcome = if status_db == "FAILED" {

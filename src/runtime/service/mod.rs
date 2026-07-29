@@ -2598,7 +2598,7 @@ pub async fn serve(
                     async move {
                         crate::runtime::service::vault_service::run_vault_db_lease_reaper_once(
                             &pool,
-                            crate::runtime::service::vault_service::VAULT_DB_LEASE_REAPER_BATCH,
+                            crate::runtime::service::vault_service::vault_db_lease_reaper_batch(),
                         )
                         .await
                     }
@@ -2998,7 +2998,7 @@ pub async fn serve(
                             runtime,
                             &pool,
                             Some(&outbox),
-                            crate::runtime::service::notification_service::NOTIFICATION_DELIVERY_BATCH,
+                            crate::runtime::service::notification_service::notification_delivery_batch(),
                             Some(&metrics),
                         )
                         .await

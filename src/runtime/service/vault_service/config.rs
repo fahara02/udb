@@ -78,6 +78,9 @@ pub(crate) const DEFAULT_DB_CREDENTIAL_TTL_SECONDS: i32 = 900;
 pub(crate) const MIN_DB_CREDENTIAL_TTL_SECONDS: i32 = 60;
 pub(crate) const DEFAULT_DB_CREDENTIAL_MAX_TTL_SECONDS: i32 = 3600;
 pub const VAULT_DB_LEASE_REAPER_BATCH: i64 = 100;
+/// Default cap on `BatchEncrypt` plaintext items per request (env-overridable via
+/// `max_batch_encrypt_items`).
+pub(crate) const MAX_BATCH_ENCRYPT_ITEMS: usize = 256;
 /// Constant the seal gate round-trips through `encrypt_secret_at_rest` to probe
 /// master-key availability without exposing real secret material.
 pub(crate) const SEAL_PROBE: &str = "udb-vault-seal-probe";
@@ -96,5 +99,46 @@ pub fn vault_db_lease_reaper_interval() -> Duration {
                 .filter(|value| *value > 0)
                 .unwrap_or(60),
         )
+    })
+}
+
+/// Env-governed cap on how many versions of a single path/key are scanned in one
+/// read. Mirrors the `vault_db_lease_reaper_interval` OnceLock pattern; falls back
+/// to the byte-stable `MAX_VERSIONS_SCAN` default when unset/invalid.
+pub(crate) fn max_versions_scan() -> u32 {
+    static MAX: OnceLock<u32> = OnceLock::new();
+    *MAX.get_or_init(|| {
+        std::env::var("UDB_VAULT_MAX_VERSIONS_SCAN")
+            .ok()
+            .and_then(|value| value.trim().parse::<u32>().ok())
+            .filter(|value| *value > 0)
+            .unwrap_or(MAX_VERSIONS_SCAN)
+    })
+}
+
+/// Env-governed reaper batch size, for parity with the already-env reaper
+/// interval. Falls back to the `VAULT_DB_LEASE_REAPER_BATCH` default when
+/// unset/invalid.
+pub fn vault_db_lease_reaper_batch() -> i64 {
+    static BATCH: OnceLock<i64> = OnceLock::new();
+    *BATCH.get_or_init(|| {
+        std::env::var("UDB_VAULT_DB_LEASE_REAPER_BATCH")
+            .ok()
+            .and_then(|value| value.trim().parse::<i64>().ok())
+            .filter(|value| *value > 0)
+            .unwrap_or(VAULT_DB_LEASE_REAPER_BATCH)
+    })
+}
+
+/// Env-governed cap on the number of plaintexts accepted by `BatchEncrypt` in a
+/// single request; over-cap requests are rejected before any allocation/crypto.
+pub(crate) fn max_batch_encrypt_items() -> usize {
+    static MAX: OnceLock<usize> = OnceLock::new();
+    *MAX.get_or_init(|| {
+        std::env::var("UDB_VAULT_MAX_BATCH_ENCRYPT")
+            .ok()
+            .and_then(|value| value.trim().parse::<usize>().ok())
+            .filter(|value| *value > 0)
+            .unwrap_or(MAX_BATCH_ENCRYPT_ITEMS)
     })
 }

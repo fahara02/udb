@@ -66,14 +66,31 @@ pub(crate) fn map_comparison(op: lq_pb::LiveQueryComparison) -> Result<Compariso
     }
 }
 
-/// Type a predicate value: numeric when it parses cleanly, else a string. Keeps
-/// the mediated snapshot read binding the operand with the right backend type.
+/// Type a predicate value: coerce to a numeric IR value ONLY when the raw string
+/// is already in CANONICAL numeric form — i.e. the parsed number renders back to
+/// the exact same string. This keeps a numeric-LOOKING business string that is
+/// not canonical — a leading-zero identifier like an account number `"0123"` or a
+/// zip code `"007"`, or a signed/padded form like `"+5"` — as a `String`, so the
+/// mediated snapshot read binds it against a text column as text (matching the
+/// stored `"0123"`) instead of silently binding the integer `123` (which would
+/// mismatch, or force a text↔int cast). Canonical forms (`"123"`, `"0"`, `"-5"`,
+/// `"1.5"`) still coerce so numeric predicates bind with the right backend type.
 fn typed_value(raw: &str) -> LogicalValue {
     if let Ok(int_value) = raw.parse::<i64>() {
-        return LogicalValue::Int(int_value);
+        // Round-trip guard: "0123" parses to 123 but renders "123" != "0123", so
+        // it is NOT canonical and stays a string. "123"/"0"/"-5" round-trip.
+        if int_value.to_string() == raw {
+            return LogicalValue::Int(int_value);
+        }
     }
     if let Ok(float_value) = raw.parse::<f64>() {
-        return LogicalValue::Float(float_value);
+        // Same round-trip rule for floats: "1.5"/"0.5" render identically and
+        // coerce; padded/exponent forms ("1.50", "1e3") are not canonical and
+        // stay strings (and still compare numerically against a numeric column
+        // via the scalar-projection parse-back in `compare_scalar`).
+        if float_value.to_string() == raw {
+            return LogicalValue::Float(float_value);
+        }
     }
     LogicalValue::String(raw.to_string())
 }
@@ -164,6 +181,11 @@ pub(crate) fn change_row(payload: &serde_json::Value) -> serde_json::Value {
 /// from the topic verb suffix; defaults to UPDATE.
 fn change_op(topic: &str, payload: &serde_json::Value) -> lq_pb::LiveQueryChangeOp {
     use lq_pb::LiveQueryChangeOp as Op;
+    let topic_lower = topic.to_ascii_lowercase();
+    // Whether the topic verb suffix names a row CREATION event; shared by the
+    // explicit-`upsert` classification below and the topic-only fallthrough.
+    let topic_indicates_create =
+        topic_lower.contains("created") || topic_lower.contains("inserted");
     let explicit = payload
         .get("op")
         .or_else(|| payload.get("operation"))
@@ -176,14 +198,25 @@ fn change_op(topic: &str, payload: &serde_json::Value) -> lq_pb::LiveQueryChange
         if op.starts_with("del") || op == "d" || op == "remove" {
             return Op::Delete;
         }
+        // An explicit "upsert" is a create-OR-update: it does not start with
+        // "upd", so it would otherwise fall through to the UPDATE default even
+        // when the topic clearly marks a creation. Classify it by the topic verb
+        // suffix (`*.created`/`*.inserted` => INSERT), else UPDATE. Checked
+        // before the `upd*` arm since "upsert" does not match that prefix.
+        if op == "upsert" {
+            return if topic_indicates_create {
+                Op::Insert
+            } else {
+                Op::Update
+            };
+        }
         if op.starts_with("upd") || op == "u" || op == "modify" {
             return Op::Update;
         }
     }
-    let topic = topic.to_ascii_lowercase();
-    if topic.contains("created") || topic.contains("inserted") {
+    if topic_indicates_create {
         Op::Insert
-    } else if topic.contains("deleted") || topic.contains("removed") {
+    } else if topic_lower.contains("deleted") || topic_lower.contains("removed") {
         Op::Delete
     } else {
         Op::Update
@@ -348,5 +381,70 @@ pub(crate) fn change_frame(
     lq_pb::SubscribeResponse {
         payload: Some(lq_pb::subscribe_response::Payload::Change(change)),
         error: None,
+    }
+}
+
+#[cfg(test)]
+mod predicate_tests {
+    use serde_json::json;
+
+    use super::lq_pb;
+    use super::{change_op, typed_value};
+    use crate::ir::LogicalValue;
+
+    /// F7 regression: a numeric-looking business string with a leading zero (or
+    /// other non-canonical form) must NOT be coerced to a number, or the mediated
+    /// snapshot read would bind it as an integer and mismatch the text column.
+    #[test]
+    fn typed_value_keeps_non_canonical_numeric_strings_as_string() {
+        // Leading-zero identifiers stay strings ("0123" is not the integer 123).
+        assert_eq!(
+            typed_value("0123"),
+            LogicalValue::String("0123".to_string())
+        );
+        assert_eq!(typed_value("007"), LogicalValue::String("007".to_string()));
+        // A signed-with-plus form is not canonical either.
+        assert_eq!(typed_value("+5"), LogicalValue::String("+5".to_string()));
+        // Canonical integers/floats still coerce so numeric binds keep working.
+        assert_eq!(typed_value("123"), LogicalValue::Int(123));
+        assert_eq!(typed_value("0"), LogicalValue::Int(0));
+        assert_eq!(typed_value("-5"), LogicalValue::Int(-5));
+        assert_eq!(typed_value("1.5"), LogicalValue::Float(1.5));
+        // A plainly non-numeric string is unchanged.
+        assert_eq!(
+            typed_value("HELD"),
+            LogicalValue::String("HELD".to_string())
+        );
+    }
+
+    /// F8 regression: an explicit `"upsert"` op is create-or-update, classified by
+    /// the topic verb suffix rather than silently defaulting to UPDATE.
+    #[test]
+    fn change_op_classifies_upsert_by_topic_verb() {
+        use lq_pb::LiveQueryChangeOp as Op;
+        // A creation topic => INSERT.
+        assert_eq!(
+            change_op("udb.lock.lock.created.v1", &json!({"op": "upsert"})),
+            Op::Insert
+        );
+        // An "inserted" verb (and the `operation` alias key) also => INSERT.
+        assert_eq!(
+            change_op("udb.item.item.inserted.v1", &json!({"operation": "upsert"})),
+            Op::Insert
+        );
+        // A non-creation topic => UPDATE (the create-or-update fallback).
+        assert_eq!(
+            change_op("udb.lock.lock.changed.v1", &json!({"op": "upsert"})),
+            Op::Update
+        );
+        // Explicit non-upsert ops are unaffected by the new arm.
+        assert_eq!(
+            change_op("udb.lock.lock.changed.v1", &json!({"op": "insert"})),
+            Op::Insert
+        );
+        assert_eq!(
+            change_op("udb.lock.lock.changed.v1", &json!({"op": "update"})),
+            Op::Update
+        );
     }
 }

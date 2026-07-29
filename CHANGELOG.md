@@ -5,6 +5,60 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.4.31] - 2026-07-30
+
+Native-service upgrade release. Implements the tractable items from the
+native-service upgrade review across all five reviewed services (notification,
+vault, search, live-query, embedding): correctness/robustness fixes, per-tenant
+fairness, and operator-tunable knobs. No proto changes; no feature removed.
+
+### Added / Changed
+- **Notification — bounded delivery retries.** A failing provider was re-POSTed
+  every interval forever. A delivery attempt now moves the log to `FAILED` once
+  `attempt_count` reaches `UDB_NOTIFICATION_DELIVERY_MAX_ATTEMPTS` (default 6),
+  removing it from the PENDING work queue; below the ceiling it stays PENDING
+  (bounded auto-retry). `RetryNotification` now retries only the `FAILED` state
+  (resetting the retry budget) — it no longer resurrects `SUPPRESSED` (opted-out)
+  rows, closing an opt-out-bypass compliance gap. Delivery batch size is now
+  `UDB_NOTIFICATION_DELIVERY_BATCH`. (Exponential backoff + DLQ need a
+  `next_attempt_at` schema column and remain deferred.)
+- **Vault — hardening.** `DestroySecret` now requires the `confirmation_token`
+  to equal the target `secret_path` (an irreversible crypto-shred must name its
+  path). The DB-lease reaper logs-and-continues on a single un-droppable role
+  instead of aborting the batch. `BatchEncrypt` rejects oversized input
+  (`UDB_VAULT_MAX_BATCH_ENCRYPT`, default 256). New knobs
+  `UDB_VAULT_MAX_VERSIONS_SCAN` and `UDB_VAULT_DB_LEASE_REAPER_BATCH`.
+- **Search — pagination, robustness, mode.** Deep pagination is fixed: each index
+  now fetches `offset + page_size` candidates (a fixed `top_k` made page 2+
+  empty) and a `next_page_token` is emitted only when a further page truly
+  exists. A single failing index is skipped (logged) so a multi-index search
+  still returns the healthy indexes; the whole search fails only if every target
+  errors. `SearchRequest.mode` is now enforced (a mode that contradicts the
+  supplied `query_text`/`query_vector` is rejected). New knobs
+  `UDB_SEARCH_MAX_TOP_K`, `UDB_SEARCH_MAX_INDEXES_PER_TENANT`.
+- **LiveQuery — global cap + classification.** A process-wide concurrent-stream
+  ceiling (`UDB_LIVEQUERY_MAX_STREAMS_GLOBAL`, default 4096) now bounds total
+  streams across tenants (the per-tenant budget alone did not). `change_op` now
+  classifies `upsert` by the topic verb (created/inserted → INSERT) instead of
+  always UPDATE. Predicate values coerce to numeric only in canonical form, so a
+  leading-zero business string (e.g. `"0123"`) binds as text, not `123`.
+- **Embedding — unified similarity + fairness.** The two duplicate cosine/
+  similarity implementations are consolidated into one metric-aware
+  `similarity(metric, a, b)` (higher-is-better for every metric), making the
+  fresh-buffer and MMR paths consistent (fixing EUCLID read-your-writes ordering).
+  The read-your-writes fresh buffer is now sharded per tenant, so a write-heavy
+  tenant can no longer evict another tenant's entries. The rerank URL, candidate
+  cap, MMR over-fetch, and rerank timeout are now config knobs
+  (`UDB_EMBEDDING_RERANK_URL`/`_MAX_CANDIDATES`/`_MMR_OVERFETCH`/
+  `_RERANK_TIMEOUT_SECS`).
+
+### Deferred (tracked in the private upgrade plan)
+- Notification exponential backoff + DLQ; shared native-delivery worker.
+- Vault transactional `PutSecret` CAS / atomic `rotate_transit_key`; KMS master KEK.
+- Search full-text-only execution path (`SEARCH_MODE_TEXT`).
+- LiveQuery durable resume from the CDC journal; delta-path metrics.
+- Embedding non-Qdrant portable teardown; Matryoshka truncated-dim cutover.
+
 ## [0.4.30] - 2026-07-30
 
 Native-service hardening release. A rigorous review of the incomplete native

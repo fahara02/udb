@@ -49,8 +49,9 @@ mod store;
 mod tests;
 
 // Re-exported at the module root for the leader notification-delivery worker
-// (`serve()`).
-pub(crate) use config::{NOTIFICATION_DELIVERY_BATCH, notification_delivery_interval};
+// (`serve()`). The batch size is the env-backed `notification_delivery_batch()`
+// (default `NOTIFICATION_DELIVERY_BATCH`), wired at the worker spawn.
+pub(crate) use config::{notification_delivery_batch, notification_delivery_interval};
 #[cfg(feature = "http-client")]
 pub(crate) use delivery::run_notification_delivery_worker_once;
 

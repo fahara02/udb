@@ -17,14 +17,14 @@ use crate::runtime::DataBrokerRuntime;
 use crate::runtime::channels::OperationChannel;
 
 use super::super::native_helpers::{
-    admit_on as native_admit_on, native_next_page_token, native_offset_page_window,
-    native_service_context, non_empty_json, validate_request_tenant,
+    admit_on as native_admit_on, native_next_page_token, native_next_page_token_for_total,
+    native_offset_page_window, native_service_context, non_empty_json, validate_request_tenant,
 };
 use super::SearchServiceImpl;
 use super::config::{
-    BACKEND_ELASTICSEARCH, BACKEND_QDRANT, ENGINE_VECTOR_DISTANCE, MAX_INDEXES_PER_TENANT,
-    SEARCH_INDEX_MSG, STATUS_ACTIVE, STATUS_DELETED, STATUS_REINDEXING, TENANT_SCOPE_PAYLOAD_KEY,
-    TOPIC_CREATED, TOPIC_DELETED, TOPIC_REINDEX, resolve_top_k,
+    BACKEND_ELASTICSEARCH, BACKEND_QDRANT, ENGINE_VECTOR_DISTANCE, SEARCH_INDEX_MSG, STATUS_ACTIVE,
+    STATUS_DELETED, STATUS_REINDEXING, TENANT_SCOPE_PAYLOAD_KEY, TOPIC_CREATED, TOPIC_DELETED,
+    TOPIC_REINDEX, max_indexes_per_tenant, max_top_k, resolve_top_k,
 };
 use super::errors::{
     full_text_only_requires_mediated_ir_status, require_source_tenant_column,
@@ -224,14 +224,15 @@ pub(crate) async fn create_index(
             .native_entity_read_for_service(
                 "search",
                 &context,
-                active_indexes_read(&tenant_id, 0, (MAX_INDEXES_PER_TENANT as u32) + 1),
+                active_indexes_read(&tenant_id, 0, (max_indexes_per_tenant() as u32) + 1),
             )
             .await?;
-        if active.len() >= MAX_INDEXES_PER_TENANT {
+        let quota = max_indexes_per_tenant();
+        if active.len() >= quota {
             return Err(crate::runtime::executor_utils::quota_refusal_status(
                 "search",
                 "tenant search-index quota",
-                format!("tenant search-index quota exhausted ({MAX_INDEXES_PER_TENANT})"),
+                format!("tenant search-index quota exhausted ({quota})"),
             ));
         }
     }
@@ -430,7 +431,7 @@ pub(crate) async fn list_indexes(
         1,
         req.page_size,
         &req.page_token,
-        MAX_INDEXES_PER_TENANT as i32,
+        max_indexes_per_tenant() as i32,
     );
 
     let rows = runtime
@@ -440,7 +441,7 @@ pub(crate) async fn list_indexes(
             active_indexes_read(
                 &tenant_id,
                 page_window.offset as u64,
-                (page_window.limit as u32).min(MAX_INDEXES_PER_TENANT as u32),
+                (page_window.limit as u32).min(max_indexes_per_tenant() as u32),
             ),
         )
         .await?;
@@ -489,6 +490,14 @@ pub(crate) async fn search(
     let catalog = svc.require_catalog()?;
     let mut context = native_service_context(&metadata, &tenant_id, "");
     context.scopes.push("udb:vector:read".to_string());
+    // Honor the declared SearchMode: reject a request whose inputs contradict the
+    // mode (e.g. VECTOR mode with no vector). UNSPECIFIED infers from the inputs
+    // (the historical behavior). Full-text-only execution is still gated below.
+    validate_search_mode(
+        req.mode(),
+        !req.query_text.trim().is_empty(),
+        !req.query_vector.is_empty(),
+    )?;
     let top_k = resolve_top_k(req.top_k);
 
     // Resolve the target index(es): a single named index, or all of the
@@ -499,7 +508,7 @@ pub(crate) async fn search(
             .native_entity_read_for_service(
                 "search",
                 &context,
-                active_indexes_read(&tenant_id, 0, MAX_INDEXES_PER_TENANT as u32),
+                active_indexes_read(&tenant_id, 0, max_indexes_per_tenant() as u32),
             )
             .await?
             .iter()
@@ -534,24 +543,60 @@ pub(crate) async fn search(
     let state = catalog.active_for(&context.project_id);
     let manifest = &state.manifest;
 
+    // Compute the page window BEFORE querying so each index fetches enough
+    // candidates to REACH the requested page. Fetching a fixed `top_k` per index
+    // made any page past the first empty (offset >= top_k skipped the whole
+    // fetched set) while still advertising a next-page token. We fetch
+    // `offset + limit + 1` (the +1 detects a further page), bounded by the max.
+    let requested_page_size = if req.page_size > 0 {
+        req.page_size
+    } else {
+        top_k
+    };
+    let page_window =
+        native_offset_page_window(1, requested_page_size, &req.page_token, top_k.max(1));
+    let fetch_depth = page_window
+        .offset
+        .saturating_add(page_window.limit)
+        .saturating_add(1)
+        .min(max_top_k() as usize)
+        .max(1) as i32;
+
     // Query each target through the mediated dispatch, then fuse the ranked
-    // id lists across indexes with pure RRF. Per hit id the first-seen
-    // (index name, tenant-stripped payload_json) pair is kept for mapping.
+    // lists across indexes. Per hit id the first-seen (index name,
+    // tenant-stripped payload_json) pair is kept for mapping. A single failing
+    // index is skipped (not fatal) so "one search box" still returns the healthy
+    // indexes' hits; the whole search fails only if EVERY target errored.
     let mut ranked_lists: Vec<Vec<(String, f64)>> = Vec::with_capacity(targets.len());
     let mut hit_meta: std::collections::HashMap<String, (String, String)> =
         std::collections::HashMap::new();
+    let mut succeeded = 0usize;
+    let mut last_error: Option<Status> = None;
     for index in &targets {
-        let points = svc
+        let points = match svc
             .query_one_index(
                 runtime,
                 manifest,
                 &context,
                 index,
                 &req,
-                top_k,
+                fetch_depth,
                 tenant_filter.clone(),
             )
-            .await?;
+            .await
+        {
+            Ok(points) => points,
+            Err(err) => {
+                tracing::warn!(
+                    index = %index.index_name,
+                    error = %err,
+                    "search: index query failed; skipping this index"
+                );
+                last_error = Some(err);
+                continue;
+            }
+        };
+        succeeded += 1;
         // Carry the engine's own relevance score so a single-index search keeps
         // it (see `fuse_ranked_lists`); cross-index fusion uses only the rank.
         let mut scored = Vec::with_capacity(points.len());
@@ -566,19 +611,20 @@ pub(crate) async fn search(
         }
         ranked_lists.push(scored);
     }
+    // Every targeted index errored → surface the failure rather than a silent
+    // empty result.
+    if succeeded == 0 {
+        if let Some(err) = last_error {
+            return Err(err);
+        }
+    }
 
     let fused = fuse_ranked_lists(&ranked_lists);
-    let requested_page_size = if req.page_size > 0 {
-        req.page_size
-    } else {
-        top_k
-    };
-    let page_window =
-        native_offset_page_window(1, requested_page_size, &req.page_token, top_k.max(1));
+    let total = fused.len();
     let hits = fused
         .into_iter()
         .skip(page_window.offset)
-        .take(page_window.limit.min(top_k as usize))
+        .take(page_window.limit)
         .map(|(id, score)| {
             let (index_name, payload_json) = hit_meta.get(&id).cloned().unwrap_or_default();
             search_pb::SearchHit {
@@ -589,11 +635,11 @@ pub(crate) async fn search(
             }
         })
         .collect::<Vec<_>>();
-    let next_page_token = native_next_page_token(
-        page_window.offset,
-        page_window.limit.min(top_k as usize),
-        hits.len(),
-    );
+    // Emit a next-page token only when a further page genuinely exists
+    // (offset + limit < total fused results), never merely because the page is
+    // full.
+    let next_page_token =
+        native_next_page_token_for_total(page_window.offset, page_window.limit, total as i64);
 
     Ok(Response::new(search_pb::SearchResponse {
         hits,
@@ -601,6 +647,64 @@ pub(crate) async fn search(
         error: None,
         next_page_token,
     }))
+}
+
+/// Validate a `SearchRequest.mode` against the supplied inputs. `UNSPECIFIED`
+/// infers from the inputs (legacy behavior); the explicit modes reject a request
+/// whose inputs contradict them (e.g. `VECTOR` with no vector, `HYBRID` without
+/// both). Kept pure so the contract is unit-tested without a runtime.
+fn validate_search_mode(
+    mode: search_pb::SearchMode,
+    has_text: bool,
+    has_vector: bool,
+) -> Result<(), Status> {
+    use search_pb::SearchMode;
+    let violation = |message: &str| {
+        search_field_violation(
+            "mode",
+            "must be consistent with query_text / query_vector",
+            message.to_string(),
+        )
+    };
+    match mode {
+        SearchMode::Unspecified => Ok(()),
+        SearchMode::Text if !has_text => Err(violation(
+            "SEARCH_MODE_TEXT requires a non-empty query_text",
+        )),
+        SearchMode::Vector if !has_vector => Err(violation(
+            "SEARCH_MODE_VECTOR requires a non-empty query_vector",
+        )),
+        SearchMode::Hybrid if !(has_text && has_vector) => Err(violation(
+            "SEARCH_MODE_HYBRID requires both query_text and query_vector",
+        )),
+        _ => Ok(()),
+    }
+}
+
+#[cfg(test)]
+mod search_mode_tests {
+    use super::validate_search_mode;
+    use crate::proto::udb::core::search::services::v1::SearchMode;
+
+    #[test]
+    fn unspecified_infers_from_inputs() {
+        assert!(validate_search_mode(SearchMode::Unspecified, false, false).is_ok());
+    }
+
+    #[test]
+    fn explicit_modes_reject_contradictory_inputs() {
+        assert!(validate_search_mode(SearchMode::Vector, true, false).is_err());
+        assert!(validate_search_mode(SearchMode::Text, false, true).is_err());
+        assert!(validate_search_mode(SearchMode::Hybrid, true, false).is_err());
+        assert!(validate_search_mode(SearchMode::Hybrid, false, true).is_err());
+    }
+
+    #[test]
+    fn explicit_modes_accept_matching_inputs() {
+        assert!(validate_search_mode(SearchMode::Vector, false, true).is_ok());
+        assert!(validate_search_mode(SearchMode::Text, true, false).is_ok());
+        assert!(validate_search_mode(SearchMode::Hybrid, true, true).is_ok());
+    }
 }
 
 pub(crate) async fn reindex(

@@ -11,7 +11,7 @@ use crate::ir::{
     LogicalRead, LogicalRecord, LogicalValue,
 };
 
-use super::config::{MAX_VERSIONS_SCAN, VAULT_SECRET_MSG, VAULT_TRANSIT_KEY_MSG};
+use super::config::{VAULT_SECRET_MSG, VAULT_TRANSIT_KEY_MSG, max_versions_scan};
 
 pub(crate) fn logical_string(value: impl Into<String>) -> LogicalValue {
     LogicalValue::String(value.into())
@@ -42,7 +42,7 @@ pub(crate) fn secret_path_read(tenant_id: &str, secret_path: &str) -> LogicalRea
         ])),
         sort: Vec::new(),
         include: Vec::new(),
-        pagination: Some(LogicalPagination::limit(MAX_VERSIONS_SCAN)),
+        pagination: Some(LogicalPagination::limit(max_versions_scan())),
     }
 }
 
@@ -69,7 +69,7 @@ pub(crate) fn secret_list_read(tenant_id: &str, prefix: &str) -> LogicalRead {
         ])),
         sort: Vec::new(),
         include: Vec::new(),
-        pagination: Some(LogicalPagination::limit(MAX_VERSIONS_SCAN)),
+        pagination: Some(LogicalPagination::limit(max_versions_scan())),
     }
 }
 
@@ -97,7 +97,7 @@ pub(crate) fn transit_key_read(tenant_id: &str, key_name: &str) -> LogicalRead {
         ])),
         sort: Vec::new(),
         include: Vec::new(),
-        pagination: Some(LogicalPagination::limit(MAX_VERSIONS_SCAN)),
+        pagination: Some(LogicalPagination::limit(max_versions_scan())),
     }
 }
 

@@ -334,19 +334,22 @@ pub(crate) async fn retry_notification(
     .await?;
     let req = request.into_inner();
     let log_id = parse_uuid("log_id", &req.log_id)?;
-    // Transitional: retry needs conditional update plus retry_count + 1 with
-    // RETURNING. The current typed write helper cannot express increments or
-    // status-gated updates, so this path remains capability-gated to Postgres.
+    // Transitional: retry needs a status-gated conditional update with a
+    // retry_count reset and RETURNING. The current typed write helper cannot
+    // express status-gated updates, so this path remains capability-gated to PG.
     let pool = svc.require_pool()?;
     let m = log_model();
     let rel = m.relation.clone();
     let projection = log_select_projection(&m);
-    // Only failed (or suppressed) notifications are retryable — re-queuing a
-    // PENDING/SENT/DELIVERED row would double-send. Guard in the WHERE so a
-    // non-failed row yields no update.
+    // Only FAILED notifications are retryable. A SUPPRESSED row is an opt-out and
+    // MUST NOT be resurrected (re-queuing it would re-deliver to an opted-out
+    // recipient — a compliance bypass), and re-queuing a PENDING/SENT/DELIVERED
+    // row would double-send. A manual retry resets retry_count to 0 (a fresh
+    // bounded-retry budget). Guard in the WHERE so a non-FAILED row yields no
+    // update (→ notification_not_retryable_status).
     let row = sqlx::query(&format!(
-        "UPDATE {rel} SET {status} = 'PENDING', {retry} = {retry} + 1 \
-         WHERE {log_id} = $1::UUID AND {tenant_id} = $2 AND {status} IN ('FAILED','SUPPRESSED') \
+        "UPDATE {rel} SET {status} = 'PENDING', {retry} = 0 \
+         WHERE {log_id} = $1::UUID AND {tenant_id} = $2 AND {status} = 'FAILED' \
          RETURNING {projection}",
         status = m.q("status"),
         retry = m.q("retry_count"),

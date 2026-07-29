@@ -16,9 +16,17 @@ pub(crate) const DELIVERY_ATTEMPT_MSG: &str =
     "udb.core.notification.entity.v1.NotificationDeliveryAttempt";
 pub(crate) const TEMPLATE_LOCALE_MAX_CHARS: usize = 10;
 pub(crate) const NOTIFICATION_DELIVERY_BATCH: i64 = 200;
+pub(crate) const NOTIFICATION_DELIVERY_BATCH_ENV: &str = "UDB_NOTIFICATION_DELIVERY_BATCH";
 pub(crate) const DEFAULT_NOTIFICATION_DELIVERY_INTERVAL_SECS: u64 = 30;
 pub(crate) const NOTIFICATION_DELIVERY_INTERVAL_ENV: &str =
     "UDB_NOTIFICATION_DELIVERY_INTERVAL_SECS";
+/// Bounded-retry ceiling (F7): once a delivery's stored `attempt_count` reaches
+/// this value the worker moves the log to the terminal FAILED state, removing it
+/// from the PENDING queue so a permanently-failing provider stops being re-POSTed
+/// every interval. Default 6 (the middle of the 5–8 best-practice range).
+pub(crate) const DEFAULT_NOTIFICATION_DELIVERY_MAX_ATTEMPTS: i64 = 6;
+pub(crate) const NOTIFICATION_DELIVERY_MAX_ATTEMPTS_ENV: &str =
+    "UDB_NOTIFICATION_DELIVERY_MAX_ATTEMPTS";
 pub(crate) const NOTIFICATION_DELIVERY_PROVIDERS_ENV: &str =
     "UDB_NOTIFICATION_DELIVERY_PROVIDERS_JSON";
 
@@ -77,6 +85,63 @@ pub(crate) fn notification_delivery_interval() -> Duration {
     })
 }
 
+/// Pure positive-integer env parse shared by the delivery batch / max-attempts
+/// knobs: a present, parseable, strictly-positive value wins; anything else
+/// (absent / unparseable / `<= 0`) falls back to `default`. Mirrors the filter
+/// shape of `notification_delivery_interval`. Pure + unit-tested.
+pub(crate) fn parse_positive_i64(value: Option<&str>, default: i64) -> i64 {
+    value
+        .and_then(|raw| raw.trim().parse::<i64>().ok())
+        .filter(|v| *v > 0)
+        .unwrap_or(default)
+}
+
+/// Max delivery attempts before the worker transitions a still-failing log to
+/// the terminal FAILED state (bounding the retry storm — F7). Reads
+/// `UDB_NOTIFICATION_DELIVERY_MAX_ATTEMPTS`, default
+/// `DEFAULT_NOTIFICATION_DELIVERY_MAX_ATTEMPTS` (6). Mirrors the
+/// `notification_delivery_interval` resolve-once pattern.
+pub(crate) fn max_delivery_attempts() -> i64 {
+    static MAX_ATTEMPTS: OnceLock<i64> = OnceLock::new();
+    *MAX_ATTEMPTS.get_or_init(|| {
+        parse_positive_i64(
+            std::env::var(NOTIFICATION_DELIVERY_MAX_ATTEMPTS_ENV)
+                .ok()
+                .as_deref(),
+            DEFAULT_NOTIFICATION_DELIVERY_MAX_ATTEMPTS,
+        )
+    })
+}
+
+/// Whether a delivery has exhausted its bounded-retry budget: the stored attempt
+/// row's `attempt_count` has reached `max_attempts`, so the worker moves the log
+/// to terminal FAILED (dropping it from the PENDING queue) instead of leaving it
+/// for another bounded auto-retry. Pure + unit-tested; `max_attempts <= 0` means
+/// "never exhaust" (unbounded), never a divide/underflow.
+pub(crate) fn delivery_exhausted_retries(attempt_count: i32, max_attempts: i64) -> bool {
+    max_attempts > 0 && i64::from(attempt_count) >= max_attempts
+}
+
+/// Per-pass delivery batch size (the worker's `LIMIT`). Reads
+/// `UDB_NOTIFICATION_DELIVERY_BATCH`, default `NOTIFICATION_DELIVERY_BATCH` (200).
+/// Mirrors the `notification_delivery_interval` resolve-once pattern.
+// TODO(leader-wire): re-export this from notification_service/mod.rs and swap the
+// hardcoded `NOTIFICATION_DELIVERY_BATCH` spawn arg for `notification_delivery_batch()`
+// at the notification delivery worker spawn in service/mod.rs. Unused until then
+// (the spawn still passes the const), hence the allow.
+#[allow(dead_code)]
+pub(crate) fn notification_delivery_batch() -> i64 {
+    static BATCH: OnceLock<i64> = OnceLock::new();
+    *BATCH.get_or_init(|| {
+        parse_positive_i64(
+            std::env::var(NOTIFICATION_DELIVERY_BATCH_ENV)
+                .ok()
+                .as_deref(),
+            NOTIFICATION_DELIVERY_BATCH,
+        )
+    })
+}
+
 /// The versioned dot-topic a terminal delivery outcome is published on
 /// (master-plan 9.13): `udb.notification.delivery.<status>.v1`, e.g.
 /// `udb.notification.delivery.delivered.v1`. Pure + unit-tested.
@@ -85,4 +150,48 @@ pub(crate) fn delivery_event_topic(status_db: &str) -> String {
         "udb.notification.delivery.{}.v1",
         status_db.to_ascii_lowercase()
     )
+}
+
+#[cfg(test)]
+mod config_tests {
+    use super::{
+        DEFAULT_NOTIFICATION_DELIVERY_MAX_ATTEMPTS, NOTIFICATION_DELIVERY_BATCH,
+        delivery_exhausted_retries, parse_positive_i64,
+    };
+
+    #[test]
+    fn parse_positive_i64_falls_back_on_absent_or_non_positive() {
+        // Absent / unparseable / non-positive all take the default.
+        assert_eq!(parse_positive_i64(None, 200), 200);
+        assert_eq!(parse_positive_i64(Some("not-a-number"), 200), 200);
+        assert_eq!(parse_positive_i64(Some("0"), 200), 200);
+        assert_eq!(parse_positive_i64(Some("-5"), 200), 200);
+        assert_eq!(parse_positive_i64(Some("   "), 200), 200);
+    }
+
+    #[test]
+    fn parse_positive_i64_uses_a_valid_positive_override() {
+        assert_eq!(
+            parse_positive_i64(Some("500"), NOTIFICATION_DELIVERY_BATCH),
+            500
+        );
+        assert_eq!(parse_positive_i64(Some("  9  "), 6), 9);
+    }
+
+    #[test]
+    fn delivery_exhausted_retries_is_true_at_or_above_the_ceiling() {
+        let max = DEFAULT_NOTIFICATION_DELIVERY_MAX_ATTEMPTS; // 6
+        // Below the ceiling: keep retrying (stays PENDING).
+        assert!(!delivery_exhausted_retries(1, max));
+        assert!(!delivery_exhausted_retries(5, max));
+        // At and above the ceiling: exhaust → terminal FAILED.
+        assert!(delivery_exhausted_retries(6, max));
+        assert!(delivery_exhausted_retries(7, max));
+    }
+
+    #[test]
+    fn delivery_exhausted_retries_treats_non_positive_max_as_unbounded() {
+        assert!(!delivery_exhausted_retries(1_000, 0));
+        assert!(!delivery_exhausted_retries(1_000, -1));
+    }
 }

@@ -35,7 +35,7 @@ use super::config::{
     TOPIC_SECRET_PUT, TOPIC_SECRET_RESTORED, TOPIC_TRANSIT_DECRYPTED, TOPIC_TRANSIT_ENCRYPTED,
     TOPIC_TRANSIT_HMAC, TOPIC_TRANSIT_SIGNED, TOPIC_TRANSIT_VERIFIED,
     VAULT_DB_CREDENTIAL_LEASE_MSG, VAULT_ED25519_PREFIX, VAULT_HMAC_PREFIX, VAULT_SECRET_MSG,
-    VAULT_TRANSIT_KEY_MSG,
+    VAULT_TRANSIT_KEY_MSG, max_batch_encrypt_items,
 };
 use super::crypto::{
     DataKey, PlaintextSecret, constant_time_eq, dek_open, dek_seal, ed25519_public_key_b64,
@@ -49,10 +49,10 @@ use super::dynamic::{
     vault_db_role_configs,
 };
 use super::errors::{
-    vault_confirmation_token_required_status, vault_db_credentials_config_status,
-    vault_db_native_store_required_status, vault_field_violation, vault_internal_status,
-    vault_required_key_name, vault_required_secret_path, vault_schema_already_exists_status,
-    vault_schema_not_found_status,
+    vault_confirmation_token_mismatch_status, vault_confirmation_token_required_status,
+    vault_db_credentials_config_status, vault_db_native_store_required_status,
+    vault_field_violation, vault_internal_status, vault_required_key_name,
+    vault_required_secret_path, vault_schema_already_exists_status, vault_schema_not_found_status,
 };
 use super::model::{active_transit, json_i64, json_object, json_str, transit_version};
 use super::store::{
@@ -511,6 +511,12 @@ pub(crate) async fn destroy_secret(
     if secret_path.is_empty() {
         return Err(vault_required_secret_path());
     }
+    // Bind the confirmation to the path itself (Vault's own UX): an irreversible
+    // crypto-shred must name the exact secret_path it destroys — a merely
+    // non-empty token is not enough authorization.
+    if req.confirmation_token.trim() != secret_path {
+        return Err(vault_confirmation_token_mismatch_status());
+    }
     let _admit = native_admit_on(
         svc.channels.as_ref(),
         &svc.metrics,
@@ -902,6 +908,20 @@ pub(crate) async fn batch_encrypt(
     let key_name = req.key_name.trim().to_string();
     if key_name.is_empty() {
         return Err(vault_required_key_name());
+    }
+    // Bound the batch before any admission/crypto work: an unbounded plaintexts
+    // vector otherwise drives a `Vec::with_capacity` allocation and N seals.
+    let batch_cap = max_batch_encrypt_items();
+    if req.plaintexts.len() > batch_cap {
+        return Err(vault_field_violation(
+            "plaintexts",
+            "must not exceed the configured batch-encrypt item cap",
+            format!(
+                "batch_encrypt accepts at most {} plaintexts per request (got {})",
+                batch_cap,
+                req.plaintexts.len()
+            ),
+        ));
     }
     let _admit = native_admit_on(
         svc.channels.as_ref(),

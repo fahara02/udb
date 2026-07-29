@@ -93,11 +93,38 @@ pub(crate) fn search_reindex_interval() -> Duration {
     })
 }
 
-/// Clamp a requested `top_k` into `[1, MAX_TOP_K]`; non-positive → default.
+/// Clamp a requested `top_k` into `[1, max_top_k()]`; non-positive → default.
 pub(crate) fn resolve_top_k(requested: i32) -> i32 {
     if requested <= 0 {
         DEFAULT_TOP_K
     } else {
-        requested.min(MAX_TOP_K)
+        requested.min(max_top_k())
     }
+}
+
+/// Resolve the max `top_k` / result-page bound from `UDB_SEARCH_MAX_TOP_K`,
+/// falling back to [`MAX_TOP_K`]. Resolved once; a non-positive/unparsable value
+/// keeps the default so the bound is always finite.
+pub(crate) fn max_top_k() -> i32 {
+    static V: OnceLock<i32> = OnceLock::new();
+    *V.get_or_init(|| {
+        std::env::var("UDB_SEARCH_MAX_TOP_K")
+            .ok()
+            .and_then(|value| value.trim().parse::<i32>().ok())
+            .filter(|value| *value > 0)
+            .unwrap_or(MAX_TOP_K)
+    })
+}
+
+/// Resolve the per-tenant index quota from `UDB_SEARCH_MAX_INDEXES_PER_TENANT`,
+/// falling back to [`MAX_INDEXES_PER_TENANT`]. Resolved once.
+pub(crate) fn max_indexes_per_tenant() -> usize {
+    static V: OnceLock<usize> = OnceLock::new();
+    *V.get_or_init(|| {
+        std::env::var("UDB_SEARCH_MAX_INDEXES_PER_TENANT")
+            .ok()
+            .and_then(|value| value.trim().parse::<usize>().ok())
+            .filter(|value| *value > 0)
+            .unwrap_or(MAX_INDEXES_PER_TENANT)
+    })
 }

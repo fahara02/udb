@@ -8,7 +8,7 @@
 
 use sqlx::{PgPool, Row};
 
-use super::config::{VAULT_DB_CREDENTIAL_LEASE_MSG, VAULT_DB_LEASE_REAPER_BATCH};
+use super::config::{VAULT_DB_CREDENTIAL_LEASE_MSG, vault_db_lease_reaper_batch};
 use super::dynamic::drop_postgres_login_role;
 
 pub async fn run_vault_db_lease_reaper_once(pool: &PgPool, batch: i64) -> Result<i64, String> {
@@ -16,7 +16,7 @@ pub async fn run_vault_db_lease_reaper_once(pool: &PgPool, batch: i64) -> Result
         VAULT_DB_CREDENTIAL_LEASE_MSG,
         &["lease_id", "username", "state", "expires_at", "revoked_at"],
     );
-    let limit = batch.clamp(1, VAULT_DB_LEASE_REAPER_BATCH);
+    let limit = batch.clamp(1, vault_db_lease_reaper_batch());
     let select_sql = format!(
         "SELECT {}, {} FROM {} WHERE {} = 'ACTIVE' AND {} IS NULL AND {} <= NOW() \
          ORDER BY {} ASC LIMIT $1",
@@ -51,7 +51,20 @@ pub async fn run_vault_db_lease_reaper_once(pool: &PgPool, batch: i64) -> Result
         let username: String = row
             .try_get("username")
             .map_err(|err| format!("expired lease row missing username: {err}"))?;
-        drop_postgres_login_role(pool, &username).await?;
+        // Log-and-continue: one un-droppable role (e.g. a role the broker can no
+        // longer manage, or a transient backend error) must not stall revocation
+        // of the rest of the batch. Skip marking THIS lease REVOKED — it stays
+        // ACTIVE and is retried on the next reaper pass — and move on.
+        if let Err(err) = drop_postgres_login_role(pool, &username).await {
+            tracing::warn!(
+                lease_id = %lease_id,
+                username = %username,
+                error = %err,
+                "vault DB lease reaper: dropping expired login role failed; \
+                 continuing with the rest of the batch"
+            );
+            continue;
+        }
         let updated = sqlx::query(&update_sql)
             .bind(&lease_id)
             .execute(pool)

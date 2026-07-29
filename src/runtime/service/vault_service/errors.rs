@@ -100,6 +100,17 @@ pub(crate) fn vault_confirmation_token_required_status() -> Status {
     )
 }
 
+/// The confirmation token was provided but did not match the `secret_path`.
+/// DestroySecret is an irreversible crypto-shred, so the caller must name the
+/// exact path being destroyed (Vault's own UX) — a non-empty token is not enough.
+pub(crate) fn vault_confirmation_token_mismatch_status() -> Status {
+    vault_field_violation(
+        "confirmation_token",
+        "must exactly equal the secret_path being destroyed",
+        "DestroySecret confirmation_token must match the secret_path to authorize the irreversible crypto-shred",
+    )
+}
+
 pub(crate) fn vault_field_violation<F, D, M>(field: F, description: D, message: M) -> Status
 where
     F: Into<String>,

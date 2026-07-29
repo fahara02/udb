@@ -66,6 +66,26 @@ const EMBEDDING_RETRIEVE_SCORE_THRESHOLD_ENV: &str = "UDB_EMBEDDING_RETRIEVE_SCO
 /// fusion weighting (was a hardcoded empty vec).
 const EMBEDDING_RETRIEVE_FUSION_WEIGHTS_ENV: &str = "UDB_EMBEDDING_RETRIEVE_FUSION_WEIGHTS";
 
+/// Optional sidecar reranker endpoint. Empty (the default) disables reranking
+/// unless a request explicitly asks for it (then a strict config gets a typed
+/// capability error). Resolved ONCE via a `OnceLock` — was read per-request via
+/// a raw `std::env::var`, unlike every other embedding knob.
+const EMBEDDING_RERANK_URL_ENV: &str = "UDB_EMBEDDING_RERANK_URL";
+/// Upper bound on the candidate set a single `Retrieve` pulls from the store
+/// before MMR/rerank/top-k trimming, so one query cannot pull an unbounded set
+/// (was a hardcoded `.min(800)`).
+const DEFAULT_EMBEDDING_MAX_CANDIDATES: usize = 800;
+const EMBEDDING_MAX_CANDIDATES_ENV: &str = "UDB_EMBEDDING_MAX_CANDIDATES";
+/// Multiplier applied to `top_k` to over-fetch candidates when MMR diversity
+/// re-ranking is requested (MMR needs a larger pool to select from). Was a
+/// hardcoded `top_k * 4`.
+const DEFAULT_EMBEDDING_MMR_OVERFETCH: usize = 4;
+const EMBEDDING_MMR_OVERFETCH_ENV: &str = "UDB_EMBEDDING_MMR_OVERFETCH";
+/// Per-request timeout for the sidecar reranker HTTP call (was a hardcoded
+/// `Duration::from_secs(10)`).
+const DEFAULT_EMBEDDING_RERANK_TIMEOUT_SECS: u64 = 10;
+const EMBEDDING_RERANK_TIMEOUT_ENV: &str = "UDB_EMBEDDING_RERANK_TIMEOUT_SECS";
+
 /// Maximum characters of source text carried in a single `udb.embedding.work.v1`
 /// event. Embedding models cap their input (roughly a few thousand tokens); an
 /// unbounded row would make the sidecar's provider call fail, and — since a
@@ -177,6 +197,55 @@ pub(crate) fn retrieve_fusion_weights() -> Vec<f32> {
                 .unwrap_or_default()
         })
         .clone()
+}
+
+/// Sidecar reranker endpoint, resolved once (trimmed). Empty ⇒ reranking is
+/// unconfigured. Returns a `&'static str` so callers never re-read the env.
+pub(crate) fn embedding_rerank_url() -> &'static str {
+    static URL: OnceLock<String> = OnceLock::new();
+    URL.get_or_init(|| {
+        std::env::var(EMBEDDING_RERANK_URL_ENV)
+            .map(|value| value.trim().to_string())
+            .unwrap_or_default()
+    })
+    .as_str()
+}
+
+/// Candidate-set cap for a single `Retrieve` (resolved once). A `<= 0`/malformed
+/// override falls back to the default so the bound is always sane.
+pub(crate) fn embedding_max_candidates() -> usize {
+    static MAX: OnceLock<usize> = OnceLock::new();
+    usize_env_once(
+        &MAX,
+        EMBEDDING_MAX_CANDIDATES_ENV,
+        DEFAULT_EMBEDDING_MAX_CANDIDATES,
+    )
+}
+
+/// MMR over-fetch multiplier applied to `top_k` (resolved once). A `<= 0`/
+/// malformed override falls back to the default.
+pub(crate) fn embedding_mmr_overfetch() -> usize {
+    static OVERFETCH: OnceLock<usize> = OnceLock::new();
+    usize_env_once(
+        &OVERFETCH,
+        EMBEDDING_MMR_OVERFETCH_ENV,
+        DEFAULT_EMBEDDING_MMR_OVERFETCH,
+    )
+}
+
+/// Sidecar reranker HTTP timeout (resolved once). A `<= 0`/malformed override
+/// falls back to the default so the timeout is always a real, sane bound.
+pub(crate) fn embedding_rerank_timeout() -> Duration {
+    static TIMEOUT: OnceLock<Duration> = OnceLock::new();
+    *TIMEOUT.get_or_init(|| {
+        Duration::from_secs(
+            std::env::var(EMBEDDING_RERANK_TIMEOUT_ENV)
+                .ok()
+                .and_then(|value| value.trim().parse::<u64>().ok())
+                .filter(|value| *value > 0)
+                .unwrap_or(DEFAULT_EMBEDDING_RERANK_TIMEOUT_SECS),
+        )
+    })
 }
 
 /// Maximum source-text characters per work event, resolved once. A `<= 0` or

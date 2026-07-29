@@ -1,5 +1,5 @@
 use std::collections::{BTreeMap, BTreeSet};
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
@@ -14,36 +14,19 @@ use super::super::native_helpers::{
 use super::EmbeddingServiceImpl;
 use super::config::{
     STATUS_ACTIVE, STATUS_DEPRECATED, TOPIC_RETRIEVAL_EVALUATED, TOPIC_RETRIEVAL_SAMPLED,
-    embedding_max_chunks_per_row, resolve_top_k, retrieval_eval_sample_rate,
-    retrieve_fusion_weights, retrieve_score_threshold,
+    embedding_max_candidates, embedding_max_chunks_per_row, embedding_mmr_overfetch,
+    embedding_rerank_url, resolve_top_k, retrieval_eval_sample_rate, retrieve_fusion_weights,
+    retrieve_score_threshold,
 };
 use super::documents::document_source_name;
 use super::errors::{
     embedding_field_violation, embedding_required_field, embedding_source_not_found_status,
 };
+use super::fresh_buffer::similarity;
 use super::handlers::{parse_grpc_timeout, remaining_before_deadline};
 use super::model::{merge_retrieve_scope_filter, stored_model_from_json, stored_source_from_json};
 use super::store::{model_read_by_id, source_read_by_name};
 use super::vector_store::VectorStore as _;
-
-fn cosine(left: &[f32], right: &[f32]) -> f32 {
-    if left.is_empty() || left.len() != right.len() {
-        return 0.0;
-    }
-    let mut dot = 0.0f64;
-    let mut left_norm = 0.0f64;
-    let mut right_norm = 0.0f64;
-    for (left, right) in left.iter().zip(right) {
-        dot += f64::from(*left) * f64::from(*right);
-        left_norm += f64::from(*left) * f64::from(*left);
-        right_norm += f64::from(*right) * f64::from(*right);
-    }
-    if left_norm == 0.0 || right_norm == 0.0 {
-        0.0
-    } else {
-        (dot / (left_norm.sqrt() * right_norm.sqrt())) as f32
-    }
-}
 
 /// Whether a retrieved point clears the caller/operator cosine `score_floor`.
 /// The floor is a cosine threshold, so it is only meaningful on the vector-only
@@ -68,10 +51,13 @@ pub(crate) fn mmr_select(
         let mut best_index = 0usize;
         let mut best_score = f32::NEG_INFINITY;
         for (index, candidate) in candidates.iter().enumerate() {
+            // MMR relevance/redundancy are cosine-based diversity terms (higher =
+            // more similar), computed via the ONE shared `similarity` helper so
+            // there is a single similarity implementation across the service.
             let relevance = if candidate.vector.is_empty() {
                 candidate.score
             } else {
-                cosine(query, &candidate.vector)
+                similarity("COSINE", query, &candidate.vector)
             };
             let redundancy = selected
                 .iter()
@@ -79,7 +65,7 @@ pub(crate) fn mmr_select(
                     if candidate.vector.is_empty() || chosen.vector.is_empty() {
                         0.0
                     } else {
-                        cosine(&candidate.vector, &chosen.vector)
+                        similarity("COSINE", &candidate.vector, &chosen.vector)
                     }
                 })
                 .fold(0.0f32, f32::max);
@@ -159,8 +145,8 @@ async fn rerank_points(
     if !config.enabled {
         return Ok((points, BTreeMap::new(), false));
     }
-    let endpoint = std::env::var("UDB_EMBEDDING_RERANK_URL").unwrap_or_default();
-    if endpoint.trim().is_empty() {
+    let endpoint = embedding_rerank_url();
+    if endpoint.is_empty() {
         if config.fail_open {
             return Ok((points, BTreeMap::new(), false));
         }
@@ -209,10 +195,11 @@ async fn rerank_points(
     }
     #[cfg(feature = "http-client")]
     {
+        use super::config::embedding_rerank_timeout;
         let response = reqwest::Client::new()
-            .post(endpoint.trim())
+            .post(endpoint)
             .json(&body)
-            .timeout(Duration::from_secs(10))
+            .timeout(embedding_rerank_timeout())
             .send()
             .await;
         let decoded = match response {
@@ -378,11 +365,11 @@ pub(crate) async fn retrieve(
     let candidate_limit = top_k
         .max(rerank_top)
         .max(if mmr.is_some() {
-            top_k.saturating_mul(4)
+            top_k.saturating_mul(embedding_mmr_overfetch())
         } else {
             top_k
         })
-        .min(800);
+        .min(embedding_max_candidates());
     let score_floor = {
         let configured = retrieve_score_threshold();
         if req.score_threshold > 0.0 {
@@ -467,6 +454,19 @@ pub(crate) async fn retrieve(
         );
         if !fresh.is_empty() {
             svc.metrics.inc_embedding_work("fresh_merged");
+            // The fresh-buffer scores come from the unified `similarity` helper,
+            // which is higher-better for EVERY metric (EUCLID via `1/(1+d)`), so
+            // this merged DESC sort is self-consistent for COSINE/DOT — the
+            // engine and fresh buffer agree on scale — and for the fresh entries
+            // themselves under EUCLID.
+            // NOTE (residual EUCLID engine-convention): the merged engine scores
+            // pass through whatever the vector backend returns
+            // (`executors/qdrant.rs` forwards Qdrant's raw `score`), so if a
+            // backend reports EUCLID as a raw *distance* (lower-better) rather
+            // than a higher-better score, an engine EUCLID hit and a fresh
+            // EUCLID hit are on different scales here. Reconciling that is a
+            // backend/executor concern outside embedding_service and is tracked
+            // as the open EUCLID engine-convention question.
             points.extend(fresh.into_iter().filter(|point| point.score >= score_floor));
             points.sort_by(|left, right| right.score.total_cmp(&left.score));
             let mut seen = BTreeSet::new();

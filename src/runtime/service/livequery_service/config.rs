@@ -55,3 +55,24 @@ pub(crate) fn max_streams_per_tenant() -> usize {
             .unwrap_or(DEFAULT_MAX_STREAMS_PER_TENANT)
     })
 }
+
+/// Default GLOBAL ceiling on concurrent live-query streams across ALL tenants.
+/// The per-tenant budget alone does not bound the process: N tenants × 64 each
+/// would spawn N×64 forwarder tasks + N×64 bounded channels. This aggregate cap
+/// keeps a large tenant fan-out from exhausting process memory.
+const DEFAULT_MAX_STREAMS_GLOBAL: usize = 4_096;
+
+/// Resolve the global concurrent-stream ceiling from
+/// `UDB_LIVEQUERY_MAX_STREAMS_GLOBAL`, falling back to
+/// [`DEFAULT_MAX_STREAMS_GLOBAL`]. A non-positive / unparsable value uses the
+/// default so the ceiling is always finite. Resolved exactly once.
+pub(crate) fn max_streams_global() -> usize {
+    static GLOBAL: OnceLock<usize> = OnceLock::new();
+    *GLOBAL.get_or_init(|| {
+        std::env::var("UDB_LIVEQUERY_MAX_STREAMS_GLOBAL")
+            .ok()
+            .and_then(|value| value.trim().parse::<usize>().ok())
+            .filter(|value| *value > 0)
+            .unwrap_or(DEFAULT_MAX_STREAMS_GLOBAL)
+    })
+}

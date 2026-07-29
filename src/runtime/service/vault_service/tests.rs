@@ -16,8 +16,10 @@ use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
 
 use super::VaultServiceImpl;
 use super::config::{
-    DEFAULT_TRANSIT_ALGORITHM, MIN_DB_CREDENTIAL_TTL_SECONDS, VAULT_MASTER_KEY_UNAVAILABLE_MESSAGE,
-    VAULT_RUNTIME_REQUIRED_MESSAGE,
+    DEFAULT_TRANSIT_ALGORITHM, MAX_BATCH_ENCRYPT_ITEMS, MAX_VERSIONS_SCAN,
+    MIN_DB_CREDENTIAL_TTL_SECONDS, VAULT_DB_LEASE_REAPER_BATCH,
+    VAULT_MASTER_KEY_UNAVAILABLE_MESSAGE, VAULT_RUNTIME_REQUIRED_MESSAGE, max_batch_encrypt_items,
+    max_versions_scan, vault_db_lease_reaper_batch,
 };
 use super::crypto::{
     DataKey, PlaintextSecret, constant_time_eq, dek_open, dek_seal, ed25519_public_key_b64,
@@ -568,4 +570,108 @@ fn db_role_config_is_allow_listed_and_identifier_safe() {
         parse_vault_db_role_configs(r#"[{"role_name":"app read","parent_role":"udb_app_read"}]"#)
             .expect_err("space in role alias must be rejected");
     assert!(bad_alias.contains("role_name"));
+}
+
+/// DestroySecret is an irreversible crypto-shred, so a merely non-empty
+/// confirmation token is not enough: it must name the exact `secret_path`. A
+/// mismatching token fails closed with a typed field violation before any
+/// admission/runtime access.
+#[tokio::test]
+async fn destroy_secret_confirmation_must_match_secret_path() {
+    let svc = VaultServiceImpl::new().with_seal_override(false);
+    let mut request = Request::new(vault_pb::DestroySecretRequest {
+        tenant_id: "tenant-a".to_string(),
+        secret_path: "app/db/password".to_string(),
+        confirmation_token: "app/db/passwrd".to_string(),
+        ..Default::default()
+    });
+    request
+        .metadata_mut()
+        .insert("x-tenant-id", MetadataValue::from_static("tenant-a"));
+
+    let err = svc
+        .destroy_secret(request)
+        .await
+        .expect_err("a confirmation token that does not equal the path must be rejected");
+    assert_eq!(err.code(), tonic::Code::InvalidArgument);
+    assert_eq!(
+        err.message(),
+        "DestroySecret confirmation_token must match the secret_path to authorize the irreversible crypto-shred"
+    );
+    assert_single_field_violation(
+        &err,
+        "confirmation_token",
+        "must exactly equal the secret_path being destroyed",
+    );
+}
+
+/// A confirmation token equal to the `secret_path` satisfies the binding guard;
+/// the RPC then proceeds and (with no runtime configured in the unit) fails at the
+/// runtime capability gate — proving the guard was passed, not the confirmation.
+#[tokio::test]
+async fn destroy_secret_matching_confirmation_passes_the_binding_guard() {
+    let svc = VaultServiceImpl::new().with_seal_override(false);
+    let mut request = Request::new(vault_pb::DestroySecretRequest {
+        tenant_id: "tenant-a".to_string(),
+        secret_path: "app/db/password".to_string(),
+        confirmation_token: "app/db/password".to_string(),
+        ..Default::default()
+    });
+    request
+        .metadata_mut()
+        .insert("x-tenant-id", MetadataValue::from_static("tenant-a"));
+
+    let err = svc
+        .destroy_secret(request)
+        .await
+        .expect_err("no runtime is configured in the unit");
+    assert_capability_detail(
+        &err,
+        "native_entity_dispatch",
+        "runtime_native_entity_dispatch",
+        VAULT_RUNTIME_REQUIRED_MESSAGE,
+    );
+}
+
+/// BatchEncrypt caps the number of plaintexts per request (env
+/// `UDB_VAULT_MAX_BATCH_ENCRYPT`), rejecting an over-cap batch with a typed field
+/// violation before any allocation or crypto work.
+#[tokio::test]
+async fn batch_encrypt_rejects_over_cap_batches() {
+    let svc = VaultServiceImpl::new().with_seal_override(false);
+    let over_cap = max_batch_encrypt_items() + 1;
+    let mut request = Request::new(vault_pb::BatchEncryptRequest {
+        tenant_id: "tenant-a".to_string(),
+        key_name: "app-key".to_string(),
+        plaintexts: vec![String::new(); over_cap],
+        ..Default::default()
+    });
+    request
+        .metadata_mut()
+        .insert("x-tenant-id", MetadataValue::from_static("tenant-a"));
+
+    let err = svc
+        .batch_encrypt(request)
+        .await
+        .expect_err("an over-cap plaintext batch must be rejected");
+    assert_eq!(err.code(), tonic::Code::InvalidArgument);
+    assert!(
+        err.message().starts_with("batch_encrypt accepts at most "),
+        "unexpected message: {}",
+        err.message()
+    );
+    assert_single_field_violation(
+        &err,
+        "plaintexts",
+        "must not exceed the configured batch-encrypt item cap",
+    );
+}
+
+/// The env-governed Vault knobs fall back to their byte-stable const defaults when
+/// their `UDB_VAULT_*` variables are unset (the case under `cargo test`).
+#[test]
+fn vault_env_knobs_default_to_the_consts() {
+    assert_eq!(max_versions_scan(), MAX_VERSIONS_SCAN);
+    assert_eq!(vault_db_lease_reaper_batch(), VAULT_DB_LEASE_REAPER_BATCH);
+    assert_eq!(max_batch_encrypt_items(), MAX_BATCH_ENCRYPT_ITEMS);
 }
