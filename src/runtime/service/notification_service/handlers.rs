@@ -24,7 +24,8 @@ use super::config::{
     test_mode_enabled,
 };
 use super::errors::{
-    notification_internal_status, notification_not_retryable_status, notification_required_field,
+    notification_internal_status, notification_log_not_found_status,
+    notification_not_retryable_status, notification_required_field,
     notification_schema_not_found_status, notification_template_not_found_status,
     notification_tenant_metadata_required_status, status_with_reason,
 };
@@ -37,10 +38,10 @@ use super::model::{
     template_select_projection,
 };
 use super::store::{
-    delivery_stats_aggregate, is_notification_opted_out, notification_log_filter,
-    notification_log_list_read, notification_log_read, notification_log_record,
-    preference_list_filter, preference_list_read, preference_read, template_read,
-    template_scope_filter, write_delivery_attempt,
+    delivery_stats_aggregate, is_notification_opted_out, log_transition_allowed_prev,
+    notification_log_filter, notification_log_list_read, notification_log_read,
+    notification_log_record, preference_list_filter, preference_list_read, preference_read,
+    template_read, template_scope_filter, transition_log_status, write_delivery_attempt,
 };
 
 pub(crate) async fn send_notification(
@@ -422,6 +423,35 @@ pub(crate) async fn report_delivery(
     let channel_db = channel_to_db(req.channel);
     let provider = req.provider.trim();
     let pool = svc.require_pool()?;
+    // Verify the log belongs to the caller's tenant BEFORE recording a delivery
+    // attempt for it. Without this, a tenant could stamp a terminal attempt on
+    // another tenant's `log_id`; the delivery worker's dedup would then treat
+    // that tenant's still-PENDING notification as already delivered and silently
+    // drop it (cross-tenant denial-of-delivery). The body `tenant_id` is already
+    // pinned to the verified claim by `validate_request_tenant` above, so this
+    // read is scoped to the caller's own tenant.
+    {
+        let lm = log_model();
+        let owns = sqlx::query(&format!(
+            "SELECT 1 FROM {rel} WHERE {log_id} = $1::UUID AND {tenant_id} = $2 LIMIT 1",
+            rel = lm.relation,
+            log_id = lm.q("log_id"),
+            tenant_id = lm.q("tenant_id"),
+        ))
+        .bind(log_id)
+        .bind(&req.tenant_id)
+        .fetch_optional(pool)
+        .await
+        .map_err(|err| {
+            notification_internal_status(
+                "report_delivery_ownership",
+                format!("report delivery ownership check failed: {err}"),
+            )
+        })?;
+        if owns.is_none() {
+            return Err(notification_log_not_found_status("report_delivery"));
+        }
+    }
     // Upsert the durable per-(notification, channel, provider) delivery record.
     let row = write_delivery_attempt(
         pool,
@@ -441,6 +471,21 @@ pub(crate) async fn report_delivery(
         )
     })?;
     let attempt = row.as_ref().map(delivery_attempt_from_row).transpose()?;
+    // A client-reported success moves the log forward (PENDING→SENT→DELIVERED) so
+    // GetNotification/GetDeliveryStats reflect the real outcome. Best-effort: a
+    // transition failure must not fail the delivery report itself.
+    let allowed_prev = log_transition_allowed_prev(status_db);
+    if !allowed_prev.is_empty() {
+        if let Err(err) =
+            transition_log_status(pool, log_id, &req.tenant_id, status_db, allowed_prev).await
+        {
+            tracing::warn!(
+                log_id = %req.log_id,
+                error = %err,
+                "notification log status transition failed"
+            );
+        }
+    }
     // Emit `udb.notification.delivery.<status>.v1` (best-effort; no secrets).
     let project_id = native_service_context(&metadata, &req.tenant_id, "").project_id;
     svc.emit_delivery_event(

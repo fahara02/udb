@@ -20,7 +20,7 @@ use crate::runtime::DataBrokerRuntime;
 use super::super::native_helpers::parse_uuid;
 use super::config::{LOG_MSG, PREFERENCE_MSG, TEMPLATE_MSG};
 use super::model::{
-    channel_to_db, delivery_attempt_model, delivery_attempt_select_projection,
+    channel_to_db, delivery_attempt_model, delivery_attempt_select_projection, log_model,
     preference_from_json_row,
 };
 
@@ -454,4 +454,56 @@ pub(crate) async fn write_delivery_attempt(
     .bind(provider_message_id)
     .fetch_optional(pool)
     .await
+}
+
+/// Transition a `NotificationLog.status` when a terminal delivery outcome is
+/// recorded, but ONLY from an allowed prior state (`allowed_prev`). This is the
+/// forward state machine `PENDING → SENT → DELIVERED`: a later attempt can never
+/// downgrade a delivered notification, and the `(log_id, tenant_id)` predicate
+/// keeps the write tenant-scoped. Idempotent — a no-op when the log is already
+/// in a further state or belongs to another tenant. Returns whether a row moved.
+///
+/// Before this, the log stayed `PENDING` forever after a real send, so
+/// `GetNotification`/`GetDeliveryStats` never reflected actual deliveries. The
+/// FAILED transition is deliberately NOT handled here — it belongs with the
+/// bounded-retry model (max-attempts + backoff) rather than marking a log failed
+/// on the first transient error.
+pub(crate) async fn transition_log_status(
+    pool: &PgPool,
+    log_id: Uuid,
+    tenant_id: &str,
+    new_status: &str,
+    allowed_prev: &[&str],
+) -> Result<bool, sqlx::Error> {
+    if allowed_prev.is_empty() {
+        return Ok(false);
+    }
+    let m = log_model();
+    let rel = m.relation.clone();
+    let prev: Vec<String> = allowed_prev.iter().map(|state| state.to_string()).collect();
+    let result = sqlx::query(&format!(
+        "UPDATE {rel} SET {status} = $1 \
+         WHERE {log_id} = $2::UUID AND {tenant_id} = $3 AND {status} = ANY($4)",
+        status = m.q("status"),
+        log_id = m.q("log_id"),
+        tenant_id = m.q("tenant_id"),
+    ))
+    .bind(new_status)
+    .bind(log_id)
+    .bind(tenant_id)
+    .bind(&prev)
+    .execute(pool)
+    .await?;
+    Ok(result.rows_affected() > 0)
+}
+
+/// The allowed prior states for a forward transition to `status_db`. Only the
+/// success terminals move the log here; `FAILED` returns an empty slice (handled
+/// by the retry model), so callers can pass any delivery status safely.
+pub(crate) fn log_transition_allowed_prev(status_db: &str) -> &'static [&'static str] {
+    match status_db {
+        "DELIVERED" => &["PENDING", "SENT"],
+        "SENT" => &["PENDING"],
+        _ => &[],
+    }
 }

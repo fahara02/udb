@@ -342,3 +342,47 @@ fn single_row_evaluator_matches_predicate() {
     // Missing field => comparison false => row excluded.
     assert!(!filter_matches_row(&filter, &json!({"status": "HELD"})));
 }
+
+#[test]
+fn change_row_unwraps_the_udb_payload_envelope() {
+    // Regression: both CDC emit paths (core/setup_data.rs and the native
+    // compliance envelope) nest the row image under `payload`, with tenant and
+    // operation stamped at the top level. Before `payload` was a ROW_KEY,
+    // change_row returned the WHOLE envelope, so filters keyed on row columns
+    // (e.g. `status`) evaluated against the envelope top level (None) and every
+    // matching delta was silently dropped, and change frames shipped the
+    // envelope instead of the row.
+    let envelope = json!({
+        "event_id": "e1",
+        "topic": "udb.lock.acquired.v1",
+        "tenant_id": "t1",
+        "operation": "upsert",
+        "payload": { "lock_id": "L1", "status": "HELD", "fencing_token": 7 }
+    });
+    let row = super::predicate::change_row(&envelope);
+    assert_eq!(
+        row,
+        json!({ "lock_id": "L1", "status": "HELD", "fencing_token": 7 })
+    );
+    // The unwrapped row now matches the snapshot row shape, so a filter on a row
+    // column resolves correctly instead of dropping the delta.
+    assert!(super::predicate::filter_matches_row(
+        &LogicalFilter::Comparison {
+            field: "status".to_string(),
+            op: ComparisonOp::Eq,
+            value: LogicalValue::String("HELD".to_string()),
+        },
+        &row
+    ));
+}
+
+#[test]
+fn change_row_prefers_external_convention_keys_over_payload() {
+    // A foreign (Debezium-style) envelope whose row is under `after` must still
+    // unwrap to `after`, not the UDB `payload` fallback.
+    let debezium = json!({ "op": "u", "after": { "id": 1, "v": "x" } });
+    assert_eq!(
+        super::predicate::change_row(&debezium),
+        json!({ "id": 1, "v": "x" })
+    );
+}

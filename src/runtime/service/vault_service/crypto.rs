@@ -17,7 +17,6 @@ use aes_gcm_siv::{Aes256GcmSiv, Nonce};
 use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
 use ed25519_dalek::{Signature, Signer, SigningKey};
-use sha2::{Digest, Sha256};
 use tonic::Status;
 use uuid::Uuid;
 
@@ -229,34 +228,13 @@ pub(crate) fn ed25519_public_key_b64(seed: &[u8; 32]) -> String {
     BASE64_STANDARD.encode(SigningKey::from_bytes(seed).verifying_key().to_bytes())
 }
 
-const HMAC_BLOCK: usize = 64; // SHA-256 block size.
-
-/// HMAC-SHA256 built on the already-vendored `sha2` crate (no `hmac` crate
-/// dependency added). Standard FIPS-198 construction.
+/// HMAC-SHA256 for the transit MAC/signature path. Delegates to the shared,
+/// test-covered primitive (`runtime::security::hmac_sha256`) so vault crypto and
+/// the rest of the broker share ONE vetted construction instead of a second
+/// hand-rolled copy that could drift. (The `hmac` crate is already a dependency;
+/// the previous "no hmac crate added" rationale no longer applied.)
 pub(crate) fn hmac_sha256(key: &[u8], message: &[u8]) -> [u8; 32] {
-    let mut block_key = [0u8; HMAC_BLOCK];
-    if key.len() > HMAC_BLOCK {
-        let digest = Sha256::digest(key);
-        block_key[..32].copy_from_slice(&digest);
-    } else {
-        block_key[..key.len()].copy_from_slice(key);
-    }
-    let mut ipad = [0x36u8; HMAC_BLOCK];
-    let mut opad = [0x5cu8; HMAC_BLOCK];
-    for i in 0..HMAC_BLOCK {
-        ipad[i] ^= block_key[i];
-        opad[i] ^= block_key[i];
-    }
-    let mut inner = Sha256::new();
-    inner.update(ipad);
-    inner.update(message);
-    let inner_digest = inner.finalize();
-    let mut outer = Sha256::new();
-    outer.update(opad);
-    outer.update(inner_digest);
-    let mut out = [0u8; 32];
-    out.copy_from_slice(&outer.finalize());
-    out
+    crate::runtime::security::hmac_sha256(key, message)
 }
 
 /// Constant-time equality for MAC verification (no early-exit timing leak).
@@ -347,4 +325,29 @@ pub(crate) fn transit_payload(ciphertext: &str) -> Result<&str, Status> {
                 "stored secret has a malformed ciphertext envelope",
             )
         })
+}
+
+#[cfg(test)]
+mod crypto_primitive_tests {
+    use super::{constant_time_eq, hmac_sha256};
+
+    #[test]
+    fn hmac_sha256_matches_the_rfc4231_known_answer() {
+        // RFC 4231 Test Case 1: key = 20×0x0b, data = "Hi There". Proves the
+        // delegation to the shared primitive is a correct HMAC-SHA256 (the
+        // transit MAC/signature path depends on it).
+        let mac = hmac_sha256(&[0x0b; 20], b"Hi There");
+        let hex: String = mac.iter().map(|b| format!("{b:02x}")).collect();
+        assert_eq!(
+            hex,
+            "b0344c61d8db38535ca8afceaf0bf12b881dc200c9833da726e9376c2e32cff7"
+        );
+    }
+
+    #[test]
+    fn constant_time_eq_agrees_with_equality() {
+        assert!(constant_time_eq(b"abc", b"abc"));
+        assert!(!constant_time_eq(b"abc", b"abd"));
+        assert!(!constant_time_eq(b"abc", b"ab"));
+    }
 }

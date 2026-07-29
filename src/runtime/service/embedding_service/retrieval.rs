@@ -45,6 +45,17 @@ fn cosine(left: &[f32], right: &[f32]) -> f32 {
     }
 }
 
+/// Whether a retrieved point clears the caller/operator cosine `score_floor`.
+/// The floor is a cosine threshold, so it is only meaningful on the vector-only
+/// path (where the engine returns cosine scores and already applies it). On the
+/// hybrid path the store returns RRF-fused scores on an incompatible scale, so
+/// applying the cosine floor there would drop every hit — we skip it instead of
+/// silently returning empty. Kept as a tiny pure fn so the semantics are tested
+/// without a live vector store.
+fn passes_score_floor(is_vector_only: bool, score: f32, score_floor: f32) -> bool {
+    !is_vector_only || score >= score_floor
+}
+
 pub(crate) fn mmr_select(
     mut candidates: Vec<VectorPoint>,
     query: &[f32],
@@ -381,6 +392,14 @@ pub(crate) async fn retrieve(
         }
     };
     let filter = merge_retrieve_scope_filter(&tenant_id, &source_name, &req.filter_json, None)?;
+    // The cosine `score_floor` is only comparable to the engine's vector scores.
+    // On the hybrid path the store returns RRF-fused scores (~1/(60+rank) ≈
+    // 0.016), so a cosine threshold (e.g. 0.5) would wipe every hybrid hit even
+    // though the proto promises the threshold "applies to both paths". We honor
+    // it on the vector-only path (where the engine already applies it, line
+    // below) and skip it on hybrid rather than silently returning empty. A
+    // fusion-appropriate hybrid threshold is tracked as a follow-up.
+    let is_vector_only = req.query_text.trim().is_empty();
     let with_vector = req.include_vectors || mmr.is_some();
     let store = svc.vector_store_for_model(&context.project_id, &model)?;
     let remaining = remaining_before_deadline(deadline, Instant::now())?;
@@ -434,7 +453,7 @@ pub(crate) async fn retrieve(
     let mut points = result
         .points
         .into_iter()
-        .filter(|point| point.score >= score_floor)
+        .filter(|point| passes_score_floor(is_vector_only, point.score, score_floor))
         .collect::<Vec<_>>();
     if req.filter_json.trim().is_empty() {
         let fresh = svc.fresh_vectors.search(
@@ -668,4 +687,28 @@ pub(crate) async fn report_retrieval_evaluation(
             error: None,
         },
     ))
+}
+
+#[cfg(test)]
+mod score_floor_tests {
+    use super::passes_score_floor;
+
+    #[test]
+    fn vector_only_path_enforces_the_cosine_floor() {
+        // On the vector-only path the score is a cosine similarity, so the floor
+        // applies: a below-floor point is dropped, an at/above-floor point kept.
+        assert!(!passes_score_floor(true, 0.30, 0.50));
+        assert!(passes_score_floor(true, 0.50, 0.50));
+        assert!(passes_score_floor(true, 0.90, 0.50));
+    }
+
+    #[test]
+    fn hybrid_path_never_applies_the_cosine_floor() {
+        // Regression: hybrid returns RRF-fused scores (~1/(60+rank) ≈ 0.016).
+        // A cosine floor of 0.5 must NOT wipe them — every hybrid hit passes
+        // regardless of its fused score, instead of the query silently
+        // returning empty.
+        assert!(passes_score_floor(false, 0.016, 0.50));
+        assert!(passes_score_floor(false, 0.0, 0.99));
+    }
 }

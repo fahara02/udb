@@ -638,3 +638,19 @@ fn delivery_provider_json_accepts_names_and_redacts_credentials() {
     assert!(!rendered.contains("udb-aead:v1:secret"));
     assert!(rendered.contains("[redacted]"));
 }
+
+#[test]
+fn log_transition_allowed_prev_is_a_forward_only_state_machine() {
+    use super::store::log_transition_allowed_prev;
+    // Success terminals move the log forward from an allowed prior state...
+    assert_eq!(log_transition_allowed_prev("SENT"), &["PENDING"]);
+    assert_eq!(
+        log_transition_allowed_prev("DELIVERED"),
+        &["PENDING", "SENT"]
+    );
+    // ...FAILED is handled by the retry model, not this forward transition, so it
+    // yields no allowed prior state (callers can pass any status safely).
+    assert!(log_transition_allowed_prev("FAILED").is_empty());
+    assert!(log_transition_allowed_prev("SUPPRESSED").is_empty());
+    assert!(log_transition_allowed_prev("PENDING").is_empty());
+}

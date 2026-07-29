@@ -31,7 +31,7 @@ use super::errors::{
     search_field_violation, search_index_not_found_status, search_required_field,
     validate_create_index_required_fields, validate_search_query,
 };
-use super::fusion::reciprocal_rank_fusion;
+use super::fusion::fuse_ranked_lists;
 use super::model::{StoredIndex, collection_name, stored_index_from_json};
 use super::store::{active_indexes_read, index_conflict, index_read_by_name, index_record};
 
@@ -537,7 +537,7 @@ pub(crate) async fn search(
     // Query each target through the mediated dispatch, then fuse the ranked
     // id lists across indexes with pure RRF. Per hit id the first-seen
     // (index name, tenant-stripped payload_json) pair is kept for mapping.
-    let mut ranked_lists: Vec<Vec<String>> = Vec::with_capacity(targets.len());
+    let mut ranked_lists: Vec<Vec<(String, f64)>> = Vec::with_capacity(targets.len());
     let mut hit_meta: std::collections::HashMap<String, (String, String)> =
         std::collections::HashMap::new();
     for index in &targets {
@@ -552,7 +552,9 @@ pub(crate) async fn search(
                 tenant_filter.clone(),
             )
             .await?;
-        let mut ids = Vec::with_capacity(points.len());
+        // Carry the engine's own relevance score so a single-index search keeps
+        // it (see `fuse_ranked_lists`); cross-index fusion uses only the rank.
+        let mut scored = Vec::with_capacity(points.len());
         for point in points {
             hit_meta.entry(point.id.clone()).or_insert_with(|| {
                 (
@@ -560,12 +562,12 @@ pub(crate) async fn search(
                     hit_payload_json(point.payload.as_ref()),
                 )
             });
-            ids.push(point.id);
+            scored.push((point.id, f64::from(point.score)));
         }
-        ranked_lists.push(ids);
+        ranked_lists.push(scored);
     }
 
-    let fused = reciprocal_rank_fusion(&ranked_lists);
+    let fused = fuse_ranked_lists(&ranked_lists);
     let requested_page_size = if req.page_size > 0 {
         req.page_size
     } else {

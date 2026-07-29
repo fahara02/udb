@@ -5,6 +5,55 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.4.30] - 2026-07-30
+
+Native-service hardening release. A rigorous review of the incomplete native
+thin-layer services (vault, search, embedding, live-query, notification) fixed
+one CRITICAL cross-tenant data leak, two cross-tenant/isolation bugs, and two
+correctness bugs, plus a security-crypto de-duplication. No feature was removed.
+
+### Breaking / wire changes
+- None. No proto changes; all fixes are behavioral/internal.
+
+### Fixed
+- **CRITICAL — Search (Elasticsearch) cross-tenant read leak.** The Elasticsearch
+  vector-search path ran `match_all` and ignored the tenant filter entirely, and
+  ES documents carried no tenant tag — so an ES-backed index could return other
+  tenants' documents. The generic (non-Qdrant) vector upsert now stamps
+  `_tenant_id`/`_project_id` onto every point payload (mirroring the Qdrant
+  executor's write-time stamp), and the ES `_search` query now AND's in a `term`
+  filter on `payload._tenant_id.keyword`. (Operators with a custom ES mapping must
+  ensure `_tenant_id` is keyword-indexed.)
+- **Notification cross-tenant denial-of-delivery.** `ReportDelivery` never
+  verified the `log_id` belonged to the caller's tenant, and the delivery worker's
+  dedup had no tenant predicate — so one tenant could stamp a `DELIVERED` attempt
+  on another tenant's notification and suppress its real delivery. `ReportDelivery`
+  now checks log ownership (returns `NotFound` otherwise) and the worker dedup is
+  tenant-scoped.
+- **LiveQuery filtered deltas silently dropped.** The change-row extractor did not
+  unwrap the UDB CDC envelope's `payload`, so every *filtered* live subscription
+  evaluated predicates against the envelope (never the row) and dropped all
+  matching deltas; change frames also shipped the wrong shape. `payload` is now a
+  recognised row key.
+- **Embedding hybrid `Retrieve` returned nothing under a score threshold.** A
+  cosine `score_threshold` was applied to RRF-fused hybrid scores (a different
+  scale), wiping every hybrid result. The threshold is now applied only on the
+  vector-only path (where the engine already enforces it) and skipped on the
+  hybrid path.
+- **Search discarded engine relevance scores.** A single-index search had its
+  cosine score overwritten by the positional RRF value; single-index results now
+  keep the engine's own relevance score (RRF still fuses across multiple indexes).
+
+### Changed
+- **Notification delivery status now transitions** `PENDING → SENT → DELIVERED`
+  (forward-only, tenant-scoped) when a delivery succeeds or is reported, so
+  `GetNotification`/`GetDeliveryStats` reflect real outcomes instead of reporting
+  every delivered notification as `PENDING`.
+- **Vault HMAC-SHA256 de-duplicated** onto the shared, test-covered
+  `runtime::security::hmac_sha256` primitive (verified byte-identical via an
+  RFC 4231 known-answer test) instead of a second hand-rolled copy. No behavior
+  change.
+
 ## [0.4.29] - 2026-07-29
 
 The rate-limit ergonomics + per-key release. Fixes a discoverability trap where

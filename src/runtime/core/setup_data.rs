@@ -2188,7 +2188,17 @@ impl DataBrokerRuntime {
                     self.qdrant_for_instance_for_project(target_instance, &context.project_id)?;
                 qdrant.upsert(&request).await?;
             } else {
-                self.vector_upsert_dispatch_target(&target.backend, target_instance, &request)
+                // Stamp `_tenant_id`/`_project_id` into every point payload before
+                // the generic HTTP dispatch, mirroring the Qdrant executor's
+                // write-time stamp (qdrant.rs C7/C8). Without this the
+                // Elasticsearch/Weaviate/Pinecone docs carry no tenant tag and the
+                // search arm cannot enforce isolation (cross-tenant read leak).
+                let stamped = stamp_generic_vector_point_payloads(
+                    &request,
+                    &context.tenant_id,
+                    &context.project_id,
+                );
+                self.vector_upsert_dispatch_target(&target.backend, target_instance, &stamped)
                     .await?;
             }
             Ok(MutationResponse {
@@ -4756,6 +4766,104 @@ mod setup_data_validation_tests {
             "object_store_backend",
             "typed object RPCs require an object-store backend, but the store is configured for 'postgres'",
         );
+    }
+
+    #[test]
+    fn es_vector_search_injects_the_tenant_filter() {
+        // Regression (cross-tenant read leak): the Elasticsearch arm previously
+        // ran `match_all` and ignored `request.filter`, returning other tenants'
+        // documents. The generated `_search` body must now AND in a `term`
+        // filter on `payload._tenant_id.keyword` for the caller's tenant, with
+        // the vector similarity preserved under `bool.must`.
+        let filter = crate::runtime::executor_utils::json_to_struct(&serde_json::json!({
+            "must": [{ "key": "_tenant_id", "match": { "value": "acme" } }]
+        }));
+        let spec = vector_search_dispatch_spec(
+            "elasticsearch",
+            &VectorSearchRequest {
+                context: None,
+                collection: "Docs".to_string(),
+                vector: vec![0.1, 0.2],
+                filter,
+                limit: 10,
+                score_threshold: 0.0,
+                with_payload: true,
+                with_vector: false,
+                vector_name: String::new(),
+                quantization_rescore: false,
+            },
+        )
+        .expect("es vector search spec");
+        let json: serde_json::Value = serde_json::from_str(&spec).expect("spec json");
+        assert_eq!(
+            json["body"]["query"]["bool"]["filter"],
+            serde_json::json!([{ "term": { "payload._tenant_id.keyword": "acme" } }]),
+            "ES vector search must scope to the caller's tenant"
+        );
+        assert!(
+            json["body"]["query"]["bool"]["must"][0]["script_score"].is_object(),
+            "the vector similarity must still be applied"
+        );
+    }
+
+    #[test]
+    fn es_vector_search_without_a_filter_adds_no_terms() {
+        // No filter (direct, non-tenant-scoped caller) → empty filter list, i.e.
+        // unchanged from the historical behavior; the search-service path always
+        // supplies the tenant filter (fail-closed) so this branch is not a leak.
+        let spec = vector_search_dispatch_spec(
+            "elasticsearch",
+            &VectorSearchRequest {
+                context: None,
+                collection: "Docs".to_string(),
+                vector: vec![0.1],
+                filter: None,
+                limit: 5,
+                score_threshold: 0.0,
+                with_payload: false,
+                with_vector: false,
+                vector_name: String::new(),
+                quantization_rescore: false,
+            },
+        )
+        .expect("es vector search spec");
+        let json: serde_json::Value = serde_json::from_str(&spec).expect("spec json");
+        assert_eq!(
+            json["body"]["query"]["bool"]["filter"],
+            serde_json::json!([])
+        );
+    }
+
+    #[cfg(feature = "qdrant")]
+    #[test]
+    fn stamp_generic_vector_point_payloads_tags_every_point() {
+        // The generic (non-Qdrant) dispatch must stamp the tenant/project tag the
+        // ES search then filters on — mirroring the Qdrant write-time stamp.
+        use crate::proto::VectorUpsertRequest;
+        let req = VectorUpsertRequest {
+            context: None,
+            collection: "Docs".to_string(),
+            points: vec![VectorPointMutation {
+                id: "p1".to_string(),
+                vector: vec![0.1],
+                payload: crate::runtime::executor_utils::json_to_struct(
+                    &serde_json::json!({ "body": "hi" }),
+                ),
+                vector_name: String::new(),
+            }],
+            idempotency_key: String::new(),
+        };
+        let stamped = super::stamp_generic_vector_point_payloads(&req, "acme", "billing");
+        let payload = crate::runtime::executor_utils::struct_to_json(
+            stamped.points[0]
+                .payload
+                .as_ref()
+                .expect("stamped payload present"),
+        );
+        assert_eq!(payload["_tenant_id"], serde_json::json!("acme"));
+        assert_eq!(payload["_project_id"], serde_json::json!("billing"));
+        // The original payload field survives the stamp.
+        assert_eq!(payload["body"], serde_json::json!("hi"));
     }
 }
 
@@ -7625,6 +7733,41 @@ fn reject_vector_plan_errors(
     reject_plan(&remaining)
 }
 
+/// Translate the neutral qdrant-style filter (`{"must":[{"key":…,"match":{"value":…}}]}`)
+/// into Elasticsearch `term` clauses over the stored `payload.<key>` field.
+///
+/// The tenant scope (`_tenant_id`) is the SECURITY boundary: previously the ES
+/// arm ran `match_all` and ignored `request.filter` entirely, returning other
+/// tenants' documents. Each equality `must` term becomes a `term` on
+/// `payload.<key>.keyword` — the `.keyword` sub-field is used so exact-match
+/// works under Elasticsearch's default dynamic string mapping (a bare `term` on
+/// an analyzed `text` field would tokenise a UUID and mis-match). Non-equality
+/// operators are not translated (they would only ever broaden results WITHIN the
+/// tenant, never cross it). Docs are tenant-stamped at write time by
+/// [`stamp_generic_vector_point_payloads`], so `payload._tenant_id` exists to
+/// match against.
+fn es_payload_filter_terms(filter: Option<&prost_types::Struct>) -> Vec<JsonValue> {
+    let Some(filter) = filter else {
+        return Vec::new();
+    };
+    let json = struct_to_json(filter);
+    let Some(must) = json.get("must").and_then(JsonValue::as_array) else {
+        return Vec::new();
+    };
+    let mut terms = Vec::new();
+    for clause in must {
+        let Some(key) = clause.get("key").and_then(JsonValue::as_str) else {
+            continue;
+        };
+        if let Some(value) = clause.get("match").and_then(|m| m.get("value")) {
+            let mut term_field = serde_json::Map::new();
+            term_field.insert(format!("payload.{key}.keyword"), value.clone());
+            terms.push(serde_json::json!({ "term": JsonValue::Object(term_field) }));
+        }
+    }
+    terms
+}
+
 fn vector_search_dispatch_spec(
     backend: &str,
     request: &VectorSearchRequest,
@@ -7637,12 +7780,20 @@ fn vector_search_dispatch_spec(
             "body": {
                 "size": limit,
                 "query": {
-                    "script_score": {
-                        "query": { "match_all": {} },
-                        "script": {
-                            "source": "cosineSimilarity(params.query_vector, 'vector') + 1.0",
-                            "params": { "query_vector": request.vector }
-                        }
+                    // Wrap the vector similarity in a bool so the tenant-scope
+                    // (and any equality) filter is AND'd in server-side. Without
+                    // the `filter` clause this arm leaked across tenants.
+                    "bool": {
+                        "must": [{
+                            "script_score": {
+                                "query": { "match_all": {} },
+                                "script": {
+                                    "source": "cosineSimilarity(params.query_vector, 'vector') + 1.0",
+                                    "params": { "query_vector": request.vector }
+                                }
+                            }
+                        }],
+                        "filter": es_payload_filter_terms(request.filter.as_ref())
                     }
                 }
             }
@@ -7680,6 +7831,47 @@ fn vector_search_dispatch_spec(
     };
     serde_json::to_string(&spec)
         .map_err(|err| setup_data_internal_status("vector_search_spec_encode", err.to_string()))
+}
+
+/// Return a clone of `request` with `_tenant_id`/`_project_id` stamped onto every
+/// point payload, mirroring the Qdrant executor's write-time tenant stamp so the
+/// generic HTTP backends (Elasticsearch/Weaviate/Pinecone) store a tenant tag the
+/// search filter can enforce isolation against. Empty tenant/project are skipped
+/// (never stamped as blank). A missing/non-object payload becomes a fresh object
+/// carrying only the tags.
+#[cfg(feature = "qdrant")]
+fn stamp_generic_vector_point_payloads(
+    request: &VectorUpsertRequest,
+    tenant_id: &str,
+    project_id: &str,
+) -> VectorUpsertRequest {
+    let mut stamped = request.clone();
+    for point in &mut stamped.points {
+        let mut payload = point
+            .payload
+            .as_ref()
+            .map(struct_to_json)
+            .unwrap_or_else(|| JsonValue::Object(serde_json::Map::new()));
+        if !payload.is_object() {
+            payload = JsonValue::Object(serde_json::Map::new());
+        }
+        if let Some(object) = payload.as_object_mut() {
+            if !tenant_id.trim().is_empty() {
+                object.insert(
+                    "_tenant_id".to_string(),
+                    JsonValue::String(tenant_id.to_string()),
+                );
+            }
+            if !project_id.trim().is_empty() {
+                object.insert(
+                    "_project_id".to_string(),
+                    JsonValue::String(project_id.to_string()),
+                );
+            }
+        }
+        point.payload = crate::runtime::executor_utils::json_to_struct(&payload);
+    }
+    stamped
 }
 
 fn vector_upsert_dispatch_spec(

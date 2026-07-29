@@ -137,7 +137,15 @@ pub(crate) fn row_object(row: &serde_json::Value) -> serde_json::Value {
 
 /// The CDC payload key that may carry the row image, in precedence order. A
 /// native outbox payload is usually the row itself; richer envelopes nest it.
-const ROW_KEYS: [&str; 5] = ["after", "row", "new", "record", "data"];
+/// `payload` is UDB's own outbox envelope key — the generic data-plane emit
+/// (`core/setup_data.rs`) and the native-service compliance envelope both nest
+/// the row image under `payload`, with tenant/operation stamped at the top
+/// level. It is checked AFTER the external CDC conventions (Debezium-style
+/// `after`, etc.) so a foreign envelope's more-specific row key still wins, and
+/// BEFORE the whole-object fallthrough so a UDB delta unwraps to the real row
+/// (otherwise filters and change frames operate on the envelope, dropping every
+/// matching delta and shipping the wrong shape).
+const ROW_KEYS: [&str; 6] = ["after", "row", "new", "record", "data", "payload"];
 
 /// Extract the changed row image from a CDC payload: the first object-valued
 /// `ROW_KEYS` member, else the payload object itself.

@@ -31,3 +31,51 @@ pub(crate) fn reciprocal_rank_fusion(ranked_lists: &[Vec<String>]) -> Vec<(Strin
     });
     fused
 }
+
+/// Fuse per-index ranked lists that carry the engine's own relevance score.
+///
+/// - **Single index** (the common case): the engine's cosine/relevance scores and
+///   order are preserved verbatim. Previously every result — even a single-index
+///   search — had its score overwritten by the positional RRF value
+///   `1/(60+rank)`, so `SearchHit.score` was never the real similarity a client
+///   could threshold or display.
+/// - **Multiple indexes:** raw scores from different indexes/metrics are not
+///   comparable, so fall back to reciprocal-rank fusion over positions.
+pub(crate) fn fuse_ranked_lists(ranked_lists: &[Vec<(String, f64)>]) -> Vec<(String, f64)> {
+    if ranked_lists.len() == 1 {
+        return ranked_lists[0].clone();
+    }
+    let id_lists: Vec<Vec<String>> = ranked_lists
+        .iter()
+        .map(|list| list.iter().map(|(id, _score)| id.clone()).collect())
+        .collect();
+    reciprocal_rank_fusion(&id_lists)
+}
+
+#[cfg(test)]
+mod fuse_tests {
+    use super::fuse_ranked_lists;
+
+    #[test]
+    fn single_index_preserves_engine_scores_and_order() {
+        let lists = vec![vec![("a".to_string(), 0.91), ("b".to_string(), 0.42)]];
+        assert_eq!(
+            fuse_ranked_lists(&lists),
+            vec![("a".to_string(), 0.91), ("b".to_string(), 0.42)],
+            "a single index must keep the engine's cosine scores, not RRF positions"
+        );
+    }
+
+    #[test]
+    fn multi_index_falls_back_to_rrf() {
+        // Two lists → positional RRF; a doc ranked #0 in both scores highest.
+        let lists = vec![
+            vec![("a".to_string(), 0.9), ("b".to_string(), 0.1)],
+            vec![("a".to_string(), 0.5), ("c".to_string(), 0.4)],
+        ];
+        let fused = fuse_ranked_lists(&lists);
+        assert_eq!(fused[0].0, "a");
+        // Score is the RRF value 1/(60+0) + 1/(60+0), not an engine score.
+        assert!((fused[0].1 - (2.0 / 60.0)).abs() < 1e-9);
+    }
+}

@@ -112,6 +112,16 @@ pub(crate) fn notification_schema_not_found_status(
     )
 }
 
+pub(crate) fn notification_log_not_found_status(operation: &'static str) -> Status {
+    // NotFound (not PermissionDenied) so a cross-tenant caller cannot use the
+    // error to probe whether another tenant's log id exists.
+    notification_schema_not_found_status(
+        operation,
+        "notification_log_not_found",
+        "notification log not found for this tenant",
+    )
+}
+
 pub(crate) fn notification_template_not_found_status(
     operation: &'static str,
     message: impl Into<String>,

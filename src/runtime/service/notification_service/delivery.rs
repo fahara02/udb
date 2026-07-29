@@ -36,7 +36,7 @@ use super::config::{NOTIFICATION_DELIVERY_PROVIDERS_ENV, delivery_event_topic};
 #[cfg(feature = "http-client")]
 use super::model::{channel_from_db, channel_to_db, delivery_attempt_model, log_model};
 #[cfg(feature = "http-client")]
-use super::store::write_delivery_attempt;
+use super::store::{log_transition_allowed_prev, transition_log_status, write_delivery_attempt};
 
 /// A decrypted provider credential in flight. Redacting `Debug` from day one so
 /// the secret never leaks into a log line or panic (the redaction doctrine,
@@ -261,6 +261,7 @@ async fn load_notification_delivery_intents(
                SELECT 1 FROM {attempt_rel} a \
                WHERE a.{attempt_notification_id} = l.{log_id} \
                  AND a.{attempt_channel} = l.{channel} \
+                 AND a.{attempt_tenant} = l.{tenant_id} \
                  AND a.{attempt_status} IN ($2, $3) \
            ) \
          ORDER BY l.{created_at} ASC, l.{log_id} ASC \
@@ -275,6 +276,7 @@ async fn load_notification_delivery_intents(
         created_at = log.q("created_at"),
         attempt_notification_id = attempt.q("notification_id"),
         attempt_channel = attempt.q("channel"),
+        attempt_tenant = attempt.q("tenant_id"),
         attempt_status = attempt.q("status"),
     ))
     .bind("PENDING")
@@ -320,6 +322,23 @@ async fn record_attempt_outcome(
     {
         tracing::warn!(log_id = %intent.log_id, error = %err, "notification delivery attempt write failed");
         return;
+    }
+    // Reflect a successful delivery on the parent log (PENDING→SENT→DELIVERED) so
+    // GetNotification/GetDeliveryStats stop reporting a delivered notification as
+    // PENDING. Best-effort: a transition failure is logged, never aborts the pass.
+    let allowed_prev = log_transition_allowed_prev(status_db);
+    if !allowed_prev.is_empty() {
+        if let Err(err) = transition_log_status(
+            pool,
+            notification_id,
+            &intent.tenant_id,
+            status_db,
+            allowed_prev,
+        )
+        .await
+        {
+            tracing::warn!(log_id = %intent.log_id, error = %err, "notification log status transition failed");
+        }
     }
     let outcome = if status_db == "FAILED" {
         "failure"
