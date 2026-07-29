@@ -843,6 +843,11 @@ impl ApiKeyService for ApiKeyServiceImpl {
             last_used_at_unix: 0,
             expires_at_unix: expires_at_unix(req.expires_at),
             revoked_at_unix: 0,
+            // Per-key budgets from the request (0 = use the column default). The
+            // opt-in per-key DataBroker limiter reads `rate_limit_per_minute` to
+            // raise this key above the tenant default.
+            rate_limit_per_minute: req.rate_limit_per_minute as i64,
+            rate_limit_per_day: req.rate_limit_per_day,
         };
         // UDB-AUTH-009: enforce ACTIVE-name uniqueness per owner so an
         // idempotent provisioner reconciles instead of silently minting a
@@ -1137,6 +1142,9 @@ impl ApiKeyService for ApiKeyServiceImpl {
             last_used_at_unix: 0,
             expires_at_unix: existing.expires_at_unix,
             revoked_at_unix: 0,
+            // Preserve the key's per-key budget across rotation.
+            rate_limit_per_minute: existing.rate_limit_per_minute,
+            rate_limit_per_day: existing.rate_limit_per_day,
         };
         // Atomic insert-new + revoke-old (store override is a single tx).
         self.api_keys

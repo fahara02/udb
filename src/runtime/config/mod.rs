@@ -353,6 +353,16 @@ pub struct ServiceSettings {
     pub rate_limit_enabled: bool,
     pub rate_limit_window_secs: u64,
     pub rate_limit_max_per_window: u32,
+    /// Per-key data-plane rate limiting (`UDB_RATE_LIMIT_PER_KEY`, default off).
+    /// OFF: the DataBroker limiter keys one bucket per `(tenant, operation)` and
+    /// every principal in the tenant shares `rate_limit_max_per_window`.
+    /// ON: the bucket becomes per-principal `(tenant, credential_id, operation)`
+    /// and a credential's `api_keys.rate_limit_per_minute` column RAISES its own
+    /// budget above the tenant default (converted to the window). It is
+    /// **raise-only** — a low/default column value never throttles a key below
+    /// the tenant default (the column is `NOT NULL DEFAULT 60`, so honoring it as
+    /// an absolute ceiling would silently strangle every default key).
+    pub rate_limit_per_key_enabled: bool,
     /// W4 (consumer tip 4): the DECLARED limiter-outage posture. What happens
     /// to data-plane requests when the rate-limit Redis is unreachable (after
     /// the in-call re-dial):
@@ -385,6 +395,7 @@ impl Default for ServiceSettings {
             rate_limit_enabled: true,
             rate_limit_window_secs: 60,
             rate_limit_max_per_window: 1000,
+            rate_limit_per_key_enabled: false,
             rate_limit_failure_mode: "closed".to_string(),
             require_secure_transport: false,
             mtls_required: false,
@@ -479,11 +490,26 @@ impl ServiceSettings {
         if let Some(value) = bool_env("UDB_RATE_LIMIT_ENABLED") {
             self.rate_limit_enabled = value;
         }
-        if let Some(value) = env_u32("UDB_RATE_LIMIT_WINDOW_SECS") {
+        // Accept the canonical `_SECS` name plus the bare `UDB_RATE_LIMIT_WINDOW`
+        // alias; the canonical name wins when both are set.
+        if let Some(value) = env_first(&["UDB_RATE_LIMIT_WINDOW_SECS", "UDB_RATE_LIMIT_WINDOW"])
+            .and_then(|value| value.parse::<u32>().ok())
+        {
             self.rate_limit_window_secs = value.max(1) as u64;
         }
-        if let Some(value) = env_u32("UDB_RATE_LIMIT_MAX_PER_WINDOW") {
+        // The data-plane per-tenant budget. Accept the canonical
+        // `UDB_RATE_LIMIT_MAX_PER_WINDOW` AND the short `UDB_RATE_LIMIT_MAX` name
+        // operators reach for first; the canonical `_PER_WINDOW` name wins when
+        // both are set. Before this alias, `UDB_RATE_LIMIT_MAX` silently did
+        // nothing and the budget stayed pinned at the 1000/window default —
+        // a discoverability trap that read as an un-overridable hardcoded limit.
+        if let Some(value) = env_first(&["UDB_RATE_LIMIT_MAX_PER_WINDOW", "UDB_RATE_LIMIT_MAX"])
+            .and_then(|value| value.parse::<u32>().ok())
+        {
             self.rate_limit_max_per_window = value;
+        }
+        if let Some(value) = bool_env("UDB_RATE_LIMIT_PER_KEY") {
+            self.rate_limit_per_key_enabled = value;
         }
         if let Ok(value) = std::env::var("UDB_RATE_LIMIT_FAILURE_MODE") {
             let normalized = value.trim().to_ascii_lowercase();

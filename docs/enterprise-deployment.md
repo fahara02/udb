@@ -34,12 +34,40 @@ the auth/session/encryption/authz/redis subset.
 | `UDB_AUTH_GRPC_ADDR=0.0.0.0:50061` | Exposes the auth control plane — see §3. Defaults to loopback-only. |
 | `UDB_SERVICE_IDENTITY_REQUIRED=true` | Require a verified service identity (forced on in production). |
 | `REDIS_URL` (or `UDB_REDIS_DSN`) | Redis for the distributed rate limiter / sessions. Without it the rate limiter no-ops. |
+| `UDB_RATE_LIMIT_MAX_PER_WINDOW=1000` | **The data-plane budget.** Max DataBroker requests per `(tenant, operation)` bucket per window (default `1000`). This is the knob that governs `Select`/`Upsert`/… — raise it for high-throughput tenants. Short alias: `UDB_RATE_LIMIT_MAX`. |
+| `UDB_RATE_LIMIT_WINDOW_SECS=60` | Fixed-window length in seconds (default `60`). Short alias: `UDB_RATE_LIMIT_WINDOW`. |
+| `UDB_RATE_LIMIT_ENABLED=true` | Master switch for the data-plane limiter (default on). Set `false` to disable entirely. |
+| `UDB_RATE_LIMIT_PER_KEY=false` | Opt-in **per-key** limiting (default off). When on, each credential gets its own window bucket and a key's `api_keys.rate_limit_per_minute` column **raises** its budget above the tenant default (raise-only — never lowers below it). Off = one shared `(tenant, operation)` bucket. |
+| `UDB_RATE_LIMIT_FAILURE_MODE=closed` | Behaviour when the limiter's Redis is unreachable: `closed` (retryable error, default), `local` (per-process fallback), `open` (allow). |
 | `UDB_QDRANT_URL` | Qdrant endpoint (if using vector features). |
 | `UDB_ABAC_DEFAULT_ALLOW=true` | Coarse dev/bootstrap escape hatch — see §5. Omit (default deny) once you seed real policies. |
 
 Aliases: `UDB_PG_DSN` > `DATABASE_URL`; `UDB_REDIS_DSN` > `REDIS_URL`;
-`UDB_QDRANT_URL` > `QDRANT_URL`. Mint the first admin offline with
-`udb auth bootstrap user`.
+`UDB_QDRANT_URL` > `QDRANT_URL`;
+`UDB_RATE_LIMIT_MAX_PER_WINDOW` > `UDB_RATE_LIMIT_MAX`;
+`UDB_RATE_LIMIT_WINDOW_SECS` > `UDB_RATE_LIMIT_WINDOW`. Mint the first admin
+offline with `udb auth bootstrap user`.
+
+> **Data-plane rate limiting (the `ResourceExhausted: … requests per Ns window`
+> error).** By default the DataBroker limiter is a fixed window keyed by
+> `(tenant_id, operation)` — every principal (API key / service session) in a
+> tenant shares one budget (`UDB_RATE_LIMIT_MAX_PER_WINDOW`), so aggregate
+> traffic, not per-key traffic, is what trips it. The deny message names the
+> governing knob and the offending tenant so you can attribute pressure without
+> cross-referencing logs. The `UDB_API_KEY_RATE_LIMIT_*` /
+> `UDB_PUBLIC_BOOTSTRAP_RATE_LIMIT_*` env vars govern the auth control-plane /
+> public-bootstrap paths, **not** DataBroker.
+>
+> **Per-key budgets (`UDB_RATE_LIMIT_PER_KEY=true`).** With the shared per-tenant
+> bucket, one noisy principal exhausts the whole tenant. Enable per-key limiting
+> to give each credential its own window bucket; then a key's
+> `api_keys.rate_limit_per_minute` column **raises** its budget above the tenant
+> default (`per_minute × window ÷ 60`). Set it via `CreateApiKey`'s
+> `rate_limit_per_minute` field or a direct `UPDATE`. It is **raise-only** —
+> because the column is `NOT NULL DEFAULT 60`, honoring it as an absolute ceiling
+> would strangle every default key, so a low value never lowers a key below
+> `UDB_RATE_LIMIT_MAX_PER_WINDOW`. To throttle a noisy key *downward*, lower the
+> tenant default and raise the well-behaved keys instead.
 
 > **CRLF gotcha:** a `.env` saved with Windows CRLF line endings leaves a trailing
 > `\r` on each value. UDB now trims env values at load, but prefer LF `.env`

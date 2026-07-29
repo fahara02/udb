@@ -451,11 +451,36 @@ unknown command or sub-action prints a "did you mean …?" suggestion.
 | `PERMISSION_DENIED` | Missing scope, tenant mismatch (metadata/body vs credential), revoked credential, or per-action policy deny. **On a data RPC with otherwise-valid scopes → no policy seeded** (default-deny, mental model #7): seed the `udb_authz.policy_rules` table via `AuthzService.CreatePolicyRule` (or `udb policy-seed`) with the real `Select`/`Upsert`/`Delete` action, or set `UDB_ABAC_DEFAULT_ALLOW=true` for dev. |
 | `INVALID_ARGUMENT` "tenant isolation requires filter on tenant_id" | A tenant-scoped read/delete MUST include `tenant_id` (the canonical UUID, not the code) in the filter. |
 | `FAILED_PRECONDITION` | Service disabled/not mounted, wrong lifecycle state (e.g. apply before approve), feature requires config (TURN secret, media profile). |
-| `RESOURCE_EXHAUSTED` | Public-auth rate limit, per-key rate limit, quota, or per-tenant fairness backpressure — back off and retry. |
+| `RESOURCE_EXHAUSTED` | Rate limit, quota, or per-tenant fairness backpressure. Read the typed detail's `retry_after_ms` and back off. For a **DataBroker** data RPC (`… requests per Ns window`) it's the per-tenant limiter — see the note under this table for the exact knob. |
 | `INVALID_ARGUMENT` | Unknown `message_type` (use the proto FQN; check `udb sdk manifest`), malformed filter, invalid cron/enum/value. |
 | `ABORTED` | Optimistic-concurrency conflict (CAS/version mismatch) — re-read and retry. |
 | `DEADLINE_EXCEEDED` | The op may have committed server-side. SDKs auto-retry only read-only RPCs; retry writes yourself only when idempotent (`conflict_fields`). |
 | `NOT_FOUND` | Row outside your tenant looks identical to a missing row — by design. |
+
+> **DataBroker rate limiting (`RESOURCE_EXHAUSTED: … requests per Ns window`).**
+> The data plane enforces a fixed window keyed by **`(tenant_id, operation)`** —
+> every principal (API key / service session / user) in a tenant shares **one**
+> budget (default **1000 requests / 60s**), so it is aggregate tenant traffic,
+> not per-credential traffic, that trips it. The operator raises it **on the
+> broker** with **`UDB_RATE_LIMIT_MAX_PER_WINDOW`** (short alias
+> `UDB_RATE_LIMIT_MAX`) and **`UDB_RATE_LIMIT_WINDOW_SECS`** (alias
+> `UDB_RATE_LIMIT_WINDOW`); `UDB_RATE_LIMIT_ENABLED=false` turns it off entirely.
+> The deny message names the governing knob and the offending tenant, so you can
+> attribute pressure without grepping logs. The `UDB_API_KEY_RATE_LIMIT_*` /
+> `UDB_PUBLIC_BOOTSTRAP_RATE_LIMIT_*` env vars govern the **auth control-plane /
+> public-bootstrap** limiters — not the DataBroker budget. Client-side read caches
+> on hot paths reduce pressure but don't raise the ceiling; raise the knob for
+> high-throughput tenants.
+>
+> **Per-key budgets (opt-in).** With the default shared per-tenant bucket, one
+> noisy principal exhausts the whole tenant. The operator can set
+> `UDB_RATE_LIMIT_PER_KEY=true` to give **each credential its own window bucket**;
+> then a key's `api_keys.rate_limit_per_minute` (set via `CreateApiKey`'s
+> `rate_limit_per_minute` field or a direct column `UPDATE`) **raises** that key's
+> budget above the tenant default. It is **raise-only** — a low/default column
+> value never throttles a key below `UDB_RATE_LIMIT_MAX_PER_WINDOW` (the column is
+> `NOT NULL DEFAULT 60`). To throttle one key downward, lower the tenant default
+> and raise the others.
 
 ---
 

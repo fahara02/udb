@@ -41,6 +41,12 @@ pub struct SecurityContext {
     pub primary_read: bool,
     pub eventual_consistency_allowed: bool,
     pub read_fence_json: String,
+    /// Per-key data-plane budget carried from the verified credential
+    /// (`api_keys.rate_limit_per_minute`), so the rate limiter can apply a
+    /// per-principal override without a per-request store lookup. `0` = none
+    /// (the tenant default applies). Only populated for API-key principals.
+    #[serde(default)]
+    pub rate_limit_per_minute: i64,
 }
 
 /// Phase 9: Security configuration
@@ -1554,6 +1560,7 @@ pub fn security_from_request<T>(request: &Request<T>) -> Result<SecurityContext,
                             primary_read,
                             eventual_consistency_allowed,
                             read_fence_json: read_fence_json.clone(),
+                            rate_limit_per_minute: principal.rate_limit_per_minute,
                         });
                     }
                     // CRIT-1: the durable certificate-binding chain (resolved
@@ -1628,6 +1635,9 @@ pub fn security_from_request<T>(request: &Request<T>) -> Result<SecurityContext,
                     primary_read,
                     eventual_consistency_allowed,
                     read_fence_json: read_fence_json.clone(),
+                    // Carry the key's per-minute budget so the opt-in per-key
+                    // limiter can raise this credential without a store lookup.
+                    rate_limit_per_minute: principal.rate_limit_per_minute,
                 });
             }
         };
@@ -1774,6 +1784,8 @@ pub fn security_from_request<T>(request: &Request<T>) -> Result<SecurityContext,
             primary_read,
             eventual_consistency_allowed,
             read_fence_json,
+            // Bearer/JWT principals carry no per-key budget — tenant default.
+            rate_limit_per_minute: bearer_lineage.rate_limit_per_minute,
         });
     }
 
@@ -1836,6 +1848,8 @@ pub fn security_from_request<T>(request: &Request<T>) -> Result<SecurityContext,
             primary_read,
             eventual_consistency_allowed,
             read_fence_json,
+            // Dev header path (no verified credential) — tenant default.
+            rate_limit_per_minute: 0,
         });
     }
 
@@ -1925,6 +1939,8 @@ pub fn security_from_request<T>(request: &Request<T>) -> Result<SecurityContext,
         primary_read,
         eventual_consistency_allowed,
         read_fence_json,
+        // mTLS-grant principals carry no per-key budget — tenant default.
+        rate_limit_per_minute: grant.rate_limit_per_minute,
     })
 }
 
@@ -3602,6 +3618,7 @@ mod tests {
             credential_id: "udbk_test".to_string(),
             auth_method: "api_key".to_string(),
             certificate_identity: None,
+            rate_limit_per_minute: 0,
         }
     }
 

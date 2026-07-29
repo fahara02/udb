@@ -5,6 +5,47 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.4.29] - 2026-07-29
+
+The rate-limit ergonomics + per-key release. Fixes a discoverability trap where
+the DataBroker per-tenant limit read as an un-overridable hardcoded 1000/60s, and
+adds opt-in per-key budgets so one principal can no longer exhaust a whole
+tenant.
+
+### Breaking / wire changes
+- None. All changes are additive and config-only; there are no proto changes.
+  The per-key limiter is opt-in (`UDB_RATE_LIMIT_PER_KEY`, default off) and the
+  default per-tenant behavior is byte-identical to 0.4.28.
+
+### Fixed
+- The DataBroker per-tenant rate limit is now discoverable. The governing knob
+  `UDB_RATE_LIMIT_MAX_PER_WINDOW` additionally accepts the short alias
+  `UDB_RATE_LIMIT_MAX`, and `UDB_RATE_LIMIT_WINDOW_SECS` accepts
+  `UDB_RATE_LIMIT_WINDOW` — the obvious names operators reach for now take effect
+  instead of silently doing nothing (which made the limit read as hardcoded). The
+  `RESOURCE_EXHAUSTED` deny message now names the governing env knob and the
+  offending tenant, so operators can attribute pressure and raise the ceiling
+  without grepping the binary.
+
+### Added
+- Opt-in per-key DataBroker rate limiting (`UDB_RATE_LIMIT_PER_KEY=true`). When
+  enabled the limiter buckets per `(tenant, credential, operation)` instead of
+  `(tenant, operation)`, so one noisy principal no longer exhausts the tenant's
+  shared budget. A key's `api_keys.rate_limit_per_minute` column — settable via
+  `CreateApiKey`'s `rate_limit_per_minute` field or a direct `UPDATE`, and
+  preserved across key rotation — RAISES that key's budget above the tenant
+  default (`per_minute × window ÷ 60`). It is **raise-only**: because the column
+  is `NOT NULL DEFAULT 60`, a low/default value never lowers a key below
+  `UDB_RATE_LIMIT_MAX_PER_WINDOW`, so enabling the feature can only relax
+  pressure, never strangle default keys. Default (flag off) behavior is unchanged.
+
+### Docs
+- `docs/enterprise-deployment.md` and the `using-udb` skill guide now document
+  every `UDB_RATE_LIMIT_*` knob, the per-tenant vs per-key semantics, and the trap
+  that the `UDB_API_KEY_*` / `UDB_PUBLIC_BOOTSTRAP_*` limiters are separate from
+  DataBroker. The guidance is embedded in the skill (what a consumer's agent sees
+  after installing an SDK), not only in the repo.
+
 ## [0.4.28] - 2026-07-26
 
 The transaction-completeness release: `BeginTx` now supports partial `update`

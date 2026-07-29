@@ -54,6 +54,10 @@ pub struct VerifiedPrincipal {
     /// The certificate-derived identity when a verified peer certificate was
     /// present (also set alongside a bearer/key for composition checks).
     pub certificate_identity: Option<String>,
+    /// Per-key data-plane budget from the credential's stored record
+    /// (`api_keys.rate_limit_per_minute`). Only meaningful for API-key
+    /// principals; `0` for every other credential type (tenant default applies).
+    pub rate_limit_per_minute: i64,
 }
 
 impl VerifiedPrincipal {
@@ -91,6 +95,8 @@ impl VerifiedPrincipal {
             credential_id: claims.jti.clone().unwrap_or_default(),
             auth_method,
             certificate_identity: None,
+            // Bearer/JWT principals carry no api-key budget — tenant default.
+            rate_limit_per_minute: 0,
         }
     }
 }
@@ -322,6 +328,9 @@ async fn resolve_credentials(
                         credential_id: record.key_prefix,
                         auth_method: "api_key".to_string(),
                         certificate_identity: None,
+                        // The key's own per-minute budget (0 when the column is
+                        // unset) — the opt-in limiter uses it to raise this key.
+                        rate_limit_per_minute: record.rate_limit_per_minute,
                     })),
                     // Grant revoked / owner inactive / empty intersection —
                     // the key no longer authenticates (fail closed).
@@ -361,6 +370,8 @@ async fn resolve_credentials(
                             credential_id: grant.credential_id,
                             auth_method: "mtls".to_string(),
                             certificate_identity: resolved.certificate_identity.clone(),
+                            // mTLS grants carry no api-key budget — tenant default.
+                            rate_limit_per_minute: 0,
                         });
                     }
                     Ok(None) => {

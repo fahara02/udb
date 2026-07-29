@@ -571,7 +571,13 @@ impl DataBrokerService {
         // a true sliding window).
         if self.runtime_snapshot().config().service.rate_limit_enabled && !safe.tenant_id.is_empty()
         {
-            self.check_rate_limit(&safe.tenant_id, operation).await?;
+            self.check_rate_limit(
+                &safe.tenant_id,
+                operation,
+                &safe.credential_id,
+                security.rate_limit_per_minute,
+            )
+            .await?;
         }
 
         tracing::debug!(
@@ -730,6 +736,8 @@ impl DataBrokerService {
         &self,
         _tenant_id: &str,
         _operation: &str,
+        _principal_id: &str,
+        _per_key_per_minute: i64,
     ) -> Result<(), Status> {
         static WARN_ONCE: std::sync::Once = std::sync::Once::new();
         WARN_ONCE.call_once(|| {
@@ -743,6 +751,8 @@ impl DataBrokerService {
         &self,
         tenant_id: &str,
         operation: &str,
+        principal_id: &str,
+        per_key_per_minute: i64,
     ) -> Result<(), Status> {
         let Some(redis) = self.runtime_snapshot().redis_clone() else {
             return Ok(());
@@ -753,7 +763,12 @@ impl DataBrokerService {
             .service
             .rate_limit_window_secs
             .max(1);
-        let max_rps = self
+        let per_key_enabled = self
+            .runtime_snapshot()
+            .config()
+            .service
+            .rate_limit_per_key_enabled;
+        let base_max_rps = self
             .runtime_snapshot()
             .config()
             .service
@@ -763,12 +778,17 @@ impl DataBrokerService {
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
             .as_secs();
+        let window_index = unix_epoch / window_secs;
 
-        let key = format!(
-            "udb:ratelimit:{}:{}:{}",
+        let (key, max_rps) = resolve_rate_limit_bucket(
+            per_key_enabled,
             tenant_id,
+            principal_id,
             operation,
-            unix_epoch / window_secs
+            window_index,
+            base_max_rps,
+            window_secs,
+            per_key_per_minute,
         );
 
         let mut conn = {
@@ -890,9 +910,15 @@ impl DataBrokerService {
                 "data_broker",
                 "distributed rate limit",
                 retry_after_ms,
+                // Name the governing knob and the bucket identity so operators can
+                // attribute the pressure and raise the ceiling without grepping
+                // the binary. The budget is per (tenant, operation) — every
+                // principal in the tenant shares it — so callers know the fix is a
+                // higher tenant budget, not a per-principal one.
                 format!(
-                    "rate limit exceeded: {}/{} requests per {}s window",
-                    count, max_rps, window_secs
+                    "rate limit exceeded for tenant '{}' on {}: {}/{} requests per {}s window \
+                     (raise UDB_RATE_LIMIT_MAX_PER_WINDOW to increase the per-tenant budget)",
+                    tenant_id, operation, count, max_rps, window_secs
                 ),
             ));
         }
@@ -945,7 +971,8 @@ impl DataBrokerService {
                         retry_after_ms,
                         format!(
                             "rate limit exceeded: {}/{} requests per {}s window \
-                             (per-process fallback while Redis is unreachable)",
+                             (per-process fallback while Redis is unreachable; \
+                             raise UDB_RATE_LIMIT_MAX_PER_WINDOW to increase the budget)",
                             count, max_rps, window_secs
                         ),
                     ));
@@ -4437,6 +4464,110 @@ impl DataBroker for DataBrokerService {
         request: Request<crate::proto::AnalyticalQueryRequest>,
     ) -> Result<Response<crate::proto::AnalyticalQueryResponse>, Status> {
         self.analytical_query_inner(request).await
+    }
+}
+
+/// Resolve the DataBroker rate-limit bucket key and the effective per-window
+/// budget for one request.
+///
+/// - Per-key OFF (default): one bucket per `(tenant, operation)`; the budget is
+///   `base_max_per_window` unchanged — byte-identical to the historical
+///   per-tenant limiter.
+/// - Per-key ON with a credential present: one bucket per
+///   `(tenant, principal, operation)`, and the key's `per_key_per_minute`
+///   RAISES the window budget above the tenant default (`per_minute × window /
+///   60`). It is **raise-only**: a low/default column value (the column is
+///   `NOT NULL DEFAULT 60`) never lowers a key below the tenant default, so
+///   enabling the feature can only relax pressure, never strangle default keys.
+#[cfg(feature = "redis")]
+fn resolve_rate_limit_bucket(
+    per_key_enabled: bool,
+    tenant_id: &str,
+    principal_id: &str,
+    operation: &str,
+    window_index: u64,
+    base_max_per_window: u32,
+    window_secs: u64,
+    per_key_per_minute: i64,
+) -> (String, u32) {
+    if per_key_enabled && !principal_id.is_empty() {
+        let mut max_per_window = base_max_per_window;
+        if per_key_per_minute > 0 {
+            let per_window = per_key_per_minute
+                .saturating_mul(window_secs as i64)
+                .checked_div(60)
+                .unwrap_or(0)
+                .clamp(0, i64::from(u32::MAX)) as u32;
+            max_per_window = max_per_window.max(per_window);
+        }
+        (
+            format!("udb:ratelimit:{tenant_id}:{principal_id}:{operation}:{window_index}"),
+            max_per_window,
+        )
+    } else {
+        (
+            format!("udb:ratelimit:{tenant_id}:{operation}:{window_index}"),
+            base_max_per_window,
+        )
+    }
+}
+
+#[cfg(all(test, feature = "redis"))]
+mod rate_limit_bucket_tests {
+    use super::resolve_rate_limit_bucket;
+
+    #[test]
+    fn per_key_off_is_the_unchanged_per_tenant_bucket_and_budget() {
+        // Flag off → tenant-scoped bucket, base budget, even with a principal and
+        // a per-key value present. This is the zero-regression guarantee.
+        let (key, max) =
+            resolve_rate_limit_bucket(false, "t1", "udbk_abc", "Select", 42, 1000, 60, 1_000_000);
+        assert_eq!(key, "udb:ratelimit:t1:Select:42");
+        assert_eq!(max, 1000);
+    }
+
+    #[test]
+    fn per_key_on_isolates_the_principal_and_raises_the_budget() {
+        let (key, max) =
+            resolve_rate_limit_bucket(true, "t1", "udbk_abc", "Select", 42, 1000, 60, 5000);
+        assert_eq!(key, "udb:ratelimit:t1:udbk_abc:Select:42");
+        // 5000/min over a 60s window = 5000; raised above the 1000 default.
+        assert_eq!(max, 5000);
+    }
+
+    #[test]
+    fn per_key_is_raise_only_never_below_the_tenant_default() {
+        // A default/low column value (60/min) must NOT strangle the key below the
+        // tenant default of 1000 — the column is NOT NULL DEFAULT 60.
+        let (_key, max) =
+            resolve_rate_limit_bucket(true, "t1", "udbk_abc", "Select", 1, 1000, 60, 60);
+        assert_eq!(max, 1000);
+    }
+
+    #[test]
+    fn per_key_budget_scales_to_a_non_default_window() {
+        // 1200/min over a 30s window = 600; still below the 1000 default → floor.
+        let (_k, max) = resolve_rate_limit_bucket(true, "t", "p", "Select", 0, 1000, 30, 1200);
+        assert_eq!(max, 1000);
+        // 6000/min over a 30s window = 3000 → raised.
+        let (_k2, max2) = resolve_rate_limit_bucket(true, "t", "p", "Select", 0, 1000, 30, 6000);
+        assert_eq!(max2, 3000);
+    }
+
+    #[test]
+    fn per_key_on_without_a_principal_falls_back_to_tenant_bucket() {
+        // No credential id (e.g. a non-API-key principal) → tenant bucket, base
+        // budget, so per-key mode never breaks unauthenticated-shaped contexts.
+        let (key, max) = resolve_rate_limit_bucket(true, "t1", "", "Select", 7, 1000, 60, 999_999);
+        assert_eq!(key, "udb:ratelimit:t1:Select:7");
+        assert_eq!(max, 1000);
+    }
+
+    #[test]
+    fn per_key_zero_value_uses_the_tenant_default_in_a_principal_bucket() {
+        let (key, max) = resolve_rate_limit_bucket(true, "t1", "udbk_x", "Upsert", 3, 1000, 60, 0);
+        assert_eq!(key, "udb:ratelimit:t1:udbk_x:Upsert:3");
+        assert_eq!(max, 1000);
     }
 }
 

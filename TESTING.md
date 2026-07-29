@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>UDB :: Universal Data Broker</strong><br>
-  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.4.28 | protocol v1.0.0</sub>
+  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.4.29 | protocol v1.0.0</sub>
 </p>
 
 This is the test guide for people working on the UDB repository. It walks you

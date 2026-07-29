@@ -96,6 +96,55 @@ fn saga_settings_merge_env_overrides_file_values() {
 }
 
 #[test]
+fn rate_limit_max_accepts_short_alias_with_canonical_precedence() {
+    let prior_canonical = std::env::var("UDB_RATE_LIMIT_MAX_PER_WINDOW").ok();
+    let prior_alias = std::env::var("UDB_RATE_LIMIT_MAX").ok();
+
+    // The short name operators reach for first (`UDB_RATE_LIMIT_MAX`) must move
+    // the per-tenant budget — before the alias it silently did nothing and the
+    // budget stayed pinned at the 1000/window default.
+    #[allow(unused_unsafe)]
+    unsafe {
+        std::env::remove_var("UDB_RATE_LIMIT_MAX_PER_WINDOW");
+        std::env::set_var("UDB_RATE_LIMIT_MAX", "1000000");
+    }
+    let mut aliased = UdbConfig::default();
+    aliased.merge_env();
+    assert_eq!(aliased.service.rate_limit_max_per_window, 1_000_000);
+
+    // The canonical `_PER_WINDOW` name wins when both are set.
+    #[allow(unused_unsafe)]
+    unsafe {
+        std::env::set_var("UDB_RATE_LIMIT_MAX_PER_WINDOW", "2000");
+        std::env::set_var("UDB_RATE_LIMIT_MAX", "9");
+    }
+    let mut both = UdbConfig::default();
+    both.merge_env();
+    assert_eq!(both.service.rate_limit_max_per_window, 2000);
+
+    restore_env("UDB_RATE_LIMIT_MAX_PER_WINDOW", prior_canonical);
+    restore_env("UDB_RATE_LIMIT_MAX", prior_alias);
+}
+
+#[test]
+fn rate_limit_per_key_flag_is_explicit_opt_in() {
+    let prior = std::env::var("UDB_RATE_LIMIT_PER_KEY").ok();
+
+    // Default: off (the zero-regression per-tenant behavior).
+    assert!(!ServiceSettings::default().rate_limit_per_key_enabled);
+
+    #[allow(unused_unsafe)]
+    unsafe {
+        std::env::set_var("UDB_RATE_LIMIT_PER_KEY", "true");
+    }
+    let mut on = UdbConfig::default();
+    on.merge_env();
+    assert!(on.service.rate_limit_per_key_enabled);
+
+    restore_env("UDB_RATE_LIMIT_PER_KEY", prior);
+}
+
+#[test]
 fn circuit_breaker_settings_merge_env_overrides_file_values() {
     let prior_threshold = std::env::var("UDB_CIRCUIT_FAILURE_THRESHOLD").ok();
     let prior_cooldown = std::env::var("UDB_CIRCUIT_COOLDOWN_SECS").ok();

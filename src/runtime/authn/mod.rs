@@ -308,6 +308,13 @@ pub struct ApiKeyRecord {
     pub last_used_at_unix: u64,
     pub expires_at_unix: u64,
     pub revoked_at_unix: u64,
+    /// Per-minute request budget (`rate_limit_per_minute` column). Consumed by
+    /// the opt-in per-key DataBroker limiter to RAISE this key's budget above the
+    /// tenant default. `0` = no per-key override (tenant default applies).
+    pub rate_limit_per_minute: i64,
+    /// Per-day request budget (`rate_limit_per_day` column). Carried for
+    /// completeness/audit; `0` = no per-key override.
+    pub rate_limit_per_day: i64,
 }
 
 impl ApiKeyRecord {
@@ -923,6 +930,10 @@ fn api_key_from_row(row: &sqlx::postgres::PgRow) -> Result<ApiKeyRecord, sqlx::E
         last_used_at_unix: row.try_get::<i64, _>("last_used_at_unix")?.max(0) as u64,
         expires_at_unix: row.try_get::<i64, _>("expires_at_unix")?.max(0) as u64,
         revoked_at_unix: row.try_get::<i64, _>("revoked_at_unix")?.max(0) as u64,
+        // Tolerant: SELECTs that don't project these columns hydrate to 0
+        // (= no per-key override), so only the resolution path needs to add them.
+        rate_limit_per_minute: row.try_get::<i64, _>("rate_limit_per_minute").unwrap_or(0),
+        rate_limit_per_day: row.try_get::<i64, _>("rate_limit_per_day").unwrap_or(0),
     })
 }
 
@@ -2300,6 +2311,22 @@ fn api_key_write_op(record: &ApiKeyRecord, status: ApiKeyStatus) -> Result<Logic
             String::new()
         }),
     );
+    // Persist per-key budgets only when explicitly set (> 0). Omitting them lets
+    // the column defaults (`rate_limit_per_minute` 60, `rate_limit_per_day`
+    // 10000) stand, so an unset request never writes 0 and forces a key below
+    // the intended default.
+    if record.rate_limit_per_minute > 0 {
+        row.insert(
+            "rate_limit_per_minute".to_string(),
+            LogicalValue::Int(record.rate_limit_per_minute),
+        );
+    }
+    if record.rate_limit_per_day > 0 {
+        row.insert(
+            "rate_limit_per_day".to_string(),
+            LogicalValue::Int(record.rate_limit_per_day),
+        );
+    }
     Ok(LogicalWrite {
         message_type: API_KEY_MSG.to_string(),
         records: vec![row],
@@ -2446,9 +2473,17 @@ impl ApiKeyStore for PostgresApiKeyStore {
         let revoked_at_unix = m.timestamp_unix_as("deleted_at", "revoked_at_unix");
         let created_at = m.q("created_at");
         let deleted_at = m.q("deleted_at");
+        // Per-key budgets for the opt-in DataBroker limiter. Cast to bigint so the
+        // INTEGER `rate_limit_per_minute` and BIGINT `rate_limit_per_day` both
+        // decode uniformly as i64. Only this resolution SELECT projects them (the
+        // limiter reads the record built here); management list SELECTs omit them
+        // and hydrate to 0 (= no per-key override) via the tolerant row decoder.
+        let rate_limit_per_minute = m.q("rate_limit_per_minute");
+        let rate_limit_per_day = m.q("rate_limit_per_day");
         let row = sqlx::query(&format!(
             "SELECT {key_prefix_col} AS key_prefix, {key_hash}, {name}, {description}, {owner_id}, {service_identity}, {grant_revision}, {tenant_id}, {project_id}, {scopes}, \
-                    {created_at_unix}, {last_used_at_unix}, {expires_at_unix}, {revoked_at_unix} \
+                    {created_at_unix}, {last_used_at_unix}, {expires_at_unix}, {revoked_at_unix}, \
+                    {rate_limit_per_minute}::bigint AS rate_limit_per_minute, {rate_limit_per_day}::bigint AS rate_limit_per_day \
              FROM {rel} WHERE {key_prefix_col} = $1 AND {deleted_at} IS NULL ORDER BY {created_at} DESC LIMIT 1"
         ))
         .bind(key_prefix)
