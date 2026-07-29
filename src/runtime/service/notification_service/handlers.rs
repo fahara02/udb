@@ -344,11 +344,12 @@ pub(crate) async fn retry_notification(
     // Only FAILED notifications are retryable. A SUPPRESSED row is an opt-out and
     // MUST NOT be resurrected (re-queuing it would re-deliver to an opted-out
     // recipient — a compliance bypass), and re-queuing a PENDING/SENT/DELIVERED
-    // row would double-send. A manual retry resets retry_count to 0 (a fresh
-    // bounded-retry budget). Guard in the WHERE so a non-FAILED row yields no
-    // update (→ notification_not_retryable_status).
+    // row would double-send. `retry_count` bumps as the manual-retry counter; the
+    // bounded auto-retry budget is tracked separately by the delivery attempt
+    // row's `attempt_count`, not this column. Guard in the WHERE so a non-FAILED
+    // row yields no update (→ notification_not_retryable_status).
     let row = sqlx::query(&format!(
-        "UPDATE {rel} SET {status} = 'PENDING', {retry} = 0 \
+        "UPDATE {rel} SET {status} = 'PENDING', {retry} = {retry} + 1 \
          WHERE {log_id} = $1::UUID AND {tenant_id} = $2 AND {status} = 'FAILED' \
          RETURNING {projection}",
         status = m.q("status"),
