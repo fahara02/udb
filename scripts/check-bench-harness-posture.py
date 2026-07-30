@@ -464,7 +464,7 @@ CHECKS: tuple[SourceCheck, ...] = (
             '| [ ] | Encrypt | MUTATION | EncryptRequest | `{ "tenant_id": "<seed:tenant_id>", "key_name": "<seed:vault_key_name>", "plaintext": "perf" }` |',
             '| [ ] | GenerateDatabaseCredentials | MUTATION | GenerateDatabaseCredentialsRequest | `{ "tenant_id": "<seed:tenant_id>", "role_name": "<seed:vault_db_role>", "ttl_seconds": 900 }` |',
             '| [ ] | GetSecret | READ_ONLY | GetSecretRequest | `{ "tenant_id": "<seed:tenant_id>", "secret_path": "<seed:vault_secret_path>", "version": 0 }` |',
-            '| [ ] | Hmac | MUTATION | HmacRequest | `{ "tenant_id": "<seed:tenant_id>", "key_name": "<seed:vault_key_name>", "input": "perf" }` |',
+            '| [ ] | Hmac | MUTATION | HmacRequest | `{ "tenant_id": "<seed:tenant_id>", "key_name": "<seed:vault_hmac_key_name>", "input": "perf" }` |',
             '| [ ] | ListSecrets | READ_ONLY | ListSecretsRequest | `{ "tenant_id": "<seed:tenant_id>", "path_prefix": "app/", "page": 1, "page_size": 50 }` |',
             '| [ ] | PutSecret | MUTATION | PutSecretRequest | `{ "tenant_id": "<seed:tenant_id>", "secret_path": "<seed:vault_put_secret_path>", "secret_value": "perf-secret", "expected_version": 0, "metadata_json": "{}" }` |',
             '| [ ] | RotateTransitKey | MUTATION | RotateTransitKeyRequest | `{ "tenant_id": "<seed:tenant_id>", "key_name": "<seed:vault_key_name>" }` |',

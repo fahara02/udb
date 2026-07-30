@@ -16,8 +16,10 @@ use super::super::native_helpers::{
     validate_request_scope,
 };
 use super::SchedulerServiceImpl;
-use super::config::{TOPIC_JOB_CREATED, TOPIC_JOB_DELETED, TOPIC_JOB_PAUSED, TOPIC_JOB_RESUMED};
-use super::cron::next_cron_after;
+use super::config::{
+    TOPIC_JOB_CREATED, TOPIC_JOB_DELETED, TOPIC_JOB_PAUSED, TOPIC_JOB_RESUMED, scheduler_default_tz,
+};
+use super::cron::{next_cron_after_tz, timezone_from_payload};
 use super::errors::{
     scheduler_internal_status, scheduler_not_found_status, scheduler_required_field,
 };
@@ -53,6 +55,10 @@ pub(crate) async fn create_job(
         ));
     }
     let kind = schedule_type_to_db(&req.schedule_type)?;
+    // Resolve the per-job timezone from the opaque payload up front so an invalid
+    // explicit IANA name fails closed at the door (never persisted), independent of
+    // schedule kind. Absent/empty falls through to the process default below.
+    let job_tz = timezone_from_payload(&req.payload)?;
     if kind == "CRON" {
         if req.cron_expression.trim().is_empty() {
             return Err(scheduler_required_field(
@@ -63,7 +69,10 @@ pub(crate) async fn create_job(
         }
         // Reject an unparseable cron up front so a job never lands DEAD on the
         // first tick for a typo (fail closed at the door, not at fire time).
-        if next_cron_after(req.cron_expression.trim(), Utc::now()).is_none() {
+        // Validate in the SAME zone the tick will fire in (per-job override, else
+        // the process default, else UTC) so validity and firing never diverge.
+        let effective_tz = job_tz.or_else(scheduler_default_tz);
+        if next_cron_after_tz(req.cron_expression.trim(), Utc::now(), effective_tz).is_none() {
             return Err(scheduler_required_field(
                 "cron_expression",
                 "must be a valid 5-field cron expression or @macro",

@@ -407,7 +407,7 @@ fn transit_algorithm_validation_accepts_supported_and_rejects_unknown() {
     assert_single_field_violation(
         &err,
         "algorithm",
-        "must be one of the supported transit algorithms: aes256-gcm-siv, ed25519",
+        "must be one of the supported transit algorithms: aes256-gcm-siv, ed25519, hmac-sha256",
     );
 }
 
@@ -539,8 +539,9 @@ fn ed25519_sign_verify_round_trips_and_rejects_tampering() {
     assert_ne!(pubkey, ed25519_public_key_b64(&other.0));
 }
 
-/// The encryption path refuses an Ed25519 signing key (key-purpose confusion): a
-/// signing seed is not an AEAD key. Encryption-algorithm keys pass through.
+/// The encryption path refuses a non-encryption key (key-purpose confusion): a
+/// signing seed is not an AEAD key, and an hmac-sha256 key is a dedicated MAC key.
+/// Encryption-algorithm keys (and the empty/legacy default) pass through.
 #[test]
 fn encryption_path_rejects_a_signing_key() {
     assert!(require_encryption_algorithm("aes256-gcm-siv", "encrypt").is_ok());
@@ -551,7 +552,17 @@ fn encryption_path_rejects_a_signing_key() {
     assert_single_field_violation(
         &err,
         "key_name",
-        "must name an encryption key (aes256-gcm-siv), not an ed25519 signing key",
+        "must name an encryption key (aes256-gcm-siv), not a 'ed25519' key",
+    );
+    // A dedicated hmac-sha256 key is likewise refused for the encryption path, so
+    // one key can never serve both Encrypt and HMAC.
+    let hmac_err = require_encryption_algorithm("hmac-sha256", "encrypt")
+        .expect_err("an hmac-sha256 key must not be used to encrypt");
+    assert_eq!(hmac_err.code(), tonic::Code::InvalidArgument);
+    assert_single_field_violation(
+        &hmac_err,
+        "key_name",
+        "must name an encryption key (aes256-gcm-siv), not a 'hmac-sha256' key",
     );
 }
 
@@ -707,44 +718,49 @@ async fn batch_decrypt_rejects_over_cap_batches() {
     );
 }
 
-/// Key separation (M12, scoped): an Ed25519 signing key is usable for Sign/Verify
-/// ONLY — refused for HMAC and for the encryption path. A symmetric key
-/// (aes256-gcm-siv, and the empty/legacy default) is usable for Encrypt/Decrypt
-/// AND HMAC, but refused for Sign/Verify. This closes the cited exploit (a signing
-/// key usable as an HMAC key) without introducing a dedicated HMAC algorithm.
+/// Key separation (M12, full): the three transit purposes are FULLY isolated by
+/// algorithm. aes256-gcm-siv (and the empty/legacy default) → Encrypt/Decrypt
+/// ONLY; ed25519 → Sign/Verify ONLY; hmac-sha256 → Hmac/Verify ONLY. No single key
+/// serves two purposes — in particular an encryption key can no longer double as
+/// an HMAC key. This closes the cited exploit with a dedicated HMAC algorithm.
 #[test]
 fn transit_key_purpose_is_separated_by_algorithm() {
-    // HMAC guard: a symmetric key is admitted; the Ed25519 signing key is refused.
-    assert!(require_hmac_algorithm("aes256-gcm-siv", "hmac").is_ok());
-    assert!(require_hmac_algorithm("", "hmac").is_ok());
-    let hmac_err = require_hmac_algorithm("ed25519", "hmac")
-        .expect_err("a signing key must not be usable for HMAC");
+    // HMAC guard: ONLY the dedicated hmac-sha256 key is admitted; the encryption
+    // key and the Ed25519 signing key (and the empty/legacy default) are refused.
+    assert!(require_hmac_algorithm("hmac-sha256", "hmac").is_ok());
+    for wrong in ["aes256-gcm-siv", "ed25519", ""] {
+        assert!(
+            require_hmac_algorithm(wrong, "hmac").is_err(),
+            "a non-HMAC key ('{wrong}') must not be usable for HMAC"
+        );
+    }
+    let hmac_err = require_hmac_algorithm("aes256-gcm-siv", "hmac")
+        .expect_err("an encryption key must not be usable for HMAC");
     assert_eq!(hmac_err.code(), tonic::Code::InvalidArgument);
-    assert_single_field_violation(
-        &hmac_err,
-        "key_name",
-        "must name a symmetric HMAC key (aes256-gcm-siv), not an ed25519 signing key",
-    );
+    assert_single_field_violation(&hmac_err, "key_name", "must name an hmac-sha256 HMAC key");
 
-    // Signing guard: only the Ed25519 signing key signs/verifies; a symmetric key
-    // is refused.
+    // Signing guard: only the Ed25519 signing key signs/verifies; the encryption
+    // and HMAC keys are refused.
     assert!(require_signing_algorithm("ed25519", "sign").is_ok());
-    for wrong in ["aes256-gcm-siv", ""] {
+    for wrong in ["aes256-gcm-siv", "hmac-sha256", ""] {
         assert!(
             require_signing_algorithm(wrong, "sign").is_err(),
-            "a symmetric key ('{wrong}') must not be usable for Sign/Verify"
+            "a non-signing key ('{wrong}') must not be usable for Sign/Verify"
         );
     }
 
-    // Encryption guard: a symmetric key encrypts; the Ed25519 signing key is
-    // refused. Note the same symmetric key passes BOTH the encryption and the HMAC
-    // guard above — a deliberate scope decision (no dedicated HMAC algorithm).
+    // Encryption guard: only a symmetric encryption key (or the empty/legacy
+    // default) encrypts; the Ed25519 signing key and the hmac-sha256 key are
+    // refused. The encryption key no longer passes the HMAC guard above — the two
+    // purposes are fully separated.
     assert!(require_encryption_algorithm("aes256-gcm-siv", "encrypt").is_ok());
     assert!(require_encryption_algorithm("", "decrypt").is_ok());
-    assert!(
-        require_encryption_algorithm("ed25519", "encrypt").is_err(),
-        "a signing key must not be usable to encrypt"
-    );
+    for wrong in ["ed25519", "hmac-sha256"] {
+        assert!(
+            require_encryption_algorithm(wrong, "encrypt").is_err(),
+            "a non-encryption key ('{wrong}') must not be usable to encrypt"
+        );
+    }
 }
 
 /// The env-governed Vault knobs fall back to their byte-stable const defaults when

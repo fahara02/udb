@@ -13,7 +13,10 @@ use crate::proto::{ErrorDetail, ErrorKind};
 use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
 
 use super::SchedulerServiceImpl;
-use super::cron::{MAX_MISSED_RUNS_COUNTED, missed_cron_occurrences, next_cron_after};
+use super::cron::{
+    MAX_MISSED_RUNS_COUNTED, effective_tz, missed_cron_occurrences, next_cron_after,
+    next_cron_after_in_zone, next_cron_after_tz, timezone_from_payload,
+};
 use super::errors::{
     scheduler_capability_status, scheduler_internal_status, scheduler_not_found_status,
 };
@@ -307,22 +310,22 @@ fn missed_count_counts_elapsed_cron_windows() {
         .with_timezone(&Utc);
     // On time (fired within the due minute): nothing collapsed.
     let now = due + ChronoDuration::seconds(30);
-    assert_eq!(missed_cron_occurrences("0 * * * *", due, now), 0);
+    assert_eq!(missed_cron_occurrences("0 * * * *", due, now, None), 0);
     // Fired 3h late: the 13:00, 14:00 and 15:00 windows collapse into one event.
     let now = due + ChronoDuration::hours(3);
-    assert_eq!(missed_cron_occurrences("0 * * * *", due, now), 3);
+    assert_eq!(missed_cron_occurrences("0 * * * *", due, now, None), 3);
     // Macro form agrees with its 5-field expansion.
     let now = due + ChronoDuration::days(3);
-    assert_eq!(missed_cron_occurrences("@daily", due, now), 3);
+    assert_eq!(missed_cron_occurrences("@daily", due, now, None), 3);
     // An every-minute job asleep for two days hits the safety cap — the loop
     // is bounded, and the cap reads as "at least this many".
     let now = due + ChronoDuration::days(2);
     assert_eq!(
-        missed_cron_occurrences("* * * * *", due, now),
+        missed_cron_occurrences("* * * * *", due, now, None),
         MAX_MISSED_RUNS_COUNTED
     );
     // Invalid expression: fail closed to zero.
-    assert_eq!(missed_cron_occurrences("not a cron", due, now), 0);
+    assert_eq!(missed_cron_occurrences("not a cron", due, now, None), 0);
 }
 
 /// The create-time job quota MUST be atomic: the rendered INSERT folds the
@@ -429,4 +432,160 @@ fn cron_evaluator_advances_standard_expressions() {
     // Invalid expressions fail closed.
     assert!(next_cron_after("not a cron", base).is_none());
     assert!(next_cron_after("99 * * * *", base).is_none());
+}
+
+/// No timezone ⇒ the historical UTC evaluation, unchanged: `next_cron_after_tz`
+/// with `None` is byte-for-byte `next_cron_after`, and missed-run accounting in
+/// UTC matches the plain path.
+#[test]
+fn no_timezone_job_stays_utc() {
+    let base = chrono::DateTime::parse_from_rfc3339("2026-06-26T12:00:00Z")
+        .unwrap()
+        .with_timezone(&Utc);
+    for expr in [
+        "* * * * *",
+        "0 0 * * *",
+        "@daily",
+        "*/15 9-17 * * 1-5",
+        "0 0 29 2 *",
+    ] {
+        assert_eq!(
+            next_cron_after_tz(expr, base, None),
+            next_cron_after(expr, base),
+            "None-zone must equal the UTC path for {expr}"
+        );
+    }
+    // A payload with no `"timezone"` carries no explicit zone; UTC accounting is
+    // the plain-path accounting.
+    assert_eq!(timezone_from_payload("{}").unwrap(), None);
+    let due = base;
+    let now = due + ChronoDuration::hours(3);
+    assert_eq!(missed_cron_occurrences("0 * * * *", due, now, None), 3);
+}
+
+/// DST spring-forward in `America/New_York`: a daily 09:00-local job advances
+/// across the March boundary to the UTC instant dictated by the NEW offset (EDT,
+/// UTC-4 → 13:00Z), NOT a fixed pre-DST offset (EST, UTC-5 → would be 14:00Z).
+/// Second Sunday of March 2026 is the 8th; clocks spring forward at 02:00 that day.
+#[test]
+fn dst_spring_forward_advances_by_rule_not_fixed_offset() {
+    let ny: chrono_tz::Tz = "America/New_York".parse().unwrap();
+    // 2026-03-07 10:00 EST (offset -5) — just after that day's 09:00 fire.
+    let after = chrono::DateTime::parse_from_rfc3339("2026-03-07T15:00:00Z")
+        .unwrap()
+        .with_timezone(&Utc);
+    let next = next_cron_after_in_zone("0 9 * * *", after, ny)
+        .expect("daily 09:00 local must resolve across the DST boundary");
+    // 09:00 on 2026-03-08 is EDT (UTC-4) ⇒ 13:00Z, proving the offset tracked DST.
+    assert_eq!(next.to_rfc3339(), "2026-03-08T13:00:00+00:00");
+    assert_ne!(
+        next.to_rfc3339(),
+        "2026-03-08T14:00:00+00:00",
+        "must not apply the stale pre-DST (EST) offset"
+    );
+    // The same expression with an explicit payload timezone resolves identically.
+    let via_payload = effective_tz(r#"{"timezone":"America/New_York"}"#).unwrap();
+    assert_eq!(
+        next_cron_after_tz("0 9 * * *", after, via_payload),
+        Some(next)
+    );
+}
+
+/// A nonexistent local time (spring-forward gap) resolves to the post-transition
+/// instant. `30 2 * * *` on 2026-03-08 falls in the [02:00,03:00) gap; the clock
+/// jumps to 03:00 EDT, so the fire lands at the transition instant 07:00Z.
+#[test]
+fn dst_spring_forward_gap_picks_post_transition_instant() {
+    let ny: chrono_tz::Tz = "America/New_York".parse().unwrap();
+    let after = chrono::DateTime::parse_from_rfc3339("2026-03-07T12:00:00Z")
+        .unwrap()
+        .with_timezone(&Utc);
+    let next = next_cron_after_in_zone("30 2 * * *", after, ny)
+        .expect("a gap-time cron must resolve to the post-transition instant");
+    // 03:00 EDT == 02:00 EST == 07:00Z, the instant the wall clock jumps to.
+    assert_eq!(next.to_rfc3339(), "2026-03-08T07:00:00+00:00");
+}
+
+/// An ambiguous local time (fall-back overlap) resolves to the EARLIER instant.
+/// DST ends on the first Sunday of November 2026 (the 1st); 01:30 local occurs
+/// twice — first as EDT (UTC-4 ⇒ 05:30Z), then as EST (UTC-5 ⇒ 06:30Z). The
+/// scheduler picks the earlier one.
+#[test]
+fn dst_fall_back_overlap_picks_earlier_instant() {
+    let ny: chrono_tz::Tz = "America/New_York".parse().unwrap();
+    let after = chrono::DateTime::parse_from_rfc3339("2026-11-01T04:00:00Z")
+        .unwrap()
+        .with_timezone(&Utc);
+    let next = next_cron_after_in_zone("30 1 * * *", after, ny)
+        .expect("an overlap-time cron must resolve to the earlier instant");
+    assert_eq!(next.to_rfc3339(), "2026-11-01T05:30:00+00:00");
+    assert_ne!(
+        next.to_rfc3339(),
+        "2026-11-01T06:30:00+00:00",
+        "must pick the earlier (EDT) instant, not the later (EST) one"
+    );
+}
+
+/// `timezone_from_payload` reads the opaque `"timezone"` key case-insensitively,
+/// treats absent/empty/non-object payloads as "no zone", and rejects a non-empty
+/// but invalid IANA name (fail closed).
+#[test]
+fn timezone_from_payload_parses_absent_valid_and_invalid() {
+    // Absent / empty / non-object ⇒ no explicit zone.
+    assert_eq!(timezone_from_payload("").unwrap(), None);
+    assert_eq!(timezone_from_payload("{}").unwrap(), None);
+    assert_eq!(timezone_from_payload(r#"{"other":"x"}"#).unwrap(), None);
+    assert_eq!(timezone_from_payload(r#"{"timezone":""}"#).unwrap(), None);
+    // Valid name, including a case-insensitive spelling.
+    let ny: chrono_tz::Tz = "America/New_York".parse().unwrap();
+    assert_eq!(
+        timezone_from_payload(r#"{"timezone":"America/New_York"}"#).unwrap(),
+        Some(ny)
+    );
+    assert_eq!(
+        timezone_from_payload(r#"{"timezone":"america/new_york"}"#).unwrap(),
+        Some(ny)
+    );
+    // Non-empty invalid name ⇒ fail closed with a typed `timezone` field violation.
+    let err = timezone_from_payload(r#"{"timezone":"Mars/Phobos"}"#)
+        .expect_err("an unresolvable timezone must be rejected");
+    assert_eq!(err.code(), tonic::Code::InvalidArgument);
+    assert_eq!(
+        err.message(),
+        "timezone is not a valid IANA time zone: Mars/Phobos"
+    );
+    let detail = decode_detail(&err);
+    assert_eq!(detail.kind, ErrorKind::Validation as i32);
+    assert_eq!(detail.field_violations.len(), 1);
+    assert_eq!(detail.field_violations[0].field, "timezone");
+}
+
+/// An invalid explicit timezone in the payload is rejected at CREATE, before any
+/// pool access — a job is never persisted with an unresolvable zone.
+#[tokio::test]
+async fn create_job_rejects_invalid_timezone() {
+    let svc = SchedulerServiceImpl::new(); // no pool, no channels (admit no-op)
+    let mut request = Request::new(scheduler_pb::CreateJobRequest {
+        tenant_id: "tenant-a".to_string(),
+        name: "nightly".to_string(),
+        schedule_type: "CRON".to_string(),
+        cron_expression: "@daily".to_string(),
+        payload: r#"{"timezone":"Not/AZone"}"#.to_string(),
+        ..Default::default()
+    });
+    request
+        .metadata_mut()
+        .insert("x-tenant-id", MetadataValue::from_static("tenant-a"));
+    let err = svc
+        .create_job(request)
+        .await
+        .expect_err("invalid timezone must be rejected before pool access");
+    assert_eq!(err.code(), tonic::Code::InvalidArgument);
+    assert_eq!(
+        err.message(),
+        "timezone is not a valid IANA time zone: Not/AZone"
+    );
+    let detail = decode_detail(&err);
+    assert_eq!(detail.kind, ErrorKind::Validation as i32);
+    assert_eq!(detail.field_violations[0].field, "timezone");
 }

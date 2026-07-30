@@ -3,7 +3,7 @@
 //
 // UDB C# SDK — generated robustness/forwarding layer.
 //   Language:         csharp
-//   UDB version:      0.4.32
+//   UDB version:      0.4.33
 //   Protocol version: 1.0.0
 //   Services:         28
 //   RPCs:             376

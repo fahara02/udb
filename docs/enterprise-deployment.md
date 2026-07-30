@@ -87,7 +87,57 @@ The historical rustls "Could not automatically determine the process-level
 CryptoProvider" panic that made production mode unbootable is **fixed** (the
 broker installs the `aws-lc-rs` provider at startup). If you don't need broker
 TLS, a valid hardened alternative is to terminate TLS at an edge proxy (nginx)
-and run the broker plaintext on a private network with real JWT login.
+and run the broker plaintext on a private network with real JWT login — see §2.1.
+
+### 2.1 Fail-closed audit posture (`UDB_FAIL_CLOSED`) and its checklist
+
+`UDB_FAIL_CLOSED=true` (alias `UDB_ENTERPRISE_AUDIT=true`) is the **runtime
+enforcement posture**: security-sensitive lookups (revocation, JWKS/signing-key,
+rate-limit store) **deny on a dependency error** instead of failing open, and the
+broker refuses to serve unless a hardened deployment checklist is satisfied. It is
+implied automatically by `UDB_ENV=production`.
+
+Because it runs the **whole** production checklist at once, the broker aborts
+startup listing **every** unmet item together (not one-at-a-time). The checklist:
+
+| Requirement | Satisfy with |
+|---|---|
+| Secure transport | broker TLS (`UDB_TLS_REQUIRED=true` + `UDB_TLS_CERT_PATH`/`UDB_TLS_KEY_PATH`) **OR** the trusted-transport acknowledgment below |
+| Service identity | `UDB_SERVICE_IDENTITY_REQUIRED=true` **OR** the trusted-transport acknowledgment |
+| Authentication | JWT (`UDB_JWT_PUBLIC_KEY` or `UDB_JWT_JWKS_URL`) **or** mTLS |
+| No header scopes | do **not** set `UDB_ALLOW_HEADER_SCOPES` |
+| Durable audit sink | external HTTP/SIEM (`UDB_AUDIT_SINK_URL=…`) **OR** the always-on durable Postgres audit log (`UDB_AUDIT_SINK=postgres`) |
+| PII-safe logging | on by default — only fails if you explicitly set `UDB_PII_SAFE_LOGGING=false` |
+
+**Two escape hatches let a single-node / behind-a-proxy deployment run fail-closed
+without standing up broker TLS or an external SIEM:**
+
+- **`UDB_AUDIT_SINK=postgres`** — declares the append-only `udb_system.auth_audit_log`
+  (which `udb compliance evidence` chain-hashes) as your durable audit sink. No
+  external endpoint needed.
+- **`UDB_TRUSTED_TRANSPORT=true`** — an explicit, auditable acknowledgment that
+  transport is secured **outside** the broker (a TLS-terminating reverse proxy,
+  a service mesh with mTLS sidecars, or a trusted private network). It satisfies
+  the TLS **and** service-identity gates so the broker need not own certs. Unset,
+  every transport gate stays fully enforced — this never silently weakens anything.
+
+**Minimal fail-closed bring-up behind a TLS proxy (copy-paste):**
+
+```bash
+UDB_FAIL_CLOSED=true            # deny-on-error + audit posture
+UDB_TRUSTED_TRANSPORT=true      # TLS terminated upstream (proxy / mesh / trusted net)
+UDB_AUDIT_SINK=postgres         # durable audit log, no external SIEM
+UDB_JWT_PUBLIC_KEY=…            # (or UDB_JWT_JWKS_URL) — auth is still required
+# UDB_PG_DSN / UDB_JWT_PRIVATE_KEY / session + encryption secrets per §1
+```
+
+**Full broker-terminated TLS instead?** Drop `UDB_TRUSTED_TRANSPORT` and provide
+`UDB_TLS_REQUIRED=true` + `UDB_TLS_CERT_PATH`/`UDB_TLS_KEY_PATH` (+ the mTLS client
+CA if you enable mTLS), exactly as §2 above. `UDB_ENV=production` selects that path
+automatically.
+
+> `udb doctor --enterprise` reports this checklist (including which escape hatch, if
+> any, is active) before you pay a slow startup.
 
 ---
 

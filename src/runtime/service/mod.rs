@@ -2833,6 +2833,40 @@ pub async fn serve(
             );
         }
     }
+    // Leader-elected backup maintenance: enforce each enabled BackupPolicy's
+    // retention (prune old runs + their objects) and fire due scheduled backups.
+    // One winner cluster-wide via the singleton lease. The shared cron evaluator
+    // is injected so the grammar stays single-sourced in scheduler_service.
+    {
+        let backup_runtime = service.runtime.load_full();
+        if let Ok(backup_pool) = backup_runtime.native_store_pool_for_service("backup", true, "") {
+            let singleton_relation = backup_runtime.config().cdc.lock_log_relation();
+            let lease_pool = backup_pool.clone();
+            let backup_service = std::sync::Arc::new(service.build_backup_service());
+            crate::runtime::service::native_runtime::NativeWorkerHost::spawn_while_leader(
+                crate::runtime::singleton::WORKER_BACKUP_RETENTION,
+                "backup maintenance pruned runs / fired scheduled backups",
+                lease_pool,
+                singleton_relation,
+                crate::runtime::service::backup_service::config::backup_maintenance_interval(),
+                move || {
+                    let svc = backup_service.clone();
+                    async move {
+                        let pruned =
+                            crate::runtime::service::backup_service::retention::run_backup_retention_once(&svc)
+                                .await?;
+                        let fired =
+                            crate::runtime::service::backup_service::retention::run_scheduled_backups_once(
+                                &svc,
+                                crate::runtime::service::scheduler_service::cron::next_cron_after,
+                            )
+                            .await?;
+                        Ok::<i64, tonic::Status>(pruned + fired)
+                    }
+                },
+            );
+        }
+    }
     // 9.12: leader-elected workflow tick — claims DUE workflow instances (FOR
     // UPDATE SKIP LOCKED) and atomically advances durable state + outbox
     // transition events. Since 16.3.2 the tick also owns application-level

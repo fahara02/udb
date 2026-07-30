@@ -3334,6 +3334,14 @@ def perf_seed(clients: dict, meta: Metadata):
         vault.CreateTransitKey(vault_pb.CreateTransitKeyRequest(tenant_id=tenant, key_name=signing_key, algorithm="ed25519"), metadata=md, timeout=8.0)
     except grpc.RpcError:
         pass
+    # A dedicated hmac-sha256 key — the transit Hmac verb now requires a
+    # purpose-built hmac-sha256 key and rejects the symmetric aes256-gcm-siv key.
+    hmac_key = f"sdk-perf-hmac-key-{suffix}"
+    fix.set("vault_hmac_key_name", hmac_key)
+    try:
+        vault.CreateTransitKey(vault_pb.CreateTransitKeyRequest(tenant_id=tenant, key_name=hmac_key, algorithm="hmac-sha256"), metadata=md, timeout=8.0)
+    except grpc.RpcError:
+        pass
     try:
         enc = vault.Encrypt(vault_pb.EncryptRequest(tenant_id=tenant, key_name=vault_key, plaintext="perf"), metadata=md, timeout=8.0)
         fix.set("vault_ciphertext", enc.ciphertext)

@@ -54,18 +54,30 @@ pub(crate) const KEY_STATE_VERIFYING: &str = "VERIFYING";
 
 pub(crate) const DEFAULT_TRANSIT_ALGORITHM: &str = "aes256-gcm-siv";
 /// The asymmetric signing algorithm: a key created with this algorithm signs via
-/// real Ed25519 (Sign/Verify), not the symmetric HMAC used by every other key.
-/// The 32-byte transit key material doubles as the Ed25519 seed, so no separate
-/// key generation is needed.
+/// real Ed25519 (Sign/Verify) and does nothing else — distinct from both the
+/// AES-256-GCM-SIV encryption key and the dedicated HMAC-SHA256 MAC key. The
+/// 32-byte transit key material doubles as the Ed25519 seed, so no separate key
+/// generation is needed.
 pub(crate) const SIGNING_TRANSIT_ALGORITHM: &str = "ed25519";
+/// The dedicated HMAC algorithm: a key created with this algorithm MACs via
+/// FIPS-198 HMAC-SHA256 (Hmac/Verify) and does nothing else. Isolating HMAC onto
+/// its own algorithm keeps the three transit purposes fully separated — an
+/// encryption key can no longer double as a MAC key. The 32-byte transit key
+/// material is the algorithm-agnostic HMAC key, so no separate key generation is
+/// needed.
+pub(crate) const HMAC_TRANSIT_ALGORITHM: &str = "hmac-sha256";
 /// The transit algorithms the crypto stack actually implements: the
-/// AES-256-GCM-SIV envelope primitive (Encrypt/Decrypt/HMAC-Sign) and Ed25519
-/// (asymmetric Sign/Verify). An unknown `algorithm` on CreateTransitKey is
-/// rejected up front instead of being silently coerced to the default (a latent
-/// capability lie). Extend this set only when a new primitive is genuinely wired
-/// into the seal/open/sign path.
-pub(crate) const SUPPORTED_TRANSIT_ALGORITHMS: &[&str] =
-    &[DEFAULT_TRANSIT_ALGORITHM, SIGNING_TRANSIT_ALGORITHM];
+/// AES-256-GCM-SIV envelope primitive (Encrypt/Decrypt), Ed25519 (asymmetric
+/// Sign/Verify), and HMAC-SHA256 (symmetric MAC via Hmac/Verify). Each algorithm
+/// serves exactly one purpose — the three are fully isolated. An unknown
+/// `algorithm` on CreateTransitKey is rejected up front instead of being silently
+/// coerced to the default (a latent capability lie). Extend this set only when a
+/// new primitive is genuinely wired into the seal/open/sign/mac path.
+pub(crate) const SUPPORTED_TRANSIT_ALGORITHMS: &[&str] = &[
+    DEFAULT_TRANSIT_ALGORITHM,
+    SIGNING_TRANSIT_ALGORITHM,
+    HMAC_TRANSIT_ALGORITHM,
+];
 
 /// Transit ciphertext envelope tag: `udb-vault:v<keyver>:<b64(nonce||ct)>`.
 /// Distinct from the broker's `udb-aead:` master-key envelope so the two layers

@@ -579,7 +579,7 @@ function fullSurfaceManifestFixtures() {
         unpublish_track_id: "unpublish-track-1", update_key_id: "update-key-1", username: "perf-u",
         vault_ciphertext: "vault-ciphertext-1", vault_db_role: "readonly", vault_delete_secret_path: "secret/delete",
         vault_destroy_secret_path: "secret/destroy", vault_key_name: "transit-key", vault_secret_path: "secret/path",
-        vault_signature: "vault-signature-1", vault_signing_key_name: "transit-signing-key", reissue_file_id: "reissue-file-1", workflow_id: "workflow-1",
+        vault_signature: "vault-signature-1", vault_signing_key_name: "transit-signing-key", vault_hmac_key_name: "transit-hmac-key", reissue_file_id: "reissue-file-1", workflow_id: "workflow-1",
         approve_draft_id: "approve-draft-1", canary_version_id: "canary-version-1",
         policy_version_id: "policy-version-1", reject_draft_id: "reject-draft-1",
         rollback_policy_set_id: "rollback-policy-set-1", rollback_target_version_id: "rollback-target-version-1",
@@ -1565,6 +1565,7 @@ function fullSurfaceManifestFixtures() {
     fixtures.set("tenant_id", "tenant-1");
     fixtures.set("vault_key_name", "sdk-perf-key");
     fixtures.set("vault_signing_key_name", "sdk-perf-signing-key");
+    fixtures.set("vault_hmac_key_name", "sdk-perf-hmac-key");
     fixtures.set("vault_ciphertext", "udb-vault:v1:seed");
     fixtures.set("vault_secret_path", "app/config");
     fixtures.set("vault_signature", "udb-vault-sig:v1:seed");
@@ -1596,6 +1597,7 @@ function fullSurfaceManifestFixtures() {
     node_assert_1.strict.equal(dbCreds?.ttl_seconds, 900);
     node_assert_1.strict.equal(secret?.secret_path, "app/config");
     node_assert_1.strict.equal(hmac?.input, "perf");
+    node_assert_1.strict.equal(hmac?.key_name, "sdk-perf-hmac-key");
     node_assert_1.strict.equal(secrets?.page_size, 50);
     node_assert_1.strict.equal(put?.secret_value, "perf-secret");
     node_assert_1.strict.equal(put?.expected_version, 0);
@@ -2511,6 +2513,10 @@ async function seedPerfFixtures(gen, data, tenantId, projectId, uuidTenant) {
         const signed = await gen.VaultService.sign({ tenant_id: tenantId, key_name: "transit-signing-key", input: "perf" }, opts);
         if (signed.signature)
             fix.set("vault_signature", signed.signature);
+        // A dedicated hmac-sha256 key — the transit Hmac verb now requires a
+        // purpose-built hmac-sha256 key and rejects the symmetric aes256-gcm-siv key.
+        await gen.VaultService.create_transit_key({ tenant_id: tenantId, key_name: "transit-hmac-key", algorithm: "hmac-sha256" }, opts);
+        fix.set("vault_hmac_key_name", "transit-hmac-key");
     });
     // ── StorageService (UUID tenant): a registered file → file_id ──────────────────
     let fileId = "";

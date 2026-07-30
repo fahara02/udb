@@ -23,3 +23,27 @@ pub(crate) const MAX_LIST_ROWS: u32 = 500;
 /// only schema/table names, row counts, and ciphertext checksums — the integrity
 /// anchor restore reads to find and verify each encrypted table artifact.
 pub(crate) const MANIFEST_SUFFIX: &str = "manifest.json";
+
+/// Maintenance cadence for the leader spawn site — env resolved ONCE via
+/// `OnceLock` (a worker-spawn cadence knob, never a per-request read), mirroring
+/// `lock_service::lock_expiry_interval` / `cache_service::cache_invalidation_interval`.
+/// `UDB_BACKUP_MAINTENANCE_INTERVAL_SECS` overrides the 300s default; a
+/// non-positive/unparseable value falls back to the default.
+///
+/// `allow(dead_code)`: called only by the leader-elected backup-maintenance spawn
+/// in `service::serve()` (the `TODO(leader-wire)` in `retention.rs`), which is not
+/// yet wired. Delete this allow once that spawn lands.
+#[allow(dead_code)]
+pub(crate) fn backup_maintenance_interval() -> std::time::Duration {
+    const ENV_KNOB: &str = "UDB_BACKUP_MAINTENANCE_INTERVAL_SECS";
+    const DEFAULT_SECS: u64 = 300;
+    static SECS: std::sync::OnceLock<u64> = std::sync::OnceLock::new();
+    let secs = *SECS.get_or_init(|| {
+        std::env::var(ENV_KNOB)
+            .ok()
+            .and_then(|v| v.parse::<u64>().ok())
+            .filter(|v| *v > 0)
+            .unwrap_or(DEFAULT_SECS)
+    });
+    std::time::Duration::from_secs(secs)
+}

@@ -1459,9 +1459,10 @@ pub(crate) async fn verify(
             )
         })?;
     // Key separation: the envelope selects the primitive, and the key's stored
-    // purpose must match it. An Ed25519 signature must verify under a signing key;
-    // an HMAC envelope must verify under a symmetric key. A cross-purpose key is
-    // refused rather than silently returning a meaningless boolean.
+    // purpose must match it. An Ed25519 signature must verify under an ed25519
+    // signing key; an HMAC envelope must verify under a dedicated hmac-sha256 key.
+    // A cross-purpose key is refused rather than silently returning a meaningless
+    // boolean.
     if is_ed25519 {
         require_signing_algorithm(&key.algorithm, "verify")?;
     } else {
@@ -1533,9 +1534,9 @@ pub(crate) async fn hmac(
             "transit key not found or has no active version",
         )
     })?;
-    // Key separation: Hmac requires a symmetric key (an Ed25519 signing key is
-    // refused rather than cross-purposed as a MAC key). A symmetric key
-    // deliberately serves both Encrypt/Decrypt and HMAC.
+    // Key separation: Hmac requires the dedicated hmac-sha256 key; an encryption
+    // key (aes256-gcm-siv) and an Ed25519 signing key are both refused rather than
+    // cross-purposed as a MAC key. The three transit purposes are fully isolated.
     require_hmac_algorithm(&active.algorithm, "hmac")?;
     let dek = unwrap_dek(runtime, &active.wrapped_key_material)?;
     let mac = hmac_sha256(&dek.0, req.input.as_bytes());

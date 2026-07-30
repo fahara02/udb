@@ -4040,8 +4040,8 @@
     "operation_id": "vaultHmac",
     "op_kind": "MUTATION",
     "request_msg": "HmacRequest",
-    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"key_name\": \"<seed:vault_key_name>\", \"input\": \"perf\" }`",
-    "notes": "computes a transit HMAC over a small input."
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"key_name\": \"<seed:vault_hmac_key_name>\", \"input\": \"perf\" }`",
+    "notes": "computes a transit HMAC over a small input; requires the dedicated hmac-sha256 key (a symmetric aes256-gcm-siv key is rejected)."
   },
   {
     "file": "vault.md",

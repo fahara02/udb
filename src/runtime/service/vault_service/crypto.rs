@@ -23,8 +23,9 @@ use tonic::Status;
 use crate::runtime::DataBrokerRuntime;
 
 use super::config::{
-    DEFAULT_TRANSIT_ALGORITHM, SIGNING_TRANSIT_ALGORITHM, SUPPORTED_TRANSIT_ALGORITHMS,
-    VAULT_ED25519_PREFIX, VAULT_HMAC_PREFIX, VAULT_TRANSIT_ENVELOPE_PREFIX,
+    DEFAULT_TRANSIT_ALGORITHM, HMAC_TRANSIT_ALGORITHM, SIGNING_TRANSIT_ALGORITHM,
+    SUPPORTED_TRANSIT_ALGORITHMS, VAULT_ED25519_PREFIX, VAULT_HMAC_PREFIX,
+    VAULT_TRANSIT_ENVELOPE_PREFIX,
 };
 use super::errors::{
     vault_field_violation, vault_internal_status, vault_master_key_operation_status,
@@ -271,22 +272,25 @@ pub(crate) fn validate_transit_algorithm(requested: &str) -> Result<String, Stat
     ))
 }
 
-/// Reject the encryption path (Encrypt/Decrypt/GenerateDataKey/Rewrap) on a key
-/// created with the Ed25519 signing algorithm: its material is a signature seed,
-/// not an AEAD key, so encrypting with it is a key-purpose confusion. Keeps key
-/// purpose unambiguous — a signing key signs (Sign/Verify), a symmetric key
-/// encrypts (and MACs). A no-op for every symmetric-algorithm key (the common case).
+/// Reject the encryption path (Encrypt/Decrypt/GenerateDataKey/Rewrap) on any key
+/// whose algorithm is not the symmetric encryption algorithm. An Ed25519 signing
+/// key's material is a signature seed, not an AEAD key; an `hmac-sha256` key is a
+/// dedicated MAC key. Encrypting with either is a key-purpose confusion. Keeps key
+/// purpose unambiguous — a signing key signs (Sign/Verify), an HMAC key MACs
+/// (Hmac/Verify), an encryption key encrypts. A no-op for the symmetric encryption
+/// algorithm (the common case) and the empty/legacy default.
 pub(crate) fn require_encryption_algorithm(algorithm: &str, operation: &str) -> Result<(), Status> {
-    if algorithm == SIGNING_TRANSIT_ALGORITHM {
+    if algorithm == SIGNING_TRANSIT_ALGORITHM || algorithm == HMAC_TRANSIT_ALGORITHM {
         return Err(vault_field_violation(
             "key_name",
             format!(
-                "must name an encryption key ({DEFAULT_TRANSIT_ALGORITHM}), not an \
-                 {SIGNING_TRANSIT_ALGORITHM} signing key"
+                "must name an encryption key ({DEFAULT_TRANSIT_ALGORITHM}), not a \
+                 '{algorithm}' key"
             ),
             format!(
-                "{operation} requires an encryption key; the named key uses the \
-                 {SIGNING_TRANSIT_ALGORITHM} signing algorithm (use Sign/Verify instead)"
+                "{operation} requires an encryption key ({DEFAULT_TRANSIT_ALGORITHM}); the named \
+                 key uses the '{algorithm}' algorithm (use its matching Sign/Verify or Hmac path \
+                 instead)"
             ),
         ));
     }
@@ -311,22 +315,19 @@ pub(crate) fn require_signing_algorithm(algorithm: &str, operation: &str) -> Res
     Ok(())
 }
 
-/// The HMAC-purpose guard: HMAC uses a SYMMETRIC key, so reject an Ed25519 signing
-/// key (its material is a signature seed, not a MAC key) exactly as the encryption
-/// path does, while accepting every symmetric transit algorithm. This closes the
-/// key-confusion where a signing key could be used as an HMAC key; a symmetric key
-/// deliberately serves both Encrypt/Decrypt and HMAC (scoped key-separation).
+/// The HMAC-purpose guard: HMAC requires the DEDICATED `hmac-sha256` key and
+/// nothing else. An encryption key (`aes256-gcm-siv`) and an Ed25519 signing key
+/// are both refused, so the three transit purposes are fully isolated — a single
+/// key can never serve both Encrypt and HMAC. Fails closed on every non-HMAC
+/// algorithm (including the empty/legacy default, which is an encryption key).
 pub(crate) fn require_hmac_algorithm(algorithm: &str, operation: &str) -> Result<(), Status> {
-    if algorithm == SIGNING_TRANSIT_ALGORITHM {
+    if algorithm != HMAC_TRANSIT_ALGORITHM {
         return Err(vault_field_violation(
             "key_name",
+            format!("must name an {HMAC_TRANSIT_ALGORITHM} HMAC key"),
             format!(
-                "must name a symmetric HMAC key ({DEFAULT_TRANSIT_ALGORITHM}), not an \
-                 {SIGNING_TRANSIT_ALGORITHM} signing key"
-            ),
-            format!(
-                "{operation} requires a symmetric key; the named key uses the \
-                 {SIGNING_TRANSIT_ALGORITHM} signing algorithm (use Sign/Verify instead)"
+                "{operation} requires an {HMAC_TRANSIT_ALGORITHM} HMAC key; the named key uses \
+                 the '{algorithm}' algorithm and cannot MAC"
             ),
         ));
     }

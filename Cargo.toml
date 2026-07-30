@@ -8,7 +8,7 @@ resolver = "2"
 
 [package]
 name = "udb"
-version = "0.4.32"
+version = "0.4.33"
 edition = "2024"
 rust-version = "1.85"
 description = "Universal Data Broker — a Rust gRPC broker over multiple databases (Postgres, MySQL, SQLite, MongoDB, ClickHouse, Cassandra, MSSQL, Redis, Qdrant, S3, Neo4j, …) with per-tenant RLS, 2PC, sagas, and CDC."
@@ -303,6 +303,7 @@ crc32fast = { version = "1", optional = true }
 # webrtc-rs media stack. Aliased so it does not collide with generated
 # `udb.core.webrtc` protocol modules or the `webrtc` Cargo feature name.
 webrtc-rs = { package = "webrtc", version = "0.8", optional = true }
+chrono-tz = { version = "0.10", default-features = false, features = ["std", "case-insensitive"] }
 
 [build-dependencies]
 protoc-bin-vendored = "3"

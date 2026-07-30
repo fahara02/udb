@@ -38,7 +38,7 @@ pub use crate::proto::udb::core::scheduler::services::v1::scheduler_service_serv
 use super::DataBrokerService;
 
 mod config;
-mod cron;
+pub(crate) mod cron;
 mod errors;
 mod handlers;
 mod model;

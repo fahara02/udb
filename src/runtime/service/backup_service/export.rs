@@ -65,6 +65,48 @@ pub(crate) async fn start_tenant_backup(
             [("tenant_id", "must be a non-empty tenant id")],
         ));
     }
+    // The verified-tenant context carries project/correlation from request
+    // metadata; the actual export mechanics live in the shared internal routine
+    // so a background driver can fire the SAME backup without an inbound request.
+    let context = native_service_context(&metadata, &tenant_id, "");
+    let response = run_tenant_backup(
+        svc,
+        &tenant_id,
+        &req.object_backend,
+        &req.object_bucket,
+        context,
+    )
+    .await?;
+    Ok(Response::new(response))
+}
+
+/// The internal tenant-backup routine that BOTH the `StartTenantBackup` RPC and
+/// the leader-elected scheduled-backup driver call. It performs every side
+/// effect the RPC has — the SHARED movement-scope validation, fair admission,
+/// capability guards, per-table encrypted export, checksummed manifest, journal
+/// row, and outbox event — but takes an already-verified `tenant_id` and a
+/// prepared [`crate::RequestContext`] instead of request metadata, so a
+/// background driver with no inbound request can fire a backup through the SAME
+/// mechanism without re-entering the gRPC layer.
+///
+/// The CALLER owns the cross-tenant body/claim guard: the RPC runs
+/// `validate_request_tenant` against request metadata first; the scheduled-backup
+/// driver only ever passes a policy's OWN tenant id (read cross-tenant in the
+/// leader lane), so no request-scoped identity is smuggled here.
+pub(crate) async fn run_tenant_backup(
+    svc: &BackupServiceImpl,
+    tenant_id: &str,
+    req_object_backend: &str,
+    req_object_bucket: &str,
+    context: crate::RequestContext,
+) -> Result<backup_pb::StartTenantBackupResponse, Status> {
+    let tenant_id = tenant_id.trim().to_string();
+    if tenant_id.is_empty() {
+        return Err(crate::runtime::executor_utils::invalid_argument_fields(
+            "tenant_id is required",
+            [("tenant_id", "must be a non-empty tenant id")],
+        ));
+    }
 
     // SHARED fail-closed movement validator — never a bespoke scope check. A
     // backup always filters by the verified tenant (tenant_filter_present),
@@ -94,9 +136,8 @@ pub(crate) async fn start_tenant_backup(
     let manifest = svc.require_manifest()?;
     // Canonical tenant id (and a value that matches the `::text` filter).
     let _ = parse_uuid("tenant_id", &tenant_id)?;
-    let context = native_service_context(&metadata, &tenant_id, "");
     let (object_backend, object_bucket) =
-        resolve_object_target(svc, &req.object_backend, &req.object_bucket);
+        resolve_object_target(svc, req_object_backend, req_object_bucket);
 
     // SHARED enumeration: the same planner PurgeTenant uses. Tenant-owned
     // tables are `targets`; tenant-less tables are REPORTED in `excluded`.
@@ -273,7 +314,7 @@ pub(crate) async fn start_tenant_backup(
     )
     .await;
 
-    Ok(Response::new(backup_pb::StartTenantBackupResponse {
+    Ok(backup_pb::StartTenantBackupResponse {
         backup_id,
         object_prefix,
         manifest_checksum,
@@ -284,5 +325,5 @@ pub(crate) async fn start_tenant_backup(
         excluded,
         message: "tenant backup completed".to_string(),
         error: None,
-    }))
+    })
 }

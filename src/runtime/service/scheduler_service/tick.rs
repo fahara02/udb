@@ -12,8 +12,8 @@ use crate::runtime::native_catalog::NativeModel;
 
 use super::super::auth_service::events::{ComplianceEnvelope, build_native_compliance_envelope};
 use super::super::native_helpers::MAX_LIST_ROWS;
-use super::config::{TOPIC_JOB_DEAD, TOPIC_JOB_FIRED};
-use super::cron::{missed_cron_occurrences, next_cron_after};
+use super::config::{TOPIC_JOB_DEAD, TOPIC_JOB_FIRED, scheduler_default_tz};
+use super::cron::{effective_tz, missed_cron_occurrences, next_cron_after_tz};
 use super::errors::scheduler_internal_status;
 use super::model::scheduled_job_model;
 
@@ -150,11 +150,17 @@ pub(crate) async fn run_scheduler_tick_once(
             )
         })?;
 
+        // Per-job timezone from the opaque payload (validated at create). On the
+        // unreachable parse-error path fall back to the process default so a single
+        // tampered row can never abort the whole tick. `None` ⇒ UTC.
+        let tz = effective_tz(&payload).unwrap_or_else(|_| scheduler_default_tz());
+
         // CRON jobs need a parseable expression to advance. A one-shot always fires
         // once. A CRON whose expression no longer yields a future time is a stuck
-        // job: back it off and, after max_attempts, dead-letter it.
+        // job: back it off and, after max_attempts, dead-letter it. The advance is
+        // computed in the job's zone so a wall-clock cron tracks DST.
         let next_fire = if schedule_type == "CRON" {
-            next_cron_after(&cron, now)
+            next_cron_after_tz(&cron, now, tz)
         } else {
             None // one-shot: no recurrence
         };
@@ -242,7 +248,7 @@ pub(crate) async fn run_scheduler_tick_once(
         // them. Zero for an on-time fire and for one-shots (which fire once by
         // contract, however late).
         let missed_count = if is_cron {
-            missed_cron_occurrences(&cron, scheduled_slot, now)
+            missed_cron_occurrences(&cron, scheduled_slot, now, tz)
         } else {
             0
         };

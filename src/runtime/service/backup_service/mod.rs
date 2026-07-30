@@ -36,13 +36,22 @@
 //! runs and objects no longer accumulate without bound. The pure prune selector
 //! ([`retention::runs_to_prune`]) is unit-tested.
 //!
-//! The periodic, leader-elected TRIGGER for both retention and scheduled backups
-//! lives in the shared scheduler lane (`service::serve()` leader election), not
-//! in this dir; see the `TODO(leader-wire)` in `retention.rs`. Until that spawn
-//! lands, retention runs when `prune_tenant_backups` is invoked and the
-//! scheduled-BACKUP trigger (fire a StartTenantBackup on a due `BackupPolicy`)
-//! remains owned by the scheduler lane. This module owns the durable policy
-//! contract, the backup/restore mechanics, and the retention prune routine.
+//! The leader-lane DRIVERS both triggers call are implemented here in
+//! [`retention`]: [`retention::enabled_backup_policies`] is the bounded,
+//! RLS-bypassing cross-tenant read of every ENABLED `BackupPolicy`;
+//! [`retention::run_backup_retention_once`] prunes each tenant's over-retention
+//! runs; and [`retention::run_scheduled_backups_once`] fires a due scheduled
+//! backup per policy through the SAME internal routine `StartTenantBackup` uses
+//! ([`export::run_tenant_backup`]), never through the gRPC layer. The due
+//! decision ([`retention::backup_due`]) is a PURE, unit-tested comparison.
+//!
+//! Only the periodic, leader-elected SPAWN that calls these drivers on an
+//! interval lives in the shared scheduler lane (`service::serve()` leader
+//! election under `singleton::WORKER_BACKUP_RETENTION`), not in this dir; see the
+//! `TODO(leader-wire)` in `retention.rs` for the exact spawn. Until it lands, the
+//! drivers run only when invoked explicitly. This module owns the durable policy
+//! contract, the backup/restore mechanics, the retention prune routine, and the
+//! leader-lane maintenance drivers.
 
 use std::sync::Arc;
 
@@ -63,14 +72,18 @@ use super::native_helpers::{
     DEFAULT_OBJECT_BACKEND, DEFAULT_OBJECT_BUCKET, storage_object_defaults,
 };
 
-mod config;
+// `config` (the `backup_maintenance_interval` cadence knob) and `retention` (the
+// leader-lane maintenance drivers `run_backup_retention_once` /
+// `run_scheduled_backups_once`) are `pub(crate)` so the leader-elected spawn in
+// `service::serve()` can reach them; see the `TODO(leader-wire)` in `retention.rs`.
+pub(crate) mod config;
 mod errors;
 mod events;
 mod export;
 mod handlers;
 mod import;
 mod model;
-mod retention;
+pub(crate) mod retention;
 mod store;
 #[cfg(test)]
 mod tests;

@@ -415,15 +415,47 @@ impl SecurityConfig {
         self.tls_required && self.service_identity_required
     }
 
-    /// Validate security configuration for production readiness
+    /// Validate security configuration for production readiness. Resolves the two
+    /// env-derived escape hatches (trusted-transport acknowledgment + durable
+    /// Postgres audit sink) and delegates to the pure [`validate_production_with`],
+    /// which is unit-tested without touching the process environment.
     pub fn validate_production(&self) -> Result<(), Vec<String>> {
+        self.validate_production_with(
+            trusted_transport_acknowledged(),
+            durable_audit_sink_declared(),
+        )
+    }
+
+    /// Pure production-readiness check: `trusted_transport` and `durable_audit` are
+    /// the resolved operator acknowledgments (env-derived by the public wrapper),
+    /// passed in so this decision is deterministic and race-free under test.
+    pub(crate) fn validate_production_with(
+        &self,
+        trusted_transport: bool,
+        durable_audit: bool,
+    ) -> Result<(), Vec<String>> {
         let mut errors = Vec::new();
 
-        if !self.tls_required {
-            errors.push("TLS must be required in production (UDB_TLS_REQUIRED=true)".to_string());
+        // Transport hardening (TLS + service identity) can be satisfied EITHER by
+        // the broker terminating TLS itself, OR by an explicit operator
+        // acknowledgment that transport is secured upstream (proxy / mesh / trusted
+        // network) via `UDB_TRUSTED_TRANSPORT=true`. The acknowledgment lets a
+        // fail-closed AUDIT deployment run without UDB owning certs; unset, both
+        // gates stay enforced.
+        if !self.tls_required && !trusted_transport {
+            errors.push(
+                "Transport must be secured in production: enable broker TLS (UDB_TLS_REQUIRED=true \
+                 with a cert/key), OR acknowledge externally-terminated transport \
+                 (UDB_TRUSTED_TRANSPORT=true for a TLS proxy / service mesh / trusted network)."
+                    .to_string(),
+            );
         }
-        if !self.service_identity_required {
-            errors.push("Service identity must be required in production (UDB_SERVICE_IDENTITY_REQUIRED=true)".to_string());
+        if !self.service_identity_required && !trusted_transport {
+            errors.push(
+                "Service identity must be required in production (UDB_SERVICE_IDENTITY_REQUIRED=true), \
+                 or acknowledge externally-terminated transport (UDB_TRUSTED_TRANSPORT=true)."
+                    .to_string(),
+            );
         }
         if self.allow_header_scopes {
             errors.push("Header-based scopes must be disabled in production (remove UDB_ALLOW_HEADER_SCOPES)".to_string());
@@ -437,7 +469,7 @@ impl SecurityConfig {
         // chain-exports) declared via `UDB_AUDIT_SINK=postgres`. The latter lets a
         // single-node/Postgres deployment turn on fail-closed without standing up
         // an external endpoint.
-        if self.audit_sink_url.is_empty() && !durable_audit_sink_declared() {
+        if self.audit_sink_url.is_empty() && !durable_audit {
             errors.push(
                 "A durable audit sink must be configured in production: set an HTTP/SIEM sink \
                  (UDB_AUDIT_SINK_URL=…) or declare the durable Postgres audit log \
@@ -588,6 +620,27 @@ pub(crate) fn durable_audit_sink_declared() -> bool {
             matches!(
                 value.trim().to_ascii_lowercase().as_str(),
                 "postgres" | "database" | "durable" | "pg"
+            )
+        })
+        .unwrap_or(false)
+}
+
+/// Whether the operator has explicitly acknowledged that transport security is
+/// terminated OUTSIDE the broker — a TLS-terminating reverse proxy, a service
+/// mesh (mTLS sidecars), or a trusted private network — via
+/// `UDB_TRUSTED_TRANSPORT=true`. This is the escape hatch that decouples the
+/// fail-closed AUDIT posture (deny-on-error + durable audit sink) from the broker
+/// TERMINATING its own TLS: it satisfies the `tls_required` / `service_identity_required`
+/// production gates so a fail-closed deployment can run behind existing transport
+/// security without UDB owning certs. It is a deliberate, auditable operator
+/// acknowledgment (mirrors `UDB_ALLOW_CROSS_TENANT_BACKUP`), NOT a silent bypass —
+/// unset, every transport gate stays enforced exactly as before.
+pub(crate) fn trusted_transport_acknowledged() -> bool {
+    std::env::var("UDB_TRUSTED_TRANSPORT")
+        .map(|value| {
+            matches!(
+                value.trim().to_ascii_lowercase().as_str(),
+                "1" | "true" | "yes" | "on"
             )
         })
         .unwrap_or(false)
@@ -3257,15 +3310,76 @@ mod tests {
             ..SecurityConfig::default()
         };
         let errors = dev
-            .validate_production()
+            .validate_production_with(false, false)
             .expect_err("dev posture must fail validate_production");
         assert!(
-            errors.iter().any(|e| e.contains("TLS must be required")),
+            errors.iter().any(|e| e.contains("UDB_TLS_REQUIRED")),
             "dev posture must be rejected for missing TLS, got: {errors:?}"
         );
         assert!(
             !dev.is_production(),
             "dev posture must NOT report is_production() so plaintext stays allowed"
+        );
+    }
+
+    /// The `UDB_TRUSTED_TRANSPORT` escape hatch: a fail-closed AUDIT deployment
+    /// that terminates TLS upstream (proxy / mesh / trusted network) must pass the
+    /// transport gates WITHOUT the broker owning certs — while every OTHER gate
+    /// stays enforced, and unset the transport gates are still fatal. Uses the pure
+    /// `validate_production_with` so it is deterministic (no process-env toggling).
+    #[test]
+    fn trusted_transport_ack_satisfies_only_the_transport_gates() {
+        // No broker TLS, no service identity — but auth (JWT) is configured and the
+        // durable audit sink is declared (postgres), mirroring the single-node
+        // fail-closed-behind-a-proxy deployment.
+        let behind_proxy = SecurityConfig {
+            tls_required: false,
+            service_identity_required: false,
+            mtls_required: false,
+            allow_header_scopes: false,
+            jwt_public_key: Some("-----BEGIN PUBLIC KEY-----…".to_string()),
+            audit_sink_url: String::new(),
+            pii_safe_logging: true,
+            ..SecurityConfig::default()
+        };
+
+        // WITHOUT the acknowledgment: the transport gates are fatal.
+        let without = behind_proxy
+            .validate_production_with(false, true)
+            .expect_err("no ack → transport must be required");
+        assert!(
+            without.iter().any(|e| e.contains("UDB_TLS_REQUIRED")),
+            "unset, the TLS gate must still fire, got: {without:?}"
+        );
+
+        // WITH the acknowledgment (trusted_transport = true) + durable audit sink
+        // (postgres): the whole checklist passes — the deployment boots fail-closed.
+        assert!(
+            behind_proxy.validate_production_with(true, true).is_ok(),
+            "UDB_TRUSTED_TRANSPORT + UDB_AUDIT_SINK=postgres must satisfy validate_production, got: {:?}",
+            behind_proxy.validate_production_with(true, true)
+        );
+
+        // The ack does NOT paper over non-transport gates: still missing auth +
+        // header-scopes-on must fail even with the ack.
+        let insecure_auth = SecurityConfig {
+            tls_required: false,
+            service_identity_required: false,
+            mtls_required: false,
+            allow_header_scopes: true,
+            jwt_public_key: None,
+            jwt_jwks_url: None,
+            audit_sink_url: String::new(),
+            pii_safe_logging: true,
+            ..SecurityConfig::default()
+        };
+        let still = insecure_auth
+            .validate_production_with(true, true)
+            .expect_err("ack must not satisfy auth/header-scope gates");
+        assert!(
+            still.iter().any(|e| e.contains("JWT or mTLS"))
+                && still.iter().any(|e| e.contains("Header-based scopes")),
+            "ack must leave the auth + header-scope gates enforced, got: {still:?}"
         );
     }
 

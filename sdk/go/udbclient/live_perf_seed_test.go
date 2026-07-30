@@ -897,6 +897,16 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 	}); err != nil {
 		t.Logf("perf seed: CreateTransitKey(ed25519 signing) failed: %v", err)
 	}
+	// A dedicated hmac-sha256 key for the Hmac read fixture — the transit HMAC
+	// verb now requires a purpose-built hmac-sha256 key and rejects the
+	// symmetric aes256-gcm-siv key used by Encrypt/Decrypt/GenerateDataKey.
+	hmacKey := "sdk-perf-hmac-key-" + suffix
+	fix.set("vault_hmac_key_name", hmacKey)
+	if _, err := vault.CreateTransitKey(nctx, &vaultpb.CreateTransitKeyRequest{
+		TenantId: tenant, KeyName: hmacKey, Algorithm: "hmac-sha256",
+	}); err != nil {
+		t.Logf("perf seed: CreateTransitKey(hmac-sha256) failed: %v", err)
+	}
 	if enc, err := vault.Encrypt(nctx, &vaultpb.EncryptRequest{
 		TenantId: tenant, KeyName: vaultKey, Plaintext: "perf",
 	}); err == nil {

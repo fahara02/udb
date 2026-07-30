@@ -2913,6 +2913,7 @@ it('manifest JSON body hydrates VaultService requests', function () {
     $fix->set('tenant_id', 'tenant-php');
     $fix->set('vault_key_name', 'vault-key-php');
     $fix->set('vault_signing_key_name', 'vault-signing-key-php');
+    $fix->set('vault_hmac_key_name', 'vault-hmac-key-php');
     $fix->set('vault_ciphertext', 'udb-vault:v1:php');
     $fix->set('vault_secret_path', 'app/config');
     $fix->set('vault_signature', 'udb-vault-sig:v1:php');
@@ -2950,6 +2951,7 @@ it('manifest JSON body hydrates VaultService requests', function () {
         ->and($secret->getSecretPath())->toBe('app/config')
         ->and($hmac)->toBeInstanceOf(\Udb\Core\Vault\Services\V1\HmacRequest::class)
         ->and($hmac->getInput())->toBe('perf')
+        ->and($hmac->getKeyName())->toBe('vault-hmac-key-php')
         ->and($secrets)->toBeInstanceOf(\Udb\Core\Vault\Services\V1\ListSecretsRequest::class)
         ->and($secrets->getPageSize())->toBe(50)
         ->and($put)->toBeInstanceOf(\Udb\Core\Vault\Services\V1\PutSecretRequest::class)
@@ -4103,6 +4105,11 @@ function perfSeedPhp(array $s): array
     $fix->set('vault_signing_key_name', "sdk-perf-signing-key-$suffix");
     $seedStub('CreateSigningKey', $vault, 'CreateTransitKey', \Udb\Core\Vault\Services\V1\CreateTransitKeyRequest::class,
         ['tenant_id' => $tenant, 'key_name' => $fix->lookup('vault_signing_key_name'), 'algorithm' => 'ed25519']);
+    // A dedicated hmac-sha256 key — the transit Hmac verb now requires a
+    // purpose-built hmac-sha256 key and rejects the symmetric aes256-gcm-siv key.
+    $fix->set('vault_hmac_key_name', "sdk-perf-hmac-key-$suffix");
+    $seedStub('CreateHmacKey', $vault, 'CreateTransitKey', \Udb\Core\Vault\Services\V1\CreateTransitKeyRequest::class,
+        ['tenant_id' => $tenant, 'key_name' => $fix->lookup('vault_hmac_key_name'), 'algorithm' => 'hmac-sha256']);
     $enc = $seedStub('VaultEncrypt', $vault, 'Encrypt', \Udb\Core\Vault\Services\V1\EncryptRequest::class,
         ['tenant_id' => $tenant, 'key_name' => $fix->lookup('vault_key_name'), 'plaintext' => 'perf']);
     if ($enc && $enc->getCiphertext() !== '') {

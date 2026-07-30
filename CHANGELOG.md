@@ -5,6 +5,42 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.4.33] - 2026-07-31
+
+Closes the three items that shipped deferred in 0.4.32 (no-deferral follow-through)
+plus a fail-closed enterprise-bring-up ergonomics fix. No proto changes.
+
+### Fixed
+- **`UDB_FAIL_CLOSED` no longer forces the broker to terminate its own TLS.** The
+  fail-closed AUDIT posture (deny-on-error + durable audit sink) was coupled to the
+  full production transport checklist, so enabling it demanded TLS + service identity
+  even behind an edge TLS proxy / service mesh. New **`UDB_TRUSTED_TRANSPORT=true`**
+  is an explicit, auditable operator acknowledgment that transport is secured
+  upstream — it satisfies the TLS + service-identity gates while every other gate
+  (auth, durable audit sink, header-scopes) stays enforced. Unset, transport gates
+  are unchanged. The startup gate already lists all unmet requirements at once; the
+  new escape hatch + a from-scratch fail-closed recipe are documented in
+  `docs/enterprise-deployment.md` §2.1. Covered by a `validate_production` unit test.
+
+### Added / Changed (deferred-item completion)
+- **Scheduler per-job timezone / DST.** Cron next-fire is now DST-correct: a job
+  carries an IANA timezone in its existing opaque `payload` JSON (`{"timezone":
+  "America/New_York"}`, no proto change), evaluated via the newly-vendored
+  `chrono-tz`. Spring-forward gaps resolve to the post-transition instant and
+  fall-back overlaps to the earlier instant; a process default is set with
+  `UDB_SCHEDULER_TZ`; an invalid zone name is rejected at `CreateJob`. No timezone =
+  UTC (unchanged).
+- **Backup retention + scheduled backups now actually run.** A leader-elected
+  maintenance worker (`WORKER_BACKUP_RETENTION`, interval `UDB_BACKUP_MAINTENANCE_INTERVAL_SECS`,
+  default 300s) enumerates every enabled `BackupPolicy` cross-tenant and enforces
+  `retention_days`/`max_retained_backups` (prunes old runs + their objects) and fires
+  due scheduled backups (`schedule_cron`) via the internal backup routine — closing
+  the previously-inert policy columns / unbounded run accumulation.
+- **Vault: full encrypt-vs-HMAC key isolation.** A dedicated `hmac-sha256` transit
+  algorithm makes the three purposes mutually exclusive — an `aes256-gcm-siv` key
+  encrypts/decrypts only, `ed25519` signs only, `hmac-sha256` MACs only (0.4.32
+  separated signing from HMAC but still let one symmetric key both encrypt and MAC).
+
 ## [0.4.32] - 2026-07-30
 
 Native-service upgrade — batch 2, plus a full cross-service gap-review hardening

@@ -44,3 +44,18 @@ pub(crate) fn scheduler_required_field(
 ) -> Status {
     crate::runtime::executor_utils::invalid_argument_fields(message, [(field, description)])
 }
+
+/// Reject an invalid explicit per-job timezone at create (fail closed): the
+/// `payload` carried a `"timezone"` that is not a resolvable IANA name. Carries a
+/// structured `timezone` field violation so the caller knows exactly which input
+/// to fix; the bad name is echoed in the message (not the description) so the
+/// field descriptor stays a stable `&'static str`.
+pub(crate) fn scheduler_invalid_timezone(name: &str) -> Status {
+    crate::runtime::executor_utils::invalid_argument_fields(
+        format!("timezone is not a valid IANA time zone: {name}"),
+        [(
+            "timezone",
+            "must be a valid IANA time zone name (e.g. America/New_York)",
+        )],
+    )
+}

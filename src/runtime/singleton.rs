@@ -103,6 +103,9 @@ pub const WORKER_SEARCH_REINDEX: &str = "udb:search:reindex";
 /// stop counting against tenant quotas without double-expiring across replicas.
 /// The pass body is `service::lock_service::run_lock_expiry_once`.
 pub const WORKER_LOCK_EXPIRY_REAPER: &str = "udb:lock:expiry-reaper";
+/// Leader-elected backup maintenance: enforces each enabled `BackupPolicy`'s
+/// retention (prunes old runs + their objects) and fires due scheduled backups.
+pub const WORKER_BACKUP_RETENTION: &str = "udb:backup:retention";
 
 const MIN_LEASE_TTL_SECS: u64 = 5;
 pub const WORKER_SINGLETON_LEASE_TTL: Duration = Duration::from_secs(30);

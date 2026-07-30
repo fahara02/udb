@@ -94,7 +94,7 @@ func TestLivePerfExplicitBodyCoverage(t *testing.T) {
 		"unpublish_track_id": "unpublish-track-1", "update_draft_id": "update-draft-1", "update_key_id": "update-key-1", "username": "perf-u",
 		"vault_ciphertext": "vault-ciphertext-1", "vault_db_role": "readonly", "vault_delete_secret_path": "secret/delete",
 		"vault_create_key_name": "transit-create-key", "vault_destroy_secret_path": "secret/destroy", "vault_key_name": "transit-key", "vault_put_secret_path": "secret/put", "vault_secret_path": "secret/path",
-		"vault_signature": "vault-signature-1", "vault_signing_key_name": "transit-signing-key", "reissue_file_id": "reissue-file-1", "workflow_id": "workflow-1",
+		"vault_signature": "vault-signature-1", "vault_signing_key_name": "transit-signing-key", "vault_hmac_key_name": "transit-hmac-key", "reissue_file_id": "reissue-file-1", "workflow_id": "workflow-1",
 	} {
 		fix.set(k, v)
 	}
@@ -1713,6 +1713,7 @@ func TestBuildManifestJSONBodyUsesSharedManifest(t *testing.T) {
 	}
 	fix.set("vault_key_name", "sdk-perf-key")
 	fix.set("vault_signing_key_name", "sdk-perf-signing-key")
+	fix.set("vault_hmac_key_name", "sdk-perf-hmac-key")
 	fix.set("vault_create_key_name", "sdk-perf-create-key")
 	fix.set("vault_ciphertext", "udb-vault:v1:seed")
 	fix.set("vault_secret_path", "app/config")
@@ -1822,6 +1823,9 @@ func TestBuildManifestJSONBodyUsesSharedManifest(t *testing.T) {
 	hmacFields := hmacMsg.Descriptor().Fields()
 	if got := hmacMsg.Get(hmacFields.ByName("input")).String(); got != "perf" {
 		t.Fatalf("vault Hmac input = %q, want perf", got)
+	}
+	if got := hmacMsg.Get(hmacFields.ByName("key_name")).String(); got != "sdk-perf-hmac-key" {
+		t.Fatalf("vault Hmac key_name = %q, want sdk-perf-hmac-key", got)
 	}
 	dbCredsIn, _, ok := buildManifestJSONBody("/udb.core.vault.services.v1.VaultService/GenerateDatabaseCredentials", fix)
 	if !ok {
