@@ -713,7 +713,7 @@ fn put_secret_cas_conflict_maps_to_aborted() {
     let detail = decode_detail(&cas);
     assert_eq!(detail.kind, ErrorKind::Retryable as i32);
     assert_eq!(detail.backend, "vault");
-    assert_eq!(detail.operation, "secret version CAS");
+    assert_eq!(detail.operation, "secret_version_cas");
     assert!(detail.retryable);
     assert!(cas.message().contains("version 7"));
 }
