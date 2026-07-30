@@ -455,7 +455,11 @@ impl AuthzServiceImpl {
         let break_glass_eval = if actor.break_glass {
             let (claim_roles, claim_cross_admin) = if claim_present {
                 let ctx = crate::runtime::service::method_security::current_claim_context();
-                (ctx.roles, ctx.is_cross_tenant_admin())
+                // Evaluate the cross-tenant check BEFORE moving `roles` out of `ctx`
+                // (`roles` is a non-Copy Vec, so the move would otherwise partially
+                // move `ctx` and forbid the subsequent method borrow).
+                let claim_cross_admin = ctx.is_cross_tenant_admin();
+                (ctx.roles, claim_cross_admin)
             } else {
                 (Vec::new(), false)
             };

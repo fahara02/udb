@@ -475,18 +475,26 @@ pub(crate) async fn run_webhook_delivery_worker_once(
     // delivery, so one slow/black-holed endpoint (capped by the per-delivery
     // timeout) never head-of-line-blocks other tenants' deliveries in this tick.
     let concurrency = webhook_delivery_concurrency();
-    let results = futures::stream::iter(jobs.iter().map(|job| {
-        run_webhook_delivery_once(
-            pool,
-            outbox_relation,
-            std::slice::from_ref(&job.target),
-            std::slice::from_ref(&job.event),
-            metrics,
-        )
-    }))
-    .buffer_unordered(concurrency)
-    .collect::<Vec<_>>()
-    .await;
+    // Materialize the per-job delivery futures eagerly so the bounded-concurrency
+    // stream owns concrete futures. A lazy `Map` closure returning a future that
+    // borrows its `&job` argument can't satisfy the `for<'a>` bound the
+    // leader-spawned task requires ("FnOnce is not general enough").
+    let deliveries: Vec<_> = jobs
+        .iter()
+        .map(|job| {
+            run_webhook_delivery_once(
+                pool,
+                outbox_relation,
+                std::slice::from_ref(&job.target),
+                std::slice::from_ref(&job.event),
+                metrics,
+            )
+        })
+        .collect();
+    let results = futures::stream::iter(deliveries)
+        .buffer_unordered(concurrency)
+        .collect::<Vec<_>>()
+        .await;
     let mut delivered = 0u64;
     for result in results {
         delivered = delivered.saturating_add(result?);
