@@ -167,6 +167,26 @@ pub(crate) fn max_streams_global() -> usize {
     })
 }
 
+/// Default bound on the number of missed journalled deltas replayed on a durable
+/// resume (`x-udb-livequery-resume`). Bounds the one-shot backlog a reconnecting
+/// client receives before the live feed hands off; a client with a larger gap
+/// simply re-resumes from its new last-delivered cursor. Overridable via
+/// `UDB_LIVEQUERY_RESUME_REPLAY_LIMIT`.
+const DEFAULT_RESUME_REPLAY_LIMIT: u32 = 10_000;
+
+/// Bound on the durable-resume replay backlog, resolved exactly once. A
+/// non-positive / unparsable value uses [`DEFAULT_RESUME_REPLAY_LIMIT`] so the
+/// replay is always bounded.
+pub(crate) fn resume_replay_limit() -> u32 {
+    static LIMIT: OnceLock<u32> = OnceLock::new();
+    *LIMIT.get_or_init(|| {
+        positive_u32_or(
+            env_first(&["UDB_LIVEQUERY_RESUME_REPLAY_LIMIT"]).as_deref(),
+            DEFAULT_RESUME_REPLAY_LIMIT,
+        )
+    })
+}
+
 #[cfg(test)]
 mod config_tests {
     use super::{

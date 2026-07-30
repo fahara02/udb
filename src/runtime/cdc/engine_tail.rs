@@ -909,6 +909,148 @@ impl CdcEngine {
         self.broadcast_tx.subscribe()
     }
 
+    /// Canonical fail-closed tenant/project scope check for a single CDC event,
+    /// exposed as an associated fn so tenant-scoped subscriber paths OUTSIDE this
+    /// module (the native LiveQuery delta forwarder) reuse the ONE tenant-leak
+    /// boundary instead of carrying a second, drift-prone copy. It only delegates
+    /// to the engine-tail predicate ([`payload_value_matches_stream_scope`])
+    /// unchanged — the caller fixes `privileged`/`policy_scoped` for its own
+    /// principal (a live-query subscriber is never a privileged unscoped admin nor
+    /// a policy-scoped stream, so it passes `false`/`false`).
+    pub(crate) fn event_matches_stream_scope(
+        topic: &str,
+        payload: &serde_json::Value,
+        tenant_scope: &str,
+        project_scope: &str,
+        privileged: bool,
+        policy_scoped: bool,
+    ) -> bool {
+        payload_value_matches_stream_scope(
+            topic,
+            payload,
+            tenant_scope,
+            project_scope,
+            privileged,
+            policy_scoped,
+        )
+    }
+
+    /// Durable live-query resume: replay journalled change events for `topic` that
+    /// a tenant-scoped subscriber missed, strictly AFTER the client's last-delivered
+    /// `cursor_event_id`, in the journal's canonical monotonic order
+    /// `(published_at, event_id)`. The cursor is resolved to its journal watermark
+    /// so the replay reuses the same compound `(published_at, event_id) > (…)`
+    /// anchor the cross-replica journal tail uses; a cursor we cannot resolve
+    /// anchors at genesis (replay the retained backlog for the topic, bounded by
+    /// `limit`). Every row is re-checked against the subscriber's tenant/project
+    /// scope with the SAME fail-closed predicate as the live path
+    /// ([`event_matches_stream_scope`], non-privileged/non-policy-scoped), so a
+    /// foreign-tenant or tenant-less row is never replayed. Read-only over the
+    /// engine pool; it does not touch the tailer/broadcast state.
+    pub(crate) async fn journal_replay_for_scope(
+        &self,
+        topic: &str,
+        tenant_scope: &str,
+        project_scope: &str,
+        cursor_event_id: &str,
+        limit: i64,
+    ) -> Vec<CdcEnvelope> {
+        if topic.trim().is_empty() || limit <= 0 {
+            return Vec::new();
+        }
+        let journal_relation = SystemCatalogConfig::current().cdc_journal_relation();
+        // Genesis floor for an unresolvable cursor: the Unix epoch, a valid
+        // `timestamptz` (chrono's `MIN_UTC` predates the Postgres range and would
+        // fail to bind). Journal `published_at` is always a publish-time "now", so
+        // the epoch is a safe lower bound that replays the retained backlog
+        // (bounded by `limit`) for a fresh/stale cursor.
+        let genesis =
+            DateTime::<Utc>::from_timestamp(0, 0).expect("unix epoch is a valid timestamp");
+        // Anchor the replay in the journal's canonical (published_at, event_id)
+        // order by resolving the cursor row's watermark. An unparseable/unknown
+        // cursor anchors at genesis so a fresh resume still streams the backlog.
+        let (anchor_ts, anchor_id): (DateTime<Utc>, String) =
+            match Uuid::parse_str(cursor_event_id.trim()) {
+                Ok(cursor_uuid) => {
+                    let resolved: Option<DateTime<Utc>> = sqlx::query_scalar(&format!(
+                        "SELECT published_at FROM {journal_relation} WHERE event_id = $1"
+                    ))
+                    .bind(cursor_uuid)
+                    .fetch_optional(&self.pool)
+                    .await
+                    .ok()
+                    .flatten();
+                    match resolved {
+                        Some(ts) => (ts, cursor_uuid.to_string()),
+                        None => (genesis, String::new()),
+                    }
+                }
+                Err(_) => (genesis, String::new()),
+            };
+        let sql = format!(
+            "SELECT event_id, topic, partition_key, payload, published_at \
+             FROM {journal_relation} \
+             WHERE topic = $3 AND (published_at, event_id::TEXT) > ($1, $2) \
+             ORDER BY published_at ASC, event_id ASC \
+             LIMIT {limit}"
+        );
+        let mut rows = sqlx::query(&sql)
+            .bind(anchor_ts)
+            .bind(anchor_id)
+            .bind(topic.to_string())
+            .fetch(&self.pool);
+        let mut out = Vec::new();
+        while let Some(row) = tokio_stream::StreamExt::next(&mut rows).await {
+            let record = match row {
+                Ok(record) => record,
+                Err(err) => {
+                    warn!("[cdc] live-query resume journal row decode failed: {err}");
+                    continue;
+                }
+            };
+            let event_id: Uuid = match record.try_get("event_id") {
+                Ok(value) => value,
+                Err(_) => continue,
+            };
+            let published_at: DateTime<Utc> = match record.try_get("published_at") {
+                Ok(value) => value,
+                Err(_) => continue,
+            };
+            let row_topic: String = match record.try_get("topic") {
+                Ok(value) => value,
+                Err(_) => continue,
+            };
+            let payload: serde_json::Value = match record.try_get("payload") {
+                Ok(value) => value,
+                Err(_) => continue,
+            };
+            // SECURITY: fail-closed tenant/project re-check with the canonical
+            // predicate — a foreign-tenant or tenant-less journal row is dropped.
+            if !payload_value_matches_stream_scope(
+                &row_topic,
+                &payload,
+                tenant_scope,
+                project_scope,
+                false,
+                false,
+            ) {
+                continue;
+            }
+            let partition_key: String = match record.try_get("partition_key") {
+                Ok(value) => value,
+                Err(_) => continue,
+            };
+            out.push(CdcEnvelope {
+                event_id: event_id.to_string(),
+                topic: row_topic,
+                partition_key,
+                payload_json: payload.to_string(),
+                published_at,
+            });
+        }
+        out
+    }
+
     /// U21 step 2: sweep in-doubt `publishing` rows from prior epochs.
     ///
     /// The supervisor MUST call this once after `new()` returns and

@@ -76,6 +76,21 @@ mod workers;
 
 use config::{SEAL_PROBE, VAULT_MASTER_KEY_UNAVAILABLE_MESSAGE, VAULT_RUNTIME_REQUIRED_MESSAGE};
 use errors::{vault_capability_status, vault_master_key_unavailable_status};
+
+/// Whether the operator requires a real master KEK for the vault secrets engine
+/// (`UDB_VAULT_REQUIRE_MASTER_KEY`), sealing it in dev rather than storing DEKs as
+/// base64 plaintext. Independent of the global fail-closed default (which already
+/// makes `encrypt_secret_at_rest` error without a key).
+fn vault_require_master_key() -> bool {
+    std::env::var("UDB_VAULT_REQUIRE_MASTER_KEY")
+        .map(|value| {
+            matches!(
+                value.trim().to_ascii_lowercase().as_str(),
+                "1" | "true" | "yes" | "on"
+            )
+        })
+        .unwrap_or(false)
+}
 use model::{
     StoredSecret, StoredTransitKey, stored_secret_from_json, stored_transit_key_from_json,
 };
@@ -185,14 +200,27 @@ impl VaultServiceImpl {
         let runtime = self.runtime.as_deref().ok_or_else(|| {
             vault_master_key_unavailable_status("vault is sealed: no runtime / master key wired")
         })?;
-        runtime
-            .encrypt_secret_at_rest(SEAL_PROBE)
-            .map(|_| ())
-            .map_err(|err| {
-                vault_master_key_unavailable_status(format!(
-                    "vault is sealed: master key unavailable ({err})"
-                ))
-            })
+        let probe = runtime.encrypt_secret_at_rest(SEAL_PROBE).map_err(|err| {
+            vault_master_key_unavailable_status(format!(
+                "vault is sealed: master key unavailable ({err})"
+            ))
+        })?;
+        // A dev passthrough returns the plaintext probe unchanged (no `udb-aead:`
+        // envelope), meaning DEKs would be stored in the clear. When the operator
+        // requires a real master KEK for the secrets engine
+        // (`UDB_VAULT_REQUIRE_MASTER_KEY`), refuse to serve unsealed — a
+        // vault-specific fail-closed sealing gate independent of the global dev
+        // default. (In global fail-closed mode the probe above already errors, so
+        // this only adds the dev-time footgun guard.)
+        let has_real_kek = probe != SEAL_PROBE && probe.starts_with("udb-aead:");
+        if !has_real_kek && vault_require_master_key() {
+            return Err(vault_master_key_unavailable_status(
+                "vault is sealed: a real master KEK is required for the vault \
+                 (UDB_VAULT_REQUIRE_MASTER_KEY) but none is configured — set \
+                 UDB_ENCRYPTION_KEY / a Vault KEK to unseal",
+            ));
+        }
+        Ok(())
     }
 
     /// Whether the vault is currently sealed (for `SealStatus`).

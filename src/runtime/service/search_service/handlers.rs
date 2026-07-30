@@ -83,12 +83,44 @@ impl SearchServiceImpl {
         validate_search_query(req)?;
         let has_vector = !req.query_vector.is_empty();
         let has_text = !req.query_text.trim().is_empty();
-        // Lexical relevance rides the hybrid dispatch (Qdrant's `_full_text`
-        // prefetch + RRF), which requires a query vector. A pure text-only query
-        // with no vector has no reachable mediated full-text path in this build
-        // (P2.2): fail closed rather than silently route an empty vector.
+        // Mediated FULL-TEXT-ONLY (`SEARCH_MODE_TEXT`): a lexical query with a
+        // query_text and NO query_vector. Elasticsearch executes it through the
+        // runtime's mediated text dispatch — a BM25 `multi_match` over the stamped
+        // `payload.*` text with the tenant filter AND'd in server-side (see
+        // `core/setup_data.rs::text_search_dispatch_spec`). Every other backend —
+        // including Qdrant text-only, whose lexical match needs a payload
+        // full-text field index that may be absent — stays fail closed rather than
+        // routing a degraded/empty query. The per-index `analyzer` (metadata_json)
+        // is an ES index-mapping (create-time) concern; the query-time analyzer is
+        // left to the field mapping (optional), so no analyzer is threaded here.
         if has_text && !has_vector {
-            return Err(full_text_only_requires_mediated_ir_status());
+            if index.backend.as_str() != BACKEND_ELASTICSEARCH {
+                return Err(full_text_only_requires_mediated_ir_status());
+            }
+            // Full-text-only carries no query vector; the tenant filter injected
+            // server-side (never the body) remains the isolation boundary.
+            let request = VectorSearchRequest {
+                context: None,
+                collection: index.collection(),
+                vector: Vec::new(),
+                filter: tenant_filter,
+                limit: top_k,
+                score_threshold: 0.0,
+                with_payload: true,
+                with_vector: false,
+                vector_name: String::new(),
+                quantization_rescore: false,
+            };
+            let result = runtime
+                .vector_text_search(
+                    manifest,
+                    &index.backend,
+                    request,
+                    req.query_text.clone(),
+                    context.clone(),
+                )
+                .await?;
+            return Ok(result.points);
         }
         let collection = index.collection();
         // Hybrid (text + vector): the runtime's mediated hybrid dispatch applies

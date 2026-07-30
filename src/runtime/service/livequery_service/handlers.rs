@@ -16,10 +16,18 @@ use super::LiveQueryServiceImpl;
 use super::budget::try_acquire_stream_slot;
 use super::config::{
     SERVICE_ID, buffer_events, clamp_snapshot_limit, default_snapshot_limit, max_snapshot_limit,
+    resume_replay_limit,
 };
 use super::errors::livequery_required_field;
-use super::predicate::{build_user_filter, resolve_source, row_object, snapshot_filter};
+use super::predicate::{
+    build_user_filter, parse_resume_cursor, resolve_source, row_object, snapshot_filter,
+};
 use super::stream::{LiveQueryStream, run_delta_forward};
+
+/// Request-metadata header carrying the durable-resume cursor: the client's
+/// last-delivered `LiveQueryChange.event_id`. Metadata (not a proto field) so
+/// resume needs no contract change — a fresh subscription simply omits it.
+const RESUME_CURSOR_HEADER: &str = "x-udb-livequery-resume";
 
 pub(crate) async fn subscribe(
     svc: &LiveQueryServiceImpl,
@@ -43,6 +51,15 @@ pub(crate) async fn subscribe(
     // Fail closed BEFORE any read/stream if the source has no tenant column.
     let source = resolve_source(&message_type)?;
     let user_filter = build_user_filter(&req.filters)?;
+
+    // Durable-resume cursor (optional): the client's last-delivered event_id,
+    // carried in request metadata so resume needs no proto change. Absent/blank =
+    // a fresh, non-resuming subscription.
+    let resume_cursor = parse_resume_cursor(
+        metadata
+            .get(RESUME_CURSOR_HEADER)
+            .and_then(|value| value.to_str().ok()),
+    );
 
     // Rate-bound new subscriptions per tenant at entry; the permit is dropped
     // immediately (not held across the long-lived stream) so it cannot block.
@@ -69,11 +86,28 @@ pub(crate) async fn subscribe(
     // during the snapshot are buffered on the broadcast receiver (not lost in
     // the subscribe→read gap); any overlap with snapshot rows is de-duplicated
     // client-side by event_id.
-    // TODO(leader): durable resume — when `SubscribeRequest` carries a resume
-    // cursor (proto field, leader-owned), seed the stream from the CDC journal
-    // (`engine_tail::cdc_journal_relation`) up to the live cursor here, then hand
-    // off to this broadcast receiver, instead of a fresh subscribe + snapshot.
     let delta_rx = svc.cdc_engine.as_ref().map(|cdc| cdc.subscribe());
+
+    // Durable resume: when the client presented a resume cursor AND a live CDC
+    // feed exists, read the missed change events from the durable CDC journal
+    // (tenant re-checked at read time with the canonical scope predicate) so they
+    // can be replayed to the client BEFORE the broadcast hand-off — closing the
+    // reconnect gap the in-process broadcast ring cannot span. Bounded by
+    // `resume_replay_limit()`; a larger gap is closed by a subsequent re-resume
+    // from the client's new last-delivered cursor.
+    let resume_replay = match (resume_cursor.as_deref(), svc.cdc_engine.as_ref()) {
+        (Some(cursor), Some(cdc)) => {
+            cdc.journal_replay_for_scope(
+                &source.cdc_topic,
+                &tenant_id,
+                &project_id,
+                cursor,
+                i64::from(resume_replay_limit()),
+            )
+            .await
+        }
+        _ => Vec::new(),
+    };
 
     let limit = clamp_snapshot_limit(
         req.snapshot_limit,
@@ -128,6 +162,8 @@ pub(crate) async fn subscribe(
             project_id,
             source.cdc_topic,
             user_filter,
+            resume_replay,
+            svc.metrics.clone(),
             stream_slot,
         ));
     } else {

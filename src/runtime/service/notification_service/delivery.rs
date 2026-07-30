@@ -33,8 +33,9 @@ use crate::runtime::DataBrokerRuntime;
 use super::super::native_helpers::{NativeEventContext, enqueue_outbox_event_with_context};
 #[cfg(feature = "http-client")]
 use super::config::{
-    NOTIFICATION_DELIVERY_PROVIDERS_ENV, delivery_event_topic, delivery_exhausted_retries,
-    max_delivery_attempts,
+    NOTIFICATION_DELIVERY_PROVIDERS_ENV, TOPIC_NOTIFICATION_DEAD_LETTERED, delivery_event_topic,
+    delivery_exhausted_retries, max_delivery_attempts, notification_backoff_base_secs,
+    notification_backoff_cap_secs,
 };
 #[cfg(feature = "http-client")]
 use super::model::{channel_from_db, channel_to_db, delivery_attempt_model, log_model};
@@ -492,6 +493,13 @@ async fn load_notification_delivery_intents(
     let log_rel = log.relation.clone();
     let attempt_rel = attempt.relation.clone();
     let limit = batch.max(1);
+    // Exponential-backoff knobs (resolved once). The delay after the latest FAILED
+    // attempt is `min(cap, base * 2^(attempt_count - 1))` — replicating the pure
+    // `next_retry_delay_secs` — so a failing provider is re-POSTed with a growing gap
+    // instead of every interval (the retry storm). Passed as binds so the SQL, not a
+    // hardcode, carries the tunables.
+    let backoff_base = notification_backoff_base_secs();
+    let backoff_cap = notification_backoff_cap_secs();
     let rows = sqlx::query(&format!(
         "SELECT \
             l.{log_id}::TEXT AS log_id, \
@@ -501,6 +509,22 @@ async fn load_notification_delivery_intents(
             COALESCE(l.{rendered_subject}::TEXT, '') AS rendered_subject, \
             COALESCE(l.{rendered_body}::TEXT, '') AS rendered_body \
          FROM {log_rel} l \
+         LEFT JOIN LATERAL ( \
+             SELECT a.{attempt_count} AS attempt_count, \
+                    a.{attempt_updated_at} AS updated_at, \
+                    LEAST( \
+                        $5::double precision, \
+                        $4::double precision \
+                            * power(2::double precision, LEAST(a.{attempt_count} - 1, 12)::double precision) \
+                    ) AS delay_cap \
+             FROM {attempt_rel} a \
+             WHERE a.{attempt_notification_id} = l.{log_id} \
+               AND a.{attempt_channel} = l.{channel} \
+               AND a.{attempt_tenant} = l.{tenant_id} \
+               AND a.{attempt_status} = 'FAILED' \
+             ORDER BY a.{attempt_updated_at} DESC \
+             LIMIT 1 \
+         ) last_fail ON TRUE \
          WHERE l.{status} = $1 \
            AND COALESCE(l.{tenant_id}::TEXT, '') <> '' \
            AND NOT EXISTS ( \
@@ -510,8 +534,13 @@ async fn load_notification_delivery_intents(
                  AND a.{attempt_tenant} = l.{tenant_id} \
                  AND a.{attempt_status} IN ($2, $3) \
            ) \
+           AND ( \
+               last_fail.updated_at IS NULL \
+               OR now() >= last_fail.updated_at \
+                    + make_interval(secs => (0.5 + 0.5 * random()) * last_fail.delay_cap) \
+           ) \
          ORDER BY l.{created_at} ASC, l.{log_id} ASC \
-         LIMIT $4",
+         LIMIT $6",
         log_id = log.q("log_id"),
         tenant_id = log.q("tenant_id"),
         channel = log.q("channel"),
@@ -524,10 +553,14 @@ async fn load_notification_delivery_intents(
         attempt_channel = attempt.q("channel"),
         attempt_tenant = attempt.q("tenant_id"),
         attempt_status = attempt.q("status"),
+        attempt_count = attempt.q("attempt_count"),
+        attempt_updated_at = attempt.q("updated_at"),
     ))
     .bind("PENDING")
     .bind("SENT")
     .bind("DELIVERED")
+    .bind(backoff_base)
+    .bind(backoff_cap)
     .bind(limit)
     .fetch_all(pool)
     .await
@@ -607,7 +640,7 @@ async fn record_attempt_outcome(
             .and_then(|row| row.try_get::<i32, _>("attempt_count").ok())
             .unwrap_or(0);
         if force_terminal || delivery_exhausted_retries(attempt_count, max_delivery_attempts()) {
-            if let Err(err) = transition_log_status(
+            match transition_log_status(
                 pool,
                 notification_id,
                 &intent.tenant_id,
@@ -616,7 +649,52 @@ async fn record_attempt_outcome(
             )
             .await
             {
-                tracing::warn!(log_id = %intent.log_id, error = %err, "notification log FAILED transition failed");
+                // DLQ: the log just crossed into the terminal FAILED (dead-letter)
+                // state — either the bounded-retry budget is exhausted or this is a
+                // permanent failure. `transition_log_status` moves a row out of
+                // PENDING/SENT exactly once, so `moved == true` fires the dead-letter
+                // event ONCE (a later scan can't re-select a non-PENDING log). Reuse
+                // the outbox path the worker already uses — no new table — so operators
+                // can alert on DLQ depth via `TOPIC_NOTIFICATION_DEAD_LETTERED`.
+                Ok(true) => {
+                    let reason = if force_terminal {
+                        "permanent_failure"
+                    } else {
+                        "max_attempts_exhausted"
+                    };
+                    enqueue_outbox_event_with_context(
+                        pool,
+                        outbox_relation,
+                        TOPIC_NOTIFICATION_DEAD_LETTERED,
+                        &intent.log_id,
+                        &intent.tenant_id,
+                        "",
+                        serde_json::json!({
+                            "log_id": intent.log_id,
+                            "tenant_id": intent.tenant_id,
+                            "channel": channel_db,
+                            "provider": provider,
+                            "status": "FAILED",
+                            "reason": reason,
+                            "attempt_count": attempt_count,
+                            "last_error": last_error,
+                        }),
+                        NativeEventContext {
+                            operation: "notification.dead_letter".to_string(),
+                            outcome: "failure".to_string(),
+                            target_resource: intent.log_id.clone(),
+                            ..NativeEventContext::default()
+                        },
+                        metrics,
+                    )
+                    .await;
+                }
+                // Already terminal / not owned by this tenant — no dead-letter event
+                // (avoids a duplicate DLQ notification on a repeated scan).
+                Ok(false) => {}
+                Err(err) => {
+                    tracing::warn!(log_id = %intent.log_id, error = %err, "notification log FAILED transition failed");
+                }
             }
         }
     }

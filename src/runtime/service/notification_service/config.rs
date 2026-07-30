@@ -37,6 +37,19 @@ pub(crate) const NOTIFICATION_DELIVERY_PROVIDERS_ENV: &str =
 /// so it can't stall a whole sequential batch). Default 30s.
 pub(crate) const DEFAULT_NOTIFICATION_DELIVERY_TIMEOUT_SECS: u64 = 30;
 pub(crate) const NOTIFICATION_DELIVERY_TIMEOUT_ENV: &str = "UDB_NOTIFICATION_DELIVERY_TIMEOUT_SECS";
+/// Exponential-backoff base (seconds): the auto-retry delay after the FIRST failed
+/// delivery attempt (`attempt_count == 1`). Each further failed attempt doubles it,
+/// up to the cap. Reads `UDB_NOTIFICATION_BACKOFF_BASE_SECS`, default
+/// `DEFAULT_NOTIFICATION_BACKOFF_BASE_SECS` (5). Replaces the old fixed-interval
+/// re-POST-every-30s retry storm.
+pub(crate) const DEFAULT_NOTIFICATION_BACKOFF_BASE_SECS: i64 = 5;
+pub(crate) const NOTIFICATION_BACKOFF_BASE_SECS_ENV: &str = "UDB_NOTIFICATION_BACKOFF_BASE_SECS";
+/// Exponential-backoff ceiling (seconds): the auto-retry delay never grows past
+/// this no matter how many attempts have failed (bounded backoff). Reads
+/// `UDB_NOTIFICATION_BACKOFF_CAP_SECS`, default
+/// `DEFAULT_NOTIFICATION_BACKOFF_CAP_SECS` (1800 = 30 min).
+pub(crate) const DEFAULT_NOTIFICATION_BACKOFF_CAP_SECS: i64 = 1800;
+pub(crate) const NOTIFICATION_BACKOFF_CAP_SECS_ENV: &str = "UDB_NOTIFICATION_BACKOFF_CAP_SECS";
 
 // Stable machine-readable error reasons (google.rpc.ErrorInfo-style `reason`),
 // attached to the returned `Status` metadata under `error-reason` so SDK clients
@@ -63,6 +76,15 @@ pub(crate) const TEST_FORCE_FAILED_SENTINEL: &str = "__perf_force_failed__";
 
 /// Kafka topic for the "notification sent" domain event.
 pub(crate) const NOTIFICATION_SENT_TOPIC: &str = "udb.notification.sent.v1";
+
+/// Dead-letter (DLQ) topic: emitted ONCE when a notification log crosses into the
+/// terminal FAILED state after exhausting its bounded-retry budget (or on a
+/// permanent failure such as a missing recipient). The terminal FAILED state IS the
+/// dead-letter — no separate DLQ table — and this event is the entry notification so
+/// operators can alert on DLQ depth. Distinct from the per-attempt
+/// `udb.notification.delivery.failed.v1` (which fires on every failed attempt).
+pub(crate) const TOPIC_NOTIFICATION_DEAD_LETTERED: &str =
+    "udb.notification.delivery.dead_lettered.v1";
 
 /// Whether the notification test harness is enabled (resolved once). Fail-closed
 /// default: production never sets `UDB_NOTIFICATION_TEST_MODE`, so the test-only
@@ -174,6 +196,56 @@ pub(crate) fn notification_delivery_timeout() -> Duration {
     })
 }
 
+/// Exponential-backoff base (seconds) resolved once from
+/// `UDB_NOTIFICATION_BACKOFF_BASE_SECS`, default
+/// `DEFAULT_NOTIFICATION_BACKOFF_BASE_SECS` (5). Mirrors the
+/// `notification_delivery_interval` resolve-once pattern.
+pub(crate) fn notification_backoff_base_secs() -> i64 {
+    static BASE: OnceLock<i64> = OnceLock::new();
+    *BASE.get_or_init(|| {
+        parse_positive_i64(
+            std::env::var(NOTIFICATION_BACKOFF_BASE_SECS_ENV)
+                .ok()
+                .as_deref(),
+            DEFAULT_NOTIFICATION_BACKOFF_BASE_SECS,
+        )
+    })
+}
+
+/// Exponential-backoff ceiling (seconds) resolved once from
+/// `UDB_NOTIFICATION_BACKOFF_CAP_SECS`, default
+/// `DEFAULT_NOTIFICATION_BACKOFF_CAP_SECS` (1800). Mirrors the
+/// `notification_delivery_interval` resolve-once pattern.
+pub(crate) fn notification_backoff_cap_secs() -> i64 {
+    static CAP: OnceLock<i64> = OnceLock::new();
+    *CAP.get_or_init(|| {
+        parse_positive_i64(
+            std::env::var(NOTIFICATION_BACKOFF_CAP_SECS_ENV)
+                .ok()
+                .as_deref(),
+            DEFAULT_NOTIFICATION_BACKOFF_CAP_SECS,
+        )
+    })
+}
+
+/// Pure exponential backoff for a failed delivery's next auto-retry:
+/// `min(cap, base * 2^(attempt_count - 1))` for `attempt_count >= 1`. Bounded (never
+/// exceeds `cap`) and overflow-safe — the `(attempt_count - 1)` exponent is clamped
+/// to `[0, 32]` so `2^exp` can't overflow `i64`, and the multiply saturates. An
+/// `attempt_count <= 1` yields `base` (the exponent floors at 0). Jitter is applied
+/// at the SQL comparison site, not here, so this stays deterministic + unit-tested.
+/// The loader's SQL replicates this exact shape via
+/// `base * power(2, LEAST(attempt_count - 1, 12))` capped by `cap`; this pure
+/// version is the unit-test oracle for that shape, hence unused in non-test builds.
+#[allow(dead_code)]
+pub(crate) fn next_retry_delay_secs(attempt_count: i64, base: i64, cap: i64) -> i64 {
+    let base = base.max(0);
+    let cap = cap.max(0);
+    let exp = attempt_count.saturating_sub(1).clamp(0, 32) as u32;
+    let factor = 1_i64.checked_shl(exp).unwrap_or(i64::MAX);
+    base.saturating_mul(factor).min(cap)
+}
+
 /// The versioned dot-topic a terminal delivery outcome is published on
 /// (master-plan 9.13): `udb.notification.delivery.<status>.v1`, e.g.
 /// `udb.notification.delivery.delivered.v1`. Pure + unit-tested.
@@ -188,7 +260,7 @@ pub(crate) fn delivery_event_topic(status_db: &str) -> String {
 mod config_tests {
     use super::{
         DEFAULT_NOTIFICATION_DELIVERY_MAX_ATTEMPTS, NOTIFICATION_DELIVERY_BATCH,
-        delivery_exhausted_retries, parse_positive_i64,
+        delivery_exhausted_retries, next_retry_delay_secs, parse_positive_i64,
     };
 
     #[test]
@@ -225,5 +297,36 @@ mod config_tests {
     fn delivery_exhausted_retries_treats_non_positive_max_as_unbounded() {
         assert!(!delivery_exhausted_retries(1_000, 0));
         assert!(!delivery_exhausted_retries(1_000, -1));
+    }
+
+    #[test]
+    fn next_retry_delay_attempt_one_is_the_base() {
+        // attempt_count == 1 → base * 2^0 == base (the delay after the first failure).
+        assert_eq!(next_retry_delay_secs(1, 5, 1800), 5);
+        assert_eq!(next_retry_delay_secs(1, 8, 1800), 8);
+        // attempt_count <= 1 floors the exponent at 0 (never negative / underflow).
+        assert_eq!(next_retry_delay_secs(0, 5, 1800), 5);
+        assert_eq!(next_retry_delay_secs(-4, 5, 1800), 5);
+    }
+
+    #[test]
+    fn next_retry_delay_grows_exponentially() {
+        let (base, cap) = (5, 1800);
+        assert_eq!(next_retry_delay_secs(2, base, cap), 10); // 5 * 2^1
+        assert_eq!(next_retry_delay_secs(3, base, cap), 20); // 5 * 2^2
+        assert_eq!(next_retry_delay_secs(4, base, cap), 40); // 5 * 2^3
+        assert_eq!(next_retry_delay_secs(9, base, cap), 1280); // 5 * 2^8 (< cap)
+    }
+
+    #[test]
+    fn next_retry_delay_is_bounded_by_the_cap() {
+        let (base, cap) = (5, 1800);
+        // 5 * 2^9 == 2560 > cap → clamps to the ceiling.
+        assert_eq!(next_retry_delay_secs(10, base, cap), 1800);
+        // A far-out attempt count stays capped and never overflows.
+        assert_eq!(next_retry_delay_secs(1_000, base, cap), 1800);
+        assert_eq!(next_retry_delay_secs(i64::MAX, base, cap), 1800);
+        // A cap below the base still clamps to the cap (min semantics hold).
+        assert_eq!(next_retry_delay_secs(1, 100, 30), 30);
     }
 }

@@ -2229,6 +2229,79 @@ impl DataBrokerRuntime {
         parse_vector_search_response(backend, &raw)
     }
 
+    /// Execute a mediated FULL-TEXT-ONLY (lexical, no query vector) search
+    /// (`SEARCH_MODE_TEXT`). The query text is threaded as a plain argument
+    /// because `VectorSearchRequest` carries no text field and this path must not
+    /// require a proto change — `request.vector` is empty. The tenant scope in
+    /// `request.filter` is the SECURITY boundary and is AND'd into the generated
+    /// backend query (see [`text_search_dispatch_spec`]). Only Elasticsearch is
+    /// wired (BM25 `multi_match` over the stamped `payload.*`); every other
+    /// backend — including Qdrant text-only, whose lexical match needs a payload
+    /// full-text field index that may be absent — fails closed with a typed
+    /// capability error. `backend` is the index's authoritative backend (validated
+    /// at `CreateIndex`); a registered route only overrides the target instance.
+    pub async fn vector_text_search(
+        &self,
+        manifest: &CatalogManifest,
+        backend: &str,
+        request: VectorSearchRequest,
+        query_text: String,
+        metadata_context: RequestContext,
+    ) -> Result<VectorSet, tonic::Status> {
+        #[cfg(not(feature = "qdrant"))]
+        {
+            let _ = (manifest, backend, request, query_text, metadata_context);
+            return Err(qdrant_vector_feature_status("vector_text_search"));
+        }
+        #[cfg(feature = "qdrant")]
+        {
+            let backend = backend.to_ascii_lowercase();
+            let context = merge_context(request.context.as_ref(), metadata_context);
+            // Full-text-only carries NO query vector, so the vector-dimension plan
+            // check is intentionally bypassed (a 0-length vector would otherwise
+            // trip "dimension mismatch"); the tenant filter still governs. Resolve
+            // only the target instance (route override → project default) — the
+            // index backend is authoritative.
+            let route =
+                self.vector_resource_backend(manifest, &context.project_id, &request.collection);
+            let route_instance = route.as_ref().and_then(|route| route.instance.as_deref());
+            let target_instance = if context.target_instance.trim().is_empty() {
+                route_instance.or_else(|| {
+                    self.choose_instance_name_for_project(&backend, false, &context.project_id)
+                })
+            } else {
+                Some(context.target_instance.as_str())
+            };
+            // Honour the read fence before dispatch (same projection-task fence
+            // semantics as `vector_search`).
+            let _ = self
+                .enforce_read_fence(&context, &backend, target_instance.unwrap_or("selected"))
+                .await?;
+            self.text_search_dispatch_target(&backend, target_instance, &request, &query_text)
+                .await
+        }
+    }
+
+    async fn text_search_dispatch_target(
+        &self,
+        backend: &str,
+        instance: Option<&str>,
+        request: &VectorSearchRequest,
+        query_text: &str,
+    ) -> Result<VectorSet, tonic::Status> {
+        use crate::runtime::executors::SearchExecutor;
+        let spec = text_search_dispatch_spec(backend, request, query_text)?;
+        let executor = self.resolve_dispatch_executor(
+            backend,
+            instance,
+            false,
+            tonic::Code::FailedPrecondition,
+            None,
+        )?;
+        let raw = SearchExecutor::search(&executor, &spec).await?;
+        parse_vector_search_response(backend, &raw)
+    }
+
     async fn vector_upsert_dispatch_target(
         &self,
         backend: &str,
@@ -4515,9 +4588,9 @@ mod setup_data_validation_tests {
         empty_object_stream_status, gcs_feature_status, invalid_part_count_status,
         invalid_presign_ttl_status, json_values_match, no_object_store_feature_status,
         object_instance_missing_status, qdrant_vector_feature_status, s3_object_feature_status,
-        setup_data_internal_status, unknown_message_type_status, unsupported_object_backend_status,
-        unsupported_presign_method_status, vector_hybrid_qdrant_only_status,
-        vector_search_dispatch_spec, vector_upsert_dispatch_spec,
+        setup_data_internal_status, text_search_dispatch_spec, unknown_message_type_status,
+        unsupported_object_backend_status, unsupported_presign_method_status,
+        vector_hybrid_qdrant_only_status, vector_search_dispatch_spec, vector_upsert_dispatch_spec,
     };
     use crate::proto::{ErrorDetail, ErrorKind, VectorPointMutation, VectorSearchRequest};
     use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
@@ -4838,6 +4911,106 @@ mod setup_data_validation_tests {
         crate::runtime::executor_utils::json_to_struct(&serde_json::json!({
             "must": [{ "key": "_tenant_id", "match": { "value": "acme" } }]
         }))
+    }
+
+    #[test]
+    fn es_full_text_search_builds_multi_match_and_tenant_filter() {
+        // SEARCH_MODE_TEXT (lexical-only, no query vector): the generated ES
+        // `_search` must carry a BM25 `multi_match` over `payload.*` AND AND-in a
+        // `term` filter on `payload._tenant_id.keyword` for the caller's tenant
+        // (the security boundary), mirroring the vector arm. `query_text` is
+        // threaded separately because VectorSearchRequest has no text field.
+        let spec = text_search_dispatch_spec(
+            "elasticsearch",
+            &VectorSearchRequest {
+                context: None,
+                collection: "Docs".to_string(),
+                vector: Vec::new(),
+                filter: tenant_scoped_filter(),
+                limit: 7,
+                score_threshold: 0.0,
+                with_payload: true,
+                with_vector: false,
+                vector_name: String::new(),
+                quantization_rescore: false,
+            },
+            "quarterly revenue",
+        )
+        .expect("es full-text search spec");
+        let json: serde_json::Value = serde_json::from_str(&spec).expect("spec json");
+        assert_eq!(json["body"]["size"], serde_json::json!(7));
+        let multi_match = &json["body"]["query"]["bool"]["must"][0]["multi_match"];
+        assert_eq!(
+            multi_match["query"],
+            serde_json::json!("quarterly revenue"),
+            "the lexical query text must be applied"
+        );
+        assert_eq!(multi_match["fields"], serde_json::json!(["payload.*"]));
+        assert_eq!(
+            json["body"]["query"]["bool"]["filter"],
+            serde_json::json!([{ "term": { "payload._tenant_id.keyword": "acme" } }]),
+            "ES full-text search must scope to the caller's tenant"
+        );
+    }
+
+    #[test]
+    fn es_full_text_search_without_a_filter_adds_no_terms() {
+        // No filter (direct, non-tenant-scoped caller) → empty filter list; the
+        // search-service path always supplies the tenant filter (fail-closed) so
+        // this branch is not a leak. A non-positive limit falls back to 10.
+        let spec = text_search_dispatch_spec(
+            "elasticsearch",
+            &VectorSearchRequest {
+                context: None,
+                collection: "Docs".to_string(),
+                vector: Vec::new(),
+                filter: None,
+                limit: 0,
+                score_threshold: 0.0,
+                with_payload: false,
+                with_vector: false,
+                vector_name: String::new(),
+                quantization_rescore: false,
+            },
+            "hello",
+        )
+        .expect("es full-text search spec");
+        let json: serde_json::Value = serde_json::from_str(&spec).expect("spec json");
+        assert_eq!(
+            json["body"]["query"]["bool"]["filter"],
+            serde_json::json!([])
+        );
+        assert_eq!(json["body"]["size"], serde_json::json!(10));
+    }
+
+    #[test]
+    fn text_search_unsupported_backend_fails_closed() {
+        // Qdrant text-only (and every non-ES backend) must fail closed with a
+        // typed capability detail rather than routing a degraded/empty query.
+        let err = text_search_dispatch_spec(
+            "qdrant",
+            &VectorSearchRequest {
+                context: None,
+                collection: "Docs".to_string(),
+                vector: Vec::new(),
+                filter: None,
+                limit: 10,
+                score_threshold: 0.0,
+                with_payload: false,
+                with_vector: false,
+                vector_name: String::new(),
+                quantization_rescore: false,
+            },
+            "hello",
+        )
+        .expect_err("qdrant text-only full-text search must fail closed");
+        assert_capability_detail(
+            &err,
+            "qdrant",
+            "typed_full_text_search",
+            "typed_full_text_search_backend",
+            "typed full-text search is not wired for backend 'qdrant'",
+        );
     }
 
     #[test]
@@ -7966,6 +8139,61 @@ fn vector_search_dispatch_spec(
     };
     serde_json::to_string(&spec)
         .map_err(|err| setup_data_internal_status("vector_search_spec_encode", err.to_string()))
+}
+
+/// Build a mediated FULL-TEXT-ONLY (lexical, no query vector) search spec for
+/// `SEARCH_MODE_TEXT`. Mirrors [`vector_search_dispatch_spec`] but scores by BM25
+/// relevance instead of vector similarity. The tenant scope carried in
+/// `request.filter` is the SECURITY boundary and is AND'd into the generated query
+/// via [`es_payload_filter_terms`] (identical translation to the vector arm), so a
+/// caller can never widen past their tenant. Only Elasticsearch is wired: a
+/// `multi_match` (`best_fields`) over the stamped `payload.*` text — the same
+/// payload the vector upsert stores and stamps `_tenant_id` into — wrapped in
+/// `bool.must` with the tenant `filter`. Qdrant text-only needs a payload
+/// full-text field index that may be absent, so it (and every other backend)
+/// fails closed with a typed capability error rather than returning a silent
+/// empty/degraded result. `query_text` is threaded separately because
+/// `VectorSearchRequest` carries no text field.
+fn text_search_dispatch_spec(
+    backend: &str,
+    request: &VectorSearchRequest,
+    query_text: &str,
+) -> Result<String, tonic::Status> {
+    let limit = if request.limit > 0 { request.limit } else { 10 };
+    let spec = match backend {
+        "elasticsearch" => serde_json::json!({
+            "method": "POST",
+            "path": format!("/{}/_search", request.collection.to_ascii_lowercase()),
+            "body": {
+                "size": limit,
+                "query": {
+                    // BM25 lexical relevance wrapped in a bool so the tenant-scope
+                    // (and any equality) filter is AND'd in server-side — the same
+                    // isolation boundary the vector arm enforces.
+                    "bool": {
+                        "must": [{
+                            "multi_match": {
+                                "query": query_text,
+                                "fields": ["payload.*"],
+                                "type": "best_fields"
+                            }
+                        }],
+                        "filter": es_payload_filter_terms(request.filter.as_ref())
+                    }
+                }
+            }
+        }),
+        other => {
+            return Err(setup_data_capability_status(
+                other,
+                "typed_full_text_search",
+                "typed_full_text_search_backend",
+                format!("typed full-text search is not wired for backend '{other}'"),
+            ));
+        }
+    };
+    serde_json::to_string(&spec)
+        .map_err(|err| setup_data_internal_status("text_search_spec_encode", err.to_string()))
 }
 
 /// Return a clone of `request` with `_tenant_id`/`_project_id` stamped onto every

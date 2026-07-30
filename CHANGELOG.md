@@ -60,6 +60,30 @@ knobs) plus a fail-closed audit-sink ergonomics fix. No proto changes.
   snapshot-limit env overrides, and an idle-stream keepalive
   (`UDB_LIVEQUERY_KEEPALIVE_SECS`) so LB idle timeouts don't reap healthy streams.
 - **Shared:** a constant-time byte-slice compare (`constant_time_eq_bytes`).
+- **Search full-text execution (`SEARCH_MODE_TEXT`).** A text-only query now
+  executes a real Elasticsearch `multi_match` (BM25) over the stored text,
+  tenant-scoped, via a new mediated `vector_text_search` seam (no proto change) —
+  previously it failed closed. Qdrant text-only stays fail-closed with a typed
+  capability error (needs a payload full-text index) pending its mediated path.
+- **Notification exponential backoff + DLQ.** The delivery worker now spaces
+  retries with capped exponential backoff + equal jitter (keyed off the attempt
+  row's `attempt_count`/`updated_at`, no schema change;
+  `UDB_NOTIFICATION_BACKOFF_BASE_SECS`/`_CAP_SECS`), and emits a once-per-log
+  dead-letter event (`udb.notification.delivery.dead_lettered.v1`) when a log is
+  exhausted, so operators can alert on DLQ depth.
+- **LiveQuery durable resume + metrics + one tenant-scope boundary.** `Subscribe`
+  accepts an `x-udb-livequery-resume` cursor and replays missed changes from the
+  durable CDC journal (bounded by `UDB_LIVEQUERY_RESUME_REPLAY_LIMIT`) before
+  handing off to the live feed, stamping each change's `event_id`. The delta path
+  is now metered (forwarded / dropped-by-scope / dropped-by-filter / backpressure
+  / lag counters + a per-tenant active-stream gauge). The tenant-scope check now
+  delegates to the canonical engine-tail matcher (one leak boundary, no divergent
+  copy).
+- **Vault fail-closed sealing.** `UDB_VAULT_REQUIRE_MASTER_KEY=true` seals the
+  vault when only a dev plaintext passthrough is available, so a secrets engine
+  never silently stores DEKs in the clear regardless of the global dev default.
+  (The concrete external `AwsKmsProvider` remains omitted by the project's
+  documented offline-vendoring constraint.)
 
 ## [0.4.31] - 2026-07-30
 

@@ -202,6 +202,18 @@ pub trait MetricsRecorder: Send + Sync + std::fmt::Debug {
     /// in seconds.
     fn set_auth_outbox_lag_seconds(&self, _seconds: f64) {}
 
+    // ── Native LiveQuery delta-path metrics ───────────────────────────────────
+    /// Increment the count of live-query CDC delta events forwarded to a
+    /// subscriber, labelled by `tenant`.
+    fn record_livequery_delta_forwarded(&self, _tenant: &str) {}
+    /// Increment the count of live-query CDC delta events dropped before delivery,
+    /// labelled by `tenant` and `reason` (one of `"scope"`, `"filter"`,
+    /// `"backpressure"`, `"lag"`).
+    fn record_livequery_delta_dropped(&self, _tenant: &str, _reason: &str) {}
+    /// Set the number of ACTIVE live-query delta streams currently open for
+    /// `tenant` (per-tenant concurrency gauge).
+    fn set_livequery_active_streams(&self, _tenant: &str, _n: i64) {}
+
     // ── Phase 10 (Audit / Observability / SLOs) metrics ───────────────────────
     /// Increment the per-RPC method-security denial counter, labelled by `reason`
     /// (e.g. `"missing_bearer"`, `"scope"`, `"role"`, `"csrf"`, `"tenant"`,
@@ -496,6 +508,11 @@ pub struct PrometheusMetrics {
     // IR mediated-by-default (item 2.1): raw generic-dispatch fall-throughs that
     // bypassed the neutral-IR compiler for a mediated backend, by backend kind.
     raw_dispatch: prometheus::IntCounterVec,
+    // Native LiveQuery delta-path collectors: per-tenant forwarded/dropped delta
+    // counts and the per-tenant active-stream concurrency gauge.
+    livequery_delta_forwarded: prometheus::IntCounterVec,
+    livequery_delta_dropped: prometheus::IntCounterVec,
+    livequery_active_streams: prometheus::IntGaugeVec,
 }
 
 impl std::fmt::Debug for PrometheusMetrics {
@@ -918,6 +935,27 @@ impl PrometheusMetrics {
             ),
             &["backend"],
         )?;
+        let livequery_delta_forwarded = prometheus::IntCounterVec::new(
+            prometheus::Opts::new(
+                "udb_livequery_delta_forwarded_total",
+                "Native live-query CDC delta events forwarded to a subscriber, by tenant",
+            ),
+            &["tenant"],
+        )?;
+        let livequery_delta_dropped = prometheus::IntCounterVec::new(
+            prometheus::Opts::new(
+                "udb_livequery_delta_dropped_total",
+                "Native live-query CDC delta events dropped before delivery, by tenant and reason",
+            ),
+            &["tenant", "reason"],
+        )?;
+        let livequery_active_streams = prometheus::IntGaugeVec::new(
+            prometheus::Opts::new(
+                "udb_livequery_active_streams",
+                "Native live-query ACTIVE delta streams currently open, by tenant",
+            ),
+            &["tenant"],
+        )?;
 
         for collector in [
             Box::new(grpc_requests.clone()) as Box<dyn prometheus::core::Collector>,
@@ -992,6 +1030,9 @@ impl PrometheusMetrics {
             Box::new(canary_evaluations.clone()),
             Box::new(canary_active.clone()),
             Box::new(raw_dispatch.clone()),
+            Box::new(livequery_delta_forwarded.clone()),
+            Box::new(livequery_delta_dropped.clone()),
+            Box::new(livequery_active_streams.clone()),
         ] {
             registry.register(collector)?;
         }
@@ -1070,6 +1111,9 @@ impl PrometheusMetrics {
             canary_evaluations,
             canary_active,
             raw_dispatch,
+            livequery_delta_forwarded,
+            livequery_delta_dropped,
+            livequery_active_streams,
         })
     }
 
@@ -1643,6 +1687,26 @@ impl MetricsRecorder for PrometheusMetrics {
             .with_label_values(&[bounded_label("raw_dispatch_backend", backend).as_ref()])
             .inc();
     }
+    fn record_livequery_delta_forwarded(&self, tenant: &str) {
+        // Tenant id is claim-derived but request-shaped — bound its cardinality so
+        // a noisy tenant label cannot mint unbounded series.
+        self.livequery_delta_forwarded
+            .with_label_values(&[bounded_label("livequery_delta_tenant", tenant).as_ref()])
+            .inc();
+    }
+    fn record_livequery_delta_dropped(&self, tenant: &str, reason: &str) {
+        self.livequery_delta_dropped
+            .with_label_values(&[
+                bounded_label("livequery_delta_tenant", tenant).as_ref(),
+                bounded_label("livequery_delta_drop_reason", reason).as_ref(),
+            ])
+            .inc();
+    }
+    fn set_livequery_active_streams(&self, tenant: &str, n: i64) {
+        self.livequery_active_streams
+            .with_label_values(&[bounded_label("livequery_delta_tenant", tenant).as_ref()])
+            .set(n);
+    }
 }
 
 #[cfg(test)]
@@ -1858,6 +1922,40 @@ mod tests {
         assert!(
             text.contains("udb_authz_policy_reload_seconds_count 1"),
             "missing policy-reload histogram:\n{text}"
+        );
+    }
+
+    #[test]
+    fn livequery_delta_metrics_register_and_increment() {
+        let m = PrometheusMetrics::new().expect("build PrometheusMetrics");
+        m.record_livequery_delta_forwarded("acme");
+        m.record_livequery_delta_dropped("acme", "scope");
+        m.record_livequery_delta_dropped("acme", "filter");
+        m.set_livequery_active_streams("acme", 3);
+
+        let text = m.gather_text("");
+        assert!(
+            text.contains("udb_livequery_delta_forwarded_total{tenant=\"acme\"} 1"),
+            "missing live-query forwarded counter:\n{text}"
+        );
+        // Prometheus text exposition may order labels either way — accept both.
+        assert!(
+            text.contains("udb_livequery_delta_dropped_total{tenant=\"acme\",reason=\"scope\"} 1")
+                || text.contains(
+                    "udb_livequery_delta_dropped_total{reason=\"scope\",tenant=\"acme\"} 1"
+                ),
+            "missing live-query scope-drop counter:\n{text}"
+        );
+        assert!(
+            text.contains("udb_livequery_delta_dropped_total{tenant=\"acme\",reason=\"filter\"} 1")
+                || text.contains(
+                    "udb_livequery_delta_dropped_total{reason=\"filter\",tenant=\"acme\"} 1"
+                ),
+            "missing live-query filter-drop counter:\n{text}"
+        );
+        assert!(
+            text.contains("udb_livequery_active_streams{tenant=\"acme\"} 3"),
+            "missing live-query active-stream gauge:\n{text}"
         );
     }
 

@@ -18,6 +18,19 @@ pub(crate) fn active_streams() -> &'static Mutex<HashMap<String, usize>> {
     ACTIVE.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
+/// Current number of ACTIVE live-query streams held by `tenant_id` (0 when the
+/// tenant holds none). Read-only snapshot of the limiter map, used to drive the
+/// per-tenant active-stream metrics gauge. Poisoning is recovered like the other
+/// accessors so a panicked holder can never wedge the read.
+pub(crate) fn active_stream_count(tenant_id: &str) -> usize {
+    active_streams()
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .get(tenant_id)
+        .copied()
+        .unwrap_or(0)
+}
+
 /// Typed hard refusal for an over-budget tenant: `ResourceExhausted` with the
 /// QUOTA `ErrorDetail` (not retryable by itself — the caller must close an
 /// existing stream to free a slot).

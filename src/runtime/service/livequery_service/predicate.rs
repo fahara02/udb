@@ -48,6 +48,18 @@ pub(crate) fn resolve_source(message_type: &str) -> Result<SourceBinding, Status
     })
 }
 
+/// Parse the optional durable-resume cursor from the `x-udb-livequery-resume`
+/// metadata header value: the client's last-delivered `LiveQueryChange.event_id`.
+/// Trims surrounding whitespace (a CRLF-tainted proxy header) and rejects blank;
+/// returns `None` when absent/blank — a fresh, non-resuming subscription. Kept
+/// pure over the raw header value so it is unit-testable without a tonic
+/// `MetadataMap`.
+pub(crate) fn parse_resume_cursor(raw: Option<&str>) -> Option<String> {
+    raw.map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+}
+
 /// Map a proto comparison to the neutral IR operator. `UNSPECIFIED` is rejected.
 pub(crate) fn map_comparison(op: lq_pb::LiveQueryComparison) -> Result<ComparisonOp, Status> {
     use lq_pb::LiveQueryComparison as P;
@@ -244,45 +256,38 @@ pub(crate) fn topic_matches_source(topic: &str, cdc_topic: &str) -> bool {
 /// Only an event whose tenant (and project, if scoped) matches the verified
 /// claim survives. Reuses the public [`crate::runtime::cdc::tenant_scoped_topic`].
 ///
-/// TODO(leader): canonical filter reuse — lift the engine-tail predicate
-/// (`engine_tail::payload_value_matches_stream_scope`) into a shared module and
-/// call it here so this security boundary has ONE implementation (engine_tail is
-/// leader-owned, outside this service dir). Until then this is the faithful
-/// tenant-scoped-subscriber subset (it hard-drops non-`udb.` topics, which a
-/// live-query subscriber must never receive).
+/// Canonical filter reuse: the tenant/project comparison — the actual tenant-leak
+/// boundary — is delegated to the ONE canonical implementation
+/// ([`crate::cdc::CdcEngine::event_matches_stream_scope`], which wraps the
+/// engine-tail `payload_value_matches_stream_scope`) so the two copies can never
+/// drift. A live-query subscriber is a non-privileged, tenant-scoped subscriber
+/// and must NEVER receive a non-`udb.` (non-tenant-scoped) topic, so those are
+/// hard-dropped up front here (the canonical predicate, being general, would pass
+/// a tenant-less non-`udb.` event to a privileged unscoped admin stream — a mode
+/// that does not exist for this service); everything reachable past that guard
+/// goes through the canonical tenant/project check unchanged.
 pub(crate) fn event_matches_tenant_scope(
     topic: &str,
     payload: &serde_json::Value,
     tenant_scope: &str,
     project_scope: &str,
 ) -> bool {
+    // Fail closed: a non-`udb.` topic is never a tenant-scoped live-query source.
     if !crate::runtime::cdc::tenant_scoped_topic(topic) {
         return false;
     }
-    if tenant_scope.trim().is_empty() {
-        // An unscoped live-query subscriber cannot prove ownership of any
-        // tenant-stamped event: fail closed.
-        return false;
-    }
-    let event_tenant = payload
-        .get("tenant_id")
-        .and_then(|value| value.as_str())
-        .unwrap_or_default()
-        .trim();
-    if event_tenant.is_empty() || event_tenant != tenant_scope.trim() {
-        return false;
-    }
-    if !project_scope.trim().is_empty() {
-        let event_project = payload
-            .get("project_id")
-            .and_then(|value| value.as_str())
-            .unwrap_or_default()
-            .trim();
-        if event_project.is_empty() || event_project != project_scope.trim() {
-            return false;
-        }
-    }
-    true
+    // Delegate the tenant/project comparison to the single canonical boundary.
+    // `privileged=false, policy_scoped=false`: a live-query subscriber is neither
+    // a privileged unscoped admin stream nor a policy-scoped topic subscriber, so
+    // an empty tenant scope and any tenant mismatch both fail closed.
+    crate::cdc::CdcEngine::event_matches_stream_scope(
+        topic,
+        payload,
+        tenant_scope.trim(),
+        project_scope.trim(),
+        false,
+        false,
+    )
 }
 
 /// Resolve a possibly-dotted field path within a JSON object.
@@ -416,8 +421,82 @@ mod predicate_tests {
     use serde_json::json;
 
     use super::lq_pb;
-    use super::{change_op, keepalive_frame, typed_value};
+    use super::{
+        change_op, event_matches_tenant_scope, keepalive_frame, parse_resume_cursor, typed_value,
+    };
     use crate::ir::LogicalValue;
+
+    /// The durable-resume cursor parse: a present, non-blank header yields the
+    /// trimmed event_id; absent or whitespace-only yields `None` (fresh, non-
+    /// resuming subscription). Whitespace is trimmed so a CRLF-tainted proxy
+    /// header still resolves.
+    #[test]
+    fn parse_resume_cursor_trims_and_rejects_blank() {
+        assert_eq!(
+            parse_resume_cursor(Some("11111111-1111-1111-1111-111111111111")),
+            Some("11111111-1111-1111-1111-111111111111".to_string())
+        );
+        assert_eq!(
+            parse_resume_cursor(Some("  evt-42\r\n")),
+            Some("evt-42".to_string())
+        );
+        assert_eq!(parse_resume_cursor(Some("   ")), None);
+        assert_eq!(parse_resume_cursor(Some("")), None);
+        assert_eq!(parse_resume_cursor(None), None);
+    }
+
+    /// Tenant-isolation is preserved after delegating to the canonical scope
+    /// predicate: an in-tenant `udb.` event passes, but a FOREIGN-tenant event and
+    /// a NON-`udb.` topic are both still dropped (fail closed), as is a tenant-less
+    /// or empty-scope subscriber.
+    #[test]
+    fn event_matches_tenant_scope_drops_foreign_and_non_udb() {
+        let topic = "udb.item.item.changed.v1";
+        // Same tenant, no project scope: passes.
+        assert!(event_matches_tenant_scope(
+            topic,
+            &json!({"tenant_id": "acme"}),
+            "acme",
+            "",
+        ));
+        // Foreign tenant on a udb. topic: dropped.
+        assert!(!event_matches_tenant_scope(
+            topic,
+            &json!({"tenant_id": "evil"}),
+            "acme",
+            "",
+        ));
+        // Tenant-less payload: dropped (cannot prove ownership).
+        assert!(!event_matches_tenant_scope(topic, &json!({}), "acme", ""));
+        // Non-`udb.` topic is never a tenant-scoped live-query source: dropped even
+        // when the tenant matches (the subscriber-appropriate hard-drop).
+        assert!(!event_matches_tenant_scope(
+            "external.orders.created",
+            &json!({"tenant_id": "acme"}),
+            "acme",
+            "",
+        ));
+        // Empty subscriber scope fails closed against a tenant-stamped event.
+        assert!(!event_matches_tenant_scope(
+            topic,
+            &json!({"tenant_id": "acme"}),
+            "",
+            "",
+        ));
+        // Project scope enforced when set: mismatched project dropped.
+        assert!(!event_matches_tenant_scope(
+            topic,
+            &json!({"tenant_id": "acme", "project_id": "p1"}),
+            "acme",
+            "p2",
+        ));
+        assert!(event_matches_tenant_scope(
+            topic,
+            &json!({"tenant_id": "acme", "project_id": "p1"}),
+            "acme",
+            "p1",
+        ));
+    }
 
     /// A keepalive frame is a proto-free heartbeat: an UNSPECIFIED-op `Change`
     /// with empty row/event id that a client ignores. It must NOT look like a
