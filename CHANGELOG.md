@@ -11,8 +11,8 @@ Native-service upgrade — batch 2, plus a full cross-service gap-review hardeni
 pass. Continues the no-deferrals plan implementation across all five services
 (transactional Vault, Embedding erasure + Matryoshka, richer Notification delivery,
 Search/vector tenant-filter completeness, LiveQuery knobs) plus a fail-closed
-audit-sink ergonomics fix — and then closes a read-only gap review across all 20
-native services (see the security-hardening section below). No proto changes.
+audit-sink ergonomics fix — and then closes a read-only gap review spanning every
+native service (see the security-hardening section below). No proto changes.
 
 ### Fixed
 - **Fail-closed startup now accepts the durable Postgres audit sink.**
@@ -88,7 +88,7 @@ native services (see the security-hardening section below). No proto changes.
   documented offline-vendoring constraint.)
 
 ### Security hardening (cross-service gap-review pass)
-A read-only gap review across all 20 native services surfaced (and this release
+A read-only gap review spanning every native service surfaced (and this release
 fixes) the following. No proto changes; all fixes are fail-closed.
 
 - **Backup: cross-tenant restore is now gated on the caller's verified claim, not a
