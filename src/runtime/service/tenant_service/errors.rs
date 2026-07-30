@@ -27,6 +27,20 @@ pub(crate) fn tenant_not_found_status(operation: &'static str) -> Status {
     )
 }
 
+/// ALREADY_EXISTS for a `CreateTenant` whose `code` is already taken, returned to
+/// a caller that does NOT own the surviving tenant. Deliberately opaque: it names
+/// no existing tenant UUID or status, so a non-owner cannot probe the platform's
+/// tenant codes for their canonical ids (cross-tenant disclosure).
+pub(crate) fn tenant_already_exists_status() -> Status {
+    crate::runtime::executor_utils::schema_status(
+        tonic::Code::AlreadyExists,
+        "tenant",
+        "create_tenant",
+        "tenant_code_conflict",
+        "a tenant with this code already exists",
+    )
+}
+
 pub(crate) fn tenant_internal_status(
     operation: impl Into<String>,
     message: impl Into<String>,

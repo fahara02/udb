@@ -4,7 +4,8 @@
 //! the redacting-`Debug` secret-bearing key/plaintext types, the DEK wrap/unwrap,
 //! the AES-256-GCM-SIV seal/open, the `udb-vault:` / `udb-vmac:` envelope parsers,
 //! the FIPS-198 HMAC-SHA256 + constant-time compare, the transit-algorithm
-//! allow-list guard, and the stored-secret envelope stripper.
+//! allow-list guard, the per-purpose key-separation guards (encryption / Ed25519
+//! signing / HMAC), and the stored-secret envelope stripper.
 //!
 //! CRITICAL: this is security-critical crypto code — every byte here is a pure
 //! relocation of the tested primitives; no encryption/decryption/signing/HMAC/
@@ -273,8 +274,8 @@ pub(crate) fn validate_transit_algorithm(requested: &str) -> Result<String, Stat
 /// Reject the encryption path (Encrypt/Decrypt/GenerateDataKey/Rewrap) on a key
 /// created with the Ed25519 signing algorithm: its material is a signature seed,
 /// not an AEAD key, so encrypting with it is a key-purpose confusion. Keeps key
-/// purpose unambiguous — a signing key signs (Sign/Verify), an encryption key
-/// encrypts. A no-op for every encryption-algorithm key (the common case).
+/// purpose unambiguous — a signing key signs (Sign/Verify), a symmetric key
+/// encrypts (and MACs). A no-op for every symmetric-algorithm key (the common case).
 pub(crate) fn require_encryption_algorithm(algorithm: &str, operation: &str) -> Result<(), Status> {
     if algorithm == SIGNING_TRANSIT_ALGORITHM {
         return Err(vault_field_violation(
@@ -293,9 +294,9 @@ pub(crate) fn require_encryption_algorithm(algorithm: &str, operation: &str) -> 
 }
 
 /// The inverse of [`require_encryption_algorithm`]: reject an operation that only
-/// applies to an asymmetric signing key (e.g. exporting a public key) when the
-/// named key is an encryption key. An encryption key has no public half to
-/// export, so this fails closed rather than returning a meaningless value.
+/// applies to an asymmetric signing key (Sign/Verify, public-key export) when the
+/// named key is a symmetric key. A symmetric key cannot produce an Ed25519
+/// signature, so this fails closed rather than cross-purposing the key.
 pub(crate) fn require_signing_algorithm(algorithm: &str, operation: &str) -> Result<(), Status> {
     if algorithm != SIGNING_TRANSIT_ALGORITHM {
         return Err(vault_field_violation(
@@ -303,7 +304,29 @@ pub(crate) fn require_signing_algorithm(algorithm: &str, operation: &str) -> Res
             format!("must name an {SIGNING_TRANSIT_ALGORITHM} signing key"),
             format!(
                 "{operation} requires an {SIGNING_TRANSIT_ALGORITHM} signing key; the named key \
-                 uses the '{algorithm}' algorithm and has no public key to export"
+                 uses the '{algorithm}' algorithm and cannot sign"
+            ),
+        ));
+    }
+    Ok(())
+}
+
+/// The HMAC-purpose guard: HMAC uses a SYMMETRIC key, so reject an Ed25519 signing
+/// key (its material is a signature seed, not a MAC key) exactly as the encryption
+/// path does, while accepting every symmetric transit algorithm. This closes the
+/// key-confusion where a signing key could be used as an HMAC key; a symmetric key
+/// deliberately serves both Encrypt/Decrypt and HMAC (scoped key-separation).
+pub(crate) fn require_hmac_algorithm(algorithm: &str, operation: &str) -> Result<(), Status> {
+    if algorithm == SIGNING_TRANSIT_ALGORITHM {
+        return Err(vault_field_violation(
+            "key_name",
+            format!(
+                "must name a symmetric HMAC key ({DEFAULT_TRANSIT_ALGORITHM}), not an \
+                 {SIGNING_TRANSIT_ALGORITHM} signing key"
+            ),
+            format!(
+                "{operation} requires a symmetric key; the named key uses the \
+                 {SIGNING_TRANSIT_ALGORITHM} signing algorithm (use Sign/Verify instead)"
             ),
         ));
     }

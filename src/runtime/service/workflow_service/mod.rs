@@ -19,11 +19,18 @@
 //!     emits one `udb.workflow.compensate.step.v1` event per completed step in
 //!     REVERSE order (application-driven undo) and settles the instance
 //!     COMPENSATING → COMPENSATED, atomically with the events.
-//!   * `SignalWorkflow` delivers an external signal to a waiting step, resuming it.
+//!   * `SignalWorkflow` delivers an external signal to a waiting step and resumes
+//!     it: a step declared (in the payload `signal_waits` map) to block on a named
+//!     signal parks the instance in WAITING_SIGNAL on the forward pass; the
+//!     matching `SignalWorkflow` records the signal and returns it to RUNNING so a
+//!     later tick advances it. A COMPENSATING instance is non-signalable (a signal
+//!     never reverts an in-flight compensation).
 //!   * The leader-elected tick fires transition events ONLY (it never executes a
 //!     payload in-process), exactly like the scheduler tick. It also sweeps
-//!     RUNNING instances whose last transition exceeded the step timeout to
-//!     FAILED (`udb.workflow.failed.v1`).
+//!     RUNNING instances whose last transition exceeded the step timeout: one with
+//!     completed steps moves to COMPENSATING (its steps are undone before it
+//!     settles COMPENSATED), one with none settles FAILED — both emit
+//!     `udb.workflow.failed.v1` as the timeout cause.
 //!
 //! Every state transition emits one versioned dot-topic outbox event
 //! (`udb.workflow.<state>.v1`). Tenant identity always comes from the VERIFIED

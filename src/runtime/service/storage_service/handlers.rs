@@ -29,7 +29,7 @@ use super::errors::{
     object_store_bytes_missing_status, object_stream_requires_store_status,
     reissue_requires_pending_status, status_with_reason, storage_capability_status,
     storage_file_not_found_status, upload_already_finalized_status, upload_etag_mismatch_status,
-    upload_size_mismatch_status, uploaded_object_missing_status,
+    upload_size_mismatch_status, uploaded_object_missing_status, validate_object_key_filename,
     validate_register_upload_required_fields,
 };
 use super::model::{file_from_json, file_status_to_short, file_type_to_db, normalize_etag};
@@ -64,6 +64,9 @@ pub(crate) async fn register_upload(
     let req = request.into_inner();
     validate_request_scope(&metadata, &req.tenant_id, &req.project_id)?;
     validate_register_upload_required_fields(&req.tenant_id, &req.filename)?;
+    // Fail closed on a filename that would escape the tenant/file object-key
+    // prefix (path traversal / absolute path) before minting the key below.
+    validate_object_key_filename(&req.filename)?;
     // Per-tenant fair admission (held for the whole RPC) — one tenant's
     // upload flood can't starve shared object capacity.
     let _admit = svc.admit(&req.tenant_id, &req.project_id).await?;

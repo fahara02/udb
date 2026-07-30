@@ -9,8 +9,8 @@ use tonic::Status;
 use crate::proto::udb::core::common::v1 as common_pb;
 
 use super::config::{
-    ALREADY_FINALIZED, OBJECT_NOT_PRESENT, REISSUE_REQUIRES_PENDING, UNSUPPORTED_OBJECT_BACKEND,
-    UPLOAD_SIZE_MISMATCH, UPLOAD_URL_UNAVAILABLE,
+    ALREADY_FINALIZED, OBJECT_KEY_TRAVERSAL, OBJECT_NOT_PRESENT, REISSUE_REQUIRES_PENDING,
+    UNSUPPORTED_OBJECT_BACKEND, UPLOAD_SIZE_MISMATCH, UPLOAD_URL_UNAVAILABLE,
 };
 
 /// Attach a stable machine-readable `reason` to a non-OK gRPC `Status` via the
@@ -188,6 +188,37 @@ where
     M: Into<String>,
 {
     crate::runtime::executor_utils::invalid_argument_fields(message, [(field, description)])
+}
+
+/// Fail-closed guard against object-key path traversal. The register mint builds
+/// the canonical key as `"{tenant_id}/{file_id}/{filename}"`, so a client
+/// `filename` carrying its own path separators, a `..` traversal sequence, an
+/// absolute/drive root, or control bytes could climb out of the tenant/file
+/// prefix and read or clobber another tenant's bytes on a path-addressed backend
+/// (local FS / MinIO gateway). The filename must be a single bare path segment;
+/// anything else is rejected before any row or object is created.
+pub(crate) fn validate_object_key_filename(filename: &str) -> Result<(), Status> {
+    let name = filename.trim();
+    let suspicious = name.is_empty()
+        || name == "."
+        || name.contains("..")
+        || name.contains('/')
+        || name.contains('\\')
+        || name.contains(':')
+        || name.chars().any(char::is_control);
+    if suspicious {
+        return Err(status_with_reason(
+            crate::runtime::executor_utils::invalid_argument_fields(
+                "filename must be a single path segment without traversal or separators",
+                [(
+                    "filename",
+                    "must not contain '/', '\\', ':', '..', or control characters",
+                )],
+            ),
+            OBJECT_KEY_TRAVERSAL,
+        ));
+    }
+    Ok(())
 }
 
 pub(crate) fn validate_register_upload_required_fields(

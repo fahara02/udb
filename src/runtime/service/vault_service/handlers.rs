@@ -29,19 +29,19 @@ use super::super::native_helpers::{
 use super::VaultServiceImpl;
 use super::config::{
     DEFAULT_DB_CREDENTIAL_MAX_TTL_SECONDS, DEFAULT_TRANSIT_ALGORITHM, KEY_STATE_ACTIVE,
-    KEY_STATE_VERIFYING, MAX_LIST_SECRETS, SIGNING_TRANSIT_ALGORITHM, STATE_ACTIVE, STATE_DELETED,
-    TOPIC_DATA_KEY_GENERATED, TOPIC_DB_CREDENTIAL_ISSUED, TOPIC_KEY_CREATED, TOPIC_KEY_ROTATED,
-    TOPIC_SECRET_ACCESSED, TOPIC_SECRET_DELETED, TOPIC_SECRET_DESTROYED, TOPIC_SECRET_LISTED,
-    TOPIC_SECRET_PUT, TOPIC_SECRET_RESTORED, TOPIC_TRANSIT_DECRYPTED, TOPIC_TRANSIT_ENCRYPTED,
-    TOPIC_TRANSIT_HMAC, TOPIC_TRANSIT_REWRAPPED, TOPIC_TRANSIT_SIGNED, TOPIC_TRANSIT_VERIFIED,
+    KEY_STATE_VERIFYING, MAX_LIST_SECRETS, STATE_ACTIVE, STATE_DELETED, TOPIC_DATA_KEY_GENERATED,
+    TOPIC_DB_CREDENTIAL_ISSUED, TOPIC_KEY_CREATED, TOPIC_KEY_ROTATED, TOPIC_SECRET_ACCESSED,
+    TOPIC_SECRET_DELETED, TOPIC_SECRET_DESTROYED, TOPIC_SECRET_LISTED, TOPIC_SECRET_PUT,
+    TOPIC_SECRET_RESTORED, TOPIC_TRANSIT_DECRYPTED, TOPIC_TRANSIT_ENCRYPTED, TOPIC_TRANSIT_HMAC,
+    TOPIC_TRANSIT_REWRAPPED, TOPIC_TRANSIT_SIGNED, TOPIC_TRANSIT_VERIFIED,
     VAULT_DB_CREDENTIAL_LEASE_MSG, VAULT_ED25519_PREFIX, VAULT_HMAC_PREFIX, VAULT_SECRET_MSG,
-    VAULT_TRANSIT_KEY_MSG, max_batch_encrypt_items,
+    VAULT_TRANSIT_KEY_MSG, max_batch_decrypt_items, max_batch_encrypt_items,
 };
 use super::crypto::{
     DataKey, PlaintextSecret, constant_time_eq, dek_open, dek_seal, ed25519_public_key_b64,
     ed25519_sign_b64, ed25519_verify_b64, hmac_sha256, parse_ed25519_envelope, parse_mac_envelope,
-    parse_transit_envelope, require_encryption_algorithm, require_signing_algorithm,
-    transit_payload, unwrap_dek, validate_transit_algorithm, wrap_dek,
+    parse_transit_envelope, require_encryption_algorithm, require_hmac_algorithm,
+    require_signing_algorithm, transit_payload, unwrap_dek, validate_transit_algorithm, wrap_dek,
 };
 use super::dynamic::{
     create_postgres_login_role, drop_postgres_login_role, generate_db_password,
@@ -873,6 +873,9 @@ pub(crate) async fn decrypt(
             "not a vault transit ciphertext envelope",
         )
     })?;
+    // Per-tenant transit-op volume cap (fail-closed RESOURCE_EXHAUSTED). Decrypt
+    // unwraps the master KEK, so it is charged like the other transit ops.
+    admit_transit_op(&tenant_id, "decrypt")?;
     let _admit = native_admit_on(
         svc.channels.as_ref(),
         &svc.metrics,
@@ -1022,6 +1025,25 @@ pub(crate) async fn batch_decrypt(
     if key_name.is_empty() {
         return Err(vault_required_key_name());
     }
+    // Bound the batch before any admission/crypto work: an unbounded ciphertexts
+    // vector otherwise drives a `Vec::with_capacity` allocation and N master-key
+    // unwrap/open ops. Mirrors the BatchEncrypt cap.
+    let batch_cap = max_batch_decrypt_items();
+    if req.ciphertexts.len() > batch_cap {
+        return Err(vault_field_violation(
+            "ciphertexts",
+            "must not exceed the configured batch-decrypt item cap",
+            format!(
+                "batch_decrypt accepts at most {} ciphertexts per request (got {})",
+                batch_cap,
+                req.ciphertexts.len()
+            ),
+        ));
+    }
+    // Per-tenant transit-op volume cap (fail-closed RESOURCE_EXHAUSTED). Charged
+    // once per BatchDecrypt request, consistent with BatchEncrypt and the
+    // single-op transit RPCs.
+    admit_transit_op(&tenant_id, "batch_decrypt")?;
     let _admit = native_admit_on(
         svc.channels.as_ref(),
         &svc.metrics,
@@ -1104,6 +1126,9 @@ pub(crate) async fn generate_data_key(
     if key_name.is_empty() {
         return Err(vault_required_key_name());
     }
+    // Per-tenant transit-op volume cap (fail-closed RESOURCE_EXHAUSTED). Minting a
+    // data key unwraps the master KEK, so it is charged like the other transit ops.
+    admit_transit_op(&tenant_id, "generate_data_key")?;
     let _admit = native_admit_on(
         svc.channels.as_ref(),
         &svc.metrics,
@@ -1177,6 +1202,10 @@ pub(crate) async fn rewrap(
             "not a vault transit ciphertext envelope",
         )
     })?;
+    // Per-tenant transit-op volume cap (fail-closed RESOURCE_EXHAUSTED). Rewrap
+    // unwraps the master KEK twice (old + active), so it is charged like the other
+    // transit ops.
+    admit_transit_op(&tenant_id, "rewrap")?;
     let _admit = native_admit_on(
         svc.channels.as_ref(),
         &svc.metrics,
@@ -1343,24 +1372,18 @@ pub(crate) async fn sign(
             "transit key not found or has no active version",
         )
     })?;
+    // Key separation: Sign requires an Ed25519 signing key. A symmetric key is
+    // refused here rather than cross-purposed onto the signing path.
+    require_signing_algorithm(&active.algorithm, "sign")?;
     let dek = unwrap_dek(runtime, &active.wrapped_key_material)?;
-    // A key created with the Ed25519 algorithm produces a real asymmetric
-    // signature (the 32-byte material is the seed); every other key keeps the
-    // symmetric HMAC. The envelope prefix records which, so Verify dispatches
-    // correctly. Both preserve the existing behavior for existing keys.
-    let signature = if active.algorithm == SIGNING_TRANSIT_ALGORITHM {
-        format!(
-            "{VAULT_ED25519_PREFIX}{}:{}",
-            active.version,
-            ed25519_sign_b64(&dek.0, req.input.as_bytes())
-        )
-    } else {
-        format!(
-            "{VAULT_HMAC_PREFIX}{}:{}",
-            active.version,
-            BASE64_STANDARD.encode(hmac_sha256(&dek.0, req.input.as_bytes()))
-        )
-    };
+    // A real Ed25519 asymmetric signature (the 32-byte material is the seed). The
+    // `udb-vsig:` envelope prefix records the primitive so Verify dispatches
+    // correctly and requires the same signing-key purpose.
+    let signature = format!(
+        "{VAULT_ED25519_PREFIX}{}:{}",
+        active.version,
+        ed25519_sign_b64(&dek.0, req.input.as_bytes())
+    );
 
     // Audit the crypto operation (no input/signature/key material — only the
     // tenant/key/version metadata).
@@ -1409,6 +1432,9 @@ pub(crate) async fn verify(
             error: None,
         }));
     };
+    // Per-tenant transit-op volume cap (fail-closed RESOURCE_EXHAUSTED). Verify
+    // unwraps the master KEK, so it is charged like the other transit ops.
+    admit_transit_op(&tenant_id, "verify")?;
     let _admit = native_admit_on(
         svc.channels.as_ref(),
         &svc.metrics,
@@ -1432,6 +1458,15 @@ pub(crate) async fn verify(
                 "transit key version not found or retired",
             )
         })?;
+    // Key separation: the envelope selects the primitive, and the key's stored
+    // purpose must match it. An Ed25519 signature must verify under a signing key;
+    // an HMAC envelope must verify under a symmetric key. A cross-purpose key is
+    // refused rather than silently returning a meaningless boolean.
+    if is_ed25519 {
+        require_signing_algorithm(&key.algorithm, "verify")?;
+    } else {
+        require_hmac_algorithm(&key.algorithm, "verify")?;
+    }
     let dek = unwrap_dek(runtime, &key.wrapped_key_material)?;
     let valid = if is_ed25519 {
         ed25519_verify_b64(&dek.0, req.input.as_bytes(), signature_b64)
@@ -1498,6 +1533,10 @@ pub(crate) async fn hmac(
             "transit key not found or has no active version",
         )
     })?;
+    // Key separation: Hmac requires a symmetric key (an Ed25519 signing key is
+    // refused rather than cross-purposed as a MAC key). A symmetric key
+    // deliberately serves both Encrypt/Decrypt and HMAC.
+    require_hmac_algorithm(&active.algorithm, "hmac")?;
     let dek = unwrap_dek(runtime, &active.wrapped_key_material)?;
     let mac = hmac_sha256(&dek.0, req.input.as_bytes());
     let hmac_value = format!(

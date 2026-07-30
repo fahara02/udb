@@ -30,8 +30,12 @@ use super::errors::{
     notification_tenant_metadata_required_status, status_with_reason,
 };
 use super::model::{
-    channel_send_decision, deliverable_channels, notification_delivery_payload, status_to_db,
-    template_locale_or_default, template_model, template_selection_sql,
+    channel_send_decision, deliverable_channels, delivery_attempt_model, log_model,
+    notification_delivery_payload, preference_model, status_to_db, template_locale_or_default,
+    template_model, template_selection_sql,
+};
+use super::store::{
+    recipient_opted_out_sql, reset_delivery_attempts_sql, suppress_log_if_pending_sql,
 };
 
 fn decode_detail(status: &Status) -> ErrorDetail {
@@ -740,4 +744,81 @@ fn log_transition_allowed_prev_is_a_forward_only_state_machine() {
     assert!(log_transition_allowed_prev("FAILED").is_empty());
     assert!(log_transition_allowed_prev("SUPPRESSED").is_empty());
     assert!(log_transition_allowed_prev("PENDING").is_empty());
+}
+
+/// The manual-retry attempt reset grants a FRESH bounded-retry budget: it zeroes
+/// `attempt_count` (so the next worker pass can't instantly exhaust and re-emit the
+/// dead-letter event) and is tenant-scoped. This is the fix for the double
+/// dead-letter after RetryNotification — without the reset a resurrected log is
+/// re-scanned with `attempt_count` still at the ceiling.
+#[test]
+fn reset_delivery_attempts_grants_a_fresh_budget_tenant_scoped() {
+    let m = delivery_attempt_model();
+    let sql = reset_delivery_attempts_sql(&m);
+    // The budget is reset to zero — a full retry cycle, never an instant exhaust.
+    assert!(
+        sql.contains(&format!("{} = 0", m.q("attempt_count"))),
+        "reset must zero attempt_count: {sql}"
+    );
+    assert!(
+        sql.contains(&format!("{} = 'PENDING'", m.q("status"))),
+        "reset must clear the terminal FAILED attempt state: {sql}"
+    );
+    // Scoped by notification id AND tenant (never resets another tenant's rows).
+    assert!(
+        sql.contains(&format!("{} = $1::UUID", m.q("notification_id"))),
+        "reset must key on the notification id: {sql}"
+    );
+    assert!(
+        sql.contains(&format!("{} = $2", m.q("tenant_id"))),
+        "reset must be tenant-scoped: {sql}"
+    );
+}
+
+/// The delivery-time opt-out lookup prefers the event-specific preference over the
+/// tenant-wide default, and is scoped to (user_id, tenant, channel) — so an opt-out
+/// recorded after send suppresses delivery on the worker/retry path.
+#[test]
+fn recipient_opted_out_prefers_event_specific_and_is_scoped() {
+    let m = preference_model();
+    let sql = recipient_opted_out_sql(&m);
+    // Event-specific preference OR the tenant-wide ('') default...
+    let event_type = m.q("event_type");
+    assert!(
+        sql.contains(&format!("({event_type} = $4 OR {event_type} = '')")),
+        "opt-out must consider the event-specific and global preferences: {sql}"
+    );
+    // ...with the event-specific row preferred (sorts first).
+    assert!(
+        sql.contains(&format!("ORDER BY ({event_type} = $4) DESC")),
+        "the event-specific preference must outrank the tenant-wide default: {sql}"
+    );
+    // Keyed on the recipient user id, tenant, and channel.
+    assert!(
+        sql.contains(&format!("{} = $1::UUID", m.q("user_id"))),
+        "{sql}"
+    );
+    assert!(sql.contains(&format!("{} = $2", m.q("tenant_id"))), "{sql}");
+    assert!(sql.contains(&format!("{} = $3", m.q("channel"))), "{sql}");
+}
+
+/// Suppression only ever moves a still-PENDING log to SUPPRESSED (never downgrades
+/// a SENT/DELIVERED notification), and is tenant-scoped.
+#[test]
+fn suppress_only_moves_pending_logs_tenant_scoped() {
+    let m = log_model();
+    let sql = suppress_log_if_pending_sql(&m);
+    assert!(
+        sql.contains(&format!("{} = 'SUPPRESSED'", m.q("status"))),
+        "suppression must set the terminal SUPPRESSED state: {sql}"
+    );
+    assert!(
+        sql.contains(&format!("{} = 'PENDING'", m.q("status"))),
+        "suppression must be gated on PENDING (never downgrade SENT/DELIVERED): {sql}"
+    );
+    assert!(
+        sql.contains(&format!("{} = $1::UUID", m.q("log_id"))),
+        "{sql}"
+    );
+    assert!(sql.contains(&format!("{} = $2", m.q("tenant_id"))), "{sql}");
 }

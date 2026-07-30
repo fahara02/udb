@@ -14,6 +14,7 @@ use crate::proto::udb::core::backup::services::v1::backup_service_server::Backup
 use crate::proto::{ErrorDetail, ErrorKind};
 use crate::runtime::core::tenant_purge::plan_tenant_purge;
 use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+use crate::runtime::service::method_security;
 
 use super::BackupServiceImpl;
 use super::errors::{
@@ -224,6 +225,74 @@ async fn restore_rejects_cross_tenant_body() {
         .await
         .expect_err("cross-tenant restore body must be rejected");
     assert_eq!(err.code(), tonic::Code::PermissionDenied);
+}
+
+/// C1: a cross-tenant restore is authorized by the caller's VALIDATED CLAIM, not
+/// the wire `allow_cross_tenant` bool. A tenant-scoped (non-admin) caller that
+/// flips the bool is DENIED fail-closed before any store access.
+#[tokio::test]
+async fn restore_cross_tenant_requires_admin_claim() {
+    let svc = BackupServiceImpl::new();
+    let request = Request::new(backup_pb::RestoreTenantRequest {
+        source_tenant_id: "11111111-1111-1111-1111-111111111111".to_string(),
+        target_tenant_id: "22222222-2222-2222-2222-222222222222".to_string(),
+        backup_id: "33333333-3333-3333-3333-333333333333".to_string(),
+        confirmation_token: "yes".to_string(),
+        allow_cross_tenant: true, // wire bool must NOT self-authorize the move
+        ..Default::default()
+    });
+    // Claim is scoped to the source tenant with only a plain write scope — not a
+    // cross-tenant admin.
+    let claim = method_security::test_claim_context(
+        "user-1",
+        "11111111-1111-1111-1111-111111111111",
+        "",
+        &["udb:native:write"],
+        &[],
+    );
+    let err = method_security::scope_claim_context_for_test(claim, async move {
+        svc.restore_tenant(request)
+            .await
+            .expect_err("non-admin cross-tenant restore must be denied")
+    })
+    .await;
+    assert_eq!(err.code(), tonic::Code::PermissionDenied);
+    assert_policy_detail(
+        &err,
+        "restore_tenant",
+        "restore_cross_tenant_admin_required",
+    );
+}
+
+/// C1: a genuine cross-tenant admin passes the authorization gate (no
+/// PermissionDenied) and only then hits the fail-closed capability guard for the
+/// unconfigured runtime — proving the CLAIM, not the wire bool, gates the move.
+#[tokio::test]
+async fn restore_cross_tenant_admin_passes_auth_gate() {
+    let svc = BackupServiceImpl::new(); // no runtime → capability failure AFTER auth
+    let request = Request::new(backup_pb::RestoreTenantRequest {
+        source_tenant_id: "11111111-1111-1111-1111-111111111111".to_string(),
+        target_tenant_id: "22222222-2222-2222-2222-222222222222".to_string(),
+        backup_id: "33333333-3333-3333-3333-333333333333".to_string(),
+        confirmation_token: "yes".to_string(),
+        allow_cross_tenant: true,
+        ..Default::default()
+    });
+    let claim = method_security::test_claim_context(
+        "admin-1",
+        "11111111-1111-1111-1111-111111111111",
+        "",
+        &[],
+        &["platform_admin"],
+    );
+    let err = method_security::scope_claim_context_for_test(claim, async move {
+        svc.restore_tenant(request)
+            .await
+            .expect_err("no runtime configured must fail after the auth gate")
+    })
+    .await;
+    // The auth gate PASSED (not PermissionDenied); the capability guard fails closed.
+    assert_eq!(err.code(), tonic::Code::FailedPrecondition);
 }
 
 #[tokio::test]

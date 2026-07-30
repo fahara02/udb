@@ -405,7 +405,7 @@ pub(crate) async fn retrieve(
             store
                 .search(&VectorSearchRequest {
                     context: None,
-                    collection: model.collection().to_string(),
+                    collection: model.read_collection().to_string(),
                     vector: query_vector.clone(),
                     filter: crate::runtime::executor_utils::json_to_struct(&filter),
                     limit: candidate_limit as i32,
@@ -420,7 +420,7 @@ pub(crate) async fn retrieve(
             store
                 .hybrid_search(&VectorHybridSearchRequest {
                     context: None,
-                    collection: model.collection().to_string(),
+                    collection: model.read_collection().to_string(),
                     vector: query_vector.clone(),
                     text_query: req.query_text.clone(),
                     filter: crate::runtime::executor_utils::json_to_struct(&filter),
@@ -522,14 +522,16 @@ pub(crate) async fn retrieve(
             let neighbors = store
                 .search(&VectorSearchRequest {
                     context: None,
-                    collection: model.collection().to_string(),
+                    collection: model.read_collection().to_string(),
                     vector: query_vector.clone(),
                     filter: crate::runtime::executor_utils::json_to_struct(&window_filter),
                     limit: gather_limit as i32,
                     score_threshold: 0.0,
                     with_payload: true,
                     with_vector: false,
-                    vector_name: req.vector_name.clone(),
+                    // Trim to match the primary search path (:415) — an untrimmed
+                    // vector_name selects a different (or missing) named vector.
+                    vector_name: req.vector_name.trim().to_string(),
                     quantization_rescore: model.rescore,
                 })
                 .await?

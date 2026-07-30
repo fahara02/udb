@@ -35,6 +35,13 @@ pub(super) const SCOPE_ROLE_WRITE: &str = "authz:role:write";
 /// a claim acting under a different `actor.subject` is rejected (fail closed).
 pub(super) const SCOPE_AUTHZ_IMPERSONATE: &str = "authz:impersonate";
 
+/// Role that authorizes a caller to exercise an emergency break-glass governance
+/// bypass. Break-glass skips the standing-scope / separation-of-duties gate, so it
+/// is gated on this VERIFIED role on the authenticated principal — never on the
+/// request-supplied `actor.break_glass` bool alone (which is fully caller
+/// controlled). Mirrors the seeded `break_glass_admin` [`BUILTIN_ROLES`] entry.
+pub(super) const ROLE_BREAK_GLASS_ADMIN: &str = "break_glass_admin";
+
 /// Maximum lifetime of a break-glass grant. A break-glass actor whose
 /// `break_glass_expires_at_unix` is unset or further out than this is rejected,
 /// so emergency bypasses are always short-lived.
@@ -95,6 +102,70 @@ fn break_glass_ttl_invalid_status(rpc: &str) -> Status {
             "break-glass grant must expire within {BREAK_GLASS_MAX_TTL_SECS}s and be in the future"
         ),
     )
+}
+
+fn break_glass_role_required_status(rpc: &str) -> Status {
+    governance_permission_status(
+        rpc,
+        "break_glass_role_required",
+        format!(
+            "{rpc}: break-glass requires the {ROLE_BREAK_GLASS_ADMIN} role on the authenticated principal; a request-asserted break-glass flag is not sufficient"
+        ),
+    )
+}
+
+/// Whether `roles` contains the break-glass admin role (case-insensitive, trimmed).
+fn holds_break_glass_admin_role<S: AsRef<str>>(roles: &[S]) -> bool {
+    roles.iter().any(|r| {
+        r.as_ref()
+            .trim()
+            .eq_ignore_ascii_case(ROLE_BREAK_GLASS_ADMIN)
+    })
+}
+
+/// Outcome of evaluating whether a request may exercise an emergency break-glass
+/// grant. Break-glass skips the standing-scope / SoD gate, so it is authorized
+/// against the VERIFIED principal, never the request-supplied `actor.break_glass`
+/// bool alone.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum BreakGlassEval {
+    /// Not a break-glass request; fall through to the standing-scope/SoD gate.
+    NotAsserted,
+    /// Break-glass asserted AND the verified identity is authorized to use it.
+    Authorized,
+    /// Break-glass asserted but the verified principal lacks the break-glass role.
+    /// Fail closed: deny (do NOT ignore-and-continue).
+    RoleDenied,
+}
+
+/// Decide whether an asserted break-glass grant is authorized.
+///
+/// Over an authenticated transport (`claim_present`) the caller may exercise
+/// break-glass ONLY if the VERIFIED claim actually holds the `break_glass_admin`
+/// role (or a genuine cross-tenant/platform-admin identity). A caller that clears
+/// the coarse transport scope and self-asserts `actor.break_glass=true` without
+/// that role is DENIED — the request bool can never bypass the SoD gate.
+///
+/// Absent a validated claim (in-process / test / trusted internal caller) the
+/// actor body is trusted exactly as the standing-scope gate trusts
+/// `actor.scopes` in the same fallback, so break-glass is permitted there.
+fn evaluate_break_glass(
+    break_glass: bool,
+    claim_present: bool,
+    claim_roles: &[String],
+    claim_cross_tenant_admin: bool,
+) -> BreakGlassEval {
+    if !break_glass {
+        return BreakGlassEval::NotAsserted;
+    }
+    if !claim_present {
+        return BreakGlassEval::Authorized;
+    }
+    if claim_cross_tenant_admin || holds_break_glass_admin_role(claim_roles) {
+        BreakGlassEval::Authorized
+    } else {
+        BreakGlassEval::RoleDenied
+    }
 }
 
 fn governance_scope_required_status(rpc: &str, required_scopes: &[&str]) -> Status {
@@ -374,7 +445,30 @@ impl AuthzServiceImpl {
 
         // Break-glass: a short-TTL, reason-bearing emergency bypass. Still
         // audited as a governance resource; just not blocked on a standing scope.
-        if actor.break_glass {
+        //
+        // The bypass itself is authorized against the VERIFIED principal — NOT the
+        // request-supplied `actor.break_glass` bool. Over an authenticated
+        // transport the claim must actually hold the `break_glass_admin` role (or a
+        // genuine cross-tenant/platform-admin identity); a caller that cleared the
+        // coarse transport scope and self-asserted break-glass without that role is
+        // denied fail-closed, so the request bool can never skip the SoD gate.
+        let break_glass_eval = if actor.break_glass {
+            let (claim_roles, claim_cross_admin) = if claim_present {
+                let ctx = crate::runtime::service::method_security::current_claim_context();
+                (ctx.roles, ctx.is_cross_tenant_admin())
+            } else {
+                (Vec::new(), false)
+            };
+            evaluate_break_glass(true, claim_present, &claim_roles, claim_cross_admin)
+        } else {
+            BreakGlassEval::NotAsserted
+        };
+        if break_glass_eval == BreakGlassEval::RoleDenied {
+            self.audit_governance(&subject, &tenant, rpc, resource_action, false, now)
+                .await;
+            return Err(break_glass_role_required_status(rpc));
+        }
+        if break_glass_eval == BreakGlassEval::Authorized {
             if actor.break_glass_reason.trim().is_empty() {
                 return Err(break_glass_reason_required_status(rpc));
             }
@@ -910,6 +1004,87 @@ mod tests {
             "SimulatePolicy",
             "governance_policy_denied",
             "SimulatePolicy denied by native.authz.governance policy: deny-by-rule",
+        );
+    }
+
+    #[test]
+    fn holds_break_glass_admin_role_matches_case_insensitively() {
+        assert!(holds_break_glass_admin_role(&["break_glass_admin"]));
+        assert!(holds_break_glass_admin_role(&[" Break_Glass_Admin "]));
+        assert!(holds_break_glass_admin_role(&[
+            "auditor",
+            "break_glass_admin"
+        ]));
+        assert!(!holds_break_glass_admin_role(&["auditor", "policy_author"]));
+        assert!(!holds_break_glass_admin_role::<&str>(&[]));
+    }
+
+    // (a) Break-glass asserted over an authenticated transport WITHOUT the
+    // `break_glass_admin` role is DENIED — the request-supplied bool cannot skip
+    // the standing-scope / SoD gate. A caller who cleared the coarse transport
+    // scope stays denied.
+    #[test]
+    fn break_glass_without_role_is_denied_over_authenticated_transport() {
+        let eval = evaluate_break_glass(
+            true,
+            /* claim_present */ true,
+            &["auditor".to_string()],
+            /* cross_tenant_admin */ false,
+        );
+        assert_eq!(eval, BreakGlassEval::RoleDenied);
+
+        // No roles at all → still denied (fail closed).
+        let eval_no_roles = evaluate_break_glass(true, true, &[], false);
+        assert_eq!(eval_no_roles, BreakGlassEval::RoleDenied);
+
+        // And the denial carries the typed policy detail.
+        let status = break_glass_role_required_status("RollbackPolicyVersion");
+        assert_permission_policy_detail(
+            &status,
+            "RollbackPolicyVersion",
+            "break_glass_role_required",
+            "RollbackPolicyVersion: break-glass requires the break_glass_admin role on the authenticated principal; a request-asserted break-glass flag is not sufficient",
+        );
+    }
+
+    // (b) With the verified `break_glass_admin` role the caller may use break-glass;
+    // a genuine cross-tenant/platform-admin identity is also accepted as a superset.
+    #[test]
+    fn break_glass_with_role_is_authorized() {
+        let eval = evaluate_break_glass(true, true, &["break_glass_admin".to_string()], false);
+        assert_eq!(eval, BreakGlassEval::Authorized);
+
+        let eval_cross_admin = evaluate_break_glass(
+            true,
+            true,
+            /* roles */ &[],
+            /* cross_tenant_admin */ true,
+        );
+        assert_eq!(eval_cross_admin, BreakGlassEval::Authorized);
+    }
+
+    // (c) break_glass=false is never a break-glass path, so the normal
+    // standing-scope / SoD gate applies unaffected regardless of identity.
+    #[test]
+    fn break_glass_not_asserted_falls_through_to_standing_gate() {
+        assert_eq!(
+            evaluate_break_glass(false, true, &["break_glass_admin".to_string()], true),
+            BreakGlassEval::NotAsserted
+        );
+        assert_eq!(
+            evaluate_break_glass(false, false, &[], false),
+            BreakGlassEval::NotAsserted
+        );
+    }
+
+    // In-process / test / trusted-internal caller (no validated claim): the actor
+    // body is trusted exactly as the standing-scope gate trusts `actor.scopes` in
+    // the same fallback, so break-glass is permitted without a claim role.
+    #[test]
+    fn break_glass_without_claim_is_trusted_in_process_fallback() {
+        assert_eq!(
+            evaluate_break_glass(true, /* claim_present */ false, &[], false),
+            BreakGlassEval::Authorized
         );
     }
 }

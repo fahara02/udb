@@ -9,7 +9,7 @@ use tonic::Status;
 use crate::proto::udb::core::storage::entity::v1 as storage_entity_pb;
 
 use super::StorageServiceImpl;
-use super::config::OBJECT_DELETE_ORPHANED;
+use super::config::{OBJECT_DELETE_ORPHANED, storage_sse_required};
 
 /// Outcome of minting a presigned URL: a real URL + unix-seconds expiry, a
 /// degraded deployment (no object runtime / object-store feature off), or a
@@ -75,6 +75,26 @@ impl StorageServiceImpl {
         let Some(runtime) = self.runtime.as_ref() else {
             return PresignOutcome::Degraded;
         };
+        // SSE enforcement on the native presign path (mirrors the data-plane
+        // object PUT, which stamps `server_side_encryption` on the executor
+        // request). A presigned PUT URL only enforces SSE when the
+        // `x-amz-server-side-encryption` header is part of the SIGNED request;
+        // that signing lives in the shared `presign_object_backend_target`
+        // helper, so until it accepts the flag we fail closed for uploads rather
+        // than hand out a URL that would let the client store the object
+        // unencrypted. GET/download presign is unaffected — reading an encrypted
+        // object is transparent.
+        // TODO(leader-wire): extend runtime.presign_object_backend_target
+        // (src/runtime/core/setup_data.rs) with a `require_sse` flag that signs
+        // `x-amz-server-side-encryption: AES256` into the PUT presign, then
+        // replace this fail-closed guard with that signed-header path.
+        if method.eq_ignore_ascii_case("PUT") && storage_sse_required() {
+            return PresignOutcome::Failed(
+                "object store requires server-side encryption; the native presigned PUT cannot \
+                 yet sign the encryption header (upload via the broker object PUT RPC instead)"
+                    .to_string(),
+            );
+        }
         let ttl_secs = (ttl_minutes.max(1) as i64 * 60).min(7 * 24 * 3600) as i32;
         match runtime
             .presign_object_backend_target(

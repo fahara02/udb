@@ -4112,8 +4112,8 @@
     "operation_id": "vaultSign",
     "op_kind": "MUTATION",
     "request_msg": "SignRequest",
-    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"key_name\": \"<seed:vault_key_name>\", \"input\": \"perf\" }`",
-    "notes": "signs a small transit input."
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"key_name\": \"<seed:vault_signing_key_name>\", \"input\": \"perf\" }`",
+    "notes": "signs a small transit input; requires the ed25519 signing key (a symmetric aes256-gcm-siv key is rejected)."
   },
   {
     "file": "vault.md",
@@ -4136,8 +4136,8 @@
     "operation_id": "vaultVerify",
     "op_kind": "READ_ONLY",
     "request_msg": "VerifyRequest",
-    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"key_name\": \"<seed:vault_key_name>\", \"input\": \"perf\", \"signature\": \"<seed:vault_signature>\" }`",
-    "notes": "verifies the seeded transit signature."
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"key_name\": \"<seed:vault_signing_key_name>\", \"input\": \"perf\", \"signature\": \"<seed:vault_signature>\" }`",
+    "notes": "verifies the seeded transit signature under the ed25519 signing key that produced it."
   },
   {
     "file": "webhook.md",

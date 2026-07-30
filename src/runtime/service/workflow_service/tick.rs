@@ -16,9 +16,9 @@ use crate::runtime::native_catalog::NativeModel;
 
 use super::super::native_helpers::MAX_LIST_ROWS;
 use super::config::{
-    COMPENSATE_EMITTED_KEY, STATUS_COMPENSATED, STATUS_COMPENSATING, STATUS_FAILED,
-    TOPIC_COMPENSATE_STEP, TOPIC_COMPENSATED, TOPIC_COMPLETED, TOPIC_FAILED, TOPIC_STEP_ADVANCED,
-    workflow_step_timeout_secs,
+    COMPENSATE_EMITTED_KEY, SIGNAL_WAITS_KEY, SIGNALS_KEY, STATUS_COMPENSATED, STATUS_COMPENSATING,
+    STATUS_FAILED, STATUS_WAITING_SIGNAL, TOPIC_COMPENSATE_STEP, TOPIC_COMPENSATED,
+    TOPIC_COMPLETED, TOPIC_FAILED, TOPIC_STEP_ADVANCED, workflow_step_timeout_secs,
 };
 use super::errors::workflow_internal_status;
 use super::events::insert_tick_outbox;
@@ -88,6 +88,75 @@ pub(crate) fn compensation_steps_to_emit(
             (index, compensation_step_name(compensations, index))
         })
         .collect()
+}
+
+/// Whether the instance payload records a delivered signal of the given `name`
+/// in its append-only `signals` log. Pure — the signal-gate resume condition.
+pub(crate) fn signal_delivered(payload: &serde_json::Value, name: &str) -> bool {
+    let want = name.trim();
+    payload
+        .get(SIGNALS_KEY)
+        .and_then(serde_json::Value::as_array)
+        .map(|arr| {
+            arr.iter().any(|e| {
+                e.get("name")
+                    .and_then(serde_json::Value::as_str)
+                    .map(str::trim)
+                    == Some(want)
+            })
+        })
+        .unwrap_or(false)
+}
+
+/// The signal a step must block on before the forward pass may advance INTO it,
+/// if any: the caller-declared `signal_waits` map in the instance payload keys
+/// `step_index` (decimal string) → required signal name. Returns the pending
+/// signal name ONLY while that step is gated — i.e. a wait is declared for
+/// `step_index` AND the signal has not yet been delivered (absent from the
+/// payload `signals` log). Once `SignalWorkflow` records the matching signal the
+/// gate clears and the step advances normally. Pure — unit-tested without
+/// Postgres, so the "don't blindly advance" contract is asserted on the helper.
+pub(crate) fn pending_signal_for_step(
+    payload: &serde_json::Value,
+    step_index: i32,
+) -> Option<String> {
+    let name = payload
+        .get(SIGNAL_WAITS_KEY)
+        .and_then(serde_json::Value::as_object)
+        .and_then(|waits| waits.get(&step_index.to_string()))
+        .and_then(serde_json::Value::as_str)
+        .map(str::trim)
+        .filter(|s| !s.is_empty())?;
+    if signal_delivered(payload, name) {
+        None
+    } else {
+        Some(name.to_string())
+    }
+}
+
+/// Whether a delivered signal resumes the instance: an instance parked in
+/// WAITING_SIGNAL resumes ONLY when the delivered signal equals the exact
+/// `pending_signal` it is blocked on; any other (RUNNING/PENDING) instance is
+/// simply nudged forward. Pure — the H9 "an unrelated signal does not resume a
+/// waiting step" contract, asserted without Postgres.
+pub(crate) fn signal_resumes(status: &str, pending_signal: &str, signal_name: &str) -> bool {
+    if status == STATUS_WAITING_SIGNAL {
+        pending_signal.trim() == signal_name.trim()
+    } else {
+        true
+    }
+}
+
+/// The status a timed-out RUNNING instance transitions to: COMPENSATING when it
+/// had already completed forward steps (`current_step > 0`) so they are undone
+/// before it settles, else FAILED (nothing to undo). Pure — the H6 "don't settle
+/// FAILED with completed steps still standing" contract, asserted on the helper.
+pub(crate) fn timeout_target_status(current_step: i32) -> &'static str {
+    if current_step > 0 {
+        STATUS_COMPENSATING
+    } else {
+        STATUS_FAILED
+    }
 }
 
 /// The `SELECT ... FOR UPDATE SKIP LOCKED` statement the tick uses to claim DUE
@@ -216,7 +285,10 @@ fn tick_row_i32(row: &sqlx::postgres::PgRow, column: &str) -> Result<i32, Status
 /// 1. **Forward advance** — claims up to `batch_size` DUE RUNNING instances with
 ///    `FOR UPDATE SKIP LOCKED` and advances `current_step`, enqueuing
 ///    `step.advanced` (or `completed` on the terminal step). Never double-advances;
-///    every transition is at-least-once via the outbox→CDC pipeline.
+///    every transition is at-least-once via the outbox→CDC pipeline. A step gated
+///    on an external signal (`signal_waits` in the payload) is NOT advanced by the
+///    timer — the instance parks in WAITING_SIGNAL until `SignalWorkflow` delivers
+///    the matching signal (16.3 signal-driven wait), then advances on a later pass.
 /// 2. **Compensation driver (16.3.2)** — for COMPENSATING instances, emits one
 ///    `udb.workflow.compensate.step.v1` event per completed step in REVERSE order
 ///    (application-driven undo; the data-plane `CompensatorRegistry` cannot undo
@@ -226,8 +298,11 @@ fn tick_row_i32(row: &sqlx::postgres::PgRow, column: &str) -> Result<i32, Status
 ///    Exactly-once on re-tick: the terminal transition commits with the events,
 ///    and the payload marker skips any already-emitted steps.
 /// 3. **Timeout sweep (16.3.4)** — RUNNING instances whose `last_transition_at`
-///    exceeds the step timeout move to FAILED and emit `udb.workflow.failed.v1`.
-///    Step ADVANCE itself stays timer-driven (`next_run_at`) this wave — a full
+///    exceeds the step timeout emit `udb.workflow.failed.v1`; one that had already
+///    completed forward steps (`current_step > 0`) moves to COMPENSATING (its
+///    completed steps are undone by pass 2 before it settles COMPENSATED), while
+///    one that timed out before any step completed settles FAILED directly. Step
+///    ADVANCE itself stays timer-driven (`next_run_at`) this wave — a full
 ///    step-ack contract needs proto surface (follow-up 16.12.3).
 ///
 /// The tick FIRES EVENTS ONLY; it never runs a payload in-process — it is the
@@ -284,10 +359,46 @@ pub(crate) async fn run_workflow_tick_once(
         let total_steps = tick_row_i32(row, "total_steps")?;
 
         let new_step = current_step.saturating_add(1);
-        let completed = new_step >= total_steps;
-        let topic = advance_event_topic(completed);
         let payload_json: serde_json::Value =
             serde_json::from_str(&payload).unwrap_or(serde_json::Value::Null);
+
+        // H9 — honor step outcomes: a step gated on an external signal must NOT be
+        // advanced by the timer. If the step this pass would enter declares a
+        // required signal that has not yet been delivered, park the instance in
+        // WAITING_SIGNAL (durable, timer-immune) with that pending signal name and
+        // clear next_run_at, WITHOUT advancing current_step. `SignalWorkflow` with
+        // the matching name records the signal and resumes the instance to RUNNING;
+        // a later pass then re-evaluates this same step, finds the gate cleared,
+        // and advances it. No event is emitted for the pause (no proto wait-topic
+        // this wave).
+        if let Some(pending) = pending_signal_for_step(&payload_json, new_step) {
+            sqlx::query(&format!(
+                "UPDATE {wf_rel} SET {status} = $2, {pending_signal} = $3, \
+                    {next_run_at} = NULL, {last_transition_at} = NOW() \
+                 WHERE {workflow_id} = $1::UUID",
+                status = m.q("status"),
+                pending_signal = m.q("pending_signal"),
+                next_run_at = m.q("next_run_at"),
+                last_transition_at = m.q("last_transition_at"),
+                workflow_id = m.q("workflow_id"),
+            ))
+            .bind(&workflow_id)
+            .bind(STATUS_WAITING_SIGNAL)
+            .bind(&pending)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| {
+                workflow_internal_status(
+                    "workflow_tick_wait_update",
+                    format!("workflow tick wait update failed: {e}"),
+                )
+            })?;
+            acted += 1;
+            continue;
+        }
+
+        let completed = new_step >= total_steps;
+        let topic = advance_event_topic(completed);
         let event_payload = serde_json::json!({
             "workflow_id": workflow_id.clone(),
             "tenant_id": tenant_id.clone(),
@@ -496,6 +607,17 @@ pub(crate) async fn run_workflow_tick_once(
         let current_step = tick_row_i32(row, "current_step")?;
         let total_steps = tick_row_i32(row, "total_steps")?;
 
+        // H6 — a timed-out instance that already completed forward steps must NOT
+        // settle FAILED with those steps still standing (e.g. money left charged):
+        // move it RUNNING → COMPENSATING so the compensation driver (16.3.2) undoes
+        // each completed step in REVERSE order before it settles terminal, exactly
+        // like the cancel path. Only an instance that timed out before ANY step
+        // completed (current_step <= 0) has nothing to undo and settles FAILED
+        // directly. The `failed` event still fires as the timeout CAUSE — when
+        // compensating it is the trigger the reverse-order `compensate.step`
+        // events follow (the cancel path uses `cancelled` the same way).
+        let new_status = timeout_target_status(current_step);
+        let compensating = new_status == STATUS_COMPENSATING;
         sqlx::query(&format!(
             "UPDATE {wf_rel} SET {status} = $2, {next_run_at} = NULL, {last_error} = $3, \
                 {last_transition_at} = NOW() WHERE {workflow_id} = $1::UUID",
@@ -506,7 +628,7 @@ pub(crate) async fn run_workflow_tick_once(
             workflow_id = m.q("workflow_id"),
         ))
         .bind(&workflow_id)
-        .bind(STATUS_FAILED)
+        .bind(new_status)
         .bind(format!(
             "workflow step timed out after {timeout_secs}s without a transition"
         ))
@@ -534,12 +656,18 @@ pub(crate) async fn run_workflow_tick_once(
                 "total_steps": total_steps,
                 "reason": "step_timeout",
                 "timeout_secs": timeout_secs,
+                // Completed steps are being rolled back; the terminal state will be
+                // COMPENSATED, driven by the compensation pass on a later tick.
+                "compensating": compensating,
                 "failed_at": now.to_rfc3339(),
             }),
             "failed",
         )
         .await?;
-        if let Ok(saga_uuid) = saga_id.parse::<Uuid>() {
+        // Only settle the linked saga Failed when nothing was compensated. When
+        // compensating, the compensation driver settles the saga Compensated once
+        // the reverse-order undo completes, so it must NOT be marked Failed here.
+        if !compensating && let Ok(saga_uuid) = saga_id.parse::<Uuid>() {
             failed_sagas.push(saga_uuid);
         }
         acted += 1;

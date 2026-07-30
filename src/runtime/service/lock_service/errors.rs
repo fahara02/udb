@@ -25,11 +25,15 @@ pub(crate) fn lock_internal_status(
     crate::runtime::executor_utils::internal_status("lock", operation, message)
 }
 
-/// Fail-closed refusal when the monotone fencing-token source is unavailable
-/// (no canonical store registered, or the counter read failed). Wall-clock
-/// seconds are NOT an acceptable fallback: they collide within a second and
-/// regress across clock steps, so a time-derived token could duplicate or
-/// undercut an already-issued token and let a fenced-off holder write again.
+/// Fail-closed refusal shape for the fencing path when a monotone token cannot
+/// be established. Wall-clock seconds are NOT an acceptable fallback: they
+/// collide within a second and regress across clock steps, so a time-derived
+/// token could duplicate or undercut an already-issued token and let a
+/// fenced-off holder write again. Per-lock tokens are now sourced from the
+/// durable lock row (a store read that fails closed on its own), so no live call
+/// site remains — the constructor is retained as the canonical fail-closed shape
+/// asserted by the unit tests.
+#[allow(dead_code)]
 pub(crate) fn fencing_token_unavailable_status() -> Status {
     lock_capability_status(
         "lock_fencing",

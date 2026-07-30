@@ -14,19 +14,21 @@ use crate::runtime::saga::SagaKind;
 
 use super::WorkflowServiceImpl;
 use super::config::{
-    COMPENSATE_EMITTED_KEY, MAX_PAYLOAD_BYTES, TOPIC_COMPENSATE_STEP, TOPIC_COMPENSATED,
-    TOPIC_COMPLETED, TOPIC_FAILED, TOPIC_STEP_ADVANCED, WORKFLOW_STEP_TIMEOUT_SECS,
-    workflow_step_timeout_secs,
+    COMPENSATE_EMITTED_KEY, MAX_PAYLOAD_BYTES, STATUS_COMPENSATING, STATUS_FAILED,
+    TOPIC_COMPENSATE_STEP, TOPIC_COMPENSATED, TOPIC_COMPLETED, TOPIC_FAILED, TOPIC_STEP_ADVANCED,
+    WORKFLOW_STEP_TIMEOUT_SECS, workflow_step_timeout_secs,
 };
 use super::errors::{
     workflow_cancel_terminal_status, workflow_capability_status, workflow_internal_status,
-    workflow_not_found_status, workflow_signal_terminal_status,
+    workflow_not_found_status, workflow_signal_compensating_status,
+    workflow_signal_terminal_status,
 };
 use super::model::{is_terminal_status, workflow_model, workflow_status_filter_to_db};
 use super::store::workflow_scope_predicate;
 use super::tick::{
     advance_event_topic, compensate_emitted_from_payload, compensating_workflows_claim_sql,
-    compensation_steps_to_emit, due_workflows_claim_sql, timed_out_workflows_claim_sql,
+    compensation_steps_to_emit, due_workflows_claim_sql, pending_signal_for_step, signal_delivered,
+    signal_resumes, timed_out_workflows_claim_sql, timeout_target_status,
 };
 
 fn decode_detail(status: &Status) -> ErrorDetail {
@@ -455,4 +457,80 @@ fn compensation_and_failure_topics_are_versioned() {
     assert_eq!(TOPIC_COMPENSATE_STEP, "udb.workflow.compensate.step.v1");
     assert_eq!(TOPIC_COMPENSATED, "udb.workflow.compensated.v1");
     assert_eq!(TOPIC_FAILED, "udb.workflow.failed.v1");
+}
+
+/// H7 — a COMPENSATING instance is non-signalable: the denial carries a truthful
+/// `workflow_compensating_state` policy decision (NOT the terminal-state one), so
+/// a signal can never revert an in-flight compensation to RUNNING.
+#[test]
+fn workflow_signal_compensating_denial_carries_policy_detail() {
+    let denial = workflow_signal_compensating_status();
+    assert_eq!(denial.code(), tonic::Code::FailedPrecondition);
+    assert_eq!(
+        denial.message(),
+        "workflow is compensating and cannot be signalled"
+    );
+    assert_policy_detail(&denial, "signal_workflow", "workflow_compensating_state");
+}
+
+/// H6 — a timed-out instance that already completed forward steps moves to
+/// COMPENSATING (its steps are undone before it settles), never straight to a
+/// settled FAILED with completed steps standing; one that timed out before any
+/// step completed settles FAILED (nothing to undo). Pure — no PG.
+#[test]
+fn timeout_target_compensates_only_with_completed_steps() {
+    assert_eq!(timeout_target_status(1), STATUS_COMPENSATING);
+    assert_eq!(timeout_target_status(5), STATUS_COMPENSATING);
+    assert_eq!(timeout_target_status(0), STATUS_FAILED);
+    assert_eq!(timeout_target_status(-3), STATUS_FAILED);
+}
+
+/// H9 — the forward pass honors step outcomes: a step declared (in the payload
+/// `signal_waits` map) to block on a signal that has not been delivered gates the
+/// advance (returns the pending signal name); once the signal is recorded in the
+/// `signals` log the gate clears; a step with no declared wait never gates. Pure.
+#[test]
+fn pending_signal_gates_step_until_delivered() {
+    let waiting = serde_json::json!({
+        "signal_waits": { "2": "payment_confirmed" }
+    });
+    // Step 2 is gated on `payment_confirmed`, which has not been delivered.
+    assert_eq!(
+        pending_signal_for_step(&waiting, 2),
+        Some("payment_confirmed".to_string())
+    );
+    // Steps without a declared wait advance freely.
+    assert_eq!(pending_signal_for_step(&waiting, 1), None);
+    assert_eq!(pending_signal_for_step(&waiting, 3), None);
+
+    // Once the matching signal is recorded, the gate clears.
+    let delivered = serde_json::json!({
+        "signal_waits": { "2": "payment_confirmed" },
+        "signals": [ { "name": "payment_confirmed" } ]
+    });
+    assert_eq!(pending_signal_for_step(&delivered, 2), None);
+    assert!(signal_delivered(&delivered, "payment_confirmed"));
+    assert!(!signal_delivered(&delivered, "other"));
+
+    // A payload with no signal_waits map never gates.
+    assert_eq!(pending_signal_for_step(&serde_json::json!({}), 2), None);
+}
+
+/// H9 — a WAITING_SIGNAL instance resumes ONLY on the exact signal it is blocked
+/// on; an unrelated signal is recorded but does not resume it. A RUNNING instance
+/// is always nudged forward. Pure — no PG.
+#[test]
+fn signal_resumes_only_on_exact_pending_match() {
+    assert!(signal_resumes(
+        "WAITING_SIGNAL",
+        "payment_confirmed",
+        "payment_confirmed"
+    ));
+    assert!(!signal_resumes(
+        "WAITING_SIGNAL",
+        "payment_confirmed",
+        "shipment_ready"
+    ));
+    // A running (non-waiting) instance is simply nudged forward by any signal.
+    assert!(signal_resumes("RUNNING", "", "anything"));
 }

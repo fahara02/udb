@@ -7,10 +7,12 @@ release line was tagged.
 
 ## [0.4.32] - 2026-07-30
 
-Native-service upgrade — batch 2. Continues the no-deferrals plan implementation
-across all five services (transactional Vault, Embedding erasure + Matryoshka,
-richer Notification delivery, Search/vector tenant-filter completeness, LiveQuery
-knobs) plus a fail-closed audit-sink ergonomics fix. No proto changes.
+Native-service upgrade — batch 2, plus a full cross-service gap-review hardening
+pass. Continues the no-deferrals plan implementation across all five services
+(transactional Vault, Embedding erasure + Matryoshka, richer Notification delivery,
+Search/vector tenant-filter completeness, LiveQuery knobs) plus a fail-closed
+audit-sink ergonomics fix — and then closes a read-only gap review across all 20
+native services (see the security-hardening section below). No proto changes.
 
 ### Fixed
 - **Fail-closed startup now accepts the durable Postgres audit sink.**
@@ -84,6 +86,73 @@ knobs) plus a fail-closed audit-sink ergonomics fix. No proto changes.
   never silently stores DEKs in the clear regardless of the global dev default.
   (The concrete external `AwsKmsProvider` remains omitted by the project's
   documented offline-vendoring constraint.)
+
+### Security hardening (cross-service gap-review pass)
+A read-only gap review across all 20 native services surfaced (and this release
+fixes) the following. No proto changes; all fixes are fail-closed.
+
+- **Backup: cross-tenant restore is now gated on the caller's verified claim, not a
+  request bool.** `RestoreTenant` previously trusted `allow_cross_tenant` from the
+  wire; it now requires the caller to be a cross-tenant admin (`is_cross_tenant_admin()`)
+  and derives the privileged flag from the claim — closing an inject-A's-rows-into-B
+  path (principals/api-keys/credentials). Restore also verifies the backup manifest
+  against its recorded SHA-256 and treats an empty per-table checksum as a failure
+  (an object-store writer can no longer repoint objects at another tenant's artifact),
+  and the fresh-target guard now runs inside the restore transaction.
+- **Webhook: SSRF hardening.** Delivery no longer follows redirects
+  (`redirect::Policy::none()`, so a `302`→link-local/metadata is refused), pins the
+  validated IP for the connection (closes a DNS-rebind TOCTOU), applies a per-delivery
+  timeout (`UDB_WEBHOOK_DELIVERY_TIMEOUT_MS`) with bounded per-tenant concurrency
+  (`UDB_WEBHOOK_DELIVERY_CONCURRENCY`, no head-of-line blocking), and signs a
+  timestamp with the body (`X-Udb-Timestamp`) to bound replay.
+- **Auth: break-glass can no longer be self-asserted.** The governance authorizer now
+  authorizes `break_glass` against the caller's VERIFIED `break_glass_admin` role
+  (over-the-wire path) instead of the request-supplied `actor.break_glass` bool — a
+  caller can no longer skip the standing-scope / SoD gate.
+- **Tenant: SUSPENDED/INACTIVE now has enforcement teeth.** A fail-closed request-time
+  status gate rejects a suspended tenant's live tokens immediately (not at TTL);
+  `CreateTenant` now validates/authorizes `parent_tenant_id` and no longer discloses an
+  existing tenant's UUID/status (or emits a spurious `tenant.created`) on a duplicate code.
+- **Workflow: sagas actually compensate.** A timed-out/failed saga with completed steps
+  now transitions to COMPENSATING (reverse-order compensation) instead of settling FAILED
+  with steps left applied; COMPENSATING instances are non-signalable; the signal path
+  serializes with `SELECT … FOR UPDATE` (no lost signal); and the previously-dead
+  `WAITING_SIGNAL`/`pending_signal` path is now a working opt-in signal-gated wait.
+- **Vault: transit hardening.** `BatchDecrypt` is bounded
+  (`UDB_VAULT_MAX_BATCH_DECRYPT_ITEMS`); the per-tenant transit quota now also charges
+  the KEK-unwrapping RPCs (`Decrypt`/`BatchDecrypt`/`GenerateDataKey`/`Rewrap`/`Verify`);
+  transit keys are purpose-separated (an Ed25519 signing key is refused for HMAC and vice
+  versa); the fixed-window quota counter evicts idle tenants.
+- **Embedding/Search (portable vector backends): reachable read bugs fixed.** Weaviate
+  vector search was a silent stub returning `[]` — it now parses the response (cosine-
+  normalized) and reads/writes the same physical class; Elasticsearch-backed hits are
+  unwrapped to the flat point shape, fixing empty provenance AND an own-tenant leak of
+  internal keys + the raw vector; ES vector scores are de-offset to true cosine; and
+  `parent_window` neighbor scoping is honored on portable backends.
+- **LiveQuery durable resume: no lost sends, filter parity.** Replay now accumulates up
+  to the limit of the subscriber's OWN in-scope rows via a bounded paginated scan
+  (previously the SQL `LIMIT` was applied before the tenant filter, so a busy shared
+  entity could dilute a tenant's replay to empty), and replayed changes now pass the
+  subscriber's `user_filter` like the live path.
+- **Notification: exactly-once dead-letter + opt-out on retry.** `RetryNotification` now
+  resets the delivery-attempt budget in the same transaction as the resurrection (no more
+  double dead-letter / one-shot retry), and recipient opt-out is enforced by the delivery
+  worker and retry path, not only at send.
+- **Scheduler:** atomic per-tenant job quota (advisory-lock + guarded insert, no TOCTOU),
+  quadrennial/leap-day crons resolve instead of being rejected/dead-lettered, fired events
+  carry a stable `(job_id, scheduled_slot)` idempotency key, and CRUD outbox events are
+  enqueued inside the mutation transaction.
+- **Storage/Asset/Lock:** derived asset writes stamp server-side encryption
+  (`UDB_STORAGE_SERVER_SIDE_ENCRYPTION`; native presign-PUT fails closed when SSE is
+  required), object keys reject path traversal, `StartPipeline` compensates to FAILED
+  instead of stranding RUNNING rows, and lock fencing tokens are per-lock monotonic under
+  the lease (independent of the outbox) and bumped on lapsed re-acquire.
+
+Known fast-follow (tracked, not shipped in 0.4.32): the leader-elected trigger for backup
+retention pruning + scheduled backups (the tested `prune_tenant_backups` primitive ships,
+its cross-tenant scheduler spawn does not); per-job scheduler timezone/DST (needs a proto
+field + a vendored IANA-tz crate); and full encrypt-vs-HMAC key isolation on a shared
+symmetric key (this release separates signing from HMAC).
 
 ## [0.4.31] - 2026-07-30
 

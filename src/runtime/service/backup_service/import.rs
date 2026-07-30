@@ -29,7 +29,8 @@ use super::BackupServiceImpl;
 use super::config::{KIND_RESTORE, MANIFEST_SUFFIX, TOPIC_BACKUP_RESTORED};
 use super::errors::{
     backup_internal_status, backup_not_found_status, backup_run_missing_object_prefix_status,
-    ensure_target_is_fresh,
+    ensure_target_is_fresh, restore_cross_tenant_admin_required_status,
+    restore_manifest_integrity_status,
 };
 use super::events::emit_event;
 use super::model::{qualified_relation, run_summary_from_json, sha256_hex};
@@ -293,15 +294,32 @@ pub(crate) async fn restore_tenant(
             ],
         ));
     }
-    // Same-tenant restore acts on the target tenant. Cross-tenant restore
-    // into a fresh target has no target principal yet, so authorize the
-    // source tenant and require the explicit movement gate below.
-    let auth_tenant_id = if req.allow_cross_tenant {
-        &source_tenant_id
+    // A cross-tenant restore is any restore whose target differs from the source
+    // OR whose caller explicitly asked to cross the boundary. It moves one
+    // tenant's raw rows into another and its cross-tenant privilege is derived
+    // from the caller's VALIDATED claim — a genuine cross-tenant / platform admin,
+    // the only identity authorized over BOTH the source and the target tenant.
+    // The wire `allow_cross_tenant` bool is a caller intent hint, NEVER the
+    // authorization (that would let a tenant-scoped caller self-grant the move).
+    let cross_tenant = req.allow_cross_tenant || source_tenant_id != target_tenant_id;
+    let claim_present = crate::runtime::service::method_security::claim_context_present();
+    let claim = crate::runtime::service::method_security::current_claim_context();
+    let privileged_cross_tenant = if cross_tenant {
+        // Over-the-wire requests always carry a validated claim; a caller that is
+        // not a cross-tenant admin is DENIED fail-closed. (An in-process / loopback
+        // caller carries no claim context and is not privileged either, so the
+        // shared movement validator below still fails closed unless source ==
+        // target.)
+        if claim_present && !claim.is_cross_tenant_admin() {
+            return Err(restore_cross_tenant_admin_required_status());
+        }
+        claim.is_cross_tenant_admin()
     } else {
-        &target_tenant_id
+        // Same-tenant restore: the body/header/claim tenant must match the target
+        // exactly, so a tenant-A caller cannot smuggle tenant B in the body.
+        validate_request_tenant(&metadata, &target_tenant_id)?;
+        false
     };
-    validate_request_tenant(&metadata, auth_tenant_id)?;
     // DESTRUCTIVE: a missing confirmation token fails CLOSED.
     if req.confirmation_token.trim().is_empty() {
         return Err(crate::runtime::executor_utils::invalid_argument_fields(
@@ -313,15 +331,15 @@ pub(crate) async fn restore_tenant(
         ));
     }
 
-    // SHARED fail-closed movement validator — RestoreImport. A target that
-    // differs from the source is a cross-tenant move and requires explicit
-    // privileged approval; otherwise this returns an error and we fail closed.
+    // SHARED fail-closed movement validator — RestoreImport. The cross-tenant
+    // privilege comes from the caller's CLAIM (above), never the wire bool, so a
+    // move into a differing target still fails closed for a non-admin caller.
     let movement = TenantMovementRequest {
         operation: TenantMovementOperation::RestoreImport,
         tenant_id: &source_tenant_id,
         target_tenant_id: Some(&target_tenant_id),
         tenant_filter_present: true,
-        privileged_cross_tenant: req.allow_cross_tenant,
+        privileged_cross_tenant,
     };
     validate_tenant_movement_scope(&movement)
         .map_err(|err| tenant_movement_policy_status(movement.operation, err))?;
@@ -356,36 +374,11 @@ pub(crate) async fn restore_tenant(
         return Err(backup_run_missing_object_prefix_status());
     }
 
-    // Enumerate the tenant-owned tables via the SHARED planner.
+    // Enumerate the tenant-owned tables via the SHARED planner. The FRESH-target
+    // guard (refuse to write over a live tenant) runs INSIDE the restore tx below
+    // — a pre-tx probe races a concurrent write that lands between the check and
+    // the inserts, so the authoritative emptiness check must share the tx.
     let plan = plan_tenant_purge(manifest);
-
-    // FRESH-target guard: refuse to write over a live tenant. Probe each
-    // tenant-owned table for ANY existing row under the target tenant.
-    let mut existing_rows: u64 = 0;
-    for target in &plan.targets {
-        let rel = qualified_relation(&target.schema, &target.table);
-        let probe_sql = format!(
-            "SELECT 1 FROM {rel} WHERE {col}::text = $1 LIMIT 1",
-            col = qi_runtime(&target.tenant_column),
-        );
-        let present: Option<i32> = sqlx::query_scalar(&probe_sql)
-            .bind(&target_tenant_id)
-            .fetch_optional(pool)
-            .await
-            .map_err(|err| {
-                backup_internal_status(
-                    "restore_freshness_probe",
-                    format!(
-                        "restore freshness probe failed on {}.{}: {err}",
-                        target.schema, target.table
-                    ),
-                )
-            })?;
-        if present.is_some() {
-            existing_rows += 1;
-        }
-    }
-    ensure_target_is_fresh(existing_rows)?;
 
     let _admit = native_admit_on(
         svc.channels.as_ref(),
@@ -418,6 +411,17 @@ pub(crate) async fn restore_tenant(
             &manifest_get,
         )
         .await?;
+    // Integrity: the manifest is the anchor restore trusts before reading ANY
+    // table artifact it lists. Verify its bytes against the checksum the backup
+    // recorded in the durable journal (`run.manifest_checksum`) BEFORE trusting a
+    // single entry. An empty recorded checksum (legacy or tampered journal row)
+    // is a verification FAILURE, never a skip — fail closed.
+    let recorded_manifest_checksum = run.manifest_checksum.trim();
+    if recorded_manifest_checksum.is_empty()
+        || sha256_hex(&manifest_bytes) != recorded_manifest_checksum
+    {
+        return Err(restore_manifest_integrity_status());
+    }
     let manifest_value: serde_json::Value =
         serde_json::from_slice(&manifest_bytes).map_err(|err| {
             backup_internal_status(
@@ -458,6 +462,38 @@ pub(crate) async fn restore_tenant(
             format!("failed to begin restore transaction: {err}"),
         )
     })?;
+
+    // FRESH-target guard (authoritative): refuse to write over a live tenant, and
+    // probe INSIDE the restore tx so a write that lands between an earlier check
+    // and the inserts cannot slip a live tenant under the restore. Any existing
+    // row aborts the tx (rolled back on the early return). Same tenant-owned table
+    // set as the backup, now transactional.
+    let mut existing_rows: u64 = 0;
+    for target in &plan.targets {
+        let rel = qualified_relation(&target.schema, &target.table);
+        let probe_sql = format!(
+            "SELECT 1 FROM {rel} WHERE {col}::text = $1 LIMIT 1",
+            col = qi_runtime(&target.tenant_column),
+        );
+        let present: Option<i32> = sqlx::query_scalar(&probe_sql)
+            .bind(&target_tenant_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|err| {
+                backup_internal_status(
+                    "restore_freshness_probe",
+                    format!(
+                        "restore freshness probe failed on {}.{}: {err}",
+                        target.schema, target.table
+                    ),
+                )
+            })?;
+        if present.is_some() {
+            existing_rows += 1;
+        }
+    }
+    ensure_target_is_fresh(existing_rows)?;
+
     for entry in &ordered_tables {
         let schema = entry.get("schema").and_then(|v| v.as_str()).unwrap_or("");
         let table = entry.get("table").and_then(|v| v.as_str()).unwrap_or("");
@@ -502,8 +538,10 @@ pub(crate) async fn restore_tenant(
                 &get_req,
             )
             .await?;
-        // Integrity: the encrypted artifact must match the manifest checksum.
-        if !expected_checksum.is_empty() && sha256_hex(&bytes) != expected_checksum {
+        // Integrity: the encrypted artifact must match the manifest checksum. An
+        // empty expected checksum is a verification FAILURE (fail closed), never a
+        // skip — a tampered manifest could blank it to bypass the check.
+        if expected_checksum.is_empty() || sha256_hex(&bytes) != expected_checksum {
             return Err(Status::data_loss(format!(
                 "restore integrity check failed for {schema}.{table} (checksum mismatch)"
             )));

@@ -69,7 +69,9 @@ mod worker;
 
 // Re-exported at the module root for the leader webhook-delivery worker (`serve()`)
 // and the notification service's shared delivery-time SSRF guard.
-pub(crate) use config::{WEBHOOK_DELIVERY_BATCH, webhook_delivery_interval};
+pub(crate) use config::{
+    WEBHOOK_DELIVERY_BATCH, webhook_delivery_interval, webhook_delivery_timeout,
+};
 pub(crate) use security::resolve_and_validate_target;
 // `validate_webhook_target_url` is re-exported at the module root ONLY for the
 // notification_service SSRF cross-check test; in-crate callers import it directly

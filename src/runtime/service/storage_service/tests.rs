@@ -15,13 +15,14 @@ use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
 
 use super::StorageServiceImpl;
 use super::config::{
-    ALREADY_FINALIZED, OBJECT_NOT_PRESENT, UNSUPPORTED_OBJECT_BACKEND, UPLOAD_SIZE_MISMATCH,
+    ALREADY_FINALIZED, OBJECT_KEY_TRAVERSAL, OBJECT_NOT_PRESENT, UNSUPPORTED_OBJECT_BACKEND,
+    UPLOAD_SIZE_MISMATCH,
 };
 use super::errors::{
     file_object_bytes_missing_status, object_store_bytes_missing_status,
     object_stream_requires_store_status, storage_capability_status, storage_file_not_found_status,
     storage_internal_status, upload_already_finalized_status, upload_etag_mismatch_status,
-    upload_size_mismatch_status, uploaded_object_missing_status,
+    upload_size_mismatch_status, uploaded_object_missing_status, validate_object_key_filename,
 };
 use super::model::{file_status_to_db, file_type_to_db, register_is_public_bind};
 
@@ -208,6 +209,52 @@ async fn register_upload_missing_filename_carries_field_violation() {
         detail.field_violations[0].description,
         "must be a non-empty filename"
     );
+}
+
+/// M4 — a client filename that would climb out of the `{tenant}/{file}/` object
+/// key prefix (traversal / absolute / separator / control byte) is rejected fail
+/// closed with the stable `OBJECT_KEY_TRAVERSAL` reason; a plain filename passes.
+#[test]
+fn object_key_filename_rejects_traversal_and_separators() {
+    for bad in [
+        "../../etc/passwd",
+        "..",
+        "/etc/passwd",
+        "a/b.png",
+        "a\\b.png",
+        "C:\\secret",
+        ".",
+        "with\0null",
+        "  ", // empty after trim
+    ] {
+        let err = validate_object_key_filename(bad)
+            .expect_err(&format!("suspicious filename must be rejected: {bad:?}"));
+        assert_eq!(err.code(), tonic::Code::InvalidArgument);
+        assert_eq!(
+            err.metadata()
+                .get("error-reason")
+                .and_then(|value| value.to_str().ok()),
+            Some(OBJECT_KEY_TRAVERSAL),
+            "reason trailer for {bad:?}"
+        );
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, "filename");
+    }
+    // Legitimate bare filenames (including dotfiles and unicode) are accepted.
+    for good in [
+        "report.pdf",
+        "photo.png",
+        ".env",
+        "résumé.txt",
+        "a.b.c.tar.gz",
+    ] {
+        assert!(
+            validate_object_key_filename(good).is_ok(),
+            "legit filename must pass: {good:?}"
+        );
+    }
 }
 
 #[test]

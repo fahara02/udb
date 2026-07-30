@@ -312,6 +312,10 @@ mod deny_reason {
     pub const PROJECT_MISMATCH: &str = "project_mismatch";
     pub const PROJECT_REQUIRED: &str = "project_required";
     pub const PUBLIC_RATE_LIMIT: &str = "public_rate_limit";
+    /// The caller authenticated, but its OWN claim tenant has been observed
+    /// SUSPENDED/INACTIVE on this node — live tokens are revoked at the request
+    /// gate before dispatch instead of waiting for the bearer TTL.
+    pub const TENANT_SUSPENDED: &str = "tenant_suspended";
 }
 
 fn method_security_policy_denied(reason: &'static str, message: impl Into<String>) -> Status {
@@ -1315,6 +1319,15 @@ fn enforce(
     }
 
     let claim_ctx = VerifiedClaimContext::from_principal(&verified_principal);
+    // Fail-closed tenant-status gate: a caller whose OWN claim tenant this node has
+    // observed SUSPENDED/INACTIVE is rejected here — revoking its live bearer tokens
+    // immediately rather than at their TTL. Public/in-process callers have an empty
+    // claim tenant, on which the gate no-ops. Keying on the caller's own tenant means
+    // a cross-tenant/platform admin can still reach UpdateTenant to reactivate.
+    if claim_ctx.authenticated {
+        crate::runtime::service::tenant_service::tenant_status_gate(&claim_ctx.tenant_id)
+            .map_err(|status| (status, deny_reason::TENANT_SUSPENDED))?;
+    }
     Ok((verified_principal, claim_ctx))
 }
 

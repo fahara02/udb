@@ -1712,6 +1712,7 @@ func TestBuildManifestJSONBodyUsesSharedManifest(t *testing.T) {
 		t.Fatalf("embedding delete_source source_name = %q, want sdk_live_records", got)
 	}
 	fix.set("vault_key_name", "sdk-perf-key")
+	fix.set("vault_signing_key_name", "sdk-perf-signing-key")
 	fix.set("vault_create_key_name", "sdk-perf-create-key")
 	fix.set("vault_ciphertext", "udb-vault:v1:seed")
 	fix.set("vault_secret_path", "app/config")
@@ -1729,8 +1730,8 @@ func TestBuildManifestJSONBodyUsesSharedManifest(t *testing.T) {
 	if got := vaultMsg.Get(vaultFields.ByName("tenant_id")).String(); got != "tenant-1" {
 		t.Fatalf("vault tenant_id = %q, want tenant-1", got)
 	}
-	if got := vaultMsg.Get(vaultFields.ByName("key_name")).String(); got != "sdk-perf-key" {
-		t.Fatalf("vault key_name = %q, want sdk-perf-key", got)
+	if got := vaultMsg.Get(vaultFields.ByName("key_name")).String(); got != "sdk-perf-signing-key" {
+		t.Fatalf("vault key_name = %q, want sdk-perf-signing-key", got)
 	}
 	if got := vaultMsg.Get(vaultFields.ByName("signature")).String(); got != "udb-vault-sig:v1:seed" {
 		t.Fatalf("vault signature = %q, want seeded signature", got)

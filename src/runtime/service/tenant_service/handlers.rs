@@ -30,10 +30,11 @@ use super::config::{
     TOPIC_TENANT_PURGED, TOPIC_TENANT_UPDATED,
 };
 use super::errors::{
-    tenant_internal_status, tenant_not_found_status, tenant_required_field,
-    validate_create_tenant_required_fields,
+    tenant_already_exists_status, tenant_field_violation, tenant_internal_status,
+    tenant_not_found_status, tenant_required_field, validate_create_tenant_required_fields,
 };
 use super::events::{emit_event, tenant_config_event_payload, tenant_lifecycle_event_payload};
+use super::gate;
 use super::model::{
     config_type_to_db, tenant_config_from_json, tenant_from_json, tenant_from_row, tenant_model,
     tenant_select_projection, tenant_status_to_db, tenant_type_to_db,
@@ -49,6 +50,30 @@ pub(crate) async fn create_tenant(
 ) -> Result<Response<tenant_pb::CreateTenantResponse>, Status> {
     let req = request.into_inner();
     validate_create_tenant_required_fields(&req.code, &req.name)?;
+    // M11 — parent authz (no DB access yet): reject creating a child under a
+    // tenant the caller does not own BEFORE charging admission or touching the
+    // store. Only a genuine cross-tenant admin may parent under an arbitrary
+    // tenant; every other authenticated caller may parent ONLY under its own
+    // VALIDATED claim tenant — so a tenant-A token cannot graft children under a
+    // victim tenant B. An in-process/trusted caller (no claim context) is not
+    // gated here, matching the other native handlers.
+    let claim = current_claim_context();
+    let parent = req.parent_tenant_id.trim().to_string();
+    if !parent.is_empty() {
+        // Reject a malformed/garbage parent id up front (fail closed).
+        parse_uuid("parent_tenant_id", &parent)?;
+        if claim_context_present()
+            && !claim.is_cross_tenant_admin()
+            && claim.tenant_id.trim() != parent
+        {
+            return Err(crate::runtime::executor_utils::policy_status_with_code(
+                tonic::Code::PermissionDenied,
+                "create_tenant",
+                "parent_tenant_forbidden",
+                "cannot create a tenant under a parent you do not own",
+            ));
+        }
+    }
     // Per-tenant fair admission. CreateTenant has no body tenant_id yet, so it
     // scopes to the parent tenant when supplied (else the shared base budget).
     let _admit = native_admit_on(
@@ -63,25 +88,56 @@ pub(crate) async fn create_tenant(
     let pool = svc.require_pool()?;
     let m = tenant_model();
     let rel = m.relation.clone();
+    // M11 — the parent must actually exist (and not be soft-deleted): reject a
+    // dangling/unknown parent so a child is never orphaned under a non-existent
+    // tenant. Runs after the pool is available; `parent` already passed the UUID
+    // + ownership checks above.
+    if !parent.is_empty() {
+        let parent_exists: bool = sqlx::query_scalar(&format!(
+            "SELECT EXISTS(SELECT 1 FROM {rel} \
+             WHERE {tenant_id} = $1::UUID AND {deleted_at} IS NULL)",
+            tenant_id = m.q("tenant_id"),
+            deleted_at = m.q("deleted_at"),
+        ))
+        .bind(&parent)
+        .fetch_one(pool)
+        .await
+        .map_err(|err| {
+            tenant_internal_status(
+                "create_tenant_parent_check",
+                format!("parent tenant existence check failed: {err}"),
+            )
+        })?;
+        if !parent_exists {
+            return Err(tenant_field_violation(
+                "parent_tenant_id",
+                "referenced parent tenant does not exist",
+                "parent tenant does not exist",
+            ));
+        }
+    }
     let tenant_id = Uuid::new_v4().to_string();
     let kind = tenant_type_to_db(&req.r#type, DEFAULT_TENANT_TYPE_DB)?;
     let config = non_empty_json(&req.config);
     let branding = non_empty_json(&req.branding);
     // Idempotent on the unique `code`: a repeated CreateTenant with the same
-    // code is a no-op insert (ON CONFLICT DO NOTHING) and returns the EXISTING
-    // canonical id rather than erroring on the unique index. This keeps tenant
-    // provisioning safe to re-run (matching the offline `ensure_tenant` path).
+    // code is a no-op insert (ON CONFLICT DO NOTHING). M22 — `RETURNING tenant_id`
+    // distinguishes a REAL insert from the conflict no-op: `Some` = a row was
+    // created (emit `tenant.created`, return its id); `None` = the code already
+    // existed, so nothing was created (NO spurious event, and no existing UUID is
+    // disclosed to a non-owner below).
     //
     // P4 transitional path: the current native LogicalWrite conflict target is
     // the message primary key (`tenant_id`), not the alternate unique `code`.
     // Keep this bespoke insert until alternate-conflict/upsert-by-code is
     // expressible in the IR; falling back to primary-key conflict would break
     // CreateTenant idempotency.
-    sqlx::query(&format!(
+    let inserted_id: Option<String> = sqlx::query_scalar(&format!(
         "INSERT INTO {rel} \
          ({tenant_id}, {code}, {name}, {type_col}, {status}, {parent}, {config}, {branding}) \
          VALUES ($1::UUID, $2, $3, $4, '{status_active}', NULLIF($5, '')::UUID, $6::JSONB, $7::JSONB) \
-         ON CONFLICT ({code}) DO NOTHING",
+         ON CONFLICT ({code}) DO NOTHING \
+         RETURNING {tenant_id}::text",
         status_active = TENANT_STATUS_ACTIVE_DB,
         tenant_id = m.q("tenant_id"),
         code = m.q("code"),
@@ -99,24 +155,51 @@ pub(crate) async fn create_tenant(
     .bind(&req.parent_tenant_id)
     .bind(&config)
     .bind(&branding)
-    .execute(pool)
+    .fetch_optional(pool)
     .await
     .map_err(|err| {
         tenant_internal_status("create_tenant", format!("create tenant failed: {err}"))
     })?;
-    // Re-resolve by code so a conflict returns the surviving row's canonical id
-    // (and its REAL status: an idempotent re-create of a suspended tenant must
-    // not report it as ACTIVE in the emitted event).
+
+    if let Some(created_id) = inserted_id {
+        // M22 — a row was actually created; its status is the column default
+        // ACTIVE. Prime the fast suspension signal (so a later suspend can revoke
+        // its tokens) and emit the contract-declared `tenant.created` event ONLY
+        // now (never on the conflict no-op path). Payload carries identifiers +
+        // status only (no secrets), same shape as PurgeTenant.
+        gate::mark_tenant_status(&created_id, TENANT_STATUS_ACTIVE_DB);
+        emit_event(
+            svc,
+            TOPIC_TENANT_CREATED,
+            EVENT_TYPE_TENANT_CREATED,
+            &created_id,
+            &created_id,
+            tenant_lifecycle_event_payload(&created_id, &req.code, TENANT_STATUS_ACTIVE_DB),
+        )
+        .await;
+        return Ok(Response::new(tenant_pb::CreateTenantResponse {
+            tenant_id: created_id,
+            message: "tenant created".to_string(),
+            error: None,
+        }));
+    }
+
+    // M22 — the code already exists and nothing was created. Do NOT emit a
+    // spurious event. Idempotent disclosure of the surviving row's canonical id
+    // is allowed ONLY to a caller that OWNS it: an in-process/trusted caller (no
+    // claim context), a genuine cross-tenant admin, or the tenant itself (claim
+    // tenant == the surviving row). Every other caller gets an OPAQUE
+    // ALREADY_EXISTS that leaks neither the existing UUID nor its status.
+    let owner_view = !claim_context_present() || claim.is_cross_tenant_admin();
     let resolved = sqlx::query(&format!(
-        "SELECT {tenant_id}::text AS tenant_id, {status} AS status \
+        "SELECT {tenant_id}::text AS tenant_id \
          FROM {rel} WHERE {code} = $1 AND {deleted_at} IS NULL",
         tenant_id = m.q("tenant_id"),
-        status = m.q("status"),
         code = m.q("code"),
         deleted_at = m.q("deleted_at"),
     ))
     .bind(&req.code)
-    .fetch_one(pool)
+    .fetch_optional(pool)
     .await
     .map_err(|err| {
         tenant_internal_status(
@@ -124,6 +207,11 @@ pub(crate) async fn create_tenant(
             format!("resolve tenant after create failed: {err}"),
         )
     })?;
+    // A conflict on the unique code with no surviving active row (e.g. the
+    // colliding row is soft-deleted) reveals nothing either.
+    let Some(resolved) = resolved else {
+        return Err(tenant_already_exists_status());
+    };
     let decode = |e: sqlx::Error| {
         tenant_internal_status(
             "resolve_tenant_after_create",
@@ -131,22 +219,13 @@ pub(crate) async fn create_tenant(
         )
     };
     let canonical_id: String = resolved.try_get("tenant_id").map_err(decode)?;
-    let canonical_status: String = resolved.try_get("status").map_err(decode)?;
-    // Contract-declared tenant event (tenant_service.proto CreateTenant
-    // method_event_contract, partition key = tenant_id). Same emit shape as
-    // PurgeTenant; payload carries identifiers + status only (no secrets).
-    emit_event(
-        svc,
-        TOPIC_TENANT_CREATED,
-        EVENT_TYPE_TENANT_CREATED,
-        &canonical_id,
-        &canonical_id,
-        tenant_lifecycle_event_payload(&canonical_id, &req.code, &canonical_status),
-    )
-    .await;
+    let caller_owns = owner_view || claim.tenant_id.trim() == canonical_id;
+    if !caller_owns {
+        return Err(tenant_already_exists_status());
+    }
     Ok(Response::new(tenant_pb::CreateTenantResponse {
         tenant_id: canonical_id,
-        message: "tenant created".to_string(),
+        message: "tenant already exists".to_string(),
         error: None,
     }))
 }
@@ -504,6 +583,12 @@ pub(crate) async fn update_tenant(
     let code: String = updated.try_get("code").map_err(decode)?;
     let stored_status: String = updated.try_get("status").map_err(decode)?;
     let tenant_id = tenant_id.to_string();
+    // H10 — record the tenant's NEW durable status in the process suspension
+    // signal so a transition to SUSPENDED/INACTIVE revokes this tenant's LIVE
+    // bearer tokens at the request gate immediately, instead of letting them run
+    // for their full TTL. The shared method-security layer consults this via
+    // `gate::tenant_status_gate` before dispatch (see its `TODO(leader-wire)`).
+    gate::mark_tenant_status(&tenant_id, &stored_status);
     // Contract-declared tenant event (tenant_service.proto UpdateTenant
     // method_event_contract, partition key = tenant_id). Identifiers + status
     // only — never the config/branding bodies.

@@ -11,7 +11,9 @@ use crate::proto::udb::core::tenant::services::v1 as tenant_pb;
 use crate::proto::udb::core::tenant::services::v1::tenant_service_server::TenantService;
 use crate::proto::{ErrorDetail, ErrorKind};
 use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
-use crate::runtime::service::method_security::VerifiedClaimContext;
+use crate::runtime::service::method_security::{
+    VerifiedClaimContext, scope_claim_context_for_test, test_claim_context,
+};
 
 use super::TenantServiceImpl;
 use super::config::{
@@ -21,6 +23,7 @@ use super::config::{
 };
 use super::errors::{tenant_capability_status, tenant_internal_status, tenant_not_found_status};
 use super::events::{tenant_config_event_payload, tenant_lifecycle_event_payload};
+use super::gate::{decide_tenant_status, mark_tenant_status, tenant_status_gate};
 use super::model::{config_type_to_db, tenant_status_to_db, tenant_type_to_db};
 use super::store::{list_tenants_scope, list_tenants_subtree_predicate};
 
@@ -425,4 +428,124 @@ fn tenant_named_defaults_preserve_prior_literals() {
     assert_eq!(DEFAULT_TENANT_TYPE_DB, "ORGANIZATION");
     assert_eq!(TENANT_STATUS_ACTIVE_DB, "ACTIVE");
     assert_eq!(DEFAULT_TENANT_LIST_PAGE_SIZE, 50);
+}
+
+// ── H10: fail-closed tenant-status gate ───────────────────────────────────────
+
+/// The pure status decision is fail-closed: only the canonical ACTIVE token
+/// proceeds; SUSPENDED / INACTIVE / unknown / empty are all denied with the
+/// tenant-not-active policy detail.
+#[test]
+fn decide_tenant_status_allows_only_active() {
+    decide_tenant_status(TENANT_STATUS_ACTIVE_DB).expect("ACTIVE is serviceable");
+    decide_tenant_status("active").expect("token match is case-insensitive");
+    for token in ["SUSPENDED", "INACTIVE", "", "GARBAGE"] {
+        let err = decide_tenant_status(token)
+            .expect_err("only ACTIVE proceeds; everything else fails closed");
+        assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+        let detail = decode_detail(&err);
+        assert_eq!(detail.kind, ErrorKind::Policy as i32);
+        assert_eq!(detail.policy_decision_id, "tenant_not_active");
+    }
+}
+
+/// The request gate revokes a just-suspended tenant on the node that observed the
+/// transition: an unknown/never-observed tenant and a re-activated tenant pass;
+/// a marked SUSPENDED/INACTIVE tenant is denied; an empty tenant is not gated.
+#[test]
+fn tenant_status_gate_reflects_recorded_suspension() {
+    // Distinct ids so the process-global registry can't be perturbed by siblings.
+    let suspended = "acme.gate.suspended.6f1c";
+    let reactivated = "acme.gate.reactivated.6f1c";
+    let unknown = "acme.gate.unknown.6f1c";
+
+    // Never observed → allowed (durable read on the handler path is the backstop).
+    tenant_status_gate(unknown).expect("never-observed tenant is not gated here");
+    // Empty tenant (public bootstrap / in-process caller) → never gated.
+    tenant_status_gate("").expect("empty tenant is not gated");
+
+    // Suspend takes effect immediately at the gate.
+    mark_tenant_status(suspended, "SUSPENDED");
+    let err = tenant_status_gate(suspended).expect_err("suspended tenant must be gated");
+    assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+    assert_eq!(decode_detail(&err).policy_decision_id, "tenant_not_active");
+
+    // Re-activation clears the denial (live tokens work again once ACTIVE).
+    mark_tenant_status(reactivated, "SUSPENDED");
+    tenant_status_gate(reactivated).expect_err("still suspended");
+    mark_tenant_status(reactivated, TENANT_STATUS_ACTIVE_DB);
+    tenant_status_gate(reactivated).expect("re-activated tenant passes the gate");
+}
+
+// ── M11: CreateTenant parent existence + parenting authz ──────────────────────
+
+const CLAIM_TENANT_A: &str = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+const PARENT_TENANT_B: &str = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
+
+fn create_under_parent(parent: &str) -> Request<tenant_pb::CreateTenantRequest> {
+    Request::new(tenant_pb::CreateTenantRequest {
+        code: "acme.child".to_string(),
+        name: "Acme Child".to_string(),
+        parent_tenant_id: parent.to_string(),
+        ..Default::default()
+    })
+}
+
+/// A tenant-A caller may not graft a child under victim tenant B: the parenting
+/// authz denies fail-closed BEFORE any admission/pool access (no PG needed).
+#[tokio::test]
+async fn create_tenant_denies_parenting_under_unowned_tenant() {
+    let svc = TenantServiceImpl::new(); // no pool/channels; authz must fire first
+    let ctx = test_claim_context("user-1", CLAIM_TENANT_A, "", &["udb:read"], &["member"]);
+    let err =
+        scope_claim_context_for_test(ctx, svc.create_tenant(create_under_parent(PARENT_TENANT_B)))
+            .await
+            .expect_err("parenting under an unowned tenant must be denied");
+    assert_eq!(err.code(), tonic::Code::PermissionDenied);
+    assert_eq!(
+        decode_detail(&err).policy_decision_id,
+        "parent_tenant_forbidden"
+    );
+}
+
+/// A malformed (non-UUID) parent is rejected up front as a field violation,
+/// before admission/pool access.
+#[tokio::test]
+async fn create_tenant_rejects_malformed_parent() {
+    let svc = TenantServiceImpl::new();
+    let ctx = test_claim_context("user-1", CLAIM_TENANT_A, "", &["udb:read"], &["member"]);
+    let err =
+        scope_claim_context_for_test(ctx, svc.create_tenant(create_under_parent("not-a-uuid")))
+            .await
+            .expect_err("a non-UUID parent must be rejected");
+    assert_single_field_violation(&err, "parent_tenant_id", "must be a valid UUID");
+}
+
+/// A cross-tenant admin clears the parenting authz for any parent: the request
+/// proceeds past authz to the pool requirement (proving authz did not block it).
+#[tokio::test]
+async fn create_tenant_allows_cross_tenant_admin_to_parent_anywhere() {
+    let svc = TenantServiceImpl::new(); // no pool: the post-authz require_pool fires
+    let ctx = test_claim_context("op-1", CLAIM_TENANT_A, "", &["udb:admin"], &[]);
+    let err =
+        scope_claim_context_for_test(ctx, svc.create_tenant(create_under_parent(PARENT_TENANT_B)))
+            .await
+            .expect_err("no pool is wired, so the request stops at require_pool");
+    // FailedPrecondition/capability, NOT PermissionDenied → parenting authz passed.
+    assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+    assert_eq!(decode_detail(&err).capability_required, "postgres_store");
+}
+
+/// A non-admin caller may parent under its OWN claim tenant: authz passes and the
+/// request proceeds to the pool requirement (not a PermissionDenied).
+#[tokio::test]
+async fn create_tenant_allows_parenting_under_own_tenant() {
+    let svc = TenantServiceImpl::new();
+    let ctx = test_claim_context("user-1", PARENT_TENANT_B, "", &["udb:read"], &["member"]);
+    let err =
+        scope_claim_context_for_test(ctx, svc.create_tenant(create_under_parent(PARENT_TENANT_B)))
+            .await
+            .expect_err("no pool is wired, so the request stops at require_pool");
+    assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+    assert_eq!(decode_detail(&err).capability_required, "postgres_store");
 }

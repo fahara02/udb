@@ -16,12 +16,13 @@ use crate::ir::{
 };
 use crate::proto::udb::core::notification::entity::v1 as notif_entity_pb;
 use crate::runtime::DataBrokerRuntime;
+use crate::runtime::native_catalog::NativeModel;
 
 use super::super::native_helpers::parse_uuid;
 use super::config::{LOG_MSG, PREFERENCE_MSG, TEMPLATE_MSG};
 use super::model::{
     channel_to_db, delivery_attempt_model, delivery_attempt_select_projection, log_model,
-    preference_from_json_row,
+    preference_from_json_row, preference_model,
 };
 
 fn logical_string(value: impl Into<String>) -> LogicalValue {
@@ -454,6 +455,136 @@ pub(crate) async fn write_delivery_attempt(
     .bind(provider_message_id)
     .fetch_optional(pool)
     .await
+}
+
+/// The `UPDATE` that grants a manually-retried notification a FRESH delivery
+/// budget: reset every `NotificationDeliveryAttempt` row for the notification back
+/// to `attempt_count = 0`, status `PENDING`, and cleared `last_error`. Extracted so
+/// the reset shape (tenant-scoped, budget reset) is unit-testable without a live
+/// Postgres.
+pub(crate) fn reset_delivery_attempts_sql(m: &NativeModel) -> String {
+    format!(
+        "UPDATE {rel} SET {attempt_count} = 0, {status} = 'PENDING', \
+                          {last_error} = NULL, {updated_at} = now() \
+         WHERE {notification_id} = $1::UUID AND {tenant_id} = $2",
+        rel = m.relation,
+        attempt_count = m.q("attempt_count"),
+        status = m.q("status"),
+        last_error = m.q("last_error"),
+        updated_at = m.q("updated_at"),
+        notification_id = m.q("notification_id"),
+        tenant_id = m.q("tenant_id"),
+    )
+}
+
+/// Reset the bounded-retry ATTEMPT tracking for a notification so a manual
+/// `RetryNotification` runs a FULL fresh retry cycle instead of instantly
+/// re-failing. Without this, a resurrected (FAILED → PENDING) log is re-scanned by
+/// the worker with `attempt_count` still at the ceiling, so the next attempt
+/// immediately exhausts and re-emits the dead-letter event (a double dead-letter)
+/// while granting the manual retry only a single attempt. Tenant-scoped. Runs in
+/// the SAME transaction as the log's FAILED → PENDING flip so the delivery worker
+/// never observes a PENDING log paired with a stale, already-exhausted attempt row.
+pub(crate) async fn reset_delivery_attempts_for_retry<'e, E>(
+    executor: E,
+    notification_id: Uuid,
+    tenant_id: &str,
+) -> Result<(), sqlx::Error>
+where
+    E: sqlx::Executor<'e, Database = sqlx::Postgres>,
+{
+    let m = delivery_attempt_model();
+    sqlx::query(&reset_delivery_attempts_sql(&m))
+        .bind(notification_id)
+        .bind(tenant_id)
+        .execute(executor)
+        .await?;
+    Ok(())
+}
+
+/// The opt-out lookup the delivery worker and retry path run against the durable
+/// preference table before handing a PENDING notification to a provider. Keyed on
+/// (user_id, tenant, channel), it prefers the event-specific preference over the
+/// tenant-wide (`''`) default — the SAME precedence `is_notification_opted_out`
+/// applies at send time — via `ORDER BY (event_type = $4) DESC`. Extracted so the
+/// scoping + precedence are unit-testable without a live Postgres.
+pub(crate) fn recipient_opted_out_sql(m: &NativeModel) -> String {
+    format!(
+        "SELECT {is_opted_out} FROM {rel} \
+         WHERE {user_id} = $1::UUID AND {tenant_id} = $2 AND {channel} = $3 \
+           AND ({event_type} = $4 OR {event_type} = '') \
+         ORDER BY ({event_type} = $4) DESC \
+         LIMIT 1",
+        rel = m.relation,
+        is_opted_out = m.q("is_opted_out"),
+        user_id = m.q("user_id"),
+        tenant_id = m.q("tenant_id"),
+        channel = m.q("channel"),
+        event_type = m.q("event_type"),
+    )
+}
+
+/// Durable opt-out check against the preference table for a (recipient, channel,
+/// event) at DELIVERY time — not only at send. The delivery worker and the retry
+/// path call this so an opt-out recorded AFTER the initial send (or before a manual
+/// retry) still suppresses delivery. Returns `false` when no preference row exists
+/// (no opt-out on record). Mirrors `is_notification_opted_out`'s event-specific-
+/// then-global precedence, but runs directly on the pool/transaction (the worker
+/// path has no `RequestContext`).
+pub(crate) async fn recipient_opted_out_db<'e, E>(
+    executor: E,
+    recipient_id: Uuid,
+    tenant_id: &str,
+    channel: i32,
+    event_type: &str,
+) -> Result<bool, sqlx::Error>
+where
+    E: sqlx::Executor<'e, Database = sqlx::Postgres>,
+{
+    let m = preference_model();
+    let opted: Option<bool> = sqlx::query_scalar(&recipient_opted_out_sql(&m))
+        .bind(recipient_id)
+        .bind(tenant_id)
+        .bind(channel_to_db(channel))
+        .bind(event_type)
+        .fetch_optional(executor)
+        .await?;
+    Ok(opted.unwrap_or(false))
+}
+
+/// The `UPDATE` that moves a still-PENDING log to the terminal SUPPRESSED state
+/// when the recipient has opted out. Gated on PENDING so a delivered/sent
+/// notification is never downgraded, and tenant-scoped. Extracted for unit tests.
+pub(crate) fn suppress_log_if_pending_sql(m: &NativeModel) -> String {
+    format!(
+        "UPDATE {rel} SET {status} = 'SUPPRESSED' \
+         WHERE {log_id} = $1::UUID AND {tenant_id} = $2 AND {status} = 'PENDING'",
+        rel = m.relation,
+        status = m.q("status"),
+        log_id = m.q("log_id"),
+        tenant_id = m.q("tenant_id"),
+    )
+}
+
+/// Suppress an opted-out notification: move a still-PENDING log to the terminal
+/// SUPPRESSED state (fail-closed — the recipient is never contacted) instead of
+/// delivering. Tenant-scoped and gated on PENDING so it never downgrades a
+/// notification that already reached SENT/DELIVERED. Returns whether a row moved.
+pub(crate) async fn suppress_log_if_pending<'e, E>(
+    executor: E,
+    log_id: Uuid,
+    tenant_id: &str,
+) -> Result<bool, sqlx::Error>
+where
+    E: sqlx::Executor<'e, Database = sqlx::Postgres>,
+{
+    let m = log_model();
+    let result = sqlx::query(&suppress_log_if_pending_sql(&m))
+        .bind(log_id)
+        .bind(tenant_id)
+        .execute(executor)
+        .await?;
+    Ok(result.rows_affected() > 0)
 }
 
 /// Transition a `NotificationLog.status` when a terminal delivery outcome is

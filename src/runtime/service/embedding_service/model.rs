@@ -159,6 +159,27 @@ impl StoredModel {
         }
     }
 
+    /// The collection the READ path (Retrieve/search) must target. Only qdrant and
+    /// elasticsearch expose a named-alias primitive that RegisterModel pre-points at
+    /// the physical collection (see `registry.rs` `swap_alias`), so on those the
+    /// alias is the correct read target. Weaviate and pinecone have NO alias
+    /// concept — the register step skips alias creation there — so their reads must
+    /// target the physical `active_collection` (the exact class writes pin, e.g.
+    /// `reports.rs` upserts into `active_collection`). Reading the never-created
+    /// alias class otherwise returns nothing (writes and reads targeting different
+    /// classes). Mirrors the register-time `matches!(backend, "qdrant" |
+    /// "elasticsearch")` alias condition so the two stay in lock-step.
+    pub(crate) fn read_collection(&self) -> &str {
+        if matches!(
+            self.vector_backend.trim().to_ascii_lowercase().as_str(),
+            "qdrant" | "elasticsearch"
+        ) {
+            self.collection()
+        } else {
+            self.active_collection.as_str()
+        }
+    }
+
     /// The dimensionality this model actually serves at (Part B.2.3 Matryoshka).
     /// Equals `dimensions` unless `matryoshka_dims` selects a smaller cut — see
     /// [`super::config::select_matryoshka_dim`]. Used for the collection geometry,

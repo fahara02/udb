@@ -2,6 +2,21 @@
 use super::*;
 use crate::runtime::system::SystemCatalogConfig;
 
+/// Durable-resume bounded-scan ceiling: `journal_replay_for_scope` scans at most
+/// `limit * REPLAY_SCAN_PAGES` raw rows off the SHARED journal topic before giving
+/// up, so a tenant with little in-scope backlog on a busy topic never walks the
+/// whole journal chasing rows that aren't there. Small on purpose.
+const REPLAY_SCAN_PAGES: i64 = 20;
+
+/// Whether the durable-resume paginated scan should fetch another page: it still
+/// needs in-scope rows (`collected < limit`) and has not burned its total-scan
+/// ceiling (`scanned < ceiling`). Pure so the bounded-scan stop contract is
+/// unit-tested without a live journal; the short-page (backlog drained) stop is
+/// applied by the caller after each page.
+fn replay_scan_wants_page(collected: usize, scanned: i64, limit: i64, ceiling: i64) -> bool {
+    (collected as i64) < limit && scanned < ceiling
+}
+
 fn cdc_stream_privileged(scopes: &[String]) -> bool {
     scopes
         .iter()
@@ -628,6 +643,34 @@ mod tests {
         ));
     }
 
+    /// H5 bounded scan: the durable-resume scan keeps paging while it still needs
+    /// in-scope rows AND has not burned its total-scan ceiling. On a busy shared
+    /// topic where a tenant's own rows are sparse, the ceiling — not an empty
+    /// `limit` window — is what stops the walk, so the tenant's replay is never
+    /// silently truncated by co-tenant rows crowding the first page.
+    #[test]
+    fn replay_scan_pages_until_limit_or_ceiling() {
+        let limit = 5i64;
+        let ceiling = limit * REPLAY_SCAN_PAGES;
+        // Fresh scan: nothing collected, nothing scanned — wants a page.
+        assert!(replay_scan_wants_page(0, 0, limit, ceiling));
+        // Partway: some in-scope rows collected but under the limit — keep paging
+        // to gather this tenant's remaining missed events past the shared window.
+        assert!(replay_scan_wants_page(2, 40, limit, ceiling));
+        // Enough in-scope rows collected — stop even though the ceiling is untouched.
+        assert!(!replay_scan_wants_page(limit as usize, 3, limit, ceiling));
+        assert!(!replay_scan_wants_page(
+            (limit + 1) as usize,
+            3,
+            limit,
+            ceiling
+        ));
+        // Ceiling burned before `limit` in-scope rows were found (a low-backlog
+        // tenant on a busy topic): stop rather than walk the whole journal.
+        assert!(!replay_scan_wants_page(1, ceiling, limit, ceiling));
+        assert!(!replay_scan_wants_page(1, ceiling + 10, limit, ceiling));
+    }
+
     /// #1: a publish failure must abort the tail instead of falling through
     /// to the next event — otherwise a later success would persist a LATER
     /// offset and the failed event would be lost forever. This drives
@@ -947,6 +990,19 @@ impl CdcEngine {
     /// ([`event_matches_stream_scope`], non-privileged/non-policy-scoped), so a
     /// foreign-tenant or tenant-less row is never replayed. Read-only over the
     /// engine pool; it does not touch the tailer/broadcast state.
+    ///
+    /// The journal `topic` is SHARED across tenants, so a single
+    /// `LIMIT {limit}` window on a busy topic can be dominated by co-tenant rows —
+    /// diluting a tenant's replay to empty and PERMANENTLY losing this tenant's own
+    /// missed events that sit past that window. To avoid the lost-send, this is a
+    /// BOUNDED PAGINATED scan: it fetches pages of `limit` rows past the current
+    /// `(published_at, event_id)` anchor, applies the fail-closed scope filter in
+    /// Rust, accumulates up to `limit` IN-SCOPE rows, and advances the anchor to
+    /// EVERY scanned row (even filtered-out ones) so each page continues strictly
+    /// past it — forward progress with no re-fetch loop. The scan stops when `limit`
+    /// in-scope rows are collected, a short page means the backlog is drained, or a
+    /// per-resume total-scan ceiling (`limit * REPLAY_SCAN_PAGES`) is hit so a
+    /// low-backlog tenant on a busy shared topic never walks the whole journal.
     pub(crate) async fn journal_replay_for_scope(
         &self,
         topic: &str,
@@ -987,66 +1043,110 @@ impl CdcEngine {
                 }
                 Err(_) => (genesis, String::new()),
             };
+        // Page size = `limit` in-scope rows worth of raw rows per fetch; the total
+        // raw scan is capped at `limit * REPLAY_SCAN_PAGES` so a tenant with little
+        // backlog on a busy shared topic can't walk the entire journal chasing rows
+        // that aren't there.
+        let page: i64 = limit;
+        let ceiling: i64 = limit.saturating_mul(REPLAY_SCAN_PAGES);
         let sql = format!(
             "SELECT event_id, topic, partition_key, payload, published_at \
              FROM {journal_relation} \
              WHERE topic = $3 AND (published_at, event_id::TEXT) > ($1, $2) \
              ORDER BY published_at ASC, event_id ASC \
-             LIMIT {limit}"
+             LIMIT $4"
         );
-        let mut rows = sqlx::query(&sql)
-            .bind(anchor_ts)
-            .bind(anchor_id)
-            .bind(topic.to_string())
-            .fetch(&self.pool);
-        let mut out = Vec::new();
-        while let Some(row) = tokio_stream::StreamExt::next(&mut rows).await {
-            let record = match row {
-                Ok(record) => record,
+        let mut out: Vec<CdcEnvelope> = Vec::new();
+        let mut scanned: i64 = 0;
+        // The advancing compound anchor; each page continues strictly past the last
+        // scanned row (matched or filtered), guaranteeing forward progress.
+        let mut cursor_ts = anchor_ts;
+        let mut cursor_id = anchor_id;
+        loop {
+            if !replay_scan_wants_page(out.len(), scanned, limit, ceiling) {
+                break;
+            }
+            let page_rows = match sqlx::query(&sql)
+                .bind(cursor_ts)
+                .bind(cursor_id.as_str())
+                .bind(topic.to_string())
+                .bind(page)
+                .fetch_all(&self.pool)
+                .await
+            {
+                Ok(rows) => rows,
                 Err(err) => {
-                    warn!("[cdc] live-query resume journal row decode failed: {err}");
-                    continue;
+                    warn!("[cdc] live-query resume journal page fetch failed: {err}");
+                    break;
                 }
             };
-            let event_id: Uuid = match record.try_get("event_id") {
-                Ok(value) => value,
-                Err(_) => continue,
-            };
-            let published_at: DateTime<Utc> = match record.try_get("published_at") {
-                Ok(value) => value,
-                Err(_) => continue,
-            };
-            let row_topic: String = match record.try_get("topic") {
-                Ok(value) => value,
-                Err(_) => continue,
-            };
-            let payload: serde_json::Value = match record.try_get("payload") {
-                Ok(value) => value,
-                Err(_) => continue,
-            };
-            // SECURITY: fail-closed tenant/project re-check with the canonical
-            // predicate — a foreign-tenant or tenant-less journal row is dropped.
-            if !payload_value_matches_stream_scope(
-                &row_topic,
-                &payload,
-                tenant_scope,
-                project_scope,
-                false,
-                false,
-            ) {
-                continue;
+            let page_len = page_rows.len() as i64;
+            // A short page means the topic's retained backlog past the anchor is
+            // exhausted — nothing more to scan.
+            let backlog_drained = page_len < page;
+            let mut stop = false;
+            for record in page_rows {
+                // Decode the cursor columns FIRST: if either fails we cannot advance
+                // the anchor, so a `continue` here would re-fetch this same row on
+                // the next page forever. Stop the scan instead.
+                let event_id: Uuid = match record.try_get("event_id") {
+                    Ok(value) => value,
+                    Err(_) => {
+                        stop = true;
+                        break;
+                    }
+                };
+                let published_at: DateTime<Utc> = match record.try_get("published_at") {
+                    Ok(value) => value,
+                    Err(_) => {
+                        stop = true;
+                        break;
+                    }
+                };
+                // Advance the anchor to EVERY scanned row (even one dropped below) so
+                // the next page starts strictly after it — forward progress, no loop.
+                cursor_ts = published_at;
+                cursor_id = event_id.to_string();
+                scanned += 1;
+                let row_topic: String = match record.try_get("topic") {
+                    Ok(value) => value,
+                    Err(_) => continue,
+                };
+                let payload: serde_json::Value = match record.try_get("payload") {
+                    Ok(value) => value,
+                    Err(_) => continue,
+                };
+                // SECURITY: fail-closed tenant/project re-check with the canonical
+                // predicate — a foreign-tenant or tenant-less journal row is dropped.
+                if !payload_value_matches_stream_scope(
+                    &row_topic,
+                    &payload,
+                    tenant_scope,
+                    project_scope,
+                    false,
+                    false,
+                ) {
+                    continue;
+                }
+                let partition_key: String = match record.try_get("partition_key") {
+                    Ok(value) => value,
+                    Err(_) => continue,
+                };
+                out.push(CdcEnvelope {
+                    event_id: event_id.to_string(),
+                    topic: row_topic,
+                    partition_key,
+                    payload_json: payload.to_string(),
+                    published_at,
+                });
+                if (out.len() as i64) >= limit {
+                    stop = true;
+                    break;
+                }
             }
-            let partition_key: String = match record.try_get("partition_key") {
-                Ok(value) => value,
-                Err(_) => continue,
-            };
-            out.push(CdcEnvelope {
-                event_id: event_id.to_string(),
-                topic: row_topic,
-                partition_key,
-                payload_json: payload.to_string(),
-                published_at,
-            });
+            if stop || backlog_drained {
+                break;
+            }
         }
         out
     }

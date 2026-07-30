@@ -41,6 +41,7 @@ use super::store::{
     delivery_stats_aggregate, is_notification_opted_out, log_transition_allowed_prev,
     notification_log_filter, notification_log_list_read, notification_log_read,
     notification_log_record, preference_list_filter, preference_list_read, preference_read,
+    recipient_opted_out_db, reset_delivery_attempts_for_retry, suppress_log_if_pending,
     template_read, template_scope_filter, transition_log_status, write_delivery_attempt,
 };
 
@@ -352,6 +353,18 @@ pub(crate) async fn retry_notification(
     // bounded auto-retry budget is tracked separately by the delivery attempt
     // row's `attempt_count`, not this column. Guard in the WHERE so a non-FAILED
     // row yields no update (→ notification_not_retryable_status).
+    //
+    // The FAILED → PENDING flip and the attempt-budget reset run in ONE
+    // transaction so the delivery worker (a separate connection) never observes a
+    // resurrected PENDING log still paired with an exhausted attempt row — that
+    // window is exactly what made the next worker pass instantly re-fail and
+    // re-emit the dead-letter event (a double dead-letter).
+    let mut tx = pool.begin().await.map_err(|err| {
+        notification_internal_status(
+            "retry_notification_begin",
+            format!("retry notification failed: {err}"),
+        )
+    })?;
     let row = sqlx::query(&format!(
         "UPDATE {rel} SET {status} = 'PENDING', {retry} = {retry} + 1 \
          WHERE {log_id} = $1::UUID AND {tenant_id} = $2 AND {status} = 'FAILED' \
@@ -363,7 +376,7 @@ pub(crate) async fn retry_notification(
     ))
     .bind(log_id)
     .bind(&scoped_tenant)
-    .fetch_optional(pool)
+    .fetch_optional(&mut *tx)
     .await
     .map_err(|err| {
         notification_internal_status(
@@ -371,12 +384,74 @@ pub(crate) async fn retry_notification(
             format!("retry notification failed: {err}"),
         )
     })?;
-    let log = match row {
+    let mut log = match row {
         Some(row) => log_from_row(&row)?,
         None => {
+            // No FAILED row moved → nothing to reset; the tx rolls back on drop.
             return Err(notification_not_retryable_status());
         }
     };
+    // Grant a FRESH retry budget: reset the attempt tracking so this manual retry
+    // runs a full bounded-retry cycle rather than instantly exhausting and
+    // dead-lettering. Keeps the `retry_count` bump above (the manual-retry counter).
+    reset_delivery_attempts_for_retry(&mut *tx, log_id, &scoped_tenant)
+        .await
+        .map_err(|err| {
+            notification_internal_status(
+                "retry_notification_reset_attempts",
+                format!("retry notification failed: {err}"),
+            )
+        })?;
+    // Opt-out enforced on the retry path too (not only at send): if the recipient
+    // opted out of this (channel, event) since the original send, SUPPRESS rather
+    // than re-queue for delivery. Fail-closed — an opt-out lookup error aborts the
+    // retry (INTERNAL) instead of risking delivery to an opted-out recipient.
+    let opted_out = match Uuid::parse_str(log.recipient_id.trim()) {
+        Ok(recipient_uuid) => recipient_opted_out_db(
+            &mut *tx,
+            recipient_uuid,
+            &scoped_tenant,
+            log.channel,
+            &log.event_type,
+        )
+        .await
+        .map_err(|err| {
+            notification_internal_status(
+                "retry_notification_optout",
+                format!("retry opt-out check failed: {err}"),
+            )
+        })?,
+        // No user-scoped recipient id → no preference key → nothing to suppress on.
+        Err(_) => false,
+    };
+    if opted_out {
+        // Mark SUPPRESSED (moving the just-set PENDING row) and do NOT emit a sent
+        // event — nothing is handed to a provider for an opted-out recipient.
+        suppress_log_if_pending(&mut *tx, log_id, &scoped_tenant)
+            .await
+            .map_err(|err| {
+                notification_internal_status(
+                    "retry_notification_suppress",
+                    format!("retry notification failed: {err}"),
+                )
+            })?;
+        tx.commit().await.map_err(|err| {
+            notification_internal_status(
+                "retry_notification_commit",
+                format!("retry notification failed: {err}"),
+            )
+        })?;
+        log.status = notif_entity_pb::NotificationStatus::Suppressed as i32;
+        return Ok(Response::new(notif_pb::RetryNotificationResponse {
+            log: Some(log),
+        }));
+    }
+    tx.commit().await.map_err(|err| {
+        notification_internal_status(
+            "retry_notification_commit",
+            format!("retry notification failed: {err}"),
+        )
+    })?;
     svc.emit_sent_event(
         pool,
         &log.log_id,

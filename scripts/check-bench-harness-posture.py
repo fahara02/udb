@@ -469,8 +469,8 @@ CHECKS: tuple[SourceCheck, ...] = (
             '| [ ] | PutSecret | MUTATION | PutSecretRequest | `{ "tenant_id": "<seed:tenant_id>", "secret_path": "<seed:vault_put_secret_path>", "secret_value": "perf-secret", "expected_version": 0, "metadata_json": "{}" }` |',
             '| [ ] | RotateTransitKey | MUTATION | RotateTransitKeyRequest | `{ "tenant_id": "<seed:tenant_id>", "key_name": "<seed:vault_key_name>" }` |',
             '| [ ] | SealStatus | READ_ONLY | SealStatusRequest | `{ "tenant_id": "<seed:tenant_id>" }` |',
-            '| [ ] | Sign | MUTATION | SignRequest | `{ "tenant_id": "<seed:tenant_id>", "key_name": "<seed:vault_key_name>", "input": "perf" }` |',
-            '| [ ] | Verify | READ_ONLY | VerifyRequest | `{ "tenant_id": "<seed:tenant_id>", "key_name": "<seed:vault_key_name>", "input": "perf", "signature": "<seed:vault_signature>" }` |',
+            '| [ ] | Sign | MUTATION | SignRequest | `{ "tenant_id": "<seed:tenant_id>", "key_name": "<seed:vault_signing_key_name>", "input": "perf" }` |',
+            '| [ ] | Verify | READ_ONLY | VerifyRequest | `{ "tenant_id": "<seed:tenant_id>", "key_name": "<seed:vault_signing_key_name>", "input": "perf", "signature": "<seed:vault_signature>" }` |',
         ),
     ),
     SourceCheck(

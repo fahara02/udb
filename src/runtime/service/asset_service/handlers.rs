@@ -29,7 +29,7 @@ use super::errors::{
     active_storage_file_required_status, asset_internal_status, asset_invalid_field,
     asset_required_field, asset_schema_not_found_status, status_with_reason,
 };
-use super::execution::advance_instance;
+use super::execution::{advance_instance, fail_instance_on_abort};
 use super::model::{
     asset_from_json, asset_model, asset_status_to_db, pipeline_definition_from_json,
     pipeline_definition_model, pipeline_instance_from_row, pipeline_instance_model,
@@ -236,8 +236,6 @@ pub(crate) async fn start_pipeline(
     let inst_rel = inst.relation.clone();
     let def = pipeline_definition_model();
     let def_rel = def.relation.clone();
-    let step = pipeline_step_model();
-    let step_rel = step.relation.clone();
 
     let correlation_id = req.correlation_id.trim().to_string();
 
@@ -416,6 +414,59 @@ pub(crate) async fn start_pipeline(
     )
     .await;
 
+    // Parse the freshly-minted instance id up front so a mid-run abort can
+    // compensate (flip the RUNNING row to FAILED) rather than strand it.
+    let instance_uuid = parse_uuid("instance_id", &instance_id)?;
+
+    // Run the inline steps as a single fallible unit: once the RUNNING instance
+    // row exists, ANY failure must drive it terminal, never leave an orphaned
+    // RUNNING row. On error the instance is compensated (flipped FAILED + failed
+    // event) before the original error is surfaced (M5).
+    let response_steps = match execute_inline_pipeline_steps(
+        svc,
+        pool,
+        &req,
+        tenant_id,
+        asset_id,
+        instance_id.clone(),
+        instance_uuid,
+        step_array,
+    )
+    .await
+    {
+        Ok(steps) => steps,
+        Err(err) => {
+            fail_instance_on_abort(svc, pool, instance_uuid, tenant_id).await;
+            return Err(err);
+        }
+    };
+
+    Ok(Response::new(asset_pb::StartPipelineResponse {
+        instance_id,
+        message: "pipeline started".to_string(),
+        error: None,
+        steps: response_steps,
+    }))
+}
+
+/// Execute a pipeline's declared steps inline (materialize each step, run it,
+/// persist the row, emit its event) then advance the instance to a terminal
+/// state. Split out of `start_pipeline` so the whole run is one fallible unit:
+/// the caller compensates the RUNNING instance on ANY error here, so a mid-run
+/// failure never strands a non-terminal row (M5).
+#[allow(clippy::too_many_arguments)]
+async fn execute_inline_pipeline_steps(
+    svc: &AssetServiceImpl,
+    pool: &sqlx::PgPool,
+    req: &asset_pb::StartPipelineRequest,
+    tenant_id: Uuid,
+    asset_id: Uuid,
+    instance_id: String,
+    instance_uuid: Uuid,
+    step_array: Vec<serde_json::Value>,
+) -> Result<Vec<asset_entity_pb::PipelineStep>, Status> {
+    let step = pipeline_step_model();
+    let step_rel = step.relation.clone();
     // Load the asset's name + metadata once: these are the inputs available
     // to in-process steps without object bytes. Missing asset → empty inputs.
     let am = asset_model();
@@ -611,15 +662,8 @@ pub(crate) async fn start_pipeline(
     }
 
     // Advance the instance to a terminal state (emits completed/failed).
-    let instance_uuid = parse_uuid("instance_id", &instance_id)?;
     advance_instance(svc, pool, instance_uuid, tenant_id).await?;
-
-    Ok(Response::new(asset_pb::StartPipelineResponse {
-        instance_id,
-        message: "pipeline started".to_string(),
-        error: None,
-        steps: response_steps,
-    }))
+    Ok(response_steps)
 }
 
 pub(crate) async fn get_pipeline(

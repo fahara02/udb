@@ -5,8 +5,10 @@
 //! path (and the shared native store) at another tenant's expense. This is a
 //! fail-closed, process-local fixed-window counter — NOT a durable store: it caps
 //! the RATE of ephemeral crypto work, the same way the fair-admission manager caps
-//! concurrency. The map holds one small entry per active tenant (bounded by the
-//! tenant count), reset lazily each window.
+//! concurrency. Each tenant's tally resets when its fixed one-minute window rolls
+//! over. The map holds one small entry per active tenant, and stale entries (a
+//! tenant idle for a full window) are lazily evicted under the same lock so the
+//! map cannot grow unbounded across the tenant population over time.
 //!
 //! The cap is opt-out-able and generous (`UDB_VAULT_TRANSIT_QUOTA_PER_MINUTE`,
 //! default 6000/min; `0` disables). Over-cap ops fail closed with a typed
@@ -21,8 +23,14 @@ use tonic::Status;
 
 use super::config::vault_transit_quota_per_minute;
 
-/// The rolling counting window.
+/// The fixed counting window: a tenant's tally resets when its window is this old.
 const QUOTA_WINDOW: Duration = Duration::from_secs(60);
+
+/// Soft ceiling on the per-tenant tally map. Once it is exceeded, a bounded lazy
+/// sweep drops fully-stale entries (see [`evict_stale_windows`]) so a long tail of
+/// one-shot tenants cannot grow the map without bound. Kept high so the sweep runs
+/// rarely and stays off the common-case hot path.
+const QUOTA_MAP_SWEEP_THRESHOLD: usize = 4_096;
 
 /// Pure quota decision, unit-testable without any clock or lock: with a positive
 /// `limit`, the op that brought the in-window tally to `count_after` is refused
@@ -41,6 +49,15 @@ struct WindowCount {
 fn counters() -> &'static Mutex<HashMap<String, WindowCount>> {
     static COUNTERS: OnceLock<Mutex<HashMap<String, WindowCount>>> = OnceLock::new();
     COUNTERS.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+/// Drop tally entries whose window is fully stale (a tenant idle for at least one
+/// whole `QUOTA_WINDOW`): their tally would reset to 0 on the next op anyway, so
+/// the entry carries no state and can be reclaimed. Pure over an explicit `now`
+/// (no clock, no lock) so it is unit-testable. A just-touched entry always has a
+/// current window, so it is never evicted here.
+fn evict_stale_windows(map: &mut HashMap<String, WindowCount>, now: Instant) {
+    map.retain(|_, entry| now.duration_since(entry.window_start) < QUOTA_WINDOW);
 }
 
 /// Admit one transit crypto op for `tenant_id` against the per-tenant per-minute
@@ -69,7 +86,14 @@ pub(crate) fn admit_transit_op(tenant_id: &str, operation: &'static str) -> Resu
         }
         entry.count += 1;
         let remaining = QUOTA_WINDOW.saturating_sub(now.duration_since(entry.window_start));
-        (entry.count, remaining)
+        let count_after = entry.count;
+        // Bounded lazy eviction: only when the map has grown past the soft ceiling
+        // do we sweep fully-stale tenants, keeping the common path O(1). The entry
+        // just touched above has a current window, so it survives the sweep.
+        if map.len() > QUOTA_MAP_SWEEP_THRESHOLD {
+            evict_stale_windows(&mut map, now);
+        }
+        (count_after, remaining)
     };
     if transit_quota_exceeded(count_after, limit) {
         // Retryable after the window rolls over. `quota_status` is
@@ -89,7 +113,9 @@ pub(crate) fn admit_transit_op(tenant_id: &str, operation: &'static str) -> Resu
 
 #[cfg(test)]
 mod tests {
-    use super::transit_quota_exceeded;
+    use super::{QUOTA_WINDOW, WindowCount, evict_stale_windows, transit_quota_exceeded};
+    use std::collections::HashMap;
+    use std::time::Instant;
 
     #[test]
     fn transit_quota_decision_is_a_strict_over_limit_check() {
@@ -101,5 +127,55 @@ mod tests {
         // A non-positive limit disables the cap regardless of the tally.
         assert!(!transit_quota_exceeded(1_000_000, 0));
         assert!(!transit_quota_exceeded(1_000_000, -5));
+    }
+
+    #[test]
+    fn eviction_drops_only_fully_stale_tenants() {
+        let now = Instant::now();
+        // A tenant whose window is older than a full QUOTA_WINDOW is reclaimable;
+        // one still inside its window (and one whose window just started) is kept.
+        let stale_start = now
+            .checked_sub(QUOTA_WINDOW * 2)
+            .expect("instant subtraction stays in range");
+        let fresh_start = now
+            .checked_sub(QUOTA_WINDOW / 2)
+            .expect("instant subtraction stays in range");
+        let mut map: HashMap<String, WindowCount> = HashMap::new();
+        map.insert(
+            "acme-stale".to_string(),
+            WindowCount {
+                window_start: stale_start,
+                count: 500,
+            },
+        );
+        map.insert(
+            "acme-fresh".to_string(),
+            WindowCount {
+                window_start: fresh_start,
+                count: 3,
+            },
+        );
+        map.insert(
+            "acme-now".to_string(),
+            WindowCount {
+                window_start: now,
+                count: 1,
+            },
+        );
+
+        evict_stale_windows(&mut map, now);
+
+        assert!(
+            !map.contains_key("acme-stale"),
+            "a tenant idle for a full window must be evicted"
+        );
+        assert!(
+            map.contains_key("acme-fresh"),
+            "a tenant still inside its window must be retained"
+        );
+        assert!(
+            map.contains_key("acme-now"),
+            "a just-touched tenant must be retained"
+        );
     }
 }

@@ -2226,7 +2226,8 @@ impl DataBrokerRuntime {
             None,
         )?;
         let raw = SearchExecutor::search(&executor, &spec).await?;
-        parse_vector_search_response(backend, &raw)
+        // Vector arm: ES scores carry the `+ 1.0` cosine offset, so normalize back.
+        parse_vector_search_response(backend, &raw, true)
     }
 
     /// Execute a mediated FULL-TEXT-ONLY (lexical, no query vector) search
@@ -2299,7 +2300,9 @@ impl DataBrokerRuntime {
             None,
         )?;
         let raw = SearchExecutor::search(&executor, &spec).await?;
-        parse_vector_search_response(backend, &raw)
+        // Text arm: ES `_score` is BM25 relevance (no cosine offset), so it is
+        // passed through unchanged.
+        parse_vector_search_response(backend, &raw, false)
     }
 
     async fn vector_upsert_dispatch_target(
@@ -4585,12 +4588,14 @@ fn assert_deployment_tier_floor(runtime: &DataBrokerRuntime) {
 #[cfg(test)]
 mod setup_data_validation_tests {
     use super::{
-        empty_object_stream_status, gcs_feature_status, invalid_part_count_status,
-        invalid_presign_ttl_status, json_values_match, no_object_store_feature_status,
-        object_instance_missing_status, qdrant_vector_feature_status, s3_object_feature_status,
-        setup_data_internal_status, text_search_dispatch_spec, unknown_message_type_status,
-        unsupported_object_backend_status, unsupported_presign_method_status,
-        vector_hybrid_qdrant_only_status, vector_search_dispatch_spec, vector_upsert_dispatch_spec,
+        empty_object_stream_status, es_payload_filter_terms, gcs_feature_status,
+        invalid_part_count_status, invalid_presign_ttl_status, json_values_match,
+        no_object_store_feature_status, object_instance_missing_status,
+        parse_vector_search_response, pinecone_metadata_filter, qdrant_vector_feature_status,
+        s3_object_feature_status, setup_data_internal_status, text_search_dispatch_spec,
+        unknown_message_type_status, unsupported_object_backend_status,
+        unsupported_presign_method_status, vector_hybrid_qdrant_only_status,
+        vector_search_dispatch_spec, vector_upsert_dispatch_spec, weaviate_where_arg,
     };
     use crate::proto::{ErrorDetail, ErrorKind, VectorPointMutation, VectorSearchRequest};
     use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
@@ -5100,6 +5105,161 @@ mod setup_data_validation_tests {
         assert_eq!(payload["_project_id"], serde_json::json!("billing"));
         // The original payload field survives the stamp.
         assert_eq!(payload["body"], serde_json::json!("hi"));
+    }
+
+    fn parent_window_filter() -> Option<prost_types::Struct> {
+        crate::runtime::executor_utils::json_to_struct(&serde_json::json!({
+            "must": [
+                { "key": "_tenant_id", "match": { "value": "acme" } },
+                { "key": "_parent_pk", "match": { "any": ["row-1", "row-2"] } }
+            ]
+        }))
+    }
+
+    #[test]
+    fn es_filter_translates_match_any_into_a_terms_clause() {
+        // The parent-window gather scopes `_parent_pk` with `match.any`; previously
+        // `struct_filter_equality_terms` skipped it (no `value`) so the gather ran
+        // UNSCOPED. It must now become an ES `terms` clause over the OR-set while the
+        // tenant equality stays a `term` — both within the tenant.
+        let clauses = es_payload_filter_terms(parent_window_filter().as_ref());
+        assert!(
+            clauses.contains(&serde_json::json!({
+                "term": { "payload._tenant_id.keyword": "acme" }
+            })),
+            "tenant equality term must remain: {clauses:?}"
+        );
+        assert!(
+            clauses.contains(&serde_json::json!({
+                "terms": { "payload._parent_pk.keyword": ["row-1", "row-2"] }
+            })),
+            "match.any must become a terms clause, not be dropped: {clauses:?}"
+        );
+    }
+
+    #[test]
+    fn weaviate_where_translates_match_any_into_an_or() {
+        // `match.any` → a weaviate `Or` of `Equal` operands so the gather stays
+        // scoped; combined with the tenant equality under a top-level `And`.
+        let arg = weaviate_where_arg(parent_window_filter().as_ref());
+        assert!(arg.contains("operator: And"), "combined under And: {arg}");
+        assert!(arg.contains("operator: Or"), "any-set becomes an Or: {arg}");
+        assert!(
+            arg.contains("row-1") && arg.contains("row-2"),
+            "both any values present: {arg}"
+        );
+        assert!(arg.contains("_tenant_id"), "tenant scope preserved: {arg}");
+    }
+
+    #[test]
+    fn pinecone_filter_translates_match_any_into_in() {
+        // `match.any` → Pinecone `$in`; tenant equality stays `$eq`.
+        let filter = pinecone_metadata_filter(parent_window_filter().as_ref());
+        assert_eq!(
+            filter,
+            serde_json::json!({
+                "_tenant_id": { "$eq": "acme" },
+                "_parent_pk": { "$in": ["row-1", "row-2"] }
+            }),
+            "match.any must become a $in set, not be dropped"
+        );
+    }
+
+    #[test]
+    fn es_vector_hits_unwrap_nested_payload_and_normalize_cosine() {
+        // ES upserts store `{ "vector":[…], "payload":{…stamped…} }`. The vector-arm
+        // hit must (a) lift the nested `payload` object as the point payload — so the
+        // stamped provenance/tenant keys sit at the top level like qdrant — (b) NOT
+        // return the raw dense `vector`, and (c) subtract the `+1.0` cosine offset so
+        // the score is a comparable cosine (`1.6 → 0.6`).
+        let raw = serde_json::json!({
+            "hits": { "hits": [{
+                "_id": "row-1#chunk:0",
+                "_score": 1.6,
+                "_source": {
+                    "vector": [0.1, 0.2, 0.3],
+                    "payload": {
+                        "_tenant_id": "acme",
+                        "_parent_pk": "row-1",
+                        "_chunk_text": "hello"
+                    }
+                }
+            }] }
+        })
+        .to_string();
+        let set = parse_vector_search_response("elasticsearch", &raw, true)
+            .expect("es vector response parses");
+        assert_eq!(set.points.len(), 1);
+        let point = &set.points[0];
+        assert_eq!(point.id, "row-1#chunk:0");
+        assert!(
+            (point.score - 0.6).abs() < 1e-5,
+            "cosine offset must be stripped: {}",
+            point.score
+        );
+        assert!(point.vector.is_empty(), "dense vector must not be returned");
+        let payload = crate::runtime::executor_utils::struct_to_json(
+            point.payload.as_ref().expect("payload lifted"),
+        );
+        assert_eq!(payload["_tenant_id"], serde_json::json!("acme"));
+        assert_eq!(payload["_parent_pk"], serde_json::json!("row-1"));
+        assert_eq!(payload["_chunk_text"], serde_json::json!("hello"));
+        // The raw dense vector must NOT leak into the caller-facing payload.
+        assert!(payload.get("vector").is_none(), "vector leaked: {payload}");
+    }
+
+    #[test]
+    fn es_text_hits_pass_bm25_score_through_unchanged() {
+        // The text/BM25 arm passes `es_cosine_offset = false`: `_score` is relevance,
+        // not offset cosine, so it must NOT have 1.0 subtracted.
+        let raw = serde_json::json!({
+            "hits": { "hits": [{
+                "_id": "row-9",
+                "_score": 4.25,
+                "_source": { "payload": { "_tenant_id": "acme" } }
+            }] }
+        })
+        .to_string();
+        let set =
+            parse_vector_search_response("elasticsearch", &raw, false).expect("es text parses");
+        assert!((set.points[0].score - 4.25).abs() < 1e-5);
+    }
+
+    #[test]
+    fn weaviate_hits_parse_into_points_with_cosine_score_and_payload() {
+        // Regression (hollow): the weaviate arm returned `Vec::new()` so every
+        // retrieval was empty even though the query dispatched. It must now parse the
+        // GraphQL `data.Get.<class>` array: id from `_additional.id`, cosine score
+        // from `distance` (`1 - 0.2 = 0.8`), and the stored properties (minus the
+        // reserved `_additional`) as the point payload.
+        let raw = serde_json::json!({
+            "data": { "Get": { "UdbDocs": [{
+                "_additional": { "id": "row-7", "distance": 0.2, "certainty": 0.9 },
+                "_tenant_id": "acme",
+                "_project_id": "billing"
+            }] } }
+        })
+        .to_string();
+        let set = parse_vector_search_response("weaviate", &raw, false)
+            .expect("weaviate response parses");
+        assert_eq!(set.points.len(), 1, "weaviate hit must not be dropped");
+        let point = &set.points[0];
+        assert_eq!(point.id, "row-7");
+        assert!(
+            (point.score - 0.8).abs() < 1e-5,
+            "cosine distance must map to similarity: {}",
+            point.score
+        );
+        assert!(point.vector.is_empty(), "dense vector must not be returned");
+        let payload = crate::runtime::executor_utils::struct_to_json(
+            point.payload.as_ref().expect("payload present"),
+        );
+        assert_eq!(payload["_tenant_id"], serde_json::json!("acme"));
+        // The reserved `_additional` metadata must never leak into the payload.
+        assert!(
+            payload.get("_additional").is_none(),
+            "meta leaked: {payload}"
+        );
     }
 }
 
@@ -7983,14 +8143,23 @@ fn reject_vector_plan_errors(
 /// [`stamp_generic_vector_point_payloads`], so `payload._tenant_id` exists to
 /// match against.
 fn es_payload_filter_terms(filter: Option<&prost_types::Struct>) -> Vec<JsonValue> {
-    struct_filter_equality_terms(filter)
+    let mut clauses: Vec<JsonValue> = struct_filter_equality_terms(filter)
         .into_iter()
         .map(|(key, value)| {
             let mut term_field = serde_json::Map::new();
             term_field.insert(format!("payload.{key}.keyword"), value);
             serde_json::json!({ "term": JsonValue::Object(term_field) })
         })
-        .collect()
+        .collect();
+    // `match.any` (the parent-window gather scoping `_parent_pk` to the selected
+    // parents) becomes an ES `terms` clause so the OR-set still narrows the query
+    // WITHIN the tenant — previously it was dropped and the gather ran unscoped.
+    for (key, values) in struct_filter_any_terms(filter) {
+        let mut terms_field = serde_json::Map::new();
+        terms_field.insert(format!("payload.{key}.keyword"), JsonValue::Array(values));
+        clauses.push(serde_json::json!({ "terms": JsonValue::Object(terms_field) }));
+    }
+    clauses
 }
 
 /// Extract equality `(key, value)` pairs from the neutral qdrant-style filter
@@ -8018,12 +8187,45 @@ fn struct_filter_equality_terms(filter: Option<&prost_types::Struct>) -> Vec<(St
     terms
 }
 
+/// Extract `match.any` OR-set `(key, [values…])` clauses from the neutral
+/// qdrant-style filter (`{"must":[{"key":…,"match":{"any":[…]}}]}`). The
+/// parent-window neighbor gather scopes `_parent_pk` this way (match ANY of the
+/// selected parents in ONE query); [`struct_filter_equality_terms`] only reads
+/// `match.value`, so without this the `any` clause was silently dropped and the
+/// gather ran unscoped over the whole collection. Each backend translator ANDs
+/// these in as its native OR/terms/`$in` primitive. Empty `any` lists are skipped.
+fn struct_filter_any_terms(filter: Option<&prost_types::Struct>) -> Vec<(String, Vec<JsonValue>)> {
+    let Some(filter) = filter else {
+        return Vec::new();
+    };
+    let json = struct_to_json(filter);
+    let Some(must) = json.get("must").and_then(JsonValue::as_array) else {
+        return Vec::new();
+    };
+    let mut terms = Vec::new();
+    for clause in must {
+        if let (Some(key), Some(any)) = (
+            clause.get("key").and_then(JsonValue::as_str),
+            clause
+                .get("match")
+                .and_then(|m| m.get("any"))
+                .and_then(JsonValue::as_array),
+        ) {
+            if !any.is_empty() {
+                terms.push((key.to_string(), any.clone()));
+            }
+        }
+    }
+    terms
+}
+
 /// Build a Weaviate GraphQL `where:` argument (with a trailing comma so it slots
 /// before `limit:`) enforcing the tenant/equality terms. Weaviate stores the
 /// stamped payload as top-level properties, so the path is the bare key. Empty
 /// terms → empty string (unchanged behaviour). Values are emitted as `valueText`.
 fn weaviate_where_arg(filter: Option<&prost_types::Struct>) -> String {
-    let terms = struct_filter_equality_terms(filter);
+    let equality = struct_filter_equality_terms(filter);
+    let any = struct_filter_any_terms(filter);
     let operand = |key: &str, value: &JsonValue| -> String {
         let text = value
             .as_str()
@@ -8031,16 +8233,26 @@ fn weaviate_where_arg(filter: Option<&prost_types::Struct>) -> String {
             .unwrap_or_else(|| value.to_string());
         format!("{{ path: [{key:?}], operator: Equal, valueText: {text:?} }}")
     };
-    match terms.as_slice() {
+    let mut operands: Vec<String> = equality
+        .iter()
+        .map(|(key, value)| operand(key, value))
+        .collect();
+    // `match.any` → an OR of Equal operands on the same path, so the parent-window
+    // gather (or any multi-value clause) stays scoped instead of being dropped.
+    for (key, values) in &any {
+        let inner = values
+            .iter()
+            .map(|value| operand(key, value))
+            .collect::<Vec<_>>()
+            .join(", ");
+        operands.push(format!("{{ operator: Or, operands: [{inner}] }}"));
+    }
+    match operands.as_slice() {
         [] => String::new(),
-        [(key, value)] => format!("where: {}, ", operand(key, value)),
+        [single] => format!("where: {single}, "),
         many => {
-            let operands = many
-                .iter()
-                .map(|(key, value)| operand(key, value))
-                .collect::<Vec<_>>()
-                .join(", ");
-            format!("where: {{ operator: And, operands: [{operands}] }}, ")
+            let joined = many.join(", ");
+            format!("where: {{ operator: And, operands: [{joined}] }}, ")
         }
     }
 }
@@ -8049,15 +8261,23 @@ fn weaviate_where_arg(filter: Option<&prost_types::Struct>) -> String {
 /// enforcing the tenant/equality terms over the stamped metadata. Empty terms →
 /// `null` (the caller omits the field, unchanged behaviour).
 fn pinecone_metadata_filter(filter: Option<&prost_types::Struct>) -> JsonValue {
-    let terms = struct_filter_equality_terms(filter);
-    if terms.is_empty() {
+    let equality = struct_filter_equality_terms(filter);
+    let any = struct_filter_any_terms(filter);
+    if equality.is_empty() && any.is_empty() {
         return JsonValue::Null;
     }
     let mut map = serde_json::Map::new();
-    for (key, value) in terms {
+    for (key, value) in equality {
         let mut eq = serde_json::Map::new();
         eq.insert("$eq".to_string(), value);
         map.insert(key, JsonValue::Object(eq));
+    }
+    // `match.any` → Pinecone's `$in` set membership, keeping the parent-window
+    // gather scoped instead of dropping the clause (unscoped cross-parent read).
+    for (key, values) in any {
+        let mut in_op = serde_json::Map::new();
+        in_op.insert("$in".to_string(), JsonValue::Array(values));
+        map.insert(key, JsonValue::Object(in_op));
     }
     JsonValue::Object(map)
 }
@@ -8101,8 +8321,19 @@ fn vector_search_dispatch_spec(
                 "method": "POST",
                 "path": "/v1/graphql",
                 "body": {
+                    // Weaviate GraphQL requires every returned property be named
+                    // explicitly (no wildcard). `_tenant_id`/`_project_id` are the
+                    // isolation keys the class schema always declares, so selecting
+                    // them is safe for both the embedding and the generic vector
+                    // path; the parser lifts them into the point payload and the
+                    // caller-facing strip removes them again.
+                    // TODO(leader-wire): to also surface embedding provenance
+                    // (`_parent_pk`/`_chunk_seq`/`_chunk_text`/…) on weaviate reads,
+                    // declare those properties in the weaviate class schema
+                    // (executors/weaviate.rs `ensure_resource`) and add them to this
+                    // selection — selecting undeclared props errors the whole query.
                     "query": format!(
-                        "{{ Get {{ {class_name}(nearVector: {{ vector: {:?} }}, {where_arg}limit: {limit}) {{ _additional {{ id distance certainty }} }} }} }}",
+                        "{{ Get {{ {class_name}(nearVector: {{ vector: {:?} }}, {where_arg}limit: {limit}) {{ _tenant_id _project_id _additional {{ id distance certainty }} }} }} }}",
                         request.vector
                     )
                 }
@@ -8298,7 +8529,11 @@ fn vector_upsert_dispatch_spec(
         .map_err(|err| setup_data_internal_status("vector_upsert_spec_encode", err.to_string()))
 }
 
-fn parse_vector_search_response(backend: &str, raw: &str) -> Result<VectorSet, tonic::Status> {
+fn parse_vector_search_response(
+    backend: &str,
+    raw: &str,
+    es_cosine_offset: bool,
+) -> Result<VectorSet, tonic::Status> {
     let parsed: JsonValue = serde_json::from_str(raw).map_err(|err| {
         setup_data_internal_status(
             "vector_search_response_parse",
@@ -8317,8 +8552,28 @@ fn parse_vector_search_response(backend: &str, raw: &str) -> Result<VectorSet, t
                             .and_then(JsonValue::as_str)
                             .unwrap_or_default()
                             .to_string(),
-                        score: hit.get("_score").and_then(JsonValue::as_f64).unwrap_or(0.0) as f32,
-                        payload: hit.get("_source").cloned().and_then(json_into_struct),
+                        // The vector arm scores `cosineSimilarity(...) + 1.0`
+                        // (range ~0..2) so ES never returns negative scores; strip
+                        // the +1.0 offset back to cosine (−1..1) so the score is
+                        // comparable to the retrieval cosine floor and the other
+                        // backends. The text/BM25 arm passes `es_cosine_offset =
+                        // false` (its `_score` is BM25 relevance, not offset cosine).
+                        score: hit
+                            .get("_score")
+                            .and_then(JsonValue::as_f64)
+                            .map(|raw| (if es_cosine_offset { raw - 1.0 } else { raw }) as f32)
+                            .unwrap_or(0.0),
+                        // Upserts store `{ "vector":[…], "payload":{…stamped…} }`, so
+                        // the stamped provenance/tenant keys live UNDER `_source.
+                        // payload` (not at `_source` top level). Lift that nested
+                        // object as the point payload so provenance reads and the
+                        // caller-facing tenant strip work uniformly with qdrant — and
+                        // the sibling raw dense `vector` is left behind, never
+                        // returned to callers.
+                        payload: hit
+                            .pointer("/_source/payload")
+                            .cloned()
+                            .and_then(json_into_struct),
                         vector: Vec::new(),
                         vector_name: String::new(),
                     })
@@ -8355,10 +8610,76 @@ fn parse_vector_search_response(backend: &str, raw: &str) -> Result<VectorSet, t
                     .collect()
             })
             .unwrap_or_default(),
-        "weaviate" => Vec::new(),
+        "weaviate" => parsed
+            .pointer("/data/Get")
+            .and_then(JsonValue::as_object)
+            // The GraphQL `Get` object carries exactly one key — the queried class —
+            // whose value is the hit array. Take that single class array without
+            // needing to re-derive the (request-side) class name here.
+            .and_then(|get| get.values().next())
+            .and_then(JsonValue::as_array)
+            .map(|objects| {
+                objects
+                    .iter()
+                    .map(|object| {
+                        let additional = object.get("_additional");
+                        VectorPoint {
+                            id: additional
+                                .and_then(|meta| meta.get("id"))
+                                .and_then(JsonValue::as_str)
+                                .unwrap_or_default()
+                                .to_string(),
+                            score: additional.map(weaviate_cosine_score).unwrap_or(0.0),
+                            // Weaviate stores the stamped payload as top-level object
+                            // properties; lift every returned property EXCEPT the
+                            // reserved `_additional` metadata into the point payload,
+                            // matching the qdrant point shape (tenant strip applies
+                            // uniformly). The query never selects the dense vector, so
+                            // it is not returned to callers.
+                            payload: weaviate_point_payload(object),
+                            vector: Vec::new(),
+                            vector_name: String::new(),
+                        }
+                    })
+                    .collect()
+            })
+            .unwrap_or_default(),
         _ => Vec::new(),
     };
     Ok(VectorSet { points })
+}
+
+/// Convert Weaviate's `_additional` distance/certainty into a COSINE similarity so
+/// the score is comparable to the retrieval cosine floor and the other backends.
+/// Weaviate cosine `distance` = 1 − cosine_similarity (∈ 0..2), and `certainty` =
+/// (2 − distance)/2 (∈ 0..1) ⇒ cosine_similarity = 2·certainty − 1. Prefer the
+/// exact `distance`, fall back to `certainty`, else 0.0.
+fn weaviate_cosine_score(additional: &JsonValue) -> f32 {
+    if let Some(distance) = additional.get("distance").and_then(JsonValue::as_f64) {
+        (1.0 - distance) as f32
+    } else if let Some(certainty) = additional.get("certainty").and_then(JsonValue::as_f64) {
+        (2.0 * certainty - 1.0) as f32
+    } else {
+        0.0
+    }
+}
+
+/// Lift a Weaviate GraphQL hit object's stored properties (all keys except the
+/// reserved `_additional` metadata block) into a point payload `Struct`, so a
+/// weaviate hit carries the same stamped payload shape a qdrant hit does. An
+/// object with no properties beyond `_additional` yields `None`.
+fn weaviate_point_payload(object: &JsonValue) -> Option<prost_types::Struct> {
+    let properties = object.as_object()?;
+    let mut payload = serde_json::Map::new();
+    for (key, value) in properties {
+        if key != "_additional" {
+            payload.insert(key.clone(), value.clone());
+        }
+    }
+    if payload.is_empty() {
+        return None;
+    }
+    json_into_struct(JsonValue::Object(payload))
 }
 
 fn vector_weaviate_class_name(resource_name: &str) -> String {

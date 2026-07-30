@@ -904,7 +904,7 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 	} else {
 		t.Logf("perf seed: Encrypt failed: %v", err)
 	}
-	if sig, err := vault.Sign(nctx, &vaultpb.SignRequest{TenantId: tenant, KeyName: vaultKey, Input: "perf"}); err == nil {
+	if sig, err := vault.Sign(nctx, &vaultpb.SignRequest{TenantId: tenant, KeyName: signingKey, Input: "perf"}); err == nil {
 		fix.set("vault_signature", sig.GetSignature())
 	} else {
 		t.Logf("perf seed: Sign failed: %v", err)

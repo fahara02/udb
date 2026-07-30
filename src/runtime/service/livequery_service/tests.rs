@@ -376,6 +376,43 @@ fn change_row_unwraps_the_udb_payload_envelope() {
     ));
 }
 
+/// M1 resume/live predicate parity: the durable-resume replay gates a journalled
+/// envelope through the SAME `change_row` + `filter_matches_row` pair the live
+/// loop uses, so a reconnecting subscriber never receives replayed deltas its
+/// `user_filter` would have dropped on the live feed. Exercised at the predicate
+/// level (the exact expression the resume loop runs); the full forwarder needs a
+/// runtime/CDC broadcast and is covered elsewhere.
+#[test]
+fn resume_replay_applies_user_filter_like_live_loop() {
+    let filter = LogicalFilter::Comparison {
+        field: "status".to_string(),
+        op: ComparisonOp::Eq,
+        value: LogicalValue::String("HELD".to_string()),
+    };
+    // A journalled envelope nests the row image under `payload` (both CDC emit
+    // paths), exactly what the resume loop parses out of `envelope.payload_json`.
+    let matching = json!({
+        "tenant_id": "acme-tenant",
+        "operation": "upsert",
+        "payload": { "lock_id": "L1", "status": "HELD", "fencing_token": 7 }
+    });
+    let filtered = json!({
+        "tenant_id": "acme-tenant",
+        "operation": "upsert",
+        "payload": { "lock_id": "L2", "status": "RELEASED", "fencing_token": 9 }
+    });
+    // In-scope + predicate match => replayed.
+    assert!(filter_matches_row(
+        &filter,
+        &super::predicate::change_row(&matching)
+    ));
+    // In-scope but predicate mismatch => dropped on resume, same as live.
+    assert!(!filter_matches_row(
+        &filter,
+        &super::predicate::change_row(&filtered)
+    ));
+}
+
 #[test]
 fn change_row_prefers_external_convention_keys_over_payload() {
     // A foreign (Debezium-style) envelope whose row is under `after` must still

@@ -29,11 +29,20 @@
 //!   * Every mutation appends a durable journal row and emits a versioned
 //!     dot-topic outbox event.
 //!
-//! Retention pruning runs as a SchedulerService (9.3) job: a leader-elected tick
-//! fires `udb.scheduler.job.fired.v1` for a due `BackupPolicy`, which a worker
-//! turns into a StartTenantBackup and prunes per the policy's retention window.
-//! The scheduling wiring itself lives in the scheduler lane; this module owns the
-//! durable policy contract and the backup/restore mechanics.
+//! Retention pruning is implemented here in [`retention::prune_tenant_backups`]:
+//! a bounded, fail-safe routine that enforces a `BackupPolicy`'s `retention_days`
+//! / `max_retained_backups` by deleting the oldest runs (journal rows + their
+//! encrypted objects), tenant-scoped, and never on an unconfigured policy — so
+//! runs and objects no longer accumulate without bound. The pure prune selector
+//! ([`retention::runs_to_prune`]) is unit-tested.
+//!
+//! The periodic, leader-elected TRIGGER for both retention and scheduled backups
+//! lives in the shared scheduler lane (`service::serve()` leader election), not
+//! in this dir; see the `TODO(leader-wire)` in `retention.rs`. Until that spawn
+//! lands, retention runs when `prune_tenant_backups` is invoked and the
+//! scheduled-BACKUP trigger (fire a StartTenantBackup on a due `BackupPolicy`)
+//! remains owned by the scheduler lane. This module owns the durable policy
+//! contract, the backup/restore mechanics, and the retention prune routine.
 
 use std::sync::Arc;
 
@@ -61,6 +70,7 @@ mod export;
 mod handlers;
 mod import;
 mod model;
+mod retention;
 mod store;
 #[cfg(test)]
 mod tests;

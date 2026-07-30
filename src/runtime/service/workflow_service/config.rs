@@ -24,6 +24,20 @@ pub(crate) const STATUS_COMPENSATING: &str = "COMPENSATING";
 pub(crate) const STATUS_CANCELLED: &str = "CANCELLED";
 pub(crate) const STATUS_COMPENSATED: &str = "COMPENSATED";
 pub(crate) const STATUS_FAILED: &str = "FAILED";
+/// A step that must block on an external signal parks here (durable, timer-immune)
+/// until `SignalWorkflow` delivers the matching signal, which resumes it to RUNNING.
+pub(crate) const STATUS_WAITING_SIGNAL: &str = "WAITING_SIGNAL";
+
+// ── payload keys (the opaque per-instance JSON object carries these) ────────────
+/// Caller-declared map of forward step index (as a decimal string) → the signal
+/// name that step must wait for before it advances. Enables a durable
+/// signal-gated pause (`WAITING_SIGNAL`) with no proto change — the payload is
+/// already an opaque per-instance JSON object the caller supplies at start.
+pub(crate) const SIGNAL_WAITS_KEY: &str = "signal_waits";
+/// Append-only log of delivered signals (each `{name, payload, delivered_at}`),
+/// written by `SignalWorkflow` and read by the tick to know a gated step's signal
+/// has arrived.
+pub(crate) const SIGNALS_KEY: &str = "signals";
 
 /// Upper bound on forward steps per workflow (master-plan 9.12: ≤20 steps). A
 /// request beyond this is clamped down rather than rejected.

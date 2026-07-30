@@ -14,15 +14,19 @@ use crate::proto::{ErrorDetail, ErrorKind};
 use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
 
 use super::WebhookServiceImpl;
-use super::config::{DELIVERY_BACKOFF_BASE, DELIVERY_BACKOFF_CAP, delivery_backoff};
+use super::config::{
+    DELIVERY_BACKOFF_BASE, DELIVERY_BACKOFF_CAP, MAX_WEBHOOK_DELIVERY_CONCURRENCY,
+    MAX_WEBHOOK_DELIVERY_TIMEOUT_MS, MIN_WEBHOOK_DELIVERY_TIMEOUT_MS, delivery_backoff,
+    webhook_delivery_concurrency, webhook_delivery_timeout,
+};
 use super::errors::{
     webhook_capability_status, webhook_endpoint_not_found_status,
     webhook_host_blocked_address_status, webhook_host_no_addresses_status,
     webhook_host_unresolved_status, webhook_internal_status,
 };
 use super::security::{
-    ip_is_blocked, sign_webhook_body, validate_webhook_target_url,
-    webhook_event_matches_endpoint_scope,
+    ip_is_blocked, resolve_and_pin_target, sign_webhook_body, sign_webhook_body_with_timestamp,
+    validate_webhook_target_url, webhook_event_matches_endpoint_scope,
 };
 
 fn decode_detail(status: &Status) -> ErrorDetail {
@@ -309,6 +313,84 @@ fn hmac_signature_round_trips() {
     // Tampered body does not verify.
     let tampered = br#"{"tenant_id":"tenant-b","event":"invoice.created"}"#;
     assert_ne!(signature, sign_webhook_body(secret, tampered));
+}
+
+/// The timestamped signature binds the timestamp into the signed material: the
+/// same `(secret, timestamp, body)` verifies; a different timestamp, a wrong
+/// secret, or a tampered body does not — so a captured `(signature, body)` pair
+/// cannot be replayed under a fresh timestamp. It also differs from the legacy
+/// body-only signature, proving the timestamp is actually covered.
+#[test]
+fn timestamped_signature_binds_timestamp() {
+    let secret = "shhh-per-endpoint-secret";
+    let body = br#"{"tenant_id":"tenant-a","event":"invoice.created"}"#;
+
+    let signature = sign_webhook_body_with_timestamp(secret, 1_700_000_000, body);
+    assert!(signature.starts_with("sha256="));
+    // Same secret + timestamp + body verifies.
+    assert_eq!(
+        signature,
+        sign_webhook_body_with_timestamp(secret, 1_700_000_000, body)
+    );
+    // A different timestamp yields a different signature (timestamp is signed).
+    assert_ne!(
+        signature,
+        sign_webhook_body_with_timestamp(secret, 1_700_000_001, body)
+    );
+    // Wrong secret does not verify.
+    assert_ne!(
+        signature,
+        sign_webhook_body_with_timestamp("wrong-secret", 1_700_000_000, body)
+    );
+    // Tampered body does not verify.
+    let tampered = br#"{"tenant_id":"tenant-b","event":"invoice.created"}"#;
+    assert_ne!(
+        signature,
+        sign_webhook_body_with_timestamp(secret, 1_700_000_000, tampered)
+    );
+    // The timestamped scheme is distinct from the legacy body-only signature.
+    assert_ne!(signature, sign_webhook_body(secret, body));
+}
+
+/// The delivery-time guard PINS the validated address so the connect cannot be
+/// re-resolved (DNS-rebinding TOCTOU): a blocked literal and a localhost name are
+/// rejected before any connection, and a public literal target is pinned to
+/// exactly its own address on the URL's port.
+#[tokio::test]
+async fn resolve_and_pin_rejects_blocked_and_pins_public_literal() {
+    // Blocked IP literal (cloud metadata) never yields a pinned target.
+    resolve_and_pin_target("https://169.254.169.254/hook")
+        .await
+        .expect_err("link-local metadata literal must be rejected");
+    // localhost hostname is rejected up front (no resolution attempted).
+    resolve_and_pin_target("https://localhost/hook")
+        .await
+        .expect_err("localhost must be rejected");
+
+    // A public IP literal on a custom port pins to exactly that address:port.
+    let pinned = resolve_and_pin_target("https://203.0.113.10:8443/hook")
+        .await
+        .expect("public literal target should pin");
+    assert_eq!(pinned.host, "203.0.113.10");
+    assert_eq!(pinned.port, 8443);
+    assert_eq!(
+        pinned.addrs,
+        vec!["203.0.113.10:8443".parse().expect("socket addr")]
+    );
+}
+
+/// The per-delivery timeout and fan-out width resolve to values inside their
+/// bounded ranges (a bad/unset env can neither disable the timeout nor set an
+/// absurd concurrency).
+#[test]
+fn delivery_timeout_and_concurrency_are_bounded() {
+    let timeout = webhook_delivery_timeout();
+    assert!(timeout >= std::time::Duration::from_millis(MIN_WEBHOOK_DELIVERY_TIMEOUT_MS));
+    assert!(timeout <= std::time::Duration::from_millis(MAX_WEBHOOK_DELIVERY_TIMEOUT_MS));
+
+    let concurrency = webhook_delivery_concurrency();
+    assert!(concurrency >= 1);
+    assert!(concurrency <= MAX_WEBHOOK_DELIVERY_CONCURRENCY);
 }
 
 /// A caller scoped to tenant-a must not register/read an endpoint for tenant-b

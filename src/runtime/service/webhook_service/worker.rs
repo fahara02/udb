@@ -15,15 +15,19 @@ use uuid::Uuid;
 #[cfg(feature = "http-client")]
 use super::super::native_helpers::{NativeEventContext, enqueue_outbox_event_with_context};
 #[cfg(feature = "http-client")]
+use futures::StreamExt as _;
+
+#[cfg(feature = "http-client")]
 use super::config::{
-    SIGNATURE_HEADER, STATUS_DEAD, STATUS_DELIVERED, TOPIC_DELIVERY_DEAD, TOPIC_DELIVERY_SUCCEEDED,
-    TOPIC_WEBHOOK_DELIVERY_CDC, clamp_max_attempts, delivery_backoff,
+    SIGNATURE_HEADER, STATUS_DEAD, STATUS_DELIVERED, TIMESTAMP_HEADER, TOPIC_DELIVERY_DEAD,
+    TOPIC_DELIVERY_SUCCEEDED, TOPIC_WEBHOOK_DELIVERY_CDC, clamp_max_attempts, delivery_backoff,
+    webhook_delivery_concurrency, webhook_delivery_timeout,
 };
 #[cfg(feature = "http-client")]
 use super::model::{delivery_model, endpoint_model};
 #[cfg(feature = "http-client")]
 use super::security::{
-    resolve_and_validate_target, sign_webhook_body, webhook_event_matches_endpoint_scope,
+    resolve_and_pin_target, sign_webhook_body_with_timestamp, webhook_event_matches_endpoint_scope,
 };
 #[cfg(feature = "http-client")]
 use crate::metrics::MetricsRecorder;
@@ -251,13 +255,26 @@ async fn insert_delivery_journal(
     }
 }
 
+/// Current unix time in whole seconds (saturating), the timestamp bound into the
+/// delivery signature and emitted in the `X-Udb-Timestamp` header.
+#[cfg(feature = "http-client")]
+fn current_unix_timestamp() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| i64::try_from(d.as_secs()).unwrap_or(i64::MAX))
+        .unwrap_or(0)
+}
+
 /// Run ONE delivery pass over supplied candidates. For each
 /// candidate event and each endpoint whose BOUND tenant + subscription matches
-/// ([`webhook_event_matches_endpoint_scope`]): re-validate the target against the
-/// SSRF guard at delivery time (DNS rebinding), sign the body
-/// ([`sign_webhook_body`]), POST it with retries/backoff, journal the terminal
-/// outcome, and on attempt exhaustion emit the dead-letter event
-/// (`udb.webhook.delivery.dead.v1`). Returns the count of events delivered
+/// ([`webhook_event_matches_endpoint_scope`]): re-validate AND PIN the target
+/// against the SSRF guard at delivery time (defeats DNS rebinding at the connect
+/// layer — [`resolve_and_pin_target`]), sign the timestamped body
+/// ([`sign_webhook_body_with_timestamp`]), POST it (redirects DISABLED so a 3xx to
+/// an internal host can never be followed past the guard; a bounded per-delivery
+/// timeout so one black-holed endpoint cannot pin the worker) with retries/backoff,
+/// journal the terminal outcome, and on attempt exhaustion emit the dead-letter
+/// event (`udb.webhook.delivery.dead.v1`). Returns the count of events delivered
 /// successfully. Best-effort per (event, endpoint): one failing target never
 /// aborts the pass.
 ///
@@ -265,7 +282,6 @@ async fn insert_delivery_journal(
 #[cfg_attr(test, allow(dead_code))]
 #[allow(dead_code)]
 pub(crate) async fn run_webhook_delivery_once(
-    http: &reqwest::Client,
     pool: &PgPool,
     outbox_relation: Option<&str>,
     endpoints: &[WebhookDeliveryTarget],
@@ -289,7 +305,12 @@ pub(crate) async fn run_webhook_delivery_once(
             if terminal_delivery_exists(pool, &endpoint.endpoint_id, &event.event_id).await? {
                 continue;
             }
-            let signature = sign_webhook_body(&endpoint.signing_secret, &body);
+            // One timestamp per delivery, bound into the signed material and sent
+            // in the header so receivers can reject stale/replayed deliveries.
+            let timestamp = current_unix_timestamp();
+            let timestamp_header = timestamp.to_string();
+            let signature =
+                sign_webhook_body_with_timestamp(&endpoint.signing_secret, timestamp, &body);
             let max_attempts = clamp_max_attempts(endpoint.max_attempts).max(1) as u32;
             let mut last_status: i32 = 0;
             let mut last_error = String::new();
@@ -297,14 +318,46 @@ pub(crate) async fn run_webhook_delivery_once(
             let mut attempts_observed: i32 = 0;
             for attempt in 1..=max_attempts {
                 attempts_observed = attempt as i32;
-                // SSRF re-check at DELIVERY time (DNS rebinding).
-                if let Err(err) = resolve_and_validate_target(&endpoint.url).await {
-                    last_error = err.message().to_string();
-                    break; // a blocked target never becomes deliverable on retry
-                }
-                match http
+                // SSRF re-check AND address PIN at DELIVERY time: resolve+validate
+                // once here, then connect to exactly those addresses so reqwest
+                // never re-resolves the hostname (closing the DNS-rebinding TOCTOU).
+                let target = match resolve_and_pin_target(&endpoint.url).await {
+                    Ok(target) => target,
+                    Err(err) => {
+                        last_error = err.message().to_string();
+                        break; // a blocked target never becomes deliverable on retry
+                    }
+                };
+                // Per-request client pinned to the validated address(es), with
+                // redirects DISABLED (a 302 to 169.254.169.254 / any internal host
+                // is returned as a non-success status, never followed) and a
+                // bounded timeout so a black-holed endpoint cannot pin the worker.
+                //
+                // TODO(leader-wire): the SHARED delivery client built in
+                // `src/runtime/service/mod.rs` (`reqwest::Client::new()`) must also
+                // be constructed as
+                //   `reqwest::Client::builder()
+                //        .redirect(reqwest::redirect::Policy::none())
+                //        .timeout(webhook_service::webhook_delivery_timeout())
+                //        .build()`
+                // as defense-in-depth for any caller that still uses it; this
+                // worker no longer relies on it (it pins per request below).
+                let client = match reqwest::Client::builder()
+                    .redirect(reqwest::redirect::Policy::none())
+                    .timeout(webhook_delivery_timeout())
+                    .resolve_to_addrs(&target.host, &target.addrs)
+                    .build()
+                {
+                    Ok(client) => client,
+                    Err(err) => {
+                        last_error = format!("webhook delivery client build failed: {err}");
+                        break;
+                    }
+                };
+                match client
                     .post(endpoint.url.as_str())
                     .header(SIGNATURE_HEADER, signature.as_str())
+                    .header(TIMESTAMP_HEADER, timestamp_header.as_str())
                     .header("content-type", "application/json")
                     .body(body.clone())
                     .send()
@@ -403,9 +456,14 @@ pub(crate) async fn run_webhook_delivery_once(
 /// Run one leader-owned worker tick from the durable CDC journal. The loader
 /// returns endpoint/event pairs that still lack a terminal delivery journal row,
 /// so repeated ticks are idempotent and bounded.
+///
+/// `_http` is the process-shared client built in `serve()`; the worker no longer
+/// uses it (each delivery builds a per-request client pinned to the SSRF-validated
+/// address — see [`run_webhook_delivery_once`]). It is kept in the signature only
+/// to avoid touching the shared `serve()` call site.
 #[cfg(feature = "http-client")]
 pub(crate) async fn run_webhook_delivery_worker_once(
-    http: &reqwest::Client,
+    _http: &reqwest::Client,
     pool: &PgPool,
     outbox_relation: Option<&str>,
     journal_relation: &str,
@@ -413,19 +471,25 @@ pub(crate) async fn run_webhook_delivery_worker_once(
     metrics: Option<&Arc<dyn MetricsRecorder>>,
 ) -> Result<i64, String> {
     let jobs = load_webhook_delivery_jobs(pool, journal_relation, batch).await?;
+    // Bounded-concurrency fan-out: each job is an independent (endpoint, event)
+    // delivery, so one slow/black-holed endpoint (capped by the per-delivery
+    // timeout) never head-of-line-blocks other tenants' deliveries in this tick.
+    let concurrency = webhook_delivery_concurrency();
+    let results = futures::stream::iter(jobs.iter().map(|job| {
+        run_webhook_delivery_once(
+            pool,
+            outbox_relation,
+            std::slice::from_ref(&job.target),
+            std::slice::from_ref(&job.event),
+            metrics,
+        )
+    }))
+    .buffer_unordered(concurrency)
+    .collect::<Vec<_>>()
+    .await;
     let mut delivered = 0u64;
-    for job in &jobs {
-        delivered = delivered.saturating_add(
-            run_webhook_delivery_once(
-                http,
-                pool,
-                outbox_relation,
-                std::slice::from_ref(&job.target),
-                std::slice::from_ref(&job.event),
-                metrics,
-            )
-            .await?,
-        );
+    for result in results {
+        delivered = delivered.saturating_add(result?);
     }
     Ok(i64::try_from(delivered).unwrap_or(i64::MAX))
 }

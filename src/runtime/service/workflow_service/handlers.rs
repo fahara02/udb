@@ -20,12 +20,13 @@ use super::super::native_helpers::{
 };
 use super::WorkflowServiceImpl;
 use super::config::{
-    MAX_COMPENSATIONS_BYTES, MAX_PAYLOAD_BYTES, STATUS_CANCELLED, STATUS_COMPENSATED,
+    MAX_COMPENSATIONS_BYTES, MAX_PAYLOAD_BYTES, SIGNALS_KEY, STATUS_CANCELLED, STATUS_COMPENSATED,
     STATUS_COMPENSATING, TOPIC_CANCELLED, TOPIC_SIGNALED, TOPIC_STARTED,
 };
 use super::errors::{
     workflow_cancel_terminal_status, workflow_internal_status, workflow_not_found_status,
-    workflow_required_field, workflow_signal_terminal_status, workflow_size_field,
+    workflow_required_field, workflow_signal_compensating_status, workflow_signal_terminal_status,
+    workflow_size_field,
 };
 use super::events::insert_rpc_outbox;
 use super::model::{
@@ -33,6 +34,7 @@ use super::model::{
     workflow_status_filter_to_db,
 };
 use super::store::{workflow_project_bind, workflow_scope_predicate, workflow_select_projection};
+use super::tick::signal_resumes;
 
 pub(crate) async fn start_workflow(
     svc: &WorkflowServiceImpl,
@@ -399,6 +401,17 @@ pub(crate) async fn cancel_workflow(
         workflow_internal_status("cancel_workflow_decode", format!("decode saga_id: {e}"))
     })?;
 
+    // Already compensating: the tick's compensation driver already owns the
+    // reverse-order undo. Short-circuit as an idempotent no-op — a second cancel
+    // must NOT re-run the saga handoff or emit a duplicate `cancelled` event, and
+    // must never revert the in-flight compensation.
+    if status == STATUS_COMPENSATING {
+        return Ok(Response::new(workflow_pb::CancelWorkflowResponse {
+            message: "workflow compensation already in progress".to_string(),
+            error: None,
+        }));
+    }
+
     // Already terminal: COMPLETED/FAILED cannot be cancelled; an
     // already-cancelled/compensated workflow is an idempotent no-op.
     if is_terminal_status(&status) {
@@ -541,12 +554,27 @@ pub(crate) async fn signal_workflow(
     let m = workflow_model();
     let rel = m.relation.clone();
 
+    // H8 — the load, the append, and the writeback run in ONE transaction with the
+    // instance row locked `FOR UPDATE`, so concurrent signals SERIALIZE on the row:
+    // a second signal blocks until the first commits, then reads the already-
+    // appended payload and appends its own — no lost signal. Reading unlocked from
+    // the pool and writing the whole JSON back in a separate tx is last-write-wins
+    // and drops one of two concurrent signals.
+    let mut tx = pool.begin().await.map_err(|err| {
+        workflow_internal_status(
+            "signal_workflow_begin",
+            format!("signal workflow begin failed: {err}"),
+        )
+    })?;
     let row = sqlx::query(&format!(
-        "SELECT {status} AS status, COALESCE({payload}::TEXT, '') AS payload \
+        "SELECT {status} AS status, COALESCE({payload}::TEXT, '') AS payload, \
+            COALESCE({pending_signal}, '') AS pending_signal \
          FROM {rel} \
-         WHERE {workflow_id} = $1::UUID AND {scope} AND {deleted} IS NULL",
+         WHERE {workflow_id} = $1::UUID AND {scope} AND {deleted} IS NULL \
+         FOR UPDATE",
         status = m.q("status"),
         payload = m.q("payload"),
+        pending_signal = m.q("pending_signal"),
         workflow_id = m.q("workflow_id"),
         scope = workflow_scope_predicate(&m, "$2", "$3"),
         deleted = m.q("deleted_at"),
@@ -554,7 +582,7 @@ pub(crate) async fn signal_workflow(
     .bind(&workflow_id)
     .bind(&tenant_id)
     .bind(&project_id)
-    .fetch_optional(pool)
+    .fetch_optional(&mut *tx)
     .await
     .map_err(|err| {
         workflow_internal_status(
@@ -569,12 +597,22 @@ pub(crate) async fn signal_workflow(
     let payload_text: String = row.try_get("payload").map_err(|e| {
         workflow_internal_status("signal_workflow_decode", format!("decode payload: {e}"))
     })?;
+    let pending_signal: String = row.try_get("pending_signal").map_err(|e| {
+        workflow_internal_status(
+            "signal_workflow_decode",
+            format!("decode pending_signal: {e}"),
+        )
+    })?;
+    // H7 — a COMPENSATING instance is non-signalable: a signal must never revert
+    // it to RUNNING and abandon the in-flight compensation.
+    if status == STATUS_COMPENSATING {
+        return Err(workflow_signal_compensating_status());
+    }
     if is_terminal_status(&status) {
         return Err(workflow_signal_terminal_status());
     }
 
-    // Durably record the delivered signal in the payload's `signals` array and
-    // resume forward progress (a waiting step is unblocked on the next tick).
+    // Durably record the delivered signal in the payload's `signals` log.
     let mut payload_json: serde_json::Value =
         serde_json::from_str(&payload_text).unwrap_or_else(|_| serde_json::json!({}));
     if !payload_json.is_object() {
@@ -588,44 +626,57 @@ pub(crate) async fn signal_workflow(
         "delivered_at": Utc::now().to_rfc3339(),
     });
     if let Some(obj) = payload_json.as_object_mut() {
-        obj.entry("signals")
+        obj.entry(SIGNALS_KEY)
             .or_insert_with(|| serde_json::json!([]));
-        if let Some(arr) = obj.get_mut("signals").and_then(|v| v.as_array_mut()) {
+        if let Some(arr) = obj.get_mut(SIGNALS_KEY).and_then(|v| v.as_array_mut()) {
             arr.push(entry);
         }
     }
     let updated_payload = payload_json.to_string();
 
-    // 16.3.3 — the signal writeback and its outbox event commit in ONE
-    // transaction (no dual-write window).
-    let mut tx = pool.begin().await.map_err(|err| {
-        workflow_internal_status(
-            "signal_workflow_begin",
-            format!("signal workflow begin failed: {err}"),
+    // H9 — a step parked in WAITING_SIGNAL resumes ONLY when the delivered signal
+    // matches the exact signal it is waiting for (`pending_signal`); an unrelated
+    // signal is recorded but the step keeps waiting. A RUNNING instance is simply
+    // nudged forward. Either way the writeback and its outbox event commit in the
+    // SAME transaction as the locked read above (16.3.3 — no dual-write window).
+    let resume = signal_resumes(&status, &pending_signal, &req.signal_name);
+    let update_sql = if resume {
+        format!(
+            "UPDATE {rel} SET {status} = 'RUNNING', {pending_signal} = NULL, \
+                {payload} = $4::JSONB, {next_run_at} = NOW(), {last_transition_at} = NOW() \
+             WHERE {workflow_id} = $1::UUID AND {scope} AND {deleted} IS NULL",
+            status = m.q("status"),
+            pending_signal = m.q("pending_signal"),
+            payload = m.q("payload"),
+            next_run_at = m.q("next_run_at"),
+            last_transition_at = m.q("last_transition_at"),
+            workflow_id = m.q("workflow_id"),
+            scope = workflow_scope_predicate(&m, "$2", "$3"),
+            deleted = m.q("deleted_at"),
         )
-    })?;
-    sqlx::query(&format!(
-        "UPDATE {rel} SET {status} = 'RUNNING', {pending_signal} = NULL, \
-            {payload} = $4::JSONB, {next_run_at} = NOW(), {last_transition_at} = NOW() \
-         WHERE {workflow_id} = $1::UUID AND {scope} AND {deleted} IS NULL",
-        status = m.q("status"),
-        pending_signal = m.q("pending_signal"),
-        payload = m.q("payload"),
-        next_run_at = m.q("next_run_at"),
-        last_transition_at = m.q("last_transition_at"),
-        workflow_id = m.q("workflow_id"),
-        scope = workflow_scope_predicate(&m, "$2", "$3"),
-        deleted = m.q("deleted_at"),
-    ))
-    .bind(&workflow_id)
-    .bind(&tenant_id)
-    .bind(&project_id)
-    .bind(&updated_payload)
-    .execute(&mut *tx)
-    .await
-    .map_err(|err| {
-        workflow_internal_status("signal_workflow", format!("signal workflow failed: {err}"))
-    })?;
+    } else {
+        // Still waiting for a different signal: record the delivery only, keep the
+        // WAITING_SIGNAL status and its pending_signal, and DO NOT arm next_run_at.
+        format!(
+            "UPDATE {rel} SET {payload} = $4::JSONB, {last_transition_at} = NOW() \
+             WHERE {workflow_id} = $1::UUID AND {scope} AND {deleted} IS NULL",
+            payload = m.q("payload"),
+            last_transition_at = m.q("last_transition_at"),
+            workflow_id = m.q("workflow_id"),
+            scope = workflow_scope_predicate(&m, "$2", "$3"),
+            deleted = m.q("deleted_at"),
+        )
+    };
+    sqlx::query(&update_sql)
+        .bind(&workflow_id)
+        .bind(&tenant_id)
+        .bind(&project_id)
+        .bind(&updated_payload)
+        .execute(&mut *tx)
+        .await
+        .map_err(|err| {
+            workflow_internal_status("signal_workflow", format!("signal workflow failed: {err}"))
+        })?;
 
     insert_rpc_outbox(
         &mut tx,

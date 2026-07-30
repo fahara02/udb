@@ -230,18 +230,27 @@ pub(crate) async fn run_scheduler_tick_once(
         // Normal path: FIRE the job, then advance its schedule (reset attempts).
         let payload_json: serde_json::Value =
             serde_json::from_str(&payload).unwrap_or(serde_json::Value::Null);
+        // The occurrence THIS fire represents: the STORED due time (next_fire_at),
+        // which is stable across at-least-once CDC redeliveries — unlike the
+        // wall-clock `fired_at`. Claimed rows always carry it (the claim filters
+        // `next_fire_at <= NOW()`); fall back to `now` only defensively.
+        let scheduled_slot = due_at_epoch
+            .and_then(|epoch| DateTime::<Utc>::from_timestamp(epoch, 0))
+            .unwrap_or(now);
         // Missed-run accounting: a late fire collapses the elapsed cron windows
         // into this ONE event; stamp how many were collapsed instead of hiding
         // them. Zero for an on-time fire and for one-shots (which fire once by
         // contract, however late).
         let missed_count = if is_cron {
-            due_at_epoch
-                .and_then(|epoch| DateTime::<Utc>::from_timestamp(epoch, 0))
-                .map(|due_at| missed_cron_occurrences(&cron, due_at, now))
-                .unwrap_or(0)
+            missed_cron_occurrences(&cron, scheduled_slot, now)
         } else {
             0
         };
+        // Stable per-occurrence idempotency key `(job_id, scheduled_slot)`: a
+        // redelivered fire of the SAME occurrence carries the SAME key, giving
+        // at-least-once consumers a durable dedup key that wall-clock `fired_at`
+        // cannot.
+        let idempotency_key = fired_idempotency_key(&job_id, scheduled_slot);
         // Build the payload first (cloning the owned fields) so the borrows passed
         // to `insert_tick_outbox` below stay valid.
         let fired_payload = serde_json::json!({
@@ -253,6 +262,8 @@ pub(crate) async fn run_scheduler_tick_once(
             "target_topic": target_topic.clone(),
             "payload": payload_json,
             "fired_at": now.to_rfc3339(),
+            "scheduled_slot": scheduled_slot.to_rfc3339(),
+            "idempotency_key": idempotency_key,
             "missed_count": missed_count,
         });
         insert_tick_outbox(
@@ -320,6 +331,15 @@ pub(crate) async fn run_scheduler_tick_once(
         )
     })?;
     Ok(acted)
+}
+
+/// Stable per-occurrence idempotency key for a fired event: `job_id` joined to
+/// the occurrence's STORED due time (`scheduled_slot`, seconds precision). A
+/// redelivered fire of the same occurrence yields the same key, so consumers get
+/// a durable dedup key across at-least-once CDC redelivery — which the wall-clock
+/// `fired_at` (different on each redelivery attempt) cannot provide.
+pub(crate) fn fired_idempotency_key(job_id: &str, scheduled_slot: DateTime<Utc>) -> String {
+    format!("{job_id}:{}", scheduled_slot.timestamp())
 }
 
 fn dead_payload(

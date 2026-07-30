@@ -3340,7 +3340,7 @@ def perf_seed(clients: dict, meta: Metadata):
     except grpc.RpcError:
         pass
     try:
-        sig = vault.Sign(vault_pb.SignRequest(tenant_id=tenant, key_name=vault_key, input="perf"), metadata=md, timeout=8.0)
+        sig = vault.Sign(vault_pb.SignRequest(tenant_id=tenant, key_name=signing_key, input="perf"), metadata=md, timeout=8.0)
         fix.set("vault_signature", sig.signature)
     except grpc.RpcError:
         pass

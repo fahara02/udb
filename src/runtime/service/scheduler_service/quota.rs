@@ -23,18 +23,27 @@ pub(crate) fn max_jobs_per_tenant() -> i64 {
     })
 }
 
+/// The typed per-tenant scheduled-job quota refusal (`ResourceExhausted` +
+/// `kind = QUOTA`) built through the shared `quota_refusal_status` detail (same
+/// shape as the search-index gate). A single constructor so the PURE gate and
+/// the atomic (0-rows-inserted) gate in `handlers` fail with the IDENTICAL
+/// typed detail and message.
+pub(crate) fn job_quota_exhausted_status(budget: i64) -> Status {
+    crate::runtime::executor_utils::quota_refusal_status(
+        "scheduler",
+        // Operation identifiers are normalized to underscore form on the wire
+        // (matches the `tenant_storage_quota` convention); pass it explicitly.
+        "tenant_scheduled-job_quota",
+        format!("tenant scheduled-job quota exhausted ({budget})"),
+    )
+}
+
 /// PURE quota gate: refuse when the tenant's non-deleted job count has reached
-/// the budget. `ResourceExhausted` + `kind = QUOTA` via the shared
-/// `quota_refusal_status` typed detail (same shape as the search-index gate).
+/// the budget. Shares [`job_quota_exhausted_status`] with the atomic create-time
+/// gate so both paths carry the same typed detail.
 pub(crate) fn enforce_job_quota(active_jobs: i64, budget: i64) -> Result<(), Status> {
     if active_jobs >= budget {
-        return Err(crate::runtime::executor_utils::quota_refusal_status(
-            "scheduler",
-            // Operation identifiers are normalized to underscore form on the wire
-            // (matches the `tenant_storage_quota` convention); pass it explicitly.
-            "tenant_scheduled-job_quota",
-            format!("tenant scheduled-job quota exhausted ({budget})"),
-        ));
+        return Err(job_quota_exhausted_status(budget));
     }
     Ok(())
 }

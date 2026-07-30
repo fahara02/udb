@@ -16,16 +16,17 @@ use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
 
 use super::VaultServiceImpl;
 use super::config::{
-    DEFAULT_TRANSIT_ALGORITHM, MAX_BATCH_ENCRYPT_ITEMS, MAX_VERSIONS_SCAN,
+    DEFAULT_TRANSIT_ALGORITHM, MAX_BATCH_DECRYPT_ITEMS, MAX_BATCH_ENCRYPT_ITEMS, MAX_VERSIONS_SCAN,
     MIN_DB_CREDENTIAL_TTL_SECONDS, VAULT_DB_LEASE_REAPER_BATCH,
-    VAULT_MASTER_KEY_UNAVAILABLE_MESSAGE, VAULT_RUNTIME_REQUIRED_MESSAGE, max_batch_encrypt_items,
-    max_versions_scan, vault_db_lease_reaper_batch,
+    VAULT_MASTER_KEY_UNAVAILABLE_MESSAGE, VAULT_RUNTIME_REQUIRED_MESSAGE, max_batch_decrypt_items,
+    max_batch_encrypt_items, max_versions_scan, vault_db_lease_reaper_batch,
 };
 use super::config::{STATE_ACTIVE, STATE_DELETED};
 use super::crypto::{
     DataKey, PlaintextSecret, constant_time_eq, dek_open, dek_seal, ed25519_public_key_b64,
     ed25519_sign_b64, ed25519_verify_b64, hmac_sha256, parse_transit_envelope,
-    require_encryption_algorithm, validate_transit_algorithm,
+    require_encryption_algorithm, require_hmac_algorithm, require_signing_algorithm,
+    validate_transit_algorithm,
 };
 use super::dynamic::{
     parse_vault_db_role_configs, requested_db_credential_ttl, validate_db_role_alias,
@@ -671,6 +672,81 @@ async fn batch_encrypt_rejects_over_cap_batches() {
     );
 }
 
+/// BatchDecrypt caps the number of ciphertexts per request (env
+/// `UDB_VAULT_MAX_BATCH_DECRYPT_ITEMS`), rejecting an over-cap batch with a typed
+/// field violation before any allocation, master-key unwrap, or crypto work —
+/// closing the parity gap with BatchEncrypt.
+#[tokio::test]
+async fn batch_decrypt_rejects_over_cap_batches() {
+    let svc = VaultServiceImpl::new().with_seal_override(false);
+    let over_cap = max_batch_decrypt_items() + 1;
+    let mut request = Request::new(vault_pb::BatchDecryptRequest {
+        tenant_id: "acme-tenant".to_string(),
+        key_name: "acme-key".to_string(),
+        ciphertexts: vec![String::new(); over_cap],
+        ..Default::default()
+    });
+    request
+        .metadata_mut()
+        .insert("x-tenant-id", MetadataValue::from_static("acme-tenant"));
+
+    let err = svc
+        .batch_decrypt(request)
+        .await
+        .expect_err("an over-cap ciphertext batch must be rejected");
+    assert_eq!(err.code(), tonic::Code::InvalidArgument);
+    assert!(
+        err.message().starts_with("batch_decrypt accepts at most "),
+        "unexpected message: {}",
+        err.message()
+    );
+    assert_single_field_violation(
+        &err,
+        "ciphertexts",
+        "must not exceed the configured batch-decrypt item cap",
+    );
+}
+
+/// Key separation (M12, scoped): an Ed25519 signing key is usable for Sign/Verify
+/// ONLY — refused for HMAC and for the encryption path. A symmetric key
+/// (aes256-gcm-siv, and the empty/legacy default) is usable for Encrypt/Decrypt
+/// AND HMAC, but refused for Sign/Verify. This closes the cited exploit (a signing
+/// key usable as an HMAC key) without introducing a dedicated HMAC algorithm.
+#[test]
+fn transit_key_purpose_is_separated_by_algorithm() {
+    // HMAC guard: a symmetric key is admitted; the Ed25519 signing key is refused.
+    assert!(require_hmac_algorithm("aes256-gcm-siv", "hmac").is_ok());
+    assert!(require_hmac_algorithm("", "hmac").is_ok());
+    let hmac_err = require_hmac_algorithm("ed25519", "hmac")
+        .expect_err("a signing key must not be usable for HMAC");
+    assert_eq!(hmac_err.code(), tonic::Code::InvalidArgument);
+    assert_single_field_violation(
+        &hmac_err,
+        "key_name",
+        "must name a symmetric HMAC key (aes256-gcm-siv), not an ed25519 signing key",
+    );
+
+    // Signing guard: only the Ed25519 signing key signs/verifies; a symmetric key
+    // is refused.
+    assert!(require_signing_algorithm("ed25519", "sign").is_ok());
+    for wrong in ["aes256-gcm-siv", ""] {
+        assert!(
+            require_signing_algorithm(wrong, "sign").is_err(),
+            "a symmetric key ('{wrong}') must not be usable for Sign/Verify"
+        );
+    }
+
+    // Encryption guard: a symmetric key encrypts; the Ed25519 signing key is
+    // refused. Note the same symmetric key passes BOTH the encryption and the HMAC
+    // guard above — a deliberate scope decision (no dedicated HMAC algorithm).
+    assert!(require_encryption_algorithm("aes256-gcm-siv", "encrypt").is_ok());
+    assert!(require_encryption_algorithm("", "decrypt").is_ok());
+    assert!(
+        require_encryption_algorithm("ed25519", "encrypt").is_err(),
+        "a signing key must not be usable to encrypt"
+    );
+}
+
 /// The env-governed Vault knobs fall back to their byte-stable const defaults when
 /// their `UDB_VAULT_*` variables are unset (the case under `cargo test`).
 #[test]
@@ -678,6 +754,7 @@ fn vault_env_knobs_default_to_the_consts() {
     assert_eq!(max_versions_scan(), MAX_VERSIONS_SCAN);
     assert_eq!(vault_db_lease_reaper_batch(), VAULT_DB_LEASE_REAPER_BATCH);
     assert_eq!(max_batch_encrypt_items(), MAX_BATCH_ENCRYPT_ITEMS);
+    assert_eq!(max_batch_decrypt_items(), MAX_BATCH_DECRYPT_ITEMS);
 }
 
 fn stored_secret(version: i64, state: &str) -> StoredSecret {
@@ -713,7 +790,7 @@ fn put_secret_cas_conflict_maps_to_aborted() {
     let detail = decode_detail(&cas);
     assert_eq!(detail.kind, ErrorKind::Retryable as i32);
     assert_eq!(detail.backend, "vault");
-    assert_eq!(detail.operation, "secret_version_cas");
+    assert_eq!(detail.operation, "secret_version_CAS");
     assert!(detail.retryable);
     assert!(cas.message().contains("version 7"));
 }

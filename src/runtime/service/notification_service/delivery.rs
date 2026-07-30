@@ -40,7 +40,10 @@ use super::config::{
 #[cfg(feature = "http-client")]
 use super::model::{channel_from_db, channel_to_db, delivery_attempt_model, log_model};
 #[cfg(feature = "http-client")]
-use super::store::{log_transition_allowed_prev, transition_log_status, write_delivery_attempt};
+use super::store::{
+    log_transition_allowed_prev, recipient_opted_out_db, suppress_log_if_pending,
+    transition_log_status, write_delivery_attempt,
+};
 
 /// A decrypted provider credential in flight. Redacting `Debug` from day one so
 /// the secret never leaks into a log line or panic (the redaction doctrine,
@@ -453,6 +456,12 @@ pub(crate) struct NotificationDeliveryIntent {
     pub log_id: String,
     pub tenant_id: String,
     pub channel: i32,
+    /// The recipient's user id (preference key) — carried so the worker can run the
+    /// durable opt-out check at delivery time, not only at send.
+    pub recipient_id: String,
+    /// The originating event type — the second half of the opt-out preference key
+    /// (event-specific preference, falling back to the tenant-wide default).
+    pub event_type: String,
     pub recipient_address: String,
     pub rendered_subject: String,
     pub rendered_body: String,
@@ -471,6 +480,12 @@ fn intent_from_row(row: &sqlx::postgres::PgRow) -> Result<NotificationDeliveryIn
             .try_get("tenant_id")
             .map_err(|err| format!("decode notification delivery tenant failed: {err}"))?,
         channel: channel_from_db(&channel_db),
+        recipient_id: row
+            .try_get("recipient_id")
+            .map_err(|err| format!("decode notification delivery recipient id failed: {err}"))?,
+        event_type: row
+            .try_get("event_type")
+            .map_err(|err| format!("decode notification delivery event type failed: {err}"))?,
         recipient_address: row
             .try_get("recipient_address")
             .map_err(|err| format!("decode notification delivery recipient failed: {err}"))?,
@@ -505,6 +520,8 @@ async fn load_notification_delivery_intents(
             l.{log_id}::TEXT AS log_id, \
             l.{tenant_id}::TEXT AS tenant_id, \
             l.{channel}::TEXT AS channel, \
+            COALESCE(l.{recipient_id}::TEXT, '') AS recipient_id, \
+            COALESCE(l.{event_type}::TEXT, '') AS event_type, \
             COALESCE(l.{recipient_address}::TEXT, '') AS recipient_address, \
             COALESCE(l.{rendered_subject}::TEXT, '') AS rendered_subject, \
             COALESCE(l.{rendered_body}::TEXT, '') AS rendered_body \
@@ -544,6 +561,8 @@ async fn load_notification_delivery_intents(
         log_id = log.q("log_id"),
         tenant_id = log.q("tenant_id"),
         channel = log.q("channel"),
+        recipient_id = log.q("recipient_id"),
+        event_type = log.q("event_type"),
         recipient_address = log.q("recipient_address"),
         rendered_subject = log.q("rendered_subject"),
         rendered_body = log.q("rendered_body"),
@@ -753,6 +772,39 @@ pub(crate) async fn run_notification_delivery_once(
         let Ok(notification_id) = Uuid::parse_str(intent.log_id.trim()) else {
             continue;
         };
+        // Opt-out enforced at DELIVERY time, not only at send: a preference set
+        // AFTER the original send (or re-queued via a manual retry) must still
+        // suppress delivery. Fail-closed — on a lookup error, skip this intent
+        // (leave it PENDING for a later pass) rather than risk delivering to an
+        // opted-out recipient. An empty/non-UUID recipient id has no preference key,
+        // so it is delivered normally (its address, if required, is checked below).
+        if let Ok(recipient_uuid) = Uuid::parse_str(intent.recipient_id.trim()) {
+            match recipient_opted_out_db(
+                pool,
+                recipient_uuid,
+                &intent.tenant_id,
+                intent.channel,
+                &intent.event_type,
+            )
+            .await
+            {
+                Ok(true) => {
+                    // Suppress: move the log out of PENDING to SUPPRESSED and skip
+                    // the provider POST entirely — no attempt row, no dead-letter.
+                    if let Err(err) =
+                        suppress_log_if_pending(pool, notification_id, &intent.tenant_id).await
+                    {
+                        tracing::warn!(log_id = %intent.log_id, error = %err, "notification opt-out suppression failed");
+                    }
+                    continue;
+                }
+                Ok(false) => {}
+                Err(err) => {
+                    tracing::warn!(log_id = %intent.log_id, error = %err, "notification opt-out check failed; skipping delivery this pass");
+                    continue;
+                }
+            }
+        }
         // An address-bearing channel (EMAIL/SMS/PUSH) with an empty
         // `recipient_address` can NEVER be delivered — without this it would sit
         // PENDING and be re-scanned forever. Fail it out of the queue with a clear

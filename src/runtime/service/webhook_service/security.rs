@@ -5,7 +5,7 @@
 //! the tenant-bound subscription matching (`topic_matches_pattern` /
 //! `webhook_event_matches_endpoint_scope`).
 
-use std::net::IpAddr;
+use std::net::{IpAddr, SocketAddr};
 
 use base64::Engine as _;
 use tonic::Status;
@@ -137,36 +137,67 @@ pub(crate) fn validate_webhook_target_url(url: &str) -> Result<(), Status> {
     Ok(())
 }
 
-/// Delivery-time SSRF guard (defeats DNS rebinding): re-run the write-time check,
-/// then — for a hostname target — resolve it and reject if ANY resolved address is
-/// blocked. Fail closed: a resolution error is treated as a rejection rather than
-/// proceeding to a possibly-internal address. Literal-IP targets were already
-/// validated by [`validate_webhook_target_url`].
+/// A delivery target whose resolved addresses have ALL passed the SSRF range
+/// check, carried together with the exact addresses to connect to. The caller
+/// PINS these addresses for the actual TCP connection (never handing the hostname
+/// back to the HTTP client to re-resolve), which closes the check→connect TOCTOU
+/// a DNS-rebinding attacker would otherwise use to swing a validated public name
+/// onto an internal address after the check but before the connect.
 #[allow(dead_code)]
-pub(crate) async fn resolve_and_validate_target(url: &str) -> Result<(), Status> {
+pub(crate) struct ValidatedTarget {
+    pub host: String,
+    pub port: u16,
+    /// Every entry is confirmed non-blocked; the delivery client is pinned to
+    /// these and only these addresses.
+    pub addrs: Vec<SocketAddr>,
+}
+
+/// Delivery-time SSRF guard that also PINS the connect address (defeats DNS
+/// rebinding at the connection layer, not just the validation layer): re-run the
+/// write-time check, then — for a hostname target — resolve it, reject if ANY
+/// resolved address is blocked, and return the validated addresses so the caller
+/// connects to exactly those (no independent re-resolution). Fail closed: a
+/// resolution error is a rejection, never a proceed. A literal-IP target (already
+/// range-checked by [`validate_webhook_target_url`]) is pinned directly, so no
+/// name resolution — hence no rebind window — exists for it.
+#[allow(dead_code)]
+pub(crate) async fn resolve_and_pin_target(url: &str) -> Result<ValidatedTarget, Status> {
     validate_webhook_target_url(url)?;
     let (host, port) = parse_webhook_target(url)?;
-    if host.parse::<IpAddr>().is_ok() {
-        // A literal IP was already range-checked by `validate_webhook_target_url`.
-        return Ok(());
+    if let Ok(ip) = host.parse::<IpAddr>() {
+        // A literal IP was already range-checked by `validate_webhook_target_url`;
+        // pin it directly so no resolver (and no rebind) is ever involved.
+        return Ok(ValidatedTarget {
+            host,
+            port,
+            addrs: vec![SocketAddr::new(ip, port)],
+        });
     }
-    let mut resolved = tokio::net::lookup_host((host.as_str(), port))
+    let resolved = tokio::net::lookup_host((host.as_str(), port))
         .await
         .map_err(|err| {
             // Fail closed: if we cannot prove where the host points, do not deliver.
             webhook_host_unresolved_status(&host, err)
         })?;
-    let mut saw_any = false;
-    for addr in &mut resolved {
-        saw_any = true;
+    let mut addrs = Vec::new();
+    for addr in resolved {
         if ip_is_blocked(addr.ip()) {
             return Err(webhook_host_blocked_address_status(&host, addr.ip()));
         }
+        addrs.push(addr);
     }
-    if !saw_any {
+    if addrs.is_empty() {
         return Err(webhook_host_no_addresses_status(&host));
     }
-    Ok(())
+    Ok(ValidatedTarget { host, port, addrs })
+}
+
+/// Back-compat delivery-time SSRF check that only reports pass/fail (used by the
+/// notification service's shared guard, which does not need the pinned address).
+/// Delegates to [`resolve_and_pin_target`] so the validation logic lives once.
+#[allow(dead_code)]
+pub(crate) async fn resolve_and_validate_target(url: &str) -> Result<(), Status> {
+    resolve_and_pin_target(url).await.map(|_| ())
 }
 
 // ── HMAC signing (reuses the vendored sha2-based HMAC; no new crypto crate) ────
@@ -184,6 +215,28 @@ fn hex_lower(bytes: &[u8]) -> String {
 /// the Vault/TOTP lanes share) so no `hmac` crate is added.
 pub(crate) fn sign_webhook_body(secret: &str, body: &[u8]) -> String {
     let mac = crate::runtime::security::hmac_sha256(secret.as_bytes(), body);
+    format!("sha256={}", hex_lower(&mac))
+}
+
+/// The replay-resistant `X-Udb-Signature` value: the HMAC covers
+/// `"<timestamp>.<body>"` (unix seconds `.` raw body, no separator escaping — the
+/// timestamp is digits-only so the `.` boundary is unambiguous) rather than the
+/// body alone. The `timestamp` is transmitted in the `X-Udb-Timestamp` header, so
+/// a receiver recomputes the same material and rejects any delivery whose
+/// timestamp falls outside its freshness window — a captured `(signature, body)`
+/// pair can no longer be replayed indefinitely. Scheme:
+/// `sha256=<hex(HMAC-SHA256(secret, "<timestamp>.<body>"))>`.
+pub(crate) fn sign_webhook_body_with_timestamp(
+    secret: &str,
+    timestamp: i64,
+    body: &[u8],
+) -> String {
+    let ts = timestamp.to_string();
+    let mut signed = Vec::with_capacity(ts.len() + 1 + body.len());
+    signed.extend_from_slice(ts.as_bytes());
+    signed.push(b'.');
+    signed.extend_from_slice(body);
+    let mac = crate::runtime::security::hmac_sha256(secret.as_bytes(), &signed);
     format!("sha256={}", hex_lower(&mac))
 }
 

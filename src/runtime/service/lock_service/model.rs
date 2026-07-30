@@ -92,6 +92,20 @@ pub(crate) struct StoredLock {
     pub(crate) owner_id: String,
     pub(crate) fencing_token: i64,
     pub(crate) status: String,
+    /// Lease expiry as unix seconds (0 when absent/unparseable). Lets `renew`
+    /// distinguish a continuous hold (keep the fencing token) from re-acquiring
+    /// a LAPSED lease (mint a strictly-greater token).
+    pub(crate) expires_at_unix: i64,
+}
+
+/// Whether a renew is re-acquiring a LAPSED lease (expiry already in the past)
+/// and must therefore mint a strictly-greater fencing token, versus a continuous
+/// hold that keeps the current token. `expires_at_unix == 0` (absent/unparseable)
+/// is treated as NOT lapsed so a live row with an undecodable timestamp keeps its
+/// token — the separate owner + fence checks still gate the renew. Pure; unit
+/// tested without a store.
+pub(crate) fn lease_lapsed(expires_at_unix: i64, now_unix: i64) -> bool {
+    expires_at_unix > 0 && expires_at_unix <= now_unix
 }
 
 pub(crate) fn stored_lock_from_json(row: &serde_json::Value) -> StoredLock {
@@ -101,5 +115,6 @@ pub(crate) fn stored_lock_from_json(row: &serde_json::Value) -> StoredLock {
         owner_id: json_str(map, "owner_id"),
         fencing_token: json_i64(map, "fencing_token"),
         status: json_str(map, "status"),
+        expires_at_unix: json_unix(map, "expires_at"),
     }
 }

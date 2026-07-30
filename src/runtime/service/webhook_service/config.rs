@@ -19,6 +19,10 @@ pub(crate) const TOPIC_DELIVERY_DEAD: &str = "udb.webhook.delivery.dead.v1";
 
 /// The signature header the broker stamps every delivery with.
 pub(crate) const SIGNATURE_HEADER: &str = "x-udb-signature";
+/// The delivery timestamp (unix seconds) header stamped alongside the signature.
+/// The signature covers `"<timestamp>.<body>"`, so a receiver rejects a stale or
+/// replayed delivery by bounding `now - timestamp` before it trusts the payload.
+pub(crate) const TIMESTAMP_HEADER: &str = "x-udb-timestamp";
 
 /// Default delivery attempt budget when an endpoint declares none.
 pub(crate) const DEFAULT_MAX_ATTEMPTS: i32 = 5;
@@ -30,6 +34,23 @@ pub(crate) const DELIVERY_BACKOFF_CAP: Duration = Duration::from_secs(300);
 pub(crate) const WEBHOOK_DELIVERY_BATCH: i64 = 200;
 pub(crate) const DEFAULT_WEBHOOK_DELIVERY_INTERVAL_SECS: u64 = 30;
 pub(crate) const WEBHOOK_DELIVERY_INTERVAL_ENV: &str = "UDB_WEBHOOK_DELIVERY_INTERVAL_SECS";
+
+// ── per-delivery request timeout (bounds head-of-line blocking) ────────────────
+/// Default hard timeout for a single delivery POST. Without it, one black-holed
+/// endpoint can pin the worker (and — before bounded concurrency — starve every
+/// other tenant's deliveries in the tick). Bounded to a sane floor/ceiling.
+pub(crate) const DEFAULT_WEBHOOK_DELIVERY_TIMEOUT_MS: u64 = 10_000;
+pub(crate) const MIN_WEBHOOK_DELIVERY_TIMEOUT_MS: u64 = 1_000;
+pub(crate) const MAX_WEBHOOK_DELIVERY_TIMEOUT_MS: u64 = 120_000;
+pub(crate) const WEBHOOK_DELIVERY_TIMEOUT_ENV: &str = "UDB_WEBHOOK_DELIVERY_TIMEOUT_MS";
+
+// ── bounded per-tick delivery concurrency (per-tenant fairness) ────────────────
+/// Independent `(endpoint, event)` deliveries run concurrently up to this bound so
+/// a slow/black-holed endpoint for one tenant (already capped by the per-delivery
+/// timeout) never head-of-line-blocks other tenants' deliveries in the same tick.
+pub(crate) const DEFAULT_WEBHOOK_DELIVERY_CONCURRENCY: usize = 8;
+pub(crate) const MAX_WEBHOOK_DELIVERY_CONCURRENCY: usize = 64;
+pub(crate) const WEBHOOK_DELIVERY_CONCURRENCY_ENV: &str = "UDB_WEBHOOK_DELIVERY_CONCURRENCY";
 
 // ── delivery statuses (stored as VARCHAR) ─────────────────────────────────────
 pub(crate) const STATUS_DELIVERED: &str = "DELIVERED";
@@ -54,6 +75,31 @@ pub(crate) fn webhook_delivery_interval() -> Duration {
             .filter(|v| *v > 0)
             .unwrap_or(DEFAULT_WEBHOOK_DELIVERY_INTERVAL_SECS),
     )
+}
+
+/// Resolve-once per-delivery request timeout, clamped to `[MIN, MAX]` so a bad
+/// env value can neither disable the timeout nor set an absurd one.
+pub(crate) fn webhook_delivery_timeout() -> Duration {
+    let ms = std::env::var(WEBHOOK_DELIVERY_TIMEOUT_ENV)
+        .ok()
+        .and_then(|v| v.parse::<u64>().ok())
+        .filter(|v| *v > 0)
+        .unwrap_or(DEFAULT_WEBHOOK_DELIVERY_TIMEOUT_MS)
+        .clamp(
+            MIN_WEBHOOK_DELIVERY_TIMEOUT_MS,
+            MAX_WEBHOOK_DELIVERY_TIMEOUT_MS,
+        );
+    Duration::from_millis(ms)
+}
+
+/// Resolve-once bounded delivery fan-out width (at least 1, capped).
+pub(crate) fn webhook_delivery_concurrency() -> usize {
+    std::env::var(WEBHOOK_DELIVERY_CONCURRENCY_ENV)
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok())
+        .filter(|v| *v > 0)
+        .unwrap_or(DEFAULT_WEBHOOK_DELIVERY_CONCURRENCY)
+        .clamp(1, MAX_WEBHOOK_DELIVERY_CONCURRENCY)
 }
 
 pub(crate) fn clamp_max_attempts(requested: i32) -> i32 {

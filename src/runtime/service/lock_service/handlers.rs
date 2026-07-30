@@ -25,37 +25,42 @@ use super::config::{
     TOPIC_ACQUIRED, TOPIC_RELEASED, TOPIC_RENEWED, resolve_ttl_seconds,
 };
 use super::errors::{
-    ensure_fencing_token_fresh, fencing_token_unavailable_status, lock_already_held_status,
-    lock_held_by_different_owner_status, lock_lease_lost_status, lock_not_held_status,
-    validate_lock_identity,
+    ensure_fencing_token_fresh, lock_already_held_status, lock_held_by_different_owner_status,
+    lock_lease_lost_status, lock_not_held_status, validate_lock_identity,
 };
 use super::events::emit_lock_event;
-use super::model::{lease_name, lock_dto_from_json, now_unix, stored_lock_from_json};
+use super::model::{lease_lapsed, lease_name, lock_dto_from_json, now_unix, stored_lock_from_json};
 use super::store::{
     held_locks_read, lock_conflict, lock_inventory_read, lock_read_by_name, lock_record,
 };
 
-/// Source the next monotone fencing token from the canonical outbox high-water
-/// mark (the same counter write receipts advance), so each successive grant —
-/// including a takeover after the prior holder's lease expired — receives a
-/// strictly greater token. Fail closed when no canonical store is registered
-/// or the counter read fails (16.5.2): the old wall-clock fallback collided
-/// within a second and regressed across clock steps, breaking the fencing
-/// guarantee the token exists to provide.
-pub(crate) async fn next_fencing_token(runtime: &DataBrokerRuntime) -> Result<i64, Status> {
-    let Some(store) = runtime.default_system_stores() else {
-        return Err(fencing_token_unavailable_status());
-    };
-    match store.outbox_max_seq().await {
-        Ok(seq) => Ok(seq.saturating_add(1)),
-        Err(err) => {
-            tracing::error!(
-                error = %err,
-                "lock fencing-token source read failed; refusing to grant"
-            );
-            Err(fencing_token_unavailable_status())
-        }
-    }
+/// Allocate the next fencing token for THIS lock — per-lock, strictly monotone,
+/// and independent of the outbox high-water mark.
+///
+/// The token lives on the durable lock row and is bumped from the row's own
+/// last value: the successor is `current + 1`. This is read UNDER the freshly
+/// (re)held advisory lease, which serializes acquirers, so the read+bump is
+/// atomic for this lock — the prior stale scheme (`outbox_max_seq()+1`) could
+/// hand the next holder the SAME token when the acquire event dropped and the
+/// global counter was quiescent, defeating split-brain fencing. Because the
+/// durable row is committed before any outbox emit, a dropped event can never
+/// let a successor reuse a token.
+///
+/// Returns the granted token plus the fresh row read (its `lock_id` is reused so
+/// a re-acquire keeps the same primary key).
+async fn allocate_lock_fencing_token(
+    runtime: &DataBrokerRuntime,
+    context: &crate::RequestContext,
+    tenant_id: &str,
+    lock_name: &str,
+) -> Result<(i64, Option<super::model::StoredLock>), Status> {
+    let current = runtime
+        .native_entity_read_for_service("lock", context, lock_read_by_name(tenant_id, lock_name))
+        .await?
+        .first()
+        .map(stored_lock_from_json);
+    let prev = current.as_ref().map(|row| row.fencing_token).unwrap_or(0);
+    Ok((prev.saturating_add(1), current))
 }
 
 pub(crate) async fn acquire_lock(
@@ -123,9 +128,15 @@ pub(crate) async fn acquire_lock(
         return Err(lock_already_held_status());
     }
 
-    let fencing_token = next_fencing_token(runtime).await?;
-    let lock_id = existing
+    // Per-lock monotone fencing token, allocated UNDER the just-held lease: the
+    // fresh read reflects the last committed grant for this lock even after a
+    // takeover, so the successor token is strictly greater. Independent of the
+    // outbox high-water mark, which could collide when an acquire event dropped.
+    let (fencing_token, current) =
+        allocate_lock_fencing_token(runtime, &context, &tenant_id, &lock_name).await?;
+    let lock_id = current
         .as_ref()
+        .or(existing.as_ref())
         .map(|row| row.lock_id.clone())
         .filter(|id| !id.trim().is_empty())
         .unwrap_or_else(|| Uuid::new_v4().to_string());
@@ -221,9 +232,21 @@ pub(crate) async fn renew_lock(
         return Err(lock_lease_lost_status());
     }
 
+    // A continuous renew keeps the same token. But if the lease had already
+    // LAPSED (expired) before this renew, re-acquiring it is a fresh grant — a
+    // stale token from the lapse window must not stay valid, so bump to a
+    // strictly-greater per-lock token. The owner check above guarantees no other
+    // owner supplanted us during the lapse (else it would have failed), so the
+    // stored token is our own last grant and `+1` is monotone for this lock.
+    let lapsed = lease_lapsed(stored.expires_at_unix, now_unix());
+    let fencing_token = if lapsed {
+        stored.fencing_token.saturating_add(1)
+    } else {
+        stored.fencing_token
+    };
+
     let acquired_at = Utc::now();
     let expires_at = acquired_at + chrono::Duration::seconds(ttl_seconds);
-    // Renew keeps the same fencing token (no new grant).
     runtime
         .native_entity_write_for_service(
             "lock",
@@ -234,7 +257,7 @@ pub(crate) async fn renew_lock(
                 &tenant_id,
                 &lock_name,
                 &owner_id,
-                stored.fencing_token,
+                fencing_token,
                 ttl_seconds,
                 STATUS_HELD,
                 acquired_at,
@@ -254,13 +277,13 @@ pub(crate) async fn renew_lock(
         &stored.lock_id,
         &lock_name,
         &owner_id,
-        stored.fencing_token,
+        fencing_token,
     )
     .await;
 
     Ok(Response::new(lock_pb::RenewLockResponse {
         renewed: true,
-        fencing_token: stored.fencing_token,
+        fencing_token,
         expires_at_unix: now_unix() + ttl_seconds,
         message: "lock renewed".to_string(),
         error: None,

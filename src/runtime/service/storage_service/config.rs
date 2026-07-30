@@ -32,3 +32,30 @@ pub(crate) const OBJECT_DELETE_ORPHANED: &str = "OBJECT_DELETE_ORPHANED";
 pub(crate) const UPLOAD_EXPIRED: &str = "UPLOAD_EXPIRED";
 #[allow(dead_code)]
 pub(crate) const UNSUPPORTED_OBJECT_BACKEND: &str = "UNSUPPORTED_OBJECT_BACKEND";
+/// A client-supplied `filename` produced an object key that would escape the
+/// tenant/file prefix (traversal / absolute / separator) — the register is
+/// rejected fail-closed before any row or object is created.
+pub(crate) const OBJECT_KEY_TRAVERSAL: &str = "OBJECT_KEY_TRAVERSAL";
+
+/// Env knob: when set truthy, the native storage object store requires
+/// server-side encryption (SSE-S3 / AES-256) on every object write — the
+/// native-path analog of an object store's `server_side_encryption` catalog
+/// annotation, which the data plane enforces on the object PUT. Native services
+/// hold no catalog-manifest handle, so the requirement is surfaced through this
+/// companion knob alongside `UDB_STORAGE_BUCKET` / `UDB_STORAGE_OBJECT_BACKEND`.
+pub(crate) const STORAGE_SSE_ENV: &str = "UDB_STORAGE_SERVER_SIDE_ENCRYPTION";
+
+/// Whether native object writes/presigns into this service's store must request
+/// server-side encryption. Parsed with the same truthy set the rest of the
+/// runtime uses for boolean env flags.
+pub(crate) fn storage_sse_required() -> bool {
+    std::env::var(STORAGE_SSE_ENV)
+        .ok()
+        .map(|value| {
+            matches!(
+                value.trim().to_ascii_lowercase().as_str(),
+                "1" | "true" | "yes" | "on"
+            )
+        })
+        .unwrap_or(false)
+}

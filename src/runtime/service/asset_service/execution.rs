@@ -19,7 +19,7 @@ use crate::runtime::service::native_helpers::{
 };
 
 use super::AssetServiceImpl;
-use super::config::{PIPELINE_COMPLETED_TOPIC, PIPELINE_FAILED_TOPIC};
+use super::config::{PIPELINE_COMPLETED_TOPIC, PIPELINE_FAILED_TOPIC, storage_sse_required};
 use super::errors::asset_internal_status;
 use super::model::{
     asset_model, pipeline_definition_model, pipeline_instance_model, pipeline_step_model,
@@ -30,6 +30,26 @@ use super::steps::image::{
 };
 use super::steps::transcode::run_ffmpeg_transcode;
 use super::steps::{ByteStepParams, StepOutcome, derived_object_key, register_derived_file};
+
+/// Build the object-store PUT request for a derived object, mirroring the
+/// data-plane object PUT's server-side-encryption enforcement: when the native
+/// storage store requires SSE (`UDB_STORAGE_SERVER_SIDE_ENCRYPTION`), the request
+/// is stamped so the S3/MinIO executor writes it SSE-S3 (AES-256) — otherwise a
+/// natively-served derived object would land unencrypted while data-plane writes
+/// to the same store are encrypted.
+fn derived_put_request_json(bucket: &str, derived_key: &str, content_type: &str) -> String {
+    let request_json = crate::runtime::core::setup_data::object_request_json(
+        "put",
+        bucket,
+        derived_key,
+        content_type,
+    );
+    if storage_sse_required() {
+        crate::runtime::core::setup_data::object_request_json_require_sse(&request_json)
+    } else {
+        request_json
+    }
+}
 
 /// Resolved metadata for a finalized storage file that an asset pipeline acts on.
 /// Shared by the storage-finalized and Kafka-trigger handlers so both derive the
@@ -378,12 +398,7 @@ impl AssetServiceImpl {
             };
             let out_len = out_bytes.len();
             let derived_key = derived_object_key(&object_key, step_type, ext);
-            let put_req = crate::runtime::core::setup_data::object_request_json(
-                "put",
-                &bucket,
-                &derived_key,
-                content_type,
-            );
+            let put_req = derived_put_request_json(&bucket, &derived_key, content_type);
             if let Err(err) = runtime
                 .put_object_backend_target_for_project(
                     &backend, None, project_id, &put_req, out_bytes,
@@ -502,12 +517,7 @@ impl AssetServiceImpl {
 
             // (6) store under the `derived/` namespace (no source-key collision).
             let derived_key = derived_object_key(&object_key, step_type, ext);
-            let put_req = crate::runtime::core::setup_data::object_request_json(
-                "put",
-                &bucket,
-                &derived_key,
-                content_type,
-            );
+            let put_req = derived_put_request_json(&bucket, &derived_key, content_type);
             if let Err(err) = runtime
                 .put_object_backend_target_for_project(
                     &backend, None, project_id, &put_req, out_bytes,
@@ -540,6 +550,62 @@ impl AssetServiceImpl {
                 "format": ext,
                 "bytes": out_len,
             }))
+        }
+    }
+}
+
+/// Compensating terminal-state advance for a pipeline instance whose INLINE
+/// execution aborted mid-run (a step INSERT, a state-encrypt, or a byte-step
+/// dispatch returned an error and the RPC is about to fail). Without this a
+/// partially-run instance would be stranded in `RUNNING` forever — an orphaned
+/// row that never reaches a terminal state. The flip is guarded on the current
+/// status being `RUNNING`, so it never clobbers a row another path already
+/// advanced (idempotent), and it emits the same `pipeline.failed` domain event a
+/// normal FAILED advance emits. Best-effort: it logs and swallows its own errors
+/// so the ORIGINAL failure is the one returned to the caller.
+pub(crate) async fn fail_instance_on_abort(
+    svc: &AssetServiceImpl,
+    pool: &PgPool,
+    instance_id: Uuid,
+    tenant_id: Uuid,
+) {
+    let inst = pipeline_instance_model();
+    let inst_rel = inst.relation.clone();
+    let flipped = sqlx::query(&format!(
+        "UPDATE {inst_rel} SET {status} = 'FAILED', {completed_at} = CURRENT_TIMESTAMP \
+         WHERE {instance_id} = $1::UUID AND {tenant_id} = $2::UUID AND {status} = 'RUNNING'",
+        status = inst.q("status"),
+        completed_at = inst.q("completed_at"),
+        instance_id = inst.q("instance_id"),
+        tenant_id = inst.q("tenant_id"),
+    ))
+    .bind(instance_id)
+    .bind(tenant_id)
+    .execute(pool)
+    .await;
+    match flipped {
+        Ok(done) if done.rows_affected() > 0 => {
+            emit_payload_event(
+                pool,
+                svc.outbox_relation.as_deref(),
+                PIPELINE_FAILED_TOPIC,
+                &instance_id.to_string(),
+                serde_json::json!({
+                    "instance_id": instance_id.to_string(),
+                    "tenant_id": tenant_id.to_string(),
+                    "status": "FAILED",
+                }),
+                Some(&svc.metrics),
+            )
+            .await;
+        }
+        Ok(_) => {}
+        Err(err) => {
+            tracing::error!(
+                error = %err,
+                instance_id = %instance_id,
+                "pipeline start aborted; compensating FAILED flip failed (instance may be stranded RUNNING)"
+            );
         }
     }
 }

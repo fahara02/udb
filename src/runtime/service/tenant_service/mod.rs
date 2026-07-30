@@ -35,11 +35,20 @@ use super::DataBrokerService;
 mod config;
 mod errors;
 mod events;
+mod gate;
 mod handlers;
 mod model;
 mod store;
 #[cfg(test)]
 mod tests;
+
+// Fail-closed request-time tenant-status gate. Re-exported at the module root so
+// the shared method-security tower layer can invoke it on the validated claim
+// tenant before dispatch as `crate::runtime::service::tenant_service::tenant_status_gate`
+// (see `gate::tenant_status_gate` TODO(leader-wire)). `allow(unused_imports)`
+// until that leader-owned call site is wired.
+#[allow(unused_imports)]
+pub(crate) use gate::tenant_status_gate;
 
 /// Postgres-backed `TenantService` handler.
 pub struct TenantServiceImpl {

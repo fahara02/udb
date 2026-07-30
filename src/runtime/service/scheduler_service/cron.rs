@@ -6,10 +6,25 @@
 //! `@hourly`/`@daily`/`@weekly`/`@monthly`/`@yearly` macros. Day-of-week is 0-6
 //! (0 = Sunday). When BOTH day-of-month and day-of-week are restricted, a match on
 //! EITHER fires (Vixie-cron semantics). Returns the first matching minute strictly
-//! after `after`, searching up to ~366 days; `None` if the expression is invalid
-//! or unsatisfiable within that horizon.
+//! after `after`, searching up to [`NEXT_FIRE_SEARCH_DAYS`]; `None` if the
+//! expression is invalid or unsatisfiable within that horizon.
+//!
+//! TIMEZONE: evaluation is UTC-only. DST-aware evaluation in a caller-chosen zone
+//! (e.g. a `UDB_SCHEDULER_TZ` default plus a per-job override) is intentionally
+//! NOT implemented here: it needs both a `timezone` field on the `ScheduledJob`
+//! entity (a proto change) and a vendored IANA tz database crate — neither exists
+//! today, and faking a fixed offset would silently drift twice a year. Deferred
+//! until those land; until then all crons fire on UTC wall-clock minutes.
 
 use chrono::{DateTime, Datelike, Duration as ChronoDuration, Timelike, Utc};
+
+/// Horizon for the next-fire search. Must comfortably exceed the longest gap
+/// between occurrences of any valid cron — the widest is the quadrennial
+/// leap-day expression `0 0 29 2 *`, whose occurrences are ~4 years apart. A
+/// 366-day bound wrongly returned `None` for it (rejecting a valid job at create
+/// or dead-lettering it at fire time); ~5 years covers a full leap cycle with
+/// margin so a sparse-but-valid cron always resolves.
+pub(crate) const NEXT_FIRE_SEARCH_DAYS: i64 = 1830;
 
 /// Safety cap on the missed-run counting loop: bounds how many elapsed cron
 /// occurrences one fire will enumerate, so a job that slept for months cannot
@@ -105,7 +120,7 @@ pub(crate) fn next_cron_after(expr: &str, after: DateTime<Utc>) -> Option<DateTi
     let mut t = (after + ChronoDuration::minutes(1))
         .with_second(0)?
         .with_nanosecond(0)?;
-    let horizon = after + ChronoDuration::days(366);
+    let horizon = after + ChronoDuration::days(NEXT_FIRE_SEARCH_DAYS);
     while t <= horizon {
         let minute = t.minute() as u8;
         let hour = t.hour() as u8;

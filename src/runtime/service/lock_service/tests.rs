@@ -22,7 +22,7 @@ use super::errors::{
     lock_capability_status, lock_held_by_different_owner_status, lock_lease_lost_status,
     lock_not_held_status,
 };
-use super::model::lock_dto_from_json;
+use super::model::{lease_lapsed, lock_dto_from_json};
 use super::store::{held_locks_read, lock_filter, lock_inventory_read, lock_model};
 use super::workers::expired_locks_claim_sql;
 
@@ -117,6 +117,22 @@ fn stale_fencing_token_is_rejected() {
     ensure_fencing_token_fresh(8, 7).expect("newer token must pass");
 }
 
+/// M10 — renew must bump the fencing token when it re-acquires a LAPSED lease
+/// (expiry in the past), but keep it for a continuous hold (expiry in the
+/// future). An absent/unparseable expiry (0) is treated as NOT lapsed (keep).
+#[test]
+fn lease_lapsed_detects_expired_leases_only() {
+    let now = 1_000_000i64;
+    // Expiry strictly in the past → lapsed (bump the token).
+    assert!(lease_lapsed(now - 1, now));
+    // Expiry exactly at now → lapsed (the lease no longer excludes anyone).
+    assert!(lease_lapsed(now, now));
+    // Expiry in the future → continuous hold (keep the token).
+    assert!(!lease_lapsed(now + 30, now));
+    // Absent/unparseable expiry → NOT lapsed (fail-safe: keep the token).
+    assert!(!lease_lapsed(0, now));
+}
+
 #[test]
 fn lock_lease_lost_carries_policy_detail() {
     let err = lock_lease_lost_status();
@@ -185,10 +201,11 @@ fn held_locks_quota_read_excludes_expired_rows() {
     assert_eq!(read.filter, Some(expected));
 }
 
-/// 16.5.2 — with no canonical store (or a failed counter read) the fencing
-/// path must return this typed capability refusal, never a wall-clock token:
-/// `next_fencing_token`'s only non-store exit is
-/// `fencing_token_unavailable_status()` (the `now_unix()` fallback is gone).
+/// 16.5.2 — the fencing path must never mint a wall-clock token; when it cannot
+/// establish a monotone source it returns this typed capability refusal. The
+/// per-lock token is now read from the durable lock row under the advisory lease
+/// (a store read that fails closed on its own), so this constructor remains the
+/// canonical fail-closed shape.
 #[test]
 fn missing_fencing_token_source_returns_typed_refusal_not_a_token() {
     let err = fencing_token_unavailable_status();

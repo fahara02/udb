@@ -11,7 +11,7 @@ use crate::proto::udb::core::scheduler::services::v1 as scheduler_pb;
 use crate::runtime::channels::OperationChannel;
 
 use super::super::native_helpers::{
-    NativeEventContext, admit_on as native_admit_on, enqueue_outbox_event_with_context,
+    NativeEventContext, admit_on as native_admit_on, enqueue_outbox_event_in_tx,
     native_next_page_token_for_total, native_offset_page_window, non_empty_json, parse_uuid,
     validate_request_scope,
 };
@@ -25,7 +25,9 @@ use super::model::{
     job_from_row, job_select_projection, job_status_filter_to_db, schedule_type_to_db,
     scheduled_job_model,
 };
-use super::quota::{enforce_job_quota, max_jobs_per_tenant};
+use super::quota::{job_quota_exhausted_status, max_jobs_per_tenant};
+
+use crate::runtime::native_catalog::NativeModel;
 
 /// Create a scheduled job. FIRE-ONLY SEMANTICS: when the job is due, the
 /// scheduler durably emits one `udb.scheduler.job.fired.v1` event
@@ -87,25 +89,7 @@ pub(crate) async fn create_job(
     let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?.to_string();
     let pool = svc.require_pool()?;
     let m = scheduled_job_model();
-    let rel = m.relation.clone();
-    // Per-tenant job quota: COUNT the tenant's non-deleted jobs and refuse
-    // over budget with the typed quota detail (fail closed; mirrors the
-    // search-index gate).
-    let active_jobs: i64 = sqlx::query_scalar(&format!(
-        "SELECT COUNT(*) FROM {rel} WHERE {tenant_id} = $1::UUID AND {deleted} IS NULL",
-        tenant_id = m.q("tenant_id"),
-        deleted = m.q("deleted_at"),
-    ))
-    .bind(&tenant_id)
-    .fetch_one(pool)
-    .await
-    .map_err(|err| {
-        scheduler_internal_status(
-            "count_scheduled_jobs_quota",
-            format!("count scheduled jobs for quota failed: {err}"),
-        )
-    })?;
-    enforce_job_quota(active_jobs, max_jobs_per_tenant())?;
+    let limit = max_jobs_per_tenant();
     let job_id = Uuid::new_v4().to_string();
     let payload = non_empty_json(&req.payload);
     let max_attempts = if req.max_attempts > 0 {
@@ -118,53 +102,67 @@ pub(crate) async fn create_job(
     } else {
         60
     };
-    // ONE_SHOT with an empty seed is rejected above; a CRON with an empty seed
-    // fires immediately (NOW()) and then advances from the cron expression.
-    sqlx::query(&format!(
-        "INSERT INTO {rel} \
-           ({job_id}, {tenant_id}, {project_id}, {name}, {schedule_type}, {cron}, {payload}, \
-            {target_topic}, {status}, {next_fire_at}, {max_attempts}, {attempt_count}, {backoff}) \
-         VALUES ($1::UUID, $2::UUID, NULLIF($3, '')::UUID, $4, $5, NULLIF($6, ''), $7::JSONB, \
-            NULLIF($8, ''), 'ACTIVE', \
-            CASE WHEN $9 = '' THEN (CASE WHEN $5 = 'CRON' THEN NOW() ELSE NULL END) \
-                 ELSE $9::TIMESTAMPTZ END, \
-            $10, 0, $11)",
-        job_id = m.q("job_id"),
-        tenant_id = m.q("tenant_id"),
-        project_id = m.q("project_id"),
-        name = m.q("name"),
-        schedule_type = m.q("schedule_type"),
-        cron = m.q("cron_expression"),
-        payload = m.q("payload"),
-        target_topic = m.q("target_topic"),
-        status = m.q("status"),
-        next_fire_at = m.q("next_fire_at"),
-        max_attempts = m.q("max_attempts"),
-        attempt_count = m.q("attempt_count"),
-        backoff = m.q("backoff_seconds"),
-    ))
-    .bind(&job_id)
-    .bind(&tenant_id)
-    .bind(&req.project_id)
-    .bind(req.name.trim())
-    .bind(&kind)
-    .bind(req.cron_expression.trim())
-    .bind(&payload)
-    .bind(req.target_topic.trim())
-    .bind(req.next_fire_at.trim())
-    .bind(max_attempts)
-    .bind(backoff_seconds)
-    .execute(pool)
-    .await
-    .map_err(|err| {
+
+    // ONE transaction so the quota gate is ATOMIC and the CREATED outbox event
+    // co-commits with the row (transactional outbox). A non-transactional
+    // COUNT-then-INSERT is a TOCTOU race: concurrent creates at budget-1 each
+    // read `count < budget` (their peers' inserts are invisible under READ
+    // COMMITTED) and all land, blowing past `UDB_MAX_JOBS_PER_TENANT`.
+    let mut tx = pool.begin().await.map_err(|err| {
         scheduler_internal_status(
-            "create_scheduled_job",
-            format!("create scheduled job failed: {err}"),
+            "create_scheduled_job_begin",
+            format!("create scheduled job begin failed: {err}"),
         )
     })?;
+    // Serialize THIS tenant's creates with a per-tenant advisory xact lock so
+    // the count-gated INSERT below cannot race a sibling create; the lock
+    // auto-releases on tx end. `hashtext()` folds the tenant UUID text into the
+    // bigint the advisory-lock builtin takes (same serialization the audit
+    // chain uses).
+    sqlx::query("SELECT pg_advisory_xact_lock(hashtext($1)::BIGINT)")
+        .bind(&tenant_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|err| {
+            scheduler_internal_status(
+                "create_scheduled_job_lock",
+                format!("create scheduled job tenant lock failed: {err}"),
+            )
+        })?;
+    // Atomic quota gate: the INSERT persists ONLY while the tenant is under
+    // budget, counted in the SAME statement under the lock. 0 rows inserted ⇒
+    // at/over budget ⇒ fail closed with the typed quota detail (tx rolls back on
+    // drop). ONE_SHOT with an empty seed is rejected above; a CRON with an empty
+    // seed fires immediately (NOW()) then advances from the cron expression.
+    let inserted = sqlx::query(&guarded_insert_job_sql(&m))
+        .bind(&job_id)
+        .bind(&tenant_id)
+        .bind(&req.project_id)
+        .bind(req.name.trim())
+        .bind(&kind)
+        .bind(req.cron_expression.trim())
+        .bind(&payload)
+        .bind(req.target_topic.trim())
+        .bind(req.next_fire_at.trim())
+        .bind(max_attempts)
+        .bind(backoff_seconds)
+        .bind(limit)
+        .execute(&mut *tx)
+        .await
+        .map_err(|err| {
+            scheduler_internal_status(
+                "create_scheduled_job",
+                format!("create scheduled job failed: {err}"),
+            )
+        })?;
+    if inserted.rows_affected() == 0 {
+        return Err(job_quota_exhausted_status(limit));
+    }
 
-    enqueue_outbox_event_with_context(
-        pool,
+    // CREATED outbox INSIDE the tx (co-commits with the row). Strict: a failed
+    // enqueue rolls the create back rather than silently dropping the event.
+    enqueue_outbox_event_in_tx(
+        &mut *tx,
         svc.outbox_relation.as_deref(),
         TOPIC_JOB_CREATED,
         &tenant_id,
@@ -178,15 +176,63 @@ pub(crate) async fn create_job(
             "schedule_type": kind.clone(),
         }),
         NativeEventContext::default(),
-        Some(&svc.metrics),
     )
-    .await;
+    .await
+    .map_err(|err| {
+        scheduler_internal_status(
+            "create_scheduled_job_outbox",
+            format!("create scheduled job outbox enqueue failed: {err}"),
+        )
+    })?;
+
+    tx.commit().await.map_err(|err| {
+        scheduler_internal_status(
+            "create_scheduled_job_commit",
+            format!("create scheduled job commit failed: {err}"),
+        )
+    })?;
 
     Ok(Response::new(scheduler_pb::CreateJobResponse {
         job_id,
         message: "scheduled job created".to_string(),
         error: None,
     }))
+}
+
+/// The atomic, quota-gated INSERT for a scheduled job, built from the manifest
+/// model so column identifiers stay single-sourced. The row persists ONLY while
+/// the tenant's non-deleted job count is under `$12` (the budget), counted in
+/// the SAME statement — so, run under the per-tenant advisory lock, the create
+/// path can never exceed the cap (0 rows inserted signals over-budget). Exposed
+/// (and unit-tested) so the atomicity contract is asserted on the rendered SQL.
+pub(crate) fn guarded_insert_job_sql(m: &NativeModel) -> String {
+    let rel = m.relation.clone();
+    format!(
+        "INSERT INTO {rel} \
+           ({job_id}, {tenant_id}, {project_id}, {name}, {schedule_type}, {cron}, {payload}, \
+            {target_topic}, {status}, {next_fire_at}, {max_attempts}, {attempt_count}, {backoff}) \
+         SELECT $1::UUID, $2::UUID, NULLIF($3, '')::UUID, $4, $5, NULLIF($6, ''), $7::JSONB, \
+            NULLIF($8, ''), 'ACTIVE', \
+            CASE WHEN $9 = '' THEN (CASE WHEN $5 = 'CRON' THEN NOW() ELSE NULL END) \
+                 ELSE $9::TIMESTAMPTZ END, \
+            $10, 0, $11 \
+         WHERE (SELECT COUNT(*) FROM {rel} \
+                WHERE {tenant_id} = $2::UUID AND {deleted} IS NULL) < $12",
+        job_id = m.q("job_id"),
+        tenant_id = m.q("tenant_id"),
+        project_id = m.q("project_id"),
+        name = m.q("name"),
+        schedule_type = m.q("schedule_type"),
+        cron = m.q("cron_expression"),
+        payload = m.q("payload"),
+        target_topic = m.q("target_topic"),
+        status = m.q("status"),
+        next_fire_at = m.q("next_fire_at"),
+        max_attempts = m.q("max_attempts"),
+        attempt_count = m.q("attempt_count"),
+        backoff = m.q("backoff_seconds"),
+        deleted = m.q("deleted_at"),
+    )
 }
 
 pub(crate) async fn get_job(
@@ -335,8 +381,16 @@ pub(crate) async fn delete_job(
     let pool = svc.require_pool()?;
     let m = scheduled_job_model();
     let rel = m.relation.clone();
-    // Soft delete: set the manifest soft-delete column; the tick never claims a
-    // deleted row (its claim filters `deleted_at IS NULL`).
+    // Soft delete + DELETED outbox event in ONE tx so the event co-commits with
+    // the mutation (transactional outbox — no delete without its durable event,
+    // no orphan event without the delete). The tick never claims a deleted row
+    // (its claim filters `deleted_at IS NULL`).
+    let mut tx = pool.begin().await.map_err(|err| {
+        scheduler_internal_status(
+            "delete_scheduled_job_begin",
+            format!("delete scheduled job begin failed: {err}"),
+        )
+    })?;
     let result = sqlx::query(&format!(
         "UPDATE {rel} SET {deleted} = NOW() \
          WHERE {job_id} = $1::UUID AND {tenant_id} = $2::UUID AND {deleted} IS NULL",
@@ -346,7 +400,7 @@ pub(crate) async fn delete_job(
     ))
     .bind(&job_id)
     .bind(&tenant_id)
-    .execute(pool)
+    .execute(&mut *tx)
     .await
     .map_err(|err| {
         scheduler_internal_status(
@@ -355,14 +409,15 @@ pub(crate) async fn delete_job(
         )
     })?;
     if result.rows_affected() == 0 {
+        // Nothing matched: fail closed; the tx rolls back on drop (no event).
         return Err(scheduler_not_found_status(
             "delete_job",
             "scheduled_job_not_found",
             "scheduled job not found",
         ));
     }
-    enqueue_outbox_event_with_context(
-        pool,
+    enqueue_outbox_event_in_tx(
+        &mut *tx,
         svc.outbox_relation.as_deref(),
         TOPIC_JOB_DELETED,
         &tenant_id,
@@ -370,9 +425,20 @@ pub(crate) async fn delete_job(
         "",
         serde_json::json!({ "job_id": job_id.clone(), "tenant_id": tenant_id.clone() }),
         NativeEventContext::default(),
-        Some(&svc.metrics),
     )
-    .await;
+    .await
+    .map_err(|err| {
+        scheduler_internal_status(
+            "delete_scheduled_job_outbox",
+            format!("delete scheduled job outbox enqueue failed: {err}"),
+        )
+    })?;
+    tx.commit().await.map_err(|err| {
+        scheduler_internal_status(
+            "delete_scheduled_job_commit",
+            format!("delete scheduled job commit failed: {err}"),
+        )
+    })?;
     Ok(Response::new(scheduler_pb::DeleteJobResponse {
         message: "scheduled job deleted".to_string(),
         error: None,
@@ -400,6 +466,13 @@ pub(crate) async fn pause_job(
     let pool = svc.require_pool()?;
     let m = scheduled_job_model();
     let rel = m.relation.clone();
+    // Pause + PAUSED outbox event in ONE tx (transactional outbox).
+    let mut tx = pool.begin().await.map_err(|err| {
+        scheduler_internal_status(
+            "pause_scheduled_job_begin",
+            format!("pause scheduled job begin failed: {err}"),
+        )
+    })?;
     let result = sqlx::query(&format!(
         "UPDATE {rel} SET {status} = 'PAUSED' \
          WHERE {job_id} = $1::UUID AND {tenant_id} = $2::UUID AND {deleted} IS NULL \
@@ -411,7 +484,7 @@ pub(crate) async fn pause_job(
     ))
     .bind(&job_id)
     .bind(&tenant_id)
-    .execute(pool)
+    .execute(&mut *tx)
     .await
     .map_err(|err| {
         scheduler_internal_status(
@@ -426,8 +499,8 @@ pub(crate) async fn pause_job(
             "active scheduled job not found",
         ));
     }
-    enqueue_outbox_event_with_context(
-        pool,
+    enqueue_outbox_event_in_tx(
+        &mut *tx,
         svc.outbox_relation.as_deref(),
         TOPIC_JOB_PAUSED,
         &tenant_id,
@@ -435,9 +508,20 @@ pub(crate) async fn pause_job(
         "",
         serde_json::json!({ "job_id": job_id.clone(), "tenant_id": tenant_id.clone() }),
         NativeEventContext::default(),
-        Some(&svc.metrics),
     )
-    .await;
+    .await
+    .map_err(|err| {
+        scheduler_internal_status(
+            "pause_scheduled_job_outbox",
+            format!("pause scheduled job outbox enqueue failed: {err}"),
+        )
+    })?;
+    tx.commit().await.map_err(|err| {
+        scheduler_internal_status(
+            "pause_scheduled_job_commit",
+            format!("pause scheduled job commit failed: {err}"),
+        )
+    })?;
     Ok(Response::new(scheduler_pb::PauseJobResponse {
         message: "scheduled job paused".to_string(),
         error: None,
@@ -467,6 +551,13 @@ pub(crate) async fn resume_job(
     let rel = m.relation.clone();
     // Resume re-activates a paused job and re-arms attempt accounting. A job
     // with no future fire time (e.g. a completed one-shot) cannot be resumed.
+    // The mutation and its RESUMED outbox event commit in ONE tx.
+    let mut tx = pool.begin().await.map_err(|err| {
+        scheduler_internal_status(
+            "resume_scheduled_job_begin",
+            format!("resume scheduled job begin failed: {err}"),
+        )
+    })?;
     let result = sqlx::query(&format!(
         "UPDATE {rel} SET {status} = 'ACTIVE', {attempt_count} = 0 \
          WHERE {job_id} = $1::UUID AND {tenant_id} = $2::UUID AND {deleted} IS NULL \
@@ -479,7 +570,7 @@ pub(crate) async fn resume_job(
     ))
     .bind(&job_id)
     .bind(&tenant_id)
-    .execute(pool)
+    .execute(&mut *tx)
     .await
     .map_err(|err| {
         scheduler_internal_status(
@@ -494,8 +585,8 @@ pub(crate) async fn resume_job(
             "paused scheduled job not found",
         ));
     }
-    enqueue_outbox_event_with_context(
-        pool,
+    enqueue_outbox_event_in_tx(
+        &mut *tx,
         svc.outbox_relation.as_deref(),
         TOPIC_JOB_RESUMED,
         &tenant_id,
@@ -503,9 +594,20 @@ pub(crate) async fn resume_job(
         "",
         serde_json::json!({ "job_id": job_id.clone(), "tenant_id": tenant_id.clone() }),
         NativeEventContext::default(),
-        Some(&svc.metrics),
     )
-    .await;
+    .await
+    .map_err(|err| {
+        scheduler_internal_status(
+            "resume_scheduled_job_outbox",
+            format!("resume scheduled job outbox enqueue failed: {err}"),
+        )
+    })?;
+    tx.commit().await.map_err(|err| {
+        scheduler_internal_status(
+            "resume_scheduled_job_commit",
+            format!("resume scheduled job commit failed: {err}"),
+        )
+    })?;
     Ok(Response::new(scheduler_pb::ResumeJobResponse {
         message: "scheduled job resumed".to_string(),
         error: None,

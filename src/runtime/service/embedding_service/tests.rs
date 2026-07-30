@@ -433,6 +433,71 @@ fn row_teardown_filter_scopes_to_a_single_parent() {
     assert!(row_teardown_filter("", "orders", "row-7").is_none());
 }
 
+/// The READ collection follows the register-time alias condition: qdrant/ES have
+/// a named-alias primitive RegisterModel pre-points at the physical collection, so
+/// reads target the alias; weaviate/pinecone have no alias (register skips it), so
+/// reads must target the physical `active_collection` writes pin — otherwise reads
+/// hit a never-created alias class and return nothing.
+#[test]
+fn read_collection_targets_the_class_writes_pin_for_aliasless_backends() {
+    use super::model::stored_model_from_json;
+    let model_json = |backend: &str| {
+        serde_json::json!({
+            "vector_backend": backend,
+            "collection_alias": "docs-alias",
+            "active_collection": "docs",
+        })
+    };
+    // Alias backends read through the alias (pre-pointed at the physical class).
+    assert_eq!(
+        stored_model_from_json(&model_json("qdrant")).read_collection(),
+        "docs-alias"
+    );
+    assert_eq!(
+        stored_model_from_json(&model_json("elasticsearch")).read_collection(),
+        "docs-alias"
+    );
+    // Alias-less backends read the physical collection writes target — same class.
+    assert_eq!(
+        stored_model_from_json(&model_json("weaviate")).read_collection(),
+        "docs"
+    );
+    assert_eq!(
+        stored_model_from_json(&model_json("pinecone")).read_collection(),
+        "docs"
+    );
+}
+
+/// The parent-window neighbor gather scopes `_parent_pk` with a single `match.any`
+/// clause on top of the mandatory tenant filter, so ALL selected parents are
+/// gathered in ONE query; empty parents ⇒ None (nothing to gather).
+#[test]
+fn parent_window_filter_scopes_any_of_the_selected_parents() {
+    use super::model::merge_retrieve_parent_window_filter;
+    let filter =
+        merge_retrieve_parent_window_filter("acme", "orders", &["row-1".into(), "row-2".into()])
+            .expect("filter builds")
+            .expect("parents present ⇒ Some");
+    let must = filter.get("must").and_then(|m| m.as_array()).expect("must");
+    assert_eq!(must[0]["key"], "_tenant_id", "tenant scope stays first");
+    let any = must
+        .iter()
+        .find(|clause| clause["key"] == "_parent_pk")
+        .expect("parent_pk clause present");
+    assert_eq!(any["match"]["any"], serde_json::json!(["row-1", "row-2"]));
+    // No parents ⇒ None (never an unscoped gather).
+    assert!(
+        merge_retrieve_parent_window_filter("acme", "orders", &[])
+            .expect("ok")
+            .is_none()
+    );
+    assert!(
+        merge_retrieve_parent_window_filter("acme", "orders", &["   ".into()])
+            .expect("ok")
+            .is_none()
+    );
+}
+
 /// The composite point-id scheme round-trips: a single-chunk row keeps its bare
 /// pk (backward-compatible ids), a multi-chunk row gets `{pk}#chunk:{seq}`, and
 /// parsing recovers `(parent, seq)`; a bare or non-numeric-suffix id is seq 0.

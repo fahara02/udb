@@ -1608,6 +1608,7 @@ test("manifest JSON body hydrates VaultService rows with seed refs", () => {
   const fixtures = new PerfFixtures();
   fixtures.set("tenant_id", "tenant-1");
   fixtures.set("vault_key_name", "sdk-perf-key");
+  fixtures.set("vault_signing_key_name", "sdk-perf-signing-key");
   fixtures.set("vault_ciphertext", "udb-vault:v1:seed");
   fixtures.set("vault_secret_path", "app/config");
   fixtures.set("vault_signature", "udb-vault-sig:v1:seed");
@@ -2575,11 +2576,13 @@ async function seedPerfFixtures(
     await gen.VaultService.create_transit_key({ tenant_id: tenantId, key_name: "transit-key", algorithm: "aes256-gcm-siv" }, opts);
     const encrypted = await gen.VaultService.encrypt({ tenant_id: tenantId, key_name: "transit-key", plaintext: "perf" }, opts);
     if (encrypted.ciphertext) fix.set("vault_ciphertext", encrypted.ciphertext);
-    const signed = await gen.VaultService.sign({ tenant_id: tenantId, key_name: "transit-key", input: "perf" }, opts);
-    if (signed.signature) fix.set("vault_signature", signed.signature);
     // A dedicated ed25519 SIGNING key so GetTransitPublicKey exports a real public
-    // key — the aes256-gcm-siv key above has no exportable public half.
+    // key — the aes256-gcm-siv key above has no exportable public half. Sign/Verify
+    // also require this ed25519 key (the symmetric aes256-gcm-siv key is rejected),
+    // so it must exist before the Sign below that seeds vault_signature.
     await gen.VaultService.create_transit_key({ tenant_id: tenantId, key_name: "transit-signing-key", algorithm: "ed25519" }, opts);
+    const signed = await gen.VaultService.sign({ tenant_id: tenantId, key_name: "transit-signing-key", input: "perf" }, opts);
+    if (signed.signature) fix.set("vault_signature", signed.signature);
   });
 
   // ── StorageService (UUID tenant): a registered file → file_id ──────────────────

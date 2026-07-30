@@ -17,9 +17,10 @@ use super::cron::{MAX_MISSED_RUNS_COUNTED, missed_cron_occurrences, next_cron_af
 use super::errors::{
     scheduler_capability_status, scheduler_internal_status, scheduler_not_found_status,
 };
+use super::handlers::guarded_insert_job_sql;
 use super::model::{job_status_filter_to_db, schedule_type_to_db, scheduled_job_model};
-use super::quota::{DEFAULT_MAX_JOBS_PER_TENANT, enforce_job_quota};
-use super::tick::due_jobs_claim_sql;
+use super::quota::{DEFAULT_MAX_JOBS_PER_TENANT, enforce_job_quota, job_quota_exhausted_status};
+use super::tick::{due_jobs_claim_sql, fired_idempotency_key};
 
 fn decode_detail(status: &Status) -> ErrorDetail {
     let raw = status
@@ -322,6 +323,91 @@ fn missed_count_counts_elapsed_cron_windows() {
     );
     // Invalid expression: fail closed to zero.
     assert_eq!(missed_cron_occurrences("not a cron", due, now), 0);
+}
+
+/// The create-time job quota MUST be atomic: the rendered INSERT folds the
+/// tenant's live count into the SAME statement and persists only while under
+/// budget, so — run under the per-tenant advisory lock — concurrent creates at
+/// budget-1 can never all land and exceed `UDB_MAX_JOBS_PER_TENANT` (the
+/// TOCTOU a separate COUNT-then-INSERT allowed).
+#[test]
+fn guarded_insert_sql_gates_quota_atomically() {
+    let sql = guarded_insert_job_sql(&scheduled_job_model());
+    assert!(sql.contains("INSERT INTO"), "must be an INSERT: {sql}");
+    assert!(
+        sql.contains("SELECT") && !sql.contains("VALUES"),
+        "quota gate must fold the count into an INSERT ... SELECT (no plain VALUES): {sql}"
+    );
+    assert!(
+        sql.contains("WHERE (SELECT COUNT(*)"),
+        "INSERT must be guarded by a live count subquery: {sql}"
+    );
+    assert!(
+        sql.contains("< $12"),
+        "the count must be gated against the budget bind: {sql}"
+    );
+    assert!(
+        sql.contains("IS NULL"),
+        "the quota count must exclude soft-deleted jobs: {sql}"
+    );
+}
+
+/// The atomic (0-rows-inserted) create gate fails with the SAME typed quota
+/// detail as the pure `enforce_job_quota` gate — both go through the shared
+/// `job_quota_exhausted_status` so the wire contract can't drift between paths.
+#[test]
+fn job_quota_exhausted_status_matches_pure_gate() {
+    let atomic = job_quota_exhausted_status(DEFAULT_MAX_JOBS_PER_TENANT);
+    let pure = enforce_job_quota(DEFAULT_MAX_JOBS_PER_TENANT, DEFAULT_MAX_JOBS_PER_TENANT)
+        .expect_err("at-budget must refuse");
+    assert_eq!(atomic.code(), tonic::Code::ResourceExhausted);
+    assert_eq!(atomic.message(), pure.message());
+    let detail = decode_detail(&atomic);
+    assert_eq!(detail.kind, ErrorKind::Quota as i32);
+    assert_eq!(detail.backend, "scheduler");
+    assert_eq!(detail.operation, "tenant_scheduled-job_quota");
+    assert!(!detail.retryable);
+}
+
+/// A valid but sparse quadrennial cron (`0 0 29 2 *`, leap-day) resolves within
+/// the extended search horizon instead of returning `None` — which would have
+/// rejected it at create or dead-lettered it at fire time. The next occurrence
+/// after mid-2026 is 2028-02-29 (a leap year) at 00:00 UTC.
+#[test]
+fn cron_resolves_quadrennial_leap_day() {
+    use chrono::Datelike;
+    let base = chrono::DateTime::parse_from_rfc3339("2026-06-26T12:00:00Z")
+        .unwrap()
+        .with_timezone(&Utc);
+    let next = next_cron_after("0 0 29 2 *", base).expect("leap-day cron must resolve, not None");
+    assert_eq!(next.month(), 2);
+    assert_eq!(next.day(), 29);
+    assert_eq!(next.to_rfc3339(), "2028-02-29T00:00:00+00:00");
+}
+
+/// The fired-event idempotency key is stable per occurrence `(job_id,
+/// scheduled_slot)` and independent of wall time, so a redelivered fire dedups;
+/// a different occurrence or a different job yields a different key.
+#[test]
+fn fired_idempotency_key_is_stable_per_occurrence() {
+    let slot = chrono::DateTime::parse_from_rfc3339("2026-06-26T12:00:00Z")
+        .unwrap()
+        .with_timezone(&Utc);
+    let job = "00000000-0000-0000-0000-000000000009";
+    let key = fired_idempotency_key(job, slot);
+    assert_eq!(key, format!("{job}:{}", slot.timestamp()));
+    // Recomputing for the SAME occurrence is stable (dedup across redelivery).
+    assert_eq!(fired_idempotency_key(job, slot), key);
+    // A later occurrence of the same job is a different key.
+    assert_ne!(
+        fired_idempotency_key(job, slot + ChronoDuration::hours(1)),
+        key
+    );
+    // A different job at the same slot is a different key.
+    assert_ne!(
+        fired_idempotency_key("00000000-0000-0000-0000-00000000000a", slot),
+        key
+    );
 }
 
 #[test]

@@ -2912,6 +2912,7 @@ it('manifest JSON body hydrates VaultService requests', function () {
     $fix = new PerfFixturesPhp();
     $fix->set('tenant_id', 'tenant-php');
     $fix->set('vault_key_name', 'vault-key-php');
+    $fix->set('vault_signing_key_name', 'vault-signing-key-php');
     $fix->set('vault_ciphertext', 'udb-vault:v1:php');
     $fix->set('vault_secret_path', 'app/config');
     $fix->set('vault_signature', 'udb-vault-sig:v1:php');
@@ -4108,7 +4109,7 @@ function perfSeedPhp(array $s): array
         $fix->set('vault_ciphertext', $enc->getCiphertext());
     }
     $sig = $seedStub('VaultSign', $vault, 'Sign', \Udb\Core\Vault\Services\V1\SignRequest::class,
-        ['tenant_id' => $tenant, 'key_name' => $fix->lookup('vault_key_name'), 'input' => 'perf']);
+        ['tenant_id' => $tenant, 'key_name' => $fix->lookup('vault_signing_key_name'), 'input' => 'perf']);
     if ($sig && $sig->getSignature() !== '') {
         $fix->set('vault_signature', $sig->getSignature());
     }

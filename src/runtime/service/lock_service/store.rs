@@ -53,6 +53,7 @@ pub(crate) fn lock_read_by_name(tenant_id: &str, lock_name: &str) -> LogicalRead
             "owner_id".to_string(),
             "fencing_token".to_string(),
             "status".to_string(),
+            "expires_at".to_string(),
         ])),
         sort: Vec::new(),
         include: Vec::new(),

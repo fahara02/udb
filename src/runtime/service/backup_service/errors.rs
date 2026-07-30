@@ -90,3 +90,26 @@ pub(crate) fn backup_run_missing_object_prefix_status() -> Status {
         "backup run has no object prefix to restore from",
     )
 }
+
+/// A cross-tenant restore (target differs from source, or the caller asked to
+/// cross the boundary) moves one tenant's raw rows into another. Only a genuine
+/// cross-tenant / platform admin — the identity authorized over BOTH tenants —
+/// may authorize it. A tenant-scoped caller is DENIED fail-closed: the wire
+/// `allow_cross_tenant` bool is a caller intent hint, never an authorization.
+pub(crate) fn restore_cross_tenant_admin_required_status() -> Status {
+    crate::runtime::executor_utils::policy_status_with_code(
+        tonic::Code::PermissionDenied,
+        "restore_tenant",
+        "restore_cross_tenant_admin_required",
+        "cross-tenant restore requires a cross-tenant admin identity authorized over both the \
+         source and the target tenant",
+    )
+}
+
+/// The run manifest is the integrity anchor a restore trusts before reading any
+/// table artifact it lists. When its bytes do not match the checksum the backup
+/// recorded in the durable journal (or that recorded checksum is absent), the
+/// restore refuses fail-closed rather than trust a tampered manifest.
+pub(crate) fn restore_manifest_integrity_status() -> Status {
+    Status::data_loss("restore integrity check failed for the run manifest (checksum mismatch)")
+}

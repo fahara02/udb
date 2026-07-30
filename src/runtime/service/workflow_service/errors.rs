@@ -72,3 +72,14 @@ pub(crate) fn workflow_signal_terminal_status() -> Status {
         "workflow is in a terminal state and cannot be signalled",
     )
 }
+
+/// A COMPENSATING instance is undoing its completed steps; a signal must never
+/// revert it to RUNNING and abandon the in-flight compensation. Non-signalable,
+/// but NOT terminal — a distinct decision id so the denial reason is truthful.
+pub(crate) fn workflow_signal_compensating_status() -> Status {
+    workflow_policy_status(
+        "signal_workflow",
+        "workflow_compensating_state",
+        "workflow is compensating and cannot be signalled",
+    )
+}

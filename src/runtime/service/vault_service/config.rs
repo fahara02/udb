@@ -88,7 +88,12 @@ pub const VAULT_DB_LEASE_REAPER_BATCH: i64 = 100;
 /// Default cap on `BatchEncrypt` plaintext items per request (env-overridable via
 /// `max_batch_encrypt_items`).
 pub(crate) const MAX_BATCH_ENCRYPT_ITEMS: usize = 256;
-/// Default per-tenant transit crypto-op volume cap per rolling minute
+/// Default cap on `BatchDecrypt` ciphertext items per request (env-overridable via
+/// `max_batch_decrypt_items`). Same order as the encrypt cap — an unbounded
+/// ciphertexts vector otherwise drives an N-element `Vec::with_capacity` plus N
+/// master-key unwrap/open ops before any bound is applied.
+pub(crate) const MAX_BATCH_DECRYPT_ITEMS: usize = 256;
+/// Default per-tenant transit crypto-op volume cap per fixed one-minute window
 /// (env-overridable via `vault_transit_quota_per_minute`). Generous by design —
 /// it protects the master-key unwrap path from a single tenant monopolizing the
 /// vault, not normal traffic. `0` disables the cap.
@@ -155,8 +160,24 @@ pub(crate) fn max_batch_encrypt_items() -> usize {
     })
 }
 
-/// Env-governed per-tenant transit crypto-op volume cap per rolling minute
-/// (`UDB_VAULT_TRANSIT_QUOTA_PER_MINUTE`). A non-positive value (including the
+/// Env-governed cap on the number of ciphertexts accepted by `BatchDecrypt` in a
+/// single request; over-cap requests are rejected before any allocation/crypto,
+/// mirroring [`max_batch_encrypt_items`]. Falls back to the byte-stable
+/// `MAX_BATCH_DECRYPT_ITEMS` default when `UDB_VAULT_MAX_BATCH_DECRYPT_ITEMS` is
+/// unset/invalid.
+pub(crate) fn max_batch_decrypt_items() -> usize {
+    static MAX: OnceLock<usize> = OnceLock::new();
+    *MAX.get_or_init(|| {
+        std::env::var("UDB_VAULT_MAX_BATCH_DECRYPT_ITEMS")
+            .ok()
+            .and_then(|value| value.trim().parse::<usize>().ok())
+            .filter(|value| *value > 0)
+            .unwrap_or(MAX_BATCH_DECRYPT_ITEMS)
+    })
+}
+
+/// Env-governed per-tenant transit crypto-op volume cap per fixed one-minute
+/// window (`UDB_VAULT_TRANSIT_QUOTA_PER_MINUTE`). A non-positive value (including the
 /// explicit `0`) disables the cap; any positive value overrides the byte-stable
 /// `VAULT_TRANSIT_QUOTA_PER_MINUTE` default. Mirrors the other Vault OnceLock
 /// knobs.

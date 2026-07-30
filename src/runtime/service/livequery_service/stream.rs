@@ -82,6 +82,19 @@ pub(crate) async fn run_delta_forward(
                 continue;
             }
         };
+        // Predicate parity with the live loop: the subscriber's IR `user_filter`
+        // must gate replayed deltas the same way it gates live ones, or a resume
+        // would leak rows the client explicitly filtered out. Tenant scope was
+        // already re-checked at journal read time, so only the predicate is applied
+        // here — build the change row exactly as the live loop does and drop a
+        // non-match with the same "filter" outcome label.
+        if let Some(filter) = user_filter.as_ref() {
+            let row = change_row(&payload);
+            if !filter_matches_row(filter, &row) {
+                metrics.record_livequery_delta_dropped(&tenant_id, "filter");
+                continue;
+            }
+        }
         match tx.send(Ok(change_frame(&envelope, &payload))).await {
             Ok(()) => metrics.record_livequery_delta_forwarded(&tenant_id),
             Err(_) => {

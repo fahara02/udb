@@ -33,6 +33,28 @@ pub(crate) const PIPELINE_ALREADY_STARTED: &str = "PIPELINE_ALREADY_STARTED";
 /// `UDB_ASSET_VECTOR_COLLECTION`.
 pub(crate) const DEFAULT_VECTOR_COLLECTION: &str = "udb_asset_embeddings";
 
+/// Env knob: when set truthy, derived-object writes (thumbnails/resizes/
+/// transcodes) into the native storage object store request server-side
+/// encryption (SSE-S3 / AES-256), the native-path analog of an object store's
+/// `server_side_encryption` catalog annotation that the data plane enforces on
+/// the object PUT. Shared with the storage service (both write the same bucket
+/// via `UDB_STORAGE_BUCKET` / `UDB_STORAGE_OBJECT_BACKEND`).
+pub(crate) const STORAGE_SSE_ENV: &str = "UDB_STORAGE_SERVER_SIDE_ENCRYPTION";
+
+/// Whether derived-object writes must request server-side encryption. Parsed
+/// with the same truthy set the rest of the runtime uses for boolean env flags.
+pub(crate) fn storage_sse_required() -> bool {
+    std::env::var(STORAGE_SSE_ENV)
+        .ok()
+        .map(|value| {
+            matches!(
+                value.trim().to_ascii_lowercase().as_str(),
+                "1" | "true" | "yes" | "on"
+            )
+        })
+        .unwrap_or(false)
+}
+
 // ── outbox topics (dot-only per Kafka topic policy) ───────────────────────────
 pub(crate) const ASSET_REGISTERED_TOPIC: &str = "udb.asset.asset.registered.v1";
 pub(crate) const PIPELINE_STARTED_TOPIC: &str = "udb.asset.pipeline.started.v1";

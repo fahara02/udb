@@ -2892,7 +2892,15 @@ pub async fn serve(
             let journal_relation =
                 crate::runtime::system::SystemCatalogConfig::current().cdc_journal_relation();
             let lease_pool = webhook_pool.clone();
-            let http = reqwest::Client::new();
+            // Defense-in-depth on the shared client: no redirect following (an
+            // endpoint can't 302 the delivery toward a link-local/metadata host)
+            // and a bounded per-request timeout. The webhook worker additionally
+            // builds a per-delivery IP-pinned client, so this is belt-and-braces.
+            let http = reqwest::Client::builder()
+                .redirect(reqwest::redirect::Policy::none())
+                .timeout(crate::runtime::service::webhook_service::webhook_delivery_timeout())
+                .build()
+                .unwrap_or_else(|_| reqwest::Client::new());
             let metrics: Arc<dyn MetricsRecorder> = service.metrics.clone();
             crate::runtime::service::native_runtime::NativeWorkerHost::spawn_while_leader(
                 crate::runtime::singleton::WORKER_WEBHOOK_DELIVERY,
