@@ -8,7 +8,7 @@ resolver = "2"
 
 [package]
 name = "udb"
-version = "0.4.31"
+version = "0.4.32"
 edition = "2024"
 rust-version = "1.85"
 description = "Universal Data Broker — a Rust gRPC broker over multiple databases (Postgres, MySQL, SQLite, MongoDB, ClickHouse, Cassandra, MSSQL, Redis, Qdrant, S3, Neo4j, …) with per-tenant RLS, 2PC, sagas, and CDC."
@@ -236,6 +236,9 @@ sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio-r
 # 24.04 toolchains, so this provider choice is NOT a Postgres-connectivity risk.)
 rustls = { version = "0.23", features = ["aws_lc_rs"] }
 futures = { version = "0.3", default-features = false, features = ["std"] }
+# OS CSPRNG for key/nonce material (already vendored transitively via uuid; made
+# direct so vault crypto draws clean 256-bit keys instead of concatenated UUIDs).
+getrandom = "0.2"
 tokio = { version = "1", features = ["full"] }
 tokio-postgres = { version = "0.7", features = ["with-chrono-0_4", "with-uuid-1", "with-serde_json-1", "runtime"] }
 tokio-stream = "0.1"

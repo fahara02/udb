@@ -14,7 +14,9 @@ use super::super::native_helpers::{
 };
 use super::LiveQueryServiceImpl;
 use super::budget::try_acquire_stream_slot;
-use super::config::{DEFAULT_SNAPSHOT_LIMIT, MAX_SNAPSHOT_LIMIT, SERVICE_ID, buffer_events};
+use super::config::{
+    SERVICE_ID, buffer_events, clamp_snapshot_limit, default_snapshot_limit, max_snapshot_limit,
+};
 use super::errors::livequery_required_field;
 use super::predicate::{build_user_filter, resolve_source, row_object, snapshot_filter};
 use super::stream::{LiveQueryStream, run_delta_forward};
@@ -67,12 +69,17 @@ pub(crate) async fn subscribe(
     // during the snapshot are buffered on the broadcast receiver (not lost in
     // the subscribe→read gap); any overlap with snapshot rows is de-duplicated
     // client-side by event_id.
+    // TODO(leader): durable resume — when `SubscribeRequest` carries a resume
+    // cursor (proto field, leader-owned), seed the stream from the CDC journal
+    // (`engine_tail::cdc_journal_relation`) up to the live cursor here, then hand
+    // off to this broadcast receiver, instead of a fresh subscribe + snapshot.
     let delta_rx = svc.cdc_engine.as_ref().map(|cdc| cdc.subscribe());
 
-    let limit = match req.snapshot_limit {
-        value if value <= 0 => DEFAULT_SNAPSHOT_LIMIT,
-        value => (value as u32).min(MAX_SNAPSHOT_LIMIT),
-    };
+    let limit = clamp_snapshot_limit(
+        req.snapshot_limit,
+        default_snapshot_limit(),
+        max_snapshot_limit(),
+    );
     let read = LogicalRead {
         message_type: message_type.clone(),
         filter: Some(snapshot_filter(

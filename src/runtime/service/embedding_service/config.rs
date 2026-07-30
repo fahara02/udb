@@ -271,6 +271,274 @@ fn usize_env_once(cell: &'static OnceLock<usize>, var: &str, default: usize) -> 
     })
 }
 
+/// A positive `usize` knob bounded to `[1, 100]` (a percentage-style margin);
+/// a `0`/out-of-range/malformed override falls back to the default.
+fn pct_env_once(cell: &'static OnceLock<usize>, var: &str, default: usize) -> usize {
+    *cell.get_or_init(|| {
+        std::env::var(var)
+            .ok()
+            .and_then(|v| v.trim().parse::<usize>().ok())
+            .filter(|v| (1..=100).contains(v))
+            .unwrap_or(default)
+    })
+}
+
+/// A trimmed, non-empty string knob resolved once. Returns a `&'static str` so
+/// callers never re-read the env (same pattern as [`embedding_rerank_url`]).
+fn str_env_once(cell: &'static OnceLock<String>, var: &str, default: &str) -> &'static str {
+    cell.get_or_init(|| {
+        std::env::var(var)
+            .ok()
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty())
+            .unwrap_or_else(|| default.to_string())
+    })
+    .as_str()
+}
+
+// ── RegisterModel defaults (Part B.2 straggler centralization) ───────────────
+// Historically hardcoded in `registry.rs`; exposed as knobs with byte-stable
+// defaults so the write path AND the re-register identity check resolve the SAME
+// value (they must agree or a benign re-register would be rejected as a geometry
+// change).
+const DEFAULT_EMBEDDING_REGISTER_CHUNK_TOKENS: i32 = 512;
+const EMBEDDING_REGISTER_CHUNK_TOKENS_ENV: &str = "UDB_EMBEDDING_DEFAULT_CHUNK_TOKENS";
+const DEFAULT_EMBEDDING_REGISTER_OVERLAP_PCT: i32 = 15;
+const EMBEDDING_REGISTER_OVERLAP_PCT_ENV: &str = "UDB_EMBEDDING_DEFAULT_CHUNK_OVERLAP_PCT";
+const DEFAULT_EMBEDDING_VECTOR_BACKEND: &str = "qdrant";
+const EMBEDDING_VECTOR_BACKEND_ENV: &str = "UDB_EMBEDDING_DEFAULT_VECTOR_BACKEND";
+const DEFAULT_EMBEDDING_DISTANCE_METRIC: &str = "COSINE";
+const EMBEDDING_DISTANCE_METRIC_ENV: &str = "UDB_EMBEDDING_DEFAULT_DISTANCE_METRIC";
+const DEFAULT_EMBEDDING_OUTPUT_DTYPE: &str = "FLOAT32";
+const EMBEDDING_OUTPUT_DTYPE_ENV: &str = "UDB_EMBEDDING_DEFAULT_OUTPUT_DTYPE";
+const DEFAULT_EMBEDDING_TASK_TYPE: &str = "DOCUMENT";
+const EMBEDDING_TASK_TYPE_ENV: &str = "UDB_EMBEDDING_DEFAULT_TASK_TYPE";
+const DEFAULT_EMBEDDING_CHUNKING_STRATEGY: &str = "TOKEN_RECURSIVE";
+const EMBEDDING_CHUNKING_STRATEGY_ENV: &str = "UDB_EMBEDDING_DEFAULT_CHUNKING_STRATEGY";
+
+/// Default token-window size applied when a `RegisterModelRequest` omits
+/// `chunk_tokens` (was a hardcoded `512`, still clamped to `max_input_tokens` by
+/// the caller). Must be positive.
+pub(crate) fn embedding_default_chunk_tokens() -> i32 {
+    static TOKENS: OnceLock<i32> = OnceLock::new();
+    *TOKENS.get_or_init(|| {
+        std::env::var(EMBEDDING_REGISTER_CHUNK_TOKENS_ENV)
+            .ok()
+            .and_then(|v| v.trim().parse::<i32>().ok())
+            .filter(|v| *v > 0)
+            .unwrap_or(DEFAULT_EMBEDDING_REGISTER_CHUNK_TOKENS)
+    })
+}
+
+/// Default chunk-overlap percentage applied when a request omits
+/// `chunk_overlap_tokens` (was a hardcoded `15%`). `0` is a legitimate override
+/// (no overlap); values are clamped to `[0, 100]`.
+pub(crate) fn embedding_default_overlap_pct() -> i32 {
+    static PCT: OnceLock<i32> = OnceLock::new();
+    *PCT.get_or_init(|| {
+        std::env::var(EMBEDDING_REGISTER_OVERLAP_PCT_ENV)
+            .ok()
+            .and_then(|v| v.trim().parse::<i32>().ok())
+            .filter(|v| (0..=100).contains(v))
+            .unwrap_or(DEFAULT_EMBEDDING_REGISTER_OVERLAP_PCT)
+    })
+}
+
+/// Default vector backend when a request omits `vector_backend` (was `"qdrant"`).
+pub(crate) fn embedding_default_vector_backend() -> &'static str {
+    static BACKEND: OnceLock<String> = OnceLock::new();
+    str_env_once(
+        &BACKEND,
+        EMBEDDING_VECTOR_BACKEND_ENV,
+        DEFAULT_EMBEDDING_VECTOR_BACKEND,
+    )
+}
+
+/// Default distance metric when a request omits `distance_metric` (was `"COSINE"`).
+pub(crate) fn embedding_default_distance_metric() -> &'static str {
+    static METRIC: OnceLock<String> = OnceLock::new();
+    str_env_once(
+        &METRIC,
+        EMBEDDING_DISTANCE_METRIC_ENV,
+        DEFAULT_EMBEDDING_DISTANCE_METRIC,
+    )
+}
+
+/// Default output dtype when a request omits `output_dtype` (was `"FLOAT32"`).
+pub(crate) fn embedding_default_output_dtype() -> &'static str {
+    static DTYPE: OnceLock<String> = OnceLock::new();
+    str_env_once(
+        &DTYPE,
+        EMBEDDING_OUTPUT_DTYPE_ENV,
+        DEFAULT_EMBEDDING_OUTPUT_DTYPE,
+    )
+}
+
+/// Default task type when a request omits `task_type` (was `"DOCUMENT"`).
+pub(crate) fn embedding_default_task_type() -> &'static str {
+    static TASK: OnceLock<String> = OnceLock::new();
+    str_env_once(&TASK, EMBEDDING_TASK_TYPE_ENV, DEFAULT_EMBEDDING_TASK_TYPE)
+}
+
+/// Default chunking strategy when a request omits `chunking_strategy`
+/// (was `"TOKEN_RECURSIVE"`).
+pub(crate) fn embedding_default_chunking_strategy() -> &'static str {
+    static STRATEGY: OnceLock<String> = OnceLock::new();
+    str_env_once(
+        &STRATEGY,
+        EMBEDDING_CHUNKING_STRATEGY_ENV,
+        DEFAULT_EMBEDDING_CHUNKING_STRATEGY,
+    )
+}
+
+// ── Chunking heuristics (Part B.2 straggler centralization) ──────────────────
+const DEFAULT_EMBEDDING_PROVIDER_TOKEN_MARGIN_PCT: usize = 85;
+const EMBEDDING_PROVIDER_TOKEN_MARGIN_PCT_ENV: &str = "UDB_EMBEDDING_PROVIDER_TOKEN_MARGIN_PCT";
+const DEFAULT_EMBEDDING_CHUNK_BOUNDARY_MIN_PCT: usize = 80;
+const EMBEDDING_CHUNK_BOUNDARY_MIN_PCT_ENV: &str = "UDB_EMBEDDING_CHUNK_BOUNDARY_MIN_PCT";
+
+/// Percentage of a provider's `max_input_tokens` a token window may fill before
+/// the safety margin kicks in (was a hardcoded `85%`). The broker counts
+/// whitespace tokens, not provider-exact BPE, so it stays under the ceiling.
+pub(crate) fn embedding_provider_token_margin_pct() -> usize {
+    static PCT: OnceLock<usize> = OnceLock::new();
+    pct_env_once(
+        &PCT,
+        EMBEDDING_PROVIDER_TOKEN_MARGIN_PCT_ENV,
+        DEFAULT_EMBEDDING_PROVIDER_TOKEN_MARGIN_PCT,
+    )
+}
+
+/// Minimum percentage of a token window that must be filled before the chunker
+/// will cut early at a paragraph/sentence boundary (was a hardcoded `window*4/5`
+/// i.e. 80%). Keeps chunks from collapsing to tiny fragments at the first
+/// boundary.
+pub(crate) fn embedding_chunk_boundary_min_pct() -> usize {
+    static PCT: OnceLock<usize> = OnceLock::new();
+    pct_env_once(
+        &PCT,
+        EMBEDDING_CHUNK_BOUNDARY_MIN_PCT_ENV,
+        DEFAULT_EMBEDDING_CHUNK_BOUNDARY_MIN_PCT,
+    )
+}
+
+// ── Durable-queue retry backoff (Part B.2 straggler centralization) ──────────
+const DEFAULT_EMBEDDING_RETRY_BACKOFF_CAP_SECS: i64 = 3600;
+const EMBEDDING_RETRY_BACKOFF_CAP_ENV: &str = "UDB_EMBEDDING_RETRY_BACKOFF_CAP_SECS";
+const DEFAULT_EMBEDDING_RETRY_BACKOFF_BASE: i64 = 2;
+const EMBEDDING_RETRY_BACKOFF_BASE_ENV: &str = "UDB_EMBEDDING_RETRY_BACKOFF_BASE";
+
+/// Upper bound (seconds) on the exponential nack backoff `next_attempt_at` gap
+/// (was a hardcoded `LEAST(3600, ...)`). Must be positive.
+pub(crate) fn embedding_retry_backoff_cap_secs() -> i64 {
+    static CAP: OnceLock<i64> = OnceLock::new();
+    *CAP.get_or_init(|| {
+        std::env::var(EMBEDDING_RETRY_BACKOFF_CAP_ENV)
+            .ok()
+            .and_then(|v| v.trim().parse::<i64>().ok())
+            .filter(|v| *v > 0)
+            .unwrap_or(DEFAULT_EMBEDDING_RETRY_BACKOFF_CAP_SECS)
+    })
+}
+
+/// Exponential base for the nack backoff `power(base, attempt)` (was a hardcoded
+/// `2`). Clamped to `>= 2` so retries always grow.
+pub(crate) fn embedding_retry_backoff_base() -> i64 {
+    static BASE: OnceLock<i64> = OnceLock::new();
+    *BASE.get_or_init(|| {
+        std::env::var(EMBEDDING_RETRY_BACKOFF_BASE_ENV)
+            .ok()
+            .and_then(|v| v.trim().parse::<i64>().ok())
+            .filter(|v| *v >= 2)
+            .unwrap_or(DEFAULT_EMBEDDING_RETRY_BACKOFF_BASE)
+    })
+}
+
+// ── Matryoshka truncated-dim cutover (Part B.2.3) ────────────────────────────
+const DEFAULT_EMBEDDING_MATRYOSHKA_STRATEGY: &str = "largest";
+const EMBEDDING_MATRYOSHKA_STRATEGY_ENV: &str = "UDB_EMBEDDING_MATRYOSHKA_STRATEGY";
+
+/// Which configured Matryoshka truncation a model serves at when
+/// `matryoshka_dims` is non-empty: `"largest"` (default — the highest-accuracy
+/// cut that still truncates) or `"smallest"` (max storage/compute savings).
+pub(crate) fn embedding_matryoshka_strategy() -> &'static str {
+    static STRATEGY: OnceLock<String> = OnceLock::new();
+    str_env_once(
+        &STRATEGY,
+        EMBEDDING_MATRYOSHKA_STRATEGY_ENV,
+        DEFAULT_EMBEDDING_MATRYOSHKA_STRATEGY,
+    )
+}
+
+/// The dimensionality a model actually serves at. `matryoshka_dims_json` is the
+/// registry-stored JSON array of valid truncations; when it carries a positive
+/// value `<= dimensions`, the `strategy` picks one (largest/smallest) and that
+/// becomes the collection geometry + the sidecar `truncate_dim` + the Retrieve
+/// query cut. An empty/absent/all-invalid list ⇒ full `dimensions` (the historic
+/// behavior — zero change for non-Matryoshka models). Pure — unit-tested.
+pub(crate) fn select_matryoshka_dim(
+    dimensions: i32,
+    matryoshka_dims_json: &str,
+    strategy: &str,
+) -> i32 {
+    if dimensions <= 0 {
+        return dimensions;
+    }
+    let dims: Vec<i32> = serde_json::from_str(matryoshka_dims_json.trim()).unwrap_or_default();
+    let valid = dims
+        .into_iter()
+        .filter(|dim| *dim > 0 && *dim <= dimensions);
+    let chosen = match strategy.trim().to_ascii_lowercase().as_str() {
+        "smallest" => valid.min(),
+        // "largest" (and any unrecognized strategy) → the most-accurate cut.
+        _ => valid.max(),
+    };
+    chosen.unwrap_or(dimensions)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn matryoshka_empty_list_keeps_full_dimensions() {
+        assert_eq!(select_matryoshka_dim(1024, "[]", "largest"), 1024);
+        assert_eq!(select_matryoshka_dim(1024, "", "largest"), 1024);
+        assert_eq!(select_matryoshka_dim(1024, "not json", "largest"), 1024);
+    }
+
+    #[test]
+    fn matryoshka_largest_picks_highest_valid_cut() {
+        assert_eq!(select_matryoshka_dim(1024, "[256,512,768]", "largest"), 768);
+        // Values above the full dimensionality are ignored (never up-scale).
+        assert_eq!(select_matryoshka_dim(768, "[256,768,4096]", "largest"), 768);
+    }
+
+    #[test]
+    fn matryoshka_smallest_picks_lowest_valid_cut() {
+        assert_eq!(
+            select_matryoshka_dim(1024, "[256,512,768]", "smallest"),
+            256
+        );
+        // Non-positive entries are rejected before selection.
+        assert_eq!(select_matryoshka_dim(1024, "[0,-8,384]", "smallest"), 384);
+    }
+
+    #[test]
+    fn matryoshka_unknown_strategy_defaults_to_largest() {
+        assert_eq!(
+            select_matryoshka_dim(1024, "[256,512]", "banana"),
+            512,
+            "an unrecognized strategy must fall back to the largest cut"
+        );
+    }
+
+    #[test]
+    fn matryoshka_all_invalid_falls_back_to_full() {
+        assert_eq!(select_matryoshka_dim(512, "[0,-1,9999]", "largest"), 512);
+    }
+}
+
 /// Chunk window size in characters (resolved once). Bounded to
 /// `max_embedding_text_chars` so a single chunk can never exceed the work-event
 /// text envelope.

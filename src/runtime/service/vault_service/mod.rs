@@ -68,6 +68,7 @@ mod errors;
 mod events;
 mod handlers;
 mod model;
+mod quota;
 mod store;
 #[cfg(test)]
 mod tests;

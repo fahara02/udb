@@ -4834,6 +4834,69 @@ mod setup_data_validation_tests {
         );
     }
 
+    fn tenant_scoped_filter() -> Option<prost_types::Struct> {
+        crate::runtime::executor_utils::json_to_struct(&serde_json::json!({
+            "must": [{ "key": "_tenant_id", "match": { "value": "acme" } }]
+        }))
+    }
+
+    #[test]
+    fn weaviate_vector_search_injects_the_tenant_where() {
+        // Regression: the Weaviate arm ignored request.filter (same cross-tenant
+        // leak class as ES). The GraphQL must now carry a `where` scoping to the
+        // caller's tenant.
+        let spec = vector_search_dispatch_spec(
+            "weaviate",
+            &VectorSearchRequest {
+                context: None,
+                collection: "Docs".to_string(),
+                vector: vec![0.1, 0.2],
+                filter: tenant_scoped_filter(),
+                limit: 10,
+                score_threshold: 0.0,
+                with_payload: true,
+                with_vector: false,
+                vector_name: String::new(),
+                quantization_rescore: false,
+            },
+        )
+        .expect("weaviate vector search spec");
+        let json: serde_json::Value = serde_json::from_str(&spec).expect("spec json");
+        let query = json["body"]["query"].as_str().expect("graphql query");
+        assert!(
+            query.contains("where:") && query.contains("_tenant_id") && query.contains("acme"),
+            "weaviate query must scope to the tenant: {query}"
+        );
+    }
+
+    #[test]
+    fn pinecone_vector_search_injects_the_tenant_filter() {
+        // Regression: the Pinecone arm ignored request.filter. The /query body must
+        // now AND a metadata filter on the caller's tenant.
+        let spec = vector_search_dispatch_spec(
+            "pinecone",
+            &VectorSearchRequest {
+                context: None,
+                collection: "Docs".to_string(),
+                vector: vec![0.1, 0.2],
+                filter: tenant_scoped_filter(),
+                limit: 10,
+                score_threshold: 0.0,
+                with_payload: true,
+                with_vector: false,
+                vector_name: String::new(),
+                quantization_rescore: false,
+            },
+        )
+        .expect("pinecone vector search spec");
+        let json: serde_json::Value = serde_json::from_str(&spec).expect("spec json");
+        assert_eq!(
+            json["body"]["filter"],
+            serde_json::json!({ "_tenant_id": { "$eq": "acme" } }),
+            "pinecone query must scope to the tenant"
+        );
+    }
+
     #[cfg(feature = "qdrant")]
     #[test]
     fn stamp_generic_vector_point_payloads_tags_every_point() {
@@ -7747,6 +7810,22 @@ fn reject_vector_plan_errors(
 /// [`stamp_generic_vector_point_payloads`], so `payload._tenant_id` exists to
 /// match against.
 fn es_payload_filter_terms(filter: Option<&prost_types::Struct>) -> Vec<JsonValue> {
+    struct_filter_equality_terms(filter)
+        .into_iter()
+        .map(|(key, value)| {
+            let mut term_field = serde_json::Map::new();
+            term_field.insert(format!("payload.{key}.keyword"), value);
+            serde_json::json!({ "term": JsonValue::Object(term_field) })
+        })
+        .collect()
+}
+
+/// Extract equality `(key, value)` pairs from the neutral qdrant-style filter
+/// (`{"must":[{"key":…,"match":{"value":…}}]}`). The tenant scope (`_tenant_id`)
+/// is the security boundary each generic-HTTP backend must AND into its query;
+/// non-equality operators are not translated (they only broaden WITHIN a tenant).
+/// Docs are tenant-stamped at write time by [`stamp_generic_vector_point_payloads`].
+fn struct_filter_equality_terms(filter: Option<&prost_types::Struct>) -> Vec<(String, JsonValue)> {
     let Some(filter) = filter else {
         return Vec::new();
     };
@@ -7756,16 +7835,58 @@ fn es_payload_filter_terms(filter: Option<&prost_types::Struct>) -> Vec<JsonValu
     };
     let mut terms = Vec::new();
     for clause in must {
-        let Some(key) = clause.get("key").and_then(JsonValue::as_str) else {
-            continue;
-        };
-        if let Some(value) = clause.get("match").and_then(|m| m.get("value")) {
-            let mut term_field = serde_json::Map::new();
-            term_field.insert(format!("payload.{key}.keyword"), value.clone());
-            terms.push(serde_json::json!({ "term": JsonValue::Object(term_field) }));
+        if let (Some(key), Some(value)) = (
+            clause.get("key").and_then(JsonValue::as_str),
+            clause.get("match").and_then(|m| m.get("value")),
+        ) {
+            terms.push((key.to_string(), value.clone()));
         }
     }
     terms
+}
+
+/// Build a Weaviate GraphQL `where:` argument (with a trailing comma so it slots
+/// before `limit:`) enforcing the tenant/equality terms. Weaviate stores the
+/// stamped payload as top-level properties, so the path is the bare key. Empty
+/// terms → empty string (unchanged behaviour). Values are emitted as `valueText`.
+fn weaviate_where_arg(filter: Option<&prost_types::Struct>) -> String {
+    let terms = struct_filter_equality_terms(filter);
+    let operand = |key: &str, value: &JsonValue| -> String {
+        let text = value
+            .as_str()
+            .map(str::to_string)
+            .unwrap_or_else(|| value.to_string());
+        format!("{{ path: [{key:?}], operator: Equal, valueText: {text:?} }}")
+    };
+    match terms.as_slice() {
+        [] => String::new(),
+        [(key, value)] => format!("where: {}, ", operand(key, value)),
+        many => {
+            let operands = many
+                .iter()
+                .map(|(key, value)| operand(key, value))
+                .collect::<Vec<_>>()
+                .join(", ");
+            format!("where: {{ operator: And, operands: [{operands}] }}, ")
+        }
+    }
+}
+
+/// Build a Pinecone metadata `filter` object (`{"_tenant_id": {"$eq": …}, …}`)
+/// enforcing the tenant/equality terms over the stamped metadata. Empty terms →
+/// `null` (the caller omits the field, unchanged behaviour).
+fn pinecone_metadata_filter(filter: Option<&prost_types::Struct>) -> JsonValue {
+    let terms = struct_filter_equality_terms(filter);
+    if terms.is_empty() {
+        return JsonValue::Null;
+    }
+    let mut map = serde_json::Map::new();
+    for (key, value) in terms {
+        let mut eq = serde_json::Map::new();
+        eq.insert("$eq".to_string(), value);
+        map.insert(key, JsonValue::Object(eq));
+    }
+    JsonValue::Object(map)
 }
 
 fn vector_search_dispatch_spec(
@@ -7800,26 +7921,40 @@ fn vector_search_dispatch_spec(
         }),
         "weaviate" => {
             let class_name = vector_weaviate_class_name(&request.collection);
+            // Tenant scope (and any equality term) AND'd into the GraphQL `where`;
+            // previously the arm ignored request.filter (cross-tenant leak class).
+            let where_arg = weaviate_where_arg(request.filter.as_ref());
             serde_json::json!({
                 "method": "POST",
                 "path": "/v1/graphql",
                 "body": {
                     "query": format!(
-                        "{{ Get {{ {class_name}(nearVector: {{ vector: {:?} }}, limit: {limit}) {{ _additional {{ id distance certainty }} }} }} }}",
+                        "{{ Get {{ {class_name}(nearVector: {{ vector: {:?} }}, {where_arg}limit: {limit}) {{ _additional {{ id distance certainty }} }} }} }}",
                         request.vector
                     )
                 }
             })
         }
-        "pinecone" => serde_json::json!({
-            "method": "POST",
-            "path": "/query",
-            "body": {
-                "vector": request.vector,
-                "topK": limit,
-                "includeMetadata": request.with_payload
+        "pinecone" => {
+            let mut body = serde_json::Map::new();
+            body.insert("vector".to_string(), serde_json::json!(request.vector));
+            body.insert("topK".to_string(), serde_json::json!(limit));
+            body.insert(
+                "includeMetadata".to_string(),
+                serde_json::json!(request.with_payload),
+            );
+            // Tenant scope AND'd into the Pinecone metadata `filter`; previously the
+            // arm ignored request.filter (cross-tenant leak class).
+            let metadata_filter = pinecone_metadata_filter(request.filter.as_ref());
+            if !metadata_filter.is_null() {
+                body.insert("filter".to_string(), metadata_filter);
             }
-        }),
+            serde_json::json!({
+                "method": "POST",
+                "path": "/query",
+                "body": JsonValue::Object(body)
+            })
+        }
         other => {
             return Err(setup_data_capability_status(
                 other,

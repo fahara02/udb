@@ -8,7 +8,8 @@ use super::EmbeddingServiceImpl;
 use super::chunking::{Chunk, chunk_content_hash, chunk_point_id, deterministic_work_item_id};
 use super::config::{
     DEFAULT_WORK_MAX_ATTEMPTS, EMBEDDING_WORK_ITEM_MSG, TOPIC_WORK, WORK_ACKED, WORK_DEAD,
-    WORK_PENDING, embedding_work_visibility_timeout,
+    WORK_PENDING, embedding_retry_backoff_base, embedding_retry_backoff_cap_secs,
+    embedding_work_visibility_timeout,
 };
 use super::errors::{embedding_field_violation, embedding_policy_status_with_code};
 use super::model::{StoredModel, json_i32, json_i64, json_str, native_json_object};
@@ -106,13 +107,13 @@ impl DurableWorkItem {
             "rescore": model.rescore,
             "task_type": model.task_type,
             "asymmetric": model.asymmetric,
-            // Always the model's FULL dimensionality: the active collection's
-            // geometry is created and verified at `model.dimensions`, so a
-            // smaller Matryoshka cut here would fail the dims-of-record gate.
-            // `matryoshka_dims` is registry-validated capability metadata for a
-            // FUTURE alias cutover into a truncated-dim collection; it is not
-            // consulted on the live emit path yet.
-            "truncate_dim": model.dimensions,
+            // Part B.2.3 Matryoshka: the sidecar truncates its full embedding to
+            // the model's SERVING dim — the chosen `matryoshka_dims` cut when one
+            // is configured, else full `dimensions`. The active collection is
+            // created at this same serving dim (registry) and ReportEmbedding
+            // stores/queries at it, so all four agree. Non-Matryoshka models keep
+            // full `dimensions` (serving_dim == dimensions), a zero-change default.
+            "truncate_dim": model.serving_dim(),
             "tokenizer": model.tokenizer,
             "provider_endpoint_ref": model.provider_endpoint_ref,
             "contextual_retrieval": model.contextual_retrieval,
@@ -608,15 +609,34 @@ pub(crate) async fn fail_work_item(
         .begin()
         .await
         .map_err(|error| queue_status("embedding_nack", error))?;
-    let row = sqlx::query(
+    // Exponential nack backoff `next_attempt_at = now + LEAST(cap, base^attempt)`,
+    // cap/base operator-tunable (were hardcoded 3600 / 2). Both are server-derived
+    // integers, never request input, so string interpolation is injection-safe.
+    let backoff_cap = embedding_retry_backoff_cap_secs();
+    let backoff_base = embedding_retry_backoff_base();
+    let nack_sql = format!(
         "UPDATE udb_embedding.embedding_work_items SET last_error = $3, retryable = $4, \
          status = CASE WHEN NOT $4 OR attempt_count >= max_attempts THEN 'DEAD' ELSE 'PENDING' END, \
-         next_attempt_at = CURRENT_TIMESTAMP + make_interval(secs => LEAST(3600, CAST(power(2, LEAST(attempt_count, 10)) AS INTEGER))), \
+         next_attempt_at = CURRENT_TIMESTAMP + make_interval(secs => LEAST({backoff_cap}, CAST(power({backoff_base}, LEAST(attempt_count, 10)) AS INTEGER))), \
          updated_at = CURRENT_TIMESTAMP WHERE work_item_id = $1 AND tenant_id = $2 \
-         RETURNING status, attempt_count, job_id",
-    ).bind(work_item_id).bind(tenant_id).bind(error_message).bind(retryable)
-    .fetch_optional(&mut *tx).await.map_err(|error| queue_status("embedding_nack", error))?
-    .ok_or_else(|| embedding_policy_status_with_code(tonic::Code::NotFound, "embedding_nack", "embedding_work_item_not_found", "embedding work item not found"))?;
+         RETURNING status, attempt_count, job_id"
+    );
+    let row = sqlx::query(&nack_sql)
+        .bind(work_item_id)
+        .bind(tenant_id)
+        .bind(error_message)
+        .bind(retryable)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|error| queue_status("embedding_nack", error))?
+        .ok_or_else(|| {
+            embedding_policy_status_with_code(
+                tonic::Code::NotFound,
+                "embedding_nack",
+                "embedding_work_item_not_found",
+                "embedding work item not found",
+            )
+        })?;
     let status: String = row.try_get("status").unwrap_or_default();
     let attempt_count: i32 = row.try_get("attempt_count").unwrap_or_default();
     let dead = status == WORK_DEAD;

@@ -24,7 +24,10 @@ use super::errors::{
 };
 use super::fresh_buffer::similarity;
 use super::handlers::{parse_grpc_timeout, remaining_before_deadline};
-use super::model::{merge_retrieve_scope_filter, stored_model_from_json, stored_source_from_json};
+use super::model::{
+    merge_retrieve_parent_window_filter, merge_retrieve_scope_filter, stored_model_from_json,
+    stored_source_from_json, truncate_embedding_vector,
+};
 use super::store::{model_read_by_id, source_read_by_name};
 use super::vector_store::VectorStore as _;
 
@@ -104,7 +107,7 @@ fn payload_i32(point: &VectorPoint, key: &str) -> i32 {
         .unwrap_or_default()
 }
 
-fn public_payload(point: &VectorPoint, context_text: Option<&str>) -> String {
+pub(crate) fn public_payload(point: &VectorPoint, context_text: Option<&str>) -> String {
     let mut json = payload_json(point);
     let Some(object) = json.as_object_mut() else {
         return String::new();
@@ -346,6 +349,13 @@ pub(crate) async fn retrieve(
             ),
         ));
     }
+    // Part B.2.3 Matryoshka: the caller sends the FULL embedding (validated
+    // above); truncate it to the model's SERVING dim so it matches the collection
+    // geometry + stored vectors. serving_dim == dimensions for non-Matryoshka
+    // models ⇒ an untouched clone. Used for every downstream vector op (engine
+    // search/hybrid, fresh buffer, MMR, parent-window) so they stay consistent.
+    let serving_dim = model.serving_dim();
+    let query_vector = truncate_embedding_vector(req.query_vector.clone(), serving_dim);
     let top_k = resolve_top_k(req.top_k) as usize;
     let mmr = req.mmr.as_ref().filter(|config| config.enabled);
     if let Some(mmr) = mmr
@@ -396,7 +406,7 @@ pub(crate) async fn retrieve(
                 .search(&VectorSearchRequest {
                     context: None,
                     collection: model.collection().to_string(),
-                    vector: req.query_vector.clone(),
+                    vector: query_vector.clone(),
                     filter: crate::runtime::executor_utils::json_to_struct(&filter),
                     limit: candidate_limit as i32,
                     score_threshold: score_floor,
@@ -411,7 +421,7 @@ pub(crate) async fn retrieve(
                 .hybrid_search(&VectorHybridSearchRequest {
                     context: None,
                     collection: model.collection().to_string(),
-                    vector: req.query_vector.clone(),
+                    vector: query_vector.clone(),
                     text_query: req.query_text.clone(),
                     filter: crate::runtime::executor_utils::json_to_struct(&filter),
                     limit: candidate_limit as i32,
@@ -448,7 +458,7 @@ pub(crate) async fn retrieve(
             &source_name,
             &model.model_id,
             req.vector_name.trim(),
-            &req.query_vector,
+            &query_vector,
             &model.distance_metric,
             candidate_limit,
         );
@@ -475,12 +485,7 @@ pub(crate) async fn retrieve(
         }
     }
     if let Some(config) = mmr {
-        points = mmr_select(
-            points,
-            &req.query_vector,
-            candidate_limit,
-            config.lambda as f32,
-        );
+        points = mmr_select(points, &query_vector, candidate_limit, config.lambda as f32);
     }
     let rerank = req.rerank.clone().unwrap_or_default();
     let (mut points, rerank_scores, rerank_applied) =
@@ -499,16 +504,28 @@ pub(crate) async fn retrieve(
                     .insert(payload_i32(point, "_chunk_seq"));
             }
         }
-        for (parent, selected_sequences) in parents {
-            let parent_filter =
-                merge_retrieve_scope_filter(&tenant_id, &source_name, "", Some(&parent))?;
+        // Gather every neighbor chunk for ALL selected parents in a SINGLE
+        // payload-only filtered query (match-any on `_parent_pk`), replacing the
+        // previous one-ANN-search-per-parent fan-out. `max_chunks_per_row` caps
+        // chunks per row at index time, so `rows * cap` returns the complete set
+        // (no truncation) and the in-memory grouping + windowing below yields the
+        // SAME neighbor texts the per-parent searches did — just without the N
+        // redundant queries.
+        let parent_keys: Vec<String> = parents.keys().cloned().collect();
+        if let Some(window_filter) =
+            merge_retrieve_parent_window_filter(&tenant_id, &source_name, &parent_keys)?
+        {
+            let gather_limit = parent_keys
+                .len()
+                .saturating_mul(embedding_max_chunks_per_row())
+                .max(1);
             let neighbors = store
                 .search(&VectorSearchRequest {
                     context: None,
                     collection: model.collection().to_string(),
-                    vector: req.query_vector.clone(),
-                    filter: crate::runtime::executor_utils::json_to_struct(&parent_filter),
-                    limit: embedding_max_chunks_per_row() as i32,
+                    vector: query_vector.clone(),
+                    filter: crate::runtime::executor_utils::json_to_struct(&window_filter),
+                    limit: gather_limit as i32,
                     score_threshold: 0.0,
                     with_payload: true,
                     with_vector: false,
@@ -517,31 +534,36 @@ pub(crate) async fn retrieve(
                 })
                 .await?
                 .points;
-            let mut ordered = neighbors
-                .into_iter()
-                .map(|point| {
-                    (
-                        payload_i32(&point, "_chunk_seq"),
-                        payload_string(&point, "_chunk_text"),
-                    )
-                })
-                .collect::<Vec<_>>();
-            ordered.sort_by_key(|(seq, _)| *seq);
+            let mut by_parent = BTreeMap::<String, Vec<(i32, String)>>::new();
+            for point in neighbors {
+                let parent = payload_string(&point, "_parent_pk");
+                if parent.is_empty() {
+                    continue;
+                }
+                by_parent.entry(parent).or_default().push((
+                    payload_i32(&point, "_chunk_seq"),
+                    payload_string(&point, "_chunk_text"),
+                ));
+            }
             let window = req.parent_window as i32;
-            parent_context.insert(
-                parent,
-                ordered
-                    .into_iter()
-                    .filter(|(seq, _)| {
-                        selected_sequences
-                            .iter()
-                            .any(|selected| (seq - selected).abs() <= window)
-                    })
-                    .map(|(_, text)| text)
-                    .filter(|text| !text.is_empty())
-                    .collect::<Vec<_>>()
-                    .join("\n\n"),
-            );
+            for (parent, selected_sequences) in parents {
+                let mut ordered = by_parent.remove(&parent).unwrap_or_default();
+                ordered.sort_by_key(|(seq, _)| *seq);
+                parent_context.insert(
+                    parent,
+                    ordered
+                        .into_iter()
+                        .filter(|(seq, _)| {
+                            selected_sequences
+                                .iter()
+                                .any(|selected| (seq - selected).abs() <= window)
+                        })
+                        .map(|(_, text)| text)
+                        .filter(|text| !text.is_empty())
+                        .collect::<Vec<_>>()
+                        .join("\n\n"),
+                );
+            }
         }
     }
     let now_ms = chrono::Utc::now().timestamp_millis();

@@ -33,6 +33,13 @@ pub(crate) const TOPIC_TRANSIT_ENCRYPTED: &str = "udb.vault.transit.encrypted.v1
 pub(crate) const TOPIC_TRANSIT_SIGNED: &str = "udb.vault.transit.signed.v1";
 pub(crate) const TOPIC_TRANSIT_HMAC: &str = "udb.vault.transit.hmac.v1";
 pub(crate) const TOPIC_TRANSIT_VERIFIED: &str = "udb.vault.transit.verified.v1";
+// Dedicated audit topics for the two envelope-management crypto RPCs. Previously
+// GenerateDataKey and Rewrap both emitted under `TOPIC_TRANSIT_ENCRYPTED`, which
+// conflated three distinct operations on one audit stream; a compliance reviewer
+// could not tell an Encrypt from a data-key mint or a post-rotation rewrap. Each
+// still carries only tenant/key/version metadata — NEVER key material.
+pub(crate) const TOPIC_DATA_KEY_GENERATED: &str = "udb.vault.transit.data_key_generated.v1";
+pub(crate) const TOPIC_TRANSIT_REWRAPPED: &str = "udb.vault.transit.rewrapped.v1";
 
 // KV secret version states.
 pub(crate) const STATE_ACTIVE: &str = "ACTIVE";
@@ -81,6 +88,11 @@ pub const VAULT_DB_LEASE_REAPER_BATCH: i64 = 100;
 /// Default cap on `BatchEncrypt` plaintext items per request (env-overridable via
 /// `max_batch_encrypt_items`).
 pub(crate) const MAX_BATCH_ENCRYPT_ITEMS: usize = 256;
+/// Default per-tenant transit crypto-op volume cap per rolling minute
+/// (env-overridable via `vault_transit_quota_per_minute`). Generous by design —
+/// it protects the master-key unwrap path from a single tenant monopolizing the
+/// vault, not normal traffic. `0` disables the cap.
+pub(crate) const VAULT_TRANSIT_QUOTA_PER_MINUTE: i64 = 6_000;
 /// Constant the seal gate round-trips through `encrypt_secret_at_rest` to probe
 /// master-key availability without exposing real secret material.
 pub(crate) const SEAL_PROBE: &str = "udb-vault-seal-probe";
@@ -140,5 +152,20 @@ pub(crate) fn max_batch_encrypt_items() -> usize {
             .and_then(|value| value.trim().parse::<usize>().ok())
             .filter(|value| *value > 0)
             .unwrap_or(MAX_BATCH_ENCRYPT_ITEMS)
+    })
+}
+
+/// Env-governed per-tenant transit crypto-op volume cap per rolling minute
+/// (`UDB_VAULT_TRANSIT_QUOTA_PER_MINUTE`). A non-positive value (including the
+/// explicit `0`) disables the cap; any positive value overrides the byte-stable
+/// `VAULT_TRANSIT_QUOTA_PER_MINUTE` default. Mirrors the other Vault OnceLock
+/// knobs.
+pub(crate) fn vault_transit_quota_per_minute() -> i64 {
+    static MAX: OnceLock<i64> = OnceLock::new();
+    *MAX.get_or_init(|| {
+        std::env::var("UDB_VAULT_TRANSIT_QUOTA_PER_MINUTE")
+            .ok()
+            .and_then(|value| value.trim().parse::<i64>().ok())
+            .unwrap_or(VAULT_TRANSIT_QUOTA_PER_MINUTE)
     })
 }

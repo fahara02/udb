@@ -243,6 +243,13 @@ pub(crate) fn topic_matches_source(topic: &str, cdc_topic: &str) -> bool {
 ///
 /// Only an event whose tenant (and project, if scoped) matches the verified
 /// claim survives. Reuses the public [`crate::runtime::cdc::tenant_scoped_topic`].
+///
+/// TODO(leader): canonical filter reuse — lift the engine-tail predicate
+/// (`engine_tail::payload_value_matches_stream_scope`) into a shared module and
+/// call it here so this security boundary has ONE implementation (engine_tail is
+/// leader-owned, outside this service dir). Until then this is the faithful
+/// tenant-scoped-subscriber subset (it hard-drops non-`udb.` topics, which a
+/// live-query subscriber must never receive).
 pub(crate) fn event_matches_tenant_scope(
     topic: &str,
     payload: &serde_json::Value,
@@ -384,13 +391,50 @@ pub(crate) fn change_frame(
     }
 }
 
+/// Build a keepalive/heartbeat frame: an empty `Change` with the UNSPECIFIED op,
+/// an empty row, and an empty event id. It carries NO data — its only purpose is
+/// to put a byte on an otherwise-idle stream so an L4/L7 load balancer's idle
+/// timeout does not reap a healthy long-lived subscription. It needs no proto
+/// change: a client distinguishes it by the UNSPECIFIED op (and empty
+/// `event_id`) and ignores it — it is never a real delta and never advances a
+/// resume cursor. Emitted only when `livequery_keepalive_interval()` is enabled.
+pub(crate) fn keepalive_frame() -> lq_pb::SubscribeResponse {
+    lq_pb::SubscribeResponse {
+        payload: Some(lq_pb::subscribe_response::Payload::Change(
+            lq_pb::LiveQueryChange {
+                op: lq_pb::LiveQueryChangeOp::Unspecified as i32,
+                row_json: String::new(),
+                event_id: String::new(),
+            },
+        )),
+        error: None,
+    }
+}
+
 #[cfg(test)]
 mod predicate_tests {
     use serde_json::json;
 
     use super::lq_pb;
-    use super::{change_op, typed_value};
+    use super::{change_op, keepalive_frame, typed_value};
     use crate::ir::LogicalValue;
+
+    /// A keepalive frame is a proto-free heartbeat: an UNSPECIFIED-op `Change`
+    /// with empty row/event id that a client ignores. It must NOT look like a
+    /// real delta (no op, no event id to advance a resume cursor).
+    #[test]
+    fn keepalive_frame_is_an_ignorable_empty_change() {
+        let frame = keepalive_frame();
+        assert!(frame.error.is_none());
+        match frame.payload {
+            Some(lq_pb::subscribe_response::Payload::Change(change)) => {
+                assert_eq!(change.op, lq_pb::LiveQueryChangeOp::Unspecified as i32);
+                assert!(change.row_json.is_empty());
+                assert!(change.event_id.is_empty());
+            }
+            other => panic!("keepalive must be a Change frame, got {other:?}"),
+        }
+    }
 
     /// F7 regression: a numeric-looking business string with a leading zero (or
     /// other non-canonical form) must NOT be coerced to a number, or the mediated

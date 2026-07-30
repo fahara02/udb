@@ -13,7 +13,10 @@ use super::EmbeddingServiceImpl;
 use super::config::{
     EMBEDDING_MODEL_MSG, MAX_MODELS_PER_TENANT, MAX_SOURCES_PER_TENANT, STATUS_ACTIVE,
     STATUS_DEPRECATED, STATUS_RETIRED, TOPIC_MODEL_ALIAS_CUTOVER, TOPIC_MODEL_REGISTERED,
-    TOPIC_MODEL_STATUS_CHANGED,
+    TOPIC_MODEL_STATUS_CHANGED, embedding_default_chunk_tokens,
+    embedding_default_chunking_strategy, embedding_default_distance_metric,
+    embedding_default_output_dtype, embedding_default_overlap_pct, embedding_default_task_type,
+    embedding_default_vector_backend, select_matryoshka_dim,
 };
 use super::errors::{embedding_field_violation, embedding_required_field};
 use super::model::{StoredModel, stored_model_from_json, stored_source_from_json};
@@ -193,7 +196,7 @@ fn vector_identity_matches(
         && existing
             .distance_metric
             .eq_ignore_ascii_case(if req.distance_metric.trim().is_empty() {
-                "COSINE"
+                embedding_default_distance_metric()
             } else {
                 req.distance_metric.trim()
             })
@@ -201,7 +204,7 @@ fn vector_identity_matches(
         && existing
             .output_dtype
             .eq_ignore_ascii_case(if req.output_dtype.trim().is_empty() {
-                "FLOAT32"
+                embedding_default_output_dtype()
             } else {
                 req.output_dtype.trim()
             })
@@ -210,7 +213,7 @@ fn vector_identity_matches(
         && existing
             .task_type
             .eq_ignore_ascii_case(if req.task_type.trim().is_empty() {
-                "DOCUMENT"
+                embedding_default_task_type()
             } else {
                 req.task_type.trim()
             })
@@ -218,7 +221,7 @@ fn vector_identity_matches(
         && existing
             .vector_backend
             .eq_ignore_ascii_case(if req.vector_backend.trim().is_empty() {
-                "qdrant"
+                embedding_default_vector_backend()
             } else {
                 req.vector_backend.trim()
             })
@@ -313,22 +316,22 @@ pub(crate) async fn register_model(
     let matryoshka_dims_json =
         serde_json::to_string(&req.matryoshka_dims).unwrap_or_else(|_| "[]".to_string());
     let distance_metric = if req.distance_metric.trim().is_empty() {
-        "COSINE"
+        embedding_default_distance_metric()
     } else {
         req.distance_metric.trim()
     };
     let output_dtype = if req.output_dtype.trim().is_empty() {
-        "FLOAT32"
+        embedding_default_output_dtype()
     } else {
         req.output_dtype.trim()
     };
     let task_type = if req.task_type.trim().is_empty() {
-        "DOCUMENT"
+        embedding_default_task_type()
     } else {
         req.task_type.trim()
     };
     let vector_backend = if req.vector_backend.trim().is_empty() {
-        "qdrant"
+        embedding_default_vector_backend()
     } else {
         req.vector_backend.trim()
     };
@@ -350,22 +353,31 @@ pub(crate) async fn register_model(
         req.collection_alias.trim().to_string()
     };
     let chunking_strategy = if req.chunking_strategy.trim().is_empty() {
-        "TOKEN_RECURSIVE"
+        embedding_default_chunking_strategy()
     } else {
         req.chunking_strategy.trim()
     };
     let chunk_tokens = if req.chunk_tokens <= 0 {
-        512.min(req.max_input_tokens)
+        embedding_default_chunk_tokens().min(req.max_input_tokens)
     } else {
         req.chunk_tokens
     };
     let chunk_overlap_tokens = if req.chunk_overlap_tokens < 0 {
         0
     } else if req.chunk_overlap_tokens == 0 {
-        chunk_tokens.saturating_mul(15) / 100
+        chunk_tokens.saturating_mul(embedding_default_overlap_pct()) / 100
     } else {
         req.chunk_overlap_tokens
     };
+    // Part B.2.3 Matryoshka: create the physical collection at the SERVING dim
+    // (the chosen truncation when `matryoshka_dims` is configured, else full
+    // `dimensions`) so its geometry matches the truncated vectors ReportEmbedding
+    // stores and the truncated query Retrieve issues.
+    let serving_dim = select_matryoshka_dim(
+        req.dimensions,
+        &matryoshka_dims_json,
+        super::config::embedding_matryoshka_strategy(),
+    );
     let vector_store = RuntimeVectorStore::for_routing(
         runtime.clone(),
         &context.project_id,
@@ -375,7 +387,7 @@ pub(crate) async fn register_model(
     vector_store
         .ensure_collection(
             req.active_collection.trim(),
-            req.dimensions,
+            serving_dim,
             distance_metric,
             output_dtype,
             &[],
@@ -387,10 +399,11 @@ pub(crate) async fn register_model(
     // retrievable — otherwise the alias only appears on a later activation/cutover
     // and every Retrieve 404s until then (a divergence that only shows up against
     // a fresh vector store, e.g. CI). Idempotent: creates the alias when absent.
-    // Qdrant-only: it is the sole backend with a named-alias cutover primitive
-    // (swap_alias is `qdrant_only`); other backends address the physical
-    // collection directly, so there is no alias to pre-create.
-    if vector_backend == "qdrant" {
+    // Qdrant and Elasticsearch expose a named-alias primitive; pre-create the
+    // alias so a freshly registered model is retrievable immediately (portable
+    // `swap_alias` shapes the ES `_aliases` action). Pinecone/Weaviate have no
+    // alias concept, so there is nothing to pre-create — skip it there.
+    if matches!(vector_backend, "qdrant" | "elasticsearch") {
         vector_store
             .swap_alias(&collection_alias, req.active_collection.trim())
             .await?;

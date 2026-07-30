@@ -6,7 +6,7 @@
 
 use std::fmt;
 
-use super::config::KEY_STATE_ACTIVE;
+use super::config::{KEY_STATE_ACTIVE, STATE_ACTIVE};
 
 /// A durable KV secret version decoded from the native read JSON. Even though
 /// the two `*_*` columns are CIPHERTEXT, they are still sensitive, so this type
@@ -54,6 +54,12 @@ impl fmt::Debug for StoredTransitKey {
 }
 
 // ── JSON decoders (mirror lock_service) ───────────────────────────────────────
+//
+// TODO(leader): the leader is introducing a shared `native_helpers` decoder set
+// (`json_object`/`json_str`/`json_i64`) to replace the per-service copies in
+// vault/lock/notification. When it lands, delete these three and import the
+// shared equivalents; they are byte-identical, so the swap is mechanical. Kept
+// local for now so this fence compiles standalone.
 
 pub(crate) fn json_object(row: &serde_json::Value) -> &serde_json::Map<String, serde_json::Value> {
     row.get("n")
@@ -106,6 +112,33 @@ pub(crate) fn stored_transit_key_from_json(row: &serde_json::Value) -> StoredTra
         algorithm: json_str(map, "algorithm"),
         wrapped_key_material: json_str(map, "wrapped_key_material"),
         state: json_str(map, "state"),
+    }
+}
+
+/// Select the secret version a `GetSecret` should return, from all stored
+/// versions of one path.
+///
+/// A soft-DELETED (or crypto-shredded DESTROYED) version is never a readable
+/// value, so BOTH selection paths require `state == ACTIVE`:
+///   * `requested_version == 0` ⇒ the highest ACTIVE version (the live secret);
+///   * `requested_version > 0`  ⇒ that exact version, but only if it is ACTIVE.
+///
+/// This closes the prior asymmetry where an explicit version returned a DELETED
+/// value that `version = 0` would have hidden — a DELETED secret must read as
+/// "not found" whether or not the caller names the version.
+pub(crate) fn select_readable_secret(
+    versions: &[StoredSecret],
+    requested_version: i64,
+) -> Option<&StoredSecret> {
+    if requested_version > 0 {
+        versions
+            .iter()
+            .find(|s| s.version == requested_version && s.state == STATE_ACTIVE)
+    } else {
+        versions
+            .iter()
+            .filter(|s| s.state == STATE_ACTIVE)
+            .max_by_key(|s| s.version)
     }
 }
 

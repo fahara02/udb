@@ -21,6 +21,7 @@ use super::config::{
     VAULT_MASTER_KEY_UNAVAILABLE_MESSAGE, VAULT_RUNTIME_REQUIRED_MESSAGE, max_batch_encrypt_items,
     max_versions_scan, vault_db_lease_reaper_batch,
 };
+use super::config::{STATE_ACTIVE, STATE_DELETED};
 use super::crypto::{
     DataKey, PlaintextSecret, constant_time_eq, dek_open, dek_seal, ed25519_public_key_b64,
     ed25519_sign_b64, ed25519_verify_b64, hmac_sha256, parse_transit_envelope,
@@ -30,10 +31,13 @@ use super::dynamic::{
     parse_vault_db_role_configs, requested_db_credential_ttl, validate_db_role_alias,
 };
 use super::errors::{
-    vault_db_credentials_config_status, vault_db_native_store_required_status,
-    vault_internal_status, vault_master_key_operation_status, vault_schema_already_exists_status,
-    vault_schema_not_found_status,
+    is_duplicate_conflict, vault_db_credentials_config_status,
+    vault_db_native_store_required_status, vault_internal_status,
+    vault_master_key_operation_status, vault_schema_already_exists_status,
+    vault_schema_not_found_status, vault_secret_cas_conflict_status,
 };
+use super::model::{StoredSecret, select_readable_secret};
+use super::store::{secret_shred_all_sql, transit_demote_active_sql, transit_insert_rotated_sql};
 
 fn decode_detail(status: &Status) -> ErrorDetail {
     let raw = status
@@ -674,4 +678,103 @@ fn vault_env_knobs_default_to_the_consts() {
     assert_eq!(max_versions_scan(), MAX_VERSIONS_SCAN);
     assert_eq!(vault_db_lease_reaper_batch(), VAULT_DB_LEASE_REAPER_BATCH);
     assert_eq!(max_batch_encrypt_items(), MAX_BATCH_ENCRYPT_ITEMS);
+}
+
+fn stored_secret(version: i64, state: &str) -> StoredSecret {
+    StoredSecret {
+        secret_id: format!("id-{version}"),
+        version,
+        ciphertext: "udb-vault:v1:AA".to_string(),
+        data_key_wrapped: "udb-aead:AA".to_string(),
+        state: state.to_string(),
+        metadata_json: "{}".to_string(),
+    }
+}
+
+/// The authoritative PutSecret CAS is the unique `(tenant_id, secret_path,
+/// version)` index: the executor surfaces the collision as `AlreadyExists`, which
+/// `is_duplicate_conflict` recognises and the handler remaps to a clean, retryable
+/// `ABORTED` (never a raw `23505`/`AlreadyExists`).
+#[test]
+fn put_secret_cas_conflict_maps_to_aborted() {
+    let already_exists = vault_schema_already_exists_status(
+        "create_transit_key",
+        "vault_transit_key_already_exists",
+        "transit key already exists",
+    );
+    assert!(is_duplicate_conflict(&already_exists));
+    // A NotFound (or any non-AlreadyExists) is NOT a CAS collision.
+    let not_found =
+        vault_schema_not_found_status("get_secret", "vault_secret_not_found", "secret not found");
+    assert!(!is_duplicate_conflict(&not_found));
+
+    let cas = vault_secret_cas_conflict_status(7);
+    assert_eq!(cas.code(), tonic::Code::Aborted);
+    let detail = decode_detail(&cas);
+    assert_eq!(detail.kind, ErrorKind::Retryable as i32);
+    assert_eq!(detail.backend, "vault");
+    assert_eq!(detail.operation, "secret version CAS");
+    assert!(detail.retryable);
+    assert!(cas.message().contains("version 7"));
+}
+
+/// GetSecret never returns a soft-DELETED value: an explicit `version = N` must
+/// require ACTIVE exactly as `version = 0` does. A DELETED version reads as "not
+/// found" whether or not the caller names it.
+#[test]
+fn get_secret_hides_soft_deleted_versions() {
+    // version 0 (latest ACTIVE) skips a DELETED higher version.
+    let versions = vec![
+        stored_secret(1, STATE_ACTIVE),
+        stored_secret(2, STATE_DELETED),
+    ];
+    let latest = select_readable_secret(&versions, 0).expect("an ACTIVE version exists");
+    assert_eq!(latest.version, 1);
+
+    // An explicit request for the DELETED version 2 is hidden (None), not returned.
+    assert!(select_readable_secret(&versions, 2).is_none());
+
+    // An explicit request for the ACTIVE version 1 is honored.
+    assert_eq!(
+        select_readable_secret(&versions, 1)
+            .expect("version 1 is ACTIVE")
+            .version,
+        1
+    );
+
+    // All-DELETED ⇒ nothing readable at any selector.
+    let deleted_only = vec![stored_secret(1, STATE_DELETED)];
+    assert!(select_readable_secret(&deleted_only, 0).is_none());
+    assert!(select_readable_secret(&deleted_only, 1).is_none());
+}
+
+/// Logic-level guard for the atomic rotation: the demote statement flips ONLY the
+/// currently-ACTIVE versions to VERIFYING, and the insert always writes exactly
+/// one new ACTIVE version (with an atomically-computed `MAX(version)+1`). Run in
+/// one transaction, this guarantees a reader always sees ≥1 ACTIVE version.
+#[test]
+fn rotate_sql_builders_keep_exactly_one_active_and_demote_the_rest() {
+    let demote = transit_demote_active_sql();
+    assert!(demote.starts_with("UPDATE "));
+    assert!(demote.contains("'VERIFYING'"));
+    assert!(demote.contains("'ACTIVE'"));
+
+    let insert = transit_insert_rotated_sql();
+    assert!(insert.starts_with("INSERT INTO "));
+    // The new row is ACTIVE, and its version is MAX+1 computed inside the tx.
+    assert!(insert.contains("'ACTIVE'"));
+    assert!(insert.contains("MAX("));
+    assert!(insert.contains("RETURNING"));
+}
+
+/// Logic-level guard for the atomic destroy: one UPDATE crypto-shreds every
+/// non-DESTROYED version (clears both ciphertext columns, flips to DESTROYED), so
+/// `rows_affected` is the exact destroyed count and no partial shred is possible.
+#[test]
+fn destroy_sql_shreds_every_non_destroyed_version() {
+    let shred = secret_shred_all_sql();
+    assert!(shred.starts_with("UPDATE "));
+    assert!(shred.contains("'DESTROYED'"));
+    // Only versions not already destroyed are touched (idempotent, accurate count).
+    assert!(shred.contains("<> 'DESTROYED'"));
 }

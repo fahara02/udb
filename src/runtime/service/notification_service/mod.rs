@@ -52,6 +52,11 @@ mod tests;
 // (`serve()`). The batch size is the env-backed `notification_delivery_batch()`
 // (default `NOTIFICATION_DELIVERY_BATCH`), wired at the worker spawn.
 pub(crate) use config::{notification_delivery_batch, notification_delivery_interval};
+// Re-exported for the leader to bound each provider POST once it wires
+// `.timeout(...)` at the reqwest client build in service/mod.rs (see the
+// TODO(leader-wire) in config.rs). Unused until then, hence the allow.
+#[allow(unused_imports)]
+pub(crate) use config::notification_delivery_timeout;
 #[cfg(feature = "http-client")]
 pub(crate) use delivery::run_notification_delivery_worker_once;
 

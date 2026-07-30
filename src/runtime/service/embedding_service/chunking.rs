@@ -195,7 +195,7 @@ pub(crate) fn chunk_text_tokens(
     max_chunks: usize,
 ) -> Vec<Chunk> {
     let provider_safe_max = max_input_tokens
-        .saturating_mul(85)
+        .saturating_mul(super::config::embedding_provider_token_margin_pct())
         .checked_div(100)
         .unwrap_or(0);
     let window = requested_tokens.max(1).min(provider_safe_max.max(1));
@@ -219,7 +219,9 @@ pub(crate) fn chunk_text_tokens(
         let hard_end = (start_token + window).min(tokens.len());
         let mut end_token = hard_end;
         if hard_end < tokens.len() {
-            let lower = start_token + (window.saturating_mul(4) / 5).max(1);
+            let lower = start_token
+                + (window.saturating_mul(super::config::embedding_chunk_boundary_min_pct()) / 100)
+                    .max(1);
             if let Some(boundary) = (lower..hard_end).rev().find(|index| {
                 let gap_start = tokens[*index - 1].1;
                 let gap_end = tokens[*index].0;

@@ -20,8 +20,8 @@ use super::super::native_helpers::{
 };
 use super::NotificationServiceImpl;
 use super::config::{
-    LOG_MSG, PREFERENCE_MSG, TEMPLATE_MSG, TEST_FORCE_FAILED_SENTINEL, VARIABLE_MISSING,
-    test_mode_enabled,
+    DEFAULT_PAGE_SIZE, LOG_MSG, PREFERENCE_MSG, TEMPLATE_MSG, TEST_FORCE_FAILED_SENTINEL,
+    VARIABLE_MISSING, test_mode_enabled,
 };
 use super::errors::{
     notification_internal_status, notification_log_not_found_status,
@@ -267,7 +267,7 @@ pub(crate) async fn list_notifications(
         None,
     )
     .await?;
-    let page = native_page_window(req.page.as_ref(), 50);
+    let page = native_page_window(req.page.as_ref(), DEFAULT_PAGE_SIZE);
     let channel = if req.channel == 0 {
         String::new()
     } else {
@@ -312,7 +312,11 @@ pub(crate) async fn list_notifications(
     let logs = rows.iter().map(log_from_json).collect();
     Ok(Response::new(notif_pb::ListNotificationsResponse {
         logs,
-        page: Some(native_page_response(req.page.as_ref(), total, 50)),
+        page: Some(native_page_response(
+            req.page.as_ref(),
+            total,
+            DEFAULT_PAGE_SIZE,
+        )),
     }))
 }
 
@@ -640,7 +644,7 @@ pub(crate) async fn list_templates(
         None,
     )
     .await?;
-    let page = native_page_window(req.page.as_ref(), 50);
+    let page = native_page_window(req.page.as_ref(), DEFAULT_PAGE_SIZE);
     let channel = if req.channel == 0 {
         String::new()
     } else {
@@ -673,7 +677,11 @@ pub(crate) async fn list_templates(
     let templates = rows.iter().map(template_from_json_row).collect();
     Ok(Response::new(notif_pb::ListTemplatesResponse {
         templates,
-        page: Some(native_page_response(req.page.as_ref(), total, 50)),
+        page: Some(native_page_response(
+            req.page.as_ref(),
+            total,
+            DEFAULT_PAGE_SIZE,
+        )),
     }))
 }
 
@@ -958,7 +966,7 @@ pub(crate) async fn list_preferences(
     )
     .await?;
     let user_id = parse_uuid("user_id", &req.user_id)?;
-    let page = native_page_window(req.page.as_ref(), 50);
+    let page = native_page_window(req.page.as_ref(), DEFAULT_PAGE_SIZE);
     let user_id = user_id.to_string();
     let filter = preference_list_filter(&user_id, &req.tenant_id);
     let runtime = svc.require_runtime()?;
@@ -981,6 +989,10 @@ pub(crate) async fn list_preferences(
     let preferences = rows.iter().map(preference_from_json_row).collect();
     Ok(Response::new(notif_pb::ListPreferencesResponse {
         preferences,
-        page: Some(native_page_response(req.page.as_ref(), total, 50)),
+        page: Some(native_page_response(
+            req.page.as_ref(),
+            total,
+            DEFAULT_PAGE_SIZE,
+        )),
     }))
 }

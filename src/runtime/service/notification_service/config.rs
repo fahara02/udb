@@ -15,6 +15,10 @@ pub(crate) const PREFERENCE_MSG: &str = "udb.core.notification.entity.v1.Notific
 pub(crate) const DELIVERY_ATTEMPT_MSG: &str =
     "udb.core.notification.entity.v1.NotificationDeliveryAttempt";
 pub(crate) const TEMPLATE_LOCALE_MAX_CHARS: usize = 10;
+/// Default page size for the list handlers when a request omits `page.page_size`.
+/// One const in place of the literal `50` that was duplicated across the six
+/// notification/template/preference list read + response call sites.
+pub(crate) const DEFAULT_PAGE_SIZE: i32 = 50;
 pub(crate) const NOTIFICATION_DELIVERY_BATCH: i64 = 200;
 pub(crate) const NOTIFICATION_DELIVERY_BATCH_ENV: &str = "UDB_NOTIFICATION_DELIVERY_BATCH";
 pub(crate) const DEFAULT_NOTIFICATION_DELIVERY_INTERVAL_SECS: u64 = 30;
@@ -29,6 +33,10 @@ pub(crate) const NOTIFICATION_DELIVERY_MAX_ATTEMPTS_ENV: &str =
     "UDB_NOTIFICATION_DELIVERY_MAX_ATTEMPTS";
 pub(crate) const NOTIFICATION_DELIVERY_PROVIDERS_ENV: &str =
     "UDB_NOTIFICATION_DELIVERY_PROVIDERS_JSON";
+/// Per-POST HTTP client timeout for the delivery worker (bounds one hung provider
+/// so it can't stall a whole sequential batch). Default 30s.
+pub(crate) const DEFAULT_NOTIFICATION_DELIVERY_TIMEOUT_SECS: u64 = 30;
+pub(crate) const NOTIFICATION_DELIVERY_TIMEOUT_ENV: &str = "UDB_NOTIFICATION_DELIVERY_TIMEOUT_SECS";
 
 // Stable machine-readable error reasons (google.rpc.ErrorInfo-style `reason`),
 // attached to the returned `Status` metadata under `error-reason` so SDK clients
@@ -138,6 +146,30 @@ pub(crate) fn notification_delivery_batch() -> i64 {
                 .ok()
                 .as_deref(),
             NOTIFICATION_DELIVERY_BATCH,
+        )
+    })
+}
+
+/// Per-POST HTTP client timeout for the delivery worker. Reads
+/// `UDB_NOTIFICATION_DELIVERY_TIMEOUT_SECS`, default
+/// `DEFAULT_NOTIFICATION_DELIVERY_TIMEOUT_SECS` (30). Mirrors the
+/// `notification_delivery_interval` resolve-once pattern.
+// TODO(leader-wire): the reqwest client is built in `service/mod.rs`
+// (`let http = reqwest::Client::new();` at the notification delivery worker spawn,
+// ~line 2980, which THIS module must not edit); apply
+// `.timeout(notification_delivery_timeout())` there so one hung provider can't
+// stall a batch of intents processed sequentially. Re-exported from
+// notification_service/mod.rs; unused until the leader wires it, hence the allow.
+#[allow(dead_code)]
+pub(crate) fn notification_delivery_timeout() -> Duration {
+    static TIMEOUT: OnceLock<Duration> = OnceLock::new();
+    *TIMEOUT.get_or_init(|| {
+        Duration::from_secs(
+            std::env::var(NOTIFICATION_DELIVERY_TIMEOUT_ENV)
+                .ok()
+                .and_then(|v| v.parse::<u64>().ok())
+                .filter(|v| *v > 0)
+                .unwrap_or(DEFAULT_NOTIFICATION_DELIVERY_TIMEOUT_SECS),
         )
     })
 }

@@ -5,6 +5,62 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.4.32] - 2026-07-30
+
+Native-service upgrade — batch 2. Continues the no-deferrals plan implementation
+across all five services (transactional Vault, Embedding erasure + Matryoshka,
+richer Notification delivery, Search/vector tenant-filter completeness, LiveQuery
+knobs) plus a fail-closed audit-sink ergonomics fix. No proto changes.
+
+### Fixed
+- **Fail-closed startup now accepts the durable Postgres audit sink.**
+  `UDB_FAIL_CLOSED=true` previously refused to start unless an external HTTP sink
+  (`UDB_AUDIT_SINK_URL`) was set. It now also accepts the always-on durable
+  Postgres audit log via `UDB_AUDIT_SINK=postgres` (the append-only
+  `udb_system.auth_audit_log` that `udb compliance evidence` chain-exports), so a
+  single-node Postgres deployment can enable fail-closed with no external endpoint.
+- **Weaviate/Pinecone vector search now enforce the tenant filter** (same
+  cross-tenant leak class fixed for Elasticsearch in 0.4.30): the Weaviate GraphQL
+  `where` and the Pinecone metadata `filter` now AND in the tenant scope, over the
+  `_tenant_id` the generic upsert already stamps.
+- **Vault `PutSecret` CAS is now a true compare-and-swap** — a concurrent
+  duplicate on `(tenant_id, secret_path, version)` returns a clean retryable
+  `ABORTED` (was an opaque Postgres `23505`). `rotate_transit_key` and multi-version
+  `DestroySecret` are now single transactions (no observable "zero ACTIVE key"
+  window; accurate destroyed count). `get_secret` no longer returns soft-DELETED
+  values for an explicit version.
+- **Embedding right-to-erasure completes on non-Qdrant backends.** Teardown /
+  row-delete / stale-chunk cleanup now dispatch portable deletes for
+  Elasticsearch / Pinecone / Weaviate (previously Qdrant-only, so a delete event
+  stayed pending forever). ES also gains a real collection alias at register
+  (fixing ES Retrieve).
+- **Notification: a missing recipient address no longer loops forever** — an
+  EMAIL/SMS/PUSH intent with no address is recorded FAILED with a clear reason
+  (IN_APP, legitimately address-less, is unaffected).
+
+### Added / Changed
+- **Vault:** per-tenant transit-op quota (`UDB_VAULT_TRANSIT_QUOTA_PER_MINUTE`);
+  keyset-paginated `ListSecrets` with a correct `total_count`; dedicated audit
+  topics for `GenerateDataKey`/`Rewrap`. DEKs, the AEAD nonce, and dynamic DB
+  passwords now draw from the OS CSPRNG (`random_32_bytes`/`random_bytes`) instead
+  of concatenated UUIDs.
+- **Embedding:** Matryoshka truncated-dim serving is now active end-to-end
+  (`UDB_EMBEDDING_MATRYOSHKA_STRATEGY`); `parent_window` neighbor-text gathering is
+  one payload-only query instead of N ANN searches; the two duplicate similarity
+  implementations are one shared metric-aware `similarity`; registry/chunking/
+  backoff defaults are `UDB_EMBEDDING_*` knobs.
+- **Notification:** per-provider auth schemes (bearer / api-key / basic /
+  hmac-SHA256), a provider idempotency key (crash-retry can't double-send), real
+  response message-id extraction (header or JSON path), and a bounded HTTP
+  delivery timeout (`UDB_NOTIFICATION_DELIVERY_TIMEOUT_SECS`).
+- **Search:** operator-tunable RRF `k` and per-index/modality `fusion_weights`
+  (`UDB_SEARCH_RRF_K`, `UDB_SEARCH_FUSION_WEIGHTS`); per-index vector distance and
+  text analyzer resolved from the index `metadata_json`.
+- **LiveQuery:** `UDB_`-prefixed buffer knob (with a deprecated alias),
+  snapshot-limit env overrides, and an idle-stream keepalive
+  (`UDB_LIVEQUERY_KEEPALIVE_SECS`) so LB idle timeouts don't reap healthy streams.
+- **Shared:** a constant-time byte-slice compare (`constant_time_eq_bytes`).
+
 ## [0.4.31] - 2026-07-30
 
 Native-service upgrade release. Implements the tractable items from the

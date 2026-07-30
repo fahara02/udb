@@ -22,7 +22,7 @@ use super::config::{
 };
 #[cfg(feature = "http-client")]
 use super::delivery::parse_notification_delivery_providers_json;
-use super::delivery::{NotificationDeliveryProvider, ProviderCredential};
+use super::delivery::{NotificationDeliveryProvider, ProviderAuth, ProviderCredential};
 use super::errors::{
     notification_capability_status, notification_internal_status,
     notification_not_retryable_status, notification_required_field,
@@ -572,6 +572,10 @@ fn provider_credentials_never_appear_in_debug() {
         endpoint_url: "https://email.example.com/send".to_string(),
         wrapped_credential: canary.to_string(),
         body_template: None,
+        auth: ProviderAuth::Bearer,
+        idempotency_header: "Idempotency-Key".to_string(),
+        message_id_header: None,
+        message_id_json_path: None,
     };
     let rendered = format!("{provider:?}");
     assert!(
@@ -637,6 +641,89 @@ fn delivery_provider_json_accepts_names_and_redacts_credentials() {
     let rendered = format!("{:?}", providers[0]);
     assert!(!rendered.contains("udb-aead:v1:secret"));
     assert!(rendered.contains("[redacted]"));
+    // Absent `auth` defaults to Bearer; the idempotency header defaults on.
+    assert_eq!(providers[0].auth, ProviderAuth::Bearer);
+    assert_eq!(providers[0].idempotency_header, "Idempotency-Key");
+}
+
+/// Each supported `auth` scheme parses into its typed [`ProviderAuth`], carrying
+/// only the NON-secret scheme parameters (the secret stays the sealed
+/// `wrapped_credential`). Unknown/absent schemes fall back to Bearer, and the
+/// idempotency / message-id knobs parse alongside.
+#[cfg(feature = "http-client")]
+#[test]
+fn delivery_provider_json_parses_each_auth_scheme() {
+    let providers = parse_notification_delivery_providers_json(
+        r#"[
+            {
+                "channel": "EMAIL", "provider": "SES",
+                "endpoint_url": "https://n.example.com/e", "wrapped_credential": "c1",
+                "auth": "bearer"
+            },
+            {
+                "channel": "SMS", "provider": "TWILIO",
+                "endpoint_url": "https://n.example.com/s", "wrapped_credential": "c2",
+                "auth": { "scheme": "api_key", "header": "X-Api-Key" },
+                "idempotency_header": "X-Idem",
+                "message_id_header": "X-Message-Id"
+            },
+            {
+                "channel": "PUSH", "provider": "FCM",
+                "endpoint_url": "https://n.example.com/p", "wrapped_credential": "c3",
+                "auth": { "scheme": "basic", "username": "svc" },
+                "idempotency_header": ""
+            },
+            {
+                "channel": "WEBHOOK", "provider": "HOOK",
+                "endpoint_url": "https://n.example.com/h", "wrapped_credential": "c4",
+                "auth": { "scheme": "hmac", "header": "X-Signature" },
+                "message_id_json_path": "data.id"
+            },
+            {
+                "channel": "IN_APP", "provider": "INAPP",
+                "endpoint_url": "https://n.example.com/i", "wrapped_credential": "c5",
+                "auth": { "scheme": "totally-unknown" }
+            }
+        ]"#,
+    );
+    assert_eq!(providers.len(), 5);
+
+    assert_eq!(providers[0].auth, ProviderAuth::Bearer);
+
+    assert_eq!(
+        providers[1].auth,
+        ProviderAuth::ApiKey {
+            header: "X-Api-Key".to_string()
+        }
+    );
+    assert_eq!(providers[1].idempotency_header, "X-Idem");
+    assert_eq!(
+        providers[1].message_id_header.as_deref(),
+        Some("X-Message-Id")
+    );
+
+    assert_eq!(
+        providers[2].auth,
+        ProviderAuth::Basic {
+            username: "svc".to_string()
+        }
+    );
+    // An explicit empty string opts out of the idempotency header.
+    assert_eq!(providers[2].idempotency_header, "");
+
+    assert_eq!(
+        providers[3].auth,
+        ProviderAuth::Hmac {
+            header: "X-Signature".to_string()
+        }
+    );
+    assert_eq!(
+        providers[3].message_id_json_path.as_deref(),
+        Some("data.id")
+    );
+
+    // An unrecognized scheme fails safe to Bearer.
+    assert_eq!(providers[4].auth, ProviderAuth::Bearer);
 }
 
 #[test]

@@ -1707,6 +1707,37 @@ pub(crate) fn env_first(keys: &[&str]) -> Option<String> {
     })
 }
 
+/// Fill a fresh 32-byte key/secret from the OS CSPRNG. Cleaner than the
+/// concatenated-`Uuid::new_v4()` idiom (which fixes the version/variant nibbles);
+/// used for vault DEKs, nonces, and dynamic passwords. Panics only if the OS RNG
+/// is unavailable — the same failure mode `uuid`'s getrandom-backed v4 has.
+pub(crate) fn random_32_bytes() -> [u8; 32] {
+    let mut buf = [0u8; 32];
+    getrandom::getrandom(&mut buf).expect("OS CSPRNG unavailable");
+    buf
+}
+
+/// Fill `n` bytes from the OS CSPRNG (e.g. a 12-byte AEAD nonce).
+pub(crate) fn random_bytes(n: usize) -> Vec<u8> {
+    let mut buf = vec![0u8; n];
+    getrandom::getrandom(&mut buf).expect("OS CSPRNG unavailable");
+    buf
+}
+
+/// Constant-time byte-slice equality (no early-exit timing leak). A length
+/// mismatch returns false. Shared so MAC/secret comparisons don't each hand-roll
+/// their own (the `security.rs`/`authn` string variants exist for `&str`).
+pub(crate) fn constant_time_eq_bytes(a: &[u8], b: &[u8]) -> bool {
+    if a.len() != b.len() {
+        return false;
+    }
+    let mut diff = 0u8;
+    for (x, y) in a.iter().zip(b) {
+        diff |= x ^ y;
+    }
+    diff == 0
+}
+
 pub(crate) fn env_identifier(key: &str, fallback: &str) -> String {
     env::var(key)
         .ok()

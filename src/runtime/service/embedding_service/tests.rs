@@ -26,8 +26,9 @@ use super::errors::{
     validate_reported_vector,
 };
 use super::events::{bound_embedding_text, build_work_event_payload};
-use super::handlers::{parse_grpc_timeout, remaining_before_deadline, retrieve_hit_payload_json};
+use super::handlers::{parse_grpc_timeout, remaining_before_deadline};
 use super::model::{StoredSource, build_embedding_point, merge_retrieve_filter};
+use super::retrieval::public_payload;
 use super::workers::{
     backfill_read_context, backfill_select_request, embedding_teardown_jobs_sql,
     embedding_teardown_point_ids_sql, embedding_work_jobs_sql, extract_source_text,
@@ -928,13 +929,20 @@ fn teardown_sqls_read_nested_journal_envelope() {
 /// `_tenant_id` write-stamp stripped; tag-only or absent payloads stay "".
 #[test]
 fn retrieve_hit_payload_strips_internal_tenant_tag() {
-    let payload = crate::runtime::executor_utils::json_to_struct(&serde_json::json!({
-        "_tenant_id": "acme",
-        "title": "Q3 report",
-        "chunk": 4,
-    }))
-    .expect("struct payload");
-    let json = retrieve_hit_payload_json(Some(&payload));
+    // Exercise the REAL production sanitizer (`retrieval::public_payload`) — the
+    // test-only near-duplicate it used to call was deleted (dedup, Part B.2).
+    let point = crate::proto::VectorPoint {
+        id: "row-1".to_string(),
+        score: 0.0,
+        payload: crate::runtime::executor_utils::json_to_struct(&serde_json::json!({
+            "_tenant_id": "acme",
+            "title": "Q3 report",
+            "chunk": 4,
+        })),
+        vector: Vec::new(),
+        vector_name: String::new(),
+    };
+    let json = public_payload(&point, None);
     let value: serde_json::Value = serde_json::from_str(&json).expect("payload_json is valid JSON");
     assert_eq!(value["title"], "Q3 report");
     assert_eq!(value["chunk"], 4.0);
@@ -945,10 +953,22 @@ fn retrieve_hit_payload_strips_internal_tenant_tag() {
 
     // A payload that is ONLY the internal tag serializes to the empty
     // sentinel, and no payload stays empty too.
-    let tag_only = crate::runtime::executor_utils::json_to_struct(&serde_json::json!({
-        "_tenant_id": "acme",
-    }))
-    .expect("struct payload");
-    assert_eq!(retrieve_hit_payload_json(Some(&tag_only)), "");
-    assert_eq!(retrieve_hit_payload_json(None), "");
+    let tag_only = crate::proto::VectorPoint {
+        id: "row-2".to_string(),
+        score: 0.0,
+        payload: crate::runtime::executor_utils::json_to_struct(&serde_json::json!({
+            "_tenant_id": "acme",
+        })),
+        vector: Vec::new(),
+        vector_name: String::new(),
+    };
+    assert_eq!(public_payload(&tag_only, None), "");
+    let empty = crate::proto::VectorPoint {
+        id: "row-3".to_string(),
+        score: 0.0,
+        payload: None,
+        vector: Vec::new(),
+        vector_name: String::new(),
+    };
+    assert_eq!(public_payload(&empty, None), "");
 }

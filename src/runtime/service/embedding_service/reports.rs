@@ -15,7 +15,7 @@ use super::errors::{
 };
 use super::model::{
     EmbeddingPointMetadata, build_embedding_point_with_metadata, stored_model_from_json,
-    stored_source_from_json,
+    stored_source_from_json, truncate_embedding_vector,
 };
 use super::queue::{AckMeteringEvent, DurableWorkItem, ack_work_item, fail_work_item};
 use super::store::{model_read_by_id, source_read_by_name, work_item_read_by_id};
@@ -217,9 +217,15 @@ async fn process_report(
             vector_name: req.vector_name.trim(),
         },
     );
+    // Part B.2.3 Matryoshka: the sidecar reports the FULL embedding (validated at
+    // `model.dimensions` above); the server stores the truncated SERVING-dim
+    // prefix so the point matches the collection geometry created at register
+    // time. A non-Matryoshka model has serving_dim == dimensions ⇒ no truncation.
+    let serving_dim = model.serving_dim();
+    let stored_vector = truncate_embedding_vector(req.vector, serving_dim);
     let point = build_embedding_point_with_metadata(
         &row_pk,
-        req.vector,
+        stored_vector,
         &tenant_id,
         &source_name,
         metadata,
@@ -234,7 +240,7 @@ async fn process_report(
     svc.vector_store_for_model(&context.project_id, &model)?
         .upsert(
             &model.active_collection,
-            model.dimensions,
+            serving_dim,
             &model.distance_metric,
             &model.output_dtype,
             vec![point],

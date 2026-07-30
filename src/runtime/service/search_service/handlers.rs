@@ -22,16 +22,17 @@ use super::super::native_helpers::{
 };
 use super::SearchServiceImpl;
 use super::config::{
-    BACKEND_ELASTICSEARCH, BACKEND_QDRANT, ENGINE_VECTOR_DISTANCE, SEARCH_INDEX_MSG, STATUS_ACTIVE,
-    STATUS_DELETED, STATUS_REINDEXING, TENANT_SCOPE_PAYLOAD_KEY, TOPIC_CREATED, TOPIC_DELETED,
-    TOPIC_REINDEX, max_indexes_per_tenant, max_top_k, resolve_top_k,
+    BACKEND_ELASTICSEARCH, BACKEND_QDRANT, SEARCH_INDEX_MSG, STATUS_ACTIVE, STATUS_DELETED,
+    STATUS_REINDEXING, TENANT_SCOPE_PAYLOAD_KEY, TOPIC_CREATED, TOPIC_DELETED, TOPIC_REINDEX,
+    index_analyzer, index_distance_metric, max_indexes_per_tenant, max_top_k, resolve_top_k,
+    search_fusion_weights,
 };
 use super::errors::{
     full_text_only_requires_mediated_ir_status, require_source_tenant_column,
     search_field_violation, search_index_not_found_status, search_required_field,
     validate_create_index_required_fields, validate_search_query,
 };
-use super::fusion::fuse_ranked_lists;
+use super::fusion::fuse_ranked_lists_weighted;
 use super::model::{StoredIndex, collection_name, stored_index_from_json};
 use super::store::{active_indexes_read, index_conflict, index_read_by_name, index_record};
 
@@ -100,7 +101,10 @@ impl SearchServiceImpl {
                 text_query: req.query_text.clone(),
                 filter: tenant_filter,
                 limit: top_k,
-                fusion_weights: Vec::new(),
+                // Per-modality (dense/sparse) fusion weights for Qdrant's native
+                // hybrid RRF, from the operator `UDB_SEARCH_FUSION_WEIGHTS` knob
+                // (empty by default → engine-default weighting, unchanged).
+                fusion_weights: search_fusion_weights(),
                 with_payload: true,
                 with_vector: false,
                 vector_name: String::new(),
@@ -250,11 +254,26 @@ pub(crate) async fn create_index(
     // idempotent); a full-text-only index (vector_dims == 0) is provisioned
     // engine-side on first write.
     if existing.is_none() && req.vector_dims > 0 {
-        let engine_spec = serde_json::json!({
+        // Per-index distance metric from `metadata_json` (falls back to cosine),
+        // no longer the hardcoded cosine — an index may declare `euclid`/`dot`/
+        // `manhattan`. Normalized to the canonical token the shared vector seam
+        // understands.
+        let distance = index_distance_metric(&req.metadata_json);
+        let mut engine_spec_value = serde_json::json!({
             "dimension": req.vector_dims,
-            "distance": ENGINE_VECTOR_DISTANCE,
-        })
-        .to_string();
+            "distance": distance,
+        });
+        // Per-index text analyzer from `metadata_json`: stored into the
+        // provisioning spec so an ES/text index can declare its analyzer.
+        // TODO(leader): the ES index-PUT dispatch in core/setup_data.rs
+        // (`ensure_resource_backend_target` Elasticsearch arm) must CONSUME this
+        // `analyzer` to set the index's ES analyzer mapping; today the seam reads
+        // only `dimension`/`distance`, so the analyzer is carried but inert until
+        // the dispatch wires it (parallel to the SEARCH_MODE_TEXT execution work).
+        if let Some(analyzer) = index_analyzer(&req.metadata_json) {
+            engine_spec_value["analyzer"] = serde_json::Value::String(analyzer);
+        }
+        let engine_spec = engine_spec_value.to_string();
         runtime
             .ensure_resource_backend_target(
                 &backend,
@@ -598,7 +617,7 @@ pub(crate) async fn search(
         };
         succeeded += 1;
         // Carry the engine's own relevance score so a single-index search keeps
-        // it (see `fuse_ranked_lists`); cross-index fusion uses only the rank.
+        // it (see `fuse_ranked_lists_weighted`); cross-index fusion uses the rank.
         let mut scored = Vec::with_capacity(points.len());
         for point in points {
             hit_meta.entry(point.id.clone()).or_insert_with(|| {
@@ -619,7 +638,10 @@ pub(crate) async fn search(
         }
     }
 
-    let fused = fuse_ranked_lists(&ranked_lists);
+    // Weighted cross-index fusion: a single index keeps engine scores; multiple
+    // indexes fuse by weighted RRF using the operator `UDB_SEARCH_FUSION_WEIGHTS`
+    // knob (empty by default → uniform, unchanged behavior).
+    let fused = fuse_ranked_lists_weighted(&ranked_lists, &search_fusion_weights());
     let total = fused.len();
     let hits = fused
         .into_iter()

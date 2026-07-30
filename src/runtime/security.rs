@@ -431,9 +431,18 @@ impl SecurityConfig {
         if self.jwt_public_key.is_none() && self.jwt_jwks_url.is_none() && !self.mtls_required {
             errors.push("Either JWT or mTLS must be configured for authentication".to_string());
         }
-        if self.audit_sink_url.is_empty() {
+        // A durable audit sink is required. Two ways to satisfy it: an external
+        // HTTP/SIEM sink (`UDB_AUDIT_SINK_URL`), OR the always-on durable Postgres
+        // audit log (`udb_system.auth_audit_log`, which `udb compliance evidence`
+        // chain-exports) declared via `UDB_AUDIT_SINK=postgres`. The latter lets a
+        // single-node/Postgres deployment turn on fail-closed without standing up
+        // an external endpoint.
+        if self.audit_sink_url.is_empty() && !durable_audit_sink_declared() {
             errors.push(
-                "Audit sink URL must be configured in production (UDB_AUDIT_SINK_URL)".to_string(),
+                "A durable audit sink must be configured in production: set an HTTP/SIEM sink \
+                 (UDB_AUDIT_SINK_URL=…) or declare the durable Postgres audit log \
+                 (UDB_AUDIT_SINK=postgres)."
+                    .to_string(),
             );
         }
         if !self.pii_safe_logging {
@@ -567,6 +576,23 @@ pub struct ComplianceProfileFacts {
 /// security posture (`is_production()`) OR enterprise audit mode is on
 /// (`UDB_ENTERPRISE_AUDIT`) OR it is explicitly requested (`UDB_FAIL_CLOSED`).
 /// Dev/test default is fail-open so a missing local dependency does not block work.
+/// Whether the operator declared the durable Postgres audit log as their audit
+/// sink (`UDB_AUDIT_SINK` ∈ {postgres, database, durable, pg}). That is the
+/// always-on auth_service `PostgresAuditLogSink` (append-only
+/// `udb_system.auth_audit_log`, the source `udb compliance evidence` chain-hashes),
+/// so it satisfies the fail-closed durable-audit requirement WITHOUT an external
+/// HTTP/SIEM endpoint — the right escape hatch for a single-node Postgres deploy.
+pub(crate) fn durable_audit_sink_declared() -> bool {
+    std::env::var("UDB_AUDIT_SINK")
+        .map(|value| {
+            matches!(
+                value.trim().to_ascii_lowercase().as_str(),
+                "postgres" | "database" | "durable" | "pg"
+            )
+        })
+        .unwrap_or(false)
+}
+
 pub fn fail_closed_mode() -> bool {
     if SecurityConfig::current().is_production() {
         return true;

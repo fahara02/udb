@@ -54,6 +54,43 @@ pub(crate) fn vault_db_native_store_required_status() -> Status {
     )
 }
 
+/// The transactional multi-write handlers (`rotate_transit_key`,
+/// `destroy_secret`, `list_secrets`) run a raw `sqlx` transaction directly on the
+/// configured Postgres native store; without a wired pool they fail closed with a
+/// typed capability refusal (rather than degrading to a non-atomic path).
+pub(crate) fn vault_native_store_required_status(operation: &'static str) -> Status {
+    vault_capability_status(
+        operation,
+        "postgres_native_store",
+        "vault requires a Postgres native store for this operation",
+    )
+}
+
+/// A PutSecret lost the compare-and-swap: a concurrent writer already committed
+/// the next version of this `(tenant_id, secret_path)`, so the unique
+/// `(tenant_id, secret_path, version)` index rejected this insert. Surface the
+/// typed `ABORTED` the proto promises (retryable) instead of the raw Postgres
+/// `23505`/`AlreadyExists` the executor would otherwise return.
+pub(crate) fn vault_secret_cas_conflict_status(attempted_version: i64) -> Status {
+    crate::runtime::executor_utils::retryable_aborted_status(
+        "vault",
+        "secret version CAS",
+        0,
+        format!(
+            "CAS conflict: version {attempted_version} for this secret_path was written \
+             concurrently; re-read the latest version and retry"
+        ),
+    )
+}
+
+/// Whether a native-write `Status` is the unique-constraint collision the CAS
+/// insert (`ConflictStrategy::Error`) raises — the executor maps `23505` to
+/// `AlreadyExists`. PutSecret only inserts a fresh version row, so the sole
+/// possible unique collision is the `(tenant_id, secret_path, version)` tuple.
+pub(crate) fn is_duplicate_conflict(status: &Status) -> bool {
+    status.code() == tonic::Code::AlreadyExists
+}
+
 pub(crate) fn vault_db_role_creation_status(message: impl Into<String>) -> Status {
     vault_capability_status(
         "generate_database_credentials",

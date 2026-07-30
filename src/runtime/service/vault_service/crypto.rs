@@ -18,7 +18,6 @@ use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
 use ed25519_dalek::{Signature, Signer, SigningKey};
 use tonic::Status;
-use uuid::Uuid;
 
 use crate::runtime::DataBrokerRuntime;
 
@@ -45,13 +44,10 @@ impl fmt::Debug for DataKey {
 }
 
 impl DataKey {
-    /// A fresh random DEK. Sourced from two v4 UUIDs (getrandom-backed), the same
-    /// CSPRNG path `encryption.rs` uses for nonces — no second RNG dependency.
+    /// A fresh random DEK — a clean 256-bit draw from the OS CSPRNG (no fixed
+    /// UUID version/variant nibbles).
     pub(crate) fn generate() -> Self {
-        let mut bytes = [0u8; 32];
-        bytes[..16].copy_from_slice(Uuid::new_v4().as_bytes());
-        bytes[16..].copy_from_slice(Uuid::new_v4().as_bytes());
-        DataKey(bytes)
+        DataKey(crate::runtime::executor_utils::random_32_bytes())
     }
 
     pub(crate) fn to_b64(&self) -> String {
@@ -121,7 +117,8 @@ pub(crate) fn dek_seal(dek: &DataKey, version: i64, plaintext: &[u8]) -> Result<
         )
     })?;
     let mut nonce = [0u8; 12];
-    nonce.copy_from_slice(&Uuid::new_v4().as_bytes()[..12]);
+    // A full 12-byte OS-CSPRNG draw (GCM-SIV is misuse-resistant regardless).
+    nonce.copy_from_slice(&crate::runtime::executor_utils::random_bytes(12));
     let ciphertext = cipher
         .encrypt(Nonce::from_slice(&nonce), plaintext)
         .map_err(|err| {

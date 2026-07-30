@@ -63,7 +63,195 @@ const SEARCH_REINDEX_INTERVAL_ENV: &str = "UDB_SEARCH_REINDEX_INTERVAL_SECS";
 pub(crate) const TENANT_SCOPE_PAYLOAD_KEY: &str = "_tenant_id";
 /// Vector distance metric provisioned for a new engine collection (cosine —
 /// the same default the shared `vector_upsert_backend_target` seam ensures).
+/// Now only the *fallback* when a per-index `metadata_json.distance` is absent
+/// ([`index_distance_metric`]).
 pub(crate) const ENGINE_VECTOR_DISTANCE: &str = "cosine";
+
+/// Canonical reciprocal-rank-fusion `k` from the original RRF paper (Cormack et
+/// al.); larger values flatten the contribution of top ranks. Now the *default*
+/// for the env-tunable [`search_rrf_k`].
+const DEFAULT_SEARCH_RRF_K: f64 = 60.0;
+const SEARCH_RRF_K_ENV: &str = "UDB_SEARCH_RRF_K";
+const SEARCH_FUSION_WEIGHTS_ENV: &str = "UDB_SEARCH_FUSION_WEIGHTS";
+
+/// Operator-tunable reciprocal-rank-fusion `k` (env `UDB_SEARCH_RRF_K`), resolved
+/// ONCE. A non-positive/non-finite/unparsable override keeps the canonical
+/// [`DEFAULT_SEARCH_RRF_K`] (60) so the constant stays byte-stable by default.
+pub(crate) fn search_rrf_k() -> f64 {
+    static V: OnceLock<f64> = OnceLock::new();
+    *V.get_or_init(|| parse_rrf_k(std::env::var(SEARCH_RRF_K_ENV).ok().as_deref()))
+}
+
+/// Pure parse of the `UDB_SEARCH_RRF_K` value: a finite, strictly-positive `f64`
+/// or the canonical default. Split out so the knob is unit-tested without the
+/// process-wide `OnceLock`/env.
+fn parse_rrf_k(raw: Option<&str>) -> f64 {
+    raw.and_then(|value| value.trim().parse::<f64>().ok())
+        .filter(|value| value.is_finite() && *value > 0.0)
+        .unwrap_or(DEFAULT_SEARCH_RRF_K)
+}
+
+/// Per-index / per-modality fusion weights (env `UDB_SEARCH_FUSION_WEIGHTS`, a
+/// comma-separated list), resolved ONCE. Mirrors
+/// `embedding_service::config::retrieve_fusion_weights`: empty (the default, and
+/// the fallback for any malformed/negative entry) hands weighting back to the
+/// engine-default fusion — identical to the previous hardcoded `Vec::new()`.
+pub(crate) fn search_fusion_weights() -> Vec<f32> {
+    static WEIGHTS: OnceLock<Vec<f32>> = OnceLock::new();
+    WEIGHTS
+        .get_or_init(|| {
+            parse_fusion_weights(std::env::var(SEARCH_FUSION_WEIGHTS_ENV).ok().as_deref())
+        })
+        .clone()
+}
+
+/// Pure parse of the `UDB_SEARCH_FUSION_WEIGHTS` value. ALL entries must parse to
+/// a finite, non-negative weight, else fall back to engine-default fusion (empty)
+/// rather than apply a half-parsed weighting. Split out for unit tests.
+fn parse_fusion_weights(raw: Option<&str>) -> Vec<f32> {
+    let Some(raw) = raw else {
+        return Vec::new();
+    };
+    let parsed: Option<Vec<f32>> = raw
+        .split(',')
+        .map(|part| {
+            part.trim()
+                .parse::<f32>()
+                .ok()
+                .filter(|value| value.is_finite() && *value >= 0.0)
+        })
+        .collect();
+    parsed
+        .filter(|weights| !weights.is_empty())
+        .unwrap_or_default()
+}
+
+/// Resolve a per-index vector **distance metric** from the stored index
+/// `metadata_json` (`{"distance": "..."}`), falling back to
+/// [`ENGINE_VECTOR_DISTANCE`] (cosine) when the key is absent/empty/unknown. The
+/// returned token is normalized to the canonical set the shared vector seam
+/// understands (`normalize_qdrant_distance` accepts these case-insensitively);
+/// pure so provisioning is unit-tested without a runtime.
+pub(crate) fn index_distance_metric(metadata_json: &str) -> &'static str {
+    let raw = serde_json::from_str::<serde_json::Value>(metadata_json)
+        .ok()
+        .as_ref()
+        .and_then(|value| value.get("distance"))
+        .and_then(serde_json::Value::as_str)
+        .map(|value| value.trim().to_ascii_lowercase())
+        .unwrap_or_default();
+    match raw.as_str() {
+        "cosine" => "cosine",
+        "dot" | "dotproduct" | "dot_product" | "ip" => "dot",
+        "euclid" | "euclidean" | "l2" => "euclid",
+        "manhattan" | "l1" => "manhattan",
+        // Unknown/empty → the shared default (cosine).
+        _ => ENGINE_VECTOR_DISTANCE,
+    }
+}
+
+/// Resolve an optional per-index text **analyzer** from the stored index
+/// `metadata_json` (`{"analyzer": "..."}`). `None` when absent or blank. Pure so
+/// the metadata contract is unit-tested; the actual ES-mapping consumption lives
+/// in the setup_data index-PUT dispatch (see the `TODO(leader)` in
+/// `handlers::create_index`).
+pub(crate) fn index_analyzer(metadata_json: &str) -> Option<String> {
+    serde_json::from_str::<serde_json::Value>(metadata_json)
+        .ok()
+        .as_ref()
+        .and_then(|value| value.get("analyzer"))
+        .and_then(serde_json::Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+}
+
+#[cfg(test)]
+mod knob_tests {
+    use super::{
+        DEFAULT_SEARCH_RRF_K, ENGINE_VECTOR_DISTANCE, index_analyzer, index_distance_metric,
+        parse_fusion_weights, parse_rrf_k,
+    };
+
+    #[test]
+    fn rrf_k_uses_default_when_absent_or_invalid() {
+        assert_eq!(parse_rrf_k(None), DEFAULT_SEARCH_RRF_K);
+        assert_eq!(parse_rrf_k(Some("")), DEFAULT_SEARCH_RRF_K);
+        assert_eq!(parse_rrf_k(Some("not-a-number")), DEFAULT_SEARCH_RRF_K);
+        assert_eq!(parse_rrf_k(Some("0")), DEFAULT_SEARCH_RRF_K);
+        assert_eq!(parse_rrf_k(Some("-5")), DEFAULT_SEARCH_RRF_K);
+        assert_eq!(parse_rrf_k(Some("nan")), DEFAULT_SEARCH_RRF_K);
+    }
+
+    #[test]
+    fn rrf_k_honors_a_valid_override() {
+        assert!((parse_rrf_k(Some("10")) - 10.0).abs() < 1e-12);
+        assert!((parse_rrf_k(Some(" 42.5 ")) - 42.5).abs() < 1e-12);
+    }
+
+    #[test]
+    fn fusion_weights_empty_by_default_or_on_any_bad_entry() {
+        assert!(parse_fusion_weights(None).is_empty());
+        assert!(parse_fusion_weights(Some("")).is_empty());
+        // A single bad entry voids the whole weighting (no half-parsed vector).
+        assert!(parse_fusion_weights(Some("0.7, oops")).is_empty());
+        assert!(parse_fusion_weights(Some("0.7,-0.3")).is_empty());
+    }
+
+    #[test]
+    fn fusion_weights_parses_a_valid_list() {
+        assert_eq!(parse_fusion_weights(Some("0.7, 0.3")), vec![0.7f32, 0.3f32]);
+        assert_eq!(
+            parse_fusion_weights(Some("1,2,3")),
+            vec![1.0f32, 2.0f32, 3.0f32]
+        );
+        assert_eq!(parse_fusion_weights(Some("0")), vec![0.0f32]);
+    }
+
+    #[test]
+    fn distance_metric_defaults_to_cosine_when_absent_or_unknown() {
+        assert_eq!(index_distance_metric(""), ENGINE_VECTOR_DISTANCE);
+        assert_eq!(index_distance_metric("{}"), ENGINE_VECTOR_DISTANCE);
+        assert_eq!(index_distance_metric("not json"), ENGINE_VECTOR_DISTANCE);
+        assert_eq!(
+            index_distance_metric(r#"{"distance":"weird"}"#),
+            ENGINE_VECTOR_DISTANCE
+        );
+    }
+
+    #[test]
+    fn distance_metric_reads_and_normalizes_known_values() {
+        assert_eq!(index_distance_metric(r#"{"distance":"Cosine"}"#), "cosine");
+        assert_eq!(
+            index_distance_metric(r#"{"distance":"EUCLIDEAN"}"#),
+            "euclid"
+        );
+        assert_eq!(index_distance_metric(r#"{"distance":" l2 "}"#), "euclid");
+        assert_eq!(
+            index_distance_metric(r#"{"distance":"dot_product"}"#),
+            "dot"
+        );
+        assert_eq!(
+            index_distance_metric(r#"{"distance":"manhattan"}"#),
+            "manhattan"
+        );
+    }
+
+    #[test]
+    fn analyzer_is_none_when_absent_and_some_when_present() {
+        assert_eq!(index_analyzer(""), None);
+        assert_eq!(index_analyzer("{}"), None);
+        assert_eq!(index_analyzer(r#"{"analyzer":"  "}"#), None);
+        assert_eq!(
+            index_analyzer(r#"{"analyzer":"english"}"#),
+            Some("english".to_string())
+        );
+        assert_eq!(
+            index_analyzer(r#"{"analyzer":" standard "}"#),
+            Some("standard".to_string())
+        );
+    }
+}
 
 /// Leader poll interval for the CDC freshness pass (env resolved ONCE).
 pub(crate) fn search_freshness_interval() -> Duration {

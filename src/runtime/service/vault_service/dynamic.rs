@@ -123,10 +123,8 @@ pub(crate) fn pg_literal(value: &str) -> String {
 }
 
 pub(crate) fn generate_db_password() -> String {
-    let mut bytes = [0u8; 32];
-    bytes[..16].copy_from_slice(Uuid::new_v4().as_bytes());
-    bytes[16..].copy_from_slice(Uuid::new_v4().as_bytes());
-    BASE64_STANDARD.encode(bytes)
+    // A clean 256-bit OS-CSPRNG draw (no fixed UUID version/variant nibbles).
+    BASE64_STANDARD.encode(crate::runtime::executor_utils::random_32_bytes())
 }
 
 pub(crate) fn generate_db_username() -> String {

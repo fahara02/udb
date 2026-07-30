@@ -55,6 +55,27 @@ impl std::fmt::Debug for ProviderCredential {
     }
 }
 
+/// How a delivery provider authenticates each POST. The actual secret is ALWAYS
+/// the vault-sealed `wrapped_credential` (decrypted only at delivery time); only
+/// the NON-secret scheme parameters (header/field names, basic username) live
+/// here, so the redaction doctrine holds — no variant ever carries a plaintext
+/// secret and `Debug` is safe to derive.
+#[allow(dead_code)]
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
+pub(crate) enum ProviderAuth {
+    /// `Authorization: Bearer <credential>` (the default; back-compatible with the
+    /// previous bearer-only adapter).
+    #[default]
+    Bearer,
+    /// A custom API-key header: `<header>: <credential>` (e.g. `X-API-Key`).
+    ApiKey { header: String },
+    /// HTTP Basic — `<username>:<credential>` (the credential is the password).
+    Basic { username: String },
+    /// HMAC-SHA256 over the exact request body, keyed by `<credential>`, hex-encoded
+    /// into `<header>` (e.g. `X-Signature`).
+    Hmac { header: String },
+}
+
 /// One configured delivery provider for a channel. `wrapped_credential` is the
 /// vault-sealed API key (the `udb-aead:` envelope `encrypt_secret_at_rest`
 /// produces); it is decrypted ONLY at the moment of use and never stored
@@ -73,7 +94,23 @@ pub(crate) struct NotificationDeliveryProvider {
     /// `{{body}}` are substituted with JSON-escaped values, then parsed as JSON.
     /// `None`/empty keeps the default body shape.
     pub body_template: Option<String>,
+    /// Per-provider auth scheme applied to the POST (default `Bearer`).
+    pub auth: ProviderAuth,
+    /// Header name carrying the stable idempotency key so a crash-retry POST can't
+    /// double-send (the provider dedupes on it). Empty disables the header; the
+    /// default is `Idempotency-Key`.
+    pub idempotency_header: String,
+    /// Response header to read the provider's real message-id from (preferred, no
+    /// body read). `None` falls back to `message_id_json_path`.
+    pub message_id_header: Option<String>,
+    /// Dot-separated JSON path into the response body for the provider's message-id
+    /// (e.g. `data.id`, `messages.0.id`) when it isn't returned in a header.
+    pub message_id_json_path: Option<String>,
 }
+
+/// The default idempotency header when a provider config doesn't override it.
+#[allow(dead_code)]
+pub(crate) const DEFAULT_IDEMPOTENCY_HEADER: &str = "Idempotency-Key";
 
 /// Render a provider's `body_template` into the JSON request body by substituting
 /// the JSON-escaped recipient/subject/body, then parsing the result. Returns an
@@ -107,8 +144,151 @@ impl std::fmt::Debug for NotificationDeliveryProvider {
             .field("provider", &self.provider)
             .field("endpoint_url", &self.endpoint_url)
             .field("wrapped_credential", &"[redacted]")
+            .field("auth", &self.auth)
+            .field("idempotency_header", &self.idempotency_header)
+            .field("message_id_header", &self.message_id_header)
+            .field("message_id_json_path", &self.message_id_json_path)
             .finish()
     }
+}
+
+/// The concrete authentication to apply to a provider POST, computed purely from
+/// the scheme + decrypted credential (+ body, for HMAC). Kept separate from the
+/// reqwest builder so it is unit-testable without a live client. Never
+/// `Debug`-printed — it carries the live credential / HMAC signature.
+#[allow(dead_code)]
+pub(crate) enum ProviderAuthApplication {
+    /// `Authorization: Bearer <token>`.
+    Bearer(String),
+    /// `Authorization: Basic base64(username:password)`.
+    Basic { username: String, password: String },
+    /// A single explicit header (api-key value or HMAC signature).
+    Header { name: String, value: String },
+}
+
+/// Compute the auth application for a provider POST. `credential` is the decrypted
+/// secret (used, never logged); `body` is the exact request-body string (read only
+/// to sign the HMAC scheme). Pure + unit-tested per scheme.
+#[allow(dead_code)]
+pub(crate) fn build_auth_application(
+    auth: &ProviderAuth,
+    credential: &str,
+    body: &str,
+) -> ProviderAuthApplication {
+    match auth {
+        ProviderAuth::Bearer => ProviderAuthApplication::Bearer(credential.to_string()),
+        ProviderAuth::ApiKey { header } => ProviderAuthApplication::Header {
+            name: header.clone(),
+            value: credential.to_string(),
+        },
+        ProviderAuth::Basic { username } => ProviderAuthApplication::Basic {
+            username: username.clone(),
+            password: credential.to_string(),
+        },
+        ProviderAuth::Hmac { header } => {
+            // Sign the exact bytes we send, keyed by the decrypted credential; reuse
+            // the shared HMAC-SHA256 primitive (no hand-rolled crypto).
+            let mac = crate::runtime::security::hmac_sha256(credential.as_bytes(), body.as_bytes());
+            let hex: String = mac.iter().map(|byte| format!("{byte:02x}")).collect();
+            ProviderAuthApplication::Header {
+                name: header.clone(),
+                value: hex,
+            }
+        }
+    }
+}
+
+/// A stable idempotency key for a (log, channel) delivery so a crash-retry POST
+/// can't double-send (the provider dedupes on it): `<log_id>:<channel_db>`. Pure +
+/// unit-tested.
+#[allow(dead_code)]
+pub(crate) fn idempotency_key(log_id: &str, channel_db: &str) -> String {
+    format!("{log_id}:{channel_db}")
+}
+
+/// Extract a provider's real message-id from a dot-separated JSON path
+/// (e.g. `data.id`, `messages.0.id`). Object keys and array indices are both
+/// resolved; a scalar (string/number/bool) is stringified, anything else (missing
+/// key, non-scalar terminus) yields "". Pure + unit-tested.
+#[allow(dead_code)]
+pub(crate) fn extract_json_path(value: &serde_json::Value, path: &str) -> String {
+    let mut current = value;
+    for segment in path.split('.').filter(|part| !part.is_empty()) {
+        current = match current {
+            serde_json::Value::Object(map) => match map.get(segment) {
+                Some(next) => next,
+                None => return String::new(),
+            },
+            serde_json::Value::Array(items) => {
+                match segment.parse::<usize>().ok().and_then(|idx| items.get(idx)) {
+                    Some(next) => next,
+                    None => return String::new(),
+                }
+            }
+            _ => return String::new(),
+        };
+    }
+    match current {
+        serde_json::Value::String(text) => text.clone(),
+        serde_json::Value::Number(number) => number.to_string(),
+        serde_json::Value::Bool(flag) => flag.to_string(),
+        _ => String::new(),
+    }
+}
+
+/// Whether a queued intent can NEVER be delivered because its channel requires a
+/// recipient address but none was provided. EMAIL/SMS/PUSH require an address;
+/// IN_APP legitimately has none (delivered in-app) and must never be failed for
+/// this — otherwise a valid in-app notification would be wrongly marked FAILED.
+/// A permanent condition: the worker fails such a row out of the PENDING queue
+/// instead of leaving it to loop forever. Pure + unit-tested.
+#[allow(dead_code)]
+pub(crate) fn missing_recipient_should_fail(channel: i32, recipient_address: &str) -> bool {
+    use crate::proto::udb::core::notification::entity::v1::NotificationChannel as C;
+    if !recipient_address.trim().is_empty() {
+        return false;
+    }
+    matches!(
+        C::try_from(channel).unwrap_or(C::Unspecified),
+        C::Email | C::Sms | C::Push
+    )
+}
+
+/// Read the provider's real message-id from the response: a configured response
+/// header first (cheap, no body read), else a configured JSON path into the
+/// response body. Returns "" when neither is configured or present. Replaces the
+/// made-up `x-provider-message-id` header no real provider returns.
+#[cfg(feature = "http-client")]
+async fn extract_provider_message_id(
+    provider: &NotificationDeliveryProvider,
+    resp: reqwest::Response,
+) -> String {
+    if let Some(name) = provider
+        .message_id_header
+        .as_deref()
+        .filter(|value| !value.trim().is_empty())
+    {
+        if let Some(value) = resp
+            .headers()
+            .get(name)
+            .and_then(|value| value.to_str().ok())
+        {
+            let value = value.trim();
+            if !value.is_empty() {
+                return value.to_string();
+            }
+        }
+    }
+    if let Some(path) = provider
+        .message_id_json_path
+        .as_deref()
+        .filter(|value| !value.trim().is_empty())
+    {
+        if let Ok(body) = resp.json::<serde_json::Value>().await {
+            return extract_json_path(&body, path);
+        }
+    }
+    String::new()
 }
 
 #[cfg(feature = "http-client")]
@@ -132,6 +312,50 @@ fn parse_delivery_channel(value: &serde_json::Value) -> Option<i32> {
             Some(channel as i32)
         }
         _ => None,
+    }
+}
+
+/// Parse the per-provider `auth` config into a [`ProviderAuth`]. Accepts either a
+/// bare scheme string (`"bearer"`) or an object `{ "scheme": ..., ... }`. Only the
+/// non-secret scheme parameters are read here; the secret is always the sealed
+/// `wrapped_credential`. An absent/unknown scheme falls back to `Bearer`.
+#[cfg(feature = "http-client")]
+fn parse_provider_auth(value: Option<&serde_json::Value>) -> ProviderAuth {
+    let Some(value) = value else {
+        return ProviderAuth::Bearer;
+    };
+    let (scheme, obj) = match value {
+        serde_json::Value::String(raw) => (raw.trim().to_ascii_lowercase(), None),
+        serde_json::Value::Object(map) => {
+            let scheme = map
+                .get("scheme")
+                .and_then(serde_json::Value::as_str)
+                .unwrap_or("bearer")
+                .trim()
+                .to_ascii_lowercase();
+            (scheme, Some(map))
+        }
+        _ => return ProviderAuth::Bearer,
+    };
+    let field = |key: &str| -> Option<String> {
+        obj.and_then(|map| map.get(key))
+            .and_then(serde_json::Value::as_str)
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(str::to_string)
+    };
+    match scheme.as_str() {
+        "api_key" | "apikey" | "api-key" => ProviderAuth::ApiKey {
+            header: field("header").unwrap_or_else(|| "X-API-Key".to_string()),
+        },
+        "basic" => ProviderAuth::Basic {
+            username: field("username").unwrap_or_default(),
+        },
+        "hmac" => ProviderAuth::Hmac {
+            header: field("header").unwrap_or_else(|| "X-Signature".to_string()),
+        },
+        // "bearer" and anything unrecognized fail safe to the bearer default.
+        _ => ProviderAuth::Bearer,
     }
 }
 
@@ -179,12 +403,32 @@ pub(crate) fn parse_notification_delivery_providers_json(
                 .map(str::trim)
                 .filter(|s| !s.is_empty())
                 .map(str::to_string);
+            let auth = parse_provider_auth(obj.get("auth"));
+            let optional_string = |key: &str| -> Option<String> {
+                obj.get(key)
+                    .and_then(serde_json::Value::as_str)
+                    .map(str::trim)
+                    .filter(|s| !s.is_empty())
+                    .map(str::to_string)
+            };
+            // Default the idempotency header on; an explicit "" opts out.
+            let idempotency_header = obj
+                .get("idempotency_header")
+                .and_then(serde_json::Value::as_str)
+                .map(|s| s.trim().to_string())
+                .unwrap_or_else(|| DEFAULT_IDEMPOTENCY_HEADER.to_string());
+            let message_id_header = optional_string("message_id_header");
+            let message_id_json_path = optional_string("message_id_json_path");
             Some(NotificationDeliveryProvider {
                 channel,
                 provider,
                 endpoint_url,
                 wrapped_credential,
                 body_template,
+                auth,
+                idempotency_header,
+                message_id_header,
+                message_id_json_path,
             })
         })
         .collect()
@@ -259,7 +503,6 @@ async fn load_notification_delivery_intents(
          FROM {log_rel} l \
          WHERE l.{status} = $1 \
            AND COALESCE(l.{tenant_id}::TEXT, '') <> '' \
-           AND COALESCE(l.{recipient_address}::TEXT, '') <> '' \
            AND NOT EXISTS ( \
                SELECT 1 FROM {attempt_rel} a \
                WHERE a.{attempt_notification_id} = l.{log_id} \
@@ -309,6 +552,10 @@ async fn record_attempt_outcome(
     status_db: &str,
     last_error: &str,
     provider_message_id: &str,
+    // A permanent failure (e.g. a missing recipient address) moves the log to the
+    // terminal FAILED state on THIS attempt rather than waiting for the bounded
+    // retry budget to exhaust — retrying a permanent error just loops.
+    force_terminal: bool,
 ) {
     let channel_db = channel_to_db(intent.channel);
     // Capture the stored attempt row: its `attempt_count` (bumped by the upsert on
@@ -359,7 +606,7 @@ async fn record_attempt_outcome(
             .as_ref()
             .and_then(|row| row.try_get::<i32, _>("attempt_count").ok())
             .unwrap_or(0);
-        if delivery_exhausted_retries(attempt_count, max_delivery_attempts()) {
+        if force_terminal || delivery_exhausted_retries(attempt_count, max_delivery_attempts()) {
             if let Err(err) = transition_log_status(
                 pool,
                 notification_id,
@@ -428,6 +675,27 @@ pub(crate) async fn run_notification_delivery_once(
         let Ok(notification_id) = Uuid::parse_str(intent.log_id.trim()) else {
             continue;
         };
+        // An address-bearing channel (EMAIL/SMS/PUSH) with an empty
+        // `recipient_address` can NEVER be delivered — without this it would sit
+        // PENDING and be re-scanned forever. Fail it out of the queue with a clear
+        // reason (permanent → terminal FAILED on this attempt). IN_APP has no
+        // address by design and is never failed here.
+        if missing_recipient_should_fail(intent.channel, &intent.recipient_address) {
+            record_attempt_outcome(
+                pool,
+                outbox_relation,
+                metrics,
+                notification_id,
+                intent,
+                "",
+                "FAILED",
+                "missing recipient address",
+                "",
+                true,
+            )
+            .await;
+            continue;
+        }
         // The provider configured for this channel.
         let Some(provider) = providers.iter().find(|p| p.channel == intent.channel) else {
             record_attempt_outcome(
@@ -440,6 +708,7 @@ pub(crate) async fn run_notification_delivery_once(
                 "FAILED",
                 "no delivery provider configured for channel",
                 "",
+                false,
             )
             .await;
             continue;
@@ -461,6 +730,7 @@ pub(crate) async fn run_notification_delivery_once(
                 "FAILED",
                 err.message(),
                 "",
+                false,
             )
             .await;
             continue;
@@ -479,6 +749,7 @@ pub(crate) async fn run_notification_delivery_once(
                     "FAILED",
                     "provider credential unavailable (vault sealed?)",
                     "",
+                    false,
                 )
                 .await;
                 continue;
@@ -510,6 +781,7 @@ pub(crate) async fn run_notification_delivery_once(
                         "FAILED",
                         &err,
                         "",
+                        false,
                     )
                     .await;
                     continue;
@@ -521,22 +793,55 @@ pub(crate) async fn run_notification_delivery_once(
                 "body": intent.rendered_body,
             }),
         };
-        // Attempt delivery: POST the rendered message to the provider API,
-        // authenticated with the decrypted credential (used, never logged).
-        let outcome = http
+        // Serialize the body ONCE so the HMAC scheme signs exactly the bytes sent.
+        let body_bytes = match serde_json::to_string(&request_body) {
+            Ok(body) => body,
+            Err(err) => {
+                record_attempt_outcome(
+                    pool,
+                    outbox_relation,
+                    metrics,
+                    notification_id,
+                    intent,
+                    &provider.provider,
+                    "FAILED",
+                    &format!("notification body serialization failed: {err}"),
+                    "",
+                    false,
+                )
+                .await;
+                continue;
+            }
+        };
+        // Attempt delivery: POST the rendered message to the provider API. A stable
+        // idempotency key (log_id:channel) lets the provider dedupe a crash-retry so
+        // it can't double-send, and the per-provider auth scheme is applied with the
+        // decrypted credential (used, never logged).
+        let mut builder = http
             .post(provider.endpoint_url.as_str())
-            .bearer_auth(credential.0.as_str())
-            .json(&request_body)
-            .send()
-            .await;
+            .header(reqwest::header::CONTENT_TYPE, "application/json")
+            .body(body_bytes.clone());
+        if !provider.idempotency_header.trim().is_empty() {
+            builder = builder.header(
+                provider.idempotency_header.as_str(),
+                idempotency_key(&intent.log_id, channel_to_db(intent.channel)).as_str(),
+            );
+        }
+        builder = match build_auth_application(&provider.auth, credential.0.as_str(), &body_bytes) {
+            ProviderAuthApplication::Bearer(token) => builder.bearer_auth(token),
+            ProviderAuthApplication::Basic { username, password } => {
+                builder.basic_auth(username, Some(password))
+            }
+            ProviderAuthApplication::Header { name, value } => {
+                builder.header(name.as_str(), value.as_str())
+            }
+        };
+        let outcome = builder.send().await;
         match outcome {
             Ok(resp) if resp.status().is_success() => {
-                let provider_message_id = resp
-                    .headers()
-                    .get("x-provider-message-id")
-                    .and_then(|v| v.to_str().ok())
-                    .unwrap_or_default()
-                    .to_string();
+                // Parse the provider's REAL message-id from its configured response
+                // header / JSON path (not a made-up header) into provider_message_id.
+                let provider_message_id = extract_provider_message_id(provider, resp).await;
                 record_attempt_outcome(
                     pool,
                     outbox_relation,
@@ -547,6 +852,7 @@ pub(crate) async fn run_notification_delivery_once(
                     "SENT",
                     "",
                     &provider_message_id,
+                    false,
                 )
                 .await;
                 delivered = delivered.saturating_add(1);
@@ -563,6 +869,7 @@ pub(crate) async fn run_notification_delivery_once(
                     "FAILED",
                     &format!("provider returned status {status}"),
                     "",
+                    false,
                 )
                 .await;
             }
@@ -577,6 +884,7 @@ pub(crate) async fn run_notification_delivery_once(
                     "FAILED",
                     &err.to_string(),
                     "",
+                    false,
                 )
                 .await;
             }
@@ -606,9 +914,13 @@ pub(crate) async fn run_notification_delivery_worker_once(
     let deliverable = intents
         .into_iter()
         .filter(|intent| {
-            providers
-                .iter()
-                .any(|provider| provider.channel == intent.channel)
+            // Keep intents a configured provider can serve, PLUS undeliverable
+            // empty-address rows on an address-bearing channel so the worker can
+            // fail them out of the queue instead of leaving them to loop forever.
+            missing_recipient_should_fail(intent.channel, &intent.recipient_address)
+                || providers
+                    .iter()
+                    .any(|provider| provider.channel == intent.channel)
         })
         .collect::<Vec<_>>();
     let delivered = run_notification_delivery_once(
@@ -626,7 +938,143 @@ pub(crate) async fn run_notification_delivery_worker_once(
 
 #[cfg(test)]
 mod delivery_tests {
-    use super::render_provider_body;
+    use super::{
+        ProviderAuth, ProviderAuthApplication, build_auth_application, extract_json_path,
+        idempotency_key, missing_recipient_should_fail, render_provider_body,
+    };
+    use crate::proto::udb::core::notification::entity::v1::NotificationChannel as C;
+
+    // ── item 1: per-provider auth scheme ────────────────────────────────────
+    #[test]
+    fn bearer_auth_uses_the_credential_as_the_token() {
+        match build_auth_application(&ProviderAuth::Bearer, "sekret", "{}") {
+            ProviderAuthApplication::Bearer(token) => assert_eq!(token, "sekret"),
+            _ => panic!("bearer scheme must produce a bearer token"),
+        }
+    }
+
+    #[test]
+    fn api_key_auth_sets_the_configured_header_to_the_credential() {
+        match build_auth_application(
+            &ProviderAuth::ApiKey {
+                header: "X-API-Key".to_string(),
+            },
+            "sekret",
+            "{}",
+        ) {
+            ProviderAuthApplication::Header { name, value } => {
+                assert_eq!(name, "X-API-Key");
+                assert_eq!(value, "sekret");
+            }
+            _ => panic!("api_key scheme must produce a header"),
+        }
+    }
+
+    #[test]
+    fn basic_auth_uses_the_credential_as_the_password() {
+        match build_auth_application(
+            &ProviderAuth::Basic {
+                username: "svc-user".to_string(),
+            },
+            "sekret",
+            "{}",
+        ) {
+            ProviderAuthApplication::Basic { username, password } => {
+                assert_eq!(username, "svc-user");
+                assert_eq!(password, "sekret");
+            }
+            _ => panic!("basic scheme must produce basic credentials"),
+        }
+    }
+
+    #[test]
+    fn hmac_auth_signs_the_body_into_the_configured_header() {
+        let body = r#"{"to":"a@example.com"}"#;
+        let app = build_auth_application(
+            &ProviderAuth::Hmac {
+                header: "X-Signature".to_string(),
+            },
+            "sekret",
+            body,
+        );
+        let expected = {
+            let mac = crate::runtime::security::hmac_sha256(b"sekret", body.as_bytes());
+            mac.iter().map(|b| format!("{b:02x}")).collect::<String>()
+        };
+        match app {
+            ProviderAuthApplication::Header { name, value } => {
+                assert_eq!(name, "X-Signature");
+                assert_eq!(value.len(), 64, "hex HMAC-SHA256 is 64 chars: {value}");
+                assert_eq!(
+                    value, expected,
+                    "signature must be HMAC-SHA256(credential, body)"
+                );
+                // The body must change the signature (it is over the body, not fixed).
+                let other = build_auth_application(
+                    &ProviderAuth::Hmac {
+                        header: "X-Signature".to_string(),
+                    },
+                    "sekret",
+                    r#"{"to":"b@example.com"}"#,
+                );
+                if let ProviderAuthApplication::Header { value: v2, .. } = other {
+                    assert_ne!(
+                        value, v2,
+                        "a different body must yield a different signature"
+                    );
+                }
+            }
+            _ => panic!("hmac scheme must produce a header"),
+        }
+    }
+
+    // ── item 2: idempotency key + JSON-path message-id ──────────────────────
+    #[test]
+    fn idempotency_key_is_stable_per_log_and_channel() {
+        assert_eq!(idempotency_key("log-abc", "EMAIL"), "log-abc:EMAIL");
+        // Same inputs → same key (a crash-retry POST reuses it, so the provider
+        // dedupes); a different channel is a distinct delivery, hence a distinct key.
+        assert_eq!(
+            idempotency_key("log-abc", "EMAIL"),
+            idempotency_key("log-abc", "EMAIL")
+        );
+        assert_ne!(
+            idempotency_key("log-abc", "EMAIL"),
+            idempotency_key("log-abc", "SMS")
+        );
+    }
+
+    #[test]
+    fn extract_json_path_walks_objects_and_array_indices() {
+        let body = serde_json::json!({
+            "data": { "id": "msg-42" },
+            "messages": [ { "id": "m0" }, { "id": "m1" } ],
+            "count": 7
+        });
+        assert_eq!(extract_json_path(&body, "data.id"), "msg-42");
+        assert_eq!(extract_json_path(&body, "messages.1.id"), "m1");
+        assert_eq!(extract_json_path(&body, "count"), "7");
+        // A missing key or a non-scalar terminus yields "" (never panics).
+        assert_eq!(extract_json_path(&body, "data.missing"), "");
+        assert_eq!(extract_json_path(&body, "data"), "");
+    }
+
+    // ── item 3: empty recipient_address decision ────────────────────────────
+    #[test]
+    fn empty_address_fails_email_but_never_in_app() {
+        // EMAIL/SMS/PUSH with no address can never be delivered → fail out.
+        assert!(missing_recipient_should_fail(C::Email as i32, ""));
+        assert!(missing_recipient_should_fail(C::Email as i32, "   "));
+        assert!(missing_recipient_should_fail(C::Sms as i32, ""));
+        assert!(missing_recipient_should_fail(C::Push as i32, ""));
+        // IN_APP legitimately has no address → must NOT be failed.
+        assert!(!missing_recipient_should_fail(C::InApp as i32, ""));
+        // A present address is always fine, regardless of channel.
+        assert!(!missing_recipient_should_fail(
+            C::Email as i32,
+            "a@example.com"
+        ));
+    }
 
     #[test]
     fn template_substitutes_and_parses_a_non_default_shape() {

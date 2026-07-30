@@ -2977,7 +2977,14 @@ pub async fn serve(
         {
             let singleton_relation = notification_runtime.config().cdc.lock_log_relation();
             let outbox_relation = notification_runtime.config().cdc.outbox_relation();
-            let http = reqwest::Client::new();
+            // Bound each provider POST so one hung provider can't stall the whole
+            // sequential delivery batch (UDB_NOTIFICATION_DELIVERY_TIMEOUT_SECS).
+            let http = reqwest::Client::builder()
+                .timeout(
+                    crate::runtime::service::notification_service::notification_delivery_timeout(),
+                )
+                .build()
+                .unwrap_or_else(|_| reqwest::Client::new());
             let lease_pool = notification_pool.clone();
             let metrics: Arc<dyn MetricsRecorder> = service.metrics.clone();
             crate::runtime::service::native_runtime::NativeWorkerHost::spawn_while_leader(

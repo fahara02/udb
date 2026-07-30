@@ -15,6 +15,7 @@
 use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD as BASE64_STANDARD;
 use chrono::Utc;
+use sqlx::Row;
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
 
@@ -23,17 +24,16 @@ use crate::proto::udb::core::vault::services::v1 as vault_pb;
 use crate::runtime::channels::OperationChannel;
 
 use super::super::native_helpers::{
-    admit_on as native_admit_on, native_next_page_token_for_total, native_offset_page_window,
-    native_service_context, non_empty_json, validate_request_tenant,
+    admit_on as native_admit_on, native_service_context, non_empty_json, validate_request_tenant,
 };
 use super::VaultServiceImpl;
 use super::config::{
     DEFAULT_DB_CREDENTIAL_MAX_TTL_SECONDS, DEFAULT_TRANSIT_ALGORITHM, KEY_STATE_ACTIVE,
     KEY_STATE_VERIFYING, MAX_LIST_SECRETS, SIGNING_TRANSIT_ALGORITHM, STATE_ACTIVE, STATE_DELETED,
-    STATE_DESTROYED, TOPIC_DB_CREDENTIAL_ISSUED, TOPIC_KEY_CREATED, TOPIC_KEY_ROTATED,
+    TOPIC_DATA_KEY_GENERATED, TOPIC_DB_CREDENTIAL_ISSUED, TOPIC_KEY_CREATED, TOPIC_KEY_ROTATED,
     TOPIC_SECRET_ACCESSED, TOPIC_SECRET_DELETED, TOPIC_SECRET_DESTROYED, TOPIC_SECRET_LISTED,
     TOPIC_SECRET_PUT, TOPIC_SECRET_RESTORED, TOPIC_TRANSIT_DECRYPTED, TOPIC_TRANSIT_ENCRYPTED,
-    TOPIC_TRANSIT_HMAC, TOPIC_TRANSIT_SIGNED, TOPIC_TRANSIT_VERIFIED,
+    TOPIC_TRANSIT_HMAC, TOPIC_TRANSIT_REWRAPPED, TOPIC_TRANSIT_SIGNED, TOPIC_TRANSIT_VERIFIED,
     VAULT_DB_CREDENTIAL_LEASE_MSG, VAULT_ED25519_PREFIX, VAULT_HMAC_PREFIX, VAULT_SECRET_MSG,
     VAULT_TRANSIT_KEY_MSG, max_batch_encrypt_items,
 };
@@ -49,15 +49,20 @@ use super::dynamic::{
     vault_db_role_configs,
 };
 use super::errors::{
-    vault_confirmation_token_mismatch_status, vault_confirmation_token_required_status,
-    vault_db_credentials_config_status, vault_db_native_store_required_status,
-    vault_field_violation, vault_internal_status, vault_required_key_name,
-    vault_required_secret_path, vault_schema_already_exists_status, vault_schema_not_found_status,
+    is_duplicate_conflict, vault_confirmation_token_mismatch_status,
+    vault_confirmation_token_required_status, vault_db_credentials_config_status,
+    vault_db_native_store_required_status, vault_field_violation, vault_internal_status,
+    vault_native_store_required_status, vault_required_key_name, vault_required_secret_path,
+    vault_schema_already_exists_status, vault_schema_not_found_status,
+    vault_secret_cas_conflict_status,
 };
-use super::model::{active_transit, json_i64, json_object, json_str, transit_version};
+use super::model::{active_transit, select_readable_secret, transit_version};
+use super::quota::admit_transit_op;
 use super::store::{
-    db_credential_lease_record, secret_conflict, secret_list_read, secret_record,
-    transit_key_conflict, transit_key_record,
+    db_credential_lease_record, like_prefix_pattern, secret_conflict,
+    secret_count_distinct_paths_sql, secret_list_page_sql, secret_record, secret_shred_all_sql,
+    transit_demote_active_sql, transit_insert_rotated_sql, transit_key_conflict,
+    transit_key_record,
 };
 
 // ── KV engine ─────────────────────────────────────────────────────────────
@@ -114,7 +119,13 @@ pub(crate) async fn put_secret(
     let wrapped = wrap_dek(runtime, &dek)?;
     let metadata_json = non_empty_json(&req.metadata_json);
 
-    runtime
+    // The version pre-check above is a fast-path TOCTOU guard; the AUTHORITATIVE
+    // compare-and-swap is the unique `(tenant_id, secret_path, version)` index.
+    // Insert with `ConflictStrategy::Error` so a concurrent writer that already
+    // committed `new_version` collides at the database, and map that typed
+    // `AlreadyExists` to the `ABORTED` the proto promises (retryable) rather than
+    // leaking a raw Postgres `23505`.
+    if let Err(status) = runtime
         .native_entity_write_for_service(
             "vault",
             &context,
@@ -129,9 +140,15 @@ pub(crate) async fn put_secret(
                 STATE_ACTIVE,
                 &metadata_json,
             ),
-            secret_conflict(),
+            ConflictStrategy::Error,
         )
-        .await?;
+        .await
+    {
+        if is_duplicate_conflict(&status) {
+            return Err(vault_secret_cas_conflict_status(new_version));
+        }
+        return Err(status);
+    }
 
     svc.emit(
         TOPIC_SECRET_PUT,
@@ -184,17 +201,10 @@ pub(crate) async fn get_secret(
     let versions = svc
         .read_secret_versions(runtime, &context, &tenant_id, &secret_path)
         .await?;
-    let selected = if req.version > 0 {
-        versions
-            .iter()
-            .find(|s| s.version == i64::from(req.version) && s.state != STATE_DESTROYED)
-    } else {
-        versions
-            .iter()
-            .filter(|s| s.state == STATE_ACTIVE)
-            .max_by_key(|s| s.version)
-    };
-    let secret = selected.ok_or_else(|| {
+    // A soft-DELETED (or DESTROYED) version is not a readable value, whether or
+    // not the caller names an explicit version — `version = 0` and `version = N`
+    // both require ACTIVE (see `select_readable_secret`).
+    let secret = select_readable_secret(&versions, i64::from(req.version)).ok_or_else(|| {
         vault_schema_not_found_status("get_secret", "vault_secret_not_found", "secret not found")
     })?;
 
@@ -251,51 +261,78 @@ pub(crate) async fn list_secrets(
         None,
     )
     .await?;
-    let runtime = svc.require_runtime()?;
     let context = native_service_context(&metadata, &tenant_id, "");
+    let pool = svc
+        .pg_pool
+        .as_ref()
+        .ok_or_else(|| vault_native_store_required_status("list_secrets"))?;
 
-    let rows = runtime
-        .native_entity_read_for_service(
-            "vault",
-            &context,
-            secret_list_read(&tenant_id, &req.path_prefix),
-        )
-        .await?;
-    // Aggregate versions → one summary per path (its highest version + state).
-    let mut by_path: std::collections::BTreeMap<String, (i64, String)> =
-        std::collections::BTreeMap::new();
-    for row in &rows {
-        let map = json_object(row);
-        let path = json_str(map, "secret_path");
-        if path.is_empty() {
-            continue;
-        }
-        let version = json_i64(map, "version");
-        let state = json_str(map, "state");
-        by_path
-            .entry(path)
-            .and_modify(|cur| {
-                if version > cur.0 {
-                    *cur = (version, state.clone());
-                }
-            })
-            .or_insert((version, state));
+    let prefix = req.path_prefix.trim();
+    let has_prefix = !prefix.is_empty();
+    let cursor = req.page_token.trim();
+    let has_cursor = !cursor.is_empty();
+    // Page size: the request `page_size` (default 50) clamped to the per-list cap.
+    let page_size = if req.page_size > 0 {
+        (req.page_size as usize).min(MAX_LIST_SECRETS as usize)
+    } else {
+        50usize.min(MAX_LIST_SECRETS as usize)
+    };
+
+    // Correct DISTINCT-path total (no in-memory truncation at the version-scan
+    // cap): computed in the store over ALL matching versions.
+    let count_sql = secret_count_distinct_paths_sql(has_prefix);
+    let mut count_query = sqlx::query_scalar::<sqlx::Postgres, i64>(&count_sql).bind(&tenant_id);
+    if has_prefix {
+        count_query = count_query.bind(like_prefix_pattern(prefix));
     }
-    let total_count = by_path.len() as i32;
-    let page_window = native_offset_page_window(req.page, req.page_size, &req.page_token, 50);
-    let secrets = by_path
-        .into_iter()
-        .skip(page_window.offset)
-        .take(page_window.limit.min(MAX_LIST_SECRETS as usize))
-        .map(
-            |(secret_path, (latest_version, state))| vault_pb::SecretSummary {
-                secret_path,
-                latest_version: latest_version as i32,
-                state,
-            },
-        )
-        .collect::<Vec<_>>();
+    let total_count = count_query
+        .fetch_one(pool)
+        .await
+        .map_err(|err| vault_internal_status("list_secrets_count", err.to_string()))?
+        as i32;
+
+    // Keyset (seek) page: latest version + state per path, ordered by path so the
+    // last row's path is the next cursor — no OFFSET scan, no truncated total.
+    let page_sql = secret_list_page_sql(has_prefix, has_cursor);
+    let mut page_query = sqlx::query(&page_sql).bind(&tenant_id);
+    if has_prefix {
+        page_query = page_query.bind(like_prefix_pattern(prefix));
+    }
+    if has_cursor {
+        page_query = page_query.bind(cursor.to_string());
+    }
+    page_query = page_query.bind(page_size as i64);
+    let rows = page_query
+        .fetch_all(pool)
+        .await
+        .map_err(|err| vault_internal_status("list_secrets_page", err.to_string()))?;
+
+    let secrets = rows
+        .iter()
+        .map(|row| {
+            Ok(vault_pb::SecretSummary {
+                secret_path: row
+                    .try_get::<String, _>("secret_path")
+                    .map_err(|err| vault_internal_status("list_secrets_decode", err.to_string()))?,
+                latest_version: row
+                    .try_get::<i32, _>("latest_version")
+                    .map_err(|err| vault_internal_status("list_secrets_decode", err.to_string()))?,
+                state: row
+                    .try_get::<String, _>("state")
+                    .map_err(|err| vault_internal_status("list_secrets_decode", err.to_string()))?,
+            })
+        })
+        .collect::<Result<Vec<_>, Status>>()?;
     let returned_count = secrets.len() as i64;
+    // A full page means there may be more; the cursor is the last path returned.
+    let next_page_token = if secrets.len() == page_size {
+        secrets
+            .last()
+            .map(|s| s.secret_path.clone())
+            .unwrap_or_default()
+    } else {
+        String::new()
+    };
 
     // Fulfil the declared `udb.vault.secret.listed.v1` event contract (was
     // declared in the proto but never emitted). Metadata only — counts and the
@@ -306,10 +343,10 @@ pub(crate) async fn list_secrets(
         &tenant_id,
         &context.project_id,
         "list",
-        req.path_prefix.trim(),
+        prefix,
         serde_json::json!({
             "tenant_id": tenant_id,
-            "path_prefix": req.path_prefix.trim(),
+            "path_prefix": prefix,
             "returned_count": returned_count,
             "total_count": total_count,
         }),
@@ -320,11 +357,7 @@ pub(crate) async fn list_secrets(
         secrets,
         total_count,
         error: None,
-        next_page_token: native_next_page_token_for_total(
-            page_window.offset,
-            page_window.limit.min(MAX_LIST_SECRETS as usize),
-            total_count as i64,
-        ),
+        next_page_token,
     }))
 }
 
@@ -526,36 +559,35 @@ pub(crate) async fn destroy_secret(
         None,
     )
     .await?;
-    let runtime = svc.require_runtime()?;
+    // The whole service requires the native runtime/store; gate on it here so a
+    // misconfigured deployment fails closed with the runtime capability detail
+    // (rather than a bare "no pool") before touching the store.
+    svc.require_runtime()?;
     let context = native_service_context(&metadata, &tenant_id, "");
+    let pool = svc
+        .pg_pool
+        .as_ref()
+        .ok_or_else(|| vault_native_store_required_status("destroy_secret"))?;
 
-    let versions = svc
-        .read_secret_versions(runtime, &context, &tenant_id, &secret_path)
-        .await?;
-    let mut destroyed = 0u32;
-    for secret in versions.iter().filter(|s| s.state != STATE_DESTROYED) {
-        // Crypto-shred: clear the wrapped DEK + ciphertext so the value is
-        // irrecoverable even if the row survives.
-        runtime
-            .native_entity_write_for_service(
-                "vault",
-                &context,
-                VAULT_SECRET_MSG,
-                secret_record(
-                    &secret.secret_id,
-                    &tenant_id,
-                    &secret_path,
-                    secret.version,
-                    "",
-                    "",
-                    STATE_DESTROYED,
-                    "{}",
-                ),
-                secret_conflict(),
-            )
-            .await?;
-        destroyed += 1;
-    }
+    // ATOMIC multi-version crypto-shred: clear the ciphertext + wrapped DEK and
+    // flip every non-DESTROYED version to DESTROYED in ONE statement, inside a
+    // transaction. The former per-version loop could fail mid-way, leaving a
+    // partial shred and an undercounted result; `rows_affected` is now the exact
+    // destroyed count.
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|err| vault_internal_status("destroy_begin_tx", err.to_string()))?;
+    let shred = sqlx::query(&secret_shred_all_sql())
+        .bind(&tenant_id)
+        .bind(&secret_path)
+        .execute(&mut *tx)
+        .await
+        .map_err(|err| vault_internal_status("destroy_shred_versions", err.to_string()))?;
+    tx.commit()
+        .await
+        .map_err(|err| vault_internal_status("destroy_commit_tx", err.to_string()))?;
+    let destroyed = shred.rows_affected() as u32;
 
     svc.emit(
         TOPIC_SECRET_DESTROYED,
@@ -695,52 +727,48 @@ pub(crate) async fn rotate_transit_key(
             "transit key not found",
         ));
     }
-    let max_version = versions.iter().map(|k| k.version).max().unwrap_or(0);
+    // Carry the ACTIVE version's purpose/algorithm forward to the new version.
     let algorithm = active_transit(&versions)
         .map(|k| k.algorithm.clone())
         .unwrap_or_else(|| DEFAULT_TRANSIT_ALGORITHM.to_string());
 
-    // Demote every current ACTIVE version to VERIFYING (rotation overlap).
-    for key in versions.iter().filter(|k| k.state == KEY_STATE_ACTIVE) {
-        runtime
-            .native_entity_write_for_service(
-                "vault",
-                &context,
-                VAULT_TRANSIT_KEY_MSG,
-                transit_key_record(
-                    &key.key_id,
-                    &tenant_id,
-                    &key_name,
-                    key.version,
-                    &key.algorithm,
-                    &key.wrapped_key_material,
-                    KEY_STATE_VERIFYING,
-                ),
-                transit_key_conflict(),
-            )
-            .await?;
-    }
-
-    let new_version = max_version + 1;
+    // Mint the new version's wrapped DEK before opening the transaction (the
+    // master-KEK wrap is fallible and must not hold a DB tx open).
     let dek = DataKey::generate();
     let wrapped = wrap_dek(runtime, &dek)?;
-    runtime
-        .native_entity_write_for_service(
-            "vault",
-            &context,
-            VAULT_TRANSIT_KEY_MSG,
-            transit_key_record(
-                &Uuid::new_v4().to_string(),
-                &tenant_id,
-                &key_name,
-                new_version,
-                &algorithm,
-                &wrapped,
-                KEY_STATE_ACTIVE,
-            ),
-            transit_key_conflict(),
-        )
-        .await?;
+    let new_key_id = Uuid::new_v4().to_string();
+    let pool = svc
+        .pg_pool
+        .as_ref()
+        .ok_or_else(|| vault_native_store_required_status("rotate_transit_key"))?;
+
+    // ATOMIC rotation: demote every ACTIVE version to VERIFYING AND insert the new
+    // ACTIVE version in ONE transaction, so a concurrent Encrypt/Sign can never
+    // observe zero ACTIVE versions between the demote and the insert (the old
+    // per-write loop left that window open). The new version number is computed
+    // as `MAX(version)+1` inside the tx, so concurrent rotations cannot collide.
+    let mut tx = pool
+        .begin()
+        .await
+        .map_err(|err| vault_internal_status("rotate_begin_tx", err.to_string()))?;
+    sqlx::query(&transit_demote_active_sql())
+        .bind(&tenant_id)
+        .bind(&key_name)
+        .execute(&mut *tx)
+        .await
+        .map_err(|err| vault_internal_status("rotate_demote_active", err.to_string()))?;
+    let new_version: i32 = sqlx::query_scalar(&transit_insert_rotated_sql())
+        .bind(&new_key_id)
+        .bind(&tenant_id)
+        .bind(&key_name)
+        .bind(&algorithm)
+        .bind(&wrapped)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(|err| vault_internal_status("rotate_insert_active", err.to_string()))?;
+    tx.commit()
+        .await
+        .map_err(|err| vault_internal_status("rotate_commit_tx", err.to_string()))?;
 
     svc.emit(
         TOPIC_KEY_ROTATED,
@@ -755,7 +783,7 @@ pub(crate) async fn rotate_transit_key(
 
     Ok(Response::new(vault_pb::RotateTransitKeyResponse {
         key_name,
-        version: new_version as i32,
+        version: new_version,
         message: "transit key rotated".to_string(),
         error: None,
     }))
@@ -774,6 +802,9 @@ pub(crate) async fn encrypt(
     if key_name.is_empty() {
         return Err(vault_required_key_name());
     }
+    // Per-tenant transit-op volume cap (fail-closed RESOURCE_EXHAUSTED) before any
+    // admission, DB read, or master-key unwrap.
+    admit_transit_op(&tenant_id, "encrypt")?;
     let _admit = native_admit_on(
         svc.channels.as_ref(),
         &svc.metrics,
@@ -923,6 +954,10 @@ pub(crate) async fn batch_encrypt(
             ),
         ));
     }
+    // Per-tenant transit-op volume cap (fail-closed RESOURCE_EXHAUSTED). Charged
+    // once per BatchEncrypt request (one admission decision), consistent with the
+    // single-op transit RPCs.
+    admit_transit_op(&tenant_id, "batch_encrypt")?;
     let _admit = native_admit_on(
         svc.channels.as_ref(),
         &svc.metrics,
@@ -1100,9 +1135,10 @@ pub(crate) async fn generate_data_key(
     let ciphertext = dek_seal(&transit_dek, active.version, &new_dek.0)?;
     let plaintext = new_dek.to_b64();
 
-    // Audit the key generation (no key material — only tenant/key/version).
+    // Audit the key generation on its OWN topic (no key material — only
+    // tenant/key/version); previously conflated under `transit.encrypted`.
     svc.emit(
-        TOPIC_TRANSIT_ENCRYPTED,
+        TOPIC_DATA_KEY_GENERATED,
         &key_name,
         &tenant_id,
         &context.project_id,
@@ -1182,9 +1218,10 @@ pub(crate) async fn rewrap(
     let active_dek = unwrap_dek(runtime, &active.wrapped_key_material)?;
     let ciphertext = dek_seal(&active_dek, active.version, &raw)?;
 
-    // Audit the rewrap (no key material — only tenant/key/old+new version).
+    // Audit the rewrap on its OWN topic (no key material — only tenant/key/old+new
+    // version); previously conflated under `transit.encrypted`.
     svc.emit(
-        TOPIC_TRANSIT_ENCRYPTED,
+        TOPIC_TRANSIT_REWRAPPED,
         &key_name,
         &tenant_id,
         &context.project_id,
@@ -1282,6 +1319,8 @@ pub(crate) async fn sign(
     if key_name.is_empty() {
         return Err(vault_required_key_name());
     }
+    // Per-tenant transit-op volume cap (fail-closed RESOURCE_EXHAUSTED).
+    admit_transit_op(&tenant_id, "sign")?;
     let _admit = native_admit_on(
         svc.channels.as_ref(),
         &svc.metrics,
@@ -1435,6 +1474,8 @@ pub(crate) async fn hmac(
     if key_name.is_empty() {
         return Err(vault_required_key_name());
     }
+    // Per-tenant transit-op volume cap (fail-closed RESOURCE_EXHAUSTED).
+    admit_transit_op(&tenant_id, "hmac")?;
     let _admit = native_admit_on(
         svc.channels.as_ref(),
         &svc.metrics,

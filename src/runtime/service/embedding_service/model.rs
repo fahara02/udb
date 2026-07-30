@@ -158,6 +158,36 @@ impl StoredModel {
             self.collection_alias.as_str()
         }
     }
+
+    /// The dimensionality this model actually serves at (Part B.2.3 Matryoshka).
+    /// Equals `dimensions` unless `matryoshka_dims` selects a smaller cut — see
+    /// [`super::config::select_matryoshka_dim`]. Used for the collection geometry,
+    /// the sidecar `truncate_dim` hint, the stored/fresh vector truncation, and
+    /// the Retrieve query-vector cut so all four agree.
+    pub(crate) fn serving_dim(&self) -> i32 {
+        super::config::select_matryoshka_dim(
+            self.dimensions,
+            &self.matryoshka_dims_json,
+            super::config::embedding_matryoshka_strategy(),
+        )
+    }
+}
+
+/// Truncate an embedding to its first `dim` components (Matryoshka prefix). A
+/// non-positive `dim`, or a vector already at/under `dim`, is returned unchanged,
+/// so a non-Matryoshka model (whose `serving_dim == dimensions`) is a no-op.
+/// Cosine similarity is magnitude-invariant and the stored vectors are truncated
+/// the same way, so no re-normalization is required. Pure — unit-tested.
+pub(crate) fn truncate_embedding_vector(vector: Vec<f32>, dim: i32) -> Vec<f32> {
+    if dim <= 0 {
+        return vector;
+    }
+    let dim = dim as usize;
+    if vector.len() <= dim {
+        vector
+    } else {
+        vector[..dim].to_vec()
+    }
 }
 
 pub(crate) fn stored_model_from_json(row: &serde_json::Value) -> StoredModel {
@@ -476,6 +506,46 @@ pub(crate) fn merge_retrieve_scope_filter(
         }));
     }
     Ok(filter)
+}
+
+/// Build the tenant+source scope filter for the `parent_window` neighbor gather,
+/// matching ANY of the selected `parent_pks` in a SINGLE clause (Qdrant
+/// `match: { any: [...] }`). This lets the retriever fetch every neighbor chunk
+/// for all selected parents in ONE query instead of one ANN search per parent.
+/// Empty parents ⇒ `None` (nothing to gather). Pure — unit-tested.
+pub(crate) fn merge_retrieve_parent_window_filter(
+    tenant_id: &str,
+    source_name: &str,
+    parent_pks: &[String],
+) -> Result<Option<serde_json::Value>, Status> {
+    let parents: Vec<&str> = parent_pks
+        .iter()
+        .map(|value| value.trim())
+        .filter(|value| !value.is_empty())
+        .collect();
+    if parents.is_empty() {
+        return Ok(None);
+    }
+    let mut filter = merge_retrieve_filter(tenant_id, "")?;
+    let must = filter
+        .as_object_mut()
+        .and_then(|object| object.get_mut("must"))
+        .and_then(serde_json::Value::as_array_mut)
+        .ok_or_else(|| {
+            embedding_policy_status_with_code(
+                tonic::Code::Internal,
+                "embedding_retrieve_filter",
+                "mandatory_tenant_filter_missing",
+                "embedding parent-window retrieve lost its mandatory tenant filter",
+            )
+        })?;
+    must.push(serde_json::json!({
+        "key": "_source", "match": { "value": source_name }
+    }));
+    must.push(serde_json::json!({
+        "key": "_parent_pk", "match": { "any": parents }
+    }));
+    Ok(Some(filter))
 }
 
 /// Reject any filter condition (recursively, through nested must/should/must_not)
