@@ -1527,6 +1527,12 @@ mod tests {
             // the proto-derived native-service persistence backend) once via OnceLock
             // — startup-config knob, same category as the other UDB_* tuning reads.
             "src/runtime/core/native_store.rs",
+            // audit.rs has an env-GATED inline LIVE test (`RUN_AUDIT_REPRO`/`REPRO_DSN`
+            // + `UDB_AUDIT_*` via `UdbConfig::from_env`) that persists to a real
+            // Postgres to guard the durable audit sink against regression. The
+            // PRODUCTION emit path reads NO env — its config + pool are passed in — so
+            // this is the same inline-test category as `auth_service/` above.
+            "src/runtime/core/audit.rs",
             "src/runtime/executor_utils.rs",
             "src/runtime/executors/clickhouse.rs",
             "src/runtime/executors/http.rs",
