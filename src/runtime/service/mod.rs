@@ -2580,6 +2580,51 @@ pub async fn serve(
     // broker only emits deduped work events from the durable CDC journal and
     // accepts the computed vectors through ReportEmbedding.
     let embedding_service = service.build_embedding_service();
+    // Durable Postgres audit sink readiness: if UDB_AUDIT_SINK=postgres, create the
+    // audit table NOW so a broken sink surfaces at boot (loud error, fail-closed
+    // when hardened) instead of a detached writer task dying quietly and every audit
+    // silently going to stdout — the failure that made 0.4.34 look broken. The emit
+    // path itself is regression-covered by
+    // `runtime::core::audit::tests::repro_real_config_and_emit_persists`.
+    {
+        let audit_runtime = service.runtime.load_full();
+        let audit_pool = audit_runtime.pg_pool_clone();
+        match crate::runtime::core::audit::ensure_pg_audit_sink_ready(
+            &audit_runtime.config().audit_sink,
+            audit_pool.as_ref(),
+        )
+        .await
+        {
+            Ok(()) => {
+                if audit_runtime.config().audit_sink.kind
+                    == crate::runtime::config::AuditSinkKind::Postgres
+                {
+                    tracing::info!(
+                        table = audit_runtime
+                            .config()
+                            .audit_sink
+                            .pg_table
+                            .as_deref()
+                            .unwrap_or(""),
+                        "durable Postgres audit sink ready (table created/verified)"
+                    );
+                }
+            }
+            Err(err) if crate::runtime::security::fail_closed_mode() => {
+                return Err(std::io::Error::other(format!(
+                    "durable Postgres audit sink is unusable (UDB_AUDIT_SINK=postgres): {err}. \
+                     Fix UDB_AUDIT_PG_TABLE / grant CREATE on the schema, or drop fail-closed."
+                ))
+                .into());
+            }
+            Err(err) => {
+                tracing::error!(
+                    error = %err,
+                    "durable Postgres audit sink is unusable; audit events will fall back to stdout"
+                );
+            }
+        }
+    }
     // 9.1: leader-elected Vault DB-credential lease reaper — revokes expired
     // generated Postgres login roles and marks their durable lease rows REVOKED.
     {

@@ -146,16 +146,29 @@ fn pg_audit_writer(pool: &PgPool, table: &str) -> Option<&'static PgAuditWriter>
             // Drain the queue on a background task so the request path never blocks
             // on a DB write. Started inside the caller's async runtime context.
             tokio::spawn(async move {
-                if let Err(err) = ensure_pg_audit_table(&pool, &relation).await {
-                    tracing::error!(
-                        error = %err, table = %relation,
-                        "durable Postgres audit table create failed; audit events fall back to stdout"
-                    );
-                    // Returning drops `rx`; subsequent `try_send` fails → stdout.
-                    return;
-                }
                 let insert = pg_audit_insert_sql(&relation);
+                let mut table_ready = false;
+                // NEVER exit: a transient/ensure error must not permanently disable
+                // the sink (the 0.4.34 defect — the task returned, dropped `rx`, and
+                // every later audit silently fell back to stdout). Instead lazily
+                // (re)create the table until it sticks, and on ANY failure fall back
+                // to stdout (visible, never silently dropped) + retry next event.
                 while let Some(event) = rx.recv().await {
+                    if !table_ready {
+                        match ensure_pg_audit_table(&pool, &relation).await {
+                            Ok(()) => table_ready = true,
+                            Err(err) => {
+                                if !PG_AUDIT_FALLBACK_WARNED.swap(true, Ordering::Relaxed) {
+                                    tracing::error!(
+                                        error = %err, table = %relation,
+                                        "durable Postgres audit table unavailable; audit events fall back to stdout until it can be created"
+                                    );
+                                }
+                                print!("{}", audit_event_line(&event));
+                                continue;
+                            }
+                        }
+                    }
                     if let Err(err) = sqlx::query(&insert)
                         .bind(event.event_type.as_str())
                         .bind(event.tenant_id.as_str())
@@ -167,7 +180,9 @@ fn pg_audit_writer(pool: &PgPool, table: &str) -> Option<&'static PgAuditWriter>
                         .execute(&pool)
                         .await
                     {
-                        tracing::warn!(error = %err, "durable Postgres audit insert failed");
+                        tracing::warn!(error = %err, "durable Postgres audit insert failed; falling back to stdout, will re-check the table");
+                        table_ready = false;
+                        print!("{}", audit_event_line(&event));
                     }
                 }
             });
@@ -219,7 +234,7 @@ async fn ensure_pg_audit_table(pool: &PgPool, relation: &str) -> Result<(), Stri
     }
     let sql = format!(
         "CREATE TABLE IF NOT EXISTS {relation} ( \
-             audit_id UUID PRIMARY KEY DEFAULT gen_random_uuid(), \
+             audit_id BIGSERIAL PRIMARY KEY, \
              event_type VARCHAR(80) NOT NULL DEFAULT '', \
              tenant_id VARCHAR(64) NOT NULL DEFAULT '', \
              user_id VARCHAR(200) NOT NULL DEFAULT '', \
@@ -244,6 +259,36 @@ fn pg_audit_insert_sql(relation: &str) -> String {
              (event_type, tenant_id, user_id, correlation_id, purpose, resource_uri, checksum_sha256) \
          VALUES ($1, $2, $3, $4, $5, $6, $7)"
     )
+}
+
+/// Startup readiness check for the durable Postgres audit sink, called from
+/// `serve()`. When `UDB_AUDIT_SINK=postgres`, actually create the configured table
+/// NOW (on the data-plane pool) so a broken sink — a bad `UDB_AUDIT_PG_TABLE`, a
+/// missing CREATE privilege, or no Postgres pool — surfaces LOUDLY at boot with the
+/// exact reason, instead of a detached writer task dying quietly and every audit
+/// silently falling back to stdout (the failure mode that made 0.4.34 look broken).
+/// Returns `Ok(())` for a non-Postgres sink or once the table is confirmed creatable.
+pub(crate) async fn ensure_pg_audit_sink_ready(
+    config: &AuditSinkConfig,
+    pg_pool: Option<&PgPool>,
+) -> Result<(), String> {
+    if config.kind != AuditSinkKind::Postgres {
+        return Ok(());
+    }
+    let table = config.pg_table.as_deref().unwrap_or("").trim();
+    if table.is_empty() {
+        return Err(
+            "UDB_AUDIT_SINK=postgres requires UDB_AUDIT_PG_TABLE=<schema.table>".to_string(),
+        );
+    }
+    let relation = sanitize_audit_relation(table).ok_or_else(|| {
+        format!("UDB_AUDIT_PG_TABLE='{table}' is not a safe schema-qualified identifier")
+    })?;
+    let pool = pg_pool.ok_or_else(|| {
+        "UDB_AUDIT_SINK=postgres but no data-plane Postgres pool is configured (set UDB_PG_DSN)"
+            .to_string()
+    })?;
+    ensure_pg_audit_table(pool, &relation).await
 }
 
 fn append_line(path: &str, line: &str) -> std::io::Result<()> {
@@ -341,5 +386,58 @@ mod tests {
         assert!(insert.contains("$7"));
         assert!(!insert.contains("$8"));
         assert!(audit_relation_schema("audit_log").is_none());
+    }
+
+    /// EMPIRICAL end-to-end repro against a live Postgres (gated on `RUN_AUDIT_REPRO`).
+    /// Exercises the REAL `UdbConfig::from_env()` merge (does it populate
+    /// `audit_sink.pg_table`?) and the REAL `emit_audit` — the exact call the
+    /// data-plane upsert makes — and asserts a row PERSISTS rather than going to
+    /// stdout. Run with:
+    ///   RUN_AUDIT_REPRO=1 REPRO_DSN=postgres://udb:udb@127.0.0.1:55999/udb \
+    ///     cargo test --lib runtime::core::audit::tests::repro_real_config_and_emit_persists -- --nocapture
+    #[tokio::test]
+    async fn repro_real_config_and_emit_persists() {
+        if std::env::var("RUN_AUDIT_REPRO").is_err() {
+            return;
+        }
+        // SAFETY: gated single-run repro; edition-2024 requires unsafe env mutation.
+        unsafe {
+            std::env::set_var("UDB_AUDIT_SINK", "postgres");
+            std::env::set_var("UDB_AUDIT_PG_TABLE", "udb_system.data_audit_repro2");
+        }
+        // The REAL config path used by serve()/live_native_config().
+        let cfg = crate::runtime::config::UdbConfig::from_env();
+        eprintln!(
+            "REAL from_env audit_sink: kind={:?} pg_table={:?}",
+            cfg.audit_sink.kind, cfg.audit_sink.pg_table
+        );
+        assert_eq!(
+            cfg.audit_sink.kind,
+            AuditSinkKind::Postgres,
+            "from_env must set kind=Postgres"
+        );
+        assert_eq!(
+            cfg.audit_sink.pg_table.as_deref(),
+            Some("udb_system.data_audit_repro2"),
+            "from_env must populate pg_table from UDB_AUDIT_PG_TABLE"
+        );
+        let dsn = std::env::var("REPRO_DSN").expect("set REPRO_DSN");
+        let pool = sqlx::PgPool::connect(&dsn).await.expect("connect repro pg");
+        sqlx::query("DROP TABLE IF EXISTS udb_system.data_audit_repro2")
+            .execute(&pool)
+            .await
+            .ok();
+        // EXACT call shape the data-plane upsert makes.
+        emit_audit(&cfg.audit_sink, &sample(), Some(&pool));
+        tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
+        let count: i64 = sqlx::query_scalar("SELECT count(*) FROM udb_system.data_audit_repro2")
+            .fetch_one(&pool)
+            .await
+            .unwrap_or(-1);
+        eprintln!("REAL EMIT persisted rows = {count} (expected 1)");
+        assert_eq!(
+            count, 1,
+            "real config + emit must persist to Postgres, not stdout"
+        );
     }
 }

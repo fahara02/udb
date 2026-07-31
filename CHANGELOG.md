@@ -5,6 +5,28 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.4.35] - 2026-07-31
+
+### Fixed
+- **Durable Postgres audit sink: silent-failure hardening + startup validation.**
+  0.4.34 wired the sink correctly (verified: a real-crate test now exercises
+  `UdbConfig::from_env()` + `emit_audit` against Postgres and asserts a row
+  persists), but its background writer **exited on the first `ensure_table`/insert
+  error and never came back** — so a transient or misconfigured sink silently sent
+  every subsequent audit to stdout, indistinguishable from a working sink. Three
+  changes make it robust + observable:
+  - The writer **never exits** — it lazily (re)creates the table until it sticks and,
+    on any failure, falls back to stdout *visibly* and retries the next event
+    (self-healing instead of permanently dead).
+  - New **startup fail-closed validation** (`serve()`): when `UDB_AUDIT_SINK=postgres`
+    the audit table is created at boot; success logs `durable Postgres audit sink
+    ready`, failure logs the exact reason and, under fail-closed, **refuses to
+    start** — a broken sink can no longer masquerade as working.
+  - The audit table PK is now `BIGSERIAL` (no `gen_random_uuid`/pgcrypto dependency;
+    works on older Postgres).
+  Covered by `runtime::core::audit::tests::repro_real_config_and_emit_persists`
+  (env-gated live test).
+
 ## [0.4.34] - 2026-07-31
 
 ### Fixed
