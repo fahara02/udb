@@ -106,15 +106,21 @@ startup listing **every** unmet item together (not one-at-a-time). The checklist
 | Service identity | `UDB_SERVICE_IDENTITY_REQUIRED=true` **OR** the trusted-transport acknowledgment |
 | Authentication | JWT (`UDB_JWT_PUBLIC_KEY` or `UDB_JWT_JWKS_URL`) **or** mTLS |
 | No header scopes | do **not** set `UDB_ALLOW_HEADER_SCOPES` |
-| Durable audit sink | external HTTP/SIEM (`UDB_AUDIT_SINK_URL=…`) **OR** the always-on durable Postgres audit log (`UDB_AUDIT_SINK=postgres`) |
+| Durable audit sink | external HTTP/SIEM (`UDB_AUDIT_SINK_URL=…`) **OR** the data-plane Postgres audit sink (`UDB_AUDIT_SINK=postgres` + `UDB_AUDIT_PG_TABLE=<schema.table>`) **OR** the auth-plane durable export (`UDB_AUDIT_EXPORT_POSTGRES=1`) |
 | PII-safe logging | on by default — only fails if you explicitly set `UDB_PII_SAFE_LOGGING=false` |
 
 **Two escape hatches let a single-node / behind-a-proxy deployment run fail-closed
 without standing up broker TLS or an external SIEM:**
 
-- **`UDB_AUDIT_SINK=postgres`** — declares the append-only `udb_system.auth_audit_log`
-  (which `udb compliance evidence` chain-hashes) as your durable audit sink. No
-  external endpoint needed.
+- **`UDB_AUDIT_SINK=postgres` + `UDB_AUDIT_PG_TABLE=<schema.table>`** — persists
+  data-plane mutation audits to that Postgres table (self-created on first write,
+  `CREATE SCHEMA`/`CREATE TABLE IF NOT EXISTS`), no external endpoint. Separately,
+  **`UDB_AUDIT_EXPORT_POSTGRES=1`** activates the auth-plane durable log
+  `udb_system.auth_audit_log` (login/revocation/policy/admin events — the record
+  `udb compliance evidence` chain-hashes). Either satisfies the fail-closed durable
+  gate; enable both for a full data-plane + auth-plane trail. (These are two
+  independent sinks — `UDB_AUDIT_SINK` governs data-plane mutations,
+  `UDB_AUDIT_EXPORT_POSTGRES` the auth plane.)
 - **`UDB_TRUSTED_TRANSPORT=true`** — an explicit, auditable acknowledgment that
   transport is secured **outside** the broker (a TLS-terminating reverse proxy,
   a service mesh with mTLS sidecars, or a trusted private network). It satisfies
@@ -126,7 +132,9 @@ without standing up broker TLS or an external SIEM:**
 ```bash
 UDB_FAIL_CLOSED=true            # deny-on-error + audit posture
 UDB_TRUSTED_TRANSPORT=true      # TLS terminated upstream (proxy / mesh / trusted net)
-UDB_AUDIT_SINK=postgres         # durable audit log, no external SIEM
+UDB_AUDIT_SINK=postgres         # persist data-plane audits to Postgres, no SIEM
+UDB_AUDIT_PG_TABLE=udb_system.data_audit_log   # required for sink=postgres
+UDB_AUDIT_EXPORT_POSTGRES=1     # also persist the auth-plane audit log (auth_audit_log)
 UDB_JWT_PUBLIC_KEY=…            # (or UDB_JWT_JWKS_URL) — auth is still required
 # UDB_PG_DSN / UDB_JWT_PRIVATE_KEY / session + encryption secrets per §1
 ```

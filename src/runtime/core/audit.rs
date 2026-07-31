@@ -6,13 +6,22 @@
 //! unaudited on every configuration. This wires the emitter: a successful
 //! mutation now produces a structured JSON audit line to the configured sink.
 //!
-//! Stdout and File are implemented and unit-tested here (no external infra). The
-//! Kafka and Postgres sinks are not yet wired to their transports; rather than
-//! silently drop their events (the very lie this fixes), they fall back to stdout
-//! with a one-time warning, so events are never lost silently.
+//! Stdout and File write inline. **Postgres** persists durably: `emit_audit`
+//! hands the event to a lazily-started, bounded background writer that
+//! self-creates the configured `UDB_AUDIT_PG_TABLE` (`CREATE SCHEMA`/`CREATE TABLE
+//! IF NOT EXISTS`, mirroring the auth-plane `PostgresAuditLogSink`) and INSERTs
+//! each event off the request path. It is best-effort by design — the mutation has
+//! already committed (and is journaled via CDC/outbox) — so a full queue or a
+//! broken/unreachable audit DB falls back to stdout with a warning rather than
+//! blocking or failing the write, and never drops an event silently. **Kafka**
+//! remains unwired and still falls back to stdout with a one-time warning.
 
 use std::io::Write as _;
+use std::sync::OnceLock;
 use std::sync::atomic::{AtomicBool, Ordering};
+
+use sqlx::PgPool;
+use tokio::sync::mpsc;
 
 use crate::planning::broker::AuditEvent;
 use crate::runtime::config::{AuditSinkConfig, AuditSinkKind};
@@ -32,13 +41,21 @@ pub(crate) fn audit_event_line(event: &AuditEvent) -> String {
     format!("{value}\n")
 }
 
-static UNWIRED_SINK_WARNED: AtomicBool = AtomicBool::new(false);
+static UNWIRED_KAFKA_WARNED: AtomicBool = AtomicBool::new(false);
+static PG_AUDIT_FALLBACK_WARNED: AtomicBool = AtomicBool::new(false);
+
+/// Bounded queue depth for the durable Postgres audit writer. Best-effort: on a
+/// sustained audit-DB stall the queue caps and further events warn-and-fall-back
+/// to stdout rather than growing memory unbounded or blocking the (already
+/// committed) mutation.
+const PG_AUDIT_QUEUE_DEPTH: usize = 8192;
 
 /// Emit `event` to the configured audit sink. Best-effort by design: a mutation
-/// has already committed, so an audit-transport hiccup logs and is dropped rather
-/// than failing the write (the write itself is journaled via CDC/outbox). `None`
-/// is a no-op.
-pub(crate) fn emit_audit(config: &AuditSinkConfig, event: &AuditEvent) {
+/// has already committed, so an audit-transport hiccup logs and falls back to
+/// stdout rather than failing the write (the write itself is journaled via
+/// CDC/outbox). `pg_pool` is the data-plane Postgres pool the caller already
+/// holds, used only by the Postgres sink. `None` kind is a no-op.
+pub(crate) fn emit_audit(config: &AuditSinkConfig, event: &AuditEvent, pg_pool: Option<&PgPool>) {
     match config.kind {
         AuditSinkKind::None => {}
         AuditSinkKind::Stdout => {
@@ -55,19 +72,178 @@ pub(crate) fn emit_audit(config: &AuditSinkConfig, event: &AuditEvent) {
                 tracing::warn!(path = %path, error = %err, "audit file append failed");
             }
         }
-        // Not yet wired to their transports — fall back to stdout (never silently
+        AuditSinkKind::Postgres => {
+            let table = config.pg_table.as_deref().unwrap_or("").trim();
+            match pg_pool {
+                Some(pool) if !table.is_empty() => match pg_audit_writer(pool, table) {
+                    // Enqueue off the request path. `try_send` fails only when the
+                    // bounded queue is full OR the writer task has exited (a
+                    // table-create failure / dead audit DB), in which case we fall
+                    // back to stdout so the event is never silently lost.
+                    Some(writer) => {
+                        if writer.tx.try_send(event.clone()).is_err() {
+                            pg_audit_fallback_warn();
+                            print!("{}", audit_event_line(event));
+                        }
+                    }
+                    // Unsafe / unusable table identifier — disabled, stdout instead.
+                    None => print!("{}", audit_event_line(event)),
+                },
+                // No pool or no table configured — can't persist; stdout fallback.
+                _ => {
+                    pg_audit_fallback_warn();
+                    print!("{}", audit_event_line(event));
+                }
+            }
+        }
+        // Not yet wired to its transport — fall back to stdout (never silently
         // drop) and warn once so an operator notices the configuration gap.
-        AuditSinkKind::Kafka | AuditSinkKind::Postgres => {
-            if !UNWIRED_SINK_WARNED.swap(true, Ordering::Relaxed) {
+        AuditSinkKind::Kafka => {
+            if !UNWIRED_KAFKA_WARNED.swap(true, Ordering::Relaxed) {
                 tracing::warn!(
-                    "audit sink kind={:?} is configured but its transport is not yet wired; \
-                     audit events are being written to stdout as a fallback",
-                    config.kind
+                    "audit sink kind=Kafka is configured but its transport is not yet wired; \
+                     audit events are being written to stdout as a fallback"
                 );
             }
             print!("{}", audit_event_line(event));
         }
     }
+}
+
+fn pg_audit_fallback_warn() {
+    if !PG_AUDIT_FALLBACK_WARNED.swap(true, Ordering::Relaxed) {
+        tracing::warn!(
+            "durable Postgres audit sink is unavailable (queue full, unreachable DB, or missing \
+             UDB_AUDIT_PG_TABLE / Postgres pool); audit events are falling back to stdout"
+        );
+    }
+}
+
+/// The lazily-started durable Postgres audit writer. Owns the send half of a
+/// bounded channel drained by a background task that INSERTs each event.
+struct PgAuditWriter {
+    tx: mpsc::Sender<AuditEvent>,
+}
+
+/// Return the process-wide durable Postgres audit writer, starting it (once) with
+/// the given pool + table on first use. `None` when the configured table is not a
+/// safe qualified identifier (the writer is permanently disabled → stdout). The
+/// first caller's pool/table win; both are env-derived and stable per process.
+fn pg_audit_writer(pool: &PgPool, table: &str) -> Option<&'static PgAuditWriter> {
+    static WRITER: OnceLock<Option<PgAuditWriter>> = OnceLock::new();
+    WRITER
+        .get_or_init(|| {
+            let Some(relation) = sanitize_audit_relation(table) else {
+                tracing::error!(
+                    table,
+                    "UDB_AUDIT_PG_TABLE is not a safe schema-qualified identifier; the durable \
+                     Postgres audit sink is disabled (stdout fallback)"
+                );
+                return None;
+            };
+            let (tx, mut rx) = mpsc::channel::<AuditEvent>(PG_AUDIT_QUEUE_DEPTH);
+            let pool = pool.clone();
+            // Drain the queue on a background task so the request path never blocks
+            // on a DB write. Started inside the caller's async runtime context.
+            tokio::spawn(async move {
+                if let Err(err) = ensure_pg_audit_table(&pool, &relation).await {
+                    tracing::error!(
+                        error = %err, table = %relation,
+                        "durable Postgres audit table create failed; audit events fall back to stdout"
+                    );
+                    // Returning drops `rx`; subsequent `try_send` fails → stdout.
+                    return;
+                }
+                let insert = pg_audit_insert_sql(&relation);
+                while let Some(event) = rx.recv().await {
+                    if let Err(err) = sqlx::query(&insert)
+                        .bind(event.event_type.as_str())
+                        .bind(event.tenant_id.as_str())
+                        .bind(event.user_id.as_str())
+                        .bind(event.correlation_id.as_str())
+                        .bind(event.purpose.as_str())
+                        .bind(event.resource_uri.as_str())
+                        .bind(event.checksum_sha256.as_str())
+                        .execute(&pool)
+                        .await
+                    {
+                        tracing::warn!(error = %err, "durable Postgres audit insert failed");
+                    }
+                }
+            });
+            Some(PgAuditWriter { tx })
+        })
+        .as_ref()
+}
+
+/// Validate a fully-qualified audit table name (`schema.table` or `table`) as a
+/// safe Postgres identifier before it is interpolated into DDL/DML. Each segment
+/// must be a plain unquoted identifier (`[A-Za-z_][A-Za-z0-9_]*`), 1 or 2 segments
+/// only. Returns the normalized `schema.table` (or bare `table`) on success, `None`
+/// on anything unsafe — closing SQL injection via `UDB_AUDIT_PG_TABLE`.
+fn sanitize_audit_relation(table: &str) -> Option<String> {
+    let parts: Vec<&str> = table.trim().split('.').collect();
+    if parts.is_empty() || parts.len() > 2 {
+        return None;
+    }
+    let is_ident = |s: &str| {
+        !s.is_empty()
+            && s.len() <= 63
+            && s.chars()
+                .next()
+                .is_some_and(|c| c.is_ascii_alphabetic() || c == '_')
+            && s.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+    };
+    if parts.iter().all(|p| is_ident(p)) {
+        Some(parts.join("."))
+    } else {
+        None
+    }
+}
+
+/// Optional schema segment of a validated `schema.table` relation.
+fn audit_relation_schema(relation: &str) -> Option<&str> {
+    relation.split_once('.').map(|(schema, _)| schema)
+}
+
+/// `CREATE SCHEMA`/`CREATE TABLE IF NOT EXISTS` for the durable data-plane audit
+/// table. Idempotent + self-creating (no migration needed), mirroring the
+/// auth-plane `PostgresAuditLogSink::ensure_table`. `relation` is pre-validated by
+/// [`sanitize_audit_relation`], so interpolation is safe.
+async fn ensure_pg_audit_table(pool: &PgPool, relation: &str) -> Result<(), String> {
+    if let Some(schema) = audit_relation_schema(relation) {
+        sqlx::query(&format!("CREATE SCHEMA IF NOT EXISTS {schema}"))
+            .execute(pool)
+            .await
+            .map_err(|e| format!("ensure audit schema failed: {e}"))?;
+    }
+    let sql = format!(
+        "CREATE TABLE IF NOT EXISTS {relation} ( \
+             audit_id UUID PRIMARY KEY DEFAULT gen_random_uuid(), \
+             event_type VARCHAR(80) NOT NULL DEFAULT '', \
+             tenant_id VARCHAR(64) NOT NULL DEFAULT '', \
+             user_id VARCHAR(200) NOT NULL DEFAULT '', \
+             correlation_id VARCHAR(120) NOT NULL DEFAULT '', \
+             purpose VARCHAR(120) NOT NULL DEFAULT '', \
+             resource_uri VARCHAR(400) NOT NULL DEFAULT '', \
+             checksum_sha256 VARCHAR(80) NOT NULL DEFAULT '', \
+             occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW() \
+         )"
+    );
+    sqlx::query(&sql)
+        .execute(pool)
+        .await
+        .map(|_| ())
+        .map_err(|e| format!("ensure audit table failed: {e}"))
+}
+
+/// Parameterized INSERT for one audit event into the validated `relation`.
+fn pg_audit_insert_sql(relation: &str) -> String {
+    format!(
+        "INSERT INTO {relation} \
+             (event_type, tenant_id, user_id, correlation_id, purpose, resource_uri, checksum_sha256) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7)"
+    )
 }
 
 fn append_line(path: &str, line: &str) -> std::io::Result<()> {
@@ -116,8 +292,8 @@ mod tests {
             file_path: Some(path.to_string_lossy().to_string()),
             ..Default::default()
         };
-        emit_audit(&cfg, &sample());
-        emit_audit(&cfg, &sample());
+        emit_audit(&cfg, &sample(), None);
+        emit_audit(&cfg, &sample(), None);
         let contents = std::fs::read_to_string(&path).expect("read audit file");
         assert_eq!(contents.lines().count(), 2, "one line per event");
         assert!(contents.contains("\"event_type\":\"upsert\""));
@@ -127,6 +303,43 @@ mod tests {
     #[test]
     fn none_sink_is_a_noop() {
         // No panic, no file — the default backward-compatible behavior.
-        emit_audit(&AuditSinkConfig::default(), &sample());
+        emit_audit(&AuditSinkConfig::default(), &sample(), None);
+    }
+
+    #[test]
+    fn audit_relation_accepts_only_safe_identifiers() {
+        assert_eq!(
+            sanitize_audit_relation("udb_system.data_audit_log").as_deref(),
+            Some("udb_system.data_audit_log")
+        );
+        assert_eq!(
+            sanitize_audit_relation("audit_log").as_deref(),
+            Some("audit_log")
+        );
+        assert_eq!(
+            sanitize_audit_relation("  public.a1  ").as_deref(),
+            Some("public.a1")
+        );
+        // Injection / malformed shapes are rejected → sink disabled, never
+        // interpolated into DDL/DML.
+        assert!(sanitize_audit_relation("a.b.c").is_none());
+        assert!(sanitize_audit_relation("audit; DROP TABLE users").is_none());
+        assert!(sanitize_audit_relation("audit log").is_none());
+        assert!(sanitize_audit_relation("\"audit\"").is_none());
+        assert!(sanitize_audit_relation("1audit").is_none());
+        assert!(sanitize_audit_relation("").is_none());
+        assert!(sanitize_audit_relation("schema.").is_none());
+    }
+
+    #[test]
+    fn pg_audit_ddl_and_insert_reference_the_validated_relation() {
+        let rel = sanitize_audit_relation("udb_system.data_audit_log").expect("valid");
+        assert_eq!(audit_relation_schema(&rel), Some("udb_system"));
+        let insert = pg_audit_insert_sql(&rel);
+        assert!(insert.starts_with("INSERT INTO udb_system.data_audit_log"));
+        // All seven event fields are bound positionally.
+        assert!(insert.contains("$7"));
+        assert!(!insert.contains("$8"));
+        assert!(audit_relation_schema("audit_log").is_none());
     }
 }

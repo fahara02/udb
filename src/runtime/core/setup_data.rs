@@ -1141,6 +1141,7 @@ impl DataBrokerRuntime {
                 &response.resource_uri,
                 &manifest.checksum_sha256,
             ),
+            self.pg_pool.as_ref(),
         );
         Ok(response)
     }
@@ -1614,6 +1615,7 @@ impl DataBrokerRuntime {
                 &response.resource_uri,
                 &manifest.checksum_sha256,
             ),
+            self.pg_pool.as_ref(),
         );
         Ok(response)
     }
@@ -1977,6 +1979,7 @@ impl DataBrokerRuntime {
                 &response.resource_uri,
                 &manifest.checksum_sha256,
             ),
+            self.pg_pool.as_ref(),
         );
         Ok(response)
     }

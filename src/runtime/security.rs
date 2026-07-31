@@ -615,14 +615,30 @@ pub struct ComplianceProfileFacts {
 /// so it satisfies the fail-closed durable-audit requirement WITHOUT an external
 /// HTTP/SIEM endpoint — the right escape hatch for a single-node Postgres deploy.
 pub(crate) fn durable_audit_sink_declared() -> bool {
-    std::env::var("UDB_AUDIT_SINK")
+    // Data-plane audit sink persisting to Postgres (`UDB_AUDIT_SINK=postgres` +
+    // `UDB_AUDIT_PG_TABLE`, wired in `core::audit`). Only `postgres`/`pg` are
+    // accepted — `database`/`durable` are NOT valid `AuditSinkKind` values (they
+    // resolve to `None` = no sink), so accepting them here would be a lie.
+    let data_plane_pg = std::env::var("UDB_AUDIT_SINK")
         .map(|value| {
             matches!(
                 value.trim().to_ascii_lowercase().as_str(),
-                "postgres" | "database" | "durable" | "pg"
+                "postgres" | "pg"
             )
         })
-        .unwrap_or(false)
+        .unwrap_or(false);
+    // Auth-plane durable audit export: the always-createable
+    // `PostgresAuditLogSink` (`udb_system.auth_audit_log`, chain-hashed by
+    // `udb compliance evidence`) enabled with `UDB_AUDIT_EXPORT_POSTGRES=1`.
+    let auth_export_pg = std::env::var("UDB_AUDIT_EXPORT_POSTGRES")
+        .map(|value| {
+            matches!(
+                value.trim().to_ascii_lowercase().as_str(),
+                "1" | "true" | "yes" | "on"
+            )
+        })
+        .unwrap_or(false);
+    data_plane_pg || auth_export_pg
 }
 
 /// Whether the operator has explicitly acknowledged that transport security is

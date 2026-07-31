@@ -1074,6 +1074,7 @@ impl DataBrokerRuntime {
                         &resource_uri,
                         &manifest.checksum_sha256,
                     ),
+                    self.pg_pool.as_ref(),
                 );
             }
         }

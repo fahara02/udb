@@ -5,6 +5,30 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.4.34] - 2026-07-31
+
+### Fixed
+- **The Postgres audit sink now actually persists (was a stub → stdout).** With
+  `UDB_AUDIT_SINK=postgres` the data-plane audit emitter had never written to
+  Postgres — it fell back to stdout with a "transport not yet wired" warning, while
+  the fail-closed startup gate accepted `UDB_AUDIT_SINK=postgres` as a *durable*
+  sink. That was a capability lie: enabling fail-closed left the audit trail going
+  to stdout. `core::audit` now wires a real, self-creating durable sink — a bounded
+  background writer creates the configured `UDB_AUDIT_PG_TABLE`
+  (`CREATE SCHEMA`/`CREATE TABLE IF NOT EXISTS`, mirroring the auth-plane
+  `PostgresAuditLogSink`) and INSERTs each committed mutation off the request path.
+  Best-effort: a full queue / unreachable audit DB falls back to stdout with a
+  warning (never silently dropped) and never blocks the write. The table name is
+  validated as a safe qualified identifier before interpolation. `UDB_AUDIT_SINK`
+  (data-plane mutations) and `UDB_AUDIT_EXPORT_POSTGRES=1` (auth-plane
+  `udb_system.auth_audit_log`) are two independent sinks — both documented in
+  `docs/enterprise-deployment.md` §2.1.
+- **Fail-closed durable-audit gate is now honest.** `durable_audit_sink_declared()`
+  no longer accepts `UDB_AUDIT_SINK=database`/`durable` (which resolve to
+  `AuditSinkKind::None` — *no* sink); it accepts only the values that actually
+  persist (`postgres`/`pg`, now real) plus the auth-plane export
+  (`UDB_AUDIT_EXPORT_POSTGRES=1`). Kafka remains an honestly-warned stdout fallback.
+
 ## [0.4.33] - 2026-07-31
 
 Closes the three items that shipped deferred in 0.4.32 (no-deferral follow-through)
