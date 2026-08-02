@@ -111,16 +111,17 @@ impl WeaviateCompiler {
                     .collect::<Result<_, _>>()?;
                 Ok(json!({ "operator": "Or", "operands": operands }))
             }
-            LogicalFilter::Not(inner) => {
-                let body = self.render_where(inner, table, message_type)?;
-                // Weaviate has no NOT operator; emulate via inverted
-                // operator at the leaf level when possible. For
-                // arbitrary nested filters we use NotEqual with a
-                // sentinel — operators wanting full NOT semantics
-                // should restructure with De Morgan.
-                Ok(
-                    json!({ "operator": "And", "operands": [body, { "operator": "NotEqual", "path": ["_dummy"], "valueText": "__inverted__" }] }),
-                )
+            LogicalFilter::Not(_inner) => {
+                // C19: Weaviate has no NOT operator. The prior sentinel emulation
+                // (`And(inner, NotEqual _dummy)`) did NOT negate — it effectively
+                // returned the inner (non-negated) set, silently producing the
+                // WRONG results. Fail closed with a typed error rather than return
+                // incorrect rows; callers must push the negation to the leaf
+                // (De Morgan) or use an inverted operator directly.
+                Err(CompileError::OperatorUnsupported {
+                    backend: BackendKind::Weaviate,
+                    op: "not_filter",
+                })
             }
             LogicalFilter::IsNull(field) => {
                 let f = self.field_for(table, field, message_type)?;
@@ -1028,6 +1029,29 @@ mod tests {
             CompileError::OperatorUnsupported {
                 backend: BackendKind::Weaviate,
                 op: "insert_ignore"
+            }
+        ));
+    }
+
+    /// C19: a `NOT(...)` filter must be REJECTED (typed unsupported) rather than
+    /// silently compiled to a non-negating sentinel that returns wrong rows.
+    #[test]
+    fn not_filter_is_rejected_fail_closed() {
+        let m = fixture();
+        let ctx = CompileContext::new(&m);
+        let read = LogicalRead::message("acme.docs.v1.Document").with_filter(LogicalFilter::Not(
+            Box::new(LogicalFilter::Comparison {
+                field: "title".into(),
+                op: ComparisonOp::Eq,
+                value: LogicalValue::String("x".into()),
+            }),
+        ));
+        let err = WeaviateCompiler.compile_read(&read, &ctx).unwrap_err();
+        assert!(matches!(
+            err,
+            CompileError::OperatorUnsupported {
+                backend: BackendKind::Weaviate,
+                op: "not_filter"
             }
         ));
     }

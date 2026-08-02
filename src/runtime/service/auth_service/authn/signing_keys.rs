@@ -68,6 +68,20 @@ impl AuthnServiceImpl {
     /// `encrypted_private_material` column is genuinely an AEAD envelope (it was a
     /// name lie before — plaintext PEM). In dev (no encryption key configured) the
     /// helper passes the PEM through verbatim, so the env-seed key keeps working.
+    /// C11 startup gate: refuse to serve when a NON-`env` signing-key provider is
+    /// selected (`UDB_SIGNING_KEY_PROVIDER=aws-kms`) but is unavailable in this
+    /// binary, under fail-closed mode. Without this the seed silently skips and the
+    /// broker signs UDB-issued JWTs with the local env key — an operator who asked
+    /// for KMS/HSM key custody would get local-file signing plus a log line.
+    /// Delegates to the pure [`super::key_provider::signing_provider_gate`].
+    pub(crate) fn signing_provider_startup_gate(&self) -> Result<(), String> {
+        super::key_provider::signing_provider_gate(
+            crate::runtime::security::fail_closed_mode(),
+            super::key_provider::selected_provider_kind(),
+            super::key_provider::provider_available(&self.security),
+        )
+    }
+
     pub(crate) async fn seed_signing_key_registry(&self, runtime: &DataBrokerRuntime) {
         self.seed_signing_key_registry_inner(runtime).await;
         // Whether we just seeded the env key or rows already existed (e.g. an

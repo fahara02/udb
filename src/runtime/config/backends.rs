@@ -574,14 +574,17 @@ impl AuditSinkConfig {
                 errors
                     .push("UDB_AUDIT_SINK=file requires UDB_AUDIT_FILE_PATH to be set".to_string());
             }
-            AuditSinkKind::Kafka if self.kafka_topic.is_none() => {
+            // C1: the Kafka audit transport is UNWIRED — the runtime arm warns once
+            // and prints to stdout, silently diverting the durable/SIEM audit stream
+            // an operator selected. Fail closed at config so `kafka` can never be
+            // silently selected: use `postgres` (durable) or `file`/`stdout`, or wire
+            // the CDC→Kafka producer first.
+            AuditSinkKind::Kafka => {
                 errors.push(
-                    "UDB_AUDIT_SINK=kafka requires UDB_AUDIT_KAFKA_TOPIC to be set".to_string(),
-                );
-            }
-            AuditSinkKind::Kafka if self.kafka_brokers.is_none() => {
-                errors.push(
-                    "UDB_AUDIT_SINK=kafka requires UDB_AUDIT_KAFKA_BROKERS to be set".to_string(),
+                    "UDB_AUDIT_SINK=kafka is not implemented: the Kafka audit transport is \
+                     unwired and would silently drop the audit trail to stdout. Use \
+                     UDB_AUDIT_SINK=postgres (durable), file, or stdout instead."
+                        .to_string(),
                 );
             }
             AuditSinkKind::Postgres if self.pg_table.is_none() => {
@@ -599,6 +602,39 @@ impl AuditSinkConfig {
             )),
         }
         errors
+    }
+}
+
+#[cfg(test)]
+mod audit_sink_validate_tests {
+    use super::*;
+
+    /// C1: a fully-specified Kafka audit sink must be REJECTED (unimplemented) so
+    /// it cannot be silently selected and drop the audit trail to stdout.
+    #[test]
+    fn kafka_audit_sink_is_rejected_as_unimplemented() {
+        let cfg = AuditSinkConfig {
+            kind: AuditSinkKind::Kafka,
+            kafka_topic: Some("audit".to_string()),
+            kafka_brokers: Some("localhost:9092".to_string()),
+            ..AuditSinkConfig::default()
+        };
+        let errors = cfg.validate();
+        assert!(
+            errors.iter().any(|e| e.contains("not implemented")),
+            "kafka audit sink must be rejected: {errors:?}"
+        );
+    }
+
+    /// Postgres (durable) with its table set still validates clean.
+    #[test]
+    fn postgres_audit_sink_with_table_is_accepted() {
+        let cfg = AuditSinkConfig {
+            kind: AuditSinkKind::Postgres,
+            pg_table: Some("udb_system.audit_log".to_string()),
+            ..AuditSinkConfig::default()
+        };
+        assert!(cfg.validate().is_empty(), "{:?}", cfg.validate());
     }
 }
 

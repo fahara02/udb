@@ -239,6 +239,27 @@ impl PineconeCompiler {
             body.insert("namespace".into(), json!(ns));
         }
     }
+
+    /// C18: Pinecone's id-addressed `/vectors/fetch` (GET) and `/vectors/delete`
+    /// with `ids` cannot carry a metadata filter, so a caller who knows another
+    /// tenant's vector id in the SAME project namespace could read or delete it.
+    /// Namespaces isolate by project, not by tenant. When a tenant context is
+    /// active we therefore refuse the id path fail-closed and direct callers to
+    /// the metadata-filtered read/delete, which ANDs `_tenant_id` via
+    /// [`Self::and_with_context`]. (Untenanted / single-tenant callers keep the
+    /// fast id path.)
+    fn reject_untenanted_by_id(
+        ctx: &CompileContext<'_>,
+        op: &'static str,
+    ) -> Result<(), CompileError> {
+        if ctx.tenant_id.map(|t| !t.is_empty()).unwrap_or(false) {
+            return Err(CompileError::OperatorUnsupported {
+                backend: BackendKind::Pinecone,
+                op,
+            });
+        }
+        Ok(())
+    }
 }
 
 impl Compiler for PineconeCompiler {
@@ -271,6 +292,7 @@ impl Compiler for PineconeCompiler {
         if let Some(filter) = &op.filter {
             // Case 1: single PK fetch.
             if let Some(pk_value) = Self::extract_pk_value(filter, pk_field) {
+                Self::reject_untenanted_by_id(ctx, "tenant_scoped_fetch_by_id")?;
                 let id = id_from_value(pk_value)?;
                 let mut url = format!("/vectors/fetch?ids={id}");
                 if !namespace.is_empty() {
@@ -285,6 +307,7 @@ impl Compiler for PineconeCompiler {
             }
             // Case 2: PK IN list — batch fetch via comma-separated ids.
             if let Some(values) = Self::extract_pk_list(filter, pk_field) {
+                Self::reject_untenanted_by_id(ctx, "tenant_scoped_fetch_by_id")?;
                 let ids: Vec<String> = values
                     .iter()
                     .filter_map(|v| id_from_value(v).ok())
@@ -524,6 +547,7 @@ impl Compiler for PineconeCompiler {
         //   3. metadata filter → {filter: {...}}
         if let Some(pk) = pk_field {
             if let Some(pk_value) = Self::extract_pk_value(&op.filter, pk) {
+                Self::reject_untenanted_by_id(ctx, "tenant_scoped_delete_by_id")?;
                 let id = id_from_value(pk_value)?;
                 body.insert("ids".into(), json!([id]));
                 return Ok(CompiledRendering::Json {
@@ -534,6 +558,7 @@ impl Compiler for PineconeCompiler {
                 });
             }
             if let Some(values) = Self::extract_pk_list(&op.filter, pk) {
+                Self::reject_untenanted_by_id(ctx, "tenant_scoped_delete_by_id")?;
                 let ids: Vec<String> = values
                     .iter()
                     .filter_map(|v| id_from_value(v).ok())
@@ -1225,5 +1250,63 @@ mod tests {
         assert_eq!(body["name"], "my-index");
         assert_eq!(body["dimension"], 1536);
         assert_eq!(body["metric"], "cosine");
+    }
+
+    // ── C18: id-addressed fetch/delete can't be tenant-filtered on Pinecone ───
+
+    /// Under an active tenant, id-addressed fetch is refused fail-closed (it
+    /// cannot carry a `_tenant_id` filter, so it would read across tenants in a
+    /// shared namespace). Callers must use the metadata-filtered read.
+    #[test]
+    fn tenant_scoped_fetch_by_id_is_refused() {
+        let m = fixture();
+        let ctx = CompileContext::new(&m).with_tenant("acme");
+        let read =
+            LogicalRead::message("acme.docs.v1.Doc").with_filter(LogicalFilter::Comparison {
+                field: "id".into(),
+                op: ComparisonOp::Eq,
+                value: LogicalValue::String("doc1".into()),
+            });
+        let err = PineconeCompiler.compile_read(&read, &ctx).unwrap_err();
+        assert!(
+            matches!(err, CompileError::OperatorUnsupported { op, .. } if op == "tenant_scoped_fetch_by_id"),
+            "got {err:?}"
+        );
+    }
+
+    /// Under an active tenant, id-addressed delete is refused fail-closed.
+    #[test]
+    fn tenant_scoped_delete_by_id_is_refused() {
+        let m = fixture();
+        let ctx = CompileContext::new(&m).with_tenant("acme");
+        let del = LogicalDelete {
+            message_type: "acme.docs.v1.Doc".into(),
+            filter: LogicalFilter::Comparison {
+                field: "id".into(),
+                op: ComparisonOp::Eq,
+                value: LogicalValue::String("doc1".into()),
+            },
+            return_fields: vec![],
+        };
+        let err = PineconeCompiler.compile_delete(&del, &ctx).unwrap_err();
+        assert!(
+            matches!(err, CompileError::OperatorUnsupported { op, .. } if op == "tenant_scoped_delete_by_id"),
+            "got {err:?}"
+        );
+    }
+
+    /// Without a tenant context the fast id path is preserved (regression).
+    #[test]
+    fn untenanted_fetch_by_id_still_uses_fast_path() {
+        let m = fixture();
+        let ctx = CompileContext::new(&m);
+        let read =
+            LogicalRead::message("acme.docs.v1.Doc").with_filter(LogicalFilter::Comparison {
+                field: "id".into(),
+                op: ComparisonOp::Eq,
+                value: LogicalValue::String("doc1".into()),
+            });
+        let (path, _, _) = extract_json(PineconeCompiler.compile_read(&read, &ctx).unwrap());
+        assert_eq!(path, "/vectors/fetch?ids=doc1");
     }
 }

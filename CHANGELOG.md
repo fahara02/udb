@@ -5,6 +5,69 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.4.36] - 2026-08-02
+
+Capability-lie remediation release. A 10-agent capability-lie sweep found ~24
+confirmed cases where a capability was configured, advertised, or security-gated
+but its runtime was a stub, no-op, or silent fallback (the same bug class as the
+0.4.34/0.4.35 audit-sink saga). This release fixes them, adds two anti-drift
+lints so they cannot silently return, and repairs a migration-ledger schema skew.
+No proto changes.
+
+### Security
+- **CRITICAL — SAML XML Signature Wrapping (XSW) authentication bypass.**
+  `validate_response` verified *a* signature over the SAML response but never
+  bound the signed reference to the assertion it returned, so an attacker could
+  wrap a validly-signed assertion around an injected, unsigned attacker
+  assertion and authenticate as anyone. `idp/saml.rs` now rejects any response
+  that does not carry exactly one assertion, and requires the signed reference to
+  point at either the `Response` (single-assertion-guaranteed) or the exact
+  `Assertion` it returns — appended/wrapped assertions are refused fail-closed.
+  Covered by `saml_wrapped_response_is_rejected`,
+  `saml_appended_second_assertion_is_rejected`, and a positive
+  `saml_single_signed_assertion_still_passes`.
+
+### Fixed
+- **Cross-tenant read/write leaks in several compilers and executors.** Tenant/
+  project scope predicates were dropped on paths that advertised tenant
+  isolation: MySQL/SQLite/MSSQL read+delete+search (`scoped_where_clause` now
+  ANDs the context predicate into every filter), MongoDB and Neo4j aggregate
+  (`$match`/`WHERE` now inject the tenant predicate), Redis (executor is now
+  namespaced `udb:{project}:{tenant}:` and scans are scoped), and Qdrant search
+  (tenant filter is ANDed into the query). Pinecone by-id fetch/delete now
+  **fail closed** under a tenant context instead of silently returning an
+  unscoped point. Each is covered by a predicate-injection test.
+- **Security annotations that were decorative are now enforced.** The
+  `method_security` tower layer projected only 12 of the 16 authored
+  `EndpointSecurityContract` fields; assurance-level (AAL/`acr`), owner-field,
+  rate-limit policy ref, and audit-event-type are now carried onto
+  `MethodSecurity` and enforced (`required_assurance_level` gate, body-owner
+  guard, policy-keyed public rate-limit bucket). A new exhaustive
+  `every_endpoint_security_field_is_enforced_or_whitelisted` test destructures
+  the contract so a newly-added field fails to compile until it is wired.
+- **Fail-closed / honest-close corrections.** `UDB_AUDIT_SINK=kafka` is now
+  rejected at config-validate time (the Kafka audit transport is unimplemented,
+  previously a silent stdout fallback); Weaviate `NOT` filters are rejected
+  instead of silently dropped; capability advertisements corrected to match
+  runtime (ClickHouse `supports_rls=false`, object stores `supports_ttl=false`,
+  Cassandra `supports_schema_migration=false`); the signing-provider and
+  compliance-encryption facts are now derived from real configuration at startup
+  (fail-closed) rather than advertised unconditionally; the local rate-limiter
+  path no longer opens wide when Redis is absent.
+- **Two anti-drift lints** (`plugin.rs`, `method_security.rs`) assert every
+  advertised backend capability matches a runtime allowlist and every security
+  contract field is enforced-or-whitelisted, so this bug class fails the build
+  if it returns.
+- **Migration ledger: `migration_runtime_state.last_error_id` schema skew.** The
+  Go UDB migration service's runtime-state upsert writes `last_error_id`, but the
+  canonical DDL (`control::tracker`) never declared the column and — unlike
+  `schema_migrations` — carried no `ALTER ... ADD COLUMN IF NOT EXISTS` upgrade
+  guard, so a database bootstrapped by an older UDB failed at bring-up with
+  `cannot persist initial runtime state: pq: column "last_error_id" ... does not
+  exist`. The DDL now declares `last_error_id BIGINT NULL` (soft reference to
+  `migration_error_log.id BIGSERIAL`) and adds the idempotent upgrade guard so
+  pre-existing tables self-heal on the next bootstrap.
+
 ## [0.4.35] - 2026-07-31
 
 ### Fixed

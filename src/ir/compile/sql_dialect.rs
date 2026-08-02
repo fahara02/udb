@@ -203,6 +203,34 @@ impl<D: SqlDialect> SqlCompiler<D> {
         }
     }
 
+    /// Render a complete, tenant-scoped ` WHERE ...` clause (leading space
+    /// included, or empty string when nothing to filter). ANDs the tenant/project
+    /// [`Self::context_predicates`] into the user filter exactly as
+    /// `compile_aggregate` does. This is the mandatory scoping seam for the
+    /// no-RLS SQL backends (mysql/sqlite/mssql): every read/search MUST route its
+    /// WHERE through here so it cannot silently omit the tenant predicate (the
+    /// C15 cross-tenant leak). Parameter order is user-filter params first, then
+    /// the context params, matching the placeholder emission order.
+    pub(super) fn scoped_where_clause(
+        filter: Option<&LogicalFilter>,
+        table: &ManifestTable,
+        message_type: &str,
+        ctx: &super::CompileContext<'_>,
+        params: &mut Vec<LogicalValue>,
+    ) -> Result<String, CompileError> {
+        let user_body = match filter {
+            Some(f) => Self::render_where(f, table, message_type, params)?,
+            None => None,
+        };
+        let ctx_body = Self::context_predicates(table, ctx, params);
+        Ok(match (user_body, ctx_body) {
+            (Some(user), Some(scope)) => format!(" WHERE ({user}) AND {scope}"),
+            (Some(user), None) => format!(" WHERE {user}"),
+            (None, Some(scope)) => format!(" WHERE {scope}"),
+            (None, None) => String::new(),
+        })
+    }
+
     /// Render the `WHERE ...` body. Returns `None` for an empty filter so
     /// the caller can decide whether to emit `WHERE` at all; an empty OR
     /// lowers to the dialect false-literal.

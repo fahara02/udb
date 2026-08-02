@@ -452,11 +452,16 @@ impl Compiler for MongoDbCompiler {
         //   [$match, $group, $match (HAVING), $sort, $skip, $limit].
         let mut pipeline: Vec<Json> = Vec::new();
 
-        if let Some(filter) = &op.filter {
-            let rendered = self.render_filter(filter, table, &op.message_type)?;
-            if !rendered.as_object().is_some_and(|m| m.is_empty()) {
-                pipeline.push(json!({ "$match": rendered }));
-            }
+        // $match: user filter AND the tenant/project context (C16). Aggregate
+        // must scope like every sibling op (read/delete/search all inject via
+        // `and_with_context`); otherwise COUNT/SUM/AVG span tenants.
+        let user_match = match &op.filter {
+            Some(filter) => self.render_filter(filter, table, &op.message_type)?,
+            None => json!({}),
+        };
+        let scoped_match = and_with_context(user_match, table, ctx);
+        if !scoped_match.as_object().is_some_and(|m| m.is_empty()) {
+            pipeline.push(json!({ "$match": scoped_match }));
         }
 
         // $group._id: { groupCol: "$groupCol" } (or null when no group_by).
@@ -1231,5 +1236,39 @@ mod tests {
             }
             other => panic!("expected Malformed, got {other:?}"),
         }
+    }
+
+    /// C16: the aggregate `$match` must carry the tenant/project context like
+    /// every sibling op, or COUNT/SUM/AVG span tenants.
+    #[test]
+    fn aggregate_injects_tenant_match() {
+        let m = fixture_manifest();
+        let ctx = CompileContext::new(&m)
+            .with_tenant("acme")
+            .with_project("p1");
+        let agg = LogicalAggregate {
+            message_type: "acme.billing.v1.Customer".into(),
+            filter: None,
+            group_by: vec![],
+            aggregates: vec![AggregateExpr {
+                func: AggregateFunc::Count,
+                field: "*".into(),
+                alias: "n".into(),
+            }],
+            having: None,
+            sort: vec![],
+            pagination: None,
+        };
+        let (_, body) = extract_json(MongoDbCompiler.compile_aggregate(&agg, &ctx).unwrap());
+        let pipeline = body["pipeline"].as_array().expect("pipeline array");
+        let match_stage = pipeline
+            .iter()
+            .find_map(|s| s.get("$match"))
+            .expect("aggregate pipeline must contain a $match tenant stage");
+        let rendered = serde_json::to_string(match_stage).unwrap();
+        assert!(
+            rendered.contains("_tenant_id") && rendered.contains("acme"),
+            "aggregate $match must scope tenant: {rendered}"
+        );
     }
 }

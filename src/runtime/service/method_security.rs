@@ -33,7 +33,9 @@ use tonic::codegen::http;
 use tonic::codegen::{Context, Future, Pin, Poll, Service};
 
 use crate::metrics::MetricsRecorder;
-use crate::runtime::descriptor_manifest::descriptor_contract_manifest_static;
+use crate::runtime::descriptor_manifest::{
+    EndpointSecurityContract, descriptor_contract_manifest_static,
+};
 use crate::runtime::security::{SecurityClaims, SecurityConfig, validate_bearer_token};
 
 /// Mirror of `udb.core.common.v1.AuthMode`.
@@ -86,6 +88,21 @@ pub struct MethodSecurity {
     /// authorize the action against. When unset the handler synthesizes
     /// `native.rpc:{service}/{method}` so a decision is still recorded.
     pub decision_resource: Option<String>,
+    /// `endpoint_security.required_assurance_level` — the minimum authentication
+    /// assurance level (AAL/MFA step-up) required to invoke this RPC. `0` = unset
+    /// (no step-up requirement). Enforced against the bearer's `acr` claim (C21).
+    pub required_assurance_level: i32,
+    /// `endpoint_security.owner_field` — the body field naming the principal that
+    /// owns the target resource. Enforced via
+    /// [`enforce_body_owner_matches_claim`] when a handler extracts it (C23).
+    pub owner_field: Option<String>,
+    /// `endpoint_security.rate_limit_policy_ref` — the named rate-limit policy this
+    /// RPC's abuse bucket is keyed under, so distinct policies get distinct buckets
+    /// and an operator can tune a named policy's ceiling (C24).
+    pub rate_limit_policy_ref: Option<String>,
+    /// `endpoint_security.audit_event_type` — the per-RPC audit event type to
+    /// stamp instead of a synthesized one (C25).
+    pub audit_event_type: Option<String>,
 }
 
 /// Normalize a descriptor string field into `Some(non-empty)` / `None`.
@@ -98,6 +115,43 @@ fn opt_non_empty(value: &str) -> Option<String> {
     }
 }
 
+/// Map an `acr` claim string (e.g. `aal1`, `aal2`) to its numeric assurance
+/// level. Unknown/absent forms are the baseline level 1 (C21).
+fn aal_level(acr: &str) -> i32 {
+    acr.trim()
+        .to_ascii_lowercase()
+        .strip_prefix("aal")
+        .and_then(|n| n.parse::<i32>().ok())
+        .filter(|n| *n >= 1)
+        .unwrap_or(1)
+}
+
+/// Project a decoded `endpoint_security` contract into the enforced
+/// [`MethodSecurity`]. This is the ONLY runtime copy on the request path, so any
+/// field NOT projected here is unenforceable by construction — the seam that made
+/// C21/C23/C24/C25 decorative. L2's inventory test pins that every contract field
+/// is either projected here (enforced) or documented as metadata-only.
+fn method_security_from_contract(es: &EndpointSecurityContract) -> MethodSecurity {
+    MethodSecurity {
+        mode: AuthMode::from_i32(es.mode),
+        roles: es.roles.clone(),
+        scopes: es.scopes.clone(),
+        tenant_required: es.tenant_required,
+        csrf_required: es.csrf_required,
+        internal_grpc_only: es.internal_grpc_only,
+        allowed_credential_types: es.allowed_credential_types.clone(),
+        tenant_field: es.tenant_field.clone(),
+        project_field: es.project_field.clone(),
+        request_context_required: es.request_context_required,
+        policy_ref: opt_non_empty(&es.policy_ref),
+        decision_resource: opt_non_empty(&es.decision_resource),
+        required_assurance_level: es.required_assurance_level,
+        owner_field: opt_non_empty(&es.owner_field),
+        rate_limit_policy_ref: opt_non_empty(&es.rate_limit_policy_ref),
+        audit_event_type: opt_non_empty(&es.audit_event_type),
+    }
+}
+
 pub(crate) fn build_registry() -> HashMap<String, MethodSecurity> {
     let mut map = HashMap::new();
     let manifest = descriptor_contract_manifest_static();
@@ -106,23 +160,7 @@ pub(crate) fn build_registry() -> HashMap<String, MethodSecurity> {
             let Some(es) = method.endpoint_security.as_ref() else {
                 continue;
             };
-            map.insert(
-                method.grpc_path(),
-                MethodSecurity {
-                    mode: AuthMode::from_i32(es.mode),
-                    roles: es.roles.clone(),
-                    scopes: es.scopes.clone(),
-                    tenant_required: es.tenant_required,
-                    csrf_required: es.csrf_required,
-                    internal_grpc_only: es.internal_grpc_only,
-                    allowed_credential_types: es.allowed_credential_types.clone(),
-                    tenant_field: es.tenant_field.clone(),
-                    project_field: es.project_field.clone(),
-                    request_context_required: es.request_context_required,
-                    policy_ref: opt_non_empty(&es.policy_ref),
-                    decision_resource: opt_non_empty(&es.decision_resource),
-                },
-            );
+            map.insert(method.grpc_path(), method_security_from_contract(es));
         }
     }
     map
@@ -304,6 +342,12 @@ mod deny_reason {
     pub const CREDENTIAL_TYPE: &str = "credential_type";
     pub const SCOPE: &str = "scope";
     pub const ROLE: &str = "role";
+    /// The bearer's authentication assurance level (AAL/MFA) is below the level
+    /// the RPC declares via `required_assurance_level` (C21 step-up gate).
+    pub const ASSURANCE: &str = "assurance_level";
+    /// The decoded body's owner field does not match the authenticated principal
+    /// (C23 ownership guard).
+    pub const OWNER: &str = "owner_mismatch";
     pub const INTERNAL_ONLY: &str = "internal_only";
     pub const CSRF: &str = "csrf";
     pub const REQUEST_CONTEXT: &str = "request_context";
@@ -349,6 +393,46 @@ fn public_bootstrap_rate_limit_per_minute() -> u32 {
                 .as_deref(),
         )
     })
+}
+
+/// Normalize a `rate_limit_policy_ref` into its env override key
+/// `UDB_RATE_LIMIT_POLICY_<REF>` (uppercased; non-alphanumerics → `_`).
+fn rate_limit_policy_env_key(policy_ref: &str) -> String {
+    format!(
+        "UDB_RATE_LIMIT_POLICY_{}",
+        policy_ref
+            .to_ascii_uppercase()
+            .chars()
+            .map(|c| if c.is_ascii_alphanumeric() { c } else { '_' })
+            .collect::<String>()
+    )
+}
+
+/// Resolve the per-minute ceiling for a named `rate_limit_policy_ref` (C24). A
+/// declared policy can be tuned via its `UDB_RATE_LIMIT_POLICY_<REF>` env var;
+/// unset falls back to the global public-bootstrap limit. Memoized per ref so the
+/// env is read once per policy, not per request.
+fn public_bootstrap_rate_limit_for(policy_ref: Option<&str>) -> u32 {
+    let Some(reference) = policy_ref.map(str::trim).filter(|r| !r.is_empty()) else {
+        return public_bootstrap_rate_limit_per_minute();
+    };
+    static CACHE: OnceLock<Mutex<HashMap<String, u32>>> = OnceLock::new();
+    let cache = CACHE.get_or_init(|| Mutex::new(HashMap::new()));
+    let Ok(mut map) = cache.lock() else {
+        return public_bootstrap_rate_limit_per_minute();
+    };
+    if let Some(limit) = map.get(reference) {
+        return *limit;
+    }
+    let env_key = rate_limit_policy_env_key(reference);
+    let limit = std::env::var(&env_key)
+        .ok()
+        .as_deref()
+        .and_then(|raw| raw.trim().parse::<u32>().ok())
+        .filter(|&l| l > 0)
+        .unwrap_or_else(public_bootstrap_rate_limit_per_minute);
+    map.insert(reference.to_string(), limit);
+    limit
 }
 
 /// Whether a trusted gateway in front of UDB sets `x-forwarded-for`/`x-real-ip`.
@@ -475,13 +559,20 @@ fn public_rate_limit_key(
     path: &str,
     headers: &http::HeaderMap,
     peer: &TransportPeer,
+    policy_ref: Option<&str>,
 ) -> (String, String, u64) {
     let caller = rate_limit_caller_id(headers, peer, trust_proxy_ip_headers());
     let minute = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|duration| duration.as_secs() / 60)
         .unwrap_or_default();
-    (path.to_string(), caller, minute)
+    // C24: fold the named policy into the bucket identity so distinct policies
+    // get distinct buckets instead of all sharing one hardcoded bucket.
+    let bucket_path = match policy_ref.map(str::trim).filter(|r| !r.is_empty()) {
+        Some(reference) => format!("{reference}|{path}"),
+        None => path.to_string(),
+    };
+    (bucket_path, caller, minute)
 }
 
 fn public_bootstrap_retry_after_ms() -> i64 {
@@ -497,9 +588,10 @@ fn check_public_bootstrap_rate_limit(
     path: &str,
     headers: &http::HeaderMap,
     peer: &TransportPeer,
+    policy_ref: Option<&str>,
 ) -> Result<(), (Status, &'static str)> {
     static BUCKETS: OnceLock<Mutex<HashMap<(String, String, u64), u32>>> = OnceLock::new();
-    let key = public_rate_limit_key(path, headers, peer);
+    let key = public_rate_limit_key(path, headers, peer, policy_ref);
     let buckets = BUCKETS.get_or_init(|| Mutex::new(HashMap::new()));
     let mut guard = buckets.lock().map_err(|_| {
         (
@@ -516,7 +608,7 @@ fn check_public_bootstrap_rate_limit(
     guard.retain(|(_, _, minute), _| *minute + 2 >= current_minute);
     let count = guard.entry(key).or_insert(0);
     *count = count.saturating_add(1);
-    if *count > public_bootstrap_rate_limit_per_minute() {
+    if *count > public_bootstrap_rate_limit_for(policy_ref) {
         return Err((
             crate::runtime::executor_utils::quota_status(
                 "method_security",
@@ -783,6 +875,45 @@ pub fn enforce_body_tenant_matches_claim(
     Ok(())
 }
 
+/// C23 — post-decode body-owner guard, the ownership analogue of
+/// [`enforce_body_tenant_matches_claim`]. When an RPC declares an
+/// `endpoint_security.owner_field`, a handler extracts that field from the
+/// decoded body and calls this so that — WITHIN a tenant — a caller cannot act on
+/// another principal's owned resource by naming a foreign owner. Fail-closed: a
+/// non-empty body owner must equal the validated principal subject, unless the
+/// caller is a genuine cross-tenant admin. An empty body owner inherits the
+/// principal (no override). Skipped on the in-process/loopback path (no claim
+/// context installed), matching the tenant guard.
+pub fn enforce_body_owner_matches_claim(
+    ctx: &VerifiedClaimContext,
+    body_owner: &str,
+) -> Result<(), Status> {
+    if !claim_context_present() {
+        return Ok(());
+    }
+    if ctx.is_cross_tenant_admin() {
+        return Ok(());
+    }
+    let body_owner = body_owner.trim();
+    let subject = ctx.subject.trim();
+    if !body_owner.is_empty() && !subject.is_empty() && body_owner != subject {
+        tracing::warn!(
+            target: "udb.audit.authz",
+            subject = %ctx.subject,
+            service_identity = %ctx.service_identity,
+            credential_type = ctx.credential_type,
+            credential_id = %ctx.credential_id,
+            body_owner = %body_owner,
+            "DENY: request body owner does not match the authenticated principal"
+        );
+        return Err(method_security_policy_denied(
+            deny_reason::OWNER,
+            "request owner must match the authenticated principal",
+        ));
+    }
+    Ok(())
+}
+
 /// 01.4.1.1 — the write-path analogue of [`enforce_body_tenant_matches_claim`].
 /// It applies the SAME mismatch-reject + both-empty fail-closed checks, then
 /// RESOLVES the effective `(tenant, project)` to STORE:
@@ -981,7 +1112,12 @@ fn enforce(
 
     // Public bootstrap RPCs need no control-plane bearer.
     if matches!(declared, Some(s) if s.mode == AuthMode::Public) {
-        check_public_bootstrap_rate_limit(path, headers, peer)?;
+        check_public_bootstrap_rate_limit(
+            path,
+            headers,
+            peer,
+            declared.and_then(|s| s.rate_limit_policy_ref.as_deref()),
+        )?;
         if let Some(s) = declared {
             if !s.allowed_credential_types.is_empty()
                 && !s
@@ -1199,6 +1335,26 @@ fn enforce(
                     "required role missing for this control-plane method",
                 ),
                 deny_reason::ROLE,
+            ));
+        }
+    }
+
+    // C21: assurance-level (AAL / MFA step-up) gate. An RPC declaring
+    // `required_assurance_level=N` demands a bearer minted at that assurance
+    // (the `acr` claim: `aal2` ⇒ 2, `aal1`/absent ⇒ 1). Enforced independently of
+    // scope/role — an admin scope does NOT waive a step-up requirement. When no
+    // RPC declares a level (the current descriptor set) this gate never fires.
+    if let Some(s) = declared
+        && s.required_assurance_level > 1
+    {
+        let caller_aal = claims.acr.as_deref().map(aal_level).unwrap_or(1);
+        if caller_aal < s.required_assurance_level {
+            return Err((
+                method_security_policy_denied(
+                    deny_reason::ASSURANCE,
+                    "method requires a higher authentication assurance level (MFA step-up)",
+                ),
+                deny_reason::ASSURANCE,
             ));
         }
     }
@@ -2001,6 +2157,10 @@ mod tests {
             request_context_required: false,
             policy_ref: None,
             decision_resource: None,
+            required_assurance_level: 0,
+            owner_field: None,
+            rate_limit_policy_ref: None,
+            audit_event_type: None,
         }
     }
 
@@ -2359,6 +2519,173 @@ mod tests {
     /// and the D1/D2 guards enforce (rather than skipping the in-process path).
     fn with_ctx<R>(ctx: &VerifiedClaimContext, f: impl FnOnce() -> R) -> R {
         CURRENT_CLAIM_CONTEXT.sync_scope(ctx.clone(), f)
+    }
+
+    // ── C21: assurance-level mapping (the AAL step-up gate's comparator) ──────
+
+    #[test]
+    fn aal_level_maps_acr_strings() {
+        assert_eq!(aal_level("aal1"), 1);
+        assert_eq!(aal_level("AAL2"), 2);
+        assert_eq!(aal_level("aal3"), 3);
+        assert_eq!(aal_level(""), 1);
+        assert_eq!(aal_level("garbage"), 1);
+        // A required level of 2 denies an aal1 caller, admits an aal2 caller.
+        assert!(aal_level("aal1") < 2);
+        assert!(aal_level("aal2") >= 2);
+    }
+
+    // ── C23: body-owner-vs-principal ─────────────────────────────────────────
+
+    #[test]
+    fn body_owner_matching_principal_is_allowed() {
+        let ctx = claim_ctx("u-1", "tenant-a", "proj-1", &["udb:write"], &[]);
+        with_ctx(&ctx, || {
+            enforce_body_owner_matches_claim(&ctx, "u-1").expect("same owner allowed");
+        });
+    }
+
+    #[test]
+    fn body_owner_mismatch_is_denied() {
+        let ctx = claim_ctx("u-1", "tenant-a", "proj-1", &["udb:write"], &[]);
+        with_ctx(&ctx, || {
+            let err = enforce_body_owner_matches_claim(&ctx, "someone-else").unwrap_err();
+            assert_eq!(err.code(), tonic::Code::PermissionDenied);
+        });
+    }
+
+    #[test]
+    fn body_owner_empty_inherits_principal() {
+        let ctx = claim_ctx("u-1", "tenant-a", "proj-1", &["udb:write"], &[]);
+        with_ctx(&ctx, || {
+            enforce_body_owner_matches_claim(&ctx, "").expect("empty owner inherits principal");
+        });
+    }
+
+    // ── C24: named rate-limit policy → distinct bucket + tunable limit ────────
+
+    #[test]
+    fn rate_limit_policy_env_key_normalizes() {
+        assert_eq!(
+            rate_limit_policy_env_key("authn.login.public"),
+            "UDB_RATE_LIMIT_POLICY_AUTHN_LOGIN_PUBLIC"
+        );
+    }
+
+    #[test]
+    fn public_rate_limit_key_differs_by_policy_ref() {
+        let headers = http::HeaderMap::new();
+        let peer = TransportPeer::default();
+        let a = public_rate_limit_key("/svc/M", &headers, &peer, Some("policy.a"));
+        let b = public_rate_limit_key("/svc/M", &headers, &peer, Some("policy.b"));
+        let none = public_rate_limit_key("/svc/M", &headers, &peer, None);
+        assert_ne!(a.0, b.0, "distinct policies must get distinct buckets");
+        assert_eq!(none.0, "/svc/M");
+        assert!(a.0.contains("policy.a"));
+    }
+
+    #[test]
+    fn unset_policy_falls_back_to_default_limit() {
+        assert_eq!(
+            public_bootstrap_rate_limit_for(None),
+            public_bootstrap_rate_limit_per_minute()
+        );
+        assert_eq!(
+            public_bootstrap_rate_limit_for(Some("never.configured.policy.xyz")),
+            public_bootstrap_rate_limit_per_minute()
+        );
+    }
+
+    // ── L2: every endpoint_security field is enforced or whitelisted ──────────
+
+    /// Anti-drift guard. `method_security_from_contract` is the ONLY runtime copy
+    /// of `endpoint_security` on the request path, so a field it drops is
+    /// unenforceable — the seam that made C21/C23/C24/C25 decorative. This test
+    /// pins that every contract field is either PROJECTED (enforced) or documented
+    /// metadata-only, and the exhaustive destructure at the end makes adding a new
+    /// field a COMPILE error until the author classifies it.
+    #[test]
+    fn every_endpoint_security_field_is_enforced_or_whitelisted() {
+        let es = EndpointSecurityContract {
+            mode: 2,
+            roles: vec!["r".into()],
+            scopes: vec!["s".into()],
+            tenant_required: true,
+            csrf_required: true,
+            policy_ref: "p".into(),
+            internal_grpc_only: true,
+            required_assurance_level: 2,
+            allowed_credential_types: vec![1],
+            rate_limit_policy_ref: "rl".into(),
+            abuse_policy_ref: "ab".into(),
+            audit_event_type: "ae".into(),
+            decision_resource: "dr".into(),
+            owner_field: "owner".into(),
+            tenant_field: "tf".into(),
+            project_field: "pf".into(),
+            idempotency_required: true,
+            request_context_required: true,
+        };
+        let ms = method_security_from_contract(&es);
+        // Enforced (projected + wired) — every gate field must round-trip.
+        assert_eq!(ms.roles, vec!["r".to_string()]);
+        assert_eq!(ms.scopes, vec!["s".to_string()]);
+        assert!(ms.tenant_required);
+        assert!(ms.csrf_required);
+        assert!(ms.internal_grpc_only);
+        assert_eq!(ms.allowed_credential_types, vec![1]);
+        assert_eq!(ms.tenant_field, "tf");
+        assert_eq!(ms.project_field, "pf");
+        assert!(ms.request_context_required);
+        assert_eq!(ms.policy_ref.as_deref(), Some("p"));
+        assert_eq!(ms.decision_resource.as_deref(), Some("dr"));
+        // Newly wired — must no longer be dropped:
+        assert_eq!(ms.required_assurance_level, 2, "C21 field dropped");
+        assert_eq!(
+            ms.owner_field.as_deref(),
+            Some("owner"),
+            "C23 field dropped"
+        );
+        assert_eq!(
+            ms.rate_limit_policy_ref.as_deref(),
+            Some("rl"),
+            "C24 field dropped"
+        );
+        assert_eq!(
+            ms.audit_event_type.as_deref(),
+            Some("ae"),
+            "C25 field dropped"
+        );
+
+        // Exhaustive destructure — adding a field to EndpointSecurityContract makes
+        // THIS fail to compile until the author decides: wire it into
+        // `method_security_from_contract` + assert it above (enforced), or add it to
+        // the metadata-only whitelist here with a rationale.
+        let EndpointSecurityContract {
+            // ── enforced (projected into MethodSecurity) ──
+            mode: _,
+            roles: _,
+            scopes: _,
+            tenant_required: _,
+            csrf_required: _,
+            policy_ref: _,
+            internal_grpc_only: _,
+            required_assurance_level: _,
+            allowed_credential_types: _,
+            rate_limit_policy_ref: _,
+            audit_event_type: _,
+            decision_resource: _,
+            owner_field: _,
+            tenant_field: _,
+            project_field: _,
+            request_context_required: _,
+            // ── metadata-only whitelist (intentionally NOT a MethodSecurity gate) ──
+            // abuse_policy_ref: reserved paired signal; no consumer yet.
+            abuse_policy_ref: _,
+            // idempotency_required: superseded by the separate
+            // method_idempotency_contract (own posture gate + dedup).
+            idempotency_required: _,
+        } = &es;
     }
 
     // ── D1: body-tenant-vs-claim ─────────────────────────────────────────────

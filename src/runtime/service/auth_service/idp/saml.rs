@@ -262,6 +262,48 @@ pub fn validate_response(
             "assertion signature did not match any configured IdP certificate".into(),
         ));
     }
+
+    // ── XML Signature Wrapping (XSW) defense ─────────────────────────────────
+    // A verified signature only proves that *some* element was validly signed;
+    // by itself it does NOT prove that element is the assertion we consumed.
+    // Without the binding below, an attacker can wrap a genuinely-signed
+    // assertion alongside a forged first `<Assertion>` and authenticate as the
+    // forged identity (classic XSW). We close it two ways, both required:
+    //   (1) the response must carry exactly ONE `<Assertion>` (kills wrapping);
+    //   (2) the signed element must be that Assertion (ref-ID == the consumed
+    //       assertion's ID) or the whole enveloping `<Response>` (which, with a
+    //       single assertion, provably covers it).
+    let assertion_count = count_assertions(&xml);
+    if assertion_count != 1 {
+        return Err(SamlError::Signature(format!(
+            "SAMLResponse must contain exactly one <Assertion> (found {assertion_count}); \
+             refusing to bind a signature under XML-signature-wrapping conditions"
+        )));
+    }
+    let (signed_local, signed_ref_id) = signed_reference(&xml).ok_or_else(|| {
+        SamlError::Signature("could not resolve the signed reference for assertion binding".into())
+    })?;
+    match signed_local.as_str() {
+        "Assertion" => {
+            if signed_ref_id != assertion.assertion_id {
+                return Err(SamlError::Signature(format!(
+                    "signed assertion ID '{signed_ref_id}' does not match the consumed \
+                     assertion ID '{}' (signature-wrapping attempt)",
+                    assertion.assertion_id
+                )));
+            }
+        }
+        // A whole-Response enveloped signature covers the (single) assertion as a
+        // descendant of the signed subtree; the single-assertion guard above
+        // guarantees no wrapped sibling can be smuggled in.
+        "Response" => {}
+        other => {
+            return Err(SamlError::Signature(format!(
+                "XML-DSig must cover the <Assertion> or the enveloping <Response>, not <{other}>"
+            )));
+        }
+    }
+
     Ok((assertion, verified))
 }
 
@@ -783,6 +825,44 @@ fn extract_prefix_list(signed_info: &str) -> Vec<String> {
     }
 }
 
+/// Resolve what the XML-DSig actually signed: the local name of the referenced
+/// element and the reference ID (empty ID → whole-document `<Response>`). Used by
+/// `validate_response` to BIND a verified signature to the consumed assertion
+/// (XSW defense). Uses the same helpers `verify_signature` uses, so the resolved
+/// element is exactly the one that was digested/verified.
+fn signed_reference(xml: &str) -> Option<(String, String)> {
+    let signed_info = extract_element(xml, "SignedInfo")?;
+    let reference_uri = attr_of_element(&signed_info, "Reference", "URI").unwrap_or_default();
+    let ref_id = reference_uri.trim_start_matches('#').to_string();
+    let local = if ref_id.is_empty() {
+        "Response".to_string()
+    } else {
+        find_local_name_by_id(xml, &ref_id)?
+    };
+    Some((local, ref_id))
+}
+
+/// Count `<Assertion>` elements anywhere in the response. A legitimate SAMLResponse
+/// carries exactly one; more than one is the signature-wrapping (XSW) shape.
+fn count_assertions(xml: &str) -> usize {
+    let mut reader = Reader::from_str(xml);
+    reader.check_end_names(false);
+    let mut n = 0usize;
+    loop {
+        match reader.read_event() {
+            Ok(Event::Start(e)) | Ok(Event::Empty(e)) => {
+                if local_name(e.name().as_ref()) == "Assertion" {
+                    n += 1;
+                }
+            }
+            Ok(Event::Eof) => break,
+            Err(_) => break,
+            _ => {}
+        }
+    }
+    n
+}
+
 /// Find the local name of the element whose `ID`/`Id`/`id` attribute equals
 /// `id`. Used to resolve an XML-DSig `<ds:Reference URI="#id">` to the element
 /// it signs (e.g. the `<saml:Assertion>`).
@@ -1070,6 +1150,80 @@ mod tests {
         assert_eq!(
             assertion.attributes.get("email").map(|v| v.as_slice()),
             Some(["dev-user@udb.local".to_string()].as_slice())
+        );
+    }
+
+    // ── XML Signature Wrapping (XSW) — C10 auth-bypass closure ────────────────
+
+    /// Exploit-as-test: a genuinely-signed assertion wrapped alongside a forged
+    /// FIRST `<Assertion>` (NameID=attacker) must be REJECTED. On the pre-fix code
+    /// `parse_assertion` consumed the forged first assertion while `verify_signature`
+    /// validated the genuine second one, so `validate_response` returned
+    /// `Ok((forged, true))` — authentication as the forged identity.
+    #[test]
+    fn saml_wrapped_response_is_rejected() {
+        use base64::Engine as _;
+        let genuine = signed_response("real@corp.com");
+        // Forge an unsigned FIRST assertion asserting a different identity.
+        let forged = r#"<saml:Assertion xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" ID="_forged"><saml:Issuer>https://idp.example.com/meta</saml:Issuer><saml:Subject><saml:NameID>attacker@evil.com</saml:NameID></saml:Subject><saml:Conditions NotBefore="2020-01-01T00:00:00Z" NotOnOrAfter="2099-01-01T00:00:00Z"><saml:AudienceRestriction><saml:Audience>https://sp.example.com</saml:Audience></saml:AudienceRestriction></saml:Conditions></saml:Assertion>"#;
+        // Insert the forged assertion immediately before the genuine (signed) one.
+        let wrapped = genuine.replacen("<saml:Assertion", &format!("{forged}<saml:Assertion"), 1);
+        let b64 = base64::engine::general_purpose::STANDARD.encode(wrapped.as_bytes());
+        let result = validate_response(
+            &b64,
+            &[TEST_CERT_DER_B64.to_string()],
+            "https://sp.example.com",
+            300,
+            1_600_000_000,
+        );
+        assert!(
+            result.is_err(),
+            "signature-wrapped response must be rejected, got {result:?}"
+        );
+    }
+
+    /// Positive control: a single validly-signed assertion still authenticates.
+    #[test]
+    fn saml_single_signed_assertion_still_passes() {
+        use base64::Engine as _;
+        let genuine = signed_response("real@corp.com");
+        let b64 = base64::engine::general_purpose::STANDARD.encode(genuine.as_bytes());
+        let (assertion, verified) = validate_response(
+            &b64,
+            &[TEST_CERT_DER_B64.to_string()],
+            "https://sp.example.com",
+            300,
+            1_600_000_000,
+        )
+        .expect("a single validly-signed assertion must pass");
+        assert!(verified, "genuine assertion must verify");
+        assert_eq!(assertion.name_id, "real@corp.com");
+    }
+
+    /// A second, forged assertion appended AFTER the signed one must also be
+    /// rejected (multi-assertion guard covers append-wrapping, not just prepend).
+    #[test]
+    fn saml_appended_second_assertion_is_rejected() {
+        use base64::Engine as _;
+        let genuine = signed_response("real@corp.com");
+        let forged = r#"<saml:Assertion xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" ID="_forged2"><saml:Issuer>https://idp.example.com/meta</saml:Issuer><saml:Subject><saml:NameID>attacker@evil.com</saml:NameID></saml:Subject><saml:Conditions NotBefore="2020-01-01T00:00:00Z" NotOnOrAfter="2099-01-01T00:00:00Z"><saml:AudienceRestriction><saml:Audience>https://sp.example.com</saml:Audience></saml:AudienceRestriction></saml:Conditions></saml:Assertion>"#;
+        // Append the forged assertion just before </samlp:Response>.
+        let wrapped = genuine.replacen(
+            "</samlp:Response>",
+            &format!("{forged}</samlp:Response>"),
+            1,
+        );
+        let b64 = base64::engine::general_purpose::STANDARD.encode(wrapped.as_bytes());
+        let result = validate_response(
+            &b64,
+            &[TEST_CERT_DER_B64.to_string()],
+            "https://sp.example.com",
+            300,
+            1_600_000_000,
+        );
+        assert!(
+            result.is_err(),
+            "appended second assertion must be rejected, got {result:?}"
         );
     }
 }

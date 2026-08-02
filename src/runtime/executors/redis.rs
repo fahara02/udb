@@ -18,6 +18,61 @@ pub(crate) struct RedisExecutor {
     // Cloning a `MultiplexedConnection` is cheap (one shared actor/socket), so each
     // call clones the cached handle instead of opening a fresh connection (#76).
     conn: std::sync::Arc<tokio::sync::OnceCell<redis::aio::MultiplexedConnection>>,
+    // Tenant/project key namespace `udb:{project}:{tenant}:` derived from the
+    // request context by the dispatch factory. When present, every raw key and
+    // SCAN pattern is forced under it so a raw-dispatch caller cannot read, scan,
+    // or mutate another tenant's keys (C6). `None` only on the context-free path
+    // (health probes / admin tooling).
+    namespace: Option<String>,
+}
+
+/// Build the `udb:{project}:{tenant}:` key namespace that the Redis IR compiler
+/// (`build_key`) writes under. Empty tenant/project fall back to `default`, so a
+/// context always yields a concrete, isolating prefix.
+pub(crate) fn redis_context_namespace(project_id: &str, tenant_id: &str) -> String {
+    let project = if project_id.trim().is_empty() {
+        "default"
+    } else {
+        project_id
+    };
+    let tenant = if tenant_id.trim().is_empty() {
+        "default"
+    } else {
+        tenant_id
+    };
+    format!("udb:{project}:{tenant}:")
+}
+
+/// Force a caller SCAN pattern under the tenant/project namespace so it cannot
+/// enumerate another tenant's keys (C6). A caller pattern that does not already
+/// sit under the namespace is re-anchored beneath it (so a cross-tenant pattern
+/// like `udb:other:*` becomes `udb:me:...udb:other:*` and matches nothing). With
+/// no namespace (context-free path) the pattern is returned unchanged.
+pub(crate) fn effective_scan_pattern(namespace: Option<&str>, caller_pattern: &str) -> String {
+    match namespace {
+        Some(ns) if !ns.is_empty() => {
+            let suffix = caller_pattern.strip_prefix(ns).unwrap_or(caller_pattern);
+            let suffix = if suffix.is_empty() { "*" } else { suffix };
+            format!("{ns}{suffix}")
+        }
+        _ => caller_pattern.to_string(),
+    }
+}
+
+/// Force a raw key under the tenant/project namespace (C6). A key already under
+/// the namespace is left as-is (idempotent); any other key is prefixed so it
+/// cannot address another tenant's namespace.
+pub(crate) fn scope_redis_key(namespace: Option<&str>, key: &str) -> String {
+    match namespace {
+        Some(ns) if !ns.is_empty() => {
+            if key.starts_with(ns) {
+                key.to_string()
+            } else {
+                format!("{ns}{key}")
+            }
+        }
+        _ => key.to_string(),
+    }
 }
 
 impl std::fmt::Debug for RedisExecutor {
@@ -52,7 +107,19 @@ impl RedisExecutor {
         Self {
             client,
             conn: std::sync::Arc::new(tokio::sync::OnceCell::new()),
+            namespace: None,
         }
+    }
+
+    /// Attach the tenant/project key namespace derived from the request context.
+    /// The dispatch factory calls this so raw KV/scan ops are tenant-scoped (C6).
+    pub(crate) fn with_namespace(mut self, namespace: Option<String>) -> Self {
+        self.namespace = namespace.filter(|ns| !ns.is_empty());
+        self
+    }
+
+    fn namespace(&self) -> Option<&str> {
+        self.namespace.as_deref()
     }
 
     async fn connection(&self) -> Result<redis::aio::MultiplexedConnection, tonic::Status> {
@@ -124,8 +191,9 @@ impl QueryExecutor for RedisExecutor {
                     .get("key")
                     .and_then(Json::as_str)
                     .ok_or_else(|| redis_required_field_status("key", "key is required"))?;
+                let scoped = scope_redis_key(self.namespace(), key);
                 let value: Option<Vec<u8>> = conn
-                    .get(key)
+                    .get(&scoped)
                     .await
                     .map_err(|err| backend_transport_status("redis", "GET", err))?;
                 Ok(json!({
@@ -149,8 +217,12 @@ impl QueryExecutor for RedisExecutor {
                     .iter()
                     .filter_map(Json::as_str)
                     .collect::<Vec<_>>();
+                let scoped_keys: Vec<String> = keys
+                    .iter()
+                    .map(|k| scope_redis_key(self.namespace(), k))
+                    .collect();
                 let values: Vec<Option<Vec<u8>>> = conn
-                    .get(&keys)
+                    .get(&scoped_keys)
                     .await
                     .map_err(|err| backend_transport_status("redis", "MGET", err))?;
                 Ok(json!({
@@ -169,14 +241,18 @@ impl QueryExecutor for RedisExecutor {
                     .get("key")
                     .and_then(Json::as_str)
                     .ok_or_else(|| redis_required_field_status("key", "key is required"))?;
+                let scoped = scope_redis_key(self.namespace(), key);
                 let exists: bool = conn
-                    .exists(key)
+                    .exists(&scoped)
                     .await
                     .map_err(|err| backend_transport_status("redis", "EXISTS", err))?;
                 Ok(json!({ "key": key, "exists": exists }).to_string())
             }
             "scan" | "cache_scan" => {
-                let pattern = spec.get("pattern").and_then(Json::as_str).unwrap_or("*");
+                let caller_pattern = spec.get("pattern").and_then(Json::as_str).unwrap_or("*");
+                // C6: force the pattern under the tenant/project namespace so a raw
+                // `scan` cannot enumerate keys + values across tenants.
+                let pattern = effective_scan_pattern(self.namespace(), caller_pattern);
                 let cursor = spec
                     .get("cursor")
                     .and_then(|value| {
@@ -245,6 +321,10 @@ impl MutationExecutor for RedisExecutor {
             .get("key")
             .and_then(Json::as_str)
             .ok_or_else(|| redis_required_field_status("key", "key is required"))?;
+        // C6: scope writes under the tenant/project namespace too, so a scoped
+        // read/scan agrees with what was written and no raw write can target
+        // another tenant's key.
+        let key = scope_redis_key(self.namespace(), key);
         let mut conn = self.connection().await?;
         match operation {
             "set" | "cache_set" | "write_through" => {
@@ -406,6 +486,54 @@ mod tests {
         assert_eq!(err.code(), tonic::Code::InvalidArgument);
         assert!(err.message().starts_with("invalid request json:"));
         assert_single_field(&err, "request_json");
+    }
+
+    // ── C6: raw scan/key ops are confined to the tenant/project namespace ─────
+
+    #[test]
+    fn redis_effective_scan_pattern_is_tenant_scoped() {
+        let ns = redis_context_namespace("p1", "t1");
+        assert_eq!(ns, "udb:p1:t1:");
+        // A wildcard is anchored under the namespace.
+        assert_eq!(effective_scan_pattern(Some(&ns), "*"), "udb:p1:t1:*");
+        // A suffix pattern is anchored, not free.
+        assert_eq!(
+            effective_scan_pattern(Some(&ns), "orders:*"),
+            "udb:p1:t1:orders:*"
+        );
+        // An in-namespace pattern is idempotent.
+        assert_eq!(
+            effective_scan_pattern(Some(&ns), "udb:p1:t1:orders:*"),
+            "udb:p1:t1:orders:*"
+        );
+        // A cross-tenant pattern cannot escape our namespace — it is re-anchored
+        // beneath it, so it matches nothing rather than another tenant's keys.
+        assert_eq!(
+            effective_scan_pattern(Some(&ns), "udb:p2:t2:*"),
+            "udb:p1:t1:udb:p2:t2:*"
+        );
+        // Context-free path is unchanged.
+        assert_eq!(effective_scan_pattern(None, "*"), "*");
+    }
+
+    #[test]
+    fn redis_scope_key_confines_to_namespace() {
+        let ns = redis_context_namespace("p1", "t1");
+        assert_eq!(scope_redis_key(Some(&ns), "k"), "udb:p1:t1:k");
+        // Already-scoped key is left as-is.
+        assert_eq!(scope_redis_key(Some(&ns), "udb:p1:t1:k"), "udb:p1:t1:k");
+        // A cross-tenant key is prefixed so it can't address another namespace.
+        assert_eq!(
+            scope_redis_key(Some(&ns), "udb:p2:t2:k"),
+            "udb:p1:t1:udb:p2:t2:k"
+        );
+        assert_eq!(scope_redis_key(None, "k"), "k");
+    }
+
+    #[test]
+    fn redis_context_namespace_defaults_empty_ids() {
+        assert_eq!(redis_context_namespace("", ""), "udb:default:default:");
+        assert_eq!(redis_context_namespace("  ", "t"), "udb:default:t:");
     }
 
     #[test]

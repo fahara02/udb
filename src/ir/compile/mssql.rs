@@ -142,11 +142,15 @@ impl Compiler for MssqlCompiler {
             table = table.table,
         );
 
-        if let Some(filter) = &op.filter
-            && let Some(body) = Ms::render_where(filter, table, &op.message_type, &mut params)?
-        {
-            sql.push_str(&format!(" WHERE {body}"));
-        }
+        // Mandatory tenant/project scoping (C15): MSSQL has no runtime RLS on
+        // this path, so route the WHERE through the shared scoped helper.
+        sql.push_str(&Ms::scoped_where_clause(
+            op.filter.as_ref(),
+            table,
+            &op.message_type,
+            ctx,
+            &mut params,
+        )?);
 
         if !op.sort.is_empty() {
             let parts = op
@@ -383,8 +387,13 @@ impl Compiler for MssqlCompiler {
                 reason: "LogicalDelete::filter resolves to FALSE; refusing no-op delete".into(),
             });
         }
+        // AND the tenant/project scope into the delete filter (C15).
+        let where_clause = match Ms::context_predicates(table, ctx, &mut params) {
+            Some(scope) => format!("({body}) AND {scope}"),
+            None => body,
+        };
         let sql = format!(
-            "DELETE FROM [{schema}].[{table}] WHERE {body}",
+            "DELETE FROM [{schema}].[{table}] WHERE {where_clause}",
             schema = table.schema,
             table = table.table,
         );
@@ -540,6 +549,10 @@ impl Compiler for MssqlCompiler {
             && let Some(body) = Ms::render_where(filter, table, &op.message_type, &mut params)?
         {
             sql.push_str(&format!(" AND {body}"));
+        }
+        // Tenant/project scope (C15): AND it into the CONTAINS WHERE.
+        if let Some(scope) = Ms::context_predicates(table, ctx, &mut params) {
+            sql.push_str(&format!(" AND {scope}"));
         }
 
         Ok(CompiledRendering::Sql {
@@ -1132,6 +1145,39 @@ mod tests {
         assert_eq!(
             statement,
             "DELETE FROM [billing].[customers] WHERE [id] = @P1"
+        );
+    }
+
+    /// C15: MSSQL has no runtime RLS on this path, so a read on a tenant-scoped
+    /// table must AND the tenant predicate into the WHERE.
+    #[test]
+    fn read_injects_tenant_predicate() {
+        let mut m = fixture();
+        m.tables[0].columns.push(ManifestColumn {
+            field_name: "tenant_id".into(),
+            column_name: "tenant_id".into(),
+            proto_type: "string".into(),
+            sql_type: "nvarchar(64)".into(),
+            is_tenant_column: true,
+            ..Default::default()
+        });
+        let ctx = CompileContext::new(&m).with_tenant("t1");
+        let read = LogicalRead::message("acme.billing.v1.Customer").with_filter(
+            LogicalFilter::Comparison {
+                field: "id".into(),
+                op: ComparisonOp::Eq,
+                value: LogicalValue::String("abc".into()),
+            },
+        );
+        let (statement, params) = sql(MssqlCompiler.compile_read(&read, &ctx).unwrap());
+        assert!(
+            statement.contains("[tenant_id] = @P"),
+            "read must AND the tenant scope: {statement}"
+        );
+        assert!(
+            params
+                .iter()
+                .any(|p| matches!(p, LogicalValue::String(s) if s == "t1"))
         );
     }
 }

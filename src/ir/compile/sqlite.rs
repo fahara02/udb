@@ -129,11 +129,15 @@ impl Compiler for SqliteCompiler {
         // SQLite: unqualified table name — see module doc.
         let mut sql = format!("SELECT {select} FROM \"{table}\"", table = table.table);
 
-        if let Some(filter) = &op.filter
-            && let Some(body) = Sl::render_where(filter, table, &op.message_type, &mut params)?
-        {
-            sql.push_str(&format!(" WHERE {body}"));
-        }
+        // Mandatory tenant/project scoping (C15): SQLite has no runtime RLS, so
+        // route the WHERE through the shared scoped helper.
+        sql.push_str(&Sl::scoped_where_clause(
+            op.filter.as_ref(),
+            table,
+            &op.message_type,
+            ctx,
+            &mut params,
+        )?);
 
         if !op.sort.is_empty() {
             let parts = op
@@ -322,7 +326,15 @@ impl Compiler for SqliteCompiler {
                 reason: "LogicalDelete::filter resolves to FALSE; refusing no-op delete".into(),
             });
         }
-        let mut sql = format!("DELETE FROM \"{table}\" WHERE {body}", table = table.table,);
+        // AND the tenant/project scope into the delete filter (C15).
+        let where_clause = match Sl::context_predicates(table, ctx, &mut params) {
+            Some(scope) => format!("({body}) AND {scope}"),
+            None => body,
+        };
+        let mut sql = format!(
+            "DELETE FROM \"{table}\" WHERE {where_clause}",
+            table = table.table,
+        );
         if !op.return_fields.is_empty() {
             let cols = op
                 .return_fields
@@ -489,6 +501,11 @@ impl Compiler for SqliteCompiler {
             && let Some(body) = Sl::render_where(filter, table, &op.message_type, &mut params)?
         {
             sql.push_str(&format!(" AND {}", qualify_sqlite_base_columns(&body)));
+        }
+        // Tenant/project scope (C15): AND it into the FTS WHERE, qualified onto
+        // the base-table alias like the user filter.
+        if let Some(scope) = Sl::context_predicates(table, ctx, &mut params) {
+            sql.push_str(&format!(" AND {}", qualify_sqlite_base_columns(&scope)));
         }
 
         if let Some(threshold) = op.score_threshold {
@@ -1051,5 +1068,37 @@ mod tests {
         let (statement, _) = sql(SqliteCompiler.compile_resource_op(&op, &ctx).unwrap());
         assert!(statement.contains("sqlite_master"));
         assert!(statement.contains("type = 'table'"));
+    }
+
+    /// C15: SQLite has no runtime RLS, so a read on a tenant-scoped table must
+    /// AND the tenant predicate into the WHERE.
+    #[test]
+    fn read_injects_tenant_predicate() {
+        let mut m = fixture();
+        m.tables[0].columns.push(ManifestColumn {
+            field_name: "tenant_id".into(),
+            column_name: "tenant_id".into(),
+            proto_type: "string".into(),
+            sql_type: "TEXT".into(),
+            is_tenant_column: true,
+            ..Default::default()
+        });
+        let ctx = CompileContext::new(&m).with_tenant("t1");
+        let read =
+            LogicalRead::message("acme.notes.v1.Note").with_filter(LogicalFilter::Comparison {
+                field: "id".into(),
+                op: ComparisonOp::Eq,
+                value: LogicalValue::String("abc".into()),
+            });
+        let (statement, params) = sql(SqliteCompiler.compile_read(&read, &ctx).unwrap());
+        assert!(
+            statement.contains("\"tenant_id\" = ?"),
+            "read must AND the tenant scope: {statement}"
+        );
+        assert!(
+            params
+                .iter()
+                .any(|p| matches!(p, LogicalValue::String(s) if s == "t1"))
+        );
     }
 }

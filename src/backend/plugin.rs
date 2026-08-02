@@ -537,6 +537,50 @@ mod tests {
         }
     }
 
+    /// L1 (anti-drift): an advertised V1 capability flag must match actual runtime
+    /// behavior — closing the class that let C3 (Cassandra schema-migration) and
+    /// C9 (object-store TTL) ship as silent no-ops. Future drift re-breaks this.
+    #[test]
+    fn every_advertised_capability_matches_runtime() {
+        // (a) C9 — an object store must not advertise a per-write TTL it cannot
+        //     honor; object expiry is a bucket-lifecycle policy, not a broker op.
+        for kind in BackendKind::all_known() {
+            let caps = kind.capabilities();
+            if caps.is_object_store {
+                assert!(
+                    !caps.supports_ttl,
+                    "{kind:?}: object store advertises supports_ttl but no put path sets expiry"
+                );
+            }
+        }
+        // (b) C3 — only backends with a REAL schema-migration path may advertise
+        //     it. The path differs per backend (so an artifact-count check on a
+        //     synthetic manifest is not portable): Postgres migrates via
+        //     `generate_bootstrap_sql`; mysql/sqlite/mssql via the SQL-DDL
+        //     generators; clickhouse via its store-DDL generator. Cassandra had the
+        //     flag but NO generator at all (it provisions tables at runtime) — the
+        //     C3 lie. Adding the flag to a new backend therefore requires
+        //     implementing a real path AND listing it here (or the flag must be
+        //     false), so the advertisement can never again outrun the runtime.
+        const MIGRATION_CAPABLE: &[BackendKind] = &[
+            BackendKind::Postgres,
+            BackendKind::Mysql,
+            BackendKind::Sqlite,
+            BackendKind::Mssql,
+            BackendKind::Clickhouse,
+        ];
+        for kind in BackendKind::all_known() {
+            if kind.capabilities().supports_schema_migration {
+                assert!(
+                    MIGRATION_CAPABLE.contains(kind),
+                    "{kind:?}: advertises supports_schema_migration but has no generator \
+                     (the C3 class) — implement a real migration path and add it to \
+                     MIGRATION_CAPABLE, or set the flag false"
+                );
+            }
+        }
+    }
+
     #[test]
     fn registry_is_non_empty_and_contains_postgres() {
         let plugins = all_plugins();

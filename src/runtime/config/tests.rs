@@ -947,7 +947,11 @@ fn audit_sink_file_without_path_fails_validation() {
 }
 
 #[test]
-fn audit_sink_kafka_with_topic_and_brokers_passes() {
+fn audit_sink_kafka_is_rejected_as_unimplemented() {
+    // C1: the Kafka audit transport is unwired (it warns once and prints to
+    // stdout), silently diverting the durable/SIEM audit stream. A fully-specified
+    // Kafka config must now be REJECTED so it cannot be silently selected — the
+    // prior behavior (validate() clean) was the capability-lie.
     let cfg = AuditSinkConfig {
         kind: AuditSinkKind::Kafka,
         kafka_topic: Some("udb.audit".to_string()),
@@ -955,7 +959,11 @@ fn audit_sink_kafka_with_topic_and_brokers_passes() {
         min_severity: "info".to_string(),
         ..Default::default()
     };
-    assert!(cfg.validate().is_empty());
+    let errors = cfg.validate();
+    assert!(
+        errors.iter().any(|e| e.contains("not implemented")),
+        "kafka audit sink must be rejected: {errors:?}"
+    );
 }
 
 #[test]

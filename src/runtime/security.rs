@@ -542,9 +542,15 @@ impl SecurityConfig {
     /// Derive the runtime [`ComplianceProfileFacts`] from this config so the
     /// startup compliance gate (`serve()`) can validate the selected profile
     /// against actual deployment state rather than test fixtures.
-    pub fn compliance_profile_facts(&self) -> ComplianceProfileFacts {
+    ///
+    /// C12: `encryption_configured` is the REAL encryption-at-rest fact
+    /// (`report.encryption_configured`, derived from `EncryptionSettings.keys`) —
+    /// NOT the `current_encryption_key_id` label, which defaults to the non-empty
+    /// placeholder `"default"` and would otherwise satisfy the PCI/HIPAA
+    /// encryption-key gate unconditionally with zero keys configured.
+    pub fn compliance_profile_facts(&self, encryption_configured: bool) -> ComplianceProfileFacts {
         ComplianceProfileFacts {
-            encryption_key_source_configured: !self.current_encryption_key_id.trim().is_empty(),
+            encryption_key_source_configured: encryption_configured,
             fail_closed_enabled: fail_closed_mode(),
             durable_audit_sink_configured: !self.audit_sink_url.trim().is_empty(),
         }
@@ -3421,6 +3427,32 @@ mod tests {
                 &ComplianceProfileFacts::default()
             ),
             Ok(())
+        );
+    }
+
+    /// C12: the encryption-at-rest fact must come from REAL configured keys, not
+    /// the `current_encryption_key_id="default"` placeholder that would otherwise
+    /// satisfy the PCI/HIPAA encryption-key gate with zero keys.
+    #[test]
+    fn encryption_fact_reflects_real_keys_not_placeholder() {
+        let cfg = hardened_compliance_config();
+        // Default config carries the non-empty placeholder key id "default"…
+        assert_eq!(cfg.current_encryption_key_id, "default");
+        // …but with no real encryption keys the derived fact must be false.
+        let facts_no_keys = cfg.compliance_profile_facts(false);
+        assert!(!facts_no_keys.encryption_key_source_configured);
+        let errors = cfg
+            .validate_compliance_profile(ComplianceProfile::PciHipaa, &facts_no_keys)
+            .expect_err("PCI/HIPAA must fail with zero encryption keys");
+        assert!(
+            errors
+                .iter()
+                .any(|e| e.contains("encryption-at-rest key source"))
+        );
+        // With real keys the fact flips true.
+        assert!(
+            cfg.compliance_profile_facts(true)
+                .encryption_key_source_configured
         );
     }
 

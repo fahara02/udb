@@ -38,12 +38,19 @@ impl crate::runtime::executors::handle::DispatchFactory for RedisPlugin {
         runtime: &crate::runtime::core::DataBrokerRuntime,
         instance: Option<&str>,
         _write: bool,
-        _context: Option<&crate::broker::RequestContext>,
+        context: Option<&crate::broker::RequestContext>,
     ) -> Result<crate::runtime::executors::handle::DispatchExecutor, tonic::Status> {
+        // C6: derive the tenant/project key namespace from the request context so
+        // the raw Redis dispatch path (scan/get/mget/exists/set/del) is confined
+        // to the caller's namespace and cannot leak across tenants.
+        let namespace = context.map(|c| {
+            crate::runtime::executors::redis::redis_context_namespace(&c.project_id, &c.tenant_id)
+        });
         Ok(crate::runtime::executors::handle::DispatchExecutor::Redis(
             crate::runtime::executors::redis::RedisExecutor::new(
                 runtime.redis_for_instance(instance)?.clone(),
-            ),
+            )
+            .with_namespace(namespace),
         ))
     }
 }

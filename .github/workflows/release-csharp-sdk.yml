@@ -7,7 +7,7 @@ name: Release · C# SDK (NuGet)
 #   Udb.Cli     — dotnet tool launcher (dotnet tool install --global Udb.Cli)
 #
 # Both packages follow the main UDB release version tracked in versions.json.
-# Expected UDB release version, for example 0.4.35"
+# Expected UDB release version, for example 0.4.36"
 # The release flow mirrors the Python/TypeScript SDKs: version consistency is
 # verified, tests pass, then nuget push fires. Publishing uses NuGet trusted
 # publishing: the `production` environment is bound to the nuget.org trusted

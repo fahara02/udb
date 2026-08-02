@@ -754,9 +754,7 @@ impl DataBrokerService {
         principal_id: &str,
         per_key_per_minute: i64,
     ) -> Result<(), Status> {
-        let Some(redis) = self.runtime_snapshot().redis_clone() else {
-            return Ok(());
-        };
+        let redis = self.runtime_snapshot().redis_clone();
         let window_secs = self
             .runtime_snapshot()
             .config()
@@ -790,6 +788,25 @@ impl DataBrokerService {
             window_secs,
             per_key_per_minute,
         );
+
+        // C5: no Redis configured — do NOT silently fail OPEN. Explicit
+        // `UDB_RATE_LIMIT_FAILURE_MODE=open` allows; every other mode (including the
+        // default `closed`) applies the local per-process limiter so requests are
+        // still bounded rather than unconditionally allowed.
+        let Some(redis) = redis else {
+            let mode = self
+                .runtime_snapshot()
+                .config()
+                .service
+                .rate_limit_failure_mode
+                .clone();
+            if rate_limit_absent_backend_allows_open(&mode) {
+                return Ok(());
+            }
+            return self
+                .apply_local_rate_limit(&key, window_secs, max_rps, unix_epoch, "no_backend")
+                .await;
+        };
 
         let mut conn = {
             let mut guard = self.rate_limit_redis.lock().await;
@@ -925,6 +942,51 @@ impl DataBrokerService {
         Ok(())
     }
 
+    /// Per-process fixed-window limiter used when the distributed (Redis) limiter
+    /// is unavailable — either after an in-call re-dial fails (`local` failure mode)
+    /// or when no Redis is configured at all (C5). Sets the degraded flag so the
+    /// health report surfaces the degraded state. `N×limit` across N replicas —
+    /// degraded but NOT absent (never a silent fail-open).
+    #[cfg(feature = "redis")]
+    async fn apply_local_rate_limit(
+        &self,
+        key: &str,
+        window_secs: u64,
+        max_rps: u32,
+        unix_epoch: u64,
+        degraded_label: &'static str,
+    ) -> Result<(), Status> {
+        self.rate_limit_degraded
+            .store(true, std::sync::atomic::Ordering::Relaxed);
+        self.metrics.record_rate_limit_degraded(degraded_label);
+        let window = unix_epoch / window_secs;
+        let count = {
+            let mut windows = self.rate_limit_local.lock().await;
+            // Prune expired windows so an outage never grows the map beyond the
+            // currently-active keys.
+            windows.retain(|_, (w, _)| *w == window);
+            let entry = windows.entry(key.to_string()).or_insert((window, 0));
+            entry.1 += 1;
+            entry.1
+        };
+        if count > u64::from(max_rps) {
+            let retry_after_ms =
+                (window_secs.saturating_sub(unix_epoch % window_secs).max(1) as i64) * 1_000;
+            return Err(crate::runtime::executor_utils::quota_status(
+                "data_broker",
+                "local rate limit (degraded)",
+                retry_after_ms,
+                format!(
+                    "rate limit exceeded: {}/{} requests per {}s window \
+                     (per-process fallback; raise UDB_RATE_LIMIT_MAX_PER_WINDOW \
+                     to increase the budget)",
+                    count, max_rps, window_secs
+                ),
+            ));
+        }
+        Ok(())
+    }
+
     /// W4: the limiter's DECLARED behavior when Redis stays unreachable after
     /// the in-call re-dial (`service.rate_limit_failure_mode`):
     /// `closed` returns the typed retryable status; `local` enforces a
@@ -948,36 +1010,8 @@ impl DataBrokerService {
             .clone();
         match mode.as_str() {
             "local" => {
-                self.rate_limit_degraded
-                    .store(true, std::sync::atomic::Ordering::Relaxed);
-                self.metrics.record_rate_limit_degraded("local");
-                let window = unix_epoch / window_secs;
-                let count = {
-                    let mut windows = self.rate_limit_local.lock().await;
-                    // Prune expired windows so an outage never grows the map
-                    // beyond the currently-active keys.
-                    windows.retain(|_, (w, _)| *w == window);
-                    let entry = windows.entry(key.to_string()).or_insert((window, 0));
-                    entry.1 += 1;
-                    entry.1
-                };
-                if count > u64::from(max_rps) {
-                    let retry_after_ms =
-                        (window_secs.saturating_sub(unix_epoch % window_secs).max(1) as i64)
-                            * 1_000;
-                    return Err(crate::runtime::executor_utils::quota_status(
-                        "data_broker",
-                        "local rate limit (degraded)",
-                        retry_after_ms,
-                        format!(
-                            "rate limit exceeded: {}/{} requests per {}s window \
-                             (per-process fallback while Redis is unreachable; \
-                             raise UDB_RATE_LIMIT_MAX_PER_WINDOW to increase the budget)",
-                            count, max_rps, window_secs
-                        ),
-                    ));
-                }
-                Ok(())
+                self.apply_local_rate_limit(key, window_secs, max_rps, unix_epoch, "local")
+                    .await
             }
             "open" => {
                 self.rate_limit_degraded
@@ -1834,7 +1868,10 @@ pub async fn serve(
         match crate::runtime::security::selected_compliance_profile() {
             Some(profile) => {
                 let cfg = crate::runtime::security::SecurityConfig::current();
-                let facts = cfg.compliance_profile_facts();
+                // C12: the encryption-at-rest fact must reflect REAL configured
+                // keys, not the `current_encryption_key_id="default"` placeholder.
+                let encryption_configured = !runtime_config.encryption.keys.is_empty();
+                let facts = cfg.compliance_profile_facts(encryption_configured);
                 if let Err(violations) = cfg.validate_compliance_profile(profile, &facts) {
                     return Err(std::io::Error::other(format!(
                         "compliance profile '{}' startup gate failed: {}",
@@ -2462,6 +2499,15 @@ pub async fn serve(
     // key when the registry is empty, so existing single-key deployments keep
     // working and JWKS publishes from the registry. Best-effort (never fatal).
     let runtime_snapshot = service.runtime_snapshot();
+    // C11: fail-closed signing-key provider gate. A selected non-`env` provider
+    // (e.g. aws-kms) that is unavailable must abort startup rather than silently
+    // signing with the local env key.
+    if let Err(err) = authn_service.signing_provider_startup_gate() {
+        return Err(std::io::Error::other(format!(
+            "signing-key provider startup gate failed: {err}"
+        ))
+        .into());
+    }
     authn_service
         .seed_signing_key_registry(runtime_snapshot.as_ref())
         .await;
@@ -4606,9 +4652,28 @@ fn resolve_rate_limit_bucket(
     }
 }
 
+/// C5: when NO rate-limit backend (Redis) is configured, decide from the failure
+/// mode whether to allow (only explicit `open`) or apply the local per-process
+/// limiter (every other mode, including the default `closed`). Pure so it is
+/// unit-testable; the actual limiting is done by `apply_local_rate_limit`.
+fn rate_limit_absent_backend_allows_open(failure_mode: &str) -> bool {
+    failure_mode.trim().eq_ignore_ascii_case("open")
+}
+
 #[cfg(all(test, feature = "redis"))]
 mod rate_limit_bucket_tests {
-    use super::resolve_rate_limit_bucket;
+    use super::{rate_limit_absent_backend_allows_open, resolve_rate_limit_bucket};
+
+    #[test]
+    fn absent_backend_only_allows_on_explicit_open() {
+        // C5: the default (closed) and `local` must NOT fail open — they route to
+        // the local per-process limiter. Only an explicit `open` allows.
+        assert!(rate_limit_absent_backend_allows_open("open"));
+        assert!(rate_limit_absent_backend_allows_open("OPEN"));
+        assert!(!rate_limit_absent_backend_allows_open("closed"));
+        assert!(!rate_limit_absent_backend_allows_open("local"));
+        assert!(!rate_limit_absent_backend_allows_open(""));
+    }
 
     #[test]
     fn per_key_off_is_the_unchanged_per_tenant_bucket_and_budget() {

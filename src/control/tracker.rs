@@ -126,6 +126,19 @@ CREATE INDEX IF NOT EXISTS idx_migration_error_log_unresolved
 /// the run ID of any in-progress migration.  The Go UDB service upserts this
 /// row after every state transition so that health-check endpoints can expose
 /// live migration progress.
+///
+/// `last_error_id` is a soft reference to the most recent `migration_error_log`
+/// row for this run (BIGINT, matching `migration_error_log.id BIGSERIAL`); the
+/// runtime-state upsert writes it so a health check can jump straight to the
+/// latest failure.  No hard FK is declared — the whole ledger is FK-free by
+/// convention, and the upsert tolerates a NULL/absent error id.
+///
+/// The idempotent `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` block below is the
+/// upgrade guard: `CREATE TABLE IF NOT EXISTS` never evolves a table that
+/// already exists, so a database bootstrapped by an older UDB (whose DDL lacked
+/// `last_error_id`) would otherwise be missing the column and the upsert would
+/// fail with `column "last_error_id" ... does not exist`.  Mirrors how
+/// `schema_migrations` above extends a baseline schema.
 pub const DDL_MIGRATION_RUNTIME_STATE: &str = r#"
 CREATE TABLE IF NOT EXISTS public.migration_runtime_state (
     singleton     BOOLEAN      PRIMARY KEY DEFAULT TRUE,
@@ -134,9 +147,16 @@ CREATE TABLE IF NOT EXISTS public.migration_runtime_state (
     active_file   TEXT         NULL,
     retry_count   INTEGER      NOT NULL DEFAULT 0,
     last_note     TEXT         NULL,
+    last_error_id BIGINT       NULL,
     updated_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     CONSTRAINT migration_runtime_state_singleton_check CHECK (singleton = TRUE)
 );
+
+-- Upgrade guard: add columns introduced after the baseline runtime-state table.
+-- CREATE TABLE IF NOT EXISTS is a no-op on an existing table, so pre-existing
+-- deployments need this to gain `last_error_id`.
+ALTER TABLE public.migration_runtime_state
+    ADD COLUMN IF NOT EXISTS last_error_id BIGINT NULL;
 
 -- Insert the default IDLE row on first bootstrap.
 INSERT INTO public.migration_runtime_state (singleton) VALUES (TRUE)
@@ -206,5 +226,27 @@ mod tests {
                 "combined DDL must reference table {table}"
             );
         }
+    }
+
+    #[test]
+    fn runtime_state_defines_last_error_id_column() {
+        // The Go UDB runtime-state upsert writes `last_error_id`; the canonical
+        // DDL must both create the column on a fresh table and carry an
+        // idempotent upgrade guard so a pre-existing table gains it (otherwise
+        // the upsert fails with `column "last_error_id" ... does not exist`).
+        assert!(
+            DDL_MIGRATION_RUNTIME_STATE.contains("last_error_id BIGINT"),
+            "runtime-state DDL must declare last_error_id as BIGINT"
+        );
+        assert!(
+            DDL_MIGRATION_RUNTIME_STATE
+                .contains("ADD COLUMN IF NOT EXISTS last_error_id BIGINT NULL"),
+            "runtime-state DDL must carry an idempotent upgrade guard for last_error_id"
+        );
+        // migration_error_log.id is BIGSERIAL, so the soft reference is BIGINT.
+        assert!(
+            DDL_MIGRATION_ERROR_LOG.contains("id            BIGSERIAL"),
+            "last_error_id type (BIGINT) tracks migration_error_log.id (BIGSERIAL)"
+        );
     }
 }

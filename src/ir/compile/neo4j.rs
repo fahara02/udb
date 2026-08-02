@@ -475,11 +475,32 @@ impl Compiler for Neo4jCompiler {
         let mut bind = CypherBind::new();
 
         let mut cypher = format!("MATCH (n:`{label}`)");
+        // C17: AND the active tenant + project predicate into the aggregate WHERE
+        // like every sibling op (read/delete/search), else COUNT/SUM/AVG span
+        // tenants at protocol level.
+        let mut where_parts: Vec<String> = Vec::new();
+        if let Some(tid) = ctx.tenant_id
+            && !tid.is_empty()
+            && let Some(column) = Some(super::util::tenant_system_field(table))
+        {
+            let p = bind.push(&LogicalValue::String(tid.to_string()));
+            where_parts.push(format!("n.`{column}` = {p}"));
+        }
+        if let Some(pid) = ctx.project_id
+            && !pid.is_empty()
+            && let Some(column) = Some(super::util::project_system_field(table))
+        {
+            let p = bind.push(&LogicalValue::String(pid.to_string()));
+            where_parts.push(format!("n.`{column}` = {p}"));
+        }
         if let Some(filter) = &op.filter {
             let body = self.render_filter(filter, table, &op.message_type, &mut bind)?;
             if body != "true" {
-                cypher.push_str(&format!(" WHERE {body}"));
+                where_parts.push(body);
             }
+        }
+        if !where_parts.is_empty() {
+            cypher.push_str(&format!(" WHERE {}", where_parts.join(" AND ")));
         }
 
         // Cypher aggregation: group-by columns appear in WITH alongside
@@ -1132,5 +1153,36 @@ mod tests {
         assert!(statement.contains("WHERE n.`_tenant_id` = $p1"));
         assert_eq!(params["p0"], "Alice");
         assert_eq!(params["p1"], "tenant-a");
+    }
+
+    /// C17: the aggregate WHERE must carry the tenant/project predicate like the
+    /// sibling ops, or COUNT/SUM span tenants.
+    #[test]
+    fn aggregate_with_tenant_context_ands_predicate() {
+        let m = fixture();
+        let ctx = CompileContext::new(&m)
+            .with_tenant("acme")
+            .with_project("p1");
+        let agg = LogicalAggregate {
+            message_type: "acme.billing.v1.Customer".into(),
+            filter: None,
+            group_by: vec![],
+            aggregates: vec![AggregateExpr {
+                func: AggregateFunc::Count,
+                field: "*".into(),
+                alias: "n".into(),
+            }],
+            having: None,
+            sort: vec![],
+            pagination: None,
+        };
+        let (statement, params) = cypher(Neo4jCompiler.compile_aggregate(&agg, &ctx).unwrap());
+        assert!(
+            statement.contains("n.`_tenant_id` = $p0"),
+            "aggregate WHERE must scope tenant: {statement}"
+        );
+        assert!(statement.contains("n.`_project_id` = $p1"));
+        assert_eq!(params["p0"], "acme");
+        assert_eq!(params["p1"], "p1");
     }
 }

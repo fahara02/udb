@@ -332,7 +332,12 @@ impl BackendKind {
                 supports_transactions: false,
                 supports_xa: false,
                 supports_two_phase_commit: false,
-                supports_rls: true, // session-setting scoping via BackendContextEnforcer
+                // C8: broker-enforced tenant predicates via IR-compiler injection
+                // (like Cassandra) — NOT native/session-setting RLS. The
+                // `BackendContextEnforcer` mechanism this once claimed is a no-op
+                // (execute_raw emits no SET; enforce() returns Advisory), so
+                // advertising native RLS was a silent fail-open.
+                supports_rls: false,
                 supports_vector_search: false,
                 supports_streaming: true,
                 supports_ttl: true,
@@ -458,7 +463,10 @@ impl BackendKind {
                 supports_rls: true, // key-prefix scoping via BackendContextEnforcer
                 supports_vector_search: false,
                 supports_streaming: true,
-                supports_ttl: true,
+                // C9: object expiry is a bucket-lifecycle policy, not a per-write
+                // broker capability — no put path sets any expiry, so advertising
+                // it was a no-op. Set false until a real per-object TTL exists.
+                supports_ttl: false,
                 is_object_store: true,
                 is_migration_ledger_capable: false,
                 supports_idempotency: true,
@@ -478,7 +486,9 @@ impl BackendKind {
                 supports_rls: true, // key-prefix scoping
                 supports_vector_search: false,
                 supports_streaming: true,
-                supports_ttl: true,
+                // C9: object expiry is a bucket-lifecycle policy, not a per-write
+                // broker capability (no put path sets an expiry).
+                supports_ttl: false,
                 is_object_store: true,
                 is_migration_ledger_capable: false,
                 supports_idempotency: true,
@@ -545,7 +555,12 @@ impl BackendKind {
                 is_object_store: false,
                 is_migration_ledger_capable: false,
                 supports_idempotency: true, // INSERT IS upsert; LWT for IF NOT EXISTS
-                supports_schema_migration: true,
+                // C3: Cassandra has NO offline DDL generator (`generate_artifacts`
+                // returns empty), so the offline migration-sync would report
+                // "clean" while emitting zero CQL. Tables are provisioned at RUNTIME
+                // (`register_cassandra` ensure-tables), not via offline sync — so do
+                // not advertise offline schema migration.
+                supports_schema_migration: false,
                 supports_hybrid_search: false,
                 supports_resource_lifecycle: true,
                 max_payload_bytes: 0,

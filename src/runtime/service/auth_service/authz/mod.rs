@@ -1537,13 +1537,41 @@ impl AuthzServiceImpl {
     }
 }
 
-fn authz_snapshot_ttl() -> Duration {
-    let secs = std::env::var("UDB_AUTHZ_SNAPSHOT_TTL_SECS")
-        .ok()
-        .and_then(|v| v.parse::<u64>().ok())
+/// Resolve the authz-snapshot refresh cadence (seconds). C13: the canonical
+/// `UDB_AUTHZ_SNAPSHOT_TTL_SECS` wins, but the advertised `UDB_ABAC_REFRESH_SECS`
+/// alias is honored when the canonical is unset so the documented knob is not a
+/// no-op. Floors at 1s; defaults to 5s. Pure for testability.
+fn resolve_snapshot_ttl_secs(canonical: Option<&str>, alias: Option<&str>) -> u64 {
+    canonical
+        .or(alias)
+        .and_then(|v| v.trim().parse::<u64>().ok())
         .unwrap_or(5)
-        .max(1);
-    Duration::from_secs(secs)
+        .max(1)
+}
+
+fn authz_snapshot_ttl() -> Duration {
+    let canonical = std::env::var("UDB_AUTHZ_SNAPSHOT_TTL_SECS").ok();
+    let alias = std::env::var("UDB_ABAC_REFRESH_SECS").ok();
+    Duration::from_secs(resolve_snapshot_ttl_secs(
+        canonical.as_deref(),
+        alias.as_deref(),
+    ))
+}
+
+#[cfg(test)]
+mod c13_snapshot_ttl_tests {
+    use super::resolve_snapshot_ttl_secs;
+
+    #[test]
+    fn abac_refresh_secs_aliases_snapshot_ttl_when_canonical_unset() {
+        assert_eq!(resolve_snapshot_ttl_secs(Some("30"), None), 30);
+        // C13: the advertised alias drives the cadence when the canonical is unset.
+        assert_eq!(resolve_snapshot_ttl_secs(None, Some("45")), 45);
+        // Canonical wins when both are set.
+        assert_eq!(resolve_snapshot_ttl_secs(Some("30"), Some("45")), 30);
+        assert_eq!(resolve_snapshot_ttl_secs(None, None), 5);
+        assert_eq!(resolve_snapshot_ttl_secs(Some("0"), None), 1);
+    }
 }
 
 #[tonic::async_trait]

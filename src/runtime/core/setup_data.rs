@@ -2046,7 +2046,12 @@ impl DataBrokerRuntime {
             if target.backend == "qdrant" {
                 let qdrant =
                     self.qdrant_for_instance_for_project(target_instance, &context.project_id)?;
-                qdrant.search(&request, filter).await
+                // C7: AND the tenant/project scope into the Qdrant filter so a
+                // direct vector search cannot read another tenant's points in a
+                // shared collection. Mirrors the write-side payload stamp.
+                let scoped_filter =
+                    qdrant_and_tenant_filter(filter, &context.tenant_id, &context.project_id);
+                qdrant.search(&request, scoped_filter).await
             } else {
                 self.vector_search_dispatch_target(&target.backend, target_instance, &request)
                     .await
@@ -2186,21 +2191,22 @@ impl DataBrokerRuntime {
             } else {
                 Some(context.target_instance.as_str())
             };
+            // C7: stamp `_tenant_id`/`_project_id` into every point payload before
+            // dispatch — for ALL vector backends, Qdrant included. The direct
+            // Qdrant RPC does NOT stamp on its own (the executor writes the payload
+            // verbatim), so hoisting the stamp ABOVE the backend split is what
+            // actually enforces tenant isolation on a shared collection; it pairs
+            // with the search-side tenant filter so writes and reads agree.
+            let stamped = stamp_generic_vector_point_payloads(
+                &request,
+                &context.tenant_id,
+                &context.project_id,
+            );
             if target.backend == "qdrant" {
                 let qdrant =
                     self.qdrant_for_instance_for_project(target_instance, &context.project_id)?;
-                qdrant.upsert(&request).await?;
+                qdrant.upsert(&stamped).await?;
             } else {
-                // Stamp `_tenant_id`/`_project_id` into every point payload before
-                // the generic HTTP dispatch, mirroring the Qdrant executor's
-                // write-time stamp (qdrant.rs C7/C8). Without this the
-                // Elasticsearch/Weaviate/Pinecone docs carry no tenant tag and the
-                // search arm cannot enforce isolation (cross-tenant read leak).
-                let stamped = stamp_generic_vector_point_payloads(
-                    &request,
-                    &context.tenant_id,
-                    &context.project_id,
-                );
                 self.vector_upsert_dispatch_target(&target.backend, target_instance, &stamped)
                     .await?;
             }
@@ -8437,6 +8443,71 @@ fn text_search_dispatch_spec(
 /// (never stamped as blank). A missing/non-object payload becomes a fresh object
 /// carrying only the tags.
 #[cfg(feature = "qdrant")]
+/// AND the active tenant/project into a Qdrant filter body so a direct
+/// `vector_search` cannot read another tenant's points from a shared collection
+/// (C7). Preserves any caller filter as a nested condition and matches the
+/// `_tenant_id`/`_project_id` keys written by
+/// [`stamp_generic_vector_point_payloads`], so writes and reads agree. Returns
+/// `Null` when there is nothing to scope by.
+#[cfg(feature = "qdrant")]
+fn qdrant_and_tenant_filter(
+    user_filter: JsonValue,
+    tenant_id: &str,
+    project_id: &str,
+) -> JsonValue {
+    let mut must: Vec<JsonValue> = Vec::new();
+    // Preserve the caller filter as a nested filter condition (Qdrant allows a
+    // full filter object inside `must`).
+    if user_filter.as_object().is_some_and(|m| !m.is_empty()) {
+        must.push(user_filter);
+    }
+    if !tenant_id.trim().is_empty() {
+        must.push(serde_json::json!({"key": "_tenant_id", "match": {"value": tenant_id}}));
+    }
+    if !project_id.trim().is_empty() {
+        must.push(serde_json::json!({"key": "_project_id", "match": {"value": project_id}}));
+    }
+    if must.is_empty() {
+        return JsonValue::Null;
+    }
+    serde_json::json!({ "must": must })
+}
+
+#[cfg(all(test, feature = "qdrant"))]
+mod qdrant_tenant_filter_tests {
+    use super::qdrant_and_tenant_filter;
+    use serde_json::json;
+
+    #[test]
+    fn ands_tenant_and_project_into_must() {
+        let f = qdrant_and_tenant_filter(json!({}), "t1", "p1");
+        let must = f["must"].as_array().expect("must array");
+        assert!(
+            must.iter()
+                .any(|c| c["key"] == "_tenant_id" && c["match"]["value"] == "t1"),
+            "tenant clause missing: {f}"
+        );
+        assert!(
+            must.iter()
+                .any(|c| c["key"] == "_project_id" && c["match"]["value"] == "p1")
+        );
+    }
+
+    #[test]
+    fn preserves_user_filter_as_nested_condition() {
+        let user = json!({"must":[{"key":"kind","match":{"value":"doc"}}]});
+        let f = qdrant_and_tenant_filter(user.clone(), "t1", "");
+        let must = f["must"].as_array().unwrap();
+        assert_eq!(must[0], user, "user filter must be preserved");
+        assert!(must.iter().any(|c| c["key"] == "_tenant_id"));
+    }
+
+    #[test]
+    fn empty_context_returns_null() {
+        assert!(qdrant_and_tenant_filter(json!({}), "", "").is_null());
+    }
+}
+
 fn stamp_generic_vector_point_payloads(
     request: &VectorUpsertRequest,
     tenant_id: &str,

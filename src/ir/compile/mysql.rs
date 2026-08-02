@@ -140,11 +140,16 @@ impl Compiler for MysqlCompiler {
             table = table.table,
         );
 
-        if let Some(filter) = &op.filter
-            && let Some(body) = My::render_where(filter, table, &op.message_type, &mut params)?
-        {
-            sql.push_str(&format!(" WHERE {body}"));
-        }
+        // Tenant/project scoping is MANDATORY here: MySQL has no runtime RLS, so
+        // the compiler is the only isolation seam (C15). Route the WHERE through
+        // the shared scoped helper so read can never omit the tenant predicate.
+        sql.push_str(&My::scoped_where_clause(
+            op.filter.as_ref(),
+            table,
+            &op.message_type,
+            ctx,
+            &mut params,
+        )?);
 
         if !op.sort.is_empty() {
             let parts = op
@@ -329,8 +334,14 @@ impl Compiler for MysqlCompiler {
                 op: "returning",
             });
         }
+        // AND the tenant/project scope into the (mandatory) delete filter so a
+        // cross-tenant DELETE cannot remove another tenant's rows (C15).
+        let where_clause = match My::context_predicates(table, ctx, &mut params) {
+            Some(scope) => format!("({body}) AND {scope}"),
+            None => body,
+        };
         let sql = format!(
-            "DELETE FROM `{schema}`.`{table}` WHERE {body}",
+            "DELETE FROM `{schema}`.`{table}` WHERE {where_clause}",
             schema = table.schema,
             table = table.table,
         );
@@ -514,6 +525,11 @@ impl Compiler for MysqlCompiler {
             && let Some(body) = My::render_where(filter, table, &op.message_type, &mut params)?
         {
             sql.push_str(&format!(" AND {body}"));
+        }
+        // Tenant/project scope (C15): AND it into the fulltext WHERE so a search
+        // cannot return another tenant's rows. MySQL has no runtime RLS seam.
+        if let Some(scope) = My::context_predicates(table, ctx, &mut params) {
+            sql.push_str(&format!(" AND {scope}"));
         }
 
         if let Some(threshold) = op.score_threshold {
@@ -1131,5 +1147,94 @@ mod tests {
             "DELETE FROM `billing`.`customers` WHERE `id` = ?"
         );
         assert_eq!(params, vec![LogicalValue::String("abc".into())]);
+    }
+
+    // ── C15: tenant scoping on read/delete/search (MySQL has no runtime RLS) ──
+
+    /// Fixture whose customer table carries a tenant column, so
+    /// `context_predicates` can inject a scope.
+    fn tenant_fixture() -> CatalogManifest {
+        let mut m = fixture();
+        m.tables[0].columns.push(ManifestColumn {
+            field_name: "tenant_id".into(),
+            column_name: "tenant_id".into(),
+            proto_type: "string".into(),
+            sql_type: "varchar(64)".into(),
+            is_tenant_column: true,
+            ..Default::default()
+        });
+        m
+    }
+
+    fn has_tenant_bind(params: &[LogicalValue]) -> bool {
+        params
+            .iter()
+            .any(|p| matches!(p, LogicalValue::String(s) if s == "t1"))
+    }
+
+    #[test]
+    fn read_injects_tenant_predicate() {
+        let m = tenant_fixture();
+        let ctx = CompileContext::new(&m).with_tenant("t1");
+        let read = LogicalRead::message("acme.billing.v1.Customer").with_filter(
+            LogicalFilter::Comparison {
+                field: "email".into(),
+                op: ComparisonOp::Eq,
+                value: LogicalValue::String("a@b.c".into()),
+            },
+        );
+        let (statement, params) = sql(MysqlCompiler.compile_read(&read, &ctx).unwrap());
+        assert!(
+            statement.contains("`tenant_id` = ?"),
+            "read must AND the tenant scope: {statement}"
+        );
+        assert!(
+            has_tenant_bind(&params),
+            "tenant value must be bound: {params:?}"
+        );
+    }
+
+    #[test]
+    fn delete_injects_tenant_predicate() {
+        let m = tenant_fixture();
+        let ctx = CompileContext::new(&m).with_tenant("t1");
+        let del = LogicalDelete {
+            message_type: "acme.billing.v1.Customer".into(),
+            filter: LogicalFilter::Comparison {
+                field: "id".into(),
+                op: ComparisonOp::Eq,
+                value: LogicalValue::String("abc".into()),
+            },
+            return_fields: vec![],
+        };
+        let (statement, params) = sql(MysqlCompiler.compile_delete(&del, &ctx).unwrap());
+        assert!(
+            statement.contains("`tenant_id` = ?"),
+            "delete must AND the tenant scope so it can't remove another tenant's rows: {statement}"
+        );
+        assert!(has_tenant_bind(&params));
+    }
+
+    #[test]
+    fn search_injects_tenant_predicate() {
+        let m = tenant_fixture();
+        let ctx = CompileContext::new(&m).with_tenant("t1");
+        let search = LogicalSearch {
+            message_type: "acme.billing.v1.Customer".into(),
+            vector: None,
+            text_query: Some("alice".into()),
+            filter: None,
+            top_k: 5,
+            score_threshold: None,
+            require_hybrid: false,
+            with_vector: false,
+            with_payload: true,
+        };
+        let (statement, params) = sql(MysqlCompiler.compile_search(&search, &ctx).unwrap());
+        assert!(
+            statement.contains("`tenant_id` = ?"),
+            "search must AND the tenant scope: {statement}"
+        );
+        assert!(has_tenant_bind(&params));
     }
 }

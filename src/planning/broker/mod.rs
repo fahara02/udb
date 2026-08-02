@@ -466,6 +466,9 @@ pub(crate) fn build_select_logical_read(
     if !has_scope(&request.context, "udb:read") {
         errors.push("scope udb:read is required".to_string());
     }
+    // C22: per-table ABAC — a table declaring `required_scope` demands it IN
+    // ADDITION to the coarse `udb:read` gate.
+    errors.extend(table_required_scope_error(&request.context, table));
 
     let allowed = allowed_columns(table);
     let resolver = column_resolver(table);
@@ -574,6 +577,9 @@ fn build_select_query_plan_uncached(
     if !has_scope(&request.context, "udb:read") {
         errors.push("scope udb:read is required".to_string());
     }
+    // C22: per-table ABAC — a table declaring `required_scope` demands it IN
+    // ADDITION to the coarse `udb:read` gate.
+    errors.extend(table_required_scope_error(&request.context, table));
 
     let allowed = allowed_columns(table);
     // #117: resolve proto `field_name` aliases to physical `column_name`s before
@@ -719,6 +725,8 @@ pub fn build_upsert_plan(
     };
 
     let mut errors = validate_write_context(&request.context);
+    // C22: per-table ABAC on the write path.
+    errors.extend(table_required_scope_error(&request.context, table));
     let allowed = allowed_columns(table);
     // #117: resolve proto `field_name` aliases (record keys, conflict fields) to
     // physical `column_name`s. Idempotent on already-physical names; the runtime
@@ -882,6 +890,8 @@ pub(crate) fn build_upsert_logical_write(
         .map_err(|error| vec![error.to_string()])?;
 
     let mut errors = validate_write_context(&request.context);
+    // C22: per-table ABAC on the write path.
+    errors.extend(table_required_scope_error(&request.context, table));
     let allowed = allowed_columns(table);
     let resolver = column_resolver(table);
     let Some(record) = request.record.as_object() else {
@@ -1016,6 +1026,8 @@ pub fn build_delete_plan(
     };
 
     let mut errors = validate_write_context(&request.context);
+    // C22: per-table ABAC on the write path.
+    errors.extend(table_required_scope_error(&request.context, table));
     let allowed = allowed_columns(table);
     // #117: resolve proto `field_name` aliases in the delete filter.
     let resolver = column_resolver(table);
@@ -1105,6 +1117,8 @@ pub fn build_update_plan(
     };
 
     let mut errors = validate_write_context(&request.context);
+    // C22: per-table ABAC on the write path.
+    errors.extend(table_required_scope_error(&request.context, table));
     let allowed = allowed_columns(table);
     let resolver = column_resolver(table);
     let filter = normalize_filter_keys(&resolver, &request.filter);
@@ -1280,6 +1294,8 @@ pub(crate) fn build_delete_logical_delete(
         .map_err(|error| vec![error.to_string()])?;
 
     let mut errors = validate_write_context(&request.context);
+    // C22: per-table ABAC on the write path.
+    errors.extend(table_required_scope_error(&request.context, table));
     let allowed = allowed_columns(table);
     let resolver = column_resolver(table);
     let filter_json = normalize_filter_keys(&resolver, &request.filter);
@@ -2459,6 +2475,45 @@ mod tests {
             ..ManifestTable::default()
         };
         test_manifest(table)
+    }
+
+    /// C22: a table declaring `required_scope` must be denied to a caller holding
+    /// only the coarse verb scope, and allowed once the caller carries it.
+    #[test]
+    fn table_required_scope_is_enforced() {
+        let mut manifest = update_test_manifest();
+        manifest.tables[0].required_scope = "hr:write".to_string();
+        let request = |scopes: Vec<String>| UpdatePlanRequest {
+            context: RequestContext {
+                tenant_id: "t1".to_string(),
+                purpose: "unit-test".to_string(),
+                scopes,
+                ..RequestContext::default()
+            },
+            message_type: "acme.test.v1.Widget".to_string(),
+            filter: json!({"id": "w1", "tenant_id": "t1"}),
+            changes: json!({"status": "closed"}),
+            increments: vec![],
+            return_record: false,
+        };
+        let denied = build_update_plan(&manifest, &request(vec!["udb:write".to_string()]));
+        assert!(
+            denied
+                .errors
+                .iter()
+                .any(|e| e.contains("scope hr:write is required")),
+            "per-table scope must be required: {:?}",
+            denied.errors
+        );
+        let allowed = build_update_plan(
+            &manifest,
+            &request(vec!["udb:write".to_string(), "hr:write".to_string()]),
+        );
+        assert!(
+            !allowed.errors.iter().any(|e| e.contains("hr:write")),
+            "carrying the table scope must clear the error: {:?}",
+            allowed.errors
+        );
     }
 
     #[test]

@@ -38,6 +38,22 @@ pub(crate) fn validate_write_context(context: &RequestContext) -> Vec<String> {
     errors
 }
 
+/// C22: per-table ABAC scope check. A table declaring `required_scope` demands it
+/// in addition to the coarse verb scope (`udb:read`/`udb:write`). Returns the
+/// error string when the caller lacks it, else `None`. Admin wildcard scopes
+/// satisfy `has_scope`, so cross-tenant admins are unaffected.
+pub(crate) fn table_required_scope_error(
+    context: &RequestContext,
+    table: &ManifestTable,
+) -> Option<String> {
+    let required = table.required_scope.trim();
+    if !required.is_empty() && !has_scope(context, required) {
+        Some(format!("scope {required} is required for this table"))
+    } else {
+        None
+    }
+}
+
 pub(crate) fn validate_stream_context(context: &RequestContext) -> Vec<String> {
     let mut errors = Vec::new();
     if context.tenant_id.trim().is_empty() {

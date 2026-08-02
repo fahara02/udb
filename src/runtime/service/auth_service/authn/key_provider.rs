@@ -135,6 +135,56 @@ pub(super) fn active_key_provider(security: &SecurityConfig) -> Box<dyn KeyProvi
     }
 }
 
+/// The once-resolved signing-key provider kind (`env` / `aws-kms` / …). For the
+/// startup fail-closed gate (C11).
+pub(crate) fn selected_provider_kind() -> &'static str {
+    provider_settings().kind.as_str()
+}
+
+/// Whether the selected provider can actually produce a signing key right now.
+/// A selected-but-unbuilt provider (e.g. `aws-kms`) yields `false` (C11).
+pub(crate) fn provider_available(security: &SecurityConfig) -> bool {
+    active_key_provider(security).signing_key_pem().is_ok()
+}
+
+/// Pure fail-closed decision for the signing-key provider (C11). A selected
+/// NON-`env` provider that is not actually available must ABORT startup under
+/// fail-closed mode, rather than silently downgrading to the local env signing
+/// key (the archetypal capability-lie: operator asked for KMS custody, got local
+/// file signing + a log line). `env`, an available provider, or non-fail-closed
+/// mode all pass.
+pub(crate) fn signing_provider_gate(
+    fail_closed: bool,
+    provider_kind: &str,
+    available: bool,
+) -> Result<(), String> {
+    if fail_closed && provider_kind != "env" && !available {
+        return Err(format!(
+            "UDB_SIGNING_KEY_PROVIDER={provider_kind} is selected but unavailable in this \
+             binary; refusing to fall back to the local env signing key under fail-closed \
+             mode. Build/configure the provider or set UDB_SIGNING_KEY_PROVIDER=env."
+        ));
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod signing_provider_gate_tests {
+    use super::signing_provider_gate;
+
+    #[test]
+    fn unavailable_nonenv_provider_fails_closed() {
+        assert!(signing_provider_gate(true, "aws-kms", false).is_err());
+    }
+
+    #[test]
+    fn available_or_env_or_open_modes_pass() {
+        assert!(signing_provider_gate(true, "aws-kms", true).is_ok());
+        assert!(signing_provider_gate(true, "env", false).is_ok());
+        assert!(signing_provider_gate(false, "aws-kms", false).is_ok());
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
