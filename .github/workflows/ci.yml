@@ -758,6 +758,13 @@ jobs:
           go: "true"
       - run: go vet ./...
       - run: go build ./...
+      # Offline (no-broker) generator + enterprise-metadata regressions. Both use
+      # only in-process servers, so they run here in the Go-only job:
+      #   - V23-1: the typed <Entity>Repo contract compiles against the shipping SDK
+      #     (int64 List count widening + protoc-gen-go field naming).
+      #   - V23-2: ConnectEnterprise emits exactly one canonical value per identity
+      #     header (no duplicated / stale pre-login tenant/project hint).
+      - run: go test ./udbclient -run 'TestEntityRepoGeneratedContract|TestConnectEnterpriseEmitsCanonicalSingletonMetadata' -count=1
 
   # ── TypeScript SDK: typecheck + build (matches the npm-publish build) ──
   ts-sdk:

@@ -5,6 +5,46 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.4.37] - 2026-08-04
+
+Go SDK consumer fixes. Two independent defects — each confirmed against the
+checksum-verified official v0.4.36 release — blocked proto-driven Go consumers:
+one made generated entity code uncompilable, the other put a stale second
+tenant/project identity on every enterprise call. No proto changes; no Rust
+runtime data-path changes (the fixes are the Go code generator and the Go SDK).
+
+### Fixed
+- **`sdk generate --project-proto --lang go` emitted uncompilable Go.** Two
+  generator defects in `src/cli/sdk_gen.rs`:
+  - Go field/getter identifiers were derived by a home-grown
+    underscore-to-PascalCase pass that mishandled letter/digit boundaries, so a
+    legal proto field like `proj4text` produced `Proj4text` / `GetProj4text`
+    where `protoc-gen-go` emits `Proj4Text` / `GetProj4Text`. `go_pascal` is now
+    a faithful port of `protoc-gen-go`'s `GoCamelCase`, verified against real
+    generated getters (`checksum_sha256`→`ChecksumSha256`,
+    `int64_values`→`Int64Values`, `p99_execution_ms`→`P99ExecutionMs`, …).
+  - Every typed repository `List` declared an `int64` count but returned
+    `udbclient.Page.TotalCount` (`int32`) directly, which does not compile. The
+    count is now widened with `int64(page.TotalCount)`.
+  Guarded by Rust unit tests (`go_pascal` contract + rendered-List widening) and
+  a Go compile-contract test (`TestEntityRepoGeneratedContract`) pinning the
+  generated repository call shapes against the shipping SDK.
+- **`ConnectEnterprise` carried a stale pre-login tenant/project identity.** The
+  enterprise connection's metadata interceptor was owned by a `GeneratedClient`
+  distinct from `Udb.Generated`, so tenant adoption and bearer refresh updated a
+  different object while the connection kept appending the pre-login
+  `x-tenant-id` / `x-udb-project-id` hints next to the canonical values — so
+  `DataContext` / `NativeContext` calls carried conflicting repeated identity
+  headers. Fixed by (a) exposing the single interceptor-owning `GeneratedClient`
+  as `Udb.Generated` (`sdk/go/udbclient/project.go`) so adoption/refresh update
+  the object the connections actually read, and (b) making the interceptor
+  idempotent (`sdk/go/udbclient/generated_client.go`) so it injects a header only
+  when the caller has not already set it — restoring the "each identity header
+  exactly once" contract. Guarded by a served-path test
+  (`TestConnectEnterpriseEmitsCanonicalSingletonMetadata`) asserting singleton
+  canonical headers on data + native calls across separate targets and after a
+  forced bearer refresh.
+
 ## [0.4.36] - 2026-08-02
 
 Capability-lie remediation release. A 10-agent capability-lie sweep found ~24

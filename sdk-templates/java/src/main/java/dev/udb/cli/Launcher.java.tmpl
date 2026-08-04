@@ -96,7 +96,7 @@ public final class Launcher {
       Process p = new ProcessBuilder(bin.toString(), "--version").redirectErrorStream(true).start();
       String out = new String(p.getInputStream().readAllBytes()).trim();
       p.waitFor();
-      // `udb --version` prints e.g. "udb 0.4.36"; accept any line containing the tag.
+      // `udb --version` prints e.g. "udb 0.4.37"; accept any line containing the tag.
       return out.contains(UDB_VERSION);
     } catch (IOException | InterruptedException e) {
       if (e instanceof InterruptedException) {

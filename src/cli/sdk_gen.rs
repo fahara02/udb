@@ -1343,7 +1343,7 @@ func (r {name}Repo) List(ctx context.Context, where map[string]any, opts udbclie
 \tif err != nil {{\n\t\treturn nil, \"\", 0, err\n\t}}\n\
 \tout := make([]*{qualified}, 0, len(page.Rows))\n\
 \tfor _, row := range page.Rows {{\n\t\tout = append(out, {name}FromUDBRow(row))\n\t}}\n\
-\treturn out, page.NextPageToken, page.TotalCount, nil\n\
+\treturn out, page.NextPageToken, int64(page.TotalCount), nil\n\
 }}\n\n\
 // Get returns the single row matching where (typically the primary key), or\n\
 // nil when absent.\n\
@@ -1400,19 +1400,55 @@ fn is_go_timestamp(proto_type: &str) -> bool {
         || proto_type == "Timestamp"
 }
 
-/// `user_id` -> `UserId` (protoc-gen-go field naming).
+/// Camel-case a proto field name into its Go identifier EXACTLY as
+/// `protoc-gen-go` does (`google.golang.org/protobuf/internal/strs.GoCamelCase`),
+/// so the emitted accessors match the consumer's compiled protobuf Go. This is a
+/// faithful byte-for-byte port of the upstream algorithm — proto field names are
+/// ASCII (`[A-Za-z_][A-Za-z0-9_]*`), so byte and char processing coincide.
+///
+/// V23-1: the previous `split('_')` + first-char-uppercase approximation only
+/// capitalized the first letter of each underscore segment, so it mishandled
+/// letter/digit boundaries WITHIN a segment. A digit is its own word, so the
+/// letter that FOLLOWS a digit is uppercased: `proj4text` -> `Proj4Text` (not
+/// `Proj4text`), `checksum_sha256` -> `ChecksumSha256`, `s3_configured` ->
+/// `S3Configured`. `protoc-gen-go` emits `GetProj4Text`; the old code emitted the
+/// non-existent `GetProj4text`, so the generated Go did not compile.
 fn go_pascal(field_name: &str) -> String {
-    field_name
-        .split('_')
-        .filter(|seg| !seg.is_empty())
-        .map(|seg| {
-            let mut chars = seg.chars();
-            match chars.next() {
-                Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
-                None => String::new(),
+    fn is_ascii_lower(c: u8) -> bool {
+        c.is_ascii_lowercase()
+    }
+    let s = field_name.as_bytes();
+    let mut b: Vec<u8> = Vec::with_capacity(s.len());
+    let mut i = 0;
+    while i < s.len() {
+        let c = s[i];
+        if c == b'.' && i + 1 < s.len() && is_ascii_lower(s[i + 1]) {
+            // Skip '.' in ".{lowercase}".
+        } else if c == b'.' {
+            b.push(b'_'); // convert '.' to '_'
+        } else if c == b'_' && (i == 0 || s[i - 1] == b'.') {
+            // Leading '_' (or '_' after '.') -> 'X', so we start with a capital.
+            b.push(b'X');
+        } else if c == b'_' && i + 1 < s.len() && is_ascii_lower(s[i + 1]) {
+            // Skip '_' in "_{lowercase}".
+        } else if c.is_ascii_digit() {
+            b.push(c); // digits are their own word
+        } else {
+            // A letter word: uppercase its first char, then take the trailing
+            // lowercase run verbatim. (A '_' that is neither leading nor followed
+            // by a lowercase letter falls here and is preserved as-is, matching
+            // the upstream `default` case.)
+            let up = if is_ascii_lower(c) { c - (b'a' - b'A') } else { c };
+            b.push(up);
+            while i + 1 < s.len() && is_ascii_lower(s[i + 1]) {
+                b.push(s[i + 1]);
+                i += 1;
             }
-        })
-        .collect()
+        }
+        i += 1;
+    }
+    // Input is ASCII, so the byte buffer is always valid UTF-8.
+    String::from_utf8(b).unwrap_or_else(|_| field_name.to_string())
 }
 
 /// Longest common `UPPER_SNAKE_` prefix of an enum's value names (e.g.
@@ -3035,6 +3071,104 @@ mod tests {
         assert!(
             !out.contains("\"time\""),
             "no emitted timestamp code ⇒ no time import, got:\n{out}"
+        );
+    }
+
+    // V23-1: `go_pascal` must reproduce protoc-gen-go's `GoCamelCase` EXACTLY, or
+    // the emitted `m.<Field>` / `m.Get<Field>()` accessors don't exist on the
+    // consumer's compiled message and the generated Go fails to compile. The old
+    // split('_')+first-char approximation broke on letter/digit boundaries within
+    // a segment. Each expected value below is verified against a REAL
+    // protoc-gen-go getter present in this repo's committed `sdk/go/gen`.
+    #[test]
+    fn go_pascal_matches_protoc_gen_go_contract() {
+        let cases = [
+            // The reported regression: no underscore, a digit mid-word — the
+            // letter AFTER the digit must capitalize. protoc-gen-go: GetProj4Text.
+            ("proj4text", "Proj4Text"),
+            // Ordinary snake_case (the cases the old code already handled).
+            ("user_id", "UserId"),
+            ("id", "Id"),
+            ("created_by", "CreatedBy"),
+            ("mobile_number", "MobileNumber"),
+            // Digit boundaries cross-checked against sdk/go/gen getters:
+            ("address_line1", "AddressLine1"),      // GetAddressLine1
+            ("checksum_sha256", "ChecksumSha256"),  // GetChecksumSha256
+            ("int64_values", "Int64Values"),        // GetInt64Values
+            ("p99_execution_ms", "P99ExecutionMs"), // GetP99ExecutionMs
+            ("p50_latency_ms", "P50LatencyMs"),     // GetP50LatencyMs
+            ("s3_configured", "S3Configured"),       // GetS3Configured
+            ("sha256", "Sha256"),                    // GetSha256
+            (
+                "overall_p99_compliance_rate",
+                "OverallP99ComplianceRate", // GetOverallP99ComplianceRate
+            ),
+        ];
+        for (field, expected) in cases {
+            let got = go_pascal(field);
+            assert_eq!(
+                got, expected,
+                "go_pascal({field:?}) = {got:?}, want {expected:?} (protoc-gen-go contract)"
+            );
+            // The getter the emitter actually writes is `Get<Field>`.
+            assert_eq!(format!("Get{got}"), format!("Get{expected}"));
+        }
+        // Guard the exact defect the bug report cited: never the old wrong form.
+        assert_ne!(go_pascal("proj4text"), "Proj4text");
+    }
+
+    // V23-1: the typed repository `List` declares an `int64` count return but the
+    // SDK's `udbclient.Page.TotalCount` is `int32` — the raw return did not
+    // compile (`cannot use page.TotalCount (int32) as int64`). The emitter must
+    // widen explicitly, and the digit-field accessors must use the correct names.
+    #[test]
+    fn typed_list_widens_total_count_and_names_digit_fields() {
+        let mut language_classes = std::collections::BTreeMap::new();
+        language_classes.insert(
+            "go".to_string(),
+            "example.com/gen/spatialv1;spatialv1.SpatialRefSys".to_string(),
+        );
+        let mut proj4 = column("proj4text", "string");
+        proj4.not_null = true;
+        let entities = vec![EntityDescriptor {
+            message_type: "acme.spatial.v1.SpatialRefSys".to_string(),
+            short_name: "SpatialRefSys".to_string(),
+            table: "spatial_ref_sys".to_string(),
+            primary_keys: vec!["srid".to_string()],
+            tenant_field: String::new(),
+            project_field: String::new(),
+            soft_delete_field: String::new(),
+            version_field: String::new(),
+            proto_package: "acme.spatial.v1".to_string(),
+            language_classes,
+            json_field_names: vec!["srid".to_string(), "proj4text".to_string()],
+            relations: Vec::new(),
+            columns: vec![column("srid", "int32"), proj4],
+        }];
+        let out = render_go_entities_file(&entities, "spatialgen");
+
+        // Count type: the return must widen to match the int64 signature.
+        assert!(
+            out.contains("[]*spatialv1.SpatialRefSys, string, int64, error)"),
+            "List must declare the int64 count return, got:\n{out}"
+        );
+        assert!(
+            out.contains("return out, page.NextPageToken, int64(page.TotalCount), nil"),
+            "List must widen page.TotalCount to int64, got:\n{out}"
+        );
+        assert!(
+            !out.contains("page.NextPageToken, page.TotalCount, nil"),
+            "the un-widened int32 return must not survive, got:\n{out}"
+        );
+
+        // Field naming: the digit-boundary accessors must match protoc-gen-go.
+        assert!(
+            out.contains("m.GetProj4Text()") && out.contains("m.Proj4Text = "),
+            "digit-field accessors must be Proj4Text, got:\n{out}"
+        );
+        assert!(
+            !out.contains("Proj4text"),
+            "the old wrong Proj4text form must not survive, got:\n{out}"
         );
     }
 

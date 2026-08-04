@@ -180,9 +180,17 @@ func NewUdb(ctx context.Context, cfg Config) (*Udb, error) {
 
 	u := &Udb{Meta: meta, conns: []*grpc.ClientConn{brokerConn}, brokerConn: brokerConn}
 
-	// Rebind the generated layer onto the live connection so its escape-hatch
-	// Invoke/NewStream go through the dialed broker.
-	u.Generated = NewGenerated(brokerConn, opt)
+	// V23-2: expose the SAME generated client whose interceptors were installed on
+	// every dialed connection (gen.DialOptions() above), rebound onto the live
+	// broker connection for its escape-hatch Invoke/NewStream. Because the
+	// connection interceptors read this exact object's options live, adoptMetadata
+	// (SetMeta) and setBearerLocked (SetAuthorization) now update the metadata the
+	// connections actually emit — so after tenant adoption or a bearer refresh no
+	// connection carries the stale pre-login identity/bearer. (Previously this was
+	// a SECOND NewGenerated(brokerConn, opt); the interceptors kept reading the
+	// original gen, which nothing updated, duplicating a stale x-tenant-id.)
+	gen.rebindConn(brokerConn)
+	u.Generated = gen
 
 	authConn := brokerConn
 	if cfg.AuthTarget != cfg.Target {

@@ -26,7 +26,7 @@ package udbclient
 // hatches for RPCs that don't yet have a typed helper.
 //
 // Covers 376 RPCs across 28 services
-// (UDB v0.4.36, wire protocol 1.0.0).
+// (UDB v0.4.37, wire protocol 1.0.0).
 
 import (
 	"bytes"
@@ -63,7 +63,7 @@ const (
 // SDKVersion is the UDB release this generated layer was rendered from. It is
 // baked at generation time and is the version the bundled `udb` CLI launcher
 // (cmd/udb) will resolve.
-const SDKVersion = "0.4.36"
+const SDKVersion = "0.4.37"
 
 // GeneratedProtocolVersion mirrors the wire protocol this layer targets. It is
 // the generated companion to the hand-written udbclient.ProtocolVersion and is
@@ -301,6 +301,15 @@ func NewGenerated(conn grpc.ClientConnInterface, opt Options) *GeneratedClient {
 	return g
 }
 
+// rebindConn points this client's escape-hatch connection at a live conn after
+// the caller dialed it with DialOptions(). V23-2: NewUdb uses this so the exact
+// GeneratedClient whose interceptors were installed on the connections is the
+// SAME object exposed as Udb.Generated — then adoptMetadata (SetMeta) and
+// setBearerLocked (SetAuthorization) update the object the interceptors actually
+// read, and no connection keeps a stale pre-login identity/bearer. Call only
+// during construction, before the client is published to other goroutines.
+func (g *GeneratedClient) rebindConn(conn grpc.ClientConnInterface) { g.conn = conn }
+
 // options atomically loads the current snapshot of this client's options.
 func (g *GeneratedClient) options() Options { return *g.opt.Load() }
 
@@ -350,30 +359,50 @@ func (g *GeneratedClient) outgoingContext(ctx context.Context) context.Context {
 	// Single atomic snapshot so meta + auth + api-key are read all-or-nothing.
 	o := g.options()
 	m := MergeRequestScopedAudit(ctx, o.Meta)
-	pairs := []string{
-		"x-tenant-id", m.TenantID,
-		"x-user-id", m.UserID,
-		"x-purpose", m.Purpose,
-		"x-correlation-id", m.CorrelationID,
-		"x-service-identity", m.ServiceIdentity,
-		"x-udb-project-id", m.ProjectID,
-		"x-udb-client-catalog-version", m.ClientCatalogVersion,
+	// V23-2: this interceptor runs on connections that ALSO carry the typed
+	// facades (Client.Context / AuthClient.Context) and the enterprise
+	// DataContext / NativeContext, each of which already appends the canonical,
+	// post-adoption identity + bearer for the call — Client.Context is documented
+	// to emit "each header exactly once". Unconditionally re-appending the
+	// connection-level snapshot here produced DUPLICATE headers, and after tenant
+	// adoption a CONFLICTING second x-tenant-id / x-udb-project-id (the stale
+	// pre-login hint) next to the canonical one. So inject each header ONLY when
+	// the caller has not already set it: raw / escape-hatch calls (no facade
+	// context) still get every default, while facade calls keep their single
+	// authoritative value.
+	existing, _ := metadata.FromOutgoingContext(ctx)
+	var pairs []string
+	add := func(key, val string) {
+		if len(existing.Get(key)) > 0 {
+			return // caller already set this header — never duplicate or override it
+		}
+		pairs = append(pairs, key, val)
 	}
+	add("x-tenant-id", m.TenantID)
+	add("x-user-id", m.UserID)
+	add("x-purpose", m.Purpose)
+	add("x-correlation-id", m.CorrelationID)
+	add("x-service-identity", m.ServiceIdentity)
+	add("x-udb-project-id", m.ProjectID)
+	add("x-udb-client-catalog-version", m.ClientCatalogVersion)
 	if len(m.Scopes) > 0 {
-		pairs = append(pairs, "x-scopes", joinScopes(m.Scopes))
+		add("x-scopes", joinScopes(m.Scopes))
 	}
 	if o.Authorization != "" {
-		pairs = append(pairs, "authorization", o.Authorization)
+		add("authorization", o.Authorization)
 	}
 	if o.APIKey != "" {
-		pairs = append(pairs, "x-api-key", o.APIKey)
+		add("x-api-key", o.APIKey)
 	}
 	if rid := o.RequestID; rid != "" {
-		pairs = append(pairs, "x-request-id", rid)
+		add("x-request-id", rid)
 	} else if m.CorrelationID != "" {
 		// m is the MERGED metadata, so a per-request correlation id also
 		// satisfies the server's request-context requirement here.
-		pairs = append(pairs, "x-request-id", m.CorrelationID)
+		add("x-request-id", m.CorrelationID)
+	}
+	if len(pairs) == 0 {
+		return ctx
 	}
 	return metadata.AppendToOutgoingContext(ctx, pairs...)
 }
