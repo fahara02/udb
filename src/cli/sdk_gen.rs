@@ -1438,7 +1438,11 @@ fn go_pascal(field_name: &str) -> String {
             // lowercase run verbatim. (A '_' that is neither leading nor followed
             // by a lowercase letter falls here and is preserved as-is, matching
             // the upstream `default` case.)
-            let up = if is_ascii_lower(c) { c - (b'a' - b'A') } else { c };
+            let up = if is_ascii_lower(c) {
+                c - (b'a' - b'A')
+            } else {
+                c
+            };
             b.push(up);
             while i + 1 < s.len() && is_ascii_lower(s[i + 1]) {
                 b.push(s[i + 1]);
@@ -3092,13 +3096,13 @@ mod tests {
             ("created_by", "CreatedBy"),
             ("mobile_number", "MobileNumber"),
             // Digit boundaries cross-checked against sdk/go/gen getters:
-            ("address_line1", "AddressLine1"),      // GetAddressLine1
-            ("checksum_sha256", "ChecksumSha256"),  // GetChecksumSha256
-            ("int64_values", "Int64Values"),        // GetInt64Values
+            ("address_line1", "AddressLine1"), // GetAddressLine1
+            ("checksum_sha256", "ChecksumSha256"), // GetChecksumSha256
+            ("int64_values", "Int64Values"),   // GetInt64Values
             ("p99_execution_ms", "P99ExecutionMs"), // GetP99ExecutionMs
-            ("p50_latency_ms", "P50LatencyMs"),     // GetP50LatencyMs
-            ("s3_configured", "S3Configured"),       // GetS3Configured
-            ("sha256", "Sha256"),                    // GetSha256
+            ("p50_latency_ms", "P50LatencyMs"), // GetP50LatencyMs
+            ("s3_configured", "S3Configured"), // GetS3Configured
+            ("sha256", "Sha256"),              // GetSha256
             (
                 "overall_p99_compliance_rate",
                 "OverallP99ComplianceRate", // GetOverallP99ComplianceRate
