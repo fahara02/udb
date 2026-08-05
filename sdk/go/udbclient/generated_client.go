@@ -333,6 +333,15 @@ func (g *GeneratedClient) SetAPIKey(apiKey string) {
 // be built on the same channel: udbclient.New(gc.Conn(), gc.Meta()).
 func (g *GeneratedClient) Conn() grpc.ClientConnInterface { return g.conn }
 
+// rebindConn points this client's escape-hatch connection at a live conn after
+// the caller dialed it with DialOptions(). V23-2: NewUdb uses this so the exact
+// GeneratedClient whose interceptors were installed on the connections is the
+// SAME object exposed as Udb.Generated — then adoptMetadata (SetMeta) and
+// setBearerLocked (SetAuthorization) update the object the interceptors actually
+// read, and no connection keeps a stale pre-login identity/bearer. Call only
+// during construction, before the client is published to other goroutines.
+func (g *GeneratedClient) rebindConn(conn grpc.ClientConnInterface) { g.conn = conn }
+
 // Meta returns the configured caller Metadata.
 func (g *GeneratedClient) Meta() Metadata { return g.options().Meta }
 
