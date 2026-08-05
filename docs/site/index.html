@@ -37,7 +37,7 @@
 <main>
   <div class="hero">
     <div class="wrap">
-      <span class="pill reveal"><span class="dot"></span> <b>v0.5.0</b> · 18 backends · 344 RPCs · six SDKs</span>
+      <span class="pill reveal"><span class="dot"></span> <b>v0.5.0</b> · 18 backends · 379 RPCs · six SDKs</span>
       <div class="reveal d1"><img class="logo" src="./assets/udb_logo.svg" alt="Universal Data Broker logo"></div>
       <h1 class="reveal d1">UDB is the typed control point for <span class="g">app data</span></h1>
       <p class="tagline reveal d2"><b>Declare once</b> · <b>enforce centrally</b> · <b>call from any SDK</b></p>
@@ -58,8 +58,8 @@
         <div class="proof-node"><span>04</span><b>SDKs</b><small>consistent facades, metadata, credentials, retries</small></div>
       </div>
       <div class="badges reveal d5">
-        <span class="badge">DataBroker <b>77 RPCs</b></span>
-        <span class="badge">Native services <b>267 RPCs</b></span>
+        <span class="badge">DataBroker <b>79 RPCs</b></span>
+        <span class="badge">Native services <b>300 RPCs</b></span>
         <span class="badge">Contract <b>4.0.0</b></span>
         <span class="badge">Protocol <b>1.0.0</b></span>
       </div>
@@ -71,7 +71,7 @@
     <div class="wrap">
       <div class="stats">
         <div class="stat reveal"><div class="n"><span data-count="18">18</span></div><div class="l">Backend kinds</div></div>
-        <div class="stat reveal d1"><div class="n"><span data-count="77">77</span></div><div class="l">DataBroker RPCs</div></div>
+        <div class="stat reveal d1"><div class="n"><span data-count="79">77</span></div><div class="l">DataBroker RPCs</div></div>
         <div class="stat reveal d2"><div class="n"><span data-count="188">188</span></div><div class="l">Control-plane RPCs</div></div>
         <div class="stat reveal d3"><div class="n"><span data-count="6">6</span></div><div class="l">SDK languages</div></div>
       </div>
@@ -106,7 +106,7 @@
           <a href="./data-plane.html">Inspect the data plane</a>
         </article>
         <article class="surface reveal d1">
-          <span>Control plane</span><h3>267 native RPCs</h3>
+          <span>Control plane</span><h3>300 native RPCs</h3>
           <p>Auth, identity federation, tenancy, policy bundles, API keys, notifications, storage, realtime, analytics, audit, and operational services behind the native listener.</p>
           <a href="./control-plane.html">Inspect native services</a>
         </article>
@@ -261,8 +261,8 @@ $ udb native manifest | jq <span class="s">'.service_count'</span></pre></div>
       <h2 class="reveal">Dive into the <span class="accent">platform</span></h2>
       <div class="grid c3 mt28">
         <a class="card reveal" href="./architecture.html"><div class="ic">🧭</div><h3>Architecture</h3><p>Proto → catalog manifest → per-request runtime pipeline; the descriptor is the single source of truth.</p><span class="more">How it works</span></a>
-        <a class="card warm reveal d1" href="./data-plane.html"><div class="ic">🗄️</div><h3>Data plane</h3><p>77 RPCs across every backend, plus 2PC/XA, sagas, CDC→Kafka, and migrations.</p><span class="more">Explore</span></a>
-        <a class="card reveal d2" href="./control-plane.html"><div class="ic">🔐</div><h3>Control plane</h3><p>27 native services, 267 RPCs — auth, identity, tenancy, and policy distribution.</p><span class="more">See services</span></a>
+        <a class="card warm reveal d1" href="./data-plane.html"><div class="ic">🗄️</div><h3>Data plane</h3><p>79 RPCs across every backend, plus 2PC/XA, sagas, CDC→Kafka, and migrations.</p><span class="more">Explore</span></a>
+        <a class="card reveal d2" href="./control-plane.html"><div class="ic">🔐</div><h3>Control plane</h3><p>27 native services, 300 RPCs — auth, identity, tenancy, and policy distribution.</p><span class="more">See services</span></a>
         <a class="card warm reveal" href="./security.html"><div class="ic">🛡️</div><h3>Security</h3><p>RLS, encryption, mTLS, fail-closed posture, and compliance profiles.</p><span class="more">Security model</span></a>
         <a class="card reveal d1" href="./enterprise.html"><div class="ic">⚙️</div><h3>Enterprise &amp; HA</h3><p>Leader election, recovery, observability, SLOs, and runbooks.</p><span class="more">Operate at scale</span></a>
         <a class="card reveal d2" href="./sdks.html"><div class="ic">🧩</div><h3>SDKs</h3><p>Workflow helpers for app code, raw generated clients for advanced protocol access.</p><span class="more">Get started</span></a>

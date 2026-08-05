@@ -17,9 +17,9 @@ packages wrap this content verbatim.
 UDB is a **proto-driven multi-database broker** in Rust (tonic/prost gRPC, sqlx).
 Developers declare entities as annotated protobuf messages; from that ONE
 contract UDB derives DB schema (DDL), runtime security enforcement, **27 native
-services / 344 RPCs (77 DataBroker + 267 native)**, six language SDKs, CLI
+services / 379 RPCs (79 DataBroker + 300 native)**, six language SDKs, CLI
 scaffolds and docs. Three planes:
-Current product/SDK baseline is **0.4.0** with wire protocol **1.0.0**.
+Current product/SDK baseline is **0.5.0** with wire protocol **1.0.0**.
 Version strings must continue to derive from
 manifests/`env!("CARGO_PKG_VERSION")`, not hand-coded literals.
 
@@ -178,6 +178,18 @@ NEVER trust body ids) → per-action authz where annotated
 pool → `enqueue_outbox_event` (versioned dot topic `udb.<svc>.<entity>.<verb>.v1`)
 → proto mapping. Pagination via shared `MAX_LIST_ROWS`/`page_response`.
 
+**0.5.0 surface delta (new RPCs + behavior changes — carry these when touching the
+data plane or grants):**
+- **`DataBroker.BulkCas`** (`handlers_data.rs::bulk_cas_inner` → `setup_data.rs::bulk_cas`) — tenant-scoped, `max_rows`-bounded batch of single-row conditional updates in ONE write tx; each item pins the full PK in `filter`, `changes`+optional `expected_revision`/field-CAS/`increments`; a per-item CAS miss is **counted** (`conflicted`), not a batch error (safe partial retry via `idempotency_key`). Preserves the unary Update path's projection/CDC-outbox/audit side effects. Authorized by the per-call DataBroker `authorize()` (deny-by-default Casbin), NOT a static method_security row; fail-closed on no tenant.
+- **Opaque row-revision / ETag** — `SelectRequest.include_revision`, `RecordSet.record_revisions`, `MutationResponse.revision`, `Update/Delete/BulkCas.expected_revision`. Server salted-hash revision map (`system.rs` `udb_row_revisions`, `bump_row_revision_in_tx`, `enforce_expected_revision_in_tx`) — optimistic concurrency for protos with no business `version` column.
+- **Soft-delete default live-row scope** — the planner conjoins `<soft_delete_column> IS NULL` into EVERY Select (legacy planner AND neutral-IR bridge, `planning/broker/mod.rs`), and `Delete` on a `soft_delete`-annotated table is now an idempotent `UPDATE … SET tombstone = NOW()`, not a physical DELETE. NOTE: there is **no `include_deleted` wire field** — the "expose tombstoned rows" opt-in did NOT ship; do not document one.
+- **RLS update backstop (defense-in-depth)** — the served UPDATE (`build_update_plan`, legacy planner) now appends `AND <tenant> = $N` bound to the VERIFIED caller tenant (mirrors the select/delete IR bridges), so a runtime-level Update naming a foreign tenant matches ZERO rows. Bound in `setup_data.rs::update` via the `parameter_columns.len() == values.len()+1` invariant.
+- **Hybrid-tenant reads** — `CompileContext::allow_global_tenant` + `native_entity_read_hybrid_tenant_for_service`. The strict tenant predicate is injected by `SqlDialect::context_predicates` (SQL backends), NOT `util::append_context_predicates` (Cassandra only) — set the flag there to emit `(tenant = $N OR tenant IS NULL)` for hybrid entities like notification global templates.
+- **Page-token bound to query shape** — tokens fold a hash of filter+sort+fields; reusing a token under a different query shape ⇒ `FAILED_PRECONDITION` (`pagination.rs`).
+- **Lock-fencing at commit** — DataBroker mutations carry optional `lock_name`+`fencing_token`, validated against LockService in the same tx (`enforce_fencing_token_in_tx`).
+- **`AuthnService.TransferServiceAccountGrant`** (`auth_service/grants.rs::transfer_service_account_grant`) — atomic service-account identity cutover: re-points an ACTIVE grant's `user_id` under `expected_revision` CAS, both accounts `FOR UPDATE`, dest must be grantless, no cross-project, no window where nobody owns the identity; response returns `previous_user_id` for a deterministic reverse. DESTRUCTIVE, scope `udb:authn:manage-grants`.
+- **`udb deploy`** (D-1..D-4) — declarative `udb.deploy.yaml` + `udb deploy plan|apply|render {env,compose,helm,kube}`; from minimum args derives the full production env (UDB_ENV, 3 mTLS flags, JWT/JWKS, listeners, RLS, audit) and idempotently reconciles project/auth-bootstrap/grants/api-keys/policies + `udb secrets init`. Plus `udb doctor --json` compat manifest (descriptor hash / versions / capabilities) and a BrokenPipe-safe `cli::emit()` sink.
+
 | Service (dir under `src/runtime/service/`) | Notables |
 |---|---|
 | `auth_service/authn/` | delegator submodules: `core.rs` (user CRUD; `enforce_body_tenant_matches_claim`, `claim_bound_read_tenant`), `sessions.rs`, `lifecycle.rs` (devices, revocation, `authorize_target_user`, `is_token_revoked`), MFA/WebAuthn (attestation openssl-gated) |
@@ -186,9 +198,10 @@ pool → `enqueue_outbox_event` (versioned dot topic `udb.<svc>.<entity>.<verb>.
 | `auth_service/idp/` | OIDC/SAML (`saml.rs` — exclusive-C14N verified), SCIM (gRPC) |
 | `auth_service/signing_keys.rs` | registry: `active_signing_key` signs with its kid; rotation = sign-new/verify-old; env key only as unseeded fallback |
 | `auth_service/` shared | `events.rs` (topic consts — every const must have an emitter), compliance envelope (`with_compliance`, enforced under `UDB_ENTERPRISE_AUDIT=1`), `audit_export.rs`, `readiness.rs` |
-| `tenant_service/`, `analytics_service/` | straightforward CRUD + events |
+| `tenant_service/` | CRUD + events; **`AdminPurgeTenant`** (0.5.0, `tenant_purge.rs`) = privileged CROSS-tenant hard/soft purge — self-purge `PurgeTenant` forbids other tenants, this one reaches them: scope `udb:tenant:admin-purge`, `confirmation_token`==`target_tenant_id`, `idempotency_key`, HARD physically deletes every tenant-columned row (control-plane/tenant-less tables reported-excluded) / SOFT deactivates the control record + revokes tokens. The **handler** authorizes the cross-tenant reach (`authorize_action(ACTION_TENANT_ADMIN_PURGE)` default-deny + VERIFIED delegated actor + `validate_tenant_movement_scope{privileged_cross_tenant:true}`), NOT the transport gate; UNSPECIFIED mode fails closed |
+| `analytics_service/` | straightforward CRUD + events |
 | `notification_service/` | preferences (`is_opted_out` → SUPPRESSED rows excluded from emit; `channel_send_decision`), tenant-bound template selection (`template_selection_sql`), `retry_notification` re-emits with retry flag |
-| `storage_service/` | register/finalize/update (presence-guarded `is_public` binds — proto3 `optional` + COALESCE), presigned URLs, quota, GC + `WORKER_STORAGE_ORPHAN_REAPER` |
+| `storage_service/` | register/finalize/update (presence-guarded `is_public` binds — proto3 `optional` + COALESCE); **0.5.0:** register-established fields (`is_public`, size) are IMMUTABLE at finalize — a differing value ⇒ typed `FAILED_PRECONDITION` (`FINALIZE_IMMUTABLE_MISMATCH`), finalize trusts the store HEAD size; **`DeleteMode HARD`** = durable object-GC intent + convergent byte removal (`SOFT` tombstones) with `reason`/`expected_version`/`idempotency_key`. Presigned URLs, quota, GC + `WORKER_STORAGE_ORPHAN_REAPER`. NOTE: the scan/quarantine VERDICT lifecycle (RecordScanVerdict / QUARANTINED FileStatus) did NOT ship — do not assume a clean-only download gate |
 | `asset_service/` | pipelines + `AssetStepExecutor` (EMBED→Qdrant), `spawn_storage_finalized_consumer` (Kafka earliest + manual commit AFTER success — the at-least-once consumer template) |
 | `webrtc_service/` | rooms/peers/tracks/TURN(fail-closed); `SignalingHub` broadcast: `HubFrame::{Signal,RoomClosed,PeerClosed}`, `dispose_hub_frame` (PeerClosed ends only that peer), `disconnect_bound_peer` on stream death, periodic membership recheck, stale-peer reaper; egress via `SfuBridge` seam (LiveKit token backend binds {tenant,room,peer}; disabled ⇒ `failed_precondition`) |
 | `vault_service/` | 3 engines, 1 crypto stack (AES-256-GCM-SIV envelope reused from `runtime/encryption.rs`): versioned KV (CAS, soft-delete, crypto-shred destroy), transit (encrypt/decrypt/sign/verify/hmac by key NAME; material never exported), seal — `check_seal` gates EVERY handler `failed_precondition` when the master key is unavailable; destroyed-version reaper worker |

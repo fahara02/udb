@@ -37,9 +37,9 @@ packages wrap this content verbatim.
 UDB is a **proto-driven multi-database broker** in Rust (tonic/prost gRPC, sqlx).
 Developers declare entities as annotated protobuf messages; from that ONE
 contract UDB derives DB schema (DDL), runtime security enforcement, **27 native
-services / 344 RPCs (77 DataBroker + 267 native)**, six language SDKs, CLI
+services / 379 RPCs (79 DataBroker + 300 native)**, six language SDKs, CLI
 scaffolds and docs. Three planes:
-Current product/SDK baseline is **0.4.0** with wire protocol **1.0.0**.
+Current product/SDK baseline is **0.5.0** with wire protocol **1.0.0**.
 Version strings must continue to derive from
 manifests/`env!("CARGO_PKG_VERSION")`, not hand-coded literals.
 
