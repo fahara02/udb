@@ -193,7 +193,15 @@ impl<D: SqlDialect> SqlCompiler<D> {
             let placeholder = col
                 .map(|c| D::cast_compare_placeholder(&c.sql_type, &placeholder))
                 .unwrap_or(placeholder);
-            parts.push(format!("{} = {placeholder}", D::quote(col_name)));
+            let quoted = D::quote(col_name);
+            if ctx.allow_global_tenant {
+                // Hybrid-tenant entity (e.g. notification templates): also match
+                // platform-global (NULL-tenant) rows. Still bound to the tenant
+                // param, so a FOREIGN tenant never matches.
+                parts.push(format!("({quoted} = {placeholder} OR {quoted} IS NULL)"));
+            } else {
+                parts.push(format!("{quoted} = {placeholder}"));
+            }
         }
         if let Some(pid) = ctx.project_id
             && !pid.is_empty()
@@ -207,7 +215,12 @@ impl<D: SqlDialect> SqlCompiler<D> {
             let placeholder = col
                 .map(|c| D::cast_compare_placeholder(&c.sql_type, &placeholder))
                 .unwrap_or(placeholder);
-            parts.push(format!("{} = {placeholder}", D::quote(col_name)));
+            let quoted = D::quote(col_name);
+            if ctx.allow_global_tenant {
+                parts.push(format!("({quoted} = {placeholder} OR {quoted} IS NULL)"));
+            } else {
+                parts.push(format!("{quoted} = {placeholder}"));
+            }
         }
         if parts.is_empty() {
             Ok(None)
