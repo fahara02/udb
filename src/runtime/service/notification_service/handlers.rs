@@ -687,6 +687,46 @@ pub(crate) async fn get_template(
         Some(&locale),
         false,
     );
+    // TEMP DEBUG (remove after diagnosing the live template-not-found): dump the
+    // stored template rows + the filter this read applies, so the lane shows the
+    // exact mismatch between what upsert_template wrote and what the read queries.
+    if let Ok(pool) = svc.require_pool() {
+        let m = template_model();
+        let sql = format!(
+            "SELECT {tid}::text AS tid, {et}::text AS et, {ch}::text AS ch, \
+             {lc}::text AS lc, {act}::text AS act, {del}::text AS del FROM {rel}",
+            tid = m.q("tenant_id"),
+            et = m.q("event_type"),
+            ch = m.q("channel"),
+            lc = m.q("locale"),
+            act = m.q("is_active"),
+            del = m.q("deleted_at"),
+            rel = m.relation,
+        );
+        eprintln!(
+            "TEMPLATE_DEBUG filter tenant={scoped_tenant} event={} channel={} locale={locale}",
+            req.event_type,
+            channel_to_db(req.channel)
+        );
+        match sqlx::query(&sql).fetch_all(pool).await {
+            Ok(dump) => {
+                use sqlx::Row;
+                eprintln!("TEMPLATE_DEBUG {} row(s) in {}", dump.len(), m.relation);
+                for r in &dump {
+                    eprintln!(
+                        "TEMPLATE_DEBUG row tid={:?} et={:?} ch={:?} lc={:?} act={:?} del={:?}",
+                        r.get::<Option<String>, _>("tid"),
+                        r.get::<Option<String>, _>("et"),
+                        r.get::<Option<String>, _>("ch"),
+                        r.get::<Option<String>, _>("lc"),
+                        r.get::<Option<String>, _>("act"),
+                        r.get::<Option<String>, _>("del"),
+                    );
+                }
+            }
+            Err(e) => eprintln!("TEMPLATE_DEBUG dump failed: {e}"),
+        }
+    }
     let rows = runtime
         .native_entity_read_hybrid_tenant_for_service(
             "notification",
