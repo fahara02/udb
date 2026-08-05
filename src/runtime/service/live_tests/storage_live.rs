@@ -48,6 +48,9 @@ async fn live_postgres_storage_crud_roundtrip() {
             content_type: "application/pdf".to_string(),
             file_type: "PDF".to_string(),
             size_bytes: 13,
+            // finalize supplies is_public: true, and it is IMMUTABLE after
+            // register, so establish it here (the test asserts a public file).
+            is_public: Some(true),
             ..Default::default()
         }))
         .await

@@ -87,6 +87,8 @@ async fn live_storage_finalize_emits_declared_topic() {
             filename: "report.pdf".to_string(),
             content_type: "application/pdf".to_string(),
             file_type: "DOCUMENT".to_string(),
+            // finalize supplies is_public: true (immutable after register).
+            is_public: Some(true),
             ..Default::default()
         }))
         .await
