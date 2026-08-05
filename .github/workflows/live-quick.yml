@@ -60,6 +60,14 @@ jobs:
             echo "::error::live-test compile preflight failed"
             exit "$compile_status"
           fi
+      - name: Create MinIO storage bucket
+        # Storage/asset live tests PUT object bytes into DEFAULT_OBJECT_BUCKET
+        # (udb-storage); nothing else provisions it. Mirrors the main live job.
+        run: |
+          docker compose -f docker-compose.integration.yml exec -T minio \
+            mc alias set local http://localhost:9000 minio minio123
+          docker compose -f docker-compose.integration.yml exec -T minio \
+            mc mb --ignore-existing local/udb-storage
       - name: Live tests (filtered)
         env:
           UDB_LIVE_AUTH_TESTS: "1"

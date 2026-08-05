@@ -98,7 +98,7 @@ async fn live_storage_finalize_emits_declared_topic() {
         file_id: reg.file_id.clone(),
         content_type: "application/pdf".to_string(),
         is_public: Some(true),
-        size_bytes: 2048,
+        size_bytes: 14,
         ..Default::default()
     }))
     .await

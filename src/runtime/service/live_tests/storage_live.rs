@@ -47,7 +47,7 @@ async fn live_postgres_storage_crud_roundtrip() {
             filename: "invoice.pdf".to_string(),
             content_type: "application/pdf".to_string(),
             file_type: "PDF".to_string(),
-            size_bytes: 2048,
+            size_bytes: 13,
             ..Default::default()
         }))
         .await
@@ -64,7 +64,7 @@ async fn live_postgres_storage_crud_roundtrip() {
             file_id: reg.file_id.clone(),
             content_type: "application/pdf".to_string(),
             is_public: Some(true),
-            size_bytes: 2048,
+            size_bytes: 13,
             ..Default::default()
         }))
         .await
@@ -74,7 +74,7 @@ async fn live_postgres_storage_crud_roundtrip() {
     assert_eq!(file.file_id, reg.file_id);
     assert!(file.is_public);
     assert_eq!(
-        file.size_bytes, 2048,
+        file.size_bytes, 13,
         "finalize must persist the actual size"
     );
 
@@ -140,7 +140,7 @@ async fn live_postgres_storage_read_after_write() {
             filename: "ryw.pdf".to_string(),
             content_type: "application/pdf".to_string(),
             file_type: "PDF".to_string(),
-            size_bytes: 16,
+            size_bytes: 14,
             ..Default::default()
         }))
         .await
@@ -151,7 +151,7 @@ async fn live_postgres_storage_read_after_write() {
         tenant_id: tenant_id.clone(),
         file_id: reg.file_id.clone(),
         content_type: "application/pdf".to_string(),
-        size_bytes: 16,
+        size_bytes: 14,
         ..Default::default()
     }))
     .await
