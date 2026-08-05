@@ -22,10 +22,10 @@ use super::super::native_helpers::{
 };
 use super::SearchServiceImpl;
 use super::config::{
-    BACKEND_ELASTICSEARCH, BACKEND_QDRANT, SEARCH_INDEX_MSG, STATUS_ACTIVE, STATUS_DELETED,
-    STATUS_REINDEXING, TENANT_SCOPE_PAYLOAD_KEY, TOPIC_CREATED, TOPIC_DELETED, TOPIC_REINDEX,
-    index_analyzer, index_distance_metric, max_indexes_per_tenant, max_top_k, resolve_top_k,
-    search_fusion_weights,
+    BACKEND_ELASTICSEARCH, BACKEND_QDRANT, SEARCH_INDEX_MSG, SOURCE_PK_PAYLOAD_KEY, STATUS_ACTIVE,
+    STATUS_DELETED, STATUS_REINDEXING, TENANT_SCOPE_PAYLOAD_KEY, TOPIC_CREATED, TOPIC_DELETED,
+    TOPIC_REINDEX, index_analyzer, index_distance_metric, max_indexes_per_tenant, max_top_k,
+    resolve_top_k, search_fusion_weights,
 };
 use super::errors::{
     full_text_only_requires_mediated_ir_status, require_source_tenant_column,
@@ -185,6 +185,19 @@ pub(crate) fn tenant_scope_filter(tenant_id: &str) -> Option<prost_types::Struct
     crate::runtime::executor_utils::json_to_struct(&body)
 }
 
+/// Extract the RAW source pk stamped under [`SOURCE_PK_PAYLOAD_KEY`] on the write
+/// path, so the search returns the pk the consumer indexed instead of the hashed
+/// engine point id. Empty when absent (legacy points predating the stamp).
+pub(crate) fn source_pk_from_payload(payload: Option<&prost_types::Struct>) -> String {
+    payload
+        .map(crate::runtime::executor_utils::struct_to_json)
+        .as_ref()
+        .and_then(|value| value.get(SOURCE_PK_PAYLOAD_KEY))
+        .and_then(serde_json::Value::as_str)
+        .map(str::to_string)
+        .unwrap_or_default()
+}
+
 /// Serialize a returned engine payload into the hit's `payload_json`, stripping
 /// the broker-stamped tenant-scope key ([`TENANT_SCOPE_PAYLOAD_KEY`]) — it is
 /// write-time bookkeeping, never application data. Empty/absent payloads map to
@@ -198,6 +211,7 @@ pub(crate) fn hit_payload_json(payload: Option<&prost_types::Struct>) -> String 
         return String::new();
     };
     object.remove(TENANT_SCOPE_PAYLOAD_KEY);
+    object.remove(SOURCE_PK_PAYLOAD_KEY);
     if object.is_empty() {
         return String::new();
     }
@@ -619,7 +633,7 @@ pub(crate) async fn search(
     // index is skipped (not fatal) so "one search box" still returns the healthy
     // indexes' hits; the whole search fails only if EVERY target errored.
     let mut ranked_lists: Vec<Vec<(String, f64)>> = Vec::with_capacity(targets.len());
-    let mut hit_meta: std::collections::HashMap<String, (String, String)> =
+    let mut hit_meta: std::collections::HashMap<String, (String, String, String)> =
         std::collections::HashMap::new();
     let mut succeeded = 0usize;
     let mut last_error: Option<Status> = None;
@@ -655,6 +669,7 @@ pub(crate) async fn search(
             hit_meta.entry(point.id.clone()).or_insert_with(|| {
                 (
                     index.index_name.clone(),
+                    source_pk_from_payload(point.payload.as_ref()),
                     hit_payload_json(point.payload.as_ref()),
                 )
             });
@@ -680,13 +695,19 @@ pub(crate) async fn search(
         .skip(page_window.offset)
         .take(page_window.limit)
         .map(|(id, score)| {
-            let (index_name, payload_json) = hit_meta.get(&id).cloned().unwrap_or_default();
+            let (index_name, source_pk, payload_json) =
+                hit_meta.get(&id).cloned().unwrap_or_default();
             search_pb::SearchHit {
                 index_name,
-                // SRCH1: hit ids are stored tenant-namespaced ("{tenant}:{pk}");
-                // strip the verified-tenant prefix so the consumer sees the raw PK
-                // it indexed (hit_meta above is keyed by the stored/scoped id).
-                id: strip_tenant_point_id(&tenant_id, &id),
+                // SRCH1: the stored engine point id is a HASH of the tenant-scoped
+                // "{tenant}:{pk}" id (Qdrant ids must be UUID/int), so recover the
+                // raw pk from the `_source_pk` payload the write path stamps; fall
+                // back to prefix-strip for legacy points predating the stamp.
+                id: if source_pk.is_empty() {
+                    strip_tenant_point_id(&tenant_id, &id)
+                } else {
+                    source_pk
+                },
                 score,
                 payload_json,
             }

@@ -424,6 +424,24 @@ fn reindex_point_payload(row: &serde_json::Value) -> Option<prost_types::Struct>
     crate::runtime::executor_utils::json_to_struct(&serde_json::Value::Object(object))
 }
 
+/// Stamp the RAW source pk into a point payload under
+/// [`super::config::SOURCE_PK_PAYLOAD_KEY`] so the search READ path can return it.
+/// The stored Qdrant point id is a SHA-256 hash of the tenant-scoped
+/// `"{tenant}:{pk}"` id (Qdrant requires UUID/int ids), so strip-based pk
+/// recovery from the returned id is impossible; the payload is the reliable seat.
+fn with_source_pk(payload: Option<prost_types::Struct>, pk: &str) -> Option<prost_types::Struct> {
+    let mut object = payload
+        .as_ref()
+        .map(crate::runtime::executor_utils::struct_to_json)
+        .and_then(|value| value.as_object().cloned())
+        .unwrap_or_default();
+    object.insert(
+        super::config::SOURCE_PK_PAYLOAD_KEY.to_string(),
+        serde_json::Value::String(pk.to_string()),
+    );
+    crate::runtime::executor_utils::json_to_struct(&serde_json::Value::Object(object))
+}
+
 /// Mediated tenant-scoped SELECT over an index's source entity, cursor-paged on
 /// the primary key (mirrors the embedding backfill's `backfill_select_request`,
 /// including the project-isolation predicate the served planner requires).
@@ -535,9 +553,11 @@ async fn apply_search_freshness_job(
             // PK in a shared collection cannot clobber this vector.
             id: tenant_scoped_point_id(&job.tenant_id, &id),
             vector,
-            payload: body
-                .get("payload")
-                .and_then(|value| crate::runtime::executor_utils::json_to_struct(value)),
+            payload: with_source_pk(
+                body.get("payload")
+                    .and_then(|value| crate::runtime::executor_utils::json_to_struct(value)),
+                &id,
+            ),
             vector_name: String::new(),
         }],
         idempotency_key: String::new(),
@@ -662,7 +682,7 @@ async fn reindex_source_rows(
                 // cross-tenant clobbered on rebuild.
                 id: tenant_scoped_point_id(&job.tenant_id, &row_pk),
                 vector,
-                payload: reindex_point_payload(&row),
+                payload: with_source_pk(reindex_point_payload(&row), &row_pk),
                 vector_name: String::new(),
             });
         }

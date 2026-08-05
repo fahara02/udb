@@ -61,6 +61,13 @@ const SEARCH_REINDEX_INTERVAL_ENV: &str = "UDB_SEARCH_REINDEX_INTERVAL_SECS";
 /// Every Search both filters on it server-side and strips it from returned hit
 /// payloads (it is broker bookkeeping, never application data).
 pub(crate) const TENANT_SCOPE_PAYLOAD_KEY: &str = "_tenant_id";
+/// Reserved point-payload key carrying the RAW source primary key. The stored
+/// Qdrant point id is a SHA-256 hash of the tenant-scoped `"{tenant}:{pk}"` id
+/// (Qdrant point ids must be UUID/int, so `qdrant_point_id` hashes anything
+/// else), which makes the raw pk UNRECOVERABLE from the returned id. The search
+/// READ path returns this payload value as the hit id, and strips it from the
+/// returned payload just like the tenant-scope key.
+pub(crate) const SOURCE_PK_PAYLOAD_KEY: &str = "_source_pk";
 /// Vector distance metric provisioned for a new engine collection (cosine —
 /// the same default the shared `vector_upsert_backend_target` seam ensures).
 /// Now only the *fallback* when a per-index `metadata_json.distance` is absent
