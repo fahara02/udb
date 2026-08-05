@@ -81,6 +81,7 @@ func TestLivePerfExplicitBodyCoverage(t *testing.T) {
 		"embedding_delete_model_id": "embedding-delete-model-1",
 		"grant_binding_id":          "11111111-1111-4111-8111-000000000201",
 		"grant_create_user_id":      "11111111-1111-4111-8111-000000000202",
+		"grant_transfer_to_user_id": "11111111-1111-4111-8111-000000000203",
 		"join_session_room_id":      "join-room-1", "leave_peer_id": "leave-peer-1", "mark_saga_id": "mark-saga-1",
 		"otp_code": "123456", "otp_id": "otp-1", "owner_id": "owner-1", "quarantine_dlq_id": "quarantine-dlq-1",
 		"policy_version_id": "policy-version-1", "approve_draft_id": "approve-draft-1", "reject_draft_id": "reject-draft-1",

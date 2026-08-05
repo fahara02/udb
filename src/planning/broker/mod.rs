@@ -3605,21 +3605,36 @@ mod tests {
         // byte-identical. Assert the safe-subset relationship instead of equality:
         // the IR keeps the caller's predicates, appends exactly the tenant backstop
         // as one extra positional param, and preserves projection/order/limit.
+        //
+        // The ORDER between the two caller predicates (status vs tenant_id) is a
+        // `serde_json` object-iteration artifact — alphabetical without the
+        // `preserve_order` feature (slim builds) but insertion-order with it (the
+        // full-feature build enables it transitively via cloud/otel deps). Assert
+        // presence / occurrence-count / last-positional-param, never a hardcoded
+        // inter-column order.
         assert!(
-            compiled_sql.contains("\"status\" = $1 AND \"tenant_id\" = $2"),
-            "IR keeps the caller predicates: {compiled_sql}"
+            compiled_sql.contains("\"status\" = $"),
+            "IR keeps the caller status predicate: {compiled_sql}"
+        );
+        assert_eq!(
+            compiled_sql.matches("\"tenant_id\" = $").count(),
+            2,
+            "IR keeps the caller tenant_id predicate AND appends the RLS backstop: {compiled_sql}"
         );
         assert!(
             compiled_sql.contains(&format!("AND \"tenant_id\" = ${}", compiled_params.len())),
-            "IR appends the tenant backstop as the last param: {compiled_sql}"
+            "IR appends the tenant backstop as the last positional param: {compiled_sql}"
         );
         assert!(
             compiled_sql.ends_with("ORDER BY \"status\" DESC LIMIT 10"),
             "IR preserves order/limit: {compiled_sql}"
         );
+        let mut param_cols = legacy_plan.parameter_columns.clone();
+        param_cols.sort();
         assert_eq!(
-            legacy_plan.parameter_columns,
-            vec!["status".to_string(), "tenant_id".to_string()]
+            param_cols,
+            vec!["status".to_string(), "tenant_id".to_string()],
+            "legacy planner filters on exactly the caller columns (inter-column order is a map-iteration artifact)"
         );
         // Caller's 2 params + the 1 tenant backstop.
         assert_eq!(
@@ -3899,21 +3914,33 @@ mod tests {
         // tenant-scoped, not byte-identical. (`build_delete_logical_delete` also
         // declines for soft-delete tables, but `widgets` here is non-soft, so it
         // is a real physical DELETE, exercising the backstop on the delete path.)
+        // The order between the two caller predicates is a `serde_json`
+        // object-iteration artifact (see the select bridge test) — assert
+        // presence / occurrence-count / last-positional-param, never a hardcoded
+        // inter-column order.
         assert!(
             compiled_sql.starts_with("DELETE FROM \"public\".\"widgets\" WHERE "),
             "IR emits a physical DELETE for a non-soft table: {compiled_sql}"
         );
         assert!(
-            compiled_sql.contains("\"status\" = $1 AND \"tenant_id\" = $2"),
-            "IR keeps the caller predicates: {compiled_sql}"
+            compiled_sql.contains("\"status\" = $"),
+            "IR keeps the caller status predicate: {compiled_sql}"
+        );
+        assert_eq!(
+            compiled_sql.matches("\"tenant_id\" = $").count(),
+            2,
+            "IR keeps the caller tenant_id predicate AND appends the RLS backstop: {compiled_sql}"
         );
         assert!(
             compiled_sql.contains(&format!("AND \"tenant_id\" = ${}", compiled_params.len())),
-            "IR appends the tenant backstop as the last param: {compiled_sql}"
+            "IR appends the tenant backstop as the last positional param: {compiled_sql}"
         );
+        let mut param_cols = legacy_plan.parameter_columns.clone();
+        param_cols.sort();
         assert_eq!(
-            legacy_plan.parameter_columns,
-            vec!["status".to_string(), "tenant_id".to_string()]
+            param_cols,
+            vec!["status".to_string(), "tenant_id".to_string()],
+            "legacy planner filters on exactly the caller columns (inter-column order is a map-iteration artifact)"
         );
         assert_eq!(
             compiled_params.len(),
