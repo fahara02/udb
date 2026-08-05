@@ -1,0 +1,81 @@
+# Isolation lane for the env-gated live Postgres/Kafka tests.
+#
+# The main CI "Native services + canonical stores (live)" job spins up the FULL
+# canonical stack (MySQL/MSSQL/Mongo/Cassandra/Neo4j/ClickHouse/ES/Weaviate) and
+# runs every `#[ignore]` lib test — ~40 min wall time. This lane brings up ONLY
+# the lightweight integration stack (Postgres/Kafka/Redis/MinIO/Qdrant) and runs
+# a FILTERED subset, so a single live-test fix can be verified in ~15 min.
+#
+# Trigger it two ways:
+#   * push to a `livefix/**` branch (auto-runs on every fix commit), or
+#   * `gh workflow run live-quick.yml --ref <branch> -f filter='apikey_live'`.
+# It is NOT a required check and never runs on `main` pushes — pure iteration.
+name: Live quick (isolation)
+
+on:
+  workflow_dispatch:
+    inputs:
+      filter:
+        description: "cargo test name filter(s), space-separated. Empty = all ignored lib tests."
+        required: false
+        default: "apikey_live authn_authenticate_live authn_security_live authn_session_live grants_live grants_transfer_live notification_events_live notification_live data_plane_tenant_rls_live native_events_live search_tenant_iso_live storage_live ha_multinode_live"
+  push:
+    branches:
+      - "livefix/**"
+
+permissions:
+  contents: read
+
+jobs:
+  live-quick:
+    name: Live quick (Postgres + Kafka)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reclaim runner disk
+        run: |
+          set -euxo pipefail
+          sudo rm -rf /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL || true
+          docker system prune -af --volumes || true
+          df -h
+      - uses: ./.github/actions/setup-rust
+        with:
+          cache-key: live-quick
+      - name: Start integration stack while compiling tests
+        run: |
+          set +e
+          docker compose -f docker-compose.integration.yml up -d --wait postgres kafka redis memcached qdrant minio &
+          stack_pid=$!
+          cargo test --locked --no-run --lib
+          compile_status=$?
+          wait "$stack_pid"
+          stack_status=$?
+          if [ "$stack_status" -ne 0 ]; then
+            echo "::error::integration stack startup failed"
+            docker compose -f docker-compose.integration.yml logs --no-color --tail=120
+            exit "$stack_status"
+          fi
+          if [ "$compile_status" -ne 0 ]; then
+            echo "::error::live-test compile preflight failed"
+            exit "$compile_status"
+          fi
+      - name: Live tests (filtered)
+        env:
+          UDB_LIVE_AUTH_TESTS: "1"
+          UDB_INTEGRATION_PG_DSN: postgres://udb:udb@localhost:55432/udb
+          UDB_INTEGRATION_KAFKA_BROKERS: localhost:59192
+          UDB_INTEGRATION_REDIS_URL: redis://localhost:56379
+          UDB_MINIO_ENDPOINT: http://localhost:59000
+          UDB_MINIO_ACCESS_KEY: minio
+          UDB_MINIO_SECRET_KEY: minio123
+          UDB_QDRANT_URL: http://localhost:56333
+          UDB_ENCRYPTION_KEY: QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkI=
+          TEST_FILTER: ${{ github.event.inputs.filter }}
+        run: |
+          set -euo pipefail
+          # shellcheck disable=SC2086
+          cargo test --locked --lib $TEST_FILTER -- --ignored --nocapture --test-threads=1
+      - name: Dump stack logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.integration.yml logs --no-color --tail=200
