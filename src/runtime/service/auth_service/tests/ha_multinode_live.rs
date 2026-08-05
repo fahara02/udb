@@ -696,8 +696,9 @@ async fn live_postgres_ha_apikey_revocation_propagation() {
             .await;
     let principal_id = owner.user_id;
 
-    let created = node1
-        .create_api_key(Request::new(apikey_pb::CreateApiKeyRequest {
+    let created = scope_claim_context_for_test(
+        test_claim_context(&principal_id, "acme", "billing", &[], &[]),
+        node1.create_api_key(Request::new(apikey_pb::CreateApiKeyRequest {
             name: "ha-key".to_string(),
             owner_id: principal_id.clone(),
             scopes: vec!["data:read".to_string()],
@@ -711,10 +712,11 @@ async fn live_postgres_ha_apikey_revocation_propagation() {
                 ..Default::default()
             }),
             ..Default::default()
-        }))
-        .await
-        .expect("node1 create API key")
-        .into_inner();
+        })),
+    )
+    .await
+    .expect("node1 create API key")
+    .into_inner();
     let key_id = created.key.expect("created key").key_id;
 
     // node2 validates the key created on node1 (shared durable store).

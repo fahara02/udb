@@ -110,8 +110,9 @@ async fn live_postgres_authn_authenticate_api_key() {
     )
     .await;
 
-    let created = apikey
-        .create_api_key(Request::new(apikey_pb::CreateApiKeyRequest {
+    let created = scope_claim_context_for_test(
+        test_claim_context(&user.user_id, "acme", "billing", &[], &[]),
+        apikey.create_api_key(Request::new(apikey_pb::CreateApiKeyRequest {
             name: "authenticate-key".to_string(),
             owner_id: user.user_id.clone(),
             scopes: vec!["data:read".to_string(), "data:write".to_string()],
@@ -125,10 +126,11 @@ async fn live_postgres_authn_authenticate_api_key() {
                 ..Default::default()
             }),
             ..Default::default()
-        }))
-        .await
-        .expect("create API key for authenticate")
-        .into_inner();
+        })),
+    )
+    .await
+    .expect("create API key for authenticate")
+    .into_inner();
 
     let exchanged = authn
         .authenticate(Request::new(authn_pb::AuthnRequest {
@@ -270,8 +272,9 @@ async fn live_postgres_revoked_api_key_cannot_obtain_broker_principal() {
     )
     .await;
 
-    let created = apikey
-        .create_api_key(Request::new(apikey_pb::CreateApiKeyRequest {
+    let created = scope_claim_context_for_test(
+        test_claim_context(&user.user_id, "acme", "billing", &[], &[]),
+        apikey.create_api_key(Request::new(apikey_pb::CreateApiKeyRequest {
             name: "revoke-broker-key".to_string(),
             owner_id: user.user_id.clone(),
             scopes: vec!["data:read".to_string()],
@@ -285,10 +288,11 @@ async fn live_postgres_revoked_api_key_cannot_obtain_broker_principal() {
                 ..Default::default()
             }),
             ..Default::default()
-        }))
-        .await
-        .expect("create live API key")
-        .into_inner();
+        })),
+    )
+    .await
+    .expect("create live API key")
+    .into_inner();
     let key_id = created.key.as_ref().expect("created key").key_id.clone();
 
     // Pre-revocation: the live key resolves to a broker-ready principal.

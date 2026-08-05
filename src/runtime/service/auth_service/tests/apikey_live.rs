@@ -24,8 +24,9 @@ async fn live_postgres_apikey_roundtrip() {
     .await;
     let principal_id = owner.user_id;
 
-    let created = svc
-        .create_api_key(Request::new(apikey_pb::CreateApiKeyRequest {
+    let created = scope_claim_context_for_test(
+        test_claim_context(&principal_id, "acme", "billing", &[], &[]),
+        svc.create_api_key(Request::new(apikey_pb::CreateApiKeyRequest {
             name: "live-key".to_string(),
             owner_id: principal_id.clone(),
             scopes: vec!["data:read".to_string()],
@@ -39,10 +40,11 @@ async fn live_postgres_apikey_roundtrip() {
                 ..Default::default()
             }),
             ..Default::default()
-        }))
-        .await
-        .expect("create API key through Postgres store")
-        .into_inner();
+        })),
+    )
+    .await
+    .expect("create API key through Postgres store")
+    .into_inner();
     let key = created.key.expect("created API key");
     assert!(created.plain_key.starts_with("udbk_"));
     assert_eq!(key.owner_id, principal_id);
@@ -151,8 +153,9 @@ async fn live_postgres_apikey_validate_records_usage() {
         create_service_account_with_grant(&authn, "apikey_usage", "CorrectHorse1!", &["data:read"])
             .await;
     let principal_id = owner.user_id;
-    let created = svc
-        .create_api_key(Request::new(apikey_pb::CreateApiKeyRequest {
+    let created = scope_claim_context_for_test(
+        test_claim_context(&principal_id, "acme", "billing", &[], &[]),
+        svc.create_api_key(Request::new(apikey_pb::CreateApiKeyRequest {
             name: "usage-key".to_string(),
             owner_id: principal_id.clone(),
             scopes: vec!["data:read".to_string()],
@@ -166,10 +169,11 @@ async fn live_postgres_apikey_validate_records_usage() {
                 ..Default::default()
             }),
             ..Default::default()
-        }))
-        .await
-        .expect("create API key")
-        .into_inner();
+        })),
+    )
+    .await
+    .expect("create API key")
+    .into_inner();
 
     let count_usages = |pool: sqlx::PgPool| async move {
         sqlx::query_scalar::<_, i64>("SELECT COUNT(*)::bigint FROM udb_authn.api_key_usages")
@@ -228,8 +232,9 @@ async fn live_postgres_apikey_admin_lifecycle() {
     .await;
     let owner_id = owner.user_id;
 
-    let created = svc
-        .create_api_key(Request::new(apikey_pb::CreateApiKeyRequest {
+    let created = scope_claim_context_for_test(
+        test_claim_context(&owner_id, "acme", "billing", &[], &[]),
+        svc.create_api_key(Request::new(apikey_pb::CreateApiKeyRequest {
             name: "admin-live-key".to_string(),
             owner_type: apikey_entity_pb::ApiKeyOwnerType::ServiceAccount as i32,
             owner_id: owner_id.clone(),
@@ -244,10 +249,11 @@ async fn live_postgres_apikey_admin_lifecycle() {
                 ..Default::default()
             }),
             ..Default::default()
-        }))
-        .await
-        .expect("create admin API key")
-        .into_inner();
+        })),
+    )
+    .await
+    .expect("create admin API key")
+    .into_inner();
     let key_id = created.key.as_ref().expect("created key").key_id.clone();
 
     let missing_scope = svc
@@ -335,8 +341,9 @@ async fn live_postgres_apikey_read_after_write() {
             .await;
     let owner_id = owner.user_id;
 
-    let created = svc
-        .create_api_key(Request::new(apikey_pb::CreateApiKeyRequest {
+    let created = scope_claim_context_for_test(
+        test_claim_context(&owner_id, "acme", "billing", &[], &[]),
+        svc.create_api_key(Request::new(apikey_pb::CreateApiKeyRequest {
             name: "ryw-key".to_string(),
             owner_id: owner_id.clone(),
             scopes: vec!["data:read".to_string()],
@@ -350,10 +357,11 @@ async fn live_postgres_apikey_read_after_write() {
                 ..Default::default()
             }),
             ..Default::default()
-        }))
-        .await
-        .expect("create_api_key")
-        .into_inner();
+        })),
+    )
+    .await
+    .expect("create_api_key")
+    .into_inner();
     let key_id = created.key.expect("created key").key_id;
 
     // CreateApiKey → GetApiKey, run as the same validated tenant-`acme` admin claim.

@@ -122,8 +122,9 @@ async fn live_postgres_authenticate_with_api_key() {
     .await;
     let owner_id = owner.user_id;
 
-    let created = apikeys
-        .create_api_key(Request::new(apikey_pb::CreateApiKeyRequest {
+    let created = scope_claim_context_for_test(
+        test_claim_context(&owner_id, "acme", "billing", &[], &[]),
+        apikeys.create_api_key(Request::new(apikey_pb::CreateApiKeyRequest {
             name: "svc-key".to_string(),
             owner_type: apikey_entity_pb::ApiKeyOwnerType::ServiceAccount as i32,
             owner_id: owner_id.clone(),
@@ -138,10 +139,11 @@ async fn live_postgres_authenticate_with_api_key() {
                 ..Default::default()
             }),
             ..Default::default()
-        }))
-        .await
-        .expect("create api key")
-        .into_inner();
+        })),
+    )
+    .await
+    .expect("create api key")
+    .into_inner();
 
     let principal = authn
         .authenticate(Request::new(authn_pb::AuthnRequest {

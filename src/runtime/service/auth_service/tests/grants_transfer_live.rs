@@ -309,7 +309,9 @@ async fn live_postgres_transfer_service_account_grant_atomic_cutover() {
     // (d) Atomicity invariant: exactly ONE active row carries I, owned by B; A none.
     let m = native_model(GRANT_MSG, &["service_identity", "user_id", "status"]);
     let rows: Vec<(String, String)> = sqlx::query_as(&format!(
-        "SELECT {uid}, {status} FROM {rel} WHERE {ident} = $1",
+        // `user_id` is a UUID column; cast to text so it decodes into `String`
+        // and compares against the proto `user_id` string form.
+        "SELECT {uid}::text, {status} FROM {rel} WHERE {ident} = $1",
         uid = m.q("user_id"),
         status = m.q("status"),
         rel = m.relation,

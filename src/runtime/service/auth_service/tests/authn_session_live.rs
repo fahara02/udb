@@ -6,6 +6,7 @@ use crate::proto::udb::core::authn::services::v1 as authn_pb;
 use crate::proto::udb::core::authn::services::v1::authn_service_server::AuthnService;
 use crate::proto::udb::core::common::v1 as common_pb;
 use crate::runtime::authn::AuthnConfig;
+use crate::runtime::service::method_security::{scope_claim_context_for_test, test_claim_context};
 use tonic::Request;
 
 #[tokio::test]
@@ -93,8 +94,9 @@ async fn live_postgres_authn_session_token_lifecycle() {
         &["authn:test"],
     )
     .await;
-    let created_key = apikey
-        .create_api_key(Request::new(apikey_pb::CreateApiKeyRequest {
+    let created_key = scope_claim_context_for_test(
+        test_claim_context(&key_owner.user_id, "acme", "billing", &[], &[]),
+        apikey.create_api_key(Request::new(apikey_pb::CreateApiKeyRequest {
             name: "authn-token-key".to_string(),
             owner_id: key_owner.user_id.clone(),
             scopes: vec!["authn:test".to_string()],
@@ -108,10 +110,11 @@ async fn live_postgres_authn_session_token_lifecycle() {
                 ..Default::default()
             }),
             ..Default::default()
-        }))
-        .await
-        .expect("create API key for authn token validation")
-        .into_inner();
+        })),
+    )
+    .await
+    .expect("create API key for authn token validation")
+    .into_inner();
     let api_key_token = authn
         .validate_token(Request::new(authn_pb::ValidateTokenRequest {
             token: created_key.plain_key,

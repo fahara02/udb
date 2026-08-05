@@ -739,8 +739,9 @@ async fn live_postgres_api_key_crud_on_data_only_listener() {
         &["udb:read", "udb:write"],
     )
     .await;
-    let created = apikey
-        .create_api_key(Request::new(apikey_pb::CreateApiKeyRequest {
+    let created = scope_claim_context_for_test(
+        test_claim_context(&owner.user_id, "acme", "billing", &[], &[]),
+        apikey.create_api_key(Request::new(apikey_pb::CreateApiKeyRequest {
             name: "data-only-listener".to_string(),
             owner_id: owner.user_id.clone(),
             scopes: vec!["udb:read".to_string(), "udb:write".to_string()],
@@ -754,10 +755,11 @@ async fn live_postgres_api_key_crud_on_data_only_listener() {
                 ..Default::default()
             }),
             ..Default::default()
-        }))
-        .await
-        .expect("create grant-backed data-plane API key")
-        .into_inner();
+        })),
+    )
+    .await
+    .expect("create grant-backed data-plane API key")
+    .into_inner();
 
     let authn_config = crate::runtime::authn::AuthnConfig {
         session_enabled: true,
@@ -1208,8 +1210,9 @@ async fn live_postgres_service_credentials_follow_grant_and_account_state() {
         .await
         .expect("service login before grant replacement")
         .into_inner();
-    let api_key = apikey
-        .create_api_key(Request::new(apikey_pb::CreateApiKeyRequest {
+    let api_key = scope_claim_context_for_test(
+        test_claim_context(&user.user_id, "acme", "billing", &[], &[]),
+        apikey.create_api_key(Request::new(apikey_pb::CreateApiKeyRequest {
             name: "grant-revision-key".to_string(),
             owner_id: user.user_id.clone(),
             scopes: vec!["udb:read".to_string()],
@@ -1223,10 +1226,11 @@ async fn live_postgres_service_credentials_follow_grant_and_account_state() {
                 ..Default::default()
             }),
             ..Default::default()
-        }))
-        .await
-        .expect("create grant-backed API key")
-        .into_inner();
+        })),
+    )
+    .await
+    .expect("create grant-backed API key")
+    .into_inner();
     assert!(
         apikey
             .validate_api_key(Request::new(apikey_pb::ValidateApiKeyRequest {
@@ -1425,8 +1429,9 @@ async fn live_postgres_service_credentials_follow_grant_and_account_state() {
         .await
         .expect("service login before identity rotation")
         .into_inner();
-    let pre_rotation_key = apikey
-        .create_api_key(Request::new(apikey_pb::CreateApiKeyRequest {
+    let pre_rotation_key = scope_claim_context_for_test(
+        test_claim_context(&user.user_id, "acme", "billing", &[], &[]),
+        apikey.create_api_key(Request::new(apikey_pb::CreateApiKeyRequest {
             name: "identity-rotation-key".to_string(),
             owner_id: user.user_id.clone(),
             scopes: vec!["udb:read".to_string()],
@@ -1440,10 +1445,11 @@ async fn live_postgres_service_credentials_follow_grant_and_account_state() {
                 ..Default::default()
             }),
             ..Default::default()
-        }))
-        .await
-        .expect("create key before identity rotation")
-        .into_inner();
+        })),
+    )
+    .await
+    .expect("create key before identity rotation")
+    .into_inner();
     let rotated = authn
         .rotate_service_account_identity(Request::new(
             authn_pb::RotateServiceAccountIdentityRequest {
