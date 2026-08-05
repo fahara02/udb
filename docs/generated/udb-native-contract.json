@@ -1,6 +1,6 @@
 {
   "schema_version": "1",
-  "descriptor_sha256": "2a28fd5ed98edaf2b33924d7fbf037d0fc5549c927539568074991d666975828",
+  "descriptor_sha256": "b7d5b7f97dbd77ced0aeda868a000125f6ff498126cb35e9a77961bf381a1e29",
   "contract_version": "4.1.0",
   "udb_version": "0.4.37",
   "protocol_version": "1.0.0",
@@ -2678,7 +2678,7 @@
         ],
         "degraded_when_missing": []
       },
-      "rpc_count": 59,
+      "rpc_count": 60,
       "rpcs": [
         {
           "method": "AdminResetMfa",
@@ -7538,6 +7538,102 @@
           "http": {
             "verb": "post",
             "path": "/v1/auth/users/{user_id}/webauthn/registration:start",
+            "body": "*",
+            "response_body": ""
+          }
+        },
+        {
+          "method": "TransferServiceAccountGrant",
+          "method_alias": "transfer_service_account_grant",
+          "rest_operation_id": "transferServiceAccountGrant",
+          "path": "/udb.core.authn.services.v1.AuthnService/TransferServiceAccountGrant",
+          "kind": "unary",
+          "operation_kind": "destructive",
+          "read_only": false,
+          "input": ".udb.core.authn.services.v1.TransferServiceAccountGrantRequest",
+          "output": ".udb.core.authn.services.v1.TransferServiceAccountGrantResponse",
+          "auth_mode": "bearer",
+          "scopes": [
+            "udb:authn:manage-grants"
+          ],
+          "roles": [],
+          "policy_ref": "",
+          "tenant_required": true,
+          "tenant_field": "tenant_id",
+          "project_field": "",
+          "endpoint_security": {
+            "auth_mode": "bearer",
+            "roles": [],
+            "scopes": [
+              "udb:authn:manage-grants"
+            ],
+            "policy_ref": "",
+            "tenant_required": true,
+            "csrf_required": false,
+            "internal_grpc_only": false,
+            "required_assurance_level": 0,
+            "allowed_credential_types": [
+              1,
+              2
+            ],
+            "rate_limit_policy_ref": "",
+            "abuse_policy_ref": "",
+            "audit_event_type": "",
+            "decision_resource": "authn.TransferServiceAccountGrant",
+            "owner_field": "",
+            "tenant_field": "tenant_id",
+            "project_field": "",
+            "idempotency_required": false,
+            "request_context_required": true
+          },
+          "event_contract": {
+            "event_type": "authn.TransferServiceAccountGrant",
+            "outbox_topic": "authn.events",
+            "partition_key_field": "tenant_id",
+            "payload_redaction_profile": "standard",
+            "delivery_guarantee": "at_least_once",
+            "replay_compatibility": "stable"
+          },
+          "emits": [],
+          "sdk_surface": {
+            "include_in_facade": true,
+            "method_alias": "transfer_service_account_grant",
+            "rest_operation_id": "transferServiceAccountGrant",
+            "required_credential_provider": "udb",
+            "streaming_helper_type": "",
+            "default_deadline_ms": 30000,
+            "default_max_attempts": 3,
+            "browser_safe": false,
+            "server_only": true,
+            "boilerplate_recipe_tags": [
+              "auth"
+            ],
+            "generate_minimal_example": true
+          },
+          "dependency_contract": {
+            "required_native_services": [
+              "authn"
+            ],
+            "optional_native_services": [],
+            "required_backends": [
+              "postgres"
+            ],
+            "optional_backends": [],
+            "required_features": [],
+            "required_env": [
+              "UDB_NATIVE_SERVICES_ENABLED",
+              "UDB_GRPC_TARGET"
+            ],
+            "degraded_when_missing": []
+          },
+          "precondition_contract": null,
+          "readback_contract": null,
+          "lifecycle_contract": null,
+          "idempotency_contract": null,
+          "error_contract": null,
+          "http": {
+            "verb": "post",
+            "path": "/v1/auth/service-accounts/{from_user_id}/grant:transfer",
             "body": "*",
             "response_body": ""
           }
@@ -22872,8 +22968,104 @@
         ],
         "degraded_when_missing": []
       },
-      "rpc_count": 7,
+      "rpc_count": 8,
       "rpcs": [
+        {
+          "method": "AdminPurgeTenant",
+          "method_alias": "admin_purge_tenant",
+          "rest_operation_id": "adminPurgeTenant",
+          "path": "/udb.core.tenant.services.v1.TenantService/AdminPurgeTenant",
+          "kind": "unary",
+          "operation_kind": "destructive",
+          "read_only": false,
+          "input": ".udb.core.tenant.services.v1.AdminPurgeTenantRequest",
+          "output": ".udb.core.tenant.services.v1.AdminPurgeTenantResponse",
+          "auth_mode": "bearer",
+          "scopes": [
+            "udb:tenant:admin-purge"
+          ],
+          "roles": [],
+          "policy_ref": "",
+          "tenant_required": true,
+          "tenant_field": "target_tenant_id",
+          "project_field": "",
+          "endpoint_security": {
+            "auth_mode": "bearer",
+            "roles": [],
+            "scopes": [
+              "udb:tenant:admin-purge"
+            ],
+            "policy_ref": "",
+            "tenant_required": true,
+            "csrf_required": false,
+            "internal_grpc_only": false,
+            "required_assurance_level": 0,
+            "allowed_credential_types": [
+              1,
+              2
+            ],
+            "rate_limit_policy_ref": "",
+            "abuse_policy_ref": "",
+            "audit_event_type": "",
+            "decision_resource": "tenant.AdminPurgeTenant",
+            "owner_field": "",
+            "tenant_field": "target_tenant_id",
+            "project_field": "",
+            "idempotency_required": true,
+            "request_context_required": true
+          },
+          "event_contract": {
+            "event_type": "tenant.AdminPurgeTenant",
+            "outbox_topic": "tenant.events",
+            "partition_key_field": "target_tenant_id",
+            "payload_redaction_profile": "standard",
+            "delivery_guarantee": "at_least_once",
+            "replay_compatibility": "stable"
+          },
+          "emits": [],
+          "sdk_surface": {
+            "include_in_facade": true,
+            "method_alias": "admin_purge_tenant",
+            "rest_operation_id": "adminPurgeTenant",
+            "required_credential_provider": "udb",
+            "streaming_helper_type": "",
+            "default_deadline_ms": 30000,
+            "default_max_attempts": 3,
+            "browser_safe": false,
+            "server_only": true,
+            "boilerplate_recipe_tags": [
+              "tenant"
+            ],
+            "generate_minimal_example": true
+          },
+          "dependency_contract": {
+            "required_native_services": [
+              "tenant"
+            ],
+            "optional_native_services": [],
+            "required_backends": [
+              "postgres"
+            ],
+            "optional_backends": [],
+            "required_features": [],
+            "required_env": [
+              "UDB_NATIVE_SERVICES_ENABLED",
+              "UDB_GRPC_TARGET"
+            ],
+            "degraded_when_missing": []
+          },
+          "precondition_contract": null,
+          "readback_contract": null,
+          "lifecycle_contract": null,
+          "idempotency_contract": null,
+          "error_contract": null,
+          "http": {
+            "verb": "post",
+            "path": "/v1/tenants/{target_tenant_id}:adminPurge",
+            "body": "*",
+            "response_body": ""
+          }
+        },
         {
           "method": "CreateTenant",
           "method_alias": "create_tenant",
@@ -29074,7 +29266,7 @@
       "sdk_surface": null,
       "cli_scaffold": null,
       "dependency_contract": null,
-      "rpc_count": 78,
+      "rpc_count": 79,
       "rpcs": [
         {
           "method": "ActivateCatalog",
@@ -29373,6 +29565,47 @@
             "include_in_facade": true,
             "method_alias": "begin_tx",
             "rest_operation_id": "beginTx",
+            "required_credential_provider": "",
+            "streaming_helper_type": "",
+            "default_deadline_ms": 0,
+            "default_max_attempts": 0,
+            "browser_safe": false,
+            "server_only": false,
+            "boilerplate_recipe_tags": [],
+            "generate_minimal_example": false
+          },
+          "dependency_contract": null,
+          "precondition_contract": null,
+          "readback_contract": null,
+          "lifecycle_contract": null,
+          "idempotency_contract": null,
+          "error_contract": null,
+          "http": null
+        },
+        {
+          "method": "BulkCas",
+          "method_alias": "bulk_cas",
+          "rest_operation_id": "bulkCas",
+          "path": "/udb.services.v1.DataBroker/BulkCas",
+          "kind": "unary",
+          "operation_kind": "mutation",
+          "read_only": false,
+          "input": ".udb.entity.v1.BulkCasRequest",
+          "output": ".udb.entity.v1.BulkCasResponse",
+          "auth_mode": "unspecified",
+          "scopes": [],
+          "roles": [],
+          "policy_ref": "",
+          "tenant_required": false,
+          "tenant_field": "",
+          "project_field": "",
+          "endpoint_security": null,
+          "event_contract": null,
+          "emits": [],
+          "sdk_surface": {
+            "include_in_facade": true,
+            "method_alias": "bulk_cas",
+            "rest_operation_id": "bulkCas",
             "required_credential_provider": "",
             "streaming_helper_type": "",
             "default_deadline_ms": 0,
@@ -32330,7 +32563,7 @@
       ]
     }
   ],
-  "message_count": 1028,
+  "message_count": 1036,
   "messages": [
     {
       "message": "udb.core.analytics.entity.v1.ExecutorPerformanceSummary",
@@ -58881,6 +59114,227 @@
           "name": "expires_at_unix",
           "number": 3,
           "type": "3",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
+      "message": "udb.core.authn.services.v1.TransferServiceAccountGrantRequest",
+      "file": "udb/core/authn/services/v1/authn_service.proto",
+      "sdk_surface": {
+        "include_in_facade": true,
+        "method_alias": "",
+        "rest_operation_id": "",
+        "required_credential_provider": "udb",
+        "streaming_helper_type": "",
+        "default_deadline_ms": 30000,
+        "default_max_attempts": 3,
+        "browser_safe": false,
+        "server_only": true,
+        "boilerplate_recipe_tags": [
+          "authn"
+        ],
+        "generate_minimal_example": true
+      },
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 5,
+      "fields": [
+        {
+          "name": "tenant_id",
+          "number": 1,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "from_user_id",
+          "number": 2,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "to_user_id",
+          "number": 3,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "expected_revision",
+          "number": 4,
+          "type": "3",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "reason",
+          "number": 5,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
+      "message": "udb.core.authn.services.v1.TransferServiceAccountGrantResponse",
+      "file": "udb/core/authn/services/v1/authn_service.proto",
+      "sdk_surface": {
+        "include_in_facade": true,
+        "method_alias": "",
+        "rest_operation_id": "",
+        "required_credential_provider": "udb",
+        "streaming_helper_type": "",
+        "default_deadline_ms": 30000,
+        "default_max_attempts": 3,
+        "browser_safe": false,
+        "server_only": true,
+        "boilerplate_recipe_tags": [
+          "authn"
+        ],
+        "generate_minimal_example": true
+      },
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 4,
+      "fields": [
+        {
+          "name": "grant",
+          "number": 1,
+          "type": ".udb.core.authn.entity.v1.ServiceAccountGrant",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "previous_user_id",
+          "number": 2,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "message",
+          "number": 3,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "error",
+          "number": 4,
+          "type": ".udb.core.common.v1.ApiError",
           "column_security": null,
           "scalar_security": {
             "pii": false,
@@ -121791,7 +122245,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 2,
+      "field_count": 6,
       "fields": [
         {
           "name": "tenant_id",
@@ -121815,6 +122269,82 @@
         {
           "name": "file_id",
           "number": 2,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "mode",
+          "number": 3,
+          "type": ".udb.core.storage.services.v1.DeleteMode",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "reason",
+          "number": 4,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "expected_status",
+          "number": 5,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "idempotency_key",
+          "number": 6,
           "type": "9",
           "column_security": null,
           "scalar_security": {
@@ -124381,6 +124911,436 @@
           "name": "timestamp",
           "number": 6,
           "type": ".google.protobuf.Timestamp",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
+      "message": "udb.core.tenant.services.v1.AdminPurgeTenantRequest",
+      "file": "udb/core/tenant/services/v1/tenant_service.proto",
+      "sdk_surface": {
+        "include_in_facade": true,
+        "method_alias": "",
+        "rest_operation_id": "",
+        "required_credential_provider": "udb",
+        "streaming_helper_type": "",
+        "default_deadline_ms": 30000,
+        "default_max_attempts": 3,
+        "browser_safe": false,
+        "server_only": true,
+        "boilerplate_recipe_tags": [
+          "tenant"
+        ],
+        "generate_minimal_example": true
+      },
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 7,
+      "fields": [
+        {
+          "name": "delegated_actor",
+          "number": 1,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "target_tenant_id",
+          "number": 2,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "mode",
+          "number": 3,
+          "type": ".udb.core.tenant.services.v1.AdminPurgeMode",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "reason",
+          "number": 4,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "expected_version",
+          "number": 5,
+          "type": "3",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "confirmation_token",
+          "number": 6,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "idempotency_key",
+          "number": 7,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
+      "message": "udb.core.tenant.services.v1.AdminPurgeTenantResponse",
+      "file": "udb/core/tenant/services/v1/tenant_service.proto",
+      "sdk_surface": {
+        "include_in_facade": true,
+        "method_alias": "",
+        "rest_operation_id": "",
+        "required_credential_provider": "udb",
+        "streaming_helper_type": "",
+        "default_deadline_ms": 30000,
+        "default_max_attempts": 3,
+        "browser_safe": false,
+        "server_only": true,
+        "boilerplate_recipe_tags": [
+          "tenant"
+        ],
+        "generate_minimal_example": true
+      },
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 13,
+      "fields": [
+        {
+          "name": "target_tenant_id",
+          "number": 1,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "mode",
+          "number": 2,
+          "type": ".udb.core.tenant.services.v1.AdminPurgeMode",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "purged",
+          "number": 3,
+          "type": ".udb.core.tenant.services.v1.PurgedTableCount",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "excluded",
+          "number": 4,
+          "type": ".udb.core.tenant.services.v1.PurgeExcludedTable",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "total_deleted",
+          "number": 5,
+          "type": "4",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "tenant_denylisted",
+          "number": 6,
+          "type": "8",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "principals_denylisted",
+          "number": 7,
+          "type": "13",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "soft_deactivated",
+          "number": 8,
+          "type": "8",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "purged_version",
+          "number": 9,
+          "type": "3",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "replayed",
+          "number": 10,
+          "type": "8",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "outcome_id",
+          "number": 11,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "message",
+          "number": 12,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "error",
+          "number": 13,
+          "type": ".udb.core.common.v1.ApiError",
           "column_security": null,
           "scalar_security": {
             "pii": false,
@@ -141771,6 +142731,411 @@
       ]
     },
     {
+      "message": "udb.entity.v1.BulkCasItem",
+      "file": "udb/entity/v1/relational.proto",
+      "sdk_surface": null,
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 5,
+      "fields": [
+        {
+          "name": "filter",
+          "number": 1,
+          "type": ".google.protobuf.Struct",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "changes",
+          "number": 2,
+          "type": ".google.protobuf.Struct",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "expected_revision",
+          "number": 3,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "expected",
+          "number": 4,
+          "type": ".google.protobuf.Struct",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "increments",
+          "number": 5,
+          "type": ".udb.entity.v1.UpdateRequest.Increment",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
+      "message": "udb.entity.v1.BulkCasItemResult",
+      "file": "udb/entity/v1/relational.proto",
+      "sdk_surface": null,
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 4,
+      "fields": [
+        {
+          "name": "matched",
+          "number": 1,
+          "type": "8",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "changed",
+          "number": 2,
+          "type": "8",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "conflicted",
+          "number": 3,
+          "type": "8",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "revision",
+          "number": 4,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
+      "message": "udb.entity.v1.BulkCasRequest",
+      "file": "udb/entity/v1/relational.proto",
+      "sdk_surface": null,
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 5,
+      "fields": [
+        {
+          "name": "context",
+          "number": 1,
+          "type": ".udb.entity.v1.RequestContext",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "message_type",
+          "number": 2,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "items",
+          "number": 3,
+          "type": ".udb.entity.v1.BulkCasItem",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "idempotency_key",
+          "number": 4,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "max_rows",
+          "number": 5,
+          "type": "5",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
+      "message": "udb.entity.v1.BulkCasResponse",
+      "file": "udb/entity/v1/relational.proto",
+      "sdk_surface": null,
+      "event_contract": null,
+      "dependency_contract": null,
+      "table_security": null,
+      "field_count": 5,
+      "fields": [
+        {
+          "name": "matched",
+          "number": 1,
+          "type": "5",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "changed",
+          "number": 2,
+          "type": "5",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "conflicted",
+          "number": 3,
+          "type": "5",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "write_receipt_json",
+          "number": 4,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "results",
+          "number": 5,
+          "type": ".udb.entity.v1.BulkCasItemResult",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        }
+      ]
+    },
+    {
       "message": "udb.entity.v1.CDCSubscriptionRequest",
       "file": "udb/entity/v1/cdc.proto",
       "sdk_surface": null,
@@ -144272,7 +145637,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 5,
+      "field_count": 8,
       "fields": [
         {
           "name": "context",
@@ -144354,6 +145719,63 @@
           "name": "expected",
           "number": 5,
           "type": ".google.protobuf.Struct",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "expected_revision",
+          "number": 6,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "lock_name",
+          "number": 7,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "fencing_token",
+          "number": 8,
+          "type": "3",
           "column_security": null,
           "scalar_security": {
             "pii": false,
@@ -148569,7 +149991,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 18,
+      "field_count": 20,
       "fields": [
         {
           "name": "context",
@@ -148912,6 +150334,44 @@
             "security_classification": 0,
             "data_category": 0
           }
+        },
+        {
+          "name": "expected",
+          "number": 19,
+          "type": ".google.protobuf.Struct",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "cdc_required",
+          "number": 20,
+          "type": "8",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
         }
       ]
     },
@@ -148922,7 +150382,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 11,
+      "field_count": 12,
       "fields": [
         {
           "name": "mutation_id",
@@ -149118,6 +150578,25 @@
           "name": "write_receipt",
           "number": 11,
           "type": ".udb.entity.v1.WriteReceipt",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "revision",
+          "number": 12,
+          "type": "9",
           "column_security": null,
           "scalar_security": {
             "pii": false,
@@ -151569,7 +153048,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 4,
+      "field_count": 5,
       "fields": [
         {
           "name": "records_json",
@@ -151632,6 +153111,25 @@
           "name": "total_count",
           "number": 4,
           "type": "5",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "record_revisions",
+          "number": 5,
+          "type": "9",
           "column_security": null,
           "scalar_security": {
             "pii": false,
@@ -152955,7 +154453,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 8,
+      "field_count": 9,
       "fields": [
         {
           "name": "context",
@@ -153094,6 +154592,25 @@
           "name": "cache",
           "number": 8,
           "type": ".udb.entity.v1.CacheOptions",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "include_revision",
+          "number": 9,
+          "type": "8",
           "column_security": null,
           "scalar_security": {
             "pii": false,
@@ -154151,7 +155668,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 8,
+      "field_count": 11,
       "fields": [
         {
           "name": "context",
@@ -154304,6 +155821,63 @@
             "security_classification": 0,
             "data_category": 0
           }
+        },
+        {
+          "name": "expected_revision",
+          "number": 9,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "lock_name",
+          "number": 10,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "fencing_token",
+          "number": 11,
+          "type": "3",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
         }
       ]
     },
@@ -154363,7 +155937,7 @@
       "event_contract": null,
       "dependency_contract": null,
       "table_security": null,
-      "field_count": 9,
+      "field_count": 11,
       "fields": [
         {
           "name": "context",
@@ -154521,6 +156095,44 @@
           "name": "expected",
           "number": 9,
           "type": ".google.protobuf.Struct",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "lock_name",
+          "number": 10,
+          "type": "9",
+          "column_security": null,
+          "scalar_security": {
+            "pii": false,
+            "encrypted_security": false,
+            "log_masked": false,
+            "log_redacted": false,
+            "sensitive": false,
+            "requires_consent": false,
+            "data_purpose": "",
+            "retention_days": 0,
+            "tokenized": false,
+            "security_classification": 0,
+            "data_category": 0
+          }
+        },
+        {
+          "name": "fencing_token",
+          "number": 11,
+          "type": "3",
           "column_security": null,
           "scalar_security": {
             "pii": false,
@@ -177097,7 +178709,7 @@
       ]
     }
   ],
-  "event_count": 249,
+  "event_count": 251,
   "events": [
     {
       "event_type": "analytics.GetExecutorPerformance",
@@ -177728,6 +179340,15 @@
       "delivery_guarantee": "at_least_once",
       "replay_compatibility": "stable",
       "source": "/udb.core.authn.services.v1.AuthnService/StartWebAuthnRegistration"
+    },
+    {
+      "event_type": "authn.TransferServiceAccountGrant",
+      "outbox_topic": "authn.events",
+      "partition_key_field": "tenant_id",
+      "payload_redaction_profile": "standard",
+      "delivery_guarantee": "at_least_once",
+      "replay_compatibility": "stable",
+      "source": "/udb.core.authn.services.v1.AuthnService/TransferServiceAccountGrant"
     },
     {
       "event_type": "authn.UpdateUser",
@@ -178385,6 +180006,15 @@
       "delivery_guarantee": "at_least_once",
       "replay_compatibility": "stable",
       "source": "/udb.core.storage.services.v1.StorageService/UpdateFile"
+    },
+    {
+      "event_type": "tenant.AdminPurgeTenant",
+      "outbox_topic": "tenant.events",
+      "partition_key_field": "target_tenant_id",
+      "payload_redaction_profile": "standard",
+      "delivery_guarantee": "at_least_once",
+      "replay_compatibility": "stable",
+      "source": "/udb.core.tenant.services.v1.TenantService/AdminPurgeTenant"
     },
     {
       "event_type": "tenant.CreateTenant",

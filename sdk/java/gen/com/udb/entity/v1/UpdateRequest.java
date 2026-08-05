@@ -38,6 +38,8 @@ private static final long serialVersionUID = 0L;
     messageType_ = "";
     increments_ = java.util.Collections.emptyList();
     idempotencyKey_ = "";
+    expectedRevision_ = "";
+    lockName_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -936,6 +938,133 @@ private static final long serialVersionUID = 0L;
     return returnRecord_;
   }
 
+  public static final int EXPECTED_REVISION_FIELD_NUMBER = 9;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object expectedRevision_ = "";
+  /**
+   * <pre>
+   * #5 (opaque row revision / ETag): optional revision precondition. When set,
+   * the filter MUST pin every primary-key column by equality (single-row), and
+   * the update proceeds only if the broker-maintained opaque revision of that
+   * row still equals this token — checked atomically under the revision row lock
+   * in the write transaction. A mismatch or an untracked row is
+   * `FAILED_PRECONDITION` and nothing is written/projected/emitted. On success
+   * the response carries the bumped revision. ABA-safe (revision only increases).
+   * </pre>
+   *
+   * <code>string expected_revision = 9 [json_name = "expectedRevision"];</code>
+   * @return The expectedRevision.
+   */
+  @java.lang.Override
+  public java.lang.String getExpectedRevision() {
+    java.lang.Object ref = expectedRevision_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      expectedRevision_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * #5 (opaque row revision / ETag): optional revision precondition. When set,
+   * the filter MUST pin every primary-key column by equality (single-row), and
+   * the update proceeds only if the broker-maintained opaque revision of that
+   * row still equals this token — checked atomically under the revision row lock
+   * in the write transaction. A mismatch or an untracked row is
+   * `FAILED_PRECONDITION` and nothing is written/projected/emitted. On success
+   * the response carries the bumped revision. ABA-safe (revision only increases).
+   * </pre>
+   *
+   * <code>string expected_revision = 9 [json_name = "expectedRevision"];</code>
+   * @return The bytes for expectedRevision.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getExpectedRevisionBytes() {
+    java.lang.Object ref = expectedRevision_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      expectedRevision_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int LOCK_NAME_FIELD_NUMBER = 10;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object lockName_ = "";
+  /**
+   * <pre>
+   * gate 25 (lock-fencing-at-commit): optional advisory-lock name + the
+   * monotonic fencing token granted for it. When both are set the broker
+   * validates the token against the LockService's durable lock row IN THE SAME
+   * write transaction; a stale token (a writer that outlived its lease) is
+   * rejected fail-closed with NO write / projection / CDC / audit / idempotency
+   * side effect. Unset (empty `lock_name`) = no fencing (unchanged behaviour).
+   * </pre>
+   *
+   * <code>string lock_name = 10 [json_name = "lockName"];</code>
+   * @return The lockName.
+   */
+  @java.lang.Override
+  public java.lang.String getLockName() {
+    java.lang.Object ref = lockName_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      lockName_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * gate 25 (lock-fencing-at-commit): optional advisory-lock name + the
+   * monotonic fencing token granted for it. When both are set the broker
+   * validates the token against the LockService's durable lock row IN THE SAME
+   * write transaction; a stale token (a writer that outlived its lease) is
+   * rejected fail-closed with NO write / projection / CDC / audit / idempotency
+   * side effect. Unset (empty `lock_name`) = no fencing (unchanged behaviour).
+   * </pre>
+   *
+   * <code>string lock_name = 10 [json_name = "lockName"];</code>
+   * @return The bytes for lockName.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getLockNameBytes() {
+    java.lang.Object ref = lockName_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      lockName_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int FENCING_TOKEN_FIELD_NUMBER = 11;
+  private long fencingToken_ = 0L;
+  /**
+   * <code>int64 fencing_token = 11 [json_name = "fencingToken"];</code>
+   * @return The fencingToken.
+   */
+  @java.lang.Override
+  public long getFencingToken() {
+    return fencingToken_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -973,6 +1102,15 @@ private static final long serialVersionUID = 0L;
     }
     if (returnRecord_ != false) {
       output.writeBool(8, returnRecord_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(expectedRevision_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 9, expectedRevision_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(lockName_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 10, lockName_);
+    }
+    if (fencingToken_ != 0L) {
+      output.writeInt64(11, fencingToken_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -1012,6 +1150,16 @@ private static final long serialVersionUID = 0L;
     if (returnRecord_ != false) {
       size += com.google.protobuf.CodedOutputStream
         .computeBoolSize(8, returnRecord_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(expectedRevision_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(9, expectedRevision_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(lockName_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(10, lockName_);
+    }
+    if (fencingToken_ != 0L) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeInt64Size(11, fencingToken_);
     }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
@@ -1056,6 +1204,12 @@ private static final long serialVersionUID = 0L;
         .equals(other.getIdempotencyKey())) return false;
     if (getReturnRecord()
         != other.getReturnRecord()) return false;
+    if (!getExpectedRevision()
+        .equals(other.getExpectedRevision())) return false;
+    if (!getLockName()
+        .equals(other.getLockName())) return false;
+    if (getFencingToken()
+        != other.getFencingToken()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -1094,6 +1248,13 @@ private static final long serialVersionUID = 0L;
     hash = (37 * hash) + RETURN_RECORD_FIELD_NUMBER;
     hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
         getReturnRecord());
+    hash = (37 * hash) + EXPECTED_REVISION_FIELD_NUMBER;
+    hash = (53 * hash) + getExpectedRevision().hashCode();
+    hash = (37 * hash) + LOCK_NAME_FIELD_NUMBER;
+    hash = (53 * hash) + getLockName().hashCode();
+    hash = (37 * hash) + FENCING_TOKEN_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+        getFencingToken());
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -1272,6 +1433,9 @@ private static final long serialVersionUID = 0L;
       bitField0_ = (bitField0_ & ~0x00000020);
       idempotencyKey_ = "";
       returnRecord_ = false;
+      expectedRevision_ = "";
+      lockName_ = "";
+      fencingToken_ = 0L;
       return this;
     }
 
@@ -1352,6 +1516,15 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000080) != 0)) {
         result.returnRecord_ = returnRecord_;
       }
+      if (((from_bitField0_ & 0x00000100) != 0)) {
+        result.expectedRevision_ = expectedRevision_;
+      }
+      if (((from_bitField0_ & 0x00000200) != 0)) {
+        result.lockName_ = lockName_;
+      }
+      if (((from_bitField0_ & 0x00000400) != 0)) {
+        result.fencingToken_ = fencingToken_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -1417,6 +1590,19 @@ private static final long serialVersionUID = 0L;
       }
       if (other.getReturnRecord() != false) {
         setReturnRecord(other.getReturnRecord());
+      }
+      if (!other.getExpectedRevision().isEmpty()) {
+        expectedRevision_ = other.expectedRevision_;
+        bitField0_ |= 0x00000100;
+        onChanged();
+      }
+      if (!other.getLockName().isEmpty()) {
+        lockName_ = other.lockName_;
+        bitField0_ |= 0x00000200;
+        onChanged();
+      }
+      if (other.getFencingToken() != 0L) {
+        setFencingToken(other.getFencingToken());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -1500,6 +1686,21 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000080;
               break;
             } // case 64
+            case 74: {
+              expectedRevision_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000100;
+              break;
+            } // case 74
+            case 82: {
+              lockName_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000200;
+              break;
+            } // case 82
+            case 88: {
+              fencingToken_ = input.readInt64();
+              bitField0_ |= 0x00000400;
+              break;
+            } // case 88
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -2575,6 +2776,277 @@ private static final long serialVersionUID = 0L;
     public Builder clearReturnRecord() {
       bitField0_ = (bitField0_ & ~0x00000080);
       returnRecord_ = false;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object expectedRevision_ = "";
+    /**
+     * <pre>
+     * #5 (opaque row revision / ETag): optional revision precondition. When set,
+     * the filter MUST pin every primary-key column by equality (single-row), and
+     * the update proceeds only if the broker-maintained opaque revision of that
+     * row still equals this token — checked atomically under the revision row lock
+     * in the write transaction. A mismatch or an untracked row is
+     * `FAILED_PRECONDITION` and nothing is written/projected/emitted. On success
+     * the response carries the bumped revision. ABA-safe (revision only increases).
+     * </pre>
+     *
+     * <code>string expected_revision = 9 [json_name = "expectedRevision"];</code>
+     * @return The expectedRevision.
+     */
+    public java.lang.String getExpectedRevision() {
+      java.lang.Object ref = expectedRevision_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        expectedRevision_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * #5 (opaque row revision / ETag): optional revision precondition. When set,
+     * the filter MUST pin every primary-key column by equality (single-row), and
+     * the update proceeds only if the broker-maintained opaque revision of that
+     * row still equals this token — checked atomically under the revision row lock
+     * in the write transaction. A mismatch or an untracked row is
+     * `FAILED_PRECONDITION` and nothing is written/projected/emitted. On success
+     * the response carries the bumped revision. ABA-safe (revision only increases).
+     * </pre>
+     *
+     * <code>string expected_revision = 9 [json_name = "expectedRevision"];</code>
+     * @return The bytes for expectedRevision.
+     */
+    public com.google.protobuf.ByteString
+        getExpectedRevisionBytes() {
+      java.lang.Object ref = expectedRevision_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        expectedRevision_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * #5 (opaque row revision / ETag): optional revision precondition. When set,
+     * the filter MUST pin every primary-key column by equality (single-row), and
+     * the update proceeds only if the broker-maintained opaque revision of that
+     * row still equals this token — checked atomically under the revision row lock
+     * in the write transaction. A mismatch or an untracked row is
+     * `FAILED_PRECONDITION` and nothing is written/projected/emitted. On success
+     * the response carries the bumped revision. ABA-safe (revision only increases).
+     * </pre>
+     *
+     * <code>string expected_revision = 9 [json_name = "expectedRevision"];</code>
+     * @param value The expectedRevision to set.
+     * @return This builder for chaining.
+     */
+    public Builder setExpectedRevision(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      expectedRevision_ = value;
+      bitField0_ |= 0x00000100;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * #5 (opaque row revision / ETag): optional revision precondition. When set,
+     * the filter MUST pin every primary-key column by equality (single-row), and
+     * the update proceeds only if the broker-maintained opaque revision of that
+     * row still equals this token — checked atomically under the revision row lock
+     * in the write transaction. A mismatch or an untracked row is
+     * `FAILED_PRECONDITION` and nothing is written/projected/emitted. On success
+     * the response carries the bumped revision. ABA-safe (revision only increases).
+     * </pre>
+     *
+     * <code>string expected_revision = 9 [json_name = "expectedRevision"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearExpectedRevision() {
+      expectedRevision_ = getDefaultInstance().getExpectedRevision();
+      bitField0_ = (bitField0_ & ~0x00000100);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * #5 (opaque row revision / ETag): optional revision precondition. When set,
+     * the filter MUST pin every primary-key column by equality (single-row), and
+     * the update proceeds only if the broker-maintained opaque revision of that
+     * row still equals this token — checked atomically under the revision row lock
+     * in the write transaction. A mismatch or an untracked row is
+     * `FAILED_PRECONDITION` and nothing is written/projected/emitted. On success
+     * the response carries the bumped revision. ABA-safe (revision only increases).
+     * </pre>
+     *
+     * <code>string expected_revision = 9 [json_name = "expectedRevision"];</code>
+     * @param value The bytes for expectedRevision to set.
+     * @return This builder for chaining.
+     */
+    public Builder setExpectedRevisionBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      expectedRevision_ = value;
+      bitField0_ |= 0x00000100;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object lockName_ = "";
+    /**
+     * <pre>
+     * gate 25 (lock-fencing-at-commit): optional advisory-lock name + the
+     * monotonic fencing token granted for it. When both are set the broker
+     * validates the token against the LockService's durable lock row IN THE SAME
+     * write transaction; a stale token (a writer that outlived its lease) is
+     * rejected fail-closed with NO write / projection / CDC / audit / idempotency
+     * side effect. Unset (empty `lock_name`) = no fencing (unchanged behaviour).
+     * </pre>
+     *
+     * <code>string lock_name = 10 [json_name = "lockName"];</code>
+     * @return The lockName.
+     */
+    public java.lang.String getLockName() {
+      java.lang.Object ref = lockName_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        lockName_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * gate 25 (lock-fencing-at-commit): optional advisory-lock name + the
+     * monotonic fencing token granted for it. When both are set the broker
+     * validates the token against the LockService's durable lock row IN THE SAME
+     * write transaction; a stale token (a writer that outlived its lease) is
+     * rejected fail-closed with NO write / projection / CDC / audit / idempotency
+     * side effect. Unset (empty `lock_name`) = no fencing (unchanged behaviour).
+     * </pre>
+     *
+     * <code>string lock_name = 10 [json_name = "lockName"];</code>
+     * @return The bytes for lockName.
+     */
+    public com.google.protobuf.ByteString
+        getLockNameBytes() {
+      java.lang.Object ref = lockName_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        lockName_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * gate 25 (lock-fencing-at-commit): optional advisory-lock name + the
+     * monotonic fencing token granted for it. When both are set the broker
+     * validates the token against the LockService's durable lock row IN THE SAME
+     * write transaction; a stale token (a writer that outlived its lease) is
+     * rejected fail-closed with NO write / projection / CDC / audit / idempotency
+     * side effect. Unset (empty `lock_name`) = no fencing (unchanged behaviour).
+     * </pre>
+     *
+     * <code>string lock_name = 10 [json_name = "lockName"];</code>
+     * @param value The lockName to set.
+     * @return This builder for chaining.
+     */
+    public Builder setLockName(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      lockName_ = value;
+      bitField0_ |= 0x00000200;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * gate 25 (lock-fencing-at-commit): optional advisory-lock name + the
+     * monotonic fencing token granted for it. When both are set the broker
+     * validates the token against the LockService's durable lock row IN THE SAME
+     * write transaction; a stale token (a writer that outlived its lease) is
+     * rejected fail-closed with NO write / projection / CDC / audit / idempotency
+     * side effect. Unset (empty `lock_name`) = no fencing (unchanged behaviour).
+     * </pre>
+     *
+     * <code>string lock_name = 10 [json_name = "lockName"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearLockName() {
+      lockName_ = getDefaultInstance().getLockName();
+      bitField0_ = (bitField0_ & ~0x00000200);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * gate 25 (lock-fencing-at-commit): optional advisory-lock name + the
+     * monotonic fencing token granted for it. When both are set the broker
+     * validates the token against the LockService's durable lock row IN THE SAME
+     * write transaction; a stale token (a writer that outlived its lease) is
+     * rejected fail-closed with NO write / projection / CDC / audit / idempotency
+     * side effect. Unset (empty `lock_name`) = no fencing (unchanged behaviour).
+     * </pre>
+     *
+     * <code>string lock_name = 10 [json_name = "lockName"];</code>
+     * @param value The bytes for lockName to set.
+     * @return This builder for chaining.
+     */
+    public Builder setLockNameBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      lockName_ = value;
+      bitField0_ |= 0x00000200;
+      onChanged();
+      return this;
+    }
+
+    private long fencingToken_ ;
+    /**
+     * <code>int64 fencing_token = 11 [json_name = "fencingToken"];</code>
+     * @return The fencingToken.
+     */
+    @java.lang.Override
+    public long getFencingToken() {
+      return fencingToken_;
+    }
+    /**
+     * <code>int64 fencing_token = 11 [json_name = "fencingToken"];</code>
+     * @param value The fencingToken to set.
+     * @return This builder for chaining.
+     */
+    public Builder setFencingToken(long value) {
+
+      fencingToken_ = value;
+      bitField0_ |= 0x00000400;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>int64 fencing_token = 11 [json_name = "fencingToken"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearFencingToken() {
+      bitField0_ = (bitField0_ & ~0x00000400);
+      fencingToken_ = 0L;
       onChanged();
       return this;
     }

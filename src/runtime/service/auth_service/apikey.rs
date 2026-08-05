@@ -827,6 +827,12 @@ impl ApiKeyService for ApiKeyServiceImpl {
                 &requested_project,
             )
             .await?;
+        // A4: bind the VALIDATED caller claim (never the spoofable/omittable body
+        // `req.context`) to the grant's authoritative tenant — a tenant-A caller
+        // must not mint a key inheriting a tenant-B service account's grant/scopes.
+        // Mirrors the sibling get/update/revoke/rotate handlers.
+        let caller_context = Self::current_claim_request_context();
+        self.enforce_caller_tenant(caller_context.as_ref(), &grant.tenant_id)?;
         let key_scopes = super::grants::validate_service_scopes(&req.scopes, &grant.scopes)?;
         let rec = ApiKeyRecord {
             key_prefix: authn::api_key_prefix(&plain_key),

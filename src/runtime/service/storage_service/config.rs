@@ -5,6 +5,27 @@
 
 pub(crate) const FILE_MSG: &str = "udb.core.storage.entity.v1.File";
 
+/// Durable object-GC intent ledger (schema-qualified). A HARD `DeleteFile` records
+/// one PENDING row here, atomically with the metadata tombstone, so an object that
+/// fails to delete inline can never leak: the leader-elected sweep drives it to
+/// convergence (or dead-letters it after the attempt cap). This is a broker-owned
+/// operational table managed via `store::ensure_gc_intents_table` — it is NOT a
+/// proto entity (tenant isolation is enforced by the per-tenant handler filters,
+/// not RLS), so ideally the maintainer promotes it to a `file.proto`-style entity
+/// + manifest table in a follow-up.
+pub(crate) const GC_INTENTS_RELATION: &str = "udb_storage.gc_intents";
+
+/// Leader-election lock name for the GC-intent sweep worker. Kept distinct from
+/// `WORKER_STORAGE_ORPHAN_REAPER` so the two workers hold independent leases.
+/// Defined locally because `src/runtime/singleton.rs` (the canonical `WORKER_*`
+/// registry) is out of this change's fence — the maintainer should add a matching
+/// `WORKER_STORAGE_GC_SWEEP` const + distinctness-test entry there.
+pub(crate) const WORKER_STORAGE_GC_SWEEP: &str = "udb:storage:gc-sweep";
+
+/// Default cap on inline+sweep object-delete attempts before a GC intent is
+/// dead-lettered (`status = 'FAILED'`). Overridable via `UDB_STORAGE_GC_MAX_ATTEMPTS`.
+pub(crate) const GC_INTENT_DEFAULT_MAX_ATTEMPTS: i64 = 10;
+
 /// Topics for the storage domain events emitted via the transactional outbox
 /// (→ CDC → Kafka). Dot-only per the project's Kafka topic convention.
 pub(crate) const TOPIC_UPLOAD_URL_ISSUED: &str = "udb.storage.file.upload_url_issued.v1";
@@ -23,9 +44,27 @@ pub(crate) const OBJECT_NOT_PRESENT: &str = "OBJECT_NOT_PRESENT";
 pub(crate) const UPLOAD_SIZE_MISMATCH: &str = "UPLOAD_SIZE_MISMATCH";
 pub(crate) const ALREADY_FINALIZED: &str = "ALREADY_FINALIZED";
 pub(crate) const REISSUE_REQUIRES_PENDING: &str = "REISSUE_REQUIRES_PENDING";
+/// Finalize tried to change a registration-established (immutable) field —
+/// reference id/type, content/file type, or visibility. Finalize is an
+/// ownership-preserving lifecycle transition, not a metadata-update endpoint, so
+/// a conflicting value is rejected fail-closed instead of silently rewriting the
+/// row (a same-tenant finalize scope must not re-point ownership or escalate
+/// visibility).
+pub(crate) const FINALIZE_IMMUTABLE_MISMATCH: &str = "FINALIZE_IMMUTABLE_MISMATCH";
 /// Soft-delete warn path only (bytes orphaned after a metadata delete) — emitted
 /// on the warn log, NOT part of the RPC error catalog.
 pub(crate) const OBJECT_DELETE_ORPHANED: &str = "OBJECT_DELETE_ORPHANED";
+/// HARD DeleteFile replayed an idempotency key that was first claimed by a delete
+/// with a DIFFERENT target (file/mode) — reused fail-closed instead of replaying a
+/// mismatched outcome. Mirrors the data-plane idempotency-mismatch contract.
+pub(crate) const IDEMPOTENCY_KEY_CONFLICT: &str = "IDEMPOTENCY_KEY_CONFLICT";
+/// HARD DeleteFile committed the tombstone + durable GC intent but the object
+/// executor could not remove the bytes; success is NOT reported and the PENDING
+/// intent is left for the leader-elected sweep to drive to convergence. Retryable.
+pub(crate) const OBJECT_DELETE_FAILED: &str = "OBJECT_DELETE_FAILED";
+/// DeleteFile's `expected_status` optimistic guard did not match the file's
+/// current status token — the delete is refused fail-closed.
+pub(crate) const DELETE_PRECONDITION_FAILED: &str = "DELETE_PRECONDITION_FAILED";
 /// Reserved: defined for the catalog but no live emit site on the in-process
 /// path yet (expiry/backend-unsupported are not surfaced as RPC errors today).
 #[allow(dead_code)]

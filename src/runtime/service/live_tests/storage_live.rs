@@ -104,6 +104,7 @@ async fn live_postgres_storage_crud_roundtrip() {
         .delete_file(Request::new(storage_pb::DeleteFileRequest {
             tenant_id: tenant_id.clone(),
             file_id: reg.file_id.clone(),
+            ..Default::default()
         }))
         .await
         .expect("delete_file")

@@ -774,12 +774,9 @@ impl ProjectionTaskStore for RedisCanonicalStore {
             else {
                 continue;
             };
-            if !matches!(
-                row.status,
-                ProjectionTaskStatus::Completed
-                    | ProjectionTaskStatus::DeadLetter
-                    | ProjectionTaskStatus::Failed
-            ) {
+            // P2-1 NF-1/NF-2: only COMPLETED clears the fence; FAILED/DEAD_LETTER
+            // are not projected yet so they still count as pending.
+            if !matches!(row.status, ProjectionTaskStatus::Completed) {
                 count += 1;
             }
         }

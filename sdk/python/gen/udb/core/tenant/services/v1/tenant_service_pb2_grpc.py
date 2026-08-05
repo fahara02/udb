@@ -49,6 +49,11 @@ class TenantServiceStub(object):
                 request_serializer=udb_dot_core_dot_tenant_dot_services_dot_v1_dot_tenant__service__pb2.PurgeTenantRequest.SerializeToString,
                 response_deserializer=udb_dot_core_dot_tenant_dot_services_dot_v1_dot_tenant__service__pb2.PurgeTenantResponse.FromString,
                 _registered_method=True)
+        self.AdminPurgeTenant = channel.unary_unary(
+                '/udb.core.tenant.services.v1.TenantService/AdminPurgeTenant',
+                request_serializer=udb_dot_core_dot_tenant_dot_services_dot_v1_dot_tenant__service__pb2.AdminPurgeTenantRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_tenant_dot_services_dot_v1_dot_tenant__service__pb2.AdminPurgeTenantResponse.FromString,
+                _registered_method=True)
 
 
 class TenantServiceServicer(object):
@@ -108,6 +113,23 @@ class TenantServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def AdminPurgeTenant(self, request, context):
+        """PRIVILEGED cross-tenant purge (Bug #2). Unlike PurgeTenant — which forces the
+        body tenant to equal the verified claim (self-purge only) — this RPC lets a
+        delegated operator purge a DIFFERENT `target_tenant_id`. It is gated by a
+        DISTINCT, default-deny scope (`udb:tenant:admin-purge`) SEPARATE from the
+        self-purge scope, is DESTRUCTIVE, and demands an explicit confirmation token
+        plus an idempotency key. The handler routes the movement with
+        `privileged_cross_tenant=true`, binds the VERIFIED delegated actor, treats
+        control-plane / tenant-less tables explicitly (retained + reported, never
+        blind-deleted), and writes an immutable audit/outcome record. `tenant_field`
+        names the body tenant the action targets (`target_tenant_id`); the handler —
+        not the transport gate — authorizes the cross-tenant reach via the scope.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_TenantServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -145,6 +167,11 @@ def add_TenantServiceServicer_to_server(servicer, server):
                     servicer.PurgeTenant,
                     request_deserializer=udb_dot_core_dot_tenant_dot_services_dot_v1_dot_tenant__service__pb2.PurgeTenantRequest.FromString,
                     response_serializer=udb_dot_core_dot_tenant_dot_services_dot_v1_dot_tenant__service__pb2.PurgeTenantResponse.SerializeToString,
+            ),
+            'AdminPurgeTenant': grpc.unary_unary_rpc_method_handler(
+                    servicer.AdminPurgeTenant,
+                    request_deserializer=udb_dot_core_dot_tenant_dot_services_dot_v1_dot_tenant__service__pb2.AdminPurgeTenantRequest.FromString,
+                    response_serializer=udb_dot_core_dot_tenant_dot_services_dot_v1_dot_tenant__service__pb2.AdminPurgeTenantResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -336,6 +363,33 @@ class TenantService(object):
             '/udb.core.tenant.services.v1.TenantService/PurgeTenant',
             udb_dot_core_dot_tenant_dot_services_dot_v1_dot_tenant__service__pb2.PurgeTenantRequest.SerializeToString,
             udb_dot_core_dot_tenant_dot_services_dot_v1_dot_tenant__service__pb2.PurgeTenantResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def AdminPurgeTenant(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.tenant.services.v1.TenantService/AdminPurgeTenant',
+            udb_dot_core_dot_tenant_dot_services_dot_v1_dot_tenant__service__pb2.AdminPurgeTenantRequest.SerializeToString,
+            udb_dot_core_dot_tenant_dot_services_dot_v1_dot_tenant__service__pb2.AdminPurgeTenantResponse.FromString,
             options,
             channel_credentials,
             insecure,

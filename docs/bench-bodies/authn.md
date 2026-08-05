@@ -1,6 +1,6 @@
 ## AuthnService
 
-_proto: core/authn/services/v1/authn_service.proto · 50 RPCs_
+_proto: core/authn/services/v1/authn_service.proto · 51 RPCs_
 
 All request/response message bodies live in `core/authn/services/v1/core.proto`. Enum fields resolve against `core/authn/entity/v1/enums.proto`; `context` is `udb.core.common.v1.RequestContext` (from `common/v1/types.proto`, fields: `tenant{TenantContext}`, `request_id`, `correlation_id`, `user_id`, `headers`, `trace_id`, `ip_address`, `user_agent`, `idempotency_key`, `scopes`, `roles`, ...). Most authn fields read from `RequestContext` are populated server-side from the bearer/session, so the column below lists only the *message body* fields you set.
 
@@ -60,6 +60,7 @@ All request/response message bodies live in `core/authn/services/v1/core.proto`.
 | [ ] | SendPhoneVerification | MUTATION | SendPhoneVerificationRequest | `{ "user_id": "<seed:user_id>", "phone": "+15551234567" }` | `phone` = E.164. Complete with VerifyOTP. Optional `context`. |
 | [ ] | StartWebAuthnAuthentication | MUTATION | StartWebAuthnAuthenticationRequest | `{ "user_id": "<seed:user_id>", "tenant_id": "<seed:tenant_id>" }` | PUBLIC. Optional `project_id`, `context`. |
 | [ ] | StartWebAuthnRegistration | MUTATION | StartWebAuthnRegistrationRequest | `{ "user_id": "<seed:user_id>", "label": "perf-key", "tenant_id": "<seed:tenant_id>" }` | Optional `project_id`, `context`. |
+| [ ] | TransferServiceAccountGrant | DESTRUCTIVE | TransferServiceAccountGrantRequest | `{ "tenant_id": "<seed:tenant_id>", "from_user_id": "<seed:owner_id>", "to_user_id": "<seed:grant_transfer_to_user_id>", "expected_revision": 1, "reason": "bench transfer grant" }` | Revision CAS: moves the ACTIVE grant from `from_user_id` to a grantless ACTIVE service account (`to_user_id`) in the same tenant/project; the grant's revision bumps on success while its service_identity/scopes are unchanged. Terminal grant row — run after the other grant measurements. |
 | [ ] | UpdateUser | MUTATION | UpdateUserRequest | `{ "user_id": "<seed:user_id>", "full_name": "Perf U2", "email": "perf-u2@acme.test", "tenant_id": "<seed:tenant_id>" }` | Optional: `account_kind` (AccountKind), `project_id`, `profile_attributes`, `external_provider_id`, `external_subject`, `context`. |
 | [ ] | ValidateCSRF | READ_ONLY | ValidateCSRFRequest | `{ "session_id": "<seed:session_id>", "csrf_token": "<seed:csrf_token>" }` | Server-side sessions only. csrf_token = value from csrf cookie/header (runtime-issued at Login). |
 | [ ] | ValidateToken | READ_ONLY | ValidateTokenRequest | `{ "token": "<seed:token>", "token_type": "TOKEN_TYPE_JWT_ACCESS" }` | `token_type` enum (TokenType, non-UNSPECIFIED). `token` = raw JWT or session_token. |

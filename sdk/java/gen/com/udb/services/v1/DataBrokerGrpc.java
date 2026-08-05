@@ -233,6 +233,37 @@ public final class DataBrokerGrpc {
     return getUpdateMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.udb.entity.v1.BulkCasRequest,
+      com.udb.entity.v1.BulkCasResponse> getBulkCasMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "BulkCas",
+      requestType = com.udb.entity.v1.BulkCasRequest.class,
+      responseType = com.udb.entity.v1.BulkCasResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.entity.v1.BulkCasRequest,
+      com.udb.entity.v1.BulkCasResponse> getBulkCasMethod() {
+    io.grpc.MethodDescriptor<com.udb.entity.v1.BulkCasRequest, com.udb.entity.v1.BulkCasResponse> getBulkCasMethod;
+    if ((getBulkCasMethod = DataBrokerGrpc.getBulkCasMethod) == null) {
+      synchronized (DataBrokerGrpc.class) {
+        if ((getBulkCasMethod = DataBrokerGrpc.getBulkCasMethod) == null) {
+          DataBrokerGrpc.getBulkCasMethod = getBulkCasMethod =
+              io.grpc.MethodDescriptor.<com.udb.entity.v1.BulkCasRequest, com.udb.entity.v1.BulkCasResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "BulkCas"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.entity.v1.BulkCasRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.entity.v1.BulkCasResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new DataBrokerMethodDescriptorSupplier("BulkCas"))
+              .build();
+        }
+      }
+    }
+    return getBulkCasMethod;
+  }
+
   private static volatile io.grpc.MethodDescriptor<com.udb.entity.v1.VectorSearchRequest,
       com.udb.entity.v1.VectorSet> getVectorSearchMethod;
 
@@ -2571,6 +2602,23 @@ public final class DataBrokerGrpc {
 
     /**
      * <pre>
+     * gate 23 (bounded bulk compare-and-swap): apply a tenant-scoped, explicitly
+     * bounded batch of single-row conditional updates in ONE write transaction.
+     * Each item pins its full primary key by equality and is applied only if its
+     * compare-and-swap preconditions hold; a per-item mismatch is COUNTED as a
+     * conflict, not a batch error, so a partial batch is safe to replay by reusing
+     * `idempotency_key`. Same tenant isolation, authorization (deny-by-default
+     * Casbin gate) and per-row projection / CDC-outbox / audit side effects as the
+     * unary Update path.
+     * </pre>
+     */
+    default void bulkCas(com.udb.entity.v1.BulkCasRequest request,
+        io.grpc.stub.StreamObserver<com.udb.entity.v1.BulkCasResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getBulkCasMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
      * ── Vector ──────────────────────────────────────────────────────────────────
      * </pre>
      */
@@ -3301,6 +3349,24 @@ public final class DataBrokerGrpc {
         io.grpc.stub.StreamObserver<com.udb.entity.v1.MutationResponse> responseObserver) {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getUpdateMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     * gate 23 (bounded bulk compare-and-swap): apply a tenant-scoped, explicitly
+     * bounded batch of single-row conditional updates in ONE write transaction.
+     * Each item pins its full primary key by equality and is applied only if its
+     * compare-and-swap preconditions hold; a per-item mismatch is COUNTED as a
+     * conflict, not a batch error, so a partial batch is safe to replay by reusing
+     * `idempotency_key`. Same tenant isolation, authorization (deny-by-default
+     * Casbin gate) and per-row projection / CDC-outbox / audit side effects as the
+     * unary Update path.
+     * </pre>
+     */
+    public void bulkCas(com.udb.entity.v1.BulkCasRequest request,
+        io.grpc.stub.StreamObserver<com.udb.entity.v1.BulkCasResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getBulkCasMethod(), getCallOptions()), request, responseObserver);
     }
 
     /**
@@ -4094,6 +4160,23 @@ public final class DataBrokerGrpc {
 
     /**
      * <pre>
+     * gate 23 (bounded bulk compare-and-swap): apply a tenant-scoped, explicitly
+     * bounded batch of single-row conditional updates in ONE write transaction.
+     * Each item pins its full primary key by equality and is applied only if its
+     * compare-and-swap preconditions hold; a per-item mismatch is COUNTED as a
+     * conflict, not a batch error, so a partial batch is safe to replay by reusing
+     * `idempotency_key`. Same tenant isolation, authorization (deny-by-default
+     * Casbin gate) and per-row projection / CDC-outbox / audit side effects as the
+     * unary Update path.
+     * </pre>
+     */
+    public com.udb.entity.v1.BulkCasResponse bulkCas(com.udb.entity.v1.BulkCasRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getBulkCasMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
      * ── Vector ──────────────────────────────────────────────────────────────────
      * </pre>
      */
@@ -4803,6 +4886,23 @@ public final class DataBrokerGrpc {
 
     /**
      * <pre>
+     * gate 23 (bounded bulk compare-and-swap): apply a tenant-scoped, explicitly
+     * bounded batch of single-row conditional updates in ONE write transaction.
+     * Each item pins its full primary key by equality and is applied only if its
+     * compare-and-swap preconditions hold; a per-item mismatch is COUNTED as a
+     * conflict, not a batch error, so a partial batch is safe to replay by reusing
+     * `idempotency_key`. Same tenant isolation, authorization (deny-by-default
+     * Casbin gate) and per-row projection / CDC-outbox / audit side effects as the
+     * unary Update path.
+     * </pre>
+     */
+    public com.udb.entity.v1.BulkCasResponse bulkCas(com.udb.entity.v1.BulkCasRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getBulkCasMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
      * ── Vector ──────────────────────────────────────────────────────────────────
      * </pre>
      */
@@ -5468,6 +5568,24 @@ public final class DataBrokerGrpc {
 
     /**
      * <pre>
+     * gate 23 (bounded bulk compare-and-swap): apply a tenant-scoped, explicitly
+     * bounded batch of single-row conditional updates in ONE write transaction.
+     * Each item pins its full primary key by equality and is applied only if its
+     * compare-and-swap preconditions hold; a per-item mismatch is COUNTED as a
+     * conflict, not a batch error, so a partial batch is safe to replay by reusing
+     * `idempotency_key`. Same tenant isolation, authorization (deny-by-default
+     * Casbin gate) and per-row projection / CDC-outbox / audit side effects as the
+     * unary Update path.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.entity.v1.BulkCasResponse> bulkCas(
+        com.udb.entity.v1.BulkCasRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getBulkCasMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
      * ── Vector ──────────────────────────────────────────────────────────────────
      * </pre>
      */
@@ -6120,79 +6238,80 @@ public final class DataBrokerGrpc {
   private static final int METHODID_UPSERT = 2;
   private static final int METHODID_DELETE = 3;
   private static final int METHODID_UPDATE = 4;
-  private static final int METHODID_VECTOR_SEARCH = 5;
-  private static final int METHODID_VECTOR_HYBRID_SEARCH = 6;
-  private static final int METHODID_VECTOR_UPSERT = 7;
-  private static final int METHODID_GET_OBJECT = 8;
-  private static final int METHODID_GENERATE_PRESIGNED_URL = 9;
-  private static final int METHODID_INITIATE_MULTIPART_UPLOAD = 10;
-  private static final int METHODID_CACHE_GET = 11;
-  private static final int METHODID_CACHE_SET = 12;
-  private static final int METHODID_CACHE_DELETE = 13;
-  private static final int METHODID_CACHE_SCAN = 14;
-  private static final int METHODID_DOCUMENT_GET = 15;
-  private static final int METHODID_DOCUMENT_FIND = 16;
-  private static final int METHODID_DOCUMENT_UPSERT = 17;
-  private static final int METHODID_DOCUMENT_DELETE = 18;
-  private static final int METHODID_GRAPH_QUERY = 19;
-  private static final int METHODID_GRAPH_MUTATE = 20;
-  private static final int METHODID_TIME_SERIES_WRITE = 21;
-  private static final int METHODID_TIME_SERIES_QUERY = 22;
-  private static final int METHODID_ANALYTICAL_QUERY = 23;
-  private static final int METHODID_PUBLISH_CDC = 24;
-  private static final int METHODID_CREATE_MATERIALIZED_VIEW = 25;
-  private static final int METHODID_ENQUEUE_OUTBOX_EVENT = 26;
-  private static final int METHODID_GENERIC_DISPATCH = 27;
-  private static final int METHODID_ENSURE_RESOURCE = 28;
-  private static final int METHODID_DROP_RESOURCE = 29;
-  private static final int METHODID_LIST_RESOURCES = 30;
-  private static final int METHODID_STAGE_CATALOG = 31;
-  private static final int METHODID_ACTIVATE_CATALOG = 32;
-  private static final int METHODID_ROLLBACK_CATALOG = 33;
-  private static final int METHODID_VALIDATE_CATALOG = 34;
-  private static final int METHODID_GET_CATALOG_VERSIONS = 35;
-  private static final int METHODID_GET_CATALOG_VERSION = 36;
-  private static final int METHODID_PLAN_MIGRATION = 37;
-  private static final int METHODID_APPLY_MIGRATION = 38;
-  private static final int METHODID_GET_MIGRATION_STATUS = 39;
-  private static final int METHODID_LIST_MIGRATION_RUNS = 40;
-  private static final int METHODID_APPROVE_MIGRATION_PLAN = 41;
-  private static final int METHODID_LIST_DLQ_EVENTS = 42;
-  private static final int METHODID_GET_DLQ_EVENT = 43;
-  private static final int METHODID_REPLAY_DLQ_EVENT = 44;
-  private static final int METHODID_DISMISS_DLQ_EVENT = 45;
-  private static final int METHODID_QUARANTINE_DLQ_EVENT = 46;
-  private static final int METHODID_GET_CDC_STATUS = 47;
-  private static final int METHODID_PAUSE_CDC = 48;
-  private static final int METHODID_RESUME_CDC = 49;
-  private static final int METHODID_STEP_DOWN_CDC_LEADER = 50;
-  private static final int METHODID_PREVIEW_CDC_REDACTION = 51;
-  private static final int METHODID_SCAN_PROJECTION_DRIFT = 52;
-  private static final int METHODID_LIST_SAGAS = 53;
-  private static final int METHODID_GET_SAGA = 54;
-  private static final int METHODID_RETRY_SAGA_COMPENSATION = 55;
-  private static final int METHODID_MARK_SAGA_REVIEWED = 56;
-  private static final int METHODID_ENSURE_BASELINE = 57;
-  private static final int METHODID_LIST_POLICIES = 58;
-  private static final int METHODID_PUT_POLICY = 59;
-  private static final int METHODID_DELETE_POLICY = 60;
-  private static final int METHODID_RELOAD_POLICIES = 61;
-  private static final int METHODID_LINT_POLICIES = 62;
-  private static final int METHODID_GET_CAPABILITIES = 63;
-  private static final int METHODID_GET_CATALOG_MANIFEST = 64;
-  private static final int METHODID_LOOKUP_MESSAGE_SCHEMA = 65;
-  private static final int METHODID_LIST_MESSAGE_SCHEMAS = 66;
-  private static final int METHODID_GET_HEALTH_REPORT = 67;
-  private static final int METHODID_ENSURE_PROJECT = 68;
-  private static final int METHODID_LIST_PROJECTS = 69;
-  private static final int METHODID_GET_ADMIN_SUMMARY = 70;
-  private static final int METHODID_LIST_ADMIN_AUDIT_LOGS = 71;
-  private static final int METHODID_VERIFY_ADMIN_AUDIT_LOG = 72;
-  private static final int METHODID_BATCH_SELECT = 73;
-  private static final int METHODID_BATCH_UPSERT = 74;
-  private static final int METHODID_VECTOR_BATCH_UPSERT = 75;
-  private static final int METHODID_PUT_OBJECT = 76;
-  private static final int METHODID_BEGIN_TX = 77;
+  private static final int METHODID_BULK_CAS = 5;
+  private static final int METHODID_VECTOR_SEARCH = 6;
+  private static final int METHODID_VECTOR_HYBRID_SEARCH = 7;
+  private static final int METHODID_VECTOR_UPSERT = 8;
+  private static final int METHODID_GET_OBJECT = 9;
+  private static final int METHODID_GENERATE_PRESIGNED_URL = 10;
+  private static final int METHODID_INITIATE_MULTIPART_UPLOAD = 11;
+  private static final int METHODID_CACHE_GET = 12;
+  private static final int METHODID_CACHE_SET = 13;
+  private static final int METHODID_CACHE_DELETE = 14;
+  private static final int METHODID_CACHE_SCAN = 15;
+  private static final int METHODID_DOCUMENT_GET = 16;
+  private static final int METHODID_DOCUMENT_FIND = 17;
+  private static final int METHODID_DOCUMENT_UPSERT = 18;
+  private static final int METHODID_DOCUMENT_DELETE = 19;
+  private static final int METHODID_GRAPH_QUERY = 20;
+  private static final int METHODID_GRAPH_MUTATE = 21;
+  private static final int METHODID_TIME_SERIES_WRITE = 22;
+  private static final int METHODID_TIME_SERIES_QUERY = 23;
+  private static final int METHODID_ANALYTICAL_QUERY = 24;
+  private static final int METHODID_PUBLISH_CDC = 25;
+  private static final int METHODID_CREATE_MATERIALIZED_VIEW = 26;
+  private static final int METHODID_ENQUEUE_OUTBOX_EVENT = 27;
+  private static final int METHODID_GENERIC_DISPATCH = 28;
+  private static final int METHODID_ENSURE_RESOURCE = 29;
+  private static final int METHODID_DROP_RESOURCE = 30;
+  private static final int METHODID_LIST_RESOURCES = 31;
+  private static final int METHODID_STAGE_CATALOG = 32;
+  private static final int METHODID_ACTIVATE_CATALOG = 33;
+  private static final int METHODID_ROLLBACK_CATALOG = 34;
+  private static final int METHODID_VALIDATE_CATALOG = 35;
+  private static final int METHODID_GET_CATALOG_VERSIONS = 36;
+  private static final int METHODID_GET_CATALOG_VERSION = 37;
+  private static final int METHODID_PLAN_MIGRATION = 38;
+  private static final int METHODID_APPLY_MIGRATION = 39;
+  private static final int METHODID_GET_MIGRATION_STATUS = 40;
+  private static final int METHODID_LIST_MIGRATION_RUNS = 41;
+  private static final int METHODID_APPROVE_MIGRATION_PLAN = 42;
+  private static final int METHODID_LIST_DLQ_EVENTS = 43;
+  private static final int METHODID_GET_DLQ_EVENT = 44;
+  private static final int METHODID_REPLAY_DLQ_EVENT = 45;
+  private static final int METHODID_DISMISS_DLQ_EVENT = 46;
+  private static final int METHODID_QUARANTINE_DLQ_EVENT = 47;
+  private static final int METHODID_GET_CDC_STATUS = 48;
+  private static final int METHODID_PAUSE_CDC = 49;
+  private static final int METHODID_RESUME_CDC = 50;
+  private static final int METHODID_STEP_DOWN_CDC_LEADER = 51;
+  private static final int METHODID_PREVIEW_CDC_REDACTION = 52;
+  private static final int METHODID_SCAN_PROJECTION_DRIFT = 53;
+  private static final int METHODID_LIST_SAGAS = 54;
+  private static final int METHODID_GET_SAGA = 55;
+  private static final int METHODID_RETRY_SAGA_COMPENSATION = 56;
+  private static final int METHODID_MARK_SAGA_REVIEWED = 57;
+  private static final int METHODID_ENSURE_BASELINE = 58;
+  private static final int METHODID_LIST_POLICIES = 59;
+  private static final int METHODID_PUT_POLICY = 60;
+  private static final int METHODID_DELETE_POLICY = 61;
+  private static final int METHODID_RELOAD_POLICIES = 62;
+  private static final int METHODID_LINT_POLICIES = 63;
+  private static final int METHODID_GET_CAPABILITIES = 64;
+  private static final int METHODID_GET_CATALOG_MANIFEST = 65;
+  private static final int METHODID_LOOKUP_MESSAGE_SCHEMA = 66;
+  private static final int METHODID_LIST_MESSAGE_SCHEMAS = 67;
+  private static final int METHODID_GET_HEALTH_REPORT = 68;
+  private static final int METHODID_ENSURE_PROJECT = 69;
+  private static final int METHODID_LIST_PROJECTS = 70;
+  private static final int METHODID_GET_ADMIN_SUMMARY = 71;
+  private static final int METHODID_LIST_ADMIN_AUDIT_LOGS = 72;
+  private static final int METHODID_VERIFY_ADMIN_AUDIT_LOG = 73;
+  private static final int METHODID_BATCH_SELECT = 74;
+  private static final int METHODID_BATCH_UPSERT = 75;
+  private static final int METHODID_VECTOR_BATCH_UPSERT = 76;
+  private static final int METHODID_PUT_OBJECT = 77;
+  private static final int METHODID_BEGIN_TX = 78;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -6230,6 +6349,10 @@ public final class DataBrokerGrpc {
         case METHODID_UPDATE:
           serviceImpl.update((com.udb.entity.v1.UpdateRequest) request,
               (io.grpc.stub.StreamObserver<com.udb.entity.v1.MutationResponse>) responseObserver);
+          break;
+        case METHODID_BULK_CAS:
+          serviceImpl.bulkCas((com.udb.entity.v1.BulkCasRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.entity.v1.BulkCasResponse>) responseObserver);
           break;
         case METHODID_VECTOR_SEARCH:
           serviceImpl.vectorSearch((com.udb.entity.v1.VectorSearchRequest) request,
@@ -6585,6 +6708,13 @@ public final class DataBrokerGrpc {
               com.udb.entity.v1.UpdateRequest,
               com.udb.entity.v1.MutationResponse>(
                 service, METHODID_UPDATE)))
+        .addMethod(
+          getBulkCasMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.entity.v1.BulkCasRequest,
+              com.udb.entity.v1.BulkCasResponse>(
+                service, METHODID_BULK_CAS)))
         .addMethod(
           getVectorSearchMethod(),
           io.grpc.stub.ServerCalls.asyncUnaryCall(
@@ -7137,6 +7267,7 @@ public final class DataBrokerGrpc {
               .addMethod(getBatchUpsertMethod())
               .addMethod(getDeleteMethod())
               .addMethod(getUpdateMethod())
+              .addMethod(getBulkCasMethod())
               .addMethod(getVectorSearchMethod())
               .addMethod(getVectorHybridSearchMethod())
               .addMethod(getVectorUpsertMethod())

@@ -7,12 +7,22 @@ from udb.core.common.v1 import dto_pb2 as _dto_pb2
 from udb.core.common.v1 import security_pb2 as _security_pb2
 from udb.core.storage.entity.v1 import file_pb2 as _file_pb2
 from google.protobuf.internal import containers as _containers
+from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
 from collections.abc import Iterable as _Iterable, Mapping as _Mapping
 from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
+
+class DeleteMode(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    DELETE_MODE_UNSPECIFIED: _ClassVar[DeleteMode]
+    DELETE_MODE_SOFT: _ClassVar[DeleteMode]
+    DELETE_MODE_HARD: _ClassVar[DeleteMode]
+DELETE_MODE_UNSPECIFIED: DeleteMode
+DELETE_MODE_SOFT: DeleteMode
+DELETE_MODE_HARD: DeleteMode
 
 class RegisterUploadRequest(_message.Message):
     __slots__ = ("tenant_id", "project_id", "filename", "content_type", "file_type", "reference_id", "reference_type", "is_public", "expires_in_minutes", "size_bytes")
@@ -197,12 +207,20 @@ class UpdateFileResponse(_message.Message):
     def __init__(self, message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
 
 class DeleteFileRequest(_message.Message):
-    __slots__ = ("tenant_id", "file_id")
+    __slots__ = ("tenant_id", "file_id", "mode", "reason", "expected_status", "idempotency_key")
     TENANT_ID_FIELD_NUMBER: _ClassVar[int]
     FILE_ID_FIELD_NUMBER: _ClassVar[int]
+    MODE_FIELD_NUMBER: _ClassVar[int]
+    REASON_FIELD_NUMBER: _ClassVar[int]
+    EXPECTED_STATUS_FIELD_NUMBER: _ClassVar[int]
+    IDEMPOTENCY_KEY_FIELD_NUMBER: _ClassVar[int]
     tenant_id: str
     file_id: str
-    def __init__(self, tenant_id: _Optional[str] = ..., file_id: _Optional[str] = ...) -> None: ...
+    mode: DeleteMode
+    reason: str
+    expected_status: str
+    idempotency_key: str
+    def __init__(self, tenant_id: _Optional[str] = ..., file_id: _Optional[str] = ..., mode: _Optional[_Union[DeleteMode, str]] = ..., reason: _Optional[str] = ..., expected_status: _Optional[str] = ..., idempotency_key: _Optional[str] = ...) -> None: ...
 
 class DeleteFileResponse(_message.Message):
     __slots__ = ("success", "error")

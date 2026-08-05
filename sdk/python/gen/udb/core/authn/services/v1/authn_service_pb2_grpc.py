@@ -300,6 +300,11 @@ class AuthnServiceStub(object):
                 request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.RotateServiceAccountIdentityRequest.SerializeToString,
                 response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.RotateServiceAccountIdentityResponse.FromString,
                 _registered_method=True)
+        self.TransferServiceAccountGrant = channel.unary_unary(
+                '/udb.core.authn.services.v1.AuthnService/TransferServiceAccountGrant',
+                request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.TransferServiceAccountGrantRequest.SerializeToString,
+                response_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.TransferServiceAccountGrantResponse.FromString,
+                _registered_method=True)
         self.RevokeServiceAccountGrant = channel.unary_unary(
                 '/udb.core.authn.services.v1.AuthnService/RevokeServiceAccountGrant',
                 request_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.RevokeServiceAccountGrantRequest.SerializeToString,
@@ -706,6 +711,22 @@ class AuthnServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def TransferServiceAccountGrant(self, request, context):
+        """Atomically transfer an ACTIVE service-account grant (its stable
+        service_identity and approved scopes) from one service account to another,
+        under revision CAS. The grant row is re-pointed from `from_user_id` to
+        `to_user_id` in a single transaction, so neither the deployment-wide
+        service_identity unique index nor the per-user unique index is ever
+        violated, and no window exists in which no account owns the identity. The
+        source account is left with no grant (its credentials no longer resolve to
+        the identity); the move is a deterministic inverse of itself. This is the
+        supported recovery path when the currently-bound account's credentials are
+        unavailable, replacing a non-atomic rotate-then-create.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def RevokeServiceAccountGrant(self, request, context):
         """Revoke a service account's grant. The account (and every credential or
         certificate binding that resolves through the grant) stops authenticating
@@ -1017,6 +1038,11 @@ def add_AuthnServiceServicer_to_server(servicer, server):
                     servicer.RotateServiceAccountIdentity,
                     request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.RotateServiceAccountIdentityRequest.FromString,
                     response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.RotateServiceAccountIdentityResponse.SerializeToString,
+            ),
+            'TransferServiceAccountGrant': grpc.unary_unary_rpc_method_handler(
+                    servicer.TransferServiceAccountGrant,
+                    request_deserializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.TransferServiceAccountGrantRequest.FromString,
+                    response_serializer=udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.TransferServiceAccountGrantResponse.SerializeToString,
             ),
             'RevokeServiceAccountGrant': grpc.unary_unary_rpc_method_handler(
                     servicer.RevokeServiceAccountGrant,
@@ -2534,6 +2560,33 @@ class AuthnService(object):
             '/udb.core.authn.services.v1.AuthnService/RotateServiceAccountIdentity',
             udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.RotateServiceAccountIdentityRequest.SerializeToString,
             udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.RotateServiceAccountIdentityResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def TransferServiceAccountGrant(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.core.authn.services.v1.AuthnService/TransferServiceAccountGrant',
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.TransferServiceAccountGrantRequest.SerializeToString,
+            udb_dot_core_dot_authn_dot_services_dot_v1_dot_authn__service__pb2.TransferServiceAccountGrantResponse.FromString,
             options,
             channel_credentials,
             insecure,

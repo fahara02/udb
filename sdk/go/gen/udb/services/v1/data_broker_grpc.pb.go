@@ -28,6 +28,7 @@ const (
 	DataBroker_BatchUpsert_FullMethodName             = "/udb.services.v1.DataBroker/BatchUpsert"
 	DataBroker_Delete_FullMethodName                  = "/udb.services.v1.DataBroker/Delete"
 	DataBroker_Update_FullMethodName                  = "/udb.services.v1.DataBroker/Update"
+	DataBroker_BulkCas_FullMethodName                 = "/udb.services.v1.DataBroker/BulkCas"
 	DataBroker_VectorSearch_FullMethodName            = "/udb.services.v1.DataBroker/VectorSearch"
 	DataBroker_VectorHybridSearch_FullMethodName      = "/udb.services.v1.DataBroker/VectorHybridSearch"
 	DataBroker_VectorUpsert_FullMethodName            = "/udb.services.v1.DataBroker/VectorUpsert"
@@ -126,6 +127,15 @@ type DataBrokerClient interface {
 	// (fail-closed, tenant+project-scoped durable dedup) and returns
 	// was_duplicate=true with the original body.
 	Update(ctx context.Context, in *v1.UpdateRequest, opts ...grpc.CallOption) (*v1.MutationResponse, error)
+	// gate 23 (bounded bulk compare-and-swap): apply a tenant-scoped, explicitly
+	// bounded batch of single-row conditional updates in ONE write transaction.
+	// Each item pins its full primary key by equality and is applied only if its
+	// compare-and-swap preconditions hold; a per-item mismatch is COUNTED as a
+	// conflict, not a batch error, so a partial batch is safe to replay by reusing
+	// `idempotency_key`. Same tenant isolation, authorization (deny-by-default
+	// Casbin gate) and per-row projection / CDC-outbox / audit side effects as the
+	// unary Update path.
+	BulkCas(ctx context.Context, in *v1.BulkCasRequest, opts ...grpc.CallOption) (*v1.BulkCasResponse, error)
 	// ── Vector ──────────────────────────────────────────────────────────────────
 	VectorSearch(ctx context.Context, in *v1.VectorSearchRequest, opts ...grpc.CallOption) (*v1.VectorSet, error)
 	VectorHybridSearch(ctx context.Context, in *v1.VectorHybridSearchRequest, opts ...grpc.CallOption) (*v1.VectorSet, error)
@@ -346,6 +356,16 @@ func (c *dataBrokerClient) Update(ctx context.Context, in *v1.UpdateRequest, opt
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.MutationResponse)
 	err := c.cc.Invoke(ctx, DataBroker_Update_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dataBrokerClient) BulkCas(ctx context.Context, in *v1.BulkCasRequest, opts ...grpc.CallOption) (*v1.BulkCasResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.BulkCasResponse)
+	err := c.cc.Invoke(ctx, DataBroker_BulkCas_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1114,6 +1134,15 @@ type DataBrokerServer interface {
 	// (fail-closed, tenant+project-scoped durable dedup) and returns
 	// was_duplicate=true with the original body.
 	Update(context.Context, *v1.UpdateRequest) (*v1.MutationResponse, error)
+	// gate 23 (bounded bulk compare-and-swap): apply a tenant-scoped, explicitly
+	// bounded batch of single-row conditional updates in ONE write transaction.
+	// Each item pins its full primary key by equality and is applied only if its
+	// compare-and-swap preconditions hold; a per-item mismatch is COUNTED as a
+	// conflict, not a batch error, so a partial batch is safe to replay by reusing
+	// `idempotency_key`. Same tenant isolation, authorization (deny-by-default
+	// Casbin gate) and per-row projection / CDC-outbox / audit side effects as the
+	// unary Update path.
+	BulkCas(context.Context, *v1.BulkCasRequest) (*v1.BulkCasResponse, error)
 	// ── Vector ──────────────────────────────────────────────────────────────────
 	VectorSearch(context.Context, *v1.VectorSearchRequest) (*v1.VectorSet, error)
 	VectorHybridSearch(context.Context, *v1.VectorHybridSearchRequest) (*v1.VectorSet, error)
@@ -1274,6 +1303,9 @@ func (UnimplementedDataBrokerServer) Delete(context.Context, *v1.DeleteRequest) 
 }
 func (UnimplementedDataBrokerServer) Update(context.Context, *v1.UpdateRequest) (*v1.MutationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Update not implemented")
+}
+func (UnimplementedDataBrokerServer) BulkCas(context.Context, *v1.BulkCasRequest) (*v1.BulkCasResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method BulkCas not implemented")
 }
 func (UnimplementedDataBrokerServer) VectorSearch(context.Context, *v1.VectorSearchRequest) (*v1.VectorSet, error) {
 	return nil, status.Error(codes.Unimplemented, "method VectorSearch not implemented")
@@ -1601,6 +1633,24 @@ func _DataBroker_Update_Handler(srv interface{}, ctx context.Context, dec func(i
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DataBrokerServer).Update(ctx, req.(*v1.UpdateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DataBroker_BulkCas_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.BulkCasRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataBrokerServer).BulkCas(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DataBroker_BulkCas_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataBrokerServer).BulkCas(ctx, req.(*v1.BulkCasRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2858,6 +2908,10 @@ var DataBroker_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Update",
 			Handler:    _DataBroker_Update_Handler,
+		},
+		{
+			MethodName: "BulkCas",
+			Handler:    _DataBroker_BulkCas_Handler,
 		},
 		{
 			MethodName: "VectorSearch",

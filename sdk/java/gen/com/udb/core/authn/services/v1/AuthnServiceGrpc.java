@@ -1727,6 +1727,37 @@ public final class AuthnServiceGrpc {
     return getRotateServiceAccountIdentityMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.TransferServiceAccountGrantRequest,
+      com.udb.core.authn.services.v1.TransferServiceAccountGrantResponse> getTransferServiceAccountGrantMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "TransferServiceAccountGrant",
+      requestType = com.udb.core.authn.services.v1.TransferServiceAccountGrantRequest.class,
+      responseType = com.udb.core.authn.services.v1.TransferServiceAccountGrantResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.TransferServiceAccountGrantRequest,
+      com.udb.core.authn.services.v1.TransferServiceAccountGrantResponse> getTransferServiceAccountGrantMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.TransferServiceAccountGrantRequest, com.udb.core.authn.services.v1.TransferServiceAccountGrantResponse> getTransferServiceAccountGrantMethod;
+    if ((getTransferServiceAccountGrantMethod = AuthnServiceGrpc.getTransferServiceAccountGrantMethod) == null) {
+      synchronized (AuthnServiceGrpc.class) {
+        if ((getTransferServiceAccountGrantMethod = AuthnServiceGrpc.getTransferServiceAccountGrantMethod) == null) {
+          AuthnServiceGrpc.getTransferServiceAccountGrantMethod = getTransferServiceAccountGrantMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.authn.services.v1.TransferServiceAccountGrantRequest, com.udb.core.authn.services.v1.TransferServiceAccountGrantResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "TransferServiceAccountGrant"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.TransferServiceAccountGrantRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.authn.services.v1.TransferServiceAccountGrantResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new AuthnServiceMethodDescriptorSupplier("TransferServiceAccountGrant"))
+              .build();
+        }
+      }
+    }
+    return getTransferServiceAccountGrantMethod;
+  }
+
   private static volatile io.grpc.MethodDescriptor<com.udb.core.authn.services.v1.RevokeServiceAccountGrantRequest,
       com.udb.core.authn.services.v1.RevokeServiceAccountGrantResponse> getRevokeServiceAccountGrantMethod;
 
@@ -2404,6 +2435,25 @@ public final class AuthnServiceGrpc {
 
     /**
      * <pre>
+     * Atomically transfer an ACTIVE service-account grant (its stable
+     * service_identity and approved scopes) from one service account to another,
+     * under revision CAS. The grant row is re-pointed from `from_user_id` to
+     * `to_user_id` in a single transaction, so neither the deployment-wide
+     * service_identity unique index nor the per-user unique index is ever
+     * violated, and no window exists in which no account owns the identity. The
+     * source account is left with no grant (its credentials no longer resolve to
+     * the identity); the move is a deterministic inverse of itself. This is the
+     * supported recovery path when the currently-bound account's credentials are
+     * unavailable, replacing a non-atomic rotate-then-create.
+     * </pre>
+     */
+    default void transferServiceAccountGrant(com.udb.core.authn.services.v1.TransferServiceAccountGrantRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.TransferServiceAccountGrantResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getTransferServiceAccountGrantMethod(), responseObserver);
+    }
+
+    /**
+     * <pre>
      * Revoke a service account's grant. The account (and every credential or
      * certificate binding that resolves through the grant) stops authenticating
      * immediately — fail closed, audited.
@@ -3031,6 +3081,26 @@ public final class AuthnServiceGrpc {
 
     /**
      * <pre>
+     * Atomically transfer an ACTIVE service-account grant (its stable
+     * service_identity and approved scopes) from one service account to another,
+     * under revision CAS. The grant row is re-pointed from `from_user_id` to
+     * `to_user_id` in a single transaction, so neither the deployment-wide
+     * service_identity unique index nor the per-user unique index is ever
+     * violated, and no window exists in which no account owns the identity. The
+     * source account is left with no grant (its credentials no longer resolve to
+     * the identity); the move is a deterministic inverse of itself. This is the
+     * supported recovery path when the currently-bound account's credentials are
+     * unavailable, replacing a non-atomic rotate-then-create.
+     * </pre>
+     */
+    public void transferServiceAccountGrant(com.udb.core.authn.services.v1.TransferServiceAccountGrantRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.TransferServiceAccountGrantResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getTransferServiceAccountGrantMethod(), getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
      * Revoke a service account's grant. The account (and every credential or
      * certificate binding that resolves through the grant) stops authenticating
      * immediately — fail closed, audited.
@@ -3586,6 +3656,25 @@ public final class AuthnServiceGrpc {
 
     /**
      * <pre>
+     * Atomically transfer an ACTIVE service-account grant (its stable
+     * service_identity and approved scopes) from one service account to another,
+     * under revision CAS. The grant row is re-pointed from `from_user_id` to
+     * `to_user_id` in a single transaction, so neither the deployment-wide
+     * service_identity unique index nor the per-user unique index is ever
+     * violated, and no window exists in which no account owns the identity. The
+     * source account is left with no grant (its credentials no longer resolve to
+     * the identity); the move is a deterministic inverse of itself. This is the
+     * supported recovery path when the currently-bound account's credentials are
+     * unavailable, replacing a non-atomic rotate-then-create.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.TransferServiceAccountGrantResponse transferServiceAccountGrant(com.udb.core.authn.services.v1.TransferServiceAccountGrantRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getTransferServiceAccountGrantMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
      * Revoke a service account's grant. The account (and every credential or
      * certificate binding that resolves through the grant) stops authenticating
      * immediately — fail closed, audited.
@@ -4133,6 +4222,25 @@ public final class AuthnServiceGrpc {
     public com.udb.core.authn.services.v1.RotateServiceAccountIdentityResponse rotateServiceAccountIdentity(com.udb.core.authn.services.v1.RotateServiceAccountIdentityRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getRotateServiceAccountIdentityMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * Atomically transfer an ACTIVE service-account grant (its stable
+     * service_identity and approved scopes) from one service account to another,
+     * under revision CAS. The grant row is re-pointed from `from_user_id` to
+     * `to_user_id` in a single transaction, so neither the deployment-wide
+     * service_identity unique index nor the per-user unique index is ever
+     * violated, and no window exists in which no account owns the identity. The
+     * source account is left with no grant (its credentials no longer resolve to
+     * the identity); the move is a deterministic inverse of itself. This is the
+     * supported recovery path when the currently-bound account's credentials are
+     * unavailable, replacing a non-atomic rotate-then-create.
+     * </pre>
+     */
+    public com.udb.core.authn.services.v1.TransferServiceAccountGrantResponse transferServiceAccountGrant(com.udb.core.authn.services.v1.TransferServiceAccountGrantRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getTransferServiceAccountGrantMethod(), getCallOptions(), request);
     }
 
     /**
@@ -4743,6 +4851,26 @@ public final class AuthnServiceGrpc {
 
     /**
      * <pre>
+     * Atomically transfer an ACTIVE service-account grant (its stable
+     * service_identity and approved scopes) from one service account to another,
+     * under revision CAS. The grant row is re-pointed from `from_user_id` to
+     * `to_user_id` in a single transaction, so neither the deployment-wide
+     * service_identity unique index nor the per-user unique index is ever
+     * violated, and no window exists in which no account owns the identity. The
+     * source account is left with no grant (its credentials no longer resolve to
+     * the identity); the move is a deterministic inverse of itself. This is the
+     * supported recovery path when the currently-bound account's credentials are
+     * unavailable, replacing a non-atomic rotate-then-create.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.authn.services.v1.TransferServiceAccountGrantResponse> transferServiceAccountGrant(
+        com.udb.core.authn.services.v1.TransferServiceAccountGrantRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getTransferServiceAccountGrantMethod(), getCallOptions()), request);
+    }
+
+    /**
+     * <pre>
      * Revoke a service account's grant. The account (and every credential or
      * certificate binding that resolves through the grant) stops authenticating
      * immediately — fail closed, audited.
@@ -4847,10 +4975,11 @@ public final class AuthnServiceGrpc {
   private static final int METHODID_LIST_SERVICE_ACCOUNT_GRANTS = 52;
   private static final int METHODID_REPLACE_SERVICE_ACCOUNT_GRANT = 53;
   private static final int METHODID_ROTATE_SERVICE_ACCOUNT_IDENTITY = 54;
-  private static final int METHODID_REVOKE_SERVICE_ACCOUNT_GRANT = 55;
-  private static final int METHODID_CREATE_CERTIFICATE_BINDING = 56;
-  private static final int METHODID_LIST_CERTIFICATE_BINDINGS = 57;
-  private static final int METHODID_REVOKE_CERTIFICATE_BINDING = 58;
+  private static final int METHODID_TRANSFER_SERVICE_ACCOUNT_GRANT = 55;
+  private static final int METHODID_REVOKE_SERVICE_ACCOUNT_GRANT = 56;
+  private static final int METHODID_CREATE_CERTIFICATE_BINDING = 57;
+  private static final int METHODID_LIST_CERTIFICATE_BINDINGS = 58;
+  private static final int METHODID_REVOKE_CERTIFICATE_BINDING = 59;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -5088,6 +5217,10 @@ public final class AuthnServiceGrpc {
         case METHODID_ROTATE_SERVICE_ACCOUNT_IDENTITY:
           serviceImpl.rotateServiceAccountIdentity((com.udb.core.authn.services.v1.RotateServiceAccountIdentityRequest) request,
               (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.RotateServiceAccountIdentityResponse>) responseObserver);
+          break;
+        case METHODID_TRANSFER_SERVICE_ACCOUNT_GRANT:
+          serviceImpl.transferServiceAccountGrant((com.udb.core.authn.services.v1.TransferServiceAccountGrantRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.authn.services.v1.TransferServiceAccountGrantResponse>) responseObserver);
           break;
         case METHODID_REVOKE_SERVICE_ACCOUNT_GRANT:
           serviceImpl.revokeServiceAccountGrant((com.udb.core.authn.services.v1.RevokeServiceAccountGrantRequest) request,
@@ -5509,6 +5642,13 @@ public final class AuthnServiceGrpc {
               com.udb.core.authn.services.v1.RotateServiceAccountIdentityResponse>(
                 service, METHODID_ROTATE_SERVICE_ACCOUNT_IDENTITY)))
         .addMethod(
+          getTransferServiceAccountGrantMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.authn.services.v1.TransferServiceAccountGrantRequest,
+              com.udb.core.authn.services.v1.TransferServiceAccountGrantResponse>(
+                service, METHODID_TRANSFER_SERVICE_ACCOUNT_GRANT)))
+        .addMethod(
           getRevokeServiceAccountGrantMethod(),
           io.grpc.stub.ServerCalls.asyncUnaryCall(
             new MethodHandlers<
@@ -5639,6 +5779,7 @@ public final class AuthnServiceGrpc {
               .addMethod(getListServiceAccountGrantsMethod())
               .addMethod(getReplaceServiceAccountGrantMethod())
               .addMethod(getRotateServiceAccountIdentityMethod())
+              .addMethod(getTransferServiceAccountGrantMethod())
               .addMethod(getRevokeServiceAccountGrantMethod())
               .addMethod(getCreateCertificateBindingMethod())
               .addMethod(getListCertificateBindingsMethod())

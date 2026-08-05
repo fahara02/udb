@@ -7448,6 +7448,143 @@
         "x-udb-operation-kind": "read_only"
       }
     },
+    "/v1/auth/service-accounts/{fromUserId}/grant:transfer": {
+      "post": {
+        "summary": "Atomically transfer an ACTIVE service-account grant (its stable\nservice_identity and approved scopes) from one service account to another,\nunder revision CAS. The grant row is re-pointed from `from_user_id` to\n`to_user_id` in a single transaction, so neither the deployment-wide\nservice_identity unique index nor the per-user unique index is ever\nviolated, and no window exists in which no account owns the identity. The\nsource account is left with no grant (its credentials no longer resolve to\nthe identity); the move is a deterministic inverse of itself. This is the\nsupported recovery path when the currently-bound account's credentials are\nunavailable, replacing a non-atomic rotate-then-create.",
+        "operationId": "AuthnService_TransferServiceAccountGrant",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1TransferServiceAccountGrantResponse"
+            }
+          },
+          "400": {
+            "description": "gRPC INVALID_ARGUMENT/FAILED_PRECONDITION mapped to HTTP 400. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "INVALID_ARGUMENT",
+              "FAILED_PRECONDITION"
+            ]
+          },
+          "401": {
+            "description": "gRPC UNAUTHENTICATED mapped to HTTP 401. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNAUTHENTICATED"
+            ]
+          },
+          "403": {
+            "description": "gRPC PERMISSION_DENIED mapped to HTTP 403. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "PERMISSION_DENIED"
+            ]
+          },
+          "404": {
+            "description": "gRPC NOT_FOUND mapped to HTTP 404. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "NOT_FOUND"
+            ]
+          },
+          "409": {
+            "description": "gRPC ALREADY_EXISTS/ABORTED mapped to HTTP 409. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "ALREADY_EXISTS",
+              "ABORTED"
+            ]
+          },
+          "429": {
+            "description": "gRPC RESOURCE_EXHAUSTED mapped to HTTP 429. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "RESOURCE_EXHAUSTED"
+            ]
+          },
+          "500": {
+            "description": "gRPC UNKNOWN/INTERNAL/DATA_LOSS mapped to HTTP 500. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNKNOWN",
+              "INTERNAL",
+              "DATA_LOSS"
+            ]
+          },
+          "501": {
+            "description": "gRPC UNIMPLEMENTED mapped to HTTP 501. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNIMPLEMENTED"
+            ]
+          },
+          "503": {
+            "description": "gRPC UNAVAILABLE mapped to HTTP 503. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNAVAILABLE"
+            ]
+          },
+          "504": {
+            "description": "gRPC DEADLINE_EXCEEDED mapped to HTTP 504. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "DEADLINE_EXCEEDED"
+            ]
+          },
+          "default": {
+            "description": "Unexpected gRPC error response. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNKNOWN"
+            ]
+          }
+        },
+        "parameters": [
+          {
+            "name": "fromUserId",
+            "description": "The service account that currently holds the grant/identity.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/AuthnServiceTransferServiceAccountGrantBody"
+            }
+          }
+        ],
+        "tags": [
+          "AuthnService"
+        ]
+      }
+    },
     "/v1/auth/service-accounts/{userId}/grant": {
       "get": {
         "summary": "Read the current typed grant for a service account; NOT_FOUND when the\naccount has no grant (the account then cannot authenticate — fail closed).",
@@ -36470,7 +36607,7 @@
         "x-udb-operation-kind": "read_only"
       },
       "delete": {
-        "summary": "Delete a file (soft delete)",
+        "summary": "Delete a file. `mode` selects soft-delete (default, metadata tombstone +\nbest-effort byte removal) or hard-delete (durable object-GC intent committed\natomically with the tombstone, then driven to convergence — a byte-delete\nfailure returns an error, never success, and leaves the intent for the sweep).",
         "operationId": "deleteFile",
         "responses": {
           "200": {
@@ -36592,6 +36729,40 @@
           },
           {
             "name": "tenantId",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "mode",
+            "description": "Deletion mode. UNSPECIFIED/SOFT (default) soft-deletes the metadata and best-\neffort-removes the bytes. HARD durably records an object-GC intent atomically\nwith the tombstone and drives object deletion to convergence.\n\n - DELETE_MODE_UNSPECIFIED: treated as SOFT\n - DELETE_MODE_SOFT: metadata tombstone + best-effort byte removal\n - DELETE_MODE_HARD: durable object-GC intent + convergent byte removal",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "DELETE_MODE_UNSPECIFIED",
+              "DELETE_MODE_SOFT",
+              "DELETE_MODE_HARD"
+            ],
+            "default": "DELETE_MODE_UNSPECIFIED"
+          },
+          {
+            "name": "reason",
+            "description": "Optional operator-supplied reason, recorded on the durable GC intent (HARD).",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "expectedStatus",
+            "description": "Optional optimistic-concurrency guard. When non-empty it is matched against\nthe file's current status token (PENDING/ACTIVE/DELETED) — the File row's\nrevision proxy (the entity carries no numeric version) — and a mismatch is\nrejected fail-closed so a stale client cannot delete a file that changed.",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "idempotencyKey",
+            "description": "Optional idempotency key (HARD). A replay with the SAME key + SAME target\nreturns the ORIGINAL recorded outcome; the SAME key with a DIFFERENT target\nconflicts fail-closed.",
             "in": "query",
             "required": false,
             "type": "string"
@@ -37833,6 +38004,143 @@
         },
         "x-udb-resource": "tenants",
         "x-udb-operation-kind": "mutation"
+      }
+    },
+    "/v1/tenants/{targetTenantId}:adminPurge": {
+      "post": {
+        "summary": "PRIVILEGED cross-tenant purge (Bug #2). Unlike PurgeTenant — which forces the\nbody tenant to equal the verified claim (self-purge only) — this RPC lets a\ndelegated operator purge a DIFFERENT `target_tenant_id`. It is gated by a\nDISTINCT, default-deny scope (`udb:tenant:admin-purge`) SEPARATE from the\nself-purge scope, is DESTRUCTIVE, and demands an explicit confirmation token\nplus an idempotency key. The handler routes the movement with\n`privileged_cross_tenant=true`, binds the VERIFIED delegated actor, treats\ncontrol-plane / tenant-less tables explicitly (retained + reported, never\nblind-deleted), and writes an immutable audit/outcome record. `tenant_field`\nnames the body tenant the action targets (`target_tenant_id`); the handler —\nnot the transport gate — authorizes the cross-tenant reach via the scope.",
+        "operationId": "TenantService_AdminPurgeTenant",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1AdminPurgeTenantResponse"
+            }
+          },
+          "400": {
+            "description": "gRPC INVALID_ARGUMENT/FAILED_PRECONDITION mapped to HTTP 400. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "INVALID_ARGUMENT",
+              "FAILED_PRECONDITION"
+            ]
+          },
+          "401": {
+            "description": "gRPC UNAUTHENTICATED mapped to HTTP 401. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNAUTHENTICATED"
+            ]
+          },
+          "403": {
+            "description": "gRPC PERMISSION_DENIED mapped to HTTP 403. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "PERMISSION_DENIED"
+            ]
+          },
+          "404": {
+            "description": "gRPC NOT_FOUND mapped to HTTP 404. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "NOT_FOUND"
+            ]
+          },
+          "409": {
+            "description": "gRPC ALREADY_EXISTS/ABORTED mapped to HTTP 409. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "ALREADY_EXISTS",
+              "ABORTED"
+            ]
+          },
+          "429": {
+            "description": "gRPC RESOURCE_EXHAUSTED mapped to HTTP 429. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "RESOURCE_EXHAUSTED"
+            ]
+          },
+          "500": {
+            "description": "gRPC UNKNOWN/INTERNAL/DATA_LOSS mapped to HTTP 500. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNKNOWN",
+              "INTERNAL",
+              "DATA_LOSS"
+            ]
+          },
+          "501": {
+            "description": "gRPC UNIMPLEMENTED mapped to HTTP 501. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNIMPLEMENTED"
+            ]
+          },
+          "503": {
+            "description": "gRPC UNAVAILABLE mapped to HTTP 503. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNAVAILABLE"
+            ]
+          },
+          "504": {
+            "description": "gRPC DEADLINE_EXCEEDED mapped to HTTP 504. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "DEADLINE_EXCEEDED"
+            ]
+          },
+          "default": {
+            "description": "Unexpected gRPC error response. Body preserves the canonical gRPC code/message and UDB ErrorDetail-derived fields.",
+            "schema": {
+              "$ref": "#/definitions/v1ApiError"
+            },
+            "x-udb-grpc-codes": [
+              "UNKNOWN"
+            ]
+          }
+        },
+        "parameters": [
+          {
+            "name": "targetTenantId",
+            "description": "The tenant to purge — MAY differ from the caller's own tenant (this is the\nprivileged cross-tenant path; the self-purge PurgeTenant forbids that).",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/TenantServiceAdminPurgeTenantBody"
+            }
+          }
+        ],
+        "tags": [
+          "TenantService"
+        ]
       }
     },
     "/v1/tenants/{tenantId}": {
@@ -46249,6 +46557,26 @@
         }
       }
     },
+    "AuthnServiceTransferServiceAccountGrantBody": {
+      "type": "object",
+      "properties": {
+        "tenantId": {
+          "type": "string"
+        },
+        "toUserId": {
+          "type": "string",
+          "description": "The service account to transfer the grant/identity to. Must be an ACTIVE\nservice account in the same tenant/project with no existing grant."
+        },
+        "expectedRevision": {
+          "type": "string",
+          "format": "int64",
+          "description": "Optimistic-concurrency guard: the source grant's current revision."
+        },
+        "reason": {
+          "type": "string"
+        }
+      }
+    },
     "AuthnServiceUpdateUserBody": {
       "type": "object",
       "properties": {
@@ -46968,6 +47296,36 @@
         }
       }
     },
+    "TenantServiceAdminPurgeTenantBody": {
+      "type": "object",
+      "properties": {
+        "delegatedActor": {
+          "type": "string",
+          "description": "Actor on whose behalf the purge is delegated (audit attribution). The server\nbinds this to the VERIFIED caller subject: empty inherits the caller; a\nnon-empty value that disagrees with the caller is accepted ONLY from a genuine\ncross-tenant admin, otherwise rejected (attribution cannot be forged)."
+        },
+        "mode": {
+          "$ref": "#/definitions/v1AdminPurgeMode",
+          "description": "Destructive treatment; ADMIN_PURGE_MODE_UNSPECIFIED is rejected."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Mandatory human-readable justification, recorded in the immutable audit record."
+        },
+        "expectedVersion": {
+          "type": "string",
+          "format": "int64",
+          "description": "Optimistic-concurrency guard against the tenant's current version (its\nupdated-at epoch seconds). `0` disables the check; a non-zero mismatch is an\nAborted conflict so a stale operator view never purges a changed tenant."
+        },
+        "confirmationToken": {
+          "type": "string",
+          "description": "Required explicit confirmation. To guard against a fat-fingered cross-tenant\npurge it MUST equal `target_tenant_id`; empty or non-matching fails closed."
+        },
+        "idempotencyKey": {
+          "type": "string",
+          "description": "Required caller-supplied idempotency key. A replay with the SAME key and SAME\ninputs returns the original outcome; the same key with DIFFERENT inputs is a\nconflict (never a bogus replay)."
+        }
+      }
+    },
     "TenantServicePurgeTenantBody": {
       "type": "object",
       "properties": {
@@ -47641,6 +47999,81 @@
         },
         "contentHash": {
           "type": "string"
+        }
+      }
+    },
+    "v1AdminPurgeMode": {
+      "type": "string",
+      "enum": [
+        "ADMIN_PURGE_MODE_UNSPECIFIED",
+        "ADMIN_PURGE_MODE_HARD",
+        "ADMIN_PURGE_MODE_SOFT"
+      ],
+      "default": "ADMIN_PURGE_MODE_UNSPECIFIED",
+      "description": "Treatment the privileged AdminPurgeTenant applies to the target tenant's data.\nUNSPECIFIED is rejected (fail closed) so the destructive blast radius is always\nchosen explicitly, never defaulted.\n\n - ADMIN_PURGE_MODE_HARD: Physically HARD-deletes every row the tenant owns across all tenant-columned\nentity tables (the same ripple as PurgeTenant). Irreversible.\n - ADMIN_PURGE_MODE_SOFT: Reversible: deactivates the tenant control record (soft-delete + INACTIVE) and\nrevokes its tokens WITHOUT physically deleting entity rows. Every tenant-owned\ntable is REPORTED as retained so the operator sees data was preserved."
+    },
+    "v1AdminPurgeTenantResponse": {
+      "type": "object",
+      "properties": {
+        "targetTenantId": {
+          "type": "string"
+        },
+        "mode": {
+          "$ref": "#/definitions/v1AdminPurgeMode",
+          "description": "The treatment actually applied (echoes the request mode)."
+        },
+        "purged": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PurgedTableCount"
+          },
+          "description": "HARD: per-table hard-delete counts (children->parents). SOFT: empty."
+        },
+        "excluded": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PurgeExcludedTable"
+          },
+          "description": "Tables NOT physically purged, reported for capability honesty: tenant-less /\ncontrol-plane tables (both modes), and — in SOFT mode — every tenant-owned\ntable whose data was deliberately retained."
+        },
+        "totalDeleted": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "tenantDenylisted": {
+          "type": "boolean",
+          "description": "Whether the tenant-level cluster denylist cutoff was recorded (best-effort)."
+        },
+        "principalsDenylisted": {
+          "type": "integer",
+          "format": "int64",
+          "description": "How many principals had a denylist cutoff recorded (best-effort)."
+        },
+        "softDeactivated": {
+          "type": "boolean",
+          "description": "SOFT mode: the tenant control record was deactivated (soft-deleted), data kept."
+        },
+        "purgedVersion": {
+          "type": "string",
+          "format": "int64",
+          "description": "The tenant version observed at purge time (see AdminPurgeTenantRequest.expected_version)."
+        },
+        "replayed": {
+          "type": "boolean",
+          "description": "True when this response was replayed from a prior identical request (idempotency)."
+        },
+        "outcomeId": {
+          "type": "string",
+          "description": "Id of the immutable audit/outcome record written for this purge."
+        },
+        "message": {
+          "type": "string"
+        },
+        "error": {
+          "$ref": "#/definitions/v1ApiError",
+          "title": "Error information if operation failed"
         }
       }
     },
@@ -49852,6 +50285,16 @@
           "$ref": "#/definitions/v1ApiError"
         }
       }
+    },
+    "v1DeleteMode": {
+      "type": "string",
+      "enum": [
+        "DELETE_MODE_UNSPECIFIED",
+        "DELETE_MODE_SOFT",
+        "DELETE_MODE_HARD"
+      ],
+      "default": "DELETE_MODE_UNSPECIFIED",
+      "description": "Deletion mode for DeleteFile. Additive: an absent/UNSPECIFIED mode is treated\nas SOFT so pre-existing clients (which sent only tenant_id + file_id) keep the\nhistorical soft-delete behavior.\n\n - DELETE_MODE_UNSPECIFIED: treated as SOFT\n - DELETE_MODE_SOFT: metadata tombstone + best-effort byte removal\n - DELETE_MODE_HARD: durable object-GC intent + convergent byte removal"
     },
     "v1DeleteModelRequest": {
       "type": "object",
@@ -58355,6 +58798,25 @@
         "TRACK_STATE_ENDED"
       ],
       "default": "TRACK_STATE_UNSPECIFIED"
+    },
+    "v1TransferServiceAccountGrantResponse": {
+      "type": "object",
+      "properties": {
+        "grant": {
+          "$ref": "#/definitions/v1ServiceAccountGrant",
+          "description": "The grant after the transfer: now owned by to_user_id with its revision\nbumped. Its service_identity and approved scopes are unchanged."
+        },
+        "previousUserId": {
+          "type": "string",
+          "description": "The account that previously held the grant — feed it back as to_user_id\n(with the new revision) for a deterministic reverse transfer."
+        },
+        "message": {
+          "type": "string"
+        },
+        "error": {
+          "$ref": "#/definitions/v1ApiError"
+        }
+      }
     },
     "v1TransitPublicKey": {
       "type": "object",

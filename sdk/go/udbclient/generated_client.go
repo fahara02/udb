@@ -25,7 +25,7 @@ package udbclient
 // connection (interceptors) those wrappers run on, plus low-level escape
 // hatches for RPCs that don't yet have a typed helper.
 //
-// Covers 376 RPCs across 28 services
+// Covers 379 RPCs across 28 services
 // (UDB v0.4.37, wire protocol 1.0.0).
 
 import (
@@ -301,15 +301,6 @@ func NewGenerated(conn grpc.ClientConnInterface, opt Options) *GeneratedClient {
 	return g
 }
 
-// rebindConn points this client's escape-hatch connection at a live conn after
-// the caller dialed it with DialOptions(). V23-2: NewUdb uses this so the exact
-// GeneratedClient whose interceptors were installed on the connections is the
-// SAME object exposed as Udb.Generated — then adoptMetadata (SetMeta) and
-// setBearerLocked (SetAuthorization) update the object the interceptors actually
-// read, and no connection keeps a stale pre-login identity/bearer. Call only
-// during construction, before the client is published to other goroutines.
-func (g *GeneratedClient) rebindConn(conn grpc.ClientConnInterface) { g.conn = conn }
-
 // options atomically loads the current snapshot of this client's options.
 func (g *GeneratedClient) options() Options { return *g.opt.Load() }
 
@@ -359,50 +350,30 @@ func (g *GeneratedClient) outgoingContext(ctx context.Context) context.Context {
 	// Single atomic snapshot so meta + auth + api-key are read all-or-nothing.
 	o := g.options()
 	m := MergeRequestScopedAudit(ctx, o.Meta)
-	// V23-2: this interceptor runs on connections that ALSO carry the typed
-	// facades (Client.Context / AuthClient.Context) and the enterprise
-	// DataContext / NativeContext, each of which already appends the canonical,
-	// post-adoption identity + bearer for the call — Client.Context is documented
-	// to emit "each header exactly once". Unconditionally re-appending the
-	// connection-level snapshot here produced DUPLICATE headers, and after tenant
-	// adoption a CONFLICTING second x-tenant-id / x-udb-project-id (the stale
-	// pre-login hint) next to the canonical one. So inject each header ONLY when
-	// the caller has not already set it: raw / escape-hatch calls (no facade
-	// context) still get every default, while facade calls keep their single
-	// authoritative value.
-	existing, _ := metadata.FromOutgoingContext(ctx)
-	var pairs []string
-	add := func(key, val string) {
-		if len(existing.Get(key)) > 0 {
-			return // caller already set this header — never duplicate or override it
-		}
-		pairs = append(pairs, key, val)
+	pairs := []string{
+		"x-tenant-id", m.TenantID,
+		"x-user-id", m.UserID,
+		"x-purpose", m.Purpose,
+		"x-correlation-id", m.CorrelationID,
+		"x-service-identity", m.ServiceIdentity,
+		"x-udb-project-id", m.ProjectID,
+		"x-udb-client-catalog-version", m.ClientCatalogVersion,
 	}
-	add("x-tenant-id", m.TenantID)
-	add("x-user-id", m.UserID)
-	add("x-purpose", m.Purpose)
-	add("x-correlation-id", m.CorrelationID)
-	add("x-service-identity", m.ServiceIdentity)
-	add("x-udb-project-id", m.ProjectID)
-	add("x-udb-client-catalog-version", m.ClientCatalogVersion)
 	if len(m.Scopes) > 0 {
-		add("x-scopes", joinScopes(m.Scopes))
+		pairs = append(pairs, "x-scopes", joinScopes(m.Scopes))
 	}
 	if o.Authorization != "" {
-		add("authorization", o.Authorization)
+		pairs = append(pairs, "authorization", o.Authorization)
 	}
 	if o.APIKey != "" {
-		add("x-api-key", o.APIKey)
+		pairs = append(pairs, "x-api-key", o.APIKey)
 	}
 	if rid := o.RequestID; rid != "" {
-		add("x-request-id", rid)
+		pairs = append(pairs, "x-request-id", rid)
 	} else if m.CorrelationID != "" {
 		// m is the MERGED metadata, so a per-request correlation id also
 		// satisfies the server's request-context requirement here.
-		add("x-request-id", m.CorrelationID)
-	}
-	if len(pairs) == 0 {
-		return ctx
+		pairs = append(pairs, "x-request-id", m.CorrelationID)
 	}
 	return metadata.AppendToOutgoingContext(ctx, pairs...)
 }
@@ -609,9 +580,9 @@ const (
 	KindBidi            RPCKind = "bidi"
 )
 
-var ORMTiers = mustStringMap(`{"postgres":"relational","mysql":"relational","sqlite":"relational","sqlserver":"relational","clickhouse":"relational","redis":"kv","memcached":"kv","qdrant":"vector","weaviate":"vector","pinecone":"vector","minio":"blob","s3":"blob","azureblob":"blob","gcs":"blob","mongodb":"document","elasticsearch":"vector","neo4j":"graph","cassandra":"relational"}`)
+var ORMTiers = mustStringMap(`{"azureblob":"blob","cassandra":"relational","clickhouse":"relational","elasticsearch":"vector","gcs":"blob","memcached":"kv","minio":"blob","mongodb":"document","mysql":"relational","neo4j":"graph","pinecone":"vector","postgres":"relational","qdrant":"vector","redis":"kv","s3":"blob","sqlite":"relational","sqlserver":"relational","weaviate":"vector"}`)
 
-var BackendRoles = mustStringMap(`{"postgres":"canonical","mysql":"canonical","sqlite":"canonical","sqlserver":"canonical","clickhouse":"canonical","redis":"canonical","memcached":"projection","qdrant":"projection","weaviate":"projection","pinecone":"projection","minio":"projection","s3":"projection","azureblob":"projection","gcs":"projection","mongodb":"canonical","elasticsearch":"projection","neo4j":"canonical","cassandra":"canonical"}`)
+var BackendRoles = mustStringMap(`{"azureblob":"projection","cassandra":"projection","clickhouse":"projection","elasticsearch":"projection","gcs":"projection","memcached":"projection","minio":"projection","mongodb":"projection","mysql":"canonical","neo4j":"projection","pinecone":"projection","postgres":"canonical","qdrant":"projection","redis":"projection","s3":"projection","sqlite":"canonical","sqlserver":"canonical","weaviate":"projection"}`)
 
 type EagerIncludeUnsupportedBackendError struct {
 	Backend string
@@ -734,6 +705,7 @@ var AllRPCs = []RPCInfo{
 	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/SendPhoneVerification", Name: "SendPhoneVerification", APIAlias: "send_phone_verification", OperationID: "sendPhoneVerification", HTTPMethod: "post", HTTPPath: "/v1/auth/users/{user_id}/phones:verify", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
 	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/StartWebAuthnAuthentication", Name: "StartWebAuthnAuthentication", APIAlias: "start_web_authn_authentication", OperationID: "startWebAuthnAuthentication", HTTPMethod: "post", HTTPPath: "/v1/auth/webauthn/authentication:start", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
 	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/StartWebAuthnRegistration", Name: "StartWebAuthnRegistration", APIAlias: "start_web_authn_registration", OperationID: "startWebAuthnRegistration", HTTPMethod: "post", HTTPPath: "/v1/auth/users/{user_id}/webauthn/registration:start", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/TransferServiceAccountGrant", Name: "TransferServiceAccountGrant", APIAlias: "transfer_service_account_grant", OperationID: "transferServiceAccountGrant", HTTPMethod: "post", HTTPPath: "/v1/auth/service-accounts/{from_user_id}/grant:transfer", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive", ReplaySafe: false},
 	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/UpdateUser", Name: "UpdateUser", APIAlias: "update_user", OperationID: "updateUser", HTTPMethod: "patch", HTTPPath: "/v1/auth/users/{user_id}", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
 	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/ValidateCSRF", Name: "ValidateCSRF", APIAlias: "validate_csrf", OperationID: "validateCsrf", HTTPMethod: "post", HTTPPath: "/v1/auth/csrf-tokens:validate", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
 	{Service: "AuthnService", ServicePkg: "udb.core.authn.services.v1", FullMethod: "/udb.core.authn.services.v1.AuthnService/ValidateToken", Name: "ValidateToken", APIAlias: "validate_token", OperationID: "validateToken", HTTPMethod: "post", HTTPPath: "/v1/auth/tokens:validate", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
@@ -896,6 +868,7 @@ var AllRPCs = []RPCInfo{
 	{Service: "StorageService", ServicePkg: "udb.core.storage.services.v1", FullMethod: "/udb.core.storage.services.v1.StorageService/RegisterUpload", Name: "RegisterUpload", APIAlias: "register_upload", OperationID: "registerUpload", HTTPMethod: "post", HTTPPath: "/v1/storage/uploads", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
 	{Service: "StorageService", ServicePkg: "udb.core.storage.services.v1", FullMethod: "/udb.core.storage.services.v1.StorageService/ReissueUploadUrl", Name: "ReissueUploadUrl", APIAlias: "reissue_upload_url", OperationID: "reissueUploadUrl", HTTPMethod: "get", HTTPPath: "/v1/storage/files/{file_id}:reissueUploadUrl", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
 	{Service: "StorageService", ServicePkg: "udb.core.storage.services.v1", FullMethod: "/udb.core.storage.services.v1.StorageService/UpdateFile", Name: "UpdateFile", APIAlias: "update_file", OperationID: "updateFile", HTTPMethod: "patch", HTTPPath: "/v1/storage/files/{file_id}", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "TenantService", ServicePkg: "udb.core.tenant.services.v1", FullMethod: "/udb.core.tenant.services.v1.TenantService/AdminPurgeTenant", Name: "AdminPurgeTenant", APIAlias: "admin_purge_tenant", OperationID: "adminPurgeTenant", HTTPMethod: "post", HTTPPath: "/v1/tenants/{target_tenant_id}:adminPurge", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "destructive", ReplaySafe: false},
 	{Service: "TenantService", ServicePkg: "udb.core.tenant.services.v1", FullMethod: "/udb.core.tenant.services.v1.TenantService/CreateTenant", Name: "CreateTenant", APIAlias: "create_tenant", OperationID: "createTenant", HTTPMethod: "post", HTTPPath: "/v1/tenants", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
 	{Service: "TenantService", ServicePkg: "udb.core.tenant.services.v1", FullMethod: "/udb.core.tenant.services.v1.TenantService/GetTenant", Name: "GetTenant", APIAlias: "get_tenant", OperationID: "getTenant", HTTPMethod: "get", HTTPPath: "/v1/tenants/{tenant_id}", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
 	{Service: "TenantService", ServicePkg: "udb.core.tenant.services.v1", FullMethod: "/udb.core.tenant.services.v1.TenantService/GetTenantConfig", Name: "GetTenantConfig", APIAlias: "get_tenant_config", OperationID: "getTenantConfig", HTTPMethod: "get", HTTPPath: "/v1/tenants/{tenant_id}/config", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
@@ -961,6 +934,7 @@ var AllRPCs = []RPCInfo{
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/BatchSelect", Name: "BatchSelect", APIAlias: "batch_select", OperationID: "batchSelect", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("bidi"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/BatchUpsert", Name: "BatchUpsert", APIAlias: "batch_upsert", OperationID: "batchUpsert", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("bidi"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/BeginTx", Name: "BeginTx", APIAlias: "begin_tx", OperationID: "beginTx", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("bidi"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
+	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/BulkCas", Name: "BulkCas", APIAlias: "bulk_cas", OperationID: "bulkCas", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/CacheDelete", Name: "CacheDelete", APIAlias: "cache_delete", OperationID: "cacheDelete", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: false, OperationKind: "mutation", ReplaySafe: false},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/CacheGet", Name: "CacheGet", APIAlias: "cache_get", OperationID: "cacheGet", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
 	{Service: "DataBroker", ServicePkg: "udb.services.v1", FullMethod: "/udb.services.v1.DataBroker/CacheScan", Name: "CacheScan", APIAlias: "cache_scan", OperationID: "cacheScan", HTTPMethod: "", HTTPPath: "", Kind: RPCKind("unary"), ReadOnly: true, OperationKind: "read_only", ReplaySafe: false},
@@ -1039,7 +1013,7 @@ var ServiceRPCCounts = map[string]int{
 	"udb.core.analytics.services.v1.AnalyticsService": 7,
 	"udb.core.apikey.services.v1.ApiKeyService": 9,
 	"udb.core.asset.services.v1.AssetService": 8,
-	"udb.core.authn.services.v1.AuthnService": 59,
+	"udb.core.authn.services.v1.AuthnService": 60,
 	"udb.core.authz.services.v1.AuthzService": 41,
 	"udb.core.backup.services.v1.BackupService": 8,
 	"udb.core.cache.services.v1.CacheService": 7,
@@ -1054,7 +1028,7 @@ var ServiceRPCCounts = map[string]int{
 	"udb.core.scheduler.services.v1.SchedulerService": 6,
 	"udb.core.search.services.v1.SearchService": 5,
 	"udb.core.storage.services.v1.StorageService": 9,
-	"udb.core.tenant.services.v1.TenantService": 7,
+	"udb.core.tenant.services.v1.TenantService": 8,
 	"udb.core.vault.services.v1.VaultService": 20,
 	"udb.core.webhook.services.v1.WebhookService": 6,
 	"udb.core.webrtc.services.v1.PeerService": 5,
@@ -1063,7 +1037,7 @@ var ServiceRPCCounts = map[string]int{
 	"udb.core.webrtc.services.v1.TrackService": 4,
 	"udb.core.webrtc.services.v1.TurnService": 1,
 	"udb.core.workflow.services.v1.WorkflowService": 5,
-	"udb.services.v1.DataBroker": 78,
+	"udb.services.v1.DataBroker": 79,
 }
 
 // Entities is the catalog-derived entity registry, generated from the annotated

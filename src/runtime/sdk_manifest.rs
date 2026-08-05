@@ -150,6 +150,15 @@ pub struct EntityColumnDescriptor {
     /// Non-empty ⇒ this column is a proto enum; the generator emits a
     /// short-token ⇄ enum map from these values.
     pub enum_values: Vec<String>,
+    /// True when this column's enum type lives in a DIFFERENT proto package than
+    /// the owning entity — so its Go type needs a distinct import alias the
+    /// co-located-enum emit path does not have. FQN registry rekeying (V19-1
+    /// follow-up) now resolves such an enum's `enum_values`, but the Go emitter
+    /// cannot yet qualify the type across packages, so it FAILS CLOSED on a NOT
+    /// NULL cross-package enum (never a silent comment-only TODO). Emitter-only;
+    /// `#[serde(skip)]` keeps the sdk-manifest JSON surface unchanged.
+    #[serde(skip)]
+    pub enum_cross_package: bool,
     pub is_json: bool,
     pub is_jsonb: bool,
     /// Column is server-populated (e.g. default/PK); omit from generated INSERTs.
@@ -405,10 +414,35 @@ pub fn entity_manifest() -> Vec<EntityDescriptor> {
     out
 }
 
-/// Enum registry for typed codegen: `(proto_package, enum_name)` → the enum's
-/// full value NAMES (e.g. `ORDER_STATUS_ACTIVE`), harvested from file-level and
-/// message-nested enum declarations across the parsed proto set.
-type EnumRegistry = BTreeMap<(String, String), Vec<String>>;
+/// Enum registry for typed codegen: fully-qualified enum name
+/// (`proto_package.EnumName`, e.g. `acme.order.v1.OrderStatus`) → the enum's full
+/// value NAMES (e.g. `ORDER_STATUS_ACTIVE`), harvested from file-level and
+/// message-nested enum declarations across the parsed proto set. Keying by FQN
+/// (rather than the previous `(entity_package, name)`) lets a CROSS-package enum
+/// reference resolve its value names too — the same-package restriction only ever
+/// existed because the key omitted the declaring package.
+type EnumRegistry = BTreeMap<String, Vec<String>>;
+
+/// The fully-qualified enum name used as an [`EnumRegistry`] key.
+fn enum_fqn(proto_package: &str, name: &str) -> String {
+    if proto_package.trim().is_empty() {
+        name.to_string()
+    } else {
+        format!("{proto_package}.{name}")
+    }
+}
+
+/// Whether an enum-typed column's proto type names an enum in a DIFFERENT proto
+/// package than the owning entity. A bare reference (no dot) is same-package by
+/// definition; a package-qualified reference is cross-package iff the qualifying
+/// package differs from the entity's.
+fn enum_type_is_cross_package(proto_type: &str, entity_package: &str) -> bool {
+    let trimmed = proto_type.trim_start_matches('.');
+    match trimmed.rsplit_once('.') {
+        Some((pkg, _)) => pkg != entity_package,
+        None => false,
+    }
+}
 
 /// Build one [`EntityDescriptor`] from a resolved [`ManifestTable`]. Shared by the
 /// embedded [`entity_manifest`] and the consumer-proto [`entity_manifest_from_proto_dir`]
@@ -450,28 +484,45 @@ fn entity_descriptor_from_table(
         columns: table
             .columns
             .iter()
-            .map(|column| EntityColumnDescriptor {
-                field_name: column.field_name.clone(),
-                column_name: column.column_name.clone(),
-                proto_type: column.proto_type.clone(),
-                sql_type: column.sql_type.clone(),
-                not_null: column.not_null,
-                is_array: column.is_array,
-                has_presence: column.has_presence,
-                enum_values: if column.enum_values.is_empty() {
-                    resolve_enum_values(&column.proto_type, &table.proto_package, enum_registry)
+            .map(|column| {
+                let (enum_values, enum_cross_package) = if column.enum_values.is_empty() {
+                    match resolve_enum(&column.proto_type, &table.proto_package, enum_registry) {
+                        // Cross-package is derived from the MATCHED enum's package,
+                        // not a raw-string heuristic (so a same-package nested enum
+                        // is not mistaken for cross-package).
+                        Some((fqn, values)) => {
+                            let cross = enum_package_of_fqn(&fqn) != table.proto_package;
+                            (values, cross)
+                        }
+                        None => (Vec::new(), false),
+                    }
                 } else {
-                    column.enum_values.clone()
-                },
-                is_json: column.is_json,
-                is_jsonb: column.is_jsonb,
-                exclude_from_insert: column.exclude_from_insert,
-                is_blind_index: column.security.is_blind_index,
-                is_pii: column.security.is_pii,
-                is_encrypted: column.security.is_encrypted,
-                declared_in_proto: declared_fields
-                    .map(|fields| fields.contains(&column.field_name))
-                    .unwrap_or(true),
+                    // Pre-annotated `enum_values` (the embedded-descriptor path, which
+                    // is never rendered by the Go entity emitter): fall back to the
+                    // reference heuristic for the cross-package flag.
+                    let cross = enum_type_is_cross_package(&column.proto_type, &table.proto_package);
+                    (column.enum_values.clone(), cross)
+                };
+                EntityColumnDescriptor {
+                    field_name: column.field_name.clone(),
+                    column_name: column.column_name.clone(),
+                    proto_type: column.proto_type.clone(),
+                    sql_type: column.sql_type.clone(),
+                    not_null: column.not_null,
+                    is_array: column.is_array,
+                    has_presence: column.has_presence,
+                    enum_values,
+                    enum_cross_package,
+                    is_json: column.is_json,
+                    is_jsonb: column.is_jsonb,
+                    exclude_from_insert: column.exclude_from_insert,
+                    is_blind_index: column.security.is_blind_index,
+                    is_pii: column.security.is_pii,
+                    is_encrypted: column.security.is_encrypted,
+                    declared_in_proto: declared_fields
+                        .map(|fields| fields.contains(&column.field_name))
+                        .unwrap_or(true),
+                }
             })
             .collect(),
     }
@@ -501,13 +552,14 @@ pub fn entity_manifest_from_proto_dir(
         BTreeMap::new();
     // Enum registry from file-level AND message-nested enum declarations, so an
     // enum-typed column resolves without an explicit `enum_values` annotation
-    // (V19-1). Same-package only — a cross-package enum falls back to the
-    // symmetric unsupported-column TODO (its Go type needs its own import
-    // alias, a documented follow-up).
+    // (V19-1). Keyed by FQN (`package.EnumName`) so a CROSS-package enum resolves
+    // its value names too; the Go emitter still fails closed on a NOT NULL
+    // cross-package enum because qualifying its Go type across packages needs a
+    // distinct import alias (a documented follow-up).
     let mut enum_registry: EnumRegistry = BTreeMap::new();
     for decl in &file_enums {
         enum_registry
-            .entry((decl.proto_package.clone(), decl.enum_def.name.clone()))
+            .entry(enum_fqn(&decl.proto_package, &decl.enum_def.name))
             .or_insert_with(|| {
                 decl.enum_def
                     .values
@@ -527,7 +579,7 @@ pub fn entity_manifest_from_proto_dir(
         );
         for nested in &schema.nested_enums {
             enum_registry
-                .entry((schema.proto_package.clone(), nested.name.clone()))
+                .entry(enum_fqn(&schema.proto_package, &nested.name))
                 .or_insert_with(|| {
                     nested
                         .values
@@ -572,28 +624,42 @@ pub fn entity_manifest_from_proto_dir(
     Ok(out)
 }
 
-/// Resolve an enum-typed column against the parsed enum registry by the type's
-/// trailing name segment. Fills value names only for a SAME-PACKAGE enum (bare
-/// or package-qualified reference); a cross-package enum stays empty so the
-/// emitter's symmetric unsupported-column TODO applies instead of emitting a
-/// Go type lookup under the wrong import alias.
-fn resolve_enum_values(
+/// Resolve an enum-typed column against the parsed enum registry (keyed by FQN),
+/// returning the matched enum FQN and its value NAMES. A package-qualified
+/// reference resolves by exact FQN — including a CROSS-package enum, whose value
+/// names now fill just like a same-package one. Otherwise the trailing name
+/// segment is resolved within the entity's own package (the pre-FQN behavior,
+/// which also covers a same-package nested-enum reference like `Order.Status`).
+/// Scalars/messages never resolve: registry keys are enum declarations only. The
+/// returned FQN's package (vs the entity's) is the authoritative cross-package
+/// signal — string heuristics on the raw reference cannot tell a package prefix
+/// from a nesting message.
+fn resolve_enum(
     proto_type: &str,
     entity_package: &str,
     enum_registry: Option<&EnumRegistry>,
-) -> Vec<String> {
-    let Some(registry) = enum_registry else {
-        return Vec::new();
-    };
+) -> Option<(String, Vec<String>)> {
+    let registry = enum_registry?;
     let trimmed = proto_type.trim_start_matches('.');
-    let Some(name) = trimmed.rsplit('.').next() else {
-        return Vec::new();
-    };
-    // Scalars/messages never resolve: registry keys are enum declarations only.
-    registry
-        .get(&(entity_package.to_string(), name.to_string()))
-        .cloned()
-        .unwrap_or_default()
+    // Package-qualified reference: try the FQN as written first (this is what lets
+    // a cross-package enum resolve).
+    if let Some(values) = registry.get(trimmed) {
+        return Some((trimmed.to_string(), values.clone()));
+    }
+    // Trailing-segment reference resolved in the entity's own package: bare
+    // (`OrderStatus`) and same-package nested (`Order.Status`) both land here.
+    if let Some(name) = trimmed.rsplit('.').next() {
+        let fqn = enum_fqn(entity_package, name);
+        if let Some(values) = registry.get(&fqn) {
+            return Some((fqn, values.clone()));
+        }
+    }
+    None
+}
+
+/// The proto package of a resolved enum FQN (everything before the final `.`).
+fn enum_package_of_fqn(fqn: &str) -> &str {
+    fqn.rsplit_once('.').map(|(pkg, _)| pkg).unwrap_or("")
 }
 
 /// Recursively parse every `*.proto` under `dir` into [`ProtoSchema`]s, also
@@ -967,10 +1033,23 @@ message Order {
             ],
             "same-package file-level enum must auto-resolve"
         );
-        // Cross-package enum stays unresolved → symmetric TODO downstream.
         assert!(
-            col("region").enum_values.is_empty(),
-            "cross-package enum must NOT resolve (wrong import alias otherwise)"
+            !col("status").enum_cross_package,
+            "a same-package enum must not be flagged cross-package"
+        );
+        // #3: FQN rekeying now resolves a CROSS-package enum's value names too,
+        // but the column is FLAGGED cross_package so the Go emitter fails closed
+        // (a NOT NULL cross-package enum errors generation) instead of silently
+        // emitting a comment-only TODO. Qualifying the Go type across packages is
+        // the remaining follow-up (needs the enum's own import alias).
+        assert_eq!(
+            col("region").enum_values,
+            ["REGION_UNSPECIFIED", "REGION_EAST"],
+            "cross-package enum value names must now resolve via FQN rekeying"
+        );
+        assert!(
+            col("region").enum_cross_package,
+            "cross-package enum must be flagged so the Go emitter fails closed"
         );
         // V19-4 input: repeated survives as is_array for the emitter's skip.
         assert!(col("tags").is_array, "repeated field must carry is_array");

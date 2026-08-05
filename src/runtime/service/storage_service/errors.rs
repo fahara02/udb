@@ -9,8 +9,10 @@ use tonic::Status;
 use crate::proto::udb::core::common::v1 as common_pb;
 
 use super::config::{
-    ALREADY_FINALIZED, OBJECT_KEY_TRAVERSAL, OBJECT_NOT_PRESENT, REISSUE_REQUIRES_PENDING,
-    UNSUPPORTED_OBJECT_BACKEND, UPLOAD_SIZE_MISMATCH, UPLOAD_URL_UNAVAILABLE,
+    ALREADY_FINALIZED, DELETE_PRECONDITION_FAILED, FINALIZE_IMMUTABLE_MISMATCH,
+    IDEMPOTENCY_KEY_CONFLICT, OBJECT_DELETE_FAILED, OBJECT_KEY_TRAVERSAL, OBJECT_NOT_PRESENT,
+    REISSUE_REQUIRES_PENDING, UNSUPPORTED_OBJECT_BACKEND, UPLOAD_SIZE_MISMATCH,
+    UPLOAD_URL_UNAVAILABLE,
 };
 
 /// Attach a stable machine-readable `reason` to a non-OK gRPC `Status` via the
@@ -75,6 +77,89 @@ pub(crate) fn upload_etag_mismatch_status() -> Status {
             [("etag", "must match the uploaded object's store ETag")],
         ),
         UPLOAD_SIZE_MISMATCH,
+    )
+}
+
+/// Finalize supplied a value for a field that was fixed at `register_upload`
+/// (reference id/type, content/file type, visibility). Finalize is an
+/// ownership-preserving lifecycle transition — the caller may re-assert the
+/// registered value, but any change is rejected fail-closed so a finalize-scoped
+/// caller cannot re-point ownership/reference or escalate visibility on an
+/// existing PENDING row.
+pub(crate) fn finalize_immutable_mismatch_status(
+    field: &'static str,
+    registered: &str,
+    supplied: &str,
+) -> Status {
+    status_with_reason(
+        crate::runtime::executor_utils::failed_precondition_fields(
+            format!(
+                "finalize cannot change {field}: it was established as \"{registered}\" at \
+                 register_upload but finalize supplied \"{supplied}\""
+            ),
+            [(
+                field,
+                "must equal the value established at register_upload (or be omitted)",
+            )],
+        ),
+        FINALIZE_IMMUTABLE_MISMATCH,
+    )
+}
+
+/// HARD `DeleteFile` replayed an idempotency key first claimed by a delete with a
+/// DIFFERENT target. Reused fail-closed (mirrors the data-plane idempotency-key
+/// mismatch: a `FailedPrecondition` validation on `idempotency_key`, never a
+/// replay of the mismatched outcome), with the stable `IDEMPOTENCY_KEY_CONFLICT`
+/// reason on the trailer.
+pub(crate) fn storage_idempotency_conflict_status() -> Status {
+    status_with_reason(
+        crate::runtime::executor_utils::failed_precondition_fields(
+            "idempotency_key was already used for a different delete; reuse a key only to retry \
+             an identical delete",
+            [(
+                "idempotency_key",
+                "the same idempotency_key was already claimed by a delete with different inputs",
+            )],
+        ),
+        IDEMPOTENCY_KEY_CONFLICT,
+    )
+}
+
+/// DeleteFile's `expected_status` optimistic guard did not match the file's
+/// current status token — refused fail-closed so a stale client cannot delete a
+/// file that changed under it.
+pub(crate) fn delete_expected_status_mismatch_status(current: &str, expected: &str) -> Status {
+    status_with_reason(
+        crate::runtime::executor_utils::failed_precondition_fields(
+            format!(
+                "delete precondition failed: expected file status \"{expected}\" but the file is \
+                 currently \"{current}\""
+            ),
+            [(
+                "expected_status",
+                "must equal the file's current status token (or be omitted)",
+            )],
+        ),
+        DELETE_PRECONDITION_FAILED,
+    )
+}
+
+/// HARD `DeleteFile` committed the tombstone + durable GC intent but the object
+/// bytes could not be removed. Success is NOT reported; the retryable status tells
+/// the client the delete is durably recorded and will converge via the sweep.
+pub(crate) fn object_delete_failed_status(message: impl Into<String>) -> Status {
+    status_with_reason(
+        crate::runtime::executor_utils::retryable_status(
+            "storage",
+            "object_delete",
+            crate::runtime::executor_utils::HTTP_RETRYABLE_BACKOFF_MS,
+            format!(
+                "file metadata was deleted and a durable object-GC intent recorded, but object \
+                 byte removal failed and will be retried by the GC sweep: {}",
+                message.into()
+            ),
+        ),
+        OBJECT_DELETE_FAILED,
     )
 }
 

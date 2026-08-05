@@ -177,4 +177,72 @@ public interface UpdateRequestOrBuilder extends
    * @return The returnRecord.
    */
   boolean getReturnRecord();
+
+  /**
+   * <pre>
+   * #5 (opaque row revision / ETag): optional revision precondition. When set,
+   * the filter MUST pin every primary-key column by equality (single-row), and
+   * the update proceeds only if the broker-maintained opaque revision of that
+   * row still equals this token — checked atomically under the revision row lock
+   * in the write transaction. A mismatch or an untracked row is
+   * `FAILED_PRECONDITION` and nothing is written/projected/emitted. On success
+   * the response carries the bumped revision. ABA-safe (revision only increases).
+   * </pre>
+   *
+   * <code>string expected_revision = 9 [json_name = "expectedRevision"];</code>
+   * @return The expectedRevision.
+   */
+  java.lang.String getExpectedRevision();
+  /**
+   * <pre>
+   * #5 (opaque row revision / ETag): optional revision precondition. When set,
+   * the filter MUST pin every primary-key column by equality (single-row), and
+   * the update proceeds only if the broker-maintained opaque revision of that
+   * row still equals this token — checked atomically under the revision row lock
+   * in the write transaction. A mismatch or an untracked row is
+   * `FAILED_PRECONDITION` and nothing is written/projected/emitted. On success
+   * the response carries the bumped revision. ABA-safe (revision only increases).
+   * </pre>
+   *
+   * <code>string expected_revision = 9 [json_name = "expectedRevision"];</code>
+   * @return The bytes for expectedRevision.
+   */
+  com.google.protobuf.ByteString
+      getExpectedRevisionBytes();
+
+  /**
+   * <pre>
+   * gate 25 (lock-fencing-at-commit): optional advisory-lock name + the
+   * monotonic fencing token granted for it. When both are set the broker
+   * validates the token against the LockService's durable lock row IN THE SAME
+   * write transaction; a stale token (a writer that outlived its lease) is
+   * rejected fail-closed with NO write / projection / CDC / audit / idempotency
+   * side effect. Unset (empty `lock_name`) = no fencing (unchanged behaviour).
+   * </pre>
+   *
+   * <code>string lock_name = 10 [json_name = "lockName"];</code>
+   * @return The lockName.
+   */
+  java.lang.String getLockName();
+  /**
+   * <pre>
+   * gate 25 (lock-fencing-at-commit): optional advisory-lock name + the
+   * monotonic fencing token granted for it. When both are set the broker
+   * validates the token against the LockService's durable lock row IN THE SAME
+   * write transaction; a stale token (a writer that outlived its lease) is
+   * rejected fail-closed with NO write / projection / CDC / audit / idempotency
+   * side effect. Unset (empty `lock_name`) = no fencing (unchanged behaviour).
+   * </pre>
+   *
+   * <code>string lock_name = 10 [json_name = "lockName"];</code>
+   * @return The bytes for lockName.
+   */
+  com.google.protobuf.ByteString
+      getLockNameBytes();
+
+  /**
+   * <code>int64 fencing_token = 11 [json_name = "fencingToken"];</code>
+   * @return The fencingToken.
+   */
+  long getFencingToken();
 }

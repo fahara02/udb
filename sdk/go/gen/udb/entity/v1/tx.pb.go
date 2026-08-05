@@ -98,12 +98,28 @@ type Mutation struct {
 	// Partial-update payload for `operation = "update"` — the SET columns and the
 	// atomic increments. Same semantics as the unary UpdateRequest (SETs named
 	// columns / applies counter deltas on the rows matched by `filter`), atomic
-	// with the rest of the transaction; ignored for other operations. Note: the
-	// unary UpdateRequest.expected compare-and-swap precondition is intentionally
-	// NOT carried here — transactional updates do not support CAS (rather than
-	// silently ignore an `expected` a caller might set).
-	Changes       *structpb.Struct           `protobuf:"bytes,17,opt,name=changes,proto3" json:"changes,omitempty"`
-	Increments    []*UpdateRequest_Increment `protobuf:"bytes,18,rep,name=increments,proto3" json:"increments,omitempty"`
+	// with the rest of the transaction; ignored for other operations.
+	Changes    *structpb.Struct           `protobuf:"bytes,17,opt,name=changes,proto3" json:"changes,omitempty"`
+	Increments []*UpdateRequest_Increment `protobuf:"bytes,18,rep,name=increments,proto3" json:"increments,omitempty"`
+	// Optional compare-and-swap precondition (bug #8.1), mirroring the unary
+	// UpsertRequest/DeleteRequest/UpdateRequest `expected` field. When set, each
+	// `field -> value` assertion is checked against the CURRENT row — located by
+	// the primary key (from `filter` for update/delete, from the record for
+	// upsert) and locked FOR UPDATE — inside this transaction and under its
+	// tenant/RLS fencing, BEFORE the mutation is applied. A mismatch or an absent
+	// row aborts the WHOLE transaction with FAILED_PRECONDITION and nothing is
+	// written, projected, or emitted. Supported for `operation` upsert, update,
+	// and delete; setting it on any other operation is rejected (never silently
+	// ignored). Unset/empty = unconditional (unchanged behaviour).
+	Expected *structpb.Struct `protobuf:"bytes,19,opt,name=expected,proto3" json:"expected,omitempty"`
+	// Required-CDC-delivery contract (bug #8.2). When true, this mutation FAILS
+	// CLOSED (FAILED_PRECONDITION, aborting the transaction) unless its change
+	// event is durably enqueued to the transactional outbox in the SAME tx: it
+	// errors if CDC delivery is disabled, if the entity declares no `cdc_topic`,
+	// if a tenant-scoped topic has no tenant to route to, or if the outbox INSERT
+	// fails. Default false preserves best-effort emission (an event is emitted
+	// when CDC is enabled and the entity is CDC-mapped, and skipped otherwise).
+	CdcRequired   bool `protobuf:"varint,20,opt,name=cdc_required,json=cdcRequired,proto3" json:"cdc_required,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -264,6 +280,20 @@ func (x *Mutation) GetIncrements() []*UpdateRequest_Increment {
 	return nil
 }
 
+func (x *Mutation) GetExpected() *structpb.Struct {
+	if x != nil {
+		return x.Expected
+	}
+	return nil
+}
+
+func (x *Mutation) GetCdcRequired() bool {
+	if x != nil {
+		return x.CdcRequired
+	}
+	return false
+}
+
 type TxStatus struct {
 	state      protoimpl.MessageState `protogen:"open.v1"`
 	State      TxStatus_State         `protobuf:"varint,1,opt,name=state,proto3,enum=udb.entity.v1.TxStatus_State" json:"state,omitempty"`
@@ -349,7 +379,7 @@ var File_udb_entity_v1_tx_proto protoreflect.FileDescriptor
 
 const file_udb_entity_v1_tx_proto_rawDesc = "" +
 	"\n" +
-	"\x16udb/entity/v1/tx.proto\x12\rudb.entity.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1budb/entity/v1/context.proto\x1a\x1audb/entity/v1/vector.proto\x1a\x1eudb/entity/v1/relational.proto\x1a\x1fudb/entity/v1/consistency.proto\"\xda\x05\n" +
+	"\x16udb/entity/v1/tx.proto\x12\rudb.entity.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1budb/entity/v1/context.proto\x1a\x1audb/entity/v1/vector.proto\x1a\x1eudb/entity/v1/relational.proto\x1a\x1fudb/entity/v1/consistency.proto\"\xb2\x06\n" +
 	"\bMutation\x127\n" +
 	"\acontext\x18\x01 \x01(\v2\x1d.udb.entity.v1.RequestContextR\acontext\x12\x13\n" +
 	"\x05tx_id\x18\x02 \x01(\tR\x04txId\x12\x1c\n" +
@@ -376,7 +406,9 @@ const file_udb_entity_v1_tx_proto_rawDesc = "" +
 	"\achanges\x18\x11 \x01(\v2\x17.google.protobuf.StructR\achanges\x12F\n" +
 	"\n" +
 	"increments\x18\x12 \x03(\v2&.udb.entity.v1.UpdateRequest.IncrementR\n" +
-	"increments\"\xcd\x02\n" +
+	"increments\x123\n" +
+	"\bexpected\x18\x13 \x01(\v2\x17.google.protobuf.StructR\bexpected\x12!\n" +
+	"\fcdc_required\x18\x14 \x01(\bR\vcdcRequired\"\xcd\x02\n" +
 	"\bTxStatus\x123\n" +
 	"\x05state\x18\x01 \x01(\x0e2\x1d.udb.entity.v1.TxStatus.StateR\x05state\x12\x13\n" +
 	"\x05tx_id\x18\x02 \x01(\tR\x04txId\x12\x1f\n" +
@@ -423,13 +455,14 @@ var file_udb_entity_v1_tx_proto_depIdxs = []int32{
 	5, // 3: udb.entity.v1.Mutation.vector_points:type_name -> udb.entity.v1.VectorPointMutation
 	4, // 4: udb.entity.v1.Mutation.changes:type_name -> google.protobuf.Struct
 	6, // 5: udb.entity.v1.Mutation.increments:type_name -> udb.entity.v1.UpdateRequest.Increment
-	0, // 6: udb.entity.v1.TxStatus.state:type_name -> udb.entity.v1.TxStatus.State
-	7, // 7: udb.entity.v1.TxStatus.write_receipt:type_name -> udb.entity.v1.WriteReceipt
-	8, // [8:8] is the sub-list for method output_type
-	8, // [8:8] is the sub-list for method input_type
-	8, // [8:8] is the sub-list for extension type_name
-	8, // [8:8] is the sub-list for extension extendee
-	0, // [0:8] is the sub-list for field type_name
+	4, // 6: udb.entity.v1.Mutation.expected:type_name -> google.protobuf.Struct
+	0, // 7: udb.entity.v1.TxStatus.state:type_name -> udb.entity.v1.TxStatus.State
+	7, // 8: udb.entity.v1.TxStatus.write_receipt:type_name -> udb.entity.v1.WriteReceipt
+	9, // [9:9] is the sub-list for method output_type
+	9, // [9:9] is the sub-list for method input_type
+	9, // [9:9] is the sub-list for extension type_name
+	9, // [9:9] is the sub-list for extension extendee
+	0, // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_udb_entity_v1_tx_proto_init() }

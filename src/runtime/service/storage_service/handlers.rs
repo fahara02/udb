@@ -9,9 +9,10 @@ use tonic::{Request, Response, Status};
 use uuid::Uuid;
 
 use crate::ir::{
-    ConflictStrategy, LogicalPagination, LogicalRead, LogicalSort, LogicalValue, NullOrder,
-    SortDirection,
+    ComparisonOp, ConflictStrategy, LogicalAssignment, LogicalFilter, LogicalPagination,
+    LogicalRead, LogicalSort, LogicalUpdate, LogicalValue, NullOrder, SortDirection,
 };
+use crate::proto::udb::core::storage::entity::v1 as storage_entity_pb;
 use crate::proto::udb::core::storage::services::v1 as storage_pb;
 
 use super::super::native_helpers::{
@@ -25,18 +26,24 @@ use super::config::{
     TOPIC_FILE_METADATA_UPDATED, TOPIC_UPLOAD_URL_ISSUED, UNSUPPORTED_OBJECT_BACKEND,
 };
 use super::errors::{
-    api_error_upload_url_unavailable, file_object_bytes_missing_status,
-    object_store_bytes_missing_status, object_stream_requires_store_status,
-    reissue_requires_pending_status, status_with_reason, storage_capability_status,
-    storage_file_not_found_status, upload_already_finalized_status, upload_etag_mismatch_status,
-    upload_size_mismatch_status, uploaded_object_missing_status, validate_object_key_filename,
+    api_error_upload_url_unavailable, delete_expected_status_mismatch_status,
+    file_object_bytes_missing_status, finalize_immutable_mismatch_status,
+    object_delete_failed_status, object_store_bytes_missing_status,
+    object_stream_requires_store_status, reissue_requires_pending_status,
+    status_with_reason, storage_capability_status, storage_file_not_found_status,
+    storage_idempotency_conflict_status, storage_internal_status,
+    upload_already_finalized_status, upload_etag_mismatch_status, upload_size_mismatch_status,
+    uploaded_object_missing_status, validate_object_key_filename,
     validate_register_upload_required_fields,
 };
-use super::model::{file_from_json, file_status_to_short, file_type_to_db, normalize_etag};
+use super::model::{
+    file_from_json, file_status_to_short, file_type_to_db, file_type_to_short, normalize_etag,
+};
 use super::presign::{ObjectCheck, PresignOutcome};
 use super::store::{
-    file_full_record, file_list_filter, file_projection, file_read_by_id, file_register_record,
-    logical_string, logical_text_or_null, logical_uuid_or_null, quota_lease_name,
+    GcIntentRow, file_full_record, file_list_filter, file_projection, file_read_by_id,
+    file_register_record, gc_intent_fingerprint, logical_string, logical_text_or_null,
+    logical_uuid_or_null, quota_lease_name,
 };
 
 /// The concrete `download_file` server-streaming type (the trait's associated
@@ -198,6 +205,44 @@ pub(crate) async fn register_upload(
     }))
 }
 
+/// True when a re-finalize request re-asserts (or omits) every field the finalize
+/// transition fixes — i.e. it is a SAME-INPUT replay of an upload that is already
+/// ACTIVE. Drives the idempotent-replay path: a matching request returns the
+/// stored File, while one that would change the finalized file falls through to
+/// the fail-closed already-finalized rejection. Mirrors the immutability
+/// assertions on the PENDING path, comparing against the STORED row (no object
+/// HEAD needed — the persisted size is the HEAD-trusted size from the first
+/// finalize).
+fn finalize_replay_matches(
+    req: &storage_pb::FinalizeUploadRequest,
+    prior: &storage_entity_pb::File,
+    file_type: &str,
+) -> bool {
+    let content_type_ok = req.content_type.trim().is_empty()
+        || req.content_type.trim() == prior.content_type.trim();
+    let file_type_ok = file_type.is_empty() || file_type == file_type_to_short(prior.file_type);
+    let reference_id_ok = req.reference_id.trim().is_empty()
+        || req
+            .reference_id
+            .trim()
+            .eq_ignore_ascii_case(prior.reference_id.trim());
+    let reference_type_ok = req.reference_type.trim().is_empty()
+        || req.reference_type.trim() == prior.reference_type.trim();
+    let is_public_ok = match req.is_public {
+        Some(v) => v == prior.is_public,
+        None => true,
+    };
+    // An unspecified declared size (< 0) matches; otherwise it must equal the
+    // finalized size already on record. A different declared size is a conflict.
+    let size_ok = req.size_bytes < 0 || req.size_bytes == prior.size_bytes;
+    content_type_ok
+        && file_type_ok
+        && reference_id_ok
+        && reference_type_ok
+        && is_public_ok
+        && size_ok
+}
+
 /// Finalize an upload, transitioning the metadata row to `ACTIVE` and
 /// applying any supplied metadata updates.
 pub(crate) async fn finalize_upload(
@@ -224,19 +269,30 @@ pub(crate) async fn finalize_upload(
         Some(row) => file_from_json(row),
         None => return Err(storage_file_not_found_status("finalize_upload")),
     };
-    // Reject re-finalize of an already-ACTIVE row (zero extra round-trip —
-    // `prior` is in hand). Fail-closed lifecycle guard: avoids silently
-    // re-running the ACTIVE-transition upsert on a double finalize.
+    // Re-finalize of an already-ACTIVE row (zero extra round-trip — `prior` is in
+    // hand). A SAME-INPUT replay — the caller re-sends the finalize it already
+    // succeeded with — is idempotent: return the STORED File instead of erroring,
+    // so an at-least-once / retried finalize is safe. A replay that would CHANGE
+    // the finalized file (a different size or a re-pointed immutable field) is
+    // still rejected fail-closed as a conflicting double-finalize.
     if file_status_to_short(prior.status) == "ACTIVE" {
+        if finalize_replay_matches(&req, &prior, &file_type) {
+            return Ok(Response::new(storage_pb::FinalizeUploadResponse {
+                file: Some(prior),
+                error: None,
+            }));
+        }
         return Err(upload_already_finalized_status());
     }
-    // Confirm the bytes landed and, when the client supplies them, verify the
-    // object's HEAD size/etag — fail-closed on a missing object or a
-    // supplied-vs-actual mismatch. The bench deliberately sends a wrong
-    // `size_bytes`, so unsupplied size is NEVER compared; size is only checked
-    // under a configured quota (strict mode). Metadata-only mode = unchecked.
+    // Confirm the bytes landed and, when the object store returns a HEAD, verify
+    // the object's etag and size — fail-closed on a missing object or a
+    // supplied-vs-actual mismatch. The object store's HEAD size is AUTHORITATIVE:
+    // it is compared regardless of whether a tenant quota is configured, and it
+    // (never the client's declaration) is what gets persisted, so a caller cannot
+    // record a false size under an unlimited quota. Metadata-only mode (no object
+    // store configured) has no HEAD to trust and falls back to the declared size.
     let presence = svc.object_exists(&prior).await?;
-    match &presence {
+    let trusted_size: Option<i64> = match &presence {
         ObjectCheck::Absent => {
             return Err(uploaded_object_missing_status());
         }
@@ -249,56 +305,102 @@ pub(crate) async fn finalize_upload(
                     return Err(upload_etag_mismatch_status());
                 }
             }
-            if StorageServiceImpl::tenant_quota_bytes() > 0
-                && req.size_bytes >= 0
-                && *head_size >= 0
-                && req.size_bytes != *head_size
-            {
+            // Always compare a supplied size against the actual object size — a
+            // mismatch is a fail-closed error, not a silently-accepted override,
+            // independent of quota enforcement.
+            if req.size_bytes >= 0 && *head_size >= 0 && req.size_bytes != *head_size {
                 return Err(upload_size_mismatch_status(*head_size, req.size_bytes));
             }
+            if *head_size >= 0 {
+                Some(*head_size)
+            } else {
+                None
+            }
         }
-        ObjectCheck::Unchecked => {}
-    }
+        ObjectCheck::Unchecked => None,
+    };
 
-    // Partial update onto a full record (NOT-NULL-safe upsert): ACTIVE
-    // transition plus only the fields the caller supplied. A negative
-    // `size_bytes` means "leave the size unchanged".
-    let new_size = req.size_bytes;
-    let mut record = file_full_record(&prior);
-    record.insert("status".to_string(), logical_string("ACTIVE"));
-    let mut fields = vec!["status".to_string()];
-    if new_size >= 0 {
-        record.insert("size_bytes".to_string(), LogicalValue::Int(new_size));
-        fields.push("size_bytes".to_string());
-    }
-    if !req.content_type.trim().is_empty() {
-        record.insert(
-            "content_type".to_string(),
-            logical_string(req.content_type.clone()),
-        );
-        fields.push("content_type".to_string());
+    // Finalize is an ownership-PRESERVING lifecycle transition, NOT a
+    // metadata-update endpoint: the identity/ownership tuple fixed at
+    // register_upload (reference id/type, content/file type, visibility) is
+    // IMMUTABLE here. The caller may re-assert the registered value, but any
+    // change is rejected fail-closed — a finalize-scoped caller must not be able
+    // to re-point ownership/reference or escalate visibility on a PENDING row.
+    // (Tenant RLS alone does not stop a same-tenant reference/owner swap.)
+    if !req.content_type.trim().is_empty() && req.content_type.trim() != prior.content_type.trim() {
+        return Err(finalize_immutable_mismatch_status(
+            "content_type",
+            prior.content_type.trim(),
+            req.content_type.trim(),
+        ));
     }
     if !file_type.is_empty() {
-        record.insert("file_type".to_string(), logical_text_or_null(&file_type));
-        fields.push("file_type".to_string());
+        let registered = file_type_to_short(prior.file_type);
+        if file_type != registered {
+            return Err(finalize_immutable_mismatch_status(
+                "file_type",
+                registered,
+                &file_type,
+            ));
+        }
     }
-    if !req.reference_id.trim().is_empty() {
-        record.insert(
-            "reference_id".to_string(),
-            logical_uuid_or_null(&req.reference_id),
-        );
-        fields.push("reference_id".to_string());
+    // reference_id is a UUID: compare case-insensitively so a re-asserted id in a
+    // different case is not treated as a change (registration canonicalizes it).
+    if !req.reference_id.trim().is_empty()
+        && !req
+            .reference_id
+            .trim()
+            .eq_ignore_ascii_case(prior.reference_id.trim())
+    {
+        return Err(finalize_immutable_mismatch_status(
+            "reference_id",
+            prior.reference_id.trim(),
+            req.reference_id.trim(),
+        ));
     }
-    if !req.reference_type.trim().is_empty() {
-        record.insert(
-            "reference_type".to_string(),
-            logical_string(req.reference_type.clone()),
-        );
-        fields.push("reference_type".to_string());
+    if !req.reference_type.trim().is_empty()
+        && req.reference_type.trim() != prior.reference_type.trim()
+    {
+        return Err(finalize_immutable_mismatch_status(
+            "reference_type",
+            prior.reference_type.trim(),
+            req.reference_type.trim(),
+        ));
     }
     if let Some(is_public) = req.is_public {
-        record.insert("is_public".to_string(), LogicalValue::Bool(is_public));
-        fields.push("is_public".to_string());
+        if is_public != prior.is_public {
+            return Err(finalize_immutable_mismatch_status(
+                "is_public",
+                &prior.is_public.to_string(),
+                &is_public.to_string(),
+            ));
+        }
+    }
+
+    // Status-guarded CAS transition to ACTIVE. Instead of an unconditional upsert,
+    // build a conditional UPDATE whose filter pins tenant + file + still-live +
+    // `status = 'PENDING'`, so a concurrent or replayed finalize that already won
+    // the transition matches ZERO rows here and cannot double-run the ACTIVE write.
+    // The TRUSTED size (object-store HEAD when available, else the declared size)
+    // and the optional integrity checksum are the only mutations; the immutable
+    // identity/ownership columns asserted above are never touched. A negative
+    // declared size in metadata-only mode means "leave the size unchanged".
+    let new_size = trusted_size.unwrap_or(req.size_bytes);
+    let mut assignments: std::collections::BTreeMap<String, LogicalAssignment> =
+        std::collections::BTreeMap::new();
+    assignments.insert(
+        "status".to_string(),
+        LogicalAssignment::Set {
+            value: logical_string("ACTIVE"),
+        },
+    );
+    if new_size >= 0 {
+        assignments.insert(
+            "size_bytes".to_string(),
+            LogicalAssignment::Set {
+                value: LogicalValue::Int(new_size),
+            },
+        );
     }
     // Persist a client-supplied content checksum into File.checksum (field 17,
     // previously never written). Verification against the store is etag-based
@@ -309,9 +411,33 @@ pub(crate) async fn finalize_upload(
         .map(str::trim)
         .filter(|c| !c.is_empty())
     {
-        record.insert("checksum".to_string(), logical_string(checksum));
-        fields.push("checksum".to_string());
+        assignments.insert(
+            "checksum".to_string(),
+            LogicalAssignment::Set {
+                value: logical_string(checksum),
+            },
+        );
     }
+    // Fail-closed CAS predicate: same tenant, same file, still live, still PENDING.
+    // Tenant scope is enforced both here and by the tenant-bound request context.
+    let cas_filter = LogicalFilter::And(vec![
+        LogicalFilter::Comparison {
+            field: "tenant_id".to_string(),
+            op: ComparisonOp::Eq,
+            value: logical_uuid_or_null(&tenant_id),
+        },
+        LogicalFilter::Comparison {
+            field: "file_id".to_string(),
+            op: ComparisonOp::Eq,
+            value: logical_uuid_or_null(&file_id),
+        },
+        LogicalFilter::IsNull("deleted_at".to_string()),
+        LogicalFilter::Comparison {
+            field: "status".to_string(),
+            op: ComparisonOp::Eq,
+            value: logical_string("PENDING"),
+        },
+    ]);
 
     // Quota re-check against the size delta, serialized per tenant by the same
     // lease as register. Only matters when the size grows under a finite quota.
@@ -341,16 +467,22 @@ pub(crate) async fn finalize_upload(
                 ));
             }
         }
-        runtime
-            .native_entity_write_for_service(
+        // `require_affected: false` — a lost CAS (0 rows) is an idempotent replay,
+        // NOT an error; it is handled at the read-back below (no event re-emit).
+        let (affected, _) = runtime
+            .native_entity_update_for_service(
                 "storage",
                 &context,
-                FILE_MSG,
-                record,
-                ConflictStrategy::update(fields),
+                LogicalUpdate {
+                    message_type: FILE_MSG.to_string(),
+                    filter: cas_filter,
+                    assignments,
+                    return_fields: Vec::new(),
+                    require_affected: false,
+                },
             )
             .await?;
-        Ok::<(), Status>(())
+        Ok::<u64, Status>(affected)
     }
     .await;
     if lease_held {
@@ -358,26 +490,35 @@ pub(crate) async fn finalize_upload(
             .release_native_lease(&quota_lease_name(&tenant_id), &file_id)
             .await;
     }
-    apply?;
+    let affected = apply?;
 
-    // Read back the finalized row for the response.
+    // Read back the current row for the response. On a WON CAS (affected == 1)
+    // this is the freshly-ACTIVE row; on a LOST CAS (affected == 0, a concurrent
+    // finalize already transitioned it) it is that same finalized row — an
+    // idempotent outcome, not a double-run. If the row vanished (concurrently
+    // soft-deleted between the CAS and this read) fail closed as not-found.
     let rows = runtime
         .native_entity_read_for_service("storage", &context, file_read_by_id(&tenant_id, &file_id))
         .await?;
-    let file = rows.first().map(file_from_json);
-    if let Some(f) = &file {
+    let file = match rows.first().map(file_from_json) {
+        Some(f) => f,
+        None => return Err(storage_file_not_found_status("finalize_upload")),
+    };
+    // Emit the finalize event ONLY for the transition WE performed, so a lost CAS
+    // (idempotent replay) never double-publishes FILE_FINALIZED.
+    if affected > 0 {
         if let Some(pool) = svc.pg_pool.as_ref() {
             emit_payload_event(
                 pool,
                 svc.outbox_relation.as_deref(),
                 TOPIC_FILE_FINALIZED,
-                &f.file_id,
+                &file.file_id,
                 serde_json::json!({
-                    "file_id": f.file_id,
-                    "tenant_id": f.tenant_id,
-                    "project_id": f.project_id,
-                    "object_key": f.object_key,
-                    "size_bytes": f.size_bytes,
+                    "file_id": file.file_id,
+                    "tenant_id": file.tenant_id,
+                    "project_id": file.project_id,
+                    "object_key": file.object_key,
+                    "size_bytes": file.size_bytes,
                     "status": "ACTIVE",
                 }),
                 Some(&svc.metrics),
@@ -386,7 +527,7 @@ pub(crate) async fn finalize_upload(
         }
     }
     Ok(Response::new(storage_pb::FinalizeUploadResponse {
-        file,
+        file: Some(file),
         error: None,
     }))
 }
@@ -819,10 +960,10 @@ pub(crate) async fn update_file(
     }))
 }
 
-/// Soft-delete a file's metadata record.
-///
-/// v1 soft-deletes the metadata record; object GC is handled by a
-/// lifecycle/reaper, not inline.
+/// Delete a file. `mode` selects SOFT (default — metadata tombstone + best-effort
+/// byte removal) or HARD (a durable object-GC intent committed atomically with the
+/// tombstone, then driven to convergence so object bytes can never leak while the
+/// metadata says deleted).
 pub(crate) async fn delete_file(
     svc: &StorageServiceImpl,
     request: Request<storage_pb::DeleteFileRequest>,
@@ -837,15 +978,83 @@ pub(crate) async fn delete_file(
     let file_id = parse_uuid("file_id", &req.file_id)?.to_string();
     let context = tenant_only_native_service_context(&metadata, &tenant_id);
     let runtime = svc.require_runtime()?;
+    // Additive: an absent/UNSPECIFIED mode is SOFT, so pre-existing clients keep
+    // their historical behavior.
+    let hard = matches!(
+        storage_pb::DeleteMode::try_from(req.mode).unwrap_or(storage_pb::DeleteMode::Unspecified),
+        storage_pb::DeleteMode::Hard
+    );
+    if hard {
+        delete_file_hard(svc, runtime, &context, &tenant_id, &file_id, &req).await
+    } else {
+        delete_file_soft(svc, runtime, &context, &tenant_id, &file_id, &req).await
+    }
+}
+
+/// Optimistic-concurrency guard shared by both delete modes: when
+/// `expected_status` is supplied it must equal the file's current status token,
+/// else the delete is refused fail-closed.
+fn enforce_expected_status(
+    req: &storage_pb::DeleteFileRequest,
+    prior: &storage_entity_pb::File,
+) -> Result<(), Status> {
+    let expected = req.expected_status.trim();
+    if expected.is_empty() {
+        return Ok(());
+    }
+    let current = file_status_to_short(prior.status);
+    if expected.eq_ignore_ascii_case(current) {
+        Ok(())
+    } else {
+        Err(delete_expected_status_mismatch_status(current, expected))
+    }
+}
+
+/// Emit the `FILE_DELETED` domain event through the transactional outbox. Emitted
+/// once per delete (never on an idempotent HARD replay).
+async fn emit_file_deleted_event(
+    svc: &StorageServiceImpl,
+    req: &storage_pb::DeleteFileRequest,
+    project_id: &str,
+) {
+    if let Some(pool) = svc.pg_pool.as_ref() {
+        emit_payload_event(
+            pool,
+            svc.outbox_relation.as_deref(),
+            TOPIC_FILE_DELETED,
+            &req.file_id,
+            serde_json::json!({
+                "file_id": req.file_id,
+                "tenant_id": req.tenant_id,
+                "project_id": project_id,
+            }),
+            Some(&svc.metrics),
+        )
+        .await;
+    }
+}
+
+/// SOFT delete (default): soft-delete the metadata record; object GC is handled by
+/// the lifecycle/reaper, not inline (byte removal is best-effort, metadata stays
+/// soft-deleted and auditable on failure).
+async fn delete_file_soft(
+    svc: &StorageServiceImpl,
+    runtime: &crate::runtime::DataBrokerRuntime,
+    context: &crate::RequestContext,
+    tenant_id: &str,
+    file_id: &str,
+    req: &storage_pb::DeleteFileRequest,
+) -> Result<Response<storage_pb::DeleteFileResponse>, Status> {
     // Load the live row first: confirms existence (and not already deleted) and
     // recovers the object_key/project so the bytes can be removed too.
     let rows = runtime
-        .native_entity_read_for_service("storage", &context, file_read_by_id(&tenant_id, &file_id))
+        .native_entity_read_for_service("storage", context, file_read_by_id(tenant_id, file_id))
         .await?;
     let prior = match rows.first() {
         Some(row) => file_from_json(row),
         None => return Err(storage_file_not_found_status("delete_file")),
     };
+    enforce_expected_status(req, &prior)?;
     // Soft-delete the metadata (keeps it auditable) on a full record.
     let mut record = file_full_record(&prior);
     record.insert(
@@ -856,7 +1065,7 @@ pub(crate) async fn delete_file(
     runtime
         .native_entity_write_for_service(
             "storage",
-            &context,
+            context,
             FILE_MSG,
             record,
             ConflictStrategy::update(vec!["deleted_at".to_string(), "status".to_string()]),
@@ -865,25 +1074,188 @@ pub(crate) async fn delete_file(
     // Remove the bytes (best-effort; metadata stays soft-deleted on failure).
     svc.delete_object_bytes(&prior.project_id, &prior.object_key)
         .await;
-    if let Some(pool) = svc.pg_pool.as_ref() {
-        emit_payload_event(
-            pool,
-            svc.outbox_relation.as_deref(),
-            TOPIC_FILE_DELETED,
-            &req.file_id,
-            serde_json::json!({
-                "file_id": req.file_id,
-                "tenant_id": req.tenant_id,
-                "project_id": prior.project_id,
-            }),
-            Some(&svc.metrics),
-        )
-        .await;
-    }
+    emit_file_deleted_event(svc, req, &prior.project_id).await;
     Ok(Response::new(storage_pb::DeleteFileResponse {
         success: true,
         error: None,
     }))
+}
+
+/// HARD delete: durably record an object-GC intent ATOMICALLY with the metadata
+/// tombstone, then drive object deletion to convergence. A byte-delete failure
+/// returns an error (never `success: true`) and leaves the PENDING intent for the
+/// leader-elected sweep to converge — so object bytes can never leak while the
+/// metadata says deleted. An idempotency-key replay returns the ORIGINAL outcome; a
+/// same-key/different-target reuse conflicts fail-closed.
+async fn delete_file_hard(
+    svc: &StorageServiceImpl,
+    runtime: &crate::runtime::DataBrokerRuntime,
+    context: &crate::RequestContext,
+    tenant_id: &str,
+    file_id: &str,
+    req: &storage_pb::DeleteFileRequest,
+) -> Result<Response<storage_pb::DeleteFileResponse>, Status> {
+    svc.ensure_gc_intents_table().await?;
+    let max_attempts = StorageServiceImpl::gc_max_attempts();
+    let fingerprint = gc_intent_fingerprint(file_id, "HARD");
+    let idempotency_key = req.idempotency_key.trim();
+
+    // Idempotent replay: a prior intent under this key returns its recorded outcome
+    // (fingerprint-guarded so a mismatched target conflicts).
+    if !idempotency_key.is_empty() {
+        if let Some(prior) = svc.gc_intent_by_key(tenant_id, idempotency_key).await? {
+            return resolve_replayed_gc_intent(svc, prior, &fingerprint, max_attempts).await;
+        }
+    }
+
+    // Fresh delete: resolve the live row (existence + object coordinates), enforce
+    // the optimistic guard, then commit the tombstone + PENDING intent atomically.
+    let rows = runtime
+        .native_entity_read_for_service("storage", context, file_read_by_id(tenant_id, file_id))
+        .await?;
+    let prior = match rows.first() {
+        Some(row) => file_from_json(row),
+        None => return Err(storage_file_not_found_status("delete_file")),
+    };
+    enforce_expected_status(req, &prior)?;
+    let backend = if prior.backend.trim().is_empty() {
+        svc.object_backend.clone()
+    } else {
+        prior.backend.clone()
+    };
+    let bucket = if prior.bucket.trim().is_empty() {
+        svc.object_bucket.clone()
+    } else {
+        prior.bucket.clone()
+    };
+    let key = if idempotency_key.is_empty() {
+        None
+    } else {
+        Some(idempotency_key)
+    };
+    let intent_id = match svc
+        .insert_gc_intent_and_tombstone(
+            tenant_id,
+            file_id,
+            &prior.project_id,
+            &backend,
+            &bucket,
+            &prior.object_key,
+            req.reason.trim(),
+            key,
+            &fingerprint,
+        )
+        .await?
+    {
+        Some(id) => id,
+        None => {
+            // Lost the idempotency race — replay the concurrent winner's intent.
+            let winner = svc
+                .gc_intent_by_key(tenant_id, idempotency_key)
+                .await?
+                .ok_or_else(|| {
+                    storage_internal_status(
+                        "gc_intent_race",
+                        "idempotency race left no intent row to replay",
+                    )
+                })?;
+            return resolve_replayed_gc_intent(svc, winner, &fingerprint, max_attempts).await;
+        }
+    };
+    // The tombstone is committed (metadata is deleted), so emit FILE_DELETED once
+    // here — parity with the SOFT path, and never re-emitted on a replay.
+    emit_file_deleted_event(svc, req, &prior.project_id).await;
+    converge_gc_intent(
+        svc,
+        &intent_id,
+        &backend,
+        &bucket,
+        &prior.project_id,
+        &prior.object_key,
+        max_attempts,
+    )
+    .await
+}
+
+/// Replay path for an existing GC intent under a repeated idempotency key. A
+/// fingerprint mismatch conflicts fail-closed. A resolved success returns the
+/// ORIGINAL outcome without touching bytes or metadata; a still-PENDING or dead-
+/// lettered intent is re-driven to convergence (self-healing) without re-emitting
+/// the delete event or re-tombstoning.
+async fn resolve_replayed_gc_intent(
+    svc: &StorageServiceImpl,
+    intent: GcIntentRow,
+    fingerprint: &str,
+    max_attempts: i64,
+) -> Result<Response<storage_pb::DeleteFileResponse>, Status> {
+    if intent.fingerprint != fingerprint {
+        return Err(storage_idempotency_conflict_status());
+    }
+    if intent.status == "DONE" && intent.outcome_success == Some(true) {
+        return Ok(Response::new(storage_pb::DeleteFileResponse {
+            success: true,
+            error: None,
+        }));
+    }
+    converge_gc_intent(
+        svc,
+        &intent.intent_id,
+        &intent.backend,
+        &intent.bucket,
+        &intent.project_id,
+        &intent.object_key,
+        max_attempts,
+    )
+    .await
+}
+
+/// Drive one GC intent's object deletion to convergence. On success the immutable
+/// success outcome is recorded and the RPC returns success; on failure the attempt
+/// is recorded (intent stays PENDING for the sweep, dead-lettered at the cap) and a
+/// retryable error is returned — success is NEVER reported for an unremoved object.
+/// Ledger updates are best-effort (the sweep reconciles), so a post-delete ledger
+/// blip does not mask that the bytes are gone.
+async fn converge_gc_intent(
+    svc: &StorageServiceImpl,
+    intent_id: &str,
+    backend: &str,
+    bucket: &str,
+    project_id: &str,
+    object_key: &str,
+    max_attempts: i64,
+) -> Result<Response<storage_pb::DeleteFileResponse>, Status> {
+    match svc
+        .try_delete_object_bytes(backend, bucket, project_id, object_key)
+        .await
+    {
+        Ok(()) => {
+            if let Err(err) = svc.mark_gc_intent_done(intent_id).await {
+                tracing::warn!(
+                    error = %err,
+                    intent_id,
+                    "storage GC intent bytes removed but marking the ledger DONE failed; the sweep will reconcile"
+                );
+            }
+            Ok(Response::new(storage_pb::DeleteFileResponse {
+                success: true,
+                error: None,
+            }))
+        }
+        Err(err) => {
+            let message = err.message().to_string();
+            if let Err(update_err) = svc
+                .record_gc_intent_failure(intent_id, &message, max_attempts)
+                .await
+            {
+                tracing::warn!(
+                    error = %update_err,
+                    intent_id,
+                    "storage GC intent byte delete failed AND recording the attempt failed; the sweep will retry"
+                );
+            }
+            Err(object_delete_failed_status(message))
+        }
+    }
 }
 
 /// List a tenant's files with optional metadata filters.

@@ -360,7 +360,11 @@ impl Compiler for ElasticsearchCompiler {
             if let Some(pk) = pk_field
                 && let Some(pk_value) = record.get(pk)
             {
-                idx_meta.insert("_id".into(), value_to_es_json(pk_value));
+                // F3: tenant-qualify the bulk `_id` so two tenants writing the SAME
+                // primary key into a SHARED per-table index cannot overwrite each
+                // other's document (cross-tenant clobber / data loss). SAFE: ES
+                // reads/deletes filter on the `id`/`_tenant_id` FIELDS, never `_id`.
+                idx_meta.insert("_id".into(), json!(es_document_id(ctx, pk_value)));
             }
             action.insert("index".into(), Json::Object(idx_meta));
             bulk.push_str(&serde_json::to_string(&action).map_err(|e| {
@@ -759,6 +763,34 @@ fn value_to_es_json(v: &LogicalValue) -> Json {
     }
 }
 
+/// Compose the Elasticsearch bulk `_id` for a written document. Two tenants can
+/// carry the same primary key on a SHARED per-table index, so when a tenant is in
+/// scope we qualify the id as `{tenant}:{pk}` — otherwise tenant B's write
+/// silently overwrites tenant A's same-PK document (F3). With no tenant in scope
+/// we keep the bare pk (back-compat + no-claim dispatch). SAFE because ES
+/// reads/deletes filter on the `id` + `_tenant_id` *fields*, never on `_id`; the
+/// only other `_id` consumer is COUNT(*)'s `value_count`, which needs existence
+/// only.
+fn es_document_id(ctx: &CompileContext<'_>, pk_value: &LogicalValue) -> String {
+    let pk = es_id_stringify(pk_value);
+    match ctx.tenant_id {
+        Some(tid) if !tid.is_empty() => format!("{tid}:{pk}"),
+        _ => pk,
+    }
+}
+
+/// Stringify a primary-key value for embedding inside the ES `_id`: strings pass
+/// through unquoted; scalars use their plain rendering; anything else falls back
+/// to the JSON encoding (bytes→base64, timestamp→rfc3339 string).
+fn es_id_stringify(v: &LogicalValue) -> String {
+    match value_to_es_json(v) {
+        Json::String(s) => s,
+        Json::Bool(b) => b.to_string(),
+        Json::Number(n) => n.to_string(),
+        other => other.to_string(),
+    }
+}
+
 fn record_to_es_json_with_context(
     record: &crate::ir::operations::LogicalRecord,
     table: &ManifestTable,
@@ -922,7 +954,7 @@ mod tests {
         assert_eq!(path, "/documents/_bulk");
         let ndjson = body["ndjson"].as_str().expect("ndjson");
         assert!(ndjson.contains("\"_index\":\"documents\""));
-        assert!(ndjson.contains("\"_id\":\"doc1\""));
+        assert!(ndjson.contains("\"_id\":\"acme:doc1\""));
         assert!(ndjson.contains("\"_tenant_id\":\"acme\""));
     }
 

@@ -86,6 +86,24 @@ pub(super) fn regex_escape(s: &str) -> String {
 pub(super) fn validate_aggregate_aliases(aggregates: &[AggregateExpr]) -> Result<(), CompileError> {
     let mut seen: std::collections::HashSet<&str> = std::collections::HashSet::new();
     for agg in aggregates {
+        // INJ1 (identifier injection): the alias is client-controlled and every
+        // backend interpolates it into an *identifier* position (`AS "<alias>"`,
+        // `` AS `<alias>` ``, MSSQL `AS [<alias>]`, Cypher `AS \`<alias>\``) via a
+        // naive quoter that does NOT double the closing delimiter. Reject any
+        // alias that is not a plain identifier so a `"` / `` ` `` / `]` / `--` /
+        // whitespace / `//` payload cannot break out of the quotes — which on the
+        // no-RLS SQL backends (mysql/sqlite/mssql) would comment out the
+        // compiler-injected tenant/project predicate (cross-tenant read), and on
+        // Neo4j would inject arbitrary Cypher.
+        if !is_safe_result_alias(&agg.alias) {
+            return Err(CompileError::Malformed {
+                reason: format!(
+                    "invalid aggregate alias '{}': aliases must be a plain identifier \
+                     matching [A-Za-z_][A-Za-z0-9_]* of at most 64 characters",
+                    agg.alias
+                ),
+            });
+        }
         if !seen.insert(agg.alias.as_str()) {
             return Err(CompileError::Malformed {
                 reason: format!("duplicate aggregate alias '{}'", agg.alias),
@@ -93,6 +111,23 @@ pub(super) fn validate_aggregate_aliases(aggregates: &[AggregateExpr]) -> Result
         }
     }
     Ok(())
+}
+
+/// A client-supplied result alias is safe to interpolate into any backend's
+/// identifier-quoting only when it is a plain identifier: a leading ASCII letter
+/// or `_`, then ASCII alphanumerics/`_`, bounded length. This is deliberately
+/// stricter than "quotable" because the backends' alias quoters do not escape
+/// their delimiter (see INJ1 in `validate_aggregate_aliases`).
+pub(super) fn is_safe_result_alias(alias: &str) -> bool {
+    if alias.is_empty() || alias.len() > 64 {
+        return false;
+    }
+    let mut chars = alias.chars();
+    let first = chars.next().unwrap();
+    if !(first.is_ascii_alphabetic() || first == '_') {
+        return false;
+    }
+    chars.all(|c| c.is_ascii_alphanumeric() || c == '_')
 }
 
 /// Reject a GROUP BY column whose resolved name collides with an aggregate

@@ -91,6 +91,9 @@ pub struct WebhookServiceImpl {
     /// only in bare unit-test construction (admit becomes a no-op).
     pub(crate) channels: Option<ChannelManager>,
     pub(crate) metrics: Arc<dyn MetricsRecorder>,
+    /// NTF1: runtime handle used to seal/unseal the endpoint signing secret at
+    /// rest. `None` only in bare unit-test construction (encryption skipped).
+    pub(crate) runtime: Option<Arc<crate::runtime::DataBrokerRuntime>>,
 }
 
 impl WebhookServiceImpl {
@@ -100,6 +103,7 @@ impl WebhookServiceImpl {
             outbox_relation: None,
             channels: None,
             metrics: Arc::new(NoopMetrics),
+            runtime: None,
         }
     }
 
@@ -120,6 +124,14 @@ impl WebhookServiceImpl {
 
     pub(crate) fn with_metrics(mut self, metrics: Arc<dyn MetricsRecorder>) -> Self {
         self.metrics = metrics;
+        self
+    }
+
+    pub(crate) fn with_runtime(
+        mut self,
+        runtime: Option<Arc<crate::runtime::DataBrokerRuntime>>,
+    ) -> Self {
+        self.runtime = runtime;
         self
     }
 
@@ -204,5 +216,6 @@ impl DataBrokerService {
             .with_outbox(Some(outbox))
             .with_channels(channels)
             .with_metrics(self.metrics.clone())
+            .with_runtime(Some(runtime))
     }
 }

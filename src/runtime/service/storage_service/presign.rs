@@ -10,6 +10,7 @@ use crate::proto::udb::core::storage::entity::v1 as storage_entity_pb;
 
 use super::StorageServiceImpl;
 use super::config::{OBJECT_DELETE_ORPHANED, storage_sse_required};
+use super::errors::storage_capability_status;
 
 /// Outcome of minting a presigned URL: a real URL + unix-seconds expiry, a
 /// degraded deployment (no object runtime / object-store feature off), or a
@@ -59,6 +60,51 @@ impl StorageServiceImpl {
                 "storage object byte delete failed; metadata soft-deleted (auditable), bytes orphaned"
             );
         }
+    }
+
+    /// Delete an object's bytes via the object executor, RETURNING the outcome —
+    /// unlike the best-effort [`Self::delete_object_bytes`], which swallows the
+    /// result. The HARD-delete convergence path and the GC-intent sweep MUST know
+    /// whether the bytes were actually removed, so a failure is surfaced (never
+    /// silently ignored) and the durable intent is left PENDING for retry.
+    ///
+    /// Object DELETE is idempotent (S3/MinIO return success for an already-absent
+    /// key), so a re-drive after a partially-applied prior attempt converges rather
+    /// than erroring. `backend`/`bucket` fall back to the service defaults when the
+    /// intent/file did not record them.
+    pub(crate) async fn try_delete_object_bytes(
+        &self,
+        backend: &str,
+        bucket: &str,
+        project_id: &str,
+        object_key: &str,
+    ) -> Result<(), Status> {
+        let runtime = self.runtime.as_ref().ok_or_else(|| {
+            storage_capability_status(
+                "object_delete",
+                "object_store",
+                "object byte deletion requires a configured object store",
+            )
+        })?;
+        if object_key.trim().is_empty() {
+            // Nothing to delete — a metadata-only file converges trivially.
+            return Ok(());
+        }
+        let backend = if backend.trim().is_empty() {
+            self.object_backend.as_str()
+        } else {
+            backend
+        };
+        let bucket = if bucket.trim().is_empty() {
+            self.object_bucket.as_str()
+        } else {
+            bucket
+        };
+        let request_json =
+            crate::runtime::core::setup_data::object_request_json("delete", bucket, object_key, "");
+        runtime
+            .delete_object_backend_target(backend, None, project_id, &request_json)
+            .await
     }
 
     /// Mint a presigned object URL via the runtime (PUT for uploads, GET for

@@ -6,6 +6,7 @@
 
 use std::time::Duration;
 
+use sqlx::Row;
 use tonic::Status;
 
 use crate::ir::{
@@ -17,7 +18,7 @@ use crate::proto::udb::core::storage::services::v1 as storage_pb;
 use crate::runtime::DataBrokerRuntime;
 
 use super::StorageServiceImpl;
-use super::config::FILE_MSG;
+use super::config::{FILE_MSG, GC_INTENT_DEFAULT_MAX_ATTEMPTS, GC_INTENTS_RELATION};
 use super::errors::{storage_capability_status, storage_internal_status};
 use super::model::{file_status_to_short, file_type_to_short, register_is_public_bind};
 
@@ -357,5 +358,376 @@ impl StorageServiceImpl {
             .ok()
             .and_then(|v| v.parse().ok())
             .unwrap_or(0)
+    }
+}
+
+// ── durable object-GC intent ledger (HARD DeleteFile) ────────────────────────
+//
+// A HARD `DeleteFile` records a PENDING intent here ATOMICALLY with the metadata
+// tombstone (one Postgres tx), so an object whose bytes fail to delete inline can
+// never leak silently: the leader-elected sweep drives every PENDING intent to
+// convergence, or dead-letters it (`status = 'FAILED'`) after the attempt cap. The
+// same row is the idempotency ledger — a partial unique index on
+// `(tenant_id, idempotency_key)` makes an exact-key replay return the ORIGINAL
+// outcome while a same-key/different-target reuse conflicts fail-closed.
+//
+// This is a broker-owned operational table (NOT a proto entity): tenant isolation
+// is enforced by the per-tenant handler queries + the tenant-scoped tombstone (RLS
+// GUC set in-tx), and the cross-tenant sweep is a broker-admin maintenance path
+// (the same posture the orphan reaper uses).
+
+/// Stable fingerprint of a delete's semantic target, stored on the GC intent and
+/// re-derived on an idempotency-key replay. A replay that hashes to the SAME
+/// fingerprint is an identical retry (replay the outcome); a DIFFERENT fingerprint
+/// under the same key is a conflict. Deliberately covers only the target identity
+/// (file + mode), not advisory fields (reason/expected_status).
+pub(crate) fn gc_intent_fingerprint(file_id: &str, mode: &str) -> String {
+    format!("{}|{}", file_id.trim(), mode.trim())
+}
+
+/// A durable GC-intent ledger row, decoded for the idempotency-replay and sweep
+/// paths. `intent_id`/`tenant_id`/`project_id` are carried as text (UUIDs never
+/// leave Postgres typed here) to avoid depending on sqlx's uuid feature.
+pub(crate) struct GcIntentRow {
+    pub(crate) intent_id: String,
+    #[allow(dead_code)]
+    pub(crate) tenant_id: String,
+    pub(crate) project_id: String,
+    pub(crate) backend: String,
+    pub(crate) bucket: String,
+    pub(crate) object_key: String,
+    pub(crate) status: String,
+    pub(crate) outcome_success: Option<bool>,
+    pub(crate) fingerprint: String,
+    #[allow(dead_code)]
+    pub(crate) attempts: i64,
+}
+
+/// Column list shared by the by-key lookup and the sweep scan so their decodes
+/// cannot drift. `attempts` is widened to bigint for a uniform i64 decode.
+const GC_INTENT_SELECT_COLUMNS: &str = "intent_id::text AS intent_id, \
+     tenant_id::text AS tenant_id, \
+     COALESCE(project_id::text, '') AS project_id, \
+     backend, bucket, object_key, status, outcome_success, \
+     request_fingerprint AS fingerprint, attempts::bigint AS attempts";
+
+fn gc_intent_from_row(row: &sqlx::postgres::PgRow) -> Result<GcIntentRow, Status> {
+    let decode = |field: &'static str, err: sqlx::Error| {
+        storage_internal_status(
+            "gc_intent_decode",
+            format!("storage GC intent decode failed for {field}: {err}"),
+        )
+    };
+    Ok(GcIntentRow {
+        intent_id: row.try_get("intent_id").map_err(|e| decode("intent_id", e))?,
+        tenant_id: row.try_get("tenant_id").map_err(|e| decode("tenant_id", e))?,
+        project_id: row
+            .try_get("project_id")
+            .map_err(|e| decode("project_id", e))?,
+        backend: row.try_get("backend").map_err(|e| decode("backend", e))?,
+        bucket: row.try_get("bucket").map_err(|e| decode("bucket", e))?,
+        object_key: row
+            .try_get("object_key")
+            .map_err(|e| decode("object_key", e))?,
+        status: row.try_get("status").map_err(|e| decode("status", e))?,
+        outcome_success: row
+            .try_get("outcome_success")
+            .map_err(|e| decode("outcome_success", e))?,
+        fingerprint: row
+            .try_get("fingerprint")
+            .map_err(|e| decode("fingerprint", e))?,
+        attempts: row.try_get("attempts").map_err(|e| decode("attempts", e))?,
+    })
+}
+
+/// Idempotent DDL for the GC-intent ledger, applied once per process (guarded by a
+/// `OnceCell` in [`StorageServiceImpl::ensure_gc_intents_table`]).
+const GC_INTENTS_DDL: &[&str] = &[
+    "CREATE SCHEMA IF NOT EXISTS udb_storage",
+    "CREATE TABLE IF NOT EXISTS udb_storage.gc_intents ( \
+        intent_id           UUID PRIMARY KEY, \
+        tenant_id           UUID NOT NULL, \
+        project_id          UUID, \
+        file_id             UUID NOT NULL, \
+        backend             TEXT NOT NULL DEFAULT '', \
+        bucket              TEXT NOT NULL DEFAULT '', \
+        object_key          TEXT NOT NULL, \
+        mode                TEXT NOT NULL DEFAULT 'HARD', \
+        reason              TEXT NOT NULL DEFAULT '', \
+        status              TEXT NOT NULL DEFAULT 'PENDING', \
+        attempts            INTEGER NOT NULL DEFAULT 0, \
+        last_error          TEXT NOT NULL DEFAULT '', \
+        idempotency_key     TEXT, \
+        request_fingerprint TEXT NOT NULL DEFAULT '', \
+        outcome_success     BOOLEAN, \
+        outcome_code        TEXT NOT NULL DEFAULT '', \
+        created_at          TIMESTAMPTZ NOT NULL DEFAULT now(), \
+        updated_at          TIMESTAMPTZ NOT NULL DEFAULT now(), \
+        completed_at        TIMESTAMPTZ )",
+    "CREATE UNIQUE INDEX IF NOT EXISTS uq_udb_storage_gc_intents_idem \
+        ON udb_storage.gc_intents (tenant_id, idempotency_key) \
+        WHERE idempotency_key IS NOT NULL AND idempotency_key <> ''",
+    "CREATE INDEX IF NOT EXISTS idx_udb_storage_gc_intents_pending \
+        ON udb_storage.gc_intents (status, created_at) \
+        WHERE status = 'PENDING'",
+];
+
+impl StorageServiceImpl {
+    /// Cap on inline+sweep object-delete attempts before a GC intent is
+    /// dead-lettered. `UDB_STORAGE_GC_MAX_ATTEMPTS` overrides; clamped to `>= 1`.
+    pub(crate) fn gc_max_attempts() -> i64 {
+        std::env::var("UDB_STORAGE_GC_MAX_ATTEMPTS")
+            .ok()
+            .and_then(|v| v.parse::<i64>().ok())
+            .unwrap_or(GC_INTENT_DEFAULT_MAX_ATTEMPTS)
+            .max(1)
+    }
+
+    fn gc_intent_pool(&self) -> Result<&sqlx::PgPool, Status> {
+        self.pg_pool.as_ref().ok_or_else(|| {
+            storage_capability_status(
+                "gc_intent_store",
+                "postgres_store",
+                "storage GC-intent ledger requires a Postgres pool",
+            )
+        })
+    }
+
+    /// Create the durable GC-intent ledger if absent (idempotent DDL, run once per
+    /// process). Fails closed when no Postgres pool is wired (metadata-only mode
+    /// cannot durably track HARD deletes).
+    pub(crate) async fn ensure_gc_intents_table(&self) -> Result<(), Status> {
+        static GC_INTENTS_READY: tokio::sync::OnceCell<()> = tokio::sync::OnceCell::const_new();
+        let pool = self.gc_intent_pool()?;
+        GC_INTENTS_READY
+            .get_or_try_init(|| async {
+                for stmt in GC_INTENTS_DDL {
+                    sqlx::query(stmt).execute(pool).await.map_err(|err| {
+                        storage_internal_status(
+                            "gc_intent_ddl",
+                            format!("storage GC-intent ledger DDL failed: {err}"),
+                        )
+                    })?;
+                }
+                Ok::<(), Status>(())
+            })
+            .await
+            .map(|_| ())
+    }
+
+    /// Look up a tenant's GC intent by idempotency key (the idempotency-replay
+    /// probe). Tenant-scoped so a key is never resolved across tenants.
+    pub(crate) async fn gc_intent_by_key(
+        &self,
+        tenant_id: &str,
+        idempotency_key: &str,
+    ) -> Result<Option<GcIntentRow>, Status> {
+        let pool = self.gc_intent_pool()?;
+        let sql = format!(
+            "SELECT {GC_INTENT_SELECT_COLUMNS} FROM {GC_INTENTS_RELATION} \
+             WHERE tenant_id = $1::uuid AND idempotency_key = $2 LIMIT 1"
+        );
+        let row = sqlx::query(&sql)
+            .bind(tenant_id)
+            .bind(idempotency_key)
+            .fetch_optional(pool)
+            .await
+            .map_err(|err| {
+                storage_internal_status(
+                    "gc_intent_lookup",
+                    format!("storage GC-intent lookup failed: {err}"),
+                )
+            })?;
+        row.as_ref().map(gc_intent_from_row).transpose()
+    }
+
+    /// Commit the durable GC intent (PENDING) TOGETHER with the metadata tombstone
+    /// in ONE Postgres transaction, so the two can never diverge (bytes tracked for
+    /// GC ⇔ metadata marked deleted). The tenant RLS GUC is set in-tx and the
+    /// tombstone is tenant+file scoped, preserving isolation.
+    ///
+    /// Returns `Ok(Some(intent_id))` on a fresh commit, or `Ok(None)` when a
+    /// concurrent same-key delete already claimed the idempotency key (unique
+    /// violation) — the caller then replays that intent's outcome.
+    pub(crate) async fn insert_gc_intent_and_tombstone(
+        &self,
+        tenant_id: &str,
+        file_id: &str,
+        project_id: &str,
+        backend: &str,
+        bucket: &str,
+        object_key: &str,
+        reason: &str,
+        idempotency_key: Option<&str>,
+        fingerprint: &str,
+    ) -> Result<Option<String>, Status> {
+        let pool = self.gc_intent_pool()?;
+        let intent_id = uuid::Uuid::new_v4().to_string();
+        let mut tx = pool.begin().await.map_err(|err| {
+            storage_internal_status(
+                "gc_intent_tx_begin",
+                format!("storage GC-intent tx begin failed: {err}"),
+            )
+        })?;
+        // Scope the tombstone to the tenant for the File table's force_rls policy
+        // (same GUC install as tenant_scoped_size_sum).
+        sqlx::query("SELECT set_config('app.current_tenant_id', $1, true)")
+            .bind(tenant_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|err| {
+                storage_internal_status(
+                    "gc_intent_tenant_scope",
+                    format!("storage GC-intent tenant scope set failed: {err}"),
+                )
+            })?;
+        let insert_sql = format!(
+            "INSERT INTO {GC_INTENTS_RELATION} \
+               (intent_id, tenant_id, project_id, file_id, backend, bucket, object_key, mode, \
+                reason, status, idempotency_key, request_fingerprint) \
+             VALUES ($1::uuid, $2::uuid, NULLIF($3,'')::uuid, $4::uuid, $5, $6, $7, 'HARD', $8, \
+                'PENDING', NULLIF($9,''), $10)"
+        );
+        let insert = sqlx::query(&insert_sql)
+            .bind(&intent_id)
+            .bind(tenant_id)
+            .bind(project_id)
+            .bind(file_id)
+            .bind(backend)
+            .bind(bucket)
+            .bind(object_key)
+            .bind(reason)
+            .bind(idempotency_key.unwrap_or(""))
+            .bind(fingerprint)
+            .execute(&mut *tx)
+            .await;
+        if let Err(err) = insert {
+            // A unique violation on (tenant_id, idempotency_key) means a concurrent
+            // same-key delete won the race: roll back and signal replay.
+            let is_unique_violation = err
+                .as_database_error()
+                .and_then(|db| db.code())
+                .is_some_and(|code| code.as_ref() == "23505");
+            drop(tx);
+            if is_unique_violation && idempotency_key.is_some() {
+                return Ok(None);
+            }
+            return Err(storage_internal_status(
+                "gc_intent_insert",
+                format!("storage GC-intent insert failed: {err}"),
+            ));
+        }
+        // Metadata tombstone: same soft-delete transition the SOFT path applies,
+        // but here it is atomic with the durable intent. Not requiring an affected
+        // row keeps a concurrently-deleted file convergent (the intent still GCs
+        // the bytes).
+        sqlx::query(
+            "UPDATE udb_storage.files SET deleted_at = now(), status = 'DELETED' \
+             WHERE tenant_id = $1::uuid AND file_id = $2::uuid AND deleted_at IS NULL",
+        )
+        .bind(tenant_id)
+        .bind(file_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|err| {
+            storage_internal_status(
+                "gc_intent_tombstone",
+                format!("storage GC-intent tombstone failed: {err}"),
+            )
+        })?;
+        tx.commit().await.map_err(|err| {
+            storage_internal_status(
+                "gc_intent_tx_commit",
+                format!("storage GC-intent tx commit failed: {err}"),
+            )
+        })?;
+        Ok(Some(intent_id))
+    }
+
+    /// Record the immutable success outcome once the bytes are confirmed removed.
+    /// Guarded `status <> 'DONE'` so a resolved outcome is never rewritten.
+    pub(crate) async fn mark_gc_intent_done(&self, intent_id: &str) -> Result<(), Status> {
+        let pool = self.gc_intent_pool()?;
+        let sql = format!(
+            "UPDATE {GC_INTENTS_RELATION} \
+                SET status = 'DONE', outcome_success = true, outcome_code = 'OK', \
+                    attempts = attempts + 1, updated_at = now(), completed_at = now() \
+              WHERE intent_id = $1::uuid AND status <> 'DONE'"
+        );
+        sqlx::query(&sql)
+            .bind(intent_id)
+            .execute(pool)
+            .await
+            .map_err(|err| {
+                storage_internal_status(
+                    "gc_intent_mark_done",
+                    format!("storage GC-intent mark-done failed: {err}"),
+                )
+            })?;
+        Ok(())
+    }
+
+    /// Record a failed byte-delete attempt: bump `attempts`, keep the intent
+    /// PENDING for the sweep, and dead-letter (`status = 'FAILED'`, immutable
+    /// failure outcome) once the attempt cap is reached. Guarded `status =
+    /// 'PENDING'` so a DONE intent is never regressed.
+    pub(crate) async fn record_gc_intent_failure(
+        &self,
+        intent_id: &str,
+        error_message: &str,
+        max_attempts: i64,
+    ) -> Result<(), Status> {
+        let pool = self.gc_intent_pool()?;
+        let truncated: String = error_message.chars().take(500).collect();
+        let sql = format!(
+            "UPDATE {GC_INTENTS_RELATION} \
+                SET attempts = attempts + 1, \
+                    last_error = $2, \
+                    status = CASE WHEN attempts + 1 >= $3 THEN 'FAILED' ELSE 'PENDING' END, \
+                    outcome_success = CASE WHEN attempts + 1 >= $3 THEN false ELSE outcome_success END, \
+                    outcome_code = CASE WHEN attempts + 1 >= $3 THEN 'OBJECT_DELETE_FAILED' ELSE outcome_code END, \
+                    completed_at = CASE WHEN attempts + 1 >= $3 THEN now() ELSE completed_at END, \
+                    updated_at = now() \
+              WHERE intent_id = $1::uuid AND status = 'PENDING'"
+        );
+        sqlx::query(&sql)
+            .bind(intent_id)
+            .bind(truncated)
+            .bind(max_attempts)
+            .execute(pool)
+            .await
+            .map_err(|err| {
+                storage_internal_status(
+                    "gc_intent_record_failure",
+                    format!("storage GC-intent failure record failed: {err}"),
+                )
+            })?;
+        Ok(())
+    }
+
+    /// Bounded, oldest-first batch of PENDING GC intents across all tenants, for the
+    /// leader-elected sweep. Cross-tenant by design (broker-admin maintenance, same
+    /// posture as the orphan reaper).
+    pub(crate) async fn select_pending_gc_intents(
+        &self,
+        batch_size: i64,
+    ) -> Result<Vec<GcIntentRow>, Status> {
+        let pool = self.gc_intent_pool()?;
+        let batch_size = batch_size.clamp(1, 10_000);
+        let sql = format!(
+            "SELECT {GC_INTENT_SELECT_COLUMNS} FROM {GC_INTENTS_RELATION} \
+             WHERE status = 'PENDING' ORDER BY created_at ASC LIMIT $1"
+        );
+        let rows = sqlx::query(&sql)
+            .bind(batch_size)
+            .fetch_all(pool)
+            .await
+            .map_err(|err| {
+                storage_internal_status(
+                    "gc_intent_scan",
+                    format!("storage GC-intent scan failed: {err}"),
+                )
+            })?;
+        rows.iter().map(gc_intent_from_row).collect()
     }
 }

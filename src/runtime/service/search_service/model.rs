@@ -16,6 +16,36 @@ pub(crate) fn collection_name(resource_name: &str, index_name: &str) -> String {
     }
 }
 
+/// SRCH1: namespace an engine point-id by the verified tenant so two tenants that
+/// share a collection and reuse the same source primary key cannot clobber or
+/// delete each other's vectors on the ingest / reindex / teardown write paths.
+/// The search READ path strips the prefix ([`strip_tenant_point_id`]) so
+/// consumers still see the raw PK they indexed. A blank tenant (no isolation
+/// boundary to enforce) is left unscoped so pre-existing points stay reachable.
+pub(crate) fn tenant_scoped_point_id(tenant_id: &str, pk: &str) -> String {
+    let tenant = tenant_id.trim();
+    if tenant.is_empty() {
+        pk.to_string()
+    } else {
+        format!("{tenant}:{pk}")
+    }
+}
+
+/// Inverse of [`tenant_scoped_point_id`]: strip the verified-tenant prefix from a
+/// returned hit id so the consumer sees the raw source PK. Only the exact
+/// `"{tenant}:"` prefix is removed (the tenant is the verified claim), so a PK
+/// that itself contains ':' is preserved intact.
+pub(crate) fn strip_tenant_point_id(tenant_id: &str, id: &str) -> String {
+    let tenant = tenant_id.trim();
+    if tenant.is_empty() {
+        return id.to_string();
+    }
+    let prefix = format!("{tenant}:");
+    id.strip_prefix(&prefix)
+        .map(str::to_string)
+        .unwrap_or_else(|| id.to_string())
+}
+
 /// A registered index decoded from the native read JSON.
 pub(crate) struct StoredIndex {
     pub(crate) index_id: String,

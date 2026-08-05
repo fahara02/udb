@@ -74,7 +74,7 @@ impl AuthnServiceImpl {
         now: u64,
     ) -> Result<(String, String), Status> {
         let (rec, code) =
-            self.prepare_otp_record(user, otp_type, channel, address, correlation_id, now);
+            self.prepare_otp_record(user, otp_type, channel, address, correlation_id, now)?;
         let otp_id = rec.otp_id.clone();
         self.users
             .put_otp(rec)
@@ -101,14 +101,14 @@ impl AuthnServiceImpl {
         address: &str,
         correlation_id: String,
         now: u64,
-    ) -> (OtpRecord, String) {
+    ) -> Result<(OtpRecord, String), Status> {
         let otp_id = Uuid::new_v4().to_string();
         let code = authn::mfa_challenge::generate_otp_code();
         let rec = OtpRecord {
             otp_id,
             user_id: user.user_id.clone(),
             otp_type,
-            code_hash: authn::hash_otp_code(&code, &self.otp_hash_key()),
+            code_hash: authn::hash_otp_code(&code, &self.otp_hash_key()?),
             delivery_channel: channel.to_string(),
             delivery_address: address.to_string(),
             status: authn_entity_pb::OtpStatus::Pending as i32,
@@ -122,7 +122,7 @@ impl AuthnServiceImpl {
             // (RLS tolerates NULL, so an empty tenant simply stores NULL).
             tenant_id: user.tenant_id.clone(),
         };
-        (rec, code)
+        Ok((rec, code))
     }
 
     /// Best-effort post-persistence OTP delivery (operator channel gateway + the
@@ -206,7 +206,7 @@ impl AuthnServiceImpl {
                 .map_err(|err| mfa_internal_status("verify_otp_expire_update", err.to_string()))?;
             return Ok(None);
         }
-        if !authn::verify_otp_code(code, &self.otp_hash_key(), &rec.code_hash) {
+        if !authn::verify_otp_code(code, &self.otp_hash_key()?, &rec.code_hash) {
             rec.attempt_count += 1;
             if authn::mfa_challenge::should_expire_after_failed_attempt(rec.attempt_count) {
                 rec.status = authn_entity_pb::OtpStatus::Expired as i32;
@@ -237,6 +237,9 @@ impl AuthnServiceImpl {
         request: Request<authn_pb::SendOtpRequest>,
     ) -> Result<Response<authn_pb::SendOtpResponse>, Status> {
         let req = request.into_inner();
+        // A9: bind the target user_id to the validated claim — a bearer must not
+        // trigger OTP delivery to another tenant's user (no-op in-process).
+        self.authorize_target_user(&req.user_id).await?;
         let user = self
             .users
             .get_user_by_id(&req.user_id)
@@ -495,6 +498,10 @@ impl AuthnServiceImpl {
         if req.mfa_type == authn_entity_pb::AuthFactorKind::Webauthn as i32 {
             return Err(mfa_webauthn_enrollment_rpc_required_status());
         }
+        // A2: bind the target user_id to the VALIDATED bearer claim — a tenant-A
+        // bearer must not enroll MFA on (and receive the TOTP secret for) a
+        // tenant-B user. No-op for in-process/trusted callers (no claim context).
+        self.authorize_target_user(&req.user_id).await?;
         let mut user = self
             .users
             .get_user_by_id(&req.user_id)
@@ -507,7 +514,7 @@ impl AuthnServiceImpl {
         // possession with a code), and hand the secret + provisioning URI back
         // once for the authenticator app to scan.
         let secret = authn::totp::generate_secret();
-        let enc = authn::totp::encrypt_secret(&secret, &self.otp_hash_key()).ok_or_else(|| {
+        let enc = authn::totp::encrypt_secret(&secret, &self.otp_hash_key()?).ok_or_else(|| {
             mfa_internal_status("enroll_mfa_secret_encrypt", "failed to secure TOTP secret")
         })?;
         let uri = authn::totp::provisioning_uri("UDB", &user.username, &secret);
@@ -558,6 +565,8 @@ impl AuthnServiceImpl {
         request: Request<authn_pb::ConfirmMfaEnrollmentRequest>,
     ) -> Result<Response<authn_pb::ConfirmMfaEnrollmentResponse>, Status> {
         let req = request.into_inner();
+        // A2: bind the target user_id to the validated claim (no-op in-process).
+        self.authorize_target_user(&req.user_id).await?;
         let now = now_unix();
         let mut user = self
             .users
@@ -567,7 +576,7 @@ impl AuthnServiceImpl {
             .ok_or_else(super::authn_user_not_found_status)?;
         // Verify the submitted code against the pending TOTP secret minted at
         // enrollment. Only flip `mfa_enabled` on a valid code.
-        let verified = authn::totp::decrypt_secret(&user.totp_secret_hash, &self.otp_hash_key())
+        let verified = authn::totp::decrypt_secret(&user.totp_secret_hash, &self.otp_hash_key()?)
             .map(|secret| authn::totp::verify(&secret, &req.code, now))
             .unwrap_or(false);
         if !verified {
@@ -617,6 +626,11 @@ impl AuthnServiceImpl {
         request: Request<authn_pb::GenerateRecoveryCodesRequest>,
     ) -> Result<Response<authn_pb::GenerateRecoveryCodesResponse>, Status> {
         let req = request.into_inner();
+        // A1 (CRITICAL): bind the target user_id to the validated claim — this RPC
+        // RETURNS the user's recovery codes, so a cross-tenant bearer must never
+        // reach another user's second factor. No-op in-process. (Same-tenant-peer
+        // vs self/admin-only tightening is a maintainer decision — see 0.5.0 todos A1.)
+        self.authorize_target_user(&req.user_id).await?;
         // The user must exist; recovery codes are an alternative MFA second factor.
         let user = self
             .users
@@ -633,7 +647,7 @@ impl AuthnServiceImpl {
         let mut hashes = Vec::with_capacity(count);
         for _ in 0..count {
             let code = authn::mfa_challenge::generate_recovery_code();
-            hashes.push(authn::hash_recovery_code(&code, &self.otp_hash_key()));
+            hashes.push(authn::hash_recovery_code(&code, &self.otp_hash_key()?));
             codes.push(code);
         }
         // Replacing the set invalidates any previously-issued codes. Denormalize
@@ -722,6 +736,9 @@ impl AuthnServiceImpl {
         request: Request<authn_pb::SendPhoneVerificationRequest>,
     ) -> Result<Response<authn_pb::SendPhoneVerificationResponse>, Status> {
         let req = request.into_inner();
+        // A-bonus: bind the target user_id to the validated claim — a bearer must
+        // not overwrite another tenant's user's phone / send them SMS (no-op in-process).
+        self.authorize_target_user(&req.user_id).await?;
         let phone = req.phone.trim().to_string();
         if phone.is_empty() {
             return Err(mfa_required_field(

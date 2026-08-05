@@ -49,7 +49,7 @@ public final class TxProto {
       "\034google/protobuf/struct.proto\032\033udb/entit" +
       "y/v1/context.proto\032\032udb/entity/v1/vector" +
       ".proto\032\036udb/entity/v1/relational.proto\032\037" +
-      "udb/entity/v1/consistency.proto\"\332\005\n\010Muta" +
+      "udb/entity/v1/consistency.proto\"\262\006\n\010Muta" +
       "tion\0227\n\007context\030\001 \001(\0132\035.udb.entity.v1.Re" +
       "questContextR\007context\022\023\n\005tx_id\030\002 \001(\tR\004tx" +
       "Id\022\034\n\toperation\030\003 \001(\tR\toperation\022!\n\014mess" +
@@ -68,20 +68,22 @@ public final class TxProto {
       "y\0221\n\007changes\030\021 \001(\0132\027.google.protobuf.Str" +
       "uctR\007changes\022F\n\nincrements\030\022 \003(\0132&.udb.e" +
       "ntity.v1.UpdateRequest.IncrementR\nincrem" +
-      "ents\"\315\002\n\010TxStatus\0223\n\005state\030\001 \001(\0162\035.udb.e" +
-      "ntity.v1.TxStatus.StateR\005state\022\023\n\005tx_id\030" +
-      "\002 \001(\tR\004txId\022\037\n\013mutation_id\030\003 \001(\tR\nmutati" +
-      "onId\022\030\n\007message\030\004 \001(\tR\007message\022@\n\rwrite_" +
-      "receipt\030\005 \001(\0132\033.udb.entity.v1.WriteRecei" +
-      "ptR\014writeReceipt\"z\n\005State\022\030\n\024TX_STATE_UN" +
-      "SPECIFIED\020\000\022\021\n\rTX_STATE_OPEN\020\001\022\026\n\022TX_STA" +
-      "TE_COMMITTED\020\002\022\030\n\024TX_STATE_ROLLED_BACK\020\003" +
-      "\022\022\n\016TX_STATE_ERROR\020\004B\255\001\n\021com.udb.entity." +
-      "v1B\007TxProtoP\001Z9github.com/fahara02/udb/s" +
-      "dk/go/gen/udb/entity/v1;entityv1\242\002\003UEX\252\002" +
-      "\rUdb.Entity.V1\312\002\rUdb\\Entity\\V1\342\002\031Udb\\GPB" +
-      "Metadata\\Entity\\V1\352\002\017Udb::Entity::V1b\006pr" +
-      "oto3"
+      "ents\0223\n\010expected\030\023 \001(\0132\027.google.protobuf" +
+      ".StructR\010expected\022!\n\014cdc_required\030\024 \001(\010R" +
+      "\013cdcRequired\"\315\002\n\010TxStatus\0223\n\005state\030\001 \001(\016" +
+      "2\035.udb.entity.v1.TxStatus.StateR\005state\022\023" +
+      "\n\005tx_id\030\002 \001(\tR\004txId\022\037\n\013mutation_id\030\003 \001(\t" +
+      "R\nmutationId\022\030\n\007message\030\004 \001(\tR\007message\022@" +
+      "\n\rwrite_receipt\030\005 \001(\0132\033.udb.entity.v1.Wr" +
+      "iteReceiptR\014writeReceipt\"z\n\005State\022\030\n\024TX_" +
+      "STATE_UNSPECIFIED\020\000\022\021\n\rTX_STATE_OPEN\020\001\022\026" +
+      "\n\022TX_STATE_COMMITTED\020\002\022\030\n\024TX_STATE_ROLLE" +
+      "D_BACK\020\003\022\022\n\016TX_STATE_ERROR\020\004B\255\001\n\021com.udb" +
+      ".entity.v1B\007TxProtoP\001Z9github.com/fahara" +
+      "02/udb/sdk/go/gen/udb/entity/v1;entityv1" +
+      "\242\002\003UEX\252\002\rUdb.Entity.V1\312\002\rUdb\\Entity\\V1\342\002" +
+      "\031Udb\\GPBMetadata\\Entity\\V1\352\002\017Udb::Entity" +
+      "::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -97,7 +99,7 @@ public final class TxProto {
     internal_static_udb_entity_v1_Mutation_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_Mutation_descriptor,
-        new java.lang.String[] { "Context", "TxId", "Operation", "MessageType", "RecordJson", "Payload", "Filter", "Collection", "VectorPoints", "Commit", "Rollback", "Bucket", "ObjectKey", "ObjectData", "ContentType", "IdempotencyKey", "Changes", "Increments", });
+        new java.lang.String[] { "Context", "TxId", "Operation", "MessageType", "RecordJson", "Payload", "Filter", "Collection", "VectorPoints", "Commit", "Rollback", "Bucket", "ObjectKey", "ObjectData", "ContentType", "IdempotencyKey", "Changes", "Increments", "Expected", "CdcRequired", });
     internal_static_udb_entity_v1_TxStatus_descriptor =
       getDescriptor().getMessageTypes().get(1);
     internal_static_udb_entity_v1_TxStatus_fieldAccessorTable = new

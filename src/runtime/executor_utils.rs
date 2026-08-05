@@ -690,6 +690,25 @@ pub(crate) fn sqlx_error_to_status(context: &str, err: &sqlx::Error) -> tonic::S
                         msg,
                     );
                 }
+                "42846" => {
+                    // cannot_coerce — a value cannot be cast/coerced to the target
+                    // column's type (e.g. a CAST the backend rejects, reached on a
+                    // non-bind path where 42804's datatype_mismatch doesn't fire).
+                    // Like 42804 this is a client-side type error, not an internal
+                    // fault, so surface a typed InvalidArgument naming the column
+                    // when the driver message exposes it, instead of an opaque
+                    // Internal.
+                    let column = not_null_column(db.message());
+                    let msg = match &column {
+                        Some(c) => format!("value cannot be coerced to column '{c}' type"),
+                        None => "a value cannot be coerced to the target column type".to_string(),
+                    };
+                    return executor_utils_invalid_field(
+                        column.unwrap_or_else(|| "parameter".to_string()),
+                        "value must be coercible to the target column type",
+                        msg,
+                    );
+                }
                 "23503" => {
                     return referential_constraint_status();
                 }
@@ -1173,6 +1192,24 @@ pub(crate) fn merge_context(
         // the wire `RequestContext` cannot assert them, so the metadata side wins.
         service_identity: metadata_context.service_identity,
         decision_id: metadata_context.decision_id,
+    }
+}
+
+/// OBJ1/2/3 (tenant object isolation): physically namespace every object key by
+/// the VERIFIED tenant so two tenants that PUT/GET/DELETE the same `bucket`+`key`
+/// can never read, overwrite, or delete each other's objects. `context.tenant_id`
+/// is the claim-derived isolation boundary — [`merge_context`] refuses a
+/// body-supplied tenant — so the prefix is unforgeable. Applied identically on
+/// every object entrypoint (PUT/GET/presign/multipart) so a tenant always maps to
+/// the same physical key. A blank tenant (single-tenant / no-isolation build)
+/// keeps the unscoped key: with no tenant boundary there is nothing to isolate,
+/// and pre-existing unscoped objects stay reachable.
+pub(crate) fn tenant_scoped_object_key(context: &RequestContext, object_key: &str) -> String {
+    let tenant = context.tenant_id.trim();
+    if tenant.is_empty() {
+        object_key.to_string()
+    } else {
+        format!("__udb_t/{tenant}/{}", object_key.trim_start_matches('/'))
     }
 }
 
@@ -1825,6 +1862,11 @@ where
     for<'a> bool: sqlx::Decode<'a, R::Database> + sqlx::Type<R::Database>,
     for<'a> String: sqlx::Decode<'a, R::Database> + sqlx::Type<R::Database>,
     for<'a> Vec<u8>: sqlx::Decode<'a, R::Database> + sqlx::Type<R::Database>,
+    // W3: temporal probes for MySQL DATETIME/TIMESTAMP/DATE (the concrete mysql +
+    // sqlite callers both satisfy these via sqlx's `chrono` feature).
+    for<'a> chrono::DateTime<chrono::Utc>: sqlx::Decode<'a, R::Database> + sqlx::Type<R::Database>,
+    for<'a> chrono::NaiveDateTime: sqlx::Decode<'a, R::Database> + sqlx::Type<R::Database>,
+    for<'a> chrono::NaiveDate: sqlx::Decode<'a, R::Database> + sqlx::Type<R::Database>,
 {
     // `Column` is needed for `col.name()`; `Row`'s methods (`columns`,
     // `try_get`) are callable directly on the `R: sqlx::Row`-bounded param
@@ -1840,6 +1882,19 @@ where
             v.map(JsonValue::from).unwrap_or(JsonValue::Null)
         } else if let Ok(v) = row.try_get::<Option<bool>, _>(i) {
             v.map(JsonValue::from).unwrap_or(JsonValue::Null)
+        } else if let Ok(v) = row.try_get::<Option<chrono::DateTime<chrono::Utc>>, _>(i) {
+            // W3: MySQL native TIMESTAMP/DATETIME/DATE decode as chrono types, NOT
+            // String — without these branches every temporal column read back NULL
+            // (silent data loss). Probe temporals before String (a real VARCHAR
+            // fails the chrono decode and falls through).
+            v.map(|dt| JsonValue::String(dt.to_rfc3339()))
+                .unwrap_or(JsonValue::Null)
+        } else if let Ok(v) = row.try_get::<Option<chrono::NaiveDateTime>, _>(i) {
+            v.map(|dt| JsonValue::String(dt.format("%Y-%m-%dT%H:%M:%S%.6f").to_string()))
+                .unwrap_or(JsonValue::Null)
+        } else if let Ok(v) = row.try_get::<Option<chrono::NaiveDate>, _>(i) {
+            v.map(|d| JsonValue::String(d.format("%Y-%m-%d").to_string()))
+                .unwrap_or(JsonValue::Null)
         } else if let Ok(v) = row.try_get::<Option<String>, _>(i) {
             v.map(JsonValue::from).unwrap_or(JsonValue::Null)
         } else if let Ok(v) = row.try_get::<Option<Vec<u8>>, _>(i) {

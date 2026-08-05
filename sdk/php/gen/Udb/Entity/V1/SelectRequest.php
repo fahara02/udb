@@ -46,6 +46,14 @@ class SelectRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>.udb.entity.v1.CacheOptions cache = 8 [json_name = "cache"];</code>
      */
     protected $cache = null;
+    /**
+     * #5: opt-in — when true, the broker joins each returned record against the
+     * system-side revision map and fills `RecordSet.record_revisions`. Off by
+     * default so the read hot path is unchanged (zero extra SQL).
+     *
+     * Generated from protobuf field <code>bool include_revision = 9 [json_name = "includeRevision"];</code>
+     */
+    protected $include_revision = false;
 
     /**
      * Constructor.
@@ -61,6 +69,10 @@ class SelectRequest extends \Google\Protobuf\Internal\Message
      *     @type string $page_token
      *     @type \Udb\Entity\V1\Sort[] $sort
      *     @type \Udb\Entity\V1\CacheOptions $cache
+     *     @type bool $include_revision
+     *           #5: opt-in — when true, the broker joins each returned record against the
+     *           system-side revision map and fills `RecordSet.record_revisions`. Off by
+     *           default so the read hot path is unchanged (zero extra SQL).
      * }
      */
     public function __construct($data = NULL) {
@@ -270,6 +282,36 @@ class SelectRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkMessage($var, \Udb\Entity\V1\CacheOptions::class);
         $this->cache = $var;
+
+        return $this;
+    }
+
+    /**
+     * #5: opt-in — when true, the broker joins each returned record against the
+     * system-side revision map and fills `RecordSet.record_revisions`. Off by
+     * default so the read hot path is unchanged (zero extra SQL).
+     *
+     * Generated from protobuf field <code>bool include_revision = 9 [json_name = "includeRevision"];</code>
+     * @return bool
+     */
+    public function getIncludeRevision()
+    {
+        return $this->include_revision;
+    }
+
+    /**
+     * #5: opt-in — when true, the broker joins each returned record against the
+     * system-side revision map and fills `RecordSet.record_revisions`. Off by
+     * default so the read hot path is unchanged (zero extra SQL).
+     *
+     * Generated from protobuf field <code>bool include_revision = 9 [json_name = "includeRevision"];</code>
+     * @param bool $var
+     * @return $this
+     */
+    public function setIncludeRevision($var)
+    {
+        GPBUtil::checkBool($var);
+        $this->include_revision = $var;
 
         return $this;
     }

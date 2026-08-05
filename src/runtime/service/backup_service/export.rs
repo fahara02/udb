@@ -179,13 +179,18 @@ pub(crate) async fn run_tenant_backup(
         let row_count = rows.len() as i64;
         total_rows += row_count;
         let jsonl = rows.join("\n");
-        // Encrypt the table's rows at rest via the SHARED envelope helper.
-        let ciphertext = runtime.encrypt_secret_at_rest(&jsonl).map_err(|err| {
-            backup_internal_status(
-                "start_backup_encrypt_artifact",
-                format!("backup encryption failed: {err}"),
-            )
-        })?;
+        // D1: a tenant-data backup must NEVER be written in the clear under a
+        // manifest that labels it `encrypted: true`. Use the MANDATORY variant so a
+        // keyless deployment fails closed instead of producing a plaintext `.enc`
+        // artifact (the base helper passes plaintext through when not fail-closed).
+        let ciphertext = runtime
+            .encrypt_secret_at_rest_required(&jsonl)
+            .map_err(|err| {
+                backup_internal_status(
+                    "start_backup_encrypt_artifact",
+                    format!("backup encryption failed: {err}"),
+                )
+            })?;
         let bytes = ciphertext.into_bytes();
         let checksum = sha256_hex(&bytes);
         let object_key = format!(

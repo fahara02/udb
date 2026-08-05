@@ -549,3 +549,141 @@ async fn create_tenant_allows_parenting_under_own_tenant() {
     assert_eq!(err.code(), tonic::Code::FailedPrecondition);
     assert_eq!(decode_detail(&err).capability_required, "postgres_store");
 }
+
+// ── Bug #2: privileged cross-tenant AdminPurgeTenant ──────────────────────────
+
+/// The distinct, default-deny scope that authorizes the privileged cross-tenant
+/// purge (mirrors the RPC's `endpoint_security.scopes`).
+const SCOPE_ADMIN_PURGE: &str = "udb:tenant:admin-purge";
+
+/// A fully-valid AdminPurgeTenant request (confirmation token equals the target,
+/// as the destructive gate requires). Callers vary only the fields under test.
+fn admin_purge_request(
+    target: &str,
+    mode: tenant_pb::AdminPurgeMode,
+) -> Request<tenant_pb::AdminPurgeTenantRequest> {
+    Request::new(tenant_pb::AdminPurgeTenantRequest {
+        delegated_actor: String::new(),
+        target_tenant_id: target.to_string(),
+        mode: mode as i32,
+        reason: "gdpr erasure".to_string(),
+        expected_version: 0,
+        confirmation_token: target.to_string(),
+        idempotency_key: "idem-key-1".to_string(),
+    })
+}
+
+/// Missing/empty required fields all fail closed as field violations BEFORE any
+/// authz / pool / manifest access (no PG, no claim context needed).
+#[tokio::test]
+async fn admin_purge_missing_target_is_field_violation() {
+    let svc = TenantServiceImpl::new();
+    let err = svc
+        .admin_purge_tenant(admin_purge_request("  ", tenant_pb::AdminPurgeMode::Hard))
+        .await
+        .expect_err("empty target_tenant_id must be rejected first");
+    assert_single_field_violation(&err, "target_tenant_id", "must be a non-empty tenant id");
+}
+
+#[tokio::test]
+async fn admin_purge_unspecified_mode_is_field_violation() {
+    let svc = TenantServiceImpl::new();
+    let err = svc
+        .admin_purge_tenant(admin_purge_request(
+            PARENT_TENANT_B,
+            tenant_pb::AdminPurgeMode::Unspecified,
+        ))
+        .await
+        .expect_err("UNSPECIFIED mode must be rejected (explicit blast radius)");
+    assert_single_field_violation(
+        &err,
+        "mode",
+        "must be ADMIN_PURGE_MODE_HARD or ADMIN_PURGE_MODE_SOFT",
+    );
+}
+
+#[tokio::test]
+async fn admin_purge_confirmation_must_equal_target() {
+    let svc = TenantServiceImpl::new();
+    let mut request = admin_purge_request(PARENT_TENANT_B, tenant_pb::AdminPurgeMode::Hard);
+    request.get_mut().confirmation_token = CLAIM_TENANT_A.to_string(); // valid UUID, wrong tenant
+    let err = svc
+        .admin_purge_tenant(request)
+        .await
+        .expect_err("a confirmation token that is not the target must fail closed");
+    assert_single_field_violation(&err, "confirmation_token", "must equal target_tenant_id");
+}
+
+#[tokio::test]
+async fn admin_purge_missing_idempotency_key_is_field_violation() {
+    let svc = TenantServiceImpl::new();
+    let mut request = admin_purge_request(PARENT_TENANT_B, tenant_pb::AdminPurgeMode::Hard);
+    request.get_mut().idempotency_key = "   ".to_string();
+    let err = svc
+        .admin_purge_tenant(request)
+        .await
+        .expect_err("a missing idempotency key must be rejected");
+    assert_single_field_violation(
+        &err,
+        "idempotency_key",
+        "must be a non-empty caller-supplied idempotency key",
+    );
+}
+
+/// DEFAULT-DENY: a caller that reached the handler WITHOUT the distinct
+/// `udb:tenant:admin-purge` scope (and without a broad admin scope) is rejected by
+/// the per-action authz guard — before any pool/manifest access.
+#[tokio::test]
+async fn admin_purge_without_scope_is_denied() {
+    let svc = TenantServiceImpl::new();
+    let ctx = test_claim_context("user-1", CLAIM_TENANT_A, "", &["udb:read"], &["member"]);
+    let err = scope_claim_context_for_test(
+        ctx,
+        svc.admin_purge_tenant(admin_purge_request(
+            PARENT_TENANT_B,
+            tenant_pb::AdminPurgeMode::Hard,
+        )),
+    )
+    .await
+    .expect_err("a caller lacking the admin-purge scope must be denied");
+    assert_eq!(err.code(), tonic::Code::PermissionDenied);
+    assert_eq!(decode_detail(&err).policy_decision_id, "scope");
+}
+
+/// The Bug #2 fix: a caller HOLDING the distinct scope may target a DIFFERENT
+/// tenant than its own claim. Authz + actor binding + the privileged cross-tenant
+/// movement all pass, so the request proceeds to the pool requirement (proving it
+/// was NOT blocked as cross-tenant) rather than a PermissionDenied.
+#[tokio::test]
+async fn admin_purge_with_scope_allows_cross_tenant_target() {
+    let svc = TenantServiceImpl::new(); // no pool: the post-authz require_pool fires
+    let ctx = test_claim_context("op-1", CLAIM_TENANT_A, "", &[SCOPE_ADMIN_PURGE], &[]);
+    // Target PARENT_TENANT_B — a DIFFERENT tenant from the caller's claim tenant.
+    let err = scope_claim_context_for_test(
+        ctx,
+        svc.admin_purge_tenant(admin_purge_request(
+            PARENT_TENANT_B,
+            tenant_pb::AdminPurgeMode::Hard,
+        )),
+    )
+    .await
+    .expect_err("no pool is wired, so the request stops at require_pool");
+    assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+    assert_eq!(decode_detail(&err).capability_required, "postgres_store");
+}
+
+/// A non-cross-tenant-admin scope holder may not forge a `delegated_actor` other
+/// than its own verified subject: attribution cannot be spoofed. Fail-closed
+/// before pool access.
+#[tokio::test]
+async fn admin_purge_rejects_forged_delegated_actor() {
+    let svc = TenantServiceImpl::new();
+    let ctx = test_claim_context("op-1", CLAIM_TENANT_A, "", &[SCOPE_ADMIN_PURGE], &[]);
+    let mut request = admin_purge_request(PARENT_TENANT_B, tenant_pb::AdminPurgeMode::Hard);
+    request.get_mut().delegated_actor = "someone-else".to_string();
+    let err = scope_claim_context_for_test(ctx, svc.admin_purge_tenant(request))
+        .await
+        .expect_err("a forged delegated_actor must be rejected for a non-cross-tenant admin");
+    assert_eq!(err.code(), tonic::Code::PermissionDenied);
+    assert_eq!(decode_detail(&err).policy_decision_id, "delegated_actor_mismatch");
+}

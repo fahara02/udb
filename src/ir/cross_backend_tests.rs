@@ -118,8 +118,14 @@ fn same_logical_read_compiles_to_postgres_and_mongo() {
             assert_eq!(
                 params,
                 vec![
+                    // filter tenant_id, filter email, then F6's defense-in-depth
+                    // tenant backstop (context_predicates re-asserts the claim
+                    // tenant on the read even though the caller filter already
+                    // scoped it — redundant here, load-bearing when a caller omits
+                    // the tenant predicate). All bound positionally, no interpolation.
                     LogicalValue::String("acme-1".into()),
                     LogicalValue::String("alice@acme.com".into()),
+                    LogicalValue::String("acme-1".into()),
                 ],
                 "params must be bound positionally with no interpolation"
             );

@@ -30,6 +30,8 @@ private static final long serialVersionUID = 0L;
   private DeleteRequest() {
     messageType_ = "";
     idempotencyKey_ = "";
+    expectedRevision_ = "";
+    lockName_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -220,6 +222,121 @@ private static final long serialVersionUID = 0L;
     return expected_ == null ? com.google.protobuf.Struct.getDefaultInstance() : expected_;
   }
 
+  public static final int EXPECTED_REVISION_FIELD_NUMBER = 6;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object expectedRevision_ = "";
+  /**
+   * <pre>
+   * #5 (opaque row revision / ETag): optional revision precondition. When set,
+   * the delete proceeds only if the broker-maintained opaque revision of the
+   * primary-key-identified row still equals this token, checked atomically under
+   * the revision row lock in the write transaction. A mismatch or an untracked
+   * row is `FAILED_PRECONDITION` and nothing is removed. Non-disclosing (never
+   * reveals a foreign row's existence). ABA-safe (the revision only increases).
+   * </pre>
+   *
+   * <code>string expected_revision = 6 [json_name = "expectedRevision"];</code>
+   * @return The expectedRevision.
+   */
+  @java.lang.Override
+  public java.lang.String getExpectedRevision() {
+    java.lang.Object ref = expectedRevision_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      expectedRevision_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * #5 (opaque row revision / ETag): optional revision precondition. When set,
+   * the delete proceeds only if the broker-maintained opaque revision of the
+   * primary-key-identified row still equals this token, checked atomically under
+   * the revision row lock in the write transaction. A mismatch or an untracked
+   * row is `FAILED_PRECONDITION` and nothing is removed. Non-disclosing (never
+   * reveals a foreign row's existence). ABA-safe (the revision only increases).
+   * </pre>
+   *
+   * <code>string expected_revision = 6 [json_name = "expectedRevision"];</code>
+   * @return The bytes for expectedRevision.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getExpectedRevisionBytes() {
+    java.lang.Object ref = expectedRevision_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      expectedRevision_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int LOCK_NAME_FIELD_NUMBER = 7;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object lockName_ = "";
+  /**
+   * <pre>
+   * gate 25 (lock-fencing-at-commit): see UpdateRequest.lock_name/fencing_token.
+   * </pre>
+   *
+   * <code>string lock_name = 7 [json_name = "lockName"];</code>
+   * @return The lockName.
+   */
+  @java.lang.Override
+  public java.lang.String getLockName() {
+    java.lang.Object ref = lockName_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      lockName_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * gate 25 (lock-fencing-at-commit): see UpdateRequest.lock_name/fencing_token.
+   * </pre>
+   *
+   * <code>string lock_name = 7 [json_name = "lockName"];</code>
+   * @return The bytes for lockName.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getLockNameBytes() {
+    java.lang.Object ref = lockName_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      lockName_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int FENCING_TOKEN_FIELD_NUMBER = 8;
+  private long fencingToken_ = 0L;
+  /**
+   * <code>int64 fencing_token = 8 [json_name = "fencingToken"];</code>
+   * @return The fencingToken.
+   */
+  @java.lang.Override
+  public long getFencingToken() {
+    return fencingToken_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -249,6 +366,15 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000004) != 0)) {
       output.writeMessage(5, getExpected());
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(expectedRevision_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 6, expectedRevision_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(lockName_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 7, lockName_);
+    }
+    if (fencingToken_ != 0L) {
+      output.writeInt64(8, fencingToken_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -275,6 +401,16 @@ private static final long serialVersionUID = 0L;
     if (((bitField0_ & 0x00000004) != 0)) {
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(5, getExpected());
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(expectedRevision_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(6, expectedRevision_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(lockName_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(7, lockName_);
+    }
+    if (fencingToken_ != 0L) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeInt64Size(8, fencingToken_);
     }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
@@ -310,6 +446,12 @@ private static final long serialVersionUID = 0L;
       if (!getExpected()
           .equals(other.getExpected())) return false;
     }
+    if (!getExpectedRevision()
+        .equals(other.getExpectedRevision())) return false;
+    if (!getLockName()
+        .equals(other.getLockName())) return false;
+    if (getFencingToken()
+        != other.getFencingToken()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -337,6 +479,13 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + EXPECTED_FIELD_NUMBER;
       hash = (53 * hash) + getExpected().hashCode();
     }
+    hash = (37 * hash) + EXPECTED_REVISION_FIELD_NUMBER;
+    hash = (53 * hash) + getExpectedRevision().hashCode();
+    hash = (37 * hash) + LOCK_NAME_FIELD_NUMBER;
+    hash = (53 * hash) + getLockName().hashCode();
+    hash = (37 * hash) + FENCING_TOKEN_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+        getFencingToken());
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -493,6 +642,9 @@ private static final long serialVersionUID = 0L;
         expectedBuilder_.dispose();
         expectedBuilder_ = null;
       }
+      expectedRevision_ = "";
+      lockName_ = "";
+      fencingToken_ = 0L;
       return this;
     }
 
@@ -551,6 +703,15 @@ private static final long serialVersionUID = 0L;
             : expectedBuilder_.build();
         to_bitField0_ |= 0x00000004;
       }
+      if (((from_bitField0_ & 0x00000020) != 0)) {
+        result.expectedRevision_ = expectedRevision_;
+      }
+      if (((from_bitField0_ & 0x00000040) != 0)) {
+        result.lockName_ = lockName_;
+      }
+      if (((from_bitField0_ & 0x00000080) != 0)) {
+        result.fencingToken_ = fencingToken_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -584,6 +745,19 @@ private static final long serialVersionUID = 0L;
       }
       if (other.hasExpected()) {
         mergeExpected(other.getExpected());
+      }
+      if (!other.getExpectedRevision().isEmpty()) {
+        expectedRevision_ = other.expectedRevision_;
+        bitField0_ |= 0x00000020;
+        onChanged();
+      }
+      if (!other.getLockName().isEmpty()) {
+        lockName_ = other.lockName_;
+        bitField0_ |= 0x00000040;
+        onChanged();
+      }
+      if (other.getFencingToken() != 0L) {
+        setFencingToken(other.getFencingToken());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -642,6 +816,21 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000010;
               break;
             } // case 42
+            case 50: {
+              expectedRevision_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000020;
+              break;
+            } // case 50
+            case 58: {
+              lockName_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000040;
+              break;
+            } // case 58
+            case 64: {
+              fencingToken_ = input.readInt64();
+              bitField0_ |= 0x00000080;
+              break;
+            } // case 64
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1218,6 +1407,247 @@ private static final long serialVersionUID = 0L;
         expected_ = null;
       }
       return expectedBuilder_;
+    }
+
+    private java.lang.Object expectedRevision_ = "";
+    /**
+     * <pre>
+     * #5 (opaque row revision / ETag): optional revision precondition. When set,
+     * the delete proceeds only if the broker-maintained opaque revision of the
+     * primary-key-identified row still equals this token, checked atomically under
+     * the revision row lock in the write transaction. A mismatch or an untracked
+     * row is `FAILED_PRECONDITION` and nothing is removed. Non-disclosing (never
+     * reveals a foreign row's existence). ABA-safe (the revision only increases).
+     * </pre>
+     *
+     * <code>string expected_revision = 6 [json_name = "expectedRevision"];</code>
+     * @return The expectedRevision.
+     */
+    public java.lang.String getExpectedRevision() {
+      java.lang.Object ref = expectedRevision_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        expectedRevision_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * #5 (opaque row revision / ETag): optional revision precondition. When set,
+     * the delete proceeds only if the broker-maintained opaque revision of the
+     * primary-key-identified row still equals this token, checked atomically under
+     * the revision row lock in the write transaction. A mismatch or an untracked
+     * row is `FAILED_PRECONDITION` and nothing is removed. Non-disclosing (never
+     * reveals a foreign row's existence). ABA-safe (the revision only increases).
+     * </pre>
+     *
+     * <code>string expected_revision = 6 [json_name = "expectedRevision"];</code>
+     * @return The bytes for expectedRevision.
+     */
+    public com.google.protobuf.ByteString
+        getExpectedRevisionBytes() {
+      java.lang.Object ref = expectedRevision_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        expectedRevision_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * #5 (opaque row revision / ETag): optional revision precondition. When set,
+     * the delete proceeds only if the broker-maintained opaque revision of the
+     * primary-key-identified row still equals this token, checked atomically under
+     * the revision row lock in the write transaction. A mismatch or an untracked
+     * row is `FAILED_PRECONDITION` and nothing is removed. Non-disclosing (never
+     * reveals a foreign row's existence). ABA-safe (the revision only increases).
+     * </pre>
+     *
+     * <code>string expected_revision = 6 [json_name = "expectedRevision"];</code>
+     * @param value The expectedRevision to set.
+     * @return This builder for chaining.
+     */
+    public Builder setExpectedRevision(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      expectedRevision_ = value;
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * #5 (opaque row revision / ETag): optional revision precondition. When set,
+     * the delete proceeds only if the broker-maintained opaque revision of the
+     * primary-key-identified row still equals this token, checked atomically under
+     * the revision row lock in the write transaction. A mismatch or an untracked
+     * row is `FAILED_PRECONDITION` and nothing is removed. Non-disclosing (never
+     * reveals a foreign row's existence). ABA-safe (the revision only increases).
+     * </pre>
+     *
+     * <code>string expected_revision = 6 [json_name = "expectedRevision"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearExpectedRevision() {
+      expectedRevision_ = getDefaultInstance().getExpectedRevision();
+      bitField0_ = (bitField0_ & ~0x00000020);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * #5 (opaque row revision / ETag): optional revision precondition. When set,
+     * the delete proceeds only if the broker-maintained opaque revision of the
+     * primary-key-identified row still equals this token, checked atomically under
+     * the revision row lock in the write transaction. A mismatch or an untracked
+     * row is `FAILED_PRECONDITION` and nothing is removed. Non-disclosing (never
+     * reveals a foreign row's existence). ABA-safe (the revision only increases).
+     * </pre>
+     *
+     * <code>string expected_revision = 6 [json_name = "expectedRevision"];</code>
+     * @param value The bytes for expectedRevision to set.
+     * @return This builder for chaining.
+     */
+    public Builder setExpectedRevisionBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      expectedRevision_ = value;
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object lockName_ = "";
+    /**
+     * <pre>
+     * gate 25 (lock-fencing-at-commit): see UpdateRequest.lock_name/fencing_token.
+     * </pre>
+     *
+     * <code>string lock_name = 7 [json_name = "lockName"];</code>
+     * @return The lockName.
+     */
+    public java.lang.String getLockName() {
+      java.lang.Object ref = lockName_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        lockName_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * gate 25 (lock-fencing-at-commit): see UpdateRequest.lock_name/fencing_token.
+     * </pre>
+     *
+     * <code>string lock_name = 7 [json_name = "lockName"];</code>
+     * @return The bytes for lockName.
+     */
+    public com.google.protobuf.ByteString
+        getLockNameBytes() {
+      java.lang.Object ref = lockName_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        lockName_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * gate 25 (lock-fencing-at-commit): see UpdateRequest.lock_name/fencing_token.
+     * </pre>
+     *
+     * <code>string lock_name = 7 [json_name = "lockName"];</code>
+     * @param value The lockName to set.
+     * @return This builder for chaining.
+     */
+    public Builder setLockName(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      lockName_ = value;
+      bitField0_ |= 0x00000040;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * gate 25 (lock-fencing-at-commit): see UpdateRequest.lock_name/fencing_token.
+     * </pre>
+     *
+     * <code>string lock_name = 7 [json_name = "lockName"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearLockName() {
+      lockName_ = getDefaultInstance().getLockName();
+      bitField0_ = (bitField0_ & ~0x00000040);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * gate 25 (lock-fencing-at-commit): see UpdateRequest.lock_name/fencing_token.
+     * </pre>
+     *
+     * <code>string lock_name = 7 [json_name = "lockName"];</code>
+     * @param value The bytes for lockName to set.
+     * @return This builder for chaining.
+     */
+    public Builder setLockNameBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      lockName_ = value;
+      bitField0_ |= 0x00000040;
+      onChanged();
+      return this;
+    }
+
+    private long fencingToken_ ;
+    /**
+     * <code>int64 fencing_token = 8 [json_name = "fencingToken"];</code>
+     * @return The fencingToken.
+     */
+    @java.lang.Override
+    public long getFencingToken() {
+      return fencingToken_;
+    }
+    /**
+     * <code>int64 fencing_token = 8 [json_name = "fencingToken"];</code>
+     * @param value The fencingToken to set.
+     * @return This builder for chaining.
+     */
+    public Builder setFencingToken(long value) {
+
+      fencingToken_ = value;
+      bitField0_ |= 0x00000080;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>int64 fencing_token = 8 [json_name = "fencingToken"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearFencingToken() {
+      bitField0_ = (bitField0_ & ~0x00000080);
+      fencingToken_ = 0L;
+      onChanged();
+      return this;
     }
 
     // @@protoc_insertion_point(builder_scope:udb.entity.v1.DeleteRequest)

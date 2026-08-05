@@ -937,6 +937,18 @@
   },
   {
     "file": "authn.md",
+    "rpc": "TransferServiceAccountGrant",
+    "service": "AuthnService",
+    "wire_rpc": "AuthnService/TransferServiceAccountGrant",
+    "api_alias": "transfer_service_account_grant",
+    "operation_id": "transferServiceAccountGrant",
+    "op_kind": "DESTRUCTIVE",
+    "request_msg": "TransferServiceAccountGrantRequest",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"from_user_id\": \"<seed:owner_id>\", \"to_user_id\": \"<seed:grant_transfer_to_user_id>\", \"expected_revision\": 1, \"reason\": \"bench transfer grant\" }`",
+    "notes": "Revision CAS: moves the ACTIVE grant from `from_user_id` to a grantless ACTIVE service account (`to_user_id`) in the same tenant/project; the grant's revision bumps on success while its service_identity/scopes are unchanged. Terminal grant row — run after the other grant measurements."
+  },
+  {
+    "file": "authn.md",
     "rpc": "UpdateUser",
     "service": "AuthnService",
     "wire_rpc": "AuthnService/UpdateUser",
@@ -1882,6 +1894,18 @@
     "request_msg": "stream Mutation",
     "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\" }, \"operation\": \"upsert\", \"message_type\": \"<seed:message_type>\", \"payload\": { \"record_id\": \"manifest-tx\", \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"lookup_key\": \"manifest-tx-lk\", \"payload\": \"perf\" } }`",
     "notes": "bidi-stream. Mutation fields: operation/message_type/record_json/payload/filter/collection/vector_points/commit/rollback/bucket/object_key/object_data/content_type/idempotency_key/tx_id. Send commit:true to finalize."
+  },
+  {
+    "file": "data_broker.md",
+    "rpc": "BulkCas",
+    "service": "DataBroker",
+    "wire_rpc": "DataBroker/BulkCas",
+    "api_alias": "bulk_cas",
+    "operation_id": "bulkCas",
+    "op_kind": "MUTATION",
+    "request_msg": "BulkCasRequest",
+    "body": "`{ \"context\": { \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\", \"purpose\": \"sdk.live.perf\" }, \"message_type\": \"<seed:message_type>\", \"items\": [ { \"filter\": { \"record_id\": \"<seed:record_id>\", \"tenant_id\": \"<seed:tenant_id>\", \"project_id\": \"<seed:project>\" }, \"changes\": { \"payload\": \"perf-bulkcas\" } } ], \"idempotency_key\": \"sdk-perf-bulkcas\", \"max_rows\": 10 }`",
+    "notes": "Batch conditional update in ONE write tx; each item pins the PK in `filter` and SETs `changes` (same semantics as Update). Per-item `expected_revision`/`expected` CAS optional — a CAS miss is COUNTED as a conflict, not a batch error. Reuse `idempotency_key` to replay original counts; `max_rows` is clamped to the server ceiling."
   },
   {
     "file": "data_broker.md",
@@ -3814,6 +3838,18 @@
     "request_msg": "UpdateFileRequest",
     "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"file_id\": \"<seed:file_id>\", \"filename\": \"renamed.pdf\", \"content_type\": \"application/pdf\", \"file_type\": \"document\", \"reference_id\": \"<seed:file_id>\", \"reference_type\": \"document\", \"is_public\": true }`",
     "notes": "fields: tenant_id(str), file_id(str), filename(str), content_type(str), file_type(str), reference_id(str), reference_type(str), is_public(optional bool). Partial update: empty string fields leave value unchanged; is_public absent leaves visibility unchanged (never silently flips public/private)."
+  },
+  {
+    "file": "tenant.md",
+    "rpc": "AdminPurgeTenant",
+    "service": "TenantService",
+    "wire_rpc": "TenantService/AdminPurgeTenant",
+    "api_alias": "admin_purge_tenant",
+    "operation_id": "adminPurgeTenant",
+    "op_kind": "DESTRUCTIVE",
+    "request_msg": "AdminPurgeTenantRequest",
+    "body": "`{ \"delegated_actor\": \"\", \"target_tenant_id\": \"<seed:purge_tenant_id>\", \"mode\": \"ADMIN_PURGE_MODE_SOFT\", \"reason\": \"bench admin purge\", \"expected_version\": 0, \"confirmation_token\": \"<seed:purge_tenant_id>\", \"idempotency_key\": \"sdk-perf-admin-purge\" }`",
+    "notes": "Privileged cross-tenant purge. `mode` MUST be set (ADMIN_PURGE_MODE_UNSPECIFIED is rejected); SOFT (reversible) is used for bench so entity rows are retained. `confirmation_token` MUST equal `target_tenant_id`; `expected_version` 0 disables the version CAS; empty `delegated_actor` inherits the caller. Terminal — runs last against the disposable bench tenant."
   },
   {
     "file": "tenant.md",

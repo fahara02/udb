@@ -466,6 +466,12 @@ pub struct CompileContext<'a> {
     pub tenant_id: Option<&'a str>,
     pub project_id: Option<&'a str>,
     pub backend_instance: Option<&'a str>,
+    /// Defense-in-depth: when set, the generic-SQL read/write compilers refuse
+    /// to emit a query for a tenant-scoped table without a concrete tenant id
+    /// (returns `TenantScopeRequired`) instead of silently omitting the scope
+    /// predicate. Set only at the over-the-wire generic-SQL seams for non-admin
+    /// callers; left false on cross-tenant-admin and bridged/internal paths.
+    pub enforce_tenant_scope: bool,
 }
 
 impl<'a> CompileContext<'a> {
@@ -475,6 +481,7 @@ impl<'a> CompileContext<'a> {
             tenant_id: None,
             project_id: None,
             backend_instance: None,
+            enforce_tenant_scope: false,
         }
     }
 
@@ -490,6 +497,12 @@ impl<'a> CompileContext<'a> {
 
     pub fn with_instance(mut self, backend_instance: &'a str) -> Self {
         self.backend_instance = Some(backend_instance);
+        self
+    }
+
+    /// Enable fail-closed tenant-scope enforcement (see `enforce_tenant_scope`).
+    pub fn enforcing_tenant_scope(mut self, enforce: bool) -> Self {
+        self.enforce_tenant_scope = enforce;
         self
     }
 }
@@ -625,6 +638,9 @@ pub enum CompileError {
         backend: BackendKind,
         message: String,
     },
+    /// Fail-closed: a tenant-scoped table was compiled with tenant enforcement
+    /// enabled but no concrete tenant id (see `CompileContext::enforce_tenant_scope`).
+    TenantScopeRequired { message_type: String },
 }
 
 impl CompileError {
@@ -643,6 +659,7 @@ impl CompileError {
             Self::Malformed { .. } => "malformed",
             Self::ValueOutOfRange { .. } => "value_out_of_range",
             Self::BackendSpecific { .. } => "backend_specific",
+            Self::TenantScopeRequired { .. } => "tenant_scope_required",
         }
     }
 }
@@ -680,6 +697,11 @@ impl std::fmt::Display for CompileError {
             Self::BackendSpecific { backend, message } => {
                 write!(f, "{}: {message}", backend.as_str())
             }
+            Self::TenantScopeRequired { message_type } => write!(
+                f,
+                "tenant scope required: refusing to compile a query for tenant-scoped \
+                 message '{message_type}' without a concrete tenant id"
+            ),
         }
     }
 }

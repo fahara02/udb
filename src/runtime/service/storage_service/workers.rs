@@ -97,4 +97,49 @@ impl StorageServiceImpl {
         }
         Ok(doomed.len() as u64)
     }
+
+    /// Drive PENDING durable object-GC intents (recorded by HARD `DeleteFile`) to
+    /// convergence: for each intent in a bounded oldest-first batch, re-attempt the
+    /// object-byte delete (idempotent) and either mark the intent DONE (immutable
+    /// success outcome) or record the failed attempt — dead-lettering it
+    /// (`status = 'FAILED'`) once the attempt cap is hit. Returns the number of
+    /// intents converged (marked DONE) on this pass.
+    ///
+    /// Cross-tenant by design (the broker's own GC maintenance, same posture as the
+    /// orphan reaper): each intent carries its tenant's project/backend/bucket, so a
+    /// delete is dispatched against the object the intent recorded. Spawned under a
+    /// dedicated leader-election lease (`WORKER_STORAGE_GC_SWEEP`) by
+    /// `build_storage_service`.
+    pub(crate) async fn sweep_gc_intents(&self, batch_size: i64) -> Result<u64, Status> {
+        // Ensure the ledger exists even if no HARD delete has run on this leader yet.
+        self.ensure_gc_intents_table().await?;
+        let max_attempts = Self::gc_max_attempts();
+        let pending = self.select_pending_gc_intents(batch_size).await?;
+        let mut converged = 0u64;
+        for intent in &pending {
+            match self
+                .try_delete_object_bytes(
+                    &intent.backend,
+                    &intent.bucket,
+                    &intent.project_id,
+                    &intent.object_key,
+                )
+                .await
+            {
+                Ok(()) => {
+                    self.mark_gc_intent_done(&intent.intent_id).await?;
+                    converged += 1;
+                }
+                Err(err) => {
+                    self.record_gc_intent_failure(
+                        &intent.intent_id,
+                        err.message(),
+                        max_attempts,
+                    )
+                    .await?;
+                }
+            }
+        }
+        Ok(converged)
+    }
 }

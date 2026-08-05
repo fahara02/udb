@@ -838,6 +838,30 @@ class AuthnServiceClient extends \Grpc\BaseStub {
     }
 
     /**
+     * Atomically transfer an ACTIVE service-account grant (its stable
+     * service_identity and approved scopes) from one service account to another,
+     * under revision CAS. The grant row is re-pointed from `from_user_id` to
+     * `to_user_id` in a single transaction, so neither the deployment-wide
+     * service_identity unique index nor the per-user unique index is ever
+     * violated, and no window exists in which no account owns the identity. The
+     * source account is left with no grant (its credentials no longer resolve to
+     * the identity); the move is a deterministic inverse of itself. This is the
+     * supported recovery path when the currently-bound account's credentials are
+     * unavailable, replacing a non-atomic rotate-then-create.
+     * @param \Udb\Core\Authn\Services\V1\TransferServiceAccountGrantRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Authn\Services\V1\TransferServiceAccountGrantResponse>
+     */
+    public function TransferServiceAccountGrant(\Udb\Core\Authn\Services\V1\TransferServiceAccountGrantRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.authn.services.v1.AuthnService/TransferServiceAccountGrant',
+        $argument,
+        ['\Udb\Core\Authn\Services\V1\TransferServiceAccountGrantResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
      * Revoke a service account's grant. The account (and every credential or
      * certificate binding that resolves through the grant) stops authenticating
      * immediately — fail closed, audited.

@@ -6,11 +6,17 @@
 mod asset_image_live;
 mod asset_live;
 mod asset_trigger_live;
+mod data_plane_live;
+mod data_plane_tenant_rls_live;
 #[cfg(feature = "http-client")]
 mod asset_vector_live;
 mod native_events_live;
+#[cfg(feature = "http-client")]
+mod search_tenant_iso_live;
 mod storage_live;
 #[cfg(feature = "http-client")]
 mod storage_object_live;
+#[cfg(feature = "http-client")]
+mod storage_object_tenant_iso_live;
 mod support;
 mod webrtc_live;

@@ -198,6 +198,15 @@ impl AuthzServiceImpl {
             ));
         }
         let project = req.project_id.clone();
+        // A6: bind the body tenant/project to the VALIDATED claim BEFORE any DB
+        // write — a tenant-A `authz:policy:write` caller must not create a draft /
+        // policy-set under tenant B. Cross-tenant admins still pass; no-op
+        // in-process. (Mirrors the read guards in authz/mod.rs.)
+        crate::runtime::service::method_security::enforce_body_tenant_matches_claim(
+            &crate::runtime::service::method_security::current_claim_context(),
+            &tenant,
+            &project,
+        )?;
 
         // Build the initial document: explicit document, or a branch of the
         // active snapshot when branch_from_active is set.

@@ -166,7 +166,20 @@ impl<D: SqlDialect> SqlCompiler<D> {
         table: &ManifestTable,
         ctx: &super::CompileContext<'_>,
         params: &mut Vec<LogicalValue>,
-    ) -> Option<String> {
+    ) -> Result<Option<String>, CompileError> {
+        // Fail-closed defense-in-depth (F10): a tenant-scoped table must not be
+        // compiled without a concrete tenant id when enforcement is enabled.
+        // This mirrors the exact predicate the body below uses to decide whether
+        // to add the tenant scope, so an omitted scope becomes a hard error
+        // instead of a silent full-table read/write (the C15 cross-tenant leak).
+        if ctx.enforce_tenant_scope
+            && super::util::resolve_tenant_column(table).is_some()
+            && ctx.tenant_id.map_or(true, |t| t.trim().is_empty())
+        {
+            return Err(CompileError::TenantScopeRequired {
+                message_type: table.message_name.clone(),
+            });
+        }
         let mut parts: Vec<String> = Vec::new();
         if let Some(tid) = ctx.tenant_id
             && !tid.is_empty()
@@ -197,9 +210,9 @@ impl<D: SqlDialect> SqlCompiler<D> {
             parts.push(format!("{} = {placeholder}", D::quote(col_name)));
         }
         if parts.is_empty() {
-            None
+            Ok(None)
         } else {
-            Some(parts.join(" AND "))
+            Ok(Some(parts.join(" AND ")))
         }
     }
 
@@ -222,7 +235,7 @@ impl<D: SqlDialect> SqlCompiler<D> {
             Some(f) => Self::render_where(f, table, message_type, params)?,
             None => None,
         };
-        let ctx_body = Self::context_predicates(table, ctx, params);
+        let ctx_body = Self::context_predicates(table, ctx, params)?;
         Ok(match (user_body, ctx_body) {
             (Some(user), Some(scope)) => format!(" WHERE ({user}) AND {scope}"),
             (Some(user), None) => format!(" WHERE {user}"),

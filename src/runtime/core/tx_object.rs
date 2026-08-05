@@ -195,6 +195,34 @@ fn saga_compensation_for_mutation(operation: &str, mutation: &Mutation) -> Strin
     compensation.to_string()
 }
 
+/// bug #8.1 — decide whether a transactional mutation carries a compare-and-swap
+/// precondition that must run, rejecting `expected` on operations without CAS
+/// semantics (rejected, never silently ignored — mirroring the unary paths,
+/// which only accept `expected` on upsert/update/delete). Returns `Ok(false)`
+/// for the hot path (no `expected`), `Ok(true)` when CAS must be enforced, and
+/// an `InvalidArgument` when `expected` is set on an unsupported operation.
+/// Split out as a pure function so the guard is unit-testable without a live tx.
+fn tx_cas_required(mutation: &Mutation, operation: &str) -> Result<bool, tonic::Status> {
+    let has_expected = mutation
+        .expected
+        .as_ref()
+        .map(|expected| !expected.fields.is_empty())
+        .unwrap_or(false);
+    if !has_expected {
+        return Ok(false);
+    }
+    if !matches!(operation, "upsert" | "update" | "delete") {
+        return Err(tx_object_invalid_field(
+            "expected",
+            "compare-and-swap is only supported for upsert, update, and delete",
+            format!(
+                "operation '{operation}' does not support an `expected` compare-and-swap precondition"
+            ),
+        ));
+    }
+    Ok(true)
+}
+
 impl DataBrokerRuntime {
     pub async fn begin_tx(
         &self,
@@ -310,7 +338,20 @@ impl DataBrokerRuntime {
         for (mutation_index, mutation) in tx_mutations.iter().enumerate() {
             let context = merge_context(mutation.context.as_ref(), metadata_context.clone());
             let operation = mutation.operation.to_ascii_lowercase();
-            let result = if operation == "upsert" {
+            // bug #8.1: transactional compare-and-swap. When the mutation carries a
+            // non-empty `expected`, assert it against the current row under this
+            // tx's row lock + RLS fencing BEFORE the write, reusing the SAME unary
+            // CAS helpers (enforce_cas_precondition / enforce_delete_precondition).
+            // A mismatch surfaces as this mutation's `result` error, which the
+            // failure arm below turns into a full-transaction rollback + compensation
+            // exactly like any other mutation failure — so a stale precondition
+            // aborts the whole tx with nothing written.
+            let cas_check = self
+                .enforce_tx_cas_precondition(&mut tx, manifest, mutation, &operation, &context)
+                .await;
+            let result = if let Err(err) = cas_check {
+                Err(err)
+            } else if operation == "upsert" {
                 let record = mutation_record_json(mutation);
                 match record {
                     Ok(record) => {
@@ -386,13 +427,14 @@ impl DataBrokerRuntime {
                                         // miss every transactional write. A failure
                                         // rolls back the mutation (outbox atomicity).
                                         } else if let Err(err) = self
-                                            .emit_cdc_outbox_on_mutation(
+                                            .emit_cdc_outbox_on_mutation_checked(
                                                 &mut tx,
                                                 manifest,
                                                 &mutation.message_type,
                                                 "upsert",
                                                 &record,
                                                 &context,
+                                                mutation.cdc_required,
                                             )
                                             .await
                                         {
@@ -463,13 +505,14 @@ impl DataBrokerRuntime {
                         // unary delete path so BeginTx deletes are not invisible
                         // to CDC subscribers and journal readers.
                         } else if let Err(err) = self
-                            .emit_cdc_outbox_on_mutation(
+                            .emit_cdc_outbox_on_mutation_checked(
                                 &mut tx,
                                 manifest,
                                 &mutation.message_type,
                                 "delete",
                                 &filter,
                                 &context,
+                                mutation.cdc_required,
                             )
                             .await
                         {
@@ -515,7 +558,7 @@ impl DataBrokerRuntime {
                 };
                 // return_record=false: a TxStatus carries no per-row body; the
                 // helper still RETURNs internally when projections need the rows.
-                self.execute_update_in_tx(
+                self.execute_update_in_tx_checked(
                     &mut tx,
                     manifest,
                     &mutation.message_type,
@@ -524,6 +567,7 @@ impl DataBrokerRuntime {
                     &increments,
                     &context,
                     false,
+                    mutation.cdc_required,
                 )
                 .await
                 .map(|(affected, _record_json, _task_ids)| affected as u64)
@@ -1091,6 +1135,80 @@ impl DataBrokerRuntime {
                 &step.compensation_json,
             )
             .await;
+        }
+    }
+
+    /// bug #8.1 — enforce the transactional compare-and-swap precondition for one
+    /// mutation, reusing the exact unary CAS helpers so the two write paths cannot
+    /// drift: `enforce_cas_precondition` (upsert, keyed by the primary key — the
+    /// transactional upsert carries no conflict_fields, so its conflict target is
+    /// always the PK, matching `enforce_upsert_precondition`'s empty-conflict_fields
+    /// branch) and `enforce_delete_precondition` (update/delete, keyed by PK
+    /// equality from the encryption-rewritten, normalized filter — identical to the
+    /// unary update/delete CAS). The SELECT ... FOR UPDATE is tenant/RLS-fenced by
+    /// installing the request-local GUCs on `tx` first: the tx apply loop otherwise
+    /// fences its writes through SQL-baked tenant predicates and never installs the
+    /// GUC, so without this the CAS read would not be tenant-scoped. `SET LOCAL` is
+    /// transaction-scoped. No-op (no extra SQL, no GUC) when `expected` is unset.
+    async fn enforce_tx_cas_precondition(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        manifest: &CatalogManifest,
+        mutation: &Mutation,
+        operation: &str,
+        context: &RequestContext,
+    ) -> Result<(), tonic::Status> {
+        if !tx_cas_required(mutation, operation)? {
+            return Ok(());
+        }
+        // `tx_cas_required` returned true, so `expected` is Some and non-empty.
+        let expected = mutation
+            .expected
+            .as_ref()
+            .expect("tx_cas_required guarantees a non-empty expected precondition");
+        let table = resolve_table_for_message(manifest, &mutation.message_type).map_err(|error| {
+            tx_object_invalid_field(
+                "message_type",
+                "must match exactly one manifest table message type",
+                error.to_string(),
+            )
+        })?;
+        // Fence the CAS read to the caller's tenant, exactly as the unary CAS runs
+        // after `set_request_local_settings`.
+        set_request_local_settings(tx, context).await?;
+        if operation == "upsert" {
+            let record = mutation_record_json(mutation)?;
+            let normalized = crate::broker::normalize_record_keys(table, &record);
+            let key_columns = table.primary_key.clone();
+            if key_columns.is_empty() {
+                return Err(crate::runtime::executor_utils::failed_precondition_fields(
+                    "compare-and-swap precondition requires a manifest primary key",
+                    [(
+                        "expected".to_string(),
+                        "no key columns are available to locate the current row".to_string(),
+                    )],
+                ));
+            }
+            let key_values = record_values(&normalized, &key_columns)?;
+            self.enforce_cas_precondition(tx, table, expected, &key_columns, &key_values, context)
+                .await
+        } else {
+            // update | delete: locate the row by primary-key equality from the
+            // encryption-rewritten, normalized filter — the same helper + filter
+            // shape the unary update()/delete() CAS uses.
+            let filter_raw = mutation
+                .filter
+                .as_ref()
+                .map(struct_to_json)
+                .unwrap_or(JsonValue::Null);
+            let filter =
+                self.rewrite_encrypted_equality_filters(table, &filter_raw, &context.tenant_id);
+            let normalized_filter = crate::planning::broker::normalize_filter_keys(
+                &crate::planning::broker::column_resolver(table),
+                &filter,
+            );
+            self.enforce_delete_precondition(tx, table, expected, &normalized_filter, context)
+                .await
         }
     }
 
@@ -2419,6 +2537,73 @@ mod materialized_view_refresh_tests {
             }),
         ];
         assert!(transaction_committed(&mixed));
+    }
+
+    /// bug #8.1 pin: an `expected` compare-and-swap precondition set on an
+    /// operation without CAS semantics (vector_upsert/put_object/enqueue_outbox_
+    /// event) is REJECTED with an InvalidArgument naming `expected`, never
+    /// silently ignored. Reverting the guard (accepting/ignoring `expected` on
+    /// those ops) regresses this.
+    #[test]
+    fn tx_cas_required_rejects_expected_on_non_cas_operation() {
+        let expected =
+            crate::runtime::executor_utils::json_to_struct(&serde_json::json!({"version": 1}));
+        assert!(expected.is_some(), "fixture: expected struct must build");
+        let mutation = Mutation {
+            operation: "vector_upsert".to_string(),
+            message_type: "acme.billing.v1.Invoice".to_string(),
+            expected,
+            ..Mutation::default()
+        };
+        let err = tx_cas_required(&mutation, "vector_upsert")
+            .expect_err("expected on a non-CAS operation must be rejected, not ignored");
+        assert_single_field_violation(
+            &err,
+            "expected",
+            "compare-and-swap is only supported for upsert, update, and delete",
+        );
+    }
+
+    /// bug #8.1 pin: CAS is gated exactly on a NON-EMPTY `expected` for the three
+    /// CAS-capable operations, and is a no-op (the hot path) otherwise — an
+    /// unset OR empty `expected` never triggers a precondition SELECT.
+    #[test]
+    fn tx_cas_required_gates_only_supported_ops_and_is_noop_without_expected() {
+        // Unset `expected` -> never required, for every operation.
+        for op in ["upsert", "update", "delete", "vector_upsert", "put_object"] {
+            let mutation = Mutation {
+                operation: op.to_string(),
+                ..Mutation::default()
+            };
+            assert!(
+                !tx_cas_required(&mutation, op).expect("unset expected must never error"),
+                "unset expected -> CAS not required for {op}"
+            );
+        }
+        // Empty `expected` (present but no fields) is also a no-op.
+        let empty = Mutation {
+            operation: "upsert".to_string(),
+            expected: crate::runtime::executor_utils::json_to_struct(&serde_json::json!({})),
+            ..Mutation::default()
+        };
+        assert!(
+            !tx_cas_required(&empty, "upsert").expect("empty expected must never error"),
+            "empty expected -> CAS not required"
+        );
+        // Non-empty `expected` -> required for each CAS-capable operation.
+        let expected =
+            crate::runtime::executor_utils::json_to_struct(&serde_json::json!({"version": 1}));
+        for op in ["upsert", "update", "delete"] {
+            let mutation = Mutation {
+                operation: op.to_string(),
+                expected: expected.clone(),
+                ..Mutation::default()
+            };
+            assert!(
+                tx_cas_required(&mutation, op).expect("supported op must not error"),
+                "non-empty expected -> CAS required for {op}"
+            );
+        }
     }
 }
 

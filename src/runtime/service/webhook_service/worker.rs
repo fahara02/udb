@@ -469,8 +469,18 @@ pub(crate) async fn run_webhook_delivery_worker_once(
     journal_relation: &str,
     batch: i64,
     metrics: Option<&Arc<dyn MetricsRecorder>>,
+    runtime: &crate::runtime::DataBrokerRuntime,
 ) -> Result<i64, String> {
-    let jobs = load_webhook_delivery_jobs(pool, journal_relation, batch).await?;
+    let mut jobs = load_webhook_delivery_jobs(pool, journal_relation, batch).await?;
+    // NTF1: the loaded signing_secret is sealed at rest (see create_endpoint);
+    // decrypt it to the plaintext HMAC key before signing. `decrypt_secret_at_rest`
+    // returns a plaintext value unchanged, so a mixed plaintext/ciphertext rollout
+    // (pre-fix rows + newly-sealed rows) both sign correctly.
+    for job in &mut jobs {
+        if let Ok(plain) = runtime.decrypt_secret_at_rest(&job.target.signing_secret) {
+            job.target.signing_secret = plain;
+        }
+    }
     // Bounded-concurrency fan-out: each job is an independent (endpoint, event)
     // delivery, so one slow/black-holed endpoint (capped by the per-delivery
     // timeout) never head-of-line-blocks other tenants' deliveries in this tick.

@@ -8,6 +8,8 @@ import (
 	"time"
 
 	authnv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/authn/services/v1"
+	lockv1 "github.com/fahara02/udb/sdk/go/gen/udb/core/lock/services/v1"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -343,4 +345,92 @@ func (s *EnterpriseSession) setBearerLocked(bearer string) {
 // the verified canonical tenant — call it before a tenant-scoped write.
 func (s *EnterpriseSession) ValidateTenant(recordTenantID string) error {
 	return s.Tenant.ValidateTenantID(recordTenantID)
+}
+
+// NativeConn returns the session-OWNED, authenticated control-plane channel: the
+// same *grpc.ClientConn ConnectEnterprise dialed to AuthTarget (or Target when the
+// two coincide). It is the supported escape hatch for constructing a generated
+// native-service client the typed facades do not yet cover — no redial, no second
+// TLS lifecycle — e.g.
+//
+//	lock := lockv1.NewLockServiceClient(sess.NativeConn())
+//	lock.AcquireLock(sess.NativeContext(ctx), &lockv1.AcquireLockRequest{ /* … */ })
+//
+// The connection is owned by the session: never Dial or Close it yourself — the
+// session's Close tears it down. Its dial-time interceptors read the SAME
+// GeneratedClient that tenant adoption (SetMeta) and the background bearer
+// refresher (SetAuthorization) keep current, so a bare-context call still carries
+// the canonical adopted identity and the live bearer. For the strongest guarantee
+// — a single-flight-refreshed bearer AND local fail-closed when the session is
+// poisoned — pair every call with NativeContext (as above), which is exactly what
+// the typed LockService facade below does. The return type mirrors
+// GeneratedClient.Conn(): a grpc.ClientConnInterface is all any generated
+// NewXxxClient constructor needs.
+func (s *EnterpriseSession) NativeConn() grpc.ClientConnInterface {
+	return s.Udb.authConn
+}
+
+// EnterpriseLockService is a typed LockService facade bound to the session-owned
+// control-plane channel (NativeConn). Every call routes through NativeContext, so
+// it carries the canonical adopted identity + the freshly-refreshed bearer and
+// fails closed locally when the session is poisoned — the same guarantees the
+// data/native contexts give. Reach the raw stub via .Raw for any RPC (GetLock/
+// ListLocks or future additions) the helpers omit.
+type EnterpriseLockService struct {
+	Raw lockv1.LockServiceClient
+	s   *EnterpriseSession
+}
+
+// LockService returns a typed distributed-lock facade on the session-owned
+// authenticated control-plane channel. There is no caller-managed dial or close:
+// the connection is owned by the session (NativeConn) and torn down by Close, and
+// the adopted-identity metadata + bearer refresh are preserved on every call.
+func (s *EnterpriseSession) LockService() *EnterpriseLockService {
+	return &EnterpriseLockService{Raw: lockv1.NewLockServiceClient(s.NativeConn()), s: s}
+}
+
+// Acquire acquires a distributed lock, defaulting the request tenant to the
+// verified canonical tenant UUID when the caller left it empty (never overriding
+// an explicit value). Returns the monotone fencing token to present on Renew/Release.
+func (l *EnterpriseLockService) Acquire(ctx context.Context, req *lockv1.AcquireLockRequest) (*lockv1.AcquireLockResponse, error) {
+	if req.GetTenantId() == "" {
+		req.TenantId = l.s.CanonicalTenantID
+	}
+	return l.Raw.AcquireLock(l.s.NativeContext(ctx), req)
+}
+
+// Renew extends the lease of a lock the caller holds; the presented fencing token
+// must not be stale. Defaults the request tenant to the canonical UUID when empty.
+func (l *EnterpriseLockService) Renew(ctx context.Context, req *lockv1.RenewLockRequest) (*lockv1.RenewLockResponse, error) {
+	if req.GetTenantId() == "" {
+		req.TenantId = l.s.CanonicalTenantID
+	}
+	return l.Raw.RenewLock(l.s.NativeContext(ctx), req)
+}
+
+// Release releases a lock the caller holds; the presented fencing token must not
+// be stale. Defaults the request tenant to the canonical UUID when empty.
+func (l *EnterpriseLockService) Release(ctx context.Context, req *lockv1.ReleaseLockRequest) (*lockv1.ReleaseLockResponse, error) {
+	if req.GetTenantId() == "" {
+		req.TenantId = l.s.CanonicalTenantID
+	}
+	return l.Raw.ReleaseLock(l.s.NativeContext(ctx), req)
+}
+
+// Get fetches a single lock by name within the caller's tenant (found=false on a
+// miss, not an error). Defaults the request tenant to the canonical UUID when empty.
+func (l *EnterpriseLockService) Get(ctx context.Context, req *lockv1.GetLockRequest) (*lockv1.GetLockResponse, error) {
+	if req.GetTenantId() == "" {
+		req.TenantId = l.s.CanonicalTenantID
+	}
+	return l.Raw.GetLock(l.s.NativeContext(ctx), req)
+}
+
+// List lists the caller tenant's locks (paginated). Defaults the request tenant to
+// the canonical UUID when empty.
+func (l *EnterpriseLockService) List(ctx context.Context, req *lockv1.ListLocksRequest) (*lockv1.ListLocksResponse, error) {
+	if req.GetTenantId() == "" {
+		req.TenantId = l.s.CanonicalTenantID
+	}
+	return l.Raw.ListLocks(l.s.NativeContext(ctx), req)
 }

@@ -304,11 +304,22 @@ impl Compiler for PostgresCompiler {
             table = table.table,
         );
 
-        // WHERE.
-        if let Some(filter) = &op.filter
-            && let Some(body) = Pg::render_where(filter, table, &op.message_type, &mut params)?
-        {
-            sql.push_str(&format!(" WHERE {body}"));
+        // WHERE — user filter first (parameter numbering), then the tenant/project
+        // context predicate as a COMPILER-LAYER backstop (F6). PG typed reads rely
+        // on RLS + the request GUC; but when the broker connects as the table owner,
+        // or a table is `enable_rls`-not-`force_rls`, RLS is bypassed and there is no
+        // scoping. AND the context predicate here — exactly as `compile_aggregate`
+        // already does. RLS stays primary; this is defense-in-depth (a strict subset).
+        let user_body = match &op.filter {
+            Some(filter) => Pg::render_where(filter, table, &op.message_type, &mut params)?,
+            None => None,
+        };
+        let ctx_body = Pg::context_predicates(table, ctx, &mut params)?;
+        match (user_body, ctx_body) {
+            (Some(user), Some(scope)) => sql.push_str(&format!(" WHERE ({user}) AND {scope}")),
+            (Some(user), None) => sql.push_str(&format!(" WHERE {user}")),
+            (None, Some(scope)) => sql.push_str(&format!(" WHERE {scope}")),
+            (None, None) => {}
         }
 
         // ORDER BY.
@@ -575,6 +586,20 @@ impl Compiler for PostgresCompiler {
             });
         }
 
+        // RLS1: AND the server-authenticated tenant/project scope into the WHERE.
+        // Postgres tables are `enable_rls` but NOT `force_rls` by default and the
+        // broker connects as the table owner, so DB row-level security is bypassed
+        // at runtime — the compiler predicate is the real isolation boundary (as it
+        // already is for compile_read/compile_aggregate and for the mysql/sqlite/
+        // mssql delete paths). Without this, a client filter of `{tenant_id:<victim>}`
+        // updates another tenant's rows. `context_predicates` also fires the F10
+        // fail-closed `TenantScopeRequired` guard when enforcement is on and the
+        // resolved tenant is empty.
+        let body = match Pg::context_predicates(table, ctx, &mut params)? {
+            Some(scope) => format!("({body}) AND {scope}"),
+            None => body,
+        };
+
         let mut sql = format!(
             "UPDATE \"{schema}\".\"{table}\" SET {assignments} WHERE {body}",
             schema = table.schema,
@@ -623,6 +648,15 @@ impl Compiler for PostgresCompiler {
                 reason: "LogicalDelete::filter resolves to FALSE; refusing no-op delete".into(),
             });
         }
+        // RLS1: AND the server-authenticated tenant/project scope into the WHERE
+        // (see compile_update). RLS is decorative by default (owner connection,
+        // no FORCE), so this compiler predicate is what stops a `{tenant_id:<victim>}`
+        // filter from mass-deleting another tenant's rows; it also fires the F10
+        // fail-closed guard on an empty enforced tenant.
+        let body = match Pg::context_predicates(table, ctx, &mut params)? {
+            Some(scope) => format!("({body}) AND {scope}"),
+            None => body,
+        };
         let mut sql = format!(
             "DELETE FROM \"{schema}\".\"{table}\" WHERE {body}",
             schema = table.schema,
@@ -713,7 +747,7 @@ impl Compiler for PostgresCompiler {
             Some(filter) => Pg::render_where(filter, table, &op.message_type, &mut params)?,
             None => None,
         };
-        let ctx_body = Pg::context_predicates(table, ctx, &mut params);
+        let ctx_body = Pg::context_predicates(table, ctx, &mut params)?;
         match (user_body, ctx_body) {
             (Some(user), Some(scope)) => sql.push_str(&format!(" WHERE ({user}) AND {scope}")),
             (Some(user), None) => sql.push_str(&format!(" WHERE {user}")),

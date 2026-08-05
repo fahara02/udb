@@ -33,7 +33,7 @@ use super::errors::{
     validate_create_index_required_fields, validate_search_query,
 };
 use super::fusion::fuse_ranked_lists_weighted;
-use super::model::{StoredIndex, collection_name, stored_index_from_json};
+use super::model::{StoredIndex, collection_name, stored_index_from_json, strip_tenant_point_id};
 use super::store::{active_indexes_read, index_conflict, index_read_by_name, index_record};
 
 impl SearchServiceImpl {
@@ -683,7 +683,10 @@ pub(crate) async fn search(
             let (index_name, payload_json) = hit_meta.get(&id).cloned().unwrap_or_default();
             search_pb::SearchHit {
                 index_name,
-                id,
+                // SRCH1: hit ids are stored tenant-namespaced ("{tenant}:{pk}");
+                // strip the verified-tenant prefix so the consumer sees the raw PK
+                // it indexed (hit_meta above is keyed by the stored/scoped id).
+                id: strip_tenant_point_id(&tenant_id, &id),
                 score,
                 payload_json,
             }

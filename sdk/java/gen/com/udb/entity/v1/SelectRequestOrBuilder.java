@@ -133,4 +133,16 @@ public interface SelectRequestOrBuilder extends
    * <code>.udb.entity.v1.CacheOptions cache = 8 [json_name = "cache"];</code>
    */
   com.udb.entity.v1.CacheOptionsOrBuilder getCacheOrBuilder();
+
+  /**
+   * <pre>
+   * #5: opt-in — when true, the broker joins each returned record against the
+   * system-side revision map and fills `RecordSet.record_revisions`. Off by
+   * default so the read hot path is unchanged (zero extra SQL).
+   * </pre>
+   *
+   * <code>bool include_revision = 9 [json_name = "includeRevision"];</code>
+   * @return The includeRevision.
+   */
+  boolean getIncludeRevision();
 }

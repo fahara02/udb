@@ -257,7 +257,10 @@ namespace udb.core.Storage.Services.V1 {
       }
 
       /// <summary>
-      /// Delete a file (soft delete)
+      /// Delete a file. `mode` selects soft-delete (default, metadata tombstone +
+      /// best-effort byte removal) or hard-delete (durable object-GC intent committed
+      /// atomically with the tombstone, then driven to convergence — a byte-delete
+      /// failure returns an error, never success, and leaves the intent for the sweep).
       /// </summary>
       /// <param name="request">The request received from the client.</param>
       /// <param name="context">The context of the server-side call handler being invoked.</param>
@@ -644,7 +647,10 @@ namespace udb.core.Storage.Services.V1 {
         return CallInvoker.AsyncUnaryCall(__Method_UpdateFile, null, options, request);
       }
       /// <summary>
-      /// Delete a file (soft delete)
+      /// Delete a file. `mode` selects soft-delete (default, metadata tombstone +
+      /// best-effort byte removal) or hard-delete (durable object-GC intent committed
+      /// atomically with the tombstone, then driven to convergence — a byte-delete
+      /// failure returns an error, never success, and leaves the intent for the sweep).
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
@@ -657,7 +663,10 @@ namespace udb.core.Storage.Services.V1 {
         return DeleteFile(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       /// <summary>
-      /// Delete a file (soft delete)
+      /// Delete a file. `mode` selects soft-delete (default, metadata tombstone +
+      /// best-effort byte removal) or hard-delete (durable object-GC intent committed
+      /// atomically with the tombstone, then driven to convergence — a byte-delete
+      /// failure returns an error, never success, and leaves the intent for the sweep).
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="options">The options for the call.</param>
@@ -668,7 +677,10 @@ namespace udb.core.Storage.Services.V1 {
         return CallInvoker.BlockingUnaryCall(__Method_DeleteFile, null, options, request);
       }
       /// <summary>
-      /// Delete a file (soft delete)
+      /// Delete a file. `mode` selects soft-delete (default, metadata tombstone +
+      /// best-effort byte removal) or hard-delete (durable object-GC intent committed
+      /// atomically with the tombstone, then driven to convergence — a byte-delete
+      /// failure returns an error, never success, and leaves the intent for the sweep).
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
@@ -681,7 +693,10 @@ namespace udb.core.Storage.Services.V1 {
         return DeleteFileAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
       }
       /// <summary>
-      /// Delete a file (soft delete)
+      /// Delete a file. `mode` selects soft-delete (default, metadata tombstone +
+      /// best-effort byte removal) or hard-delete (durable object-GC intent committed
+      /// atomically with the tombstone, then driven to convergence — a byte-delete
+      /// failure returns an error, never success, and leaves the intent for the sweep).
       /// </summary>
       /// <param name="request">The request to send to the server.</param>
       /// <param name="options">The options for the call.</param>

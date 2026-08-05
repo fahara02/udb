@@ -601,7 +601,7 @@ impl AuthnServiceImpl {
             let verified = if has_recovery {
                 // Single-use recovery/backup code, consumed atomically and bound
                 // to this authenticated user.
-                let hash = authn::hash_recovery_code(&req.recovery_code, &self.otp_hash_key());
+                let hash = authn::hash_recovery_code(&req.recovery_code, &self.otp_hash_key()?);
                 self.users
                     .consume_recovery_code(&user.user_id, &hash, now)
                     .await
@@ -626,7 +626,7 @@ impl AuthnServiceImpl {
                 )
             } else {
                 // TOTP authenticator code verified against the enrolled secret.
-                authn::totp::decrypt_secret(&user.totp_secret_hash, &self.otp_hash_key())
+                authn::totp::decrypt_secret(&user.totp_secret_hash, &self.otp_hash_key()?)
                     .map(|secret| authn::totp::verify(&secret, &req.totp_code, now))
                     .unwrap_or(false)
             };

@@ -553,16 +553,20 @@ async fn execute_inline_pipeline_steps(
         let outcome = if step_type == "EMBED" {
             match outcome {
                 StepOutcome::Completed(mut value) => {
-                    if let Some(target) = svc
+                    let persisted = svc
                         .upsert_embedding(
                             &tenant_id.to_string(),
                             &asset_project_id,
                             &req.asset_id,
                             &value,
                         )
-                        .await
-                    {
-                        if let Some(object) = value.as_object_mut() {
+                        .await;
+                    if let Some(object) = value.as_object_mut() {
+                        if let Some(target) = persisted {
+                            object.insert(
+                                "vector_persisted".to_string(),
+                                serde_json::Value::Bool(true),
+                            );
                             object.insert(
                                 "vector_backend".to_string(),
                                 serde_json::Value::String("qdrant".to_string()),
@@ -574,6 +578,18 @@ async fn execute_inline_pipeline_steps(
                             object.insert(
                                 "vector_project_id".to_string(),
                                 serde_json::Value::String(target.project_id),
+                            );
+                        } else {
+                            // D4: EMBED completed but NO searchable vector was
+                            // persisted (metadata-only mode or a vector-backend
+                            // outage — upsert_embedding warns + returns None). Surface
+                            // an explicit posture so a consumer distinguishes
+                            // "embedded but not indexed" from "indexed", instead of a
+                            // silent success. (Not hard-failed: metadata-only mode is
+                            // legitimate.)
+                            object.insert(
+                                "vector_persisted".to_string(),
+                                serde_json::Value::Bool(false),
                             );
                         }
                     }

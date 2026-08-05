@@ -1,11 +1,12 @@
 ## TenantService
 
-_proto: core/tenant/services/v1/tenant_service.proto · 7 RPCs_
+_proto: core/tenant/services/v1/tenant_service.proto · 8 RPCs_
 
 All request messages are defined inline in `tenant_service.proto`; every request field is a proto3 scalar `string`/`int32` except `UpdateTenantRequest.update_mask` (omitted here for legacy full update semantics). `type`/`status` are free-form `string` columns, NOT proto enums. All 7 RPCs carry `tenant_required: true` + `request_context_required: true` (must send tenant context + bearer JWT/session).
 
 | done | RPC | op_kind | request msg | valid body | seed refs / notes |
 | --- | --- | --- | --- | --- | --- |
+| [ ] | AdminPurgeTenant | DESTRUCTIVE | AdminPurgeTenantRequest | `{ "delegated_actor": "", "target_tenant_id": "<seed:purge_tenant_id>", "mode": "ADMIN_PURGE_MODE_SOFT", "reason": "bench admin purge", "expected_version": 0, "confirmation_token": "<seed:purge_tenant_id>", "idempotency_key": "sdk-perf-admin-purge" }` | Privileged cross-tenant purge. `mode` MUST be set (ADMIN_PURGE_MODE_UNSPECIFIED is rejected); SOFT (reversible) is used for bench so entity rows are retained. `confirmation_token` MUST equal `target_tenant_id`; `expected_version` 0 disables the version CAS; empty `delegated_actor` inherits the caller. Terminal — runs last against the disposable bench tenant. |
 | [ ] | CreateTenant | MUTATION | CreateTenantRequest | `{ "code": "<seed:tenant_code>", "name": "Acme Bench", "type": "organization", "parent_tenant_id": "", "config": "{}", "branding": "{}" }` | Only `code`+`name` are realistically load-bearing; `config`/`branding` are JSON strings — send `"{}"`, not bare `""`, to be safe. `parent_tenant_id` must reference an existing tenant if set. Creates a new tenant row each call → use a unique `code` per bench iteration to avoid uniqueness conflicts. |
 | [ ] | GetTenant | READ_ONLY | GetTenantRequest | `{ "tenant_id": "<seed:tenant_id>" }` | Single lookup by id. |
 | [ ] | GetTenantConfig | READ_ONLY | GetTenantConfigRequest | `{ "tenant_id": "<seed:tenant_id>" }` | Returns repeated TenantConfig rows for the tenant. |

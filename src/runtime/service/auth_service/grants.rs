@@ -953,6 +953,160 @@ pub(crate) async fn rotate_grant_identity(
     Ok((grant_row_from(&row), previous_service_identity))
 }
 
+/// Transfer an ACTIVE grant's stable service identity from one service account
+/// to another by RE-POINTING the grant's `user_id`, atomically and under
+/// revision CAS. The identity and its approved scopes ride the SAME row to the
+/// destination, so neither the deployment-wide `service_identity` unique index
+/// nor the per-user `user_id` unique index (both of which retain revoked rows)
+/// is ever violated — unlike a revoke-then-create, which would collide on the
+/// retained rows and leave a window with no owner. The source account is left
+/// with no grant (its credentials no longer resolve to the identity), and the
+/// move is a deterministic inverse of itself (transfer back, from → destination,
+/// to → source). Returns the moved grant (now owned by the destination) and the
+/// previous owner's `user_id` for a reverse transfer.
+#[allow(clippy::too_many_arguments)]
+pub(crate) async fn transfer_grant_identity(
+    conn: &mut sqlx::PgConnection,
+    tenant_id: &str,
+    from_user_id: &str,
+    to_user_id: &str,
+    updated_by: &str,
+    reason: &str,
+    expected_revision: i64,
+) -> Result<(GrantRecord, String), Status> {
+    let from_user = parse_uuid(from_user_id, "from_user_id")?;
+    let to_user = parse_uuid(to_user_id, "to_user_id")?;
+    let tenant = validated_tenant_id(tenant_id)?;
+    if from_user == to_user {
+        return Err(grants_invalid_fields(
+            "from_user_id and to_user_id must name different service accounts",
+            [("to_user_id", "must differ from from_user_id")],
+        ));
+    }
+    // Lock + validate BOTH accounts: each must be an ACTIVE SERVICE_ACCOUNT in
+    // the tenant. The FOR UPDATE locks prevent a concurrent deactivation from
+    // racing the re-point.
+    verify_grant_owner(&mut *conn, &from_user, tenant).await?;
+    let to_owner = verify_grant_owner(&mut *conn, &to_user, tenant).await?;
+    // The destination must hold NO grant: the per-user unique index (which
+    // retains revoked rows) would otherwise reject the re-point. Fail closed with
+    // a precise reason before attempting the write.
+    if get_grant_by_user(&mut *conn, tenant, to_user_id)
+        .await?
+        .is_some()
+    {
+        return Err(grants_failed_precondition_fields(
+            "destination service account already has a grant",
+            [(
+                "to_user_id",
+                "must have no existing grant (including a revoked one); create a fresh service account",
+            )],
+        ));
+    }
+    // Load + lock the source grant under CAS; capture the identity + project for
+    // the audit event, the response, and the same-project guard.
+    let m = native_model(
+        GRANT_MSG,
+        &[
+            "user_id",
+            "tenant_id",
+            "service_identity",
+            "project_id",
+            "status",
+            "revision",
+            "updated_by",
+            "reason",
+            "updated_at",
+        ],
+    );
+    let prior_sql = format!(
+        "SELECT {identity} AS service_identity, {project} \
+         FROM {rel} \
+         WHERE {uid} = $1 AND {tenant} = $2 AND {status} = $3 AND {revision} = $4 \
+         FOR UPDATE",
+        identity = m.q("service_identity"),
+        project = m.text_or_empty_as("project_id", "project_id"),
+        rel = &m.relation,
+        uid = m.q("user_id"),
+        tenant = m.q("tenant_id"),
+        status = m.q("status"),
+        revision = m.q("revision"),
+    );
+    let prior = sqlx::query(&prior_sql)
+        .bind(from_user)
+        .bind(tenant)
+        .bind(STATUS_ACTIVE)
+        .bind(expected_revision)
+        .fetch_optional(&mut *conn)
+        .await
+        .map_err(map_err("service-account grant transfer load failed"))?
+        .ok_or_else(|| {
+            grants_failed_precondition_fields(
+                "source grant is inactive, missing, or its revision changed",
+                [(
+                    "expected_revision",
+                    "must match the source grant's current revision (re-read the grant and retry)",
+                )],
+            )
+        })?;
+    let previous_service_identity: String = prior.try_get("service_identity").unwrap_or_default();
+    let grant_project: String = prior.try_get("project_id").unwrap_or_default();
+    // The identity is project-scoped: refuse a cross-project move so the
+    // destination cannot silently re-home the identity into another project.
+    if grant_project.trim() != to_owner.project_id.trim() {
+        return Err(grants_failed_precondition_fields(
+            "destination service account is in a different project than the grant",
+            [(
+                "to_user_id",
+                "must belong to the same project as the transferred grant",
+            )],
+        ));
+    }
+    let _ = previous_service_identity;
+    let sql = format!(
+        "UPDATE {rel} SET {uid} = $3, {revision} = {revision} + 1, \
+            {uby} = $4, {reason} = $5, {updated} = NOW() \
+         WHERE {uid} = $1 AND {tenant} = $2 AND {status} = $6 AND {revision} = $7 \
+         RETURNING {cols}",
+        rel = &m.relation,
+        uid = m.q("user_id"),
+        revision = m.q("revision"),
+        uby = m.q("updated_by"),
+        reason = m.q("reason"),
+        updated = m.q("updated_at"),
+        tenant = m.q("tenant_id"),
+        status = m.q("status"),
+        cols = grant_select_clause(),
+    );
+    let row = sqlx::query(&sql)
+        .bind(from_user)
+        .bind(tenant)
+        .bind(to_user)
+        .bind(updated_by)
+        .bind(reason)
+        .bind(STATUS_ACTIVE)
+        .bind(expected_revision)
+        .fetch_optional(&mut *conn)
+        .await
+        .map_err(|error| match unique_violation_constraint(&error) {
+            Some(constraint) if constraint.contains("user") => grants_failed_precondition_fields(
+                "destination service account already has a grant",
+                [(
+                    "to_user_id",
+                    "must have no existing grant (including a revoked one)",
+                )],
+            ),
+            _ => map_err("service-account grant transfer failed")(error),
+        })?
+        .ok_or_else(|| {
+            grants_failed_precondition_fields(
+                "source grant revision changed during transfer",
+                [("expected_revision", "must match the current grant revision")],
+            )
+        })?;
+    Ok((grant_row_from(&row), from_user_id.trim().to_string()))
+}
+
 /// Revoke a grant (status ⇒ REVOKED). Returns `true` when an ACTIVE row was
 /// revoked; `false` when the grant is missing or already revoked (idempotent).
 /// HIGH-6: executor-generic so the handler can pair it with its audit event in
@@ -2464,6 +2618,57 @@ pub(crate) async fn rotate_service_account_identity(
             grant: Some(record.to_pb()),
             previous_service_identity,
             message: "service-account identity rotated; dependent credentials invalidated"
+                .to_string(),
+            error: None,
+        },
+    ))
+}
+
+pub(crate) async fn transfer_service_account_grant(
+    svc: &AuthnServiceImpl,
+    pool: &PgPool,
+    request: Request<authn_pb::TransferServiceAccountGrantRequest>,
+) -> Result<Response<authn_pb::TransferServiceAccountGrantResponse>, Status> {
+    let req = request.into_inner();
+    require_tenant(&req.tenant_id)?;
+    let updated_by = caller_updated_by();
+    // HIGH-6: the grant re-point + audit-event outbox row commit in ONE
+    // transaction — an event-write failure rolls the transfer back.
+    let mut tx = begin_grants_tx(pool, "grant_transfer_tx").await?;
+    let (record, previous_user_id) = transfer_grant_identity(
+        &mut *tx,
+        &req.tenant_id,
+        &req.from_user_id,
+        &req.to_user_id,
+        &updated_by,
+        &req.reason,
+        req.expected_revision,
+    )
+    .await?;
+    let mut event = build_grant_event(
+        &record.grant_id,
+        &record.tenant_id,
+        &record.user_id,
+        &record.service_identity,
+        record.revision,
+        "transfer",
+        "service_identity_transferred",
+        &updated_by,
+    );
+    if let Some(body) = event.body.as_object_mut() {
+        body.insert(
+            "previous_user_id".to_string(),
+            serde_json::Value::String(previous_user_id.clone()),
+        );
+    }
+    svc.emit_event_in_tx(&mut *tx, event).await?;
+    commit_grants_tx(tx, "grant_transfer_tx").await?;
+    Ok(Response::new(
+        authn_pb::TransferServiceAccountGrantResponse {
+            grant: Some(record.to_pb()),
+            previous_user_id,
+            message: "service-account grant transferred; source credentials no longer resolve to \
+                      the identity"
                 .to_string(),
             error: None,
         },

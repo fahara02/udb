@@ -62,6 +62,11 @@ class DataBrokerStub(object):
                 request_serializer=udb_dot_entity_dot_v1_dot_relational__pb2.UpdateRequest.SerializeToString,
                 response_deserializer=udb_dot_entity_dot_v1_dot_mutation__pb2.MutationResponse.FromString,
                 _registered_method=True)
+        self.BulkCas = channel.unary_unary(
+                '/udb.services.v1.DataBroker/BulkCas',
+                request_serializer=udb_dot_entity_dot_v1_dot_relational__pb2.BulkCasRequest.SerializeToString,
+                response_deserializer=udb_dot_entity_dot_v1_dot_relational__pb2.BulkCasResponse.FromString,
+                _registered_method=True)
         self.VectorSearch = channel.unary_unary(
                 '/udb.services.v1.DataBroker/VectorSearch',
                 request_serializer=udb_dot_entity_dot_v1_dot_vector__pb2.VectorSearchRequest.SerializeToString,
@@ -472,6 +477,20 @@ class DataBrokerServicer(object):
         Upsert/Delete. A retried keyed Update is deduped in the write tx
         (fail-closed, tenant+project-scoped durable dedup) and returns
         was_duplicate=true with the original body.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def BulkCas(self, request, context):
+        """gate 23 (bounded bulk compare-and-swap): apply a tenant-scoped, explicitly
+        bounded batch of single-row conditional updates in ONE write transaction.
+        Each item pins its full primary key by equality and is applied only if its
+        compare-and-swap preconditions hold; a per-item mismatch is COUNTED as a
+        conflict, not a batch error, so a partial batch is safe to replay by reusing
+        `idempotency_key`. Same tenant isolation, authorization (deny-by-default
+        Casbin gate) and per-row projection / CDC-outbox / audit side effects as the
+        unary Update path.
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -1000,6 +1019,11 @@ def add_DataBrokerServicer_to_server(servicer, server):
                     servicer.Update,
                     request_deserializer=udb_dot_entity_dot_v1_dot_relational__pb2.UpdateRequest.FromString,
                     response_serializer=udb_dot_entity_dot_v1_dot_mutation__pb2.MutationResponse.SerializeToString,
+            ),
+            'BulkCas': grpc.unary_unary_rpc_method_handler(
+                    servicer.BulkCas,
+                    request_deserializer=udb_dot_entity_dot_v1_dot_relational__pb2.BulkCasRequest.FromString,
+                    response_serializer=udb_dot_entity_dot_v1_dot_relational__pb2.BulkCasResponse.SerializeToString,
             ),
             'VectorSearch': grpc.unary_unary_rpc_method_handler(
                     servicer.VectorSearch,
@@ -1548,6 +1572,33 @@ class DataBroker(object):
             '/udb.services.v1.DataBroker/Update',
             udb_dot_entity_dot_v1_dot_relational__pb2.UpdateRequest.SerializeToString,
             udb_dot_entity_dot_v1_dot_mutation__pb2.MutationResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def BulkCas(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/udb.services.v1.DataBroker/BulkCas',
+            udb_dot_entity_dot_v1_dot_relational__pb2.BulkCasRequest.SerializeToString,
+            udb_dot_entity_dot_v1_dot_relational__pb2.BulkCasResponse.FromString,
             options,
             channel_credentials,
             insecure,

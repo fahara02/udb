@@ -188,7 +188,7 @@ mongodb-driver = { package = "mongodb", version = "3.7", optional = true }
 memcache = { version = "0.17", default-features = false, optional = true }
 # Microsoft SQL Server driver over TDS. Default features are disabled to avoid
 # the driver's chrono shim; enable the SQL Server 2008+ wire format and rustls.
-tiberius = { version = "0.12", default-features = false, features = ["tds73", "rustls"], optional = true }
+tiberius = { version = "0.12", default-features = false, features = ["tds73", "rustls", "chrono"], optional = true }
 tokio-util = { version = "0.7", features = ["compat"], optional = true }
 # WebSocket server for the pluggable ws:// signalling bridge (feature
 # `ws-signalling`). Plain ws:// only (no TLS feature pulled); TLS is terminated

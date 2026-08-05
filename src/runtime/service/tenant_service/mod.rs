@@ -39,6 +39,7 @@ mod gate;
 mod handlers;
 mod model;
 mod store;
+mod tenant_purge;
 #[cfg(test)]
 mod tests;
 
@@ -187,6 +188,13 @@ impl TenantService for TenantServiceImpl {
         request: Request<tenant_pb::PurgeTenantRequest>,
     ) -> Result<Response<tenant_pb::PurgeTenantResponse>, Status> {
         handlers::purge_tenant(self, request).await
+    }
+
+    async fn admin_purge_tenant(
+        &self,
+        request: Request<tenant_pb::AdminPurgeTenantRequest>,
+    ) -> Result<Response<tenant_pb::AdminPurgeTenantResponse>, Status> {
+        tenant_purge::admin_purge_tenant(self, request).await
     }
 
     async fn get_tenant(

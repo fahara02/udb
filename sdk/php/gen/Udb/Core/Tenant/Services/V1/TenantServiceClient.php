@@ -126,4 +126,29 @@ class TenantServiceClient extends \Grpc\BaseStub {
         $metadata, $options);
     }
 
+    /**
+     * PRIVILEGED cross-tenant purge (Bug #2). Unlike PurgeTenant — which forces the
+     * body tenant to equal the verified claim (self-purge only) — this RPC lets a
+     * delegated operator purge a DIFFERENT `target_tenant_id`. It is gated by a
+     * DISTINCT, default-deny scope (`udb:tenant:admin-purge`) SEPARATE from the
+     * self-purge scope, is DESTRUCTIVE, and demands an explicit confirmation token
+     * plus an idempotency key. The handler routes the movement with
+     * `privileged_cross_tenant=true`, binds the VERIFIED delegated actor, treats
+     * control-plane / tenant-less tables explicitly (retained + reported, never
+     * blind-deleted), and writes an immutable audit/outcome record. `tenant_field`
+     * names the body tenant the action targets (`target_tenant_id`); the handler —
+     * not the transport gate — authorizes the cross-tenant reach via the scope.
+     * @param \Udb\Core\Tenant\Services\V1\AdminPurgeTenantRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Core\Tenant\Services\V1\AdminPurgeTenantResponse>
+     */
+    public function AdminPurgeTenant(\Udb\Core\Tenant\Services\V1\AdminPurgeTenantRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.core.tenant.services.v1.TenantService/AdminPurgeTenant',
+        $argument,
+        ['\Udb\Core\Tenant\Services\V1\AdminPurgeTenantResponse', 'decode'],
+        $metadata, $options);
+    }
+
 }

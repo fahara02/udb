@@ -464,6 +464,77 @@ service TenantService {
       body: "*"
     };
   }
+
+  // PRIVILEGED cross-tenant purge (Bug #2). Unlike PurgeTenant — which forces the
+  // body tenant to equal the verified claim (self-purge only) — this RPC lets a
+  // delegated operator purge a DIFFERENT `target_tenant_id`. It is gated by a
+  // DISTINCT, default-deny scope (`udb:tenant:admin-purge`) SEPARATE from the
+  // self-purge scope, is DESTRUCTIVE, and demands an explicit confirmation token
+  // plus an idempotency key. The handler routes the movement with
+  // `privileged_cross_tenant=true`, binds the VERIFIED delegated actor, treats
+  // control-plane / tenant-less tables explicitly (retained + reported, never
+  // blind-deleted), and writes an immutable audit/outcome record. `tenant_field`
+  // names the body tenant the action targets (`target_tenant_id`); the handler —
+  // not the transport gate — authorizes the cross-tenant reach via the scope.
+  rpc AdminPurgeTenant(AdminPurgeTenantRequest) returns (AdminPurgeTenantResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:tenant:admin-purge"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "tenant.AdminPurgeTenant"
+      request_context_required: true
+      tenant_required: true
+      tenant_field: "target_tenant_id"
+      idempotency_required: true
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "admin_purge_tenant" rest_operation_id: "adminPurgeTenant"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "tenant"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "tenant"
+      import_path: "udb/native/tenant"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.tenant.admin_purge_tenant.boilerplate"
+      route_name: "admin_purge_tenant"
+      middleware_name: "udb_tenant"
+      required_native_services: "tenant"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "tenant"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "tenant.AdminPurgeTenant"
+      outbox_topic: "tenant.events"
+      partition_key_field: "target_tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = {
+      response_envelope: true
+      api_error: true
+      explicit_nulls: true
+    };
+    option (google.api.http) = {
+      post: "/v1/tenants/{target_tenant_id}:adminPurge"
+      body: "*"
+    };
+  }
 }
 
 message CreateTenantRequest {
@@ -731,4 +802,90 @@ message PurgeTenantResponse {
   string message = 7;
   // Error information if operation failed
   udb.core.common.v1.ApiError error = 8;
+}
+
+// Treatment the privileged AdminPurgeTenant applies to the target tenant's data.
+// UNSPECIFIED is rejected (fail closed) so the destructive blast radius is always
+// chosen explicitly, never defaulted.
+enum AdminPurgeMode {
+  ADMIN_PURGE_MODE_UNSPECIFIED = 0;
+  // Physically HARD-deletes every row the tenant owns across all tenant-columned
+  // entity tables (the same ripple as PurgeTenant). Irreversible.
+  ADMIN_PURGE_MODE_HARD = 1;
+  // Reversible: deactivates the tenant control record (soft-delete + INACTIVE) and
+  // revokes its tokens WITHOUT physically deleting entity rows. Every tenant-owned
+  // table is REPORTED as retained so the operator sees data was preserved.
+  ADMIN_PURGE_MODE_SOFT = 2;
+}
+
+message AdminPurgeTenantRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "tenant"
+    generate_minimal_example: true
+  };
+  // Actor on whose behalf the purge is delegated (audit attribution). The server
+  // binds this to the VERIFIED caller subject: empty inherits the caller; a
+  // non-empty value that disagrees with the caller is accepted ONLY from a genuine
+  // cross-tenant admin, otherwise rejected (attribution cannot be forged).
+  string delegated_actor = 1;
+  // The tenant to purge — MAY differ from the caller's own tenant (this is the
+  // privileged cross-tenant path; the self-purge PurgeTenant forbids that).
+  string target_tenant_id = 2;
+  // Destructive treatment; ADMIN_PURGE_MODE_UNSPECIFIED is rejected.
+  AdminPurgeMode mode = 3;
+  // Mandatory human-readable justification, recorded in the immutable audit record.
+  string reason = 4;
+  // Optimistic-concurrency guard against the tenant's current version (its
+  // updated-at epoch seconds). `0` disables the check; a non-zero mismatch is an
+  // Aborted conflict so a stale operator view never purges a changed tenant.
+  int64 expected_version = 5;
+  // Required explicit confirmation. To guard against a fat-fingered cross-tenant
+  // purge it MUST equal `target_tenant_id`; empty or non-matching fails closed.
+  string confirmation_token = 6;
+  // Required caller-supplied idempotency key. A replay with the SAME key and SAME
+  // inputs returns the original outcome; the same key with DIFFERENT inputs is a
+  // conflict (never a bogus replay).
+  string idempotency_key = 7;
+}
+
+message AdminPurgeTenantResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "tenant"
+    generate_minimal_example: true
+  };
+  string target_tenant_id = 1;
+  // The treatment actually applied (echoes the request mode).
+  AdminPurgeMode mode = 2;
+  // HARD: per-table hard-delete counts (children->parents). SOFT: empty.
+  repeated PurgedTableCount purged = 3;
+  // Tables NOT physically purged, reported for capability honesty: tenant-less /
+  // control-plane tables (both modes), and — in SOFT mode — every tenant-owned
+  // table whose data was deliberately retained.
+  repeated PurgeExcludedTable excluded = 4;
+  uint64 total_deleted = 5;
+  // Whether the tenant-level cluster denylist cutoff was recorded (best-effort).
+  bool tenant_denylisted = 6;
+  // How many principals had a denylist cutoff recorded (best-effort).
+  uint32 principals_denylisted = 7;
+  // SOFT mode: the tenant control record was deactivated (soft-deleted), data kept.
+  bool soft_deactivated = 8;
+  // The tenant version observed at purge time (see AdminPurgeTenantRequest.expected_version).
+  int64 purged_version = 9;
+  // True when this response was replayed from a prior identical request (idempotency).
+  bool replayed = 10;
+  // Id of the immutable audit/outcome record written for this purge.
+  string outcome_id = 11;
+  string message = 12;
+  // Error information if operation failed
+  udb.core.common.v1.ApiError error = 13;
 }

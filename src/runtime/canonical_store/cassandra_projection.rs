@@ -794,11 +794,12 @@ impl ProjectionTaskStore for CassandraCanonicalStore {
                 continue;
             };
             let status = get_text(status_row, 0);
+            // P2-1 NF-1/NF-2: only COMPLETED settles the fence; FAILED (will retry)
+            // and DEAD_LETTER (will never complete) are not projected yet, so they
+            // still count as pending for read-your-writes.
             let settled = matches!(
                 ProjectionTaskStatus::parse(&status),
                 Some(ProjectionTaskStatus::Completed)
-                    | Some(ProjectionTaskStatus::DeadLetter)
-                    | Some(ProjectionTaskStatus::Failed)
             );
             if !settled {
                 pending += 1;

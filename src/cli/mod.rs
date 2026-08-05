@@ -123,6 +123,45 @@ fn install_serve_panic_hook() {
     });
 }
 
+/// True when a panic message is the one std emits from `print!` / `println!` /
+/// `eprintln!` (and friends) after the downstream reader closed the pipe — e.g.
+/// `udb … | head`. std formats these as `failed printing to stdout: Broken pipe
+/// (os error 32)` on Unix (EPIPE) and `… (os error 109)` on Windows
+/// (ERROR_BROKEN_PIPE). We match both the textual kind and the raw errno so the
+/// check holds regardless of locale-translated OS strings.
+fn is_broken_pipe_panic_message(message: &str) -> bool {
+    let lower = message.to_ascii_lowercase();
+    lower.contains("broken pipe")
+        || lower.contains("os error 32") // EPIPE on Unix
+        || lower.contains("os error 109") // ERROR_BROKEN_PIPE on Windows
+}
+
+/// Belt-and-suspenders cover for the ~98 raw `println!` / `print!` sites: when a
+/// downstream reader closes the pipe early (`udb … | head`), the next write
+/// panics on the IO error. Installed up front in `run()`, this hook turns that
+/// specific panic into a clean, silent `exit(0)` instead of a backtrace. Other
+/// panics are passed through to the previous hook unchanged. The structured
+/// stdout path (`output::output_json`) handles BrokenPipe directly and never
+/// reaches here.
+fn install_broken_pipe_panic_hook() {
+    static INSTALL: Once = Once::new();
+    INSTALL.call_once(|| {
+        let previous = panic::take_hook();
+        panic::set_hook(Box::new(move |info| {
+            let payload = info
+                .payload()
+                .downcast_ref::<&str>()
+                .copied()
+                .or_else(|| info.payload().downcast_ref::<String>().map(String::as_str));
+            if payload.is_some_and(is_broken_pipe_panic_message) {
+                let _ = std::io::stderr().flush();
+                process::exit(0);
+            }
+            previous(info);
+        }));
+    });
+}
+
 /// Install the process-level rustls `CryptoProvider` before any TLS config is
 /// built. rustls 0.23 refuses to auto-select a provider when more than one
 /// backend is linked, and UDB's graph pulls BOTH aws-lc-rs and ring transitively
@@ -217,6 +256,13 @@ fn scan_dense_aggregate_annotations(dir: &std::path::Path, out: &mut Vec<String>
 }
 
 pub fn run() {
+    // A downstream reader that closes the pipe early (`udb … | head`) makes the
+    // next raw `println!` / `print!` panic on the write error (EPIPE / os error
+    // 109). Install the hook FIRST — before help/version output or any other
+    // stdout write — so that panic becomes a clean, silent exit rather than a
+    // backtrace. See `output::output_json` for the structured-output path's
+    // matching BrokenPipe handling.
+    install_broken_pipe_panic_hook();
     // Load project root env file.
     //
     // Resolution order (first file found in cwd → parent chain wins):

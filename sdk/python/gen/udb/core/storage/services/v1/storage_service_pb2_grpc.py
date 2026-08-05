@@ -121,7 +121,10 @@ class StorageServiceServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def DeleteFile(self, request, context):
-        """Delete a file (soft delete)
+        """Delete a file. `mode` selects soft-delete (default, metadata tombstone +
+        best-effort byte removal) or hard-delete (durable object-GC intent committed
+        atomically with the tombstone, then driven to convergence — a byte-delete
+        failure returns an error, never success, and leaves the intent for the sweep).
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')

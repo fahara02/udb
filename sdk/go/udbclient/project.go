@@ -298,12 +298,13 @@ type AdoptedLogin struct {
 //  1. Login (native AuthnService.Login) to obtain the bearer access token.
 //  2. AuthenticateBearer to resolve + VERIFY the canonical principal.
 //
-// It then derives {tenant_id, project_id} FROM THE VERIFIED PRINCIPAL (never a
-// body hint), atomically adopts that metadata across every facade
-// (adoptMetadata), and installs the bearer as the authorization credential. Both
-// RPCs ALWAYS run — there is no "skip authenticate if a principal is already
-// present" branch. No body tenant copying afterward (the broker derives identity
-// from the verified claim).
+// It then derives the FULL identity {tenant_id, project_id, user_id,
+// service_identity, scopes} FROM THE VERIFIED PRINCIPAL (never a body hint),
+// atomically adopts that metadata across every facade (adoptMetadata), and
+// installs the bearer as the authorization credential. Both RPCs ALWAYS run —
+// there is no "skip authenticate if a principal is already present" branch. No
+// body tenant copying afterward (the broker derives identity from the verified
+// claim).
 func (u *Udb) LoginAndAdoptTenant(ctx context.Context, req *authnv1.LoginRequest) (*AdoptedLogin, error) {
 	// RPC 1: native login.
 	loginResp, err := u.Auth.Authn.Login(u.Auth.Context(ctx), req)
@@ -325,13 +326,19 @@ func (u *Udb) LoginAndAdoptTenant(ctx context.Context, req *authnv1.LoginRequest
 		return nil, fmt.Errorf("udb: AuthenticateBearer returned no principal")
 	}
 
-	// Adopt the canonical tenant/project from the verified principal.
+	// Adopt the FULL canonical identity from the verified principal — never a
+	// caller hint. tenant/project PLUS the user, the service identity, and the
+	// scope set are ALL taken from the principal, UNCONDITIONALLY: a caller UserID
+	// hint (or a stale value carried from a previous login) must not survive when
+	// the verified principal's user is empty, and the reconciled scopes are exactly
+	// the principal's — never merged with a caller-requested set. The verified
+	// Principal is the single source of truth for who this bearer is.
 	meta := u.Meta
 	meta.TenantID = principal.GetTenantId()
 	meta.ProjectID = principal.GetProjectId()
-	if uid := principal.GetUserId(); uid != "" {
-		meta.UserID = uid
-	}
+	meta.UserID = principal.GetUserId()
+	meta.ServiceIdentity = principal.GetServiceIdentity()
+	meta.Scopes = principal.GetScopes()
 	u.adoptMetadata(meta)
 	if u.Generated != nil {
 		u.Generated.SetAuthorization("Bearer " + token)

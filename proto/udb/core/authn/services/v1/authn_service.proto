@@ -2582,6 +2582,71 @@ service AuthnService {
       body: "*"
     };
   }
+
+  // Atomically transfer an ACTIVE service-account grant (its stable
+  // service_identity and approved scopes) from one service account to another,
+  // under revision CAS. The grant row is re-pointed from `from_user_id` to
+  // `to_user_id` in a single transaction, so neither the deployment-wide
+  // service_identity unique index nor the per-user unique index is ever
+  // violated, and no window exists in which no account owns the identity. The
+  // source account is left with no grant (its credentials no longer resolve to
+  // the identity); the move is a deterministic inverse of itself. This is the
+  // supported recovery path when the currently-bound account's credentials are
+  // unavailable, replacing a non-atomic rotate-then-create.
+  rpc TransferServiceAccountGrant(TransferServiceAccountGrantRequest) returns (TransferServiceAccountGrantResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_DESTRUCTIVE;
+    option (udb.core.common.v1.endpoint_security) = {
+      mode: AUTH_MODE_BEARER
+      scopes: "udb:authn:manage-grants"
+      allowed_credential_types: CREDENTIAL_TYPE_BEARER_JWT
+      allowed_credential_types: CREDENTIAL_TYPE_SESSION
+      decision_resource: "authn.TransferServiceAccountGrant"
+      request_context_required: true
+      tenant_required: true
+      tenant_field: "tenant_id"
+    };
+    option (udb.core.common.v1.sdk_surface) = {
+      include_in_facade: true
+      method_alias: "transfer_service_account_grant" rest_operation_id: "transferServiceAccountGrant"
+      required_credential_provider: "udb"
+      default_deadline_ms: 30000
+      default_max_attempts: 3
+      server_only: true
+      boilerplate_recipe_tags: "auth"
+      generate_minimal_example: true
+    };
+    option (udb.core.common.v1.method_cli_scaffold) = {
+      scaffold_package: "auth"
+      import_path: "udb/native/auth"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+      generated_files: "udb.native.auth.transfer_service_account_grant.boilerplate"
+      route_name: "transfer_service_account_grant"
+      middleware_name: "udb_auth"
+      required_native_services: "authn"
+      secret_placeholders: "UDB_API_KEY"
+      smoke_test_command: "udb native smoke"
+    };
+    option (udb.core.common.v1.method_dependency_contract) = {
+      required_native_services: "authn"
+      required_backends: "postgres"
+      required_env: "UDB_NATIVE_SERVICES_ENABLED"
+      required_env: "UDB_GRPC_TARGET"
+    };
+    option (udb.core.common.v1.method_event_contract) = {
+      event_type: "authn.TransferServiceAccountGrant"
+      outbox_topic: "authn.events"
+      partition_key_field: "tenant_id"
+      payload_redaction_profile: "standard"
+      delivery_guarantee: "at_least_once"
+      replay_compatibility: "stable"
+    };
+    option (udb.core.common.v1.rest_contract) = { response_envelope: true api_error: true explicit_nulls: true };
+    option (google.api.http) = {
+      post: "/v1/auth/service-accounts/{from_user_id}/grant:transfer"
+      body: "*"
+    };
+  }
   // Revoke a service account's grant. The account (and every credential or
   // certificate binding that resolves through the grant) stops authenticating
   // immediately — fail closed, audited.
@@ -2985,6 +3050,47 @@ message RotateServiceAccountIdentityResponse {
   };
   udb.core.authn.entity.v1.ServiceAccountGrant grant = 1;
   string previous_service_identity = 2;
+  string message = 3;
+  udb.core.common.v1.ApiError error = 4;
+}
+
+message TransferServiceAccountGrantRequest {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
+  string tenant_id = 1;
+  // The service account that currently holds the grant/identity.
+  string from_user_id = 2;
+  // The service account to transfer the grant/identity to. Must be an ACTIVE
+  // service account in the same tenant/project with no existing grant.
+  string to_user_id = 3;
+  // Optimistic-concurrency guard: the source grant's current revision.
+  int64 expected_revision = 4;
+  string reason = 5;
+}
+
+message TransferServiceAccountGrantResponse {
+  option (udb.core.common.v1.message_sdk_surface) = {
+    include_in_facade: true
+    required_credential_provider: "udb"
+    default_deadline_ms: 30000
+    default_max_attempts: 3
+    server_only: true
+    boilerplate_recipe_tags: "authn"
+    generate_minimal_example: true
+  };
+  // The grant after the transfer: now owned by to_user_id with its revision
+  // bumped. Its service_identity and approved scopes are unchanged.
+  udb.core.authn.entity.v1.ServiceAccountGrant grant = 1;
+  // The account that previously held the grant — feed it back as to_user_id
+  // (with the new revision) for a deterministic reverse transfer.
+  string previous_user_id = 2;
   string message = 3;
   udb.core.common.v1.ApiError error = 4;
 }

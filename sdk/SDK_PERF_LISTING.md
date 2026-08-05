@@ -6,7 +6,7 @@ Inputs:
 - `docs/generated/bench-bodies.json`
 - `docs/site/bench-results.json`
 
-Current generated RPC surface: 376 RPCs across 28 services.
+Current generated RPC surface: 379 RPCs across 28 services.
 
 Published benchmark artifact: present.
 Release tag: v0.4.28.
@@ -51,13 +51,13 @@ Generated at: 2026-07-26T17:46:09+00:00.
 | AnalyticsService | 7 | 5 | 2 | 0 | 0 |
 | ApiKeyService | 9 | 4 | 4 | 1 | 0 |
 | AssetService | 8 | 4 | 4 | 0 | 0 |
-| AuthnService | 59 | 18 | 31 | 10 | 0 |
+| AuthnService | 60 | 18 | 31 | 11 | 0 |
 | AuthzService | 41 | 18 | 17 | 6 | 0 |
 | BackupService | 8 | 4 | 3 | 1 | 0 |
 | CacheService | 7 | 3 | 3 | 1 | 0 |
 | ConfigService | 5 | 3 | 1 | 1 | 0 |
 | ControlPlaneService | 6 | 2 | 4 | 0 | 0 |
-| DataBroker | 78 | 35 | 36 | 7 | 0 |
+| DataBroker | 79 | 35 | 37 | 7 | 0 |
 | EmbeddingService | 19 | 5 | 12 | 2 | 0 |
 | IdentityProviderService | 27 | 6 | 21 | 0 | 0 |
 | LiveQueryService | 1 | 1 | 0 | 0 | 0 |
@@ -70,7 +70,7 @@ Generated at: 2026-07-26T17:46:09+00:00.
 | SearchService | 5 | 2 | 2 | 1 | 0 |
 | SignalingService | 1 | 0 | 1 | 0 | 0 |
 | StorageService | 9 | 5 | 4 | 0 | 0 |
-| TenantService | 7 | 3 | 3 | 1 | 0 |
+| TenantService | 8 | 3 | 3 | 2 | 0 |
 | TrackService | 4 | 1 | 3 | 0 | 0 |
 | TurnService | 1 | 0 | 1 | 0 | 0 |
 | VaultService | 20 | 6 | 13 | 1 | 0 |
@@ -163,6 +163,7 @@ identity surface available to benchmark reports.
 | `AuthnService/SendPhoneVerification` | `send_phone_verification` | `sendPhoneVerification` | MUTATION |
 | `AuthnService/StartWebAuthnAuthentication` | `start_web_authn_authentication` | `startWebAuthnAuthentication` | MUTATION |
 | `AuthnService/StartWebAuthnRegistration` | `start_web_authn_registration` | `startWebAuthnRegistration` | MUTATION |
+| `AuthnService/TransferServiceAccountGrant` | `transfer_service_account_grant` | `transferServiceAccountGrant` | DESTRUCTIVE |
 | `AuthnService/UpdateUser` | `update_user` | `updateUser` | MUTATION |
 | `AuthnService/ValidateCSRF` | `validate_csrf` | `validateCsrf` | READ_ONLY |
 | `AuthnService/ValidateToken` | `validate_token` | `validateToken` | READ_ONLY |
@@ -242,6 +243,7 @@ identity surface available to benchmark reports.
 | `DataBroker/BatchSelect` | `batch_select` | `batchSelect` | MUTATION |
 | `DataBroker/BatchUpsert` | `batch_upsert` | `batchUpsert` | MUTATION |
 | `DataBroker/BeginTx` | `begin_tx` | `beginTx` | MUTATION |
+| `DataBroker/BulkCas` | `bulk_cas` | `bulkCas` | MUTATION |
 | `DataBroker/CacheDelete` | `cache_delete` | `cacheDelete` | MUTATION |
 | `DataBroker/CacheGet` | `cache_get` | `cacheGet` | READ_ONLY |
 | `DataBroker/CacheScan` | `cache_scan` | `cacheScan` | READ_ONLY |
@@ -418,6 +420,7 @@ identity surface available to benchmark reports.
 | `StorageService/RegisterUpload` | `register_upload` | `registerUpload` | MUTATION |
 | `StorageService/ReissueUploadUrl` | `reissue_upload_url` | `reissueUploadUrl` | READ_ONLY |
 | `StorageService/UpdateFile` | `update_file` | `updateFile` | MUTATION |
+| `TenantService/AdminPurgeTenant` | `admin_purge_tenant` | `adminPurgeTenant` | DESTRUCTIVE |
 | `TenantService/CreateTenant` | `create_tenant` | `createTenant` | MUTATION |
 | `TenantService/GetTenant` | `get_tenant` | `getTenant` | READ_ONLY |
 | `TenantService/GetTenantConfig` | `get_tenant_config` | `getTenantConfig` | READ_ONLY |

@@ -21,7 +21,7 @@ use Grpc\ChannelCredentials;
  *   UDB version ...... 0.4.37
  *   Protocol version . 1.0.0
  *   Services ......... 28
- *   RPCs ............. 376
+ *   RPCs ............. 379
  *
  * This class COMPOSES WITH the hand-written layer; it does not replace it:
  *   - it reuses {@see UdbMetadata} for the eight broker headers,
@@ -140,6 +140,7 @@ final class GeneratedClient
         "SendPhoneVerification" => "mutation",
         "StartWebAuthnAuthentication" => "mutation",
         "StartWebAuthnRegistration" => "mutation",
+        "TransferServiceAccountGrant" => "destructive",
         "UpdateUser" => "mutation",
         "ValidateCSRF" => "read_only",
         "ValidateToken" => "read_only",
@@ -302,6 +303,7 @@ final class GeneratedClient
         "RegisterUpload" => "mutation",
         "ReissueUploadUrl" => "read_only",
         "UpdateFile" => "mutation",
+        "AdminPurgeTenant" => "destructive",
         "CreateTenant" => "mutation",
         "GetTenant" => "read_only",
         "GetTenantConfig" => "read_only",
@@ -367,6 +369,7 @@ final class GeneratedClient
         "BatchSelect" => "mutation",
         "BatchUpsert" => "mutation",
         "BeginTx" => "mutation",
+        "BulkCas" => "mutation",
         "CacheDelete" => "mutation",
         "CacheGet" => "read_only",
         "CacheScan" => "read_only",
@@ -525,6 +528,7 @@ final class GeneratedClient
         "AuthnService/SendPhoneVerification" => "mutation",
         "AuthnService/StartWebAuthnAuthentication" => "mutation",
         "AuthnService/StartWebAuthnRegistration" => "mutation",
+        "AuthnService/TransferServiceAccountGrant" => "destructive",
         "AuthnService/UpdateUser" => "mutation",
         "AuthnService/ValidateCSRF" => "read_only",
         "AuthnService/ValidateToken" => "read_only",
@@ -687,6 +691,7 @@ final class GeneratedClient
         "StorageService/RegisterUpload" => "mutation",
         "StorageService/ReissueUploadUrl" => "read_only",
         "StorageService/UpdateFile" => "mutation",
+        "TenantService/AdminPurgeTenant" => "destructive",
         "TenantService/CreateTenant" => "mutation",
         "TenantService/GetTenant" => "read_only",
         "TenantService/GetTenantConfig" => "read_only",
@@ -752,6 +757,7 @@ final class GeneratedClient
         "DataBroker/BatchSelect" => "mutation",
         "DataBroker/BatchUpsert" => "mutation",
         "DataBroker/BeginTx" => "mutation",
+        "DataBroker/BulkCas" => "mutation",
         "DataBroker/CacheDelete" => "mutation",
         "DataBroker/CacheGet" => "read_only",
         "DataBroker/CacheScan" => "read_only",
@@ -910,6 +916,7 @@ final class GeneratedClient
         "AuthnService/SendPhoneVerification" => "send_phone_verification",
         "AuthnService/StartWebAuthnAuthentication" => "start_web_authn_authentication",
         "AuthnService/StartWebAuthnRegistration" => "start_web_authn_registration",
+        "AuthnService/TransferServiceAccountGrant" => "transfer_service_account_grant",
         "AuthnService/UpdateUser" => "update_user",
         "AuthnService/ValidateCSRF" => "validate_csrf",
         "AuthnService/ValidateToken" => "validate_token",
@@ -1072,6 +1079,7 @@ final class GeneratedClient
         "StorageService/RegisterUpload" => "register_upload",
         "StorageService/ReissueUploadUrl" => "reissue_upload_url",
         "StorageService/UpdateFile" => "update_file",
+        "TenantService/AdminPurgeTenant" => "admin_purge_tenant",
         "TenantService/CreateTenant" => "create_tenant",
         "TenantService/GetTenant" => "get_tenant",
         "TenantService/GetTenantConfig" => "get_tenant_config",
@@ -1137,6 +1145,7 @@ final class GeneratedClient
         "DataBroker/BatchSelect" => "batch_select",
         "DataBroker/BatchUpsert" => "batch_upsert",
         "DataBroker/BeginTx" => "begin_tx",
+        "DataBroker/BulkCas" => "bulk_cas",
         "DataBroker/CacheDelete" => "cache_delete",
         "DataBroker/CacheGet" => "cache_get",
         "DataBroker/CacheScan" => "cache_scan",
@@ -1294,6 +1303,7 @@ final class GeneratedClient
         "AuthnService/SendPhoneVerification" => "sendPhoneVerification",
         "AuthnService/StartWebAuthnAuthentication" => "startWebAuthnAuthentication",
         "AuthnService/StartWebAuthnRegistration" => "startWebAuthnRegistration",
+        "AuthnService/TransferServiceAccountGrant" => "transferServiceAccountGrant",
         "AuthnService/UpdateUser" => "updateUser",
         "AuthnService/ValidateCSRF" => "validateCsrf",
         "AuthnService/ValidateToken" => "validateToken",
@@ -1456,6 +1466,7 @@ final class GeneratedClient
         "StorageService/RegisterUpload" => "registerUpload",
         "StorageService/ReissueUploadUrl" => "reissueUploadUrl",
         "StorageService/UpdateFile" => "updateFile",
+        "TenantService/AdminPurgeTenant" => "adminPurgeTenant",
         "TenantService/CreateTenant" => "createTenant",
         "TenantService/GetTenant" => "getTenant",
         "TenantService/GetTenantConfig" => "getTenantConfig",
@@ -1521,6 +1532,7 @@ final class GeneratedClient
         "DataBroker/BatchSelect" => "batchSelect",
         "DataBroker/BatchUpsert" => "batchUpsert",
         "DataBroker/BeginTx" => "beginTx",
+        "DataBroker/BulkCas" => "bulkCas",
         "DataBroker/CacheDelete" => "cacheDelete",
         "DataBroker/CacheGet" => "cacheGet",
         "DataBroker/CacheScan" => "cacheScan",
@@ -1678,6 +1690,7 @@ final class GeneratedClient
         "AuthnService/SendPhoneVerification" => "post",
         "AuthnService/StartWebAuthnAuthentication" => "post",
         "AuthnService/StartWebAuthnRegistration" => "post",
+        "AuthnService/TransferServiceAccountGrant" => "post",
         "AuthnService/UpdateUser" => "patch",
         "AuthnService/ValidateCSRF" => "post",
         "AuthnService/ValidateToken" => "post",
@@ -1840,6 +1853,7 @@ final class GeneratedClient
         "StorageService/RegisterUpload" => "post",
         "StorageService/ReissueUploadUrl" => "get",
         "StorageService/UpdateFile" => "patch",
+        "TenantService/AdminPurgeTenant" => "post",
         "TenantService/CreateTenant" => "post",
         "TenantService/GetTenant" => "get",
         "TenantService/GetTenantConfig" => "get",
@@ -1905,6 +1919,7 @@ final class GeneratedClient
         "DataBroker/BatchSelect" => "",
         "DataBroker/BatchUpsert" => "",
         "DataBroker/BeginTx" => "",
+        "DataBroker/BulkCas" => "",
         "DataBroker/CacheDelete" => "",
         "DataBroker/CacheGet" => "",
         "DataBroker/CacheScan" => "",
@@ -2062,6 +2077,7 @@ final class GeneratedClient
         "AuthnService/SendPhoneVerification" => "/v1/auth/users/{user_id}/phones:verify",
         "AuthnService/StartWebAuthnAuthentication" => "/v1/auth/webauthn/authentication:start",
         "AuthnService/StartWebAuthnRegistration" => "/v1/auth/users/{user_id}/webauthn/registration:start",
+        "AuthnService/TransferServiceAccountGrant" => "/v1/auth/service-accounts/{from_user_id}/grant:transfer",
         "AuthnService/UpdateUser" => "/v1/auth/users/{user_id}",
         "AuthnService/ValidateCSRF" => "/v1/auth/csrf-tokens:validate",
         "AuthnService/ValidateToken" => "/v1/auth/tokens:validate",
@@ -2224,6 +2240,7 @@ final class GeneratedClient
         "StorageService/RegisterUpload" => "/v1/storage/uploads",
         "StorageService/ReissueUploadUrl" => "/v1/storage/files/{file_id}:reissueUploadUrl",
         "StorageService/UpdateFile" => "/v1/storage/files/{file_id}",
+        "TenantService/AdminPurgeTenant" => "/v1/tenants/{target_tenant_id}:adminPurge",
         "TenantService/CreateTenant" => "/v1/tenants",
         "TenantService/GetTenant" => "/v1/tenants/{tenant_id}",
         "TenantService/GetTenantConfig" => "/v1/tenants/{tenant_id}/config",
@@ -2289,6 +2306,7 @@ final class GeneratedClient
         "DataBroker/BatchSelect" => "",
         "DataBroker/BatchUpsert" => "",
         "DataBroker/BeginTx" => "",
+        "DataBroker/BulkCas" => "",
         "DataBroker/CacheDelete" => "",
         "DataBroker/CacheGet" => "",
         "DataBroker/CacheScan" => "",
@@ -2543,6 +2561,7 @@ final class GeneratedClient
         "send_phone_verification" => "sendPhoneVerification",
         "start_web_authn_authentication" => "startWebAuthnAuthentication",
         "start_web_authn_registration" => "startWebAuthnRegistration",
+        "transfer_service_account_grant" => "transferServiceAccountGrant",
         "update_user" => "updateUser",
         "validate_csrf" => "validateCsrf",
         "validate_c_s_r_f" => "validateCsrf",
@@ -2712,6 +2731,7 @@ final class GeneratedClient
         "register_upload" => "registerUpload",
         "reissue_upload_url" => "reissueUploadUrl",
         "update_file" => "updateFile",
+        "admin_purge_tenant" => "adminPurgeTenant",
         "create_tenant" => "createTenant",
         "get_tenant" => "getTenant",
         "get_tenant_config" => "getTenantConfig",
@@ -2777,6 +2797,7 @@ final class GeneratedClient
         "batch_select" => "batchSelect",
         "batch_upsert" => "batchUpsert",
         "begin_tx" => "beginTx",
+        "bulk_cas" => "bulkCas",
         "cache_delete" => "cacheDelete",
         "cache_get" => "cacheGet",
         "cache_scan" => "cacheScan",
@@ -4567,6 +4588,27 @@ final class GeneratedClient
             fn (BaseStub $stub, array $md, array $opts) => $stub->StartWebAuthnRegistration($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.core.authn.services.v1.AuthnService / TransferServiceAccountGrant (unary), public alias transfer_service_account_grant.
+     *
+     * Forwards to {@see stubFor()}->TransferServiceAccountGrant(); retries transient codes.
+     * Path: /udb.core.authn.services.v1.AuthnService/TransferServiceAccountGrant
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded TransferServiceAccountGrantResponse
+     */
+    public function transferServiceAccountGrant($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'TransferServiceAccountGrant',
+            'AuthnService',
+            'udb.core.authn.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->TransferServiceAccountGrant($request, $md, $opts),
+            $metadata,
+            'destructive' === 'read_only',
             $request,
         );
     }
@@ -7889,6 +7931,27 @@ final class GeneratedClient
         );
     }
     /**
+     * udb.core.tenant.services.v1.TenantService / AdminPurgeTenant (unary), public alias admin_purge_tenant.
+     *
+     * Forwards to {@see stubFor()}->AdminPurgeTenant(); retries transient codes.
+     * Path: /udb.core.tenant.services.v1.TenantService/AdminPurgeTenant
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded AdminPurgeTenantResponse
+     */
+    public function adminPurgeTenant($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'AdminPurgeTenant',
+            'TenantService',
+            'udb.core.tenant.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->AdminPurgeTenant($request, $md, $opts),
+            $metadata,
+            'destructive' === 'read_only',
+            $request,
+        );
+    }
+    /**
      * udb.core.tenant.services.v1.TenantService / CreateTenant (unary), public alias create_tenant.
      *
      * Forwards to {@see stubFor()}->CreateTenant(); retries transient codes.
@@ -9164,6 +9227,27 @@ final class GeneratedClient
             'DataBroker',
             'udb.services.v1',
             fn (BaseStub $stub, array $md, array $opts) => $stub->ApproveMigrationPlan($request, $md, $opts),
+            $metadata,
+            'mutation' === 'read_only',
+            $request,
+        );
+    }
+    /**
+     * udb.services.v1.DataBroker / BulkCas (unary), public alias bulk_cas.
+     *
+     * Forwards to {@see stubFor()}->BulkCas(); retries transient codes.
+     * Path: /udb.services.v1.DataBroker/BulkCas
+     *
+     * @param  \Google\Protobuf\Internal\Message  $request
+     * @return \Google\Protobuf\Internal\Message  the decoded BulkCasResponse
+     */
+    public function bulkCas($request, ?UdbMetadata $metadata = null)
+    {
+        return $this->invokeUnary(
+            'BulkCas',
+            'DataBroker',
+            'udb.services.v1',
+            fn (BaseStub $stub, array $md, array $opts) => $stub->BulkCas($request, $md, $opts),
             $metadata,
             'mutation' === 'read_only',
             $request,
@@ -10770,7 +10854,7 @@ final class GeneratedClient
         return $this->stubFor('AssetService', 'udb.core.asset.services.v1');
     }
     /**
-     * Underlying buf-generated stub for udb.core.authn.services.v1.AuthnService (59 RPC(s)).
+     * Underlying buf-generated stub for udb.core.authn.services.v1.AuthnService (60 RPC(s)).
      * Channel is shared with every other service stub on this client.
      *
      * @return BaseStub  a AuthnServiceClient
@@ -10920,7 +11004,7 @@ final class GeneratedClient
         return $this->stubFor('StorageService', 'udb.core.storage.services.v1');
     }
     /**
-     * Underlying buf-generated stub for udb.core.tenant.services.v1.TenantService (7 RPC(s)).
+     * Underlying buf-generated stub for udb.core.tenant.services.v1.TenantService (8 RPC(s)).
      * Channel is shared with every other service stub on this client.
      *
      * @return BaseStub  a TenantServiceClient
@@ -11010,7 +11094,7 @@ final class GeneratedClient
         return $this->stubFor('WorkflowService', 'udb.core.workflow.services.v1');
     }
     /**
-     * Underlying buf-generated stub for udb.services.v1.DataBroker (78 RPC(s)).
+     * Underlying buf-generated stub for udb.services.v1.DataBroker (79 RPC(s)).
      * Channel is shared with every other service stub on this client.
      *
      * @return BaseStub  a DataBrokerClient
@@ -11213,9 +11297,9 @@ final class GeneratedClient
 
     public const DEFAULT_IR_BACKEND = 'postgres';
 
-    private const ORM_TIERS_JSON = "{\"postgres\":\"relational\",\"mysql\":\"relational\",\"sqlite\":\"relational\",\"sqlserver\":\"relational\",\"clickhouse\":\"relational\",\"redis\":\"kv\",\"memcached\":\"kv\",\"qdrant\":\"vector\",\"weaviate\":\"vector\",\"pinecone\":\"vector\",\"minio\":\"blob\",\"s3\":\"blob\",\"azureblob\":\"blob\",\"gcs\":\"blob\",\"mongodb\":\"document\",\"elasticsearch\":\"vector\",\"neo4j\":\"graph\",\"cassandra\":\"relational\"}";
+    private const ORM_TIERS_JSON = "{\"azureblob\":\"blob\",\"cassandra\":\"relational\",\"clickhouse\":\"relational\",\"elasticsearch\":\"vector\",\"gcs\":\"blob\",\"memcached\":\"kv\",\"minio\":\"blob\",\"mongodb\":\"document\",\"mysql\":\"relational\",\"neo4j\":\"graph\",\"pinecone\":\"vector\",\"postgres\":\"relational\",\"qdrant\":\"vector\",\"redis\":\"kv\",\"s3\":\"blob\",\"sqlite\":\"relational\",\"sqlserver\":\"relational\",\"weaviate\":\"vector\"}";
 
-    private const BACKEND_ROLES_JSON = "{\"postgres\":\"canonical\",\"mysql\":\"canonical\",\"sqlite\":\"canonical\",\"sqlserver\":\"canonical\",\"clickhouse\":\"canonical\",\"redis\":\"canonical\",\"memcached\":\"projection\",\"qdrant\":\"projection\",\"weaviate\":\"projection\",\"pinecone\":\"projection\",\"minio\":\"projection\",\"s3\":\"projection\",\"azureblob\":\"projection\",\"gcs\":\"projection\",\"mongodb\":\"canonical\",\"elasticsearch\":\"projection\",\"neo4j\":\"canonical\",\"cassandra\":\"canonical\"}";
+    private const BACKEND_ROLES_JSON = "{\"azureblob\":\"projection\",\"cassandra\":\"projection\",\"clickhouse\":\"projection\",\"elasticsearch\":\"projection\",\"gcs\":\"projection\",\"memcached\":\"projection\",\"minio\":\"projection\",\"mongodb\":\"projection\",\"mysql\":\"canonical\",\"neo4j\":\"projection\",\"pinecone\":\"projection\",\"postgres\":\"canonical\",\"qdrant\":\"projection\",\"redis\":\"projection\",\"s3\":\"projection\",\"sqlite\":\"canonical\",\"sqlserver\":\"canonical\",\"weaviate\":\"projection\"}";
 
     public static function query(string $messageType): IrQuery
     {

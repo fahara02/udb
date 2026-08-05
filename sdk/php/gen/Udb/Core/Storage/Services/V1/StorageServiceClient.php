@@ -129,7 +129,10 @@ class StorageServiceClient extends \Grpc\BaseStub {
     }
 
     /**
-     * Delete a file (soft delete)
+     * Delete a file. `mode` selects soft-delete (default, metadata tombstone +
+     * best-effort byte removal) or hard-delete (durable object-GC intent committed
+     * atomically with the tombstone, then driven to convergence — a byte-delete
+     * failure returns an error, never success, and leaves the intent for the sweep).
      * @param \Udb\Core\Storage\Services\V1\DeleteFileRequest $argument input argument
      * @param array $metadata metadata
      * @param array $options call options

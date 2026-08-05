@@ -47,7 +47,7 @@ public final class MutationProto {
     java.lang.String[] descriptorData = {
       "\n\034udb/entity/v1/mutation.proto\022\rudb.enti" +
       "ty.v1\032\035udb/entity/v1/operation.proto\032\037ud" +
-      "b/entity/v1/consistency.proto\"\312\004\n\020Mutati" +
+      "b/entity/v1/consistency.proto\"\346\004\n\020Mutati" +
       "onResponse\022\037\n\013mutation_id\030\001 \001(\tR\nmutatio" +
       "nId\022!\n\014resource_uri\030\002 \001(\tR\013resourceUri\022\'" +
       "\n\017checksum_sha256\030\003 \001(\tR\016checksumSha256\022" +
@@ -60,14 +60,14 @@ public final class MutationProto {
       "sponse.MetadataEntryR\010metadata\022;\n\010warnin" +
       "gs\030\n \003(\0132\037.udb.entity.v1.OperationWarnin" +
       "gR\010warnings\022@\n\rwrite_receipt\030\013 \001(\0132\033.udb" +
-      ".entity.v1.WriteReceiptR\014writeReceipt\032;\n" +
-      "\rMetadataEntry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005valu" +
-      "e\030\002 \001(\tR\005value:\0028\001B\263\001\n\021com.udb.entity.v1" +
-      "B\rMutationProtoP\001Z9github.com/fahara02/u" +
-      "db/sdk/go/gen/udb/entity/v1;entityv1\242\002\003U" +
-      "EX\252\002\rUdb.Entity.V1\312\002\rUdb\\Entity\\V1\342\002\031Udb" +
-      "\\GPBMetadata\\Entity\\V1\352\002\017Udb::Entity::V1" +
-      "b\006proto3"
+      ".entity.v1.WriteReceiptR\014writeReceipt\022\032\n" +
+      "\010revision\030\014 \001(\tR\010revision\032;\n\rMetadataEnt" +
+      "ry\022\020\n\003key\030\001 \001(\tR\003key\022\024\n\005value\030\002 \001(\tR\005val" +
+      "ue:\0028\001B\263\001\n\021com.udb.entity.v1B\rMutationPr" +
+      "otoP\001Z9github.com/fahara02/udb/sdk/go/ge" +
+      "n/udb/entity/v1;entityv1\242\002\003UEX\252\002\rUdb.Ent" +
+      "ity.V1\312\002\rUdb\\Entity\\V1\342\002\031Udb\\GPBMetadata" +
+      "\\Entity\\V1\352\002\017Udb::Entity::V1b\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -80,7 +80,7 @@ public final class MutationProto {
     internal_static_udb_entity_v1_MutationResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_udb_entity_v1_MutationResponse_descriptor,
-        new java.lang.String[] { "MutationId", "ResourceUri", "ChecksumSha256", "RecordJson", "AffectedRows", "WasDuplicate", "WriteReceiptJson", "ResourceVersion", "Metadata", "Warnings", "WriteReceipt", });
+        new java.lang.String[] { "MutationId", "ResourceUri", "ChecksumSha256", "RecordJson", "AffectedRows", "WasDuplicate", "WriteReceiptJson", "ResourceVersion", "Metadata", "Warnings", "WriteReceipt", "Revision", });
     internal_static_udb_entity_v1_MutationResponse_MetadataEntry_descriptor =
       internal_static_udb_entity_v1_MutationResponse_descriptor.getNestedTypes().get(0);
     internal_static_udb_entity_v1_MutationResponse_MetadataEntry_fieldAccessorTable = new

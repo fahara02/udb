@@ -129,7 +129,13 @@ impl XaInDoubtParticipant for MysqlInDoubtParticipant {
         conn.execute(format!("XA COMMIT '{xid}'").as_str())
             .await
             .map(|_| ())
-            .map_err(|e| format!("XA COMMIT failed: {e}"))
+            .or_else(|e| {
+                if is_already_terminal_xid_error(&e) {
+                    Ok(()) // already committed/gone elsewhere — recovery is idempotent.
+                } else {
+                    Err(format!("XA COMMIT failed: {e}"))
+                }
+            })
     }
 
     async fn rollback_prepared(&self, xid: &str) -> Result<(), String> {
@@ -143,7 +149,13 @@ impl XaInDoubtParticipant for MysqlInDoubtParticipant {
         conn.execute(format!("XA ROLLBACK '{xid}'").as_str())
             .await
             .map(|_| ())
-            .map_err(|e| format!("XA ROLLBACK failed: {e}"))
+            .or_else(|e| {
+                if is_already_terminal_xid_error(&e) {
+                    Ok(()) // already rolled back/gone elsewhere — recovery is idempotent.
+                } else {
+                    Err(format!("XA ROLLBACK failed: {e}"))
+                }
+            })
     }
 }
 
@@ -177,7 +189,13 @@ impl XaInDoubtParticipant for PostgresInDoubtParticipant {
             .execute(&self.pool)
             .await
             .map(|_| ())
-            .map_err(|e| format!("COMMIT PREPARED failed: {e}"))
+            .or_else(|e| {
+                if is_already_terminal_xid_error(&e) {
+                    Ok(()) // already committed/gone elsewhere — recovery is idempotent.
+                } else {
+                    Err(format!("COMMIT PREPARED failed: {e}"))
+                }
+            })
     }
 
     async fn rollback_prepared(&self, xid: &str) -> Result<(), String> {
@@ -186,8 +204,44 @@ impl XaInDoubtParticipant for PostgresInDoubtParticipant {
             .execute(&self.pool)
             .await
             .map(|_| ())
-            .map_err(|e| format!("ROLLBACK PREPARED failed: {e}"))
+            .or_else(|e| {
+                if is_already_terminal_xid_error(&e) {
+                    Ok(()) // already rolled back/gone elsewhere — recovery is idempotent.
+                } else {
+                    Err(format!("ROLLBACK PREPARED failed: {e}"))
+                }
+            })
     }
+}
+
+/// Idempotent recovery (2PC): an "unknown / undefined xid" error from a
+/// `COMMIT`/`ROLLBACK` of a prepared transaction means that xid was ALREADY
+/// driven terminal — by another node, a prior recovery pass, or the coordinator
+/// itself — which is precisely the state recovery is trying to reach. It MUST be
+/// treated as success, not a failure to retry: otherwise `drive_indoubt_row`
+/// marks the (already-resolved) row `Failed`, the in-doubt worker churns retries,
+/// and after `max_attempts` false-escalates a settled transaction to
+/// `manual_review`. Recognised signals: MySQL `ER_XAER_NOTA` (1397, SQLSTATE
+/// `XAE04`, "Unknown XID"); Postgres `COMMIT/ROLLBACK PREPARED` on a missing gid
+/// (SQLSTATE `42704`, "prepared transaction … does not exist"). A message
+/// fallback covers drivers that surface the state without the exact SQLSTATE.
+/// (Industry-standard idempotent-recovery handling — see the Percona XA-recovery
+/// guide referenced on `recover_abandoned_mysql_prepared`.)
+fn is_already_terminal_xid_error(err: &sqlx::Error) -> bool {
+    let Some(db) = err.as_database_error() else {
+        return false;
+    };
+    if let Some(code) = db.code() {
+        // XAE04 = MySQL XAER_NOTA (unknown xid); 42704 = Postgres undefined_object
+        // (prepared transaction does not exist).
+        if code == "XAE04" || code == "42704" {
+            return true;
+        }
+    }
+    let message = db.message().to_ascii_lowercase();
+    message.contains("unknown xid")
+        || message.contains("xaer_nota")
+        || message.contains("does not exist")
 }
 
 /// Validate a 2PC xid identifier. The coordinator always emits
@@ -256,6 +310,17 @@ impl InDoubtRegistry {
     pub fn register(&mut self, p: Arc<dyn XaInDoubtParticipant>) {
         self.by_label
             .insert(p.backend_label().to_ascii_lowercase(), p);
+    }
+
+    /// Iterate every registered participant as `(label, participant)`. Used by
+    /// the MySQL orphan-prepare sweep (XA1) to poll each MySQL participant's
+    /// `XA RECOVER` list — MySQL has no `pg_prepared_xacts`-style catalog view
+    /// the coordinator's PG pool can scan, so abandoned MySQL prepares are only
+    /// discoverable through the participant connections themselves.
+    pub fn entries(&self) -> impl Iterator<Item = (&str, &Arc<dyn XaInDoubtParticipant>)> {
+        self.by_label
+            .iter()
+            .map(|(label, participant)| (label.as_str(), participant))
     }
 
     pub fn get(&self, label: &str) -> Option<Arc<dyn XaInDoubtParticipant>> {
@@ -585,6 +650,172 @@ pub async fn recover_abandoned_prepared_transactions(
     Ok(driven_terminal)
 }
 
+/// XA1: reason stamped on a bootstrapped MySQL orphan-prepare ledger row. It MUST
+/// contain a phrase that routes [`InDoubtLedgerRow::target_intent`] to
+/// `Rollback` (here: "xa prepare") — otherwise the in-doubt worker would COMMIT an
+/// undecided orphaned prepare, violating the 2PC presumed-abort rule. Pinned by
+/// `mysql_orphan_reason_routes_to_rollback_intent`.
+pub(crate) const MYSQL_ORPHAN_PRESUMED_ABORT_REASON: &str =
+    "xa prepare orphan: participant prepared with no coordinator decision (presumed abort)";
+
+/// XA1: startup/periodic recovery for abandoned **MySQL** 2PC prepared
+/// transactions.
+///
+/// MySQL participants have no coordinator-visible `pg_prepared_xacts` analogue —
+/// a prepared `XA` transaction is only discoverable via `XA RECOVER` on the
+/// participant connection itself, which (unlike Postgres) reports NO prepare
+/// timestamp. So a MySQL participant that crashed AFTER `XA PREPARE` but BEFORE
+/// the coordinator durably recorded its decision leaks a prepared transaction
+/// holding row locks **forever**: the ledger-driven in-doubt worker never sees it
+/// (there is no ledger row), and the Postgres abandoned-prepared sweep only scans
+/// `pg_prepared_xacts`.
+///
+/// This sweep polls every registered MySQL participant's `XA RECOVER`, keeps only
+/// coordinator (`udb-`-prefixed) xids, joins them against the XA ledger, and:
+///   * **no ledger row** → records a bootstrap `in_doubt` row carrying a
+///     rollback-intent reason and the participant label (`ON CONFLICT DO NOTHING`,
+///     so a real coordinator decision that raced in first is never clobbered). The
+///     existing in-doubt worker then drives it to `ROLLBACK PREPARED` on its next
+///     pass — the 2PC *presumed-abort* rule (no durable commit decision ⇒ abort).
+///     Because the coordinator writes its real decision within milliseconds of
+///     PREPARE and that write wins the ledger upsert, a genuinely in-flight
+///     transaction is reconciled to its true outcome before the next pass; only a
+///     truly abandoned prepare survives to be rolled back (grace = one interval).
+///   * **`committed`** → `XA COMMIT` the straggler now (the in-doubt worker only
+///     scans `in_doubt`, so a commit-decided-but-still-prepared MySQL participant
+///     would otherwise leak).
+///   * **`rolled_back`** → `XA ROLLBACK` the straggler now (same rationale).
+///   * **`in_doubt` / `manual_review`** → leave it: the in-doubt worker or an
+///     operator owns that xid, so acting here would race them.
+///
+/// Returns the number of MySQL prepared xids driven to (or newly scheduled for) a
+/// terminal state.
+///
+/// Recovery-procedure reference (xid round-trip, single- vs three-part `XA COMMIT`,
+/// MySQL 5.7+ cross-connection recovery): Percona, "How to Deal with XA
+/// Transactions Recovery" — https://www.percona.com/blog/how-to-deal-with-xa-transactions-recovery/.
+/// UDB's coordinator xid is a printable single-part gtrid (`udb-<uuid>`, empty
+/// bqual, default formatID via `xa::new_xid`), so the participant's single-part
+/// `XA COMMIT '<xid>'` round-trips — the article's three-part hex form is only
+/// needed for the non-printable/bqual'd xids app servers emit.
+pub async fn recover_abandoned_mysql_prepared(
+    pool: &sqlx::PgPool,
+    config: &SystemCatalogConfig,
+    registry: &InDoubtRegistry,
+) -> Result<u64, String> {
+    // (label, xid) for every coordinator-owned prepared xid across all registered
+    // MySQL participants.
+    let mut prepared: Vec<(String, String)> = Vec::new();
+    for (label, participant) in registry.entries() {
+        if !participant
+            .backend_label()
+            .to_ascii_lowercase()
+            .starts_with("mysql")
+        {
+            continue;
+        }
+        match participant.list_prepared_xids().await {
+            Ok(xids) => {
+                for xid in xids {
+                    // Only coordinator xids (`udb-<uuid>`); never touch a
+                    // co-tenant application's own XA transactions.
+                    if xid.starts_with("udb-") && validate_xid(&xid).is_ok() {
+                        prepared.push((label.to_string(), xid));
+                    }
+                }
+            }
+            Err(err) => tracing::warn!(
+                participant = %label,
+                "XA RECOVER for the MySQL orphan sweep failed; skipping this participant: {err}"
+            ),
+        }
+    }
+    if prepared.is_empty() {
+        return Ok(0);
+    }
+    ensure_xa_ledger_table(pool, config).await?;
+    let relation = config.xa_ledger_relation();
+    let xids: Vec<String> = prepared.iter().map(|(_, xid)| xid.clone()).collect();
+    let ledger_rows: Vec<(String, String)> =
+        sqlx::query_as(&format!("SELECT xid, decision FROM {relation} WHERE xid = ANY($1)"))
+            .bind(&xids)
+            .fetch_all(pool)
+            .await
+            .map_err(|e| format!("join MySQL prepared xids against XA ledger failed: {e}"))?;
+    let decision_by_xid: HashMap<String, String> = ledger_rows.into_iter().collect();
+    let mut driven_terminal = 0u64;
+    for (label, xid) in prepared {
+        let participant = match registry.get(&label) {
+            Some(p) => p,
+            None => continue,
+        };
+        match decision_by_xid.get(&xid).map(String::as_str) {
+            None => {
+                // Orphan: `xa prepare` in the reason routes
+                // `InDoubtLedgerRow::target_intent()` to Rollback (presumed-abort);
+                // ON CONFLICT DO NOTHING so a real decision that raced in first is
+                // preserved. The in-doubt worker performs the rollback next pass.
+                let participants = serde_json::to_value(vec![label.clone()])
+                    .map_err(|e| format!("serialize MySQL orphan participant failed: {e}"))?;
+                let inserted = sqlx::query(&format!(
+                    "INSERT INTO {relation}
+                         (xid, tenant_id, project_id, origin_rpc, correlation_id,
+                          participants, decision, reason, decided_at, updated_at)
+                     VALUES ($1,'','','xa-recovery-orphan-sweep','',$2::JSONB,'in_doubt',
+                             $3, NOW(), NOW())
+                     ON CONFLICT (xid) DO NOTHING"
+                ))
+                .bind(&xid)
+                .bind(participants)
+                .bind(MYSQL_ORPHAN_PRESUMED_ABORT_REASON)
+                .execute(pool)
+                .await
+                .map_err(|e| format!("bootstrap MySQL orphan ledger row failed: {e}"))?;
+                if inserted.rows_affected() > 0 {
+                    driven_terminal += 1;
+                    tracing::warn!(
+                        xid = %xid,
+                        participant = %label,
+                        "bootstrapped abandoned MySQL prepared transaction for presumed-abort recovery"
+                    );
+                }
+            }
+            Some("committed") => match participant.commit_prepared(&xid).await {
+                Ok(_) => {
+                    driven_terminal += 1;
+                    tracing::warn!(
+                        xid = %xid,
+                        participant = %label,
+                        "committed straggling MySQL prepared transaction per ledger commit decision"
+                    );
+                }
+                Err(e) => tracing::warn!(
+                    xid = %xid,
+                    "failed to commit ledger-decided MySQL prepared transaction: {e}"
+                ),
+            },
+            Some("rolled_back") => match participant.rollback_prepared(&xid).await {
+                Ok(_) => {
+                    driven_terminal += 1;
+                    tracing::warn!(
+                        xid = %xid,
+                        participant = %label,
+                        "rolled back straggling MySQL prepared transaction per ledger rollback decision"
+                    );
+                }
+                Err(e) => tracing::warn!(
+                    xid = %xid,
+                    "failed to roll back ledger-decided MySQL prepared transaction: {e}"
+                ),
+            },
+            // `in_doubt` (owned by the in-doubt worker) / `manual_review` (owned by
+            // an operator) / anything unknown: leave it, do not race the owner.
+            Some(_) => {}
+        }
+    }
+    Ok(driven_terminal)
+}
+
 pub async fn ensure_xa_ledger_table(
     pool: &sqlx::PgPool,
     config: &SystemCatalogConfig,
@@ -800,7 +1031,12 @@ pub async fn run_xa_recovery_pass(
 ) -> Result<(u64, u64), String> {
     let ledger = recover_xa_ledger_indoubt_with(pool, config, registry, recovery).await?;
     let abandoned = recover_abandoned_prepared_transactions(pool, config, grace_secs).await?;
-    Ok((ledger, abandoned))
+    // XA1: MySQL has no coordinator-scannable prepared-xact catalog, so abandoned
+    // MySQL prepares are swept by polling each participant's `XA RECOVER`. Run it
+    // AFTER the in-doubt worker so a bootstrap row inserted here is picked up on
+    // the NEXT pass (the one-interval presumed-abort grace), never the same one.
+    let mysql_orphans = recover_abandoned_mysql_prepared(pool, config, registry).await?;
+    Ok((ledger, abandoned.saturating_add(mysql_orphans)))
 }
 
 async fn mark_xa_ledger_decision(
@@ -980,6 +1216,27 @@ mod tests {
             reason: "COMMIT PREPARED transport error".into(),
         };
         assert_eq!(row.target_intent(), RecoveryIntent::Commit);
+    }
+
+    #[test]
+    fn mysql_orphan_reason_routes_to_rollback_intent() {
+        // XA1 SAFETY INVARIANT: a bootstrapped MySQL orphan-prepare row is written
+        // as `in_doubt`, so the in-doubt worker will drive it. Its reason MUST make
+        // `target_intent()` == Rollback — if it ever routed to Commit, the worker
+        // would COMMIT a prepare the coordinator never durably decided, violating
+        // the 2PC presumed-abort rule. This pins the exact stamped reason.
+        let row = InDoubtLedgerRow {
+            xid: "udb-orphan".into(),
+            participants: vec!["mysql:primary".into()],
+            reason: MYSQL_ORPHAN_PRESUMED_ABORT_REASON.into(),
+        };
+        assert_eq!(row.target_intent(), RecoveryIntent::Rollback);
+        // And prepared_sweep_action for that same in_doubt+rollback-intent row
+        // presumes abort (the eventual ROLLBACK PREPARED), never a commit.
+        assert_eq!(
+            prepared_sweep_action(Some(("in_doubt", MYSQL_ORPHAN_PRESUMED_ABORT_REASON))),
+            PreparedSweepAction::PresumeAbort
+        );
     }
 
     #[test]

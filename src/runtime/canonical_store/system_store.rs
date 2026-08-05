@@ -872,12 +872,12 @@ where
         else {
             continue;
         };
-        if !matches!(
-            row.status,
-            ProjectionTaskStatus::Completed
-                | ProjectionTaskStatus::DeadLetter
-                | ProjectionTaskStatus::Failed
-        ) {
+        // P2-1 (NF-1/NF-2): only COMPLETED clears the fence. FAILED (will retry)
+        // and DEAD_LETTER (will never complete) are NOT projected yet, so for
+        // read-your-writes they still count as pending — a FAILED task holds the
+        // fence until the retry lands; a DEAD_LETTER task never clears, so the
+        // fence times out into a ProjectionMissing rather than lying "fresh".
+        if !matches!(row.status, ProjectionTaskStatus::Completed) {
             count += 1;
         }
     }

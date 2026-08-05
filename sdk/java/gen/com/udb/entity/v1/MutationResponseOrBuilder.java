@@ -183,4 +183,36 @@ java.lang.String defaultValue);
    * <code>.udb.entity.v1.WriteReceipt write_receipt = 11 [json_name = "writeReceipt"];</code>
    */
   com.udb.entity.v1.WriteReceiptOrBuilder getWriteReceiptOrBuilder();
+
+  /**
+   * <pre>
+   * #5 (opaque row revision / ETag): the broker-maintained opaque revision of
+   * the single row this mutation addressed, AFTER the mutation. Set on upserts
+   * and on single-row (primary-key-pinned) updates; empty for deletes (the row
+   * is gone) and for multi-row updates (revision is a single-row primitive).
+   * Opaque + monotonically increasing; feed it back as
+   * `UpdateRequest.expected_revision` / `DeleteRequest.expected_revision` for
+   * optimistic-concurrency (compare-and-swap) writes.
+   * </pre>
+   *
+   * <code>string revision = 12 [json_name = "revision"];</code>
+   * @return The revision.
+   */
+  java.lang.String getRevision();
+  /**
+   * <pre>
+   * #5 (opaque row revision / ETag): the broker-maintained opaque revision of
+   * the single row this mutation addressed, AFTER the mutation. Set on upserts
+   * and on single-row (primary-key-pinned) updates; empty for deletes (the row
+   * is gone) and for multi-row updates (revision is a single-row primitive).
+   * Opaque + monotonically increasing; feed it back as
+   * `UpdateRequest.expected_revision` / `DeleteRequest.expected_revision` for
+   * optimistic-concurrency (compare-and-swap) writes.
+   * </pre>
+   *
+   * <code>string revision = 12 [json_name = "revision"];</code>
+   * @return The bytes for revision.
+   */
+  com.google.protobuf.ByteString
+      getRevisionBytes();
 }

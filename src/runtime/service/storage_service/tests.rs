@@ -15,16 +15,19 @@ use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
 
 use super::StorageServiceImpl;
 use super::config::{
-    ALREADY_FINALIZED, OBJECT_KEY_TRAVERSAL, OBJECT_NOT_PRESENT, UNSUPPORTED_OBJECT_BACKEND,
-    UPLOAD_SIZE_MISMATCH,
+    ALREADY_FINALIZED, DELETE_PRECONDITION_FAILED, IDEMPOTENCY_KEY_CONFLICT, OBJECT_DELETE_FAILED,
+    OBJECT_KEY_TRAVERSAL, OBJECT_NOT_PRESENT, UNSUPPORTED_OBJECT_BACKEND, UPLOAD_SIZE_MISMATCH,
 };
 use super::errors::{
-    file_object_bytes_missing_status, object_store_bytes_missing_status,
+    delete_expected_status_mismatch_status, file_object_bytes_missing_status,
+    object_delete_failed_status, object_store_bytes_missing_status,
     object_stream_requires_store_status, storage_capability_status, storage_file_not_found_status,
-    storage_internal_status, upload_already_finalized_status, upload_etag_mismatch_status,
-    upload_size_mismatch_status, uploaded_object_missing_status, validate_object_key_filename,
+    storage_idempotency_conflict_status, storage_internal_status, upload_already_finalized_status,
+    upload_etag_mismatch_status, upload_size_mismatch_status, uploaded_object_missing_status,
+    validate_object_key_filename,
 };
 use super::model::{file_status_to_db, file_type_to_db, register_is_public_bind};
+use super::store::gc_intent_fingerprint;
 
 fn decode_detail(status: &Status) -> ErrorDetail {
     let raw = status
@@ -395,6 +398,82 @@ fn storage_internal_status_carries_typed_detail() {
 /// `register_is_public_bind` helper (still called from `register_upload`),
 /// covered here. End-to-end preservation of stored visibility on an absent
 /// update is exercised by the env-gated storage live tests.
+/// Additive DeleteFile mode: an absent/UNSPECIFIED mode resolves to SOFT (so
+/// pre-existing clients keep soft-delete), and only an explicit HARD is hard.
+#[test]
+fn delete_mode_defaults_to_soft() {
+    use storage_pb::DeleteMode;
+    let is_hard = |mode: i32| {
+        matches!(
+            DeleteMode::try_from(mode).unwrap_or(DeleteMode::Unspecified),
+            DeleteMode::Hard
+        )
+    };
+    assert!(!is_hard(DeleteMode::Unspecified as i32));
+    assert!(!is_hard(DeleteMode::Soft as i32));
+    assert!(!is_hard(0)); // default proto value
+    assert!(is_hard(DeleteMode::Hard as i32));
+}
+
+/// The GC-intent fingerprint is stable for the same target and discriminates a
+/// different file or mode — the basis of the same-key/different-input conflict.
+#[test]
+fn gc_intent_fingerprint_is_stable_and_discriminating() {
+    let a = gc_intent_fingerprint("file-1", "HARD");
+    assert_eq!(a, gc_intent_fingerprint(" file-1 ", " HARD ")); // trimmed
+    assert_ne!(a, gc_intent_fingerprint("file-2", "HARD")); // different file
+    assert_ne!(a, gc_intent_fingerprint("file-1", "SOFT")); // different mode
+}
+
+/// A same-key/different-target HARD delete replay conflicts fail-closed, mirroring
+/// the data-plane idempotency-mismatch contract (FailedPrecondition validation on
+/// `idempotency_key`, non-retryable, stable reason trailer).
+#[test]
+fn idempotency_conflict_carries_validation_detail_and_reason() {
+    assert_validation_detail_with_reason(
+        &storage_idempotency_conflict_status(),
+        "idempotency_key",
+        "the same idempotency_key was already claimed by a delete with different inputs",
+        IDEMPOTENCY_KEY_CONFLICT,
+        "idempotency_key was already used for a different delete; reuse a key only to retry an \
+         identical delete",
+    );
+}
+
+/// The `expected_status` optimistic guard mismatch is a fail-closed
+/// FailedPrecondition validation naming the offending field + stable reason.
+#[test]
+fn delete_expected_status_mismatch_carries_validation_detail_and_reason() {
+    assert_validation_detail_with_reason(
+        &delete_expected_status_mismatch_status("DELETED", "ACTIVE"),
+        "expected_status",
+        "must equal the file's current status token (or be omitted)",
+        DELETE_PRECONDITION_FAILED,
+        "delete precondition failed: expected file status \"ACTIVE\" but the file is currently \
+         \"DELETED\"",
+    );
+}
+
+/// A HARD delete whose byte removal failed reports a RETRYABLE error (never
+/// success) carrying the stable `OBJECT_DELETE_FAILED` reason — the durable intent
+/// guarantees eventual convergence via the sweep.
+#[test]
+fn object_delete_failed_status_is_retryable_with_reason() {
+    let status = object_delete_failed_status("backend timeout");
+    assert_eq!(status.code(), tonic::Code::Unavailable);
+    assert_eq!(
+        status
+            .metadata()
+            .get("error-reason")
+            .and_then(|value| value.to_str().ok()),
+        Some(OBJECT_DELETE_FAILED)
+    );
+    assert!(status.message().contains("durable object-GC intent"));
+    let detail = decode_detail(&status);
+    assert_eq!(detail.kind, ErrorKind::Retryable as i32);
+    assert!(detail.retryable);
+}
+
 #[test]
 fn register_is_public_defaults_to_private_when_absent() {
     // register_upload INSERT: absent field defaults to private, never NULL.

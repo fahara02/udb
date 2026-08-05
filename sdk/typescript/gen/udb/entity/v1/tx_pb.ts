@@ -19,7 +19,7 @@ import type { JsonObject, Message } from "@bufbuild/protobuf";
  * Describes the file udb/entity/v1/tx.proto.
  */
 export const file_udb_entity_v1_tx: GenFile = /*@__PURE__*/
-  fileDesc("ChZ1ZGIvZW50aXR5L3YxL3R4LnByb3RvEg11ZGIuZW50aXR5LnYxIpkECghNdXRhdGlvbhIuCgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dBINCgV0eF9pZBgCIAEoCRIRCglvcGVyYXRpb24YAyABKAkSFAoMbWVzc2FnZV90eXBlGAQgASgJEhMKC3JlY29yZF9qc29uGAUgASgMEigKB3BheWxvYWQYBiABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EicKBmZpbHRlchgHIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSEgoKY29sbGVjdGlvbhgIIAEoCRI5Cg12ZWN0b3JfcG9pbnRzGAkgAygLMiIudWRiLmVudGl0eS52MS5WZWN0b3JQb2ludE11dGF0aW9uEg4KBmNvbW1pdBgKIAEoCBIQCghyb2xsYmFjaxgLIAEoCBIOCgZidWNrZXQYDCABKAkSEgoKb2JqZWN0X2tleRgNIAEoCRITCgtvYmplY3RfZGF0YRgOIAEoDBIUCgxjb250ZW50X3R5cGUYDyABKAkSFwoPaWRlbXBvdGVuY3lfa2V5GBAgASgJEigKB2NoYW5nZXMYESABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EjoKCmluY3JlbWVudHMYEiADKAsyJi51ZGIuZW50aXR5LnYxLlVwZGF0ZVJlcXVlc3QuSW5jcmVtZW50Ip0CCghUeFN0YXR1cxIsCgVzdGF0ZRgBIAEoDjIdLnVkYi5lbnRpdHkudjEuVHhTdGF0dXMuU3RhdGUSDQoFdHhfaWQYAiABKAkSEwoLbXV0YXRpb25faWQYAyABKAkSDwoHbWVzc2FnZRgEIAEoCRIyCg13cml0ZV9yZWNlaXB0GAUgASgLMhsudWRiLmVudGl0eS52MS5Xcml0ZVJlY2VpcHQiegoFU3RhdGUSGAoUVFhfU1RBVEVfVU5TUEVDSUZJRUQQABIRCg1UWF9TVEFURV9PUEVOEAESFgoSVFhfU1RBVEVfQ09NTUlUVEVEEAISGAoUVFhfU1RBVEVfUk9MTEVEX0JBQ0sQAxISCg5UWF9TVEFURV9FUlJPUhAEQq0BChFjb20udWRiLmVudGl0eS52MUIHVHhQcm90b1ABWjlnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9lbnRpdHkvdjE7ZW50aXR5djGiAgNVRViqAg1VZGIuRW50aXR5LlYxygINVWRiXEVudGl0eVxWMeICGVVkYlxHUEJNZXRhZGF0YVxFbnRpdHlcVjHqAg9VZGI6OkVudGl0eTo6VjFiBnByb3RvMw", [file_google_protobuf_struct, file_udb_entity_v1_context, file_udb_entity_v1_vector, file_udb_entity_v1_relational, file_udb_entity_v1_consistency]);
+  fileDesc("ChZ1ZGIvZW50aXR5L3YxL3R4LnByb3RvEg11ZGIuZW50aXR5LnYxItoECghNdXRhdGlvbhIuCgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dBINCgV0eF9pZBgCIAEoCRIRCglvcGVyYXRpb24YAyABKAkSFAoMbWVzc2FnZV90eXBlGAQgASgJEhMKC3JlY29yZF9qc29uGAUgASgMEigKB3BheWxvYWQYBiABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EicKBmZpbHRlchgHIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSEgoKY29sbGVjdGlvbhgIIAEoCRI5Cg12ZWN0b3JfcG9pbnRzGAkgAygLMiIudWRiLmVudGl0eS52MS5WZWN0b3JQb2ludE11dGF0aW9uEg4KBmNvbW1pdBgKIAEoCBIQCghyb2xsYmFjaxgLIAEoCBIOCgZidWNrZXQYDCABKAkSEgoKb2JqZWN0X2tleRgNIAEoCRITCgtvYmplY3RfZGF0YRgOIAEoDBIUCgxjb250ZW50X3R5cGUYDyABKAkSFwoPaWRlbXBvdGVuY3lfa2V5GBAgASgJEigKB2NoYW5nZXMYESABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EjoKCmluY3JlbWVudHMYEiADKAsyJi51ZGIuZW50aXR5LnYxLlVwZGF0ZVJlcXVlc3QuSW5jcmVtZW50EikKCGV4cGVjdGVkGBMgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBIUCgxjZGNfcmVxdWlyZWQYFCABKAginQIKCFR4U3RhdHVzEiwKBXN0YXRlGAEgASgOMh0udWRiLmVudGl0eS52MS5UeFN0YXR1cy5TdGF0ZRINCgV0eF9pZBgCIAEoCRITCgttdXRhdGlvbl9pZBgDIAEoCRIPCgdtZXNzYWdlGAQgASgJEjIKDXdyaXRlX3JlY2VpcHQYBSABKAsyGy51ZGIuZW50aXR5LnYxLldyaXRlUmVjZWlwdCJ6CgVTdGF0ZRIYChRUWF9TVEFURV9VTlNQRUNJRklFRBAAEhEKDVRYX1NUQVRFX09QRU4QARIWChJUWF9TVEFURV9DT01NSVRURUQQAhIYChRUWF9TVEFURV9ST0xMRURfQkFDSxADEhIKDlRYX1NUQVRFX0VSUk9SEARCrQEKEWNvbS51ZGIuZW50aXR5LnYxQgdUeFByb3RvUAFaOWdpdGh1Yi5jb20vZmFoYXJhMDIvdWRiL3Nkay9nby9nZW4vdWRiL2VudGl0eS92MTtlbnRpdHl2MaICA1VFWKoCDVVkYi5FbnRpdHkuVjHKAg1VZGJcRW50aXR5XFYx4gIZVWRiXEdQQk1ldGFkYXRhXEVudGl0eVxWMeoCD1VkYjo6RW50aXR5OjpWMWIGcHJvdG8z", [file_google_protobuf_struct, file_udb_entity_v1_context, file_udb_entity_v1_vector, file_udb_entity_v1_relational, file_udb_entity_v1_consistency]);
 
 /**
  * @generated from message udb.entity.v1.Mutation
@@ -109,10 +109,7 @@ export type Mutation = Message<"udb.entity.v1.Mutation"> & {
    * Partial-update payload for `operation = "update"` — the SET columns and the
    * atomic increments. Same semantics as the unary UpdateRequest (SETs named
    * columns / applies counter deltas on the rows matched by `filter`), atomic
-   * with the rest of the transaction; ignored for other operations. Note: the
-   * unary UpdateRequest.expected compare-and-swap precondition is intentionally
-   * NOT carried here — transactional updates do not support CAS (rather than
-   * silently ignore an `expected` a caller might set).
+   * with the rest of the transaction; ignored for other operations.
    *
    * @generated from field: google.protobuf.Struct changes = 17;
    */
@@ -122,6 +119,35 @@ export type Mutation = Message<"udb.entity.v1.Mutation"> & {
    * @generated from field: repeated udb.entity.v1.UpdateRequest.Increment increments = 18;
    */
   increments: UpdateRequest_Increment[];
+
+  /**
+   * Optional compare-and-swap precondition (bug #8.1), mirroring the unary
+   * UpsertRequest/DeleteRequest/UpdateRequest `expected` field. When set, each
+   * `field -> value` assertion is checked against the CURRENT row — located by
+   * the primary key (from `filter` for update/delete, from the record for
+   * upsert) and locked FOR UPDATE — inside this transaction and under its
+   * tenant/RLS fencing, BEFORE the mutation is applied. A mismatch or an absent
+   * row aborts the WHOLE transaction with FAILED_PRECONDITION and nothing is
+   * written, projected, or emitted. Supported for `operation` upsert, update,
+   * and delete; setting it on any other operation is rejected (never silently
+   * ignored). Unset/empty = unconditional (unchanged behaviour).
+   *
+   * @generated from field: google.protobuf.Struct expected = 19;
+   */
+  expected?: JsonObject | undefined;
+
+  /**
+   * Required-CDC-delivery contract (bug #8.2). When true, this mutation FAILS
+   * CLOSED (FAILED_PRECONDITION, aborting the transaction) unless its change
+   * event is durably enqueued to the transactional outbox in the SAME tx: it
+   * errors if CDC delivery is disabled, if the entity declares no `cdc_topic`,
+   * if a tenant-scoped topic has no tenant to route to, or if the outbox INSERT
+   * fails. Default false preserves best-effort emission (an event is emitted
+   * when CDC is enabled and the entity is CDC-mapped, and skipped otherwise).
+   *
+   * @generated from field: bool cdc_required = 20;
+   */
+  cdcRequired: boolean;
 };
 
 /**

@@ -275,7 +275,71 @@ fn cql_to_json(v: &CqlValue) -> JsonValue {
                 base64::engine::general_purpose::STANDARD.encode(b)
             ))
         }
-        _ => JsonValue::Null,
+        // W5: the old `_ => Null` catch-all silently dropped every column below to
+        // `null` — a data-loss capability lie (a SELECT of a timestamp, list, map,
+        // counter, smallint, … column returned null). Handle every CqlValue arm so
+        // reads round-trip; the match is exhaustive (CqlValue is not
+        // `#[non_exhaustive]`), so a future driver variant is a compile error, not a
+        // silent null.
+        CqlValue::SmallInt(i) => JsonValue::Number((*i).into()),
+        CqlValue::TinyInt(i) => JsonValue::Number((*i).into()),
+        CqlValue::Counter(c) => JsonValue::Number(c.0.into()),
+        // Temporal columns are surfaced as their raw driver integers (Timestamp =
+        // ms since epoch, Time = ns since midnight, Date = days offset) so no
+        // precision is lost to a lossy string conversion.
+        CqlValue::Timestamp(t) => JsonValue::Number(t.0.into()),
+        CqlValue::Time(t) => JsonValue::Number(t.0.into()),
+        CqlValue::Date(d) => JsonValue::Number(d.0.into()),
+        CqlValue::Duration(d) => serde_json::json!({
+            "months": d.months,
+            "days": d.days,
+            "nanoseconds": d.nanoseconds,
+        }),
+        CqlValue::Inet(ip) => JsonValue::String(ip.to_string()),
+        // Varint/Decimal have no lossless JSON number form; encode the signed
+        // big-endian magnitude (Decimal also carries its scale) so the value is
+        // preserved honestly rather than truncated or nulled.
+        CqlValue::Varint(v) => {
+            use base64::Engine as _;
+            JsonValue::String(format!(
+                "varint:base64:{}",
+                base64::engine::general_purpose::STANDARD.encode(v.as_signed_bytes_be_slice())
+            ))
+        }
+        CqlValue::Decimal(d) => {
+            use base64::Engine as _;
+            let (unscaled, scale) = d.as_signed_be_bytes_slice_and_exponent();
+            serde_json::json!({
+                "decimal_unscaled_be_base64":
+                    base64::engine::general_purpose::STANDARD.encode(unscaled),
+                "scale": scale,
+            })
+        }
+        CqlValue::List(items) | CqlValue::Set(items) => {
+            JsonValue::Array(items.iter().map(cql_to_json).collect())
+        }
+        CqlValue::Map(pairs) => JsonValue::Array(
+            pairs
+                .iter()
+                .map(|(k, v)| JsonValue::Array(vec![cql_to_json(k), cql_to_json(v)]))
+                .collect(),
+        ),
+        CqlValue::Tuple(items) => JsonValue::Array(
+            items
+                .iter()
+                .map(|item| item.as_ref().map(cql_to_json).unwrap_or(JsonValue::Null))
+                .collect(),
+        ),
+        CqlValue::UserDefinedType { fields, .. } => {
+            let mut map = serde_json::Map::new();
+            for (name, val) in fields {
+                map.insert(
+                    name.clone(),
+                    val.as_ref().map(cql_to_json).unwrap_or(JsonValue::Null),
+                );
+            }
+            JsonValue::Object(map)
+        }
     }
 }
 

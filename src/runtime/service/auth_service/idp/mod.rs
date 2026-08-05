@@ -641,6 +641,17 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
     ) -> Result<Response<idp_pb::CreateProviderResponse>, Status> {
         let pool = self.require_pool()?;
         let req = request.into_inner();
+        // IDP2: bind the request-body tenant to the VALIDATED bearer claim. The
+        // method-security tower only checks headers + scope, never the decoded
+        // body, so without this a tenant-A caller could target tenant B via
+        // `req.tenant_id` (e.g. ScimDeleteUser{tenant_id:"B"}) — cross-tenant
+        // provisioning / hard-delete. Fail-closed; genuine cross-tenant admins are
+        // exempt inside the helper; an empty body tenant inherits the claim scope.
+        crate::runtime::service::method_security::enforce_body_tenant_matches_claim(
+            &crate::runtime::service::method_security::current_claim_context(),
+            &req.tenant_id,
+            "",
+        )?;
         if req.tenant_id.trim().is_empty() {
             return Err(idp_tenant_id_required_status());
         }
@@ -707,6 +718,17 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
     ) -> Result<Response<idp_pb::UpdateProviderResponse>, Status> {
         let pool = self.require_pool()?;
         let req = request.into_inner();
+        // IDP2: bind the request-body tenant to the VALIDATED bearer claim. The
+        // method-security tower only checks headers + scope, never the decoded
+        // body, so without this a tenant-A caller could target tenant B via
+        // `req.tenant_id` (e.g. ScimDeleteUser{tenant_id:"B"}) — cross-tenant
+        // provisioning / hard-delete. Fail-closed; genuine cross-tenant admins are
+        // exempt inside the helper; an empty body tenant inherits the claim scope.
+        crate::runtime::service::method_security::enforce_body_tenant_matches_claim(
+            &crate::runtime::service::method_security::current_claim_context(),
+            &req.tenant_id,
+            "",
+        )?;
         // Resolve-before-mutate: the provider must exist for this tenant.
         let _ = self
             .load_provider(pool, &req.tenant_id, &req.provider_id)
@@ -864,6 +886,17 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
     ) -> Result<Response<idp_pb::DisableProviderResponse>, Status> {
         let pool = self.require_pool()?;
         let req = request.into_inner();
+        // IDP2: bind the request-body tenant to the VALIDATED bearer claim. The
+        // method-security tower only checks headers + scope, never the decoded
+        // body, so without this a tenant-A caller could target tenant B via
+        // `req.tenant_id` (e.g. ScimDeleteUser{tenant_id:"B"}) — cross-tenant
+        // provisioning / hard-delete. Fail-closed; genuine cross-tenant admins are
+        // exempt inside the helper; an empty body tenant inherits the claim scope.
+        crate::runtime::service::method_security::enforce_body_tenant_matches_claim(
+            &crate::runtime::service::method_security::current_claim_context(),
+            &req.tenant_id,
+            "",
+        )?;
         let _ = self
             .load_provider(pool, &req.tenant_id, &req.provider_id)
             .await?;
@@ -890,6 +923,17 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
     ) -> Result<Response<idp_pb::GetProviderResponse>, Status> {
         let pool = self.require_pool()?;
         let req = request.into_inner();
+        // IDP2: bind the request-body tenant to the VALIDATED bearer claim. The
+        // method-security tower only checks headers + scope, never the decoded
+        // body, so without this a tenant-A caller could target tenant B via
+        // `req.tenant_id` (e.g. ScimDeleteUser{tenant_id:"B"}) — cross-tenant
+        // provisioning / hard-delete. Fail-closed; genuine cross-tenant admins are
+        // exempt inside the helper; an empty body tenant inherits the claim scope.
+        crate::runtime::service::method_security::enforce_body_tenant_matches_claim(
+            &crate::runtime::service::method_security::current_claim_context(),
+            &req.tenant_id,
+            "",
+        )?;
         let provider = self
             .load_provider(pool, &req.tenant_id, &req.provider_id)
             .await?;
@@ -904,6 +948,17 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
     ) -> Result<Response<idp_pb::ListProvidersResponse>, Status> {
         let pool = self.require_pool()?;
         let req = request.into_inner();
+        // IDP2: bind the request-body tenant to the VALIDATED bearer claim. The
+        // method-security tower only checks headers + scope, never the decoded
+        // body, so without this a tenant-A caller could target tenant B via
+        // `req.tenant_id` (e.g. ScimDeleteUser{tenant_id:"B"}) — cross-tenant
+        // provisioning / hard-delete. Fail-closed; genuine cross-tenant admins are
+        // exempt inside the helper; an empty body tenant inherits the claim scope.
+        crate::runtime::service::method_security::enforce_body_tenant_matches_claim(
+            &crate::runtime::service::method_security::current_claim_context(),
+            &req.tenant_id,
+            "",
+        )?;
         if req.tenant_id.trim().is_empty() {
             return Err(idp_tenant_id_required_status());
         }
@@ -934,6 +989,17 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
     ) -> Result<Response<idp_pb::TestProviderDiscoveryResponse>, Status> {
         let pool = self.require_pool()?;
         let req = request.into_inner();
+        // IDP2: bind the request-body tenant to the VALIDATED bearer claim. The
+        // method-security tower only checks headers + scope, never the decoded
+        // body, so without this a tenant-A caller could target tenant B via
+        // `req.tenant_id` (e.g. ScimDeleteUser{tenant_id:"B"}) — cross-tenant
+        // provisioning / hard-delete. Fail-closed; genuine cross-tenant admins are
+        // exempt inside the helper; an empty body tenant inherits the claim scope.
+        crate::runtime::service::method_security::enforce_body_tenant_matches_claim(
+            &crate::runtime::service::method_security::current_claim_context(),
+            &req.tenant_id,
+            "",
+        )?;
         let provider = self
             .load_provider(pool, &req.tenant_id, &req.provider_id)
             .await?;
@@ -975,6 +1041,17 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
     ) -> Result<Response<idp_pb::ForceJwksRefreshResponse>, Status> {
         let pool = self.require_pool()?;
         let req = request.into_inner();
+        // IDP2: bind the request-body tenant to the VALIDATED bearer claim. The
+        // method-security tower only checks headers + scope, never the decoded
+        // body, so without this a tenant-A caller could target tenant B via
+        // `req.tenant_id` (e.g. ScimDeleteUser{tenant_id:"B"}) — cross-tenant
+        // provisioning / hard-delete. Fail-closed; genuine cross-tenant admins are
+        // exempt inside the helper; an empty body tenant inherits the claim scope.
+        crate::runtime::service::method_security::enforce_body_tenant_matches_claim(
+            &crate::runtime::service::method_security::current_claim_context(),
+            &req.tenant_id,
+            "",
+        )?;
         let provider = self
             .load_provider(pool, &req.tenant_id, &req.provider_id)
             .await?;
@@ -1061,6 +1138,17 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
     ) -> Result<Response<idp_pb::PreviewClaimMappingResponse>, Status> {
         let pool = self.require_pool()?;
         let req = request.into_inner();
+        // IDP2: bind the request-body tenant to the VALIDATED bearer claim. The
+        // method-security tower only checks headers + scope, never the decoded
+        // body, so without this a tenant-A caller could target tenant B via
+        // `req.tenant_id` (e.g. ScimDeleteUser{tenant_id:"B"}) — cross-tenant
+        // provisioning / hard-delete. Fail-closed; genuine cross-tenant admins are
+        // exempt inside the helper; an empty body tenant inherits the claim scope.
+        crate::runtime::service::method_security::enforce_body_tenant_matches_claim(
+            &crate::runtime::service::method_security::current_claim_context(),
+            &req.tenant_id,
+            "",
+        )?;
         let provider = self
             .load_provider(pool, &req.tenant_id, &req.provider_id)
             .await?;
@@ -1097,6 +1185,17 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
     ) -> Result<Response<idp_pb::PreviewGroupMappingResponse>, Status> {
         let pool = self.require_pool()?;
         let req = request.into_inner();
+        // IDP2: bind the request-body tenant to the VALIDATED bearer claim. The
+        // method-security tower only checks headers + scope, never the decoded
+        // body, so without this a tenant-A caller could target tenant B via
+        // `req.tenant_id` (e.g. ScimDeleteUser{tenant_id:"B"}) — cross-tenant
+        // provisioning / hard-delete. Fail-closed; genuine cross-tenant admins are
+        // exempt inside the helper; an empty body tenant inherits the claim scope.
+        crate::runtime::service::method_security::enforce_body_tenant_matches_claim(
+            &crate::runtime::service::method_security::current_claim_context(),
+            &req.tenant_id,
+            "",
+        )?;
         let provider = self
             .load_provider(pool, &req.tenant_id, &req.provider_id)
             .await?;
@@ -1118,6 +1217,17 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
     ) -> Result<Response<idp_pb::ListExternalIdentitiesResponse>, Status> {
         let pool = self.require_pool()?;
         let req = request.into_inner();
+        // IDP2: bind the request-body tenant to the VALIDATED bearer claim. The
+        // method-security tower only checks headers + scope, never the decoded
+        // body, so without this a tenant-A caller could target tenant B via
+        // `req.tenant_id` (e.g. ScimDeleteUser{tenant_id:"B"}) — cross-tenant
+        // provisioning / hard-delete. Fail-closed; genuine cross-tenant admins are
+        // exempt inside the helper; an empty body tenant inherits the claim scope.
+        crate::runtime::service::method_security::enforce_body_tenant_matches_claim(
+            &crate::runtime::service::method_security::current_claim_context(),
+            &req.tenant_id,
+            "",
+        )?;
         if req.tenant_id.trim().is_empty() {
             return Err(idp_tenant_id_required_status());
         }
@@ -1143,6 +1253,17 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
     ) -> Result<Response<idp_pb::LinkIdentityResponse>, Status> {
         let pool = self.require_pool()?;
         let req = request.into_inner();
+        // IDP2: bind the request-body tenant to the VALIDATED bearer claim. The
+        // method-security tower only checks headers + scope, never the decoded
+        // body, so without this a tenant-A caller could target tenant B via
+        // `req.tenant_id` (e.g. ScimDeleteUser{tenant_id:"B"}) — cross-tenant
+        // provisioning / hard-delete. Fail-closed; genuine cross-tenant admins are
+        // exempt inside the helper; an empty body tenant inherits the claim scope.
+        crate::runtime::service::method_security::enforce_body_tenant_matches_claim(
+            &crate::runtime::service::method_security::current_claim_context(),
+            &req.tenant_id,
+            "",
+        )?;
         // Provider must exist for the tenant (prevents cross-tenant linking).
         let _ = self
             .load_provider(pool, &req.tenant_id, &req.provider_id)
@@ -1179,6 +1300,17 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
     ) -> Result<Response<idp_pb::UnlinkIdentityResponse>, Status> {
         let pool = self.require_pool()?;
         let req = request.into_inner();
+        // IDP2: bind the request-body tenant to the VALIDATED bearer claim. The
+        // method-security tower only checks headers + scope, never the decoded
+        // body, so without this a tenant-A caller could target tenant B via
+        // `req.tenant_id` (e.g. ScimDeleteUser{tenant_id:"B"}) — cross-tenant
+        // provisioning / hard-delete. Fail-closed; genuine cross-tenant admins are
+        // exempt inside the helper; an empty body tenant inherits the claim scope.
+        crate::runtime::service::method_security::enforce_body_tenant_matches_claim(
+            &crate::runtime::service::method_security::current_claim_context(),
+            &req.tenant_id,
+            "",
+        )?;
         if req.tenant_id.trim().is_empty() {
             return Err(idp_tenant_id_required_status());
         }
@@ -1205,6 +1337,17 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
     ) -> Result<Response<idp_pb::ImportSamlMetadataResponse>, Status> {
         let pool = self.require_pool()?;
         let req = request.into_inner();
+        // IDP2: bind the request-body tenant to the VALIDATED bearer claim. The
+        // method-security tower only checks headers + scope, never the decoded
+        // body, so without this a tenant-A caller could target tenant B via
+        // `req.tenant_id` (e.g. ScimDeleteUser{tenant_id:"B"}) — cross-tenant
+        // provisioning / hard-delete. Fail-closed; genuine cross-tenant admins are
+        // exempt inside the helper; an empty body tenant inherits the claim scope.
+        crate::runtime::service::method_security::enforce_body_tenant_matches_claim(
+            &crate::runtime::service::method_security::current_claim_context(),
+            &req.tenant_id,
+            "",
+        )?;
         let provider = self
             .load_provider(pool, &req.tenant_id, &req.provider_id)
             .await?;
@@ -1262,6 +1405,17 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
     ) -> Result<Response<idp_pb::StartSamlLoginResponse>, Status> {
         let pool = self.require_pool()?;
         let req = request.into_inner();
+        // IDP2: bind the request-body tenant to the VALIDATED bearer claim. The
+        // method-security tower only checks headers + scope, never the decoded
+        // body, so without this a tenant-A caller could target tenant B via
+        // `req.tenant_id` (e.g. ScimDeleteUser{tenant_id:"B"}) — cross-tenant
+        // provisioning / hard-delete. Fail-closed; genuine cross-tenant admins are
+        // exempt inside the helper; an empty body tenant inherits the claim scope.
+        crate::runtime::service::method_security::enforce_body_tenant_matches_claim(
+            &crate::runtime::service::method_security::current_claim_context(),
+            &req.tenant_id,
+            "",
+        )?;
         let provider = self
             .load_provider(pool, &req.tenant_id, &req.provider_id)
             .await?;
@@ -1311,6 +1465,17 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
     ) -> Result<Response<idp_pb::SamlAcsResponse>, Status> {
         let pool = self.require_pool()?;
         let req = request.into_inner();
+        // IDP2: bind the request-body tenant to the VALIDATED bearer claim. The
+        // method-security tower only checks headers + scope, never the decoded
+        // body, so without this a tenant-A caller could target tenant B via
+        // `req.tenant_id` (e.g. ScimDeleteUser{tenant_id:"B"}) — cross-tenant
+        // provisioning / hard-delete. Fail-closed; genuine cross-tenant admins are
+        // exempt inside the helper; an empty body tenant inherits the claim scope.
+        crate::runtime::service::method_security::enforce_body_tenant_matches_claim(
+            &crate::runtime::service::method_security::current_claim_context(),
+            &req.tenant_id,
+            "",
+        )?;
         let provider = self
             .load_provider(pool, &req.tenant_id, &req.provider_id)
             .await?;
@@ -1480,6 +1645,17 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
     ) -> Result<Response<idp_pb::ResolveExternalIdentityResponse>, Status> {
         let pool = self.require_pool()?;
         let req = request.into_inner();
+        // IDP2: bind the request-body tenant to the VALIDATED bearer claim. The
+        // method-security tower only checks headers + scope, never the decoded
+        // body, so without this a tenant-A caller could target tenant B via
+        // `req.tenant_id` (e.g. ScimDeleteUser{tenant_id:"B"}) — cross-tenant
+        // provisioning / hard-delete. Fail-closed; genuine cross-tenant admins are
+        // exempt inside the helper; an empty body tenant inherits the claim scope.
+        crate::runtime::service::method_security::enforce_body_tenant_matches_claim(
+            &crate::runtime::service::method_security::current_claim_context(),
+            &req.tenant_id,
+            "",
+        )?;
         let provider = self
             .load_provider(pool, &req.tenant_id, &req.provider_id)
             .await?;
@@ -1520,6 +1696,17 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
     ) -> Result<Response<idp_pb::ScimCreateUserResponse>, Status> {
         let pool = self.require_pool()?;
         let req = request.into_inner();
+        // IDP2: bind the request-body tenant to the VALIDATED bearer claim. The
+        // method-security tower only checks headers + scope, never the decoded
+        // body, so without this a tenant-A caller could target tenant B via
+        // `req.tenant_id` (e.g. ScimDeleteUser{tenant_id:"B"}) — cross-tenant
+        // provisioning / hard-delete. Fail-closed; genuine cross-tenant admins are
+        // exempt inside the helper; an empty body tenant inherits the claim scope.
+        crate::runtime::service::method_security::enforce_body_tenant_matches_claim(
+            &crate::runtime::service::method_security::current_claim_context(),
+            &req.tenant_id,
+            "",
+        )?;
         let provider = self
             .load_provider(pool, &req.tenant_id, &req.provider_id)
             .await?;
@@ -1586,6 +1773,17 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
     ) -> Result<Response<idp_pb::ScimGetUserResponse>, Status> {
         let pool = self.require_pool()?;
         let req = request.into_inner();
+        // IDP2: bind the request-body tenant to the VALIDATED bearer claim. The
+        // method-security tower only checks headers + scope, never the decoded
+        // body, so without this a tenant-A caller could target tenant B via
+        // `req.tenant_id` (e.g. ScimDeleteUser{tenant_id:"B"}) — cross-tenant
+        // provisioning / hard-delete. Fail-closed; genuine cross-tenant admins are
+        // exempt inside the helper; an empty body tenant inherits the claim scope.
+        crate::runtime::service::method_security::enforce_body_tenant_matches_claim(
+            &crate::runtime::service::method_security::current_claim_context(),
+            &req.tenant_id,
+            "",
+        )?;
         let _ = self
             .load_provider(pool, &req.tenant_id, &req.provider_id)
             .await?;
@@ -1612,6 +1810,17 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
     ) -> Result<Response<idp_pb::ScimListUsersResponse>, Status> {
         let pool = self.require_pool()?;
         let req = request.into_inner();
+        // IDP2: bind the request-body tenant to the VALIDATED bearer claim. The
+        // method-security tower only checks headers + scope, never the decoded
+        // body, so without this a tenant-A caller could target tenant B via
+        // `req.tenant_id` (e.g. ScimDeleteUser{tenant_id:"B"}) — cross-tenant
+        // provisioning / hard-delete. Fail-closed; genuine cross-tenant admins are
+        // exempt inside the helper; an empty body tenant inherits the claim scope.
+        crate::runtime::service::method_security::enforce_body_tenant_matches_claim(
+            &crate::runtime::service::method_security::current_claim_context(),
+            &req.tenant_id,
+            "",
+        )?;
         let _ = self
             .load_provider(pool, &req.tenant_id, &req.provider_id)
             .await?;
@@ -1649,6 +1858,17 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
     ) -> Result<Response<idp_pb::ScimReplaceUserResponse>, Status> {
         let pool = self.require_pool()?;
         let req = request.into_inner();
+        // IDP2: bind the request-body tenant to the VALIDATED bearer claim. The
+        // method-security tower only checks headers + scope, never the decoded
+        // body, so without this a tenant-A caller could target tenant B via
+        // `req.tenant_id` (e.g. ScimDeleteUser{tenant_id:"B"}) — cross-tenant
+        // provisioning / hard-delete. Fail-closed; genuine cross-tenant admins are
+        // exempt inside the helper; an empty body tenant inherits the claim scope.
+        crate::runtime::service::method_security::enforce_body_tenant_matches_claim(
+            &crate::runtime::service::method_security::current_claim_context(),
+            &req.tenant_id,
+            "",
+        )?;
         let _ = self
             .load_provider(pool, &req.tenant_id, &req.provider_id)
             .await?;
@@ -1709,6 +1929,17 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
     ) -> Result<Response<idp_pb::ScimPatchUserResponse>, Status> {
         let pool = self.require_pool()?;
         let req = request.into_inner();
+        // IDP2: bind the request-body tenant to the VALIDATED bearer claim. The
+        // method-security tower only checks headers + scope, never the decoded
+        // body, so without this a tenant-A caller could target tenant B via
+        // `req.tenant_id` (e.g. ScimDeleteUser{tenant_id:"B"}) — cross-tenant
+        // provisioning / hard-delete. Fail-closed; genuine cross-tenant admins are
+        // exempt inside the helper; an empty body tenant inherits the claim scope.
+        crate::runtime::service::method_security::enforce_body_tenant_matches_claim(
+            &crate::runtime::service::method_security::current_claim_context(),
+            &req.tenant_id,
+            "",
+        )?;
         let _ = self
             .load_provider(pool, &req.tenant_id, &req.provider_id)
             .await?;
@@ -1774,6 +2005,17 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
     ) -> Result<Response<idp_pb::ScimDeleteUserResponse>, Status> {
         let pool = self.require_pool()?;
         let req = request.into_inner();
+        // IDP2: bind the request-body tenant to the VALIDATED bearer claim. The
+        // method-security tower only checks headers + scope, never the decoded
+        // body, so without this a tenant-A caller could target tenant B via
+        // `req.tenant_id` (e.g. ScimDeleteUser{tenant_id:"B"}) — cross-tenant
+        // provisioning / hard-delete. Fail-closed; genuine cross-tenant admins are
+        // exempt inside the helper; an empty body tenant inherits the claim scope.
+        crate::runtime::service::method_security::enforce_body_tenant_matches_claim(
+            &crate::runtime::service::method_security::current_claim_context(),
+            &req.tenant_id,
+            "",
+        )?;
         let _ = self
             .load_provider(pool, &req.tenant_id, &req.provider_id)
             .await?;
@@ -1841,6 +2083,17 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
     ) -> Result<Response<idp_pb::ScimCreateGroupResponse>, Status> {
         let pool = self.require_pool()?;
         let req = request.into_inner();
+        // IDP2: bind the request-body tenant to the VALIDATED bearer claim. The
+        // method-security tower only checks headers + scope, never the decoded
+        // body, so without this a tenant-A caller could target tenant B via
+        // `req.tenant_id` (e.g. ScimDeleteUser{tenant_id:"B"}) — cross-tenant
+        // provisioning / hard-delete. Fail-closed; genuine cross-tenant admins are
+        // exempt inside the helper; an empty body tenant inherits the claim scope.
+        crate::runtime::service::method_security::enforce_body_tenant_matches_claim(
+            &crate::runtime::service::method_security::current_claim_context(),
+            &req.tenant_id,
+            "",
+        )?;
         let provider = self
             .load_provider(pool, &req.tenant_id, &req.provider_id)
             .await?;
@@ -1866,6 +2119,17 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
     ) -> Result<Response<idp_pb::ScimGetGroupResponse>, Status> {
         let pool = self.require_pool()?;
         let req = request.into_inner();
+        // IDP2: bind the request-body tenant to the VALIDATED bearer claim. The
+        // method-security tower only checks headers + scope, never the decoded
+        // body, so without this a tenant-A caller could target tenant B via
+        // `req.tenant_id` (e.g. ScimDeleteUser{tenant_id:"B"}) — cross-tenant
+        // provisioning / hard-delete. Fail-closed; genuine cross-tenant admins are
+        // exempt inside the helper; an empty body tenant inherits the claim scope.
+        crate::runtime::service::method_security::enforce_body_tenant_matches_claim(
+            &crate::runtime::service::method_security::current_claim_context(),
+            &req.tenant_id,
+            "",
+        )?;
         let _ = self
             .load_provider(pool, &req.tenant_id, &req.provider_id)
             .await?;
@@ -1893,6 +2157,17 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
     ) -> Result<Response<idp_pb::ScimListGroupsResponse>, Status> {
         let pool = self.require_pool()?;
         let req = request.into_inner();
+        // IDP2: bind the request-body tenant to the VALIDATED bearer claim. The
+        // method-security tower only checks headers + scope, never the decoded
+        // body, so without this a tenant-A caller could target tenant B via
+        // `req.tenant_id` (e.g. ScimDeleteUser{tenant_id:"B"}) — cross-tenant
+        // provisioning / hard-delete. Fail-closed; genuine cross-tenant admins are
+        // exempt inside the helper; an empty body tenant inherits the claim scope.
+        crate::runtime::service::method_security::enforce_body_tenant_matches_claim(
+            &crate::runtime::service::method_security::current_claim_context(),
+            &req.tenant_id,
+            "",
+        )?;
         let provider = self
             .load_provider(pool, &req.tenant_id, &req.provider_id)
             .await?;
@@ -1921,6 +2196,17 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
     ) -> Result<Response<idp_pb::ScimPatchGroupResponse>, Status> {
         let pool = self.require_pool()?;
         let req = request.into_inner();
+        // IDP2: bind the request-body tenant to the VALIDATED bearer claim. The
+        // method-security tower only checks headers + scope, never the decoded
+        // body, so without this a tenant-A caller could target tenant B via
+        // `req.tenant_id` (e.g. ScimDeleteUser{tenant_id:"B"}) — cross-tenant
+        // provisioning / hard-delete. Fail-closed; genuine cross-tenant admins are
+        // exempt inside the helper; an empty body tenant inherits the claim scope.
+        crate::runtime::service::method_security::enforce_body_tenant_matches_claim(
+            &crate::runtime::service::method_security::current_claim_context(),
+            &req.tenant_id,
+            "",
+        )?;
         let provider = self
             .load_provider(pool, &req.tenant_id, &req.provider_id)
             .await?;
@@ -1956,6 +2242,17 @@ impl IdentityProviderService for IdentityProviderServiceImpl {
     ) -> Result<Response<idp_pb::ScimDeleteGroupResponse>, Status> {
         let pool = self.require_pool()?;
         let req = request.into_inner();
+        // IDP2: bind the request-body tenant to the VALIDATED bearer claim. The
+        // method-security tower only checks headers + scope, never the decoded
+        // body, so without this a tenant-A caller could target tenant B via
+        // `req.tenant_id` (e.g. ScimDeleteUser{tenant_id:"B"}) — cross-tenant
+        // provisioning / hard-delete. Fail-closed; genuine cross-tenant admins are
+        // exempt inside the helper; an empty body tenant inherits the claim scope.
+        crate::runtime::service::method_security::enforce_body_tenant_matches_claim(
+            &crate::runtime::service::method_security::current_claim_context(),
+            &req.tenant_id,
+            "",
+        )?;
         let provider = self
             .load_provider(pool, &req.tenant_id, &req.provider_id)
             .await?;

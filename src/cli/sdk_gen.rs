@@ -151,7 +151,15 @@ fn sdk_diff(selector: &SdkSelector, against: &str) -> i32 {
         .map(str::trim)
         .unwrap_or("udbgen")
         .to_string();
-    let regenerated = render_go_entities_file(&entities, &package);
+    // Regenerate through the SAME render+gofmt pipeline the write path uses, so a
+    // fresh file is byte-comparable with the committed (gofmt-canonical) one.
+    let regenerated = match render_go_entities_file_canonical(&entities, &package) {
+        Ok(regenerated) => regenerated,
+        Err(err) => {
+            eprintln!("sdk diff: {err}");
+            return 2;
+        }
+    };
     let committed_normalized = committed.replace("\r\n", "\n");
     if regenerated == committed_normalized {
         println!(
@@ -1056,7 +1064,12 @@ fn generate(
         // repository).
         if selector.project_proto.is_some() && lang_name == "go" {
             let go_pkg = selector.go_package.as_deref().unwrap_or("udbentities");
-            let content = render_go_entities_file(&entities, go_pkg);
+            // Render + gofmt-canonicalize BEFORE writing, so a fail-closed (#3) or a
+            // formatter failure (#8) leaves any prior file intact.
+            let content = match render_go_entities_file_canonical(&entities, go_pkg) {
+                Ok(content) => content,
+                Err(err) => return fsm.fail(err),
+            };
             let file_path = lang_out_dir.join("udb_entities_gen.go");
             if let Err(err) = std::fs::create_dir_all(&lang_out_dir)
                 .and_then(|_| std::fs::write(&file_path, content))
@@ -1086,12 +1099,16 @@ fn generate(
 
 /// B3: render a self-contained Go file of TYPED marshalling for the consumer's
 /// entities. Emits, per entity, `<Entity>ToUDBRecord(*T) map[string]any` and
-/// `<Entity>FromUDBRow(row) *T`, plus a small set of once-per-file coercion
-/// helpers. Derived entirely from [`EntityColumnDescriptor`] (B2). This replaces a
-/// consumer's hand-written proto<->record conversion. Correctness of the GENERATED
-/// Go is verified by the litmus compile (`go build` on the output); the Rust here
-/// is the emitter.
-fn render_go_entities_file(entities: &[EntityDescriptor], package: &str) -> String {
+/// `<Entity>FromUDBRow(row) (*T, error)`, plus a small set of once-per-file
+/// coercion helpers. Derived entirely from [`EntityColumnDescriptor`] (B2). This
+/// replaces a consumer's hand-written proto<->record conversion. Correctness of
+/// the GENERATED Go is verified by the litmus compile (`go build` on the output);
+/// the Rust here is the emitter.
+///
+/// Returns `Err` (FAILS CLOSED) when an entity has a NOT NULL column the emitter
+/// cannot marshal — currently a NOT NULL cross-package enum (#3) — rather than
+/// silently omitting it and emitting a record the broker rejects.
+fn render_go_entities_file(entities: &[EntityDescriptor], package: &str) -> Result<String, String> {
     // First pass: which entities are renderable + what imports/helpers are needed.
     let mut proto_imports: BTreeMap<String, String> = BTreeMap::new();
     let mut needs_time = false;
@@ -1117,11 +1134,38 @@ fn render_go_entities_file(entities: &[EntityDescriptor], package: &str) -> Stri
                 needs_time = true;
                 needs_timestamppb = true;
             }
-            if !column.enum_values.is_empty() {
+            // `strings` is only needed by the SAME-package enum write path
+            // (strings.TrimPrefix); a cross-package enum is skipped, so counting it
+            // would import `strings` for a file that never uses it.
+            if !column.enum_values.is_empty() && !column.enum_cross_package {
                 needs_strings = true;
             }
         }
         renderable.push((entity, alias, type_name));
+    }
+
+    // #3: FAIL CLOSED before emitting anything — a NOT NULL column the emitter
+    // cannot marshal (currently a NOT NULL cross-package enum) would be silently
+    // omitted from the record, and the broker would reject the resulting INSERT.
+    // A nullable such column is fine (it round-trips as NULL) and is skipped with a
+    // TODO instead.
+    for (entity, _, _) in &renderable {
+        for column in &entity.columns {
+            if column.enum_cross_package
+                && column.not_null
+                && column.declared_in_proto
+                && !column.exclude_from_insert
+            {
+                return Err(format!(
+                    "entity `{}`: column `{}` is a NOT NULL cross-package enum ({}); the Go entity \
+                     generator cannot yet qualify an enum type across proto packages, so omitting \
+                     it would emit a record the broker rejects. Move the enum into the entity's \
+                     proto package, make the column nullable/optional, or annotate the column with \
+                     a co-located enum.",
+                    entity.short_name, column.field_name, column.proto_type,
+                ));
+            }
+        }
     }
 
     // W3 (tip 9): the semantic input stamp — a sha256 over the canonical
@@ -1168,9 +1212,15 @@ fn render_go_entities_file(entities: &[EntityDescriptor], package: &str) -> Stri
     out.push_str(&format!("package {package}\n\n"));
 
     // Imports (std first, then the consumer's proto packages, deterministic order).
+    // The always-emitted coercion helpers reference encoding/base64 (bytes),
+    // encoding/json (json.Number / JSON columns), fmt (fail-closed errors) and
+    // strconv (unsigned parse), so those std imports are always present and used.
     out.push_str("import (\n");
-    // W8: the typed repositories always need context + the SDK package.
     out.push_str("\t\"context\"\n");
+    out.push_str("\t\"encoding/base64\"\n");
+    out.push_str("\t\"encoding/json\"\n");
+    out.push_str("\t\"fmt\"\n");
+    out.push_str("\t\"strconv\"\n");
     if needs_strings {
         out.push_str("\t\"strings\"\n");
     }
@@ -1178,8 +1228,7 @@ fn render_go_entities_file(entities: &[EntityDescriptor], package: &str) -> Stri
         out.push_str("\t\"time\"\n");
     }
     out.push_str("\n\t\"github.com/fahara02/udb/sdk/go/udbclient\"\n");
-    let has_std = true;
-    if has_std && (!proto_imports.is_empty() || needs_timestamppb) {
+    if !proto_imports.is_empty() || needs_timestamppb {
         out.push('\n');
     }
     if needs_timestamppb {
@@ -1211,8 +1260,10 @@ fn render_go_entities_file(entities: &[EntityDescriptor], package: &str) -> Stri
 
         // ── FromUDBRow (read path) ────────────────────────────────────────────
         out.push_str(&format!(
-            "// {name}FromUDBRow converts a UDB row into a *{qualified}.\n\
-             func {name}FromUDBRow(row map[string]any) *{qualified} {{\n\
+            "// {name}FromUDBRow converts a UDB row into a *{qualified}. A value that\n\
+             // cannot be decoded into its message field fails the read (the row is\n\
+             // rejected) instead of silently decoding to a zero value.\n\
+             func {name}FromUDBRow(row map[string]any) (*{qualified}, error) {{\n\
              \tm := &{qualified}{{}}\n",
             name = entity.short_name,
         ));
@@ -1222,7 +1273,7 @@ fn render_go_entities_file(entities: &[EntityDescriptor], package: &str) -> Stri
             }
             out.push_str(&go_from_row_stmt(column, alias));
         }
-        out.push_str("\treturn m\n}\n\n");
+        out.push_str("\treturn m, nil\n}\n\n");
     }
 
     // W3: machine-checkable stamp — code can assert the generated layer
@@ -1237,26 +1288,29 @@ fn render_go_entities_file(entities: &[EntityDescriptor], package: &str) -> Stri
     // W6 (tip 8): the column-policy table AS DATA — the same facts the
     // marshalling above bakes into behavior, published for consumer policy
     // code and linters (Prisma-DMMF-style). One struct type per file.
+    // Emitted WITHOUT hand-alignment padding (single space after each field name):
+    // the write-site gofmt canonicalization (#8) column-aligns the fields, so
+    // reproducing gofmt's alignment here by hand would only risk drifting from it.
     out.push_str(
         "// UDBColumn describes one column's write/read policy facts, generated from\n\
          // the proto + manifest truth. Consumers build policy-shaped writes on\n\
          // this instead of maintaining tribal knowledge per repository.\n\
          type UDBColumn struct {\n\
-         \tSQLType           string\n\
-         \tNotNull           bool\n\
-         \tHasPresence       bool\n\
-         \tIsArray           bool\n\
-         \tJSON              bool\n\
-         \tJSONB             bool\n\
+         \tSQLType string\n\
+         \tNotNull bool\n\
+         \tHasPresence bool\n\
+         \tIsArray bool\n\
+         \tJSON bool\n\
+         \tJSONB bool\n\
          \tExcludeFromInsert bool\n\
-         \tPII               bool\n\
-         \tEncrypted         bool\n\
+         \tPII bool\n\
+         \tEncrypted bool\n\
          \t// BlindIndex names the filterable HMAC sibling column (empty = none).\n\
-         \tBlindIndex        string\n\
-         \tEnumTokens        []string\n\
+         \tBlindIndex string\n\
+         \tEnumTokens []string\n\
          \t// DeclaredInProto is false for broker-injected audit columns — they\n\
          \t// have no getter and are server-populated.\n\
-         \tDeclaredInProto   bool\n\
+         \tDeclaredInProto bool\n\
          }\n\n",
     );
     for (entity, _, _) in &renderable {
@@ -1337,38 +1391,119 @@ type {name}Repo struct {{ E *udbclient.Entity }}\n\n\
 func New{name}Repo(c *udbclient.Client) {name}Repo {{\n\
 \treturn {name}Repo{{E: c.Entity({fqn:?}, udbclient.Key({keys}))}}\n\
 }}\n\n\
-// List pages through rows matching where, decoded to typed messages.\n\
+// List pages through rows matching where, decoded to typed messages. A row that\n\
+// fails to decode fails the whole page (no partially-zeroed results).\n\
 func (r {name}Repo) List(ctx context.Context, where map[string]any, opts udbclient.PageOptions) ([]*{qualified}, string, int64, error) {{\n\
 \tpage, err := r.E.SelectPage(ctx, where, opts)\n\
 \tif err != nil {{\n\t\treturn nil, \"\", 0, err\n\t}}\n\
 \tout := make([]*{qualified}, 0, len(page.Rows))\n\
-\tfor _, row := range page.Rows {{\n\t\tout = append(out, {name}FromUDBRow(row))\n\t}}\n\
+\tfor _, row := range page.Rows {{\n\
+\t\titem, err := {name}FromUDBRow(row)\n\
+\t\tif err != nil {{\n\t\t\treturn nil, \"\", 0, err\n\t\t}}\n\
+\t\tout = append(out, item)\n\t}}\n\
 \treturn out, page.NextPageToken, int64(page.TotalCount), nil\n\
 }}\n\n\
-// Get returns the single row matching where (typically the primary key), or\n\
-// nil when absent.\n\
+// Get returns the single row identified by its FULL primary key. where must pin\n\
+// every primary-key column by equality; a partial key is rejected before the RPC\n\
+// (use FindFirst for an arbitrary-filter lookup). Returns (nil, nil) when absent,\n\
+// and a cardinality error if the key somehow matches more than one row.\n\
 func (r {name}Repo) Get(ctx context.Context, where map[string]any) (*{qualified}, error) {{\n\
-\trows, err := r.E.Select(ctx, where)\n\
-\tif err != nil || len(rows) == 0 {{\n\t\treturn nil, err\n\t}}\n\
-\treturn {name}FromUDBRow(rows[0]), nil\n\
+\tfor _, pk := range []string{{{keys}}} {{\n\
+\t\tif _, ok := where[pk]; !ok {{\n\
+\t\t\treturn nil, fmt.Errorf({get_pk_msg:?}, pk)\n\t\t}}\n\t}}\n\
+\tpage, err := r.E.SelectPage(ctx, where, udbclient.PageOptions{{Limit: 2}})\n\
+\tif err != nil {{\n\t\treturn nil, err\n\t}}\n\
+\tif len(page.Rows) == 0 {{\n\t\treturn nil, nil\n\t}}\n\
+\tif len(page.Rows) > 1 {{\n\
+\t\treturn nil, fmt.Errorf({get_card_msg:?}, len(page.Rows))\n\t}}\n\
+\treturn {name}FromUDBRow(page.Rows[0])\n\
+}}\n\n\
+// FindFirst returns the first row matching an ARBITRARY filter (not necessarily\n\
+// the primary key), or (nil, nil) when none match. Use Get for a primary-key\n\
+// point read with a cardinality guarantee.\n\
+func (r {name}Repo) FindFirst(ctx context.Context, where map[string]any) (*{qualified}, error) {{\n\
+\tpage, err := r.E.SelectPage(ctx, where, udbclient.PageOptions{{Limit: 1}})\n\
+\tif err != nil {{\n\t\treturn nil, err\n\t}}\n\
+\tif len(page.Rows) == 0 {{\n\t\treturn nil, nil\n\t}}\n\
+\treturn {name}FromUDBRow(page.Rows[0])\n\
 }}\n\n\
 // UpdateGuarded is a CAS partial update: SET only changes on the rows matched\n\
-// by where, only if expected still equals the current row.\n\
+// by where, only if expected still equals the current row. An empty expected map\n\
+// is rejected before the RPC — a guarded update must never silently degrade into\n\
+// an unconditional one (use Update for that).\n\
 func (r {name}Repo) UpdateGuarded(ctx context.Context, where, changes, expected map[string]any) error {{\n\
+\tif len(expected) == 0 {{\n\
+\t\treturn fmt.Errorf({upd_cas_msg:?})\n\t}}\n\
 \t_, err := r.E.Update(ctx, where, changes, udbclient.WithUpdateExpected(expected))\n\
 \treturn err\n\
 }}\n\n\
-// DeleteGuarded deletes the matched row only if expected still equals it.\n\
+// DeleteGuarded deletes the matched row only if expected still equals it. An\n\
+// empty expected map is rejected before the RPC (use Delete for an unconditional\n\
+// delete).\n\
 func (r {name}Repo) DeleteGuarded(ctx context.Context, where, expected map[string]any) error {{\n\
+\tif len(expected) == 0 {{\n\
+\t\treturn fmt.Errorf({del_cas_msg:?})\n\t}}\n\
 \t_, err := r.E.Delete(ctx, where, udbclient.WithDeleteExpected(expected))\n\
 \treturn err\n\
 }}\n\n",
             fqn = entity.message_type,
+            get_pk_msg = format!(
+                "{name}.Get: primary key %q missing from filter; use FindFirst for a partial-key lookup"
+            ),
+            get_card_msg = format!(
+                "{name}.Get: primary key matched %d rows, expected at most 1"
+            ),
+            upd_cas_msg = format!(
+                "{name}.UpdateGuarded: expected precondition is empty; refusing to run an unconditional update"
+            ),
+            del_cas_msg = format!(
+                "{name}.DeleteGuarded: expected precondition is empty; refusing to run an unconditional delete"
+            ),
         ));
     }
 
     out.push_str(&go_coercion_helpers(needs_time));
-    out
+    Ok(out)
+}
+
+/// Render the typed Go entity file AND canonicalize it with gofmt (#8). Used by
+/// the `udb sdk generate --project-proto` write path and `udb sdk diff` so both
+/// compare/emit byte-identical, gofmt-canonical output. A gofmt failure (a broken
+/// toolchain, or — a generator bug — Go the formatter rejects) surfaces as a
+/// generation error, leaving any previously-written file intact.
+fn render_go_entities_file_canonical(
+    entities: &[EntityDescriptor],
+    package: &str,
+) -> Result<String, String> {
+    let raw = render_go_entities_file(entities, package)?;
+    gofmt_canonicalize(&raw)
+}
+
+/// Canonicalize Go source through `gofmt` (reads a temp file, returns the
+/// formatted bytes). Errors when `gofmt` is unavailable or rejects the input.
+fn gofmt_canonicalize(src: &str) -> Result<String, String> {
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or_default();
+    let path =
+        std::env::temp_dir().join(format!("udb-gofmt-{}-{stamp}.go", std::process::id()));
+    std::fs::write(&path, src).map_err(|err| format!("gofmt: write temp file: {err}"))?;
+    let result = ProcessCommand::new("gofmt").arg(&path).output();
+    let _ = std::fs::remove_file(&path);
+    let output = result.map_err(|err| {
+        format!(
+            "gofmt is required to emit the typed Go entity layer but could not be run ({err}); \
+             install the Go toolchain (gofmt ships with it) and re-run"
+        )
+    })?;
+    if !output.status.success() {
+        return Err(format!(
+            "gofmt rejected the generated Go (this is a udb generator bug — please report it): {}",
+            String::from_utf8_lossy(&output.stderr).trim()
+        ));
+    }
+    String::from_utf8(output.stdout).map_err(|err| format!("gofmt: non-UTF-8 output: {err}"))
 }
 
 /// Parse an `EntityDescriptor` Go type token `"import/path;alias.TypeName"` into
@@ -1515,12 +1650,39 @@ fn go_to_record_stmt(column: &EntityColumnDescriptor) -> String {
         );
     }
     if !column.enum_values.is_empty() {
+        if column.enum_cross_package {
+            // A NOT NULL cross-package enum already failed closed in the render
+            // pre-scan; a nullable one lands here and is skipped (NULL is legal).
+            return format!(
+                "\t// TODO(udb-b3): unsupported write for \"{key}\" (cross-package enum {}; \
+                 Go import unavailable) — field skipped\n",
+                column.proto_type
+            );
+        }
         let prefix = enum_common_prefix(&column.enum_values);
         let expr = format!("strings.TrimPrefix(m.{getter}().String(), \"{prefix}\")");
         if column.has_presence {
             return format!("\tif m.{field} != nil {{\n\t\tr[\"{key}\"] = {expr}\n\t}}\n");
         }
         return format!("\tr[\"{key}\"] = {expr}\n");
+    }
+    // #10: a JSON/JSONB textual column embeds the PARSED JSON (json.RawMessage) so
+    // the record is not double-encoded — record_json is built with json.Marshal,
+    // which embeds a RawMessage verbatim (and validates it, rejecting malformed
+    // JSON) instead of string-escaping the whole document as `r[key] = string`
+    // would. An unset/empty nullable value is omitted so the column stays NULL.
+    if column.is_json || column.is_jsonb {
+        if column.has_presence {
+            return format!(
+                "\tif m.{field} != nil {{\n\t\tr[\"{key}\"] = json.RawMessage(m.{getter}())\n\t}}\n"
+            );
+        }
+        if !column.not_null {
+            return format!(
+                "\tif v := m.{getter}(); v != \"\" {{\n\t\tr[\"{key}\"] = json.RawMessage(v)\n\t}}\n"
+            );
+        }
+        return format!("\tr[\"{key}\"] = json.RawMessage(m.{getter}())\n");
     }
     if matches!(go_scalar_kind(&column.proto_type), GoScalar::Unknown) {
         // Message-typed (or unresolved-enum) column: no scalar round-trip.
@@ -1532,9 +1694,16 @@ fn go_to_record_stmt(column: &EntityColumnDescriptor) -> String {
             column.proto_type
         );
     }
-    // proto3 `optional` renders as a pointer: an unset field must be OMITTED from
-    // the record, never flattened to a zero value.
-    if column.has_presence && !matches!(go_scalar_kind(&column.proto_type), GoScalar::Bytes) {
+    // #11: optional `bytes` — []byte is already nilable, so nil means unset (omit →
+    // SQL NULL) while a present empty []byte{} is a real value to write. The
+    // general presence arm below cannot express this (it guards a scalar pointer),
+    // and the old fall-through wrote `null` for an unset optional bytes.
+    if column.has_presence && matches!(go_scalar_kind(&column.proto_type), GoScalar::Bytes) {
+        return format!("\tif m.{field} != nil {{\n\t\tr[\"{key}\"] = m.{getter}()\n\t}}\n");
+    }
+    // proto3 `optional` (non-bytes) renders as a pointer: an unset field must be
+    // OMITTED from the record, never flattened to a zero value.
+    if column.has_presence {
         return format!("\tif m.{field} != nil {{\n\t\tr[\"{key}\"] = m.{getter}()\n\t}}\n");
     }
     // Nullable string WITHOUT presence: Go cannot distinguish "" from unset, and
@@ -1556,6 +1725,10 @@ fn go_to_record_stmt(column: &EntityColumnDescriptor) -> String {
 fn go_from_row_stmt(column: &EntityColumnDescriptor, alias: &str) -> String {
     let key = &column.field_name;
     let field = go_pascal(&column.field_name);
+    // The `decode column %q: %w` wrapper, shared by every fail-closed arm.
+    let fail = |indent: &str| {
+        format!("{indent}return nil, fmt.Errorf(\"decode column %q: %w\", \"{key}\", err)\n")
+    };
     if column.is_array {
         // Mirrors go_to_record_stmt's repeated-field skip (symmetry rule).
         return format!(
@@ -1564,81 +1737,123 @@ fn go_from_row_stmt(column: &EntityColumnDescriptor, alias: &str) -> String {
         );
     }
     if is_go_timestamp(&column.proto_type) {
+        // A malformed timestamp string now fails the row (#5); nil/empty leaves the
+        // field unset (ok=false, no error).
         return format!(
-            "\tif t, ok := udbAsTime(row[\"{key}\"]); ok {{\n\
+            "\tif t, ok, err := udbAsTime(row[\"{key}\"]); err != nil {{\n{fail}\
+             \t}} else if ok {{\n\
              \t\tm.{field} = timestamppb.New(t)\n\t}}\n",
+            fail = fail("\t\t"),
         );
     }
     if !column.enum_values.is_empty() {
+        if column.enum_cross_package {
+            // A NOT NULL cross-package enum already failed closed in the render
+            // pre-scan; a nullable one lands here and is skipped (NULL is legal).
+            return format!(
+                "\t// TODO(udb-b3): unsupported read for \"{key}\" (cross-package enum {}; \
+                 Go import unavailable) — field skipped\n",
+                column.proto_type
+            );
+        }
         // The DB stores the enum SHORT token (the write path trims the prefix);
         // read it back through protoc-gen-go's `<Type>_value` map. Assumes the
         // enum's Go type is in the entity's package — the common case, since
-        // co-located entity/enum protos share a `go_package`. A cross-package enum
-        // would need its own import alias (a follow-up if a consumer hits it).
+        // co-located entity/enum protos share a `go_package`.
         let enum_type = go_enum_type_name(&column.proto_type);
         let prefix = enum_common_prefix(&column.enum_values);
         // W9 dual-read tolerance: probe the SHORT token first (the wire
         // convention), then the FULL enum name — so readers deployed before a
-        // legacy-data `migrate-enum-tokens` rewrite decode both forms
-        // (Stripe-phase dual-read; full names always carry the prefix, so the
-        // second probe can never misclassify a short token).
+        // legacy-data `migrate-enum-tokens` rewrite decode both forms.
         if column.has_presence {
             return format!(
-                "\tif s := udbAsString(row[\"{key}\"]); s != \"\" {{\n\
+                "\tif s, err := udbAsString(row[\"{key}\"]); err != nil {{\n{fail}\
+                 \t}} else if s != \"\" {{\n\
                  \t\tif v, ok := {alias}.{enum_type}_value[\"{prefix}\"+s]; ok {{\n\
                  \t\t\te := {alias}.{enum_type}(v)\n\t\t\tm.{field} = &e\n\
                  \t\t}} else if v, ok := {alias}.{enum_type}_value[s]; ok {{\n\
                  \t\t\te := {alias}.{enum_type}(v)\n\t\t\tm.{field} = &e\n\t\t}}\n\t}}\n",
+                fail = fail("\t\t"),
             );
         }
         return format!(
-            "\tif s := udbAsString(row[\"{key}\"]); s != \"\" {{\n\
+            "\tif s, err := udbAsString(row[\"{key}\"]); err != nil {{\n{fail}\
+             \t}} else if s != \"\" {{\n\
              \t\tif v, ok := {alias}.{enum_type}_value[\"{prefix}\"+s]; ok {{\n\
              \t\t\tm.{field} = {alias}.{enum_type}(v)\n\
              \t\t}} else if v, ok := {alias}.{enum_type}_value[s]; ok {{\n\
              \t\t\tm.{field} = {alias}.{enum_type}(v)\n\t\t}}\n\t}}\n",
+            fail = fail("\t\t"),
         );
     }
+    // #10: a JSON/JSONB textual column serializes the structured value back to
+    // canonical JSON text rather than reading it as an opaque string (which for a
+    // structured value would be its Go %v form, not JSON).
+    if column.is_json || column.is_jsonb {
+        let assign = if column.has_presence {
+            format!("\t\tm.{field} = &encoded\n")
+        } else {
+            format!("\t\tm.{field} = encoded\n")
+        };
+        return format!(
+            "\tif raw, ok := row[\"{key}\"]; ok && raw != nil {{\n\
+             \t\tencoded, err := udbAsJSONText(raw)\n\
+             \t\tif err != nil {{\n{fail}\t\t}}\n{assign}\t}}\n",
+            fail = fail("\t\t\t"),
+        );
+    }
+    let kind = go_scalar_kind(&column.proto_type);
+    if matches!(kind, GoScalar::Unknown) {
+        // Message-typed (or unresolved-enum) column: no scalar round-trip.
+        return format!(
+            "\t// TODO(udb-b3): unsupported read for \"{key}\" ({}) — field skipped\n",
+            column.proto_type
+        );
+    }
+    // (coercer, cast-open, cast-close) for the value the coercer yields.
+    let (coercer, cast_open, cast_close) = match kind {
+        GoScalar::String => ("udbAsString", "", ""),
+        GoScalar::Bool => ("udbAsBool", "", ""),
+        GoScalar::Int32 => ("udbAsInt64", "int32(", ")"),
+        GoScalar::Int64 => ("udbAsInt64", "", ""),
+        GoScalar::Uint32 => ("udbAsUint64", "uint32(", ")"),
+        GoScalar::Uint64 => ("udbAsUint64", "", ""),
+        GoScalar::Float32 => ("udbAsFloat64", "float32(", ")"),
+        GoScalar::Float64 => ("udbAsFloat64", "", ""),
+        GoScalar::Bytes => ("udbAsBytes", "", ""),
+        GoScalar::Unknown => unreachable!("Unknown handled above"),
+    };
     // proto3 `optional` scalars are pointers: only assign when the row actually
     // carried the key, so an absent column stays nil rather than becoming a zero.
     // (`bytes` is already nilable and keeps the plain-slice form.)
-    if column.has_presence {
-        let conv = match go_scalar_kind(&column.proto_type) {
-            GoScalar::String => Some("udbAsString(raw)"),
-            GoScalar::Bool => Some("udbAsBool(raw)"),
-            GoScalar::Int32 => Some("int32(udbAsInt64(raw))"),
-            GoScalar::Int64 => Some("udbAsInt64(raw)"),
-            GoScalar::Float64 => Some("udbAsFloat64(raw)"),
-            GoScalar::Float32 => Some("float32(udbAsFloat64(raw))"),
-            GoScalar::Bytes | GoScalar::Unknown => None,
-        };
-        if let Some(conv) = conv {
-            return format!(
-                "\tif raw, ok := row[\"{key}\"]; ok && raw != nil {{\n\
-                 \t\tv := {conv}\n\t\tm.{field} = &v\n\t}}\n",
-            );
-        }
+    if column.has_presence && !matches!(kind, GoScalar::Bytes) {
+        return format!(
+            "\tif raw, ok := row[\"{key}\"]; ok && raw != nil {{\n\
+             \t\tval, err := {coercer}(raw)\n\
+             \t\tif err != nil {{\n{fail}\t\t}}\n\
+             \t\tv := {cast_open}val{cast_close}\n\t\tm.{field} = &v\n\t}}\n",
+            fail = fail("\t\t\t"),
+        );
     }
-    match go_scalar_kind(&column.proto_type) {
-        GoScalar::String => format!("\tm.{field} = udbAsString(row[\"{key}\"])\n"),
-        GoScalar::Bool => format!("\tm.{field} = udbAsBool(row[\"{key}\"])\n"),
-        GoScalar::Int32 => format!("\tm.{field} = int32(udbAsInt64(row[\"{key}\"]))\n"),
-        GoScalar::Int64 => format!("\tm.{field} = udbAsInt64(row[\"{key}\"])\n"),
-        GoScalar::Float64 => format!("\tm.{field} = udbAsFloat64(row[\"{key}\"])\n"),
-        GoScalar::Float32 => format!("\tm.{field} = float32(udbAsFloat64(row[\"{key}\"]))\n"),
-        GoScalar::Bytes => format!("\tm.{field} = udbAsBytes(row[\"{key}\"])\n"),
-        GoScalar::Unknown => format!(
-            "\t// TODO(udb-b3): unsupported read for \"{key}\" ({}) — field skipped\n",
-            column.proto_type
-        ),
-    }
+    // Non-presence (and bytes): block-scoped coerce + assign, so a bad value fails
+    // the row instead of decoding to a zero (#5).
+    format!(
+        "\t{{\n\
+         \t\tval, err := {coercer}(row[\"{key}\"])\n\
+         \t\tif err != nil {{\n{fail}\t\t}}\n\
+         \t\tm.{field} = {cast_open}val{cast_close}\n\t}}\n",
+        fail = fail("\t\t\t"),
+    )
 }
 
+#[derive(Clone, Copy)]
 enum GoScalar {
     String,
     Bool,
     Int32,
     Int64,
+    Uint32,
+    Uint64,
     Float32,
     Float64,
     Bytes,
@@ -1649,8 +1864,13 @@ fn go_scalar_kind(proto_type: &str) -> GoScalar {
     match proto_type.trim_start_matches('.') {
         "string" => GoScalar::String,
         "bool" => GoScalar::Bool,
-        "int32" | "sint32" | "sfixed32" | "uint32" | "fixed32" => GoScalar::Int32,
-        "int64" | "sint64" | "sfixed64" | "uint64" | "fixed64" => GoScalar::Int64,
+        "int32" | "sint32" | "sfixed32" => GoScalar::Int32,
+        "int64" | "sint64" | "sfixed64" => GoScalar::Int64,
+        // #12: unsigned/fixed proto scalars map to Go uint32/uint64 — folding them
+        // into the signed kinds emitted `int32(...)`/`int64(...)`, which does not
+        // compile against a `uint32`/`uint64` protobuf field.
+        "uint32" | "fixed32" => GoScalar::Uint32,
+        "uint64" | "fixed64" => GoScalar::Uint64,
         "float" => GoScalar::Float32,
         "double" => GoScalar::Float64,
         "bytes" => GoScalar::Bytes,
@@ -1659,31 +1879,56 @@ fn go_scalar_kind(proto_type: &str) -> GoScalar {
 }
 
 /// Once-per-file safe `any` -> typed coercion helpers used by `…FromUDBRow`.
+///
+/// Every coercer returns `(T, error)` and FAILS CLOSED on a type mismatch instead
+/// of returning a zero value: a bad row must fail the read, not silently decode to
+/// a zero (#5). Numbers arrive as `json.Number` (the SDK's `decodeRecordJSON`
+/// decodes with `UseNumber` to preserve integer precision), so the integer/float
+/// coercers parse the exact digits and reject overflow / fractional / sign errors
+/// (#9/#12). A `nil` (absent/NULL column) is NOT an error — it yields the zero
+/// value with a nil error so an absent column leaves the field unset.
 fn go_coercion_helpers(needs_time: bool) -> String {
     let mut out = String::new();
     out.push_str(
-        "func udbAsString(v any) string {\n\tif s, ok := v.(string); ok {\n\t\treturn s\n\t}\n\treturn \"\"\n}\n\n",
+        "func udbAsString(v any) (string, error) {\n\tswitch s := v.(type) {\n\tcase nil:\n\t\treturn \"\", nil\n\tcase string:\n\t\treturn s, nil\n\t}\n\treturn \"\", fmt.Errorf(\"expected string, got %T\", v)\n}\n\n",
     );
     out.push_str(
-        "func udbAsBool(v any) bool {\n\tif b, ok := v.(bool); ok {\n\t\treturn b\n\t}\n\treturn false\n}\n\n",
+        "func udbAsBool(v any) (bool, error) {\n\tswitch b := v.(type) {\n\tcase nil:\n\t\treturn false, nil\n\tcase bool:\n\t\treturn b, nil\n\t}\n\treturn false, fmt.Errorf(\"expected bool, got %T\", v)\n}\n\n",
+    );
+    // #9: json.Number.Int64 rejects a fractional or out-of-range value; the float64
+    // arm (legacy/non-UseNumber sources) rejects a non-integral value and any value
+    // outside int64 (int64(n) round-trips only when the value is representable).
+    out.push_str(
+        "func udbAsInt64(v any) (int64, error) {\n\tswitch n := v.(type) {\n\tcase nil:\n\t\treturn 0, nil\n\tcase int64:\n\t\treturn n, nil\n\tcase int32:\n\t\treturn int64(n), nil\n\tcase int:\n\t\treturn int64(n), nil\n\tcase json.Number:\n\t\ti, err := n.Int64()\n\t\tif err != nil {\n\t\t\treturn 0, fmt.Errorf(\"expected 64-bit integer, got %q: %w\", n.String(), err)\n\t\t}\n\t\treturn i, nil\n\tcase float64:\n\t\tif i := int64(n); float64(i) == n {\n\t\t\treturn i, nil\n\t\t}\n\t\treturn 0, fmt.Errorf(\"expected integer, got non-integral or out-of-range %v\", n)\n\t}\n\treturn 0, fmt.Errorf(\"expected integer, got %T\", v)\n}\n\n",
+    );
+    // #12: unsigned coercer. json.Number is parsed with ParseUint so a negative or
+    // overflowing value is rejected; the signed arms reject a negative source.
+    out.push_str(
+        "func udbAsUint64(v any) (uint64, error) {\n\tswitch n := v.(type) {\n\tcase nil:\n\t\treturn 0, nil\n\tcase uint64:\n\t\treturn n, nil\n\tcase uint32:\n\t\treturn uint64(n), nil\n\tcase uint:\n\t\treturn uint64(n), nil\n\tcase int64:\n\t\tif n < 0 {\n\t\t\treturn 0, fmt.Errorf(\"expected unsigned integer, got negative %d\", n)\n\t\t}\n\t\treturn uint64(n), nil\n\tcase int32:\n\t\tif n < 0 {\n\t\t\treturn 0, fmt.Errorf(\"expected unsigned integer, got negative %d\", n)\n\t\t}\n\t\treturn uint64(n), nil\n\tcase int:\n\t\tif n < 0 {\n\t\t\treturn 0, fmt.Errorf(\"expected unsigned integer, got negative %d\", n)\n\t\t}\n\t\treturn uint64(n), nil\n\tcase json.Number:\n\t\tu, err := strconv.ParseUint(n.String(), 10, 64)\n\t\tif err != nil {\n\t\t\treturn 0, fmt.Errorf(\"expected 64-bit unsigned integer, got %q: %w\", n.String(), err)\n\t\t}\n\t\treturn u, nil\n\tcase float64:\n\t\tif n < 0 {\n\t\t\treturn 0, fmt.Errorf(\"expected unsigned integer, got negative %v\", n)\n\t\t}\n\t\tif u := uint64(n); float64(u) == n {\n\t\t\treturn u, nil\n\t\t}\n\t\treturn 0, fmt.Errorf(\"expected unsigned integer, got non-integral or out-of-range %v\", n)\n\t}\n\treturn 0, fmt.Errorf(\"expected unsigned integer, got %T\", v)\n}\n\n",
     );
     out.push_str(
-        "func udbAsInt64(v any) int64 {\n\tswitch n := v.(type) {\n\tcase int64:\n\t\treturn n\n\tcase int32:\n\t\treturn int64(n)\n\tcase int:\n\t\treturn int64(n)\n\tcase float64:\n\t\treturn int64(n)\n\t}\n\treturn 0\n}\n\n",
+        "func udbAsFloat64(v any) (float64, error) {\n\tswitch n := v.(type) {\n\tcase nil:\n\t\treturn 0, nil\n\tcase float64:\n\t\treturn n, nil\n\tcase float32:\n\t\treturn float64(n), nil\n\tcase int64:\n\t\treturn float64(n), nil\n\tcase int:\n\t\treturn float64(n), nil\n\tcase json.Number:\n\t\tf, err := n.Float64()\n\t\tif err != nil {\n\t\t\treturn 0, fmt.Errorf(\"expected number, got %q: %w\", n.String(), err)\n\t\t}\n\t\treturn f, nil\n\t}\n\treturn 0, fmt.Errorf(\"expected number, got %T\", v)\n}\n\n",
     );
+    // #2: a bytes column round-trips through record_json as a base64 STRING
+    // (json.Marshal encodes []byte that way), so decode it — the old `[]byte(s)`
+    // returned the base64 text verbatim as the field value.
     out.push_str(
-        "func udbAsFloat64(v any) float64 {\n\tswitch n := v.(type) {\n\tcase float64:\n\t\treturn n\n\tcase float32:\n\t\treturn float64(n)\n\tcase int64:\n\t\treturn float64(n)\n\t}\n\treturn 0\n}\n\n",
+        "func udbAsBytes(v any) ([]byte, error) {\n\tswitch b := v.(type) {\n\tcase nil:\n\t\treturn nil, nil\n\tcase []byte:\n\t\treturn b, nil\n\tcase string:\n\t\tdecoded, err := base64.StdEncoding.DecodeString(b)\n\t\tif err != nil {\n\t\t\treturn nil, fmt.Errorf(\"expected base64-encoded bytes: %w\", err)\n\t\t}\n\t\treturn decoded, nil\n\t}\n\treturn nil, fmt.Errorf(\"expected bytes, got %T\", v)\n}\n\n",
     );
+    // #10: a JSON/JSONB column comes back as a structured value (map/slice/number)
+    // OR as JSON text; canonicalize either into JSON text for the string field.
     out.push_str(
-        "func udbAsBytes(v any) []byte {\n\tif b, ok := v.([]byte); ok {\n\t\treturn b\n\t}\n\tif s, ok := v.(string); ok {\n\t\treturn []byte(s)\n\t}\n\treturn nil\n}\n\n",
+        "func udbAsJSONText(v any) (string, error) {\n\tswitch s := v.(type) {\n\tcase nil:\n\t\treturn \"\", nil\n\tcase string:\n\t\tif s == \"\" {\n\t\t\treturn \"\", nil\n\t\t}\n\t\tif !json.Valid([]byte(s)) {\n\t\t\treturn \"\", fmt.Errorf(\"expected JSON text, got %q\", s)\n\t\t}\n\t\treturn s, nil\n\t}\n\tb, err := json.Marshal(v)\n\tif err != nil {\n\t\treturn \"\", fmt.Errorf(\"encode JSON value: %w\", err)\n\t}\n\treturn string(b), nil\n}\n\n",
     );
     if needs_time {
         out.push_str(
             // The broker renders timestamps in more than one layout across column
             // types (offset form for TIMESTAMPTZ, space-separated for some
             // TIMESTAMP renderings, bare dates for DATE). Try the canonical form
-            // first, then fall back through the observed set rather than dropping
-            // the value — a failed parse would silently zero the field.
-            "func udbAsTime(v any) (time.Time, bool) {\n\ts, ok := v.(string)\n\tif !ok || s == \"\" {\n\t\treturn time.Time{}, false\n\t}\n\tfor _, layout := range []string{\n\t\ttime.RFC3339Nano,\n\t\ttime.RFC3339,\n\t\t\"2006-01-02T15:04:05\",\n\t\t\"2006-01-02 15:04:05.999999999Z07:00\",\n\t\t\"2006-01-02 15:04:05\",\n\t\t\"2006-01-02\",\n\t} {\n\t\tif t, err := time.Parse(layout, s); err == nil {\n\t\t\treturn t, true\n\t\t}\n\t}\n\treturn time.Time{}, false\n}\n",
+            // first, then fall back through the observed set. A non-empty string
+            // that matches NO layout is a decode error (fail closed), not a silent
+            // zero; nil/empty means the column was absent/NULL (ok=false, no error).
+            "func udbAsTime(v any) (time.Time, bool, error) {\n\tif v == nil {\n\t\treturn time.Time{}, false, nil\n\t}\n\ts, ok := v.(string)\n\tif !ok {\n\t\treturn time.Time{}, false, fmt.Errorf(\"expected timestamp string, got %T\", v)\n\t}\n\tif s == \"\" {\n\t\treturn time.Time{}, false, nil\n\t}\n\tfor _, layout := range []string{\n\t\ttime.RFC3339Nano,\n\t\ttime.RFC3339,\n\t\t\"2006-01-02T15:04:05\",\n\t\t\"2006-01-02 15:04:05.999999999Z07:00\",\n\t\t\"2006-01-02 15:04:05\",\n\t\t\"2006-01-02\",\n\t} {\n\t\tif t, err := time.Parse(layout, s); err == nil {\n\t\t\treturn t, true, nil\n\t\t}\n\t}\n\treturn time.Time{}, false, fmt.Errorf(\"unrecognized timestamp format %q\", s)\n}\n",
         );
     }
     out
@@ -2859,6 +3104,7 @@ mod tests {
             is_array: false,
             has_presence: false,
             enum_values: Vec::new(),
+            enum_cross_package: false,
             is_json: false,
             is_jsonb: false,
             exclude_from_insert: false,
@@ -3066,7 +3312,7 @@ mod tests {
             relations: Vec::new(),
             columns: vec![column("id", "string"), phantom],
         }];
-        let out = render_go_entities_file(&entities, "acmegen");
+        let out = render_go_entities_file(&entities, "acmegen").expect("render");
         assert!(out.contains("m.GetId()"), "declared field must marshal");
         assert!(
             !out.contains("GetUpdatedAt"),
@@ -3149,7 +3395,7 @@ mod tests {
             relations: Vec::new(),
             columns: vec![column("srid", "int32"), proj4],
         }];
-        let out = render_go_entities_file(&entities, "spatialgen");
+        let out = render_go_entities_file(&entities, "spatialgen").expect("render");
 
         // Count type: the return must widen to match the int64 signature.
         assert!(
@@ -3174,6 +3420,279 @@ mod tests {
             !out.contains("Proj4text"),
             "the old wrong Proj4text form must not survive, got:\n{out}"
         );
+    }
+
+    /// One renderable `Widget` entity (go language class present) with the given
+    /// primary keys and columns — the boilerplate every render-level emitter test
+    /// otherwise repeats.
+    fn widget_entity(
+        primary_keys: Vec<String>,
+        columns: Vec<EntityColumnDescriptor>,
+    ) -> Vec<EntityDescriptor> {
+        let mut language_classes = std::collections::BTreeMap::new();
+        language_classes.insert(
+            "go".to_string(),
+            "example.com/gen/acmev1;acmev1.Widget".to_string(),
+        );
+        vec![EntityDescriptor {
+            message_type: "acme.v1.Widget".to_string(),
+            short_name: "Widget".to_string(),
+            table: "widgets".to_string(),
+            primary_keys,
+            tenant_field: String::new(),
+            project_field: String::new(),
+            soft_delete_field: String::new(),
+            version_field: String::new(),
+            proto_package: "acme.v1".to_string(),
+            language_classes,
+            json_field_names: Vec::new(),
+            relations: Vec::new(),
+            columns,
+        }]
+    }
+
+    // #5: FromUDBRow returns (*T, error) and each scalar read propagates a decode
+    // failure instead of zeroing the field. List surfaces it so a bad row fails the
+    // whole page.
+    #[test]
+    fn read_path_fails_closed_on_decode_error() {
+        let read = go_from_row_stmt(&column("user_id", "string"), "acmev1");
+        assert!(
+            read.contains("val, err := udbAsString(row[\"user_id\"])"),
+            "read must coerce through the error channel, got: {read}"
+        );
+        assert!(
+            read.contains("return nil, fmt.Errorf(\"decode column %q: %w\", \"user_id\", err)"),
+            "read must propagate the decode error, got: {read}"
+        );
+        assert!(read.contains("m.UserId = val"), "got: {read}");
+
+        let out = render_go_entities_file(
+            &widget_entity(vec!["id".to_string()], vec![column("id", "string")]),
+            "acmegen",
+        )
+        .expect("render");
+        assert!(
+            out.contains("func WidgetFromUDBRow(row map[string]any) (*acmev1.Widget, error) {"),
+            "FromUDBRow must return (*T, error), got:\n{out}"
+        );
+        assert!(out.contains("\treturn m, nil\n"), "got:\n{out}");
+        assert!(
+            out.contains("item, err := WidgetFromUDBRow(row)")
+                && out.contains("return nil, \"\", 0, err"),
+            "List must propagate a per-row decode error, got:\n{out}"
+        );
+    }
+
+    // #12: unsigned/fixed proto scalars must decode through udbAsUint64 with the
+    // right Go cast, not int32/int64 (which does not compile against a uint field).
+    #[test]
+    fn unsigned_scalars_use_uint_coercers() {
+        assert!(matches!(go_scalar_kind("uint32"), GoScalar::Uint32));
+        assert!(matches!(go_scalar_kind("fixed32"), GoScalar::Uint32));
+        assert!(matches!(go_scalar_kind("uint64"), GoScalar::Uint64));
+        assert!(matches!(go_scalar_kind("fixed64"), GoScalar::Uint64));
+
+        let read32 = go_from_row_stmt(&column("port", "uint32"), "acmev1");
+        assert!(
+            read32.contains("val, err := udbAsUint64(row[\"port\"])")
+                && read32.contains("m.Port = uint32(val)"),
+            "uint32 read must widen through udbAsUint64, got: {read32}"
+        );
+        let read64 = go_from_row_stmt(&column("counter", "uint64"), "acmev1");
+        assert!(
+            read64.contains("val, err := udbAsUint64(row[\"counter\"])")
+                && read64.contains("m.Counter = val"),
+            "uint64 read must use udbAsUint64, got: {read64}"
+        );
+    }
+
+    // #2: a bytes column round-trips as base64 in record_json, so the read must
+    // base64-decode (the old code returned the base64 TEXT as the field bytes).
+    #[test]
+    fn bytes_column_base64_decodes_on_read() {
+        let read = go_from_row_stmt(&column("blob", "bytes"), "acmev1");
+        assert!(
+            read.contains("val, err := udbAsBytes(row[\"blob\"])"),
+            "bytes read must go through udbAsBytes, got: {read}"
+        );
+        let helpers = go_coercion_helpers(false);
+        assert!(
+            helpers.contains("base64.StdEncoding.DecodeString(b)"),
+            "udbAsBytes must base64-decode, got: {helpers}"
+        );
+    }
+
+    // #11: an optional (presence) bytes field is nilable in Go; nil means unset
+    // (omit → NULL) while a present empty []byte{} is written. The old presence arm
+    // excluded bytes, so an unset optional bytes was serialized as null.
+    #[test]
+    fn optional_bytes_presence_omits_unset() {
+        let mut col = column("avatar", "bytes");
+        col.has_presence = true;
+        let write = go_to_record_stmt(&col);
+        assert!(
+            write.contains("if m.Avatar != nil {") && write.contains("r[\"avatar\"] = m.GetAvatar()"),
+            "optional bytes must be nil-guarded, got: {write}"
+        );
+    }
+
+    // #10: a JSON/JSONB column must EMBED the parsed JSON (json.RawMessage) so the
+    // record is not double-encoded, and read back as canonical JSON text.
+    #[test]
+    fn json_column_avoids_double_encoding() {
+        let mut col = column("metadata", "string");
+        col.is_jsonb = true;
+        let write = go_to_record_stmt(&col);
+        assert!(
+            write.contains("r[\"metadata\"] = json.RawMessage(m.GetMetadata())"),
+            "jsonb write must embed a RawMessage, got: {write}"
+        );
+        assert!(
+            !write.contains("r[\"metadata\"] = m.GetMetadata()\n"),
+            "jsonb write must NOT emit the double-encoding string form, got: {write}"
+        );
+        let read = go_from_row_stmt(&col, "acmev1");
+        assert!(
+            read.contains("encoded, err := udbAsJSONText(raw)") && read.contains("m.Metadata = encoded"),
+            "jsonb read must canonicalize via udbAsJSONText, got: {read}"
+        );
+
+        // A nullable json column omits an empty value so the column stays NULL.
+        let mut nullable = column("metadata", "string");
+        nullable.is_json = true;
+        nullable.not_null = false;
+        let write = go_to_record_stmt(&nullable);
+        assert!(
+            write.contains("if v := m.GetMetadata(); v != \"\" {")
+                && write.contains("r[\"metadata\"] = json.RawMessage(v)"),
+            "nullable json write must omit empty, got: {write}"
+        );
+    }
+
+    // #3: a NOT NULL cross-package enum can now resolve its value names but the Go
+    // emitter cannot qualify its type across packages — so it FAILS CLOSED rather
+    // than silently omitting a NOT NULL column. A NULLABLE one is skipped instead.
+    #[test]
+    fn cross_package_enum_not_null_fails_closed() {
+        let mut region = column("region", "acme.geo.v1.Region");
+        region.enum_values = vec!["REGION_UNSPECIFIED".to_string(), "REGION_EAST".to_string()];
+        region.enum_cross_package = true;
+        region.not_null = true;
+        let err = render_go_entities_file(
+            &widget_entity(
+                vec!["id".to_string()],
+                vec![column("id", "string"), region.clone()],
+            ),
+            "acmegen",
+        )
+        .expect_err("NOT NULL cross-package enum must fail closed");
+        assert!(
+            err.contains("cross-package enum") && err.contains("region"),
+            "fail-closed message must name the offending column, got: {err}"
+        );
+
+        // Nullable → skipped with a TODO, generation succeeds.
+        region.not_null = false;
+        let out = render_go_entities_file(
+            &widget_entity(vec!["id".to_string()], vec![column("id", "string"), region]),
+            "acmegen",
+        )
+        .expect("nullable cross-package enum must not fail closed");
+        assert!(
+            out.contains("cross-package enum acme.geo.v1.Region"),
+            "nullable cross-package enum must be skipped with a TODO, got:\n{out}"
+        );
+    }
+
+    // #6: Get requires the FULL primary key, caps the read at 2 rows, and returns a
+    // cardinality error on >1; FindFirst is the arbitrary-filter escape hatch.
+    #[test]
+    fn typed_get_requires_full_key_and_guards_cardinality() {
+        let out = render_go_entities_file(
+            &widget_entity(vec!["id".to_string()], vec![column("id", "string")]),
+            "acmegen",
+        )
+        .expect("render");
+        assert!(
+            out.contains("for _, pk := range []string{\"id\"} {"),
+            "Get must require every primary-key column, got:\n{out}"
+        );
+        assert!(
+            out.contains("udbclient.PageOptions{Limit: 2}")
+                && out.contains("primary key matched %d rows, expected at most 1"),
+            "Get must LIMIT 2 and guard cardinality, got:\n{out}"
+        );
+        assert!(
+            out.contains("func (r WidgetRepo) FindFirst(ctx context.Context, where map[string]any) (*acmev1.Widget, error) {")
+                && out.contains("udbclient.PageOptions{Limit: 1}"),
+            "FindFirst must exist for arbitrary-filter reads, got:\n{out}"
+        );
+    }
+
+    // #7: guarded CAS writes must reject a nil/empty expected map BEFORE the RPC so
+    // a guarded write can never silently degrade into an unconditional one.
+    #[test]
+    fn guarded_writes_reject_empty_expected() {
+        let out = render_go_entities_file(
+            &widget_entity(vec!["id".to_string()], vec![column("id", "string")]),
+            "acmegen",
+        )
+        .expect("render");
+        assert!(
+            out.contains("func (r WidgetRepo) UpdateGuarded(")
+                && out.contains(
+                    "refusing to run an unconditional update"
+                ),
+            "UpdateGuarded must reject empty expected, got:\n{out}"
+        );
+        assert!(
+            out.contains("func (r WidgetRepo) DeleteGuarded(")
+                && out.contains("refusing to run an unconditional delete"),
+            "DeleteGuarded must reject empty expected, got:\n{out}"
+        );
+        assert_eq!(
+            out.matches("if len(expected) == 0 {").count(),
+            2,
+            "both guarded writes must gate on an empty expected map, got:\n{out}"
+        );
+    }
+
+    // #8: the emitted Go must be gofmt-canonical. The write path (and `sdk diff`)
+    // run render output through gofmt before writing/comparing; assert that
+    // pipeline succeeds and is a fixed point for a sample carrying the column-policy
+    // table. Skipped when the Go toolchain (gofmt) is absent — an environment probe,
+    // like the generated-client gate.
+    #[test]
+    fn emitted_column_policy_is_gofmt_clean() {
+        let mut status = column("status", "acme.v1.WidgetStatus");
+        status.enum_values = vec![
+            "WIDGET_STATUS_UNSPECIFIED".to_string(),
+            "WIDGET_STATUS_ACTIVE".to_string(),
+        ];
+        let raw = render_go_entities_file(
+            &widget_entity(
+                vec!["id".to_string()],
+                vec![column("id", "string"), status],
+            ),
+            "acmegen",
+        )
+        .expect("render");
+        // The sample must actually carry the column-policy table we canonicalize.
+        assert!(raw.contains("type UDBColumn struct {"), "got:\n{raw}");
+        assert!(raw.contains("var WidgetColumns = map[string]UDBColumn{"), "got:\n{raw}");
+        // Skip only when the toolchain is absent; when gofmt IS present a failure to
+        // format is a REAL generator bug (invalid Go) and must fail the test, not be
+        // swallowed as "unavailable".
+        if !command_exists("gofmt") {
+            eprintln!("skipping gofmt-clean assertion: gofmt not installed");
+            return;
+        }
+        let formatted = gofmt_canonicalize(&raw)
+            .expect("gofmt must accept and format the emitted Go (a rejection here is a generator bug)");
+        let twice = gofmt_canonicalize(&formatted).expect("gofmt is idempotent");
+        assert_eq!(formatted, twice, "gofmt output must be a fixed point (clean)");
+        assert!(formatted.contains("type UDBColumn struct {"), "got:\n{formatted}");
     }
 
     fn sample_manifest() -> Vec<RpcDescriptor> {

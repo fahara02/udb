@@ -851,7 +851,7 @@ impl ProjectionTaskStore for ClickHouseCanonicalStore {
             .join(", ");
         let sql = format!(
             "SELECT count() AS n FROM {tbl} FINAL WHERE idempotency_key IN ({in_list}) \
-             AND status NOT IN ('COMPLETED', 'DEAD_LETTER', 'FAILED')"
+             AND status <> 'COMPLETED'" // P2-1 NF-1/NF-2: FAILED/DEAD_LETTER = not projected yet = still fences
         );
         let rows = self
             .executor()

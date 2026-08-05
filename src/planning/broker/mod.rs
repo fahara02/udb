@@ -532,7 +532,19 @@ pub(crate) fn build_select_logical_read(
         })
         .collect::<Vec<_>>();
 
-    let filter = logical_filter_from_planner_json(&filter_json, &allowed, &mut errors);
+    let mut filter = logical_filter_from_planner_json(&filter_json, &allowed, &mut errors);
+    // #4 soft-delete-read-scope-gap: default-exclude tombstoned rows on the
+    // neutral-IR read path too (the served SELECT prefers this bridge). Conjoin
+    // `<soft_delete_column> IS NULL` with the caller filter (which already carries
+    // the tenant/project isolation predicates); `.and()` keeps the tree flat.
+    // Malformed soft-delete metadata fails closed via the pushed error below.
+    if let Some(column) = resolve_soft_delete_column(table, &allowed, &mut errors) {
+        let live_rows = LogicalFilter::IsNull(column);
+        filter = Some(match filter {
+            Some(existing) => existing.and(live_rows),
+            None => live_rows,
+        });
+    }
     if !errors.is_empty() {
         return Err(errors);
     }
@@ -655,6 +667,16 @@ fn build_select_query_plan_uncached(
         ));
     }
 
+    // #4 soft-delete-read-scope-gap: exclude tombstoned rows from ordinary reads
+    // by default. Inject `<soft_delete_column> IS NULL` into the mandatory
+    // conjunction so it composes with the caller filter (including a top-level
+    // `$or`, which `compile_filter_predicates` already parenthesizes), the
+    // tenant/project mandatory filters, and the LIMIT below. The predicate binds
+    // no parameter, so `$N` numbering is unchanged. Malformed soft-delete metadata
+    // fails closed via the pushed error rather than leaking deleted rows.
+    let soft_delete_predicate = resolve_soft_delete_column(table, &allowed, &mut errors)
+        .map(|column| format!("{} IS NULL", qi(&column)));
+
     let mut sql = format!(
         "SELECT {} FROM {}.{}",
         if selected_columns.is_empty() {
@@ -665,9 +687,16 @@ fn build_select_query_plan_uncached(
         qi(&table.schema),
         qi(&table.table)
     );
+    let mut where_fragments = Vec::new();
     if !compiled_filter.sql.is_empty() {
+        where_fragments.push(compiled_filter.sql.clone());
+    }
+    if let Some(predicate) = soft_delete_predicate {
+        where_fragments.push(predicate);
+    }
+    if !where_fragments.is_empty() {
         sql.push_str(" WHERE ");
-        sql.push_str(&compiled_filter.sql);
+        sql.push_str(&where_fragments.join(" AND "));
     }
     if !request.sort.is_empty() {
         sql.push_str(" ORDER BY ");
@@ -1010,6 +1039,19 @@ pub(crate) fn build_upsert_logical_write(
     })
 }
 
+/// Build the IR→SQL plan for a typed Delete.
+///
+/// #3 soft-delete-is-hard-delete: when the resolved table is annotated
+/// `soft_delete`, the emitted statement is NOT a physical `DELETE` but an
+/// idempotent `UPDATE … SET <soft_delete_column> = NOW()` that stamps the
+/// declared tombstone column using the SAME WHERE/tenant/project predicate the
+/// physical delete would have used. The SET clause binds no parameter, so
+/// `parameter_columns` and the `$N` filter numbering are byte-identical to the
+/// physical-delete plan — the compare-and-swap precondition (enforced upstream
+/// on the same normalized filter), tenant/project isolation, and the
+/// affected-rows contract are all preserved. Malformed soft-delete metadata
+/// fails closed (see [`resolve_soft_delete_column`]) and NEVER degrades to a
+/// physical `DELETE`.
 pub fn build_delete_plan(
     manifest: &CatalogManifest,
     request: &DeletePlanRequest,
@@ -1061,16 +1103,46 @@ pub fn build_delete_plan(
     if compiled.sql.is_empty() {
         errors.push("delete requires at least one safe filter predicate".to_string());
     }
-    let sql = format!(
-        "DELETE FROM {}.{} WHERE {}",
-        qi(&table.schema),
-        qi(&table.table),
-        if compiled.sql.is_empty() {
-            "FALSE".to_string()
-        } else {
-            compiled.sql
+    // #3: resolve the tombstone column (fail-closed on malformed metadata) BEFORE
+    // emitting anything, so a soft-delete table can never fall through to a
+    // physical DELETE.
+    let soft_delete_column = resolve_soft_delete_column(table, &allowed, &mut errors);
+    let where_clause = if compiled.sql.is_empty() {
+        "FALSE".to_string()
+    } else {
+        compiled.sql
+    };
+    let sql = match (table.soft_delete, &soft_delete_column) {
+        // Not a soft-delete table: ordinary physical delete (unchanged behavior).
+        (false, _) => format!(
+            "DELETE FROM {}.{} WHERE {}",
+            qi(&table.schema),
+            qi(&table.table),
+            where_clause
+        ),
+        // Soft-delete table, valid metadata: idempotent tombstone UPDATE that
+        // reuses the exact delete WHERE/tenant/project predicate.
+        (true, Some(column)) => format!(
+            "UPDATE {}.{} SET {} = NOW() WHERE {}",
+            qi(&table.schema),
+            qi(&table.table),
+            qi(column),
+            where_clause
+        ),
+        // Soft-delete table, MALFORMED metadata: an error is already queued, so
+        // fail closed with an inert (never-matching) UPDATE — we must never emit
+        // a physical DELETE for a table declared soft-delete.
+        (true, None) => {
+            let inert = table.soft_delete_column.trim();
+            let inert = if inert.is_empty() { "deleted_at" } else { inert };
+            format!(
+                "UPDATE {}.{} SET {} = NOW() WHERE FALSE",
+                qi(&table.schema),
+                qi(&table.table),
+                qi(inert)
+            )
         }
-    );
+    };
 
     SqlOperationPlan {
         operation: "delete".to_string(),
@@ -1292,6 +1364,18 @@ pub(crate) fn build_delete_logical_delete(
 ) -> Result<LogicalDelete, Vec<String>> {
     let table = resolve_table_for_message(manifest, &request.message_type)
         .map_err(|error| vec![error.to_string()])?;
+
+    // #3: a soft-delete table must NOT lower to a neutral hard `DELETE`. Decline
+    // so the served delete path (`bridged_pg_delete_statement` → `.ok()?`) falls
+    // back to the planner's soft-delete UPDATE in `build_delete_plan`; direct
+    // callers get a clear routing error instead of a silent physical delete.
+    if table.soft_delete {
+        return Err(vec![format!(
+            "soft-delete table {}.{} does not lower to a neutral hard delete; \
+             the planner emits a soft-delete UPDATE instead",
+            table.schema, table.table
+        )]);
+    }
 
     let mut errors = validate_write_context(&request.context);
     // C22: per-table ABAC on the write path.
@@ -1848,6 +1932,51 @@ fn project_column(table: &ManifestTable) -> String {
     resolve_project_column(table)
         .unwrap_or_default()
         .to_string()
+}
+
+/// Resolve the declared soft-delete (tombstone) column for a table, failing
+/// closed on malformed soft-delete metadata (#3 delete rewrite / #4 read scope).
+///
+/// Returns:
+///   * `None` when the table is NOT soft-delete — the caller emits an ordinary
+///     physical delete / injects no live-row read predicate;
+///   * `Some(column)` — the validated, declared soft-delete column (the physical
+///     `column_name`, lowercased to match `allowed`), ready to quote with [`qi`];
+///   * `None` **with an error pushed onto `errors`** when the table declares
+///     `soft_delete` but its `soft_delete_column` is empty or is not a real
+///     column. A soft-delete table that yields `None` MUST be treated as
+///     fail-closed by the caller (the plan is rejected) and must NEVER fall
+///     through to a physical `DELETE` (#3) or to a read that could surface
+///     tombstoned rows (#4).
+///
+/// `build.rs` (`security_soft_delete_enabled` + the `soft_delete_column`
+/// existence check) and `generation::lint` gate this at catalog-build time; the
+/// runtime re-check makes a hand-built or corrupted manifest unable to physically
+/// delete a soft-delete row or leak a tombstoned one.
+fn resolve_soft_delete_column(
+    table: &ManifestTable,
+    allowed: &BTreeSet<String>,
+    errors: &mut Vec<String>,
+) -> Option<String> {
+    if !table.soft_delete {
+        return None;
+    }
+    let column = table.soft_delete_column.trim().to_ascii_lowercase();
+    if column.is_empty() {
+        errors.push(format!(
+            "soft-delete table {}.{} declares no soft_delete_column",
+            table.schema, table.table
+        ));
+        return None;
+    }
+    if !allowed.contains(&column) {
+        errors.push(format!(
+            "soft-delete table {}.{} soft_delete_column '{}' is not a declared column",
+            table.schema, table.table, table.soft_delete_column
+        ));
+        return None;
+    }
+    Some(column)
 }
 
 fn unresolved_tenant_column_error(table: &ManifestTable) -> String {
@@ -2770,6 +2899,286 @@ mod tests {
         );
     }
 
+    // ── #3/#4: soft-delete planner behavior ──────────────────────────────────
+
+    fn soft_delete_test_manifest() -> CatalogManifest {
+        test_manifest(ManifestTable {
+            columns: vec![
+                test_column("id"),
+                test_column("tenant_id"),
+                test_column("status"),
+                test_column("deleted_at"),
+            ],
+            table_security: ManifestTableSecurity {
+                tenant_column: "tenant_id".to_string(),
+                ..ManifestTableSecurity::default()
+            },
+            soft_delete: true,
+            soft_delete_column: "deleted_at".to_string(),
+            ..ManifestTable::default()
+        })
+    }
+
+    fn soft_delete_delete_request(filter: Value) -> DeletePlanRequest {
+        DeletePlanRequest {
+            context: RequestContext {
+                tenant_id: "tenant-a".to_string(),
+                purpose: "unit-test".to_string(),
+                scopes: vec!["udb:write".to_string()],
+                ..RequestContext::default()
+            },
+            message_type: "acme.test.v1.Widget".to_string(),
+            filter,
+        }
+    }
+
+    // #3: a Delete on a soft-delete table becomes an idempotent tombstone UPDATE
+    // that reuses the exact delete WHERE (tenant isolation + `$N` numbering) and
+    // never emits a physical DELETE. The SET binds no parameter, so
+    // `parameter_columns` and the verb/audit/cache contract are unchanged.
+    #[test]
+    fn delete_plan_soft_delete_rewrites_to_tombstone_update() {
+        let manifest = soft_delete_test_manifest();
+        let plan = build_delete_plan(
+            &manifest,
+            &soft_delete_delete_request(json!({"id": "w1", "tenant_id": "tenant-a"})),
+        );
+        assert_eq!(plan.errors, Vec::<String>::new());
+        assert_eq!(
+            plan.sql,
+            "UPDATE \"public\".\"widgets\" SET \"deleted_at\" = NOW() WHERE (\"id\" = $1 AND \"tenant_id\" = $2)"
+        );
+        assert!(
+            !plan.sql.to_ascii_uppercase().contains("DELETE FROM"),
+            "soft-delete must never physically DELETE: {}",
+            plan.sql
+        );
+        assert_eq!(plan.parameter_columns, ["id", "tenant_id"]);
+        assert_eq!(plan.operation, "delete");
+        assert_eq!(plan.audit_event_type, "udb.sql.delete");
+    }
+
+    // #3: tenant isolation is still enforced on the soft-delete path, and even a
+    // rejected soft-delete plan must not be a physical DELETE.
+    #[test]
+    fn delete_plan_soft_delete_preserves_tenant_isolation() {
+        let manifest = soft_delete_test_manifest();
+        let plan = build_delete_plan(&manifest, &soft_delete_delete_request(json!({"id": "w1"})));
+        assert!(
+            plan.errors
+                .iter()
+                .any(|e| e.contains("tenant isolation requires filter on tenant_id")),
+            "{:?}",
+            plan.errors
+        );
+        assert!(
+            !plan.sql.to_ascii_uppercase().contains("DELETE FROM"),
+            "even a rejected soft-delete plan must not physically DELETE: {}",
+            plan.sql
+        );
+    }
+
+    // #3: malformed soft-delete metadata fails closed BEFORE mutating and never
+    // degrades to a physical DELETE.
+    #[test]
+    fn delete_plan_soft_delete_malformed_metadata_fails_closed() {
+        // Declared column absent from the table.
+        let mut manifest = soft_delete_test_manifest();
+        manifest.tables[0].soft_delete_column = "gone".to_string();
+        let plan = build_delete_plan(
+            &manifest,
+            &soft_delete_delete_request(json!({"id": "w1", "tenant_id": "tenant-a"})),
+        );
+        assert!(
+            plan.errors
+                .iter()
+                .any(|e| e.contains("soft_delete_column 'gone' is not a declared column")),
+            "{:?}",
+            plan.errors
+        );
+        assert!(
+            !plan.sql.to_ascii_uppercase().contains("DELETE FROM"),
+            "{}",
+            plan.sql
+        );
+
+        // Empty column with soft_delete set.
+        let mut manifest = soft_delete_test_manifest();
+        manifest.tables[0].soft_delete_column = String::new();
+        let plan = build_delete_plan(
+            &manifest,
+            &soft_delete_delete_request(json!({"id": "w1", "tenant_id": "tenant-a"})),
+        );
+        assert!(
+            plan.errors
+                .iter()
+                .any(|e| e.contains("declares no soft_delete_column")),
+            "{:?}",
+            plan.errors
+        );
+        assert!(
+            !plan.sql.to_ascii_uppercase().contains("DELETE FROM"),
+            "{}",
+            plan.sql
+        );
+    }
+
+    // #3: a non-soft-delete table still emits a physical DELETE (regression).
+    #[test]
+    fn delete_plan_non_soft_delete_still_physical() {
+        let mut manifest = soft_delete_test_manifest();
+        manifest.tables[0].soft_delete = false;
+        let plan = build_delete_plan(
+            &manifest,
+            &soft_delete_delete_request(json!({"id": "w1", "tenant_id": "tenant-a"})),
+        );
+        assert_eq!(plan.errors, Vec::<String>::new());
+        assert!(
+            plan.sql
+                .starts_with("DELETE FROM \"public\".\"widgets\" WHERE "),
+            "{}",
+            plan.sql
+        );
+    }
+
+    // #3: the neutral-IR delete bridge declines for soft-delete tables so the
+    // served path falls back to the planner's soft-delete UPDATE.
+    #[test]
+    fn delete_logical_delete_declines_for_soft_delete_table() {
+        let manifest = soft_delete_test_manifest();
+        let errors = build_delete_logical_delete(
+            &manifest,
+            &soft_delete_delete_request(json!({"id": "w1", "tenant_id": "tenant-a"})),
+        )
+        .expect_err("soft-delete table must not lower to a neutral hard delete");
+        assert!(
+            errors
+                .iter()
+                .any(|e| e.contains("does not lower to a neutral hard delete")),
+            "{:?}",
+            errors
+        );
+    }
+
+    // #4: ordinary reads on a soft-delete table default-exclude tombstoned rows
+    // via an injected `IS NULL`, composed with the caller/tenant filter. The
+    // injection binds no parameter.
+    #[test]
+    fn select_plan_soft_delete_injects_live_row_predicate() {
+        let mut manifest = soft_delete_test_manifest();
+        manifest.checksum_sha256 = "sd-inject".to_string();
+        let plan = build_select_query_plan(
+            &manifest,
+            &SelectPlanRequest {
+                context: read_context(),
+                message_type: "acme.test.v1.Widget".to_string(),
+                filter: json!({"tenant_id": "tenant-a"}),
+                ..SelectPlanRequest::default()
+            },
+        );
+        assert_eq!(plan.errors, Vec::<String>::new());
+        assert!(
+            plan.sql
+                .ends_with("WHERE \"tenant_id\" = $1 AND \"deleted_at\" IS NULL"),
+            "{}",
+            plan.sql
+        );
+        assert_eq!(plan.parameter_columns, ["tenant_id"]);
+    }
+
+    // #4: the injected predicate composes with a top-level $or (already
+    // parenthesized) as a trailing mandatory conjunct.
+    #[test]
+    fn select_plan_soft_delete_composes_with_or() {
+        let mut manifest = soft_delete_test_manifest();
+        manifest.checksum_sha256 = "sd-or".to_string();
+        let plan = build_select_query_plan(
+            &manifest,
+            &SelectPlanRequest {
+                context: read_context(),
+                message_type: "acme.test.v1.Widget".to_string(),
+                filter: json!({
+                    "tenant_id": "tenant-a",
+                    "$or": [{"status": "open"}, {"status": "queued"}],
+                }),
+                ..SelectPlanRequest::default()
+            },
+        );
+        assert_eq!(plan.errors, Vec::<String>::new());
+        assert!(plan.sql.contains(" OR "), "OR group preserved: {}", plan.sql);
+        assert!(
+            plan.sql.ends_with("AND \"deleted_at\" IS NULL"),
+            "live-row predicate is the trailing mandatory conjunct: {}",
+            plan.sql
+        );
+    }
+
+    // #4: a non-soft-delete read is unchanged (no injected predicate).
+    #[test]
+    fn select_plan_non_soft_delete_has_no_live_row_predicate() {
+        let mut manifest = soft_delete_test_manifest();
+        manifest.tables[0].soft_delete = false;
+        manifest.checksum_sha256 = "sd-nonsoft".to_string();
+        let plan = build_select_query_plan(
+            &manifest,
+            &SelectPlanRequest {
+                context: read_context(),
+                message_type: "acme.test.v1.Widget".to_string(),
+                filter: json!({"tenant_id": "tenant-a"}),
+                ..SelectPlanRequest::default()
+            },
+        );
+        assert!(!plan.sql.contains("IS NULL"), "{}", plan.sql);
+    }
+
+    // #4: the neutral-IR read bridge also default-excludes tombstoned rows.
+    #[test]
+    fn select_logical_read_soft_delete_injects_is_null() {
+        let manifest = soft_delete_test_manifest();
+        let read = build_select_logical_read(
+            &manifest,
+            &SelectPlanRequest {
+                context: read_context(),
+                message_type: "acme.test.v1.Widget".to_string(),
+                filter: json!({"tenant_id": "tenant-a"}),
+                ..SelectPlanRequest::default()
+            },
+        )
+        .expect("soft-delete read lowers to neutral read");
+        let mut fields = Vec::new();
+        read.filter
+            .as_ref()
+            .expect("filter")
+            .referenced_fields(&mut fields);
+        fields.sort();
+        assert_eq!(fields, vec!["deleted_at", "tenant_id"]);
+    }
+
+    // #4: malformed soft-delete metadata fails the read closed rather than
+    // leaking tombstoned rows.
+    #[test]
+    fn select_plan_soft_delete_malformed_metadata_fails_closed() {
+        let mut manifest = soft_delete_test_manifest();
+        manifest.tables[0].soft_delete_column = "gone".to_string();
+        manifest.checksum_sha256 = "sd-read-malformed".to_string();
+        let plan = build_select_query_plan(
+            &manifest,
+            &SelectPlanRequest {
+                context: read_context(),
+                message_type: "acme.test.v1.Widget".to_string(),
+                filter: json!({"tenant_id": "tenant-a"}),
+                ..SelectPlanRequest::default()
+            },
+        );
+        assert!(
+            plan.errors
+                .iter()
+                .any(|e| e.contains("soft_delete_column 'gone' is not a declared column")),
+            "{:?}",
+            plan.errors
+        );
+    }
+
     fn test_manifest(mut table: ManifestTable) -> CatalogManifest {
         table.message_name = "acme.test.v1.Widget".to_string();
         table.schema = "public".to_string();
@@ -3182,18 +3591,30 @@ mod tests {
         let (compiled_sql, compiled_params) =
             compile_pg_sql(&manifest, &context, CompileOperation::Read(&read));
 
-        assert_eq!(legacy_plan.sql, compiled_sql);
+        // The neutral-IR bridge is the SERVED-DEFAULT emitter and carries F6/RLS1's
+        // defense-in-depth tenant backstop (`AND "tenant_id" = $N`) that the legacy
+        // fallback planner omits — it is intentionally MORE tenant-scoped, not
+        // byte-identical. Assert the safe-subset relationship instead of equality:
+        // the IR keeps the caller's predicates, appends exactly the tenant backstop
+        // as one extra positional param, and preserves projection/order/limit.
+        assert!(
+            compiled_sql.contains("\"status\" = $1 AND \"tenant_id\" = $2"),
+            "IR keeps the caller predicates: {compiled_sql}"
+        );
+        assert!(
+            compiled_sql.contains(&format!("AND \"tenant_id\" = ${}", compiled_params.len())),
+            "IR appends the tenant backstop as the last param: {compiled_sql}"
+        );
+        assert!(
+            compiled_sql.ends_with("ORDER BY \"status\" DESC LIMIT 10"),
+            "IR preserves order/limit: {compiled_sql}"
+        );
         assert_eq!(
             legacy_plan.parameter_columns,
-            vec!["tenant_id".to_string(), "status".to_string()]
+            vec!["status".to_string(), "tenant_id".to_string()]
         );
-        assert_eq!(
-            compiled_params,
-            vec![
-                LogicalValue::String("tenant-a".to_string()),
-                LogicalValue::String("open".to_string())
-            ]
-        );
+        // Caller's 2 params + the 1 tenant backstop.
+        assert_eq!(compiled_params.len(), 3, "2 caller params + tenant backstop");
     }
 
     #[test]
@@ -3460,17 +3881,28 @@ mod tests {
         let (compiled_sql, compiled_params) =
             compile_pg_sql(&manifest, &context, CompileOperation::Delete(&delete));
 
-        assert_eq!(legacy_plan.sql, compiled_sql);
+        // Same safe-subset relationship as the select bridge test: the neutral-IR
+        // DELETE (served default) carries RLS1's defense-in-depth tenant backstop
+        // (`AND "tenant_id" = $N`) the legacy planner omits — intentionally MORE
+        // tenant-scoped, not byte-identical. (`build_delete_logical_delete` also
+        // declines for soft-delete tables, but `widgets` here is non-soft, so it
+        // is a real physical DELETE, exercising the backstop on the delete path.)
+        assert!(
+            compiled_sql.starts_with("DELETE FROM \"public\".\"widgets\" WHERE "),
+            "IR emits a physical DELETE for a non-soft table: {compiled_sql}"
+        );
+        assert!(
+            compiled_sql.contains("\"status\" = $1 AND \"tenant_id\" = $2"),
+            "IR keeps the caller predicates: {compiled_sql}"
+        );
+        assert!(
+            compiled_sql.contains(&format!("AND \"tenant_id\" = ${}", compiled_params.len())),
+            "IR appends the tenant backstop as the last param: {compiled_sql}"
+        );
         assert_eq!(
             legacy_plan.parameter_columns,
-            vec!["tenant_id".to_string(), "status".to_string()]
+            vec!["status".to_string(), "tenant_id".to_string()]
         );
-        assert_eq!(
-            compiled_params,
-            vec![
-                LogicalValue::String("tenant-a".to_string()),
-                LogicalValue::String("archived".to_string())
-            ]
-        );
+        assert_eq!(compiled_params.len(), 3, "2 caller params + tenant backstop");
     }
 }

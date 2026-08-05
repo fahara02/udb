@@ -374,6 +374,23 @@ func TestBuildManifestJSONBodyUsesSharedManifest(t *testing.T) {
 	if got := purgeTenantMsg.Get(purgeTenantFields.ByName("confirmation_token")).String(); got != "sdk-perf-confirm-purge" {
 		t.Fatalf("tenant purge confirmation_token = %q, want sdk-perf-confirm-purge", got)
 	}
+	adminPurgeTenantIn, _, ok := buildManifestJSONBody("/udb.core.tenant.services.v1.TenantService/AdminPurgeTenant", fix)
+	if !ok {
+		t.Fatalf("TenantService AdminPurgeTenant manifest JSON body was not hydrated")
+	}
+	adminPurgeTenantMsg := adminPurgeTenantIn.ProtoReflect()
+	adminPurgeTenantFields := adminPurgeTenantMsg.Descriptor().Fields()
+	if got := adminPurgeTenantMsg.Get(adminPurgeTenantFields.ByName("target_tenant_id")).String(); got != "tenant-purge-1" {
+		t.Fatalf("tenant admin purge target_tenant_id = %q, want tenant-purge-1", got)
+	}
+	// confirmation_token MUST equal target_tenant_id (fail-closed cross-tenant guard).
+	if got := adminPurgeTenantMsg.Get(adminPurgeTenantFields.ByName("confirmation_token")).String(); got != "tenant-purge-1" {
+		t.Fatalf("tenant admin purge confirmation_token = %q, want tenant-purge-1", got)
+	}
+	// mode must be an explicit non-UNSPECIFIED enum (ADMIN_PURGE_MODE_UNSPECIFIED is rejected).
+	if got := adminPurgeTenantMsg.Get(adminPurgeTenantFields.ByName("mode")).Enum(); got == 0 {
+		t.Fatalf("tenant admin purge mode was not set from manifest enum")
+	}
 	fix.set("key_id", "key-1")
 	fix.set("plain_key", "plain-1")
 	fix.set("owner_id", "owner-1")
@@ -532,12 +549,14 @@ func TestBuildManifestJSONBodyUsesSharedManifest(t *testing.T) {
 	// (no generic fill). Seeds for the grant id family are set above.
 	fix.set("grant_binding_id", "11111111-1111-4111-8111-000000000201")
 	fix.set("grant_create_user_id", "11111111-1111-4111-8111-000000000202")
+	fix.set("grant_transfer_to_user_id", "11111111-1111-4111-8111-000000000203")
 	for _, rpc := range []string{
 		"AuthnService/CreateServiceAccountGrant",
 		"AuthnService/GetServiceAccountGrant",
 		"AuthnService/ListServiceAccountGrants",
 		"AuthnService/ReplaceServiceAccountGrant",
 		"AuthnService/RotateServiceAccountIdentity",
+		"AuthnService/TransferServiceAccountGrant",
 		"AuthnService/RevokeServiceAccountGrant",
 		"AuthnService/CreateCertificateBinding",
 		"AuthnService/ListCertificateBindings",
@@ -2677,6 +2696,18 @@ func TestBuildManifestJSONBodyUsesSharedManifest(t *testing.T) {
 	upsertFields := upsertMsg.Descriptor().Fields()
 	if got := upsertMsg.Get(upsertFields.ByName("return_record")).Bool(); !got {
 		t.Fatalf("databroker upsert return_record = false, want true")
+	}
+	bulkCasIn, _, ok := buildManifestJSONBody("/udb.services.v1.DataBroker/BulkCas", fix)
+	if !ok {
+		t.Fatalf("DataBroker BulkCas manifest JSON body was not hydrated")
+	}
+	bulkCasMsg := bulkCasIn.ProtoReflect()
+	bulkCasFields := bulkCasMsg.Descriptor().Fields()
+	if got := bulkCasMsg.Get(bulkCasFields.ByName("items")).List().Len(); got != 1 {
+		t.Fatalf("databroker bulk_cas items len = %d, want 1", got)
+	}
+	if got := bulkCasMsg.Get(bulkCasFields.ByName("max_rows")).Int(); got != 10 {
+		t.Fatalf("databroker bulk_cas max_rows = %d, want 10", got)
 	}
 	vectorBatchIn, _, ok := buildManifestJSONBody("/udb.services.v1.DataBroker/VectorBatchUpsert", fix)
 	if !ok {

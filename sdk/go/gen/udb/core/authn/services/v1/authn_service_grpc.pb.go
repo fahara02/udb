@@ -74,6 +74,7 @@ const (
 	AuthnService_ListServiceAccountGrants_FullMethodName     = "/udb.core.authn.services.v1.AuthnService/ListServiceAccountGrants"
 	AuthnService_ReplaceServiceAccountGrant_FullMethodName   = "/udb.core.authn.services.v1.AuthnService/ReplaceServiceAccountGrant"
 	AuthnService_RotateServiceAccountIdentity_FullMethodName = "/udb.core.authn.services.v1.AuthnService/RotateServiceAccountIdentity"
+	AuthnService_TransferServiceAccountGrant_FullMethodName  = "/udb.core.authn.services.v1.AuthnService/TransferServiceAccountGrant"
 	AuthnService_RevokeServiceAccountGrant_FullMethodName    = "/udb.core.authn.services.v1.AuthnService/RevokeServiceAccountGrant"
 	AuthnService_CreateCertificateBinding_FullMethodName     = "/udb.core.authn.services.v1.AuthnService/CreateCertificateBinding"
 	AuthnService_ListCertificateBindings_FullMethodName      = "/udb.core.authn.services.v1.AuthnService/ListCertificateBindings"
@@ -191,6 +192,17 @@ type AuthnServiceClient interface {
 	// reviewed against the prior identity; already-issued service JWTs fail the
 	// current-grant identity check immediately.
 	RotateServiceAccountIdentity(ctx context.Context, in *RotateServiceAccountIdentityRequest, opts ...grpc.CallOption) (*RotateServiceAccountIdentityResponse, error)
+	// Atomically transfer an ACTIVE service-account grant (its stable
+	// service_identity and approved scopes) from one service account to another,
+	// under revision CAS. The grant row is re-pointed from `from_user_id` to
+	// `to_user_id` in a single transaction, so neither the deployment-wide
+	// service_identity unique index nor the per-user unique index is ever
+	// violated, and no window exists in which no account owns the identity. The
+	// source account is left with no grant (its credentials no longer resolve to
+	// the identity); the move is a deterministic inverse of itself. This is the
+	// supported recovery path when the currently-bound account's credentials are
+	// unavailable, replacing a non-atomic rotate-then-create.
+	TransferServiceAccountGrant(ctx context.Context, in *TransferServiceAccountGrantRequest, opts ...grpc.CallOption) (*TransferServiceAccountGrantResponse, error)
 	// Revoke a service account's grant. The account (and every credential or
 	// certificate binding that resolves through the grant) stops authenticating
 	// immediately — fail closed, audited.
@@ -765,6 +777,16 @@ func (c *authnServiceClient) RotateServiceAccountIdentity(ctx context.Context, i
 	return out, nil
 }
 
+func (c *authnServiceClient) TransferServiceAccountGrant(ctx context.Context, in *TransferServiceAccountGrantRequest, opts ...grpc.CallOption) (*TransferServiceAccountGrantResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(TransferServiceAccountGrantResponse)
+	err := c.cc.Invoke(ctx, AuthnService_TransferServiceAccountGrant_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *authnServiceClient) RevokeServiceAccountGrant(ctx context.Context, in *RevokeServiceAccountGrantRequest, opts ...grpc.CallOption) (*RevokeServiceAccountGrantResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(RevokeServiceAccountGrantResponse)
@@ -916,6 +938,17 @@ type AuthnServiceServer interface {
 	// reviewed against the prior identity; already-issued service JWTs fail the
 	// current-grant identity check immediately.
 	RotateServiceAccountIdentity(context.Context, *RotateServiceAccountIdentityRequest) (*RotateServiceAccountIdentityResponse, error)
+	// Atomically transfer an ACTIVE service-account grant (its stable
+	// service_identity and approved scopes) from one service account to another,
+	// under revision CAS. The grant row is re-pointed from `from_user_id` to
+	// `to_user_id` in a single transaction, so neither the deployment-wide
+	// service_identity unique index nor the per-user unique index is ever
+	// violated, and no window exists in which no account owns the identity. The
+	// source account is left with no grant (its credentials no longer resolve to
+	// the identity); the move is a deterministic inverse of itself. This is the
+	// supported recovery path when the currently-bound account's credentials are
+	// unavailable, replacing a non-atomic rotate-then-create.
+	TransferServiceAccountGrant(context.Context, *TransferServiceAccountGrantRequest) (*TransferServiceAccountGrantResponse, error)
 	// Revoke a service account's grant. The account (and every credential or
 	// certificate binding that resolves through the grant) stops authenticating
 	// immediately — fail closed, audited.
@@ -1103,6 +1136,9 @@ func (UnimplementedAuthnServiceServer) ReplaceServiceAccountGrant(context.Contex
 }
 func (UnimplementedAuthnServiceServer) RotateServiceAccountIdentity(context.Context, *RotateServiceAccountIdentityRequest) (*RotateServiceAccountIdentityResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RotateServiceAccountIdentity not implemented")
+}
+func (UnimplementedAuthnServiceServer) TransferServiceAccountGrant(context.Context, *TransferServiceAccountGrantRequest) (*TransferServiceAccountGrantResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method TransferServiceAccountGrant not implemented")
 }
 func (UnimplementedAuthnServiceServer) RevokeServiceAccountGrant(context.Context, *RevokeServiceAccountGrantRequest) (*RevokeServiceAccountGrantResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RevokeServiceAccountGrant not implemented")
@@ -2126,6 +2162,24 @@ func _AuthnService_RotateServiceAccountIdentity_Handler(srv interface{}, ctx con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthnService_TransferServiceAccountGrant_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TransferServiceAccountGrantRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthnServiceServer).TransferServiceAccountGrant(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthnService_TransferServiceAccountGrant_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthnServiceServer).TransferServiceAccountGrant(ctx, req.(*TransferServiceAccountGrantRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AuthnService_RevokeServiceAccountGrant_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RevokeServiceAccountGrantRequest)
 	if err := dec(in); err != nil {
@@ -2424,6 +2478,10 @@ var AuthnService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RotateServiceAccountIdentity",
 			Handler:    _AuthnService_RotateServiceAccountIdentity_Handler,
+		},
+		{
+			MethodName: "TransferServiceAccountGrant",
+			Handler:    _AuthnService_TransferServiceAccountGrant_Handler,
 		},
 		{
 			MethodName: "RevokeServiceAccountGrant",

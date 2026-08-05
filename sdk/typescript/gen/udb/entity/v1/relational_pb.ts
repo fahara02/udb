@@ -14,7 +14,7 @@ import type { JsonObject, Message } from "@bufbuild/protobuf";
  * Describes the file udb/entity/v1/relational.proto.
  */
 export const file_udb_entity_v1_relational: GenFile = /*@__PURE__*/
-  fileDesc("Ch51ZGIvZW50aXR5L3YxL3JlbGF0aW9uYWwucHJvdG8SDXVkYi5lbnRpdHkudjEiKQoEU29ydBINCgVmaWVsZBgBIAEoCRISCgpkZXNjZW5kaW5nGAIgASgIIk4KDENhY2hlT3B0aW9ucxITCgtieXBhc3NfcmVhZBgBIAEoCBIUCgxieXBhc3Nfd3JpdGUYAiABKAgSEwoLdHRsX3NlY29uZHMYAyABKAUifAoDUm93Ei4KBmZpZWxkcxgBIAMoCzIeLnVkYi5lbnRpdHkudjEuUm93LkZpZWxkc0VudHJ5GkUKC0ZpZWxkc0VudHJ5EgsKA2tleRgBIAEoCRIlCgV2YWx1ZRgCIAEoCzIWLmdvb2dsZS5wcm90b2J1Zi5WYWx1ZToCOAEicQoJUmVjb3JkU2V0EhQKDHJlY29yZHNfanNvbhgBIAMoDBIgCgRyb3dzGAIgAygLMhIudWRiLmVudGl0eS52MS5Sb3cSFwoPbmV4dF9wYWdlX3Rva2VuGAMgASgJEhMKC3RvdGFsX2NvdW50GAQgASgFIoACCg1TZWxlY3RSZXF1ZXN0Ei4KB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0EhQKDG1lc3NhZ2VfdHlwZRgCIAEoCRInCgZmaWx0ZXIYAyABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0Eg4KBmZpZWxkcxgEIAMoCRINCgVsaW1pdBgFIAEoBRISCgpwYWdlX3Rva2VuGAYgASgJEiEKBHNvcnQYByADKAsyEy51ZGIuZW50aXR5LnYxLlNvcnQSKgoFY2FjaGUYCCABKAsyGy51ZGIuZW50aXR5LnYxLkNhY2hlT3B0aW9ucyK0AgoNVXBzZXJ0UmVxdWVzdBIuCgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dBIUCgxtZXNzYWdlX3R5cGUYAiABKAkSEwoLcmVjb3JkX2pzb24YAyABKAwSKAoHcGF5bG9hZBgEIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSFwoPY29uZmxpY3RfZmllbGRzGAUgAygJEhUKDXJldHVybl9yZWNvcmQYBiABKAgSKgoFY2FjaGUYByABKAsyGy51ZGIuZW50aXR5LnYxLkNhY2hlT3B0aW9ucxIXCg9pZGVtcG90ZW5jeV9rZXkYCCABKAkSKQoIZXhwZWN0ZWQYCSABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0IsIBCg1EZWxldGVSZXF1ZXN0Ei4KB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0EhQKDG1lc3NhZ2VfdHlwZRgCIAEoCRInCgZmaWx0ZXIYAyABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EhcKD2lkZW1wb3RlbmN5X2tleRgEIAEoCRIpCghleHBlY3RlZBgFIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3Qi6wIKDVVwZGF0ZVJlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHQSFAoMbWVzc2FnZV90eXBlGAIgASgJEicKBmZpbHRlchgDIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSKAoHY2hhbmdlcxgEIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSKQoIZXhwZWN0ZWQYBSABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EjoKCmluY3JlbWVudHMYBiADKAsyJi51ZGIuZW50aXR5LnYxLlVwZGF0ZVJlcXVlc3QuSW5jcmVtZW50EhcKD2lkZW1wb3RlbmN5X2tleRgHIAEoCRIVCg1yZXR1cm5fcmVjb3JkGAggASgIGioKCUluY3JlbWVudBIOCgZjb2x1bW4YASABKAkSDQoFZGVsdGEYAiABKAEikgEKDlZpZXdEZWZpbml0aW9uEi4KB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Eg4KBnNjaGVtYRgCIAEoCRIMCgRuYW1lGAMgASgJEg0KBXF1ZXJ5GAQgASgJEhEKCXdpdGhfZGF0YRgFIAEoCBIQCgh0dGxfZGF5cxgGIAEoBUK1AQoRY29tLnVkYi5lbnRpdHkudjFCD1JlbGF0aW9uYWxQcm90b1ABWjlnaXRodWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9lbnRpdHkvdjE7ZW50aXR5djGiAgNVRViqAg1VZGIuRW50aXR5LlYxygINVWRiXEVudGl0eVxWMeICGVVkYlxHUEJNZXRhZGF0YVxFbnRpdHlcVjHqAg9VZGI6OkVudGl0eTo6VjFiBnByb3RvMw", [file_google_protobuf_struct, file_udb_entity_v1_context]);
+  fileDesc("Ch51ZGIvZW50aXR5L3YxL3JlbGF0aW9uYWwucHJvdG8SDXVkYi5lbnRpdHkudjEiKQoEU29ydBINCgVmaWVsZBgBIAEoCRISCgpkZXNjZW5kaW5nGAIgASgIIk4KDENhY2hlT3B0aW9ucxITCgtieXBhc3NfcmVhZBgBIAEoCBIUCgxieXBhc3Nfd3JpdGUYAiABKAgSEwoLdHRsX3NlY29uZHMYAyABKAUifAoDUm93Ei4KBmZpZWxkcxgBIAMoCzIeLnVkYi5lbnRpdHkudjEuUm93LkZpZWxkc0VudHJ5GkUKC0ZpZWxkc0VudHJ5EgsKA2tleRgBIAEoCRIlCgV2YWx1ZRgCIAEoCzIWLmdvb2dsZS5wcm90b2J1Zi5WYWx1ZToCOAEiiwEKCVJlY29yZFNldBIUCgxyZWNvcmRzX2pzb24YASADKAwSIAoEcm93cxgCIAMoCzISLnVkYi5lbnRpdHkudjEuUm93EhcKD25leHRfcGFnZV90b2tlbhgDIAEoCRITCgt0b3RhbF9jb3VudBgEIAEoBRIYChByZWNvcmRfcmV2aXNpb25zGAUgAygJIpoCCg1TZWxlY3RSZXF1ZXN0Ei4KB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0EhQKDG1lc3NhZ2VfdHlwZRgCIAEoCRInCgZmaWx0ZXIYAyABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0Eg4KBmZpZWxkcxgEIAMoCRINCgVsaW1pdBgFIAEoBRISCgpwYWdlX3Rva2VuGAYgASgJEiEKBHNvcnQYByADKAsyEy51ZGIuZW50aXR5LnYxLlNvcnQSKgoFY2FjaGUYCCABKAsyGy51ZGIuZW50aXR5LnYxLkNhY2hlT3B0aW9ucxIYChBpbmNsdWRlX3JldmlzaW9uGAkgASgIIt4CCg1VcHNlcnRSZXF1ZXN0Ei4KB2NvbnRleHQYASABKAsyHS51ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0EhQKDG1lc3NhZ2VfdHlwZRgCIAEoCRITCgtyZWNvcmRfanNvbhgDIAEoDBIoCgdwYXlsb2FkGAQgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBIXCg9jb25mbGljdF9maWVsZHMYBSADKAkSFQoNcmV0dXJuX3JlY29yZBgGIAEoCBIqCgVjYWNoZRgHIAEoCzIbLnVkYi5lbnRpdHkudjEuQ2FjaGVPcHRpb25zEhcKD2lkZW1wb3RlbmN5X2tleRgIIAEoCRIpCghleHBlY3RlZBgJIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSEQoJbG9ja19uYW1lGAogASgJEhUKDWZlbmNpbmdfdG9rZW4YCyABKAMihwIKDURlbGV0ZVJlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHQSFAoMbWVzc2FnZV90eXBlGAIgASgJEicKBmZpbHRlchgDIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSFwoPaWRlbXBvdGVuY3lfa2V5GAQgASgJEikKCGV4cGVjdGVkGAUgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBIZChFleHBlY3RlZF9yZXZpc2lvbhgGIAEoCRIRCglsb2NrX25hbWUYByABKAkSFQoNZmVuY2luZ190b2tlbhgIIAEoAyKwAwoNVXBkYXRlUmVxdWVzdBIuCgdjb250ZXh0GAEgASgLMh0udWRiLmVudGl0eS52MS5SZXF1ZXN0Q29udGV4dBIUCgxtZXNzYWdlX3R5cGUYAiABKAkSJwoGZmlsdGVyGAMgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBIoCgdjaGFuZ2VzGAQgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBIpCghleHBlY3RlZBgFIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSOgoKaW5jcmVtZW50cxgGIAMoCzImLnVkYi5lbnRpdHkudjEuVXBkYXRlUmVxdWVzdC5JbmNyZW1lbnQSFwoPaWRlbXBvdGVuY3lfa2V5GAcgASgJEhUKDXJldHVybl9yZWNvcmQYCCABKAgSGQoRZXhwZWN0ZWRfcmV2aXNpb24YCSABKAkSEQoJbG9ja19uYW1lGAogASgJEhUKDWZlbmNpbmdfdG9rZW4YCyABKAMaKgoJSW5jcmVtZW50Eg4KBmNvbHVtbhgBIAEoCRINCgVkZWx0YRgCIAEoASKSAQoOVmlld0RlZmluaXRpb24SLgoHY29udGV4dBgBIAEoCzIdLnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHQSDgoGc2NoZW1hGAIgASgJEgwKBG5hbWUYAyABKAkSDQoFcXVlcnkYBCABKAkSEQoJd2l0aF9kYXRhGAUgASgIEhAKCHR0bF9kYXlzGAYgASgFIuIBCgtCdWxrQ2FzSXRlbRInCgZmaWx0ZXIYASABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EigKB2NoYW5nZXMYAiABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EhkKEWV4cGVjdGVkX3JldmlzaW9uGAMgASgJEikKCGV4cGVjdGVkGAQgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBI6CgppbmNyZW1lbnRzGAUgAygLMiYudWRiLmVudGl0eS52MS5VcGRhdGVSZXF1ZXN0LkluY3JlbWVudCKsAQoOQnVsa0Nhc1JlcXVlc3QSLgoHY29udGV4dBgBIAEoCzIdLnVkYi5lbnRpdHkudjEuUmVxdWVzdENvbnRleHQSFAoMbWVzc2FnZV90eXBlGAIgASgJEikKBWl0ZW1zGAMgAygLMhoudWRiLmVudGl0eS52MS5CdWxrQ2FzSXRlbRIXCg9pZGVtcG90ZW5jeV9rZXkYBCABKAkSEAoIbWF4X3Jvd3MYBSABKAUiWwoRQnVsa0Nhc0l0ZW1SZXN1bHQSDwoHbWF0Y2hlZBgBIAEoCBIPCgdjaGFuZ2VkGAIgASgIEhIKCmNvbmZsaWN0ZWQYAyABKAgSEAoIcmV2aXNpb24YBCABKAkilgEKD0J1bGtDYXNSZXNwb25zZRIPCgdtYXRjaGVkGAEgASgFEg8KB2NoYW5nZWQYAiABKAUSEgoKY29uZmxpY3RlZBgDIAEoBRIaChJ3cml0ZV9yZWNlaXB0X2pzb24YBCABKAkSMQoHcmVzdWx0cxgFIAMoCzIgLnVkYi5lbnRpdHkudjEuQnVsa0Nhc0l0ZW1SZXN1bHRCtQEKEWNvbS51ZGIuZW50aXR5LnYxQg9SZWxhdGlvbmFsUHJvdG9QAVo5Z2l0aHViLmNvbS9mYWhhcmEwMi91ZGIvc2RrL2dvL2dlbi91ZGIvZW50aXR5L3YxO2VudGl0eXYxogIDVUVYqgINVWRiLkVudGl0eS5WMcoCDVVkYlxFbnRpdHlcVjHiAhlVZGJcR1BCTWV0YWRhdGFcRW50aXR5XFYx6gIPVWRiOjpFbnRpdHk6OlYxYgZwcm90bzM", [file_google_protobuf_struct, file_udb_entity_v1_context]);
 
 /**
  * @generated from message udb.entity.v1.Sort
@@ -105,6 +105,21 @@ export type RecordSet = Message<"udb.entity.v1.RecordSet"> & {
    * @generated from field: int32 total_count = 4;
    */
   totalCount: number;
+
+  /**
+   * #5 (opaque row revision / ETag): when the caller asked for revisions
+   * (`SelectRequest.include_revision`), this carries the broker-maintained
+   * opaque revision token for each returned record, index-aligned with
+   * `records_json`. An empty slot means the row has no tracked revision yet
+   * (it has not been mutated since revision tracking was enabled). Absent
+   * (empty repeated) when the caller did not request revisions, so the read
+   * hot path pays nothing. The token is opaque + monotonically increasing;
+   * feed it back as `UpdateRequest.expected_revision` / `DeleteRequest.
+   * expected_revision` for optimistic concurrency.
+   *
+   * @generated from field: repeated string record_revisions = 5;
+   */
+  recordRevisions: string[];
 };
 
 /**
@@ -157,6 +172,15 @@ export type SelectRequest = Message<"udb.entity.v1.SelectRequest"> & {
    * @generated from field: udb.entity.v1.CacheOptions cache = 8;
    */
   cache?: CacheOptions | undefined;
+
+  /**
+   * #5: opt-in — when true, the broker joins each returned record against the
+   * system-side revision map and fills `RecordSet.record_revisions`. Off by
+   * default so the read hot path is unchanged (zero extra SQL).
+   *
+   * @generated from field: bool include_revision = 9;
+   */
+  includeRevision: boolean;
 };
 
 /**
@@ -224,6 +248,24 @@ export type UpsertRequest = Message<"udb.entity.v1.UpsertRequest"> & {
    * @generated from field: google.protobuf.Struct expected = 9;
    */
   expected?: JsonObject | undefined;
+
+  /**
+   * gate 25 (lock-fencing-at-commit): optional advisory-lock name + the
+   * monotonic fencing token the caller was granted for it. When both are set,
+   * the broker validates the token against the LockService's durable lock row
+   * IN THE SAME write transaction as the mutation; a stale token (a writer that
+   * outlived its lease and was fenced by a newer holder) is rejected fail-closed
+   * with NO write / projection / CDC / audit / idempotency side effect. Unset
+   * (empty `lock_name`) = no fencing (unchanged behaviour).
+   *
+   * @generated from field: string lock_name = 10;
+   */
+  lockName: string;
+
+  /**
+   * @generated from field: int64 fencing_token = 11;
+   */
+  fencingToken: bigint;
 };
 
 /**
@@ -265,6 +307,30 @@ export type DeleteRequest = Message<"udb.entity.v1.DeleteRequest"> & {
    * @generated from field: google.protobuf.Struct expected = 5;
    */
   expected?: JsonObject | undefined;
+
+  /**
+   * #5 (opaque row revision / ETag): optional revision precondition. When set,
+   * the delete proceeds only if the broker-maintained opaque revision of the
+   * primary-key-identified row still equals this token, checked atomically under
+   * the revision row lock in the write transaction. A mismatch or an untracked
+   * row is `FAILED_PRECONDITION` and nothing is removed. Non-disclosing (never
+   * reveals a foreign row's existence). ABA-safe (the revision only increases).
+   *
+   * @generated from field: string expected_revision = 6;
+   */
+  expectedRevision: string;
+
+  /**
+   * gate 25 (lock-fencing-at-commit): see UpdateRequest.lock_name/fencing_token.
+   *
+   * @generated from field: string lock_name = 7;
+   */
+  lockName: string;
+
+  /**
+   * @generated from field: int64 fencing_token = 8;
+   */
+  fencingToken: bigint;
 };
 
 /**
@@ -334,6 +400,36 @@ export type UpdateRequest = Message<"udb.entity.v1.UpdateRequest"> & {
    * @generated from field: bool return_record = 8;
    */
   returnRecord: boolean;
+
+  /**
+   * #5 (opaque row revision / ETag): optional revision precondition. When set,
+   * the filter MUST pin every primary-key column by equality (single-row), and
+   * the update proceeds only if the broker-maintained opaque revision of that
+   * row still equals this token — checked atomically under the revision row lock
+   * in the write transaction. A mismatch or an untracked row is
+   * `FAILED_PRECONDITION` and nothing is written/projected/emitted. On success
+   * the response carries the bumped revision. ABA-safe (revision only increases).
+   *
+   * @generated from field: string expected_revision = 9;
+   */
+  expectedRevision: string;
+
+  /**
+   * gate 25 (lock-fencing-at-commit): optional advisory-lock name + the
+   * monotonic fencing token granted for it. When both are set the broker
+   * validates the token against the LockService's durable lock row IN THE SAME
+   * write transaction; a stale token (a writer that outlived its lease) is
+   * rejected fail-closed with NO write / projection / CDC / audit / idempotency
+   * side effect. Unset (empty `lock_name`) = no fencing (unchanged behaviour).
+   *
+   * @generated from field: string lock_name = 10;
+   */
+  lockName: string;
+
+  /**
+   * @generated from field: int64 fencing_token = 11;
+   */
+  fencingToken: bigint;
 };
 
 /**
@@ -409,3 +505,186 @@ export type ViewDefinition = Message<"udb.entity.v1.ViewDefinition"> & {
  */
 export const ViewDefinitionSchema: GenMessage<ViewDefinition> = /*@__PURE__*/
   messageDesc(file_udb_entity_v1_relational, 8);
+
+/**
+ * gate 23 (bounded bulk compare-and-swap): one tenant-scoped, explicitly
+ * bounded, request-hash-idempotent batch of single-row conditional updates.
+ * Each item targets exactly one row (its `filter` must pin the full primary
+ * key by equality) and is applied only if its compare-and-swap preconditions
+ * hold; a per-item CAS mismatch is COUNTED as a conflict, not a batch error, so
+ * the batch is safe to retry after a partial failure (reuse `idempotency_key`
+ * to replay the original counts). The whole batch runs in ONE write transaction
+ * and preserves the per-row projection / CDC-outbox / audit side effects of the
+ * unary Update path. The RPC that carries these messages is wired separately;
+ * the broker core (`DataBrokerRuntime::bulk_cas`) is the single implementation.
+ *
+ * @generated from message udb.entity.v1.BulkCasItem
+ */
+export type BulkCasItem = Message<"udb.entity.v1.BulkCasItem"> & {
+  /**
+   * Row selector — MUST pin every primary-key column by equality (single row),
+   * identical to a conditional Delete/Update filter.
+   *
+   * @generated from field: google.protobuf.Struct filter = 1;
+   */
+  filter?: JsonObject | undefined;
+
+  /**
+   * Columns to SET on the matched row (same semantics as UpdateRequest.changes).
+   *
+   * @generated from field: google.protobuf.Struct changes = 2;
+   */
+  changes?: JsonObject | undefined;
+
+  /**
+   * Optional opaque revision precondition (#5). Empty = not asserted.
+   *
+   * @generated from field: string expected_revision = 3;
+   */
+  expectedRevision: string;
+
+  /**
+   * Optional field-map compare-and-swap precondition (UpdateRequest.expected).
+   *
+   * @generated from field: google.protobuf.Struct expected = 4;
+   */
+  expected?: JsonObject | undefined;
+
+  /**
+   * Optional atomic counter deltas, applied in the same UPDATE (col = col + n).
+   *
+   * @generated from field: repeated udb.entity.v1.UpdateRequest.Increment increments = 5;
+   */
+  increments: UpdateRequest_Increment[];
+};
+
+/**
+ * Describes the message udb.entity.v1.BulkCasItem.
+ * Use `create(BulkCasItemSchema)` to create a new message.
+ */
+export const BulkCasItemSchema: GenMessage<BulkCasItem> = /*@__PURE__*/
+  messageDesc(file_udb_entity_v1_relational, 9);
+
+/**
+ * @generated from message udb.entity.v1.BulkCasRequest
+ */
+export type BulkCasRequest = Message<"udb.entity.v1.BulkCasRequest"> & {
+  /**
+   * @generated from field: udb.entity.v1.RequestContext context = 1;
+   */
+  context?: RequestContext | undefined;
+
+  /**
+   * @generated from field: string message_type = 2;
+   */
+  messageType: string;
+
+  /**
+   * @generated from field: repeated udb.entity.v1.BulkCasItem items = 3;
+   */
+  items: BulkCasItem[];
+
+  /**
+   * Durable request-hash idempotency (reuses the keyed-mutation dedup machinery)
+   * so a whole-batch retry replays the original counts instead of re-applying.
+   *
+   * @generated from field: string idempotency_key = 4;
+   */
+  idempotencyKey: string;
+
+  /**
+   * Caller's explicit row ceiling. Clamped to the server-side maximum; a batch
+   * larger than the effective ceiling is rejected `INVALID_ARGUMENT` (bounded).
+   *
+   * @generated from field: int32 max_rows = 5;
+   */
+  maxRows: number;
+};
+
+/**
+ * Describes the message udb.entity.v1.BulkCasRequest.
+ * Use `create(BulkCasRequestSchema)` to create a new message.
+ */
+export const BulkCasRequestSchema: GenMessage<BulkCasRequest> = /*@__PURE__*/
+  messageDesc(file_udb_entity_v1_relational, 10);
+
+/**
+ * @generated from message udb.entity.v1.BulkCasItemResult
+ */
+export type BulkCasItemResult = Message<"udb.entity.v1.BulkCasItemResult"> & {
+  /**
+   * The target row exists (its primary key matched a live row).
+   *
+   * @generated from field: bool matched = 1;
+   */
+  matched: boolean;
+
+  /**
+   * The row passed every precondition and was updated.
+   *
+   * @generated from field: bool changed = 2;
+   */
+  changed: boolean;
+
+  /**
+   * A precondition (revision or field-map CAS) did not hold — not applied.
+   *
+   * @generated from field: bool conflicted = 3;
+   */
+  conflicted: boolean;
+
+  /**
+   * The bumped opaque revision after a successful change; empty otherwise.
+   *
+   * @generated from field: string revision = 4;
+   */
+  revision: string;
+};
+
+/**
+ * Describes the message udb.entity.v1.BulkCasItemResult.
+ * Use `create(BulkCasItemResultSchema)` to create a new message.
+ */
+export const BulkCasItemResultSchema: GenMessage<BulkCasItemResult> = /*@__PURE__*/
+  messageDesc(file_udb_entity_v1_relational, 11);
+
+/**
+ * @generated from message udb.entity.v1.BulkCasResponse
+ */
+export type BulkCasResponse = Message<"udb.entity.v1.BulkCasResponse"> & {
+  /**
+   * @generated from field: int32 matched = 1;
+   */
+  matched: number;
+
+  /**
+   * @generated from field: int32 changed = 2;
+   */
+  changed: number;
+
+  /**
+   * @generated from field: int32 conflicted = 3;
+   */
+  conflicted: number;
+
+  /**
+   * JSON-encoded WriteReceipt for read-your-writes fencing over the batch.
+   *
+   * @generated from field: string write_receipt_json = 4;
+   */
+  writeReceiptJson: string;
+
+  /**
+   * Per-item outcome, index-aligned with BulkCasRequest.items.
+   *
+   * @generated from field: repeated udb.entity.v1.BulkCasItemResult results = 5;
+   */
+  results: BulkCasItemResult[];
+};
+
+/**
+ * Describes the message udb.entity.v1.BulkCasResponse.
+ * Use `create(BulkCasResponseSchema)` to create a new message.
+ */
+export const BulkCasResponseSchema: GenMessage<BulkCasResponse> = /*@__PURE__*/
+  messageDesc(file_udb_entity_v1_relational, 12);

@@ -108,6 +108,19 @@ fn setup_data_internal_status(
     crate::runtime::executor_utils::internal_status("setup_data", operation, message)
 }
 
+/// bug #8.2 — a `cdc_required` mutation whose change event cannot be durably
+/// enqueued. `FAILED_PRECONDITION` with the `cdc_required` field named so the
+/// caller learns which contract it violated and why delivery was impossible.
+fn cdc_required_undeliverable_status(
+    message_type: &str,
+    reason: impl std::fmt::Display,
+) -> tonic::Status {
+    crate::runtime::executor_utils::failed_precondition_fields(
+        format!("cdc_required mutation on {message_type} cannot be delivered: {reason}"),
+        [("cdc_required".to_string(), reason.to_string())],
+    )
+}
+
 // Serving callers live in the `#[cfg(not(feature = "qdrant"))]` vector arms;
 // the unconditional pin test `setup_data_vector_object_capability_refusals_
 // carry_detail` keeps the disabled-path ErrorDetail contract alive even in
@@ -554,49 +567,89 @@ impl DataBrokerRuntime {
             );
         }
         let mut fields = request.fields.clone();
-        let cursor_keys: Option<Vec<pagination::CursorKey>> = if paginate {
-            let table_for_keys = resolve_table_for_message(manifest, &request.message_type)
-                .map_err(|_| message_type_lookup_status(manifest, &request.message_type))?;
-            let resolver = crate::planning::broker::column_resolver(table_for_keys);
-            let resolved_sort: Vec<(String, bool)> = request
-                .sort
-                .iter()
-                .map(|s| {
-                    (
-                        crate::planning::broker::resolve_column(&resolver, &s.field),
-                        s.descending,
-                    )
-                })
-                .collect();
-            let keys = pagination::total_order_keys(&resolved_sort, &table_for_keys.primary_key);
-            // The cursor + next-token need every key column present in the row, so
-            // force them into an explicit projection (SELECT * already has them).
-            if !fields.is_empty() {
-                for key in &keys {
-                    if !fields.iter().any(|f| f == &key.column) {
-                        fields.push(key.column.clone());
+        // #5: an include_revision read must carry every primary-key column in its
+        // projection so each returned row can be keyed against the revision map (a
+        // SELECT * — empty `fields` — already has them). Mirrors the pagination
+        // cursor-key injection below. `revision_pk_columns` is the ordered PK used
+        // to rebuild each row's revision key after the rows come back.
+        let revision_pk_columns: Vec<String> = if request.include_revision {
+            match resolve_table_for_message(manifest, &request.message_type) {
+                Ok(table) => {
+                    if !fields.is_empty() {
+                        for pk in &table.primary_key {
+                            if !fields.iter().any(|field| field == pk) {
+                                fields.push(pk.clone());
+                            }
+                        }
+                    }
+                    table.primary_key.clone()
+                }
+                Err(_) => Vec::new(),
+            }
+        } else {
+            Vec::new()
+        };
+        // P-1 / #7: `cursor_keys` carries the total-order keys, `page_query_digest`
+        // the versioned digest of the query SHAPE (normalized filter, resolved sort,
+        // caller projection) that minted the token. Both are set together (Some) iff
+        // paginating, so a next-token is bound to the exact query it walks and a
+        // token from a different filter/sort/projection is refused on decode.
+        let (cursor_keys, page_query_digest): (Option<Vec<pagination::CursorKey>>, Option<String>) =
+            if paginate {
+                let table_for_keys = resolve_table_for_message(manifest, &request.message_type)
+                    .map_err(|_| message_type_lookup_status(manifest, &request.message_type))?;
+                let resolver = crate::planning::broker::column_resolver(table_for_keys);
+                let resolved_sort: Vec<(String, bool)> = request
+                    .sort
+                    .iter()
+                    .map(|s| {
+                        (
+                            crate::planning::broker::resolve_column(&resolver, &s.field),
+                            s.descending,
+                        )
+                    })
+                    .collect();
+                let keys =
+                    pagination::total_order_keys(&resolved_sort, &table_for_keys.primary_key);
+                // #7: digest the query shape from the NORMALIZED base filter (BEFORE
+                // the cursor predicate is injected below — otherwise the digest would
+                // depend on which page we are on), the resolved sort, and the caller's
+                // projection. A continuation request reproduces this exact digest only
+                // when the query is unchanged.
+                let query_digest = pagination::query_digest(
+                    &crate::planning::broker::normalize_filter_keys(&resolver, &filter),
+                    &resolved_sort,
+                    &request.fields,
+                );
+                // The cursor + next-token need every key column present in the row, so
+                // force them into an explicit projection (SELECT * already has them).
+                if !fields.is_empty() {
+                    for key in &keys {
+                        if !fields.iter().any(|f| f == &key.column) {
+                            fields.push(key.column.clone());
+                        }
                     }
                 }
-            }
-            if !page_token.is_empty() {
-                let decoded = pagination::decode_page_token(
-                    &page_token,
-                    &context.tenant_id,
-                    &request.message_type,
-                )
-                .map_err(|msg| setup_data_invalid_field("page_token", &msg, &msg))?;
-                let values = pagination::cursor_values_for_keys(&keys, &decoded)
+                if !page_token.is_empty() {
+                    let decoded = pagination::decode_page_token(
+                        &page_token,
+                        &context.tenant_id,
+                        &request.message_type,
+                        &query_digest,
+                    )
                     .map_err(|msg| setup_data_invalid_field("page_token", &msg, &msg))?;
-                let cursor_pred = pagination::build_cursor_predicate(&keys, &values);
-                filter = match filter {
-                    JsonValue::Null => cursor_pred,
-                    existing => serde_json::json!({ "$and": [existing, cursor_pred] }),
-                };
-            }
-            Some(keys)
-        } else {
-            None
-        };
+                    let values = pagination::cursor_values_for_keys(&keys, &decoded)
+                        .map_err(|msg| setup_data_invalid_field("page_token", &msg, &msg))?;
+                    let cursor_pred = pagination::build_cursor_predicate(&keys, &values);
+                    filter = match filter {
+                        JsonValue::Null => cursor_pred,
+                        existing => serde_json::json!({ "$and": [existing, cursor_pred] }),
+                    };
+                }
+                (Some(keys), Some(query_digest))
+            } else {
+                (None, None)
+            };
         // The SQL sort is the total-order keys when paginating, else the caller's.
         let sort = match &cursor_keys {
             Some(keys) => keys
@@ -679,6 +732,10 @@ impl DataBrokerRuntime {
         // `cached_record_set` with no next_page_token, which would break the walk.
         if !bypass_read
             && !paginate
+            // #5: an include_revision read skips the record cache — a cached
+            // RecordSet carries no per-row revisions, so serving it would drop the
+            // tokens the caller asked for (mirrors the paginated-read cache skip).
+            && !request.include_revision
             && let Some(cache_key) = cache_key.as_deref()
             && let Some(cached) = self
                 .cache_get_fresh(cache_key, &manifest.checksum_sha256, &context)
@@ -776,11 +833,56 @@ impl DataBrokerRuntime {
             && let Ok(JsonValue::Object(row)) = serde_json::from_slice::<JsonValue>(last)
             && let Some(cursor) = pagination::cursor_values_from_row(keys, &row)
         {
-            record_set.next_page_token =
-                pagination::encode_page_token(&context.tenant_id, &request.message_type, &cursor);
+            record_set.next_page_token = pagination::encode_page_token(
+                &context.tenant_id,
+                &request.message_type,
+                page_query_digest.as_deref().unwrap_or_default(),
+                &cursor,
+            );
+        }
+        // #5: surface each returned row's opaque revision when the caller asked for
+        // it. One batched lookup keyed on the salted revision keys of the returned
+        // primary keys; a row with no revision entry (never mutated since tracking
+        // was enabled) gets an empty slot. The output is index-aligned with
+        // `records_json`, so a client can pair a row with its CAS token.
+        if request.include_revision {
+            let config = crate::runtime::system::SystemCatalogConfig::current();
+            let mut revision_keys: Vec<String> = Vec::with_capacity(record_set.records_json.len());
+            let mut per_row_key: Vec<Option<String>> =
+                Vec::with_capacity(record_set.records_json.len());
+            for bytes in &record_set.records_json {
+                let row: JsonValue = serde_json::from_slice(bytes).unwrap_or(JsonValue::Null);
+                let pk_values: Vec<JsonValue> = revision_pk_columns
+                    .iter()
+                    .map(|col| row.get(col).cloned().unwrap_or(JsonValue::Null))
+                    .collect();
+                if revision_pk_columns.is_empty() || pk_values.iter().any(JsonValue::is_null) {
+                    per_row_key.push(None);
+                } else {
+                    let key = row_revision_key(
+                        &context.tenant_id,
+                        &context.project_id,
+                        &request.message_type,
+                        &pk_tuple_canonical(&pk_values),
+                    );
+                    per_row_key.push(Some(key.clone()));
+                    revision_keys.push(key);
+                }
+            }
+            let revisions = self.load_row_revisions(&config, &revision_keys).await?;
+            record_set.record_revisions = per_row_key
+                .into_iter()
+                .map(|key| {
+                    key.and_then(|key| revisions.get(&key).map(i64::to_string))
+                        .unwrap_or_default()
+                })
+                .collect();
         }
         if !bypass_write
             && !paginate
+            // #5: never populate the record cache from an include_revision read —
+            // the entry would carry revisions a later plain read never asked for.
+            && !request.include_revision
             && let Some(cache_key) = cache_key.as_deref()
         {
             let ttl = request
@@ -908,6 +1010,18 @@ impl DataBrokerRuntime {
             )
         })?;
         set_request_local_settings(&mut tx, &context).await?;
+        // gate 25 (lock-fencing-at-commit): when the caller supplied a lock_name +
+        // fencing_token, validate the token against the LockService's durable row
+        // in THIS tx BEFORE any dedup/write/CDC work — a stale token (a writer that
+        // outlived its lease) is fenced off fail-closed with zero side effect. No-op
+        // when lock_name is empty (the hot-path majority).
+        self.enforce_fencing_token_in_tx(
+            &mut tx,
+            &context.tenant_id,
+            &request.lock_name,
+            request.fencing_token,
+        )
+        .await?;
         // KEYSTONE (lane 05): keyed-only durable dedup. Fires ONLY when an
         // idempotency_key is supplied — keyless writes (the hot-path majority)
         // take zero extra SQL and zero behavioral change. The claim runs in THIS
@@ -923,6 +1037,10 @@ impl DataBrokerRuntime {
                     "upsert",
                     key,
                 );
+                // #6: bind the claim to the authoritative inputs (record + conflict
+                // target + expected precondition) so a key reused with different
+                // inputs is a conflict, not a bogus replay.
+                let request_hash = idempotency_request_hash_upsert(&request, &record);
                 let claim = claim_idempotency_key_in_tx(
                     &mut tx,
                     &config,
@@ -931,12 +1049,22 @@ impl DataBrokerRuntime {
                     &context.project_id,
                     &request.message_type,
                     "upsert",
+                    &request_hash,
                 )
                 .await?;
                 if !claim.fresh {
-                    // Replay: do NOT run the write. Drop the tx (rolls back the
-                    // dedup re-read) and return the stored original response.
+                    // Replay OR conflict: do NOT run the write. Drop the tx (rolls
+                    // back the dedup re-read). If the first writer's stored hash
+                    // differs from THIS request's hash, the key was reused with
+                    // different inputs — refuse (non-disclosing). Otherwise return
+                    // the stored original response. A legacy row with no stored hash
+                    // (pre-upgrade) is replayed best-effort.
                     drop(tx);
+                    if let Some(prior_hash) = claim.prior_request_hash.as_deref()
+                        && prior_hash != request_hash
+                    {
+                        return Err(idempotency_request_mismatch_status());
+                    }
                     return mutation_response_from_idempotency_json_for_claim(
                         &claim.prior_response_json,
                         &context.tenant_id,
@@ -1041,6 +1169,9 @@ impl DataBrokerRuntime {
             (result.rows_affected() as i64, Vec::new())
         };
         let mut projection_task_ids = Vec::new();
+        // #5: opaque revision of the upserted row after the write (empty when the
+        // upsert was a no-op — 0 affected). Bumped in THIS tx so it commits atomically.
+        let mut row_revision = String::new();
         if affected_rows > 0 {
             let projection_plans =
                 crate::runtime::projection::ProjectionPlan::from_manifest(manifest);
@@ -1074,6 +1205,21 @@ impl DataBrokerRuntime {
                 &context,
             )
             .await?;
+            // #5: bump the row's opaque revision in the SAME tx and surface it on
+            // the response. Keyed by the (normalized, column-keyed) primary key of
+            // the record we just wrote — the exact tuple a later conditional
+            // Update/Delete or an include_revision Select will look up.
+            let pk_values = record_values(&record, &table.primary_key)?;
+            let revision = bump_row_revision_in_tx(
+                &mut tx,
+                &crate::runtime::system::SystemCatalogConfig::current(),
+                &context.tenant_id,
+                &context.project_id,
+                &request.message_type,
+                &pk_values,
+            )
+            .await?;
+            row_revision = revision.to_string();
         }
         // NW1-3e: route through SystemStores trait.
         let receipt = match self.default_system_stores_clone() {
@@ -1113,6 +1259,8 @@ impl DataBrokerRuntime {
             was_duplicate: false,
             write_receipt_json,
             write_receipt: Some(receipt.to_proto()),
+            // #5: opaque revision of the upserted row (empty on a 0-affected no-op).
+            revision: row_revision,
             ..MutationResponse::default()
         };
         // KEYSTONE (lane 05): persist the first writer's response summary into the
@@ -1205,7 +1353,7 @@ impl DataBrokerRuntime {
     /// exactly one row); that row is locked `FOR UPDATE` and each `expected` field
     /// asserted, identically to the upsert CAS. On mismatch or a missing row the
     /// caller returns before the delete, so nothing is removed.
-    async fn enforce_delete_precondition(
+    pub(crate) async fn enforce_delete_precondition(
         &self,
         tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
         table: &ManifestTable,
@@ -1232,7 +1380,7 @@ impl DataBrokerRuntime {
     /// by `key_columns = key_values` with `FOR UPDATE` inside the caller's tx,
     /// decrypt it, and assert each `expected` field equals the current value.
     /// `FAILED_PRECONDITION` on a missing row or any mismatch.
-    async fn enforce_cas_precondition(
+    pub(crate) async fn enforce_cas_precondition(
         &self,
         tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
         table: &ManifestTable,
@@ -1311,6 +1459,109 @@ impl DataBrokerRuntime {
         Ok(())
     }
 
+    /// gate 25 (lock-fencing-at-commit): validate a caller's `fencing_token` for
+    /// `lock_name` against the LockService's durable lock row, IN THE CALLER'S
+    /// write transaction. No-op when `lock_name` is empty (fencing not requested).
+    ///
+    /// The decision reuses the LockService's own `ensure_fencing_token_fresh`
+    /// (re-exported, so no lock logic is duplicated here); this method only does a
+    /// tenant-scoped read of the durable row the LockService owns. The row is read
+    /// `FOR UPDATE`, so a concurrent re-grant that bumps the token cannot commit
+    /// between our read and our commit — closing the token TOCTOU that fencing
+    /// exists to prevent (a stale writer that outlived its lease). A stale token
+    /// OR a lapsed/released lease is rejected fail-closed; because this runs BEFORE
+    /// the write/CDC/audit/idempotency work, a rejection rolls the tx back with no
+    /// side effect. The lock table is resolved from the native-service manifest, so
+    /// the schema/table/column names stay single-sourced (no hardcoded lock DDL).
+    async fn enforce_fencing_token_in_tx(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        tenant_id: &str,
+        lock_name: &str,
+        fencing_token: i64,
+    ) -> Result<(), tonic::Status> {
+        let lock_name = lock_name.trim();
+        if lock_name.is_empty() {
+            return Ok(());
+        }
+        let native = crate::runtime::native_catalog::native_service_manifest().map_err(|err| {
+            setup_data_internal_status(
+                "fencing_lock_manifest",
+                format!("native-service manifest unavailable for lock fencing: {err}"),
+            )
+        })?;
+        let lock_table = resolve_table_for_message(
+            native,
+            crate::runtime::service::lock_service::LOCK_MSG,
+        )
+        .map_err(|_| {
+            setup_data_internal_status(
+                "fencing_lock_table",
+                "the LockService entity is not present in the native manifest",
+            )
+        })?;
+        // Newest acquisition wins (one live row per (tenant, lock_name)); FOR UPDATE
+        // serializes against a concurrent re-grant that would bump the token.
+        let sql = format!(
+            "SELECT fencing_token, status, expires_at \
+             FROM \"{schema}\".\"{table}\" \
+             WHERE tenant_id = $1 AND lock_name = $2 \
+             ORDER BY acquired_at DESC LIMIT 1 FOR UPDATE",
+            schema = lock_table.schema,
+            table = lock_table.table,
+        );
+        let row: Option<(i64, String, Option<chrono::DateTime<chrono::Utc>>)> =
+            sqlx::query_as(&sql)
+                .bind(tenant_id)
+                .bind(lock_name)
+                .fetch_optional(&mut **tx)
+                .await
+                .map_err(|err| {
+                    crate::runtime::executor_utils::sqlx_error_to_status(
+                        "lock fencing read failed",
+                        &err,
+                    )
+                })?;
+        let Some((stored_token, status, expires_at)) = row else {
+            return Err(fencing_lock_absent_status(lock_name));
+        };
+        // Lease liveness: a released/expired lease means the writer outlived its
+        // lease and must be fenced even if no newer holder has bumped the token yet.
+        let lapsed = expires_at
+            .map(|expires| expires <= chrono::Utc::now())
+            .unwrap_or(true);
+        if status != "HELD" || lapsed {
+            return Err(fencing_lease_lost_status(lock_name));
+        }
+        crate::runtime::service::lock_service::ensure_fencing_token_fresh(
+            fencing_token,
+            stored_token,
+        )
+    }
+
+    /// #5: batch-load opaque revisions for a set of revision keys, keyed by
+    /// `revision_key`. Runs on the pool directly — no RLS/tenant GUCs are needed
+    /// because each key is a salted hash of (tenant, project, message_type, PK), so
+    /// a caller can only ever match keys it is already scoped to compute.
+    async fn load_row_revisions(
+        &self,
+        config: &crate::runtime::system::SystemCatalogConfig,
+        revision_keys: &[String],
+    ) -> Result<std::collections::HashMap<String, i64>, tonic::Status> {
+        if revision_keys.is_empty() {
+            return Ok(std::collections::HashMap::new());
+        }
+        let pool = self.pg_pool()?;
+        let rel = config.row_revisions_relation();
+        let sql = format!("SELECT revision_key, revision FROM {rel} WHERE revision_key = ANY($1)");
+        let rows: Vec<(String, i64)> = sqlx::query_as(&sql)
+            .bind(revision_keys.to_vec())
+            .fetch_all(pool)
+            .await
+            .map_err(|err| row_revision_store_status("row_revision_lookup", &err))?;
+        Ok(rows.into_iter().collect())
+    }
+
     /// mutations→CDC (bug_report.md §R "kafka is not used"): emit a transactional
     /// outbox change event for a CDC-enabled entity, IN THE GIVEN TX so it is
     /// atomic with the data write. No-op when the entity has no `cdc_topic`, or
@@ -1328,6 +1579,39 @@ impl DataBrokerRuntime {
         record: &JsonValue,
         context: &RequestContext,
     ) -> Result<(), tonic::Status> {
+        // Best-effort delivery (the historical default): the CDC-disabled /
+        // no-cdc_topic / no-tenant cases skip silently. `cdc_required = false`
+        // preserves the exact behaviour every existing caller relied on.
+        self.emit_cdc_outbox_on_mutation_checked(
+            tx,
+            manifest,
+            message_type,
+            operation,
+            record,
+            context,
+            false,
+        )
+        .await
+    }
+
+    /// Required-delivery variant of [`Self::emit_cdc_outbox_on_mutation`] (bug
+    /// #8.2). Identical, except that when `cdc_required` is true a change event
+    /// that CANNOT be durably enqueued FAILS CLOSED with `FAILED_PRECONDITION`
+    /// (aborting the caller's tx) instead of skipping: CDC delivery disabled, the
+    /// entity declaring no `cdc_topic`, or a tenant-scoped topic with no tenant to
+    /// route to. The outbox INSERT failure already errors in BOTH modes
+    /// (transactional-outbox atomicity), so the enqueue itself is unconditionally
+    /// fail-closed once we reach it.
+    pub(crate) async fn emit_cdc_outbox_on_mutation_checked(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        manifest: &CatalogManifest,
+        message_type: &str,
+        operation: &str,
+        record: &JsonValue,
+        context: &RequestContext,
+        cdc_required: bool,
+    ) -> Result<(), tonic::Status> {
         // Resolve via the SAME index the mutation used (case-insensitive, full or
         // leaf message name) so the emit gate matches exactly what was written —
         // an exact `==` missed the entity and silently skipped the event.
@@ -1335,18 +1619,38 @@ impl DataBrokerRuntime {
             .map_err(|_| message_type_lookup_status(manifest, message_type))?;
         let topic = table.cdc_topic.trim();
         if topic.is_empty() {
+            if cdc_required {
+                return Err(cdc_required_undeliverable_status(
+                    message_type,
+                    "the entity declares no cdc_topic, so no change event can be delivered",
+                ));
+            }
             return Ok(());
         }
         // When CDC delivery is disabled (UDB_CDC_ENABLED=false) nothing drains the
         // outbox — neither the Kafka tailer nor the in-process stream both live on
         // the tailer-fed broadcast — so writing the row would only accumulate
         // unbounded `outbox_events` with no consumer. Skip the write entirely; the
-        // operator has opted out of change-event delivery.
+        // operator has opted out of change-event delivery. A `cdc_required`
+        // mutation cannot tolerate that opt-out, so it fails closed instead.
         if !crate::runtime::cdc::cdc_delivery_enabled() {
+            if cdc_required {
+                return Err(cdc_required_undeliverable_status(
+                    message_type,
+                    "CDC delivery is disabled (UDB_CDC_ENABLED=false); a cdc_required mutation cannot be honoured",
+                ));
+            }
             return Ok(());
         }
-        // Tenant-scoped topics can't reach a subscriber without a tenant; skip.
+        // Tenant-scoped topics can't reach a subscriber without a tenant; skip
+        // (or fail closed when the caller requires delivery).
         if crate::runtime::cdc::tenant_scoped_topic(topic) && context.tenant_id.trim().is_empty() {
+            if cdc_required {
+                return Err(cdc_required_undeliverable_status(
+                    message_type,
+                    "tenant-scoped topic has no tenant_id to route the change event to",
+                ));
+            }
             tracing::debug!(
                 topic,
                 message_type,
@@ -1364,6 +1668,19 @@ impl DataBrokerRuntime {
             .filter(|value| !value.trim().is_empty())
             .unwrap_or_else(|| Uuid::new_v4().to_string());
         let event_id = Uuid::new_v4();
+        // Bug #8.3/#8.4: the correlation_id MUST be the caller's verified
+        // correlation_id, NOT the partition key (which is the record PK) — the old
+        // code fabricated correlation from the PK, destroying request tracing. The
+        // partition key is the `document_id`. The envelope also carries the verified
+        // actor/trace attribution (user_id / service_identity / purpose /
+        // decision_id) so downstream CDC consumers and the audit trail see WHO/WHY,
+        // not just tenant/project. Empty fields are omitted by falling back to the
+        // stamped context values (already verified, never body-supplied).
+        let correlation_id = if context.correlation_id.trim().is_empty() {
+            partition_key.clone()
+        } else {
+            context.correlation_id.clone()
+        };
         let envelope = serde_json::json!({
             "event_id": event_id.to_string(),
             "event_type": topic,
@@ -1373,7 +1690,11 @@ impl DataBrokerRuntime {
             "operation": operation,
             "message_type": message_type,
             "document_id": partition_key,
-            "correlation_id": partition_key,
+            "correlation_id": correlation_id,
+            "user_id": context.user_id,
+            "service_identity": context.service_identity,
+            "purpose": context.purpose,
+            "decision_id": context.decision_id,
             "occurred_at": chrono::Utc::now().to_rfc3339(),
             "payload": record,
         });
@@ -1402,6 +1723,8 @@ impl DataBrokerRuntime {
         // G-2: optional compare-and-swap precondition — delete only if the
         // primary-key-identified row still equals these fields.
         expected: Option<prost_types::Struct>,
+        // #5 + gate 25: optional opaque-revision precondition and lock-fencing.
+        guards: MutationGuards,
     ) -> Result<MutationResponse, tonic::Status> {
         let filter = match resolve_table_for_message(manifest, message_type) {
             Ok(table_for_encryption) => self.rewrite_encrypted_equality_filters(
@@ -1457,23 +1780,23 @@ impl DataBrokerRuntime {
             )
         })?;
         set_request_local_settings(&mut tx, &context).await?;
-        // G-2: enforce the compare-and-swap precondition (if any) BEFORE claiming
-        // the idempotency key or executing the delete, so a stale precondition
-        // fails fast and the tx rolls back with nothing removed or claimed. Uses
-        // the normalized filter so key columns resolve to physical names.
-        if let Some(expected) = expected
-            .as_ref()
-            .filter(|expected| !expected.fields.is_empty())
-        {
-            self.enforce_delete_precondition(
-                &mut tx,
-                table,
-                expected,
-                &normalized_filter,
-                &context,
-            )
-            .await?;
-        }
+        // gate 25 (lock-fencing-at-commit): validate the fencing token (if any)
+        // BEFORE the dedup claim/CAS/delete, so a fenced writer rolls the tx back
+        // with no dedup/delete/CDC/audit side effect. No-op when lock_name is empty.
+        self.enforce_fencing_token_in_tx(
+            &mut tx,
+            &context.tenant_id,
+            &guards.lock_name,
+            guards.fencing_token,
+        )
+        .await?;
+        // #1: the idempotency claim runs FIRST — BEFORE the CAS precondition and
+        // the delete — matching the Upsert ordering. A non-fresh claim takes the
+        // replay/conflict path, so a response-loss retry AFTER the row was already
+        // deleted returns the stored response instead of a spurious
+        // FAILED_PRECONDITION. Only a FRESH claim proceeds to the precondition; a
+        // precondition failure below drops the tx, which rolls back this fresh claim
+        // (same-tx atomicity), so a failed attempt does not burn the key.
         // KEYSTONE (lane 05): keyed-only durable dedup, same-tx, fail-closed.
         // Keyless deletes are unaffected.
         let dedup_ctx = {
@@ -1487,6 +1810,10 @@ impl DataBrokerRuntime {
                     "delete",
                     key,
                 );
+                // #6: bind the claim to the authoritative inputs (normalized filter
+                // + expected precondition).
+                let request_hash =
+                    idempotency_request_hash_delete(&normalized_filter, expected.as_ref());
                 let claim = claim_idempotency_key_in_tx(
                     &mut tx,
                     &config,
@@ -1495,10 +1822,16 @@ impl DataBrokerRuntime {
                     &context.project_id,
                     message_type,
                     "delete",
+                    &request_hash,
                 )
                 .await?;
                 if !claim.fresh {
                     drop(tx);
+                    if let Some(prior_hash) = claim.prior_request_hash.as_deref()
+                        && prior_hash != request_hash
+                    {
+                        return Err(idempotency_request_mismatch_status());
+                    }
                     return mutation_response_from_idempotency_json_for_claim(
                         &claim.prior_response_json,
                         &context.tenant_id,
@@ -1518,6 +1851,41 @@ impl DataBrokerRuntime {
                 None
             }
         };
+        // G-2: enforce the compare-and-swap precondition (if any) AFTER a fresh
+        // claim but BEFORE the delete, so a stale precondition fails fast and the
+        // tx rolls back with nothing removed — and the fresh claim rolls back with
+        // it. Uses the normalized filter so key columns resolve to physical names.
+        if let Some(expected) = expected
+            .as_ref()
+            .filter(|expected| !expected.fields.is_empty())
+        {
+            self.enforce_delete_precondition(
+                &mut tx,
+                table,
+                expected,
+                &normalized_filter,
+                &context,
+            )
+            .await?;
+        }
+        // #5: opaque-revision precondition (if any), AFTER a fresh claim but BEFORE
+        // the delete. Requires the filter to pin every primary-key column by
+        // equality (single row) — the same single-row boundary as the field-map
+        // CAS — so the revision assertion targets exactly one row. Mismatch / an
+        // untracked row rolls the tx back with nothing removed.
+        if !guards.expected_revision.trim().is_empty() {
+            let pk_values = pk_equality_values_from_filter(&normalized_filter, &table.primary_key)?;
+            enforce_expected_revision_in_tx(
+                &mut tx,
+                &crate::runtime::system::SystemCatalogConfig::current(),
+                &context.tenant_id,
+                &context.project_id,
+                message_type,
+                &pk_values,
+                &guards.expected_revision,
+            )
+            .await?;
+        }
         let result = query.execute(&mut *tx).await.map_err(|err| {
             setup_data_internal_status("delete_query", format!("PostgreSQL delete failed: {err}"))
         })?;
@@ -1651,6 +2019,38 @@ impl DataBrokerRuntime {
         increments: &[(String, f64)],
         context: &RequestContext,
         return_record: bool,
+    ) -> Result<(i64, Vec<u8>, Vec<String>), tonic::Status> {
+        // Best-effort CDC (the historical default): `cdc_required = false`.
+        self.execute_update_in_tx_checked(
+            tx,
+            manifest,
+            message_type,
+            filter,
+            changes,
+            increments,
+            context,
+            return_record,
+            false,
+        )
+        .await
+    }
+
+    /// Required-CDC-delivery variant of [`Self::execute_update_in_tx`] (bug
+    /// #8.2). When `cdc_required` is true, an update whose change event cannot be
+    /// durably enqueued fails closed via
+    /// [`Self::emit_cdc_outbox_on_mutation_checked`]; otherwise identical.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) async fn execute_update_in_tx_checked(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        manifest: &CatalogManifest,
+        message_type: &str,
+        filter: &JsonValue,
+        changes: &JsonValue,
+        increments: &[(String, f64)],
+        context: &RequestContext,
+        return_record: bool,
+        cdc_required: bool,
     ) -> Result<(i64, Vec<u8>, Vec<String>), tonic::Status> {
         // Projection targets re-materialize from the task's source_payload, so an
         // update that feeds projections must return the post-update rows: plan
@@ -1800,19 +2200,21 @@ impl DataBrokerRuntime {
                     .map(|(column, delta)| serde_json::json!({"column": column, "delta": delta}))
                     .collect::<Vec<_>>(),
             });
-            self.emit_cdc_outbox_on_mutation(
+            self.emit_cdc_outbox_on_mutation_checked(
                 &mut *tx,
                 manifest,
                 message_type,
                 "update",
                 &cdc_payload,
                 context,
+                cdc_required,
             )
             .await?;
         }
         Ok((affected_rows, record_json, projection_task_ids))
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn update(
         &self,
         manifest: &CatalogManifest,
@@ -1824,6 +2226,8 @@ impl DataBrokerRuntime {
         idempotency_key: String,
         expected: Option<prost_types::Struct>,
         return_record: bool,
+        // #5 + gate 25: optional opaque-revision precondition and lock-fencing.
+        guards: MutationGuards,
     ) -> Result<MutationResponse, tonic::Status> {
         let filter = match resolve_table_for_message(manifest, message_type) {
             Ok(table_for_encryption) => self.rewrite_encrypted_equality_filters(
@@ -1846,22 +2250,21 @@ impl DataBrokerRuntime {
             )
         })?;
         set_request_local_settings(&mut tx, &context).await?;
-        // CAS precondition BEFORE claiming the key or writing — a stale
-        // precondition fails fast with nothing written or claimed. Row located
-        // by primary key from the normalized filter (same as delete).
-        if let Some(expected) = expected
-            .as_ref()
-            .filter(|expected| !expected.fields.is_empty())
-        {
-            self.enforce_delete_precondition(
-                &mut tx,
-                table,
-                expected,
-                &normalized_filter,
-                &context,
-            )
-            .await?;
-        }
+        // gate 25 (lock-fencing-at-commit): validate the fencing token (if any)
+        // BEFORE the dedup claim/CAS/write. No-op when lock_name is empty.
+        self.enforce_fencing_token_in_tx(
+            &mut tx,
+            &context.tenant_id,
+            &guards.lock_name,
+            guards.fencing_token,
+        )
+        .await?;
+        // #1: the idempotency claim runs FIRST — BEFORE the CAS precondition and
+        // the update — matching Upsert. A non-fresh claim takes the replay/conflict
+        // path (a response-loss retry AFTER the row already changed returns the
+        // stored response, not a spurious FAILED_PRECONDITION); only a FRESH claim
+        // proceeds to the precondition, and a precondition failure drops the tx,
+        // rolling back the fresh claim (same-tx atomicity).
         // Keyed-only durable dedup, same-tx, fail-closed (lane 05).
         let dedup_ctx = {
             let key = idempotency_key_for_dedup(&idempotency_key)?;
@@ -1874,6 +2277,14 @@ impl DataBrokerRuntime {
                     "update",
                     key,
                 );
+                // #6: bind the claim to the authoritative inputs (normalized filter
+                // + changes/mask + increments + expected precondition).
+                let request_hash = idempotency_request_hash_update(
+                    &normalized_filter,
+                    &changes,
+                    &increments,
+                    expected.as_ref(),
+                );
                 let claim = claim_idempotency_key_in_tx(
                     &mut tx,
                     &config,
@@ -1882,10 +2293,16 @@ impl DataBrokerRuntime {
                     &context.project_id,
                     message_type,
                     "update",
+                    &request_hash,
                 )
                 .await?;
                 if !claim.fresh {
                     drop(tx);
+                    if let Some(prior_hash) = claim.prior_request_hash.as_deref()
+                        && prior_hash != request_hash
+                    {
+                        return Err(idempotency_request_mismatch_status());
+                    }
                     return mutation_response_from_idempotency_json_for_claim(
                         &claim.prior_response_json,
                         &context.tenant_id,
@@ -1905,6 +2322,39 @@ impl DataBrokerRuntime {
                 None
             }
         };
+        // CAS precondition AFTER a fresh claim but BEFORE the write — a stale
+        // precondition fails fast with nothing written, and the fresh claim rolls
+        // back with the tx. Row located by primary key from the normalized filter
+        // (same as delete).
+        if let Some(expected) = expected
+            .as_ref()
+            .filter(|expected| !expected.fields.is_empty())
+        {
+            self.enforce_delete_precondition(
+                &mut tx,
+                table,
+                expected,
+                &normalized_filter,
+                &context,
+            )
+            .await?;
+        }
+        // #5: opaque-revision precondition (if any) — same single-row (PK-pinned)
+        // boundary as the field-map CAS. Located by primary key from the normalized
+        // filter; a mismatch / untracked row rolls the tx back with nothing written.
+        if !guards.expected_revision.trim().is_empty() {
+            let pk_values = pk_equality_values_from_filter(&normalized_filter, &table.primary_key)?;
+            enforce_expected_revision_in_tx(
+                &mut tx,
+                &crate::runtime::system::SystemCatalogConfig::current(),
+                &context.tenant_id,
+                &context.project_id,
+                message_type,
+                &pk_values,
+                &guards.expected_revision,
+            )
+            .await?;
+        }
         // Plan → bind → execute → projection enqueue → CDC emit, shared verbatim
         // with the BeginTx `update` operation so neither path can drift on the
         // post-write side-effects.
@@ -1920,6 +2370,29 @@ impl DataBrokerRuntime {
                 return_record,
             )
             .await?;
+        // #5: bump + surface the opaque revision for a SINGLE-ROW (primary-key
+        // pinned) update. Revision is a single-row optimistic-concurrency primitive
+        // (like the CAS above), so a multi-row range update leaves it empty and
+        // untracked — `pk_equality_values_from_filter` returns Err there, which we
+        // treat as "not single-row" and skip (never surface a partial/ambiguous
+        // token). A revision-tracked update ALWAYS resolves to one row when
+        // expected_revision was asserted (that path required the pinned filter).
+        let mut row_revision = String::new();
+        if affected_rows > 0
+            && let Ok(pk_values) =
+                pk_equality_values_from_filter(&normalized_filter, &table.primary_key)
+        {
+            let revision = bump_row_revision_in_tx(
+                &mut tx,
+                &crate::runtime::system::SystemCatalogConfig::current(),
+                &context.tenant_id,
+                &context.project_id,
+                message_type,
+                &pk_values,
+            )
+            .await?;
+            row_revision = revision.to_string();
+        }
         let receipt = match self.default_system_stores_clone() {
             Some(store) => {
                 crate::runtime::consistency_fence::build_write_receipt(
@@ -1957,6 +2430,8 @@ impl DataBrokerRuntime {
             record_json,
             write_receipt_json,
             write_receipt: Some(receipt.to_proto()),
+            // #5: bumped revision for a single-row update; empty for multi-row.
+            revision: row_revision,
             ..MutationResponse::default()
         };
         if let Some(dedup_ctx) = dedup_ctx.as_ref() {
@@ -1982,6 +2457,318 @@ impl DataBrokerRuntime {
             self.pg_pool.as_ref(),
         );
         Ok(response)
+    }
+
+    /// gate 23 — bounded, tenant-scoped, request-hash-idempotent bulk
+    /// compare-and-swap. One write transaction applies a bounded batch of
+    /// single-row conditional updates: each item targets exactly one row (its
+    /// `filter` must pin the full primary key), and is applied only if BOTH its
+    /// optional opaque-revision precondition (#5) and its optional field-map CAS
+    /// (`expected`) hold. A per-item precondition MISMATCH is COUNTED as a conflict
+    /// (not a batch error), so the batch is safe to retry after a partial failure —
+    /// reuse `idempotency_key` and the durable dedup machinery replays the original
+    /// counts instead of re-applying. Every applied row keeps the unary Update
+    /// path's projection + CDC-outbox side effects (via `execute_update_in_tx`) and
+    /// bumps its opaque revision; the batch emits one audit event on commit.
+    pub async fn bulk_cas(
+        &self,
+        manifest: &CatalogManifest,
+        request: crate::proto::BulkCasRequest,
+        metadata_context: RequestContext,
+    ) -> Result<crate::proto::BulkCasResponse, tonic::Status> {
+        let context = merge_context(request.context.as_ref(), metadata_context);
+        // Bound the batch: clamp the caller's explicit ceiling to the server max,
+        // then reject an over-ceiling or empty batch fail-closed BEFORE any work.
+        let ceiling = bulk_cas_effective_ceiling(request.max_rows);
+        if request.items.is_empty() {
+            return Err(setup_data_invalid_field(
+                "items",
+                "must contain at least one item",
+                "bulk CAS requires at least one item",
+            ));
+        }
+        if request.items.len() > ceiling {
+            return Err(setup_data_invalid_field(
+                "items",
+                format!("must not exceed the {ceiling}-row ceiling"),
+                format!(
+                    "bulk CAS batch of {} exceeds the {ceiling}-row ceiling",
+                    request.items.len()
+                ),
+            ));
+        }
+        // Every item must actually write something (changes and/or increments) —
+        // a pure assertion has no place in a MUTATION batch. Fail fast + bounded.
+        for (index, item) in request.items.iter().enumerate() {
+            let has_changes = item
+                .changes
+                .as_ref()
+                .map(|changes| !changes.fields.is_empty())
+                .unwrap_or(false);
+            if !has_changes && item.increments.is_empty() {
+                return Err(setup_data_invalid_field(
+                    "items",
+                    "each item must set at least one column or increment",
+                    format!("bulk CAS item {index} has neither changes nor increments"),
+                ));
+            }
+        }
+        let table = resolve_table_for_message(manifest, &request.message_type)
+            .map_err(|_| message_type_lookup_status(manifest, &request.message_type))?;
+        let resolver = crate::planning::broker::column_resolver(table);
+        let config = crate::runtime::system::SystemCatalogConfig::current();
+        let pool = self.pg_pool()?;
+        let mut tx = pool.begin().await.map_err(|e| {
+            setup_data_internal_status(
+                "bulk_cas_transaction_begin",
+                format!("PG transaction begin failed: {e}"),
+            )
+        })?;
+        set_request_local_settings(&mut tx, &context).await?;
+        // Whole-batch durable idempotency (reuses the keyed-mutation dedup claim).
+        let dedup_ctx = {
+            let key = idempotency_key_for_dedup(&request.idempotency_key)?;
+            if let Some(key) = key {
+                let dedup_key = idempotency_dedup_key(
+                    &context.tenant_id,
+                    &context.project_id,
+                    &request.message_type,
+                    "bulk_cas",
+                    key,
+                );
+                let request_hash =
+                    idempotency_request_hash_bulk_cas(&request.message_type, &request.items);
+                let claim = claim_idempotency_key_in_tx(
+                    &mut tx,
+                    &config,
+                    &dedup_key,
+                    &context.tenant_id,
+                    &context.project_id,
+                    &request.message_type,
+                    "bulk_cas",
+                    &request_hash,
+                )
+                .await?;
+                if !claim.fresh {
+                    drop(tx);
+                    if let Some(prior_hash) = claim.prior_request_hash.as_deref()
+                        && prior_hash != request_hash
+                    {
+                        return Err(idempotency_request_mismatch_status());
+                    }
+                    return bulk_cas_response_from_idempotency_json(&claim.prior_response_json);
+                }
+                Some(IdempotencyPersistContext {
+                    config: config.clone(),
+                    dedup_key,
+                    tenant_id: context.tenant_id.clone(),
+                    project_id: context.project_id.clone(),
+                    message_type: request.message_type.clone(),
+                    operation: "bulk_cas",
+                })
+            } else {
+                None
+            }
+        };
+        let mut results: Vec<crate::proto::BulkCasItemResult> =
+            Vec::with_capacity(request.items.len());
+        let mut matched = 0i32;
+        let mut changed = 0i32;
+        let mut conflicted = 0i32;
+        let mut projection_task_ids: Vec<String> = Vec::new();
+        for item in &request.items {
+            let filter_json = item
+                .filter
+                .as_ref()
+                .map(struct_to_json)
+                .unwrap_or(JsonValue::Null);
+            let filter =
+                self.rewrite_encrypted_equality_filters(table, &filter_json, &context.tenant_id);
+            let normalized_filter =
+                crate::planning::broker::normalize_filter_keys(&resolver, &filter);
+            // Single-row addressing: every PK column pinned by equality.
+            let pk_values = pk_equality_values_from_filter(&normalized_filter, &table.primary_key)?;
+            let mut item_result = crate::proto::BulkCasItemResult::default();
+            // Lock + read the target row so the CAS eval and the write are atomic.
+            let row = self
+                .read_locked_row_json(&mut tx, table, &table.primary_key, &pk_values, &context)
+                .await?;
+            match row {
+                None => {
+                    conflicted += 1;
+                    item_result.conflicted = true;
+                }
+                Some(row_json) => {
+                    matched += 1;
+                    item_result.matched = true;
+                    let field_ok =
+                        bulk_cas_field_precondition_holds(&row_json, item.expected.as_ref(), &resolver);
+                    let revision_ok = if item.expected_revision.trim().is_empty() {
+                        true
+                    } else {
+                        check_expected_revision_in_tx(
+                            &mut tx,
+                            &config,
+                            &context.tenant_id,
+                            &context.project_id,
+                            &request.message_type,
+                            &pk_values,
+                            &item.expected_revision,
+                        )
+                        .await?
+                    };
+                    if field_ok && revision_ok {
+                        let changes_json = item
+                            .changes
+                            .as_ref()
+                            .map(struct_to_json)
+                            .unwrap_or_else(|| serde_json::json!({}));
+                        let increments: Vec<(String, f64)> = item
+                            .increments
+                            .iter()
+                            .map(|inc| (inc.column.clone(), inc.delta))
+                            .collect();
+                        let (affected, _record_json, task_ids) = self
+                            .execute_update_in_tx(
+                                &mut tx,
+                                manifest,
+                                &request.message_type,
+                                &filter,
+                                &changes_json,
+                                &increments,
+                                &context,
+                                false,
+                            )
+                            .await?;
+                        projection_task_ids.extend(task_ids);
+                        if affected > 0 {
+                            let revision = bump_row_revision_in_tx(
+                                &mut tx,
+                                &config,
+                                &context.tenant_id,
+                                &context.project_id,
+                                &request.message_type,
+                                &pk_values,
+                            )
+                            .await?;
+                            item_result.revision = revision.to_string();
+                        }
+                        changed += 1;
+                        item_result.changed = true;
+                    } else {
+                        conflicted += 1;
+                        item_result.conflicted = true;
+                    }
+                }
+            }
+            results.push(item_result);
+        }
+        projection_task_ids.sort();
+        projection_task_ids.dedup();
+        let receipt = match self.default_system_stores_clone() {
+            Some(store) => {
+                crate::runtime::consistency_fence::build_write_receipt(
+                    store.as_ref(),
+                    &manifest.checksum_sha256,
+                    projection_task_ids,
+                )
+                .await
+            }
+            None => crate::runtime::consistency::WriteReceipt {
+                source_lsn: String::new(),
+                outbox_seq: 0,
+                projection_task_ids,
+                manifest_checksum: manifest.checksum_sha256.clone(),
+                written_at_unix_ms: unix_millis(),
+            },
+        };
+        let write_receipt_json = write_receipt_json_or_status(&receipt)?;
+        // Persist the batch's counts into the dedup row (in-tx) so a keyed retry
+        // replays the original counts instead of re-applying (request-hash idempotent).
+        if let Some(dedup_ctx) = dedup_ctx.as_ref() {
+            persist_bulk_cas_idempotency_in_tx(
+                &mut tx,
+                dedup_ctx,
+                matched,
+                changed,
+                conflicted,
+                &write_receipt_json,
+            )
+            .await?;
+        }
+        tx.commit().await.map_err(|err| {
+            setup_data_internal_status(
+                "bulk_cas_commit",
+                format!("PostgreSQL bulk CAS commit failed: {err}"),
+            )
+        })?;
+        let _ = self
+            .cache_delete_pattern(&cache_invalidation_pattern("select", &request.message_type))
+            .await;
+        // One audit event for the committed batch (the resource is the table).
+        crate::runtime::core::audit::emit_audit(
+            &self.config.audit_sink,
+            &crate::planning::broker::build_audit_event(
+                &context,
+                "bulk_cas",
+                &format!("sql://{}/{}", table.schema, table.table),
+                &manifest.checksum_sha256,
+            ),
+            self.pg_pool.as_ref(),
+        );
+        Ok(crate::proto::BulkCasResponse {
+            matched,
+            changed,
+            conflicted,
+            write_receipt_json,
+            results,
+        })
+    }
+
+    /// gate 23 helper: lock (`FOR UPDATE`) and read a single row by its primary key
+    /// inside the caller's tx, returning the DECRYPTED row JSON (or `None` when no
+    /// row matches). Shares the row-read + decrypt shape of `enforce_cas_precondition`
+    /// but never errors on a "missing row" — the bulk path COUNTS that as a conflict.
+    async fn read_locked_row_json(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        table: &ManifestTable,
+        key_columns: &[String],
+        key_values: &[JsonValue],
+        context: &RequestContext,
+    ) -> Result<Option<JsonValue>, tonic::Status> {
+        let predicate = key_columns
+            .iter()
+            .enumerate()
+            .map(|(idx, column)| format!("\"{column}\" = ${}", idx + 1))
+            .collect::<Vec<_>>()
+            .join(" AND ");
+        let sql = format!(
+            "SELECT * FROM \"{schema}\".\"{table}\" WHERE {predicate} FOR UPDATE",
+            schema = table.schema,
+            table = table.table,
+        );
+        let query = bind_values(sqlx::query(&sql), table, key_columns, key_values)?;
+        let row = query.fetch_optional(&mut **tx).await.map_err(|err| {
+            crate::runtime::executor_utils::sqlx_error_to_status("bulk CAS row read failed", &err)
+        })?;
+        let Some(row) = row else {
+            return Ok(None);
+        };
+        let record_set = rows_to_record_set(
+            vec![row],
+            Some(table),
+            &[],
+            context,
+            self.encryption.as_ref(),
+            &self.encryption_metrics,
+        )?;
+        let json = record_set
+            .records_json
+            .first()
+            .map(|bytes| serde_json::from_slice(bytes).unwrap_or(JsonValue::Null))
+            .unwrap_or(JsonValue::Null);
+        Ok(Some(json))
     }
 
     pub async fn vector_search(
@@ -2053,8 +2840,20 @@ impl DataBrokerRuntime {
                     qdrant_and_tenant_filter(filter, &context.tenant_id, &context.project_id);
                 qdrant.search(&request, scoped_filter).await
             } else {
-                self.vector_search_dispatch_target(&target.backend, target_instance, &request)
-                    .await
+                // F2: the ES/Weaviate/Pinecone dispatch translates request.filter
+                // per-backend but never sees the CONTEXT tenant, so forwarding the
+                // raw request read every tenant's points in a shared collection.
+                // Merge the tenant/project scope into the neutral filter Struct
+                // first — the same scope the qdrant branch ANDs in.
+                let mut scoped_request = request.clone();
+                scoped_request.filter =
+                    scoped_generic_vector_filter(filter, &context.tenant_id, &context.project_id);
+                self.vector_search_dispatch_target(
+                    &target.backend,
+                    target_instance,
+                    &scoped_request,
+                )
+                .await
             }
         }
     }
@@ -2107,6 +2906,13 @@ impl DataBrokerRuntime {
                 .enforce_read_fence(&context, "qdrant", target_instance.unwrap_or("selected"))
                 .await?;
 
+            // F1: AND the tenant/project scope into the hybrid filter. The dense
+            // `vector_search` path already scopes (C7), but the hybrid and
+            // empty-text legs previously forwarded the RAW caller filter, reading
+            // across tenants in a shared collection. Scope ONCE, use on both legs.
+            let scoped_filter =
+                qdrant_and_tenant_filter(filter, &context.tenant_id, &context.project_id);
+
             // When text_query is empty, delegate to standard dense search.
             if request.text_query.trim().is_empty() {
                 let dense = VectorSearchRequest {
@@ -2123,13 +2929,13 @@ impl DataBrokerRuntime {
                 };
                 return self
                     .qdrant_for_instance_for_project(target_instance, &context.project_id)?
-                    .search(&dense, filter)
+                    .search(&dense, scoped_filter)
                     .await;
             }
 
             // Full hybrid: Qdrant native RRF with local lexical re-ranking fallback.
             self.qdrant_for_instance_for_project(target_instance, &context.project_id)?
-                .hybrid_search(&request, filter)
+                .hybrid_search(&request, scoped_filter)
                 .await
         }
     }
@@ -2379,7 +3185,11 @@ impl DataBrokerRuntime {
             ensure_typed_object_backend(&plan.backend)?;
             let backend = plan.backend.trim().to_ascii_lowercase();
             let bucket = first.bucket.clone();
-            let object_key = first.object_key.clone();
+            // OBJ1/2/3: physically namespace the key by the verified tenant before
+            // it reaches the backing store. Every downstream use here is
+            // executor-facing; the client-facing `resource_uri` comes from `plan`
+            // (unscoped), so the prefix stays an internal storage detail.
+            let object_key = tenant_scoped_object_key(&context, &first.object_key);
             let mut request_json =
                 object_request_json("put", &bucket, &object_key, &first.content_type);
             // Enforce the object store's `server_side_encryption` annotation on the
@@ -2553,7 +3363,11 @@ impl DataBrokerRuntime {
                 .await?;
             let bucket = request.bucket.clone();
             let object_key = request.object_key.clone();
-            let request_json = object_request_json("get", &bucket, &object_key, "");
+            // OBJ1/2/3: read from the tenant-namespaced physical key; the `Chunk`
+            // echo keeps the caller's original `object_key` (the prefix is an
+            // internal storage detail, not something the client asked for).
+            let physical_key = tenant_scoped_object_key(&context, &object_key);
+            let request_json = object_request_json("get", &bucket, &physical_key, "");
             let project = context.project_id.clone();
 
             // A.6: hand back the executor's streaming download wrapped into gRPC
@@ -2674,10 +3488,14 @@ impl DataBrokerRuntime {
             };
             let s3 = self.s3_for_instance_for_project(target_instance, &context.project_id)?;
             let ttl = bounded_ttl(request.ttl_seconds);
+            // OBJ1/2/3: the presigned URL must target the tenant-namespaced
+            // physical key so a caller cannot mint a URL for another tenant's
+            // object by presenting its bucket+key.
+            let physical_key = tenant_scoped_object_key(&context, &request.object_key);
             let url = presign_s3_url(
                 &s3,
                 &request.bucket,
-                &request.object_key,
+                &physical_key,
                 &method,
                 &request.content_type,
                 ttl,
@@ -3285,10 +4103,14 @@ impl DataBrokerRuntime {
                 Some(context.target_instance.as_str())
             };
             let s3 = self.s3_for_instance_for_project(target_instance, &context.project_id)?;
+            // OBJ1/2/3: every part URL and the upload itself must target the
+            // tenant-namespaced physical key so a multipart upload cannot land on
+            // (or presign into) another tenant's object.
+            let physical_key = tenant_scoped_object_key(&context, &request.object_key);
             let upload = s3
                 .create_multipart_upload()
                 .bucket(&request.bucket)
-                .key(&request.object_key)
+                .key(&physical_key)
                 .set_content_type(if request.content_type.is_empty() {
                     None
                 } else {
@@ -3312,7 +4134,7 @@ impl DataBrokerRuntime {
                 let url = s3
                     .upload_part()
                     .bucket(&request.bucket)
-                    .key(&request.object_key)
+                    .key(&physical_key)
                     .upload_id(&upload_id)
                     .part_number(part_number)
                     .presigned(config.clone())
@@ -3335,6 +4157,381 @@ impl DataBrokerRuntime {
     }
 }
 
+// ── #5 (opaque row revision / ETag) + gate 25 (lock fencing) shared helpers ────
+
+/// Optional per-mutation guards threaded from the request into the unary
+/// Update/Delete paths (Upsert reads them straight off its request). All-default
+/// (every field empty/zero) preserves the prior behaviour exactly.
+#[derive(Debug, Default, Clone)]
+pub(crate) struct MutationGuards {
+    /// #5: opaque revision the addressed row must currently hold. Empty = not
+    /// asserted (no revision precondition).
+    pub(crate) expected_revision: String,
+    /// gate 25: advisory-lock name to fence against. Empty = no fencing.
+    pub(crate) lock_name: String,
+    /// gate 25: the caller's monotonic fencing token for `lock_name`.
+    pub(crate) fencing_token: i64,
+}
+
+/// Canonical, type-stable token for a single primary-key value used to build a
+/// revision-map key. Integer-valued numbers collapse to `i:<n>` regardless of
+/// whether the value arrived as an INTEGER column (`8`) or as a
+/// `google.protobuf.Struct` f64 (`8.0`), so the bump-side key (built from the
+/// written record) and the read-side key (built from the returned row) never
+/// diverge on the int-vs-float trap — the same trap `json_values_match` guards.
+fn pk_value_token(value: &JsonValue) -> String {
+    match value {
+        JsonValue::Number(n) => {
+            let f = n.as_f64().unwrap_or(f64::NAN);
+            if f.is_finite() && f.fract() == 0.0 && f.abs() < 9.0e15 {
+                format!("i:{}", f as i64)
+            } else {
+                format!("f:{n}")
+            }
+        }
+        JsonValue::String(s) => format!("s:{s}"),
+        JsonValue::Bool(b) => format!("b:{b}"),
+        JsonValue::Null => "z:".to_string(),
+        other => format!("j:{}", canonical_json_string(other)),
+    }
+}
+
+/// Canonical primary-key-tuple string (NUL-separated so field boundaries cannot
+/// shift-collide), used both as the diagnostic `row_key` and as the key material.
+fn pk_tuple_canonical(pk_values: &[JsonValue]) -> String {
+    pk_values
+        .iter()
+        .map(pk_value_token)
+        .collect::<Vec<_>>()
+        .join("\u{0}")
+}
+
+/// Salted, tenant+project+message-type-scoped revision key — NEVER the bare PK,
+/// so a lookup can only ever match rows the caller is already scoped to, and two
+/// tenants sharing a PK value cannot collide. Mirrors `idempotency_dedup_key`.
+fn row_revision_key(
+    tenant_id: &str,
+    project_id: &str,
+    message_type: &str,
+    pk_canonical: &str,
+) -> String {
+    crate::runtime::executor_utils::checksum_str(&format!(
+        "{tenant_id}\0{project_id}\0{message_type}\0{pk_canonical}"
+    ))
+}
+
+/// #5: bump (or create at 1) the opaque revision of ONE row IN THE CALLER'S write
+/// tx, returning the NEW revision. Monotonic (`revision = revision + 1` on
+/// conflict), so an opaque token is ABA-safe (never reused or decreased). A SQL
+/// failure is surfaced as a retryable, fail-closed error — the mutation cannot
+/// commit without the bump, mirroring the idempotency claim's same-tx atomicity.
+async fn bump_row_revision_in_tx(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    config: &crate::runtime::system::SystemCatalogConfig,
+    tenant_id: &str,
+    project_id: &str,
+    message_type: &str,
+    pk_values: &[JsonValue],
+) -> Result<i64, tonic::Status> {
+    let pk_canonical = pk_tuple_canonical(pk_values);
+    let revision_key = row_revision_key(tenant_id, project_id, message_type, &pk_canonical);
+    let rel = config.row_revisions_relation();
+    let sql = format!(
+        "INSERT INTO {rel} AS rev \
+             (revision_key, tenant_id, project_id, message_type, row_key, revision, updated_at) \
+         VALUES ($1, $2, $3, $4, $5, 1, NOW()) \
+         ON CONFLICT (revision_key) \
+         DO UPDATE SET revision = rev.revision + 1, updated_at = NOW() \
+         RETURNING revision"
+    );
+    let revision: i64 = sqlx::query_scalar(&sql)
+        .bind(&revision_key)
+        .bind(tenant_id)
+        .bind(project_id)
+        .bind(message_type)
+        .bind(&pk_canonical)
+        .fetch_one(&mut **tx)
+        .await
+        .map_err(|err| row_revision_store_status("row_revision_bump", &err))?;
+    Ok(revision)
+}
+
+/// #5: assert a caller's `expected_revision` against the CURRENT opaque revision
+/// of the primary-key-identified row, locking the revision row `FOR UPDATE` in the
+/// caller's write tx so concurrent CAS writers serialize on it (ABA-safe: the
+/// revision only increases, and the loser reads the bumped value and fails). A
+/// missing revision entry OR any mismatch is a NON-DISCLOSING `FAILED_PRECONDITION`
+/// (it never reveals a foreign row's existence or value).
+async fn enforce_expected_revision_in_tx(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    config: &crate::runtime::system::SystemCatalogConfig,
+    tenant_id: &str,
+    project_id: &str,
+    message_type: &str,
+    pk_values: &[JsonValue],
+    expected_revision: &str,
+) -> Result<(), tonic::Status> {
+    let expected: i64 = expected_revision.trim().parse().map_err(|_| {
+        setup_data_invalid_field(
+            "expected_revision",
+            "must be an opaque revision token previously returned by the broker",
+            "expected_revision is not a valid revision token",
+        )
+    })?;
+    let pk_canonical = pk_tuple_canonical(pk_values);
+    let revision_key = row_revision_key(tenant_id, project_id, message_type, &pk_canonical);
+    let rel = config.row_revisions_relation();
+    let sql = format!("SELECT revision FROM {rel} WHERE revision_key = $1 FOR UPDATE");
+    let current: Option<i64> = sqlx::query_scalar(&sql)
+        .bind(&revision_key)
+        .fetch_optional(&mut **tx)
+        .await
+        .map_err(|err| row_revision_store_status("row_revision_cas_read", &err))?;
+    match current {
+        Some(revision) if revision == expected => Ok(()),
+        _ => Err(row_revision_precondition_failed_status()),
+    }
+}
+
+/// NON-DISCLOSING typed refusal for an `expected_revision` mismatch (#5). Names
+/// only the contract violation; never leaks the current revision or row.
+fn row_revision_precondition_failed_status() -> tonic::Status {
+    crate::runtime::executor_utils::failed_precondition_fields(
+        "revision precondition failed: the row's current revision differs from expected_revision, or the row is not revision-tracked",
+        [(
+            "expected_revision".to_string(),
+            "the current revision differs from the expected revision".to_string(),
+        )],
+    )
+}
+
+/// Fail-closed, retryable status for a revision-store SQL failure. The keyed
+/// mutation is refused (never silently skipped) so read-your-writes and CAS
+/// callers can retry the SAME request while the tx is dropped fail-closed.
+fn row_revision_store_status(operation: &'static str, err: &sqlx::Error) -> tonic::Status {
+    tracing::error!(
+        error = %err,
+        operation,
+        "row revision store operation failed; mutation refused fail-closed"
+    );
+    crate::runtime::executor_utils::retryable_status(
+        "postgres",
+        operation,
+        250,
+        "row revision store unavailable (fail-closed)",
+    )
+}
+
+/// gate 25: no durable lock row exists for a caller that asked to be fenced.
+/// Fail-closed — a caller presenting a fencing token for a lock that is not held
+/// must not be allowed to write (the lease it believes it holds is gone).
+fn fencing_lock_absent_status(lock_name: &str) -> tonic::Status {
+    crate::runtime::executor_utils::failed_precondition_fields(
+        "lock fencing failed: no active lock by that name to fence against",
+        [(
+            "lock_name".to_string(),
+            format!("no durable lock row exists for '{lock_name}' in this tenant"),
+        )],
+    )
+}
+
+/// gate 25: the lock's lease has lapsed or been released — the writer outlived
+/// its lease and is fenced off fail-closed.
+fn fencing_lease_lost_status(lock_name: &str) -> tonic::Status {
+    crate::runtime::executor_utils::failed_precondition_fields(
+        "lock fencing failed: the lock lease has lapsed or been released (the writer outlived its lease)",
+        [(
+            "fencing_token".to_string(),
+            format!("the lease for '{lock_name}' is no longer HELD"),
+        )],
+    )
+}
+
+// ── gate 23 (bounded bulk compare-and-swap) helpers ─────────────────────────────
+
+/// Server ceiling on a single bulk-CAS batch — bounds the write tx and the
+/// per-request memory. A caller's explicit `max_rows` is clamped INTO this.
+const BULK_CAS_MAX_ROWS: usize = 1000;
+
+/// Clamp the caller's explicit row ceiling into `[1, BULK_CAS_MAX_ROWS]`; a
+/// non-positive request means "use the server maximum".
+fn bulk_cas_effective_ceiling(requested: i32) -> usize {
+    if requested <= 0 {
+        BULK_CAS_MAX_ROWS
+    } else {
+        (requested as usize).min(BULK_CAS_MAX_ROWS)
+    }
+}
+
+/// Canonical authoritative-input hash for a bulk-CAS batch (message type + every
+/// item's filter/changes/increments/preconditions), so a keyed retry with the
+/// SAME batch replays, and a key reused with a DIFFERENT batch is a conflict.
+fn idempotency_request_hash_bulk_cas(
+    message_type: &str,
+    items: &[crate::proto::BulkCasItem],
+) -> String {
+    let authoritative = serde_json::json!({
+        "message_type": message_type,
+        "items": items
+            .iter()
+            .map(|item| {
+                serde_json::json!({
+                    "filter": item
+                        .filter
+                        .as_ref()
+                        .map(crate::runtime::executor_utils::struct_to_json)
+                        .unwrap_or(JsonValue::Null),
+                    "changes": item
+                        .changes
+                        .as_ref()
+                        .map(crate::runtime::executor_utils::struct_to_json)
+                        .unwrap_or(JsonValue::Null),
+                    "expected_revision": item.expected_revision,
+                    "expected": idempotency_expected_json(item.expected.as_ref()),
+                    "increments": item
+                        .increments
+                        .iter()
+                        .map(|inc| serde_json::json!([inc.column, inc.delta]))
+                        .collect::<Vec<_>>(),
+                })
+            })
+            .collect::<Vec<_>>(),
+    });
+    idempotency_request_hash("bulk_cas", &authoritative)
+}
+
+/// gate 23: NON-erroring opaque-revision precondition check — returns whether it
+/// HOLDS, locking the revision row FOR UPDATE. A parse failure IS an error (a
+/// malformed token); a "row not tracked" or a mismatch returns `Ok(false)` so the
+/// bulk path counts it as a conflict rather than aborting the whole batch.
+async fn check_expected_revision_in_tx(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    config: &crate::runtime::system::SystemCatalogConfig,
+    tenant_id: &str,
+    project_id: &str,
+    message_type: &str,
+    pk_values: &[JsonValue],
+    expected_revision: &str,
+) -> Result<bool, tonic::Status> {
+    let expected: i64 = expected_revision.trim().parse().map_err(|_| {
+        setup_data_invalid_field(
+            "expected_revision",
+            "must be an opaque revision token previously returned by the broker",
+            "expected_revision is not a valid revision token",
+        )
+    })?;
+    let pk_canonical = pk_tuple_canonical(pk_values);
+    let revision_key = row_revision_key(tenant_id, project_id, message_type, &pk_canonical);
+    let rel = config.row_revisions_relation();
+    let sql = format!("SELECT revision FROM {rel} WHERE revision_key = $1 FOR UPDATE");
+    let current: Option<i64> = sqlx::query_scalar(&sql)
+        .bind(&revision_key)
+        .fetch_optional(&mut **tx)
+        .await
+        .map_err(|err| row_revision_store_status("row_revision_cas_read", &err))?;
+    Ok(current == Some(expected))
+}
+
+/// gate 23: evaluate an optional field-map compare-and-swap precondition against
+/// an already-read (decrypted) row, returning whether it HOLDS. Empty precondition
+/// holds trivially. Reuses the same field resolution + int/float-tolerant value
+/// match (`json_values_match`) as `enforce_cas_precondition`.
+fn bulk_cas_field_precondition_holds(
+    row: &JsonValue,
+    expected: Option<&prost_types::Struct>,
+    resolver: &std::collections::HashMap<String, String>,
+) -> bool {
+    let Some(expected) = expected.filter(|expected| !expected.fields.is_empty()) else {
+        return true;
+    };
+    let current = row.as_object();
+    let expected_json = crate::runtime::executor_utils::struct_to_json(expected);
+    let Some(expected_obj) = expected_json.as_object() else {
+        return true;
+    };
+    for (field, want) in expected_obj {
+        let column = crate::planning::broker::resolve_column(resolver, field);
+        let have = current
+            .and_then(|obj| obj.get(&column).or_else(|| obj.get(field)))
+            .unwrap_or(&JsonValue::Null);
+        if !json_values_match(have, want) {
+            return false;
+        }
+    }
+    true
+}
+
+/// gate 23: persist the batch's counts into the dedup row (in the caller's tx) so
+/// a keyed retry replays them (never re-applies). Stored in the same JSONB
+/// `response_json` column the keyed unary mutations use, via the shared persist SQL.
+async fn persist_bulk_cas_idempotency_in_tx(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    dedup_ctx: &IdempotencyPersistContext,
+    matched: i32,
+    changed: i32,
+    conflicted: i32,
+    write_receipt_json: &str,
+) -> Result<(), tonic::Status> {
+    let summary = serde_json::json!({
+        "op": "bulk_cas",
+        "matched": matched,
+        "changed": changed,
+        "conflicted": conflicted,
+        "write_receipt_json": write_receipt_json,
+    });
+    let rel = dedup_ctx.config.idempotency_keys_relation();
+    let sql = idempotency_response_persist_sql(&rel);
+    let result = sqlx::query(&sql)
+        .bind(&summary)
+        .bind(&dedup_ctx.dedup_key)
+        .bind(&dedup_ctx.tenant_id)
+        .bind(&dedup_ctx.project_id)
+        .bind(&dedup_ctx.message_type)
+        .bind(dedup_ctx.operation)
+        .execute(&mut **tx)
+        .await
+        .map_err(|err| {
+            crate::runtime::executor_utils::sqlx_error_to_status(
+                "bulk CAS idempotency persist failed",
+                &err,
+            )
+        })?;
+    idempotency_response_persist_row_count_status(result.rows_affected())?;
+    Ok(())
+}
+
+/// gate 23: reconstruct a `BulkCasResponse` (counts only; per-item results are not
+/// re-derived on replay) from a replayed dedup `response_json`. A legacy/empty row
+/// yields a typed internal error rather than a bogus zero-count success.
+fn bulk_cas_response_from_idempotency_json(
+    prior: &JsonValue,
+) -> Result<crate::proto::BulkCasResponse, tonic::Status> {
+    let counts = ["matched", "changed", "conflicted"]
+        .iter()
+        .map(|field| {
+            prior
+                .get(field)
+                .and_then(JsonValue::as_i64)
+                .map(|value| value as i32)
+                .ok_or_else(|| {
+                    idempotency_replay_response_status(format!("missing bulk CAS count {field}"))
+                })
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    let write_receipt_json = prior
+        .get("write_receipt_json")
+        .and_then(JsonValue::as_str)
+        .unwrap_or_default()
+        .to_string();
+    Ok(crate::proto::BulkCasResponse {
+        matched: counts[0],
+        changed: counts[1],
+        conflicted: counts[2],
+        write_receipt_json,
+        results: Vec::new(),
+    })
+}
+
 // ── KEYSTONE (lane 05): durable, fail-closed, tenant+project-scoped idempotency
 // dedup for keyed data-plane mutations ─────────────────────────────────────────
 
@@ -3348,6 +4545,11 @@ impl DataBrokerRuntime {
 struct IdempotencyClaim {
     fresh: bool,
     prior_response_json: JsonValue,
+    /// The first writer's canonical request hash (#6). `None` only for a legacy
+    /// row written before the `request_hash` column existed; such rows are
+    /// replayed best-effort (no mismatch can be proven). For a fresh claim this
+    /// is the row we just inserted, so it is never inspected.
+    prior_request_hash: Option<String>,
 }
 
 struct IdempotencyPersistContext {
@@ -3391,6 +4593,122 @@ fn idempotency_key_for_dedup(key: &str) -> Result<Option<&str>, tonic::Status> {
     Ok(Some(key))
 }
 
+/// Version tag for the idempotency request hash (#6). Bump to force a
+/// conservative mismatch (typed conflict, never a bogus replay) if the set of
+/// authoritative inputs covered below ever changes shape.
+const IDEMPOTENCY_REQUEST_HASH_VERSION: u32 = 1;
+
+/// Serialize a JSON value with object keys sorted recursively, so structurally
+/// equal values produce byte-identical output regardless of key insertion order
+/// (robust even if serde_json's `preserve_order` feature is enabled elsewhere in
+/// the workspace). Array order is PRESERVED — it is semantic.
+fn canonical_json_string(value: &JsonValue) -> String {
+    fn canonical(value: &JsonValue) -> JsonValue {
+        match value {
+            JsonValue::Object(map) => {
+                let mut entries: Vec<(&String, &JsonValue)> = map.iter().collect();
+                entries.sort_by(|a, b| a.0.cmp(b.0));
+                JsonValue::Object(
+                    entries
+                        .into_iter()
+                        .map(|(key, val)| (key.clone(), canonical(val)))
+                        .collect(),
+                )
+            }
+            JsonValue::Array(items) => JsonValue::Array(items.iter().map(canonical).collect()),
+            other => other.clone(),
+        }
+    }
+    serde_json::to_string(&canonical(value)).unwrap_or_default()
+}
+
+/// Canonical SHA-256 over the mutation-authoritative inputs of a keyed write
+/// (#6). Two requests that reuse the same idempotency key but carry DIFFERENT
+/// authoritative inputs (filter / record / changes / mask / increments /
+/// conflict strategy / expected precondition) MUST hash differently, so the
+/// replay path can reject the mismatch instead of returning the first writer's
+/// success for an op that never ran. `authoritative` MUST exclude transport-only
+/// fields (correlation id, deadlines, cache toggles, `return_record`) — those do
+/// not change the write and must not rotate the hash. Object keys are
+/// canonicalized so key ordering is not significant.
+fn idempotency_request_hash(operation: &str, authoritative: &JsonValue) -> String {
+    let payload = serde_json::json!({
+        "v": IDEMPOTENCY_REQUEST_HASH_VERSION,
+        "op": operation,
+        "in": authoritative,
+    });
+    crate::runtime::executor_utils::checksum_str(&canonical_json_string(&payload))
+}
+
+/// Render an optional CAS `expected` precondition to canonical JSON for hashing.
+/// An unset or empty precondition is `null` (identical to a request that never
+/// asserted one), so adding/removing a precondition rotates the hash.
+fn idempotency_expected_json(expected: Option<&prost_types::Struct>) -> JsonValue {
+    match expected.filter(|expected| !expected.fields.is_empty()) {
+        Some(expected) => crate::runtime::executor_utils::struct_to_json(expected),
+        None => JsonValue::Null,
+    }
+}
+
+/// Authoritative-input hash for a keyed `Upsert`: the record to write, the
+/// conflict target, and any CAS precondition. `return_record`/cache are
+/// transport-only and excluded.
+fn idempotency_request_hash_upsert(request: &UpsertRequest, record: &JsonValue) -> String {
+    let authoritative = serde_json::json!({
+        "record": record,
+        "conflict_fields": request.conflict_fields,
+        "expected": idempotency_expected_json(request.expected.as_ref()),
+    });
+    idempotency_request_hash("upsert", &authoritative)
+}
+
+/// Authoritative-input hash for a keyed `Delete`: the normalized filter (which
+/// rows) and any CAS precondition.
+fn idempotency_request_hash_delete(
+    normalized_filter: &JsonValue,
+    expected: Option<&prost_types::Struct>,
+) -> String {
+    let authoritative = serde_json::json!({
+        "filter": normalized_filter,
+        "expected": idempotency_expected_json(expected),
+    });
+    idempotency_request_hash("delete", &authoritative)
+}
+
+/// Authoritative-input hash for a keyed `Update`: the normalized filter (which
+/// rows), the assignments/mask, the numeric increments, and any CAS precondition.
+fn idempotency_request_hash_update(
+    normalized_filter: &JsonValue,
+    changes: &JsonValue,
+    increments: &[(String, f64)],
+    expected: Option<&prost_types::Struct>,
+) -> String {
+    let authoritative = serde_json::json!({
+        "filter": normalized_filter,
+        "changes": changes,
+        "increments": increments
+            .iter()
+            .map(|(column, delta)| serde_json::json!([column, delta]))
+            .collect::<Vec<_>>(),
+        "expected": idempotency_expected_json(expected),
+    });
+    idempotency_request_hash("update", &authoritative)
+}
+
+/// NON-DISCLOSING typed refusal for a keyed mutation whose idempotency key was
+/// already claimed by a request with DIFFERENT authoritative inputs (#6). The
+/// message names ONLY the contract violation — it must never leak the first
+/// writer's stored inputs or response.
+fn idempotency_request_mismatch_status() -> tonic::Status {
+    crate::runtime::executor_utils::failed_precondition_fields(
+        "idempotency_key was already used for a different request; reuse a key only to retry an identical request",
+        [(
+            "idempotency_key".to_string(),
+            "the same idempotency_key was already claimed by a request with different inputs".to_string(),
+        )],
+    )
+}
+
 /// Atomically claim a dedup key INSIDE the caller's write transaction, mirroring
 /// the proven `projection/mod.rs::insert_task_if_absent_on` ON CONFLICT CTE.
 ///
@@ -3408,15 +4726,21 @@ async fn claim_idempotency_key_in_tx(
     project_id: &str,
     message_type: &str,
     operation: &str,
+    // #6: the current request's canonical authoritative-input hash. Stored on the
+    // FRESH insert (the winner's identity) and NEVER overwritten by a later
+    // conflicting claim, so `RETURNING request_hash` on a replay yields the first
+    // writer's hash for the caller to compare against.
+    request_hash: &str,
 ) -> Result<IdempotencyClaim, tonic::Status> {
     let rel = config.idempotency_keys_relation();
     let sql = idempotency_claim_sql(&rel);
-    let row: Option<(bool, JsonValue)> = sqlx::query_as(&sql)
+    let row: Option<(bool, JsonValue, Option<String>)> = sqlx::query_as(&sql)
         .bind(dedup_key)
         .bind(tenant_id)
         .bind(project_id)
         .bind(message_type)
         .bind(operation)
+        .bind(request_hash)
         .fetch_optional(&mut **tx)
         .await
         .map_err(|err| idempotency_dedup_claim_status(&err))?;
@@ -3429,6 +4753,7 @@ async fn claim_idempotency_key_in_tx(
     Ok(IdempotencyClaim {
         fresh: row.0,
         prior_response_json: row.1,
+        prior_request_hash: row.2,
     })
 }
 
@@ -3515,17 +4840,23 @@ fn idempotency_claim_sql(rel: &str) -> String {
     // and the caller still surfaces the "no row for matching scope" error.
     // `idem.response_json = idem.response_json` is a self-touch that never
     // overwrites the winner's stored body.
+    //
+    // #6: `request_hash` ($6) is written ONLY on the fresh INSERT and the DO UPDATE
+    // deliberately does not touch it, so a replay's `RETURNING request_hash` yields
+    // the FIRST writer's hash. The caller compares it to the current request's hash
+    // and refuses a key reused with different authoritative inputs (instead of
+    // replaying a bogus success for an op that never ran).
     format!(
         "INSERT INTO {rel} AS idem
-             (dedup_key, tenant_id, project_id, message_type, operation, response_json)
-         VALUES ($1, $2, $3, $4, $5, '{{}}'::jsonb)
+             (dedup_key, tenant_id, project_id, message_type, operation, request_hash, response_json)
+         VALUES ($1, $2, $3, $4, $5, $6, '{{}}'::jsonb)
          ON CONFLICT (dedup_key) DO UPDATE
              SET response_json = idem.response_json
              WHERE idem.tenant_id = $2
                AND idem.project_id = $3
                AND idem.message_type = $4
                AND idem.operation = $5
-         RETURNING (xmax = 0) AS inserted, response_json"
+         RETURNING (xmax = 0) AS inserted, response_json, request_hash"
     )
 }
 
@@ -5275,18 +6606,24 @@ mod setup_data_validation_tests {
 #[cfg(test)]
 mod setup_data_consistency_tests {
     use super::{
-        RequestContext, full_canonical_store_requires_opt_in, idempotency_claim_sql,
+        RequestContext, bulk_cas_effective_ceiling, bulk_cas_field_precondition_holds,
+        bulk_cas_response_from_idempotency_json, fencing_lease_lost_status,
+        fencing_lock_absent_status, full_canonical_store_requires_opt_in, idempotency_claim_sql,
         idempotency_dedup_claim_status, idempotency_dedup_key, idempotency_key_for_dedup,
-        idempotency_response_persist_row_count_status, idempotency_response_persist_sql,
-        merge_runtime_backend_instances, mutation_response_from_idempotency_json,
-        mutation_response_from_idempotency_json_for_claim, mutation_response_idempotency_json,
-        mutation_response_resource_uri, mutation_response_resource_uri_or_fallback,
-        pg_outbox_receipt_store_mismatch, pk_equality_values_from_filter,
+        idempotency_request_hash_bulk_cas, idempotency_request_hash_delete,
+        idempotency_request_hash_update, idempotency_request_hash_upsert,
+        idempotency_request_mismatch_status, idempotency_response_persist_row_count_status,
+        idempotency_response_persist_sql, merge_runtime_backend_instances,
+        mutation_response_from_idempotency_json, mutation_response_from_idempotency_json_for_claim,
+        mutation_response_idempotency_json, mutation_response_resource_uri,
+        mutation_response_resource_uri_or_fallback, pg_outbox_receipt_store_mismatch,
+        pk_equality_values_from_filter, pk_tuple_canonical, pk_value_token,
         projection_system_store_opt_in_value, returned_record_json_or_status,
-        validate_deployment_tier_floor, write_receipt_json_or_status,
+        row_revision_key, row_revision_precondition_failed_status, validate_deployment_tier_floor,
+        write_receipt_json_or_status,
     };
     use crate::backend::ControlPlaneHaLevel;
-    use crate::proto::{ErrorDetail, ErrorKind, MutationResponse};
+    use crate::proto::{BulkCasItem, ErrorDetail, ErrorKind, MutationResponse, UpsertRequest};
     use crate::runtime::config::{BackendInstance, BackendInstanceConfig, BackendInstanceRole};
     use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
     use base64::Engine as _;
@@ -5297,6 +6634,173 @@ mod setup_data_consistency_tests {
             .get_bin(ERROR_DETAIL_METADATA_KEY)
             .expect("typed error detail trailer");
         crate::runtime::executor_utils::decode_error_detail_from_raw(&raw)
+    }
+
+    // ── #5 (opaque row revision / ETag) + gate 23/25 unit tests ──────────────
+
+    #[test]
+    fn pk_value_token_collapses_int_and_float_forms() {
+        // The revision-map key MUST be identical whether a numeric PK arrives as an
+        // INTEGER column (`8`) or a google.protobuf.Struct f64 (`8.0`) — otherwise
+        // the bump-side key (from the written record) and the read-side key (from
+        // the returned row) diverge for integer PKs supplied via a Struct payload.
+        assert_eq!(
+            pk_value_token(&serde_json::json!(8)),
+            pk_value_token(&serde_json::json!(8.0))
+        );
+        assert_eq!(pk_value_token(&serde_json::json!(8)), "i:8");
+        // Strings / genuine floats stay distinct + typed (no "8" == 8 confusion).
+        assert_ne!(
+            pk_value_token(&serde_json::json!("8")),
+            pk_value_token(&serde_json::json!(8))
+        );
+        assert_eq!(pk_value_token(&serde_json::json!("abc")), "s:abc");
+        assert!(pk_value_token(&serde_json::json!(8.5)).starts_with("f:"));
+    }
+
+    #[test]
+    fn pk_tuple_canonical_is_nul_separated_and_shift_safe() {
+        // ("a","bc") vs ("ab","c") must not collide (the NUL boundary prevents a
+        // composite PK from being confused with a shifted one).
+        let a = pk_tuple_canonical(&[serde_json::json!("a"), serde_json::json!("bc")]);
+        let b = pk_tuple_canonical(&[serde_json::json!("ab"), serde_json::json!("c")]);
+        assert_ne!(a, b);
+    }
+
+    #[test]
+    fn row_revision_key_is_scoped_and_never_bare_pk() {
+        let pk = "s:row-1";
+        let a = row_revision_key("t-a", "p-1", "Invoice", pk);
+        assert_ne!(
+            a,
+            row_revision_key("t-b", "p-1", "Invoice", pk),
+            "tenant isolation"
+        );
+        assert_ne!(
+            a,
+            row_revision_key("t-a", "p-2", "Invoice", pk),
+            "project isolation"
+        );
+        assert_ne!(
+            a,
+            row_revision_key("t-a", "p-1", "Payment", pk),
+            "message-type isolation"
+        );
+        assert_eq!(
+            a,
+            row_revision_key("t-a", "p-1", "Invoice", pk),
+            "deterministic"
+        );
+        assert!(a.starts_with("sha256:"));
+        assert!(!a.contains("row-1"), "must never embed the bare PK");
+    }
+
+    #[test]
+    fn bulk_cas_effective_ceiling_is_bounded() {
+        assert_eq!(bulk_cas_effective_ceiling(0), 1000, "unset → server max");
+        assert_eq!(
+            bulk_cas_effective_ceiling(-5),
+            1000,
+            "non-positive → server max"
+        );
+        assert_eq!(bulk_cas_effective_ceiling(10), 10, "explicit under ceiling");
+        assert_eq!(
+            bulk_cas_effective_ceiling(100_000),
+            1000,
+            "clamped to server max"
+        );
+    }
+
+    #[test]
+    fn bulk_cas_request_hash_binds_authoritative_inputs() {
+        let item = |revision: &str| BulkCasItem {
+            filter: None,
+            changes: None,
+            expected_revision: revision.to_string(),
+            expected: None,
+            increments: Vec::new(),
+        };
+        let a = idempotency_request_hash_bulk_cas("Invoice", &[item("1")]);
+        assert_eq!(
+            a,
+            idempotency_request_hash_bulk_cas("Invoice", &[item("1")]),
+            "stable for identical batches"
+        );
+        assert_ne!(
+            a,
+            idempotency_request_hash_bulk_cas("Invoice", &[item("2")]),
+            "revision precondition is authoritative"
+        );
+        assert_ne!(
+            a,
+            idempotency_request_hash_bulk_cas("Payment", &[item("1")]),
+            "message type is authoritative"
+        );
+    }
+
+    #[test]
+    fn bulk_cas_field_precondition_evaluates_without_erroring() {
+        let row = serde_json::json!({"status": "active", "version": 3});
+        let resolver: std::collections::HashMap<String, String> =
+            std::collections::HashMap::new();
+        // No precondition → holds.
+        assert!(bulk_cas_field_precondition_holds(&row, None, &resolver));
+        let want = |field: &str, kind: prost_types::value::Kind| prost_types::Struct {
+            fields: std::collections::BTreeMap::from([(
+                field.to_string(),
+                prost_types::Value { kind: Some(kind) },
+            )]),
+        };
+        // Matching field → holds; mismatched field → conflict (false, NOT an error).
+        let ok = want(
+            "status",
+            prost_types::value::Kind::StringValue("active".into()),
+        );
+        assert!(bulk_cas_field_precondition_holds(&row, Some(&ok), &resolver));
+        let bad = want(
+            "status",
+            prost_types::value::Kind::StringValue("archived".into()),
+        );
+        assert!(!bulk_cas_field_precondition_holds(&row, Some(&bad), &resolver));
+        // int/float tolerance: an INTEGER column 3 matches an asserted 3.0.
+        let num = want("version", prost_types::value::Kind::NumberValue(3.0));
+        assert!(bulk_cas_field_precondition_holds(&row, Some(&num), &resolver));
+    }
+
+    #[test]
+    fn bulk_cas_response_replays_counts_or_fails_closed() {
+        let ok = serde_json::json!({
+            "matched": 5, "changed": 3, "conflicted": 2, "write_receipt_json": "{}"
+        });
+        let resp = bulk_cas_response_from_idempotency_json(&ok).expect("valid replay decodes");
+        assert_eq!((resp.matched, resp.changed, resp.conflicted), (5, 3, 2));
+        assert!(
+            resp.results.is_empty(),
+            "per-item results are not re-derived on replay"
+        );
+        // A legacy/empty row fails closed rather than replaying a bogus 0-count.
+        let err = bulk_cas_response_from_idempotency_json(&serde_json::json!({}))
+            .expect_err("missing counts must fail closed");
+        assert_eq!(err.code(), tonic::Code::Internal);
+    }
+
+    #[test]
+    fn revision_and_fencing_refusals_are_typed_failed_precondition() {
+        for status in [
+            row_revision_precondition_failed_status(),
+            fencing_lock_absent_status("orders"),
+            fencing_lease_lost_status("orders"),
+        ] {
+            assert_eq!(status.code(), tonic::Code::FailedPrecondition);
+            let detail = decode_error_detail(&status);
+            assert_eq!(detail.kind, ErrorKind::Validation as i32);
+            assert!(!detail.retryable);
+            assert_eq!(detail.field_violations.len(), 1);
+        }
+        // Non-disclosing: names only the contract, never a current revision/value.
+        let rev = row_revision_precondition_failed_status();
+        assert!(rev.message().contains("revision precondition failed"));
+        assert!(!rev.message().to_ascii_lowercase().contains("current revision is"));
     }
 
     #[test]
@@ -5655,6 +7159,88 @@ mod setup_data_consistency_tests {
         assert!(!sql.contains("NOT EXISTS (SELECT 1 FROM ins)"));
         // The scope guard is preserved for a genuine cross-scope key collision.
         assert!(sql.contains("WHERE idem.tenant_id = $2"));
+        // #6: the claim writes the request hash on the fresh INSERT ($6) and
+        // RETURNS it so a replay can be told apart from a same-key conflict.
+        assert!(sql.contains(
+            "(dedup_key, tenant_id, project_id, message_type, operation, request_hash, response_json)"
+        ));
+        assert!(sql.contains("VALUES ($1, $2, $3, $4, $5, $6, '{}'::jsonb)"));
+        assert!(sql.contains("RETURNING (xmax = 0) AS inserted, response_json, request_hash"));
+        // The DO UPDATE must NEVER overwrite the winner's stored request_hash.
+        assert!(!sql.contains("SET request_hash"));
+    }
+
+    #[test]
+    fn idempotency_request_hash_is_input_sensitive_and_canonical() {
+        // #6: the same key reused with DIFFERENT authoritative inputs must hash
+        // differently; the same inputs (regardless of JSON key order) must hash
+        // identically; and transport-only fields must not participate.
+        let record = serde_json::json!({"id": "r1", "amount": 10});
+        let record_reordered = serde_json::json!({"amount": 10, "id": "r1"});
+        let mut request = UpsertRequest {
+            message_type: "Payment".to_string(),
+            idempotency_key: "key-1".to_string(),
+            conflict_fields: vec!["id".to_string()],
+            ..Default::default()
+        };
+        let base = idempotency_request_hash_upsert(&request, &record);
+        // Key order does not matter (canonicalized).
+        assert_eq!(base, idempotency_request_hash_upsert(&request, &record_reordered));
+        // A different record rotates the hash.
+        assert_ne!(
+            base,
+            idempotency_request_hash_upsert(&request, &serde_json::json!({"id": "r1", "amount": 11}))
+        );
+        // A different conflict target rotates the hash.
+        request.conflict_fields = vec!["id".to_string(), "tenant".to_string()];
+        assert_ne!(base, idempotency_request_hash_upsert(&request, &record));
+        request.conflict_fields = vec!["id".to_string()];
+        // Operations are namespaced: an identical filter under delete vs update
+        // must not collide.
+        let filter = serde_json::json!({"id": {"$eq": "r1"}});
+        assert_ne!(
+            idempotency_request_hash_delete(&filter, None),
+            idempotency_request_hash_update(&filter, &serde_json::json!({}), &[], None)
+        );
+        // Update increments and changes participate.
+        let u_base = idempotency_request_hash_update(
+            &filter,
+            &serde_json::json!({"status": "paid"}),
+            &[("balance".to_string(), 5.0)],
+            None,
+        );
+        assert_ne!(
+            u_base,
+            idempotency_request_hash_update(
+                &filter,
+                &serde_json::json!({"status": "paid"}),
+                &[("balance".to_string(), 6.0)],
+                None,
+            )
+        );
+        assert_ne!(
+            u_base,
+            idempotency_request_hash_update(
+                &filter,
+                &serde_json::json!({"status": "void"}),
+                &[("balance".to_string(), 5.0)],
+                None,
+            )
+        );
+    }
+
+    #[test]
+    fn idempotency_request_mismatch_status_is_non_disclosing_precondition() {
+        let status = idempotency_request_mismatch_status();
+        assert_eq!(status.code(), tonic::Code::FailedPrecondition);
+        // Must name the contract violation, not leak any stored/foreign state.
+        assert!(status.message().contains("idempotency_key"));
+        assert!(status.message().contains("different request"));
+        let detail = decode_error_detail(&status);
+        assert_eq!(detail.kind, ErrorKind::Validation as i32);
+        assert!(!detail.retryable);
+        assert_eq!(detail.field_violations.len(), 1);
+        assert_eq!(detail.field_violations[0].field, "idempotency_key");
     }
 
     #[test]
@@ -8471,6 +10057,40 @@ fn qdrant_and_tenant_filter(
         return JsonValue::Null;
     }
     serde_json::json!({ "must": must })
+}
+
+/// F2: merge the CONTEXT tenant/project into the neutral qdrant-style filter as
+/// FLAT `must` equality clauses so the per-backend translators
+/// (`es_payload_filter_terms`/`weaviate_where_arg`/`pinecone_metadata_filter`)
+/// emit the `_tenant_id`/`_project_id` predicate that pairs with the write-side
+/// `stamp_generic_vector_point_payloads` stamp. Unlike `qdrant_and_tenant_filter`
+/// (which NESTS the caller filter for Qdrant's native nested-filter support), this
+/// keeps clauses flat because the generic translators only read top-level
+/// `{key, match}` clauses. No-context (both empty, no caller filter) → `{"must":[]}`
+/// → translators emit zero clauses = identical to today (no regression).
+#[cfg(feature = "qdrant")]
+fn scoped_generic_vector_filter(
+    mut user_filter: JsonValue,
+    tenant_id: &str,
+    project_id: &str,
+) -> Option<prost_types::Struct> {
+    if !user_filter.is_object() {
+        user_filter = JsonValue::Object(serde_json::Map::new());
+    }
+    if let Some(obj) = user_filter.as_object_mut() {
+        let must = obj
+            .entry("must".to_string())
+            .or_insert_with(|| JsonValue::Array(Vec::new()));
+        if let Some(arr) = must.as_array_mut() {
+            if !tenant_id.trim().is_empty() {
+                arr.push(serde_json::json!({"key": "_tenant_id", "match": {"value": tenant_id}}));
+            }
+            if !project_id.trim().is_empty() {
+                arr.push(serde_json::json!({"key": "_project_id", "match": {"value": project_id}}));
+            }
+        }
+    }
+    crate::runtime::executor_utils::json_to_struct(&user_filter)
 }
 
 #[cfg(all(test, feature = "qdrant"))]

@@ -93,123 +93,164 @@ namespace udb.core.Tenant.Services.V1 {
             "dERlbnlsaXN0ZWQSMwoVcHJpbmNpcGFsc19kZW55bGlzdGVkGAYgASgNUhRw",
             "cmluY2lwYWxzRGVueWxpc3RlZBIYCgdtZXNzYWdlGAcgASgJUgdtZXNzYWdl",
             "EjIKBWVycm9yGAggASgLMhwudWRiLmNvcmUuY29tbW9uLnYxLkFwaUVycm9y",
-            "UgVlcnJvcjodmrIZGQgBGgN1ZGIosOoBMANAAUoGdGVuYW50UAEyuyUKDVRl",
-            "bmFudFNlcnZpY2US5wQKDENyZWF0ZVRlbmFudBIwLnVkYi5jb3JlLnRlbmFu",
-            "dC5zZXJ2aWNlcy52MS5DcmVhdGVUZW5hbnRSZXF1ZXN0GjEudWRiLmNvcmUu",
-            "dGVuYW50LnNlcnZpY2VzLnYxLkNyZWF0ZVRlbmFudFJlc3BvbnNlIvEDyvMY",
-            "OggCGhh1ZGI6dGVuYW50OmNyZWF0ZS10ZW5hbnQgAUoCAQJqE3RlbmFudC5D",
-            "cmVhdGVUZW5hbnSQAQHS8xgGCAEQASAB2vMYNggBEg1jcmVhdGVfdGVuYW50",
-            "GgN1ZGIosOoBMANAAUoGdGVuYW50UAFaDGNyZWF0ZVRlbmFudOLzGLgBCgZ0",
-            "ZW5hbnQSEXVkYi9uYXRpdmUvdGVuYW50GhtVREJfTkFUSVZFX1NFUlZJQ0VT",
-            "X0VOQUJMRUQaD1VEQl9HUlBDX1RBUkdFVCIrdWRiLm5hdGl2ZS50ZW5hbnQu",
-            "Y3JlYXRlX3RlbmFudC5ib2lsZXJwbGF0ZSoNY3JlYXRlX3RlbmFudDIKdWRi",
-            "X3RlbmFudDoGdGVuYW50SgtVREJfQVBJX0tFWVoQdWRiIG5hdGl2ZSBzbW9r",
-            "ZerzGFAKE3RlbmFudC5DcmVhdGVUZW5hbnQSDXRlbmFudC5ldmVudHMaCXRl",
-            "bmFudF9pZCIIc3RhbmRhcmQqDWF0X2xlYXN0X29uY2UyBnN0YWJsZfLzGEAK",
-            "BnRlbmFudBoIcG9zdGdyZXMyG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxF",
-            "RDIPVURCX0dSUENfVEFSR0VU+PMYAoLT5JMCECILL3YxL3RlbmFudHM6ASoS",
-            "0gQKCUdldFRlbmFudBItLnVkYi5jb3JlLnRlbmFudC5zZXJ2aWNlcy52MS5H",
-            "ZXRUZW5hbnRSZXF1ZXN0Gi4udWRiLmNvcmUudGVuYW50LnNlcnZpY2VzLnYx",
-            "LkdldFRlbmFudFJlc3BvbnNlIuUDyvMYNAgCGhV1ZGI6dGVuYW50OmdldC10",
-            "ZW5hbnQgAUoCAQJqEHRlbmFudC5HZXRUZW5hbnSQAQHS8xgGCAEQASAB2vMY",
-            "MAgBEgpnZXRfdGVuYW50GgN1ZGIosOoBMANAAUoGdGVuYW50UAFaCWdldFRl",
-            "bmFudOLzGLIBCgZ0ZW5hbnQSEXVkYi9uYXRpdmUvdGVuYW50GhtVREJfTkFU",
-            "SVZFX1NFUlZJQ0VTX0VOQUJMRUQaD1VEQl9HUlBDX1RBUkdFVCIodWRiLm5h",
-            "dGl2ZS50ZW5hbnQuZ2V0X3RlbmFudC5ib2lsZXJwbGF0ZSoKZ2V0X3RlbmFu",
-            "dDIKdWRiX3RlbmFudDoGdGVuYW50SgtVREJfQVBJX0tFWVoQdWRiIG5hdGl2",
-            "ZSBzbW9rZerzGE0KEHRlbmFudC5HZXRUZW5hbnQSDXRlbmFudC5ldmVudHMa",
-            "CXRlbmFudF9pZCIIc3RhbmRhcmQqDWF0X2xlYXN0X29uY2UyBnN0YWJsZfLz",
-            "GEAKBnRlbmFudBoIcG9zdGdyZXMyG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5B",
-            "QkxFRDIPVURCX0dSUENfVEFSR0VU+PMYAYLT5JMCGRIXL3YxL3RlbmFudHMv",
-            "e3RlbmFudF9pZH0S2gQKC0xpc3RUZW5hbnRzEi8udWRiLmNvcmUudGVuYW50",
-            "LnNlcnZpY2VzLnYxLkxpc3RUZW5hbnRzUmVxdWVzdBowLnVkYi5jb3JlLnRl",
-            "bmFudC5zZXJ2aWNlcy52MS5MaXN0VGVuYW50c1Jlc3BvbnNlIucDyvMYOAgC",
-            "Ghd1ZGI6dGVuYW50Omxpc3QtdGVuYW50cyABSgIBAmoSdGVuYW50Lkxpc3RU",
-            "ZW5hbnRzkAEB0vMYBggBEAEgAdrzGDQIARIMbGlzdF90ZW5hbnRzGgN1ZGIo",
-            "sOoBMANAAUoGdGVuYW50UAFaC2xpc3RUZW5hbnRz4vMYtgEKBnRlbmFudBIR",
-            "dWRiL25hdGl2ZS90ZW5hbnQaG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxF",
-            "RBoPVURCX0dSUENfVEFSR0VUIip1ZGIubmF0aXZlLnRlbmFudC5saXN0X3Rl",
-            "bmFudHMuYm9pbGVycGxhdGUqDGxpc3RfdGVuYW50czIKdWRiX3RlbmFudDoG",
-            "dGVuYW50SgtVREJfQVBJX0tFWVoQdWRiIG5hdGl2ZSBzbW9rZerzGE8KEnRl",
-            "bmFudC5MaXN0VGVuYW50cxINdGVuYW50LmV2ZW50cxoJdGVuYW50X2lkIghz",
-            "dGFuZGFyZCoNYXRfbGVhc3Rfb25jZTIGc3RhYmxl8vMYQAoGdGVuYW50Gghw",
-            "b3N0Z3JlczIbVURCX05BVElWRV9TRVJWSUNFU19FTkFCTEVEMg9VREJfR1JQ",
-            "Q19UQVJHRVT48xgBgtPkkwINEgsvdjEvdGVuYW50cxLzBAoMVXBkYXRlVGVu",
-            "YW50EjAudWRiLmNvcmUudGVuYW50LnNlcnZpY2VzLnYxLlVwZGF0ZVRlbmFu",
-            "dFJlcXVlc3QaMS51ZGIuY29yZS50ZW5hbnQuc2VydmljZXMudjEuVXBkYXRl",
-            "VGVuYW50UmVzcG9uc2Ui/QPK8xg6CAIaGHVkYjp0ZW5hbnQ6dXBkYXRlLXRl",
-            "bmFudCABSgIBAmoTdGVuYW50LlVwZGF0ZVRlbmFudJABAdLzGAYIARABIAHa",
-            "8xg2CAESDXVwZGF0ZV90ZW5hbnQaA3VkYiiw6gEwA0ABSgZ0ZW5hbnRQAVoM",
-            "dXBkYXRlVGVuYW504vMYuAEKBnRlbmFudBIRdWRiL25hdGl2ZS90ZW5hbnQa",
-            "G1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRBoPVURCX0dSUENfVEFSR0VU",
-            "Iit1ZGIubmF0aXZlLnRlbmFudC51cGRhdGVfdGVuYW50LmJvaWxlcnBsYXRl",
-            "Kg11cGRhdGVfdGVuYW50Mgp1ZGJfdGVuYW50OgZ0ZW5hbnRKC1VEQl9BUElf",
-            "S0VZWhB1ZGIgbmF0aXZlIHNtb2tl6vMYUAoTdGVuYW50LlVwZGF0ZVRlbmFu",
-            "dBINdGVuYW50LmV2ZW50cxoJdGVuYW50X2lkIghzdGFuZGFyZCoNYXRfbGVh",
-            "c3Rfb25jZTIGc3RhYmxl8vMYQAoGdGVuYW50Gghwb3N0Z3JlczIbVURCX05B",
-            "VElWRV9TRVJWSUNFU19FTkFCTEVEMg9VREJfR1JQQ19UQVJHRVT48xgCgtPk",
-            "kwIcMhcvdjEvdGVuYW50cy97dGVuYW50X2lkfToBKhKZBQoPR2V0VGVuYW50",
-            "Q29uZmlnEjMudWRiLmNvcmUudGVuYW50LnNlcnZpY2VzLnYxLkdldFRlbmFu",
-            "dENvbmZpZ1JlcXVlc3QaNC51ZGIuY29yZS50ZW5hbnQuc2VydmljZXMudjEu",
-            "R2V0VGVuYW50Q29uZmlnUmVzcG9uc2UimgTK8xhBCAIaHHVkYjp0ZW5hbnQ6",
-            "Z2V0LXRlbmFudC1jb25maWcgAUoCAQJqFnRlbmFudC5HZXRUZW5hbnRDb25m",
-            "aWeQAQHS8xgGCAEQASAB2vMYPQgBEhFnZXRfdGVuYW50X2NvbmZpZxoDdWRi",
-            "KLDqATADQAFKBnRlbmFudFABWg9nZXRUZW5hbnRDb25maWfi8xjAAQoGdGVu",
-            "YW50EhF1ZGIvbmF0aXZlL3RlbmFudBobVURCX05BVElWRV9TRVJWSUNFU19F",
-            "TkFCTEVEGg9VREJfR1JQQ19UQVJHRVQiL3VkYi5uYXRpdmUudGVuYW50Lmdl",
-            "dF90ZW5hbnRfY29uZmlnLmJvaWxlcnBsYXRlKhFnZXRfdGVuYW50X2NvbmZp",
-            "ZzIKdWRiX3RlbmFudDoGdGVuYW50SgtVREJfQVBJX0tFWVoQdWRiIG5hdGl2",
-            "ZSBzbW9rZerzGFMKFnRlbmFudC5HZXRUZW5hbnRDb25maWcSDXRlbmFudC5l",
-            "dmVudHMaCXRlbmFudF9pZCIIc3RhbmRhcmQqDWF0X2xlYXN0X29uY2UyBnN0",
-            "YWJsZfLzGEAKBnRlbmFudBoIcG9zdGdyZXMyG1VEQl9OQVRJVkVfU0VSVklD",
-            "RVNfRU5BQkxFRDIPVURCX0dSUENfVEFSR0VU+PMYAYLT5JMCIBIeL3YxL3Rl",
-            "bmFudHMve3RlbmFudF9pZH0vY29uZmlnEroFChJVcGRhdGVUZW5hbnRDb25m",
-            "aWcSNi51ZGIuY29yZS50ZW5hbnQuc2VydmljZXMudjEuVXBkYXRlVGVuYW50",
-            "Q29uZmlnUmVxdWVzdBo3LnVkYi5jb3JlLnRlbmFudC5zZXJ2aWNlcy52MS5V",
-            "cGRhdGVUZW5hbnRDb25maWdSZXNwb25zZSKyBMrzGEcIAhofdWRiOnRlbmFu",
-            "dDp1cGRhdGUtdGVuYW50LWNvbmZpZyABSgIBAmoZdGVuYW50LlVwZGF0ZVRl",
-            "bmFudENvbmZpZ5ABAdLzGAYIARABIAHa8xhDCAESFHVwZGF0ZV90ZW5hbnRf",
-            "Y29uZmlnGgN1ZGIosOoBMANAAUoGdGVuYW50UAFaEnVwZGF0ZVRlbmFudENv",
-            "bmZpZ+LzGMYBCgZ0ZW5hbnQSEXVkYi9uYXRpdmUvdGVuYW50GhtVREJfTkFU",
-            "SVZFX1NFUlZJQ0VTX0VOQUJMRUQaD1VEQl9HUlBDX1RBUkdFVCIydWRiLm5h",
-            "dGl2ZS50ZW5hbnQudXBkYXRlX3RlbmFudF9jb25maWcuYm9pbGVycGxhdGUq",
-            "FHVwZGF0ZV90ZW5hbnRfY29uZmlnMgp1ZGJfdGVuYW50OgZ0ZW5hbnRKC1VE",
-            "Ql9BUElfS0VZWhB1ZGIgbmF0aXZlIHNtb2tl6vMYVgoZdGVuYW50LlVwZGF0",
-            "ZVRlbmFudENvbmZpZxINdGVuYW50LmV2ZW50cxoJdGVuYW50X2lkIghzdGFu",
+            "UgVlcnJvcjodmrIZGQgBGgN1ZGIosOoBMANAAUoGdGVuYW50UAEi5wIKF0Fk",
+            "bWluUHVyZ2VUZW5hbnRSZXF1ZXN0EicKD2RlbGVnYXRlZF9hY3RvchgBIAEo",
+            "CVIOZGVsZWdhdGVkQWN0b3ISKAoQdGFyZ2V0X3RlbmFudF9pZBgCIAEoCVIO",
+            "dGFyZ2V0VGVuYW50SWQSPwoEbW9kZRgDIAEoDjIrLnVkYi5jb3JlLnRlbmFu",
+            "dC5zZXJ2aWNlcy52MS5BZG1pblB1cmdlTW9kZVIEbW9kZRIWCgZyZWFzb24Y",
+            "BCABKAlSBnJlYXNvbhIpChBleHBlY3RlZF92ZXJzaW9uGAUgASgDUg9leHBl",
+            "Y3RlZFZlcnNpb24SLQoSY29uZmlybWF0aW9uX3Rva2VuGAYgASgJUhFjb25m",
+            "aXJtYXRpb25Ub2tlbhInCg9pZGVtcG90ZW5jeV9rZXkYByABKAlSDmlkZW1w",
+            "b3RlbmN5S2V5Oh2ashkZCAEaA3VkYiiw6gEwA0ABSgZ0ZW5hbnRQASKaBQoY",
+            "QWRtaW5QdXJnZVRlbmFudFJlc3BvbnNlEigKEHRhcmdldF90ZW5hbnRfaWQY",
+            "ASABKAlSDnRhcmdldFRlbmFudElkEj8KBG1vZGUYAiABKA4yKy51ZGIuY29y",
+            "ZS50ZW5hbnQuc2VydmljZXMudjEuQWRtaW5QdXJnZU1vZGVSBG1vZGUSRQoG",
+            "cHVyZ2VkGAMgAygLMi0udWRiLmNvcmUudGVuYW50LnNlcnZpY2VzLnYxLlB1",
+            "cmdlZFRhYmxlQ291bnRSBnB1cmdlZBJLCghleGNsdWRlZBgEIAMoCzIvLnVk",
+            "Yi5jb3JlLnRlbmFudC5zZXJ2aWNlcy52MS5QdXJnZUV4Y2x1ZGVkVGFibGVS",
+            "CGV4Y2x1ZGVkEiMKDXRvdGFsX2RlbGV0ZWQYBSABKARSDHRvdGFsRGVsZXRl",
+            "ZBIrChF0ZW5hbnRfZGVueWxpc3RlZBgGIAEoCFIQdGVuYW50RGVueWxpc3Rl",
+            "ZBIzChVwcmluY2lwYWxzX2RlbnlsaXN0ZWQYByABKA1SFHByaW5jaXBhbHNE",
+            "ZW55bGlzdGVkEikKEHNvZnRfZGVhY3RpdmF0ZWQYCCABKAhSD3NvZnREZWFj",
+            "dGl2YXRlZBIlCg5wdXJnZWRfdmVyc2lvbhgJIAEoA1INcHVyZ2VkVmVyc2lv",
+            "bhIaCghyZXBsYXllZBgKIAEoCFIIcmVwbGF5ZWQSHQoKb3V0Y29tZV9pZBgL",
+            "IAEoCVIJb3V0Y29tZUlkEhgKB21lc3NhZ2UYDCABKAlSB21lc3NhZ2USMgoF",
+            "ZXJyb3IYDSABKAsyHC51ZGIuY29yZS5jb21tb24udjEuQXBpRXJyb3JSBWVy",
+            "cm9yOh2ashkZCAEaA3VkYiiw6gEwA0ABSgZ0ZW5hbnRQASpoCg5BZG1pblB1",
+            "cmdlTW9kZRIgChxBRE1JTl9QVVJHRV9NT0RFX1VOU1BFQ0lGSUVEEAASGQoV",
+            "QURNSU5fUFVSR0VfTU9ERV9IQVJEEAESGQoVQURNSU5fUFVSR0VfTU9ERV9T",
+            "T0ZUEAIyhCsKDVRlbmFudFNlcnZpY2US5wQKDENyZWF0ZVRlbmFudBIwLnVk",
+            "Yi5jb3JlLnRlbmFudC5zZXJ2aWNlcy52MS5DcmVhdGVUZW5hbnRSZXF1ZXN0",
+            "GjEudWRiLmNvcmUudGVuYW50LnNlcnZpY2VzLnYxLkNyZWF0ZVRlbmFudFJl",
+            "c3BvbnNlIvEDyvMYOggCGhh1ZGI6dGVuYW50OmNyZWF0ZS10ZW5hbnQgAUoC",
+            "AQJqE3RlbmFudC5DcmVhdGVUZW5hbnSQAQHS8xgGCAEQASAB2vMYNggBEg1j",
+            "cmVhdGVfdGVuYW50GgN1ZGIosOoBMANAAUoGdGVuYW50UAFaDGNyZWF0ZVRl",
+            "bmFudOLzGLgBCgZ0ZW5hbnQSEXVkYi9uYXRpdmUvdGVuYW50GhtVREJfTkFU",
+            "SVZFX1NFUlZJQ0VTX0VOQUJMRUQaD1VEQl9HUlBDX1RBUkdFVCIrdWRiLm5h",
+            "dGl2ZS50ZW5hbnQuY3JlYXRlX3RlbmFudC5ib2lsZXJwbGF0ZSoNY3JlYXRl",
+            "X3RlbmFudDIKdWRiX3RlbmFudDoGdGVuYW50SgtVREJfQVBJX0tFWVoQdWRi",
+            "IG5hdGl2ZSBzbW9rZerzGFAKE3RlbmFudC5DcmVhdGVUZW5hbnQSDXRlbmFu",
+            "dC5ldmVudHMaCXRlbmFudF9pZCIIc3RhbmRhcmQqDWF0X2xlYXN0X29uY2Uy",
+            "BnN0YWJsZfLzGEAKBnRlbmFudBoIcG9zdGdyZXMyG1VEQl9OQVRJVkVfU0VS",
+            "VklDRVNfRU5BQkxFRDIPVURCX0dSUENfVEFSR0VU+PMYAoLT5JMCECILL3Yx",
+            "L3RlbmFudHM6ASoS0gQKCUdldFRlbmFudBItLnVkYi5jb3JlLnRlbmFudC5z",
+            "ZXJ2aWNlcy52MS5HZXRUZW5hbnRSZXF1ZXN0Gi4udWRiLmNvcmUudGVuYW50",
+            "LnNlcnZpY2VzLnYxLkdldFRlbmFudFJlc3BvbnNlIuUDyvMYNAgCGhV1ZGI6",
+            "dGVuYW50OmdldC10ZW5hbnQgAUoCAQJqEHRlbmFudC5HZXRUZW5hbnSQAQHS",
+            "8xgGCAEQASAB2vMYMAgBEgpnZXRfdGVuYW50GgN1ZGIosOoBMANAAUoGdGVu",
+            "YW50UAFaCWdldFRlbmFudOLzGLIBCgZ0ZW5hbnQSEXVkYi9uYXRpdmUvdGVu",
+            "YW50GhtVREJfTkFUSVZFX1NFUlZJQ0VTX0VOQUJMRUQaD1VEQl9HUlBDX1RB",
+            "UkdFVCIodWRiLm5hdGl2ZS50ZW5hbnQuZ2V0X3RlbmFudC5ib2lsZXJwbGF0",
+            "ZSoKZ2V0X3RlbmFudDIKdWRiX3RlbmFudDoGdGVuYW50SgtVREJfQVBJX0tF",
+            "WVoQdWRiIG5hdGl2ZSBzbW9rZerzGE0KEHRlbmFudC5HZXRUZW5hbnQSDXRl",
+            "bmFudC5ldmVudHMaCXRlbmFudF9pZCIIc3RhbmRhcmQqDWF0X2xlYXN0X29u",
+            "Y2UyBnN0YWJsZfLzGEAKBnRlbmFudBoIcG9zdGdyZXMyG1VEQl9OQVRJVkVf",
+            "U0VSVklDRVNfRU5BQkxFRDIPVURCX0dSUENfVEFSR0VU+PMYAYLT5JMCGRIX",
+            "L3YxL3RlbmFudHMve3RlbmFudF9pZH0S2gQKC0xpc3RUZW5hbnRzEi8udWRi",
+            "LmNvcmUudGVuYW50LnNlcnZpY2VzLnYxLkxpc3RUZW5hbnRzUmVxdWVzdBow",
+            "LnVkYi5jb3JlLnRlbmFudC5zZXJ2aWNlcy52MS5MaXN0VGVuYW50c1Jlc3Bv",
+            "bnNlIucDyvMYOAgCGhd1ZGI6dGVuYW50Omxpc3QtdGVuYW50cyABSgIBAmoS",
+            "dGVuYW50Lkxpc3RUZW5hbnRzkAEB0vMYBggBEAEgAdrzGDQIARIMbGlzdF90",
+            "ZW5hbnRzGgN1ZGIosOoBMANAAUoGdGVuYW50UAFaC2xpc3RUZW5hbnRz4vMY",
+            "tgEKBnRlbmFudBIRdWRiL25hdGl2ZS90ZW5hbnQaG1VEQl9OQVRJVkVfU0VS",
+            "VklDRVNfRU5BQkxFRBoPVURCX0dSUENfVEFSR0VUIip1ZGIubmF0aXZlLnRl",
+            "bmFudC5saXN0X3RlbmFudHMuYm9pbGVycGxhdGUqDGxpc3RfdGVuYW50czIK",
+            "dWRiX3RlbmFudDoGdGVuYW50SgtVREJfQVBJX0tFWVoQdWRiIG5hdGl2ZSBz",
+            "bW9rZerzGE8KEnRlbmFudC5MaXN0VGVuYW50cxINdGVuYW50LmV2ZW50cxoJ",
+            "dGVuYW50X2lkIghzdGFuZGFyZCoNYXRfbGVhc3Rfb25jZTIGc3RhYmxl8vMY",
+            "QAoGdGVuYW50Gghwb3N0Z3JlczIbVURCX05BVElWRV9TRVJWSUNFU19FTkFC",
+            "TEVEMg9VREJfR1JQQ19UQVJHRVT48xgBgtPkkwINEgsvdjEvdGVuYW50cxLz",
+            "BAoMVXBkYXRlVGVuYW50EjAudWRiLmNvcmUudGVuYW50LnNlcnZpY2VzLnYx",
+            "LlVwZGF0ZVRlbmFudFJlcXVlc3QaMS51ZGIuY29yZS50ZW5hbnQuc2Vydmlj",
+            "ZXMudjEuVXBkYXRlVGVuYW50UmVzcG9uc2Ui/QPK8xg6CAIaGHVkYjp0ZW5h",
+            "bnQ6dXBkYXRlLXRlbmFudCABSgIBAmoTdGVuYW50LlVwZGF0ZVRlbmFudJAB",
+            "AdLzGAYIARABIAHa8xg2CAESDXVwZGF0ZV90ZW5hbnQaA3VkYiiw6gEwA0AB",
+            "SgZ0ZW5hbnRQAVoMdXBkYXRlVGVuYW504vMYuAEKBnRlbmFudBIRdWRiL25h",
+            "dGl2ZS90ZW5hbnQaG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRBoPVURC",
+            "X0dSUENfVEFSR0VUIit1ZGIubmF0aXZlLnRlbmFudC51cGRhdGVfdGVuYW50",
+            "LmJvaWxlcnBsYXRlKg11cGRhdGVfdGVuYW50Mgp1ZGJfdGVuYW50OgZ0ZW5h",
+            "bnRKC1VEQl9BUElfS0VZWhB1ZGIgbmF0aXZlIHNtb2tl6vMYUAoTdGVuYW50",
+            "LlVwZGF0ZVRlbmFudBINdGVuYW50LmV2ZW50cxoJdGVuYW50X2lkIghzdGFu",
             "ZGFyZCoNYXRfbGVhc3Rfb25jZTIGc3RhYmxl8vMYQAoGdGVuYW50Gghwb3N0",
             "Z3JlczIbVURCX05BVElWRV9TRVJWSUNFU19FTkFCTEVEMg9VREJfR1JQQ19U",
-            "QVJHRVT48xgCgtPkkwIjGh4vdjEvdGVuYW50cy97dGVuYW50X2lkfS9jb25m",
-            "aWc6ASoS7wQKC1B1cmdlVGVuYW50Ei8udWRiLmNvcmUudGVuYW50LnNlcnZp",
-            "Y2VzLnYxLlB1cmdlVGVuYW50UmVxdWVzdBowLnVkYi5jb3JlLnRlbmFudC5z",
-            "ZXJ2aWNlcy52MS5QdXJnZVRlbmFudFJlc3BvbnNlIvwDyvMYOAgCGhd1ZGI6",
-            "dGVuYW50OnB1cmdlLXRlbmFudCABSgIBAmoSdGVuYW50LlB1cmdlVGVuYW50",
-            "kAEB0vMYBggBEAEgAdrzGDQIARIMcHVyZ2VfdGVuYW50GgN1ZGIosOoBMANA",
-            "AUoGdGVuYW50UAFaC3B1cmdlVGVuYW504vMYtgEKBnRlbmFudBIRdWRiL25h",
-            "dGl2ZS90ZW5hbnQaG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5BQkxFRBoPVURC",
-            "X0dSUENfVEFSR0VUIip1ZGIubmF0aXZlLnRlbmFudC5wdXJnZV90ZW5hbnQu",
-            "Ym9pbGVycGxhdGUqDHB1cmdlX3RlbmFudDIKdWRiX3RlbmFudDoGdGVuYW50",
-            "SgtVREJfQVBJX0tFWVoQdWRiIG5hdGl2ZSBzbW9rZerzGE8KEnRlbmFudC5Q",
-            "dXJnZVRlbmFudBINdGVuYW50LmV2ZW50cxoJdGVuYW50X2lkIghzdGFuZGFy",
-            "ZCoNYXRfbGVhc3Rfb25jZTIGc3RhYmxl8vMYQAoGdGVuYW50Gghwb3N0Z3Jl",
-            "czIbVURCX05BVElWRV9TRVJWSUNFU19FTkFCTEVEMg9VREJfR1JQQ19UQVJH",
-            "RVT48xgDgtPkkwIiIh0vdjEvdGVuYW50cy97dGVuYW50X2lkfTpwdXJnZToB",
-            "KhrMAsrwGVkKBnRlbmFudBIGdGVuYW50GgZ0ZW5hbnQiB1RlbmFudHMqBnRl",
-            "bmFudDABOAFoAXoGdGVuYW50ggEGdGVuYW50igEGdGVuYW50kgENbmF0aXZl",
-            "LnRlbmFudNLwGRkIARoDdWRiKLDqATADQAFKBnRlbmFudFAB2vAZiQEKBnRl",
+            "QVJHRVT48xgCgtPkkwIcMhcvdjEvdGVuYW50cy97dGVuYW50X2lkfToBKhKZ",
+            "BQoPR2V0VGVuYW50Q29uZmlnEjMudWRiLmNvcmUudGVuYW50LnNlcnZpY2Vz",
+            "LnYxLkdldFRlbmFudENvbmZpZ1JlcXVlc3QaNC51ZGIuY29yZS50ZW5hbnQu",
+            "c2VydmljZXMudjEuR2V0VGVuYW50Q29uZmlnUmVzcG9uc2UimgTK8xhBCAIa",
+            "HHVkYjp0ZW5hbnQ6Z2V0LXRlbmFudC1jb25maWcgAUoCAQJqFnRlbmFudC5H",
+            "ZXRUZW5hbnRDb25maWeQAQHS8xgGCAEQASAB2vMYPQgBEhFnZXRfdGVuYW50",
+            "X2NvbmZpZxoDdWRiKLDqATADQAFKBnRlbmFudFABWg9nZXRUZW5hbnRDb25m",
+            "aWfi8xjAAQoGdGVuYW50EhF1ZGIvbmF0aXZlL3RlbmFudBobVURCX05BVElW",
+            "RV9TRVJWSUNFU19FTkFCTEVEGg9VREJfR1JQQ19UQVJHRVQiL3VkYi5uYXRp",
+            "dmUudGVuYW50LmdldF90ZW5hbnRfY29uZmlnLmJvaWxlcnBsYXRlKhFnZXRf",
+            "dGVuYW50X2NvbmZpZzIKdWRiX3RlbmFudDoGdGVuYW50SgtVREJfQVBJX0tF",
+            "WVoQdWRiIG5hdGl2ZSBzbW9rZerzGFMKFnRlbmFudC5HZXRUZW5hbnRDb25m",
+            "aWcSDXRlbmFudC5ldmVudHMaCXRlbmFudF9pZCIIc3RhbmRhcmQqDWF0X2xl",
+            "YXN0X29uY2UyBnN0YWJsZfLzGEAKBnRlbmFudBoIcG9zdGdyZXMyG1VEQl9O",
+            "QVRJVkVfU0VSVklDRVNfRU5BQkxFRDIPVURCX0dSUENfVEFSR0VU+PMYAYLT",
+            "5JMCIBIeL3YxL3RlbmFudHMve3RlbmFudF9pZH0vY29uZmlnEroFChJVcGRh",
+            "dGVUZW5hbnRDb25maWcSNi51ZGIuY29yZS50ZW5hbnQuc2VydmljZXMudjEu",
+            "VXBkYXRlVGVuYW50Q29uZmlnUmVxdWVzdBo3LnVkYi5jb3JlLnRlbmFudC5z",
+            "ZXJ2aWNlcy52MS5VcGRhdGVUZW5hbnRDb25maWdSZXNwb25zZSKyBMrzGEcI",
+            "AhofdWRiOnRlbmFudDp1cGRhdGUtdGVuYW50LWNvbmZpZyABSgIBAmoZdGVu",
+            "YW50LlVwZGF0ZVRlbmFudENvbmZpZ5ABAdLzGAYIARABIAHa8xhDCAESFHVw",
+            "ZGF0ZV90ZW5hbnRfY29uZmlnGgN1ZGIosOoBMANAAUoGdGVuYW50UAFaEnVw",
+            "ZGF0ZVRlbmFudENvbmZpZ+LzGMYBCgZ0ZW5hbnQSEXVkYi9uYXRpdmUvdGVu",
+            "YW50GhtVREJfTkFUSVZFX1NFUlZJQ0VTX0VOQUJMRUQaD1VEQl9HUlBDX1RB",
+            "UkdFVCIydWRiLm5hdGl2ZS50ZW5hbnQudXBkYXRlX3RlbmFudF9jb25maWcu",
+            "Ym9pbGVycGxhdGUqFHVwZGF0ZV90ZW5hbnRfY29uZmlnMgp1ZGJfdGVuYW50",
+            "OgZ0ZW5hbnRKC1VEQl9BUElfS0VZWhB1ZGIgbmF0aXZlIHNtb2tl6vMYVgoZ",
+            "dGVuYW50LlVwZGF0ZVRlbmFudENvbmZpZxINdGVuYW50LmV2ZW50cxoJdGVu",
+            "YW50X2lkIghzdGFuZGFyZCoNYXRfbGVhc3Rfb25jZTIGc3RhYmxl8vMYQAoG",
+            "dGVuYW50Gghwb3N0Z3JlczIbVURCX05BVElWRV9TRVJWSUNFU19FTkFCTEVE",
+            "Mg9VREJfR1JQQ19UQVJHRVT48xgCgtPkkwIjGh4vdjEvdGVuYW50cy97dGVu",
+            "YW50X2lkfS9jb25maWc6ASoS7wQKC1B1cmdlVGVuYW50Ei8udWRiLmNvcmUu",
+            "dGVuYW50LnNlcnZpY2VzLnYxLlB1cmdlVGVuYW50UmVxdWVzdBowLnVkYi5j",
+            "b3JlLnRlbmFudC5zZXJ2aWNlcy52MS5QdXJnZVRlbmFudFJlc3BvbnNlIvwD",
+            "yvMYOAgCGhd1ZGI6dGVuYW50OnB1cmdlLXRlbmFudCABSgIBAmoSdGVuYW50",
+            "LlB1cmdlVGVuYW50kAEB0vMYBggBEAEgAdrzGDQIARIMcHVyZ2VfdGVuYW50",
+            "GgN1ZGIosOoBMANAAUoGdGVuYW50UAFaC3B1cmdlVGVuYW504vMYtgEKBnRl",
             "bmFudBIRdWRiL25hdGl2ZS90ZW5hbnQaG1VEQl9OQVRJVkVfU0VSVklDRVNf",
-            "RU5BQkxFRBoPVURCX0dSUENfVEFSR0VUIhh1ZGIubmF0aXZlLnRlbmFudC5j",
-            "b25maWc6BnRlbmFudEoLVURCX0FQSV9LRVlaD3VkYiBuYXRpdmUgbGludOLw",
-            "GUAKBnRlbmFudBoIcG9zdGdyZXMyG1VEQl9OQVRJVkVfU0VSVklDRVNfRU5B",
-            "QkxFRDIPVURCX0dSUENfVEFSR0VUQpECCh9jb20udWRiLmNvcmUudGVuYW50",
-            "LnNlcnZpY2VzLnYxQhJUZW5hbnRTZXJ2aWNlUHJvdG9QAVpJZ2l0aHViLmNv",
-            "bS9mYWhhcmEwMi91ZGIvc2RrL2dvL2dlbi91ZGIvY29yZS90ZW5hbnQvc2Vy",
-            "dmljZXMvdjE7c2VydmljZXN2MaICBFVDVFOqAht1ZGIuY29yZS5UZW5hbnQu",
-            "U2VydmljZXMuVjHKAhtVZGJcQ29yZVxUZW5hbnRcU2VydmljZXNcVjHiAidV",
-            "ZGJcR1BCTWV0YWRhdGFcQ29yZVxUZW5hbnRcU2VydmljZXNcVjHqAh9VZGI6",
-            "OkNvcmU6OlRlbmFudDo6U2VydmljZXM6OlYxYgZwcm90bzM="));
+            "RU5BQkxFRBoPVURCX0dSUENfVEFSR0VUIip1ZGIubmF0aXZlLnRlbmFudC5w",
+            "dXJnZV90ZW5hbnQuYm9pbGVycGxhdGUqDHB1cmdlX3RlbmFudDIKdWRiX3Rl",
+            "bmFudDoGdGVuYW50SgtVREJfQVBJX0tFWVoQdWRiIG5hdGl2ZSBzbW9rZerz",
+            "GE8KEnRlbmFudC5QdXJnZVRlbmFudBINdGVuYW50LmV2ZW50cxoJdGVuYW50",
+            "X2lkIghzdGFuZGFyZCoNYXRfbGVhc3Rfb25jZTIGc3RhYmxl8vMYQAoGdGVu",
+            "YW50Gghwb3N0Z3JlczIbVURCX05BVElWRV9TRVJWSUNFU19FTkFCTEVEMg9V",
+            "REJfR1JQQ19UQVJHRVT48xgDgtPkkwIiIh0vdjEvdGVuYW50cy97dGVuYW50",
+            "X2lkfTpwdXJnZToBKhLGBQoQQWRtaW5QdXJnZVRlbmFudBI0LnVkYi5jb3Jl",
+            "LnRlbmFudC5zZXJ2aWNlcy52MS5BZG1pblB1cmdlVGVuYW50UmVxdWVzdBo1",
+            "LnVkYi5jb3JlLnRlbmFudC5zZXJ2aWNlcy52MS5BZG1pblB1cmdlVGVuYW50",
+            "UmVzcG9uc2UixATK8xhRCAIaFnVkYjp0ZW5hbnQ6YWRtaW4tcHVyZ2UgAUoC",
+            "AQJqF3RlbmFudC5BZG1pblB1cmdlVGVuYW50ehB0YXJnZXRfdGVuYW50X2lk",
+            "iAEBkAEB0vMYBggBEAEgAdrzGD8IARISYWRtaW5fcHVyZ2VfdGVuYW50GgN1",
+            "ZGIosOoBMANAAUoGdGVuYW50UAFaEGFkbWluUHVyZ2VUZW5hbnTi8xjCAQoG",
+            "dGVuYW50EhF1ZGIvbmF0aXZlL3RlbmFudBobVURCX05BVElWRV9TRVJWSUNF",
+            "U19FTkFCTEVEGg9VREJfR1JQQ19UQVJHRVQiMHVkYi5uYXRpdmUudGVuYW50",
+            "LmFkbWluX3B1cmdlX3RlbmFudC5ib2lsZXJwbGF0ZSoSYWRtaW5fcHVyZ2Vf",
+            "dGVuYW50Mgp1ZGJfdGVuYW50OgZ0ZW5hbnRKC1VEQl9BUElfS0VZWhB1ZGIg",
+            "bmF0aXZlIHNtb2tl6vMYWwoXdGVuYW50LkFkbWluUHVyZ2VUZW5hbnQSDXRl",
+            "bmFudC5ldmVudHMaEHRhcmdldF90ZW5hbnRfaWQiCHN0YW5kYXJkKg1hdF9s",
+            "ZWFzdF9vbmNlMgZzdGFibGXy8xhACgZ0ZW5hbnQaCHBvc3RncmVzMhtVREJf",
+            "TkFUSVZFX1NFUlZJQ0VTX0VOQUJMRUQyD1VEQl9HUlBDX1RBUkdFVPjzGAOC",
+            "0+STAi4iKS92MS90ZW5hbnRzL3t0YXJnZXRfdGVuYW50X2lkfTphZG1pblB1",
+            "cmdlOgEqGswCyvAZWQoGdGVuYW50EgZ0ZW5hbnQaBnRlbmFudCIHVGVuYW50",
+            "cyoGdGVuYW50MAE4AWgBegZ0ZW5hbnSCAQZ0ZW5hbnSKAQZ0ZW5hbnSSAQ1u",
+            "YXRpdmUudGVuYW500vAZGQgBGgN1ZGIosOoBMANAAUoGdGVuYW50UAHa8BmJ",
+            "AQoGdGVuYW50EhF1ZGIvbmF0aXZlL3RlbmFudBobVURCX05BVElWRV9TRVJW",
+            "SUNFU19FTkFCTEVEGg9VREJfR1JQQ19UQVJHRVQiGHVkYi5uYXRpdmUudGVu",
+            "YW50LmNvbmZpZzoGdGVuYW50SgtVREJfQVBJX0tFWVoPdWRiIG5hdGl2ZSBs",
+            "aW504vAZQAoGdGVuYW50Gghwb3N0Z3JlczIbVURCX05BVElWRV9TRVJWSUNF",
+            "U19FTkFCTEVEMg9VREJfR1JQQ19UQVJHRVRCkQIKH2NvbS51ZGIuY29yZS50",
+            "ZW5hbnQuc2VydmljZXMudjFCElRlbmFudFNlcnZpY2VQcm90b1ABWklnaXRo",
+            "dWIuY29tL2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9jb3JlL3RlbmFu",
+            "dC9zZXJ2aWNlcy92MTtzZXJ2aWNlc3YxogIEVUNUU6oCG3VkYi5jb3JlLlRl",
+            "bmFudC5TZXJ2aWNlcy5WMcoCG1VkYlxDb3JlXFRlbmFudFxTZXJ2aWNlc1xW",
+            "MeICJ1VkYlxHUEJNZXRhZGF0YVxDb3JlXFRlbmFudFxTZXJ2aWNlc1xWMeoC",
+            "H1VkYjo6Q29yZTo6VGVuYW50OjpTZXJ2aWNlczo6VjFiBnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Api.AnnotationsReflection.Descriptor, global::Google.Protobuf.WellKnownTypes.FieldMaskReflection.Descriptor, global::udb.core.Common.V1.DtoReflection.Descriptor, global::udb.core.Common.V1.SecurityReflection.Descriptor, global::udb.core.Tenant.Entity.V1.TenantReflection.Descriptor, global::udb.core.Tenant.Entity.V1.TenantConfigReflection.Descriptor, },
-          new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
+          new pbr::GeneratedClrTypeInfo(new[] {typeof(global::udb.core.Tenant.Services.V1.AdminPurgeMode), }, null, new pbr::GeneratedClrTypeInfo[] {
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Tenant.Services.V1.CreateTenantRequest), global::udb.core.Tenant.Services.V1.CreateTenantRequest.Parser, new[]{ "Code", "Name", "Type", "ParentTenantId", "Config", "Branding" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Tenant.Services.V1.CreateTenantResponse), global::udb.core.Tenant.Services.V1.CreateTenantResponse.Parser, new[]{ "TenantId", "Message", "Error" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Tenant.Services.V1.GetTenantRequest), global::udb.core.Tenant.Services.V1.GetTenantRequest.Parser, new[]{ "TenantId" }, null, null, null, null),
@@ -225,12 +266,37 @@ namespace udb.core.Tenant.Services.V1 {
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Tenant.Services.V1.PurgeTenantRequest), global::udb.core.Tenant.Services.V1.PurgeTenantRequest.Parser, new[]{ "TenantId", "ConfirmationToken" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Tenant.Services.V1.PurgedTableCount), global::udb.core.Tenant.Services.V1.PurgedTableCount.Parser, new[]{ "Schema", "Table", "TenantColumn", "Deleted" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Tenant.Services.V1.PurgeExcludedTable), global::udb.core.Tenant.Services.V1.PurgeExcludedTable.Parser, new[]{ "Schema", "Table", "Reason" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Tenant.Services.V1.PurgeTenantResponse), global::udb.core.Tenant.Services.V1.PurgeTenantResponse.Parser, new[]{ "TenantId", "Purged", "Excluded", "TotalDeleted", "TenantDenylisted", "PrincipalsDenylisted", "Message", "Error" }, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Tenant.Services.V1.PurgeTenantResponse), global::udb.core.Tenant.Services.V1.PurgeTenantResponse.Parser, new[]{ "TenantId", "Purged", "Excluded", "TotalDeleted", "TenantDenylisted", "PrincipalsDenylisted", "Message", "Error" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Tenant.Services.V1.AdminPurgeTenantRequest), global::udb.core.Tenant.Services.V1.AdminPurgeTenantRequest.Parser, new[]{ "DelegatedActor", "TargetTenantId", "Mode", "Reason", "ExpectedVersion", "ConfirmationToken", "IdempotencyKey" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::udb.core.Tenant.Services.V1.AdminPurgeTenantResponse), global::udb.core.Tenant.Services.V1.AdminPurgeTenantResponse.Parser, new[]{ "TargetTenantId", "Mode", "Purged", "Excluded", "TotalDeleted", "TenantDenylisted", "PrincipalsDenylisted", "SoftDeactivated", "PurgedVersion", "Replayed", "OutcomeId", "Message", "Error" }, null, null, null, null)
           }));
     }
     #endregion
 
   }
+  #region Enums
+  /// <summary>
+  /// Treatment the privileged AdminPurgeTenant applies to the target tenant's data.
+  /// UNSPECIFIED is rejected (fail closed) so the destructive blast radius is always
+  /// chosen explicitly, never defaulted.
+  /// </summary>
+  public enum AdminPurgeMode {
+    [pbr::OriginalName("ADMIN_PURGE_MODE_UNSPECIFIED")] Unspecified = 0,
+    /// <summary>
+    /// Physically HARD-deletes every row the tenant owns across all tenant-columned
+    /// entity tables (the same ripple as PurgeTenant). Irreversible.
+    /// </summary>
+    [pbr::OriginalName("ADMIN_PURGE_MODE_HARD")] Hard = 1,
+    /// <summary>
+    /// Reversible: deactivates the tenant control record (soft-delete + INACTIVE) and
+    /// revokes its tokens WITHOUT physically deleting entity rows. Every tenant-owned
+    /// table is REPORTED as retained so the operator sees data was preserved.
+    /// </summary>
+    [pbr::OriginalName("ADMIN_PURGE_MODE_SOFT")] Soft = 2,
+  }
+
+  #endregion
+
   #region Messages
   [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
   public sealed partial class CreateTenantRequest : pb::IMessage<CreateTenantRequest>
@@ -4933,6 +4999,1117 @@ namespace udb.core.Tenant.Services.V1 {
             break;
           }
           case 66: {
+            if (error_ == null) {
+              Error = new global::udb.core.Common.V1.ApiError();
+            }
+            input.ReadMessage(Error);
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class AdminPurgeTenantRequest : pb::IMessage<AdminPurgeTenantRequest>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<AdminPurgeTenantRequest> _parser = new pb::MessageParser<AdminPurgeTenantRequest>(() => new AdminPurgeTenantRequest());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<AdminPurgeTenantRequest> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::udb.core.Tenant.Services.V1.TenantServiceReflection.Descriptor.MessageTypes[16]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public AdminPurgeTenantRequest() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public AdminPurgeTenantRequest(AdminPurgeTenantRequest other) : this() {
+      delegatedActor_ = other.delegatedActor_;
+      targetTenantId_ = other.targetTenantId_;
+      mode_ = other.mode_;
+      reason_ = other.reason_;
+      expectedVersion_ = other.expectedVersion_;
+      confirmationToken_ = other.confirmationToken_;
+      idempotencyKey_ = other.idempotencyKey_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public AdminPurgeTenantRequest Clone() {
+      return new AdminPurgeTenantRequest(this);
+    }
+
+    /// <summary>Field number for the "delegated_actor" field.</summary>
+    public const int DelegatedActorFieldNumber = 1;
+    private string delegatedActor_ = "";
+    /// <summary>
+    /// Actor on whose behalf the purge is delegated (audit attribution). The server
+    /// binds this to the VERIFIED caller subject: empty inherits the caller; a
+    /// non-empty value that disagrees with the caller is accepted ONLY from a genuine
+    /// cross-tenant admin, otherwise rejected (attribution cannot be forged).
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string DelegatedActor {
+      get { return delegatedActor_; }
+      set {
+        delegatedActor_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "target_tenant_id" field.</summary>
+    public const int TargetTenantIdFieldNumber = 2;
+    private string targetTenantId_ = "";
+    /// <summary>
+    /// The tenant to purge — MAY differ from the caller's own tenant (this is the
+    /// privileged cross-tenant path; the self-purge PurgeTenant forbids that).
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string TargetTenantId {
+      get { return targetTenantId_; }
+      set {
+        targetTenantId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "mode" field.</summary>
+    public const int ModeFieldNumber = 3;
+    private global::udb.core.Tenant.Services.V1.AdminPurgeMode mode_ = global::udb.core.Tenant.Services.V1.AdminPurgeMode.Unspecified;
+    /// <summary>
+    /// Destructive treatment; ADMIN_PURGE_MODE_UNSPECIFIED is rejected.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::udb.core.Tenant.Services.V1.AdminPurgeMode Mode {
+      get { return mode_; }
+      set {
+        mode_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "reason" field.</summary>
+    public const int ReasonFieldNumber = 4;
+    private string reason_ = "";
+    /// <summary>
+    /// Mandatory human-readable justification, recorded in the immutable audit record.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Reason {
+      get { return reason_; }
+      set {
+        reason_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "expected_version" field.</summary>
+    public const int ExpectedVersionFieldNumber = 5;
+    private long expectedVersion_;
+    /// <summary>
+    /// Optimistic-concurrency guard against the tenant's current version (its
+    /// updated-at epoch seconds). `0` disables the check; a non-zero mismatch is an
+    /// Aborted conflict so a stale operator view never purges a changed tenant.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public long ExpectedVersion {
+      get { return expectedVersion_; }
+      set {
+        expectedVersion_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "confirmation_token" field.</summary>
+    public const int ConfirmationTokenFieldNumber = 6;
+    private string confirmationToken_ = "";
+    /// <summary>
+    /// Required explicit confirmation. To guard against a fat-fingered cross-tenant
+    /// purge it MUST equal `target_tenant_id`; empty or non-matching fails closed.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string ConfirmationToken {
+      get { return confirmationToken_; }
+      set {
+        confirmationToken_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "idempotency_key" field.</summary>
+    public const int IdempotencyKeyFieldNumber = 7;
+    private string idempotencyKey_ = "";
+    /// <summary>
+    /// Required caller-supplied idempotency key. A replay with the SAME key and SAME
+    /// inputs returns the original outcome; the same key with DIFFERENT inputs is a
+    /// conflict (never a bogus replay).
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string IdempotencyKey {
+      get { return idempotencyKey_; }
+      set {
+        idempotencyKey_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as AdminPurgeTenantRequest);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(AdminPurgeTenantRequest other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (DelegatedActor != other.DelegatedActor) return false;
+      if (TargetTenantId != other.TargetTenantId) return false;
+      if (Mode != other.Mode) return false;
+      if (Reason != other.Reason) return false;
+      if (ExpectedVersion != other.ExpectedVersion) return false;
+      if (ConfirmationToken != other.ConfirmationToken) return false;
+      if (IdempotencyKey != other.IdempotencyKey) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (DelegatedActor.Length != 0) hash ^= DelegatedActor.GetHashCode();
+      if (TargetTenantId.Length != 0) hash ^= TargetTenantId.GetHashCode();
+      if (Mode != global::udb.core.Tenant.Services.V1.AdminPurgeMode.Unspecified) hash ^= Mode.GetHashCode();
+      if (Reason.Length != 0) hash ^= Reason.GetHashCode();
+      if (ExpectedVersion != 0L) hash ^= ExpectedVersion.GetHashCode();
+      if (ConfirmationToken.Length != 0) hash ^= ConfirmationToken.GetHashCode();
+      if (IdempotencyKey.Length != 0) hash ^= IdempotencyKey.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (DelegatedActor.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(DelegatedActor);
+      }
+      if (TargetTenantId.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(TargetTenantId);
+      }
+      if (Mode != global::udb.core.Tenant.Services.V1.AdminPurgeMode.Unspecified) {
+        output.WriteRawTag(24);
+        output.WriteEnum((int) Mode);
+      }
+      if (Reason.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(Reason);
+      }
+      if (ExpectedVersion != 0L) {
+        output.WriteRawTag(40);
+        output.WriteInt64(ExpectedVersion);
+      }
+      if (ConfirmationToken.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(ConfirmationToken);
+      }
+      if (IdempotencyKey.Length != 0) {
+        output.WriteRawTag(58);
+        output.WriteString(IdempotencyKey);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (DelegatedActor.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(DelegatedActor);
+      }
+      if (TargetTenantId.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(TargetTenantId);
+      }
+      if (Mode != global::udb.core.Tenant.Services.V1.AdminPurgeMode.Unspecified) {
+        output.WriteRawTag(24);
+        output.WriteEnum((int) Mode);
+      }
+      if (Reason.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(Reason);
+      }
+      if (ExpectedVersion != 0L) {
+        output.WriteRawTag(40);
+        output.WriteInt64(ExpectedVersion);
+      }
+      if (ConfirmationToken.Length != 0) {
+        output.WriteRawTag(50);
+        output.WriteString(ConfirmationToken);
+      }
+      if (IdempotencyKey.Length != 0) {
+        output.WriteRawTag(58);
+        output.WriteString(IdempotencyKey);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (DelegatedActor.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(DelegatedActor);
+      }
+      if (TargetTenantId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(TargetTenantId);
+      }
+      if (Mode != global::udb.core.Tenant.Services.V1.AdminPurgeMode.Unspecified) {
+        size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) Mode);
+      }
+      if (Reason.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Reason);
+      }
+      if (ExpectedVersion != 0L) {
+        size += 1 + pb::CodedOutputStream.ComputeInt64Size(ExpectedVersion);
+      }
+      if (ConfirmationToken.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(ConfirmationToken);
+      }
+      if (IdempotencyKey.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(IdempotencyKey);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(AdminPurgeTenantRequest other) {
+      if (other == null) {
+        return;
+      }
+      if (other.DelegatedActor.Length != 0) {
+        DelegatedActor = other.DelegatedActor;
+      }
+      if (other.TargetTenantId.Length != 0) {
+        TargetTenantId = other.TargetTenantId;
+      }
+      if (other.Mode != global::udb.core.Tenant.Services.V1.AdminPurgeMode.Unspecified) {
+        Mode = other.Mode;
+      }
+      if (other.Reason.Length != 0) {
+        Reason = other.Reason;
+      }
+      if (other.ExpectedVersion != 0L) {
+        ExpectedVersion = other.ExpectedVersion;
+      }
+      if (other.ConfirmationToken.Length != 0) {
+        ConfirmationToken = other.ConfirmationToken;
+      }
+      if (other.IdempotencyKey.Length != 0) {
+        IdempotencyKey = other.IdempotencyKey;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            DelegatedActor = input.ReadString();
+            break;
+          }
+          case 18: {
+            TargetTenantId = input.ReadString();
+            break;
+          }
+          case 24: {
+            Mode = (global::udb.core.Tenant.Services.V1.AdminPurgeMode) input.ReadEnum();
+            break;
+          }
+          case 34: {
+            Reason = input.ReadString();
+            break;
+          }
+          case 40: {
+            ExpectedVersion = input.ReadInt64();
+            break;
+          }
+          case 50: {
+            ConfirmationToken = input.ReadString();
+            break;
+          }
+          case 58: {
+            IdempotencyKey = input.ReadString();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            DelegatedActor = input.ReadString();
+            break;
+          }
+          case 18: {
+            TargetTenantId = input.ReadString();
+            break;
+          }
+          case 24: {
+            Mode = (global::udb.core.Tenant.Services.V1.AdminPurgeMode) input.ReadEnum();
+            break;
+          }
+          case 34: {
+            Reason = input.ReadString();
+            break;
+          }
+          case 40: {
+            ExpectedVersion = input.ReadInt64();
+            break;
+          }
+          case 50: {
+            ConfirmationToken = input.ReadString();
+            break;
+          }
+          case 58: {
+            IdempotencyKey = input.ReadString();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class AdminPurgeTenantResponse : pb::IMessage<AdminPurgeTenantResponse>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<AdminPurgeTenantResponse> _parser = new pb::MessageParser<AdminPurgeTenantResponse>(() => new AdminPurgeTenantResponse());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<AdminPurgeTenantResponse> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::udb.core.Tenant.Services.V1.TenantServiceReflection.Descriptor.MessageTypes[17]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public AdminPurgeTenantResponse() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public AdminPurgeTenantResponse(AdminPurgeTenantResponse other) : this() {
+      targetTenantId_ = other.targetTenantId_;
+      mode_ = other.mode_;
+      purged_ = other.purged_.Clone();
+      excluded_ = other.excluded_.Clone();
+      totalDeleted_ = other.totalDeleted_;
+      tenantDenylisted_ = other.tenantDenylisted_;
+      principalsDenylisted_ = other.principalsDenylisted_;
+      softDeactivated_ = other.softDeactivated_;
+      purgedVersion_ = other.purgedVersion_;
+      replayed_ = other.replayed_;
+      outcomeId_ = other.outcomeId_;
+      message_ = other.message_;
+      error_ = other.error_ != null ? other.error_.Clone() : null;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public AdminPurgeTenantResponse Clone() {
+      return new AdminPurgeTenantResponse(this);
+    }
+
+    /// <summary>Field number for the "target_tenant_id" field.</summary>
+    public const int TargetTenantIdFieldNumber = 1;
+    private string targetTenantId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string TargetTenantId {
+      get { return targetTenantId_; }
+      set {
+        targetTenantId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "mode" field.</summary>
+    public const int ModeFieldNumber = 2;
+    private global::udb.core.Tenant.Services.V1.AdminPurgeMode mode_ = global::udb.core.Tenant.Services.V1.AdminPurgeMode.Unspecified;
+    /// <summary>
+    /// The treatment actually applied (echoes the request mode).
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::udb.core.Tenant.Services.V1.AdminPurgeMode Mode {
+      get { return mode_; }
+      set {
+        mode_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "purged" field.</summary>
+    public const int PurgedFieldNumber = 3;
+    private static readonly pb::FieldCodec<global::udb.core.Tenant.Services.V1.PurgedTableCount> _repeated_purged_codec
+        = pb::FieldCodec.ForMessage(26, global::udb.core.Tenant.Services.V1.PurgedTableCount.Parser);
+    private readonly pbc::RepeatedField<global::udb.core.Tenant.Services.V1.PurgedTableCount> purged_ = new pbc::RepeatedField<global::udb.core.Tenant.Services.V1.PurgedTableCount>();
+    /// <summary>
+    /// HARD: per-table hard-delete counts (children->parents). SOFT: empty.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::RepeatedField<global::udb.core.Tenant.Services.V1.PurgedTableCount> Purged {
+      get { return purged_; }
+    }
+
+    /// <summary>Field number for the "excluded" field.</summary>
+    public const int ExcludedFieldNumber = 4;
+    private static readonly pb::FieldCodec<global::udb.core.Tenant.Services.V1.PurgeExcludedTable> _repeated_excluded_codec
+        = pb::FieldCodec.ForMessage(34, global::udb.core.Tenant.Services.V1.PurgeExcludedTable.Parser);
+    private readonly pbc::RepeatedField<global::udb.core.Tenant.Services.V1.PurgeExcludedTable> excluded_ = new pbc::RepeatedField<global::udb.core.Tenant.Services.V1.PurgeExcludedTable>();
+    /// <summary>
+    /// Tables NOT physically purged, reported for capability honesty: tenant-less /
+    /// control-plane tables (both modes), and — in SOFT mode — every tenant-owned
+    /// table whose data was deliberately retained.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pbc::RepeatedField<global::udb.core.Tenant.Services.V1.PurgeExcludedTable> Excluded {
+      get { return excluded_; }
+    }
+
+    /// <summary>Field number for the "total_deleted" field.</summary>
+    public const int TotalDeletedFieldNumber = 5;
+    private ulong totalDeleted_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public ulong TotalDeleted {
+      get { return totalDeleted_; }
+      set {
+        totalDeleted_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "tenant_denylisted" field.</summary>
+    public const int TenantDenylistedFieldNumber = 6;
+    private bool tenantDenylisted_;
+    /// <summary>
+    /// Whether the tenant-level cluster denylist cutoff was recorded (best-effort).
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool TenantDenylisted {
+      get { return tenantDenylisted_; }
+      set {
+        tenantDenylisted_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "principals_denylisted" field.</summary>
+    public const int PrincipalsDenylistedFieldNumber = 7;
+    private uint principalsDenylisted_;
+    /// <summary>
+    /// How many principals had a denylist cutoff recorded (best-effort).
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public uint PrincipalsDenylisted {
+      get { return principalsDenylisted_; }
+      set {
+        principalsDenylisted_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "soft_deactivated" field.</summary>
+    public const int SoftDeactivatedFieldNumber = 8;
+    private bool softDeactivated_;
+    /// <summary>
+    /// SOFT mode: the tenant control record was deactivated (soft-deleted), data kept.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool SoftDeactivated {
+      get { return softDeactivated_; }
+      set {
+        softDeactivated_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "purged_version" field.</summary>
+    public const int PurgedVersionFieldNumber = 9;
+    private long purgedVersion_;
+    /// <summary>
+    /// The tenant version observed at purge time (see AdminPurgeTenantRequest.expected_version).
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public long PurgedVersion {
+      get { return purgedVersion_; }
+      set {
+        purgedVersion_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "replayed" field.</summary>
+    public const int ReplayedFieldNumber = 10;
+    private bool replayed_;
+    /// <summary>
+    /// True when this response was replayed from a prior identical request (idempotency).
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Replayed {
+      get { return replayed_; }
+      set {
+        replayed_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "outcome_id" field.</summary>
+    public const int OutcomeIdFieldNumber = 11;
+    private string outcomeId_ = "";
+    /// <summary>
+    /// Id of the immutable audit/outcome record written for this purge.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string OutcomeId {
+      get { return outcomeId_; }
+      set {
+        outcomeId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "message" field.</summary>
+    public const int MessageFieldNumber = 12;
+    private string message_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Message {
+      get { return message_; }
+      set {
+        message_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "error" field.</summary>
+    public const int ErrorFieldNumber = 13;
+    private global::udb.core.Common.V1.ApiError error_;
+    /// <summary>
+    /// Error information if operation failed
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::udb.core.Common.V1.ApiError Error {
+      get { return error_; }
+      set {
+        error_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as AdminPurgeTenantResponse);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(AdminPurgeTenantResponse other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (TargetTenantId != other.TargetTenantId) return false;
+      if (Mode != other.Mode) return false;
+      if(!purged_.Equals(other.purged_)) return false;
+      if(!excluded_.Equals(other.excluded_)) return false;
+      if (TotalDeleted != other.TotalDeleted) return false;
+      if (TenantDenylisted != other.TenantDenylisted) return false;
+      if (PrincipalsDenylisted != other.PrincipalsDenylisted) return false;
+      if (SoftDeactivated != other.SoftDeactivated) return false;
+      if (PurgedVersion != other.PurgedVersion) return false;
+      if (Replayed != other.Replayed) return false;
+      if (OutcomeId != other.OutcomeId) return false;
+      if (Message != other.Message) return false;
+      if (!object.Equals(Error, other.Error)) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (TargetTenantId.Length != 0) hash ^= TargetTenantId.GetHashCode();
+      if (Mode != global::udb.core.Tenant.Services.V1.AdminPurgeMode.Unspecified) hash ^= Mode.GetHashCode();
+      hash ^= purged_.GetHashCode();
+      hash ^= excluded_.GetHashCode();
+      if (TotalDeleted != 0UL) hash ^= TotalDeleted.GetHashCode();
+      if (TenantDenylisted != false) hash ^= TenantDenylisted.GetHashCode();
+      if (PrincipalsDenylisted != 0) hash ^= PrincipalsDenylisted.GetHashCode();
+      if (SoftDeactivated != false) hash ^= SoftDeactivated.GetHashCode();
+      if (PurgedVersion != 0L) hash ^= PurgedVersion.GetHashCode();
+      if (Replayed != false) hash ^= Replayed.GetHashCode();
+      if (OutcomeId.Length != 0) hash ^= OutcomeId.GetHashCode();
+      if (Message.Length != 0) hash ^= Message.GetHashCode();
+      if (error_ != null) hash ^= Error.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (TargetTenantId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(TargetTenantId);
+      }
+      if (Mode != global::udb.core.Tenant.Services.V1.AdminPurgeMode.Unspecified) {
+        output.WriteRawTag(16);
+        output.WriteEnum((int) Mode);
+      }
+      purged_.WriteTo(output, _repeated_purged_codec);
+      excluded_.WriteTo(output, _repeated_excluded_codec);
+      if (TotalDeleted != 0UL) {
+        output.WriteRawTag(40);
+        output.WriteUInt64(TotalDeleted);
+      }
+      if (TenantDenylisted != false) {
+        output.WriteRawTag(48);
+        output.WriteBool(TenantDenylisted);
+      }
+      if (PrincipalsDenylisted != 0) {
+        output.WriteRawTag(56);
+        output.WriteUInt32(PrincipalsDenylisted);
+      }
+      if (SoftDeactivated != false) {
+        output.WriteRawTag(64);
+        output.WriteBool(SoftDeactivated);
+      }
+      if (PurgedVersion != 0L) {
+        output.WriteRawTag(72);
+        output.WriteInt64(PurgedVersion);
+      }
+      if (Replayed != false) {
+        output.WriteRawTag(80);
+        output.WriteBool(Replayed);
+      }
+      if (OutcomeId.Length != 0) {
+        output.WriteRawTag(90);
+        output.WriteString(OutcomeId);
+      }
+      if (Message.Length != 0) {
+        output.WriteRawTag(98);
+        output.WriteString(Message);
+      }
+      if (error_ != null) {
+        output.WriteRawTag(106);
+        output.WriteMessage(Error);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (TargetTenantId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(TargetTenantId);
+      }
+      if (Mode != global::udb.core.Tenant.Services.V1.AdminPurgeMode.Unspecified) {
+        output.WriteRawTag(16);
+        output.WriteEnum((int) Mode);
+      }
+      purged_.WriteTo(ref output, _repeated_purged_codec);
+      excluded_.WriteTo(ref output, _repeated_excluded_codec);
+      if (TotalDeleted != 0UL) {
+        output.WriteRawTag(40);
+        output.WriteUInt64(TotalDeleted);
+      }
+      if (TenantDenylisted != false) {
+        output.WriteRawTag(48);
+        output.WriteBool(TenantDenylisted);
+      }
+      if (PrincipalsDenylisted != 0) {
+        output.WriteRawTag(56);
+        output.WriteUInt32(PrincipalsDenylisted);
+      }
+      if (SoftDeactivated != false) {
+        output.WriteRawTag(64);
+        output.WriteBool(SoftDeactivated);
+      }
+      if (PurgedVersion != 0L) {
+        output.WriteRawTag(72);
+        output.WriteInt64(PurgedVersion);
+      }
+      if (Replayed != false) {
+        output.WriteRawTag(80);
+        output.WriteBool(Replayed);
+      }
+      if (OutcomeId.Length != 0) {
+        output.WriteRawTag(90);
+        output.WriteString(OutcomeId);
+      }
+      if (Message.Length != 0) {
+        output.WriteRawTag(98);
+        output.WriteString(Message);
+      }
+      if (error_ != null) {
+        output.WriteRawTag(106);
+        output.WriteMessage(Error);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (TargetTenantId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(TargetTenantId);
+      }
+      if (Mode != global::udb.core.Tenant.Services.V1.AdminPurgeMode.Unspecified) {
+        size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) Mode);
+      }
+      size += purged_.CalculateSize(_repeated_purged_codec);
+      size += excluded_.CalculateSize(_repeated_excluded_codec);
+      if (TotalDeleted != 0UL) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt64Size(TotalDeleted);
+      }
+      if (TenantDenylisted != false) {
+        size += 1 + 1;
+      }
+      if (PrincipalsDenylisted != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(PrincipalsDenylisted);
+      }
+      if (SoftDeactivated != false) {
+        size += 1 + 1;
+      }
+      if (PurgedVersion != 0L) {
+        size += 1 + pb::CodedOutputStream.ComputeInt64Size(PurgedVersion);
+      }
+      if (Replayed != false) {
+        size += 1 + 1;
+      }
+      if (OutcomeId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(OutcomeId);
+      }
+      if (Message.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Message);
+      }
+      if (error_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Error);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(AdminPurgeTenantResponse other) {
+      if (other == null) {
+        return;
+      }
+      if (other.TargetTenantId.Length != 0) {
+        TargetTenantId = other.TargetTenantId;
+      }
+      if (other.Mode != global::udb.core.Tenant.Services.V1.AdminPurgeMode.Unspecified) {
+        Mode = other.Mode;
+      }
+      purged_.Add(other.purged_);
+      excluded_.Add(other.excluded_);
+      if (other.TotalDeleted != 0UL) {
+        TotalDeleted = other.TotalDeleted;
+      }
+      if (other.TenantDenylisted != false) {
+        TenantDenylisted = other.TenantDenylisted;
+      }
+      if (other.PrincipalsDenylisted != 0) {
+        PrincipalsDenylisted = other.PrincipalsDenylisted;
+      }
+      if (other.SoftDeactivated != false) {
+        SoftDeactivated = other.SoftDeactivated;
+      }
+      if (other.PurgedVersion != 0L) {
+        PurgedVersion = other.PurgedVersion;
+      }
+      if (other.Replayed != false) {
+        Replayed = other.Replayed;
+      }
+      if (other.OutcomeId.Length != 0) {
+        OutcomeId = other.OutcomeId;
+      }
+      if (other.Message.Length != 0) {
+        Message = other.Message;
+      }
+      if (other.error_ != null) {
+        if (error_ == null) {
+          Error = new global::udb.core.Common.V1.ApiError();
+        }
+        Error.MergeFrom(other.Error);
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            TargetTenantId = input.ReadString();
+            break;
+          }
+          case 16: {
+            Mode = (global::udb.core.Tenant.Services.V1.AdminPurgeMode) input.ReadEnum();
+            break;
+          }
+          case 26: {
+            purged_.AddEntriesFrom(input, _repeated_purged_codec);
+            break;
+          }
+          case 34: {
+            excluded_.AddEntriesFrom(input, _repeated_excluded_codec);
+            break;
+          }
+          case 40: {
+            TotalDeleted = input.ReadUInt64();
+            break;
+          }
+          case 48: {
+            TenantDenylisted = input.ReadBool();
+            break;
+          }
+          case 56: {
+            PrincipalsDenylisted = input.ReadUInt32();
+            break;
+          }
+          case 64: {
+            SoftDeactivated = input.ReadBool();
+            break;
+          }
+          case 72: {
+            PurgedVersion = input.ReadInt64();
+            break;
+          }
+          case 80: {
+            Replayed = input.ReadBool();
+            break;
+          }
+          case 90: {
+            OutcomeId = input.ReadString();
+            break;
+          }
+          case 98: {
+            Message = input.ReadString();
+            break;
+          }
+          case 106: {
+            if (error_ == null) {
+              Error = new global::udb.core.Common.V1.ApiError();
+            }
+            input.ReadMessage(Error);
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            TargetTenantId = input.ReadString();
+            break;
+          }
+          case 16: {
+            Mode = (global::udb.core.Tenant.Services.V1.AdminPurgeMode) input.ReadEnum();
+            break;
+          }
+          case 26: {
+            purged_.AddEntriesFrom(ref input, _repeated_purged_codec);
+            break;
+          }
+          case 34: {
+            excluded_.AddEntriesFrom(ref input, _repeated_excluded_codec);
+            break;
+          }
+          case 40: {
+            TotalDeleted = input.ReadUInt64();
+            break;
+          }
+          case 48: {
+            TenantDenylisted = input.ReadBool();
+            break;
+          }
+          case 56: {
+            PrincipalsDenylisted = input.ReadUInt32();
+            break;
+          }
+          case 64: {
+            SoftDeactivated = input.ReadBool();
+            break;
+          }
+          case 72: {
+            PurgedVersion = input.ReadInt64();
+            break;
+          }
+          case 80: {
+            Replayed = input.ReadBool();
+            break;
+          }
+          case 90: {
+            OutcomeId = input.ReadString();
+            break;
+          }
+          case 98: {
+            Message = input.ReadString();
+            break;
+          }
+          case 106: {
             if (error_ == null) {
               Error = new global::udb.core.Common.V1.ApiError();
             }

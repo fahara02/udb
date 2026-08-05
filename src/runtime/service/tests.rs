@@ -354,8 +354,28 @@ fn descriptor_set_exposes_databroker_reflection_surface() {
         .collect::<std::collections::BTreeSet<_>>();
 
     assert!(methods.contains("Select"));
+    assert!(methods.contains("BulkCas"));
     assert!(methods.contains("LookupMessageSchema"));
     assert!(methods.contains("GetHealthReport"));
+}
+
+/// gate 23 — the bulk compare-and-swap handler enforces the SAME deny-by-default
+/// data-plane gate as its sibling mutations: `authorize()` requires a tenant
+/// before any write, so a request that carries none fails closed with
+/// `Unauthenticated` — proving the new RPC is not a weaker/unauthorized path.
+/// No DB is touched: the gate rejects ahead of `DataBrokerRuntime::bulk_cas`.
+#[tokio::test]
+async fn bulk_cas_denies_request_without_tenant() {
+    let svc = ready_service();
+    let request = tonic::Request::new(BulkCasRequest {
+        message_type: "Invoice".to_string(),
+        ..Default::default()
+    });
+    let err = svc
+        .bulk_cas_inner(request)
+        .await
+        .expect_err("bulk_cas must fail closed when no tenant is bound");
+    assert_eq!(err.code(), tonic::Code::Unauthenticated);
 }
 
 #[test]

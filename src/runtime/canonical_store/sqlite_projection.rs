@@ -545,7 +545,7 @@ impl ProjectionTaskStore for SqliteCanonicalStore {
         let sql = format!(
             "SELECT COUNT(*) FROM {TABLE}
              WHERE idempotency_key IN ({})
-               AND status NOT IN ('COMPLETED','DEAD_LETTER','FAILED')",
+               AND status <> 'COMPLETED'", // P2-1 NF-1/NF-2: FAILED/DEAD_LETTER = not projected yet = still fences
             placeholders.join(",")
         );
         let mut q = sqlx::query_scalar::<_, i64>(&sql);
@@ -978,12 +978,11 @@ mod tests {
             }
         }
 
-        // All 4 keys: only `d` (still PENDING after claim because we
-        // marked the others) — wait, `d` was also claimed, so it's
-        // IN_PROGRESS. IN_PROGRESS counts as "still in-flight" for
-        // the fence. So the result should be 1 (only d).
-        // a=COMPLETED (excluded), b=FAILED (excluded), c=DEAD_LETTER
-        // (excluded), d=IN_PROGRESS (counted).
+        // P2-1 (NF-1/NF-2): ONLY `COMPLETED` clears the read fence. FAILED (will
+        // retry) and DEAD_LETTER (will never complete) are NOT projected yet, so
+        // for read-your-writes they still count as pending. So of the 4 keys:
+        // a=COMPLETED (excluded), b=FAILED (counted), c=DEAD_LETTER (counted),
+        // d=IN_PROGRESS (counted) → 3.
         let n = store
             .pending_projection_task_count(&[
                 "a".to_string(),
@@ -993,7 +992,10 @@ mod tests {
             ])
             .await
             .unwrap();
-        assert_eq!(n, 1, "only `d` (IN_PROGRESS) should count");
+        assert_eq!(
+            n, 3,
+            "only COMPLETED clears the fence; FAILED + DEAD_LETTER + IN_PROGRESS all still count"
+        );
 
         // Empty list → 0 without hitting the DB.
         let n = store.pending_projection_task_count(&[]).await.unwrap();

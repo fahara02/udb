@@ -32,7 +32,7 @@ use crate::ir::operations::{
 use crate::ir::value::LogicalValue;
 
 use super::sql_dialect::{SqlCompiler, SqlDialect};
-use super::util::resolve_include_relation;
+use super::util::{resolve_include_relation, resolve_tenant_column};
 use super::{CompileContext, CompileError, CompiledRendering, Compiler};
 
 /// T-SQL dialect marker for the generic [`SqlCompiler`]: `[bracketed]`
@@ -132,6 +132,8 @@ impl Compiler for MssqlCompiler {
                 ctx.manifest,
                 include,
                 &op.message_type,
+                ctx,
+                &mut params,
             )?);
         }
         let select = select_items.join(", ");
@@ -388,7 +390,7 @@ impl Compiler for MssqlCompiler {
             });
         }
         // AND the tenant/project scope into the delete filter (C15).
-        let where_clause = match Ms::context_predicates(table, ctx, &mut params) {
+        let where_clause = match Ms::context_predicates(table, ctx, &mut params)? {
             Some(scope) => format!("({body}) AND {scope}"),
             None => body,
         };
@@ -455,7 +457,7 @@ impl Compiler for MssqlCompiler {
             Some(filter) => Ms::render_where(filter, table, &op.message_type, &mut params)?,
             None => None,
         };
-        let ctx_body = Ms::context_predicates(table, ctx, &mut params);
+        let ctx_body = Ms::context_predicates(table, ctx, &mut params)?;
         match (user_body, ctx_body) {
             (Some(user), Some(scope)) => sql.push_str(&format!(" WHERE ({user}) AND {scope}")),
             (Some(user), None) => sql.push_str(&format!(" WHERE {user}")),
@@ -551,7 +553,7 @@ impl Compiler for MssqlCompiler {
             sql.push_str(&format!(" AND {body}"));
         }
         // Tenant/project scope (C15): AND it into the CONTAINS WHERE.
-        if let Some(scope) = Ms::context_predicates(table, ctx, &mut params) {
+        if let Some(scope) = Ms::context_predicates(table, ctx, &mut params)? {
             sql.push_str(&format!(" AND {scope}"));
         }
 
@@ -737,10 +739,12 @@ fn render_belongs_to_include(
     manifest: &CatalogManifest,
     include: &LogicalInclude,
     message_type: &str,
+    ctx: &CompileContext<'_>,
+    params: &mut Vec<LogicalValue>,
 ) -> Result<String, CompileError> {
     let relation = resolve_include_relation(table, manifest, include, message_type)?;
     let alias = format!("_udb_include_{}", relation.name);
-    let predicates = relation
+    let mut predicates = relation
         .local_columns
         .iter()
         .zip(relation.target_columns.iter())
@@ -752,6 +756,19 @@ fn render_belongs_to_include(
         })
         .collect::<Vec<_>>()
         .join(" AND ");
+    // F5: the joined table has no runtime RLS, so the belongs-to subquery must
+    // carry the tenant predicate itself or it leaks the related row across
+    // tenants. Numbered @P placeholder from params.len() after push (the include
+    // renders into the SELECT list before the outer WHERE).
+    if let Some(tenant_col) = resolve_tenant_column(relation.target) {
+        if let Some(tid) = ctx.tenant_id.filter(|t| !t.trim().is_empty()) {
+            params.push(LogicalValue::String(tid.to_string()));
+            predicates.push_str(&format!(
+                " AND [{alias}].[{tenant_col}] = @P{}",
+                params.len()
+            ));
+        }
+    }
     let wrapper = if relation.many {
         ""
     } else {

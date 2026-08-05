@@ -9,7 +9,7 @@ Contract version `4.1.0` · 27 native services.
 | `analytics` | Analytics | analytics | yes | postgres | 7 | control-plane |
 | `apikey` | API Keys | auth | yes | postgres | 9 | control-plane |
 | `asset` | Assets | storage | yes | postgres, object_store | 8 | control-plane |
-| `authn` | Authentication | auth | yes | postgres | 59 | control-plane |
+| `authn` | Authentication | auth | yes | postgres | 60 | control-plane |
 | `authz` | Authorization | governance | yes | postgres | 41 | control-plane |
 | `backup` | Backup | backup | yes | postgres | 8 | control-plane |
 | `cache` | Cache | cache | yes | postgres, redis | 7 | control-plane |
@@ -24,7 +24,7 @@ Contract version `4.1.0` · 27 native services.
 | `scheduler` | Scheduler | scheduler | yes | postgres | 6 | control-plane |
 | `search` | Search | search | yes | postgres | 5 | control-plane |
 | `storage` | Storage | storage | yes | postgres, object_store | 9 | control-plane |
-| `tenant` | Tenants | tenant | yes | postgres | 7 | control-plane |
+| `tenant` | Tenants | tenant | yes | postgres | 8 | control-plane |
 | `vault` | Vault | vault | yes | postgres | 20 | control-plane |
 | `webhook` | Webhooks | webhook | yes | postgres | 6 | control-plane |
 | `webrtc_peer` | WebRTC Peers | realtime | yes | postgres | 5 | control-plane, peer |

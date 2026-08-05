@@ -4,7 +4,6 @@ use std::collections::HashSet;
 use std::sync::OnceLock;
 
 pub(crate) fn output_json<T: Serialize>(value: &T, label: &str) {
-    use std::io::Write;
     let mut value = match serde_json::to_value(value) {
         Ok(value) => value,
         Err(err) => {
@@ -16,16 +15,39 @@ pub(crate) fn output_json<T: Serialize>(value: &T, label: &str) {
     // #216: stream the pretty JSON straight into a buffered stdout handle
     // instead of building a throwaway `String` per call.
     let stdout = std::io::stdout();
-    let mut writer = std::io::BufWriter::new(stdout.lock());
-    if serde_json::to_writer_pretty(&mut writer, &value)
-        .map_err(|e| e.to_string())
-        .and_then(|()| writeln!(writer).map_err(|e| e.to_string()))
-        .and_then(|()| writer.flush().map_err(|e| e.to_string()))
-        .is_err()
-    {
-        eprintln!("failed to write {label} JSON to stdout");
+    if let Err(err) = write_json_value(stdout.lock(), &value) {
+        // A downstream reader that closed the pipe early (`udb … | head`)
+        // surfaces as BrokenPipe (EPIPE / os error 109). That is the normal
+        // end of a consumer, not a failure: exit cleanly and silently instead
+        // of the old exit(1)+stderr, which printed a spurious error line. The
+        // matching cover for the many raw `println!` sites is the panic hook
+        // in mod.rs (`install_broken_pipe_panic_hook`).
+        if err.kind() == std::io::ErrorKind::BrokenPipe {
+            process::exit(0);
+        }
+        eprintln!("failed to write {label} JSON to stdout: {err}");
         process::exit(1);
     }
+}
+
+/// Stream pretty JSON to `writer` through a buffered handle, recovering the
+/// underlying `io::ErrorKind` (notably `BrokenPipe`) on failure.
+///
+/// `serde_json::to_writer_pretty` returns a `serde_json::Error`; converting it
+/// with `io::Error::from` preserves the original `io::ErrorKind` when the
+/// failure was an IO error (e.g. a closed pipe), so `output_json` can
+/// special-case `BrokenPipe`. Kept separate from `output_json` so it is
+/// unit-testable against an early-closing writer without terminating the test
+/// process via `process::exit`.
+fn write_json_value<W: std::io::Write>(
+    writer: W,
+    value: &serde_json::Value,
+) -> std::io::Result<()> {
+    use std::io::Write;
+    let mut writer = std::io::BufWriter::new(writer);
+    serde_json::to_writer_pretty(&mut writer, value).map_err(std::io::Error::from)?;
+    writeln!(writer)?;
+    writer.flush()
 }
 
 pub(crate) fn redact_sensitive_json(value: &mut serde_json::Value) {
@@ -297,3 +319,50 @@ pub(crate) fn pg_relation(schema: &str, table: &str) -> String {
 }
 
 // ── Compatibility matrix ──────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod broken_pipe_tests {
+    use super::write_json_value;
+    use std::io::{Error, ErrorKind, Write};
+
+    /// A writer that emulates a downstream reader which closed the pipe early
+    /// (`udb … | head`): every write and flush fails with `BrokenPipe` — the
+    /// same kind std maps EPIPE (os error 32, Unix) and ERROR_BROKEN_PIPE (os
+    /// error 109, Windows) to. Deterministic and identical on both platforms.
+    struct BrokenPipeWriter;
+
+    impl Write for BrokenPipeWriter {
+        fn write(&mut self, _buf: &[u8]) -> std::io::Result<usize> {
+            Err(Error::from(ErrorKind::BrokenPipe))
+        }
+        fn flush(&mut self) -> std::io::Result<()> {
+            Err(Error::from(ErrorKind::BrokenPipe))
+        }
+    }
+
+    #[test]
+    fn small_output_surfaces_broken_pipe_from_flush() {
+        // Small payload stays in the buffer until flush; the broken pipe
+        // surfaces there. `output_json` maps this kind to a clean exit(0)
+        // rather than panicking or printing to stderr.
+        let value = serde_json::json!({ "ok": true, "label": "small" });
+        let err = write_json_value(BrokenPipeWriter, &value)
+            .expect_err("write to a closed pipe must return an error, not panic");
+        assert_eq!(err.kind(), ErrorKind::BrokenPipe);
+    }
+
+    #[test]
+    fn large_output_surfaces_broken_pipe_mid_serialization() {
+        // A large payload overflows the internal BufWriter, forcing a real
+        // write mid-serialization — so the broken pipe surfaces from
+        // `to_writer_pretty` (the `serde_json::Error` -> `io::Error::from`
+        // branch), proving that path is recovered too, not just the final
+        // flush. This is the "large-output against an early-closing reader"
+        // case that used to blow up with a backtrace.
+        let rows: Vec<String> = (0..4000).map(|i| format!("row-{i:010}")).collect();
+        let value = serde_json::to_value(&rows).expect("serialize rows");
+        let err = write_json_value(BrokenPipeWriter, &value)
+            .expect_err("write to a closed pipe must return an error, not panic");
+        assert_eq!(err.kind(), ErrorKind::BrokenPipe);
+    }
+}

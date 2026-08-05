@@ -126,7 +126,12 @@ fn safe_keeper_path_component(raw: &str) -> String {
 /// for every inline literal they interpolate (idempotency keys, JSON payloads,
 /// status strings, error text, etc.).
 pub(super) fn sql_lit(s: &str) -> String {
-    format!("'{}'", s.replace('\'', "''"))
+    // WC-N1: ClickHouse honors C-style backslash escapes inside string literals,
+    // so `''`-doubling alone is NOT sufficient — a `\`-terminated value would
+    // escape the closing quote (injection) and a `\n`/`\t` in a serialized JSON/
+    // CDC payload would be reinterpreted as a control char (corruption). Escape
+    // the backslash FIRST (order matters), then double the single-quote.
+    format!("'{}'", s.replace('\\', "\\\\").replace('\'', "''"))
 }
 
 pub struct ClickHouseCanonicalStore {

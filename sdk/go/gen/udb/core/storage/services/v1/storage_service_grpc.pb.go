@@ -55,7 +55,10 @@ type StorageServiceClient interface {
 	GetFile(ctx context.Context, in *GetFileRequest, opts ...grpc.CallOption) (*GetFileResponse, error)
 	// Update file metadata
 	UpdateFile(ctx context.Context, in *UpdateFileRequest, opts ...grpc.CallOption) (*UpdateFileResponse, error)
-	// Delete a file (soft delete)
+	// Delete a file. `mode` selects soft-delete (default, metadata tombstone +
+	// best-effort byte removal) or hard-delete (durable object-GC intent committed
+	// atomically with the tombstone, then driven to convergence — a byte-delete
+	// failure returns an error, never success, and leaves the intent for the sweep).
 	DeleteFile(ctx context.Context, in *DeleteFileRequest, opts ...grpc.CallOption) (*DeleteFileResponse, error)
 	// List files
 	ListFiles(ctx context.Context, in *ListFilesRequest, opts ...grpc.CallOption) (*ListFilesResponse, error)
@@ -193,7 +196,10 @@ type StorageServiceServer interface {
 	GetFile(context.Context, *GetFileRequest) (*GetFileResponse, error)
 	// Update file metadata
 	UpdateFile(context.Context, *UpdateFileRequest) (*UpdateFileResponse, error)
-	// Delete a file (soft delete)
+	// Delete a file. `mode` selects soft-delete (default, metadata tombstone +
+	// best-effort byte removal) or hard-delete (durable object-GC intent committed
+	// atomically with the tombstone, then driven to convergence — a byte-delete
+	// failure returns an error, never success, and leaves the intent for the sweep).
 	DeleteFile(context.Context, *DeleteFileRequest) (*DeleteFileResponse, error)
 	// List files
 	ListFiles(context.Context, *ListFilesRequest) (*ListFilesResponse, error)

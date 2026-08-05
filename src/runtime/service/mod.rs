@@ -24,7 +24,8 @@ use crate::proto::{
     AdminAuditLogRecord, AdminAuditLogRequest, AdminAuditLogResponse, AdminAuditVerifyRequest,
     AdminAuditVerifyResponse, AdminBackendSummary, AdminCatalogSummary, AdminCdcSummary,
     AdminSagaSummary, AdminSummaryRequest, AdminSummaryResponse, BackendInstanceStatus,
-    CapabilitiesRequest, CapabilitiesResponse, CatalogManifestRequest, CatalogManifestResponse,
+    BulkCasRequest, BulkCasResponse, CapabilitiesRequest, CapabilitiesResponse,
+    CatalogManifestRequest, CatalogManifestResponse,
     CatalogValidationResponse, CatalogVersionListResponse, CatalogVersionRequest,
     CatalogVersionResponse, CdcControlRequest, CdcEnvelope, CdcRedactionPreviewRequest,
     CdcRedactionPreviewResponse, CdcStatusResponse, CdcSubscriptionRequest, Chunk, DeleteRequest,
@@ -104,7 +105,10 @@ mod livequery_service;
 // W12: native LockService (master-plan 9.2). The leader wires `build_lock_service`
 // + `add_service(lock_service::LockServiceServer::new(...))` in `serve()`,
 // mirroring `tenant_service` (`LockServiceServer` is pub-used inside the module).
-mod lock_service;
+// `pub(crate)` so the DataBroker mutation path (gate 25 lock-fencing-at-commit)
+// can reuse the LockService's entity name + pure fencing-token freshness check
+// (re-exported from `lock_service`) without duplicating any lock logic.
+pub(crate) mod lock_service;
 // W16 (Phase 9.9): native MeteringService — usage metering and quotas. Usage is a
 // durable, append-only `UsageEvent` stream fed by `metering_service::record_usage`
 // (a cheap single-INSERT seam the leader calls from `native_helpers::admit_on`,
@@ -130,7 +134,7 @@ mod metering_service;
 // `embedding_service::run_embedding_work_emitter_once` under a leader-elected worker
 // that joins active sources to the durable CDC journal.
 mod embedding_service;
-mod method_security;
+pub(crate) mod method_security;
 // These crate-path re-exports exist solely for the feature-gated
 // `bench_internals` shims (lib.rs D.2); in-tree callers use the module path
 // directly. Gate them the same way so the default build carries no dead use.
@@ -311,6 +315,7 @@ pub(crate) const SUPPORTED_RPC_NAMES: &[&str] = &[
     "BatchUpsert",
     "Delete",
     "Update",
+    "BulkCas",
     "VectorSearch",
     "VectorHybridSearch",
     "VectorUpsert",
@@ -3027,6 +3032,9 @@ pub async fn serve(
                 .build()
                 .unwrap_or_else(|_| reqwest::Client::new());
             let metrics: Arc<dyn MetricsRecorder> = service.metrics.clone();
+            // NTF1: hand the runtime to the delivery worker so it can decrypt the
+            // at-rest-sealed signing secret to its plaintext HMAC key before signing.
+            let webhook_rt = webhook_runtime.clone();
             crate::runtime::service::native_runtime::NativeWorkerHost::spawn_while_leader(
                 crate::runtime::singleton::WORKER_WEBHOOK_DELIVERY,
                 "webhook delivery posted events",
@@ -3039,6 +3047,7 @@ pub async fn serve(
                     let outbox = outbox_relation.clone();
                     let journal = journal_relation.clone();
                     let metrics = metrics.clone();
+                    let rt = webhook_rt.clone();
                     async move {
                         crate::runtime::service::webhook_service::run_webhook_delivery_worker_once(
                             &http,
@@ -3047,6 +3056,7 @@ pub async fn serve(
                             &journal,
                             crate::runtime::service::webhook_service::WEBHOOK_DELIVERY_BATCH,
                             Some(&metrics),
+                            rt.as_ref(),
                         )
                         .await
                     }
@@ -4222,6 +4232,13 @@ impl DataBroker for DataBrokerService {
         request: Request<UpdateRequest>,
     ) -> Result<Response<MutationResponse>, Status> {
         self.update_inner(request).await
+    }
+
+    async fn bulk_cas(
+        &self,
+        request: Request<BulkCasRequest>,
+    ) -> Result<Response<BulkCasResponse>, Status> {
+        self.bulk_cas_inner(request).await
     }
 
     async fn generic_dispatch(

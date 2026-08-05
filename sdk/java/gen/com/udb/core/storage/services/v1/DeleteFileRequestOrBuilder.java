@@ -33,4 +33,97 @@ public interface DeleteFileRequestOrBuilder extends
    */
   com.google.protobuf.ByteString
       getFileIdBytes();
+
+  /**
+   * <pre>
+   * Deletion mode. UNSPECIFIED/SOFT (default) soft-deletes the metadata and best-
+   * effort-removes the bytes. HARD durably records an object-GC intent atomically
+   * with the tombstone and drives object deletion to convergence.
+   * </pre>
+   *
+   * <code>.udb.core.storage.services.v1.DeleteMode mode = 3 [json_name = "mode"];</code>
+   * @return The enum numeric value on the wire for mode.
+   */
+  int getModeValue();
+  /**
+   * <pre>
+   * Deletion mode. UNSPECIFIED/SOFT (default) soft-deletes the metadata and best-
+   * effort-removes the bytes. HARD durably records an object-GC intent atomically
+   * with the tombstone and drives object deletion to convergence.
+   * </pre>
+   *
+   * <code>.udb.core.storage.services.v1.DeleteMode mode = 3 [json_name = "mode"];</code>
+   * @return The mode.
+   */
+  com.udb.core.storage.services.v1.DeleteMode getMode();
+
+  /**
+   * <pre>
+   * Optional operator-supplied reason, recorded on the durable GC intent (HARD).
+   * </pre>
+   *
+   * <code>string reason = 4 [json_name = "reason"];</code>
+   * @return The reason.
+   */
+  java.lang.String getReason();
+  /**
+   * <pre>
+   * Optional operator-supplied reason, recorded on the durable GC intent (HARD).
+   * </pre>
+   *
+   * <code>string reason = 4 [json_name = "reason"];</code>
+   * @return The bytes for reason.
+   */
+  com.google.protobuf.ByteString
+      getReasonBytes();
+
+  /**
+   * <pre>
+   * Optional optimistic-concurrency guard. When non-empty it is matched against
+   * the file's current status token (PENDING/ACTIVE/DELETED) — the File row's
+   * revision proxy (the entity carries no numeric version) — and a mismatch is
+   * rejected fail-closed so a stale client cannot delete a file that changed.
+   * </pre>
+   *
+   * <code>string expected_status = 5 [json_name = "expectedStatus"];</code>
+   * @return The expectedStatus.
+   */
+  java.lang.String getExpectedStatus();
+  /**
+   * <pre>
+   * Optional optimistic-concurrency guard. When non-empty it is matched against
+   * the file's current status token (PENDING/ACTIVE/DELETED) — the File row's
+   * revision proxy (the entity carries no numeric version) — and a mismatch is
+   * rejected fail-closed so a stale client cannot delete a file that changed.
+   * </pre>
+   *
+   * <code>string expected_status = 5 [json_name = "expectedStatus"];</code>
+   * @return The bytes for expectedStatus.
+   */
+  com.google.protobuf.ByteString
+      getExpectedStatusBytes();
+
+  /**
+   * <pre>
+   * Optional idempotency key (HARD). A replay with the SAME key + SAME target
+   * returns the ORIGINAL recorded outcome; the SAME key with a DIFFERENT target
+   * conflicts fail-closed.
+   * </pre>
+   *
+   * <code>string idempotency_key = 6 [json_name = "idempotencyKey"];</code>
+   * @return The idempotencyKey.
+   */
+  java.lang.String getIdempotencyKey();
+  /**
+   * <pre>
+   * Optional idempotency key (HARD). A replay with the SAME key + SAME target
+   * returns the ORIGINAL recorded outcome; the SAME key with a DIFFERENT target
+   * conflicts fail-closed.
+   * </pre>
+   *
+   * <code>string idempotency_key = 6 [json_name = "idempotencyKey"];</code>
+   * @return The bytes for idempotencyKey.
+   */
+  com.google.protobuf.ByteString
+      getIdempotencyKeyBytes();
 }

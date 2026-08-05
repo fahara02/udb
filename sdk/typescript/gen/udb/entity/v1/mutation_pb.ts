@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file udb/entity/v1/mutation.proto.
  */
 export const file_udb_entity_v1_mutation: GenFile = /*@__PURE__*/
-  fileDesc("Chx1ZGIvZW50aXR5L3YxL211dGF0aW9uLnByb3RvEg11ZGIuZW50aXR5LnYxIqgDChBNdXRhdGlvblJlc3BvbnNlEhMKC211dGF0aW9uX2lkGAEgASgJEhQKDHJlc291cmNlX3VyaRgCIAEoCRIXCg9jaGVja3N1bV9zaGEyNTYYAyABKAkSEwoLcmVjb3JkX2pzb24YBCABKAwSFQoNYWZmZWN0ZWRfcm93cxgFIAEoAxIVCg13YXNfZHVwbGljYXRlGAYgASgIEhoKEndyaXRlX3JlY2VpcHRfanNvbhgHIAEoCRIYChByZXNvdXJjZV92ZXJzaW9uGAggASgJEj8KCG1ldGFkYXRhGAkgAygLMi0udWRiLmVudGl0eS52MS5NdXRhdGlvblJlc3BvbnNlLk1ldGFkYXRhRW50cnkSMQoId2FybmluZ3MYCiADKAsyHy51ZGIuZW50aXR5LnYxLk9wZXJhdGlvbldhcm5pbmcSMgoNd3JpdGVfcmVjZWlwdBgLIAEoCzIbLnVkYi5lbnRpdHkudjEuV3JpdGVSZWNlaXB0Gi8KDU1ldGFkYXRhRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4AUKzAQoRY29tLnVkYi5lbnRpdHkudjFCDU11dGF0aW9uUHJvdG9QAVo5Z2l0aHViLmNvbS9mYWhhcmEwMi91ZGIvc2RrL2dvL2dlbi91ZGIvZW50aXR5L3YxO2VudGl0eXYxogIDVUVYqgINVWRiLkVudGl0eS5WMcoCDVVkYlxFbnRpdHlcVjHiAhlVZGJcR1BCTWV0YWRhdGFcRW50aXR5XFYx6gIPVWRiOjpFbnRpdHk6OlYxYgZwcm90bzM", [file_udb_entity_v1_operation, file_udb_entity_v1_consistency]);
+  fileDesc("Chx1ZGIvZW50aXR5L3YxL211dGF0aW9uLnByb3RvEg11ZGIuZW50aXR5LnYxIroDChBNdXRhdGlvblJlc3BvbnNlEhMKC211dGF0aW9uX2lkGAEgASgJEhQKDHJlc291cmNlX3VyaRgCIAEoCRIXCg9jaGVja3N1bV9zaGEyNTYYAyABKAkSEwoLcmVjb3JkX2pzb24YBCABKAwSFQoNYWZmZWN0ZWRfcm93cxgFIAEoAxIVCg13YXNfZHVwbGljYXRlGAYgASgIEhoKEndyaXRlX3JlY2VpcHRfanNvbhgHIAEoCRIYChByZXNvdXJjZV92ZXJzaW9uGAggASgJEj8KCG1ldGFkYXRhGAkgAygLMi0udWRiLmVudGl0eS52MS5NdXRhdGlvblJlc3BvbnNlLk1ldGFkYXRhRW50cnkSMQoId2FybmluZ3MYCiADKAsyHy51ZGIuZW50aXR5LnYxLk9wZXJhdGlvbldhcm5pbmcSMgoNd3JpdGVfcmVjZWlwdBgLIAEoCzIbLnVkYi5lbnRpdHkudjEuV3JpdGVSZWNlaXB0EhAKCHJldmlzaW9uGAwgASgJGi8KDU1ldGFkYXRhRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4AUKzAQoRY29tLnVkYi5lbnRpdHkudjFCDU11dGF0aW9uUHJvdG9QAVo5Z2l0aHViLmNvbS9mYWhhcmEwMi91ZGIvc2RrL2dvL2dlbi91ZGIvZW50aXR5L3YxO2VudGl0eXYxogIDVUVYqgINVWRiLkVudGl0eS5WMcoCDVVkYlxFbnRpdHlcVjHiAhlVZGJcR1BCTWV0YWRhdGFcRW50aXR5XFYx6gIPVWRiOjpFbnRpdHk6OlYxYgZwcm90bzM", [file_udb_entity_v1_operation, file_udb_entity_v1_consistency]);
 
 /**
  * @generated from message udb.entity.v1.MutationResponse
@@ -79,6 +79,19 @@ export type MutationResponse = Message<"udb.entity.v1.MutationResponse"> & {
    * @generated from field: udb.entity.v1.WriteReceipt write_receipt = 11;
    */
   writeReceipt?: WriteReceipt | undefined;
+
+  /**
+   * #5 (opaque row revision / ETag): the broker-maintained opaque revision of
+   * the single row this mutation addressed, AFTER the mutation. Set on upserts
+   * and on single-row (primary-key-pinned) updates; empty for deletes (the row
+   * is gone) and for multi-row updates (revision is a single-row primitive).
+   * Opaque + monotonically increasing; feed it back as
+   * `UpdateRequest.expected_revision` / `DeleteRequest.expected_revision` for
+   * optimistic-concurrency (compare-and-swap) writes.
+   *
+   * @generated from field: string revision = 12;
+   */
+  revision: string;
 };
 
 /**

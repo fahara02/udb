@@ -64,6 +64,10 @@ namespace Udb.Services.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Entity.V1.UpdateRequest> __Marshaller_udb_entity_v1_UpdateRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Entity.V1.UpdateRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Entity.V1.BulkCasRequest> __Marshaller_udb_entity_v1_BulkCasRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Entity.V1.BulkCasRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Udb.Entity.V1.BulkCasResponse> __Marshaller_udb_entity_v1_BulkCasResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Entity.V1.BulkCasResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Entity.V1.VectorSearchRequest> __Marshaller_udb_entity_v1_VectorSearchRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Entity.V1.VectorSearchRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Udb.Entity.V1.VectorSet> __Marshaller_udb_entity_v1_VectorSet = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Udb.Entity.V1.VectorSet.Parser));
@@ -305,6 +309,14 @@ namespace Udb.Services.V1 {
         "Update",
         __Marshaller_udb_entity_v1_UpdateRequest,
         __Marshaller_udb_entity_v1_MutationResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::Udb.Entity.V1.BulkCasRequest, global::Udb.Entity.V1.BulkCasResponse> __Method_BulkCas = new grpc::Method<global::Udb.Entity.V1.BulkCasRequest, global::Udb.Entity.V1.BulkCasResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "BulkCas",
+        __Marshaller_udb_entity_v1_BulkCasRequest,
+        __Marshaller_udb_entity_v1_BulkCasResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Method<global::Udb.Entity.V1.VectorSearchRequest, global::Udb.Entity.V1.VectorSet> __Method_VectorSearch = new grpc::Method<global::Udb.Entity.V1.VectorSearchRequest, global::Udb.Entity.V1.VectorSet>(
@@ -954,6 +966,25 @@ namespace Udb.Services.V1 {
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::System.Threading.Tasks.Task<global::Udb.Entity.V1.MutationResponse> Update(global::Udb.Entity.V1.UpdateRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// gate 23 (bounded bulk compare-and-swap): apply a tenant-scoped, explicitly
+      /// bounded batch of single-row conditional updates in ONE write transaction.
+      /// Each item pins its full primary key by equality and is applied only if its
+      /// compare-and-swap preconditions hold; a per-item mismatch is COUNTED as a
+      /// conflict, not a batch error, so a partial batch is safe to replay by reusing
+      /// `idempotency_key`. Same tenant isolation, authorization (deny-by-default
+      /// Casbin gate) and per-row projection / CDC-outbox / audit side effects as the
+      /// unary Update path.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::Udb.Entity.V1.BulkCasResponse> BulkCas(global::Udb.Entity.V1.BulkCasRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -1870,6 +1901,82 @@ namespace Udb.Services.V1 {
       public virtual grpc::AsyncUnaryCall<global::Udb.Entity.V1.MutationResponse> UpdateAsync(global::Udb.Entity.V1.UpdateRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__Method_Update, null, options, request);
+      }
+      /// <summary>
+      /// gate 23 (bounded bulk compare-and-swap): apply a tenant-scoped, explicitly
+      /// bounded batch of single-row conditional updates in ONE write transaction.
+      /// Each item pins its full primary key by equality and is applied only if its
+      /// compare-and-swap preconditions hold; a per-item mismatch is COUNTED as a
+      /// conflict, not a batch error, so a partial batch is safe to replay by reusing
+      /// `idempotency_key`. Same tenant isolation, authorization (deny-by-default
+      /// Casbin gate) and per-row projection / CDC-outbox / audit side effects as the
+      /// unary Update path.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Entity.V1.BulkCasResponse BulkCas(global::Udb.Entity.V1.BulkCasRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return BulkCas(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// gate 23 (bounded bulk compare-and-swap): apply a tenant-scoped, explicitly
+      /// bounded batch of single-row conditional updates in ONE write transaction.
+      /// Each item pins its full primary key by equality and is applied only if its
+      /// compare-and-swap preconditions hold; a per-item mismatch is COUNTED as a
+      /// conflict, not a batch error, so a partial batch is safe to replay by reusing
+      /// `idempotency_key`. Same tenant isolation, authorization (deny-by-default
+      /// Casbin gate) and per-row projection / CDC-outbox / audit side effects as the
+      /// unary Update path.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Udb.Entity.V1.BulkCasResponse BulkCas(global::Udb.Entity.V1.BulkCasRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_BulkCas, null, options, request);
+      }
+      /// <summary>
+      /// gate 23 (bounded bulk compare-and-swap): apply a tenant-scoped, explicitly
+      /// bounded batch of single-row conditional updates in ONE write transaction.
+      /// Each item pins its full primary key by equality and is applied only if its
+      /// compare-and-swap preconditions hold; a per-item mismatch is COUNTED as a
+      /// conflict, not a batch error, so a partial batch is safe to replay by reusing
+      /// `idempotency_key`. Same tenant isolation, authorization (deny-by-default
+      /// Casbin gate) and per-row projection / CDC-outbox / audit side effects as the
+      /// unary Update path.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Entity.V1.BulkCasResponse> BulkCasAsync(global::Udb.Entity.V1.BulkCasRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return BulkCasAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// gate 23 (bounded bulk compare-and-swap): apply a tenant-scoped, explicitly
+      /// bounded batch of single-row conditional updates in ONE write transaction.
+      /// Each item pins its full primary key by equality and is applied only if its
+      /// compare-and-swap preconditions hold; a per-item mismatch is COUNTED as a
+      /// conflict, not a batch error, so a partial batch is safe to replay by reusing
+      /// `idempotency_key`. Same tenant isolation, authorization (deny-by-default
+      /// Casbin gate) and per-row projection / CDC-outbox / audit side effects as the
+      /// unary Update path.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Udb.Entity.V1.BulkCasResponse> BulkCasAsync(global::Udb.Entity.V1.BulkCasRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_BulkCas, null, options, request);
       }
       /// <summary>
       /// ── Vector ──────────────────────────────────────────────────────────────────
@@ -4262,6 +4369,7 @@ namespace Udb.Services.V1 {
           .AddMethod(__Method_BatchUpsert, serviceImpl.BatchUpsert)
           .AddMethod(__Method_Delete, serviceImpl.Delete)
           .AddMethod(__Method_Update, serviceImpl.Update)
+          .AddMethod(__Method_BulkCas, serviceImpl.BulkCas)
           .AddMethod(__Method_VectorSearch, serviceImpl.VectorSearch)
           .AddMethod(__Method_VectorHybridSearch, serviceImpl.VectorHybridSearch)
           .AddMethod(__Method_VectorUpsert, serviceImpl.VectorUpsert)
@@ -4349,6 +4457,7 @@ namespace Udb.Services.V1 {
       serviceBinder.AddMethod(__Method_BatchUpsert, serviceImpl == null ? null : new grpc::DuplexStreamingServerMethod<global::Udb.Entity.V1.UpsertRequest, global::Udb.Entity.V1.MutationResponse>(serviceImpl.BatchUpsert));
       serviceBinder.AddMethod(__Method_Delete, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.DeleteRequest, global::Udb.Entity.V1.MutationResponse>(serviceImpl.Delete));
       serviceBinder.AddMethod(__Method_Update, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.UpdateRequest, global::Udb.Entity.V1.MutationResponse>(serviceImpl.Update));
+      serviceBinder.AddMethod(__Method_BulkCas, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.BulkCasRequest, global::Udb.Entity.V1.BulkCasResponse>(serviceImpl.BulkCas));
       serviceBinder.AddMethod(__Method_VectorSearch, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.VectorSearchRequest, global::Udb.Entity.V1.VectorSet>(serviceImpl.VectorSearch));
       serviceBinder.AddMethod(__Method_VectorHybridSearch, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.VectorHybridSearchRequest, global::Udb.Entity.V1.VectorSet>(serviceImpl.VectorHybridSearch));
       serviceBinder.AddMethod(__Method_VectorUpsert, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::Udb.Entity.V1.VectorUpsertRequest, global::Udb.Entity.V1.MutationResponse>(serviceImpl.VectorUpsert));

@@ -22,6 +22,37 @@ class DeleteFileRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string file_id = 2 [json_name = "fileId"];</code>
      */
     protected $file_id = '';
+    /**
+     * Deletion mode. UNSPECIFIED/SOFT (default) soft-deletes the metadata and best-
+     * effort-removes the bytes. HARD durably records an object-GC intent atomically
+     * with the tombstone and drives object deletion to convergence.
+     *
+     * Generated from protobuf field <code>.udb.core.storage.services.v1.DeleteMode mode = 3 [json_name = "mode"];</code>
+     */
+    protected $mode = 0;
+    /**
+     * Optional operator-supplied reason, recorded on the durable GC intent (HARD).
+     *
+     * Generated from protobuf field <code>string reason = 4 [json_name = "reason"];</code>
+     */
+    protected $reason = '';
+    /**
+     * Optional optimistic-concurrency guard. When non-empty it is matched against
+     * the file's current status token (PENDING/ACTIVE/DELETED) — the File row's
+     * revision proxy (the entity carries no numeric version) — and a mismatch is
+     * rejected fail-closed so a stale client cannot delete a file that changed.
+     *
+     * Generated from protobuf field <code>string expected_status = 5 [json_name = "expectedStatus"];</code>
+     */
+    protected $expected_status = '';
+    /**
+     * Optional idempotency key (HARD). A replay with the SAME key + SAME target
+     * returns the ORIGINAL recorded outcome; the SAME key with a DIFFERENT target
+     * conflicts fail-closed.
+     *
+     * Generated from protobuf field <code>string idempotency_key = 6 [json_name = "idempotencyKey"];</code>
+     */
+    protected $idempotency_key = '';
 
     /**
      * Constructor.
@@ -31,6 +62,21 @@ class DeleteFileRequest extends \Google\Protobuf\Internal\Message
      *
      *     @type string $tenant_id
      *     @type string $file_id
+     *     @type int $mode
+     *           Deletion mode. UNSPECIFIED/SOFT (default) soft-deletes the metadata and best-
+     *           effort-removes the bytes. HARD durably records an object-GC intent atomically
+     *           with the tombstone and drives object deletion to convergence.
+     *     @type string $reason
+     *           Optional operator-supplied reason, recorded on the durable GC intent (HARD).
+     *     @type string $expected_status
+     *           Optional optimistic-concurrency guard. When non-empty it is matched against
+     *           the file's current status token (PENDING/ACTIVE/DELETED) — the File row's
+     *           revision proxy (the entity carries no numeric version) — and a mismatch is
+     *           rejected fail-closed so a stale client cannot delete a file that changed.
+     *     @type string $idempotency_key
+     *           Optional idempotency key (HARD). A replay with the SAME key + SAME target
+     *           returns the ORIGINAL recorded outcome; the SAME key with a DIFFERENT target
+     *           conflicts fail-closed.
      * }
      */
     public function __construct($data = NULL) {
@@ -78,6 +124,124 @@ class DeleteFileRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, True);
         $this->file_id = $var;
+
+        return $this;
+    }
+
+    /**
+     * Deletion mode. UNSPECIFIED/SOFT (default) soft-deletes the metadata and best-
+     * effort-removes the bytes. HARD durably records an object-GC intent atomically
+     * with the tombstone and drives object deletion to convergence.
+     *
+     * Generated from protobuf field <code>.udb.core.storage.services.v1.DeleteMode mode = 3 [json_name = "mode"];</code>
+     * @return int
+     */
+    public function getMode()
+    {
+        return $this->mode;
+    }
+
+    /**
+     * Deletion mode. UNSPECIFIED/SOFT (default) soft-deletes the metadata and best-
+     * effort-removes the bytes. HARD durably records an object-GC intent atomically
+     * with the tombstone and drives object deletion to convergence.
+     *
+     * Generated from protobuf field <code>.udb.core.storage.services.v1.DeleteMode mode = 3 [json_name = "mode"];</code>
+     * @param int $var
+     * @return $this
+     */
+    public function setMode($var)
+    {
+        GPBUtil::checkEnum($var, \Udb\Core\Storage\Services\V1\DeleteMode::class);
+        $this->mode = $var;
+
+        return $this;
+    }
+
+    /**
+     * Optional operator-supplied reason, recorded on the durable GC intent (HARD).
+     *
+     * Generated from protobuf field <code>string reason = 4 [json_name = "reason"];</code>
+     * @return string
+     */
+    public function getReason()
+    {
+        return $this->reason;
+    }
+
+    /**
+     * Optional operator-supplied reason, recorded on the durable GC intent (HARD).
+     *
+     * Generated from protobuf field <code>string reason = 4 [json_name = "reason"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setReason($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->reason = $var;
+
+        return $this;
+    }
+
+    /**
+     * Optional optimistic-concurrency guard. When non-empty it is matched against
+     * the file's current status token (PENDING/ACTIVE/DELETED) — the File row's
+     * revision proxy (the entity carries no numeric version) — and a mismatch is
+     * rejected fail-closed so a stale client cannot delete a file that changed.
+     *
+     * Generated from protobuf field <code>string expected_status = 5 [json_name = "expectedStatus"];</code>
+     * @return string
+     */
+    public function getExpectedStatus()
+    {
+        return $this->expected_status;
+    }
+
+    /**
+     * Optional optimistic-concurrency guard. When non-empty it is matched against
+     * the file's current status token (PENDING/ACTIVE/DELETED) — the File row's
+     * revision proxy (the entity carries no numeric version) — and a mismatch is
+     * rejected fail-closed so a stale client cannot delete a file that changed.
+     *
+     * Generated from protobuf field <code>string expected_status = 5 [json_name = "expectedStatus"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setExpectedStatus($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->expected_status = $var;
+
+        return $this;
+    }
+
+    /**
+     * Optional idempotency key (HARD). A replay with the SAME key + SAME target
+     * returns the ORIGINAL recorded outcome; the SAME key with a DIFFERENT target
+     * conflicts fail-closed.
+     *
+     * Generated from protobuf field <code>string idempotency_key = 6 [json_name = "idempotencyKey"];</code>
+     * @return string
+     */
+    public function getIdempotencyKey()
+    {
+        return $this->idempotency_key;
+    }
+
+    /**
+     * Optional idempotency key (HARD). A replay with the SAME key + SAME target
+     * returns the ORIGINAL recorded outcome; the SAME key with a DIFFERENT target
+     * conflicts fail-closed.
+     *
+     * Generated from protobuf field <code>string idempotency_key = 6 [json_name = "idempotencyKey"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setIdempotencyKey($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->idempotency_key = $var;
 
         return $this;
     }

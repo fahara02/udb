@@ -415,6 +415,13 @@ impl DataBrokerService {
         // G-2: capture the optional compare-and-swap precondition before the moved
         // closure, mirroring idempotency_key.
         let expected = req.expected.clone();
+        // #5 + gate 25: capture the optional opaque-revision precondition and the
+        // lock-fencing token/name before the moved closure (all-empty = unchanged).
+        let guards = crate::runtime::core::setup_data::MutationGuards {
+            expected_revision: req.expected_revision.clone(),
+            lock_name: req.lock_name.clone(),
+            fencing_token: req.fencing_token,
+        };
         // Authorize against the concrete target table (not "*"), so per-table
         // ABAC Allow/Deny policies actually match — matching Select/Upsert.
         let decision_id = match self.authorize(&security, &message_type, "Delete").await {
@@ -442,6 +449,7 @@ impl DataBrokerService {
                             context,
                             idempotency_key,
                             expected,
+                            guards,
                         )
                         .await
                 },
@@ -477,6 +485,12 @@ impl DataBrokerService {
         let idempotency_key = req.idempotency_key.clone();
         let expected = req.expected.clone();
         let return_record = req.return_record;
+        // #5 + gate 25: optional opaque-revision precondition + lock-fencing.
+        let guards = crate::runtime::core::setup_data::MutationGuards {
+            expected_revision: req.expected_revision.clone(),
+            lock_name: req.lock_name.clone(),
+            fencing_token: req.fencing_token,
+        };
         let decision_id = match self.authorize(&security, &message_type, "Update").await {
             Ok(id) => id,
             Err(err) => return self.record_grpc("Update", started, Err(err)),
@@ -515,6 +529,7 @@ impl DataBrokerService {
                             idempotency_key,
                             expected,
                             return_record,
+                            guards,
                         )
                         .await
                 },
@@ -530,6 +545,60 @@ impl DataBrokerService {
                     .await),
             ),
             Err(err) => self.record_grpc("Update", started, Err(err)),
+        }
+    }
+
+    /// gate 23 — bounded bulk compare-and-swap. Mirrors `upsert_inner`'s
+    /// authorize/context/channel shape so the new RPC enforces the SAME data-plane
+    /// security as the sibling mutations: `authorize()` (deny-by-default Casbin
+    /// gate, tenant + purpose required) runs BEFORE any write, binding the
+    /// per-table decision + tenant scope, and only then is the whole bounded batch
+    /// applied by the single `DataBrokerRuntime::bulk_cas` implementation in ONE
+    /// write transaction on the Write channel. Attaches the catalog + write-receipt
+    /// headers so a client can fence read-your-writes over the batch.
+    pub(crate) async fn bulk_cas_inner(
+        &self,
+        request: Request<BulkCasRequest>,
+    ) -> Result<Response<BulkCasResponse>, Status> {
+        let started = Instant::now();
+        let security = match security_from_request(&request) {
+            Ok(s) => s,
+            Err(e) => return self.record_grpc("BulkCas", started, Err(e)),
+        };
+        let request = request.into_inner();
+        let decision_id = match self
+            .authorize(&security, &request.message_type, "BulkCas")
+            .await
+        {
+            Ok(id) => id,
+            Err(err) => return self.record_grpc("BulkCas", started, Err(err)),
+        };
+        let manifest = &self.catalog.active_for(&security.project_id).manifest;
+        let runtime = self.runtime_snapshot();
+        let metadata_context = security.request_context_with_decision(&decision_id);
+        // One clone for the moved closure; the original stays for the response
+        // headers — same borrow discipline as `upsert_inner`.
+        let exec_context = metadata_context.clone();
+        let result = self
+            .execute_with_channel_scoped(
+                crate::runtime::channels::OperationChannel::Write,
+                Some(&metadata_context),
+                Some("postgres"),
+                || async move { runtime.bulk_cas(manifest, request, exec_context).await },
+            )
+            .await;
+
+        match result {
+            Ok(res) => {
+                // The batch receipt lives in the response body; surface it as the
+                // read-your-writes header too, matching the unary mutation path.
+                let receipt_json = res.write_receipt_json.clone();
+                let mut response =
+                    self.with_catalog_response_headers(Response::new(res), &metadata_context);
+                insert_ascii_header(response.metadata_mut(), "x-udb-write-receipt", &receipt_json);
+                self.record_grpc("BulkCas", started, Ok(response))
+            }
+            Err(err) => self.record_grpc("BulkCas", started, Err(err)),
         }
     }
 
@@ -975,7 +1044,15 @@ fn compile_neutral_ir_dispatch(
     let payload = ir_payload(ir)?;
     let mut ctx = crate::ir::compile::CompileContext::new(manifest)
         .with_tenant(&context.tenant_id)
-        .with_project(&context.project_id);
+        .with_project(&context.project_id)
+        // Fail-closed tenant scope (F10): authenticated non-admin caller with an
+        // empty tenant on this generic-SQL read seam gets `tenant_scope_required`
+        // instead of a silent full-table read. Admin / internal (no-claim) exempt.
+        .enforcing_tenant_scope(
+            crate::runtime::service::method_security::claim_context_present()
+                && !crate::runtime::service::method_security::current_claim_context()
+                    .is_cross_tenant_admin(),
+        );
     if let Some(instance) = instance.filter(|value| !value.trim().is_empty()) {
         ctx = ctx.with_instance(instance);
     }
@@ -1105,6 +1182,17 @@ fn compile_ir_payload(
                         format!("invalid LogicalResourceOp: {err}"),
                     )
                 })?;
+            // INJ2: allowlist every identifier BEFORE compile — the catalog LIST
+            // and DDL paths inline resource_name/schema/table/column/type verbatim,
+            // so a quote/semicolon here is a confirmed SQL injection. Central guard
+            // closes it for all backends at once.
+            op.validate_identifiers().map_err(|msg| {
+                handlers_data_invalid_field(
+                    "ir",
+                    "resource-op identifiers must be plain, unquoted tokens",
+                    msg,
+                )
+            })?;
             Ok((
                 compile(CompileOperation::ResourceOp(&op))?,
                 LogicalOpFamily::ResourceOp,
@@ -1752,13 +1840,20 @@ fn clickhouse_literal(value: &crate::ir::value::LogicalValue) -> String {
         }
         LogicalValue::Int(value) => value.to_string(),
         LogicalValue::Float(value) => value.to_string(),
-        LogicalValue::String(value) => format!("'{}'", value.replace('\'', "''")),
+        // WC-N1: ClickHouse processes backslash escapes in string literals, so
+        // escape `\` before doubling `'` (else a `\`-terminated value breaks out).
+        LogicalValue::String(value) => {
+            format!("'{}'", value.replace('\\', "\\\\").replace('\'', "''"))
+        }
         LogicalValue::Bytes(value) => {
             use base64::{Engine as _, engine::general_purpose::STANDARD as B64};
             format!("'{}'", B64.encode(value))
         }
         LogicalValue::Timestamp(value) => format!("'{}'", value.to_rfc3339()),
-        LogicalValue::Json(value) => format!("'{}'", value.to_string().replace('\'', "''")),
+        LogicalValue::Json(value) => format!(
+            "'{}'",
+            value.to_string().replace('\\', "\\\\").replace('\'', "''")
+        ),
         LogicalValue::Array(values) => format!(
             "[{}]",
             values

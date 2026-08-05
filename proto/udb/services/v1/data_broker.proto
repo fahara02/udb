@@ -89,6 +89,19 @@ service DataBroker {
     };
   }
 
+  // gate 23 (bounded bulk compare-and-swap): apply a tenant-scoped, explicitly
+  // bounded batch of single-row conditional updates in ONE write transaction.
+  // Each item pins its full primary key by equality and is applied only if its
+  // compare-and-swap preconditions hold; a per-item mismatch is COUNTED as a
+  // conflict, not a batch error, so a partial batch is safe to replay by reusing
+  // `idempotency_key`. Same tenant isolation, authorization (deny-by-default
+  // Casbin gate) and per-row projection / CDC-outbox / audit side effects as the
+  // unary Update path.
+  rpc BulkCas(udb.entity.v1.BulkCasRequest) returns (udb.entity.v1.BulkCasResponse) {
+    option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
+    option (udb.core.common.v1.sdk_surface) = { include_in_facade: true method_alias: "bulk_cas" rest_operation_id: "bulkCas" };
+  }
+
   // ── Vector ──────────────────────────────────────────────────────────────────
   rpc VectorSearch(udb.entity.v1.VectorSearchRequest) returns (udb.entity.v1.VectorSet) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_READ_ONLY;

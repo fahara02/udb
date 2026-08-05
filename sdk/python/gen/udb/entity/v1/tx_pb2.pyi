@@ -13,7 +13,7 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class Mutation(_message.Message):
-    __slots__ = ("context", "tx_id", "operation", "message_type", "record_json", "payload", "filter", "collection", "vector_points", "commit", "rollback", "bucket", "object_key", "object_data", "content_type", "idempotency_key", "changes", "increments")
+    __slots__ = ("context", "tx_id", "operation", "message_type", "record_json", "payload", "filter", "collection", "vector_points", "commit", "rollback", "bucket", "object_key", "object_data", "content_type", "idempotency_key", "changes", "increments", "expected", "cdc_required")
     CONTEXT_FIELD_NUMBER: _ClassVar[int]
     TX_ID_FIELD_NUMBER: _ClassVar[int]
     OPERATION_FIELD_NUMBER: _ClassVar[int]
@@ -32,6 +32,8 @@ class Mutation(_message.Message):
     IDEMPOTENCY_KEY_FIELD_NUMBER: _ClassVar[int]
     CHANGES_FIELD_NUMBER: _ClassVar[int]
     INCREMENTS_FIELD_NUMBER: _ClassVar[int]
+    EXPECTED_FIELD_NUMBER: _ClassVar[int]
+    CDC_REQUIRED_FIELD_NUMBER: _ClassVar[int]
     context: _context_pb2.RequestContext
     tx_id: str
     operation: str
@@ -50,7 +52,9 @@ class Mutation(_message.Message):
     idempotency_key: str
     changes: _struct_pb2.Struct
     increments: _containers.RepeatedCompositeFieldContainer[_relational_pb2.UpdateRequest.Increment]
-    def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., tx_id: _Optional[str] = ..., operation: _Optional[str] = ..., message_type: _Optional[str] = ..., record_json: _Optional[bytes] = ..., payload: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., filter: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., collection: _Optional[str] = ..., vector_points: _Optional[_Iterable[_Union[_vector_pb2.VectorPointMutation, _Mapping]]] = ..., commit: bool = ..., rollback: bool = ..., bucket: _Optional[str] = ..., object_key: _Optional[str] = ..., object_data: _Optional[bytes] = ..., content_type: _Optional[str] = ..., idempotency_key: _Optional[str] = ..., changes: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., increments: _Optional[_Iterable[_Union[_relational_pb2.UpdateRequest.Increment, _Mapping]]] = ...) -> None: ...
+    expected: _struct_pb2.Struct
+    cdc_required: bool
+    def __init__(self, context: _Optional[_Union[_context_pb2.RequestContext, _Mapping]] = ..., tx_id: _Optional[str] = ..., operation: _Optional[str] = ..., message_type: _Optional[str] = ..., record_json: _Optional[bytes] = ..., payload: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., filter: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., collection: _Optional[str] = ..., vector_points: _Optional[_Iterable[_Union[_vector_pb2.VectorPointMutation, _Mapping]]] = ..., commit: bool = ..., rollback: bool = ..., bucket: _Optional[str] = ..., object_key: _Optional[str] = ..., object_data: _Optional[bytes] = ..., content_type: _Optional[str] = ..., idempotency_key: _Optional[str] = ..., changes: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., increments: _Optional[_Iterable[_Union[_relational_pb2.UpdateRequest.Increment, _Mapping]]] = ..., expected: _Optional[_Union[_struct_pb2.Struct, _Mapping]] = ..., cdc_required: bool = ...) -> None: ...
 
 class TxStatus(_message.Message):
     __slots__ = ("state", "tx_id", "mutation_id", "message", "write_receipt")

@@ -294,6 +294,23 @@ private static final long serialVersionUID = 0L;
     return cache_ == null ? com.udb.entity.v1.CacheOptions.getDefaultInstance() : cache_;
   }
 
+  public static final int INCLUDE_REVISION_FIELD_NUMBER = 9;
+  private boolean includeRevision_ = false;
+  /**
+   * <pre>
+   * #5: opt-in — when true, the broker joins each returned record against the
+   * system-side revision map and fills `RecordSet.record_revisions`. Off by
+   * default so the read hot path is unchanged (zero extra SQL).
+   * </pre>
+   *
+   * <code>bool include_revision = 9 [json_name = "includeRevision"];</code>
+   * @return The includeRevision.
+   */
+  @java.lang.Override
+  public boolean getIncludeRevision() {
+    return includeRevision_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -331,6 +348,9 @@ private static final long serialVersionUID = 0L;
     }
     if (((bitField0_ & 0x00000004) != 0)) {
       output.writeMessage(8, getCache());
+    }
+    if (includeRevision_ != false) {
+      output.writeBool(9, includeRevision_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -375,6 +395,10 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(8, getCache());
     }
+    if (includeRevision_ != false) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeBoolSize(9, includeRevision_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -415,6 +439,8 @@ private static final long serialVersionUID = 0L;
       if (!getCache()
           .equals(other.getCache())) return false;
     }
+    if (getIncludeRevision()
+        != other.getIncludeRevision()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -452,6 +478,9 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + CACHE_FIELD_NUMBER;
       hash = (53 * hash) + getCache().hashCode();
     }
+    hash = (37 * hash) + INCLUDE_REVISION_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+        getIncludeRevision());
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -619,6 +648,7 @@ private static final long serialVersionUID = 0L;
         cacheBuilder_.dispose();
         cacheBuilder_ = null;
       }
+      includeRevision_ = false;
       return this;
     }
 
@@ -697,6 +727,9 @@ private static final long serialVersionUID = 0L;
             : cacheBuilder_.build();
         to_bitField0_ |= 0x00000004;
       }
+      if (((from_bitField0_ & 0x00000100) != 0)) {
+        result.includeRevision_ = includeRevision_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -769,6 +802,9 @@ private static final long serialVersionUID = 0L;
       }
       if (other.hasCache()) {
         mergeCache(other.getCache());
+      }
+      if (other.getIncludeRevision() != false) {
+        setIncludeRevision(other.getIncludeRevision());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -851,6 +887,11 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000080;
               break;
             } // case 66
+            case 72: {
+              includeRevision_ = input.readBool();
+              bitField0_ |= 0x00000100;
+              break;
+            } // case 72
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1756,6 +1797,56 @@ private static final long serialVersionUID = 0L;
         cache_ = null;
       }
       return cacheBuilder_;
+    }
+
+    private boolean includeRevision_ ;
+    /**
+     * <pre>
+     * #5: opt-in — when true, the broker joins each returned record against the
+     * system-side revision map and fills `RecordSet.record_revisions`. Off by
+     * default so the read hot path is unchanged (zero extra SQL).
+     * </pre>
+     *
+     * <code>bool include_revision = 9 [json_name = "includeRevision"];</code>
+     * @return The includeRevision.
+     */
+    @java.lang.Override
+    public boolean getIncludeRevision() {
+      return includeRevision_;
+    }
+    /**
+     * <pre>
+     * #5: opt-in — when true, the broker joins each returned record against the
+     * system-side revision map and fills `RecordSet.record_revisions`. Off by
+     * default so the read hot path is unchanged (zero extra SQL).
+     * </pre>
+     *
+     * <code>bool include_revision = 9 [json_name = "includeRevision"];</code>
+     * @param value The includeRevision to set.
+     * @return This builder for chaining.
+     */
+    public Builder setIncludeRevision(boolean value) {
+
+      includeRevision_ = value;
+      bitField0_ |= 0x00000100;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * #5: opt-in — when true, the broker joins each returned record against the
+     * system-side revision map and fills `RecordSet.record_revisions`. Off by
+     * default so the read hot path is unchanged (zero extra SQL).
+     * </pre>
+     *
+     * <code>bool include_revision = 9 [json_name = "includeRevision"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearIncludeRevision() {
+      bitField0_ = (bitField0_ & ~0x00000100);
+      includeRevision_ = false;
+      onChanged();
+      return this;
     }
 
     // @@protoc_insertion_point(builder_scope:udb.entity.v1.SelectRequest)

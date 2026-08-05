@@ -439,8 +439,34 @@ fn row_to_json(row: &tiberius::Row) -> JsonValue {
             v.map(JsonValue::from).unwrap_or(JsonValue::Null)
         } else if let Ok(v) = row.try_get::<f64, _>(idx) {
             v.map(JsonValue::from).unwrap_or(JsonValue::Null)
+        } else if let Ok(v) = row.try_get::<f32, _>(idx) {
+            // W4: SQL Server REAL is a distinct 32-bit type; tiberius decodes it
+            // only as f32 (a lone f64 probe fails → NULL). Widen to f64 for JSON.
+            v.map(|f| JsonValue::from(f64::from(f)))
+                .unwrap_or(JsonValue::Null)
         } else if let Ok(v) = row.try_get::<bool, _>(idx) {
             v.map(JsonValue::from).unwrap_or(JsonValue::Null)
+        } else if let Ok(v) = row.try_get::<uuid::Uuid, _>(idx) {
+            // W4: UNIQUEIDENTIFIER decodes only as Uuid; without this branch every
+            // uuid column read back NULL (silent data loss).
+            v.map(|u| JsonValue::String(u.to_string()))
+                .unwrap_or(JsonValue::Null)
+        } else if let Ok(v) = row.try_get::<chrono::NaiveDateTime, _>(idx) {
+            // W4: DATETIME/DATETIME2/SMALLDATETIME decode as chrono types (tiberius
+            // `chrono` feature); without this every datetime column read back NULL.
+            v.map(|dt| JsonValue::String(dt.format("%Y-%m-%dT%H:%M:%S%.f").to_string()))
+                .unwrap_or(JsonValue::Null)
+        } else if let Ok(v) = row.try_get::<chrono::NaiveDate, _>(idx) {
+            // W4 residual (found by the served round-trip test): a bare DATE column
+            // is tiberius `NaiveDate`, which the NaiveDateTime probe above does NOT
+            // match — without this branch a DATE read back NULL.
+            v.map(|d| JsonValue::String(d.format("%Y-%m-%d").to_string()))
+                .unwrap_or(JsonValue::Null)
+        } else if let Ok(v) = row.try_get::<chrono::NaiveTime, _>(idx) {
+            // W4 residual: a bare TIME column is tiberius `NaiveTime`, same rationale
+            // — otherwise it read back NULL.
+            v.map(|t| JsonValue::String(t.format("%H:%M:%S%.f").to_string()))
+                .unwrap_or(JsonValue::Null)
         } else if let Ok(v) = row.try_get::<&[u8], _>(idx) {
             v.map(base64_cell).unwrap_or(JsonValue::Null)
         } else {

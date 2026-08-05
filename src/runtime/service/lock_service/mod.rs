@@ -58,6 +58,13 @@ mod workers;
 pub(crate) use config::{LOCK_EXPIRY_SWEEP_BATCH, lock_expiry_interval};
 pub(crate) use workers::run_lock_expiry_once;
 
+// gate 25 (lock-fencing-at-commit): the DataBroker mutation path reuses the
+// LockService's entity name (to resolve the durable lock table from the native
+// manifest) and its PURE fencing-token freshness decision — so no lock logic is
+// duplicated in the data plane, only a scoped read of the row the service owns.
+pub(crate) use config::LOCK_MSG;
+pub(crate) use errors::ensure_fencing_token_fresh;
+
 /// Postgres-backed `LockService` handler.
 pub struct LockServiceImpl {
     /// Outbox-event Postgres pool (the configured native store for `lock`).

@@ -31,6 +31,16 @@ message RecordSet {
   repeated Row rows = 2;
   string next_page_token = 3;
   int32 total_count = 4;
+  // #5 (opaque row revision / ETag): when the caller asked for revisions
+  // (`SelectRequest.include_revision`), this carries the broker-maintained
+  // opaque revision token for each returned record, index-aligned with
+  // `records_json`. An empty slot means the row has no tracked revision yet
+  // (it has not been mutated since revision tracking was enabled). Absent
+  // (empty repeated) when the caller did not request revisions, so the read
+  // hot path pays nothing. The token is opaque + monotonically increasing;
+  // feed it back as `UpdateRequest.expected_revision` / `DeleteRequest.
+  // expected_revision` for optimistic concurrency.
+  repeated string record_revisions = 5;
 }
 
 message SelectRequest {
@@ -42,6 +52,10 @@ message SelectRequest {
   string page_token = 6;
   repeated Sort sort = 7;
   CacheOptions cache = 8;
+  // #5: opt-in — when true, the broker joins each returned record against the
+  // system-side revision map and fills `RecordSet.record_revisions`. Off by
+  // default so the read hot path is unchanged (zero extra SQL).
+  bool include_revision = 9;
 }
 
 message UpsertRequest {
@@ -63,6 +77,15 @@ message UpsertRequest {
   // atomic without dropping to a service-specific command or external lock.
   // Backwards-compatible: an unset/empty `expected` behaves exactly as before.
   google.protobuf.Struct expected = 9;
+  // gate 25 (lock-fencing-at-commit): optional advisory-lock name + the
+  // monotonic fencing token the caller was granted for it. When both are set,
+  // the broker validates the token against the LockService's durable lock row
+  // IN THE SAME write transaction as the mutation; a stale token (a writer that
+  // outlived its lease and was fenced by a newer holder) is rejected fail-closed
+  // with NO write / projection / CDC / audit / idempotency side effect. Unset
+  // (empty `lock_name`) = no fencing (unchanged behaviour).
+  string lock_name = 10;
+  int64 fencing_token = 11;
 }
 
 message DeleteRequest {
@@ -74,6 +97,16 @@ message DeleteRequest {
   // row's fields still equal these values (mirrors UpsertRequest.expected,
   // UDB-GO-005). Unset/empty = unconditional delete (unchanged behaviour).
   google.protobuf.Struct expected = 5;
+  // #5 (opaque row revision / ETag): optional revision precondition. When set,
+  // the delete proceeds only if the broker-maintained opaque revision of the
+  // primary-key-identified row still equals this token, checked atomically under
+  // the revision row lock in the write transaction. A mismatch or an untracked
+  // row is `FAILED_PRECONDITION` and nothing is removed. Non-disclosing (never
+  // reveals a foreign row's existence). ABA-safe (the revision only increases).
+  string expected_revision = 6;
+  // gate 25 (lock-fencing-at-commit): see UpdateRequest.lock_name/fencing_token.
+  string lock_name = 7;
+  int64 fencing_token = 8;
 }
 
 // Partial update: set only the named columns (and/or apply atomic increments)
@@ -104,6 +137,22 @@ message UpdateRequest {
   repeated Increment increments = 6;
   string idempotency_key = 7;
   bool return_record = 8;
+  // #5 (opaque row revision / ETag): optional revision precondition. When set,
+  // the filter MUST pin every primary-key column by equality (single-row), and
+  // the update proceeds only if the broker-maintained opaque revision of that
+  // row still equals this token — checked atomically under the revision row lock
+  // in the write transaction. A mismatch or an untracked row is
+  // `FAILED_PRECONDITION` and nothing is written/projected/emitted. On success
+  // the response carries the bumped revision. ABA-safe (revision only increases).
+  string expected_revision = 9;
+  // gate 25 (lock-fencing-at-commit): optional advisory-lock name + the
+  // monotonic fencing token granted for it. When both are set the broker
+  // validates the token against the LockService's durable lock row IN THE SAME
+  // write transaction; a stale token (a writer that outlived its lease) is
+  // rejected fail-closed with NO write / projection / CDC / audit / idempotency
+  // side effect. Unset (empty `lock_name`) = no fencing (unchanged behaviour).
+  string lock_name = 10;
+  int64 fencing_token = 11;
 }
 
 message ViewDefinition {
@@ -113,4 +162,61 @@ message ViewDefinition {
   string query = 4;
   bool with_data = 5;
   int32 ttl_days = 6;
+}
+
+// gate 23 (bounded bulk compare-and-swap): one tenant-scoped, explicitly
+// bounded, request-hash-idempotent batch of single-row conditional updates.
+// Each item targets exactly one row (its `filter` must pin the full primary
+// key by equality) and is applied only if its compare-and-swap preconditions
+// hold; a per-item CAS mismatch is COUNTED as a conflict, not a batch error, so
+// the batch is safe to retry after a partial failure (reuse `idempotency_key`
+// to replay the original counts). The whole batch runs in ONE write transaction
+// and preserves the per-row projection / CDC-outbox / audit side effects of the
+// unary Update path. The RPC that carries these messages is wired separately;
+// the broker core (`DataBrokerRuntime::bulk_cas`) is the single implementation.
+message BulkCasItem {
+  // Row selector — MUST pin every primary-key column by equality (single row),
+  // identical to a conditional Delete/Update filter.
+  google.protobuf.Struct filter = 1;
+  // Columns to SET on the matched row (same semantics as UpdateRequest.changes).
+  google.protobuf.Struct changes = 2;
+  // Optional opaque revision precondition (#5). Empty = not asserted.
+  string expected_revision = 3;
+  // Optional field-map compare-and-swap precondition (UpdateRequest.expected).
+  google.protobuf.Struct expected = 4;
+  // Optional atomic counter deltas, applied in the same UPDATE (col = col + n).
+  repeated UpdateRequest.Increment increments = 5;
+}
+
+message BulkCasRequest {
+  RequestContext context = 1;
+  string message_type = 2;
+  repeated BulkCasItem items = 3;
+  // Durable request-hash idempotency (reuses the keyed-mutation dedup machinery)
+  // so a whole-batch retry replays the original counts instead of re-applying.
+  string idempotency_key = 4;
+  // Caller's explicit row ceiling. Clamped to the server-side maximum; a batch
+  // larger than the effective ceiling is rejected `INVALID_ARGUMENT` (bounded).
+  int32 max_rows = 5;
+}
+
+message BulkCasItemResult {
+  // The target row exists (its primary key matched a live row).
+  bool matched = 1;
+  // The row passed every precondition and was updated.
+  bool changed = 2;
+  // A precondition (revision or field-map CAS) did not hold — not applied.
+  bool conflicted = 3;
+  // The bumped opaque revision after a successful change; empty otherwise.
+  string revision = 4;
+}
+
+message BulkCasResponse {
+  int32 matched = 1;
+  int32 changed = 2;
+  int32 conflicted = 3;
+  // JSON-encoded WriteReceipt for read-your-writes fencing over the batch.
+  string write_receipt_json = 4;
+  // Per-item outcome, index-aligned with BulkCasRequest.items.
+  repeated BulkCasItemResult results = 5;
 }

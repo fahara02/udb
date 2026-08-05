@@ -142,6 +142,15 @@ impl AuthzServiceImpl {
             ));
         }
         let version = self.load_version(&req.policy_version_id).await?;
+        // A3: bind the caller claim to the VERSION's tenant/project before the
+        // replace-all (canary) activation — a tenant-A `authz:admin` must not
+        // activate/replace tenant B's live policy set. Cross-tenant admins still
+        // pass; no-op in-process.
+        crate::runtime::service::method_security::enforce_body_tenant_matches_claim(
+            &crate::runtime::service::method_security::current_claim_context(),
+            &version.tenant_id,
+            &version.project_id,
+        )?;
         let state =
             authz_entity_pb::PolicyVersionState::try_from(version.state).unwrap_or_default();
         if !matches!(
@@ -267,6 +276,13 @@ impl AuthzServiceImpl {
             return Err(rollback_target_required_status());
         }
         let target = self.load_version(&target_id).await?;
+        // A3: bind the caller claim to the TARGET version's tenant/project before
+        // rollback replaces the live policy set (cross-tenant admins still pass).
+        crate::runtime::service::method_security::enforce_body_tenant_matches_claim(
+            &crate::runtime::service::method_security::current_claim_context(),
+            &target.tenant_id,
+            &target.project_id,
+        )?;
         let document = self.load_version_document(&target_id).await?;
         // Rollback restores the target document and records the rollback lineage.
         let (policy_rev, rel_rev) = self
@@ -767,6 +783,15 @@ impl AuthzServiceImpl {
             ));
         }
         let version = self.load_version(&req.policy_version_id).await?;
+        // A3: bind the caller claim to the VERSION's tenant/project before the
+        // replace-all (canary) activation — a tenant-A `authz:admin` must not
+        // activate/replace tenant B's live policy set. Cross-tenant admins still
+        // pass; no-op in-process.
+        crate::runtime::service::method_security::enforce_body_tenant_matches_claim(
+            &crate::runtime::service::method_security::current_claim_context(),
+            &version.tenant_id,
+            &version.project_id,
+        )?;
         let state =
             authz_entity_pb::PolicyVersionState::try_from(version.state).unwrap_or_default();
         if !matches!(
@@ -934,6 +959,13 @@ impl AuthzServiceImpl {
         // version. Reuse the governance activation path so PolicySet pointers,
         // version state, authz revision, and cluster invalidation all flip.
         let version = self.load_version(&canary.policy_version_id).await?;
+        // A3: bind the caller claim to the version's tenant/project before promote
+        // runs the fleet-wide activation (cross-tenant admins still pass).
+        crate::runtime::service::method_security::enforce_body_tenant_matches_claim(
+            &crate::runtime::service::method_security::current_claim_context(),
+            &version.tenant_id,
+            &version.project_id,
+        )?;
         let document = self
             .load_version_document(&canary.policy_version_id)
             .await?;

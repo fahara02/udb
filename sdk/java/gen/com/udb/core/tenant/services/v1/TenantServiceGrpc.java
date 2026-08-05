@@ -229,6 +229,37 @@ public final class TenantServiceGrpc {
     return getPurgeTenantMethod;
   }
 
+  private static volatile io.grpc.MethodDescriptor<com.udb.core.tenant.services.v1.AdminPurgeTenantRequest,
+      com.udb.core.tenant.services.v1.AdminPurgeTenantResponse> getAdminPurgeTenantMethod;
+
+  @io.grpc.stub.annotations.RpcMethod(
+      fullMethodName = SERVICE_NAME + '/' + "AdminPurgeTenant",
+      requestType = com.udb.core.tenant.services.v1.AdminPurgeTenantRequest.class,
+      responseType = com.udb.core.tenant.services.v1.AdminPurgeTenantResponse.class,
+      methodType = io.grpc.MethodDescriptor.MethodType.UNARY)
+  public static io.grpc.MethodDescriptor<com.udb.core.tenant.services.v1.AdminPurgeTenantRequest,
+      com.udb.core.tenant.services.v1.AdminPurgeTenantResponse> getAdminPurgeTenantMethod() {
+    io.grpc.MethodDescriptor<com.udb.core.tenant.services.v1.AdminPurgeTenantRequest, com.udb.core.tenant.services.v1.AdminPurgeTenantResponse> getAdminPurgeTenantMethod;
+    if ((getAdminPurgeTenantMethod = TenantServiceGrpc.getAdminPurgeTenantMethod) == null) {
+      synchronized (TenantServiceGrpc.class) {
+        if ((getAdminPurgeTenantMethod = TenantServiceGrpc.getAdminPurgeTenantMethod) == null) {
+          TenantServiceGrpc.getAdminPurgeTenantMethod = getAdminPurgeTenantMethod =
+              io.grpc.MethodDescriptor.<com.udb.core.tenant.services.v1.AdminPurgeTenantRequest, com.udb.core.tenant.services.v1.AdminPurgeTenantResponse>newBuilder()
+              .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
+              .setFullMethodName(generateFullMethodName(SERVICE_NAME, "AdminPurgeTenant"))
+              .setSampledToLocalTracing(true)
+              .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.tenant.services.v1.AdminPurgeTenantRequest.getDefaultInstance()))
+              .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
+                  com.udb.core.tenant.services.v1.AdminPurgeTenantResponse.getDefaultInstance()))
+              .setSchemaDescriptor(new TenantServiceMethodDescriptorSupplier("AdminPurgeTenant"))
+              .build();
+        }
+      }
+    }
+    return getAdminPurgeTenantMethod;
+  }
+
   /**
    * Creates a new async stub that supports all call types for the service
    */
@@ -366,6 +397,26 @@ public final class TenantServiceGrpc {
         io.grpc.stub.StreamObserver<com.udb.core.tenant.services.v1.PurgeTenantResponse> responseObserver) {
       io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getPurgeTenantMethod(), responseObserver);
     }
+
+    /**
+     * <pre>
+     * PRIVILEGED cross-tenant purge (Bug #2). Unlike PurgeTenant — which forces the
+     * body tenant to equal the verified claim (self-purge only) — this RPC lets a
+     * delegated operator purge a DIFFERENT `target_tenant_id`. It is gated by a
+     * DISTINCT, default-deny scope (`udb:tenant:admin-purge`) SEPARATE from the
+     * self-purge scope, is DESTRUCTIVE, and demands an explicit confirmation token
+     * plus an idempotency key. The handler routes the movement with
+     * `privileged_cross_tenant=true`, binds the VERIFIED delegated actor, treats
+     * control-plane / tenant-less tables explicitly (retained + reported, never
+     * blind-deleted), and writes an immutable audit/outcome record. `tenant_field`
+     * names the body tenant the action targets (`target_tenant_id`); the handler —
+     * not the transport gate — authorizes the cross-tenant reach via the scope.
+     * </pre>
+     */
+    default void adminPurgeTenant(com.udb.core.tenant.services.v1.AdminPurgeTenantRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.tenant.services.v1.AdminPurgeTenantResponse> responseObserver) {
+      io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall(getAdminPurgeTenantMethod(), responseObserver);
+    }
   }
 
   /**
@@ -476,6 +527,27 @@ public final class TenantServiceGrpc {
       io.grpc.stub.ClientCalls.asyncUnaryCall(
           getChannel().newCall(getPurgeTenantMethod(), getCallOptions()), request, responseObserver);
     }
+
+    /**
+     * <pre>
+     * PRIVILEGED cross-tenant purge (Bug #2). Unlike PurgeTenant — which forces the
+     * body tenant to equal the verified claim (self-purge only) — this RPC lets a
+     * delegated operator purge a DIFFERENT `target_tenant_id`. It is gated by a
+     * DISTINCT, default-deny scope (`udb:tenant:admin-purge`) SEPARATE from the
+     * self-purge scope, is DESTRUCTIVE, and demands an explicit confirmation token
+     * plus an idempotency key. The handler routes the movement with
+     * `privileged_cross_tenant=true`, binds the VERIFIED delegated actor, treats
+     * control-plane / tenant-less tables explicitly (retained + reported, never
+     * blind-deleted), and writes an immutable audit/outcome record. `tenant_field`
+     * names the body tenant the action targets (`target_tenant_id`); the handler —
+     * not the transport gate — authorizes the cross-tenant reach via the scope.
+     * </pre>
+     */
+    public void adminPurgeTenant(com.udb.core.tenant.services.v1.AdminPurgeTenantRequest request,
+        io.grpc.stub.StreamObserver<com.udb.core.tenant.services.v1.AdminPurgeTenantResponse> responseObserver) {
+      io.grpc.stub.ClientCalls.asyncUnaryCall(
+          getChannel().newCall(getAdminPurgeTenantMethod(), getCallOptions()), request, responseObserver);
+    }
   }
 
   /**
@@ -568,6 +640,26 @@ public final class TenantServiceGrpc {
       return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
           getChannel(), getPurgeTenantMethod(), getCallOptions(), request);
     }
+
+    /**
+     * <pre>
+     * PRIVILEGED cross-tenant purge (Bug #2). Unlike PurgeTenant — which forces the
+     * body tenant to equal the verified claim (self-purge only) — this RPC lets a
+     * delegated operator purge a DIFFERENT `target_tenant_id`. It is gated by a
+     * DISTINCT, default-deny scope (`udb:tenant:admin-purge`) SEPARATE from the
+     * self-purge scope, is DESTRUCTIVE, and demands an explicit confirmation token
+     * plus an idempotency key. The handler routes the movement with
+     * `privileged_cross_tenant=true`, binds the VERIFIED delegated actor, treats
+     * control-plane / tenant-less tables explicitly (retained + reported, never
+     * blind-deleted), and writes an immutable audit/outcome record. `tenant_field`
+     * names the body tenant the action targets (`target_tenant_id`); the handler —
+     * not the transport gate — authorizes the cross-tenant reach via the scope.
+     * </pre>
+     */
+    public com.udb.core.tenant.services.v1.AdminPurgeTenantResponse adminPurgeTenant(com.udb.core.tenant.services.v1.AdminPurgeTenantRequest request) throws io.grpc.StatusException {
+      return io.grpc.stub.ClientCalls.blockingV2UnaryCall(
+          getChannel(), getAdminPurgeTenantMethod(), getCallOptions(), request);
+    }
   }
 
   /**
@@ -659,6 +751,26 @@ public final class TenantServiceGrpc {
     public com.udb.core.tenant.services.v1.PurgeTenantResponse purgeTenant(com.udb.core.tenant.services.v1.PurgeTenantRequest request) {
       return io.grpc.stub.ClientCalls.blockingUnaryCall(
           getChannel(), getPurgeTenantMethod(), getCallOptions(), request);
+    }
+
+    /**
+     * <pre>
+     * PRIVILEGED cross-tenant purge (Bug #2). Unlike PurgeTenant — which forces the
+     * body tenant to equal the verified claim (self-purge only) — this RPC lets a
+     * delegated operator purge a DIFFERENT `target_tenant_id`. It is gated by a
+     * DISTINCT, default-deny scope (`udb:tenant:admin-purge`) SEPARATE from the
+     * self-purge scope, is DESTRUCTIVE, and demands an explicit confirmation token
+     * plus an idempotency key. The handler routes the movement with
+     * `privileged_cross_tenant=true`, binds the VERIFIED delegated actor, treats
+     * control-plane / tenant-less tables explicitly (retained + reported, never
+     * blind-deleted), and writes an immutable audit/outcome record. `tenant_field`
+     * names the body tenant the action targets (`target_tenant_id`); the handler —
+     * not the transport gate — authorizes the cross-tenant reach via the scope.
+     * </pre>
+     */
+    public com.udb.core.tenant.services.v1.AdminPurgeTenantResponse adminPurgeTenant(com.udb.core.tenant.services.v1.AdminPurgeTenantRequest request) {
+      return io.grpc.stub.ClientCalls.blockingUnaryCall(
+          getChannel(), getAdminPurgeTenantMethod(), getCallOptions(), request);
     }
   }
 
@@ -759,6 +871,27 @@ public final class TenantServiceGrpc {
       return io.grpc.stub.ClientCalls.futureUnaryCall(
           getChannel().newCall(getPurgeTenantMethod(), getCallOptions()), request);
     }
+
+    /**
+     * <pre>
+     * PRIVILEGED cross-tenant purge (Bug #2). Unlike PurgeTenant — which forces the
+     * body tenant to equal the verified claim (self-purge only) — this RPC lets a
+     * delegated operator purge a DIFFERENT `target_tenant_id`. It is gated by a
+     * DISTINCT, default-deny scope (`udb:tenant:admin-purge`) SEPARATE from the
+     * self-purge scope, is DESTRUCTIVE, and demands an explicit confirmation token
+     * plus an idempotency key. The handler routes the movement with
+     * `privileged_cross_tenant=true`, binds the VERIFIED delegated actor, treats
+     * control-plane / tenant-less tables explicitly (retained + reported, never
+     * blind-deleted), and writes an immutable audit/outcome record. `tenant_field`
+     * names the body tenant the action targets (`target_tenant_id`); the handler —
+     * not the transport gate — authorizes the cross-tenant reach via the scope.
+     * </pre>
+     */
+    public com.google.common.util.concurrent.ListenableFuture<com.udb.core.tenant.services.v1.AdminPurgeTenantResponse> adminPurgeTenant(
+        com.udb.core.tenant.services.v1.AdminPurgeTenantRequest request) {
+      return io.grpc.stub.ClientCalls.futureUnaryCall(
+          getChannel().newCall(getAdminPurgeTenantMethod(), getCallOptions()), request);
+    }
   }
 
   private static final int METHODID_CREATE_TENANT = 0;
@@ -768,6 +901,7 @@ public final class TenantServiceGrpc {
   private static final int METHODID_GET_TENANT_CONFIG = 4;
   private static final int METHODID_UPDATE_TENANT_CONFIG = 5;
   private static final int METHODID_PURGE_TENANT = 6;
+  private static final int METHODID_ADMIN_PURGE_TENANT = 7;
 
   private static final class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -813,6 +947,10 @@ public final class TenantServiceGrpc {
         case METHODID_PURGE_TENANT:
           serviceImpl.purgeTenant((com.udb.core.tenant.services.v1.PurgeTenantRequest) request,
               (io.grpc.stub.StreamObserver<com.udb.core.tenant.services.v1.PurgeTenantResponse>) responseObserver);
+          break;
+        case METHODID_ADMIN_PURGE_TENANT:
+          serviceImpl.adminPurgeTenant((com.udb.core.tenant.services.v1.AdminPurgeTenantRequest) request,
+              (io.grpc.stub.StreamObserver<com.udb.core.tenant.services.v1.AdminPurgeTenantResponse>) responseObserver);
           break;
         default:
           throw new AssertionError();
@@ -881,6 +1019,13 @@ public final class TenantServiceGrpc {
               com.udb.core.tenant.services.v1.PurgeTenantRequest,
               com.udb.core.tenant.services.v1.PurgeTenantResponse>(
                 service, METHODID_PURGE_TENANT)))
+        .addMethod(
+          getAdminPurgeTenantMethod(),
+          io.grpc.stub.ServerCalls.asyncUnaryCall(
+            new MethodHandlers<
+              com.udb.core.tenant.services.v1.AdminPurgeTenantRequest,
+              com.udb.core.tenant.services.v1.AdminPurgeTenantResponse>(
+                service, METHODID_ADMIN_PURGE_TENANT)))
         .build();
   }
 
@@ -936,6 +1081,7 @@ public final class TenantServiceGrpc {
               .addMethod(getGetTenantConfigMethod())
               .addMethod(getUpdateTenantConfigMethod())
               .addMethod(getPurgeTenantMethod())
+              .addMethod(getAdminPurgeTenantMethod())
               .build();
         }
       }

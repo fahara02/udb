@@ -504,10 +504,17 @@ impl ProjectionTaskStore for PostgresCanonicalStore {
         }
         let rel = self.projection_relation_ref();
         // PG accepts a TEXT[] bound via `= ANY($1)`.
+        // P2-1 (NF-1/NF-2): only COMPLETED clears the read fence. FAILED (a
+        // projection that will RETRY) and DEAD_LETTER (a projection that will
+        // NEVER complete) are NOT projected yet, so for read-your-writes they must
+        // count as PENDING — a FAILED task keeps the fence blocking until the retry
+        // lands; a DEAD_LETTER task never clears, so the fence times out into a
+        // ProjectionMissing (the honest "this write can't be read consistently"),
+        // never a silent stale-as-fresh clear.
         let sql = format!(
             r#"SELECT COUNT(*)::BIGINT FROM {rel}
                WHERE idempotency_key = ANY($1)
-                 AND status NOT IN ('COMPLETED','DEAD_LETTER','FAILED')"#
+                 AND status <> 'COMPLETED'"#
         );
         let n: i64 = sqlx::query_scalar(&sql)
             .bind(idempotency_keys)

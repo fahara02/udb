@@ -1193,3 +1193,27 @@ fn is_token_boundary(text: &str, at: usize) -> bool {
         .last()
         .is_none_or(|ch| !(ch.is_ascii_alphanumeric() || ch == '_'))
 }
+
+#[test]
+fn broken_pipe_panic_messages_map_to_clean_exit() {
+    // std's `println!` / `print!` panic with these messages when the downstream
+    // reader closed the pipe early (`udb … | head`). Both platform spellings
+    // must be recognized so `install_broken_pipe_panic_hook` exits cleanly (0)
+    // instead of dumping a backtrace. Reverting the detector to miss either
+    // spelling fails this test.
+    assert!(super::is_broken_pipe_panic_message(
+        "failed printing to stdout: Broken pipe (os error 32)" // Unix EPIPE
+    ));
+    assert!(super::is_broken_pipe_panic_message(
+        "failed printing to stdout: The pipe is being closed. (os error 109)" // Windows
+    ));
+    assert!(super::is_broken_pipe_panic_message("Broken pipe"));
+    // Unrelated panics must NOT be swallowed as a clean exit — they still get
+    // the normal (previous) panic hook and a non-zero exit.
+    assert!(!super::is_broken_pipe_panic_message(
+        "index out of bounds: the len is 3 but the index is 5"
+    ));
+    assert!(!super::is_broken_pipe_panic_message(
+        "called `Option::unwrap()` on a `None` value"
+    ));
+}

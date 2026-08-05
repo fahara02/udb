@@ -188,8 +188,20 @@ pub fn enforce_with_mechanism(ctx: &AppliedContext, mechanism: &str) -> ContextE
 /// dialect. Every dialect doubles the single-quote (`'` → `''`); this is the
 /// single source of that rule so the per-dialect arms in
 /// [`render_sql_session_settings`] don't each open-code it.
-pub fn escape_sql_string(value: &str, _dialect: SqlDialect) -> String {
-    value.replace('\'', "''")
+pub fn escape_sql_string(value: &str, dialect: SqlDialect) -> String {
+    match dialect {
+        // INJ4 (WC-N1 class): MySQL and ClickHouse honor C-style backslash escapes
+        // inside string literals, so `''`-doubling alone is insufficient — a
+        // `\`-terminated session-context value (correlation_id / purpose / scope)
+        // would escape the closing quote and corrupt or inject the SET statement.
+        // Escape the backslash FIRST (order matters), then double the quote.
+        SqlDialect::Mysql | SqlDialect::Clickhouse => {
+            value.replace('\\', "\\\\").replace('\'', "''")
+        }
+        // Postgres (standard_conforming_strings=on), SQLite, and T-SQL (MSSQL) do
+        // not process backslash escapes, so quote-doubling alone is complete.
+        SqlDialect::Postgres | SqlDialect::Sqlite | SqlDialect::Mssql => value.replace('\'', "''"),
+    }
 }
 
 /// Backend-specific request-context applicator. Implementations live

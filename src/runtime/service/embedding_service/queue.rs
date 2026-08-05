@@ -499,9 +499,12 @@ pub(crate) async fn ack_work_item(
         let job_id: Option<Uuid> = row.try_get("job_id").ok();
         if let Some(job_id) = job_id {
             sqlx::query(
+                // D16: a dead-lettered chunk (failed>0) must NEVER count toward
+                // COMPLETED, and a later ack must not resurrect a terminal FAILED.
+                // COMPLETED only when every chunk is STORED with zero failures.
                 "UPDATE udb_embedding.embedding_jobs SET vectors_stored = vectors_stored + 1, \
-                 status = CASE WHEN chunks_emitted <= vectors_stored + failed + 1 THEN 'COMPLETED' ELSE status END, \
-                 finished_at = CASE WHEN chunks_emitted <= vectors_stored + failed + 1 THEN CURRENT_TIMESTAMP ELSE finished_at END, \
+                 status = CASE WHEN failed = 0 AND chunks_emitted <= vectors_stored + 1 THEN 'COMPLETED' ELSE status END, \
+                 finished_at = CASE WHEN failed = 0 AND chunks_emitted <= vectors_stored + 1 THEN CURRENT_TIMESTAMP ELSE finished_at END, \
                  updated_at = CURRENT_TIMESTAMP WHERE job_id = $1 AND tenant_id = $2",
             ).bind(job_id).bind(tenant_id).execute(&mut *tx).await
             .map_err(|error| queue_status("embedding_ack_job", error))?;
@@ -693,8 +696,14 @@ pub(crate) async fn complete_job_enumeration(
         return Ok(());
     }
     sqlx::query(
+        // D16: count `failed` chunks as terminal FAILED, never COMPLETED — a job
+        // that dead-lettered part of its corpus must not report success. FAILED is
+        // terminal (retains dead-letter rows for inspection; not GC'd as COMPLETED).
         "UPDATE udb_embedding.embedding_jobs SET \
-         status = CASE WHEN chunks_emitted <= vectors_stored + failed THEN 'COMPLETED' ELSE 'RUNNING' END, \
+         status = CASE \
+             WHEN failed = 0 AND chunks_emitted <= vectors_stored THEN 'COMPLETED' \
+             WHEN failed > 0 AND chunks_emitted <= vectors_stored + failed THEN 'FAILED' \
+             ELSE 'RUNNING' END, \
          finished_at = CASE WHEN chunks_emitted <= vectors_stored + failed THEN CURRENT_TIMESTAMP ELSE finished_at END, \
          updated_at = CURRENT_TIMESTAMP WHERE job_id = $1::uuid AND tenant_id = $2",
     ).bind(job_id).bind(tenant_id).execute(pool).await

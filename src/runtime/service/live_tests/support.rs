@@ -129,8 +129,24 @@ pub(super) async fn asset_service(_pool: sqlx::PgPool) -> AssetServiceImpl {
     native_broker_service().await.build_asset_service()
 }
 
+pub(super) async fn search_service(
+    _pool: sqlx::PgPool,
+) -> crate::runtime::service::search_service::SearchServiceImpl {
+    native_broker_service().await.build_search_service()
+}
+
 pub(super) async fn webrtc_service(_pool: sqlx::PgPool) -> WebrtcServiceImpl {
     native_broker_service().await.build_webrtc_service()
+}
+
+/// Build the native `LockService` on the SAME live PG the data-plane broker uses,
+/// so a lock acquired/released through the real LockService RPCs is the exact
+/// durable row the data-plane fencing gate (`enforce_fencing_token_in_tx`) reads.
+/// Mirrors `storage_service` / `asset_service`.
+pub(super) async fn lock_service(
+    _pool: sqlx::PgPool,
+) -> crate::runtime::service::lock_service::LockServiceImpl {
+    native_broker_service().await.build_lock_service()
 }
 
 pub(super) async fn put_storage_object(object_key: &str, content_type: &str, bytes: &[u8]) {

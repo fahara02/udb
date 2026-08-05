@@ -26,6 +26,7 @@ const (
 	TenantService_GetTenantConfig_FullMethodName    = "/udb.core.tenant.services.v1.TenantService/GetTenantConfig"
 	TenantService_UpdateTenantConfig_FullMethodName = "/udb.core.tenant.services.v1.TenantService/UpdateTenantConfig"
 	TenantService_PurgeTenant_FullMethodName        = "/udb.core.tenant.services.v1.TenantService/PurgeTenant"
+	TenantService_AdminPurgeTenant_FullMethodName   = "/udb.core.tenant.services.v1.TenantService/AdminPurgeTenant"
 )
 
 // TenantServiceClient is the client API for TenantService service.
@@ -51,6 +52,18 @@ type TenantServiceClient interface {
 	// siblings like authn.ChangeUserStatus (AUTH_MODE_BEARER, tenant_required,
 	// request_context_required).
 	PurgeTenant(ctx context.Context, in *PurgeTenantRequest, opts ...grpc.CallOption) (*PurgeTenantResponse, error)
+	// PRIVILEGED cross-tenant purge (Bug #2). Unlike PurgeTenant — which forces the
+	// body tenant to equal the verified claim (self-purge only) — this RPC lets a
+	// delegated operator purge a DIFFERENT `target_tenant_id`. It is gated by a
+	// DISTINCT, default-deny scope (`udb:tenant:admin-purge`) SEPARATE from the
+	// self-purge scope, is DESTRUCTIVE, and demands an explicit confirmation token
+	// plus an idempotency key. The handler routes the movement with
+	// `privileged_cross_tenant=true`, binds the VERIFIED delegated actor, treats
+	// control-plane / tenant-less tables explicitly (retained + reported, never
+	// blind-deleted), and writes an immutable audit/outcome record. `tenant_field`
+	// names the body tenant the action targets (`target_tenant_id`); the handler —
+	// not the transport gate — authorizes the cross-tenant reach via the scope.
+	AdminPurgeTenant(ctx context.Context, in *AdminPurgeTenantRequest, opts ...grpc.CallOption) (*AdminPurgeTenantResponse, error)
 }
 
 type tenantServiceClient struct {
@@ -131,6 +144,16 @@ func (c *tenantServiceClient) PurgeTenant(ctx context.Context, in *PurgeTenantRe
 	return out, nil
 }
 
+func (c *tenantServiceClient) AdminPurgeTenant(ctx context.Context, in *AdminPurgeTenantRequest, opts ...grpc.CallOption) (*AdminPurgeTenantResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AdminPurgeTenantResponse)
+	err := c.cc.Invoke(ctx, TenantService_AdminPurgeTenant_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // TenantServiceServer is the server API for TenantService service.
 // All implementations should embed UnimplementedTenantServiceServer
 // for forward compatibility.
@@ -154,6 +177,18 @@ type TenantServiceServer interface {
 	// siblings like authn.ChangeUserStatus (AUTH_MODE_BEARER, tenant_required,
 	// request_context_required).
 	PurgeTenant(context.Context, *PurgeTenantRequest) (*PurgeTenantResponse, error)
+	// PRIVILEGED cross-tenant purge (Bug #2). Unlike PurgeTenant — which forces the
+	// body tenant to equal the verified claim (self-purge only) — this RPC lets a
+	// delegated operator purge a DIFFERENT `target_tenant_id`. It is gated by a
+	// DISTINCT, default-deny scope (`udb:tenant:admin-purge`) SEPARATE from the
+	// self-purge scope, is DESTRUCTIVE, and demands an explicit confirmation token
+	// plus an idempotency key. The handler routes the movement with
+	// `privileged_cross_tenant=true`, binds the VERIFIED delegated actor, treats
+	// control-plane / tenant-less tables explicitly (retained + reported, never
+	// blind-deleted), and writes an immutable audit/outcome record. `tenant_field`
+	// names the body tenant the action targets (`target_tenant_id`); the handler —
+	// not the transport gate — authorizes the cross-tenant reach via the scope.
+	AdminPurgeTenant(context.Context, *AdminPurgeTenantRequest) (*AdminPurgeTenantResponse, error)
 }
 
 // UnimplementedTenantServiceServer should be embedded to have
@@ -183,6 +218,9 @@ func (UnimplementedTenantServiceServer) UpdateTenantConfig(context.Context, *Upd
 }
 func (UnimplementedTenantServiceServer) PurgeTenant(context.Context, *PurgeTenantRequest) (*PurgeTenantResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method PurgeTenant not implemented")
+}
+func (UnimplementedTenantServiceServer) AdminPurgeTenant(context.Context, *AdminPurgeTenantRequest) (*AdminPurgeTenantResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AdminPurgeTenant not implemented")
 }
 func (UnimplementedTenantServiceServer) testEmbeddedByValue() {}
 
@@ -330,6 +368,24 @@ func _TenantService_PurgeTenant_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TenantService_AdminPurgeTenant_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AdminPurgeTenantRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TenantServiceServer).AdminPurgeTenant(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: TenantService_AdminPurgeTenant_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TenantServiceServer).AdminPurgeTenant(ctx, req.(*AdminPurgeTenantRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // TenantService_ServiceDesc is the grpc.ServiceDesc for TenantService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -364,6 +420,10 @@ var TenantService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "PurgeTenant",
 			Handler:    _TenantService_PurgeTenant_Handler,
+		},
+		{
+			MethodName: "AdminPurgeTenant",
+			Handler:    _TenantService_AdminPurgeTenant_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

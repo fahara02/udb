@@ -14,9 +14,10 @@
 //! topics + stable error-reason codes, [`errors`] the typed statuses/reason
 //! trailers + field validators, [`model`] the enum<->db converters + ETag
 //! normalizer + JSON→`File` decoders, [`store`] the neutral-IR query/record
-//! builders + per-tenant quota lease/aggregate, [`presign`] the object-store
-//! presign/HEAD/delete helpers, [`workers`] the leader-elected orphan reaper,
-//! [`handlers`] the eight RPCs — `mod.rs` keeps only the struct, the
+//! builders + per-tenant quota lease/aggregate + durable object-GC-intent ledger,
+//! [`presign`] the object-store presign/HEAD/delete helpers, [`workers`] the
+//! leader-elected orphan reaper + the object-GC-intent sweep (HARD DeleteFile
+//! convergence), [`handlers`] the RPCs — `mod.rs` keeps only the struct, the
 //! builders/admission/require guards, and one-line trait delegators. Storage
 //! lifecycle events are emitted inline via the shared
 //! `native_helpers::emit_payload_event` (no dedicated events module).
@@ -316,6 +317,36 @@ impl DataBrokerService {
                             .await
                             .map(|n| n as i64)
                     }
+                },
+            );
+        }
+
+        // Leader-elected GC-intent sweep: drive PENDING durable object-GC intents
+        // (recorded by HARD DeleteFile) to convergence, dead-lettering after the
+        // attempt cap. Held under its own lease so it runs independently of the
+        // orphan reaper (which can be disabled or run on a slower interval).
+        // Interval env-tunable; 0 disables. Best-effort — failures are logged only.
+        let gc_interval_secs = std::env::var("UDB_STORAGE_GC_SWEEP_INTERVAL_SECS")
+            .ok()
+            .and_then(|v| v.parse::<u64>().ok())
+            .unwrap_or(300);
+        let gc_batch_size = std::env::var("UDB_STORAGE_GC_SWEEP_BATCH_SIZE")
+            .ok()
+            .and_then(|v| v.parse::<i64>().ok())
+            .unwrap_or(200);
+        if gc_interval_secs > 0 && svc.pg_pool.is_some() {
+            let sweeper = svc.clone();
+            let gc_pool = svc.pg_pool.clone().expect("checked above");
+            let gc_relation = runtime.config().cdc.lock_log_relation();
+            crate::runtime::service::native_runtime::NativeWorkerHost::spawn_while_leader(
+                config::WORKER_STORAGE_GC_SWEEP,
+                "storage GC-intent sweep converged object deletions",
+                gc_pool,
+                gc_relation,
+                std::time::Duration::from_secs(gc_interval_secs),
+                move || {
+                    let sweeper_once = sweeper.clone();
+                    async move { sweeper_once.sweep_gc_intents(gc_batch_size).await.map(|n| n as i64) }
                 },
             );
         }

@@ -424,6 +424,41 @@ pub(crate) fn bind_one<'q>(
     if sql_type.contains("JSON") {
         return Ok(query.bind(sqlx::types::Json(strip_nul_json(value))));
     }
+    // W6 / bug #2 (bytes round-trip): a protobuf `bytes` field maps to a `BYTEA`
+    // column (`infer_sql_type`), and every JSON rendering of proto `bytes` is a
+    // base64 STRING — the proto3-canonical JSON the SDKs emit AND the base64 the
+    // SELECT serializer writes back (the BYTEA read branch in `core/mod.rs`).
+    // Without this branch that base64 ASCII falls through to the scalar text-bind
+    // below, so PostgreSQL either rejects it (42804 datatype_mismatch) or stores
+    // the base64 characters verbatim — never the real bytes. Base64-DECODE
+    // symmetrically and bind the native `bytea` type so a write↔read round-trips.
+    // Checked before the array branch so a BYTEA target is never misrouted into
+    // the typed `text[]` filter-array path. NULL binds a typed `Option<Vec<u8>>`
+    // NULL; a present-but-empty value ("" decodes to zero-length bytes, or an
+    // empty `[]`) binds empty bytes, distinct from NULL — mirroring the read side
+    // where NULL serializes to `null` and empty bytes serialize to `""`.
+    if sql_type.contains("BYTEA") {
+        use base64::{Engine as _, engine::general_purpose::STANDARD as B64};
+        return match value {
+            JsonValue::Null => Ok(query.bind(Option::<Vec<u8>>::None)),
+            JsonValue::String(raw) => B64
+                .decode(raw.trim())
+                .map(|bytes| query.bind(bytes))
+                .map_err(|err| {
+                    postgres_invalid_field(
+                        "value",
+                        "bytea value must be a base64-encoded string",
+                        format!("invalid base64 for bytea value: {err}"),
+                    )
+                }),
+            JsonValue::Array(items) if items.is_empty() => Ok(query.bind(Vec::<u8>::new())),
+            _ => Err(postgres_invalid_field(
+                "value",
+                "bytea value must be a base64 string or null",
+                "bytea value must be a base64 string or null",
+            )),
+        };
+    }
     // Array value — used for `$in` / `col = ANY($N)` filters. (#121)
     // Bind a *typed* array matching the column type: PostgreSQL does NOT
     // implicitly cast a `text[]` element to the column type inside `= ANY`, so a
@@ -1078,6 +1113,38 @@ mod tests {
             .is_err(),
             "a scalar UUID $in array must still validate its elements"
         );
+    }
+
+    /// W6 / bug #2: a `BYTEA` column receives proto `bytes` as a base64 STRING
+    /// (the SDKs' proto3-JSON encoding AND the SELECT serializer's base64 read
+    /// output). The bind side must base64-DECODE it into native `bytea`, symmetric
+    /// with the read path — NULL, a present-but-empty value, and an empty `[]` all
+    /// bind, while malformed base64 fails closed with a typed invalid-argument
+    /// violation instead of silently binding the raw ASCII.
+    #[test]
+    fn postgres_binds_bytea_column_from_base64() {
+        let mut bytea = col("blob");
+        bytea.sql_type = "BYTEA".to_string();
+
+        for value in [
+            serde_json::json!("aGVsbG8="), // base64 of "hello"
+            JsonValue::Null,
+            serde_json::json!(""), // present-but-empty → zero-length bytes, not NULL
+            serde_json::json!([]),
+        ] {
+            assert!(
+                bind_one(sqlx::query("SELECT $1"), Some(&bytea), &value).is_ok(),
+                "BYTEA column must accept base64/null/empty value {value}"
+            );
+        }
+
+        // Malformed base64 fails closed rather than binding the base64 ASCII text.
+        let err = expect_status(bind_one(
+            sqlx::query("SELECT $1"),
+            Some(&bytea),
+            &serde_json::json!("not valid base64 !!!"),
+        ));
+        assert_single_field_violation(&err, "value", "bytea value must be a base64-encoded string");
     }
 
     #[test]

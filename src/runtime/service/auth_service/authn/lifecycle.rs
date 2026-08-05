@@ -163,7 +163,7 @@ impl AuthnServiceImpl {
     /// Fails closed so a tenant-A admin token cannot list/revoke devices for a
     /// tenant-B user by passing that user's id. The DENY is auditable (subject +
     /// target tenant) via the shared body-tenant guard's tracing.
-    async fn authorize_target_user(&self, user_id: &str) -> Result<(), Status> {
+    pub(super) async fn authorize_target_user(&self, user_id: &str) -> Result<(), Status> {
         // No claim context (in-process / trusted caller, not over the wire): the
         // shared guards bypass too, so there is nothing to enforce here.
         if !crate::runtime::service::method_security::claim_context_present() {
@@ -1454,6 +1454,8 @@ impl AuthnServiceImpl {
         request: Request<authn_pb::IssueMfaChallengeRequest>,
     ) -> Result<Response<authn_pb::IssueMfaChallengeResponse>, Status> {
         let req = request.into_inner();
+        // A9: bind the target user_id to the validated claim (no-op in-process).
+        self.authorize_target_user(&req.user_id).await?;
         let user = self
             .users
             .get_user_by_id(&req.user_id)
@@ -1752,13 +1754,13 @@ impl AuthnServiceImpl {
             .ok_or_else(super::authn_user_not_found_status)?;
         let upper = factor_db.to_ascii_uppercase();
         if upper.contains("TOTP") {
-            let ok = authn::totp::decrypt_secret(&user.totp_secret_hash, &self.otp_hash_key())
+            let ok = authn::totp::decrypt_secret(&user.totp_secret_hash, &self.otp_hash_key()?)
                 .map(|secret| authn::totp::verify(&secret, code, now))
                 .unwrap_or(false);
             return Ok(ok);
         }
         if upper.contains("RECOVERY") {
-            let hash = authn::hash_recovery_code(code, &self.otp_hash_key());
+            let hash = authn::hash_recovery_code(code, &self.otp_hash_key()?);
             return self
                 .users
                 .consume_recovery_code(user_id, &hash, now)
@@ -1779,6 +1781,8 @@ impl AuthnServiceImpl {
         request: Request<authn_pb::ListMfaFactorsRequest>,
     ) -> Result<Response<authn_pb::ListMfaFactorsResponse>, Status> {
         let req = request.into_inner();
+        // A8: bind the target user_id to the validated claim (no-op in-process).
+        self.authorize_target_user(&req.user_id).await?;
         let user = self
             .users
             .get_user_by_id(&req.user_id)
@@ -1822,6 +1826,9 @@ impl AuthnServiceImpl {
         request: Request<authn_pb::DisableMfaFactorRequest>,
     ) -> Result<Response<authn_pb::DisableMfaFactorResponse>, Status> {
         let req = request.into_inner();
+        // A5: bind the target user_id to the validated claim — a bearer must not
+        // strip another tenant's user's second factor (no-op in-process).
+        self.authorize_target_user(&req.user_id).await?;
         let mut user = self
             .users
             .get_user_by_id(&req.user_id)
@@ -1870,6 +1877,8 @@ impl AuthnServiceImpl {
         request: Request<authn_pb::RevokeRecoveryCodesRequest>,
     ) -> Result<Response<authn_pb::RevokeRecoveryCodesResponse>, Status> {
         let req = request.into_inner();
+        // A7: bind the target user_id to the validated claim (no-op in-process).
+        self.authorize_target_user(&req.user_id).await?;
         let user = self
             .users
             .get_user_by_id(&req.user_id)
@@ -1895,6 +1904,9 @@ impl AuthnServiceImpl {
         request: Request<authn_pb::AdminResetMfaRequest>,
     ) -> Result<Response<authn_pb::AdminResetMfaResponse>, Status> {
         let req = request.into_inner();
+        // A5: bind the target user_id to the validated claim — cross-tenant admin
+        // reset only for a genuine cross-tenant admin (no-op in-process).
+        self.authorize_target_user(&req.user_id).await?;
         let mut user = self
             .users
             .get_user_by_id(&req.user_id)
@@ -2024,6 +2036,8 @@ impl AuthnServiceImpl {
         request: Request<authn_pb::ListWebAuthnCredentialsRequest>,
     ) -> Result<Response<authn_pb::ListWebAuthnCredentialsResponse>, Status> {
         let req = request.into_inner();
+        // A8: bind the target user_id to the validated claim (no-op in-process).
+        self.authorize_target_user(&req.user_id).await?;
         if req.user_id.trim().is_empty() {
             return Err(lifecycle_invalid_fields(
                 "user_id is required",
@@ -2091,6 +2105,8 @@ impl AuthnServiceImpl {
         request: Request<authn_pb::DeleteWebAuthnCredentialRequest>,
     ) -> Result<Response<authn_pb::DeleteWebAuthnCredentialResponse>, Status> {
         let req = request.into_inner();
+        // A7: bind the target user_id to the validated claim (no-op in-process).
+        self.authorize_target_user(&req.user_id).await?;
         if req.user_id.trim().is_empty() || req.credential_id.trim().is_empty() {
             return Err(lifecycle_invalid_fields(
                 "user_id and credential_id are required",
@@ -2160,6 +2176,8 @@ impl AuthnServiceImpl {
         request: Request<authn_pb::RenamePasskeyRequest>,
     ) -> Result<Response<authn_pb::RenamePasskeyResponse>, Status> {
         let req = request.into_inner();
+        // A7: bind the target user_id to the validated claim (no-op in-process).
+        self.authorize_target_user(&req.user_id).await?;
         if req.user_id.trim().is_empty() || req.credential_id.trim().is_empty() {
             return Err(lifecycle_invalid_fields(
                 "user_id and credential_id are required",

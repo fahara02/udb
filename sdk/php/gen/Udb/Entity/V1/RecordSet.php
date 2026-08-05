@@ -30,6 +30,20 @@ class RecordSet extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>int32 total_count = 4 [json_name = "totalCount"];</code>
      */
     protected $total_count = 0;
+    /**
+     * #5 (opaque row revision / ETag): when the caller asked for revisions
+     * (`SelectRequest.include_revision`), this carries the broker-maintained
+     * opaque revision token for each returned record, index-aligned with
+     * `records_json`. An empty slot means the row has no tracked revision yet
+     * (it has not been mutated since revision tracking was enabled). Absent
+     * (empty repeated) when the caller did not request revisions, so the read
+     * hot path pays nothing. The token is opaque + monotonically increasing;
+     * feed it back as `UpdateRequest.expected_revision` / `DeleteRequest.
+     * expected_revision` for optimistic concurrency.
+     *
+     * Generated from protobuf field <code>repeated string record_revisions = 5 [json_name = "recordRevisions"];</code>
+     */
+    private $record_revisions;
 
     /**
      * Constructor.
@@ -41,6 +55,16 @@ class RecordSet extends \Google\Protobuf\Internal\Message
      *     @type \Udb\Entity\V1\Row[] $rows
      *     @type string $next_page_token
      *     @type int $total_count
+     *     @type string[] $record_revisions
+     *           #5 (opaque row revision / ETag): when the caller asked for revisions
+     *           (`SelectRequest.include_revision`), this carries the broker-maintained
+     *           opaque revision token for each returned record, index-aligned with
+     *           `records_json`. An empty slot means the row has no tracked revision yet
+     *           (it has not been mutated since revision tracking was enabled). Absent
+     *           (empty repeated) when the caller did not request revisions, so the read
+     *           hot path pays nothing. The token is opaque + monotonically increasing;
+     *           feed it back as `UpdateRequest.expected_revision` / `DeleteRequest.
+     *           expected_revision` for optimistic concurrency.
      * }
      */
     public function __construct($data = NULL) {
@@ -132,6 +156,48 @@ class RecordSet extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkInt32($var);
         $this->total_count = $var;
+
+        return $this;
+    }
+
+    /**
+     * #5 (opaque row revision / ETag): when the caller asked for revisions
+     * (`SelectRequest.include_revision`), this carries the broker-maintained
+     * opaque revision token for each returned record, index-aligned with
+     * `records_json`. An empty slot means the row has no tracked revision yet
+     * (it has not been mutated since revision tracking was enabled). Absent
+     * (empty repeated) when the caller did not request revisions, so the read
+     * hot path pays nothing. The token is opaque + monotonically increasing;
+     * feed it back as `UpdateRequest.expected_revision` / `DeleteRequest.
+     * expected_revision` for optimistic concurrency.
+     *
+     * Generated from protobuf field <code>repeated string record_revisions = 5 [json_name = "recordRevisions"];</code>
+     * @return RepeatedField<string>
+     */
+    public function getRecordRevisions()
+    {
+        return $this->record_revisions;
+    }
+
+    /**
+     * #5 (opaque row revision / ETag): when the caller asked for revisions
+     * (`SelectRequest.include_revision`), this carries the broker-maintained
+     * opaque revision token for each returned record, index-aligned with
+     * `records_json`. An empty slot means the row has no tracked revision yet
+     * (it has not been mutated since revision tracking was enabled). Absent
+     * (empty repeated) when the caller did not request revisions, so the read
+     * hot path pays nothing. The token is opaque + monotonically increasing;
+     * feed it back as `UpdateRequest.expected_revision` / `DeleteRequest.
+     * expected_revision` for optimistic concurrency.
+     *
+     * Generated from protobuf field <code>repeated string record_revisions = 5 [json_name = "recordRevisions"];</code>
+     * @param string[] $var
+     * @return $this
+     */
+    public function setRecordRevisions($var)
+    {
+        $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::STRING);
+        $this->record_revisions = $arr;
 
         return $this;
     }

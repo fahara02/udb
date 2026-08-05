@@ -82,10 +82,7 @@ class Mutation extends \Google\Protobuf\Internal\Message
      * Partial-update payload for `operation = "update"` — the SET columns and the
      * atomic increments. Same semantics as the unary UpdateRequest (SETs named
      * columns / applies counter deltas on the rows matched by `filter`), atomic
-     * with the rest of the transaction; ignored for other operations. Note: the
-     * unary UpdateRequest.expected compare-and-swap precondition is intentionally
-     * NOT carried here — transactional updates do not support CAS (rather than
-     * silently ignore an `expected` a caller might set).
+     * with the rest of the transaction; ignored for other operations.
      *
      * Generated from protobuf field <code>.google.protobuf.Struct changes = 17 [json_name = "changes"];</code>
      */
@@ -94,6 +91,33 @@ class Mutation extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>repeated .udb.entity.v1.UpdateRequest.Increment increments = 18 [json_name = "increments"];</code>
      */
     private $increments;
+    /**
+     * Optional compare-and-swap precondition (bug #8.1), mirroring the unary
+     * UpsertRequest/DeleteRequest/UpdateRequest `expected` field. When set, each
+     * `field -> value` assertion is checked against the CURRENT row — located by
+     * the primary key (from `filter` for update/delete, from the record for
+     * upsert) and locked FOR UPDATE — inside this transaction and under its
+     * tenant/RLS fencing, BEFORE the mutation is applied. A mismatch or an absent
+     * row aborts the WHOLE transaction with FAILED_PRECONDITION and nothing is
+     * written, projected, or emitted. Supported for `operation` upsert, update,
+     * and delete; setting it on any other operation is rejected (never silently
+     * ignored). Unset/empty = unconditional (unchanged behaviour).
+     *
+     * Generated from protobuf field <code>.google.protobuf.Struct expected = 19 [json_name = "expected"];</code>
+     */
+    protected $expected = null;
+    /**
+     * Required-CDC-delivery contract (bug #8.2). When true, this mutation FAILS
+     * CLOSED (FAILED_PRECONDITION, aborting the transaction) unless its change
+     * event is durably enqueued to the transactional outbox in the SAME tx: it
+     * errors if CDC delivery is disabled, if the entity declares no `cdc_topic`,
+     * if a tenant-scoped topic has no tenant to route to, or if the outbox INSERT
+     * fails. Default false preserves best-effort emission (an event is emitted
+     * when CDC is enabled and the entity is CDC-mapped, and skipped otherwise).
+     *
+     * Generated from protobuf field <code>bool cdc_required = 20 [json_name = "cdcRequired"];</code>
+     */
+    protected $cdc_required = false;
 
     /**
      * Constructor.
@@ -121,11 +145,27 @@ class Mutation extends \Google\Protobuf\Internal\Message
      *           Partial-update payload for `operation = "update"` — the SET columns and the
      *           atomic increments. Same semantics as the unary UpdateRequest (SETs named
      *           columns / applies counter deltas on the rows matched by `filter`), atomic
-     *           with the rest of the transaction; ignored for other operations. Note: the
-     *           unary UpdateRequest.expected compare-and-swap precondition is intentionally
-     *           NOT carried here — transactional updates do not support CAS (rather than
-     *           silently ignore an `expected` a caller might set).
+     *           with the rest of the transaction; ignored for other operations.
      *     @type \Udb\Entity\V1\UpdateRequest\Increment[] $increments
+     *     @type \Google\Protobuf\Struct $expected
+     *           Optional compare-and-swap precondition (bug #8.1), mirroring the unary
+     *           UpsertRequest/DeleteRequest/UpdateRequest `expected` field. When set, each
+     *           `field -> value` assertion is checked against the CURRENT row — located by
+     *           the primary key (from `filter` for update/delete, from the record for
+     *           upsert) and locked FOR UPDATE — inside this transaction and under its
+     *           tenant/RLS fencing, BEFORE the mutation is applied. A mismatch or an absent
+     *           row aborts the WHOLE transaction with FAILED_PRECONDITION and nothing is
+     *           written, projected, or emitted. Supported for `operation` upsert, update,
+     *           and delete; setting it on any other operation is rejected (never silently
+     *           ignored). Unset/empty = unconditional (unchanged behaviour).
+     *     @type bool $cdc_required
+     *           Required-CDC-delivery contract (bug #8.2). When true, this mutation FAILS
+     *           CLOSED (FAILED_PRECONDITION, aborting the transaction) unless its change
+     *           event is durably enqueued to the transactional outbox in the SAME tx: it
+     *           errors if CDC delivery is disabled, if the entity declares no `cdc_topic`,
+     *           if a tenant-scoped topic has no tenant to route to, or if the outbox INSERT
+     *           fails. Default false preserves best-effort emission (an event is emitted
+     *           when CDC is enabled and the entity is CDC-mapped, and skipped otherwise).
      * }
      */
     public function __construct($data = NULL) {
@@ -519,10 +559,7 @@ class Mutation extends \Google\Protobuf\Internal\Message
      * Partial-update payload for `operation = "update"` — the SET columns and the
      * atomic increments. Same semantics as the unary UpdateRequest (SETs named
      * columns / applies counter deltas on the rows matched by `filter`), atomic
-     * with the rest of the transaction; ignored for other operations. Note: the
-     * unary UpdateRequest.expected compare-and-swap precondition is intentionally
-     * NOT carried here — transactional updates do not support CAS (rather than
-     * silently ignore an `expected` a caller might set).
+     * with the rest of the transaction; ignored for other operations.
      *
      * Generated from protobuf field <code>.google.protobuf.Struct changes = 17 [json_name = "changes"];</code>
      * @return \Google\Protobuf\Struct|null
@@ -546,10 +583,7 @@ class Mutation extends \Google\Protobuf\Internal\Message
      * Partial-update payload for `operation = "update"` — the SET columns and the
      * atomic increments. Same semantics as the unary UpdateRequest (SETs named
      * columns / applies counter deltas on the rows matched by `filter`), atomic
-     * with the rest of the transaction; ignored for other operations. Note: the
-     * unary UpdateRequest.expected compare-and-swap precondition is intentionally
-     * NOT carried here — transactional updates do not support CAS (rather than
-     * silently ignore an `expected` a caller might set).
+     * with the rest of the transaction; ignored for other operations.
      *
      * Generated from protobuf field <code>.google.protobuf.Struct changes = 17 [json_name = "changes"];</code>
      * @param \Google\Protobuf\Struct $var
@@ -581,6 +615,98 @@ class Mutation extends \Google\Protobuf\Internal\Message
     {
         $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Udb\Entity\V1\UpdateRequest\Increment::class);
         $this->increments = $arr;
+
+        return $this;
+    }
+
+    /**
+     * Optional compare-and-swap precondition (bug #8.1), mirroring the unary
+     * UpsertRequest/DeleteRequest/UpdateRequest `expected` field. When set, each
+     * `field -> value` assertion is checked against the CURRENT row — located by
+     * the primary key (from `filter` for update/delete, from the record for
+     * upsert) and locked FOR UPDATE — inside this transaction and under its
+     * tenant/RLS fencing, BEFORE the mutation is applied. A mismatch or an absent
+     * row aborts the WHOLE transaction with FAILED_PRECONDITION and nothing is
+     * written, projected, or emitted. Supported for `operation` upsert, update,
+     * and delete; setting it on any other operation is rejected (never silently
+     * ignored). Unset/empty = unconditional (unchanged behaviour).
+     *
+     * Generated from protobuf field <code>.google.protobuf.Struct expected = 19 [json_name = "expected"];</code>
+     * @return \Google\Protobuf\Struct|null
+     */
+    public function getExpected()
+    {
+        return $this->expected;
+    }
+
+    public function hasExpected()
+    {
+        return isset($this->expected);
+    }
+
+    public function clearExpected()
+    {
+        unset($this->expected);
+    }
+
+    /**
+     * Optional compare-and-swap precondition (bug #8.1), mirroring the unary
+     * UpsertRequest/DeleteRequest/UpdateRequest `expected` field. When set, each
+     * `field -> value` assertion is checked against the CURRENT row — located by
+     * the primary key (from `filter` for update/delete, from the record for
+     * upsert) and locked FOR UPDATE — inside this transaction and under its
+     * tenant/RLS fencing, BEFORE the mutation is applied. A mismatch or an absent
+     * row aborts the WHOLE transaction with FAILED_PRECONDITION and nothing is
+     * written, projected, or emitted. Supported for `operation` upsert, update,
+     * and delete; setting it on any other operation is rejected (never silently
+     * ignored). Unset/empty = unconditional (unchanged behaviour).
+     *
+     * Generated from protobuf field <code>.google.protobuf.Struct expected = 19 [json_name = "expected"];</code>
+     * @param \Google\Protobuf\Struct $var
+     * @return $this
+     */
+    public function setExpected($var)
+    {
+        GPBUtil::checkMessage($var, \Google\Protobuf\Struct::class);
+        $this->expected = $var;
+
+        return $this;
+    }
+
+    /**
+     * Required-CDC-delivery contract (bug #8.2). When true, this mutation FAILS
+     * CLOSED (FAILED_PRECONDITION, aborting the transaction) unless its change
+     * event is durably enqueued to the transactional outbox in the SAME tx: it
+     * errors if CDC delivery is disabled, if the entity declares no `cdc_topic`,
+     * if a tenant-scoped topic has no tenant to route to, or if the outbox INSERT
+     * fails. Default false preserves best-effort emission (an event is emitted
+     * when CDC is enabled and the entity is CDC-mapped, and skipped otherwise).
+     *
+     * Generated from protobuf field <code>bool cdc_required = 20 [json_name = "cdcRequired"];</code>
+     * @return bool
+     */
+    public function getCdcRequired()
+    {
+        return $this->cdc_required;
+    }
+
+    /**
+     * Required-CDC-delivery contract (bug #8.2). When true, this mutation FAILS
+     * CLOSED (FAILED_PRECONDITION, aborting the transaction) unless its change
+     * event is durably enqueued to the transactional outbox in the SAME tx: it
+     * errors if CDC delivery is disabled, if the entity declares no `cdc_topic`,
+     * if a tenant-scoped topic has no tenant to route to, or if the outbox INSERT
+     * fails. Default false preserves best-effort emission (an event is emitted
+     * when CDC is enabled and the entity is CDC-mapped, and skipped otherwise).
+     *
+     * Generated from protobuf field <code>bool cdc_required = 20 [json_name = "cdcRequired"];</code>
+     * @param bool $var
+     * @return $this
+     */
+    public function setCdcRequired($var)
+    {
+        GPBUtil::checkBool($var);
+        $this->cdc_required = $var;
 
         return $this;
     }

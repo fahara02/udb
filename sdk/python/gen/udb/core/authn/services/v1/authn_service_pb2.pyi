@@ -133,6 +133,32 @@ class RotateServiceAccountIdentityResponse(_message.Message):
     error: _dto_pb2.ApiError
     def __init__(self, grant: _Optional[_Union[_service_account_grant_pb2.ServiceAccountGrant, _Mapping]] = ..., previous_service_identity: _Optional[str] = ..., message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
 
+class TransferServiceAccountGrantRequest(_message.Message):
+    __slots__ = ("tenant_id", "from_user_id", "to_user_id", "expected_revision", "reason")
+    TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    FROM_USER_ID_FIELD_NUMBER: _ClassVar[int]
+    TO_USER_ID_FIELD_NUMBER: _ClassVar[int]
+    EXPECTED_REVISION_FIELD_NUMBER: _ClassVar[int]
+    REASON_FIELD_NUMBER: _ClassVar[int]
+    tenant_id: str
+    from_user_id: str
+    to_user_id: str
+    expected_revision: int
+    reason: str
+    def __init__(self, tenant_id: _Optional[str] = ..., from_user_id: _Optional[str] = ..., to_user_id: _Optional[str] = ..., expected_revision: _Optional[int] = ..., reason: _Optional[str] = ...) -> None: ...
+
+class TransferServiceAccountGrantResponse(_message.Message):
+    __slots__ = ("grant", "previous_user_id", "message", "error")
+    GRANT_FIELD_NUMBER: _ClassVar[int]
+    PREVIOUS_USER_ID_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    ERROR_FIELD_NUMBER: _ClassVar[int]
+    grant: _service_account_grant_pb2.ServiceAccountGrant
+    previous_user_id: str
+    message: str
+    error: _dto_pb2.ApiError
+    def __init__(self, grant: _Optional[_Union[_service_account_grant_pb2.ServiceAccountGrant, _Mapping]] = ..., previous_user_id: _Optional[str] = ..., message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
+
 class RevokeServiceAccountGrantRequest(_message.Message):
     __slots__ = ("tenant_id", "user_id", "reason")
     TENANT_ID_FIELD_NUMBER: _ClassVar[int]

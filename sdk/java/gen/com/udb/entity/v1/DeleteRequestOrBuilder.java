@@ -96,4 +96,60 @@ public interface DeleteRequestOrBuilder extends
    * <code>.google.protobuf.Struct expected = 5 [json_name = "expected"];</code>
    */
   com.google.protobuf.StructOrBuilder getExpectedOrBuilder();
+
+  /**
+   * <pre>
+   * #5 (opaque row revision / ETag): optional revision precondition. When set,
+   * the delete proceeds only if the broker-maintained opaque revision of the
+   * primary-key-identified row still equals this token, checked atomically under
+   * the revision row lock in the write transaction. A mismatch or an untracked
+   * row is `FAILED_PRECONDITION` and nothing is removed. Non-disclosing (never
+   * reveals a foreign row's existence). ABA-safe (the revision only increases).
+   * </pre>
+   *
+   * <code>string expected_revision = 6 [json_name = "expectedRevision"];</code>
+   * @return The expectedRevision.
+   */
+  java.lang.String getExpectedRevision();
+  /**
+   * <pre>
+   * #5 (opaque row revision / ETag): optional revision precondition. When set,
+   * the delete proceeds only if the broker-maintained opaque revision of the
+   * primary-key-identified row still equals this token, checked atomically under
+   * the revision row lock in the write transaction. A mismatch or an untracked
+   * row is `FAILED_PRECONDITION` and nothing is removed. Non-disclosing (never
+   * reveals a foreign row's existence). ABA-safe (the revision only increases).
+   * </pre>
+   *
+   * <code>string expected_revision = 6 [json_name = "expectedRevision"];</code>
+   * @return The bytes for expectedRevision.
+   */
+  com.google.protobuf.ByteString
+      getExpectedRevisionBytes();
+
+  /**
+   * <pre>
+   * gate 25 (lock-fencing-at-commit): see UpdateRequest.lock_name/fencing_token.
+   * </pre>
+   *
+   * <code>string lock_name = 7 [json_name = "lockName"];</code>
+   * @return The lockName.
+   */
+  java.lang.String getLockName();
+  /**
+   * <pre>
+   * gate 25 (lock-fencing-at-commit): see UpdateRequest.lock_name/fencing_token.
+   * </pre>
+   *
+   * <code>string lock_name = 7 [json_name = "lockName"];</code>
+   * @return The bytes for lockName.
+   */
+  com.google.protobuf.ByteString
+      getLockNameBytes();
+
+  /**
+   * <code>int64 fencing_token = 8 [json_name = "fencingToken"];</code>
+   * @return The fencingToken.
+   */
+  long getFencingToken();
 }

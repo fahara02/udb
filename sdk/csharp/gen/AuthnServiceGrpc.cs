@@ -278,6 +278,10 @@ namespace udb.core.Authn.Services.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.RotateServiceAccountIdentityResponse> __Marshaller_udb_core_authn_services_v1_RotateServiceAccountIdentityResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.RotateServiceAccountIdentityResponse.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.TransferServiceAccountGrantRequest> __Marshaller_udb_core_authn_services_v1_TransferServiceAccountGrantRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.TransferServiceAccountGrantRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.TransferServiceAccountGrantResponse> __Marshaller_udb_core_authn_services_v1_TransferServiceAccountGrantResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.TransferServiceAccountGrantResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.RevokeServiceAccountGrantRequest> __Marshaller_udb_core_authn_services_v1_RevokeServiceAccountGrantRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.RevokeServiceAccountGrantRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::udb.core.Authn.Services.V1.RevokeServiceAccountGrantResponse> __Marshaller_udb_core_authn_services_v1_RevokeServiceAccountGrantResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Authn.Services.V1.RevokeServiceAccountGrantResponse.Parser));
@@ -733,6 +737,14 @@ namespace udb.core.Authn.Services.V1 {
         "RotateServiceAccountIdentity",
         __Marshaller_udb_core_authn_services_v1_RotateServiceAccountIdentityRequest,
         __Marshaller_udb_core_authn_services_v1_RotateServiceAccountIdentityResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Authn.Services.V1.TransferServiceAccountGrantRequest, global::udb.core.Authn.Services.V1.TransferServiceAccountGrantResponse> __Method_TransferServiceAccountGrant = new grpc::Method<global::udb.core.Authn.Services.V1.TransferServiceAccountGrantRequest, global::udb.core.Authn.Services.V1.TransferServiceAccountGrantResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "TransferServiceAccountGrant",
+        __Marshaller_udb_core_authn_services_v1_TransferServiceAccountGrantRequest,
+        __Marshaller_udb_core_authn_services_v1_TransferServiceAccountGrantResponse);
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Method<global::udb.core.Authn.Services.V1.RevokeServiceAccountGrantRequest, global::udb.core.Authn.Services.V1.RevokeServiceAccountGrantResponse> __Method_RevokeServiceAccountGrant = new grpc::Method<global::udb.core.Authn.Services.V1.RevokeServiceAccountGrantRequest, global::udb.core.Authn.Services.V1.RevokeServiceAccountGrantResponse>(
@@ -1273,6 +1285,27 @@ namespace udb.core.Authn.Services.V1 {
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::System.Threading.Tasks.Task<global::udb.core.Authn.Services.V1.RotateServiceAccountIdentityResponse> RotateServiceAccountIdentity(global::udb.core.Authn.Services.V1.RotateServiceAccountIdentityRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// Atomically transfer an ACTIVE service-account grant (its stable
+      /// service_identity and approved scopes) from one service account to another,
+      /// under revision CAS. The grant row is re-pointed from `from_user_id` to
+      /// `to_user_id` in a single transaction, so neither the deployment-wide
+      /// service_identity unique index nor the per-user unique index is ever
+      /// violated, and no window exists in which no account owns the identity. The
+      /// source account is left with no grant (its credentials no longer resolve to
+      /// the identity); the move is a deterministic inverse of itself. This is the
+      /// supported recovery path when the currently-bound account's credentials are
+      /// unavailable, replacing a non-atomic rotate-then-create.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Authn.Services.V1.TransferServiceAccountGrantResponse> TransferServiceAccountGrant(global::udb.core.Authn.Services.V1.TransferServiceAccountGrantRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -3249,6 +3282,90 @@ namespace udb.core.Authn.Services.V1 {
         return CallInvoker.AsyncUnaryCall(__Method_RotateServiceAccountIdentity, null, options, request);
       }
       /// <summary>
+      /// Atomically transfer an ACTIVE service-account grant (its stable
+      /// service_identity and approved scopes) from one service account to another,
+      /// under revision CAS. The grant row is re-pointed from `from_user_id` to
+      /// `to_user_id` in a single transaction, so neither the deployment-wide
+      /// service_identity unique index nor the per-user unique index is ever
+      /// violated, and no window exists in which no account owns the identity. The
+      /// source account is left with no grant (its credentials no longer resolve to
+      /// the identity); the move is a deterministic inverse of itself. This is the
+      /// supported recovery path when the currently-bound account's credentials are
+      /// unavailable, replacing a non-atomic rotate-then-create.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.TransferServiceAccountGrantResponse TransferServiceAccountGrant(global::udb.core.Authn.Services.V1.TransferServiceAccountGrantRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return TransferServiceAccountGrant(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Atomically transfer an ACTIVE service-account grant (its stable
+      /// service_identity and approved scopes) from one service account to another,
+      /// under revision CAS. The grant row is re-pointed from `from_user_id` to
+      /// `to_user_id` in a single transaction, so neither the deployment-wide
+      /// service_identity unique index nor the per-user unique index is ever
+      /// violated, and no window exists in which no account owns the identity. The
+      /// source account is left with no grant (its credentials no longer resolve to
+      /// the identity); the move is a deterministic inverse of itself. This is the
+      /// supported recovery path when the currently-bound account's credentials are
+      /// unavailable, replacing a non-atomic rotate-then-create.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Authn.Services.V1.TransferServiceAccountGrantResponse TransferServiceAccountGrant(global::udb.core.Authn.Services.V1.TransferServiceAccountGrantRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_TransferServiceAccountGrant, null, options, request);
+      }
+      /// <summary>
+      /// Atomically transfer an ACTIVE service-account grant (its stable
+      /// service_identity and approved scopes) from one service account to another,
+      /// under revision CAS. The grant row is re-pointed from `from_user_id` to
+      /// `to_user_id` in a single transaction, so neither the deployment-wide
+      /// service_identity unique index nor the per-user unique index is ever
+      /// violated, and no window exists in which no account owns the identity. The
+      /// source account is left with no grant (its credentials no longer resolve to
+      /// the identity); the move is a deterministic inverse of itself. This is the
+      /// supported recovery path when the currently-bound account's credentials are
+      /// unavailable, replacing a non-atomic rotate-then-create.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.TransferServiceAccountGrantResponse> TransferServiceAccountGrantAsync(global::udb.core.Authn.Services.V1.TransferServiceAccountGrantRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return TransferServiceAccountGrantAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// Atomically transfer an ACTIVE service-account grant (its stable
+      /// service_identity and approved scopes) from one service account to another,
+      /// under revision CAS. The grant row is re-pointed from `from_user_id` to
+      /// `to_user_id` in a single transaction, so neither the deployment-wide
+      /// service_identity unique index nor the per-user unique index is ever
+      /// violated, and no window exists in which no account owns the identity. The
+      /// source account is left with no grant (its credentials no longer resolve to
+      /// the identity); the move is a deterministic inverse of itself. This is the
+      /// supported recovery path when the currently-bound account's credentials are
+      /// unavailable, replacing a non-atomic rotate-then-create.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Authn.Services.V1.TransferServiceAccountGrantResponse> TransferServiceAccountGrantAsync(global::udb.core.Authn.Services.V1.TransferServiceAccountGrantRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_TransferServiceAccountGrant, null, options, request);
+      }
+      /// <summary>
       /// Revoke a service account's grant. The account (and every credential or
       /// certificate binding that resolves through the grant) stops authenticating
       /// immediately — fail closed, audited.
@@ -3533,6 +3650,7 @@ namespace udb.core.Authn.Services.V1 {
           .AddMethod(__Method_ListServiceAccountGrants, serviceImpl.ListServiceAccountGrants)
           .AddMethod(__Method_ReplaceServiceAccountGrant, serviceImpl.ReplaceServiceAccountGrant)
           .AddMethod(__Method_RotateServiceAccountIdentity, serviceImpl.RotateServiceAccountIdentity)
+          .AddMethod(__Method_TransferServiceAccountGrant, serviceImpl.TransferServiceAccountGrant)
           .AddMethod(__Method_RevokeServiceAccountGrant, serviceImpl.RevokeServiceAccountGrant)
           .AddMethod(__Method_CreateCertificateBinding, serviceImpl.CreateCertificateBinding)
           .AddMethod(__Method_ListCertificateBindings, serviceImpl.ListCertificateBindings)
@@ -3601,6 +3719,7 @@ namespace udb.core.Authn.Services.V1 {
       serviceBinder.AddMethod(__Method_ListServiceAccountGrants, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authn.Services.V1.ListServiceAccountGrantsRequest, global::udb.core.Authn.Services.V1.ListServiceAccountGrantsResponse>(serviceImpl.ListServiceAccountGrants));
       serviceBinder.AddMethod(__Method_ReplaceServiceAccountGrant, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authn.Services.V1.ReplaceServiceAccountGrantRequest, global::udb.core.Authn.Services.V1.ReplaceServiceAccountGrantResponse>(serviceImpl.ReplaceServiceAccountGrant));
       serviceBinder.AddMethod(__Method_RotateServiceAccountIdentity, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authn.Services.V1.RotateServiceAccountIdentityRequest, global::udb.core.Authn.Services.V1.RotateServiceAccountIdentityResponse>(serviceImpl.RotateServiceAccountIdentity));
+      serviceBinder.AddMethod(__Method_TransferServiceAccountGrant, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authn.Services.V1.TransferServiceAccountGrantRequest, global::udb.core.Authn.Services.V1.TransferServiceAccountGrantResponse>(serviceImpl.TransferServiceAccountGrant));
       serviceBinder.AddMethod(__Method_RevokeServiceAccountGrant, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authn.Services.V1.RevokeServiceAccountGrantRequest, global::udb.core.Authn.Services.V1.RevokeServiceAccountGrantResponse>(serviceImpl.RevokeServiceAccountGrant));
       serviceBinder.AddMethod(__Method_CreateCertificateBinding, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authn.Services.V1.CreateCertificateBindingRequest, global::udb.core.Authn.Services.V1.CreateCertificateBindingResponse>(serviceImpl.CreateCertificateBinding));
       serviceBinder.AddMethod(__Method_ListCertificateBindings, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Authn.Services.V1.ListCertificateBindingsRequest, global::udb.core.Authn.Services.V1.ListCertificateBindingsResponse>(serviceImpl.ListCertificateBindings));

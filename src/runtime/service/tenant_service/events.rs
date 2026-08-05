@@ -40,6 +40,46 @@ pub(crate) async fn emit_event(
     .await;
 }
 
+/// Immutable audit emit for the PRIVILEGED cross-tenant admin purge (Bug #2).
+/// Unlike [`emit_event`] this threads the VERIFIED caller (`actor`) and the
+/// per-action authorization `decision_id` into the compliance envelope so the
+/// durable audit row attributes the destructive cross-tenant action to a real,
+/// authorized identity — never a spoofable body value. Best-effort (same posture
+/// as the other tenant emits); the durable ledger row is the authoritative
+/// outcome record even when no outbox relation is configured. The payload carries
+/// identifiers, per-table counts, the human reason, and the outcome id — no
+/// tenant config/branding bodies or secrets.
+pub(crate) async fn emit_admin_purge_audit(
+    svc: &TenantServiceImpl,
+    target_tenant_id: &str,
+    verified_actor: &str,
+    decision_id: &str,
+    payload: serde_json::Value,
+) {
+    let Some(pool) = svc.pg_pool.as_ref() else {
+        return;
+    };
+    enqueue_outbox_event_with_context(
+        pool,
+        svc.outbox_relation.as_deref(),
+        super::config::TOPIC_TENANT_ADMIN_PURGED,
+        target_tenant_id,
+        target_tenant_id,
+        "",
+        payload,
+        NativeEventContext {
+            actor: verified_actor.to_string(),
+            operation: super::config::EVENT_TYPE_TENANT_ADMIN_PURGE.to_string(),
+            outcome: "success".to_string(),
+            decision_id: decision_id.to_string(),
+            target_resource: target_tenant_id.to_string(),
+            ..NativeEventContext::default()
+        },
+        Some(&svc.metrics),
+    )
+    .await;
+}
+
 /// Lifecycle event payload for tenant create/update: identifiers + status ONLY.
 /// Deliberately excludes `config`/`branding` bodies and any credential material —
 /// the outbox payload must never carry tenant secrets.

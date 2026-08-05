@@ -63,6 +63,33 @@ class UpdateRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>bool return_record = 8 [json_name = "returnRecord"];</code>
      */
     protected $return_record = false;
+    /**
+     * #5 (opaque row revision / ETag): optional revision precondition. When set,
+     * the filter MUST pin every primary-key column by equality (single-row), and
+     * the update proceeds only if the broker-maintained opaque revision of that
+     * row still equals this token — checked atomically under the revision row lock
+     * in the write transaction. A mismatch or an untracked row is
+     * `FAILED_PRECONDITION` and nothing is written/projected/emitted. On success
+     * the response carries the bumped revision. ABA-safe (revision only increases).
+     *
+     * Generated from protobuf field <code>string expected_revision = 9 [json_name = "expectedRevision"];</code>
+     */
+    protected $expected_revision = '';
+    /**
+     * gate 25 (lock-fencing-at-commit): optional advisory-lock name + the
+     * monotonic fencing token granted for it. When both are set the broker
+     * validates the token against the LockService's durable lock row IN THE SAME
+     * write transaction; a stale token (a writer that outlived its lease) is
+     * rejected fail-closed with NO write / projection / CDC / audit / idempotency
+     * side effect. Unset (empty `lock_name`) = no fencing (unchanged behaviour).
+     *
+     * Generated from protobuf field <code>string lock_name = 10 [json_name = "lockName"];</code>
+     */
+    protected $lock_name = '';
+    /**
+     * Generated from protobuf field <code>int64 fencing_token = 11 [json_name = "fencingToken"];</code>
+     */
+    protected $fencing_token = 0;
 
     /**
      * Constructor.
@@ -87,6 +114,22 @@ class UpdateRequest extends \Google\Protobuf\Internal\Message
      *     @type \Udb\Entity\V1\UpdateRequest\Increment[] $increments
      *     @type string $idempotency_key
      *     @type bool $return_record
+     *     @type string $expected_revision
+     *           #5 (opaque row revision / ETag): optional revision precondition. When set,
+     *           the filter MUST pin every primary-key column by equality (single-row), and
+     *           the update proceeds only if the broker-maintained opaque revision of that
+     *           row still equals this token — checked atomically under the revision row lock
+     *           in the write transaction. A mismatch or an untracked row is
+     *           `FAILED_PRECONDITION` and nothing is written/projected/emitted. On success
+     *           the response carries the bumped revision. ABA-safe (revision only increases).
+     *     @type string $lock_name
+     *           gate 25 (lock-fencing-at-commit): optional advisory-lock name + the
+     *           monotonic fencing token granted for it. When both are set the broker
+     *           validates the token against the LockService's durable lock row IN THE SAME
+     *           write transaction; a stale token (a writer that outlived its lease) is
+     *           rejected fail-closed with NO write / projection / CDC / audit / idempotency
+     *           side effect. Unset (empty `lock_name`) = no fencing (unchanged behaviour).
+     *     @type int|string $fencing_token
      * }
      */
     public function __construct($data = NULL) {
@@ -330,6 +373,102 @@ class UpdateRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkBool($var);
         $this->return_record = $var;
+
+        return $this;
+    }
+
+    /**
+     * #5 (opaque row revision / ETag): optional revision precondition. When set,
+     * the filter MUST pin every primary-key column by equality (single-row), and
+     * the update proceeds only if the broker-maintained opaque revision of that
+     * row still equals this token — checked atomically under the revision row lock
+     * in the write transaction. A mismatch or an untracked row is
+     * `FAILED_PRECONDITION` and nothing is written/projected/emitted. On success
+     * the response carries the bumped revision. ABA-safe (revision only increases).
+     *
+     * Generated from protobuf field <code>string expected_revision = 9 [json_name = "expectedRevision"];</code>
+     * @return string
+     */
+    public function getExpectedRevision()
+    {
+        return $this->expected_revision;
+    }
+
+    /**
+     * #5 (opaque row revision / ETag): optional revision precondition. When set,
+     * the filter MUST pin every primary-key column by equality (single-row), and
+     * the update proceeds only if the broker-maintained opaque revision of that
+     * row still equals this token — checked atomically under the revision row lock
+     * in the write transaction. A mismatch or an untracked row is
+     * `FAILED_PRECONDITION` and nothing is written/projected/emitted. On success
+     * the response carries the bumped revision. ABA-safe (revision only increases).
+     *
+     * Generated from protobuf field <code>string expected_revision = 9 [json_name = "expectedRevision"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setExpectedRevision($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->expected_revision = $var;
+
+        return $this;
+    }
+
+    /**
+     * gate 25 (lock-fencing-at-commit): optional advisory-lock name + the
+     * monotonic fencing token granted for it. When both are set the broker
+     * validates the token against the LockService's durable lock row IN THE SAME
+     * write transaction; a stale token (a writer that outlived its lease) is
+     * rejected fail-closed with NO write / projection / CDC / audit / idempotency
+     * side effect. Unset (empty `lock_name`) = no fencing (unchanged behaviour).
+     *
+     * Generated from protobuf field <code>string lock_name = 10 [json_name = "lockName"];</code>
+     * @return string
+     */
+    public function getLockName()
+    {
+        return $this->lock_name;
+    }
+
+    /**
+     * gate 25 (lock-fencing-at-commit): optional advisory-lock name + the
+     * monotonic fencing token granted for it. When both are set the broker
+     * validates the token against the LockService's durable lock row IN THE SAME
+     * write transaction; a stale token (a writer that outlived its lease) is
+     * rejected fail-closed with NO write / projection / CDC / audit / idempotency
+     * side effect. Unset (empty `lock_name`) = no fencing (unchanged behaviour).
+     *
+     * Generated from protobuf field <code>string lock_name = 10 [json_name = "lockName"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setLockName($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->lock_name = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>int64 fencing_token = 11 [json_name = "fencingToken"];</code>
+     * @return int|string
+     */
+    public function getFencingToken()
+    {
+        return $this->fencing_token;
+    }
+
+    /**
+     * Generated from protobuf field <code>int64 fencing_token = 11 [json_name = "fencingToken"];</code>
+     * @param int|string $var
+     * @return $this
+     */
+    public function setFencingToken($var)
+    {
+        GPBUtil::checkInt64($var);
+        $this->fencing_token = $var;
 
         return $this;
     }

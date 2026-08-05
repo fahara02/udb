@@ -339,6 +339,112 @@ pub struct LogicalResourceOp {
     pub spec: Option<serde_json::Value>,
 }
 
+impl LogicalResourceOp {
+    /// INJ2: reject any resource-op identifier that is not a plain, safe token
+    /// BEFORE it reaches a backend compiler. `resource_name` (possibly a qualified
+    /// `schema.table`, or a bucket / dotted Kafka-topic name) and the `spec`'s
+    /// `schema` / `table` / `columns[].name` identifiers plus `columns[].type`
+    /// flow into DDL and `information_schema` filters that inline them verbatim; a
+    /// value like `x' UNION SELECT …` or `TEXT); DROP TABLE …` is a SQL injection
+    /// (confirmed live on the catalog LIST path). This single guard — called at the
+    /// generic-dispatch entry, before `compile` — closes the injection for EVERY
+    /// backend at once, independent of each executor's quoting. Allowlist-based
+    /// (deny by default): any character outside the permitted set is rejected, so
+    /// quotes, whitespace, `;`, parentheses, and comment sequences can never appear.
+    pub fn validate_identifiers(&self) -> Result<(), String> {
+        // resource_name covers SQL tables AND buckets/topics — allow letters,
+        // digits, `_`, `.`, `-` (blocks ' " ; ( ) whitespace and comment chars).
+        validate_resource_token("resource_name", &self.resource_name)?;
+        if let Some(spec) = &self.spec {
+            if let Some(schema) = spec.get("schema").and_then(serde_json::Value::as_str) {
+                validate_sql_ident("spec.schema", schema)?;
+            }
+            if let Some(table) = spec.get("table").and_then(serde_json::Value::as_str) {
+                validate_sql_ident("spec.table", table)?;
+            }
+            if let Some(columns) = spec.get("columns").and_then(serde_json::Value::as_array) {
+                for (idx, column) in columns.iter().enumerate() {
+                    if let Some(name) = column.get("name").and_then(serde_json::Value::as_str) {
+                        validate_sql_ident(&format!("spec.columns[{idx}].name"), name)?;
+                    }
+                    if let Some(col_type) = column.get("type").and_then(serde_json::Value::as_str) {
+                        validate_column_type(&format!("spec.columns[{idx}].type"), col_type)?;
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+/// Resource name allowlist: letters/digits/`_`/`.`/`-`, ≤256 chars, non-empty.
+/// Permissive enough for `schema.table`, S3 buckets, and dotted Kafka topics
+/// while rejecting every SQL-injection metacharacter.
+fn validate_resource_token(field: &str, value: &str) -> Result<(), String> {
+    let token = value.trim();
+    if token.is_empty() {
+        return Err(format!("{field} must not be empty"));
+    }
+    if token.len() > 256
+        || !token
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '.' | '-'))
+    {
+        return Err(format!(
+            "{field} '{value}' is not a valid resource name (allowed: letters, digits, '_', '.', '-'; ≤256 chars)"
+        ));
+    }
+    Ok(())
+}
+
+/// Strict SQL identifier (optionally qualified `a.b`): each segment must be a
+/// letter/underscore followed by letters/digits/underscore, ≤128 chars.
+fn validate_sql_ident(field: &str, value: &str) -> Result<(), String> {
+    let ident = value.trim();
+    if ident.is_empty() {
+        return Ok(());
+    }
+    for segment in ident.split('.') {
+        let mut chars = segment.chars();
+        let head_ok = chars
+            .next()
+            .map(|c| c.is_ascii_alphabetic() || c == '_')
+            .unwrap_or(false);
+        let tail_ok = chars.all(|c| c.is_ascii_alphanumeric() || c == '_');
+        if !head_ok || !tail_ok || segment.len() > 128 {
+            return Err(format!(
+                "{field} '{value}' is not a valid SQL identifier (letter/underscore then letters/digits/underscore per '.'-segment, ≤128 chars)"
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// Column-type allowlist: a leading letter then letters/digits/`_`/space and the
+/// parameter/array punctuation `( ) , [ ]` (e.g. `VARCHAR(64)`, `NUMERIC(10,2)`,
+/// `DOUBLE PRECISION`, `INT[]`). Rejects quotes, `;`, and comment sequences so a
+/// `type` value cannot break out of the DDL column list.
+fn validate_column_type(field: &str, value: &str) -> Result<(), String> {
+    let col_type = value.trim();
+    if col_type.is_empty() {
+        return Ok(());
+    }
+    let head_ok = col_type
+        .chars()
+        .next()
+        .map(|c| c.is_ascii_alphabetic())
+        .unwrap_or(false);
+    let body_ok = col_type
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | ' ' | '(' | ')' | ',' | '[' | ']'));
+    if !head_ok || !body_ok || col_type.len() > 64 {
+        return Err(format!(
+            "{field} '{value}' is not an allowed column type (letters/digits/'_'/space and '( ) , [ ]' only, starting with a letter, ≤64 chars)"
+        ));
+    }
+    Ok(())
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ResourceOpKind {

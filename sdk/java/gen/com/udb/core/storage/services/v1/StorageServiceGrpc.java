@@ -433,7 +433,10 @@ public final class StorageServiceGrpc {
 
     /**
      * <pre>
-     * Delete a file (soft delete)
+     * Delete a file. `mode` selects soft-delete (default, metadata tombstone +
+     * best-effort byte removal) or hard-delete (durable object-GC intent committed
+     * atomically with the tombstone, then driven to convergence — a byte-delete
+     * failure returns an error, never success, and leaves the intent for the sweep).
      * </pre>
      */
     default void deleteFile(com.udb.core.storage.services.v1.DeleteFileRequest request,
@@ -565,7 +568,10 @@ public final class StorageServiceGrpc {
 
     /**
      * <pre>
-     * Delete a file (soft delete)
+     * Delete a file. `mode` selects soft-delete (default, metadata tombstone +
+     * best-effort byte removal) or hard-delete (durable object-GC intent committed
+     * atomically with the tombstone, then driven to convergence — a byte-delete
+     * failure returns an error, never success, and leaves the intent for the sweep).
      * </pre>
      */
     public void deleteFile(com.udb.core.storage.services.v1.DeleteFileRequest request,
@@ -683,7 +689,10 @@ public final class StorageServiceGrpc {
 
     /**
      * <pre>
-     * Delete a file (soft delete)
+     * Delete a file. `mode` selects soft-delete (default, metadata tombstone +
+     * best-effort byte removal) or hard-delete (durable object-GC intent committed
+     * atomically with the tombstone, then driven to convergence — a byte-delete
+     * failure returns an error, never success, and leaves the intent for the sweep).
      * </pre>
      */
     public com.udb.core.storage.services.v1.DeleteFileResponse deleteFile(com.udb.core.storage.services.v1.DeleteFileRequest request) throws io.grpc.StatusException {
@@ -798,7 +807,10 @@ public final class StorageServiceGrpc {
 
     /**
      * <pre>
-     * Delete a file (soft delete)
+     * Delete a file. `mode` selects soft-delete (default, metadata tombstone +
+     * best-effort byte removal) or hard-delete (durable object-GC intent committed
+     * atomically with the tombstone, then driven to convergence — a byte-delete
+     * failure returns an error, never success, and leaves the intent for the sweep).
      * </pre>
      */
     public com.udb.core.storage.services.v1.DeleteFileResponse deleteFile(com.udb.core.storage.services.v1.DeleteFileRequest request) {
@@ -905,7 +917,10 @@ public final class StorageServiceGrpc {
 
     /**
      * <pre>
-     * Delete a file (soft delete)
+     * Delete a file. `mode` selects soft-delete (default, metadata tombstone +
+     * best-effort byte removal) or hard-delete (durable object-GC intent committed
+     * atomically with the tombstone, then driven to convergence — a byte-delete
+     * failure returns an error, never success, and leaves the intent for the sweep).
      * </pre>
      */
     public com.google.common.util.concurrent.ListenableFuture<com.udb.core.storage.services.v1.DeleteFileResponse> deleteFile(

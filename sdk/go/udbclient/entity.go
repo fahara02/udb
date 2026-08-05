@@ -1,8 +1,10 @@
 package udbclient
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -10,6 +12,15 @@ import (
 	entityv1 "github.com/fahara02/udb/sdk/go/gen/udb/entity/v1"
 	"google.golang.org/protobuf/types/known/structpb"
 )
+
+// errEmptyCAS is returned when a guarded compare-and-swap write is requested
+// (WithDeleteExpected / WithUpdateExpected was applied) but the expected map is
+// nil or empty. Without this gate the empty precondition would fall through to
+// the unconditional path and the broker would apply the mutation to EVERY row
+// the filter matches — silently turning an intended single-row guarded write
+// into a full-table mutation. The unconditional verbs (no With…Expected option)
+// are unaffected. Match with errors.Is.
+var errEmptyCAS = errors.New("udb: guarded write requires a non-empty expected precondition; refusing to run unconditionally")
 
 // ── Bound Entity API (chapter 08.4) ──────────────────────────────────────────
 //
@@ -171,8 +182,8 @@ func (e *Entity) Upsert(ctx context.Context, record any, opts ...UpsertOption) (
 	out := &UpsertResult{Response: resp, WasDuplicate: resp.GetWasDuplicate()}
 	if o.returnRecord {
 		if rb := resp.GetRecordJson(); len(rb) > 0 {
-			rec := map[string]any{}
-			if err := json.Unmarshal(rb, &rec); err != nil {
+			rec, err := decodeRecordJSON(rb)
+			if err != nil {
 				return nil, fmt.Errorf("udb: decode returned record_json: %w", err)
 			}
 			out.Record = rec
@@ -269,16 +280,37 @@ type DeleteOption func(*deleteOptions)
 
 type deleteOptions struct {
 	expected map[string]any
+	// expectedSet records that WithDeleteExpected was applied — i.e. a guarded
+	// (CAS) Delete was requested. It is distinct from expected being nil/empty:
+	// that combination is the empty-CAS footgun errEmptyCAS rejects.
+	expectedSet    bool
+	idempotencyKey string
 }
 
 // WithDeleteExpected makes the Delete a compare-and-swap (G-2): the row the filter
 // targets is removed only if each field -> value still equals the CURRENT row
 // (row-locked, in the same tenant/RLS transaction). If the row is absent or any
 // assertion fails, the broker returns FAILED_PRECONDITION and deletes nothing.
-// Requires the filter to pin every primary-key column by equality. A nil/empty
-// map leaves the delete unconditional (unchanged behavior).
+// Requires the filter to pin every primary-key column by equality. Passing a
+// nil/empty map is rejected with errEmptyCAS BEFORE any RPC — a guarded delete
+// must never degrade into an unconditional one (for an unconditional delete,
+// simply omit this option).
 func WithDeleteExpected(expected map[string]any) DeleteOption {
-	return func(o *deleteOptions) { o.expected = expected }
+	return func(o *deleteOptions) {
+		o.expected = expected
+		o.expectedSet = true
+	}
+}
+
+// WithDeleteIdempotencyKey attaches a caller-supplied durable idempotency key to
+// the Delete. The broker deduplicates replays of the SAME key so an ambiguous
+// client/network retry cannot repeat the delete or its side effects. Delete is
+// still never auto-retried by the SDK (it is a destructive RPC — see
+// retryableForRPC); this only makes a caller-driven retry replay-safe. A key
+// that is present but only whitespace is rejected; an unset key leaves the
+// request's idempotency_key empty (unchanged).
+func WithDeleteIdempotencyKey(key string) DeleteOption {
+	return func(o *deleteOptions) { o.idempotencyKey = key }
 }
 
 // Delete issues exactly ONE Delete RPC for the bound FQN with a Struct filter
@@ -288,6 +320,16 @@ func (e *Entity) Delete(ctx context.Context, where map[string]any, opts ...Delet
 	var o deleteOptions
 	for _, opt := range opts {
 		opt(&o)
+	}
+	// A guarded Delete (WithDeleteExpected) with a nil/empty precondition must
+	// NOT silently degrade into an unconditional delete of every matched row.
+	if o.expectedSet && len(o.expected) == 0 {
+		return nil, errEmptyCAS
+	}
+	// A supplied idempotency key must not be whitespace-only — a blank key would
+	// silently disable replay-safety while looking set. Empty (unset) is fine.
+	if o.idempotencyKey != "" && strings.TrimSpace(o.idempotencyKey) == "" {
+		return nil, fmt.Errorf("udb: idempotency key must not be whitespace-only")
 	}
 	filter, err := structFilter(where)
 	if err != nil {
@@ -301,10 +343,11 @@ func (e *Entity) Delete(ctx context.Context, where map[string]any, opts ...Delet
 		}
 	}
 	return e.client.Delete(ctx, &entityv1.DeleteRequest{
-		Context:     e.requestContext(),
-		MessageType: e.fqn,
-		Filter:      filter,
-		Expected:    expected,
+		Context:        e.requestContext(),
+		MessageType:    e.fqn,
+		Filter:         filter,
+		Expected:       expected,
+		IdempotencyKey: o.idempotencyKey,
 	})
 }
 
@@ -312,7 +355,11 @@ func (e *Entity) Delete(ctx context.Context, where map[string]any, opts ...Delet
 type UpdateOption func(*updateOptions)
 
 type updateOptions struct {
-	expected       map[string]any
+	expected map[string]any
+	// expectedSet records that WithUpdateExpected was applied — i.e. a guarded
+	// (CAS) Update/Increment was requested. Distinct from expected being
+	// nil/empty, which errEmptyCAS rejects.
+	expectedSet    bool
 	idempotencyKey string
 	returnRecord   bool
 }
@@ -320,9 +367,14 @@ type updateOptions struct {
 // WithUpdateExpected makes the Update a compare-and-swap: every field -> value
 // must still equal the CURRENT row (row-locked, same tenant/RLS transaction) or
 // the broker returns FAILED_PRECONDITION and writes nothing. Requires the
-// filter to pin every primary-key column by equality.
+// filter to pin every primary-key column by equality. Passing a nil/empty map
+// is rejected with errEmptyCAS BEFORE any RPC — a guarded update must never
+// degrade into an unconditional one (for that, omit this option).
 func WithUpdateExpected(expected map[string]any) UpdateOption {
-	return func(o *updateOptions) { o.expected = expected }
+	return func(o *updateOptions) {
+		o.expected = expected
+		o.expectedSet = true
+	}
 }
 
 // WithUpdateIdempotencyKey enables durable keyed replay: a retried Update with
@@ -357,6 +409,11 @@ func (e *Entity) update(ctx context.Context, where map[string]any, changes map[s
 	var o updateOptions
 	for _, opt := range opts {
 		opt(&o)
+	}
+	// A guarded Update/Increment (WithUpdateExpected) with a nil/empty
+	// precondition must NOT silently degrade into an unconditional write.
+	if o.expectedSet && len(o.expected) == 0 {
+		return nil, errEmptyCAS
 	}
 	filter, err := structFilter(where)
 	if err != nil {
@@ -439,13 +496,39 @@ func decodeRecordSet(rs *entityv1.RecordSet) ([]map[string]any, error) {
 		if len(raw) == 0 {
 			continue
 		}
-		m := map[string]any{}
-		if err := json.Unmarshal(raw, &m); err != nil {
+		m, err := decodeRecordJSON(raw)
+		if err != nil {
 			return nil, fmt.Errorf("udb: decode record row: %w", err)
 		}
 		out = append(out, m)
 	}
 	return out, nil
+}
+
+// decodeRecordJSON decodes one broker record_json body into a generic map while
+// PRESERVING integer precision. A plain json.Unmarshal decodes every JSON number
+// into a float64, so any integer above 2^53 is silently rounded and a large
+// int64/uint64 id, counter, or money-in-minor-units value is corrupted with no
+// error. json.Decoder.UseNumber instead delivers each number as a json.Number
+// (the exact source digits), leaving the width/signedness choice to the typed
+// read path.
+//
+// COORDINATION: numbers now arrive as json.Number, not float64. Any typed
+// decoder over these maps — notably the generated `…FromUDBRow` coercion helpers
+// emitted by src/cli/sdk_gen.rs (go_coercion_helpers: udbAsInt64 / udbAsFloat64)
+// — MUST add a json.Number case and parse it with exact width/signedness
+// (json.Number.Int64 / a strconv.ParseUint for uint64 / .Float64), surfacing the
+// parse error on overflow or a fractional value rather than coercing to 0. Their
+// current type switches list only int64/int32/int/float64, so without that case
+// every numeric field would read back as 0.
+func decodeRecordJSON(raw []byte) (map[string]any, error) {
+	m := map[string]any{}
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	dec.UseNumber()
+	if err := dec.Decode(&m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 // EntityDescriptor is a catalog-derived entity registry entry. It mirrors lane

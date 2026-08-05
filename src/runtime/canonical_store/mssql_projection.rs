@@ -553,7 +553,7 @@ impl ProjectionTaskStore for MssqlCanonicalStore {
         let sql = format!(
             "SELECT COUNT(*) AS n FROM {rel} \
              WHERE idempotency_key IN (SELECT value FROM STRING_SPLIT(@P1, ',')) \
-               AND status NOT IN ('COMPLETED','DEAD_LETTER','FAILED')"
+               AND status <> 'COMPLETED'" // P2-1 NF-1/NF-2: FAILED/DEAD_LETTER = not projected yet = still fences
         );
         let params = [SqlParam::Str(csv)];
         let rows = self

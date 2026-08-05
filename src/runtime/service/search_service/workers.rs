@@ -23,7 +23,7 @@ use super::config::{
     SEARCH_INDEX_MSG, SEARCH_REINDEX_PAGE_LIMIT, STATUS_ACTIVE, STATUS_DELETED, TOPIC_DELETED,
     TOPIC_FRESHNESS_APPLIED, TOPIC_REINDEX, TOPIC_REINDEX_COMPLETED, TOPIC_TEARDOWN_COMPLETED,
 };
-use super::model::{StoredIndex, json_str, stored_index_from_pg_row};
+use super::model::{StoredIndex, json_str, stored_index_from_pg_row, tenant_scoped_point_id};
 use super::store::{index_conflict, index_record, search_index_model};
 
 /// Fail-closed tenant scope check for a CDC freshness event, mirroring the
@@ -531,7 +531,9 @@ async fn apply_search_freshness_job(
         context: None,
         collection: job.index.collection(),
         points: vec![VectorPointMutation {
-            id,
+            // SRCH1: tenant-namespace the point-id so a foreign tenant reusing this
+            // PK in a shared collection cannot clobber this vector.
+            id: tenant_scoped_point_id(&job.tenant_id, &id),
             vector,
             payload: body
                 .get("payload")
@@ -655,7 +657,10 @@ async fn reindex_source_rows(
                 continue;
             };
             points.push(VectorPointMutation {
-                id: row_pk,
+                // SRCH1: tenant-namespace the reindexed point-id (same scheme as
+                // the freshness/teardown paths) so a shared collection cannot be
+                // cross-tenant clobbered on rebuild.
+                id: tenant_scoped_point_id(&job.tenant_id, &row_pk),
                 vector,
                 payload: reindex_point_payload(&row),
                 vector_name: String::new(),
@@ -813,7 +818,10 @@ async fn teardown_index_points(
                 continue;
             }
             last_pk = row_pk.clone();
-            page_ids.push(row_pk);
+            // SRCH1: delete the tenant-namespaced point-id so teardown removes only
+            // THIS tenant's vector, never a foreign tenant's same-PK point sharing
+            // the collection (mirrors the write-side namespacing above).
+            page_ids.push(tenant_scoped_point_id(&job.tenant_id, &row_pk));
         }
         let page_count = page_ids.len() as u64;
         if !page_ids.is_empty() {

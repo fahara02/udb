@@ -355,6 +355,22 @@ impl DataBrokerRuntime {
         }
     }
 
+    /// Like [`Self::encrypt_secret_at_rest`] but MANDATORY: fails when no
+    /// encryption key is configured REGARDLESS of `fail_closed_mode`. For callers
+    /// (tenant-data backups) that must never produce a plaintext artifact labeled
+    /// as encrypted (D1). Keyed deployments behave identically to the base method.
+    pub fn encrypt_secret_at_rest_required(&self, plaintext: &str) -> Result<String, String> {
+        match self.encryption.as_ref() {
+            Some(enc) => {
+                enc.encrypt_json_value(&serde_json::Value::String(plaintext.to_string()))
+            }
+            None => Err(
+                "encryption-at-rest is required for tenant-data backups but no UDB_ENCRYPTION_KEYS/Vault key is configured"
+                    .into(),
+            ),
+        }
+    }
+
     /// Reverse of [`Self::encrypt_secret_at_rest`]. Plaintext (legacy/dev) and
     /// values lacking the `udb-aead:` envelope prefix pass through unchanged, so
     /// mixed plaintext/ciphertext stores remain readable during rollout.
@@ -2484,8 +2500,16 @@ fn row_value_to_json(row: &PgRow, idx: usize, type_name: &str) -> Result<JsonVal
             .unwrap_or(JsonValue::Null));
     }
     if type_name.contains("FLOAT") || type_name.contains("DOUBLE") || type_name.contains("REAL") {
+        // W1: sqlx-postgres decodes float4/REAL ONLY as f32 and float8/DOUBLE ONLY
+        // as f64 (type-exact, no widening). A single f64 probe therefore returned
+        // Err for every float4/REAL column → unwrap_or(Null) = SILENT data loss on
+        // read. Probe f64 first (float8/double), then fall back to f32 (float4/real).
         return Ok(row
             .try_get::<Option<f64>, _>(idx)
+            .or_else(|_| {
+                row.try_get::<Option<f32>, _>(idx)
+                    .map(|value| value.map(f64::from))
+            })
             .map(|value| value.map(JsonValue::from).unwrap_or(JsonValue::Null))
             .unwrap_or(JsonValue::Null));
     }
@@ -2572,16 +2596,77 @@ fn row_value_to_json(row: &PgRow, idx: usize, type_name: &str) -> Result<JsonVal
             })
             .unwrap_or(JsonValue::Null));
     }
-    // GAP 10: TEXT[] and other PostgreSQL array types — deserialise as a JSON array
-    // of strings.  Covers VARCHAR[], TEXT[], BIGINT[], INT[], etc.
+    // PostgreSQL array types — deserialise to a JSON array.
+    // W2: the old code decoded ONLY `Vec<String>`, so every NON-text array
+    // (bigint[]/int[]/bool[]/float[]/uuid[]/numeric[]) failed the decode and was
+    // silently returned as an empty `[]` (data loss for a populated array).
+    // Dispatch on the element type so each array decodes with the correct Vec<T>;
+    // the text fallback uses `Vec<Option<String>>` so a NULL element is preserved
+    // as JSON null rather than dropped.
     if type_name.ends_with("[]") {
-        let arr: Vec<String> = row
-            .try_get::<Option<Vec<String>>, _>(idx)
-            .unwrap_or(None)
-            .unwrap_or_default();
-        return Ok(JsonValue::Array(
-            arr.into_iter().map(JsonValue::String).collect(),
-        ));
+        let base = type_name.trim_end_matches("[]");
+        let arr: JsonValue = if base.contains("INT8") || base == "BIGINT" {
+            row.try_get::<Option<Vec<i64>>, _>(idx)
+                .ok()
+                .flatten()
+                .map(|v| JsonValue::Array(v.into_iter().map(JsonValue::from).collect()))
+                .unwrap_or(JsonValue::Null)
+        } else if base.contains("INT4") || base == "INTEGER" || base == "INT" {
+            row.try_get::<Option<Vec<i32>>, _>(idx)
+                .ok()
+                .flatten()
+                .map(|v| JsonValue::Array(v.into_iter().map(JsonValue::from).collect()))
+                .unwrap_or(JsonValue::Null)
+        } else if base.contains("FLOAT8") || base.contains("DOUBLE") {
+            row.try_get::<Option<Vec<f64>>, _>(idx)
+                .ok()
+                .flatten()
+                .map(|v| JsonValue::Array(v.into_iter().map(JsonValue::from).collect()))
+                .unwrap_or(JsonValue::Null)
+        } else if base.contains("FLOAT4") || base.contains("REAL") {
+            row.try_get::<Option<Vec<f32>>, _>(idx)
+                .ok()
+                .flatten()
+                .map(|v| {
+                    JsonValue::Array(
+                        v.into_iter()
+                            .map(|f| JsonValue::from(f64::from(f)))
+                            .collect(),
+                    )
+                })
+                .unwrap_or(JsonValue::Null)
+        } else if base.contains("BOOL") {
+            row.try_get::<Option<Vec<bool>>, _>(idx)
+                .ok()
+                .flatten()
+                .map(|v| JsonValue::Array(v.into_iter().map(JsonValue::from).collect()))
+                .unwrap_or(JsonValue::Null)
+        } else if base.contains("UUID") {
+            row.try_get::<Option<Vec<Uuid>>, _>(idx)
+                .ok()
+                .flatten()
+                .map(|v| {
+                    JsonValue::Array(
+                        v.into_iter()
+                            .map(|u| JsonValue::String(u.to_string()))
+                            .collect(),
+                    )
+                })
+                .unwrap_or(JsonValue::Null)
+        } else {
+            row.try_get::<Option<Vec<Option<String>>>, _>(idx)
+                .ok()
+                .flatten()
+                .map(|v| {
+                    JsonValue::Array(
+                        v.into_iter()
+                            .map(|s| s.map(JsonValue::String).unwrap_or(JsonValue::Null))
+                            .collect(),
+                    )
+                })
+                .unwrap_or(JsonValue::Null)
+        };
+        return Ok(arr);
     }
     // INET / CIDR / MACADDR: sqlx's String decoder is TEXT-family-only and REJECTS
     // these OIDs, and the generic hex-of-binary fallback below would return the raw

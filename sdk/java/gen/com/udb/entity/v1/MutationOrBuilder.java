@@ -204,10 +204,7 @@ public interface MutationOrBuilder extends
    * Partial-update payload for `operation = "update"` — the SET columns and the
    * atomic increments. Same semantics as the unary UpdateRequest (SETs named
    * columns / applies counter deltas on the rows matched by `filter`), atomic
-   * with the rest of the transaction; ignored for other operations. Note: the
-   * unary UpdateRequest.expected compare-and-swap precondition is intentionally
-   * NOT carried here — transactional updates do not support CAS (rather than
-   * silently ignore an `expected` a caller might set).
+   * with the rest of the transaction; ignored for other operations.
    * </pre>
    *
    * <code>.google.protobuf.Struct changes = 17 [json_name = "changes"];</code>
@@ -219,10 +216,7 @@ public interface MutationOrBuilder extends
    * Partial-update payload for `operation = "update"` — the SET columns and the
    * atomic increments. Same semantics as the unary UpdateRequest (SETs named
    * columns / applies counter deltas on the rows matched by `filter`), atomic
-   * with the rest of the transaction; ignored for other operations. Note: the
-   * unary UpdateRequest.expected compare-and-swap precondition is intentionally
-   * NOT carried here — transactional updates do not support CAS (rather than
-   * silently ignore an `expected` a caller might set).
+   * with the rest of the transaction; ignored for other operations.
    * </pre>
    *
    * <code>.google.protobuf.Struct changes = 17 [json_name = "changes"];</code>
@@ -234,10 +228,7 @@ public interface MutationOrBuilder extends
    * Partial-update payload for `operation = "update"` — the SET columns and the
    * atomic increments. Same semantics as the unary UpdateRequest (SETs named
    * columns / applies counter deltas on the rows matched by `filter`), atomic
-   * with the rest of the transaction; ignored for other operations. Note: the
-   * unary UpdateRequest.expected compare-and-swap precondition is intentionally
-   * NOT carried here — transactional updates do not support CAS (rather than
-   * silently ignore an `expected` a caller might set).
+   * with the rest of the transaction; ignored for other operations.
    * </pre>
    *
    * <code>.google.protobuf.Struct changes = 17 [json_name = "changes"];</code>
@@ -267,4 +258,74 @@ public interface MutationOrBuilder extends
    */
   com.udb.entity.v1.UpdateRequest.IncrementOrBuilder getIncrementsOrBuilder(
       int index);
+
+  /**
+   * <pre>
+   * Optional compare-and-swap precondition (bug #8.1), mirroring the unary
+   * UpsertRequest/DeleteRequest/UpdateRequest `expected` field. When set, each
+   * `field -&gt; value` assertion is checked against the CURRENT row — located by
+   * the primary key (from `filter` for update/delete, from the record for
+   * upsert) and locked FOR UPDATE — inside this transaction and under its
+   * tenant/RLS fencing, BEFORE the mutation is applied. A mismatch or an absent
+   * row aborts the WHOLE transaction with FAILED_PRECONDITION and nothing is
+   * written, projected, or emitted. Supported for `operation` upsert, update,
+   * and delete; setting it on any other operation is rejected (never silently
+   * ignored). Unset/empty = unconditional (unchanged behaviour).
+   * </pre>
+   *
+   * <code>.google.protobuf.Struct expected = 19 [json_name = "expected"];</code>
+   * @return Whether the expected field is set.
+   */
+  boolean hasExpected();
+  /**
+   * <pre>
+   * Optional compare-and-swap precondition (bug #8.1), mirroring the unary
+   * UpsertRequest/DeleteRequest/UpdateRequest `expected` field. When set, each
+   * `field -&gt; value` assertion is checked against the CURRENT row — located by
+   * the primary key (from `filter` for update/delete, from the record for
+   * upsert) and locked FOR UPDATE — inside this transaction and under its
+   * tenant/RLS fencing, BEFORE the mutation is applied. A mismatch or an absent
+   * row aborts the WHOLE transaction with FAILED_PRECONDITION and nothing is
+   * written, projected, or emitted. Supported for `operation` upsert, update,
+   * and delete; setting it on any other operation is rejected (never silently
+   * ignored). Unset/empty = unconditional (unchanged behaviour).
+   * </pre>
+   *
+   * <code>.google.protobuf.Struct expected = 19 [json_name = "expected"];</code>
+   * @return The expected.
+   */
+  com.google.protobuf.Struct getExpected();
+  /**
+   * <pre>
+   * Optional compare-and-swap precondition (bug #8.1), mirroring the unary
+   * UpsertRequest/DeleteRequest/UpdateRequest `expected` field. When set, each
+   * `field -&gt; value` assertion is checked against the CURRENT row — located by
+   * the primary key (from `filter` for update/delete, from the record for
+   * upsert) and locked FOR UPDATE — inside this transaction and under its
+   * tenant/RLS fencing, BEFORE the mutation is applied. A mismatch or an absent
+   * row aborts the WHOLE transaction with FAILED_PRECONDITION and nothing is
+   * written, projected, or emitted. Supported for `operation` upsert, update,
+   * and delete; setting it on any other operation is rejected (never silently
+   * ignored). Unset/empty = unconditional (unchanged behaviour).
+   * </pre>
+   *
+   * <code>.google.protobuf.Struct expected = 19 [json_name = "expected"];</code>
+   */
+  com.google.protobuf.StructOrBuilder getExpectedOrBuilder();
+
+  /**
+   * <pre>
+   * Required-CDC-delivery contract (bug #8.2). When true, this mutation FAILS
+   * CLOSED (FAILED_PRECONDITION, aborting the transaction) unless its change
+   * event is durably enqueued to the transactional outbox in the SAME tx: it
+   * errors if CDC delivery is disabled, if the entity declares no `cdc_topic`,
+   * if a tenant-scoped topic has no tenant to route to, or if the outbox INSERT
+   * fails. Default false preserves best-effort emission (an event is emitted
+   * when CDC is enabled and the entity is CDC-mapped, and skipped otherwise).
+   * </pre>
+   *
+   * <code>bool cdc_required = 20 [json_name = "cdcRequired"];</code>
+   * @return The cdcRequired.
+   */
+  boolean getCdcRequired();
 }

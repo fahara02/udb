@@ -33,6 +33,7 @@ private static final long serialVersionUID = 0L;
     conflictFields_ =
         com.google.protobuf.LazyStringArrayList.emptyList();
     idempotencyKey_ = "";
+    lockName_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -326,6 +327,76 @@ private static final long serialVersionUID = 0L;
     return expected_ == null ? com.google.protobuf.Struct.getDefaultInstance() : expected_;
   }
 
+  public static final int LOCK_NAME_FIELD_NUMBER = 10;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object lockName_ = "";
+  /**
+   * <pre>
+   * gate 25 (lock-fencing-at-commit): optional advisory-lock name + the
+   * monotonic fencing token the caller was granted for it. When both are set,
+   * the broker validates the token against the LockService's durable lock row
+   * IN THE SAME write transaction as the mutation; a stale token (a writer that
+   * outlived its lease and was fenced by a newer holder) is rejected fail-closed
+   * with NO write / projection / CDC / audit / idempotency side effect. Unset
+   * (empty `lock_name`) = no fencing (unchanged behaviour).
+   * </pre>
+   *
+   * <code>string lock_name = 10 [json_name = "lockName"];</code>
+   * @return The lockName.
+   */
+  @java.lang.Override
+  public java.lang.String getLockName() {
+    java.lang.Object ref = lockName_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      lockName_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * gate 25 (lock-fencing-at-commit): optional advisory-lock name + the
+   * monotonic fencing token the caller was granted for it. When both are set,
+   * the broker validates the token against the LockService's durable lock row
+   * IN THE SAME write transaction as the mutation; a stale token (a writer that
+   * outlived its lease and was fenced by a newer holder) is rejected fail-closed
+   * with NO write / projection / CDC / audit / idempotency side effect. Unset
+   * (empty `lock_name`) = no fencing (unchanged behaviour).
+   * </pre>
+   *
+   * <code>string lock_name = 10 [json_name = "lockName"];</code>
+   * @return The bytes for lockName.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getLockNameBytes() {
+    java.lang.Object ref = lockName_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      lockName_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int FENCING_TOKEN_FIELD_NUMBER = 11;
+  private long fencingToken_ = 0L;
+  /**
+   * <code>int64 fencing_token = 11 [json_name = "fencingToken"];</code>
+   * @return The fencingToken.
+   */
+  @java.lang.Override
+  public long getFencingToken() {
+    return fencingToken_;
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -366,6 +437,12 @@ private static final long serialVersionUID = 0L;
     }
     if (((bitField0_ & 0x00000008) != 0)) {
       output.writeMessage(9, getExpected());
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(lockName_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 10, lockName_);
+    }
+    if (fencingToken_ != 0L) {
+      output.writeInt64(11, fencingToken_);
     }
     getUnknownFields().writeTo(output);
   }
@@ -414,6 +491,13 @@ private static final long serialVersionUID = 0L;
       size += com.google.protobuf.CodedOutputStream
         .computeMessageSize(9, getExpected());
     }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(lockName_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(10, lockName_);
+    }
+    if (fencingToken_ != 0L) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeInt64Size(11, fencingToken_);
+    }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
     return size;
@@ -459,6 +543,10 @@ private static final long serialVersionUID = 0L;
       if (!getExpected()
           .equals(other.getExpected())) return false;
     }
+    if (!getLockName()
+        .equals(other.getLockName())) return false;
+    if (getFencingToken()
+        != other.getFencingToken()) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -499,6 +587,11 @@ private static final long serialVersionUID = 0L;
       hash = (37 * hash) + EXPECTED_FIELD_NUMBER;
       hash = (53 * hash) + getExpected().hashCode();
     }
+    hash = (37 * hash) + LOCK_NAME_FIELD_NUMBER;
+    hash = (53 * hash) + getLockName().hashCode();
+    hash = (37 * hash) + FENCING_TOKEN_FIELD_NUMBER;
+    hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+        getFencingToken());
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -665,6 +758,8 @@ private static final long serialVersionUID = 0L;
         expectedBuilder_.dispose();
         expectedBuilder_ = null;
       }
+      lockName_ = "";
+      fencingToken_ = 0L;
       return this;
     }
 
@@ -739,6 +834,12 @@ private static final long serialVersionUID = 0L;
             : expectedBuilder_.build();
         to_bitField0_ |= 0x00000008;
       }
+      if (((from_bitField0_ & 0x00000200) != 0)) {
+        result.lockName_ = lockName_;
+      }
+      if (((from_bitField0_ & 0x00000400) != 0)) {
+        result.fencingToken_ = fencingToken_;
+      }
       result.bitField0_ |= to_bitField0_;
     }
 
@@ -791,6 +892,14 @@ private static final long serialVersionUID = 0L;
       }
       if (other.hasExpected()) {
         mergeExpected(other.getExpected());
+      }
+      if (!other.getLockName().isEmpty()) {
+        lockName_ = other.lockName_;
+        bitField0_ |= 0x00000200;
+        onChanged();
+      }
+      if (other.getFencingToken() != 0L) {
+        setFencingToken(other.getFencingToken());
       }
       this.mergeUnknownFields(other.getUnknownFields());
       onChanged();
@@ -872,6 +981,16 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000100;
               break;
             } // case 74
+            case 82: {
+              lockName_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000200;
+              break;
+            } // case 82
+            case 88: {
+              fencingToken_ = input.readInt64();
+              bitField0_ |= 0x00000400;
+              break;
+            } // case 88
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -1798,6 +1917,160 @@ private static final long serialVersionUID = 0L;
         expected_ = null;
       }
       return expectedBuilder_;
+    }
+
+    private java.lang.Object lockName_ = "";
+    /**
+     * <pre>
+     * gate 25 (lock-fencing-at-commit): optional advisory-lock name + the
+     * monotonic fencing token the caller was granted for it. When both are set,
+     * the broker validates the token against the LockService's durable lock row
+     * IN THE SAME write transaction as the mutation; a stale token (a writer that
+     * outlived its lease and was fenced by a newer holder) is rejected fail-closed
+     * with NO write / projection / CDC / audit / idempotency side effect. Unset
+     * (empty `lock_name`) = no fencing (unchanged behaviour).
+     * </pre>
+     *
+     * <code>string lock_name = 10 [json_name = "lockName"];</code>
+     * @return The lockName.
+     */
+    public java.lang.String getLockName() {
+      java.lang.Object ref = lockName_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        lockName_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * gate 25 (lock-fencing-at-commit): optional advisory-lock name + the
+     * monotonic fencing token the caller was granted for it. When both are set,
+     * the broker validates the token against the LockService's durable lock row
+     * IN THE SAME write transaction as the mutation; a stale token (a writer that
+     * outlived its lease and was fenced by a newer holder) is rejected fail-closed
+     * with NO write / projection / CDC / audit / idempotency side effect. Unset
+     * (empty `lock_name`) = no fencing (unchanged behaviour).
+     * </pre>
+     *
+     * <code>string lock_name = 10 [json_name = "lockName"];</code>
+     * @return The bytes for lockName.
+     */
+    public com.google.protobuf.ByteString
+        getLockNameBytes() {
+      java.lang.Object ref = lockName_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        lockName_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * gate 25 (lock-fencing-at-commit): optional advisory-lock name + the
+     * monotonic fencing token the caller was granted for it. When both are set,
+     * the broker validates the token against the LockService's durable lock row
+     * IN THE SAME write transaction as the mutation; a stale token (a writer that
+     * outlived its lease and was fenced by a newer holder) is rejected fail-closed
+     * with NO write / projection / CDC / audit / idempotency side effect. Unset
+     * (empty `lock_name`) = no fencing (unchanged behaviour).
+     * </pre>
+     *
+     * <code>string lock_name = 10 [json_name = "lockName"];</code>
+     * @param value The lockName to set.
+     * @return This builder for chaining.
+     */
+    public Builder setLockName(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      lockName_ = value;
+      bitField0_ |= 0x00000200;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * gate 25 (lock-fencing-at-commit): optional advisory-lock name + the
+     * monotonic fencing token the caller was granted for it. When both are set,
+     * the broker validates the token against the LockService's durable lock row
+     * IN THE SAME write transaction as the mutation; a stale token (a writer that
+     * outlived its lease and was fenced by a newer holder) is rejected fail-closed
+     * with NO write / projection / CDC / audit / idempotency side effect. Unset
+     * (empty `lock_name`) = no fencing (unchanged behaviour).
+     * </pre>
+     *
+     * <code>string lock_name = 10 [json_name = "lockName"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearLockName() {
+      lockName_ = getDefaultInstance().getLockName();
+      bitField0_ = (bitField0_ & ~0x00000200);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * gate 25 (lock-fencing-at-commit): optional advisory-lock name + the
+     * monotonic fencing token the caller was granted for it. When both are set,
+     * the broker validates the token against the LockService's durable lock row
+     * IN THE SAME write transaction as the mutation; a stale token (a writer that
+     * outlived its lease and was fenced by a newer holder) is rejected fail-closed
+     * with NO write / projection / CDC / audit / idempotency side effect. Unset
+     * (empty `lock_name`) = no fencing (unchanged behaviour).
+     * </pre>
+     *
+     * <code>string lock_name = 10 [json_name = "lockName"];</code>
+     * @param value The bytes for lockName to set.
+     * @return This builder for chaining.
+     */
+    public Builder setLockNameBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      lockName_ = value;
+      bitField0_ |= 0x00000200;
+      onChanged();
+      return this;
+    }
+
+    private long fencingToken_ ;
+    /**
+     * <code>int64 fencing_token = 11 [json_name = "fencingToken"];</code>
+     * @return The fencingToken.
+     */
+    @java.lang.Override
+    public long getFencingToken() {
+      return fencingToken_;
+    }
+    /**
+     * <code>int64 fencing_token = 11 [json_name = "fencingToken"];</code>
+     * @param value The fencingToken to set.
+     * @return This builder for chaining.
+     */
+    public Builder setFencingToken(long value) {
+
+      fencingToken_ = value;
+      bitField0_ |= 0x00000400;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>int64 fencing_token = 11 [json_name = "fencingToken"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearFencingToken() {
+      bitField0_ = (bitField0_ & ~0x00000400);
+      fencingToken_ = 0L;
+      onChanged();
+      return this;
     }
 
     // @@protoc_insertion_point(builder_scope:udb.entity.v1.UpsertRequest)

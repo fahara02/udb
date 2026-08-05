@@ -30,6 +30,10 @@ private static final long serialVersionUID = 0L;
   private DeleteFileRequest() {
     tenantId_ = "";
     fileId_ = "";
+    mode_ = 0;
+    reason_ = "";
+    expectedStatus_ = "";
+    idempotencyKey_ = "";
   }
 
   public static final com.google.protobuf.Descriptors.Descriptor
@@ -123,6 +127,187 @@ private static final long serialVersionUID = 0L;
     }
   }
 
+  public static final int MODE_FIELD_NUMBER = 3;
+  private int mode_ = 0;
+  /**
+   * <pre>
+   * Deletion mode. UNSPECIFIED/SOFT (default) soft-deletes the metadata and best-
+   * effort-removes the bytes. HARD durably records an object-GC intent atomically
+   * with the tombstone and drives object deletion to convergence.
+   * </pre>
+   *
+   * <code>.udb.core.storage.services.v1.DeleteMode mode = 3 [json_name = "mode"];</code>
+   * @return The enum numeric value on the wire for mode.
+   */
+  @java.lang.Override public int getModeValue() {
+    return mode_;
+  }
+  /**
+   * <pre>
+   * Deletion mode. UNSPECIFIED/SOFT (default) soft-deletes the metadata and best-
+   * effort-removes the bytes. HARD durably records an object-GC intent atomically
+   * with the tombstone and drives object deletion to convergence.
+   * </pre>
+   *
+   * <code>.udb.core.storage.services.v1.DeleteMode mode = 3 [json_name = "mode"];</code>
+   * @return The mode.
+   */
+  @java.lang.Override public com.udb.core.storage.services.v1.DeleteMode getMode() {
+    com.udb.core.storage.services.v1.DeleteMode result = com.udb.core.storage.services.v1.DeleteMode.forNumber(mode_);
+    return result == null ? com.udb.core.storage.services.v1.DeleteMode.UNRECOGNIZED : result;
+  }
+
+  public static final int REASON_FIELD_NUMBER = 4;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object reason_ = "";
+  /**
+   * <pre>
+   * Optional operator-supplied reason, recorded on the durable GC intent (HARD).
+   * </pre>
+   *
+   * <code>string reason = 4 [json_name = "reason"];</code>
+   * @return The reason.
+   */
+  @java.lang.Override
+  public java.lang.String getReason() {
+    java.lang.Object ref = reason_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      reason_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Optional operator-supplied reason, recorded on the durable GC intent (HARD).
+   * </pre>
+   *
+   * <code>string reason = 4 [json_name = "reason"];</code>
+   * @return The bytes for reason.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getReasonBytes() {
+    java.lang.Object ref = reason_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      reason_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int EXPECTED_STATUS_FIELD_NUMBER = 5;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object expectedStatus_ = "";
+  /**
+   * <pre>
+   * Optional optimistic-concurrency guard. When non-empty it is matched against
+   * the file's current status token (PENDING/ACTIVE/DELETED) — the File row's
+   * revision proxy (the entity carries no numeric version) — and a mismatch is
+   * rejected fail-closed so a stale client cannot delete a file that changed.
+   * </pre>
+   *
+   * <code>string expected_status = 5 [json_name = "expectedStatus"];</code>
+   * @return The expectedStatus.
+   */
+  @java.lang.Override
+  public java.lang.String getExpectedStatus() {
+    java.lang.Object ref = expectedStatus_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      expectedStatus_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Optional optimistic-concurrency guard. When non-empty it is matched against
+   * the file's current status token (PENDING/ACTIVE/DELETED) — the File row's
+   * revision proxy (the entity carries no numeric version) — and a mismatch is
+   * rejected fail-closed so a stale client cannot delete a file that changed.
+   * </pre>
+   *
+   * <code>string expected_status = 5 [json_name = "expectedStatus"];</code>
+   * @return The bytes for expectedStatus.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getExpectedStatusBytes() {
+    java.lang.Object ref = expectedStatus_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      expectedStatus_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
+  public static final int IDEMPOTENCY_KEY_FIELD_NUMBER = 6;
+  @SuppressWarnings("serial")
+  private volatile java.lang.Object idempotencyKey_ = "";
+  /**
+   * <pre>
+   * Optional idempotency key (HARD). A replay with the SAME key + SAME target
+   * returns the ORIGINAL recorded outcome; the SAME key with a DIFFERENT target
+   * conflicts fail-closed.
+   * </pre>
+   *
+   * <code>string idempotency_key = 6 [json_name = "idempotencyKey"];</code>
+   * @return The idempotencyKey.
+   */
+  @java.lang.Override
+  public java.lang.String getIdempotencyKey() {
+    java.lang.Object ref = idempotencyKey_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs =
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      idempotencyKey_ = s;
+      return s;
+    }
+  }
+  /**
+   * <pre>
+   * Optional idempotency key (HARD). A replay with the SAME key + SAME target
+   * returns the ORIGINAL recorded outcome; the SAME key with a DIFFERENT target
+   * conflicts fail-closed.
+   * </pre>
+   *
+   * <code>string idempotency_key = 6 [json_name = "idempotencyKey"];</code>
+   * @return The bytes for idempotencyKey.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getIdempotencyKeyBytes() {
+    java.lang.Object ref = idempotencyKey_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b =
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      idempotencyKey_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   @java.lang.Override
   public final boolean isInitialized() {
@@ -143,6 +328,18 @@ private static final long serialVersionUID = 0L;
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(fileId_)) {
       com.google.protobuf.GeneratedMessage.writeString(output, 2, fileId_);
     }
+    if (mode_ != com.udb.core.storage.services.v1.DeleteMode.DELETE_MODE_UNSPECIFIED.getNumber()) {
+      output.writeEnum(3, mode_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(reason_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 4, reason_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(expectedStatus_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 5, expectedStatus_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(idempotencyKey_)) {
+      com.google.protobuf.GeneratedMessage.writeString(output, 6, idempotencyKey_);
+    }
     getUnknownFields().writeTo(output);
   }
 
@@ -157,6 +354,19 @@ private static final long serialVersionUID = 0L;
     }
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(fileId_)) {
       size += com.google.protobuf.GeneratedMessage.computeStringSize(2, fileId_);
+    }
+    if (mode_ != com.udb.core.storage.services.v1.DeleteMode.DELETE_MODE_UNSPECIFIED.getNumber()) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeEnumSize(3, mode_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(reason_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(4, reason_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(expectedStatus_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(5, expectedStatus_);
+    }
+    if (!com.google.protobuf.GeneratedMessage.isStringEmpty(idempotencyKey_)) {
+      size += com.google.protobuf.GeneratedMessage.computeStringSize(6, idempotencyKey_);
     }
     size += getUnknownFields().getSerializedSize();
     memoizedSize = size;
@@ -177,6 +387,13 @@ private static final long serialVersionUID = 0L;
         .equals(other.getTenantId())) return false;
     if (!getFileId()
         .equals(other.getFileId())) return false;
+    if (mode_ != other.mode_) return false;
+    if (!getReason()
+        .equals(other.getReason())) return false;
+    if (!getExpectedStatus()
+        .equals(other.getExpectedStatus())) return false;
+    if (!getIdempotencyKey()
+        .equals(other.getIdempotencyKey())) return false;
     if (!getUnknownFields().equals(other.getUnknownFields())) return false;
     return true;
   }
@@ -192,6 +409,14 @@ private static final long serialVersionUID = 0L;
     hash = (53 * hash) + getTenantId().hashCode();
     hash = (37 * hash) + FILE_ID_FIELD_NUMBER;
     hash = (53 * hash) + getFileId().hashCode();
+    hash = (37 * hash) + MODE_FIELD_NUMBER;
+    hash = (53 * hash) + mode_;
+    hash = (37 * hash) + REASON_FIELD_NUMBER;
+    hash = (53 * hash) + getReason().hashCode();
+    hash = (37 * hash) + EXPECTED_STATUS_FIELD_NUMBER;
+    hash = (53 * hash) + getExpectedStatus().hashCode();
+    hash = (37 * hash) + IDEMPOTENCY_KEY_FIELD_NUMBER;
+    hash = (53 * hash) + getIdempotencyKey().hashCode();
     hash = (29 * hash) + getUnknownFields().hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -325,6 +550,10 @@ private static final long serialVersionUID = 0L;
       bitField0_ = 0;
       tenantId_ = "";
       fileId_ = "";
+      mode_ = 0;
+      reason_ = "";
+      expectedStatus_ = "";
+      idempotencyKey_ = "";
       return this;
     }
 
@@ -364,6 +593,18 @@ private static final long serialVersionUID = 0L;
       if (((from_bitField0_ & 0x00000002) != 0)) {
         result.fileId_ = fileId_;
       }
+      if (((from_bitField0_ & 0x00000004) != 0)) {
+        result.mode_ = mode_;
+      }
+      if (((from_bitField0_ & 0x00000008) != 0)) {
+        result.reason_ = reason_;
+      }
+      if (((from_bitField0_ & 0x00000010) != 0)) {
+        result.expectedStatus_ = expectedStatus_;
+      }
+      if (((from_bitField0_ & 0x00000020) != 0)) {
+        result.idempotencyKey_ = idempotencyKey_;
+      }
     }
 
     @java.lang.Override
@@ -386,6 +627,24 @@ private static final long serialVersionUID = 0L;
       if (!other.getFileId().isEmpty()) {
         fileId_ = other.fileId_;
         bitField0_ |= 0x00000002;
+        onChanged();
+      }
+      if (other.mode_ != 0) {
+        setModeValue(other.getModeValue());
+      }
+      if (!other.getReason().isEmpty()) {
+        reason_ = other.reason_;
+        bitField0_ |= 0x00000008;
+        onChanged();
+      }
+      if (!other.getExpectedStatus().isEmpty()) {
+        expectedStatus_ = other.expectedStatus_;
+        bitField0_ |= 0x00000010;
+        onChanged();
+      }
+      if (!other.getIdempotencyKey().isEmpty()) {
+        idempotencyKey_ = other.idempotencyKey_;
+        bitField0_ |= 0x00000020;
         onChanged();
       }
       this.mergeUnknownFields(other.getUnknownFields());
@@ -424,6 +683,26 @@ private static final long serialVersionUID = 0L;
               bitField0_ |= 0x00000002;
               break;
             } // case 18
+            case 24: {
+              mode_ = input.readEnum();
+              bitField0_ |= 0x00000004;
+              break;
+            } // case 24
+            case 34: {
+              reason_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000008;
+              break;
+            } // case 34
+            case 42: {
+              expectedStatus_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000010;
+              break;
+            } // case 42
+            case 50: {
+              idempotencyKey_ = input.readStringRequireUtf8();
+              bitField0_ |= 0x00000020;
+              break;
+            } // case 50
             default: {
               if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                 done = true; // was an endgroup tag
@@ -581,6 +860,388 @@ private static final long serialVersionUID = 0L;
       checkByteStringIsUtf8(value);
       fileId_ = value;
       bitField0_ |= 0x00000002;
+      onChanged();
+      return this;
+    }
+
+    private int mode_ = 0;
+    /**
+     * <pre>
+     * Deletion mode. UNSPECIFIED/SOFT (default) soft-deletes the metadata and best-
+     * effort-removes the bytes. HARD durably records an object-GC intent atomically
+     * with the tombstone and drives object deletion to convergence.
+     * </pre>
+     *
+     * <code>.udb.core.storage.services.v1.DeleteMode mode = 3 [json_name = "mode"];</code>
+     * @return The enum numeric value on the wire for mode.
+     */
+    @java.lang.Override public int getModeValue() {
+      return mode_;
+    }
+    /**
+     * <pre>
+     * Deletion mode. UNSPECIFIED/SOFT (default) soft-deletes the metadata and best-
+     * effort-removes the bytes. HARD durably records an object-GC intent atomically
+     * with the tombstone and drives object deletion to convergence.
+     * </pre>
+     *
+     * <code>.udb.core.storage.services.v1.DeleteMode mode = 3 [json_name = "mode"];</code>
+     * @param value The enum numeric value on the wire for mode to set.
+     * @return This builder for chaining.
+     */
+    public Builder setModeValue(int value) {
+      mode_ = value;
+      bitField0_ |= 0x00000004;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Deletion mode. UNSPECIFIED/SOFT (default) soft-deletes the metadata and best-
+     * effort-removes the bytes. HARD durably records an object-GC intent atomically
+     * with the tombstone and drives object deletion to convergence.
+     * </pre>
+     *
+     * <code>.udb.core.storage.services.v1.DeleteMode mode = 3 [json_name = "mode"];</code>
+     * @return The mode.
+     */
+    @java.lang.Override
+    public com.udb.core.storage.services.v1.DeleteMode getMode() {
+      com.udb.core.storage.services.v1.DeleteMode result = com.udb.core.storage.services.v1.DeleteMode.forNumber(mode_);
+      return result == null ? com.udb.core.storage.services.v1.DeleteMode.UNRECOGNIZED : result;
+    }
+    /**
+     * <pre>
+     * Deletion mode. UNSPECIFIED/SOFT (default) soft-deletes the metadata and best-
+     * effort-removes the bytes. HARD durably records an object-GC intent atomically
+     * with the tombstone and drives object deletion to convergence.
+     * </pre>
+     *
+     * <code>.udb.core.storage.services.v1.DeleteMode mode = 3 [json_name = "mode"];</code>
+     * @param value The mode to set.
+     * @return This builder for chaining.
+     */
+    public Builder setMode(com.udb.core.storage.services.v1.DeleteMode value) {
+      if (value == null) { throw new NullPointerException(); }
+      bitField0_ |= 0x00000004;
+      mode_ = value.getNumber();
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Deletion mode. UNSPECIFIED/SOFT (default) soft-deletes the metadata and best-
+     * effort-removes the bytes. HARD durably records an object-GC intent atomically
+     * with the tombstone and drives object deletion to convergence.
+     * </pre>
+     *
+     * <code>.udb.core.storage.services.v1.DeleteMode mode = 3 [json_name = "mode"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearMode() {
+      bitField0_ = (bitField0_ & ~0x00000004);
+      mode_ = 0;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object reason_ = "";
+    /**
+     * <pre>
+     * Optional operator-supplied reason, recorded on the durable GC intent (HARD).
+     * </pre>
+     *
+     * <code>string reason = 4 [json_name = "reason"];</code>
+     * @return The reason.
+     */
+    public java.lang.String getReason() {
+      java.lang.Object ref = reason_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        reason_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Optional operator-supplied reason, recorded on the durable GC intent (HARD).
+     * </pre>
+     *
+     * <code>string reason = 4 [json_name = "reason"];</code>
+     * @return The bytes for reason.
+     */
+    public com.google.protobuf.ByteString
+        getReasonBytes() {
+      java.lang.Object ref = reason_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        reason_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Optional operator-supplied reason, recorded on the durable GC intent (HARD).
+     * </pre>
+     *
+     * <code>string reason = 4 [json_name = "reason"];</code>
+     * @param value The reason to set.
+     * @return This builder for chaining.
+     */
+    public Builder setReason(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      reason_ = value;
+      bitField0_ |= 0x00000008;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Optional operator-supplied reason, recorded on the durable GC intent (HARD).
+     * </pre>
+     *
+     * <code>string reason = 4 [json_name = "reason"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearReason() {
+      reason_ = getDefaultInstance().getReason();
+      bitField0_ = (bitField0_ & ~0x00000008);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Optional operator-supplied reason, recorded on the durable GC intent (HARD).
+     * </pre>
+     *
+     * <code>string reason = 4 [json_name = "reason"];</code>
+     * @param value The bytes for reason to set.
+     * @return This builder for chaining.
+     */
+    public Builder setReasonBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      reason_ = value;
+      bitField0_ |= 0x00000008;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object expectedStatus_ = "";
+    /**
+     * <pre>
+     * Optional optimistic-concurrency guard. When non-empty it is matched against
+     * the file's current status token (PENDING/ACTIVE/DELETED) — the File row's
+     * revision proxy (the entity carries no numeric version) — and a mismatch is
+     * rejected fail-closed so a stale client cannot delete a file that changed.
+     * </pre>
+     *
+     * <code>string expected_status = 5 [json_name = "expectedStatus"];</code>
+     * @return The expectedStatus.
+     */
+    public java.lang.String getExpectedStatus() {
+      java.lang.Object ref = expectedStatus_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        expectedStatus_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Optional optimistic-concurrency guard. When non-empty it is matched against
+     * the file's current status token (PENDING/ACTIVE/DELETED) — the File row's
+     * revision proxy (the entity carries no numeric version) — and a mismatch is
+     * rejected fail-closed so a stale client cannot delete a file that changed.
+     * </pre>
+     *
+     * <code>string expected_status = 5 [json_name = "expectedStatus"];</code>
+     * @return The bytes for expectedStatus.
+     */
+    public com.google.protobuf.ByteString
+        getExpectedStatusBytes() {
+      java.lang.Object ref = expectedStatus_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        expectedStatus_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Optional optimistic-concurrency guard. When non-empty it is matched against
+     * the file's current status token (PENDING/ACTIVE/DELETED) — the File row's
+     * revision proxy (the entity carries no numeric version) — and a mismatch is
+     * rejected fail-closed so a stale client cannot delete a file that changed.
+     * </pre>
+     *
+     * <code>string expected_status = 5 [json_name = "expectedStatus"];</code>
+     * @param value The expectedStatus to set.
+     * @return This builder for chaining.
+     */
+    public Builder setExpectedStatus(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      expectedStatus_ = value;
+      bitField0_ |= 0x00000010;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Optional optimistic-concurrency guard. When non-empty it is matched against
+     * the file's current status token (PENDING/ACTIVE/DELETED) — the File row's
+     * revision proxy (the entity carries no numeric version) — and a mismatch is
+     * rejected fail-closed so a stale client cannot delete a file that changed.
+     * </pre>
+     *
+     * <code>string expected_status = 5 [json_name = "expectedStatus"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearExpectedStatus() {
+      expectedStatus_ = getDefaultInstance().getExpectedStatus();
+      bitField0_ = (bitField0_ & ~0x00000010);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Optional optimistic-concurrency guard. When non-empty it is matched against
+     * the file's current status token (PENDING/ACTIVE/DELETED) — the File row's
+     * revision proxy (the entity carries no numeric version) — and a mismatch is
+     * rejected fail-closed so a stale client cannot delete a file that changed.
+     * </pre>
+     *
+     * <code>string expected_status = 5 [json_name = "expectedStatus"];</code>
+     * @param value The bytes for expectedStatus to set.
+     * @return This builder for chaining.
+     */
+    public Builder setExpectedStatusBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      expectedStatus_ = value;
+      bitField0_ |= 0x00000010;
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object idempotencyKey_ = "";
+    /**
+     * <pre>
+     * Optional idempotency key (HARD). A replay with the SAME key + SAME target
+     * returns the ORIGINAL recorded outcome; the SAME key with a DIFFERENT target
+     * conflicts fail-closed.
+     * </pre>
+     *
+     * <code>string idempotency_key = 6 [json_name = "idempotencyKey"];</code>
+     * @return The idempotencyKey.
+     */
+    public java.lang.String getIdempotencyKey() {
+      java.lang.Object ref = idempotencyKey_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        idempotencyKey_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Optional idempotency key (HARD). A replay with the SAME key + SAME target
+     * returns the ORIGINAL recorded outcome; the SAME key with a DIFFERENT target
+     * conflicts fail-closed.
+     * </pre>
+     *
+     * <code>string idempotency_key = 6 [json_name = "idempotencyKey"];</code>
+     * @return The bytes for idempotencyKey.
+     */
+    public com.google.protobuf.ByteString
+        getIdempotencyKeyBytes() {
+      java.lang.Object ref = idempotencyKey_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b =
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        idempotencyKey_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <pre>
+     * Optional idempotency key (HARD). A replay with the SAME key + SAME target
+     * returns the ORIGINAL recorded outcome; the SAME key with a DIFFERENT target
+     * conflicts fail-closed.
+     * </pre>
+     *
+     * <code>string idempotency_key = 6 [json_name = "idempotencyKey"];</code>
+     * @param value The idempotencyKey to set.
+     * @return This builder for chaining.
+     */
+    public Builder setIdempotencyKey(
+        java.lang.String value) {
+      if (value == null) { throw new NullPointerException(); }
+      idempotencyKey_ = value;
+      bitField0_ |= 0x00000020;
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Optional idempotency key (HARD). A replay with the SAME key + SAME target
+     * returns the ORIGINAL recorded outcome; the SAME key with a DIFFERENT target
+     * conflicts fail-closed.
+     * </pre>
+     *
+     * <code>string idempotency_key = 6 [json_name = "idempotencyKey"];</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearIdempotencyKey() {
+      idempotencyKey_ = getDefaultInstance().getIdempotencyKey();
+      bitField0_ = (bitField0_ & ~0x00000020);
+      onChanged();
+      return this;
+    }
+    /**
+     * <pre>
+     * Optional idempotency key (HARD). A replay with the SAME key + SAME target
+     * returns the ORIGINAL recorded outcome; the SAME key with a DIFFERENT target
+     * conflicts fail-closed.
+     * </pre>
+     *
+     * <code>string idempotency_key = 6 [json_name = "idempotencyKey"];</code>
+     * @param value The bytes for idempotencyKey to set.
+     * @return This builder for chaining.
+     */
+    public Builder setIdempotencyKeyBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) { throw new NullPointerException(); }
+      checkByteStringIsUtf8(value);
+      idempotencyKey_ = value;
+      bitField0_ |= 0x00000020;
       onChanged();
       return this;
     }

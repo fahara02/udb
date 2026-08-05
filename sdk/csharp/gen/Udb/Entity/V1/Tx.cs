@@ -28,7 +28,7 @@ namespace Udb.Entity.V1 {
             "bGUvcHJvdG9idWYvc3RydWN0LnByb3RvGht1ZGIvZW50aXR5L3YxL2NvbnRl",
             "eHQucHJvdG8aGnVkYi9lbnRpdHkvdjEvdmVjdG9yLnByb3RvGh51ZGIvZW50",
             "aXR5L3YxL3JlbGF0aW9uYWwucHJvdG8aH3VkYi9lbnRpdHkvdjEvY29uc2lz",
-            "dGVuY3kucHJvdG8i2gUKCE11dGF0aW9uEjcKB2NvbnRleHQYASABKAsyHS51",
+            "dGVuY3kucHJvdG8isgYKCE11dGF0aW9uEjcKB2NvbnRleHQYASABKAsyHS51",
             "ZGIuZW50aXR5LnYxLlJlcXVlc3RDb250ZXh0Ugdjb250ZXh0EhMKBXR4X2lk",
             "GAIgASgJUgR0eElkEhwKCW9wZXJhdGlvbhgDIAEoCVIJb3BlcmF0aW9uEiEK",
             "DG1lc3NhZ2VfdHlwZRgEIAEoCVILbWVzc2FnZVR5cGUSHwoLcmVjb3JkX2pz",
@@ -44,23 +44,25 @@ namespace Udb.Entity.V1 {
             "ZGVtcG90ZW5jeV9rZXkYECABKAlSDmlkZW1wb3RlbmN5S2V5EjEKB2NoYW5n",
             "ZXMYESABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0UgdjaGFuZ2VzEkYK",
             "CmluY3JlbWVudHMYEiADKAsyJi51ZGIuZW50aXR5LnYxLlVwZGF0ZVJlcXVl",
-            "c3QuSW5jcmVtZW50UgppbmNyZW1lbnRzIs0CCghUeFN0YXR1cxIzCgVzdGF0",
-            "ZRgBIAEoDjIdLnVkYi5lbnRpdHkudjEuVHhTdGF0dXMuU3RhdGVSBXN0YXRl",
-            "EhMKBXR4X2lkGAIgASgJUgR0eElkEh8KC211dGF0aW9uX2lkGAMgASgJUgpt",
-            "dXRhdGlvbklkEhgKB21lc3NhZ2UYBCABKAlSB21lc3NhZ2USQAoNd3JpdGVf",
-            "cmVjZWlwdBgFIAEoCzIbLnVkYi5lbnRpdHkudjEuV3JpdGVSZWNlaXB0Ugx3",
-            "cml0ZVJlY2VpcHQiegoFU3RhdGUSGAoUVFhfU1RBVEVfVU5TUEVDSUZJRUQQ",
-            "ABIRCg1UWF9TVEFURV9PUEVOEAESFgoSVFhfU1RBVEVfQ09NTUlUVEVEEAIS",
-            "GAoUVFhfU1RBVEVfUk9MTEVEX0JBQ0sQAxISCg5UWF9TVEFURV9FUlJPUhAE",
-            "Qq0BChFjb20udWRiLmVudGl0eS52MUIHVHhQcm90b1ABWjlnaXRodWIuY29t",
-            "L2ZhaGFyYTAyL3VkYi9zZGsvZ28vZ2VuL3VkYi9lbnRpdHkvdjE7ZW50aXR5",
-            "djGiAgNVRViqAg1VZGIuRW50aXR5LlYxygINVWRiXEVudGl0eVxWMeICGVVk",
-            "YlxHUEJNZXRhZGF0YVxFbnRpdHlcVjHqAg9VZGI6OkVudGl0eTo6VjFiBnBy",
-            "b3RvMw=="));
+            "c3QuSW5jcmVtZW50UgppbmNyZW1lbnRzEjMKCGV4cGVjdGVkGBMgASgLMhcu",
+            "Z29vZ2xlLnByb3RvYnVmLlN0cnVjdFIIZXhwZWN0ZWQSIQoMY2RjX3JlcXVp",
+            "cmVkGBQgASgIUgtjZGNSZXF1aXJlZCLNAgoIVHhTdGF0dXMSMwoFc3RhdGUY",
+            "ASABKA4yHS51ZGIuZW50aXR5LnYxLlR4U3RhdHVzLlN0YXRlUgVzdGF0ZRIT",
+            "CgV0eF9pZBgCIAEoCVIEdHhJZBIfCgttdXRhdGlvbl9pZBgDIAEoCVIKbXV0",
+            "YXRpb25JZBIYCgdtZXNzYWdlGAQgASgJUgdtZXNzYWdlEkAKDXdyaXRlX3Jl",
+            "Y2VpcHQYBSABKAsyGy51ZGIuZW50aXR5LnYxLldyaXRlUmVjZWlwdFIMd3Jp",
+            "dGVSZWNlaXB0InoKBVN0YXRlEhgKFFRYX1NUQVRFX1VOU1BFQ0lGSUVEEAAS",
+            "EQoNVFhfU1RBVEVfT1BFThABEhYKElRYX1NUQVRFX0NPTU1JVFRFRBACEhgK",
+            "FFRYX1NUQVRFX1JPTExFRF9CQUNLEAMSEgoOVFhfU1RBVEVfRVJST1IQBEKt",
+            "AQoRY29tLnVkYi5lbnRpdHkudjFCB1R4UHJvdG9QAVo5Z2l0aHViLmNvbS9m",
+            "YWhhcmEwMi91ZGIvc2RrL2dvL2dlbi91ZGIvZW50aXR5L3YxO2VudGl0eXYx",
+            "ogIDVUVYqgINVWRiLkVudGl0eS5WMcoCDVVkYlxFbnRpdHlcVjHiAhlVZGJc",
+            "R1BCTWV0YWRhdGFcRW50aXR5XFYx6gIPVWRiOjpFbnRpdHk6OlYxYgZwcm90",
+            "bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::Google.Protobuf.WellKnownTypes.StructReflection.Descriptor, global::Udb.Entity.V1.ContextReflection.Descriptor, global::Udb.Entity.V1.VectorReflection.Descriptor, global::Udb.Entity.V1.RelationalReflection.Descriptor, global::Udb.Entity.V1.ConsistencyReflection.Descriptor, },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.Mutation), global::Udb.Entity.V1.Mutation.Parser, new[]{ "Context", "TxId", "Operation", "MessageType", "RecordJson", "Payload", "Filter", "Collection", "VectorPoints", "Commit", "Rollback", "Bucket", "ObjectKey", "ObjectData", "ContentType", "IdempotencyKey", "Changes", "Increments" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.Mutation), global::Udb.Entity.V1.Mutation.Parser, new[]{ "Context", "TxId", "Operation", "MessageType", "RecordJson", "Payload", "Filter", "Collection", "VectorPoints", "Commit", "Rollback", "Bucket", "ObjectKey", "ObjectData", "ContentType", "IdempotencyKey", "Changes", "Increments", "Expected", "CdcRequired" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Udb.Entity.V1.TxStatus), global::Udb.Entity.V1.TxStatus.Parser, new[]{ "State", "TxId", "MutationId", "Message", "WriteReceipt" }, null, new[]{ typeof(global::Udb.Entity.V1.TxStatus.Types.State) }, null, null)
           }));
     }
@@ -121,6 +123,8 @@ namespace Udb.Entity.V1 {
       idempotencyKey_ = other.idempotencyKey_;
       changes_ = other.changes_ != null ? other.changes_.Clone() : null;
       increments_ = other.increments_.Clone();
+      expected_ = other.expected_ != null ? other.expected_.Clone() : null;
+      cdcRequired_ = other.cdcRequired_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -328,10 +332,7 @@ namespace Udb.Entity.V1 {
     /// Partial-update payload for `operation = "update"` — the SET columns and the
     /// atomic increments. Same semantics as the unary UpdateRequest (SETs named
     /// columns / applies counter deltas on the rows matched by `filter`), atomic
-    /// with the rest of the transaction; ignored for other operations. Note: the
-    /// unary UpdateRequest.expected compare-and-swap precondition is intentionally
-    /// NOT carried here — transactional updates do not support CAS (rather than
-    /// silently ignore an `expected` a caller might set).
+    /// with the rest of the transaction; ignored for other operations.
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -351,6 +352,51 @@ namespace Udb.Entity.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public pbc::RepeatedField<global::Udb.Entity.V1.UpdateRequest.Types.Increment> Increments {
       get { return increments_; }
+    }
+
+    /// <summary>Field number for the "expected" field.</summary>
+    public const int ExpectedFieldNumber = 19;
+    private global::Google.Protobuf.WellKnownTypes.Struct expected_;
+    /// <summary>
+    /// Optional compare-and-swap precondition (bug #8.1), mirroring the unary
+    /// UpsertRequest/DeleteRequest/UpdateRequest `expected` field. When set, each
+    /// `field -> value` assertion is checked against the CURRENT row — located by
+    /// the primary key (from `filter` for update/delete, from the record for
+    /// upsert) and locked FOR UPDATE — inside this transaction and under its
+    /// tenant/RLS fencing, BEFORE the mutation is applied. A mismatch or an absent
+    /// row aborts the WHOLE transaction with FAILED_PRECONDITION and nothing is
+    /// written, projected, or emitted. Supported for `operation` upsert, update,
+    /// and delete; setting it on any other operation is rejected (never silently
+    /// ignored). Unset/empty = unconditional (unchanged behaviour).
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Google.Protobuf.WellKnownTypes.Struct Expected {
+      get { return expected_; }
+      set {
+        expected_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "cdc_required" field.</summary>
+    public const int CdcRequiredFieldNumber = 20;
+    private bool cdcRequired_;
+    /// <summary>
+    /// Required-CDC-delivery contract (bug #8.2). When true, this mutation FAILS
+    /// CLOSED (FAILED_PRECONDITION, aborting the transaction) unless its change
+    /// event is durably enqueued to the transactional outbox in the SAME tx: it
+    /// errors if CDC delivery is disabled, if the entity declares no `cdc_topic`,
+    /// if a tenant-scoped topic has no tenant to route to, or if the outbox INSERT
+    /// fails. Default false preserves best-effort emission (an event is emitted
+    /// when CDC is enabled and the entity is CDC-mapped, and skipped otherwise).
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool CdcRequired {
+      get { return cdcRequired_; }
+      set {
+        cdcRequired_ = value;
+      }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -386,6 +432,8 @@ namespace Udb.Entity.V1 {
       if (IdempotencyKey != other.IdempotencyKey) return false;
       if (!object.Equals(Changes, other.Changes)) return false;
       if(!increments_.Equals(other.increments_)) return false;
+      if (!object.Equals(Expected, other.Expected)) return false;
+      if (CdcRequired != other.CdcRequired) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -411,6 +459,8 @@ namespace Udb.Entity.V1 {
       if (IdempotencyKey.Length != 0) hash ^= IdempotencyKey.GetHashCode();
       if (changes_ != null) hash ^= Changes.GetHashCode();
       hash ^= increments_.GetHashCode();
+      if (expected_ != null) hash ^= Expected.GetHashCode();
+      if (CdcRequired != false) hash ^= CdcRequired.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -495,6 +545,14 @@ namespace Udb.Entity.V1 {
         output.WriteMessage(Changes);
       }
       increments_.WriteTo(output, _repeated_increments_codec);
+      if (expected_ != null) {
+        output.WriteRawTag(154, 1);
+        output.WriteMessage(Expected);
+      }
+      if (CdcRequired != false) {
+        output.WriteRawTag(160, 1);
+        output.WriteBool(CdcRequired);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -571,6 +629,14 @@ namespace Udb.Entity.V1 {
         output.WriteMessage(Changes);
       }
       increments_.WriteTo(ref output, _repeated_increments_codec);
+      if (expected_ != null) {
+        output.WriteRawTag(154, 1);
+        output.WriteMessage(Expected);
+      }
+      if (CdcRequired != false) {
+        output.WriteRawTag(160, 1);
+        output.WriteBool(CdcRequired);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -631,6 +697,12 @@ namespace Udb.Entity.V1 {
         size += 2 + pb::CodedOutputStream.ComputeMessageSize(Changes);
       }
       size += increments_.CalculateSize(_repeated_increments_codec);
+      if (expected_ != null) {
+        size += 2 + pb::CodedOutputStream.ComputeMessageSize(Expected);
+      }
+      if (CdcRequired != false) {
+        size += 2 + 1;
+      }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
       }
@@ -705,6 +777,15 @@ namespace Udb.Entity.V1 {
         Changes.MergeFrom(other.Changes);
       }
       increments_.Add(other.increments_);
+      if (other.expected_ != null) {
+        if (expected_ == null) {
+          Expected = new global::Google.Protobuf.WellKnownTypes.Struct();
+        }
+        Expected.MergeFrom(other.Expected);
+      }
+      if (other.CdcRequired != false) {
+        CdcRequired = other.CdcRequired;
+      }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
 
@@ -808,6 +889,17 @@ namespace Udb.Entity.V1 {
             increments_.AddEntriesFrom(input, _repeated_increments_codec);
             break;
           }
+          case 154: {
+            if (expected_ == null) {
+              Expected = new global::Google.Protobuf.WellKnownTypes.Struct();
+            }
+            input.ReadMessage(Expected);
+            break;
+          }
+          case 160: {
+            CdcRequired = input.ReadBool();
+            break;
+          }
         }
       }
     #endif
@@ -909,6 +1001,17 @@ namespace Udb.Entity.V1 {
           }
           case 146: {
             increments_.AddEntriesFrom(ref input, _repeated_increments_codec);
+            break;
+          }
+          case 154: {
+            if (expected_ == null) {
+              Expected = new global::Google.Protobuf.WellKnownTypes.Struct();
+            }
+            input.ReadMessage(Expected);
+            break;
+          }
+          case 160: {
+            CdcRequired = input.ReadBool();
             break;
           }
         }

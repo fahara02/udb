@@ -26,4 +26,12 @@ message MutationResponse {
   // Typed write receipt. Kept in lockstep with write_receipt_json for clients
   // that can consume protobuf messages directly.
   WriteReceipt write_receipt = 11;
+  // #5 (opaque row revision / ETag): the broker-maintained opaque revision of
+  // the single row this mutation addressed, AFTER the mutation. Set on upserts
+  // and on single-row (primary-key-pinned) updates; empty for deletes (the row
+  // is gone) and for multi-row updates (revision is a single-row primitive).
+  // Opaque + monotonically increasing; feed it back as
+  // `UpdateRequest.expected_revision` / `DeleteRequest.expected_revision` for
+  // optimistic-concurrency (compare-and-swap) writes.
+  string revision = 12;
 }

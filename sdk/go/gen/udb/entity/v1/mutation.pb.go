@@ -36,7 +36,15 @@ type MutationResponse struct {
 	Warnings         []*OperationWarning `protobuf:"bytes,10,rep,name=warnings,proto3" json:"warnings,omitempty"`
 	// Typed write receipt. Kept in lockstep with write_receipt_json for clients
 	// that can consume protobuf messages directly.
-	WriteReceipt  *WriteReceipt `protobuf:"bytes,11,opt,name=write_receipt,json=writeReceipt,proto3" json:"write_receipt,omitempty"`
+	WriteReceipt *WriteReceipt `protobuf:"bytes,11,opt,name=write_receipt,json=writeReceipt,proto3" json:"write_receipt,omitempty"`
+	// #5 (opaque row revision / ETag): the broker-maintained opaque revision of
+	// the single row this mutation addressed, AFTER the mutation. Set on upserts
+	// and on single-row (primary-key-pinned) updates; empty for deletes (the row
+	// is gone) and for multi-row updates (revision is a single-row primitive).
+	// Opaque + monotonically increasing; feed it back as
+	// `UpdateRequest.expected_revision` / `DeleteRequest.expected_revision` for
+	// optimistic-concurrency (compare-and-swap) writes.
+	Revision      string `protobuf:"bytes,12,opt,name=revision,proto3" json:"revision,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -148,11 +156,18 @@ func (x *MutationResponse) GetWriteReceipt() *WriteReceipt {
 	return nil
 }
 
+func (x *MutationResponse) GetRevision() string {
+	if x != nil {
+		return x.Revision
+	}
+	return ""
+}
+
 var File_udb_entity_v1_mutation_proto protoreflect.FileDescriptor
 
 const file_udb_entity_v1_mutation_proto_rawDesc = "" +
 	"\n" +
-	"\x1cudb/entity/v1/mutation.proto\x12\rudb.entity.v1\x1a\x1dudb/entity/v1/operation.proto\x1a\x1fudb/entity/v1/consistency.proto\"\xca\x04\n" +
+	"\x1cudb/entity/v1/mutation.proto\x12\rudb.entity.v1\x1a\x1dudb/entity/v1/operation.proto\x1a\x1fudb/entity/v1/consistency.proto\"\xe6\x04\n" +
 	"\x10MutationResponse\x12\x1f\n" +
 	"\vmutation_id\x18\x01 \x01(\tR\n" +
 	"mutationId\x12!\n" +
@@ -167,7 +182,8 @@ const file_udb_entity_v1_mutation_proto_rawDesc = "" +
 	"\bmetadata\x18\t \x03(\v2-.udb.entity.v1.MutationResponse.MetadataEntryR\bmetadata\x12;\n" +
 	"\bwarnings\x18\n" +
 	" \x03(\v2\x1f.udb.entity.v1.OperationWarningR\bwarnings\x12@\n" +
-	"\rwrite_receipt\x18\v \x01(\v2\x1b.udb.entity.v1.WriteReceiptR\fwriteReceipt\x1a;\n" +
+	"\rwrite_receipt\x18\v \x01(\v2\x1b.udb.entity.v1.WriteReceiptR\fwriteReceipt\x12\x1a\n" +
+	"\brevision\x18\f \x01(\tR\brevision\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\xb3\x01\n" +

@@ -410,9 +410,18 @@ impl SecurityConfig {
         }
     }
 
-    /// Returns true if the system is in production mode
+    /// Returns true if the system is in production mode.
+    ///
+    /// CFG-D1: an explicit `UDB_ENV=production` is authoritative and MUST engage
+    /// production posture even when an operator toggled a `*_REQUIRED` flag off —
+    /// otherwise `fail_closed_mode()` and `validate_production()` silently
+    /// disengage in a JWT-only / TLS-terminated-upstream production deployment,
+    /// failing OPEN on token-revocation, per-key rate-limit, JWKS-publication and
+    /// signing-key-custody errors. The `tls_required && service_identity_required`
+    /// derivation is retained as a secondary trigger (a deployment that hardened
+    /// both controls without setting `UDB_ENV`).
     pub fn is_production(&self) -> bool {
-        self.tls_required && self.service_identity_required
+        udb_env_is_production() || (self.tls_required && self.service_identity_required)
     }
 
     /// Validate security configuration for production readiness. Resolves the two
@@ -668,6 +677,22 @@ pub(crate) fn trusted_transport_acknowledged() -> bool {
         .unwrap_or(false)
 }
 
+/// Canonical `UDB_ENV=production|prod` check — the single authority consulted by
+/// [`SecurityConfig::is_production`] (and therefore [`fail_closed_mode`]). Trims
+/// and lowercases so a Windows CRLF `.env` value (`production\r`) or trailing
+/// whitespace cannot silently disable the production posture (CFG-D1 / the
+/// UDB_ENV-CRLF hygiene gap).
+pub fn udb_env_is_production() -> bool {
+    std::env::var("UDB_ENV")
+        .map(|v| {
+            matches!(
+                v.trim().to_ascii_lowercase().as_str(),
+                "production" | "prod"
+            )
+        })
+        .unwrap_or(false)
+}
+
 pub fn fail_closed_mode() -> bool {
     if SecurityConfig::current().is_production() {
         return true;
@@ -881,6 +906,36 @@ pub(crate) fn set_test_jwks(jwks: Option<JwkSet>) {
     }
 }
 
+/// Test-only counter of LIVE `fetch_jwks` invocations. The forced-refresh
+/// rate-limit test asserts a garbage-`kid` token flood drives AT MOST ONE outbound
+/// fetch per `JWKS_MIN_REFRESH_INTERVAL_SECS` cooldown window — not one per
+/// request. Kept `#[cfg(test)]` so neither the counter nor its reads exist in the
+/// release binary.
+#[cfg(test)]
+static JWKS_FETCH_COUNT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+#[cfg(test)]
+pub(crate) fn jwks_fetch_count() -> u64 {
+    JWKS_FETCH_COUNT.load(std::sync::atomic::Ordering::SeqCst)
+}
+
+/// Test-only: seed `JWT_JWKS_CACHE` with a known set for `url`, stamped at NOW so
+/// the entry is inside BOTH the freshness TTL and the forced-refresh cooldown
+/// window. Unlike [`set_test_jwks`] (which short-circuits `cached_jwks` before the
+/// cache/cooldown logic), this exercises the real cache path so the cooldown that
+/// gates `refresh=true` re-fetches can be observed. `#[cfg(test)]`-only.
+#[cfg(test)]
+pub(crate) fn prime_jwks_cache(url: &str, jwks: JwkSet) {
+    let cache = JWT_JWKS_CACHE.get_or_init(|| Mutex::new(None));
+    if let Ok(mut guard) = cache.lock() {
+        *guard = Some(JwksCacheEntry {
+            url: url.to_string(),
+            fetched_at_unix: unix_now(),
+            jwks,
+        });
+    }
+}
+
 fn unix_now() -> u64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -888,8 +943,27 @@ fn unix_now() -> u64 {
         .unwrap_or(0)
 }
 
+/// DoS guard: bound every JWKS HTTPS fetch so a slow/hung IdP endpoint cannot
+/// park the tokio worker thread indefinitely (the fetch runs via
+/// `reqwest::blocking` inline on the async bearer-verify path).
+const JWKS_FETCH_TIMEOUT_SECS: u64 = 5;
+/// DoS guard: the MINIMUM seconds between two live JWKS fetches, even for a
+/// forced (`refresh=true`) refresh triggered by an unknown `kid`. Without this,
+/// a replayed token carrying a garbage `kid` forces one blocking outbound fetch
+/// PER REQUEST (failed validations are never cached), starving the worker pool
+/// and hammering the IdP. Within the cooldown a forced refresh serves the cached
+/// set and the unknown kid fails cleanly with no network round-trip. Kept short
+/// so a genuine key rotation is still picked up promptly.
+const JWKS_MIN_REFRESH_INTERVAL_SECS: u64 = 10;
+
 #[cfg(feature = "http-client")]
 fn fetch_jwks(url: &str) -> Result<JwkSet, String> {
+    // Test-only: count every LIVE fetch attempt so the forced-refresh cooldown in
+    // `cached_jwks` can be asserted (a garbage-kid token flood must NOT drive one
+    // outbound fetch per request). Incremented BEFORE the network call so a failing
+    // fetch still counts. Compiles to nothing in the release binary.
+    #[cfg(test)]
+    JWKS_FETCH_COUNT.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
     // Refuse plaintext JWKS URLs: an http(s)-downgraded or MITM'd JWKS lets an
     // attacker inject their own signing keys and forge tokens. Verification keys
     // must be fetched over TLS.
@@ -898,7 +972,15 @@ fn fetch_jwks(url: &str) -> Result<JwkSet, String> {
             "JWKS URL must use https:// (refusing non-TLS endpoint to prevent key-injection MITM): {url}"
         ));
     }
-    reqwest::blocking::get(url)
+    // Bounded timeout: `reqwest::blocking::get` has NONE, so a hung endpoint would
+    // block the worker forever. Build a client with an explicit connect+read cap.
+    let client = reqwest::blocking::Client::builder()
+        .timeout(std::time::Duration::from_secs(JWKS_FETCH_TIMEOUT_SECS))
+        .build()
+        .map_err(|err| format!("JWKS client build failed: {err}"))?;
+    client
+        .get(url)
+        .send()
         .map_err(|err| format!("JWKS fetch failed: {err}"))?
         .error_for_status()
         .map_err(|err| format!("JWKS fetch returned an error status: {err}"))?
@@ -908,6 +990,10 @@ fn fetch_jwks(url: &str) -> Result<JwkSet, String> {
 
 #[cfg(not(feature = "http-client"))]
 fn fetch_jwks(_url: &str) -> Result<JwkSet, String> {
+    // Test-only fetch counter (see the http-client variant). Kept in both variants
+    // so the cooldown test is feature-agnostic.
+    #[cfg(test)]
+    JWKS_FETCH_COUNT.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
     Err("JWKS validation requires the http-client feature".to_string())
 }
 
@@ -931,6 +1017,20 @@ fn cached_jwks(config: &SecurityConfig, refresh: bool) -> Result<JwkSet, String>
         && let Some(entry) = guard.as_ref()
         && entry.url == url
         && now.saturating_sub(entry.fetched_at_unix) <= config.jwt_jwks_cache_ttl_secs
+    {
+        return Ok(entry.jwks.clone());
+    }
+    // DoS guard: rate-limit FORCED refreshes. An unknown `kid` sets refresh=true,
+    // and failed validations are never cached, so without this a garbage-kid token
+    // replayed would trigger a blocking outbound fetch on every request. When the
+    // cached set is younger than the cooldown, serve it (the unknown kid then fails
+    // cleanly with no round-trip); a real key rotation is still picked up once the
+    // short cooldown elapses.
+    if refresh
+        && let Ok(guard) = cache.lock()
+        && let Some(entry) = guard.as_ref()
+        && entry.url == url
+        && now.saturating_sub(entry.fetched_at_unix) < JWKS_MIN_REFRESH_INTERVAL_SECS
     {
         return Ok(entry.jwks.clone());
     }
@@ -3748,8 +3848,17 @@ mod tests {
         }
     }
 
+    /// Serializes the tests that touch the process-global JWKS state
+    /// (`JWT_JWKS_CACHE`, the `TEST_JWKS_OVERRIDE`, and the fetch counter), so one
+    /// test's `set_test_jwks` override cannot perturb another's cooldown counting.
+    fn jwks_test_guard() -> std::sync::MutexGuard<'static, ()> {
+        static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+        LOCK.lock().unwrap_or_else(|poison| poison.into_inner())
+    }
+
     #[test]
     fn jwt_jwks_kid_rotation_and_lookup() {
+        let _serial = jwks_test_guard();
         let now = unix_now();
         let claims = serde_json::json!({ "sub": "user_42", "exp": now + 3600 });
         let cfg = jwt_jwks_config();
@@ -3785,6 +3894,76 @@ mod tests {
         );
 
         set_test_jwks(None);
+    }
+
+    /// JWKS forced-refresh rate-limit / cooldown (the half that could not be tested
+    /// without a fetch-count seam): an attacker replays a FLOOD of RS256 tokens each
+    /// carrying a DISTINCT, unpublished `kid`. Every unknown kid sets `refresh=true`
+    /// in `jwks_decoding_key`, and failed validations are never cached, so WITHOUT
+    /// the `JWKS_MIN_REFRESH_INTERVAL_SECS` cooldown in `cached_jwks` this would
+    /// drive one blocking outbound JWKS fetch PER REQUEST — starving the worker pool
+    /// and hammering the IdP. With the cooldown, a forced refresh inside the window
+    /// serves the cached set and the unknown kid fails cleanly with NO network
+    /// round-trip.
+    ///
+    /// This drives the SAME `validate_bearer_token` path a bearer takes on the data
+    /// plane (JWKS mode), priming the real `JWT_JWKS_CACHE` (NOT the `set_test_jwks`
+    /// override, which short-circuits before the cooldown). The cache is primed
+    /// FRESH, so the fix performs ZERO live fetches across the whole flood.
+    ///
+    /// Revert-proof: delete the forced-refresh cooldown branch in `cached_jwks` and
+    /// each of the FLOOD unknown-kid tokens falls through to `fetch_jwks`, so the
+    /// counter delta becomes FLOOD (32) and the `delta <= 1` assertion fails.
+    #[test]
+    fn jwt_jwks_forced_refresh_is_rate_limited_under_unknown_kid_flood() {
+        let _serial = jwks_test_guard();
+        // Clear any override a sibling test left set, so `cached_jwks` proceeds to
+        // the real cache + cooldown logic under test rather than returning early.
+        set_test_jwks(None);
+
+        // JWKS-mode config pointed at a fast-FAILING URL: on the fix path fetch_jwks
+        // is never reached; if a regression DID reach it, connection-refused returns
+        // immediately, so the reverted test fails fast instead of on a 5s timeout
+        // per token.
+        let url = "https://127.0.0.1:1/.well-known/jwks.json";
+        let cfg = SecurityConfig {
+            jwt_jwks_url: Some(url.to_string()),
+            ..SecurityConfig::default()
+        };
+
+        // Prime the cache FRESH (stamped NOW) advertising one known kid — inside
+        // both the TTL and the forced-refresh cooldown, so every unknown-kid token
+        // must be served from it with no fetch.
+        prime_jwks_cache(url, jwks_with_kid("primed-kid"));
+
+        let now = unix_now();
+        let claims = serde_json::json!({ "sub": "flood", "exp": now + 3600 });
+
+        let before = jwks_fetch_count();
+        const FLOOD: usize = 32;
+        for i in 0..FLOOD {
+            let kid = format!("unknown-kid-{i}");
+            let token = sign_rs256_kid(&claims, &kid);
+            assert!(
+                validate_bearer_token(&cfg, &token).is_err(),
+                "a token whose kid is absent from the JWKS must never validate"
+            );
+        }
+        let delta = jwks_fetch_count() - before;
+
+        assert!(
+            delta <= 1,
+            "forced JWKS refresh must be rate-limited to <=1 live fetch per cooldown \
+             window, but observed {delta} fetches across {FLOOD} distinct unknown-kid \
+             tokens (JWKS_MIN_REFRESH_INTERVAL_SECS cooldown reverted?)"
+        );
+
+        // Reset the primed entry so later tests observe a pristine cache.
+        if let Some(cache) = JWT_JWKS_CACHE.get()
+            && let Ok(mut guard) = cache.lock()
+        {
+            *guard = None;
+        }
     }
 
     // ── UDB-AUTH-004: API-key data-plane principal reconciliation ──────────────

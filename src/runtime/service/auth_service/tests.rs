@@ -27,14 +27,18 @@ mod cdc_live;
 mod events_live;
 mod fault_injection_live;
 mod grants_live;
+mod grants_transfer_live;
 mod ha_convergence_live;
 mod ha_jwks_rotation_live;
 mod ha_multinode_live;
+#[cfg(feature = "http-client")]
+mod jwks_bearer_dos_live;
 #[cfg(feature = "kafka")]
 mod notification_events_live;
 mod notification_live;
 mod support;
 mod tenant_live;
+mod xa_recovery_idempotency_live;
 
 #[test]
 fn authn_outbound_sources_do_not_reintroduce_banned_echoes() {

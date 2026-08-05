@@ -122,6 +122,28 @@ class DataBrokerClient extends \Grpc\BaseStub {
     }
 
     /**
+     * gate 23 (bounded bulk compare-and-swap): apply a tenant-scoped, explicitly
+     * bounded batch of single-row conditional updates in ONE write transaction.
+     * Each item pins its full primary key by equality and is applied only if its
+     * compare-and-swap preconditions hold; a per-item mismatch is COUNTED as a
+     * conflict, not a batch error, so a partial batch is safe to replay by reusing
+     * `idempotency_key`. Same tenant isolation, authorization (deny-by-default
+     * Casbin gate) and per-row projection / CDC-outbox / audit side effects as the
+     * unary Update path.
+     * @param \Udb\Entity\V1\BulkCasRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall<\Udb\Entity\V1\BulkCasResponse>
+     */
+    public function BulkCas(\Udb\Entity\V1\BulkCasRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/udb.services.v1.DataBroker/BulkCas',
+        $argument,
+        ['\Udb\Entity\V1\BulkCasResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
      * ── Vector ──────────────────────────────────────────────────────────────────
      * @param \Udb\Entity\V1\VectorSearchRequest $argument input argument
      * @param array $metadata metadata

@@ -44,6 +44,9 @@ pub struct SystemCatalogConfig {
     pub projection_tasks_table: String,
     // KEYSTONE (lane 05) — durable idempotency dedup for keyed data-plane mutations
     pub idempotency_keys_table: String,
+    // #5 — durable, broker-maintained opaque row revision / ETag map, keyed by
+    // (tenant, project, message_type, primary-key-tuple) → monotonic revision.
+    pub row_revisions_table: String,
 }
 
 impl Default for SystemCatalogConfig {
@@ -143,6 +146,10 @@ impl SystemCatalogConfig {
                 "UDB_IDEMPOTENCY_KEYS_TABLE",
                 "udb_idempotency_keys",
             ),
+            // #5: resolved straight from its env var / default (single-sourced with
+            // `from_env_uninstalled`), like `idempotency_keys_table` — not part of
+            // the legacy `SystemCatalogSettings` config block.
+            row_revisions_table: env_identifier("UDB_ROW_REVISIONS_TABLE", "udb_row_revisions"),
         }
     }
 
@@ -191,6 +198,7 @@ impl SystemCatalogConfig {
                 "UDB_IDEMPOTENCY_KEYS_TABLE",
                 "udb_idempotency_keys",
             ),
+            row_revisions_table: env_identifier("UDB_ROW_REVISIONS_TABLE", "udb_row_revisions"),
         }
     }
 
@@ -278,6 +286,10 @@ impl SystemCatalogConfig {
 
     pub(crate) fn idempotency_keys_relation(&self) -> String {
         relation(&self.cdc.system_schema, &self.idempotency_keys_table)
+    }
+
+    pub(crate) fn row_revisions_relation(&self) -> String {
+        relation(&self.cdc.system_schema, &self.row_revisions_table)
     }
 }
 
@@ -505,6 +517,12 @@ fn expected_relations(config: &SystemCatalogConfig) -> Vec<ExpectedRelation> {
             "idempotency_keys",
             &config.cdc.system_schema,
             &config.idempotency_keys_table,
+        ),
+        // #5 — durable opaque row revision / ETag map
+        expected_relation(
+            "row_revisions",
+            &config.cdc.system_schema,
+            &config.row_revisions_table,
         ),
     ];
 
@@ -1209,7 +1227,11 @@ fn system_catalog_statements(config: &SystemCatalogConfig) -> Vec<String> {
         // PRIMARY KEY itself enforces per-tenant+project+type+operation uniqueness;
         // `response_json` carries the first writer's MutationResponse summary so a
         // replay returns the original body (not an empty one) without re-running the
-        // write.
+        // write. `request_hash` is the canonical SHA-256 over the first writer's
+        // *authoritative* inputs (normalized filter/record/changes/mask/increments/
+        // conflict-strategy/expected, minus transport-only fields) so a later request
+        // that reuses the same key with DIFFERENT inputs is rejected as a conflict
+        // instead of silently replaying a success for an op that never ran.
         format!(
             "CREATE TABLE IF NOT EXISTS {} (
                 dedup_key TEXT PRIMARY KEY,
@@ -1217,15 +1239,49 @@ fn system_catalog_statements(config: &SystemCatalogConfig) -> Vec<String> {
                 project_id TEXT NOT NULL,
                 message_type TEXT NOT NULL,
                 operation TEXT NOT NULL,
+                request_hash TEXT,
                 response_json JSONB NOT NULL DEFAULT '{{}}'::jsonb,
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             )",
+            config.idempotency_keys_relation()
+        ),
+        // Upgrade guard: `CREATE TABLE IF NOT EXISTS` never evolves an existing
+        // table, so a dedup relation bootstrapped by an older UDB (whose DDL lacked
+        // `request_hash`) self-heals on the next bootstrap. Nullable: legacy rows
+        // written before this upgrade carry no hash and are replayed best-effort.
+        format!(
+            "ALTER TABLE {} ADD COLUMN IF NOT EXISTS request_hash TEXT",
             config.idempotency_keys_relation()
         ),
         format!(
             "CREATE INDEX IF NOT EXISTS {} ON {} (tenant_id, project_id, created_at)",
             qi(&format!("idx_{}_tenant_created", config.idempotency_keys_table)),
             config.idempotency_keys_relation()
+        ),
+        // #5 — broker-maintained opaque row revision / ETag map. `revision_key` is
+        // the salted SHA-256 of (tenant_id, project_id, message_type, primary-key
+        // tuple) so the PRIMARY KEY enforces per-(tenant,project,type,row) identity
+        // and a lookup can never cross tenants (you can only recompute a key for a
+        // tenant you are already scoped to). `revision` is a monotonically
+        // INCREASING counter bumped in the SAME transaction as every single-row
+        // logical mutation, so an opaque token is ABA-safe (never reused/decreased).
+        // `row_key` is the canonical primary-key tuple, kept for diagnostics only.
+        format!(
+            "CREATE TABLE IF NOT EXISTS {} (
+                revision_key TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                project_id TEXT NOT NULL,
+                message_type TEXT NOT NULL,
+                row_key TEXT NOT NULL DEFAULT '',
+                revision BIGINT NOT NULL DEFAULT 1,
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )",
+            config.row_revisions_relation()
+        ),
+        format!(
+            "CREATE INDEX IF NOT EXISTS {} ON {} (tenant_id, project_id, message_type)",
+            qi(&format!("idx_{}_tenant_type", config.row_revisions_table)),
+            config.row_revisions_relation()
         ),
     ]);
     // UDB-owned native-service tables are migrated through the normal proto →
@@ -1378,6 +1434,7 @@ mod tests {
             "projects",
             "projection_tasks",
             "idempotency_keys",
+            "row_revisions",
             "native_udb_authn_users",
             "native_udb_authn_sessions",
             "native_udb_authn_otps",

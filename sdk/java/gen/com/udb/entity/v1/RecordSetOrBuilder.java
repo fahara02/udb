@@ -68,4 +68,77 @@ public interface RecordSetOrBuilder extends
    * @return The totalCount.
    */
   int getTotalCount();
+
+  /**
+   * <pre>
+   * #5 (opaque row revision / ETag): when the caller asked for revisions
+   * (`SelectRequest.include_revision`), this carries the broker-maintained
+   * opaque revision token for each returned record, index-aligned with
+   * `records_json`. An empty slot means the row has no tracked revision yet
+   * (it has not been mutated since revision tracking was enabled). Absent
+   * (empty repeated) when the caller did not request revisions, so the read
+   * hot path pays nothing. The token is opaque + monotonically increasing;
+   * feed it back as `UpdateRequest.expected_revision` / `DeleteRequest.
+   * expected_revision` for optimistic concurrency.
+   * </pre>
+   *
+   * <code>repeated string record_revisions = 5 [json_name = "recordRevisions"];</code>
+   * @return A list containing the recordRevisions.
+   */
+  java.util.List<java.lang.String>
+      getRecordRevisionsList();
+  /**
+   * <pre>
+   * #5 (opaque row revision / ETag): when the caller asked for revisions
+   * (`SelectRequest.include_revision`), this carries the broker-maintained
+   * opaque revision token for each returned record, index-aligned with
+   * `records_json`. An empty slot means the row has no tracked revision yet
+   * (it has not been mutated since revision tracking was enabled). Absent
+   * (empty repeated) when the caller did not request revisions, so the read
+   * hot path pays nothing. The token is opaque + monotonically increasing;
+   * feed it back as `UpdateRequest.expected_revision` / `DeleteRequest.
+   * expected_revision` for optimistic concurrency.
+   * </pre>
+   *
+   * <code>repeated string record_revisions = 5 [json_name = "recordRevisions"];</code>
+   * @return The count of recordRevisions.
+   */
+  int getRecordRevisionsCount();
+  /**
+   * <pre>
+   * #5 (opaque row revision / ETag): when the caller asked for revisions
+   * (`SelectRequest.include_revision`), this carries the broker-maintained
+   * opaque revision token for each returned record, index-aligned with
+   * `records_json`. An empty slot means the row has no tracked revision yet
+   * (it has not been mutated since revision tracking was enabled). Absent
+   * (empty repeated) when the caller did not request revisions, so the read
+   * hot path pays nothing. The token is opaque + monotonically increasing;
+   * feed it back as `UpdateRequest.expected_revision` / `DeleteRequest.
+   * expected_revision` for optimistic concurrency.
+   * </pre>
+   *
+   * <code>repeated string record_revisions = 5 [json_name = "recordRevisions"];</code>
+   * @param index The index of the element to return.
+   * @return The recordRevisions at the given index.
+   */
+  java.lang.String getRecordRevisions(int index);
+  /**
+   * <pre>
+   * #5 (opaque row revision / ETag): when the caller asked for revisions
+   * (`SelectRequest.include_revision`), this carries the broker-maintained
+   * opaque revision token for each returned record, index-aligned with
+   * `records_json`. An empty slot means the row has no tracked revision yet
+   * (it has not been mutated since revision tracking was enabled). Absent
+   * (empty repeated) when the caller did not request revisions, so the read
+   * hot path pays nothing. The token is opaque + monotonically increasing;
+   * feed it back as `UpdateRequest.expected_revision` / `DeleteRequest.
+   * expected_revision` for optimistic concurrency.
+   * </pre>
+   *
+   * <code>repeated string record_revisions = 5 [json_name = "recordRevisions"];</code>
+   * @param index The index of the value to return.
+   * @return The bytes of the recordRevisions at the given index.
+   */
+  com.google.protobuf.ByteString
+      getRecordRevisionsBytes(int index);
 }

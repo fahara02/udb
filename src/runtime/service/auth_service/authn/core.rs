@@ -1025,7 +1025,7 @@ impl AuthnServiceImpl {
             &rec.email,
             format!("create_user:{user_id}"),
             now,
-        );
+        )?;
         let otp_id = otp_rec.otp_id.clone();
         let otp_channel = otp_rec.delivery_channel.clone();
         let otp_address = otp_rec.delivery_address.clone();

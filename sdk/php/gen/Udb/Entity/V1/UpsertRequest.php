@@ -60,6 +60,22 @@ class UpsertRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>.google.protobuf.Struct expected = 9 [json_name = "expected"];</code>
      */
     protected $expected = null;
+    /**
+     * gate 25 (lock-fencing-at-commit): optional advisory-lock name + the
+     * monotonic fencing token the caller was granted for it. When both are set,
+     * the broker validates the token against the LockService's durable lock row
+     * IN THE SAME write transaction as the mutation; a stale token (a writer that
+     * outlived its lease and was fenced by a newer holder) is rejected fail-closed
+     * with NO write / projection / CDC / audit / idempotency side effect. Unset
+     * (empty `lock_name`) = no fencing (unchanged behaviour).
+     *
+     * Generated from protobuf field <code>string lock_name = 10 [json_name = "lockName"];</code>
+     */
+    protected $lock_name = '';
+    /**
+     * Generated from protobuf field <code>int64 fencing_token = 11 [json_name = "fencingToken"];</code>
+     */
+    protected $fencing_token = 0;
 
     /**
      * Constructor.
@@ -85,6 +101,15 @@ class UpsertRequest extends \Google\Protobuf\Internal\Message
      *           This lets optimistic-concurrency callers make "update WHERE version = N"
      *           atomic without dropping to a service-specific command or external lock.
      *           Backwards-compatible: an unset/empty `expected` behaves exactly as before.
+     *     @type string $lock_name
+     *           gate 25 (lock-fencing-at-commit): optional advisory-lock name + the
+     *           monotonic fencing token the caller was granted for it. When both are set,
+     *           the broker validates the token against the LockService's durable lock row
+     *           IN THE SAME write transaction as the mutation; a stale token (a writer that
+     *           outlived its lease and was fenced by a newer holder) is rejected fail-closed
+     *           with NO write / projection / CDC / audit / idempotency side effect. Unset
+     *           (empty `lock_name`) = no fencing (unchanged behaviour).
+     *     @type int|string $fencing_token
      * }
      */
     public function __construct($data = NULL) {
@@ -346,6 +371,66 @@ class UpsertRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkMessage($var, \Google\Protobuf\Struct::class);
         $this->expected = $var;
+
+        return $this;
+    }
+
+    /**
+     * gate 25 (lock-fencing-at-commit): optional advisory-lock name + the
+     * monotonic fencing token the caller was granted for it. When both are set,
+     * the broker validates the token against the LockService's durable lock row
+     * IN THE SAME write transaction as the mutation; a stale token (a writer that
+     * outlived its lease and was fenced by a newer holder) is rejected fail-closed
+     * with NO write / projection / CDC / audit / idempotency side effect. Unset
+     * (empty `lock_name`) = no fencing (unchanged behaviour).
+     *
+     * Generated from protobuf field <code>string lock_name = 10 [json_name = "lockName"];</code>
+     * @return string
+     */
+    public function getLockName()
+    {
+        return $this->lock_name;
+    }
+
+    /**
+     * gate 25 (lock-fencing-at-commit): optional advisory-lock name + the
+     * monotonic fencing token the caller was granted for it. When both are set,
+     * the broker validates the token against the LockService's durable lock row
+     * IN THE SAME write transaction as the mutation; a stale token (a writer that
+     * outlived its lease and was fenced by a newer holder) is rejected fail-closed
+     * with NO write / projection / CDC / audit / idempotency side effect. Unset
+     * (empty `lock_name`) = no fencing (unchanged behaviour).
+     *
+     * Generated from protobuf field <code>string lock_name = 10 [json_name = "lockName"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setLockName($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->lock_name = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>int64 fencing_token = 11 [json_name = "fencingToken"];</code>
+     * @return int|string
+     */
+    public function getFencingToken()
+    {
+        return $this->fencing_token;
+    }
+
+    /**
+     * Generated from protobuf field <code>int64 fencing_token = 11 [json_name = "fencingToken"];</code>
+     * @param int|string $var
+     * @return $this
+     */
+    public function setFencingToken($var)
+    {
+        GPBUtil::checkInt64($var);
+        $this->fencing_token = $var;
 
         return $this;
     }

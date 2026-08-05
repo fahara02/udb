@@ -14,5 +14,9 @@ from udb.entity.v1.relational_pb2 import UpsertRequest as UpsertRequest
 from udb.entity.v1.relational_pb2 import DeleteRequest as DeleteRequest
 from udb.entity.v1.relational_pb2 import UpdateRequest as UpdateRequest
 from udb.entity.v1.relational_pb2 import ViewDefinition as ViewDefinition
+from udb.entity.v1.relational_pb2 import BulkCasItem as BulkCasItem
+from udb.entity.v1.relational_pb2 import BulkCasRequest as BulkCasRequest
+from udb.entity.v1.relational_pb2 import BulkCasItemResult as BulkCasItemResult
+from udb.entity.v1.relational_pb2 import BulkCasResponse as BulkCasResponse
 
 DESCRIPTOR: _descriptor.FileDescriptor

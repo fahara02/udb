@@ -495,7 +495,7 @@ impl ProjectionTaskStore for Neo4jCanonicalStore {
         let cypher = format!(
             "MATCH (t:{LABEL_PROJECTION_TASK} {{run_tag:$tag}}) \
              WHERE t.idempotency_key IN $keys \
-               AND NOT t.status IN ['COMPLETED','DEAD_LETTER','FAILED'] \
+               AND t.status <> 'COMPLETED' \
              RETURN count(t) AS n"
         );
         let rows = self

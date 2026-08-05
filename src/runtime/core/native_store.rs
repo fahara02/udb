@@ -206,7 +206,17 @@ impl DataBrokerRuntime {
             crate::runtime::native_catalog::native_manifest(),
         )
         .with_tenant(&context.tenant_id)
-        .with_project(&context.project_id);
+        .with_project(&context.project_id)
+        // Fail-closed tenant scope (F10): for an authenticated non-admin caller,
+        // an empty tenant on this over-the-wire generic-SQL seam becomes a hard
+        // `tenant_scope_required` error rather than a silent full-table query.
+        // Cross-tenant admins and internal (no-claim) callers are exempt, matching
+        // the gate already used by the backup restore path.
+        .enforcing_tenant_scope(
+            crate::runtime::service::method_security::claim_context_present()
+                && !crate::runtime::service::method_security::current_claim_context()
+                    .is_cross_tenant_admin(),
+        );
         if let Some(instance) = instance.filter(|value| !value.trim().is_empty()) {
             ctx = ctx.with_instance(instance);
         }

@@ -571,11 +571,9 @@ impl ProjectionTaskStore for MongoDbCanonicalStore {
             .projection()
             .count_documents(doc! {
                 "idempotency_key": { "$in": keys },
-                "status": { "$nin": [
-                    ProjectionTaskStatus::Completed.as_str(),
-                    ProjectionTaskStatus::DeadLetter.as_str(),
-                    ProjectionTaskStatus::Failed.as_str(),
-                ] },
+                // P2-1 NF-1/NF-2: only COMPLETED clears the fence; FAILED/DEAD_LETTER
+                // are not projected yet so they still count as pending.
+                "status": { "$ne": ProjectionTaskStatus::Completed.as_str() },
             })
             .await
             .map_err(|e| mongo_err("pending_projection_task_count", e))?;

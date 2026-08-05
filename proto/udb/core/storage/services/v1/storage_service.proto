@@ -505,7 +505,10 @@ service StorageService {
     };
   }
 
-  // Delete a file (soft delete)
+  // Delete a file. `mode` selects soft-delete (default, metadata tombstone +
+  // best-effort byte removal) or hard-delete (durable object-GC intent committed
+  // atomically with the tombstone, then driven to convergence — a byte-delete
+  // failure returns an error, never success, and leaves the intent for the sweep).
   rpc DeleteFile(DeleteFileRequest) returns (DeleteFileResponse) {
     option (udb.core.common.v1.operation_kind) = OPERATION_KIND_MUTATION;
     option (udb.core.common.v1.endpoint_security) = {
@@ -879,6 +882,15 @@ message UpdateFileResponse {
   udb.core.common.v1.ApiError error = 2;
 }
 
+// Deletion mode for DeleteFile. Additive: an absent/UNSPECIFIED mode is treated
+// as SOFT so pre-existing clients (which sent only tenant_id + file_id) keep the
+// historical soft-delete behavior.
+enum DeleteMode {
+  DELETE_MODE_UNSPECIFIED = 0; // treated as SOFT
+  DELETE_MODE_SOFT = 1;        // metadata tombstone + best-effort byte removal
+  DELETE_MODE_HARD = 2;        // durable object-GC intent + convergent byte removal
+}
+
 message DeleteFileRequest {
   option (udb.core.common.v1.message_sdk_surface) = {
     include_in_facade: true
@@ -891,6 +903,21 @@ message DeleteFileRequest {
   };
   string tenant_id = 1;
   string file_id = 2;
+  // Deletion mode. UNSPECIFIED/SOFT (default) soft-deletes the metadata and best-
+  // effort-removes the bytes. HARD durably records an object-GC intent atomically
+  // with the tombstone and drives object deletion to convergence.
+  DeleteMode mode = 3;
+  // Optional operator-supplied reason, recorded on the durable GC intent (HARD).
+  string reason = 4;
+  // Optional optimistic-concurrency guard. When non-empty it is matched against
+  // the file's current status token (PENDING/ACTIVE/DELETED) — the File row's
+  // revision proxy (the entity carries no numeric version) — and a mismatch is
+  // rejected fail-closed so a stale client cannot delete a file that changed.
+  string expected_status = 5;
+  // Optional idempotency key (HARD). A replay with the SAME key + SAME target
+  // returns the ORIGINAL recorded outcome; the SAME key with a DIFFERENT target
+  // conflicts fail-closed.
+  string idempotency_key = 6;
 }
 
 message DeleteFileResponse {

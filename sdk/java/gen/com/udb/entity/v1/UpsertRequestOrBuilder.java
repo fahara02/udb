@@ -166,4 +166,42 @@ public interface UpsertRequestOrBuilder extends
    * <code>.google.protobuf.Struct expected = 9 [json_name = "expected"];</code>
    */
   com.google.protobuf.StructOrBuilder getExpectedOrBuilder();
+
+  /**
+   * <pre>
+   * gate 25 (lock-fencing-at-commit): optional advisory-lock name + the
+   * monotonic fencing token the caller was granted for it. When both are set,
+   * the broker validates the token against the LockService's durable lock row
+   * IN THE SAME write transaction as the mutation; a stale token (a writer that
+   * outlived its lease and was fenced by a newer holder) is rejected fail-closed
+   * with NO write / projection / CDC / audit / idempotency side effect. Unset
+   * (empty `lock_name`) = no fencing (unchanged behaviour).
+   * </pre>
+   *
+   * <code>string lock_name = 10 [json_name = "lockName"];</code>
+   * @return The lockName.
+   */
+  java.lang.String getLockName();
+  /**
+   * <pre>
+   * gate 25 (lock-fencing-at-commit): optional advisory-lock name + the
+   * monotonic fencing token the caller was granted for it. When both are set,
+   * the broker validates the token against the LockService's durable lock row
+   * IN THE SAME write transaction as the mutation; a stale token (a writer that
+   * outlived its lease and was fenced by a newer holder) is rejected fail-closed
+   * with NO write / projection / CDC / audit / idempotency side effect. Unset
+   * (empty `lock_name`) = no fencing (unchanged behaviour).
+   * </pre>
+   *
+   * <code>string lock_name = 10 [json_name = "lockName"];</code>
+   * @return The bytes for lockName.
+   */
+  com.google.protobuf.ByteString
+      getLockNameBytes();
+
+  /**
+   * <code>int64 fencing_token = 11 [json_name = "fencingToken"];</code>
+   * @return The fencingToken.
+   */
+  long getFencingToken();
 }

@@ -65,6 +65,23 @@ pub(crate) async fn create_endpoint(
     } else {
         req.signing_secret.trim().to_string()
     };
+    // NTF1: the signing secret is the HMAC key a receiver uses to verify payloads;
+    // the proto declares it `encryption_key_class` yet it was stored as plaintext,
+    // so a DB/backup/replica read — amplified fleet-wide by the webhook RLS
+    // `platform_admin` bypass — yielded every tenant's HMAC key. Seal it at rest
+    // when an encryption key is configured (production forces one; keyless dev
+    // passes through). The delivery worker reverses this via `decrypt_secret_at_rest`.
+    let stored_secret = match svc.runtime.as_ref() {
+        Some(rt) => rt.encrypt_secret_at_rest(&secret).map_err(|err| {
+            webhook_internal_status(
+                "create_webhook_endpoint",
+                format!("seal signing secret at rest failed: {err}"),
+            )
+        })?,
+        // Bare unit-test construction has no runtime → store as-is (the worker's
+        // decrypt_secret_at_rest is passthrough-safe for a plaintext value).
+        None => secret.clone(),
+    };
     let topic_pattern = {
         let p = req.topic_pattern.trim();
         if p.is_empty() {
@@ -94,7 +111,7 @@ pub(crate) async fn create_endpoint(
     .bind(&tenant_id)
     .bind(req.url.trim())
     .bind(&topic_pattern)
-    .bind(&secret)
+    .bind(&stored_secret)
     .bind(req.description.trim())
     .bind(max_attempts)
     .bind(&metadata_json)

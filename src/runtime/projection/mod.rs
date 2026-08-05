@@ -293,7 +293,7 @@ impl ProjectionEngine {
                     &plan.manifest_checksum,
                     &source_checksum,
                 );
-                let task_id = insert_task_if_absent_on(
+                insert_task_if_absent_on(
                     &mut **tx,
                     config,
                     &idempotency_key,
@@ -313,7 +313,15 @@ impl ProjectionEngine {
                     &source_checksum,
                 )
                 .await?;
-                task_keys.push(task_id);
+                // P2-1: the read fence matches projection work by its NATURAL key
+                // (`idempotency_key` — what `pending_projection_task_count` queries
+                // and what `insert_task_if_absent_on` conflicts on), NOT the random
+                // `task_id` the INSERT returns. Carrying the task_id here made the
+                // fence's `WHERE idempotency_key = ANY($1)` never match → the
+                // projection fence cleared instantly → read-your-writes was DEAD for
+                // every projection-backed read. Carry the stable idempotency_key so
+                // the fence actually waits for this write to project.
+                task_keys.push(idempotency_key);
             }
         }
         task_keys.sort();

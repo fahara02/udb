@@ -558,7 +558,7 @@ impl ProjectionTaskStore for MysqlCanonicalStore {
         let sql = format!(
             "SELECT COUNT(*) FROM {TABLE}
              WHERE idempotency_key IN ({})
-               AND status NOT IN ('COMPLETED','DEAD_LETTER','FAILED')",
+               AND status <> 'COMPLETED'", // P2-1 NF-1/NF-2: FAILED/DEAD_LETTER = not projected yet = still fences
             placeholders.join(",")
         );
         let mut q = sqlx::query_scalar::<_, i64>(&sql);

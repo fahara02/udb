@@ -6,7 +6,7 @@
 //   UDB version:      0.4.37
 //   Protocol version: 1.0.0
 //   Services:         28
-//   RPCs:             376
+//   RPCs:             379
 //
 // This file is RENDERED by `udb sdk generate` from
 //   sdk-templates/csharp/Udb.Client/GeneratedClient.cs.tmpl
@@ -141,6 +141,7 @@ public static class GeneratedRpcIdentities
         map["/udb.core.authn.services.v1.AuthnService/SendPhoneVerification"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/SendPhoneVerification", "AuthnService", "SendPhoneVerification", "send_phone_verification", "sendPhoneVerification", "mutation", "post", "/v1/auth/users/{user_id}/phones:verify");
         map["/udb.core.authn.services.v1.AuthnService/StartWebAuthnAuthentication"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/StartWebAuthnAuthentication", "AuthnService", "StartWebAuthnAuthentication", "start_web_authn_authentication", "startWebAuthnAuthentication", "mutation", "post", "/v1/auth/webauthn/authentication:start");
         map["/udb.core.authn.services.v1.AuthnService/StartWebAuthnRegistration"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/StartWebAuthnRegistration", "AuthnService", "StartWebAuthnRegistration", "start_web_authn_registration", "startWebAuthnRegistration", "mutation", "post", "/v1/auth/users/{user_id}/webauthn/registration:start");
+        map["/udb.core.authn.services.v1.AuthnService/TransferServiceAccountGrant"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/TransferServiceAccountGrant", "AuthnService", "TransferServiceAccountGrant", "transfer_service_account_grant", "transferServiceAccountGrant", "destructive", "post", "/v1/auth/service-accounts/{from_user_id}/grant:transfer");
         map["/udb.core.authn.services.v1.AuthnService/UpdateUser"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/UpdateUser", "AuthnService", "UpdateUser", "update_user", "updateUser", "mutation", "patch", "/v1/auth/users/{user_id}");
         map["/udb.core.authn.services.v1.AuthnService/ValidateCSRF"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/ValidateCSRF", "AuthnService", "ValidateCSRF", "validate_csrf", "validateCsrf", "read_only", "post", "/v1/auth/csrf-tokens:validate");
         map["/udb.core.authn.services.v1.AuthnService/ValidateToken"] = new RpcIdentity("/udb.core.authn.services.v1.AuthnService/ValidateToken", "AuthnService", "ValidateToken", "validate_token", "validateToken", "read_only", "post", "/v1/auth/tokens:validate");
@@ -303,6 +304,7 @@ public static class GeneratedRpcIdentities
         map["/udb.core.storage.services.v1.StorageService/RegisterUpload"] = new RpcIdentity("/udb.core.storage.services.v1.StorageService/RegisterUpload", "StorageService", "RegisterUpload", "register_upload", "registerUpload", "mutation", "post", "/v1/storage/uploads");
         map["/udb.core.storage.services.v1.StorageService/ReissueUploadUrl"] = new RpcIdentity("/udb.core.storage.services.v1.StorageService/ReissueUploadUrl", "StorageService", "ReissueUploadUrl", "reissue_upload_url", "reissueUploadUrl", "read_only", "get", "/v1/storage/files/{file_id}:reissueUploadUrl");
         map["/udb.core.storage.services.v1.StorageService/UpdateFile"] = new RpcIdentity("/udb.core.storage.services.v1.StorageService/UpdateFile", "StorageService", "UpdateFile", "update_file", "updateFile", "mutation", "patch", "/v1/storage/files/{file_id}");
+        map["/udb.core.tenant.services.v1.TenantService/AdminPurgeTenant"] = new RpcIdentity("/udb.core.tenant.services.v1.TenantService/AdminPurgeTenant", "TenantService", "AdminPurgeTenant", "admin_purge_tenant", "adminPurgeTenant", "destructive", "post", "/v1/tenants/{target_tenant_id}:adminPurge");
         map["/udb.core.tenant.services.v1.TenantService/CreateTenant"] = new RpcIdentity("/udb.core.tenant.services.v1.TenantService/CreateTenant", "TenantService", "CreateTenant", "create_tenant", "createTenant", "mutation", "post", "/v1/tenants");
         map["/udb.core.tenant.services.v1.TenantService/GetTenant"] = new RpcIdentity("/udb.core.tenant.services.v1.TenantService/GetTenant", "TenantService", "GetTenant", "get_tenant", "getTenant", "read_only", "get", "/v1/tenants/{tenant_id}");
         map["/udb.core.tenant.services.v1.TenantService/GetTenantConfig"] = new RpcIdentity("/udb.core.tenant.services.v1.TenantService/GetTenantConfig", "TenantService", "GetTenantConfig", "get_tenant_config", "getTenantConfig", "read_only", "get", "/v1/tenants/{tenant_id}/config");
@@ -368,6 +370,7 @@ public static class GeneratedRpcIdentities
         map["/udb.services.v1.DataBroker/BatchSelect"] = new RpcIdentity("/udb.services.v1.DataBroker/BatchSelect", "DataBroker", "BatchSelect", "batch_select", "batchSelect", "mutation", "", "");
         map["/udb.services.v1.DataBroker/BatchUpsert"] = new RpcIdentity("/udb.services.v1.DataBroker/BatchUpsert", "DataBroker", "BatchUpsert", "batch_upsert", "batchUpsert", "mutation", "", "");
         map["/udb.services.v1.DataBroker/BeginTx"] = new RpcIdentity("/udb.services.v1.DataBroker/BeginTx", "DataBroker", "BeginTx", "begin_tx", "beginTx", "mutation", "", "");
+        map["/udb.services.v1.DataBroker/BulkCas"] = new RpcIdentity("/udb.services.v1.DataBroker/BulkCas", "DataBroker", "BulkCas", "bulk_cas", "bulkCas", "mutation", "", "");
         map["/udb.services.v1.DataBroker/CacheDelete"] = new RpcIdentity("/udb.services.v1.DataBroker/CacheDelete", "DataBroker", "CacheDelete", "cache_delete", "cacheDelete", "mutation", "", "");
         map["/udb.services.v1.DataBroker/CacheGet"] = new RpcIdentity("/udb.services.v1.DataBroker/CacheGet", "DataBroker", "CacheGet", "cache_get", "cacheGet", "read_only", "", "");
         map["/udb.services.v1.DataBroker/CacheScan"] = new RpcIdentity("/udb.services.v1.DataBroker/CacheScan", "DataBroker", "CacheScan", "cache_scan", "cacheScan", "read_only", "", "");
@@ -532,7 +535,7 @@ public sealed partial class GeneratedAssetServiceClient : GeneratedServiceBase
 }
 /// <summary>
 /// Robustness wrapper for the <c>udb.core.authn.services.v1.AuthnService</c> service
-/// (59 RPCs). Forwards to the buf-generated
+/// (60 RPCs). Forwards to the buf-generated
 /// <c>AuthnServiceClient</c> stub.
 /// </summary>
 public sealed partial class GeneratedAuthnServiceClient : GeneratedServiceBase
@@ -937,7 +940,7 @@ public sealed partial class GeneratedStorageServiceClient : GeneratedServiceBase
 }
 /// <summary>
 /// Robustness wrapper for the <c>udb.core.tenant.services.v1.TenantService</c> service
-/// (7 RPCs). Forwards to the buf-generated
+/// (8 RPCs). Forwards to the buf-generated
 /// <c>TenantServiceClient</c> stub.
 /// </summary>
 public sealed partial class GeneratedTenantServiceClient : GeneratedServiceBase
@@ -1180,7 +1183,7 @@ public sealed partial class GeneratedWorkflowServiceClient : GeneratedServiceBas
 }
 /// <summary>
 /// Robustness wrapper for the <c>udb.services.v1.DataBroker</c> service
-/// (78 RPCs). Forwards to the buf-generated
+/// (79 RPCs). Forwards to the buf-generated
 /// <c>DataBrokerClient</c> stub.
 /// </summary>
 public sealed partial class GeneratedDataBrokerClient : GeneratedServiceBase
@@ -2997,6 +3000,29 @@ public sealed partial class GeneratedAuthnServiceClient
             deadline,
             cancellationToken,
             "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedAuthnServiceClient
+{
+    /// <summary>
+    /// <c>transfer_service_account_grant</c> (unary) — forwards to <c>AuthnServiceClient.TransferServiceAccountGrantAsync</c>.
+    /// gRPC path: <c>/udb.core.authn.services.v1.AuthnService/TransferServiceAccountGrant</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> TransferServiceAccountGrantAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.TransferServiceAccountGrantAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.authn.services.v1.AuthnService/TransferServiceAccountGrant",
+            co => (object)_stub.TransferServiceAccountGrantAsync(request, co),
+            deadline,
+            cancellationToken,
+            "destructive" == "read_only",
             "false" == "true",
             (object)request);
     }
@@ -6638,6 +6664,29 @@ public sealed partial class GeneratedStorageServiceClient
 public sealed partial class GeneratedTenantServiceClient
 {
     /// <summary>
+    /// <c>admin_purge_tenant</c> (unary) — forwards to <c>TenantServiceClient.AdminPurgeTenantAsync</c>.
+    /// gRPC path: <c>/udb.core.tenant.services.v1.TenantService/AdminPurgeTenant</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> AdminPurgeTenantAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.AdminPurgeTenantAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.core.tenant.services.v1.TenantService/AdminPurgeTenant",
+            co => (object)_stub.AdminPurgeTenantAsync(request, co),
+            deadline,
+            cancellationToken,
+            "destructive" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedTenantServiceClient
+{
+    /// <summary>
     /// <c>create_tenant</c> (unary) — forwards to <c>TenantServiceClient.CreateTenantAsync</c>.
     /// gRPC path: <c>/udb.core.tenant.services.v1.TenantService/CreateTenant</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
     /// </summary>
@@ -8031,6 +8080,29 @@ public sealed partial class GeneratedDataBrokerClient
         return InvokeUnaryAsync(
             "/udb.services.v1.DataBroker/ApproveMigrationPlan",
             co => (object)_stub.ApproveMigrationPlanAsync(request, co),
+            deadline,
+            cancellationToken,
+            "mutation" == "read_only",
+            "false" == "true",
+            (object)request);
+    }
+}
+public sealed partial class GeneratedDataBrokerClient
+{
+    /// <summary>
+    /// <c>bulk_cas</c> (unary) — forwards to <c>DataBrokerClient.BulkCasAsync</c>.
+    /// gRPC path: <c>/udb.services.v1.DataBroker/BulkCas</c>. Retries DEADLINE_EXCEEDED only for read-only RPCs.
+    /// </summary>
+    public Task<dynamic> BulkCasAsync(
+        dynamic request,
+        TimeSpan? deadline = null,
+        CancellationToken cancellationToken = default)
+    {
+        // _stub.BulkCasAsync returns a concrete AsyncUnaryCall<TResp>; box it
+        // as object so no dynamic-to-closed-generic cast is ever attempted.
+        return InvokeUnaryAsync(
+            "/udb.services.v1.DataBroker/BulkCas",
+            co => (object)_stub.BulkCasAsync(request, co),
             deadline,
             cancellationToken,
             "mutation" == "read_only",
@@ -9572,11 +9644,11 @@ public static class UdbIr
     public const string DefaultBackend = "postgres";
 
     public static IReadOnlyDictionary<string, string> BackendRoles { get; } =
-        JsonSerializer.Deserialize<Dictionary<string, string>>("{\"postgres\":\"canonical\",\"mysql\":\"canonical\",\"sqlite\":\"canonical\",\"sqlserver\":\"canonical\",\"clickhouse\":\"canonical\",\"redis\":\"canonical\",\"memcached\":\"projection\",\"qdrant\":\"projection\",\"weaviate\":\"projection\",\"pinecone\":\"projection\",\"minio\":\"projection\",\"s3\":\"projection\",\"azureblob\":\"projection\",\"gcs\":\"projection\",\"mongodb\":\"canonical\",\"elasticsearch\":\"projection\",\"neo4j\":\"canonical\",\"cassandra\":\"canonical\"}")
+        JsonSerializer.Deserialize<Dictionary<string, string>>("{\"azureblob\":\"projection\",\"cassandra\":\"projection\",\"clickhouse\":\"projection\",\"elasticsearch\":\"projection\",\"gcs\":\"projection\",\"memcached\":\"projection\",\"minio\":\"projection\",\"mongodb\":\"projection\",\"mysql\":\"canonical\",\"neo4j\":\"projection\",\"pinecone\":\"projection\",\"postgres\":\"canonical\",\"qdrant\":\"projection\",\"redis\":\"projection\",\"s3\":\"projection\",\"sqlite\":\"canonical\",\"sqlserver\":\"canonical\",\"weaviate\":\"projection\"}")
         ?? new Dictionary<string, string>();
 
     public static IReadOnlyDictionary<string, string> OrmTiers { get; } =
-        JsonSerializer.Deserialize<Dictionary<string, string>>("{\"postgres\":\"relational\",\"mysql\":\"relational\",\"sqlite\":\"relational\",\"sqlserver\":\"relational\",\"clickhouse\":\"relational\",\"redis\":\"kv\",\"memcached\":\"kv\",\"qdrant\":\"vector\",\"weaviate\":\"vector\",\"pinecone\":\"vector\",\"minio\":\"blob\",\"s3\":\"blob\",\"azureblob\":\"blob\",\"gcs\":\"blob\",\"mongodb\":\"document\",\"elasticsearch\":\"vector\",\"neo4j\":\"graph\",\"cassandra\":\"relational\"}")
+        JsonSerializer.Deserialize<Dictionary<string, string>>("{\"azureblob\":\"blob\",\"cassandra\":\"relational\",\"clickhouse\":\"relational\",\"elasticsearch\":\"vector\",\"gcs\":\"blob\",\"memcached\":\"kv\",\"minio\":\"blob\",\"mongodb\":\"document\",\"mysql\":\"relational\",\"neo4j\":\"graph\",\"pinecone\":\"vector\",\"postgres\":\"relational\",\"qdrant\":\"vector\",\"redis\":\"kv\",\"s3\":\"blob\",\"sqlite\":\"relational\",\"sqlserver\":\"relational\",\"weaviate\":\"vector\"}")
         ?? new Dictionary<string, string>();
 
     public static IReadOnlyDictionary<string, EntityBinding> Entities { get; } = BuildEntityRegistry();

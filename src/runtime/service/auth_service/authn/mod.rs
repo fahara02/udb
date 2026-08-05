@@ -2117,8 +2117,22 @@ impl AuthnServiceImpl {
         self.config.password_hash_secret().as_bytes().to_vec()
     }
 
-    pub(super) fn otp_hash_key(&self) -> Vec<u8> {
-        self.config.otp_hash_secret().as_bytes().to_vec()
+    /// OTP/MFA at-rest hashing+sealing key. Fails CLOSED when unresolved: an
+    /// empty secret would otherwise seal TOTP secrets / recovery codes under
+    /// `SHA256("")` — a world-known constant — silently defeating MFA-at-rest.
+    /// Mirrors the fail-closed posture the API-key (`hash_key`) and password
+    /// (`password_hash_key`) paths already enforce at their point of use.
+    pub(super) fn otp_hash_key(&self) -> Result<Vec<u8>, Status> {
+        let secret = self.config.otp_hash_secret();
+        if secret.trim().is_empty() {
+            return Err(authn_capability_status(
+                "otp_hashing",
+                "otp_hash_secret",
+                "MFA/OTP hashing requires UDB_OTP_HASH_SECRET (or UDB_SESSION_HASH_SECRET) \
+                 to be configured; refusing to seal or verify OTP material under an empty key",
+            ));
+        }
+        Ok(secret.as_bytes().to_vec())
     }
 
     /// Derive the CSRF token bound to a session id (signed double-submit cookie).
@@ -2477,16 +2491,27 @@ impl AuthnServiceImpl {
             .as_ref()
             .map(|p| p.jwks_url.clone())
             .unwrap_or_default();
-        let issuer = if !req.issuer.trim().is_empty() {
-            req.issuer.trim().to_string()
-        } else if !registered_issuer.trim().is_empty() {
+        // IDP1 + discovery-SSRF: the issuer is the TRUST ANCHOR used to fetch the
+        // JWKS and verify the id_token — it must come ONLY from the resolved
+        // provider's registered issuer or the operator-configured UDB_OIDC_ISSUER,
+        // NEVER from the client request. Otherwise an attacker names their own
+        // issuer, hosts a matching `/.well-known/openid-configuration` + JWKS, and
+        // self-signs a token asserting any tenant (full auth bypass on the public
+        // Authenticate RPC) — and the discovery fetch itself becomes an SSRF to any
+        // host. A client-supplied `req.issuer` is honored only if it exactly equals
+        // the trusted value (so legitimate clients that echo the real issuer work).
+        let trusted_issuer = if !registered_issuer.trim().is_empty() {
             registered_issuer.trim().to_string()
         } else {
             std::env::var("UDB_OIDC_ISSUER").unwrap_or_default()
         };
-        if issuer.is_empty() {
+        if trusted_issuer.is_empty() {
             return Err(Self::oidc_issuer_required_status());
         }
+        if !req.issuer.trim().is_empty() && req.issuer.trim() != trusted_issuer {
+            return Err(Status::unauthenticated("invalid credential"));
+        }
+        let issuer = trusted_issuer;
         let client_id = if !req.client_id.trim().is_empty() {
             req.client_id.trim().to_string()
         } else if !req.audience.trim().is_empty() {
@@ -3806,6 +3831,13 @@ impl AuthnService for AuthnServiceImpl {
     ) -> Result<Response<authn_pb::RotateServiceAccountIdentityResponse>, Status> {
         let pool = self.require_pool()?.clone();
         super::grants::rotate_service_account_identity(self, &pool, request).await
+    }
+    async fn transfer_service_account_grant(
+        &self,
+        request: Request<authn_pb::TransferServiceAccountGrantRequest>,
+    ) -> Result<Response<authn_pb::TransferServiceAccountGrantResponse>, Status> {
+        let pool = self.require_pool()?.clone();
+        super::grants::transfer_service_account_grant(self, &pool, request).await
     }
     async fn revoke_service_account_grant(
         &self,

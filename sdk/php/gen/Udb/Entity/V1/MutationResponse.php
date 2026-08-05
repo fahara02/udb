@@ -63,6 +63,18 @@ class MutationResponse extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>.udb.entity.v1.WriteReceipt write_receipt = 11 [json_name = "writeReceipt"];</code>
      */
     protected $write_receipt = null;
+    /**
+     * #5 (opaque row revision / ETag): the broker-maintained opaque revision of
+     * the single row this mutation addressed, AFTER the mutation. Set on upserts
+     * and on single-row (primary-key-pinned) updates; empty for deletes (the row
+     * is gone) and for multi-row updates (revision is a single-row primitive).
+     * Opaque + monotonically increasing; feed it back as
+     * `UpdateRequest.expected_revision` / `DeleteRequest.expected_revision` for
+     * optimistic-concurrency (compare-and-swap) writes.
+     *
+     * Generated from protobuf field <code>string revision = 12 [json_name = "revision"];</code>
+     */
+    protected $revision = '';
 
     /**
      * Constructor.
@@ -84,6 +96,14 @@ class MutationResponse extends \Google\Protobuf\Internal\Message
      *     @type \Udb\Entity\V1\WriteReceipt $write_receipt
      *           Typed write receipt. Kept in lockstep with write_receipt_json for clients
      *           that can consume protobuf messages directly.
+     *     @type string $revision
+     *           #5 (opaque row revision / ETag): the broker-maintained opaque revision of
+     *           the single row this mutation addressed, AFTER the mutation. Set on upserts
+     *           and on single-row (primary-key-pinned) updates; empty for deletes (the row
+     *           is gone) and for multi-row updates (revision is a single-row primitive).
+     *           Opaque + monotonically increasing; feed it back as
+     *           `UpdateRequest.expected_revision` / `DeleteRequest.expected_revision` for
+     *           optimistic-concurrency (compare-and-swap) writes.
      * }
      */
     public function __construct($data = NULL) {
@@ -349,6 +369,44 @@ class MutationResponse extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkMessage($var, \Udb\Entity\V1\WriteReceipt::class);
         $this->write_receipt = $var;
+
+        return $this;
+    }
+
+    /**
+     * #5 (opaque row revision / ETag): the broker-maintained opaque revision of
+     * the single row this mutation addressed, AFTER the mutation. Set on upserts
+     * and on single-row (primary-key-pinned) updates; empty for deletes (the row
+     * is gone) and for multi-row updates (revision is a single-row primitive).
+     * Opaque + monotonically increasing; feed it back as
+     * `UpdateRequest.expected_revision` / `DeleteRequest.expected_revision` for
+     * optimistic-concurrency (compare-and-swap) writes.
+     *
+     * Generated from protobuf field <code>string revision = 12 [json_name = "revision"];</code>
+     * @return string
+     */
+    public function getRevision()
+    {
+        return $this->revision;
+    }
+
+    /**
+     * #5 (opaque row revision / ETag): the broker-maintained opaque revision of
+     * the single row this mutation addressed, AFTER the mutation. Set on upserts
+     * and on single-row (primary-key-pinned) updates; empty for deletes (the row
+     * is gone) and for multi-row updates (revision is a single-row primitive).
+     * Opaque + monotonically increasing; feed it back as
+     * `UpdateRequest.expected_revision` / `DeleteRequest.expected_revision` for
+     * optimistic-concurrency (compare-and-swap) writes.
+     *
+     * Generated from protobuf field <code>string revision = 12 [json_name = "revision"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setRevision($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->revision = $var;
 
         return $this;
     }

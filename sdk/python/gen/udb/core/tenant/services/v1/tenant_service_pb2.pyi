@@ -5,12 +5,22 @@ from udb.core.common.v1 import security_pb2 as _security_pb2
 from udb.core.tenant.entity.v1 import tenant_pb2 as _tenant_pb2
 from udb.core.tenant.entity.v1 import tenant_config_pb2 as _tenant_config_pb2
 from google.protobuf.internal import containers as _containers
+from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
 from collections.abc import Iterable as _Iterable, Mapping as _Mapping
 from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
+
+class AdminPurgeMode(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    ADMIN_PURGE_MODE_UNSPECIFIED: _ClassVar[AdminPurgeMode]
+    ADMIN_PURGE_MODE_HARD: _ClassVar[AdminPurgeMode]
+    ADMIN_PURGE_MODE_SOFT: _ClassVar[AdminPurgeMode]
+ADMIN_PURGE_MODE_UNSPECIFIED: AdminPurgeMode
+ADMIN_PURGE_MODE_HARD: AdminPurgeMode
+ADMIN_PURGE_MODE_SOFT: AdminPurgeMode
 
 class CreateTenantRequest(_message.Message):
     __slots__ = ("code", "name", "type", "parent_tenant_id", "config", "branding")
@@ -185,3 +195,51 @@ class PurgeTenantResponse(_message.Message):
     message: str
     error: _dto_pb2.ApiError
     def __init__(self, tenant_id: _Optional[str] = ..., purged: _Optional[_Iterable[_Union[PurgedTableCount, _Mapping]]] = ..., excluded: _Optional[_Iterable[_Union[PurgeExcludedTable, _Mapping]]] = ..., total_deleted: _Optional[int] = ..., tenant_denylisted: bool = ..., principals_denylisted: _Optional[int] = ..., message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...
+
+class AdminPurgeTenantRequest(_message.Message):
+    __slots__ = ("delegated_actor", "target_tenant_id", "mode", "reason", "expected_version", "confirmation_token", "idempotency_key")
+    DELEGATED_ACTOR_FIELD_NUMBER: _ClassVar[int]
+    TARGET_TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    MODE_FIELD_NUMBER: _ClassVar[int]
+    REASON_FIELD_NUMBER: _ClassVar[int]
+    EXPECTED_VERSION_FIELD_NUMBER: _ClassVar[int]
+    CONFIRMATION_TOKEN_FIELD_NUMBER: _ClassVar[int]
+    IDEMPOTENCY_KEY_FIELD_NUMBER: _ClassVar[int]
+    delegated_actor: str
+    target_tenant_id: str
+    mode: AdminPurgeMode
+    reason: str
+    expected_version: int
+    confirmation_token: str
+    idempotency_key: str
+    def __init__(self, delegated_actor: _Optional[str] = ..., target_tenant_id: _Optional[str] = ..., mode: _Optional[_Union[AdminPurgeMode, str]] = ..., reason: _Optional[str] = ..., expected_version: _Optional[int] = ..., confirmation_token: _Optional[str] = ..., idempotency_key: _Optional[str] = ...) -> None: ...
+
+class AdminPurgeTenantResponse(_message.Message):
+    __slots__ = ("target_tenant_id", "mode", "purged", "excluded", "total_deleted", "tenant_denylisted", "principals_denylisted", "soft_deactivated", "purged_version", "replayed", "outcome_id", "message", "error")
+    TARGET_TENANT_ID_FIELD_NUMBER: _ClassVar[int]
+    MODE_FIELD_NUMBER: _ClassVar[int]
+    PURGED_FIELD_NUMBER: _ClassVar[int]
+    EXCLUDED_FIELD_NUMBER: _ClassVar[int]
+    TOTAL_DELETED_FIELD_NUMBER: _ClassVar[int]
+    TENANT_DENYLISTED_FIELD_NUMBER: _ClassVar[int]
+    PRINCIPALS_DENYLISTED_FIELD_NUMBER: _ClassVar[int]
+    SOFT_DEACTIVATED_FIELD_NUMBER: _ClassVar[int]
+    PURGED_VERSION_FIELD_NUMBER: _ClassVar[int]
+    REPLAYED_FIELD_NUMBER: _ClassVar[int]
+    OUTCOME_ID_FIELD_NUMBER: _ClassVar[int]
+    MESSAGE_FIELD_NUMBER: _ClassVar[int]
+    ERROR_FIELD_NUMBER: _ClassVar[int]
+    target_tenant_id: str
+    mode: AdminPurgeMode
+    purged: _containers.RepeatedCompositeFieldContainer[PurgedTableCount]
+    excluded: _containers.RepeatedCompositeFieldContainer[PurgeExcludedTable]
+    total_deleted: int
+    tenant_denylisted: bool
+    principals_denylisted: int
+    soft_deactivated: bool
+    purged_version: int
+    replayed: bool
+    outcome_id: str
+    message: str
+    error: _dto_pb2.ApiError
+    def __init__(self, target_tenant_id: _Optional[str] = ..., mode: _Optional[_Union[AdminPurgeMode, str]] = ..., purged: _Optional[_Iterable[_Union[PurgedTableCount, _Mapping]]] = ..., excluded: _Optional[_Iterable[_Union[PurgeExcludedTable, _Mapping]]] = ..., total_deleted: _Optional[int] = ..., tenant_denylisted: bool = ..., principals_denylisted: _Optional[int] = ..., soft_deactivated: bool = ..., purged_version: _Optional[int] = ..., replayed: bool = ..., outcome_id: _Optional[str] = ..., message: _Optional[str] = ..., error: _Optional[_Union[_dto_pb2.ApiError, _Mapping]] = ...) -> None: ...

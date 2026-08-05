@@ -7,7 +7,7 @@ Inputs:
 - `sdk/go/udbclient/generated_client.go`
 - `docs/site/bench-results.json`
 
-Current generated RPC surface: 376 RPCs across 28 services.
+Current generated RPC surface: 379 RPCs across 28 services.
 
 The benchmark body manifest is checked against generated SDK metadata before this
 file is written. A missing row, extra row, alias drift, operationId drift, or
@@ -35,13 +35,13 @@ do not yet publish per-RPC live benchmark results.
 | AnalyticsService | 7 | 5 | 2 | 0 | 0 |
 | ApiKeyService | 9 | 4 | 4 | 1 | 0 |
 | AssetService | 8 | 4 | 4 | 0 | 0 |
-| AuthnService | 59 | 18 | 31 | 10 | 0 |
+| AuthnService | 60 | 18 | 31 | 11 | 0 |
 | AuthzService | 41 | 18 | 17 | 6 | 0 |
 | BackupService | 8 | 4 | 3 | 1 | 0 |
 | CacheService | 7 | 3 | 3 | 1 | 0 |
 | ConfigService | 5 | 3 | 1 | 1 | 0 |
 | ControlPlaneService | 6 | 2 | 4 | 0 | 0 |
-| DataBroker | 78 | 35 | 36 | 7 | 0 |
+| DataBroker | 79 | 35 | 37 | 7 | 0 |
 | EmbeddingService | 19 | 5 | 12 | 2 | 0 |
 | IdentityProviderService | 27 | 6 | 21 | 0 | 0 |
 | LiveQueryService | 1 | 1 | 0 | 0 | 0 |
@@ -54,7 +54,7 @@ do not yet publish per-RPC live benchmark results.
 | SearchService | 5 | 2 | 2 | 1 | 0 |
 | SignalingService | 1 | 0 | 1 | 0 | 0 |
 | StorageService | 9 | 5 | 4 | 0 | 0 |
-| TenantService | 7 | 3 | 3 | 1 | 0 |
+| TenantService | 8 | 3 | 3 | 2 | 0 |
 | TrackService | 4 | 1 | 3 | 0 | 0 |
 | TurnService | 1 | 0 | 1 | 0 | 0 |
 | VaultService | 20 | 6 | 13 | 1 | 0 |
@@ -146,6 +146,7 @@ benchmark harnesses.
 | AuthnService | `AuthnService/SendPhoneVerification` | `send_phone_verification` | `sendPhoneVerification` | MUTATION | authn.md |
 | AuthnService | `AuthnService/StartWebAuthnAuthentication` | `start_web_authn_authentication` | `startWebAuthnAuthentication` | MUTATION | authn.md |
 | AuthnService | `AuthnService/StartWebAuthnRegistration` | `start_web_authn_registration` | `startWebAuthnRegistration` | MUTATION | authn.md |
+| AuthnService | `AuthnService/TransferServiceAccountGrant` | `transfer_service_account_grant` | `transferServiceAccountGrant` | DESTRUCTIVE | authn.md |
 | AuthnService | `AuthnService/UpdateUser` | `update_user` | `updateUser` | MUTATION | authn.md |
 | AuthnService | `AuthnService/ValidateCSRF` | `validate_csrf` | `validateCsrf` | READ_ONLY | authn.md |
 | AuthnService | `AuthnService/ValidateToken` | `validate_token` | `validateToken` | READ_ONLY | authn.md |
@@ -225,6 +226,7 @@ benchmark harnesses.
 | DataBroker | `DataBroker/BatchSelect` | `batch_select` | `batchSelect` | MUTATION | data_broker.md |
 | DataBroker | `DataBroker/BatchUpsert` | `batch_upsert` | `batchUpsert` | MUTATION | data_broker.md |
 | DataBroker | `DataBroker/BeginTx` | `begin_tx` | `beginTx` | MUTATION | data_broker.md |
+| DataBroker | `DataBroker/BulkCas` | `bulk_cas` | `bulkCas` | MUTATION | data_broker.md |
 | DataBroker | `DataBroker/CacheDelete` | `cache_delete` | `cacheDelete` | MUTATION | data_broker.md |
 | DataBroker | `DataBroker/CacheGet` | `cache_get` | `cacheGet` | READ_ONLY | data_broker.md |
 | DataBroker | `DataBroker/CacheScan` | `cache_scan` | `cacheScan` | READ_ONLY | data_broker.md |
@@ -401,6 +403,7 @@ benchmark harnesses.
 | StorageService | `StorageService/RegisterUpload` | `register_upload` | `registerUpload` | MUTATION | storage.md |
 | StorageService | `StorageService/ReissueUploadUrl` | `reissue_upload_url` | `reissueUploadUrl` | READ_ONLY | storage.md |
 | StorageService | `StorageService/UpdateFile` | `update_file` | `updateFile` | MUTATION | storage.md |
+| TenantService | `TenantService/AdminPurgeTenant` | `admin_purge_tenant` | `adminPurgeTenant` | DESTRUCTIVE | tenant.md |
 | TenantService | `TenantService/CreateTenant` | `create_tenant` | `createTenant` | MUTATION | tenant.md |
 | TenantService | `TenantService/GetTenant` | `get_tenant` | `getTenant` | READ_ONLY | tenant.md |
 | TenantService | `TenantService/GetTenantConfig` | `get_tenant_config` | `getTenantConfig` | READ_ONLY | tenant.md |

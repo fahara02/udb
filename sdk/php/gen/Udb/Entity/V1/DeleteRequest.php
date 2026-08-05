@@ -38,6 +38,27 @@ class DeleteRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>.google.protobuf.Struct expected = 5 [json_name = "expected"];</code>
      */
     protected $expected = null;
+    /**
+     * #5 (opaque row revision / ETag): optional revision precondition. When set,
+     * the delete proceeds only if the broker-maintained opaque revision of the
+     * primary-key-identified row still equals this token, checked atomically under
+     * the revision row lock in the write transaction. A mismatch or an untracked
+     * row is `FAILED_PRECONDITION` and nothing is removed. Non-disclosing (never
+     * reveals a foreign row's existence). ABA-safe (the revision only increases).
+     *
+     * Generated from protobuf field <code>string expected_revision = 6 [json_name = "expectedRevision"];</code>
+     */
+    protected $expected_revision = '';
+    /**
+     * gate 25 (lock-fencing-at-commit): see UpdateRequest.lock_name/fencing_token.
+     *
+     * Generated from protobuf field <code>string lock_name = 7 [json_name = "lockName"];</code>
+     */
+    protected $lock_name = '';
+    /**
+     * Generated from protobuf field <code>int64 fencing_token = 8 [json_name = "fencingToken"];</code>
+     */
+    protected $fencing_token = 0;
 
     /**
      * Constructor.
@@ -53,6 +74,16 @@ class DeleteRequest extends \Google\Protobuf\Internal\Message
      *           G-2: optional compare-and-swap precondition — delete only if the matched
      *           row's fields still equal these values (mirrors UpsertRequest.expected,
      *           UDB-GO-005). Unset/empty = unconditional delete (unchanged behaviour).
+     *     @type string $expected_revision
+     *           #5 (opaque row revision / ETag): optional revision precondition. When set,
+     *           the delete proceeds only if the broker-maintained opaque revision of the
+     *           primary-key-identified row still equals this token, checked atomically under
+     *           the revision row lock in the write transaction. A mismatch or an untracked
+     *           row is `FAILED_PRECONDITION` and nothing is removed. Non-disclosing (never
+     *           reveals a foreign row's existence). ABA-safe (the revision only increases).
+     *     @type string $lock_name
+     *           gate 25 (lock-fencing-at-commit): see UpdateRequest.lock_name/fencing_token.
+     *     @type int|string $fencing_token
      * }
      */
     public function __construct($data = NULL) {
@@ -204,6 +235,90 @@ class DeleteRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkMessage($var, \Google\Protobuf\Struct::class);
         $this->expected = $var;
+
+        return $this;
+    }
+
+    /**
+     * #5 (opaque row revision / ETag): optional revision precondition. When set,
+     * the delete proceeds only if the broker-maintained opaque revision of the
+     * primary-key-identified row still equals this token, checked atomically under
+     * the revision row lock in the write transaction. A mismatch or an untracked
+     * row is `FAILED_PRECONDITION` and nothing is removed. Non-disclosing (never
+     * reveals a foreign row's existence). ABA-safe (the revision only increases).
+     *
+     * Generated from protobuf field <code>string expected_revision = 6 [json_name = "expectedRevision"];</code>
+     * @return string
+     */
+    public function getExpectedRevision()
+    {
+        return $this->expected_revision;
+    }
+
+    /**
+     * #5 (opaque row revision / ETag): optional revision precondition. When set,
+     * the delete proceeds only if the broker-maintained opaque revision of the
+     * primary-key-identified row still equals this token, checked atomically under
+     * the revision row lock in the write transaction. A mismatch or an untracked
+     * row is `FAILED_PRECONDITION` and nothing is removed. Non-disclosing (never
+     * reveals a foreign row's existence). ABA-safe (the revision only increases).
+     *
+     * Generated from protobuf field <code>string expected_revision = 6 [json_name = "expectedRevision"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setExpectedRevision($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->expected_revision = $var;
+
+        return $this;
+    }
+
+    /**
+     * gate 25 (lock-fencing-at-commit): see UpdateRequest.lock_name/fencing_token.
+     *
+     * Generated from protobuf field <code>string lock_name = 7 [json_name = "lockName"];</code>
+     * @return string
+     */
+    public function getLockName()
+    {
+        return $this->lock_name;
+    }
+
+    /**
+     * gate 25 (lock-fencing-at-commit): see UpdateRequest.lock_name/fencing_token.
+     *
+     * Generated from protobuf field <code>string lock_name = 7 [json_name = "lockName"];</code>
+     * @param string $var
+     * @return $this
+     */
+    public function setLockName($var)
+    {
+        GPBUtil::checkString($var, True);
+        $this->lock_name = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>int64 fencing_token = 8 [json_name = "fencingToken"];</code>
+     * @return int|string
+     */
+    public function getFencingToken()
+    {
+        return $this->fencing_token;
+    }
+
+    /**
+     * Generated from protobuf field <code>int64 fencing_token = 8 [json_name = "fencingToken"];</code>
+     * @param int|string $var
+     * @return $this
+     */
+    public function setFencingToken($var)
+    {
+        GPBUtil::checkInt64($var);
+        $this->fencing_token = $var;
 
         return $this;
     }

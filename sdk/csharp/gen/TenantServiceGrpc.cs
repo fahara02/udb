@@ -73,6 +73,10 @@ namespace udb.core.Tenant.Services.V1 {
     static readonly grpc::Marshaller<global::udb.core.Tenant.Services.V1.PurgeTenantRequest> __Marshaller_udb_core_tenant_services_v1_PurgeTenantRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Tenant.Services.V1.PurgeTenantRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::udb.core.Tenant.Services.V1.PurgeTenantResponse> __Marshaller_udb_core_tenant_services_v1_PurgeTenantResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Tenant.Services.V1.PurgeTenantResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Tenant.Services.V1.AdminPurgeTenantRequest> __Marshaller_udb_core_tenant_services_v1_AdminPurgeTenantRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Tenant.Services.V1.AdminPurgeTenantRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::udb.core.Tenant.Services.V1.AdminPurgeTenantResponse> __Marshaller_udb_core_tenant_services_v1_AdminPurgeTenantResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::udb.core.Tenant.Services.V1.AdminPurgeTenantResponse.Parser));
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Method<global::udb.core.Tenant.Services.V1.CreateTenantRequest, global::udb.core.Tenant.Services.V1.CreateTenantResponse> __Method_CreateTenant = new grpc::Method<global::udb.core.Tenant.Services.V1.CreateTenantRequest, global::udb.core.Tenant.Services.V1.CreateTenantResponse>(
@@ -129,6 +133,14 @@ namespace udb.core.Tenant.Services.V1 {
         "PurgeTenant",
         __Marshaller_udb_core_tenant_services_v1_PurgeTenantRequest,
         __Marshaller_udb_core_tenant_services_v1_PurgeTenantResponse);
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Method<global::udb.core.Tenant.Services.V1.AdminPurgeTenantRequest, global::udb.core.Tenant.Services.V1.AdminPurgeTenantResponse> __Method_AdminPurgeTenant = new grpc::Method<global::udb.core.Tenant.Services.V1.AdminPurgeTenantRequest, global::udb.core.Tenant.Services.V1.AdminPurgeTenantResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "AdminPurgeTenant",
+        __Marshaller_udb_core_tenant_services_v1_AdminPurgeTenantRequest,
+        __Marshaller_udb_core_tenant_services_v1_AdminPurgeTenantResponse);
 
     /// <summary>Service descriptor</summary>
     public static global::Google.Protobuf.Reflection.ServiceDescriptor Descriptor
@@ -225,6 +237,28 @@ namespace udb.core.Tenant.Services.V1 {
       /// <returns>The response to send back to the client (wrapped by a task).</returns>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       public virtual global::System.Threading.Tasks.Task<global::udb.core.Tenant.Services.V1.PurgeTenantResponse> PurgeTenant(global::udb.core.Tenant.Services.V1.PurgeTenantRequest request, grpc::ServerCallContext context)
+      {
+        throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
+      }
+
+      /// <summary>
+      /// PRIVILEGED cross-tenant purge (Bug #2). Unlike PurgeTenant — which forces the
+      /// body tenant to equal the verified claim (self-purge only) — this RPC lets a
+      /// delegated operator purge a DIFFERENT `target_tenant_id`. It is gated by a
+      /// DISTINCT, default-deny scope (`udb:tenant:admin-purge`) SEPARATE from the
+      /// self-purge scope, is DESTRUCTIVE, and demands an explicit confirmation token
+      /// plus an idempotency key. The handler routes the movement with
+      /// `privileged_cross_tenant=true`, binds the VERIFIED delegated actor, treats
+      /// control-plane / tenant-less tables explicitly (retained + reported, never
+      /// blind-deleted), and writes an immutable audit/outcome record. `tenant_field`
+      /// names the body tenant the action targets (`target_tenant_id`); the handler —
+      /// not the transport gate — authorizes the cross-tenant reach via the scope.
+      /// </summary>
+      /// <param name="request">The request received from the client.</param>
+      /// <param name="context">The context of the server-side call handler being invoked.</param>
+      /// <returns>The response to send back to the client (wrapped by a task).</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::System.Threading.Tasks.Task<global::udb.core.Tenant.Services.V1.AdminPurgeTenantResponse> AdminPurgeTenant(global::udb.core.Tenant.Services.V1.AdminPurgeTenantRequest request, grpc::ServerCallContext context)
       {
         throw new grpc::RpcException(new grpc::Status(grpc::StatusCode.Unimplemented, ""));
       }
@@ -614,6 +648,94 @@ namespace udb.core.Tenant.Services.V1 {
       {
         return CallInvoker.AsyncUnaryCall(__Method_PurgeTenant, null, options, request);
       }
+      /// <summary>
+      /// PRIVILEGED cross-tenant purge (Bug #2). Unlike PurgeTenant — which forces the
+      /// body tenant to equal the verified claim (self-purge only) — this RPC lets a
+      /// delegated operator purge a DIFFERENT `target_tenant_id`. It is gated by a
+      /// DISTINCT, default-deny scope (`udb:tenant:admin-purge`) SEPARATE from the
+      /// self-purge scope, is DESTRUCTIVE, and demands an explicit confirmation token
+      /// plus an idempotency key. The handler routes the movement with
+      /// `privileged_cross_tenant=true`, binds the VERIFIED delegated actor, treats
+      /// control-plane / tenant-less tables explicitly (retained + reported, never
+      /// blind-deleted), and writes an immutable audit/outcome record. `tenant_field`
+      /// names the body tenant the action targets (`target_tenant_id`); the handler —
+      /// not the transport gate — authorizes the cross-tenant reach via the scope.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Tenant.Services.V1.AdminPurgeTenantResponse AdminPurgeTenant(global::udb.core.Tenant.Services.V1.AdminPurgeTenantRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return AdminPurgeTenant(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// PRIVILEGED cross-tenant purge (Bug #2). Unlike PurgeTenant — which forces the
+      /// body tenant to equal the verified claim (self-purge only) — this RPC lets a
+      /// delegated operator purge a DIFFERENT `target_tenant_id`. It is gated by a
+      /// DISTINCT, default-deny scope (`udb:tenant:admin-purge`) SEPARATE from the
+      /// self-purge scope, is DESTRUCTIVE, and demands an explicit confirmation token
+      /// plus an idempotency key. The handler routes the movement with
+      /// `privileged_cross_tenant=true`, binds the VERIFIED delegated actor, treats
+      /// control-plane / tenant-less tables explicitly (retained + reported, never
+      /// blind-deleted), and writes an immutable audit/outcome record. `tenant_field`
+      /// names the body tenant the action targets (`target_tenant_id`); the handler —
+      /// not the transport gate — authorizes the cross-tenant reach via the scope.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The response received from the server.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::udb.core.Tenant.Services.V1.AdminPurgeTenantResponse AdminPurgeTenant(global::udb.core.Tenant.Services.V1.AdminPurgeTenantRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__Method_AdminPurgeTenant, null, options, request);
+      }
+      /// <summary>
+      /// PRIVILEGED cross-tenant purge (Bug #2). Unlike PurgeTenant — which forces the
+      /// body tenant to equal the verified claim (self-purge only) — this RPC lets a
+      /// delegated operator purge a DIFFERENT `target_tenant_id`. It is gated by a
+      /// DISTINCT, default-deny scope (`udb:tenant:admin-purge`) SEPARATE from the
+      /// self-purge scope, is DESTRUCTIVE, and demands an explicit confirmation token
+      /// plus an idempotency key. The handler routes the movement with
+      /// `privileged_cross_tenant=true`, binds the VERIFIED delegated actor, treats
+      /// control-plane / tenant-less tables explicitly (retained + reported, never
+      /// blind-deleted), and writes an immutable audit/outcome record. `tenant_field`
+      /// names the body tenant the action targets (`target_tenant_id`); the handler —
+      /// not the transport gate — authorizes the cross-tenant reach via the scope.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="headers">The initial metadata to send with the call. This parameter is optional.</param>
+      /// <param name="deadline">An optional deadline for the call. The call will be cancelled if deadline is hit.</param>
+      /// <param name="cancellationToken">An optional token for canceling the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Tenant.Services.V1.AdminPurgeTenantResponse> AdminPurgeTenantAsync(global::udb.core.Tenant.Services.V1.AdminPurgeTenantRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return AdminPurgeTenantAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      /// <summary>
+      /// PRIVILEGED cross-tenant purge (Bug #2). Unlike PurgeTenant — which forces the
+      /// body tenant to equal the verified claim (self-purge only) — this RPC lets a
+      /// delegated operator purge a DIFFERENT `target_tenant_id`. It is gated by a
+      /// DISTINCT, default-deny scope (`udb:tenant:admin-purge`) SEPARATE from the
+      /// self-purge scope, is DESTRUCTIVE, and demands an explicit confirmation token
+      /// plus an idempotency key. The handler routes the movement with
+      /// `privileged_cross_tenant=true`, binds the VERIFIED delegated actor, treats
+      /// control-plane / tenant-less tables explicitly (retained + reported, never
+      /// blind-deleted), and writes an immutable audit/outcome record. `tenant_field`
+      /// names the body tenant the action targets (`target_tenant_id`); the handler —
+      /// not the transport gate — authorizes the cross-tenant reach via the scope.
+      /// </summary>
+      /// <param name="request">The request to send to the server.</param>
+      /// <param name="options">The options for the call.</param>
+      /// <returns>The call object.</returns>
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::udb.core.Tenant.Services.V1.AdminPurgeTenantResponse> AdminPurgeTenantAsync(global::udb.core.Tenant.Services.V1.AdminPurgeTenantRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__Method_AdminPurgeTenant, null, options, request);
+      }
       /// <summary>Creates a new instance of client from given <c>ClientBaseConfiguration</c>.</summary>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
       protected override TenantServiceClient NewInstance(ClientBaseConfiguration configuration)
@@ -634,7 +756,8 @@ namespace udb.core.Tenant.Services.V1 {
           .AddMethod(__Method_UpdateTenant, serviceImpl.UpdateTenant)
           .AddMethod(__Method_GetTenantConfig, serviceImpl.GetTenantConfig)
           .AddMethod(__Method_UpdateTenantConfig, serviceImpl.UpdateTenantConfig)
-          .AddMethod(__Method_PurgeTenant, serviceImpl.PurgeTenant).Build();
+          .AddMethod(__Method_PurgeTenant, serviceImpl.PurgeTenant)
+          .AddMethod(__Method_AdminPurgeTenant, serviceImpl.AdminPurgeTenant).Build();
     }
 
     /// <summary>Register service method with a service binder with or without implementation. Useful when customizing the service binding logic.
@@ -651,6 +774,7 @@ namespace udb.core.Tenant.Services.V1 {
       serviceBinder.AddMethod(__Method_GetTenantConfig, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Tenant.Services.V1.GetTenantConfigRequest, global::udb.core.Tenant.Services.V1.GetTenantConfigResponse>(serviceImpl.GetTenantConfig));
       serviceBinder.AddMethod(__Method_UpdateTenantConfig, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Tenant.Services.V1.UpdateTenantConfigRequest, global::udb.core.Tenant.Services.V1.UpdateTenantConfigResponse>(serviceImpl.UpdateTenantConfig));
       serviceBinder.AddMethod(__Method_PurgeTenant, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Tenant.Services.V1.PurgeTenantRequest, global::udb.core.Tenant.Services.V1.PurgeTenantResponse>(serviceImpl.PurgeTenant));
+      serviceBinder.AddMethod(__Method_AdminPurgeTenant, serviceImpl == null ? null : new grpc::UnaryServerMethod<global::udb.core.Tenant.Services.V1.AdminPurgeTenantRequest, global::udb.core.Tenant.Services.V1.AdminPurgeTenantResponse>(serviceImpl.AdminPurgeTenant));
     }
 
   }
