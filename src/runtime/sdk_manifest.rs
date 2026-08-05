@@ -500,7 +500,8 @@ fn entity_descriptor_from_table(
                     // Pre-annotated `enum_values` (the embedded-descriptor path, which
                     // is never rendered by the Go entity emitter): fall back to the
                     // reference heuristic for the cross-package flag.
-                    let cross = enum_type_is_cross_package(&column.proto_type, &table.proto_package);
+                    let cross =
+                        enum_type_is_cross_package(&column.proto_type, &table.proto_package);
                     (column.enum_values.clone(), cross)
                 };
                 EntityColumnDescriptor {

@@ -1486,8 +1486,7 @@ fn gofmt_canonicalize(src: &str) -> Result<String, String> {
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_nanos())
         .unwrap_or_default();
-    let path =
-        std::env::temp_dir().join(format!("udb-gofmt-{}-{stamp}.go", std::process::id()));
+    let path = std::env::temp_dir().join(format!("udb-gofmt-{}-{stamp}.go", std::process::id()));
     std::fs::write(&path, src).map_err(|err| format!("gofmt: write temp file: {err}"))?;
     let result = ProcessCommand::new("gofmt").arg(&path).output();
     let _ = std::fs::remove_file(&path);
@@ -3532,7 +3531,8 @@ mod tests {
         col.has_presence = true;
         let write = go_to_record_stmt(&col);
         assert!(
-            write.contains("if m.Avatar != nil {") && write.contains("r[\"avatar\"] = m.GetAvatar()"),
+            write.contains("if m.Avatar != nil {")
+                && write.contains("r[\"avatar\"] = m.GetAvatar()"),
             "optional bytes must be nil-guarded, got: {write}"
         );
     }
@@ -3554,7 +3554,8 @@ mod tests {
         );
         let read = go_from_row_stmt(&col, "acmev1");
         assert!(
-            read.contains("encoded, err := udbAsJSONText(raw)") && read.contains("m.Metadata = encoded"),
+            read.contains("encoded, err := udbAsJSONText(raw)")
+                && read.contains("m.Metadata = encoded"),
             "jsonb read must canonicalize via udbAsJSONText, got: {read}"
         );
 
@@ -3641,9 +3642,7 @@ mod tests {
         .expect("render");
         assert!(
             out.contains("func (r WidgetRepo) UpdateGuarded(")
-                && out.contains(
-                    "refusing to run an unconditional update"
-                ),
+                && out.contains("refusing to run an unconditional update"),
             "UpdateGuarded must reject empty expected, got:\n{out}"
         );
         assert!(
@@ -3671,16 +3670,16 @@ mod tests {
             "WIDGET_STATUS_ACTIVE".to_string(),
         ];
         let raw = render_go_entities_file(
-            &widget_entity(
-                vec!["id".to_string()],
-                vec![column("id", "string"), status],
-            ),
+            &widget_entity(vec!["id".to_string()], vec![column("id", "string"), status]),
             "acmegen",
         )
         .expect("render");
         // The sample must actually carry the column-policy table we canonicalize.
         assert!(raw.contains("type UDBColumn struct {"), "got:\n{raw}");
-        assert!(raw.contains("var WidgetColumns = map[string]UDBColumn{"), "got:\n{raw}");
+        assert!(
+            raw.contains("var WidgetColumns = map[string]UDBColumn{"),
+            "got:\n{raw}"
+        );
         // Skip only when the toolchain is absent; when gofmt IS present a failure to
         // format is a REAL generator bug (invalid Go) and must fail the test, not be
         // swallowed as "unavailable".
@@ -3688,11 +3687,18 @@ mod tests {
             eprintln!("skipping gofmt-clean assertion: gofmt not installed");
             return;
         }
-        let formatted = gofmt_canonicalize(&raw)
-            .expect("gofmt must accept and format the emitted Go (a rejection here is a generator bug)");
+        let formatted = gofmt_canonicalize(&raw).expect(
+            "gofmt must accept and format the emitted Go (a rejection here is a generator bug)",
+        );
         let twice = gofmt_canonicalize(&formatted).expect("gofmt is idempotent");
-        assert_eq!(formatted, twice, "gofmt output must be a fixed point (clean)");
-        assert!(formatted.contains("type UDBColumn struct {"), "got:\n{formatted}");
+        assert_eq!(
+            formatted, twice,
+            "gofmt output must be a fixed point (clean)"
+        );
+        assert!(
+            formatted.contains("type UDBColumn struct {"),
+            "got:\n{formatted}"
+        );
     }
 
     fn sample_manifest() -> Vec<RpcDescriptor> {

@@ -168,8 +168,8 @@ func TestConnectEnterpriseEmitsCanonicalSingletonMetadata(t *testing.T) {
 		AuthTarget: authLis.Addr().String(),
 		Username:   "u",
 		Password:   "p",
-		TenantCode: v232HintTenant,   // pre-login hint — replaced by the canonical UUID
-		ProjectID:  v232HintProject,  // pre-login hint
+		TenantCode: v232HintTenant,  // pre-login hint — replaced by the canonical UUID
+		ProjectID:  v232HintProject, // pre-login hint
 		Purpose:    "v232-unit",
 		Scopes:     []string{"udb:read", "udb:write"},
 	})

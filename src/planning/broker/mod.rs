@@ -1134,7 +1134,11 @@ pub fn build_delete_plan(
         // a physical DELETE for a table declared soft-delete.
         (true, None) => {
             let inert = table.soft_delete_column.trim();
-            let inert = if inert.is_empty() { "deleted_at" } else { inert };
+            let inert = if inert.is_empty() {
+                "deleted_at"
+            } else {
+                inert
+            };
             format!(
                 "UPDATE {}.{} SET {} = NOW() WHERE FALSE",
                 qi(&table.schema),
@@ -3105,7 +3109,11 @@ mod tests {
             },
         );
         assert_eq!(plan.errors, Vec::<String>::new());
-        assert!(plan.sql.contains(" OR "), "OR group preserved: {}", plan.sql);
+        assert!(
+            plan.sql.contains(" OR "),
+            "OR group preserved: {}",
+            plan.sql
+        );
         assert!(
             plan.sql.ends_with("AND \"deleted_at\" IS NULL"),
             "live-row predicate is the trailing mandatory conjunct: {}",
@@ -3614,7 +3622,11 @@ mod tests {
             vec!["status".to_string(), "tenant_id".to_string()]
         );
         // Caller's 2 params + the 1 tenant backstop.
-        assert_eq!(compiled_params.len(), 3, "2 caller params + tenant backstop");
+        assert_eq!(
+            compiled_params.len(),
+            3,
+            "2 caller params + tenant backstop"
+        );
     }
 
     #[test]
@@ -3903,6 +3915,10 @@ mod tests {
             legacy_plan.parameter_columns,
             vec!["status".to_string(), "tenant_id".to_string()]
         );
-        assert_eq!(compiled_params.len(), 3, "2 caller params + tenant backstop");
+        assert_eq!(
+            compiled_params.len(),
+            3,
+            "2 caller params + tenant backstop"
+        );
     }
 }

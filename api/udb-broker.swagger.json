@@ -2,7 +2,7 @@
   "swagger": "2.0",
   "info": {
     "title": "UDB Control-Plane API",
-    "version": "0.4.37",
+    "version": "0.5.0",
     "description": "HTTP/JSON (gRPC-gateway) surface for UDB control-plane services. The core DataBroker data-plane RPCs are gRPC-native and are not represented here."
   },
   "tags": [
@@ -7451,7 +7451,7 @@
     "/v1/auth/service-accounts/{fromUserId}/grant:transfer": {
       "post": {
         "summary": "Atomically transfer an ACTIVE service-account grant (its stable\nservice_identity and approved scopes) from one service account to another,\nunder revision CAS. The grant row is re-pointed from `from_user_id` to\n`to_user_id` in a single transaction, so neither the deployment-wide\nservice_identity unique index nor the per-user unique index is ever\nviolated, and no window exists in which no account owns the identity. The\nsource account is left with no grant (its credentials no longer resolve to\nthe identity); the move is a deterministic inverse of itself. This is the\nsupported recovery path when the currently-bound account's credentials are\nunavailable, replacing a non-atomic rotate-then-create.",
-        "operationId": "AuthnService_TransferServiceAccountGrant",
+        "operationId": "transferServiceAccountGrant",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -7582,7 +7582,20 @@
         ],
         "tags": [
           "AuthnService"
-        ]
+        ],
+        "x-udb-sdk-alias": "transfer_service_account_grant",
+        "x-udb-scope": [
+          "udb:authn:manage-grants"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "auth",
+        "x-udb-operation-kind": "destructive"
       }
     },
     "/v1/auth/service-accounts/{userId}/grant": {
@@ -38009,7 +38022,7 @@
     "/v1/tenants/{targetTenantId}:adminPurge": {
       "post": {
         "summary": "PRIVILEGED cross-tenant purge (Bug #2). Unlike PurgeTenant — which forces the\nbody tenant to equal the verified claim (self-purge only) — this RPC lets a\ndelegated operator purge a DIFFERENT `target_tenant_id`. It is gated by a\nDISTINCT, default-deny scope (`udb:tenant:admin-purge`) SEPARATE from the\nself-purge scope, is DESTRUCTIVE, and demands an explicit confirmation token\nplus an idempotency key. The handler routes the movement with\n`privileged_cross_tenant=true`, binds the VERIFIED delegated actor, treats\ncontrol-plane / tenant-less tables explicitly (retained + reported, never\nblind-deleted), and writes an immutable audit/outcome record. `tenant_field`\nnames the body tenant the action targets (`target_tenant_id`); the handler —\nnot the transport gate — authorizes the cross-tenant reach via the scope.",
-        "operationId": "TenantService_AdminPurgeTenant",
+        "operationId": "adminPurgeTenant",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -38140,7 +38153,20 @@
         ],
         "tags": [
           "TenantService"
-        ]
+        ],
+        "x-udb-sdk-alias": "admin_purge_tenant",
+        "x-udb-scope": [
+          "udb:tenant:admin-purge"
+        ],
+        "x-udb-retry-safe": false,
+        "x-udb-idempotency": {
+          "request_key_field": "",
+          "server_generated_key": false,
+          "duplicate_response_field": "",
+          "replay_safe": false
+        },
+        "x-udb-resource": "tenants",
+        "x-udb-operation-kind": "destructive"
       }
     },
     "/v1/tenants/{tenantId}": {

@@ -1166,13 +1166,14 @@ impl DataBrokerRuntime {
             .expected
             .as_ref()
             .expect("tx_cas_required guarantees a non-empty expected precondition");
-        let table = resolve_table_for_message(manifest, &mutation.message_type).map_err(|error| {
-            tx_object_invalid_field(
-                "message_type",
-                "must match exactly one manifest table message type",
-                error.to_string(),
-            )
-        })?;
+        let table =
+            resolve_table_for_message(manifest, &mutation.message_type).map_err(|error| {
+                tx_object_invalid_field(
+                    "message_type",
+                    "must match exactly one manifest table message type",
+                    error.to_string(),
+                )
+            })?;
         // Fence the CAS read to the caller's tenant, exactly as the unary CAS runs
         // after `set_request_local_settings`.
         set_request_local_settings(tx, context).await?;

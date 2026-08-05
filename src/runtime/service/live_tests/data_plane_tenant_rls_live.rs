@@ -145,13 +145,15 @@ async fn count_tenant_rows(pool: &sqlx::PgPool, schema: &str, tenant: &str) -> i
 
 async fn label_of(pool: &sqlx::PgPool, schema: &str, id: &str) -> String {
     use sqlx::Row;
-    sqlx::query(&format!("SELECT label FROM \"{schema}\".docs WHERE id = $1"))
-        .bind(id)
-        .fetch_one(pool)
-        .await
-        .expect("select label")
-        .try_get::<String, _>("label")
-        .expect("label column")
+    sqlx::query(&format!(
+        "SELECT label FROM \"{schema}\".docs WHERE id = $1"
+    ))
+    .bind(id)
+    .fetch_one(pool)
+    .await
+    .expect("select label")
+    .try_get::<String, _>("label")
+    .expect("label column")
 }
 
 /// RLS1: a served `Select` authenticated as tenant A must never return tenant

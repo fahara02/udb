@@ -5,6 +5,51 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.5.0] - 2026-08-05
+
+First "usable" stable release: a broad security/correctness remediation across the
+served path plus new native primitives, with a revert-proof, served-path end-to-end
+test for every fix. Semver-minor (behavior changes), so `^0.4.x` consumers do not
+auto-pull it.
+
+### Fixed
+- **Cross-tenant isolation.** Object-store keys and search/vector point-ids are now
+  tenant-namespaced (a tenant can no longer read/overwrite/delete another tenant's
+  objects or clobber their vectors); the Postgres IR compiler AND's a
+  defense-in-depth tenant predicate into reads/updates/deletes, so a body-supplied
+  foreign `tenant_id` filter affects zero rows.
+- **Wire-codec round-trip.** Postgres `real`/non-text arrays, MySQL/MSSQL temporal
+  columns (incl. bare MSSQL `DATE`/`TIME`), Cassandra typed columns, `BYTEA` bytes,
+  and JSONB structured values now round-trip exactly instead of collapsing to NULL,
+  empty, or double-encoded strings.
+- **Idempotency.** Mutation dedup binds a canonical request hash — the same key with
+  different inputs conflicts (`FAILED_PRECONDITION`) instead of replaying a bogus
+  success; the claim runs before CAS, so a response-loss retry replays the stored
+  outcome rather than a spurious precondition failure.
+- **Soft-delete.** A Delete on a `soft_delete` entity stamps the tombstone column via
+  an UPDATE instead of physically deleting the row, and ordinary reads exclude
+  tombstoned rows by default.
+- **2PC recovery.** XA commit/rollback are idempotent (an already-terminal xid is no
+  longer false-escalated to manual review) + a MySQL orphan-prepare sweep.
+- **Projection read fence.** Read-your-writes matches projection work by its natural
+  key and counts FAILED/DEAD_LETTER tasks as pending, so a projection-backed read
+  genuinely waits (or fails honestly) instead of clearing vacuously.
+- **JWKS bearer verification.** The JWKS fetch is timeout-bounded and forced refreshes
+  are rate-limited, closing an unauthenticated blocking-DoS on JWKS-mode brokers.
+- Resource-op SQL-injection guard; webhook signing secret sealed at rest; OIDC issuer
+  locked to the resolved provider; CDC events carry verified actor/correlation.
+
+### Added
+- Opaque broker-managed **row revision** with expected-revision CAS on Update/Delete.
+- **Lock-fencing at mutation commit** (`lock_name` + `fencing_token` validated against
+  LockService in the same transaction).
+- Bounded, request-hash-idempotent **bulk CAS** (`DataBroker.BulkCas`).
+- Durable, GC-converging **hard delete** for storage objects.
+- Privileged cross-tenant **`TenantService.AdminPurgeTenant`**.
+- **`BeginTx` expected-CAS** + `cdc_required` fail-closed delivery.
+- Atomic **`AuthnService.TransferServiceAccountGrant`** (service-identity cutover under
+  revision CAS) + enterprise native-connection SDK facades.
+
 ## [0.4.37] - 2026-08-04
 
 Go SDK consumer fixes. Two independent defects — each confirmed against the

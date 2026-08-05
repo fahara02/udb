@@ -736,12 +736,13 @@ pub async fn recover_abandoned_mysql_prepared(
     ensure_xa_ledger_table(pool, config).await?;
     let relation = config.xa_ledger_relation();
     let xids: Vec<String> = prepared.iter().map(|(_, xid)| xid.clone()).collect();
-    let ledger_rows: Vec<(String, String)> =
-        sqlx::query_as(&format!("SELECT xid, decision FROM {relation} WHERE xid = ANY($1)"))
-            .bind(&xids)
-            .fetch_all(pool)
-            .await
-            .map_err(|e| format!("join MySQL prepared xids against XA ledger failed: {e}"))?;
+    let ledger_rows: Vec<(String, String)> = sqlx::query_as(&format!(
+        "SELECT xid, decision FROM {relation} WHERE xid = ANY($1)"
+    ))
+    .bind(&xids)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| format!("join MySQL prepared xids against XA ledger failed: {e}"))?;
     let decision_by_xid: HashMap<String, String> = ledger_rows.into_iter().collect();
     let mut driven_terminal = 0u64;
     for (label, xid) in prepared {

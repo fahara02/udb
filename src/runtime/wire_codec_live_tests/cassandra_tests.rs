@@ -21,7 +21,9 @@ use crate::runtime::executors::{MutationExecutor, QueryExecutor};
 #[tokio::test]
 async fn cassandra_typed_columns_round_trip_served_live() {
     let Ok(dsn) = std::env::var("UDB_CASSANDRA_DSN") else {
-        eprintln!("UDB_CASSANDRA_DSN unset — skipping Cassandra typed-column wire-codec round-trip");
+        eprintln!(
+            "UDB_CASSANDRA_DSN unset — skipping Cassandra typed-column wire-codec round-trip"
+        );
         return;
     };
     let client = CassandraClient::connect(&dsn)
@@ -41,10 +43,7 @@ async fn cassandra_typed_columns_round_trip_served_live() {
         .await
         .expect("create throwaway keyspace");
     client
-        .cql_execute(
-            &format!("CREATE TYPE {ks}.addr (street text, zip int)"),
-            (),
-        )
+        .cql_execute(&format!("CREATE TYPE {ks}.addr (street text, zip int)"), ())
         .await
         .expect("create UDT");
     client
@@ -111,10 +110,22 @@ async fn cassandra_typed_columns_round_trip_served_live() {
     // Every one of these read back `null` before the fix (the `_ => Null` arm).
     assert_eq!(row["si"], json!(7), "W5: smallint");
     assert_eq!(row["ti"], json!(3), "W5: tinyint");
-    assert_eq!(row["ts"], json!(1754310896789_i64), "W5: timestamp (epoch ms)");
+    assert_eq!(
+        row["ts"],
+        json!(1754310896789_i64),
+        "W5: timestamp (epoch ms)"
+    );
     // date surfaces as the driver's raw day offset — assert non-null (revert → null).
-    assert!(row["dt"].is_number(), "W5: date decodes to a number, got {}", row["dt"]);
-    assert_eq!(row["tm"], json!(45296000000000_i64), "W5: time (ns since midnight)");
+    assert!(
+        row["dt"].is_number(),
+        "W5: date decodes to a number, got {}",
+        row["dt"]
+    );
+    assert_eq!(
+        row["tm"],
+        json!(45296000000000_i64),
+        "W5: time (ns since midnight)"
+    );
     assert_eq!(row["ip"], json!("10.1.2.3"), "W5: inet");
     assert_eq!(row["li"], json!([1, 2, 3]), "W5: list<int>");
     assert_eq!(row["st"], json!(["a", "b"]), "W5: set<text>");

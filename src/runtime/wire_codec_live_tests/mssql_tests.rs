@@ -25,7 +25,9 @@ use crate::runtime::executors::{MutationExecutor, QueryExecutor};
 #[tokio::test]
 async fn mssql_datetime_uuid_real_round_trip_served_live() {
     let Ok(dsn) = std::env::var("UDB_MSSQL_DSN") else {
-        eprintln!("UDB_MSSQL_DSN unset — skipping SQL Server temporal/uuid/real wire-codec round-trip");
+        eprintln!(
+            "UDB_MSSQL_DSN unset — skipping SQL Server temporal/uuid/real wire-codec round-trip"
+        );
         return;
     };
     let table = format!("udb_wire_mssql_{}", Uuid::new_v4().simple());

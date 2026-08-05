@@ -346,7 +346,12 @@ impl DataBrokerService {
                 std::time::Duration::from_secs(gc_interval_secs),
                 move || {
                     let sweeper_once = sweeper.clone();
-                    async move { sweeper_once.sweep_gc_intents(gc_batch_size).await.map(|n| n as i64) }
+                    async move {
+                        sweeper_once
+                            .sweep_gc_intents(gc_batch_size)
+                            .await
+                            .map(|n| n as i64)
+                    }
                 },
             );
         }

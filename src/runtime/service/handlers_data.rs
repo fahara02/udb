@@ -595,7 +595,11 @@ impl DataBrokerService {
                 let receipt_json = res.write_receipt_json.clone();
                 let mut response =
                     self.with_catalog_response_headers(Response::new(res), &metadata_context);
-                insert_ascii_header(response.metadata_mut(), "x-udb-write-receipt", &receipt_json);
+                insert_ascii_header(
+                    response.metadata_mut(),
+                    "x-udb-write-receipt",
+                    &receipt_json,
+                );
                 self.record_grpc("BulkCas", started, Ok(response))
             }
             Err(err) => self.record_grpc("BulkCas", started, Err(err)),

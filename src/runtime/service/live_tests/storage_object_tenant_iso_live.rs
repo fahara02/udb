@@ -93,10 +93,7 @@ fn object_context(tenant: &str) -> crate::RequestContext {
         tenant_id: tenant.to_string(),
         project_id: "default".to_string(),
         purpose: "object-iso-test".to_string(),
-        scopes: vec![
-            "udb:object:presign".to_string(),
-            "udb:stream".to_string(),
-        ],
+        scopes: vec!["udb:object:presign".to_string(), "udb:stream".to_string()],
         ..Default::default()
     }
 }
@@ -271,9 +268,15 @@ async fn object_put_then_cross_tenant_get_is_isolated_live() {
     );
 
     // Tenant A reads (bucket, key) back through the served get_object → its bytes.
-    let a_bytes = read_object(&runtime, &manifest, &bucket, &key, object_context(&tenant_a))
-        .await
-        .expect("tenant-A served get_object");
+    let a_bytes = read_object(
+        &runtime,
+        &manifest,
+        &bucket,
+        &key,
+        object_context(&tenant_a),
+    )
+    .await
+    .expect("tenant-A served get_object");
     assert_eq!(
         a_bytes, payload,
         "tenant A must read back its own object bytes"
@@ -284,8 +287,14 @@ async fn object_put_then_cross_tenant_get_is_isolated_live() {
     // returning A's exact bytes is the leak.
     // A miss on B's namespaced key surfaces as an error (the correct isolated
     // outcome); only a SUCCESSFUL read by B must not equal A's bytes.
-    if let Ok(b_bytes) =
-        read_object(&runtime, &manifest, &bucket, &key, object_context(&tenant_b)).await
+    if let Ok(b_bytes) = read_object(
+        &runtime,
+        &manifest,
+        &bucket,
+        &key,
+        object_context(&tenant_b),
+    )
+    .await
     {
         assert_ne!(
             b_bytes, payload,

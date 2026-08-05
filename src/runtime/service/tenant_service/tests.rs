@@ -685,5 +685,8 @@ async fn admin_purge_rejects_forged_delegated_actor() {
         .await
         .expect_err("a forged delegated_actor must be rejected for a non-cross-tenant admin");
     assert_eq!(err.code(), tonic::Code::PermissionDenied);
-    assert_eq!(decode_detail(&err).policy_decision_id, "delegated_actor_mismatch");
+    assert_eq!(
+        decode_detail(&err).policy_decision_id,
+        "delegated_actor_mismatch"
+    );
 }

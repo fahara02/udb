@@ -419,8 +419,12 @@ fn gc_intent_from_row(row: &sqlx::postgres::PgRow) -> Result<GcIntentRow, Status
         )
     };
     Ok(GcIntentRow {
-        intent_id: row.try_get("intent_id").map_err(|e| decode("intent_id", e))?,
-        tenant_id: row.try_get("tenant_id").map_err(|e| decode("tenant_id", e))?,
+        intent_id: row
+            .try_get("intent_id")
+            .map_err(|e| decode("intent_id", e))?,
+        tenant_id: row
+            .try_get("tenant_id")
+            .map_err(|e| decode("tenant_id", e))?,
         project_id: row
             .try_get("project_id")
             .map_err(|e| decode("project_id", e))?,

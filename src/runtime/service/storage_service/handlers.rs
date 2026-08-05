@@ -29,11 +29,10 @@ use super::errors::{
     api_error_upload_url_unavailable, delete_expected_status_mismatch_status,
     file_object_bytes_missing_status, finalize_immutable_mismatch_status,
     object_delete_failed_status, object_store_bytes_missing_status,
-    object_stream_requires_store_status, reissue_requires_pending_status,
-    status_with_reason, storage_capability_status, storage_file_not_found_status,
-    storage_idempotency_conflict_status, storage_internal_status,
-    upload_already_finalized_status, upload_etag_mismatch_status, upload_size_mismatch_status,
-    uploaded_object_missing_status, validate_object_key_filename,
+    object_stream_requires_store_status, reissue_requires_pending_status, status_with_reason,
+    storage_capability_status, storage_file_not_found_status, storage_idempotency_conflict_status,
+    storage_internal_status, upload_already_finalized_status, upload_etag_mismatch_status,
+    upload_size_mismatch_status, uploaded_object_missing_status, validate_object_key_filename,
     validate_register_upload_required_fields,
 };
 use super::model::{
@@ -218,8 +217,8 @@ fn finalize_replay_matches(
     prior: &storage_entity_pb::File,
     file_type: &str,
 ) -> bool {
-    let content_type_ok = req.content_type.trim().is_empty()
-        || req.content_type.trim() == prior.content_type.trim();
+    let content_type_ok =
+        req.content_type.trim().is_empty() || req.content_type.trim() == prior.content_type.trim();
     let file_type_ok = file_type.is_empty() || file_type == file_type_to_short(prior.file_type);
     let reference_id_ok = req.reference_id.trim().is_empty()
         || req

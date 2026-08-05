@@ -131,12 +131,8 @@ impl StorageServiceImpl {
                     converged += 1;
                 }
                 Err(err) => {
-                    self.record_gc_intent_failure(
-                        &intent.intent_id,
-                        err.message(),
-                        max_attempts,
-                    )
-                    .await?;
+                    self.record_gc_intent_failure(&intent.intent_id, err.message(), max_attempts)
+                        .await?;
                 }
             }
         }

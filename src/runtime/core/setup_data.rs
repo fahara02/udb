@@ -1490,16 +1490,14 @@ impl DataBrokerRuntime {
                 format!("native-service manifest unavailable for lock fencing: {err}"),
             )
         })?;
-        let lock_table = resolve_table_for_message(
-            native,
-            crate::runtime::service::lock_service::LOCK_MSG,
-        )
-        .map_err(|_| {
-            setup_data_internal_status(
-                "fencing_lock_table",
-                "the LockService entity is not present in the native manifest",
-            )
-        })?;
+        let lock_table =
+            resolve_table_for_message(native, crate::runtime::service::lock_service::LOCK_MSG)
+                .map_err(|_| {
+                    setup_data_internal_status(
+                        "fencing_lock_table",
+                        "the LockService entity is not present in the native manifest",
+                    )
+                })?;
         // Newest acquisition wins (one live row per (tenant, lock_name)); FOR UPDATE
         // serializes against a concurrent re-grant that would bump the token.
         let sql = format!(
@@ -2601,8 +2599,11 @@ impl DataBrokerRuntime {
                 Some(row_json) => {
                     matched += 1;
                     item_result.matched = true;
-                    let field_ok =
-                        bulk_cas_field_precondition_holds(&row_json, item.expected.as_ref(), &resolver);
+                    let field_ok = bulk_cas_field_precondition_holds(
+                        &row_json,
+                        item.expected.as_ref(),
+                        &resolver,
+                    );
                     let revision_ok = if item.expected_revision.trim().is_empty() {
                         true
                     } else {
@@ -4704,7 +4705,8 @@ fn idempotency_request_mismatch_status() -> tonic::Status {
         "idempotency_key was already used for a different request; reuse a key only to retry an identical request",
         [(
             "idempotency_key".to_string(),
-            "the same idempotency_key was already claimed by a request with different inputs".to_string(),
+            "the same idempotency_key was already claimed by a request with different inputs"
+                .to_string(),
         )],
     )
 }
@@ -6618,8 +6620,8 @@ mod setup_data_consistency_tests {
         mutation_response_idempotency_json, mutation_response_resource_uri,
         mutation_response_resource_uri_or_fallback, pg_outbox_receipt_store_mismatch,
         pk_equality_values_from_filter, pk_tuple_canonical, pk_value_token,
-        projection_system_store_opt_in_value, returned_record_json_or_status,
-        row_revision_key, row_revision_precondition_failed_status, validate_deployment_tier_floor,
+        projection_system_store_opt_in_value, returned_record_json_or_status, row_revision_key,
+        row_revision_precondition_failed_status, validate_deployment_tier_floor,
         write_receipt_json_or_status,
     };
     use crate::backend::ControlPlaneHaLevel;
@@ -6741,8 +6743,7 @@ mod setup_data_consistency_tests {
     #[test]
     fn bulk_cas_field_precondition_evaluates_without_erroring() {
         let row = serde_json::json!({"status": "active", "version": 3});
-        let resolver: std::collections::HashMap<String, String> =
-            std::collections::HashMap::new();
+        let resolver: std::collections::HashMap<String, String> = std::collections::HashMap::new();
         // No precondition → holds.
         assert!(bulk_cas_field_precondition_holds(&row, None, &resolver));
         let want = |field: &str, kind: prost_types::value::Kind| prost_types::Struct {
@@ -6756,15 +6757,27 @@ mod setup_data_consistency_tests {
             "status",
             prost_types::value::Kind::StringValue("active".into()),
         );
-        assert!(bulk_cas_field_precondition_holds(&row, Some(&ok), &resolver));
+        assert!(bulk_cas_field_precondition_holds(
+            &row,
+            Some(&ok),
+            &resolver
+        ));
         let bad = want(
             "status",
             prost_types::value::Kind::StringValue("archived".into()),
         );
-        assert!(!bulk_cas_field_precondition_holds(&row, Some(&bad), &resolver));
+        assert!(!bulk_cas_field_precondition_holds(
+            &row,
+            Some(&bad),
+            &resolver
+        ));
         // int/float tolerance: an INTEGER column 3 matches an asserted 3.0.
         let num = want("version", prost_types::value::Kind::NumberValue(3.0));
-        assert!(bulk_cas_field_precondition_holds(&row, Some(&num), &resolver));
+        assert!(bulk_cas_field_precondition_holds(
+            &row,
+            Some(&num),
+            &resolver
+        ));
     }
 
     #[test]
@@ -6800,7 +6813,11 @@ mod setup_data_consistency_tests {
         // Non-disclosing: names only the contract, never a current revision/value.
         let rev = row_revision_precondition_failed_status();
         assert!(rev.message().contains("revision precondition failed"));
-        assert!(!rev.message().to_ascii_lowercase().contains("current revision is"));
+        assert!(
+            !rev.message()
+                .to_ascii_lowercase()
+                .contains("current revision is")
+        );
     }
 
     #[test]
@@ -7185,11 +7202,17 @@ mod setup_data_consistency_tests {
         };
         let base = idempotency_request_hash_upsert(&request, &record);
         // Key order does not matter (canonicalized).
-        assert_eq!(base, idempotency_request_hash_upsert(&request, &record_reordered));
+        assert_eq!(
+            base,
+            idempotency_request_hash_upsert(&request, &record_reordered)
+        );
         // A different record rotates the hash.
         assert_ne!(
             base,
-            idempotency_request_hash_upsert(&request, &serde_json::json!({"id": "r1", "amount": 11}))
+            idempotency_request_hash_upsert(
+                &request,
+                &serde_json::json!({"id": "r1", "amount": 11})
+            )
         );
         // A different conflict target rotates the hash.
         request.conflict_fields = vec!["id".to_string(), "tenant".to_string()];

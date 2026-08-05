@@ -106,18 +106,32 @@ async fn postgres_real_and_non_text_arrays_round_trip_served_live() {
     let mut q = sqlx::query(&insert_sql);
     q = bind_one(q, Some(&col("id", "TEXT")), &json!("m1")).expect("bind id");
     q = bind_one(q, Some(&col("real_col", "REAL")), &json!(3.5)).expect("bind real_col");
-    q = bind_one(q, Some(&col("double_col", "DOUBLE PRECISION")), &json!(2.25))
-        .expect("bind double_col");
+    q = bind_one(
+        q,
+        Some(&col("double_col", "DOUBLE PRECISION")),
+        &json!(2.25),
+    )
+    .expect("bind double_col");
     q = bind_one(q, Some(&col("arr_i64", "BIGINT[]")), &json!([1, 2, 3])).expect("bind arr_i64");
     q = q.bind(vec![10_i32, 20, 30]); // arr_i32 (integer[])
-    q = bind_one(q, Some(&col("arr_bool", "BOOLEAN[]")), &json!([true, false, true]))
-        .expect("bind arr_bool");
-    q = bind_one(q, Some(&col("arr_f64", "DOUBLE PRECISION[]")), &json!([1.5, 2.5]))
-        .expect("bind arr_f64");
+    q = bind_one(
+        q,
+        Some(&col("arr_bool", "BOOLEAN[]")),
+        &json!([true, false, true]),
+    )
+    .expect("bind arr_bool");
+    q = bind_one(
+        q,
+        Some(&col("arr_f64", "DOUBLE PRECISION[]")),
+        &json!([1.5, 2.5]),
+    )
+    .expect("bind arr_f64");
     q = q.bind(vec![1.25_f32, 2.75]); // arr_f32 (real[])
     q = q.bind(vec![u1, u2]); // arr_uuid (uuid[])
     q = bind_one(q, Some(&col("arr_text", "TEXT[]")), &json!(["a", "b"])).expect("bind arr_text");
-    q.execute(&pool).await.expect("data-plane insert of matrix row");
+    q.execute(&pool)
+        .await
+        .expect("data-plane insert of matrix row");
 
     let row = served_one(
         &pool,
@@ -137,9 +151,21 @@ async fn postgres_real_and_non_text_arrays_round_trip_served_live() {
         ("real_col", json!(3.5), "W1: REAL scalar (revert → null)"),
         ("double_col", json!(2.25), "float8 control"),
         ("arr_i64", json!([1, 2, 3]), "W2: bigint[] (revert → [])"),
-        ("arr_i32", json!([10, 20, 30]), "W2: integer[] (revert → [])"),
-        ("arr_bool", json!([true, false, true]), "W2: boolean[] (revert → [])"),
-        ("arr_f64", json!([1.5, 2.5]), "W2: double precision[] (revert → [])"),
+        (
+            "arr_i32",
+            json!([10, 20, 30]),
+            "W2: integer[] (revert → [])",
+        ),
+        (
+            "arr_bool",
+            json!([true, false, true]),
+            "W2: boolean[] (revert → [])",
+        ),
+        (
+            "arr_f64",
+            json!([1.5, 2.5]),
+            "W2: double precision[] (revert → [])",
+        ),
         ("arr_f32", json!([1.25, 2.75]), "W2: real[] (revert → [])"),
         (
             "arr_uuid",
@@ -277,10 +303,12 @@ async fn postgres_jsonb_structured_round_trip_served_live() {
     }
     // A genuine SQL NULL: omit the column so the row's doc is SQL NULL, not a
     // jsonb 'null' — the distinction #10 must preserve.
-    sqlx::query(&format!("INSERT INTO \"{schema}\".docs (id) VALUES ('sqlnull')"))
-        .execute(&pool)
-        .await
-        .expect("insert sql-null row");
+    sqlx::query(&format!(
+        "INSERT INTO \"{schema}\".docs (id) VALUES ('sqlnull')"
+    ))
+    .execute(&pool)
+    .await
+    .expect("insert sql-null row");
 
     // Structured object round-trips as an OBJECT (no double-encoding).
     let obj_row = served_one(
@@ -293,15 +321,25 @@ async fn postgres_jsonb_structured_round_trip_served_live() {
         "#10: JSONB object must read back structured, not a double-encoded string (got {})",
         obj_row["doc"]
     );
-    assert_eq!(obj_row["doc"], structured, "#10: JSONB object exact round-trip");
+    assert_eq!(
+        obj_row["doc"], structured,
+        "#10: JSONB object exact round-trip"
+    );
 
     let arr_row = served_one(
         &pool,
         &format!("SELECT doc FROM \"{schema}\".docs WHERE id = 'arr'"),
     )
     .await;
-    assert!(arr_row["doc"].is_array(), "#10: JSONB array reads back as array");
-    assert_eq!(arr_row["doc"], json!([1, 2, 3]), "#10: JSONB array exact round-trip");
+    assert!(
+        arr_row["doc"].is_array(),
+        "#10: JSONB array reads back as array"
+    );
+    assert_eq!(
+        arr_row["doc"],
+        json!([1, 2, 3]),
+        "#10: JSONB array exact round-trip"
+    );
 
     // `jsonb_typeof` proves the stored physical type is the structured type — a
     // double-encoded write would report 'string'. This SELECT is itself served
@@ -318,8 +356,16 @@ async fn postgres_jsonb_structured_round_trip_served_live() {
             .map(|r| r["t"].clone())
             .unwrap_or(JsonValue::Null)
     };
-    assert_eq!(type_of("obj"), json!("object"), "#10: jsonb_typeof(obj) = object");
-    assert_eq!(type_of("arr"), json!("array"), "#10: jsonb_typeof(arr) = array");
+    assert_eq!(
+        type_of("obj"),
+        json!("object"),
+        "#10: jsonb_typeof(obj) = object"
+    );
+    assert_eq!(
+        type_of("arr"),
+        json!("array"),
+        "#10: jsonb_typeof(arr) = array"
+    );
     // JSON null vs SQL NULL: the JSON-null value is stored as jsonb 'null'
     // (jsonb_typeof = 'null'); the omitted column is SQL NULL (jsonb_typeof =
     // SQL NULL → serialized as JSON null). The two are distinguishable here.

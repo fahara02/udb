@@ -312,8 +312,14 @@ pub(crate) async fn admin_purge_tenant(
             serde_json::Value::String(target.clone()),
         );
     }
-    super::events::emit_admin_purge_audit(svc, &target, &verified_actor, &decision_id, audit_payload)
-        .await;
+    super::events::emit_admin_purge_audit(
+        svc,
+        &target,
+        &verified_actor,
+        &decision_id,
+        audit_payload,
+    )
+    .await;
 
     Ok(Response::new(response_from_outcome_json(
         &target,
@@ -792,7 +798,10 @@ fn purged_from_json(value: &serde_json::Value) -> Vec<tenant_pb::PurgedTableCoun
                     schema: json_str(p, "schema"),
                     table: json_str(p, "table"),
                     tenant_column: json_str(p, "tenant_column"),
-                    deleted: p.get("deleted").and_then(serde_json::Value::as_u64).unwrap_or(0),
+                    deleted: p
+                        .get("deleted")
+                        .and_then(serde_json::Value::as_u64)
+                        .unwrap_or(0),
                 })
                 .collect()
         })
@@ -897,7 +906,10 @@ mod tests {
             admin_purge_request_hash("t1", "HARD", "gdpr", 0, "other", "verified"),
             admin_purge_request_hash("t1", "HARD", "gdpr", 0, "actor", "other"),
         ] {
-            assert_ne!(base, changed, "a changed authoritative input must rotate the hash");
+            assert_ne!(
+                base, changed,
+                "a changed authoritative input must rotate the hash"
+            );
         }
     }
 

@@ -41,11 +41,6 @@ mod projection_acceptance_tests;
 pub mod replica;
 #[cfg(test)]
 mod rls_context_tests;
-/// Env-gated SERVED wire-codec round-trip live tests for this session's decoder
-/// fixes (W1/W2/W3/W4/W5, bug #2 bytea, #10 jsonb). Runtime-skip without
-/// `UDB_*_DSN`; each per-backend file is `*_tests.rs` for the env-reads guard.
-#[cfg(test)]
-mod wire_codec_live_tests;
 pub mod saga;
 pub mod saga_compensators; // U19: plugin-aware backend compensator dispatch
 pub mod schema_registry;
@@ -59,6 +54,11 @@ pub mod singleton;
 pub mod slo; // Phase 10: SLO/error-budget catalog + unified readiness contract
 pub mod system;
 pub mod tenant_movement;
+/// Env-gated SERVED wire-codec round-trip live tests for this session's decoder
+/// fixes (W1/W2/W3/W4/W5, bug #2 bytea, #10 jsonb). Runtime-skip without
+/// `UDB_*_DSN`; each per-backend file is `*_tests.rs` for the env-reads guard.
+#[cfg(test)]
+mod wire_codec_live_tests;
 pub mod xa;
 pub mod xa_postgres;
 pub mod xa_recovery; // C6: in-doubt 2PC recovery worker (PG + MySQL participants)

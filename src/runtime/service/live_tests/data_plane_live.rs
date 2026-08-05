@@ -132,12 +132,7 @@ fn col(name: &str, sql_type: &str, is_primary: bool) -> ManifestColumn {
 /// relation is `<schema>.<table>`, tenant-scoped on `tenant_id` (so the planner's
 /// tenant-isolation gate is satisfied by a `tenant_id` filter). When `soft_delete`
 /// is set, adds a `deleted_at` tombstone column and marks the table soft-delete.
-fn widget_manifest(
-    schema: &str,
-    table: &str,
-    message: &str,
-    soft_delete: bool,
-) -> CatalogManifest {
+fn widget_manifest(schema: &str, table: &str, message: &str, soft_delete: bool) -> CatalogManifest {
     let mut columns = vec![
         col("id", "TEXT", true),
         col("tenant_id", "TEXT", false),
@@ -306,7 +301,10 @@ async fn served_idempotency_key_reuse_with_different_input_is_refused_live() {
         )
         .await
         .expect("first keyed upsert succeeds");
-        assert_eq!(first.affected_rows, 1, "first upsert writes exactly one row");
+        assert_eq!(
+            first.affected_rows, 1,
+            "first upsert writes exactly one row"
+        );
 
         // (b1) SAME key, DIFFERENT record targeting a DIFFERENT primary key (id_b).
         // Reverting the request-hash guard replays (a)'s stored success — a bogus
@@ -520,7 +518,11 @@ async fn served_soft_delete_tombstones_and_reads_exclude_it_live() {
     .await
     .expect("create sd_widgets");
     const MSG: &str = "acme.dp.v1.SoftWidget";
-    let svc = dp_service(&dsn, widget_manifest(&schema, "sd_widgets", "SoftWidget", true)).await;
+    let svc = dp_service(
+        &dsn,
+        widget_manifest(&schema, "sd_widgets", "SoftWidget", true),
+    )
+    .await;
 
     let id_kept = format!("keep-{}", Uuid::new_v4().simple());
     let id_deleted = format!("del-{}", Uuid::new_v4().simple());
@@ -656,7 +658,8 @@ async fn served_row_revision_cas_gates_updates_live() {
     .await
     .expect("create widgets");
     const MSG: &str = "acme.dp.v1.Widget";
-    let svc = Arc::new(dp_service(&dsn, widget_manifest(&schema, "widgets", "Widget", false)).await);
+    let svc =
+        Arc::new(dp_service(&dsn, widget_manifest(&schema, "widgets", "Widget", false)).await);
 
     let id = format!("rev-{}", Uuid::new_v4().simple());
 
@@ -818,8 +821,17 @@ async fn served_status_of(
     message: &str,
     id: &str,
 ) -> Option<String> {
-    let rows = served_select_rows(svc, tenant, message, json!({"id": id, "tenant_id": tenant}), false).await;
-    rows.records_json.first().and_then(|bytes| record_status(bytes))
+    let rows = served_select_rows(
+        svc,
+        tenant,
+        message,
+        json!({"id": id, "tenant_id": tenant}),
+        false,
+    )
+    .await;
+    rows.records_json
+        .first()
+        .and_then(|bytes| record_status(bytes))
 }
 
 /// The broker's opaque revision for a single row (via the served `include_revision`
@@ -830,7 +842,14 @@ async fn served_row_revision(
     message: &str,
     id: &str,
 ) -> Option<String> {
-    let rows = served_select_rows(svc, tenant, message, json!({"id": id, "tenant_id": tenant}), true).await;
+    let rows = served_select_rows(
+        svc,
+        tenant,
+        message,
+        json!({"id": id, "tenant_id": tenant}),
+        true,
+    )
+    .await;
     rows.record_revisions.first().cloned()
 }
 
@@ -924,51 +943,122 @@ async fn served_bulk_cas_applies_only_passing_items_and_is_tenant_scoped_live() 
     let r_foreign = format!("rf-{}", Uuid::new_v4().simple());
     let missing = format!("gone-{}", Uuid::new_v4().simple());
 
-    let r1_seed = served_upsert(&svc, &tenant, MSG, json!({"id": r1, "tenant_id": tenant, "status": "A"}), "")
-        .await
-        .expect("seed r1");
+    let r1_seed = served_upsert(
+        &svc,
+        &tenant,
+        MSG,
+        json!({"id": r1, "tenant_id": tenant, "status": "A"}),
+        "",
+    )
+    .await
+    .expect("seed r1");
     for id in [&r2, &r3] {
-        served_upsert(&svc, &tenant, MSG, json!({"id": id, "tenant_id": tenant, "status": "A"}), "")
-            .await
-            .expect("seed row");
+        served_upsert(
+            &svc,
+            &tenant,
+            MSG,
+            json!({"id": id, "tenant_id": tenant, "status": "A"}),
+            "",
+        )
+        .await
+        .expect("seed row");
     }
     // r4: seed, capture its revision, then bump it so that captured token is STALE.
-    served_upsert(&svc, &tenant, MSG, json!({"id": r4, "tenant_id": tenant, "status": "A"}), "")
-        .await
-        .expect("seed r4");
+    served_upsert(
+        &svc,
+        &tenant,
+        MSG,
+        json!({"id": r4, "tenant_id": tenant, "status": "A"}),
+        "",
+    )
+    .await
+    .expect("seed r4");
     let r4_stale_rev = served_row_revision(&svc, &tenant, MSG, &r4)
         .await
         .expect("r4 revision");
-    served_update(&svc, &tenant, MSG, json!({"id": r4, "tenant_id": tenant}), json!({"status": "A4"}))
-        .await
-        .expect("bump r4 so its captured revision is stale");
+    served_update(
+        &svc,
+        &tenant,
+        MSG,
+        json!({"id": r4, "tenant_id": tenant}),
+        json!({"status": "A4"}),
+    )
+    .await
+    .expect("bump r4 so its captured revision is stale");
     // A row owned by a DIFFERENT tenant.
-    served_upsert(&svc, &foreign_tenant, MSG, json!({"id": r_foreign, "tenant_id": foreign_tenant, "status": "FA"}), "")
-        .await
-        .expect("seed foreign-tenant row");
+    served_upsert(
+        &svc,
+        &foreign_tenant,
+        MSG,
+        json!({"id": r_foreign, "tenant_id": foreign_tenant, "status": "FA"}),
+        "",
+    )
+    .await
+    .expect("seed foreign-tenant row");
 
     let r1_rev = r1_seed.revision.clone();
-    assert!(!r1_rev.is_empty(), "the upsert returns r1's opaque revision");
+    assert!(
+        !r1_rev.is_empty(),
+        "the upsert returns r1's opaque revision"
+    );
 
     let items = vec![
         // r1: CURRENT revision → applies.
-        bulk_item(json!({"id": r1, "tenant_id": tenant}), json!({"status": "B"}), None, &r1_rev),
+        bulk_item(
+            json!({"id": r1, "tenant_id": tenant}),
+            json!({"status": "B"}),
+            None,
+            &r1_rev,
+        ),
         // r2: a WRONG field-CAS assertion → conflict (unchanged).
-        bulk_item(json!({"id": r2, "tenant_id": tenant}), json!({"status": "B"}), Some(json!({"status": "WRONG"})), ""),
+        bulk_item(
+            json!({"id": r2, "tenant_id": tenant}),
+            json!({"status": "B"}),
+            Some(json!({"status": "WRONG"})),
+            "",
+        ),
         // r3: the CURRENT field value asserted → applies.
-        bulk_item(json!({"id": r3, "tenant_id": tenant}), json!({"status": "B"}), Some(json!({"status": "A"})), ""),
+        bulk_item(
+            json!({"id": r3, "tenant_id": tenant}),
+            json!({"status": "B"}),
+            Some(json!({"status": "A"})),
+            "",
+        ),
         // r4: a now-STALE revision → conflict (unchanged).
-        bulk_item(json!({"id": r4, "tenant_id": tenant}), json!({"status": "B"}), None, &r4_stale_rev),
+        bulk_item(
+            json!({"id": r4, "tenant_id": tenant}),
+            json!({"status": "B"}),
+            None,
+            &r4_stale_rev,
+        ),
         // a non-existent id → conflict, not matched.
-        bulk_item(json!({"id": missing, "tenant_id": tenant}), json!({"status": "B"}), None, ""),
+        bulk_item(
+            json!({"id": missing, "tenant_id": tenant}),
+            json!({"status": "B"}),
+            None,
+            "",
+        ),
     ];
     let resp = served_bulk_cas(&svc, &tenant, MSG, items, "", 0)
         .await
         .expect("bulk cas batch");
-    assert_eq!(resp.matched, 4, "r1..r4 exist; the missing id is not matched");
-    assert_eq!(resp.changed, 2, "only revision-current r1 and field-current r3 apply");
-    assert_eq!(resp.conflicted, 3, "r2 field-CAS + r4 stale-revision + missing id");
-    assert_eq!(resp.results.len(), 5, "per-item results are index-aligned with the request");
+    assert_eq!(
+        resp.matched, 4,
+        "r1..r4 exist; the missing id is not matched"
+    );
+    assert_eq!(
+        resp.changed, 2,
+        "only revision-current r1 and field-current r3 apply"
+    );
+    assert_eq!(
+        resp.conflicted, 3,
+        "r2 field-CAS + r4 stale-revision + missing id"
+    );
+    assert_eq!(
+        resp.results.len(),
+        5,
+        "per-item results are index-aligned with the request"
+    );
     assert!(resp.results[0].matched && resp.results[0].changed);
     assert!(resp.results[1].matched && resp.results[1].conflicted);
     assert!(resp.results[2].changed);
@@ -976,8 +1066,14 @@ async fn served_bulk_cas_applies_only_passing_items_and_is_tenant_scoped_live() 
     assert!(!resp.results[4].matched && resp.results[4].conflicted);
 
     // Served reads: only the passing items applied.
-    assert_eq!(served_status_of(&svc, &tenant, MSG, &r1).await.as_deref(), Some("B"));
-    assert_eq!(served_status_of(&svc, &tenant, MSG, &r3).await.as_deref(), Some("B"));
+    assert_eq!(
+        served_status_of(&svc, &tenant, MSG, &r1).await.as_deref(),
+        Some("B")
+    );
+    assert_eq!(
+        served_status_of(&svc, &tenant, MSG, &r3).await.as_deref(),
+        Some("B")
+    );
     assert_eq!(
         served_status_of(&svc, &tenant, MSG, &r2).await.as_deref(),
         Some("A"),
@@ -1001,7 +1097,9 @@ async fn served_bulk_cas_applies_only_passing_items_and_is_tenant_scoped_live() 
         .await
         .expect("cross-tenant bulk cas call");
     assert_eq!(
-        served_status_of(&svc, &foreign_tenant, MSG, &r_foreign).await.as_deref(),
+        served_status_of(&svc, &foreign_tenant, MSG, &r_foreign)
+            .await
+            .as_deref(),
         Some("FA"),
         "a caller-tenant batch must not mutate another tenant's row"
     );
@@ -1047,16 +1145,37 @@ async fn served_bulk_cas_is_bounded_and_request_hash_idempotent_live() {
     let b = format!("b-{}", Uuid::new_v4().simple());
     let c = format!("c-{}", Uuid::new_v4().simple());
     for id in [&a, &b, &c] {
-        served_upsert(&svc, &tenant, MSG, json!({"id": id, "tenant_id": tenant, "status": "A"}), "")
-            .await
-            .expect("seed row");
+        served_upsert(
+            &svc,
+            &tenant,
+            MSG,
+            json!({"id": id, "tenant_id": tenant, "status": "A"}),
+            "",
+        )
+        .await
+        .expect("seed row");
     }
 
     // Bounded: a 3-item batch under an explicit 2-row ceiling is rejected up front.
     let over = vec![
-        bulk_item(json!({"id": a, "tenant_id": tenant}), json!({"status": "B"}), None, ""),
-        bulk_item(json!({"id": b, "tenant_id": tenant}), json!({"status": "B"}), None, ""),
-        bulk_item(json!({"id": c, "tenant_id": tenant}), json!({"status": "B"}), None, ""),
+        bulk_item(
+            json!({"id": a, "tenant_id": tenant}),
+            json!({"status": "B"}),
+            None,
+            "",
+        ),
+        bulk_item(
+            json!({"id": b, "tenant_id": tenant}),
+            json!({"status": "B"}),
+            None,
+            "",
+        ),
+        bulk_item(
+            json!({"id": c, "tenant_id": tenant}),
+            json!({"status": "B"}),
+            None,
+            "",
+        ),
     ];
     let err = served_bulk_cas(&svc, &tenant, MSG, over, "", 2)
         .await
@@ -1093,8 +1212,14 @@ async fn served_bulk_cas_is_bounded_and_request_hash_idempotent_live() {
     let replay = served_bulk_cas(&svc, &tenant, MSG, batch(), &key, 0)
         .await
         .expect("keyed replay bulk cas");
-    assert_eq!(replay.matched, first.matched, "replay reports the original matched count");
-    assert_eq!(replay.changed, first.changed, "replay reports the original changed count");
+    assert_eq!(
+        replay.matched, first.matched,
+        "replay reports the original matched count"
+    );
+    assert_eq!(
+        replay.changed, first.changed,
+        "replay reports the original changed count"
+    );
     assert_eq!(replay.conflicted, first.conflicted);
     let rev_after_replay = served_row_revision(&svc, &tenant, MSG, &a)
         .await
@@ -1174,9 +1299,15 @@ async fn served_mutation_fences_stale_lock_token_with_no_side_effect_live() {
 
     // The CURRENT token holder commits a mutation.
     let id = format!("w-{}", Uuid::new_v4().simple());
-    served_upsert(&svc, &tenant, MSG, json!({"id": id, "tenant_id": tenant, "status": "A"}), "")
-        .await
-        .expect("seed row");
+    served_upsert(
+        &svc,
+        &tenant,
+        MSG,
+        json!({"id": id, "tenant_id": tenant, "status": "A"}),
+        "",
+    )
+    .await
+    .expect("seed row");
     let fenced_update = |token: i64, status: &str, key: &str| UpdateRequest {
         message_type: MSG.to_string(),
         filter: json_to_struct(&json!({"id": id, "tenant_id": tenant})),
@@ -1191,10 +1322,19 @@ async fn served_mutation_fences_stale_lock_token_with_no_side_effect_live() {
         .await
         .expect("the current-token holder's mutation commits")
         .into_inner();
-    assert_eq!(ok.affected_rows, 1, "the current fencing-token holder writes");
+    assert_eq!(
+        ok.affected_rows, 1,
+        "the current fencing-token holder writes"
+    );
     let rev_after_ok = ok.revision.clone();
-    assert!(!rev_after_ok.is_empty(), "the committed write returns a revision");
-    assert_eq!(served_status_of(&svc, &tenant, MSG, &id).await.as_deref(), Some("HELD-BY-A"));
+    assert!(
+        !rev_after_ok.is_empty(),
+        "the committed write returns a revision"
+    );
+    assert_eq!(
+        served_status_of(&svc, &tenant, MSG, &id).await.as_deref(),
+        Some("HELD-BY-A")
+    );
 
     // A NEWER owner takes over: A releases, B acquires → token N+1.
     lock_svc
@@ -1232,19 +1372,23 @@ async fn served_mutation_fences_stale_lock_token_with_no_side_effect_live() {
 
     // Baseline for the "no idempotency side effect" proof.
     let idem_rel = SystemCatalogConfig::current().idempotency_keys_relation();
-    let idem_before: i64 =
-        sqlx::query_scalar(&format!("SELECT COUNT(*) FROM {idem_rel} WHERE tenant_id = $1"))
-            .bind(&tenant)
-            .fetch_one(&pool)
-            .await
-            .expect("count idempotency rows before the fenced write");
+    let idem_before: i64 = sqlx::query_scalar(&format!(
+        "SELECT COUNT(*) FROM {idem_rel} WHERE tenant_id = $1"
+    ))
+    .bind(&tenant)
+    .fetch_one(&pool)
+    .await
+    .expect("count idempotency rows before the fenced write");
 
     // The fenced-off writer still presents the STALE token N; it must be rejected
     // fail-closed. It carries an idempotency key so we can prove no dedup claim was
     // burned.
     let stale_key = format!("stale-{}", Uuid::new_v4().simple());
     let stale = svc
-        .update(with_ctx(fenced_update(token_n, "HACKED-BY-A", &stale_key), &tenant))
+        .update(with_ctx(
+            fenced_update(token_n, "HACKED-BY-A", &stale_key),
+            &tenant,
+        ))
         .await
         .expect_err("a stale fencing token must be rejected fail-closed");
     assert_eq!(
@@ -1261,18 +1405,21 @@ async fn served_mutation_fences_stale_lock_token_with_no_side_effect_live() {
     );
     // NO revision bump (proxy: nothing committed in the write tx).
     assert_eq!(
-        served_row_revision(&svc, &tenant, MSG, &id).await.as_deref(),
+        served_row_revision(&svc, &tenant, MSG, &id)
+            .await
+            .as_deref(),
         Some(rev_after_ok.as_str()),
         "the fenced write must not bump the row revision"
     );
     // NO idempotency side effect: the fencing gate runs BEFORE the dedup claim, so
     // the rolled-back tx persists no claim for the stale attempt's key.
-    let idem_after: i64 =
-        sqlx::query_scalar(&format!("SELECT COUNT(*) FROM {idem_rel} WHERE tenant_id = $1"))
-            .bind(&tenant)
-            .fetch_one(&pool)
-            .await
-            .expect("count idempotency rows after the fenced write");
+    let idem_after: i64 = sqlx::query_scalar(&format!(
+        "SELECT COUNT(*) FROM {idem_rel} WHERE tenant_id = $1"
+    ))
+    .bind(&tenant)
+    .fetch_one(&pool)
+    .await
+    .expect("count idempotency rows after the fenced write");
     assert_eq!(
         idem_after, idem_before,
         "a fenced-off write must not persist an idempotency claim"
@@ -1395,9 +1542,15 @@ async fn served_begin_tx_expected_cas_mismatch_aborts_with_nothing_applied_live(
     let reader = dp_service(&dsn, widget_manifest(&schema, "widgets", "Widget", false)).await;
 
     let id = format!("tx-{}", Uuid::new_v4().simple());
-    served_upsert(&reader, &tenant, MSG, json!({"id": id, "tenant_id": tenant, "status": "A"}), "")
-        .await
-        .expect("seed row");
+    served_upsert(
+        &reader,
+        &tenant,
+        MSG,
+        json!({"id": id, "tenant_id": tenant, "status": "A"}),
+        "",
+    )
+    .await
+    .expect("seed row");
 
     let (mut client, shutdown, handle) = serve_data_broker(server_svc).await;
 
@@ -1418,7 +1571,9 @@ async fn served_begin_tx_expected_cas_mismatch_aborts_with_nothing_applied_live(
         "the mismatched transaction must surface an error status, not a silent success"
     );
     assert_eq!(
-        served_status_of(&reader, &tenant, MSG, &id).await.as_deref(),
+        served_status_of(&reader, &tenant, MSG, &id)
+            .await
+            .as_deref(),
         Some("A"),
         "a CAS-mismatched BeginTx must apply nothing"
     );
@@ -1464,9 +1619,15 @@ async fn served_begin_tx_cdc_required_fails_closed_live() {
     let reader = dp_service(&dsn, widget_manifest(&schema, "widgets", "Widget", false)).await;
 
     let id = format!("tx-{}", Uuid::new_v4().simple());
-    served_upsert(&reader, &tenant, MSG, json!({"id": id, "tenant_id": tenant, "status": "A"}), "")
-        .await
-        .expect("seed row");
+    served_upsert(
+        &reader,
+        &tenant,
+        MSG,
+        json!({"id": id, "tenant_id": tenant, "status": "A"}),
+        "",
+    )
+    .await
+    .expect("seed row");
 
     let (mut client, shutdown, handle) = serve_data_broker(server_svc).await;
 
@@ -1481,7 +1642,10 @@ async fn served_begin_tx_cdc_required_fails_closed_live() {
         ..Mutation::default()
     }];
     let (committed, error) = drive_begin_tx(&mut client, &tenant, mutations).await;
-    assert!(!committed, "a cdc_required mutation that cannot be delivered must NOT commit");
+    assert!(
+        !committed,
+        "a cdc_required mutation that cannot be delivered must NOT commit"
+    );
     let error = error.expect("an undeliverable cdc_required mutation must surface an error status");
     assert!(
         error.message().contains("cdc_required"),
@@ -1489,7 +1653,9 @@ async fn served_begin_tx_cdc_required_fails_closed_live() {
         error.message()
     );
     assert_eq!(
-        served_status_of(&reader, &tenant, MSG, &id).await.as_deref(),
+        served_status_of(&reader, &tenant, MSG, &id)
+            .await
+            .as_deref(),
         Some("A"),
         "a fail-closed cdc_required mutation must apply nothing"
     );

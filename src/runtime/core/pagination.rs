@@ -296,24 +296,20 @@ mod tests {
         // Projection order (a SET) does not matter.
         assert_eq!(
             base,
-            query_digest(
-                &filter_a,
-                &sort,
-                &["status".to_string(), "id".to_string()]
-            )
+            query_digest(&filter_a, &sort, &["status".to_string(), "id".to_string()])
         );
         // A changed FILTER rotates the digest.
-        assert_ne!(base, query_digest(&json!({"status": "B"}), &sort, &projection));
+        assert_ne!(
+            base,
+            query_digest(&json!({"status": "B"}), &sort, &projection)
+        );
         // A changed SORT direction rotates the digest.
         assert_ne!(
             base,
             query_digest(&filter_a, &[("id".to_string(), true)], &projection)
         );
         // A changed PROJECTION rotates the digest.
-        assert_ne!(
-            base,
-            query_digest(&filter_a, &sort, &["id".to_string()])
-        );
+        assert_ne!(base, query_digest(&filter_a, &sort, &["id".to_string()]));
     }
 
     #[test]

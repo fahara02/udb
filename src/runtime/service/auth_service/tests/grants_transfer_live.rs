@@ -227,9 +227,15 @@ async fn live_postgres_transfer_service_account_grant_atomic_cutover() {
     assert_eq!(cross_tenant.code(), tonic::Code::PermissionDenied);
 
     // The real, served, claim-bound cutover A -> B under the current revision CAS.
-    let resp = transfer(&svc, &a.user_id, &b.user_id, grant.revision, "atomic cutover")
-        .await
-        .expect("served grant transfer A->B");
+    let resp = transfer(
+        &svc,
+        &a.user_id,
+        &b.user_id,
+        grant.revision,
+        "atomic cutover",
+    )
+    .await
+    .expect("served grant transfer A->B");
     let moved = resp.grant.expect("transferred grant");
     assert_eq!(moved.user_id, b.user_id, "grant is now owned by B");
     assert_eq!(
@@ -326,15 +332,27 @@ async fn live_postgres_transfer_service_account_grant_atomic_cutover() {
     // grant cannot be transferred onto it (would collide the per-user unique index).
     let (c, _c_grant) =
         create_service_account_with_grant(&svc, "xfer_occupied", password, &["udb:read"]).await;
-    let occupied = transfer(&svc, &b.user_id, &c.user_id, moved.revision, "onto occupied")
-        .await
-        .expect_err("transfer onto an account that already has a grant must be rejected");
+    let occupied = transfer(
+        &svc,
+        &b.user_id,
+        &c.user_id,
+        moved.revision,
+        "onto occupied",
+    )
+    .await
+    .expect_err("transfer onto an account that already has a grant must be rejected");
     assert_eq!(occupied.code(), tonic::Code::FailedPrecondition);
 
     // Deterministic inverse: transfer BACK B -> A restores A as owner of I.
-    let back = transfer(&svc, &b.user_id, &a.user_id, moved.revision, "reverse cutover")
-        .await
-        .expect("reverse transfer B->A");
+    let back = transfer(
+        &svc,
+        &b.user_id,
+        &a.user_id,
+        moved.revision,
+        "reverse cutover",
+    )
+    .await
+    .expect("reverse transfer B->A");
     let back_grant = back.grant.expect("reverse-transferred grant");
     assert_eq!(back_grant.user_id, a.user_id);
     assert_eq!(back_grant.service_identity, identity);
