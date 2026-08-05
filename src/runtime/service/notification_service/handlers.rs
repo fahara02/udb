@@ -92,7 +92,7 @@ pub(crate) async fn send_notification(
             true,
         );
         let template_rows = runtime
-            .native_entity_read_for_service(
+            .native_entity_read_hybrid_tenant_for_service(
                 "notification",
                 &context,
                 template_read(template_filter, 0, 1),
@@ -688,7 +688,11 @@ pub(crate) async fn get_template(
         false,
     );
     let rows = runtime
-        .native_entity_read_for_service("notification", &context, template_read(filter, 0, 1))
+        .native_entity_read_hybrid_tenant_for_service(
+            "notification",
+            &context,
+            template_read(filter, 0, 1),
+        )
         .await?;
     let template = match rows.first() {
         Some(row) => Some(template_from_json_row(row)),
@@ -743,7 +747,7 @@ pub(crate) async fn list_templates(
         )
         .await?;
     let rows = runtime
-        .native_entity_read_for_service(
+        .native_entity_read_hybrid_tenant_for_service(
             "notification",
             &context,
             template_read(filter, page.offset as u64, page.limit as u32),

@@ -369,6 +369,41 @@ impl DataBrokerRuntime {
         Self::native_entity_rows(&result)
     }
 
+    /// Like [`native_entity_read_for_service`] but for a HYBRID-tenant entity:
+    /// the compiled read matches the caller's tenant OR platform-global (NULL)
+    /// rows (see `CompileContext::allow_global_tenant`). Used by the notification
+    /// template resolver, where a platform-global default coexists with future
+    /// per-tenant overrides; the caller's `template_scope_filter` still carries
+    /// the explicit `(IS NULL OR = tenant)` precedence and the tenant param still
+    /// bounds the match so a FOREIGN tenant never resolves.
+    pub(crate) async fn native_entity_read_hybrid_tenant_for_service(
+        &self,
+        service_id: &str,
+        context: &crate::RequestContext,
+        op: LogicalRead,
+    ) -> Result<Vec<serde_json::Value>, tonic::Status> {
+        let (target, kind) =
+            self.native_entity_dispatch_target(service_id, &context.project_id, false)?;
+        let compile_ctx =
+            Self::native_entity_compile_context(context, target.instance.as_deref())
+                .allowing_global_tenant(true);
+        let compiled = crate::runtime::service::handlers_data::compile_logical_read_dispatch(
+            &kind,
+            &op,
+            &compile_ctx,
+        )?;
+        let result = self
+            .execute_native_entity_dispatch(
+                context,
+                &target.backend,
+                target.instance.as_deref(),
+                false,
+                compiled,
+            )
+            .await?;
+        Self::native_entity_rows(&result)
+    }
+
     /// Execute a typed native-entity aggregate through the same neutral IR
     /// compiler/executor path as reads. Callers use this for exact counts and
     /// read-model summaries instead of leaking `COUNT(*) OVER()`/`GROUP BY`

@@ -472,6 +472,11 @@ pub struct CompileContext<'a> {
     /// predicate. Set only at the over-the-wire generic-SQL seams for non-admin
     /// callers; left false on cross-tenant-admin and bridged/internal paths.
     pub enforce_tenant_scope: bool,
+    /// Hybrid-tenant read: also match rows whose tenant column IS NULL (platform
+    /// globals) in addition to the caller's tenant. For hybrid-tenant entities
+    /// like notification templates, where a platform-global default coexists with
+    /// per-tenant overrides. Default false = strict tenant scoping (`= tenant`).
+    pub allow_global_tenant: bool,
 }
 
 impl<'a> CompileContext<'a> {
@@ -482,6 +487,7 @@ impl<'a> CompileContext<'a> {
             project_id: None,
             backend_instance: None,
             enforce_tenant_scope: false,
+            allow_global_tenant: false,
         }
     }
 
@@ -503,6 +509,13 @@ impl<'a> CompileContext<'a> {
     /// Enable fail-closed tenant-scope enforcement (see `enforce_tenant_scope`).
     pub fn enforcing_tenant_scope(mut self, enforce: bool) -> Self {
         self.enforce_tenant_scope = enforce;
+        self
+    }
+
+    /// Hybrid-tenant read: match the caller's tenant OR platform-global (NULL)
+    /// rows. Default false (strict tenant scoping). See `allow_global_tenant`.
+    pub fn allowing_global_tenant(mut self, allow: bool) -> Self {
+        self.allow_global_tenant = allow;
         self
     }
 }

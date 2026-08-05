@@ -221,7 +221,16 @@ pub(super) fn append_context_predicates(
         && let Some(col) = resolve_tenant_column(table)
     {
         params.push(LogicalValue::String(tid.to_string()));
-        parts.push(format!("{quote}{col}{quote} = ?"));
+        if ctx.allow_global_tenant {
+            // Hybrid-tenant entity (e.g. notification templates): match the
+            // caller's tenant OR platform-global (NULL) rows. Still bound to the
+            // tenant param, so foreign tenants never match.
+            parts.push(format!(
+                "({quote}{col}{quote} = ? OR {quote}{col}{quote} IS NULL)"
+            ));
+        } else {
+            parts.push(format!("{quote}{col}{quote} = ?"));
+        }
     }
     if let Some(pid) = ctx.project_id
         && !pid.is_empty()
