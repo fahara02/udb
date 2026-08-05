@@ -76,10 +76,7 @@ async fn live_postgres_storage_crud_roundtrip() {
     let file = fin.file.expect("finalized file");
     assert_eq!(file.file_id, reg.file_id);
     assert!(file.is_public);
-    assert_eq!(
-        file.size_bytes, 13,
-        "finalize must persist the actual size"
-    );
+    assert_eq!(file.size_bytes, 13, "finalize must persist the actual size");
 
     // list → finds it
     let listed = svc

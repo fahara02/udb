@@ -384,9 +384,8 @@ impl DataBrokerRuntime {
     ) -> Result<Vec<serde_json::Value>, tonic::Status> {
         let (target, kind) =
             self.native_entity_dispatch_target(service_id, &context.project_id, false)?;
-        let compile_ctx =
-            Self::native_entity_compile_context(context, target.instance.as_deref())
-                .allowing_global_tenant(true);
+        let compile_ctx = Self::native_entity_compile_context(context, target.instance.as_deref())
+            .allowing_global_tenant(true);
         let compiled = crate::runtime::service::handlers_data::compile_logical_read_dispatch(
             &kind,
             &op,
