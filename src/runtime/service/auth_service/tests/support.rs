@@ -105,6 +105,14 @@ pub(super) async fn migrate_native_auth_db(pool: &sqlx::PgPool) {
             .await
             .unwrap_or_else(|err| panic!("native auth DDL failed: {err}\nSQL:\n{stmt}"));
     }
+    // The data-plane paths some auth tests exercise (API-key-authenticated
+    // Upsert/Select over the data-only listener) require the `udb_system`
+    // catalog — the row-revision store (CAS), CDC lock/outbox, idempotency keys.
+    // `cleanup_native_auth_db` drops every `udb_*` schema, so re-provision the
+    // system catalog here (idempotent `CREATE ... IF NOT EXISTS`).
+    crate::runtime::system::ensure_system_catalog(pool)
+        .await
+        .expect("bootstrap udb_system catalog for native auth tests");
 }
 
 pub(super) fn authn_service(pool: sqlx::PgPool) -> AuthnServiceImpl {
