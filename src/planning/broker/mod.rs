@@ -1265,7 +1265,7 @@ pub fn build_update_plan(
     // ── WHERE clause: identical machinery + isolation posture to delete ──────
     let backend_kind = effective_sql_backend(&request.context);
     let encrypted = encrypted_filter_columns(table);
-    let compiled = compile_filter_predicates(
+    let mut compiled = compile_filter_predicates(
         &filter,
         &allowed,
         &encrypted,
@@ -1288,6 +1288,22 @@ pub fn build_update_plan(
     }
     if compiled.sql.is_empty() {
         errors.push("update requires at least one safe filter predicate".to_string());
+    }
+
+    // RLS1 defense-in-depth: the legacy update planner trusts the body filter's
+    // tenant value, so a served Update authenticated as tenant A that names a
+    // FOREIGN tenant in the filter would mass-update B's rows. Append the
+    // VERIFIED caller-tenant predicate (mirrors the select/delete IR-bridge
+    // backstop) so a cross-tenant filter matches ZERO rows. `runtime.update`
+    // binds the value from the verified context, keyed by this appended param
+    // (`parameter_columns.len() + 1`).
+    if !tenant.is_empty()
+        && !request.context.tenant_id.trim().is_empty()
+        && !compiled.sql.is_empty()
+    {
+        let backstop_param = parameter_columns.len() + 1;
+        compiled.sql = format!("{} AND {} = ${}", compiled.sql, qi(&tenant), backstop_param);
+        parameter_columns.push(tenant.clone());
     }
 
     let sql = format!(
@@ -2679,7 +2695,14 @@ mod tests {
         );
         assert_eq!(
             plan.parameter_columns,
-            ["status", "login_attempts", "id", "tenant_id"]
+            // SET (status, login_attempts) + filter (id, tenant_id) + the RLS1
+            // defense-in-depth caller-tenant backstop param appended last.
+            ["status", "login_attempts", "id", "tenant_id", "tenant_id"]
+        );
+        assert!(
+            plan.sql.ends_with("AND \"tenant_id\" = $5"),
+            "update carries the RLS1 caller-tenant backstop: {}",
+            plan.sql
         );
         assert!(!plan.sql.contains("RETURNING"));
         assert_eq!(plan.operation, "update");

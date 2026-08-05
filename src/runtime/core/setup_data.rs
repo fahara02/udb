@@ -2103,6 +2103,12 @@ impl DataBrokerRuntime {
             .collect();
         values.extend(increments.iter().map(|(_, delta)| serde_json::json!(delta)));
         values.extend(filter_bind_values(&normalized_filter));
+        // RLS1: build_update_plan appends a defense-in-depth caller-tenant
+        // backstop param beyond the change/increment/filter values; bind it to
+        // the VERIFIED context tenant so a foreign-tenant filter matches 0 rows.
+        if plan.parameter_columns.len() == values.len() + 1 {
+            values.push(JsonValue::String(context.tenant_id.clone()));
+        }
         let query = bind_values(
             sqlx::query(&plan.sql),
             table,
