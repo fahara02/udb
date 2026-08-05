@@ -6798,7 +6798,7 @@ mod setup_data_consistency_tests {
     }
 
     #[test]
-    fn revision_and_fencing_refusals_are_typed_failed_precondition() {
+    fn revision_and_fencing_refusals_are_typed_precondition_errors() {
         for status in [
             row_revision_precondition_failed_status(),
             fencing_lock_absent_status("orders"),
