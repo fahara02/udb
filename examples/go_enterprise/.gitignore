@@ -1,0 +1,3 @@
+# Compiled example binary (rebuild with `go build` / `go run .`)
+/go_enterprise
+/go_enterprise.exe

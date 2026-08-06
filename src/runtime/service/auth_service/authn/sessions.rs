@@ -76,6 +76,10 @@ struct RefreshGrants {
     scopes: Vec<String>,
     roles: Vec<String>,
     service_identity: String,
+    /// Account classification of the durable account being refreshed, so the
+    /// re-minted access token carries the same `account_kind` claim the original
+    /// login did (a service account stays assertable as one across refreshes).
+    account_kind: authn::AccountKind,
 }
 
 fn session_internal_status(operation: impl Into<String>, message: impl Into<String>) -> Status {
@@ -108,6 +112,7 @@ fn validate_session_response(
         principal: Some(authn_principal_to_pb(
             &principal,
             rec.expires_at_unix as i64,
+            authn_entity_pb::AccountKind::Unspecified as i32,
         )),
         project_id: rec.project_id.clone(),
         scopes: rec.scopes.clone(),
@@ -483,6 +488,7 @@ fn validate_api_key_response(rec: Option<authn::ApiKeyRecord>) -> authn_pb::Vali
         principal: Some(authn_principal_to_pb(
             &principal,
             rec.expires_at_unix as i64,
+            authn_entity_pb::AccountKind::ServiceAccount as i32,
         )),
         project_id: rec.project_id.clone(),
         scopes: rec.scopes.clone(),
@@ -521,6 +527,7 @@ impl AuthnServiceImpl {
                 scopes,
                 roles,
                 service_identity: String::new(),
+                account_kind: user.account_kind,
             });
         }
 
@@ -554,6 +561,7 @@ impl AuthnServiceImpl {
             scopes,
             roles: Vec::new(),
             service_identity: grant.service_identity,
+            account_kind: user.account_kind,
         })
     }
 
@@ -915,6 +923,7 @@ impl AuthnServiceImpl {
             &grants.service_identity,
             &session_ref,
             "refresh",
+            account_kind_to_proto(grants.account_kind),
             now,
         );
         let access_token_expires_in = if access_exp > 0 {
@@ -964,6 +973,7 @@ impl AuthnServiceImpl {
                     &grants.service_identity,
                     &format!("rtf_{family_id}"),
                     "refresh",
+                    account_kind_to_proto(grants.account_kind),
                     now,
                 );
                 let access_token_expires_in = if access_exp > 0 {
@@ -1158,11 +1168,16 @@ impl AuthnServiceImpl {
                     provider_id: String::new(),
                     auth_method: authn::AuthnMethod::Jwt.as_str().to_string(),
                 };
+                // The account classification travels as a token claim, minted at
+                // login; surface it here so a service-account JWT validates AS a
+                // service account (UNSPECIFIED on legacy tokens minted before the
+                // claim existed).
+                let token_account_kind = claims.account_kind.unwrap_or(0);
                 authn_pb::ValidateTokenResponse {
                     valid: true,
                     user_id: subject,
                     session_id: String::new(),
-                    account_kind: authn_entity_pb::AccountKind::Unspecified as i32,
+                    account_kind: token_account_kind,
                     tenant_id: principal.tenant_id.clone(),
                     roles: principal.roles.clone(),
                     expires_at: None,
@@ -1170,7 +1185,7 @@ impl AuthnServiceImpl {
                     device_id: String::new(),
                     token_id: claims.jti.clone().unwrap_or_default(),
                     session_type: authn_entity_pb::SessionType::Jwt as i32,
-                    principal: Some(authn_principal_to_pb(&principal, 0)),
+                    principal: Some(authn_principal_to_pb(&principal, 0, token_account_kind)),
                     project_id: principal.project_id.clone(),
                     scopes: principal.scopes.clone(),
                     attributes: Default::default(),

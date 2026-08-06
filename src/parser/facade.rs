@@ -87,6 +87,11 @@ pub struct ParseReport {
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct FileEnumDecl {
     pub proto_package: String,
+    /// The declaring file's `option go_package` value (`path` or `path;alias`),
+    /// so the typed-Go entity generator can QUALIFY a cross-package enum type by
+    /// importing the enum's own package — rather than failing closed when an
+    /// entity references an enum declared in a different proto package.
+    pub go_package: String,
     pub enum_def: crate::ast::ProtoNestedEnum,
 }
 

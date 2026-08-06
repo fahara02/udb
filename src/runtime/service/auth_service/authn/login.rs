@@ -222,6 +222,7 @@ impl AuthnServiceImpl {
                 &rec.service_identity,
                 &format!("apikey_{}", rec.key_prefix),
                 "api_key",
+                authn_entity_pb::AccountKind::ServiceAccount as i32,
                 now,
             );
             let expires_at_unix = if access_exp > 0 {
@@ -230,7 +231,11 @@ impl AuthnServiceImpl {
                 rec.expires_at_unix as i64
             };
             return Ok(Response::new(authn_pb::AuthnResponse {
-                principal: Some(authn_principal_to_pb(&principal, expires_at_unix)),
+                principal: Some(authn_principal_to_pb(
+                    &principal,
+                    expires_at_unix,
+                    authn_entity_pb::AccountKind::ServiceAccount as i32,
+                )),
                 session_id: String::new(),
                 access_token,
                 expires_at_unix,
@@ -261,6 +266,9 @@ impl AuthnServiceImpl {
                 principal: Some(authn_principal_to_pb(
                     &principal,
                     rec.expires_at_unix as i64,
+                    // A server-side session record does not persist the account
+                    // classification, so it stays UNSPECIFIED on this path.
+                    authn_entity_pb::AccountKind::Unspecified as i32,
                 )),
                 session_id: String::new(),
                 access_token: String::new(),
@@ -275,7 +283,11 @@ impl AuthnServiceImpl {
             {
                 let principal = self.authenticate_oidc_token(&req).await?;
                 return Ok(Response::new(authn_pb::AuthnResponse {
-                    principal: Some(authn_principal_to_pb(&principal, 0)),
+                    principal: Some(authn_principal_to_pb(
+                        &principal,
+                        0,
+                        authn_entity_pb::AccountKind::Unspecified as i32,
+                    )),
                     session_id: String::new(),
                     access_token: String::new(),
                     expires_at_unix: 0,
@@ -345,7 +357,13 @@ impl AuthnServiceImpl {
                     )
                 })?;
             return Ok(Response::new(authn_pb::AuthnResponse {
-                principal: Some(authn_principal_to_pb(&principal, 0)),
+                principal: Some(authn_principal_to_pb(
+                    &principal,
+                    0,
+                    // External-IdP mapping does not classify the account kind;
+                    // UDB authz still governs access regardless.
+                    authn_entity_pb::AccountKind::Unspecified as i32,
+                )),
                 session_id: String::new(),
                 access_token: String::new(),
                 expires_at_unix: 0,
@@ -395,7 +413,14 @@ impl AuthnServiceImpl {
                 auth_method: authn::AuthnMethod::Jwt.as_str().to_string(),
             };
             return Ok(Response::new(authn_pb::AuthnResponse {
-                principal: Some(authn_principal_to_pb(&principal, 0)),
+                principal: Some(authn_principal_to_pb(
+                    &principal,
+                    0,
+                    // Carry the account classification the login minted into the
+                    // token so a service account stays assertable as one here —
+                    // this is the path the enterprise SDKs read after login.
+                    claims.account_kind.unwrap_or(0),
+                )),
                 session_id: String::new(),
                 access_token: String::new(),
                 expires_at_unix: 0,
@@ -787,6 +812,7 @@ impl AuthnServiceImpl {
             &grants.service_identity,
             &session_id,
             "pwd",
+            super::account_kind_to_proto(user.account_kind),
             now,
         );
         let access_token_expires_in = if access_exp > 0 {

@@ -861,6 +861,13 @@ pub struct SecurityClaims {
     /// single-factor, "aal2" for MFA/WebAuthn), derived from `auth_method`.
     #[serde(default)]
     pub acr: Option<String>,
+    /// Account classification (proto `AccountKind` numeric tag) minted into
+    /// UDB-issued access tokens so a resource server can assert "this bearer is a
+    /// service account" from the token alone. Optional — absent on external IdP
+    /// tokens and on legacy tokens minted before this claim existed, which map to
+    /// `ACCOUNT_KIND_UNSPECIFIED`.
+    #[serde(default)]
+    pub account_kind: Option<i32>,
 }
 
 impl SecurityClaims {
@@ -1156,6 +1163,7 @@ pub fn sign_access_token(
     service_identity: &str,
     jti: &str,
     auth_method: &str,
+    account_kind: i32,
     now_unix: u64,
 ) -> Result<Option<(String, i64)>, String> {
     // Default/fallback signer: env private key (inline PEM or path) stamped with
@@ -1178,6 +1186,7 @@ pub fn sign_access_token(
         service_identity,
         jti,
         auth_method,
+        account_kind,
         now_unix,
         &private_pem,
         UDB_RS256_KID,
@@ -1204,6 +1213,7 @@ pub fn sign_access_token_with_key(
     service_identity: &str,
     jti: &str,
     auth_method: &str,
+    account_kind: i32,
     now_unix: u64,
     private_pem: &str,
     kid: &str,
@@ -1234,6 +1244,13 @@ pub fn sign_access_token_with_key(
     }
     if !service_identity.is_empty() {
         claims.insert("service_identity".into(), json!(service_identity));
+    }
+    // Carry the account classification so `AuthenticateBearer`/`ValidateToken`
+    // can return it on the verified principal (a service account must be
+    // assertable as such from the token alone). Omitted when UNSPECIFIED (tag 0)
+    // so legacy verifiers and person tokens are unchanged.
+    if account_kind != 0 {
+        claims.insert("account_kind".into(), json!(account_kind));
     }
     if !auth_method.is_empty() {
         claims.insert("auth_method".into(), json!(auth_method));
@@ -2977,6 +2994,7 @@ mod tests {
             "",
             "jti-1",
             "pwd",
+            0,
             1_700_000_000,
         )
         .expect("signing should not error")
@@ -2986,6 +3004,66 @@ mod tests {
         // select the verification key.
         assert_eq!(header.kid.as_deref(), Some(UDB_RS256_KID));
         assert_eq!(header.alg, jsonwebtoken::Algorithm::RS256);
+    }
+
+    #[test]
+    fn access_token_carries_account_kind_claim_round_trip() {
+        // A service account's classification must survive mint → verify so
+        // `AuthenticateBearer`/`ValidateToken` can assert "I am a service account"
+        // from the token alone — the bug being guarded here.
+        let config = SecurityConfig {
+            jwt_private_key: Some(include_str!("testdata/jwt_rs256_private.pem").to_string()),
+            jwt_public_key: Some(include_str!("testdata/jwt_rs256_public.pem").to_string()),
+            ..SecurityConfig::default()
+        };
+        // proto `AccountKind::ACCOUNT_KIND_SERVICE_ACCOUNT` numeric tag.
+        const SERVICE_ACCOUNT_TAG: i32 = 2;
+        // A recent `iat` so the minted token is inside its own `exp` window during
+        // verification (jsonwebtoken validates `exp` against the real clock).
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system clock after unix epoch")
+            .as_secs();
+
+        let (token, _exp) = sign_access_token(
+            &config,
+            "svc-1",
+            "acme",
+            "billing",
+            &[],
+            &[],
+            "ambucore.authz",
+            "jti-svc",
+            "pwd",
+            SERVICE_ACCOUNT_TAG,
+            now,
+        )
+        .expect("signing should not error")
+        .expect("a private key is configured, so a token is issued");
+        let claims = validate_bearer_token(&config, &token).expect("service token verifies");
+        assert_eq!(claims.account_kind, Some(SERVICE_ACCOUNT_TAG));
+        assert_eq!(claims.service_identity.as_deref(), Some("ambucore.authz"));
+
+        // A person token (UNSPECIFIED, tag 0) omits the claim entirely, so legacy
+        // verifiers and human principals are unchanged.
+        let (person_token, _exp) = sign_access_token(
+            &config,
+            "user-1",
+            "acme",
+            "billing",
+            &[],
+            &[],
+            "",
+            "jti-p",
+            "pwd",
+            0,
+            now,
+        )
+        .expect("signing should not error")
+        .expect("token issued");
+        let person_claims =
+            validate_bearer_token(&config, &person_token).expect("person token verifies");
+        assert_eq!(person_claims.account_kind, None);
     }
 
     fn make_allow_policy(

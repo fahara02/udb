@@ -3686,6 +3686,7 @@ impl AuthnServiceImpl {
             "",
             &session_id,
             "webauthn",
+            account_kind_to_proto(user.account_kind),
             now,
         );
         let expires_at = if access_exp > 0 {
@@ -3720,7 +3721,11 @@ impl AuthnServiceImpl {
         )
         .await;
         Ok(authn_pb::FinishWebAuthnAuthenticationResponse {
-            principal: Some(authn_principal_to_pb(&principal, expires_at)),
+            principal: Some(authn_principal_to_pb(
+                &principal,
+                expires_at,
+                account_kind_to_proto(user.account_kind),
+            )),
             session_id,
             access_token,
             expires_at_unix: expires_at,

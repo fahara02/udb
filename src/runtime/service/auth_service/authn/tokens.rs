@@ -35,6 +35,7 @@ impl AuthnServiceImpl {
         service_identity: &str,
         jti: &str,
         auth_method: &str,
+        account_kind: i32,
         now: u64,
     ) -> (String, i64) {
         // Rotation-aware signing: when the DB-backed signing-key registry has an
@@ -56,6 +57,7 @@ impl AuthnServiceImpl {
                     service_identity,
                     jti,
                     auth_method,
+                    account_kind,
                     now,
                     &private_pem,
                     &kid,
@@ -72,6 +74,7 @@ impl AuthnServiceImpl {
                     service_identity,
                     jti,
                     auth_method,
+                    account_kind,
                     now,
                 )
             };

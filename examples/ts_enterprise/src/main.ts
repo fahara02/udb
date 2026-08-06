@@ -45,6 +45,12 @@ async function main(): Promise<void> {
   // ── connect ────────────────────────────────────────────────────────────────
   // Data plane on :50051, native auth control plane on :50061. Mixing these up
   // is the #1 real-world stumble: calling Login on :50051 returns UNIMPLEMENTED.
+  //
+  // Production shortcut: `UdbProject.connectEnterprise({ ...username, password })`
+  // does the connect + login + verify + tenant-adopt below in ONE call (the parity
+  // of Go's ConnectEnterprise) and starts a background bearer refresher. We do the
+  // steps explicitly here only so the canonical tenant UUID and the granted scopes
+  // are visible for teaching — connectEnterprise adopts them for you internally.
   const tls = tlsFromEnv();
   const udb = await UdbProject.connect({
     target: DATA_TARGET,
@@ -122,21 +128,16 @@ async function main(): Promise<void> {
     console.log("crud:  deleted; remaining rows =", rows.length);
 
     // ── 4. Tenant isolation (authz, observable) ─────────────────────────────
-    // Re-create the row, then ask for a FOREIGN tenant's data: the broker scopes
-    // every read to the bearer's tenant, so another tenant's id leaks nothing.
-    await invoices.upsert({ invoice_id: id, tenant_id: tenantUuid, customer_email: "ada@example.com", amount_cents: 100, status: "paid" });
-    const FOREIGN_TENANT = "00000000-0000-0000-0000-0000000d9999";
-    try {
-      const leaked = await invoices.select({ where: { tenant_id: FOREIGN_TENANT } });
-      console.log(`authz: cross-tenant read (tenant ${FOREIGN_TENANT}) → ${leaked.length} row(s) — isolation enforced`);
-    } catch (e) {
-      console.log(`authz: cross-tenant read blocked — ${(e as Error).message.split("\n")[0]}`);
-    }
-    await invoices.delete({ invoice_id: id, tenant_id: tenantUuid }); // cleanup
+    // Ask for a FOREIGN tenant's data: the broker scopes every read to the
+    // bearer's tenant, so another tenant's id returns nothing. (Same single
+    // foreign-select check the Go and Python examples do.)
+    const FOREIGN_TENANT = "00000000-0000-0000-0000-00000000d999";
+    const leaked = await invoices.select({ where: { tenant_id: FOREIGN_TENANT } });
+    console.log(`authz: cross-tenant read (tenant ${FOREIGN_TENANT}) → ${leaked.length} row(s) — isolation enforced`);
 
     console.log("\nENTERPRISE FLOW OK (authn + authz + tenant-scoped CRUD + isolation)");
   } finally {
-    await udb.logout();
+    // Stops the background refresher (if any) and closes the channels.
     udb.close();
   }
 }

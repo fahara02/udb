@@ -36,7 +36,8 @@ export UDB_ALLOW_DEGRADED_BACKENDS=true
 export UDB_RATE_LIMIT_ENABLED=false
 export UDB_ENCRYPTION_KEY="${UDB_ENCRYPTION_KEY:-00000000000000000000000000000000}"
 # DELIBERATELY NOT SET: UDB_ALLOW_HEADER_SCOPES, UDB_ABAC_DEFAULT_ALLOW.
-# Authorization is real: JWT scopes + the seeded UDB_ABAC_POLICIES_JSON.
+# Authorization is real: JWT scopes + the allow policies bootstrap.sh seeded into
+# the udb_authz.policy_rules governance table (Casbin) — not an env override.
 export RUST_LOG="${RUST_LOG:-info}"
 
 cd "$ROOT"

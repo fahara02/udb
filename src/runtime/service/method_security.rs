@@ -2189,6 +2189,7 @@ mod tests {
                 Some(auth_method.to_string())
             },
             acr: None,
+            account_kind: None,
         }
     }
 

@@ -95,12 +95,8 @@ def main() -> None:
 
         print("\nENTERPRISE FLOW OK (authn + authz + tenant-scoped CRUD + isolation)")
     finally:
-        closer = getattr(udb, "close", None)
-        if callable(closer):
-            try:
-                closer()
-            except Exception:
-                pass
+        # Stops the background bearer refresher and closes the channels.
+        udb.close()
 
 
 if __name__ == "__main__":

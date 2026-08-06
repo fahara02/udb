@@ -1,5 +1,9 @@
 # Connect to UDB from Python — the enterprise path
 
+> Part of the enterprise trio (Go / Python / TypeScript — the same program in
+> three languages). Start with the shared **[ENTERPRISE_GUIDE.md](../ENTERPRISE_GUIDE.md)**
+> for the flow, the one run procedure, and how the three compare.
+
 This is the shortest safe way to go from *username + password* to *doing
 tenant-scoped work* against a UDB broker: `create_udb(...)` then one call,
 `login_and_adopt_tenant`.

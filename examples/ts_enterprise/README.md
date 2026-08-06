@@ -1,5 +1,9 @@
 # Connect to UDB from TypeScript — the enterprise path
 
+> Part of the enterprise trio (Go / Python / TypeScript — the same program in
+> three languages). Start with the shared **[ENTERPRISE_GUIDE.md](../ENTERPRISE_GUIDE.md)**
+> for the flow, the one run procedure, and how the three compare.
+
 This is the real, no-shortcuts way to go from *username + password* to *doing
 tenant-scoped work* against a UDB broker in TypeScript: log in, get a JWT, and
 run tenant-scoped CRUD that the broker actually authorizes. It's a **standalone**
@@ -30,8 +34,12 @@ Unlike a "hello world", this example faces the friction real deployments hit:
 
 ## The 30-second version
 
-TypeScript doesn't have a one-call `ConnectEnterprise` like the Go SDK; you do
-the four steps yourself, and they're short:
+`UdbProject.connectEnterprise({ …username, password })` is the one-call path (the
+parity of Go's `ConnectEnterprise`): it connects, logs in, verifies the bearer,
+adopts the canonical tenant UUID, and starts a background bearer refresher — all
+in one `await`. This example instead runs the four underlying steps by hand,
+because a tenant-scoped **read** needs that canonical UUID *in your own hands* for
+the filter, and `authenticateBearer` is how you get it back. They're short:
 
 ```ts
 import { UdbProject } from "@udb_plus/sdk";

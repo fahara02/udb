@@ -87,6 +87,11 @@ impl<'a> ProtoParser<'a> {
                 .into_iter()
                 .map(|enum_def| crate::parser::FileEnumDecl {
                     proto_package: self.proto_package.clone(),
+                    go_package: self
+                        .language_options
+                        .get("go_package")
+                        .cloned()
+                        .unwrap_or_default(),
                     enum_def,
                 })
                 .collect(),

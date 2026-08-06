@@ -1,5 +1,9 @@
 # Connect to UDB from Go — the enterprise path
 
+> Part of the enterprise trio (Go / Python / TypeScript — the same program in
+> three languages). Start with the shared **[ENTERPRISE_GUIDE.md](../ENTERPRISE_GUIDE.md)**
+> for the flow, the one run procedure, and how the three compare.
+
 This is the shortest safe way to go from *username + password* to *doing
 tenant-scoped work* against a UDB broker, in one call: `ConnectEnterprise`.
 
@@ -105,6 +109,6 @@ Everything except `UDB_PASS` has a sensible default:
   `session.NativeContext(ctx)`; a plain `ctx` has no bearer and the broker will
   reject it.
 - **Forgetting isolation is server-enforced.** You don't have to police tenant
-  boundaries in your app — UDB's row-level security does. `ValidateTenantID`
+  boundaries in your app — UDB's row-level security does.
   `session.ValidateTenant(recordTenantID)` gives you a fast client-side check on
   top, but the broker is the real guard.

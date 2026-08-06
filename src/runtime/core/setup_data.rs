@@ -4227,6 +4227,20 @@ fn row_revision_key(
     ))
 }
 
+/// The value stored in the diagnostic-only `row_key` `text` column. PostgreSQL
+/// rejects 0x00 in `text`/`varchar` while DECODING the bind parameter — before any
+/// constraint runs — so the NUL separators `pk_tuple_canonical` uses for a
+/// COMPOSITE key would abort the write with "invalid byte sequence for encoding
+/// UTF8: 0x00" and the fail-closed guard would refuse EVERY multi-column-key
+/// mutation. Render each NUL as U+001F UNIT SEPARATOR: legal in `text`, still
+/// human-readable, and part boundaries are preserved so distinct composite keys
+/// stay distinct. Safe because the sole unique key is the hashed `revision_key`
+/// (which keeps the ORIGINAL NUL-joined canonical); `row_key` carries no
+/// uniqueness or index, so a different rendering never collides a real row.
+fn row_key_text(pk_canonical: &str) -> String {
+    pk_canonical.replace('\u{0}', "\u{1f}")
+}
+
 /// #5: bump (or create at 1) the opaque revision of ONE row IN THE CALLER'S write
 /// tx, returning the NEW revision. Monotonic (`revision = revision + 1` on
 /// conflict), so an opaque token is ABA-safe (never reused or decreased). A SQL
@@ -4242,6 +4256,10 @@ async fn bump_row_revision_in_tx(
 ) -> Result<i64, tonic::Status> {
     let pk_canonical = pk_tuple_canonical(pk_values);
     let revision_key = row_revision_key(tenant_id, project_id, message_type, &pk_canonical);
+    // A composite key's NUL separators cannot be bound into the `text` `row_key`
+    // column; `row_key_text` renders them as U+001F (see its doc for the full
+    // fail-closed-on-0x00 rationale). `revision_key` above still uses the original.
+    let pk_canonical_text = row_key_text(&pk_canonical);
     let rel = config.row_revisions_relation();
     let sql = format!(
         "INSERT INTO {rel} AS rev \
@@ -4256,7 +4274,7 @@ async fn bump_row_revision_in_tx(
         .bind(tenant_id)
         .bind(project_id)
         .bind(message_type)
-        .bind(&pk_canonical)
+        .bind(&pk_canonical_text)
         .fetch_one(&mut **tx)
         .await
         .map_err(|err| row_revision_store_status("row_revision_bump", &err))?;
@@ -6626,8 +6644,8 @@ mod setup_data_consistency_tests {
         mutation_response_idempotency_json, mutation_response_resource_uri,
         mutation_response_resource_uri_or_fallback, pg_outbox_receipt_store_mismatch,
         pk_equality_values_from_filter, pk_tuple_canonical, pk_value_token,
-        projection_system_store_opt_in_value, returned_record_json_or_status, row_revision_key,
-        row_revision_precondition_failed_status, validate_deployment_tier_floor,
+        projection_system_store_opt_in_value, returned_record_json_or_status, row_key_text,
+        row_revision_key, row_revision_precondition_failed_status, validate_deployment_tier_floor,
         write_receipt_json_or_status,
     };
     use crate::backend::ControlPlaneHaLevel;
@@ -6673,6 +6691,39 @@ mod setup_data_consistency_tests {
         let a = pk_tuple_canonical(&[serde_json::json!("a"), serde_json::json!("bc")]);
         let b = pk_tuple_canonical(&[serde_json::json!("ab"), serde_json::json!("c")]);
         assert_ne!(a, b);
+    }
+
+    #[test]
+    fn composite_key_row_key_carries_no_nul_byte() {
+        // Regression: a COMPOSITE primary key is NUL-joined by pk_tuple_canonical,
+        // and binding that NUL into the `text` row_key column made PostgreSQL abort
+        // every composite-key write ("invalid byte sequence for encoding UTF8:
+        // 0x00"). The precondition — the canonical tuple genuinely contains a NUL:
+        let composite = pk_tuple_canonical(&[serde_json::json!("t1"), serde_json::json!("k1")]);
+        assert!(
+            composite.contains('\u{0}'),
+            "a multi-column PK must be NUL-joined (the bug precondition)"
+        );
+        // The fix: the value actually bound to row_key must be free of 0x00, so the
+        // bind decode can no longer fail. Without row_key_text this assertion fails.
+        let bound = row_key_text(&composite);
+        assert!(
+            !bound.contains('\u{0}'),
+            "row_key value must contain no NUL byte (PostgreSQL text rejects 0x00)"
+        );
+        // Distinctness is preserved: ("t1","k1") and ("t1k1","") must not collide
+        // after sanitization (the whole point of a separator).
+        let other = row_key_text(&pk_tuple_canonical(&[
+            serde_json::json!("t1k1"),
+            serde_json::json!(""),
+        ]));
+        assert_ne!(
+            bound, other,
+            "distinct composite keys must stay distinct after NUL→U+001F"
+        );
+        // A single-column key has no separator, so it round-trips unchanged.
+        let single = pk_tuple_canonical(&[serde_json::json!("only")]);
+        assert_eq!(row_key_text(&single), single);
     }
 
     #[test]

@@ -522,6 +522,7 @@ async fn live_postgres_served_grant_management_binds_every_rpc_to_claim_tenant()
         "",
         "served-grant-admin-a",
         "password",
+        0,
         now,
     )
     .expect("sign tenant-A grant admin token")
@@ -537,6 +538,7 @@ async fn live_postgres_served_grant_management_binds_every_rpc_to_claim_tenant()
         "",
         "served-grant-admin-b",
         "password",
+        0,
         now,
     )
     .expect("sign tenant-B grant admin token")
@@ -789,6 +791,7 @@ async fn live_postgres_api_key_crud_on_data_only_listener() {
             &grant.service_identity,
             jti,
             "service_account",
+            authn_entity_pb::AccountKind::ServiceAccount as i32,
             now,
         )
         .expect("sign data-only listener bearer")

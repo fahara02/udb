@@ -172,16 +172,6 @@ fn approval_policy_requires_signed_plan(
     signing_key_env_set || config.requires_signed_plan()
 }
 
-fn review_required_sql_artifact_changes(manifest: &CatalogManifest) -> Vec<ChangeOperation> {
-    diff_manifests(None, manifest)
-        .into_iter()
-        .filter(|change| {
-            change.kind == ChangeKind::ApplySqlArtifact
-                && change.safety == ChangeSafety::RequiresReview
-        })
-        .collect()
-}
-
 fn require_approved_plan_for_changes(
     runtime: &DataBrokerRuntime,
     report: &mut StartupLifecycleReport,
@@ -262,6 +252,34 @@ fn require_approved_plan_for_changes(
     }
     report.step(FsmState::Applying, accepted_message(&approval_plan_path));
     Ok(())
+}
+
+/// The ONE canonical migration change set the startup approval gate validates and
+/// both apply phases (bootstrap SQL + schema delta) authorize from:
+///
+/// - `Some(prior)` with a CHANGED proto checksum → the real prior→current delta
+///   (`diff_manifests(Some(prior), manifest)`);
+/// - `None` (first bootstrap) → the complete from-empty set;
+/// - `Some(prior)` with an UNCHANGED checksum → empty (no migration work — a
+///   `force_sync` re-run still applies idempotently under the ledger, but demands
+///   no re-approval).
+///
+/// This replaces the two independent gates that previously diffed the SAME
+/// `require_approval_plan` against DIFFERENT change sets — a from-`None`
+/// artifact-only subset (independent of applied state) vs the full prior→current
+/// diff — and so demanded incompatible operation counts, deadlocking any upgrade
+/// that carried both bootstrap artifacts and a schema diff.
+fn canonical_migration_changes(
+    prior_manifest: Option<&CatalogManifest>,
+    manifest: &CatalogManifest,
+) -> Vec<ChangeOperation> {
+    match prior_manifest {
+        Some(prior) if prior.checksum_sha256 != manifest.checksum_sha256 => {
+            diff_manifests(Some(prior), manifest)
+        }
+        None => diff_manifests(None, manifest),
+        _ => Vec::new(),
+    }
 }
 
 /// Run the startup migration lifecycle and POST the configured migration
@@ -1043,6 +1061,88 @@ async fn run_startup_lifecycle_core(
         "applying SQL and backend provisioning actions",
     )?;
 
+    // ── Single canonical migration approval (one plan, one decision) ──────────
+    // Startup previously ran TWO independent approval gates in the same pass: the
+    // bootstrap SQL-artifact gate (which diffed the proto catalog against `None`,
+    // an artifact-only subset) and the schema-diff gate (the full prior→current
+    // diff), both reading the SAME `migration.require_approval_plan` and both
+    // demanding EXACT operation counts. Those counts differ, so no single plan
+    // could satisfy both and any upgrade carrying both bootstrap artifacts and a
+    // non-empty schema diff crash-looped. It was also an atomicity hole: bootstrap
+    // SQL and backend provisioning could mutate project state before the full plan
+    // ever reached its gate.
+    //
+    // Compute the canonical change set ONCE (from the prior manifest when one
+    // exists, else from empty), reject Blocked ops, and take ONE approval decision
+    // HERE — before the pre-migrate hook, bootstrap SQL, provisioning, or delta —
+    // then authorize BOTH apply phases from it. The SQL executor's per-artifact
+    // checksum ledger still governs what is physically (re)applied, so an
+    // already-recorded artifact is skipped rather than re-approved.
+    let canonical_changes = canonical_migration_changes(prior_manifest.as_ref(), manifest);
+    let mut migration_authorized_via_plan = false;
+    if !dry_run && !checksum_unchanged {
+        let blocked: Vec<String> = canonical_changes
+            .iter()
+            .filter(|c| c.safety == ChangeSafety::Blocked)
+            .map(|c| {
+                format!(
+                    "{:?} {}.{}({}) [Blocked: {}]",
+                    c.kind, c.schema, c.table, c.column, c.blocked_reason
+                )
+            })
+            .collect();
+        if !blocked.is_empty() {
+            return Err(fail(
+                runtime,
+                &mut report,
+                "blocked_schema_change",
+                format!(
+                    "{} migration change(s) are blocked and cannot be applied even with an approved plan: {}; \
+                     prior manifest: {ledger_identity} checksum={}",
+                    blocked.len(),
+                    blocked.join("; "),
+                    prior_manifest
+                        .as_ref()
+                        .map(|p| p.checksum_sha256.as_str())
+                        .unwrap_or("<none>"),
+                ),
+            ));
+        }
+        let review_count = canonical_changes
+            .iter()
+            .filter(|c| c.safety == ChangeSafety::RequiresReview)
+            .count();
+        let approval_plan_configured = !runtime
+            .config()
+            .migration
+            .require_approval_plan
+            .trim()
+            .is_empty();
+        // Validate once when there is review-required work OR a plan is configured
+        // for an otherwise auto-safe migration (preserving the explicit-plan gate).
+        // Fails closed on a missing plan for review work, or on any count / checksum
+        // / operations-hash mismatch, before a single row is mutated.
+        if review_count > 0 || approval_plan_configured {
+            require_approved_plan_for_changes(
+                runtime,
+                &mut report,
+                manifest,
+                &canonical_changes,
+                "migration_approval",
+                |path| {
+                    if review_count > 0 {
+                        format!(
+                            "approved plan {path} accepted for the canonical migration ({review_count} review-required change(s))"
+                        )
+                    } else {
+                        format!("approved plan {path} accepted (canonical diff matches)")
+                    }
+                },
+            )?;
+            migration_authorized_via_plan = true;
+        }
+    }
+
     // Skip bootstrap SQL generation and application when the proto checksum
     // matches the last recorded run.  All the CREATE TABLE/INDEX/POLICY
     // statements are idempotent, but sending them to a cloud database (Neon,
@@ -1159,31 +1259,22 @@ async fn run_startup_lifecycle_core(
             }
         } else {
             let held = review_required_sql_artifacts(&sql_artifacts);
-            if !held.is_empty() {
-                let review_changes = review_required_sql_artifact_changes(manifest);
-                if review_changes.is_empty() {
-                    // Unattended bootstrap: there is no approvable diff to
-                    // match a plan against, so fail closed through the shared
-                    // gate helper — a single source of truth for the abort
-                    // message/metric. `held` is non-empty here, so the gate
-                    // always aborts before any artifact reaches the execute
-                    // list below.
-                    reject_review_required_sql_artifacts(runtime, &mut report, &sql_artifacts)?;
-                } else {
-                    require_approved_plan_for_changes(
-                        runtime,
-                        &mut report,
-                        manifest,
-                        &review_changes,
-                        "review_required_sql_artifact",
-                        |path| {
-                            format!(
-                                "approved plan {path} accepted for {} review-required bootstrap SQL artifact(s)",
-                                held.len()
-                            )
-                        },
-                    )?;
-                }
+            // The canonical approval decision above already authorized (or
+            // rejected, before any mutation) every review-required change in this
+            // migration. Fail closed here ONLY when the canonical change set still
+            // has PENDING review-required SQL-artifact work that the single gate
+            // did not authorize. A generator marker for an artifact already
+            // recorded in the ledger — unchanged since the prior manifest, or
+            // re-emitted under force_sync — is neither re-approved nor re-applied
+            // (`execute_sql_artifacts` skips it by content checksum).
+            if !held.is_empty()
+                && !migration_authorized_via_plan
+                && canonical_changes.iter().any(|c| {
+                    c.kind == ChangeKind::ApplySqlArtifact
+                        && c.safety == ChangeSafety::RequiresReview
+                })
+            {
+                reject_review_required_sql_artifacts(runtime, &mut report, &sql_artifacts)?;
             }
             runtime
                 .execute_sql_artifacts(&sql_artifacts, mode_label)
@@ -1377,80 +1468,14 @@ async fn run_startup_lifecycle_core(
             let changes = diff_manifests(Some(prior), manifest);
             record_change_metric_operations(&mut report, &changes);
 
-            // Fail-closed schema-diff gate (single source of truth).
-            //
-            // A `Blocked` change can never be applied — abort. A `RequiresReview`
-            // change is applied ONLY when a configured approved plan matches the
-            // current diff (the documented four-eyes flow), exactly like the
-            // bootstrap SQL-artifact branch above. Without a matching plan it
-            // aborts too, so the manifest checksum never advances past an
-            // unreviewed change. `approved_via_plan` lets the delta apply below
-            // skip the artifact-marker re-gate for changes the operator approved.
-            //
-            // Previously the review abort was UNCONDITIONAL and sat ABOVE the
-            // approval gate, so `require_approval_plan` could never authorize a
-            // DropUnique/DropIndex/DropTable and was dead for schema diffs.
-            let mut approved_via_plan = false;
-            if !dry_run {
-                let blocked: Vec<String> = changes
-                    .iter()
-                    .filter(|c| c.safety == ChangeSafety::Blocked)
-                    .map(|c| {
-                        format!(
-                            "{:?} {}.{}({}) [Blocked: {}]",
-                            c.kind, c.schema, c.table, c.column, c.blocked_reason
-                        )
-                    })
-                    .collect();
-                if !blocked.is_empty() {
-                    return Err(fail(
-                        runtime,
-                        &mut report,
-                        "blocked_schema_change",
-                        format!(
-                            "{} schema change(s) are blocked and cannot be applied even with an approved plan: {}; \
-                             prior manifest: {ledger_identity} checksum={}",
-                            blocked.len(),
-                            blocked.join("; "),
-                            prior.checksum_sha256,
-                        ),
-                    ));
-                }
-                let review_count = changes
-                    .iter()
-                    .filter(|c| c.safety == ChangeSafety::RequiresReview)
-                    .count();
-                let approval_plan_configured = !runtime
-                    .config()
-                    .migration
-                    .require_approval_plan
-                    .trim()
-                    .is_empty();
-                // Consult the approval gate when there is review-required work OR
-                // when a plan is configured for an otherwise auto-safe diff. The
-                // shared helper reads/verifies the plan against the FULL current
-                // diff and fails closed (no plan + review work, or a mismatch);
-                // on a match the review-required changes are authorized.
-                if review_count > 0 || approval_plan_configured {
-                    require_approved_plan_for_changes(
-                        runtime,
-                        &mut report,
-                        manifest,
-                        &changes,
-                        "blocked_schema_change",
-                        |path| {
-                            if review_count > 0 {
-                                format!(
-                                    "approved plan {path} accepted for {review_count} review-required schema change(s)"
-                                )
-                            } else {
-                                format!("approved plan {path} accepted (diff matches)")
-                            }
-                        },
-                    )?;
-                    approved_via_plan = true;
-                }
-            }
+            // The approval decision and the Blocked-op rejection were made ONCE,
+            // upfront, against the canonical change set (identical to this diff),
+            // before any project mutation. Reuse that single decision instead of
+            // re-comparing the same plan against a second change set — the
+            // dual-gate count mismatch that used to deadlock any upgrade carrying
+            // both bootstrap artifacts and a schema diff. `approved_via_plan` lets
+            // the delta apply below skip the artifact-marker re-gate.
+            let approved_via_plan = migration_authorized_via_plan;
 
             let delta = generate_delta_sql(manifest, &changes, &SqlGenerationConfig::default());
             report.pending_migration_files = if dry_run { delta.len() as i64 } else { 0 };
@@ -2219,6 +2244,71 @@ fn parse_seed_identity(file_name: &str) -> (String, String) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // Regression for the dual approval-gate deadlock: the ONE canonical change set
+    // an upgrade approves must be the prior→current delta, NOT the from-empty
+    // subset the old bootstrap-artifact gate diffed against — that mismatch made
+    // the two startup gates demand incompatible operation counts and crash-loop
+    // any upgrade carrying both bootstrap artifacts and a schema diff.
+    #[test]
+    fn canonical_migration_changes_uses_prior_delta_not_from_empty() {
+        use crate::generation::manifest::{ManifestColumn, ManifestTable};
+
+        fn col(name: &str, sql_type: &str) -> ManifestColumn {
+            ManifestColumn {
+                column_name: name.to_string(),
+                field_name: name.to_string(),
+                sql_type: sql_type.to_string(),
+                ..ManifestColumn::default()
+            }
+        }
+        fn manifest(cols: Vec<ManifestColumn>, ck: &str, table_ck: &str) -> CatalogManifest {
+            CatalogManifest {
+                checksum_sha256: ck.to_string(),
+                tables: vec![ManifestTable {
+                    schema: "public".to_string(),
+                    table: "invoices".to_string(),
+                    columns: cols,
+                    checksum_sha256: table_ck.to_string(),
+                    ..ManifestTable::default()
+                }],
+                ..CatalogManifest::default()
+            }
+        }
+
+        // Prior deployment already has the table; the upgrade ADDS one column.
+        let prior = manifest(vec![col("id", "UUID")], "ck-prior", "t-prior");
+        let current = manifest(
+            vec![col("id", "UUID"), col("note", "TEXT")],
+            "ck-current",
+            "t-current",
+        );
+
+        let from_empty = diff_manifests(None, &current);
+        let canonical = canonical_migration_changes(Some(&prior), &current);
+
+        // The fix: an upgrade approves the prior→current delta, which is a
+        // DIFFERENT (smaller) set than creating the whole table from empty. Before
+        // the fix, the bootstrap gate approved the from-empty artifact subset while
+        // the schema gate approved this delta — the incompatible-count deadlock.
+        assert!(
+            !canonical.is_empty(),
+            "adding a column must yield a non-empty canonical delta"
+        );
+        assert_ne!(
+            canonical, from_empty,
+            "the canonical upgrade set must NOT be the from-empty set that deadlocked the two gates"
+        );
+
+        // First bootstrap (no prior) → the complete from-empty set.
+        assert_eq!(canonical_migration_changes(None, &current), from_empty);
+
+        // Unchanged proto checksum → no migration work, so no approval is demanded.
+        assert!(
+            canonical_migration_changes(Some(&current), &current).is_empty(),
+            "an unchanged checksum must yield an empty canonical change set"
+        );
+    }
 
     // The system-schema intake guard must pass the SELF-HOSTING case (input
     // identical to the embedded catalog, as when the UDB repo serves its own

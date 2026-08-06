@@ -1134,34 +1134,48 @@ fn render_go_entities_file(entities: &[EntityDescriptor], package: &str) -> Resu
                 needs_time = true;
                 needs_timestamppb = true;
             }
-            // `strings` is only needed by the SAME-package enum write path
-            // (strings.TrimPrefix); a cross-package enum is skipped, so counting it
-            // would import `strings` for a file that never uses it.
-            if !column.enum_values.is_empty() && !column.enum_cross_package {
-                needs_strings = true;
+            if !column.enum_values.is_empty() {
+                // The write path uses `strings.TrimPrefix` for BOTH a same-package
+                // enum AND a cross-package enum we can qualify; only an
+                // unqualifiable cross-package enum is skipped (imports nothing).
+                let qualifiable = !column.enum_cross_package || column.enum_go_import.is_some();
+                if qualifiable {
+                    needs_strings = true;
+                }
+                // A qualifiable cross-package enum imports its OWN Go package so the
+                // read path can name its `<Type>_value` map and cast the value.
+                if column.enum_cross_package
+                    && let Some((enum_path, enum_alias, _)) =
+                        column.enum_go_import.as_deref().and_then(parse_go_type)
+                {
+                    proto_imports.insert(enum_path, enum_alias);
+                }
             }
         }
         renderable.push((entity, alias, type_name));
     }
 
     // #3: FAIL CLOSED before emitting anything — a NOT NULL column the emitter
-    // cannot marshal (currently a NOT NULL cross-package enum) would be silently
-    // omitted from the record, and the broker would reject the resulting INSERT.
-    // A nullable such column is fine (it round-trips as NULL) and is skipped with a
-    // TODO instead.
+    // cannot marshal would be silently omitted from the record, and the broker
+    // would reject the resulting INSERT. A cross-package enum is now qualified by
+    // importing its own Go package (`enum_go_import`); the ONLY remaining
+    // unmarshalable case is a cross-package enum whose foreign proto file declared
+    // no `go_package`, so its Go type cannot be named. A nullable such column is
+    // fine (it round-trips as NULL) and is skipped with a TODO instead.
     for (entity, _, _) in &renderable {
         for column in &entity.columns {
             if column.enum_cross_package
+                && column.enum_go_import.is_none()
                 && column.not_null
                 && column.declared_in_proto
                 && !column.exclude_from_insert
             {
                 return Err(format!(
-                    "entity `{}`: column `{}` is a NOT NULL cross-package enum ({}); the Go entity \
-                     generator cannot yet qualify an enum type across proto packages, so omitting \
-                     it would emit a record the broker rejects. Move the enum into the entity's \
-                     proto package, make the column nullable/optional, or annotate the column with \
-                     a co-located enum.",
+                    "entity `{}`: column `{}` is a NOT NULL cross-package enum ({}) whose proto \
+                     file declares no `option go_package`, so the Go entity generator cannot name \
+                     (import) its type and omitting it would emit a record the broker rejects. Add \
+                     `option go_package` to the enum's proto file, move the enum into the entity's \
+                     proto package, or make the column nullable/optional.",
                     entity.short_name, column.field_name, column.proto_type,
                 ));
             }
@@ -1649,12 +1663,15 @@ fn go_to_record_stmt(column: &EntityColumnDescriptor) -> String {
         );
     }
     if !column.enum_values.is_empty() {
-        if column.enum_cross_package {
-            // A NOT NULL cross-package enum already failed closed in the render
-            // pre-scan; a nullable one lands here and is skipped (NULL is legal).
+        if column.enum_cross_package && column.enum_go_import.is_none() {
+            // A cross-package enum whose foreign proto file declared no
+            // go_package: NOT NULL already failed closed in the render pre-scan; a
+            // nullable one lands here and is skipped (NULL is legal). A qualifiable
+            // cross-package enum falls through — the write path only calls
+            // `.String()` on the getter and needs no type name.
             return format!(
                 "\t// TODO(udb-b3): unsupported write for \"{key}\" (cross-package enum {}; \
-                 Go import unavailable) — field skipped\n",
+                 no go_package to import) — field skipped\n",
                 column.proto_type
             );
         }
@@ -1746,20 +1763,28 @@ fn go_from_row_stmt(column: &EntityColumnDescriptor, alias: &str) -> String {
         );
     }
     if !column.enum_values.is_empty() {
-        if column.enum_cross_package {
-            // A NOT NULL cross-package enum already failed closed in the render
-            // pre-scan; a nullable one lands here and is skipped (NULL is legal).
+        if column.enum_cross_package && column.enum_go_import.is_none() {
+            // A cross-package enum whose foreign proto file declared no go_package:
+            // NOT NULL already failed closed in the render pre-scan; a nullable one
+            // lands here and is skipped (NULL is legal).
             return format!(
                 "\t// TODO(udb-b3): unsupported read for \"{key}\" (cross-package enum {}; \
-                 Go import unavailable) — field skipped\n",
+                 no go_package to import) — field skipped\n",
                 column.proto_type
             );
         }
         // The DB stores the enum SHORT token (the write path trims the prefix);
-        // read it back through protoc-gen-go's `<Type>_value` map. Assumes the
-        // enum's Go type is in the entity's package — the common case, since
-        // co-located entity/enum protos share a `go_package`.
-        let enum_type = go_enum_type_name(&column.proto_type);
+        // read it back through protoc-gen-go's `<Type>_value` map. A same-package
+        // enum uses the entity's own import alias; a cross-package enum uses the
+        // foreign package's alias + type name resolved from `enum_go_import`.
+        let (enum_alias, enum_type) = match column.enum_go_import.as_deref().and_then(parse_go_type)
+        {
+            Some((_, foreign_alias, foreign_type)) => (foreign_alias, foreign_type),
+            None => (
+                alias.to_string(),
+                go_enum_type_name(&column.proto_type).to_string(),
+            ),
+        };
         let prefix = enum_common_prefix(&column.enum_values);
         // W9 dual-read tolerance: probe the SHORT token first (the wire
         // convention), then the FULL enum name — so readers deployed before a
@@ -1768,20 +1793,20 @@ fn go_from_row_stmt(column: &EntityColumnDescriptor, alias: &str) -> String {
             return format!(
                 "\tif s, err := udbAsString(row[\"{key}\"]); err != nil {{\n{fail}\
                  \t}} else if s != \"\" {{\n\
-                 \t\tif v, ok := {alias}.{enum_type}_value[\"{prefix}\"+s]; ok {{\n\
-                 \t\t\te := {alias}.{enum_type}(v)\n\t\t\tm.{field} = &e\n\
-                 \t\t}} else if v, ok := {alias}.{enum_type}_value[s]; ok {{\n\
-                 \t\t\te := {alias}.{enum_type}(v)\n\t\t\tm.{field} = &e\n\t\t}}\n\t}}\n",
+                 \t\tif v, ok := {enum_alias}.{enum_type}_value[\"{prefix}\"+s]; ok {{\n\
+                 \t\t\te := {enum_alias}.{enum_type}(v)\n\t\t\tm.{field} = &e\n\
+                 \t\t}} else if v, ok := {enum_alias}.{enum_type}_value[s]; ok {{\n\
+                 \t\t\te := {enum_alias}.{enum_type}(v)\n\t\t\tm.{field} = &e\n\t\t}}\n\t}}\n",
                 fail = fail("\t\t"),
             );
         }
         return format!(
             "\tif s, err := udbAsString(row[\"{key}\"]); err != nil {{\n{fail}\
              \t}} else if s != \"\" {{\n\
-             \t\tif v, ok := {alias}.{enum_type}_value[\"{prefix}\"+s]; ok {{\n\
-             \t\t\tm.{field} = {alias}.{enum_type}(v)\n\
-             \t\t}} else if v, ok := {alias}.{enum_type}_value[s]; ok {{\n\
-             \t\t\tm.{field} = {alias}.{enum_type}(v)\n\t\t}}\n\t}}\n",
+             \t\tif v, ok := {enum_alias}.{enum_type}_value[\"{prefix}\"+s]; ok {{\n\
+             \t\t\tm.{field} = {enum_alias}.{enum_type}(v)\n\
+             \t\t}} else if v, ok := {enum_alias}.{enum_type}_value[s]; ok {{\n\
+             \t\t\tm.{field} = {enum_alias}.{enum_type}(v)\n\t\t}}\n\t}}\n",
             fail = fail("\t\t"),
         );
     }
@@ -3104,6 +3129,7 @@ mod tests {
             has_presence: false,
             enum_values: Vec::new(),
             enum_cross_package: false,
+            enum_go_import: None,
             is_json: false,
             is_jsonb: false,
             exclude_from_insert: false,
@@ -3571,38 +3597,68 @@ mod tests {
         );
     }
 
-    // #3: a NOT NULL cross-package enum can now resolve its value names but the Go
-    // emitter cannot qualify its type across packages — so it FAILS CLOSED rather
-    // than silently omitting a NOT NULL column. A NULLABLE one is skipped instead.
+    // #3 + V050-2: a cross-package enum is now QUALIFIED by importing its own Go
+    // package (`enum_go_import`) and referencing the foreign type on the read path.
+    // It only FAILS CLOSED (NOT NULL) when the foreign proto file declared no
+    // `go_package`, so there is nothing to import.
     #[test]
-    fn cross_package_enum_not_null_fails_closed() {
+    fn cross_package_enum_qualifies_when_go_package_known() {
         let mut region = column("region", "acme.geo.v1.Region");
         region.enum_values = vec!["REGION_UNSPECIFIED".to_string(), "REGION_EAST".to_string()];
         region.enum_cross_package = true;
+        region.enum_go_import = Some("github.com/acme/geo/v1;geov1.Region".to_string());
         region.not_null = true;
-        let err = render_go_entities_file(
+
+        let out = render_go_entities_file(
             &widget_entity(
                 vec!["id".to_string()],
                 vec![column("id", "string"), region.clone()],
             ),
             "acmegen",
         )
-        .expect_err("NOT NULL cross-package enum must fail closed");
+        .expect("a qualifiable NOT NULL cross-package enum must generate");
+        assert!(
+            out.contains("geov1 \"github.com/acme/geo/v1\""),
+            "must import the foreign enum's Go package, got:\n{out}"
+        );
+        assert!(
+            out.contains("strings.TrimPrefix(m.GetRegion().String()"),
+            "write path must trim the enum prefix off the string form, got:\n{out}"
+        );
+        assert!(
+            out.contains("geov1.Region_value[") && out.contains("geov1.Region(v)"),
+            "read path must qualify the enum type with the foreign alias, got:\n{out}"
+        );
+
+        // No go_package to import → still fails closed for a NOT NULL column.
+        let mut unqualifiable = region.clone();
+        unqualifiable.enum_go_import = None;
+        let err = render_go_entities_file(
+            &widget_entity(
+                vec!["id".to_string()],
+                vec![column("id", "string"), unqualifiable.clone()],
+            ),
+            "acmegen",
+        )
+        .expect_err("NOT NULL cross-package enum without go_package must fail closed");
         assert!(
             err.contains("cross-package enum") && err.contains("region"),
             "fail-closed message must name the offending column, got: {err}"
         );
 
-        // Nullable → skipped with a TODO, generation succeeds.
-        region.not_null = false;
+        // Nullable + no go_package → skipped with a TODO, generation succeeds.
+        unqualifiable.not_null = false;
         let out = render_go_entities_file(
-            &widget_entity(vec!["id".to_string()], vec![column("id", "string"), region]),
+            &widget_entity(
+                vec!["id".to_string()],
+                vec![column("id", "string"), unqualifiable],
+            ),
             "acmegen",
         )
-        .expect("nullable cross-package enum must not fail closed");
+        .expect("nullable unqualifiable cross-package enum must not fail closed");
         assert!(
             out.contains("cross-package enum acme.geo.v1.Region"),
-            "nullable cross-package enum must be skipped with a TODO, got:\n{out}"
+            "nullable unqualifiable cross-package enum must be skipped with a TODO, got:\n{out}"
         );
     }
 

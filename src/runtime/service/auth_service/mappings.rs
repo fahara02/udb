@@ -16,7 +16,11 @@ use crate::proto::udb::core::common::v1 as common_pb;
 use super::super::native_helpers::{native_page_response, native_page_window};
 use crate::runtime::authn::{self, SessionRecord};
 use crate::runtime::authz::{AuthzPolicy, Decision, Effect, Principal, ResourceRef};
-pub(super) fn authn_principal_to_pb(p: &Principal, expires_at_unix: i64) -> authn_pb::Principal {
+pub(super) fn authn_principal_to_pb(
+    p: &Principal,
+    expires_at_unix: i64,
+    account_kind: i32,
+) -> authn_pb::Principal {
     authn_pb::Principal {
         principal_id: p.principal_id.clone(),
         subject: p.subject.clone(),
@@ -29,9 +33,12 @@ pub(super) fn authn_principal_to_pb(p: &Principal, expires_at_unix: i64) -> auth
         provider_id: p.provider_id.clone(),
         auth_method: p.auth_method.clone(),
         expires_at_unix,
-        // AccountKind unspecified (tag 0): the runtime Principal does not classify
-        // human/service/external accounts yet.
-        account_kind: 0,
+        // Account classification (proto `AccountKind` tag), supplied by the caller
+        // from the authenticated account row or the token's `account_kind` claim —
+        // the runtime `Principal` itself does not carry it. `0`
+        // (ACCOUNT_KIND_UNSPECIFIED) where the source path cannot classify the
+        // account (server-side session validate, external-IdP map).
+        account_kind,
         // authz domain string — the runtime Principal scopes via tenant/project,
         // so no separate domain is carried.
         domain: String::new(),

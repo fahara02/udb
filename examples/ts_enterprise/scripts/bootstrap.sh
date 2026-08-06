@@ -81,13 +81,8 @@ UDB_ABAC_POLICY_FILE="$POLICY_FILE" "$CLI" policy-seed > "$SEED_SQL"
 if command -v psql >/dev/null 2>&1; then
   psql "$PG_DSN" -f "$SEED_SQL" >/dev/null
   echo "seeded 3 allow policies (Select/Upsert/Delete) for tenant $TENANT_ID"
-elif command -v docker >/dev/null 2>&1; then
-  docker compose -f "$ROOT/docker-compose.yml" exec -T postgres \
-    psql -U udb -d udb_enterprise < "$SEED_SQL" >/dev/null 2>&1 \
-    && echo "seeded policies via docker postgres" \
-    || echo "WARN: could not auto-apply $SEED_SQL — apply it manually" >&2
 else
-  echo "WARN: no psql/docker found — apply $SEED_SQL to Postgres manually before serving" >&2
+  echo "WARN: no psql found — apply $SEED_SQL to Postgres ($PG_DSN) manually before serving" >&2
 fi
 
 # Emit the env file serve.sh + the client read. There is no ABAC env override any
