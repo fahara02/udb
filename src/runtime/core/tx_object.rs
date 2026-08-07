@@ -324,6 +324,9 @@ impl DataBrokerRuntime {
             .filter(|mutation| !mutation.commit)
             .collect();
         let mut pending_saga_steps: Vec<PendingSagaStep> = Vec::new();
+        // Per-mutation affected-row counts, so the post-commit audit loop skips a
+        // mutation that changed nothing (audit integrity — see build_audit_event).
+        let mut audit_affected: Vec<u64> = vec![0; tx_mutations.len()];
         // Item 23: when this transaction will commit via live 2PC and MySQL
         // instances are configured, capture every executed plan statement so
         // `XaMysqlParticipant` can replay it (translated to MySQL dialect)
@@ -749,6 +752,7 @@ impl DataBrokerRuntime {
             };
             match result {
                 Ok(affected) => {
+                    audit_affected[mutation_index] = affected;
                     pending_saga_steps.push(PendingSagaStep {
                         step_index: pending_saga_steps.len(),
                         operation: operation.clone(),
@@ -1100,7 +1104,7 @@ impl DataBrokerRuntime {
             // are a compliance blind spot. Resource URI is the table-level
             // sql://schema/table (a transaction spans multiple records, so a
             // record-level URI like the unary path's is not meaningful here).
-            for mutation in &tx_mutations {
+            for (mutation_index, mutation) in tx_mutations.iter().enumerate() {
                 let operation = mutation.operation.to_ascii_lowercase();
                 if !matches!(operation.as_str(), "upsert" | "update" | "delete") {
                     continue;
@@ -1110,16 +1114,20 @@ impl DataBrokerRuntime {
                 let resource_uri = resolve_table_for_message(manifest, &mutation.message_type)
                     .map(|table| format!("sql://{}/{}", table.schema, table.table))
                     .unwrap_or_else(|_| mutation.message_type.clone());
-                crate::runtime::core::audit::emit_audit(
-                    &self.config.audit_sink,
-                    &crate::planning::broker::build_audit_event(
-                        &audit_context,
-                        &operation,
-                        &resource_uri,
-                        &manifest.checksum_sha256,
-                    ),
-                    self.pg_pool.as_ref(),
-                );
+                // Only audit a tx mutation that actually changed a row.
+                if let Some(event) = crate::planning::broker::build_audit_event(
+                    &audit_context,
+                    &operation,
+                    &resource_uri,
+                    &manifest.checksum_sha256,
+                    audit_affected[mutation_index] as i64,
+                ) {
+                    crate::runtime::core::audit::emit_audit(
+                        &self.config.audit_sink,
+                        &event,
+                        self.pg_pool.as_ref(),
+                    );
+                }
             }
         }
         statuses

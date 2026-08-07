@@ -1049,7 +1049,9 @@ fn broker_planner_validates_vector_dimensions_object_pii_and_audit_events() {
         "udb.object.presign",
         "object://pii_docs/tenant-1/doc.pdf",
         "sha256:abc",
-    );
+        1,
+    )
+    .expect("a mutation affecting 1 row yields an audit event");
     assert_eq!(audit.tenant_id, "tenant-1");
     assert_eq!(audit.resource_uri, "object://pii_docs/tenant-1/doc.pdf");
 }

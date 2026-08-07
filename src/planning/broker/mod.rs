@@ -1764,13 +1764,24 @@ pub fn build_object_stream_plan(
     }
 }
 
+/// Build the mutation audit event — or `None` when the mutation changed nothing.
+///
+/// A write that matched ZERO rows is not a mutation. Emitting an `update`/`delete`
+/// event carrying a `resource_uri` and a `checksum_sha256` (which imply a specific
+/// modified record and a computed post-state) for it puts a change that never
+/// happened into the audit log — the artefact handed to a regulator. So
+/// `affected_rows <= 0` yields `None` and the caller emits nothing.
 pub fn build_audit_event(
     context: &RequestContext,
     event_type: &str,
     resource_uri: &str,
     checksum_sha256: &str,
-) -> AuditEvent {
-    AuditEvent {
+    affected_rows: i64,
+) -> Option<AuditEvent> {
+    if affected_rows <= 0 {
+        return None;
+    }
+    Some(AuditEvent {
         event_type: event_type.to_string(),
         tenant_id: context.tenant_id.clone(),
         user_id: context.user_id.clone(),
@@ -1778,7 +1789,7 @@ pub fn build_audit_event(
         purpose: context.purpose.clone(),
         resource_uri: resource_uri.to_string(),
         checksum_sha256: checksum_sha256.to_string(),
-    }
+    })
 }
 
 pub fn build_generic_dispatch_plan(
@@ -2338,6 +2349,22 @@ fn compile_column_predicate(
             sql: parts.join(" AND "),
             next_param,
         }
+    } else if value.is_null() {
+        // SQL surprise: `col = NULL` is always UNKNOWN and matches nothing — the
+        // same trap the READ path (`ir/compile/sql_dialect::render_filter`) already
+        // rejects. On the WRITE path (update/delete via `build_update_plan` /
+        // `build_delete_plan`, which compile through here) a bare `col: null`
+        // filter used to compile silently to `col = NULL`, so it matched zero rows
+        // and the mutation reported success while changing nothing. Reject it
+        // loudly, symmetric with reads, and direct callers to the IsNull operator.
+        errors.push(format!(
+            "comparison with NULL on field '{column}' matches no rows; use the IsNull \
+             operator instead, e.g. {{\"{column}\": {{\"$is_null\": true}}}}"
+        ));
+        CompiledFilter {
+            sql: String::new(),
+            next_param: start_param,
+        }
     } else {
         parameter_columns.push(column.to_string());
         CompiledFilter {
@@ -2561,6 +2588,79 @@ pub(crate) use helpers::*;
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // A zero-row mutation is not a write: build_audit_event must return None so no
+    // `update`/`delete` event (with a resource_uri + checksum implying a modified
+    // record) is written to the audit log for a change that never happened.
+    #[test]
+    fn no_audit_event_for_a_zero_row_mutation() {
+        let ctx = RequestContext {
+            tenant_id: "t1".to_string(),
+            ..RequestContext::default()
+        };
+        // FIX: 0 affected rows -> no audit event.
+        assert!(
+            build_audit_event(&ctx, "update", "sql://fleet/driver_sessions", "sha256:x", 0)
+                .is_none(),
+            "a mutation that changed nothing must not produce an audit event"
+        );
+        // A real mutation (>0 rows) still audits, with its fields intact.
+        let event = build_audit_event(&ctx, "update", "sql://fleet/driver_sessions", "sha256:x", 2)
+            .expect("a 2-row update must produce an audit event");
+        assert_eq!(event.event_type, "update");
+        assert_eq!(event.resource_uri, "sql://fleet/driver_sessions");
+    }
+
+    // The `= NULL` trap: a bare-null filter value must be rejected on the WRITE
+    // path (update/delete via compile_filter_predicates), symmetric with the read
+    // path, instead of silently compiling to `col = NULL` (always UNKNOWN) and
+    // no-op'ing the mutation.
+    #[test]
+    fn write_filter_rejects_bare_null_comparison() {
+        use std::collections::{BTreeMap, BTreeSet};
+        let allowed: BTreeSet<String> = ["ended_at".to_string()].into_iter().collect();
+        let encrypted: BTreeMap<String, String> = BTreeMap::new();
+
+        // FIX: `{"ended_at": null}` is rejected (no SQL, an IsNull-directing error).
+        let mut errors = Vec::new();
+        let mut params = Vec::new();
+        let compiled = compile_filter_predicates(
+            &serde_json::json!({ "ended_at": null }),
+            &allowed,
+            &encrypted,
+            &mut errors,
+            &mut params,
+            1,
+            &BackendKind::Postgres,
+        );
+        assert!(
+            compiled.sql.is_empty(),
+            "a null comparison must not compile to `col = NULL`, got: {}",
+            compiled.sql
+        );
+        assert!(
+            errors.iter().any(|e| e.contains("IsNull")),
+            "the error must direct callers to IsNull, got: {errors:?}"
+        );
+
+        // A non-null equality still compiles cleanly.
+        let mut ok_errors = Vec::new();
+        let mut ok_params = Vec::new();
+        let ok = compile_filter_predicates(
+            &serde_json::json!({ "ended_at": "2026-08-02T00:00:00Z" }),
+            &allowed,
+            &encrypted,
+            &mut ok_errors,
+            &mut ok_params,
+            1,
+            &BackendKind::Postgres,
+        );
+        assert!(
+            ok_errors.is_empty(),
+            "a non-null equality must compile: {ok_errors:?}"
+        );
+        assert!(ok.sql.contains("ended_at"), "got: {}", ok.sql);
+    }
     use crate::generation::{
         ManifestColumn, ManifestColumnSecurity, ManifestIndex, ManifestTableSecurity,
     };

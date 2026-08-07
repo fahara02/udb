@@ -1279,18 +1279,22 @@ impl DataBrokerRuntime {
         let _ = self
             .cache_delete_pattern(&cache_invalidation_pattern("select", &request.message_type))
             .await;
-        // F-1: audit the committed mutation to the configured sink (was a total
-        // no-op — build_audit_event had no emitter).
-        crate::runtime::core::audit::emit_audit(
-            &self.config.audit_sink,
-            &crate::planning::broker::build_audit_event(
-                &context,
-                "upsert",
-                &response.resource_uri,
-                &manifest.checksum_sha256,
-            ),
-            self.pg_pool.as_ref(),
-        );
+        // F-1: audit the committed mutation to the configured sink — but only when
+        // it changed something; a 0-affected write must never be recorded as a
+        // mutation (audit integrity — see build_audit_event).
+        if let Some(event) = crate::planning::broker::build_audit_event(
+            &context,
+            "upsert",
+            &response.resource_uri,
+            &manifest.checksum_sha256,
+            response.affected_rows,
+        ) {
+            crate::runtime::core::audit::emit_audit(
+                &self.config.audit_sink,
+                &event,
+                self.pg_pool.as_ref(),
+            );
+        }
         Ok(response)
     }
 
@@ -1972,17 +1976,21 @@ impl DataBrokerRuntime {
         let _ = self
             .cache_delete_pattern(&cache_invalidation_pattern("select", message_type))
             .await;
-        // F-1: audit the committed delete to the configured sink.
-        crate::runtime::core::audit::emit_audit(
-            &self.config.audit_sink,
-            &crate::planning::broker::build_audit_event(
-                &context,
-                "delete",
-                &response.resource_uri,
-                &manifest.checksum_sha256,
-            ),
-            self.pg_pool.as_ref(),
-        );
+        // F-1: audit the committed delete — only when it removed something; a
+        // 0-affected delete is not a mutation (audit integrity).
+        if let Some(event) = crate::planning::broker::build_audit_event(
+            &context,
+            "delete",
+            &response.resource_uri,
+            &manifest.checksum_sha256,
+            response.affected_rows,
+        ) {
+            crate::runtime::core::audit::emit_audit(
+                &self.config.audit_sink,
+                &event,
+                self.pg_pool.as_ref(),
+            );
+        }
         Ok(response)
     }
 
@@ -2450,16 +2458,22 @@ impl DataBrokerRuntime {
         let _ = self
             .cache_delete_pattern(&cache_invalidation_pattern("select", message_type))
             .await;
-        crate::runtime::core::audit::emit_audit(
-            &self.config.audit_sink,
-            &crate::planning::broker::build_audit_event(
-                &context,
-                "update",
-                &response.resource_uri,
-                &manifest.checksum_sha256,
-            ),
-            self.pg_pool.as_ref(),
-        );
+        // Audit the committed update — only when it changed a row. A filter that
+        // matched nothing (e.g. the `col = NULL` trap) is a no-op, not a mutation,
+        // and must not appear in the audit log as a write (audit integrity).
+        if let Some(event) = crate::planning::broker::build_audit_event(
+            &context,
+            "update",
+            &response.resource_uri,
+            &manifest.checksum_sha256,
+            response.affected_rows,
+        ) {
+            crate::runtime::core::audit::emit_audit(
+                &self.config.audit_sink,
+                &event,
+                self.pg_pool.as_ref(),
+            );
+        }
         Ok(response)
     }
 
@@ -2712,17 +2726,21 @@ impl DataBrokerRuntime {
         let _ = self
             .cache_delete_pattern(&cache_invalidation_pattern("select", &request.message_type))
             .await;
-        // One audit event for the committed batch (the resource is the table).
-        crate::runtime::core::audit::emit_audit(
-            &self.config.audit_sink,
-            &crate::planning::broker::build_audit_event(
-                &context,
-                "bulk_cas",
-                &format!("sql://{}/{}", table.schema, table.table),
-                &manifest.checksum_sha256,
-            ),
-            self.pg_pool.as_ref(),
-        );
+        // One audit event for the committed batch (the resource is the table) —
+        // only when the batch changed at least one row (audit integrity).
+        if let Some(event) = crate::planning::broker::build_audit_event(
+            &context,
+            "bulk_cas",
+            &format!("sql://{}/{}", table.schema, table.table),
+            &manifest.checksum_sha256,
+            i64::from(changed),
+        ) {
+            crate::runtime::core::audit::emit_audit(
+                &self.config.audit_sink,
+                &event,
+                self.pg_pool.as_ref(),
+            );
+        }
         Ok(crate::proto::BulkCasResponse {
             matched,
             changed,
