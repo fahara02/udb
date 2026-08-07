@@ -13,10 +13,10 @@
 │    UNIVERSAL DATA BROKER                                                   │
 │    gRPC data plane | native control plane | tenant/project scope guard     │
 │                                                                            │
-│    crate v0.5.1 | protocol v1.0.0                                          │
+│    crate v0.5.2 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
-Alongside the data plane that reads and writes your app's tables, UDB 0.5.1 includes a native control plane
+Alongside the data plane that reads and writes your app's tables, UDB 0.5.2 includes a native control plane
 — a set of built-in gRPC services that handle the plumbing
 most applications end up building anyway. If you need login and access control, file
 storage, asset pipelines, realtime coordination, multi-tenancy, notifications,

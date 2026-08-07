@@ -5,6 +5,29 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.5.2] - 2026-08-07
+
+Patch release closing a live-reported audit-integrity and write-path correctness
+defect, each with a deliberate fail-without-fix regression test. No behavior
+changes for correct callers; `^0.5.1` consumers should upgrade.
+
+### Fixed
+- **Audit log no longer records mutations that did not happen.** An `Update` (or
+  `Delete`) whose filter matched zero rows returned success *and* emitted an
+  `update`/`delete` audit event carrying a `resource_uri` and `checksum_sha256`
+  that implied a modified record — the audit trail, a regulator-facing artefact,
+  claimed a write that never occurred. No audit event is now emitted when a
+  mutation affects zero rows, gated at every emission site: unary
+  upsert/update/delete, bulk compare-and-set, and the `BeginTx` transaction path
+  (which carried the same bug).
+- **`column = NULL` filters are rejected on writes, symmetric with reads.** A bare
+  `null` filter value — which every SDK produces when a caller passes a language
+  `nil`/`None` — compiled to `col = NULL` on the update/delete path. That is always
+  UNKNOWN in SQL, so it matched zero rows and reported success while changing
+  nothing. The write path now returns a `Malformed` error directing callers to the
+  `IsNull` operator (e.g. `{"col": {"$is_null": true}}`), the same guard the read
+  path already enforced.
+
 ## [0.5.1] - 2026-08-07
 
 Patch release closing seven consumer-reported defects that blocked upgrade,
