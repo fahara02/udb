@@ -805,8 +805,8 @@ mod tests {
             json.contains("\"blocked\":[]"),
             "blocked must serialize as an array (not the boolean the MigrationPlan emitted), got: {json}"
         );
-        let reloaded: ExportedPlan =
-            serde_json::from_str(&json).expect("the emitted approval plan must deserialize as ExportedPlan");
+        let reloaded: ExportedPlan = serde_json::from_str(&json)
+            .expect("the emitted approval plan must deserialize as ExportedPlan");
 
         // (b) serve accepts it as-is (same manifest, same canonical change set).
         assert_eq!(

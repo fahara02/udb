@@ -372,7 +372,11 @@ impl DataBrokerRuntime {
                     };
                     return Err(tonic::Status::new(
                         status.code(),
-                        format!("{}{hint} [artifact {}]", status.message(), artifact.rel_path),
+                        format!(
+                            "{}{hint} [artifact {}]",
+                            status.message(),
+                            artifact.rel_path
+                        ),
                     ));
                 }
                 Err(status) => return Err(status),

@@ -912,10 +912,8 @@ pub fn run() {
                 .find(|w| w[0] == "--emit-approval-plan")
                 .map(|w| w[1].clone())
             {
-                let exported = udb::control::plan_approval::build_exported_plan(
-                    &plan.manifest,
-                    &plan.changes,
-                );
+                let exported =
+                    udb::control::plan_approval::build_exported_plan(&plan.manifest, &plan.changes);
                 let json = serde_json::to_string_pretty(&exported)
                     .unwrap_or_else(|err| fatal_json("failed to serialize approval plan", err));
                 if let Err(err) = std::fs::write(&out_path, format!("{json}\n")) {

@@ -249,7 +249,12 @@ fn require_approved_plan_for_changes(
         // now shares `canonical_change_set` with this gate.
         let expected: Vec<String> = changes
             .iter()
-            .map(|c| format!("{:?} {:?} {}.{}.{}", c.safety, c.kind, c.schema, c.table, c.column))
+            .map(|c| {
+                format!(
+                    "{:?} {:?} {}.{}.{}",
+                    c.safety, c.kind, c.schema, c.table, c.column
+                )
+            })
             .collect();
         tracing::error!(
             target: "udb.migration",
@@ -260,7 +265,11 @@ fn require_approved_plan_for_changes(
             "approval plan mismatch; regenerate with `udb plan --prior <ledger manifest>` (same canonical change set)"
         );
         let preview = if expected.len() > 30 {
-            format!("{}; …({} more)", expected[..30].join(" | "), expected.len() - 30)
+            format!(
+                "{}; …({} more)",
+                expected[..30].join(" | "),
+                expected.len() - 30
+            )
         } else {
             expected.join(" | ")
         };
