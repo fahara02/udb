@@ -704,6 +704,118 @@ mod tests {
     use crate::generation::CatalogManifest;
     use crate::migration::diff::{ChangeKind, ChangeOperation, ChangeSafety};
 
+    // Practical regression for the producer/consumer divergence: `udb plan`
+    // (`canonical_change_set` = diff_manifests + diff_all_backends) and `serve`
+    // must compute the SAME operation set. A Qdrant collection is a backend op that
+    // diff_all_backends surfaces but relational diff_manifests does NOT — so
+    // serve-with-diff_manifests (the pre-fix consumer) rejects the producer's own
+    // plan, while serve-with-canonical_change_set (the fix) accepts it.
+    #[test]
+    fn producer_plan_accepted_only_when_consumer_shares_canonical_change_set() {
+        use crate::generation::manifest::{ManifestStore, ManifestStoreOption};
+        use crate::migration::diff::diff_manifests;
+        use crate::migration::plan::canonical_change_set;
+
+        // A current manifest that introduces a Qdrant vector collection (a backend
+        // delta) and no relational tables.
+        let current = CatalogManifest {
+            checksum_sha256: "ck-current".to_string(),
+            stores: vec![ManifestStore {
+                store_kind: "vector".to_string(),
+                backend: "qdrant".to_string(),
+                logical_name: "customers".to_string(),
+                resource_name: "customers_vec".to_string(),
+                namespace: "default".to_string(),
+                database_name: "test".to_string(),
+                options: vec![
+                    ManifestStoreOption {
+                        key: "vector_size".to_string(),
+                        value: "384".to_string(),
+                    },
+                    ManifestStoreOption {
+                        key: "distance".to_string(),
+                        value: "Cosine".to_string(),
+                    },
+                ],
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+        let prior: Option<&CatalogManifest> = None;
+
+        // The producer (`udb plan`) writes the canonical set, which includes the
+        // backend op that relational diffing omits.
+        let producer = canonical_change_set(prior, &current);
+        let relational_only = diff_manifests(prior, &current);
+        assert!(
+            producer.len() > relational_only.len(),
+            "canonical set must include the backend op diff_manifests omits (canonical {} vs relational {})",
+            producer.len(),
+            relational_only.len(),
+        );
+
+        let approved = build_exported_plan(&current, &producer);
+
+        // FIX APPLIED — serve computes the SAME canonical set → plan accepted.
+        assert_eq!(
+            plan_matches_current_diff(&approved, &current, &canonical_change_set(prior, &current)),
+            PlanMatchResult::Matches,
+            "with the shared canonical change set the producer's plan must be accepted",
+        );
+
+        // FIX REMOVED — serve computes only diff_manifests (the pre-fix consumer)
+        // → CountMismatch, because it drops the backend op the producer approved.
+        match plan_matches_current_diff(&approved, &current, &relational_only) {
+            PlanMatchResult::CountMismatch {
+                approved_auto,
+                current_auto,
+                ..
+            } => assert!(
+                approved_auto > current_auto,
+                "producer approved {approved_auto} ops but the diff_manifests-only consumer saw {current_auto}",
+            ),
+            other => panic!(
+                "without the shared change set the producer's own plan must be rejected, got {other:?}"
+            ),
+        }
+    }
+
+    // What `udb plan --emit-approval-plan` writes: `build_exported_plan` over the
+    // canonical change set. It must (a) serialize/deserialize as an `ExportedPlan`
+    // — `blocked` as an ARRAY, where the old `MigrationPlan` output emitted the
+    // boolean `blocked: false` the broker's deserializer rejected — and (b) be
+    // accepted by serve's gate as-is, carrying serve's own `operations_hash`
+    // (`build_exported_plan`), not the divergent `MigrationPlan` hash. Together
+    // these remove the "approve requires a deliberate failed startup" ceremony.
+    #[test]
+    fn emit_approval_plan_round_trips_and_is_accepted_by_serve() {
+        let manifest = CatalogManifest {
+            checksum_sha256: "ck".to_string(),
+            ..Default::default()
+        };
+        let changes = vec![
+            sample_op(ChangeKind::AddColumn, "notifications", "notifications"),
+            sample_op(ChangeKind::HintWarning, "authz", "roles"),
+        ];
+        let exported = build_exported_plan(&manifest, &changes);
+
+        // (a) round-trips as ExportedPlan JSON — `blocked` is an array.
+        let json = serde_json::to_string(&exported).expect("serialize approval plan");
+        assert!(
+            json.contains("\"blocked\":[]"),
+            "blocked must serialize as an array (not the boolean the MigrationPlan emitted), got: {json}"
+        );
+        let reloaded: ExportedPlan =
+            serde_json::from_str(&json).expect("the emitted approval plan must deserialize as ExportedPlan");
+
+        // (b) serve accepts it as-is (same manifest, same canonical change set).
+        assert_eq!(
+            plan_matches_current_diff(&reloaded, &manifest, &changes),
+            PlanMatchResult::Matches,
+            "the emitted approval plan must be accepted by serve without a failed boot",
+        );
+    }
+
     fn sample_op(kind: ChangeKind, schema: &str, table: &str) -> ChangeOperation {
         use sha2::{Digest, Sha256};
         let fp = format!(

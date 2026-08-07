@@ -899,6 +899,37 @@ pub fn run() {
                 &MigrationPlanConfig::default(),
             )
             .unwrap_or_else(|err| fatal_json("failed to build migration plan", err));
+
+            // `--emit-approval-plan <path>`: write the EXACT `ExportedPlan` that
+            // `serve`'s approval gate consumes — built with `build_exported_plan`
+            // over the SAME canonical change set, so it carries serve's
+            // `operations_hash` (not the divergent MigrationPlan hash) and `blocked`
+            // as an array (not the boolean `MigrationPlan.blocked`). The file is
+            // accepted as-is; without it, approving a migration required a
+            // deliberate failed startup to read serve's expected hash from the error.
+            if let Some(out_path) = args
+                .windows(2)
+                .find(|w| w[0] == "--emit-approval-plan")
+                .map(|w| w[1].clone())
+            {
+                let exported = udb::control::plan_approval::build_exported_plan(
+                    &plan.manifest,
+                    &plan.changes,
+                );
+                let json = serde_json::to_string_pretty(&exported)
+                    .unwrap_or_else(|err| fatal_json("failed to serialize approval plan", err));
+                if let Err(err) = std::fs::write(&out_path, format!("{json}\n")) {
+                    eprintln!("failed to write approval plan to {out_path}: {err}");
+                    process::exit(1);
+                }
+                eprintln!(
+                    "wrote approval plan to {out_path} ({} auto, {} blocked op(s)) — \
+                     point migration.require_approval_plan at it; serve accepts it as-is",
+                    exported.auto_count, exported.blocked_count
+                );
+                process::exit(0);
+            }
+
             output_json(&plan, "migration plan");
         }
         Command::Lint => {

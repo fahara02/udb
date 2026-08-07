@@ -89,8 +89,10 @@ const COMMANDS: &[CmdHelp] = &[
         name: "plan",
         group: "Schema & SQL",
         summary: "Build a migration plan (optionally vs a prior manifest) as JSON.",
-        usage: "udb plan [--prior <manifest.json>]",
-        details: "",
+        usage: "udb plan [--prior <manifest.json>] [--emit-approval-plan <path>]",
+        details: "--emit-approval-plan writes the exact approval-plan file serve accepts \
+                  (same canonical change set + operations_hash), so migration.require_approval_plan \
+                  can point at it directly — no failed startup needed to discover the hash.",
     },
     CmdHelp {
         name: "catalog",

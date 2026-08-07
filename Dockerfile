@@ -25,6 +25,9 @@ COPY third_party ./third_party
 COPY configs ./configs
 # Rust compile-time includes currently read docs/abac_seed.json.
 COPY docs ./docs
+# build.rs embeds sdk-templates/ at compile time via include_dir!, so a from-source
+# --bin build fails ("sdk-templates is not a directory") without it.
+COPY sdk-templates ./sdk-templates
 # `[[bench]] core_bench` resolves to benches/core_bench.rs; cargo needs the file
 # to exist when it parses the manifest, even for a --bin build.
 COPY benches ./benches

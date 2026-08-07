@@ -1,0 +1,43 @@
+# Keep the Docker build context small. The Dockerfile COPYs only the specific
+# source dirs it needs; everything below is either huge, irrelevant to the build,
+# or local-only and must not be shipped into the image context.
+
+# Rust build output (tens of GB) — the Docker build compiles fresh via a cache mount.
+target/
+target-*/
+targetaYRWYR/
+**/target/
+
+# VCS + CI
+.git/
+.gitignore
+
+# Node / JS
+**/node_modules/
+**/package-lock.json.*
+
+# Generated SDK/build artifacts (regenerated in-image / not needed to build the broker)
+sdk/**/dist/
+sdk/**/dist-test/
+sdk/**/obj/
+sdk/**/*.egg-info/
+sdk/typescript/gen/
+
+# Heavy example scaffolding (cargo only needs examples/dhat_hotpath.rs from the manifest)
+examples/**/node_modules/
+examples/**/gen/
+examples/**/secrets/
+examples/**/proto/udb/
+examples/**/proto/google/
+examples/**/third_party/
+examples/**/*.exe
+
+# Local-only / untracked working notes and rigs
+bug_reports/
+private/
+.bench-local/
+release/
+
+# Editor / OS noise
+*.log
+.DS_Store

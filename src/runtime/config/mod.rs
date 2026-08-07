@@ -71,8 +71,13 @@ fn hundred_i32() -> i32 {
 fn thousand_i32() -> i32 {
     1000
 }
-fn four_usize() -> usize {
-    4
+/// Default startup DDL concurrency. **Serial (1)** on purpose: bootstrap SQL
+/// artifacts touch shared PostgreSQL catalog rows, and applying them in parallel
+/// makes Postgres reject the loser with `tuple concurrently updated`, aborting a
+/// crash-looping startup non-deterministically. Serial is the safe default for a
+/// startup gate; operators opt into parallelism with `UDB_DDL_CONCURRENCY=N`.
+fn default_ddl_concurrency() -> usize {
+    1
 }
 
 fn bool_env(key: &str) -> Option<bool> {
@@ -1159,8 +1164,10 @@ pub struct UdbConfig {
     /// Maximum allowed row limit for SELECT queries.
     #[serde(default = "thousand_i32")]
     pub max_limit: i32,
-    /// DDL concurrency for force-sync (default 4).
-    #[serde(default = "four_usize")]
+    /// Startup/force-sync DDL concurrency. Defaults to **1 (serial)** — parallel
+    /// DDL on shared catalog rows races with `tuple concurrently updated`. Set
+    /// `UDB_DDL_CONCURRENCY=N` to opt into parallelism.
+    #[serde(default = "default_ddl_concurrency")]
     pub ddl_concurrency: usize,
     /// PostgreSQL read-replica DSNs.
     #[serde(default)]

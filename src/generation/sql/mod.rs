@@ -580,6 +580,39 @@ pub(crate) use render_ext::*;
 mod tests {
     use super::*;
 
+    // Regression: a DropUnique must drop the index UDB actually created
+    // (`uidx_<schema>_<table>_<column>`), not the bare column. The old code emitted
+    // `DROP INDEX IF EXISTS "<schema>"."<column>"`, which matched nothing under
+    // `IF EXISTS` — a silent no-op recorded as `applied`, leaving the unique index
+    // (and its 409-on-the-second-row) in place forever.
+    #[test]
+    fn drop_unique_emits_generated_index_name_not_the_column() {
+        use crate::migration::diff::{ChangeKind, ChangeOperation, ChangeSafety};
+
+        let op = ChangeOperation {
+            kind: ChangeKind::DropUnique,
+            safety: ChangeSafety::SafeAuto,
+            schema: "fleet".to_string(),
+            table: "driver_sessions".to_string(),
+            column: "driver_profile_id".to_string(),
+            object_name: "driver_profile_id".to_string(),
+            ..Default::default()
+        };
+        let sql = render_delta_operation(&CatalogManifest::default(), None, &op);
+
+        // FIX: drops the real index AddUnique generated…
+        assert!(
+            sql.contains("uidx_fleet_driver_sessions_driver_profile_id"),
+            "DropUnique must name the generated unique index, got: {sql}"
+        );
+        // …and NOT the bare column (the silent-no-op the pre-fix code emitted).
+        assert!(
+            !sql.contains("\"fleet\".\"driver_profile_id\""),
+            "DropUnique must not target the bare column name, got: {sql}"
+        );
+        assert!(sql.contains("DROP INDEX IF EXISTS"), "got: {sql}");
+    }
+
     fn named_column(field_name: &str, column_name: &str) -> ManifestColumn {
         ManifestColumn {
             field_name: field_name.to_string(),

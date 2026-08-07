@@ -227,3 +227,5 @@ Thumbs.db
 .continue/*
 .serena
 bug_reports
+# Local build outputs (e.g. udb sdk generate / local Docker binary builds)
+/release/

@@ -59,6 +59,13 @@ pub struct ManifestDrift {
     pub message: String,
 }
 
+/// True when a PostgreSQL error message is the transient `tuple concurrently
+/// updated` serialization failure that concurrent DDL on shared catalog rows
+/// raises — same family as SQLSTATE 40001, and safe to replay.
+pub(crate) fn is_concurrent_ddl_race(message: &str) -> bool {
+    message.contains("tuple concurrently updated")
+}
+
 impl DataBrokerRuntime {
     /// GAP 7: Execute SQL artifacts with bounded-parallel schema-level execution.
     ///
@@ -259,6 +266,7 @@ impl DataBrokerRuntime {
                 let started = started;
                 let total = total;
                 let step = step;
+                let concurrency = concurrency;
                 async move {
                     // Hold the semaphore permit for the full duration of this DDL.
                     let _permit = sem
@@ -267,9 +275,14 @@ impl DataBrokerRuntime {
                         .expect("DDL semaphore unexpectedly closed");
 
                     tracing::debug!(mode = %mode, artifact = %artifact.rel_path, "applying artifact");
-                    let result =
-                        Self::apply_sql_artifact(&pool, artifact, force_reseed, &ledger_schema)
-                            .await;
+                    let result = Self::apply_sql_artifact_resilient(
+                        &pool,
+                        artifact,
+                        force_reseed,
+                        &ledger_schema,
+                        concurrency,
+                    )
+                    .await;
                     if result.is_ok() {
                         let n =
                             applied.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
@@ -298,11 +311,12 @@ impl DataBrokerRuntime {
         // Serial pass: cross-schema FK constraints and other final artifacts.
         for artifact in &serial_last {
             tracing::debug!(mode = %mode, artifact = %artifact.rel_path, "applying artifact");
-            Self::apply_sql_artifact(
+            Self::apply_sql_artifact_resilient(
                 pool,
                 artifact,
                 self.config.migration.force_reseed,
                 ledger_schema,
+                concurrency,
             )
             .await?;
             let n = applied.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
@@ -320,6 +334,51 @@ impl DataBrokerRuntime {
             }
         }
         Ok(())
+    }
+
+    /// Apply an artifact, retrying the transient PostgreSQL `tuple concurrently
+    /// updated` serialization failure that concurrent DDL on shared catalog rows
+    /// raises (same family as SQLSTATE 40001). Artifact SQL is transactional and
+    /// idempotent, so a rolled-back attempt is safe to replay. On exhaustion the
+    /// error is surfaced WITH the cause named — otherwise `tuple concurrently
+    /// updated` reads like corruption, not a DDL race — pointing at
+    /// `UDB_DDL_CONCURRENCY` when concurrency > 1.
+    async fn apply_sql_artifact_resilient(
+        pool: &PgPool,
+        artifact: &GeneratedArtifact,
+        force_reseed: bool,
+        ledger_schema: &str,
+        concurrency: usize,
+    ) -> Result<(), tonic::Status> {
+        const MAX_ATTEMPTS: usize = 5;
+        for attempt in 1..=MAX_ATTEMPTS {
+            match Self::apply_sql_artifact(pool, artifact, force_reseed, ledger_schema).await {
+                Ok(()) => return Ok(()),
+                Err(status)
+                    if is_concurrent_ddl_race(status.message()) && attempt < MAX_ATTEMPTS =>
+                {
+                    tracing::warn!(
+                        artifact = %artifact.rel_path,
+                        attempt,
+                        "DDL hit `tuple concurrently updated`; retrying after backoff"
+                    );
+                    tokio::time::sleep(std::time::Duration::from_millis(50 * attempt as u64)).await;
+                }
+                Err(status) if is_concurrent_ddl_race(status.message()) => {
+                    let hint = if concurrency > 1 {
+                        " (concurrent-DDL serialization race — set UDB_DDL_CONCURRENCY=1 for serial DDL, or lower it)"
+                    } else {
+                        ""
+                    };
+                    return Err(tonic::Status::new(
+                        status.code(),
+                        format!("{}{hint} [artifact {}]", status.message(), artifact.rel_path),
+                    ));
+                }
+                Err(status) => return Err(status),
+            }
+        }
+        unreachable!("the final attempt always returns (Ok, named race, or other error)")
     }
 
     pub(crate) async fn apply_sql_artifact(
@@ -2077,6 +2136,20 @@ mod tests {
     use super::*;
     use crate::proto::{ErrorDetail, ErrorKind};
     use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+
+    #[test]
+    fn concurrent_ddl_race_is_classified_for_retry() {
+        // The transient serialization error concurrent bootstrap DDL raises is
+        // retried by apply_sql_artifact_resilient and named on exhaustion.
+        assert!(is_concurrent_ddl_race(
+            "error returned from database: tuple concurrently updated"
+        ));
+        // Unrelated failures must NOT be treated as retryable races.
+        assert!(!is_concurrent_ddl_race("relation \"foo\" does not exist"));
+        assert!(!is_concurrent_ddl_race(
+            "duplicate key value violates unique constraint"
+        ));
+    }
 
     fn decode_detail(status: &tonic::Status) -> ErrorDetail {
         let raw = status

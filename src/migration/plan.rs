@@ -99,20 +99,40 @@ pub struct LedgerEntry {
     pub description: String,
 }
 
+/// The ONE canonical migration change set for a `previous → manifest` transition.
+///
+/// This is the SINGLE source of truth shared by the plan PRODUCER (`udb plan` via
+/// [`build_migration_plan`]) and the plan CONSUMER (the `serve` startup approval
+/// gate, `control::lifecycle`). Both must derive the identical operation set from
+/// the same prior/current manifests, or the approval gate rejects its own tool's
+/// output with a `CountMismatch` (the producer/consumer divergence). It is:
+///
+/// - `diff_manifests` — Postgres-style relational DDL; PLUS
+/// - `diff_all_backends` — the per-backend deltas (Qdrant, MongoDB, Neo4j,
+///   ClickHouse, S3/MinIO collection/index/lifecycle changes) that relational
+///   diffing does not cover.
+///
+/// Disjoint `ChangeKind` sets, so a plain concatenation is correct; every op
+/// flows through the same finalize/generate/apply pipeline.
+pub fn canonical_change_set(
+    previous: Option<&CatalogManifest>,
+    manifest: &CatalogManifest,
+) -> Vec<ChangeOperation> {
+    let mut changes = diff_manifests(previous, manifest);
+    changes.extend(diff_all_backends(previous, manifest));
+    changes
+}
+
 pub fn build_migration_plan(
     previous: Option<&CatalogManifest>,
     schemas: &[ProtoSchema],
     config: &MigrationPlanConfig,
 ) -> Result<MigrationPlan, serde_json::Error> {
     let manifest = CatalogManifest::from_schemas(schemas)?;
-    let mut changes = diff_manifests(previous, &manifest);
-    // Wire in per-backend diffs (Qdrant, MongoDB, Neo4j, ClickHouse, S3/MinIO):
-    // diff_manifests covers Postgres-style relational DDL; diff_all_backends
-    // surfaces backend-specific deltas (collection/index/lifecycle changes) that
-    // were previously never diffed in any live plan. Disjoint ChangeKind sets,
-    // so a plain extend is correct; all ops flow through the same
-    // finalize/generate/apply pipeline below.
-    changes.extend(diff_all_backends(previous, &manifest));
+    // Producer side of the shared canonical change set (see `canonical_change_set`);
+    // `serve` computes the SAME set so an approved plan this emits is one `serve`
+    // will accept.
+    let changes = canonical_change_set(previous, &manifest);
     let blocked = changes.iter().any(|change| {
         matches!(
             change.safety,

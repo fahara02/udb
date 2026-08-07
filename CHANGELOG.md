@@ -5,6 +5,51 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.5.1] - 2026-08-07
+
+Patch release closing seven consumer-reported defects that blocked upgrade,
+schema evolution, and service-account deploys — each with a deliberate
+fail-without-fix regression test. No behavior changes beyond the fixes; `^0.5.0`
+consumers should upgrade.
+
+### Fixed
+- **Composite-key writes.** The row-revision store bound a composite primary key's
+  NUL separator into the `text` `row_key`; PostgreSQL rejects `0x00` during bind
+  decode, so every write to a multi-column-key entity failed fail-closed
+  (`row revision store unavailable`). The diagnostic `row_key` now renders the
+  separator as U+001F (the unique `revision_key` still hashes the original).
+- **Service-account login.** `AuthnService/Login` → `AuthenticateBearer` now returns
+  `ACCOUNT_KIND_SERVICE_ACCOUNT` instead of `ACCOUNT_KIND_UNSPECIFIED`: the account
+  kind is minted as a JWT claim, decoded on the verified principal, and carried
+  through every login/validate path.
+- **Migration approval — dual-gate deadlock.** Startup no longer runs two
+  independent approval gates that demanded incompatible operation counts (a
+  from-empty artifact subset vs the full prior→current diff), which deadlocked any
+  upgrade — and every subsequent schema change — carrying both bootstrap artifacts
+  and a schema diff. One canonical change set is computed and approved once, before
+  any mutation, and both apply phases authorize from it.
+- **Migration approval — producer/consumer divergence.** `udb plan` and `serve` now
+  share one `canonical_change_set` (`diff_manifests` + `diff_all_backends`), so the
+  CLI and the startup gate agree on operation count. `udb plan --emit-approval-plan
+  <path>` writes the exact `ExportedPlan` serve accepts (same `operations_hash`,
+  `blocked` as an array) — so approving a migration no longer requires a deliberate
+  failed startup to read serve's expected hash. On rejection serve now names the
+  operations it computed.
+- **DropUnique dropped the wrong object.** Removing a column-level `unique: true`
+  emitted `DROP INDEX IF EXISTS "<schema>"."<column>"` — the column name, not the
+  `uidx_<schema>_<table>_<column>` index UDB created — so it silently no-op'd under
+  `IF EXISTS`, recorded itself `applied`, and left the unique index (and its
+  409-on-the-second-row) in place forever. It now names the generated index.
+- **Concurrent bootstrap DDL race.** Startup applied bootstrap SQL artifacts in
+  parallel by default, racing on shared PostgreSQL catalog rows
+  (`tuple concurrently updated`) and crash-looping non-deterministically. DDL
+  concurrency now defaults to **serial**; opt into parallelism with
+  `UDB_DDL_CONCURRENCY=N`, which additionally retries the transient error and names
+  the cause on exhaustion.
+- **Cross-package enum codegen.** `udb sdk generate` (Go entity layer) now qualifies
+  an enum declared in a different proto package by importing that package via its
+  own `go_package`, instead of failing closed on a NOT NULL cross-package enum.
+
 ## [0.5.0] - 2026-08-05
 
 First "usable" stable release: a broad security/correctness remediation across the

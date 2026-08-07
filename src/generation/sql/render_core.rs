@@ -423,8 +423,23 @@ pub(crate) fn render_delta_operation(
         ChangeKind::CreateIndex => table
             .and_then(|table| find_index(table, &op.object_name).map(|index| render_index_in_tx(table, index)))
             .unwrap_or_default(),
-        ChangeKind::DropIndex | ChangeKind::DropUnique => {
+        ChangeKind::DropIndex => {
+            // A named index: object_name IS the real index identifier.
             format!("DROP INDEX IF EXISTS {}.{};", qi(&op.schema), qi(&op.object_name))
+        }
+        ChangeKind::DropUnique => {
+            // The unique index UDB created for a column-level `unique: true` is
+            // named `uidx_<schema>_<table>_<column>` (see the AddUnique arm above),
+            // NOT the bare column. `object_name` on a DropUnique is the COLUMN, so
+            // dropping it under `DROP INDEX IF EXISTS` matched nothing — the drop
+            // silently no-op'd yet the artifact recorded as `applied`, leaving the
+            // unique index (and its 409-on-second-row) in place forever. Emit the
+            // index identifier AddUnique actually generated.
+            format!(
+                "DROP INDEX IF EXISTS {}.{};",
+                qi(&op.schema),
+                qi(&format!("uidx_{}_{}_{}", op.schema, op.table, op.column))
+            )
         }
         ChangeKind::AddForeignKey => table
             .and_then(|table| find_fk(table, &op.object_name).map(|fk| (fk, is_partitioned(table))))

@@ -243,11 +243,38 @@ fn require_approved_plan_for_changes(
         }
     };
     if !verdict.is_match() {
+        // The verdict alone reports only counts/hashes, so an operator cannot
+        // derive the plan `serve` will accept. Name the exact operation set serve
+        // computed — reproducible with `udb plan --prior <ledger manifest>`, which
+        // now shares `canonical_change_set` with this gate.
+        let expected: Vec<String> = changes
+            .iter()
+            .map(|c| format!("{:?} {:?} {}.{}.{}", c.safety, c.kind, c.schema, c.table, c.column))
+            .collect();
+        tracing::error!(
+            target: "udb.migration",
+            approval_plan = %approval_plan_path,
+            verdict = ?verdict,
+            expected_operation_count = expected.len(),
+            expected_operations = %expected.join(" | "),
+            "approval plan mismatch; regenerate with `udb plan --prior <ledger manifest>` (same canonical change set)"
+        );
+        let preview = if expected.len() > 30 {
+            format!("{}; …({} more)", expected[..30].join(" | "), expected.len() - 30)
+        } else {
+            expected.join(" | ")
+        };
         return Err(fail(
             runtime,
             report,
             "approval_plan_mismatch",
-            format!("current diff does not match approved plan {approval_plan_path}: {verdict:?}"),
+            format!(
+                "current diff does not match approved plan {approval_plan_path}: {verdict:?}; \
+                 serve computed {} operation(s) [{preview}] — regenerate the plan with \
+                 `udb plan --prior <ledger manifest>` (the CLI and serve now share one \
+                 canonical change set)",
+                expected.len(),
+            ),
         ));
     }
     report.step(FsmState::Applying, accepted_message(&approval_plan_path));
@@ -257,27 +284,30 @@ fn require_approved_plan_for_changes(
 /// The ONE canonical migration change set the startup approval gate validates and
 /// both apply phases (bootstrap SQL + schema delta) authorize from:
 ///
-/// - `Some(prior)` with a CHANGED proto checksum → the real prior→current delta
-///   (`diff_manifests(Some(prior), manifest)`);
+/// - `Some(prior)` with a CHANGED proto checksum → the real prior→current delta;
 /// - `None` (first bootstrap) → the complete from-empty set;
 /// - `Some(prior)` with an UNCHANGED checksum → empty (no migration work — a
 ///   `force_sync` re-run still applies idempotently under the ledger, but demands
 ///   no re-approval).
 ///
-/// This replaces the two independent gates that previously diffed the SAME
-/// `require_approval_plan` against DIFFERENT change sets — a from-`None`
-/// artifact-only subset (independent of applied state) vs the full prior→current
-/// diff — and so demanded incompatible operation counts, deadlocking any upgrade
-/// that carried both bootstrap artifacts and a schema diff.
+/// It delegates to [`crate::migration::plan::canonical_change_set`] — the SAME
+/// function `udb plan` (`build_migration_plan`) uses — so the producer and
+/// consumer of an approved plan can never disagree on the operation set. Two
+/// defects made this necessary: (a) serve previously ran two independent gates
+/// that diffed the plan against DIFFERENT change sets (a from-`None` artifact
+/// subset vs the full prior→current diff), deadlocking upgrades; and (b) serve's
+/// diff covered only `diff_manifests` (Postgres DDL) while `udb plan` also emits
+/// `diff_all_backends`, so any backend delta made the producer's plan
+/// un-approvable by the consumer (`CountMismatch`).
 fn canonical_migration_changes(
     prior_manifest: Option<&CatalogManifest>,
     manifest: &CatalogManifest,
 ) -> Vec<ChangeOperation> {
     match prior_manifest {
         Some(prior) if prior.checksum_sha256 != manifest.checksum_sha256 => {
-            diff_manifests(Some(prior), manifest)
+            crate::migration::plan::canonical_change_set(Some(prior), manifest)
         }
-        None => diff_manifests(None, manifest),
+        None => crate::migration::plan::canonical_change_set(None, manifest),
         _ => Vec::new(),
     }
 }

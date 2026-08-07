@@ -835,6 +835,7 @@ pub(crate) fn split_csv(value: &str) -> Vec<String> {
 /// collector and `collect_positional_services` use this to skip flag values.
 const VALUE_FLAGS: &[&str] = &[
     "--prior",
+    "--emit-approval-plan",
     "--backend",
     "--out",
     "--lang",
