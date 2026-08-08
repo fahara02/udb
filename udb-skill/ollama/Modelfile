@@ -20,12 +20,22 @@ README.
 
 This is the single source of truth for the "Using UDB" skill. The Claude
 (`SKILL.md`), OpenAI (`instructions.md`), and Ollama (`Modelfile`) packages all
-wrap this same content. Edit here; re-sync the wrappers (see the repo README).
+wrap this same content. Edit here; re-sync the wrappers with `python
+udb-skill/sync_skills.py` (and hand-update `SKILL.md` — it is NOT regenerated).
 
 > **Audience:** an AI agent helping a developer *use* a running UDB broker —
-> connecting an SDK, authenticating, and working with proto-defined entities and
-> the native services. NOT contributing to UDB's Rust internals (that is the
+> connecting an SDK, authenticating a human OR a service, seeding authorization,
+> defining/evolving proto entities, and working with the data plane and the
+> native services. NOT contributing to UDB's Rust internals (that is the
 > `udb-coding` skill).
+
+> **How to use this document.** If the developer is stuck on **"permission
+> denied"**, jump straight to *The three authorization surfaces* and *Decoding
+> broker errors → the PERMISSION_DENIED decision tree* — those two sections solve
+> the overwhelming majority of UDB support questions. If they are standing up a
+> **new project**, follow *New-project bootstrap — the runbook*. If they are
+> wiring a **backend service** (not a human), read *Authentication → Service
+> (machine) authentication* first; it has the single most common trap in UDB.
 
 ---
 
@@ -34,14 +44,17 @@ wrap this same content. Edit here; re-sync the wrappers (see the repo README).
 UDB is a **proto-driven multi-database broker**. A developer declares their data
 model as annotated Protocol Buffers; UDB turns those into database schemas (DDL)
 and serves a uniform gRPC **DataBroker** API (`Select` / `Upsert` / `Delete` /
-typed stores / streaming) across 18 backends, plus a **native control plane** of
-first-class services (auth, authz, API keys, IdP, tenant, notification,
-analytics, storage, asset pipelines, WebRTC — and the platform wave: vault
-secrets/transit-crypto, metering/quotas, scheduler, search, webhooks, workflows/
-sagas, distributed locks, live-query streams, feature flags, backup/restore,
-embeddings). Every request carries **metadata** (tenant, project, scopes,
-identity) that UDB enforces fail-closed. The proto is the source of truth; the
-SDK is a thin typed client.
+`Update` / `BulkCas` / typed stores / streaming) across 18 backends, plus a
+**native control plane** of descriptor-declared first-class services (auth,
+authz, API keys, IdP,
+tenant, notification, analytics, storage, asset pipelines, WebRTC — and the
+platform wave: vault secrets/transit-crypto, metering/quotas, scheduler, search,
+webhooks, workflows/sagas, distributed locks, live-query streams, feature flags,
+backup/restore, embeddings). Every request carries **metadata** (tenant, project,
+scopes, identity) that UDB enforces fail-closed. The proto is the source of
+truth; the SDK is a thin typed client.
+
+---
 
 ## The mental model an agent must hold
 
@@ -49,40 +62,220 @@ SDK is a thin typed client.
    `(udb.core.common.v1.table)`; each column = a field annotated with
    `(udb.core.common.v1.column)`. The message's fully-qualified name (e.g.
    `shop.v1.Customer`) is the `message_type` you pass to every data RPC.
-2. **You never write SQL.** You call `Select`/`Upsert`/`Delete` with a
+2. **You never write SQL.** You call `Select`/`Upsert`/`Delete`/`Update` with a
    `message_type` + a filter/record; the broker routes to the backend.
-3. **TWO gRPC targets.** The **data target** (default `localhost:50051`) serves
-   ONLY health/reflection/DataBroker. ALL native services (auth, storage,
-   notification, tenant, webrtc, …) live on the **control-plane target**
-   (default = data port + 10, loopback unless the operator exposes it). Every
-   SDK has both: `target` AND `authTarget` (`auth_target`/`AuthTarget`). A
-   native-service call answered with `UNIMPLEMENTED` almost always means it was
-   dialed at the data target.
-4. **Every call carries metadata** (tenant/project/scopes/identity). Missing or
-   wrong scopes/tenant → the broker denies the call. **Tenant isolation is
-   enforced server-side on reads AND writes** — you cannot read another tenant's
-   rows by passing their id.
-5. **Auth is explicit.** A credential (bearer JWT, API key, or session) is
-   attached as request metadata. Scopes like `udb:read` / `udb:write` /
-   `udb:authn:*` / `udb:storage:*` gate operations.
-6. **Every mutation emits an event** on a versioned dot topic
-   (`udb.<service>.<entity>.<verb>.v1`) through a durable outbox→Kafka pipeline;
-   clients can subscribe to tenant-scoped CDC streams.
-7. **Authorization is ONE Casbin system — default-DENY.** Data RPCs
-   (`Select`/`Upsert`/`Delete`) and `udb.authz.can/require` are enforced by the
-   **same Casbin engine** over the `udb_authz.policy_rules` governance table. With
-   no policy seeded, even an `organization_owner` admin gets `PERMISSION_DENIED` on
-   every CRUD call. You seed `policy_rules` — at runtime via
-   `AuthzService.CreatePolicyRule` (per-tenant, from your own code, effective
-   immediately) or offline (`udb policy-seed`) — using the **real action** the
-   broker submits (`Select`/`Upsert`/`Delete`, NOT a `data.*` alias). Set
-   `UDB_ABAC_DEFAULT_ALLOW=true` for dev to bypass while bootstrapping.
+3. **THREE planes on THREE listeners.** (a) the **data plane** (`DataBroker`
+   CRUD) on the public port (default `:50051`); (b) the **native control plane**
+   (all descriptor-declared services) on a *separate, loopback-by-default* listener
+   (`UDB_AUTH_GRPC_ADDR`, default `127.0.0.1:50061`); (c) the **WebRTC peer
+   plane** (`127.0.0.1:50071`). Calling a native service (Auth, Tenant, Vault, …)
+   at the data port returns `UNIMPLEMENTED`. Every SDK config has both `target`
+   AND `authTarget` (`auth_target`/`AuthTarget`).
+4. **THREE authorization surfaces, cured differently.** Data CRUD is gated by
+   **Casbin** policy rows; native-service RPCs are gated by **token scopes**
+   (`endpoint_security`); the old ABAC gate is **gone** (its table is dead).
+   "Permission denied" on a `Select` needs a *policy row*; on a native call it
+   needs a *scope on your token*. Do not confuse them — see *The three
+   authorization surfaces*.
+5. **Every call carries metadata** (tenant/project/scopes/identity/purpose).
+   Tenant isolation is enforced server-side on reads AND writes — you cannot read
+   another tenant's rows by passing their id. A tenant-scoped op with **no
+   `purpose`** is denied before authorization even runs.
+6. **Auth is explicit** and there are two kinds of caller: a **human** (logs in
+   with username/password → JWT) and a **service** (a service-account User +
+   a mandatory grant → API key or JWT). Their authz subjects differ (see below).
+7. **Authorization is ONE Casbin engine, default-DENY.** With no policy row
+   seeded, even the `organization_owner` admin gets `PERMISSION_DENIED` on every
+   CRUD call. You seed `udb_authz.policy_rules` using the **real action token**
+   (`Select`/`Upsert`/`Delete`/`Update`/`BulkCas`, NOT a `data.*` alias). The
+   dev bypass `UDB_ABAC_DEFAULT_ALLOW=true` works **only while zero policy rows
+   exist** — the first row flips the gate back to deny-by-default.
 8. **Tenant is a canonical UUID, not the human code.** `udb auth bootstrap user
    --tenant acme` prints a canonical **tenant UUID** (e.g.
    `00000000-0000-0000-0000-0000000d0001`); the login JWT carries that UUID, not
    `"acme"`. Adopt `principal.tenant_id` (the UUID) and put it in every
-   tenant-scoped filter — a tenant-scoped read with no `tenant_id` in the filter
-   is rejected (`tenant isolation requires filter on tenant_id`).
+   tenant-scoped filter AND every policy row's `tenant_id`. A mismatch is a
+   silent deny.
+9. **Every mutation emits an event** on a versioned dot topic
+   (`udb.<service>.<entity>.<verb>.v1`) through a durable outbox→Kafka pipeline;
+   clients can subscribe to tenant-scoped CDC streams.
+10. **Don't invent RPCs/fields/annotations.** Ground truth is `udb sdk manifest`,
+    `udb native list/docs`, `udb compat-matrix`, `docs/generated/*`, and the
+    per-language SDK README.
+
+---
+
+## The three planes and three listeners (definitive)
+
+UDB serves three gRPC listeners. Getting the address wrong is the most common
+"nothing works" cause, and each plane is authorized differently.
+
+| Plane | Default address | Env to change | Authorized by | What's on it |
+|---|---|---|---|---|
+| **Data plane** | public `0.0.0.0:50051` | the `serve` addr arg | **Casbin** (`udb_authz.policy_rules`) | `DataBroker` (CRUD, typed stores, CDC), health, reflection |
+| **Native / control plane** | **loopback `127.0.0.1:50061`** (public port **+10**) | `UDB_AUTH_GRPC_ADDR` | **token scopes** (`endpoint_security`) | all descriptor-declared native services (Authn, Authz, ApiKey, IdP, Tenant, Vault, Metering, Scheduler, Search, Webhook, Workflow, Lock, LiveQuery, Config, Backup, Embedding, Notification, Analytics, Storage, Asset, Control, WebRTC admin) |
+| **WebRTC peer plane** | **loopback `127.0.0.1:50071`** (public port **+20**) | `UDB_WEBRTC_GRPC_ADDR` | peer token | WebRTC Peer/Track/Turn/Signaling for browsers/apps |
+
+Why the control plane is loopback-by-default: native services **trust their
+caller** (they accept the subject principal as input), so they must not sit on
+the public port. To reach them from another host (a policy-enforcement proxy, a
+sidecar, a remote admin tool), set `UDB_AUTH_GRPC_ADDR=0.0.0.0:50061` on a
+**trusted** interface (mTLS/mesh).
+
+Consequences you WILL hit:
+- `Login`/`Authenticate`/`CreateUser`/`CreatePolicyRule` at `:50051` →
+  `12 UNIMPLEMENTED`. They live on `:50061`.
+- Those same calls from another host while `:50061` is loopback-only →
+  `ECONNREFUSED`. Open the listener.
+- Some docs/examples tell clients to hit `:50051` for authn/authz — that works
+  ONLY when the operator has co-located the auth plane on the public port (the
+  repo's integration compose stack does this). The **code default is the
+  separate `:50061` listener**.
+
+---
+
+## The three authorization surfaces (read this before fighting "permission denied")
+
+There is no single "authz" in UDB. There are three independent gates. Knowing
+which one you tripped is 90% of the fix.
+
+### Surface 1 — Data-plane CRUD → **Casbin** (`udb_authz.policy_rules`)
+
+Every `DataBroker` data RPC (`Select`, `SelectV2`, `Upsert`, `Delete`, `Update`,
+`BulkCas`, and the batch streams) is authorized by **one Casbin engine**,
+default-DENY. The old ABAC coarse gate (`data.select` vocab, the
+`udb_abac_policies` table, `DataBroker.PutPolicy`) is **removed** — those still
+exist as a vestigial write surface but **the data plane no longer reads them.
+Seeding `udb_abac_policies` will NOT fix your CRUD deny.**
+
+The decision path: handler `authorize(security, message_type, "Select")` →
+`AuthzSnapshot::casbin_authorize`. The engine is fed from `udb_authz.policy_rules`
+(warmed from Postgres on a ~5s TTL, atomically swapped). To grant access you
+insert a `policy_rules` row. **Three tokens must be exactly right or the policy
+silently never matches:**
+
+1. **`action` = the literal RPC method name.** `Select`, `Upsert`, `Delete`,
+   `Update`, `BulkCas` (and `BatchSelect`/`BatchUpsert` for the streams).
+   Case-sensitive. Or `*` for all. **The intuitive `data.select` / `read` /
+   `write` vocab is DEAD (test-only code) and will never match.** This is the #1
+   silent deny.
+2. **`object` = the `message_type`** (the proto FQN, e.g. `shop.v1.Customer`), or
+   `*`, or a `keyMatch2` glob like `shop.v1.*`.
+3. **`tenant_id` (the column) = the caller's tenant UUID** (not the human code,
+   not the `domain` column — the loader maps `policy.tenant ← tenant_id`). Empty
+   or `*` = any tenant.
+
+Plus the request itself must carry a **non-empty `purpose`** (else
+`PERMISSION_DENIED: purpose is required` *before* Casbin runs) and a tenant (else
+`UNAUTHENTICATED`).
+
+**Subject — this is where users and services diverge:**
+- A **human** principal's subject is the JWT `sub` = their `user_id`.
+- A **service account's** subject is its `user_id` too, but its token also
+  carries `service_identity`; at enforce time the candidate subject set is
+  `{user_id, service_identity, principal_id} ∪ roles`. So a policy can name a
+  service by its `user_id` UUID **or** by `service:<service_identity>`.
+- **Best practice: grant a ROLE, not an individual.** Put a role in the policy
+  (`subject` = `role:app_reader`, or leave `subject` empty and set the role in
+  the rule) and bind both humans and service accounts to that role. One policy
+  set then covers everyone, and you never rewrite policies when identities
+  change.
+
+The deny messages you will see (verbatim, so you can grep):
+- Zero policies: ``no authz policy (default deny); seed the standard data-plane
+  policy for this tenant with `udb authz seed --tenant <tenant-uuid> --role
+  app_rw` (or AuthzService CreatePolicyRule/PutAuthzPolicy), then bind
+  principals to the role — or set UDB_ABAC_DEFAULT_ALLOW=true for local
+  bootstrap (works only while zero policy rows exist)``
+- Policies exist, none match: ``denied by Casbin PERM model: no applicable
+  allow policy for action '<act>' on '<selectors>' (tenant '<t>'). Check the
+  three token traps: the action must be the RPC method name (Select/Upsert/
+  Delete/Update/BulkCas — NOT a data.* alias), the policy's tenant_id must be
+  this tenant UUID, and its object must match the message type. Seed it with
+  `udb authz seed --tenant <t> --role app_rw` (+ bind this principal to the
+  role)``
+
+**The straightforward seeder + the two policy shapes:**
+- The **standard offline seeder**: `udb authz seed --tenant <canonical-UUID>
+  [--role app_rw] [--entity <fqn>…] [--action <A>…] [--emit <path>]` — writes
+  role-gated Allow rows DIRECTLY into `udb_authz.policy_rules` (Postgres-direct
+  via `UDB_PG_DSN`; no running broker needed): idempotent, atomic, and every
+  `--action` is validated against the real RPC method names (a `data.*` alias
+  is rejected up front, so the classic silent-deny trap is impossible here).
+  `--emit <path>` additionally writes the version-controllable offline JSON
+  below so the seed is reproducible.
+- The **runtime** shape (`AuthzService.CreatePolicyRule` / `PutAuthzPolicy`,
+  `udb auth policy put`): fields `{subject, domain, object, action, effect:
+  "POLICY_EFFECT_ALLOW", tenant_id, project_id, ...}`. Effective immediately;
+  this is what you call from app code or the CLI. **This is the one that
+  actually feeds the enforced engine.**
+- The **offline JSON** shape (`UDB_ABAC_POLICY_FILE` + `udb policy-seed`, and the
+  `AuthzPolicy` lint format): `{effect, subject, tenant, resource, action,
+  required_scopes}`. `udb policy-seed` prints the `INSERT` SQL for
+  `udb_authz.policy_rules` to stdout; pipe it to `psql`. Convenient for
+  version-controlled seeds, but remember it's writing the *same* `policy_rules`
+  table.
+
+**Governed mode:** if `governed_mode_enabled()` is on, direct `PutAuthzPolicy`/
+`CreatePolicyRule` are disabled and you must use the draft → approve → activate
+governance flow (policy bundles). Check with the AuthzService if a direct write
+returns `FAILED_PRECONDITION`.
+
+**The dev escape hatch and its trap:** `UDB_ABAC_DEFAULT_ALLOW=true` fails *open*
+— but **only while `policy_rules` is empty**. The instant one row lands, the gate
+is back to deny-by-default and your default-allow is ignored. So if you seed,
+seed **all** rows atomically; a half-seeded table is worse than an empty one.
+Production posture flags this env (preflight WARN, `udb doctor` WARN).
+
+**The minimum to make one entity's Select+Upsert work for a user U in tenant T:**
+```
+# runtime, effective immediately (CLI → PutAuthzPolicy):
+udb auth policy put --subject U --action '*' --resource shop.v1.Customer \
+    --effect allow --tenant <T-UUID> --project <proj>
+# (--action '*' covers Select+Upsert+Delete+Update; or issue one per action.
+#  use --role app_rw instead of --subject to cover users AND service accounts.)
+```
+The caller must also send a non-empty `x-purpose` and the tenant UUID `T`.
+
+### Surface 2 — Native-service RPCs → **token scopes** (`endpoint_security`)
+
+Every native RPC (on `:50061`) is gated by the `endpoint_security` proto
+annotation, enforced by a tower layer (`method_security.rs`) *before* the
+handler runs — a completely different code path from Casbin. Casbin policy rows
+do **nothing** for native RPCs; scopes do everything.
+
+What a caller must present:
+- A valid **bearer JWT** (or a scoped API key / mTLS cert, only where the RPC's
+  `allowed_credential_types` opts in) whose **`scopes`** contain either the
+  method's declared scope OR a broad admin scope.
+- The per-RPC scope convention is **`udb:<service>:<kebab-method>`** — e.g.
+  `udb:vault:put-secret`, `udb:authn:create-user`, `udb:apikey:create-api-key`,
+  `udb:analytics:get-throughput`. Look them up in
+  `docs/generated/authn-authz-rpc-inventory.md` (every RPC + its required
+  scopes/roles).
+- The broad admin scopes that authorize **any** non-public native RPC: `*`,
+  `udb:*`, `udb:admin`, `udb:auth:admin`.
+- Plus (per annotation): a **tenant-bound** claim, a **request-context header**
+  (`x-correlation-id` / `x-request-id` / `traceparent` — the SDKs auto-attach
+  these), sometimes an assurance level (MFA) or `internal_grpc_only` (loopback/
+  mTLS only).
+
+8 RPCs are **public** (no bearer): `Login`, `Authenticate`, `GetJwks`,
+`ForgotPassword`, `ResetPassword`, and the WebAuthn start/finish pair — they are
+per-caller rate-limited instead.
+
+So "permission denied on a native call" = your **token is missing a scope**, not
+a missing policy row. Mint a token/API key that carries `udb:<service>:<method>`
+(or an admin scope). For a service account, the scope must be in its
+**ServiceAccountGrant** (see Authentication) — you cannot request a scope the
+grant doesn't hold.
+
+### Surface 3 — the legacy ABAC table (dead for decisions)
+
+`udb_abac_policies` (written by `DataBroker.PutPolicy`, `udb`'s old
+`policy-seed`-to-that-table paths) is **no longer consulted** by any live
+decision. If you inherited code or docs that seed it, that's why "the policy is
+there but I'm still denied." Migrate those to `policy_rules` (Surface 1).
 
 ---
 
@@ -90,36 +283,31 @@ SDK is a thin typed client.
 
 Pick the developer's language. Default data target `localhost:50051` (plaintext
 in dev). **Set `authTarget` too whenever the app uses auth/native services.**
-Current release baseline is **UDB 0.5.0** with wire protocol **1.0.0**; keep the
-broker and SDK package on the same product version unless deliberately testing
-compatibility. The platform-service wave (Vault, Metering, Scheduler, Search,
-Webhook, Workflow, Lock, LiveQuery, Config, Backup, Embedding) and the
-consistency/idempotency contract below shipped in 0.4.x and are stable in 0.5.0.
+Current published baseline is **UDB 0.5.3** with wire protocol **1.0.0**; keep
+the broker and SDK package on the same product version unless deliberately
+testing compatibility. The platform-service wave (Vault, Metering, Scheduler,
+Search, Webhook, Workflow, Lock, LiveQuery, Config, Backup, Embedding) and the
+consistency/idempotency contract below are stable.
 
-**New for consumers in 0.5.0** (behavior changes — read before upgrading from
-0.4.x): **(1) Soft-delete is now the default read scope** — on a table annotated
-`soft_delete`, `Delete` tombstones the row (idempotent `UPDATE`, not a physical
-delete) and ordinary `Select`/list results EXCLUDE tombstoned rows automatically;
-there is no wire flag to re-expose them. **(2) Opaque row-revision (ETag) CAS** —
-reads can return an opaque `revision`, and `Update`/`Delete` (and the new `BulkCas`)
-accept `expected_revision` for optimistic concurrency even when your proto has no
-`version` column. **(3) `BulkCas`** on the DataBroker — a bounded, tenant-scoped
-batch of conditional single-row updates in one tx; a per-item CAS miss is reported
-as `conflicted` (not a whole-batch failure) so a partial retry with the same
-`idempotency_key` is safe. **(4) Storage hard-delete** — `DeleteFile` takes a
-`DeleteMode` (`SOFT` tombstone vs `HARD` durable byte GC); and register-established
-`is_public`/size are IMMUTABLE at finalize (a mismatch is a typed
-`FAILED_PRECONDITION`). **(5) Page tokens are query-bound** — reusing a page token
-under a different filter/sort/fields returns `FAILED_PRECONDITION`, so always page
-the SAME query. **(6) Idempotency is input-bound** — replaying a key with different
-inputs returns `FAILED_PRECONDITION`, not a bogus success. **(7) Enterprise
-`udb deploy`** — a declarative `udb.deploy.yaml` + `udb deploy plan|apply|render`
-turns minimum args into a full production env (mTLS/JWT/RLS/audit) and idempotently
-bootstraps tenants/service-accounts/grants/api-keys/policies.
+**Behavior notes for consumers (read before upgrading from 0.4.x):**
+**(1) Soft-delete is the default read scope** — on a `soft_delete` table,
+`Delete` tombstones the row (idempotent `UPDATE`) and ordinary `Select` results
+EXCLUDE tombstoned rows automatically. **(2) Opaque row-revision (ETag) CAS** —
+reads can return a `revision`; `Update`/`Delete`/`BulkCas` accept
+`expected_revision` even with no `version` column. **(3) `BulkCas`** — a bounded
+tenant-scoped batch of conditional single-row updates in one tx; a per-item miss
+is `conflicted`, not a whole-batch failure, so a keyed partial retry is safe.
+**(4) Storage hard-delete** — `DeleteFile` takes `DeleteMode` (`SOFT`/`HARD`);
+`is_public`/size are immutable at finalize. **(5) Page tokens are query-bound** —
+reuse under a different filter/sort/fields → `FAILED_PRECONDITION`. **(6)
+Idempotency is input-bound** — replaying a key with different inputs →
+`FAILED_PRECONDITION`, not a bogus success. **(7) There is no separate `Insert`
+RPC** — to insert, call `Upsert` with **no `conflict_fields`** (see *CRUD →
+Inserting a new row*).
 
 ### TypeScript / Node — `@udb_plus/sdk`
 ```bash
-npm i @udb_plus/sdk@0.5.0
+npm i @udb_plus/sdk@0.5.3
 ```
 ```ts
 import { dataBrokerClient, metadata, UdbMetadata } from "@udb_plus/sdk/client";
@@ -135,12 +323,13 @@ broker.Select({ message_type: "shop.v1.Customer", limit: 50 }, metadata(meta),
 ```
 Entry points: `@udb_plus/sdk/client` (DataBroker + `metadata()`),
 `@udb_plus/sdk/auth` (`UdbAuthClient`), `@udb_plus/sdk` (full `UdbProject`
-facade — configure `{ target, authTarget, credentials: { bearerToken | apiKey } }`).
+facade — `{ target, authTarget, credentials: { bearerToken | apiKey } }`; and
+`UdbProject.connectEnterprise(config)` = one-call connect→login→adopt→refresh).
 Adapters for Express / Fastify / Next.js under `adapters/`.
 
 ### Python — `udb-client`
 ```bash
-pip install udb-client==0.5.0        # or: pip install "udb-client[pydantic]==0.5.0"
+pip install udb-client==0.5.3        # or: pip install "udb-client[pydantic]==0.5.3"
 ```
 ```python
 from udb_client import Metadata, UdbClient, decode_records
@@ -156,13 +345,12 @@ with UdbClient("127.0.0.1:50051", meta) as udb:
     print(decode_records(rows))
 ```
 `UdbAsyncClient` for async; `Metadata.from_env()` from env vars. The `UdbProject`
-facade takes `UdbConfig(target=…, auth_target=…, bearer_token=… | api_key=…)`
-and has `set_credentials()` hot-swap; it routes native services to the
-control-plane channel automatically.
+facade takes `UdbConfig(target=…, auth_target=…, bearer_token=… | api_key=…)`,
+has `set_credentials()` hot-swap, and `login_and_adopt_tenant(user, pass)`.
 
 ### Go — `github.com/fahara02/udb/sdk/go`
 ```bash
-go get github.com/fahara02/udb/sdk/go@v0.5.0
+go get github.com/fahara02/udb/sdk/go@v0.5.3
 ```
 ```go
 cfg := udbclient.Config{Target: "localhost:50051", AuthTarget: "localhost:50061",
@@ -172,6 +360,10 @@ cfg := udbclient.Config{Target: "localhost:50051", AuthTarget: "localhost:50061"
 u, _ := udbclient.NewUdb(ctx, cfg); defer u.Close()
 rows, _ := u.Data.Select(ctx, &entityv1.SelectRequest{MessageType: "shop.v1.Customer", Limit: 50})
 ```
+For the full login+adopt+refresh enterprise flow, use
+`udbclient.ConnectEnterprise(ctx, EnterpriseConfig{...})` → `EnterpriseSession`
+with `DataContext(ctx)` / `NativeContext(ctx)` / `CanonicalTenantID` (see
+*Authentication*).
 
 ### Java — `dev.udb:udb-java-client`
 ```java
@@ -188,7 +380,7 @@ hot-swap.
 
 ### C# — `Udb.Client`
 ```bash
-dotnet add package Udb.Client --version 0.5.0
+dotnet add package Udb.Client --version 0.5.3
 ```
 ```csharp
 var meta = new UdbMetadata(TenantId:"acme", Purpose:"web.request",
@@ -200,7 +392,7 @@ var rows = await udb.SelectAsync(new SelectRequest { MessageType="shop.v1.Custom
 
 ### PHP / Laravel — `fahara02/udb-laravel`
 ```bash
-composer require fahara02/udb-laravel:^0.5.0   # needs PHP 8.1+, grpc PECL ext
+composer require fahara02/udb-laravel:^0.5.3   # needs PHP 8.1+, grpc PECL ext
 ```
 ```php
 $client = new UdbClient(['endpoint' => '127.0.0.1:50051', 'tls' => ['enabled' => false]]);
@@ -217,21 +409,270 @@ $records = $client->select($req, $meta);
 
 | Header | Meaning |
 |---|---|
-| `x-tenant-id` | tenant isolation boundary (**required** for tenant-scoped ops; must match the credential's tenant) |
+| `x-tenant-id` | tenant isolation boundary (**required** for tenant-scoped ops; must match the credential's tenant UUID) |
 | `x-udb-project-id` | which application catalog/project |
-| `x-user-id` | end-user id (optional) |
+| `x-user-id` | end-user id (advisory; the authoritative subject is the JWT `sub`, and a disagreeing `x-user-id` is rejected) |
 | `x-scopes` | comma-separated scopes, e.g. `udb:read,udb:write` |
-| `x-purpose` | request intent, e.g. `web.request` |
-| `x-correlation-id` | tracing id |
+| `x-purpose` | request intent, e.g. `web.request` — **required** on tenant-scoped data ops (empty → PERMISSION_DENIED before authz) |
+| `x-correlation-id` / `x-request-id` / `traceparent` | request-context / tracing id (**required** by many native RPCs; SDKs auto-attach) |
 | `x-service-identity` | calling service name |
 | `x-udb-client-catalog-version` | client's catalog/protocol version |
 | `authorization: Bearer <jwt>` | bearer credential |
-| `x-api-key: <key>` | API-key credential |
+| `x-api-key: <key>` | API-key credential (native plane + data plane) |
 
 SDKs build these from a `Metadata`/`UdbMetadata` object — set tenant, project,
-scopes and a credential; never hand-craft headers. **A body-carried tenant id
-never overrides the credential's tenant** — the broker compares them and denies
-mismatches.
+scopes, purpose and a credential; never hand-craft headers. **A body-carried
+tenant id never overrides the credential's tenant** — the broker compares them
+and denies mismatches. The authoritative identity is always the validated
+token's claims, not the `x-*` headers (those only narrow/correlate).
+
+---
+
+## Authentication
+
+Two kinds of caller, two provisioning stories. Getting this wrong is the second
+biggest source of "denied" after the Casbin token traps.
+
+### Human authentication (username/password → JWT)
+
+- **Public entry:** `Login` (AuthnService, `:50061`) with username/password →
+  access token (JWT) + refresh token. `Authenticate` accepts a credential and
+  returns a principal/token. Public auth RPCs are **rate-limited per caller**
+  (default 60/min) — back off on `RESOURCE_EXHAUSTED`.
+- **First credential / bootstrap** (a fresh DB has no principal): mint the first
+  admin **offline** — see the runbook. This also seeds ONE global wildcard
+  `organization_owner ⇒ ALLOW(*,*)` role+policy and binds the admin to it, so the
+  admin works — but **non-owner principals and per-entity least-privilege have
+  nothing seeded** until you add policy rows.
+- The minted JWT carries `sub` (user_id UUID), `tenant_id` (UUID), `project_id`,
+  `scopes[]`, `roles[]`, `exp`, and (for people) a refresh token.
+- **Credential hot-swap:** rotate a token without rebuilding the channel —
+  `set_credentials()` (all SDKs).
+
+### Service (machine) authentication — the part everyone gets wrong
+
+A service is NOT just "a user with a password." It is a **two-object** identity:
+
+1. **A service-account User** — `CreateUser{ account_kind:
+   ACCOUNT_KIND_SERVICE_ACCOUNT, tenant_id, project_id, username, ... }`. There
+   is **no dedicated `CreateServiceAccount` RPC**; account_kind on `CreateUser`
+   is what makes it a service. (Enum: `PERSON=1`, `SERVICE_ACCOUNT=2`,
+   `WORKLOAD=3`, `EXTERNAL_IDENTITY=4`, `SYSTEM=5`.)
+2. **A mandatory `ServiceAccountGrant`** — `CreateServiceAccountGrant{ tenant_id,
+   user_id, service_identity, project_id, approved_scopes[], reason }`.
+   **Without an ACTIVE grant the service account cannot authenticate at all** —
+   this is the #1 "it worked as a user but fails as a service" trap. The grant is
+   the operator-approved scope envelope; every login/API-key issuance attenuates
+   requested scopes down to it, and **admin/owner/wildcard scopes are rejected**
+   in a grant (a service can't be `udb:*`).
+
+**How a service gets a credential** (there is **no OAuth2 client-credentials
+grant** — do not look for `client_id`/`client_secret`):
+
+- **API key (recommended for machines):** `CreateApiKey{ owner_id: <service
+  user_id>, owner_type: SERVICE_ACCOUNT, scopes ⊆ grant }` → returns a one-time
+  `plain_key` shaped `udbk_<12hex>.<uuid>`. Save it; it is never shown again.
+  Use it two ways:
+  - **Directly** as `x-api-key` on native AND data-plane calls (validated against
+    the durable store + live grant on every request).
+  - **Exchanged for a JWT** via `Authenticate{api_key}` → a short access token
+    with `account_kind=SERVICE_ACCOUNT`, `auth_method="api_key"`, scopes
+    re-attenuated to the *current* grant.
+  Requires `UDB_SESSION_HASH_SECRET` on the broker (API-key hashing reuses it).
+- **Password login of the service account:** `Login{username,password}` +
+  requested scopes in `x-scopes` → short access token with
+  `account_kind=SERVICE_ACCOUNT`. **Caveat: a service account gets NO refresh
+  token** — it must re-login (or re-exchange an API key) when the access token
+  expires. Long-running services should therefore prefer an API key + periodic
+  `Authenticate` exchange, or accept re-login on expiry.
+
+**What the service's token carries into authz:** `sub` = the service `user_id`
+UUID, plus `service_identity`. At the data plane the authz subject is the
+`user_id` (or `service_identity` if user_id is empty), so **write your Casbin
+policy for a service against a ROLE you bind the service to, or against its
+`user_id` / `service:<service_identity>`**. Known gap: `account_kind` is present
+in the token but is **dropped before the data-plane authz Principal**, so you
+**cannot** write a data-plane policy that matches "is a service account" —
+gate on subject id, `service_identity`, role, or scope instead.
+
+**SDK wiring for a service (Go, representative):**
+- **Static credential (the honest machine path):** `udbclient.NewUdb(ctx,
+  Config{ Target, AuthTarget, Credentials: { APIKey: "udbk_…" } })` — or
+  `BearerToken`. The SDK attaches `x-api-key` / `authorization` on every call.
+  **No auto-refresh** — you own token lifetime; on expiry, re-exchange the API
+  key and `SetAPIKey`/`SetAuthorization` (hot-swap).
+- **Enterprise session (login+refresh):** `ConnectEnterprise` hard-requires
+  username/password and runs a background bearer refresher — but since service
+  accounts have no refresh token, a service using it will still hit expiry. It's
+  the better fit for *human*-backed sessions.
+- TS/Python/PHP/Java/C# mirror the `x-api-key` / `authorization` model via their
+  generated clients + `set_credentials()`.
+
+**Transport/config a service needs on the broker:** reach `UDB_AUTH_GRPC_ADDR`
+(`:50061`, open it beyond loopback for remote services); `UDB_JWT_PRIVATE_KEY`
+(mint) + `UDB_JWT_PUBLIC_KEY` or `UDB_JWT_JWKS_URL` (verify); `UDB_SESSION_HASH_SECRET`
+(API-key hashing) and/or `UDB_PASSWORD_HASH_SECRET` (password login).
+
+**Service-auth failure modes (all real):**
+- No/inactive grant → login or API-key create fails closed
+  (`service account has no active typed grant …`). Create the grant.
+- Wrong listener → `UNIMPLEMENTED` (called `:50051`) or `ECONNREFUSED`
+  (`:50061` loopback-only from a remote host).
+- Tenant code vs UUID → the human code is only a pre-login hint; all filters/
+  records/policies must use the adopted canonical UUID.
+- Expired static bearer → no auto-refresh on the static path (and no refresh
+  token for service accounts) → `Unauthenticated`. Re-exchange the API key.
+- Scope over-request → attenuated to the grant; asking beyond it →
+  `PermissionDenied "<scope>_not_granted"`.
+- Missing keys/secrets → `UDB_JWT_PRIVATE_KEY` unset ⇒ tokens silently not minted
+  (sessions-only); missing hash secret ⇒ preflight failure / API-key create error.
+
+### API keys vs bearers, quick rules
+- **Data plane** accepts a JWT bearer, mTLS, OR an `x-api-key` (the API-key
+  data-plane principal path). If you present only an API key and get
+  `Unauthenticated`, the deployment likely requires JWT — exchange the key via
+  `Authenticate{api_key}` and send the bearer.
+- **Native plane** accepts a bearer (and API key / mTLS where the RPC opts in).
+- Per-key rate limits are enforced from real usage; see *rate limiting*.
+- **Authz checks** (`UdbAuthClient.can(resource, action)`): respect the server's
+  `cache_ttl_seconds` — `0` means DO NOT cache the decision. Never wrap it in
+  your own cache.
+- **Sessions/devices:** list/revoke your own via AuthnService; admins revoke
+  per-user/tenant. Revocation propagates — don't cache validation client-side.
+
+### More auth flows (consumer view)
+
+- **MFA / TOTP:** enroll (`EnrollMfa` → secret/QR), verify (`VerifyOtp`); on a
+  tenant that requires MFA, unenrolled users are blocked at login. Step-up: some
+  native RPCs demand a higher assurance level (`aal2`) — the token's `acr`
+  reflects `auth_method`.
+- **WebAuthn / passkeys:** the start/finish RPC pairs are public; register a
+  credential then assert it at login. (Broker builds with the `webauthn` feature.)
+- **Recovery codes:** `GenerateRecoveryCodes`; single-use at login as a second
+  factor.
+- **Forgot/reset password:** `ForgotPassword` (public, OTP-proven) →
+  `ResetPassword` (revokes existing sessions). No current-password needed.
+- **Phone/email verification:** `SendPhoneVerification`/OTP → `VerifyOtp` marks
+  verified.
+- **API-key rotation:** `RotateApiKey` issues a new secret; both may be valid for
+  an overlap window — swap the client credential (`SetAPIKey`) then revoke the
+  old.
+- **Token introspection / JWKS:** `IntrospectToken` (is this token valid + its
+  claims), `GetJwks` (public — verify tokens offline with the broker's public
+  keys / `UDB_JWT_JWKS_URL`).
+- **Federated identity:** IdentityProviderService registers OIDC/SAML providers
+  and does SCIM provisioning; JIT-provisioned users map to a tenant. Consumer
+  apps usually redirect to the IdP and receive a UDB session/token back.
+
+---
+
+## Authorization — seeding the data plane (the standard path)
+
+This is the section people come for. To make CRUD work for a principal on an
+entity, insert `policy_rules` rows with the exact tokens from *Surface 1*.
+The straightforward path is **`udb authz seed`** (Option D below): offline,
+validated action tokens, idempotent + atomic.
+
+### Option A — from app code, effective immediately
+
+Call `AuthzService.PutAuthzPolicy` (full rule incl. role/purpose/required_scopes)
+or `CreatePolicyRule` (minimal). One Allow per (subject-or-role, tenant, object,
+action) — or collapse with `action="*"` / `object="*"`.
+
+```txt
+# grant a role read+write on one entity for a tenant, then bind principals to it
+PutAuthzPolicy { subject: "role:app_rw", tenant_id: "<T-UUID>", object: "shop.v1.Customer",
+                 action: "*", effect: POLICY_EFFECT_ALLOW }
+AssignRole   { principal: "<user-or-service user_id>", role: "app_rw", tenant_id: "<T-UUID>" }
+```
+Bind BOTH your human users and your service accounts to `app_rw` and you never
+touch policies again as identities come and go.
+
+### Option B — from the CLI, effective immediately
+
+```bash
+udb auth policy put --subject role:app_rw --action '*' \
+    --resource shop.v1.Customer --effect allow --tenant <T-UUID> --project <proj>
+udb auth role bind --principal <user_id> --role app_rw --tenant <T-UUID>
+```
+
+### Option C — offline, version-controlled seed → psql
+
+Author a JSON array (the `AuthzPolicy` offline shape) and apply it:
+```json
+[{"effect":"allow","subject":"role:app_rw","tenant":"<T-UUID>","resource":"shop.v1.Customer","action":"Select"},
+ {"effect":"allow","subject":"role:app_rw","tenant":"<T-UUID>","resource":"shop.v1.Customer","action":"Upsert"},
+ {"effect":"allow","subject":"role:app_rw","tenant":"<T-UUID>","resource":"shop.v1.Customer","action":"Delete"},
+ {"effect":"allow","subject":"role:app_rw","tenant":"<T-UUID>","resource":"shop.v1.Customer","action":"Update"}]
+```
+```bash
+UDB_ABAC_POLICY_FILE=authz-policies.json udb policy-seed | psql "$UDB_PG_DSN"
+```
+`udb policy-seed` prints a `BEGIN; DELETE …; INSERT …; COMMIT;` transaction for
+`udb_authz.policy_rules` — atomic by construction (which matters: recall the
+default-allow flip). Commit this file to your repo as the project's policy
+scaffold.
+
+### Option D — `udb authz seed`: offline, validated, idempotent (the straightforward path)
+
+```bash
+UDB_PG_DSN="$DSN" udb authz seed --tenant <T-UUID> --role app_rw
+# → Allow rows for Select/Upsert/Delete/Update/BulkCas on `*`, role app_rw
+UDB_PG_DSN="$DSN" udb authz seed --tenant <T-UUID> --role app_rw \
+    --entity shop.v1.Customer --emit authz-policies.json
+# → narrowed to one entity; --emit keeps a version-controlled copy
+```
+Postgres-direct (no running broker), idempotent + atomic, and `--action` is
+validated against the real RPC method names — a `data.*` alias is rejected up
+front. Repeat `--entity` to narrow the wildcard; then bind principals exactly
+as in the other options (`udb auth role bind --principal <id> --role app_rw
+--tenant <T-UUID>`).
+
+### Checklist that prevents 90% of denies
+- `action` ∈ `{Select, Upsert, Delete, Update, BulkCas, BatchSelect,
+  BatchUpsert, *}` — never `data.select`/`read`/`write`.
+- `object` = the message_type FQN (or `*` / glob).
+- `tenant_id` = the caller's tenant **UUID** (or empty/`*`).
+- Prefer a **role** subject + role bindings over per-identity rows.
+- Leave `required_scopes` and `purpose` empty for a first bootstrap (they refine
+  an Allow — a populated `required_scopes` the caller lacks turns the Allow off).
+- Seed **all** rows atomically (default-allow flips off at row #1).
+- The caller sends a non-empty `x-purpose` and the tenant UUID.
+
+### Casbin cookbook — common patterns as worked rows
+
+The Casbin model is `r = sub, dom, obj, act`; `p = sub, dom, obj, act, eft`;
+`g = _, _` (role grouping). The matcher: subject via `g()` or `p.sub == "*"`;
+`dom` exact or `*`/empty; `obj` via `keyMatch2`; `act` exact / `keyMatch2` / `*`.
+Deny beats allow (deny-override). `policy_rules` columns map:
+`policy.tenant ← tenant_id`, `policy.resource ← object`, and `role`/`purpose`/
+`required_scopes`/`priority` live in `attributes_json`. Worked patterns
+(showing `subject | tenant_id | object | action | effect`):
+
+- **Read-only role on everything, one tenant:**
+  `role:reader | <T-UUID> | * | Select | ALLOW`
+  Bind users: `AssignRole{ principal, role:"reader", tenant_id:<T> }`.
+- **Read+write role on everything:** two rows `role:app_rw | <T> | * | Select |
+  ALLOW` and `… | Upsert | ALLOW` (plus `Delete`/`Update`), or **one** row with
+  `action: *`.
+- **Per-entity least privilege:** `role:orders_writer | <T> | shop.v1.Order |
+  Upsert | ALLOW`. Narrow `object` to the FQN.
+- **Package glob:** `role:shop_admin | <T> | shop.v1.* | * | ALLOW` (keyMatch2
+  on `object`).
+- **A specific service account, no role:** `svc-user-uuid | <T> | * | * | ALLOW`
+  — or match by identity string with `service:billing.api`.
+- **Cross-tenant admin (careful):** leave `tenant_id` empty/`*`:
+  `role:platform_admin |  | * | * | ALLOW`.
+- **Explicit deny (wins over any allow):** `role:contractor | <T> |
+  hr.v1.Salary | * | DENY` — a targeted carve-out on top of a broad allow.
+- **Scope-refined allow:** put `required_scopes:["udb:write"]` in the row's
+  attributes so the Allow only matches callers holding that scope (leave empty
+  for a first bootstrap — a scope the caller lacks silently turns the allow off).
+
+Verify a decision without a live call: `udb authz simulate` (read-only "what
+would this bundle change"), or `udb doctor --consumer --key <k> --entity <fqn>`
+(runs the real chain and prints the reason). Roles/tuples: `AssignRole` writes a
+`policy_tuples` grouping row; ReBAC uses `tuple_kind='relationship'`.
 
 ---
 
@@ -239,171 +680,368 @@ mismatches.
 
 All data RPCs take `message_type` = the proto's fully-qualified name.
 
-- **Select**: `{ message_type, filter, limit, order_by }` → `RecordSet`.
-  List/page sizes are server-capped (default max 500 rows per page) — paginate,
-  don't ask for everything.
-- **Upsert**: `{ message_type, record/record_json, conflict_fields, return_record,
-  idempotency_key }` — insert-or-update on the conflict key. **Always set
-  `conflict_fields`**, and set `idempotency_key` on writes you may retry.
-  The retry contract: SDKs auto-retry *read-only* RPCs on transient errors;
-  a **replay-safe mutation (Upsert/Delete) is retried ONLY when it carries a
-  non-empty `idempotency_key`** — keyless mutations fail closed (no auto-retry)
-  rather than risk a double apply. A keyed mutation is **durably deduplicated
-  broker-side**: a replay (retry or duplicate send) returns the stored
-  first-writer response with `was_duplicate=true` instead of re-running the
-  write — check it via the SDK helper (`WasDuplicate` on the Go result,
-  `udb.metadata.wasDuplicate(resp)` in TS, `was_duplicate(resp)` in Python,
-  `wasReplay($resp)` in PHP, `MutationOutcome` in Java/C#).
-- **Delete**: `{ message_type, filter }`.
-- **Typed stores** (when the backend supports them): cache get/set/delete/scan,
-  document get/find/upsert/delete, graph query/mutate, time-series write/query,
+- **Select**: `{ message_type, filter, limit, order_by }` → `RecordSet`. Page
+  sizes are server-capped (default max 500 rows/page) — paginate. Page tokens are
+  query-bound: page the SAME query.
+- **Insert / Upsert**: `{ message_type, record/record_json, conflict_fields,
+  return_record, idempotency_key }`. **There is no separate `Insert` RPC.** See
+  *Inserting a new row* below. **Always set `conflict_fields`** for merge
+  semantics, and set `idempotency_key` on writes you may retry.
+  Retry contract: SDKs auto-retry *read-only* RPCs on transient errors; a
+  **replay-safe mutation (Upsert/Delete/Update) is retried ONLY with a non-empty
+  `idempotency_key`** — keyless mutations fail closed rather than double-apply. A
+  keyed mutation is **durably deduplicated broker-side**: a replay returns the
+  stored first-writer response with `was_duplicate=true` (check via the SDK
+  helper — `WasDuplicate`/`wasDuplicate`/`was_duplicate`/`wasReplay`/
+  `MutationOutcome`).
+- **Update**: partial `SET`/atomic increments on matched rows — no full-record
+  resend. Respects proto3 presence.
+- **Delete**: `{ message_type, filter }` (tombstones on `soft_delete` tables).
+- **BulkCas**: bounded tenant-scoped batch of conditional single-row updates in
+  one tx; per-item CAS miss → `conflicted`, safe to retry with the same key.
+- **Typed stores** (backend-permitting): cache get/set/delete/scan, document
+  get/find/upsert/delete, graph query/mutate, time-series write/query,
   analytical query — advertised in `GetCapabilities.supported_rpcs`.
-- Streaming batch variants exist for large result sets / bulk writes.
-- **Partial updates respect proto3 presence:** fields declared `optional` in the
-  entity proto are only applied when present; plain scalar fields decode to
-  their default — never echo stale booleans/numbers back on update requests.
 
-Records are JSON-shaped objects keyed by proto field names. Decode helpers
-(`decode_records` in Python, typed messages in Go/Java/C#) turn rows into
-language objects. **Sensitive fields never come back:** columns annotated
-storage-only/redacted (password hashes, key material) are blanked server-side.
+### Query & filter language
+
+Filters are JSON objects keyed by proto **field names** (or column names).
+`{"status": "active"}` is shorthand for equality. Operators are MongoDB-style:
+
+| Form | Meaning |
+|---|---|
+| `{"col": v}` or `{"col": {"$eq": v}}` / `{"=": v}` | equals |
+| `{"col": {"$in": [a,b]}}` | in a set |
+| `{"col": {"$gt": v}}` / `$gte` / `$lt` / `$lte` | comparisons |
+| `{"col": {"$ne": v}}` | not equal |
+| `{"col": {"$is_null": true}}` | IS NULL / IS NOT NULL |
+| `{"$and": [ …clauses… ]}` (or `"and"`) | all must hold |
+| `{"$or": [ …clauses… ]}` (or `"or"`) | any must hold |
+
+Rules that bite:
+- **`{"col": null}` is NOT "IS NULL".** A bare `null` compares `col = NULL`, which
+  is always UNKNOWN → matches **zero rows** (the broker rejects it on writes and
+  ignores it on reads). Use `{"col": {"$is_null": true}}`. Many SDKs serialize a
+  language `nil`/`None` field to JSON `null` — guard against accidentally sending
+  it.
+- Tenant-scoped reads/deletes **must pin `tenant_id`** (the UUID) somewhere in the
+  filter, or `INVALID_ARGUMENT: tenant isolation requires filter on tenant_id`.
+- A conditional `Update`/`Delete` that must target exactly one row pins the full
+  primary key by equality; a non-equality operator on a PK column is rejected
+  (`FAILED_PRECONDITION`) so a CAS can't accidentally hit many rows.
+- `order_by` takes `field asc|desc`; pagination is server-capped and page tokens
+  are query-bound (page the SAME filter/sort/fields).
+
+Common shapes:
+```txt
+Select {message_type:"shop.v1.Order",
+        filter:{"$and":[{"tenant_id":"<UUID>"},{"status":{"$in":["open","paid"]}}]},
+        order_by:"created_at desc", limit:50}
+Update {message_type:"shop.v1.Order", filter:{"tenant_id":"<UUID>","order_id":"o1"},
+        set:{"status":"shipped"}, increment:{"version":1}, expected_revision:"<etag>"}
+Delete {message_type:"shop.v1.Order", filter:{"tenant_id":"<UUID>","order_id":"o1"}}
+```
+
+### Inserting a new row (there is no `Insert` RPC)
+
+Call `Upsert` with an **empty `conflict_fields`**. Two regimes:
+- **Database-assigned PK** (`BIGSERIAL`/`SERIAL`/`gen_random_uuid()` default) and
+  you omit the id → this **always appends a new row** (nothing to conflict on).
+  Set `return_record: true` to get the assigned id back. This is the append-only
+  insert.
+- **Client-supplied PK** → `ON CONFLICT (pk) DO UPDATE` fires if the PK exists →
+  this **merges (upsert)**, not a strict "fail if exists" create.
+For an idempotent insert, pass `idempotency_key` (a bare retried insert on a
+serial PK would otherwise create a *second* row). If your entity has a serial PK
+plus two or more `*_id` columns and you get an
+`identity field is ambiguous` error, set `return_record: true` (the response then
+names the row by its assigned id) or name the identity via `conflict_fields`.
+
+Records are JSON-shaped objects keyed by proto field names. Decode helpers turn
+rows into language objects. **Sensitive fields never come back** — columns
+annotated storage-only/redacted (password hashes, key material) are blanked
+server-side.
 
 **Read-your-writes, receipts, fences, consistency modes.** A mutation response
-carries a **write receipt** (`MutationResponse.write_receipt`: source LSN,
-outbox sequence, projection task ids, manifest checksum). A follow-up read can
-carry a **read fence** built from that receipt so the broker waits until the
-write is visible, and/or an explicit **consistency mode**
-(`strong` / `read_your_writes` / `bounded_staleness` / `replica_bounded` /
-`eventual` / `projection_ok` / `cache_ok`). Every SDK packages this as
-`metadata.afterWrite(receipt)` (Go `udb.Metadata().AfterWrite(...)` or
-`Entity.WithConsistency(...)`, TS `udb.metadata.afterWrite/withConsistency`,
-Python `meta.after_write(receipt)` / `meta.with_consistency(ConsistencyMode.X)`,
-PHP `UdbMetadata->afterWrite(...)`, Java/C# `meta.afterWrite(receipt)`). Prefer
-a fence over a proof `Get` after every write.
+carries a **write receipt** (source LSN, outbox sequence, projection task ids,
+manifest checksum). A follow-up read can carry a **read fence** built from it so
+the broker waits until the write is visible, and/or an explicit **consistency
+mode** (`strong`/`read_your_writes`/`bounded_staleness`/`replica_bounded`/
+`eventual`/`projection_ok`/`cache_ok`). Every SDK packages this
+(`metadata.afterWrite(receipt)` / `withConsistency(...)`). Prefer a fence over a
+proof `Get` after every write.
 
 **Typed errors.** Failed RPCs carry a decodable `udb.entity.v1.ErrorDetail` in
 the `udb-error-detail-bin` trailer (kind, retryable, retry_after_ms,
-field_violations). Every SDK decodes it (`Error.Detail()` in Go,
-`UdbError.detail` in TS, `UdbDetailedError` in Python, Java/C# accessors) —
-read `retryable`/`retry_after_ms` instead of pattern-matching message strings.
+field_violations). Every SDK decodes it — read `retryable`/`retry_after_ms`
+instead of pattern-matching message strings.
 
 ---
 
-## Auth (consumer view)
+## Native services tour (all on the control-plane target `:50061`)
 
-- **Public entry:** `Authenticate` (AuthnService, on the control-plane target)
-  accepts a credential and returns a principal/token. Public auth RPCs
-  (Authenticate/ForgotPassword/ResetPassword) are **rate-limited per caller**
-  (default 60/min) — back off on `RESOURCE_EXHAUSTED`.
-- **First credential / bootstrap:** a fresh deployment has no principal; an
-  operator mints the first one **offline**:
-  ```bash
-  UDB_PG_DSN="postgres://udb:udb@host:5432/udb?sslmode=disable" \
-  UDB_PASSWORD_HASH_SECRET="<secret>" \
-  udb auth bootstrap user --username admin --email admin@x.com \
-      --password '<strong-pass>' --tenant acme --project default
-  ```
-  Bootstrapping the admin is only step 2 of 5 — it prints a canonical tenant
-  UUID you must capture, and CRUD stays `PERMISSION_DENIED` until you ALSO seed
-  ABAC and bring up the login env. Follow the full **New-project bootstrap
-  runbook** below; don't stop here.
-- **Scopes** gate operations: `udb:read`/`udb:write` for data, per-service
-  scopes for native RPCs (`udb:authn:get-user`, `udb:storage:write`, …). The
-  error for a missing scope is `PERMISSION_DENIED`.
-- **API keys:** created via `udb auth api-key-create` or the ApiKeyService;
-  sent as `x-api-key`; tenant-scoped; per-key rate limits are enforced from
-  real usage records. **Caveat (current behavior):** the **DataBroker data plane
-  authenticates with a JWT bearer** (or mTLS), not `x-api-key` — an API key alone
-  will get `Unauthenticated: missing or invalid authorization header (JWT
-  required)` on `Select`/`Upsert`/`Delete`. For a service credential to the data
-  plane, **log in for a bearer** (username/password → JWT) and send that. (A
-  one-call API-key→bearer exchange is tracked work, not yet available.)
-- **Credential hot-swap:** rotate a token/key without rebuilding the channel —
-  `set_credentials()` (Python/TS/Go/Java/C#/PHP all support it).
-- **Authz checks:** `UdbAuthClient.can(resource, action)` asks the broker.
-  **Respect the server's `cache_ttl_seconds`: `0` means DO NOT cache the
-  decision** — every SDK honors this; never wrap it in your own cache.
-- **Sessions/devices:** list/revoke your own sessions and devices via
-  AuthnService; admins can revoke per-user/tenant. Revocation propagates —
-  don't cache validation results client-side.
+The descriptor-declared native service/RPC inventory is authoritative. Each RPC
+needs a token scope `udb:<service>:<method>`
+(or an admin scope) — see *Surface 2*. Many services **degrade to
+`FAILED_PRECONDITION "native service '<x>' is disabled"`** when their backend
+isn't configured (not an auth failure — a capability gap). Master switch
+`UDB_NATIVE_SERVICES_ENABLED`; per-service `UDB_NATIVE_<SERVICE>_ENABLED`.
 
----
+| Service | RPCs | What an app does with it | Needs beyond Postgres |
+|---|---|---|---|
+| **AuthnService** | 60 | users, sessions, MFA/WebAuthn, JWKS, **service-account grants**, cert bindings | — |
+| **AuthzService** | 41 | roles/policies, `Authorize`, `CheckAccess`, native-access grant, policy bundles | — |
+| **IdentityProviderService** | 27 | OIDC/SAML/SCIM federation | IdP config |
+| **VaultService** | 20 | secrets (versioned CAS), transit encrypt/sign, dynamic DB creds | **unseal** (master key) or `FAILED_PRECONDITION` |
+| **WebRTC** (Room/Peer/Track/Turn/Signaling) | 20 | rooms, peers, tracks, TURN creds, SFU signaling | peer listener; TURN secret |
+| **EmbeddingService** | 19 | vector points upsert/query/delete | a vector backend |
+| **NotificationService** | 12 | templated multi-channel notifications + delivery logs; opt-out → `SUPPRESSED` | **Kafka** |
+| **ApiKeyService** | 9 | API-key create/rotate/revoke/validate/usage | session hash secret |
+| **StorageService** | 9 | presigned put/get, finalize, quota, orphan GC | **object store** (S3/MinIO) |
+| **AssetService** | 8 | asset pipelines over finalized files (incl. vector EMBED) | object store; kafka+CDC for auto-trigger |
+| **BackupService** | 8 | tenant backup/restore (into a fresh target only) | — |
+| **TenantService** | 8 | tenant/project provisioning (`EnsureTenant`/`CreateTenant`) | — |
+| **AnalyticsService** | 7 | pipeline throughput/SLA/reconciliation metrics | — |
+| **CacheService** | 7 | managed cache | **Redis** |
+| **ControlPlaneService** | 6 | config/policy distribution (xDS-style push) | — |
+| **MeteringService** | 6 | `RecordUsage`/`QueryUsage`, quotas (→ `RESOURCE_EXHAUSTED`) | usage ledger pool |
+| **SchedulerService** | 6 | cron/one-shot jobs | workers/leader |
+| **WebhookService** | 6 | outbound webhooks + delivery logs; **SSRF-guarded** | delivery config |
+| **ConfigService** | 5 | feature flags (deterministic % rollout) | — |
+| **LockService** | 5 | distributed locks + monotonic fencing tokens | — |
+| **SearchService** | 5 | vector/hybrid search over collections | vector backend / active catalog |
+| **WorkflowService** | 5 | workflows/sagas with compensation | workers/leader |
+| **LiveQueryService** | 1 | streaming live query subscription (saturated → `RESOURCE_EXHAUSTED`) | — |
 
-## Native services tour (all on the control-plane target)
+**How you call them.** Every SDK has generated stubs; the Go SDK adds
+hand-written facades and an `EnterpriseSession` with the key distinction:
+`DataContext(ctx)` for `DataBroker` calls vs **`NativeContext(ctx)` for native
+calls** (appends the bearer, dialed at `NativeConn()` = the auth target). The
+escape hatch for any service without a facade:
+```go
+lock := lockv1.NewLockServiceClient(sess.NativeConn())
+lock.AcquireLock(sess.NativeContext(ctx), &lockv1.AcquireLockRequest{...})
+```
+Per-RPC request shapes are in `docs/bench-bodies/<service>.md` (valid JSON bodies
+per RPC) and `docs/generated/udb-native-contract.json`. Example programs:
+`examples/native-services/` (Authn/Authz/ApiKey + native DB fast-path in 6
+languages); wider coverage in the Go SDK live test
+`sdk/go/udbclient/live_native_services_test.go`.
 
-| Service | What an app does with it |
-|---|---|
-| **AuthnService** | authenticate, users, sessions, devices, MFA |
-| **AuthzService** | `check_access`/batch checks, policy bundles |
-| **ApiKeyService** | mint/rotate/revoke keys, validate |
-| **IdentityProviderService** | OIDC/SAML/SCIM federation |
-| **TenantService** | tenant/project lifecycle |
-| **NotificationService** | send + query notifications, **user preferences (opt-out → status `SUPPRESSED`)**, tenant-scoped templates, `RetryNotification` re-queues AND re-emits the delivery event |
-| **AnalyticsService** | usage/event queries |
-| **StorageService** | file uploads (flow below), presigned URLs, quotas, GC |
-| **AssetService** | processing pipelines over stored files (steps incl. vector EMBED); pipelines can auto-trigger on upload finalize |
-| **RoomService / WebRTC** | rooms, peers, tracks, TURN credentials, signaling (flow below), egress |
-| **VaultService** | secrets (versioned KV, CAS, soft-delete/destroy), transit encrypt/decrypt/sign/verify/HMAC by key name, dynamic DB credential leases; **fail-closed when sealed** (`FAILED_PRECONDITION` until the master key is available) |
-| **MeteringService** | `RecordUsage`/`QueryUsage`, per-tenant quotas (`PutQuota`/`CheckQuota`) — quota refusals come back as typed `RESOURCE_EXHAUSTED` |
-| **SchedulerService** | durable cron / one-shot jobs: `CreateJob`/`PauseJob`/`ResumeJob`/`DeleteJob` |
-| **SearchService** | managed search indexes over app data: `CreateIndex`/`Reindex`/`Search` (rank fusion), tenant-filtered server-side |
-| **WebhookService** | outbound webhook endpoints + delivery logs; **SSRF-guarded** (private/loopback ranges denied, DNS re-checked at delivery time) |
-| **WorkflowService** | long-running workflows/sagas: `StartWorkflow`/`SignalWorkflow`/`CancelWorkflow` with compensation |
-| **LockService** | distributed advisory locks with **monotonic fencing tokens** (`AcquireLock`/`RenewLock`/`ReleaseLock`; stale token → `FAILED_PRECONDITION`) |
-| **LiveQueryService** | `Subscribe` server-stream of live data changes (tenant-scoped; saturated subscribers are closed with `RESOURCE_EXHAUSTED`, never buffered unboundedly) |
-| **ConfigService** | feature flags: `PutFlag`/`GetFlag`/`EvaluateFlags` (deterministic percentage rollout) |
-| **BackupService** | tenant-scoped backup/restore (`StartTenantBackup`/`RestoreTenant`; restore only into a fresh target) |
-| **EmbeddingService** | embedding sources, backfill enumeration, `ReportEmbedding`, vector `Retrieve` |
-
-The platform services (Vault → Embedding) have raw generated stubs in every SDK
-today; workflow facades come later — call them through the generated client
-(e.g. Python `GeneratedClient(...).VaultService.encrypt(...)`, TS
-`udb.generated.VaultService.encrypt({...})`, Go
-`udb.Generated.InvokeUnary(ctx, "/udb.core.vault.services.v1.VaultService/Encrypt", ...)`).
-The per-RPC list, retry class, and idempotency contract are in
-`docs/generated/udb-native-contract.json` (or `udb native docs`).
-
-**Storage upload flow:** `RegisterUpload` (name/type/size → file_id + presigned
-PUT URL) → client PUTs bytes directly to object storage → `FinalizeUpload`
-(file_id; `is_public` is `optional` — omit to keep the default/stored value) →
-`GetFile`/`DownloadFile`/presigned GET. `UpdateFile` is a partial update —
-only send fields you mean to change. Finalizing can auto-start an asset
-pipeline. **`project_id` on native storage/asset RPCs (RegisterUpload,
-RegisterAsset) is OPTIONAL and UUID-only** — the server persists it through a
-`logical_uuid_or_null` column, so a human project code (e.g. `"private"`) yields
-`INVALID_ARGUMENT: uuid params must be UUID strings`. The SDK helpers omit
-`project_id` automatically unless it's a canonical UUID; pass the canonical
-project UUID (not the code) if you need project scoping.
+**Storage upload flow:** `RegisterUpload` (→ file_id + presigned PUT) → client
+PUTs bytes → `FinalizeUpload` (`is_public` immutable once registered) →
+`GetFile`/`DownloadFile`/presigned GET. `project_id` on storage/asset RPCs is
+OPTIONAL and **UUID-only** (a human code → `INVALID_ARGUMENT: uuid params must be
+UUID strings`); pass the canonical project UUID or omit it.
 
 **WebRTC flow:** `CreateRoom` → `JoinRoom` (capacity-checked) → bidirectional
-`Signal` stream relays SDP/ICE within the room (membership is re-validated
-during the stream; closed rooms/kicked peers get terminated) → `IssueCredentials`
-for TURN (fail-closed: no TURN secret configured = denied, not open) →
-`LeaveRoom` ends only YOUR stream; `CloseRoom` (admin) ends everyone's.
-Crashed clients are reaped automatically — capacity recovers without operator
-action.
+`Signal` stream (membership re-validated) → `IssueCredentials` (TURN; fail-closed
+without a TURN secret) → `LeaveRoom`/`CloseRoom`. Crashed clients are reaped.
 
-**Events:** every mutation publishes `udb.<svc>.<entity>.<verb>.v1` (e.g.
-`udb.storage.file.finalized.v1`). Apps consume via Kafka or the broker's CDC
-subscription stream — streams are **tenant-scoped server-side** (you only ever
-see your tenant's events) and support resume via `since_event_id` (replayed
-from a durable journal, surviving acked deliveries).
+**Events:** every mutation publishes `udb.<svc>.<entity>.<verb>.v1`. Consume via
+Kafka or the broker's CDC subscription stream — **tenant-scoped server-side**,
+resumable via `since_event_id`.
 
 ---
 
-## The data model — defining entities (proto annotations)
+## Native services — per-service reference (how to work with each one)
+
+For every service: its purpose, the RPCs you'll actually call, the scope prefix
+(`udb:<service>:<kebab-method>` — an admin scope `udb:*`/`udb:admin` covers all),
+what it needs to be mounted, and the trap to avoid. **Exact request/response
+field shapes are in `docs/bench-bodies/<service>.md`** (valid JSON body per RPC)
+and `docs/generated/udb-native-contract.json`; the full scope table is
+`docs/generated/authn-authz-rpc-inventory.md` (the Claude skill bundles this
+on-demand as `references/rpc-inventory.md`, and the sensitive-fields posture as
+`references/sensitive-fields.md`). Call any of these through the
+control-plane channel (`NativeContext`/`NativeConn` in Go; the generated native
+client + auth-target channel in the other SDKs).
+
+**The universal call shape (Go, applies to every service below):**
+```go
+// facade if one exists…
+sess.LockService().Acquire(sess.NativeContext(ctx), name, ttl)
+// …or the generated stub over the session's native channel:
+cli := <svc>v1.New<Svc>ServiceClient(sess.NativeConn())
+cli.SomeRpc(sess.NativeContext(ctx), &<svc>v1.SomeRpcRequest{ /* … */ })
+```
+In TS/Python/PHP/C#/Java use the generated `<Svc>Service` client dialed at
+`authTarget` with the auth metadata (`UdbProject` routes native calls there
+automatically).
+
+### TenantService — tenant/project lifecycle
+- **Key RPCs:** `EnsureTenant` (resolve-or-create; returns the canonical UUID —
+  the idempotent one you want at bootstrap), `CreateTenant`, `GetTenant`,
+  `ListTenants`, `OnboardTenant`, project CRUD.
+- **Scope:** `udb:tenant:*`. **Deps:** Postgres only.
+- **Gotcha:** `EnsureTenant` is how you turn a human code into the canonical
+  UUID from code; never assume the UUID format — read it back.
+
+### AuthnService — identity, sessions, MFA, service accounts (60 RPCs)
+- **Key RPCs:** `Login`/`Authenticate` (public), `CreateUser` (with
+  `account_kind`), `GetUser`/`UpdateUser`, `CreateSession`/`RevokeSession`,
+  `EnrollMfa`/`VerifyOtp`, WebAuthn start/finish, `GetJwks` (public),
+  `IntrospectToken`, `ForgotPassword`/`ResetPassword` (public), **service-account
+  grants** (`CreateServiceAccountGrant`, `Get/List/Replace/Rotate/Transfer/
+  RevokeServiceAccountGrant`), `CreateCertificateBinding` (mTLS→grant).
+- **Scope:** `udb:authn:*` (e.g. `udb:authn:create-user`).
+- **Gotcha:** a `SERVICE_ACCOUNT` User is inert without an ACTIVE
+  `ServiceAccountGrant` (see *Authentication*). Public RPCs are rate-limited.
+
+### AuthzService — roles, policies, checks, bundles (41 RPCs)
+- **Key RPCs:** `CreatePolicyRule`/`PutAuthzPolicy` (write a `policy_rules` row —
+  Surface 1), `DeletePolicy`, `CreateRole`/`AssignRole`, `PutRelation` (ReBAC
+  tuple), `Authorize`/`CheckAccess` (ask the engine), `GetNativeAccess`
+  (Stage-2 fast-path grant), policy-bundle draft/approve/activate (governed
+  mode), `ReloadPolicies` (audited no-op).
+- **Scope:** `udb:authz:*`. **Gotcha:** in governed mode direct writes are
+  blocked — use the bundle flow. `CheckAccess` returns a `cache_ttl_seconds`;
+  `0` = don't cache.
+
+### ApiKeyService — API-key lifecycle (9 RPCs)
+- **Key RPCs:** `CreateApiKey` (owner must be an active service account + grant;
+  returns one-time `udbk_…`), `RotateApiKey`, `RevokeApiKey`, `ListApiKeys`,
+  `ValidateApiKey` (returns validity + scopes, **no token**), `GetApiKeyUsage`.
+- **Scope:** `udb:apikey:*`. **Deps:** `UDB_SESSION_HASH_SECRET`. **Gotcha:**
+  the plain key is shown once; scopes are attenuated to the owner's grant on
+  every use.
+
+### IdentityProviderService — external IdP federation (27 RPCs)
+- **Key RPCs:** register/get/list OIDC & SAML providers, SCIM user/group
+  provisioning, JIT mapping, metadata endpoints.
+- **Scope:** `udb:idp:*`. **Gotcha:** SAML/OIDC require provider config +
+  correct redirect/metadata URLs; SCIM writes are tenant-scoped.
+
+### VaultService — secrets, transit crypto, dynamic creds (20 RPCs)
+- **Key RPCs:** `PutSecret`/`GetSecret`/`ListSecrets`/`DeleteSecret` (versioned,
+  CAS, soft-delete/destroy), transit `Encrypt`/`Decrypt`/`Sign`/`Verify`/`Hmac`
+  by key name, dynamic DB credential `IssueDatabaseCredentials`/lease renew/
+  revoke, seal/unseal admin.
+- **Scope:** `udb:vault:*`. **Deps:** Postgres + a **master key / unseal**.
+- **Gotcha:** **fail-closed when sealed** — every key-using op returns
+  `FAILED_PRECONDITION (seal_gate)` until the master key is available. Dynamic
+  creds need a role-mgmt config.
+
+### MeteringService — usage + quotas (6 RPCs)
+- **Key RPCs:** `RecordUsage` (append a usage event), `QueryUsage` (rollups),
+  `PutQuota`/`GetQuota`/`CheckQuota`.
+- **Scope:** `udb:metering:*`. **Deps:** a **usage ledger pool** configured, else
+  `FAILED_PRECONDITION "metering usage pool is not configured"`.
+- **Gotcha:** quota refusals surface to callers as typed `RESOURCE_EXHAUSTED`;
+  rollups run on a leader worker.
+
+### SchedulerService — durable cron / one-shot jobs (6 RPCs)
+- **Key RPCs:** `CreateJob`, `PauseJob`, `ResumeJob`, `DeleteJob`, `ListJobs`.
+- **Scope:** `udb:scheduler:*`. **Gotcha:** jobs only *execute* when worker/leader
+  election is running; creating a job on a broker with workers off just persists
+  it.
+
+### SearchService — managed search indexes (5 RPCs)
+- **Key RPCs:** `CreateIndex`, `Reindex`, `Search` (rank fusion, tenant-filtered
+  server-side), `DeleteIndex`, `GetIndex`.
+- **Scope:** `udb:search:*`. **Deps:** an active catalog / native-entity
+  dispatch; supply a `query_vector` (full-text-only path is still pending →
+  `FAILED_PRECONDITION`).
+
+### WebhookService — outbound webhooks (6 RPCs)
+- **Key RPCs:** `RegisterEndpoint`, `ListEndpoints`, `DeleteEndpoint`,
+  `GetDeliveries`, retry/replay.
+- **Scope:** `udb:webhook:*`. **Gotcha:** **SSRF-guarded** — private/loopback
+  target ranges are denied and DNS is re-checked at delivery time.
+
+### WorkflowService — long-running workflows / sagas (5 RPCs)
+- **Key RPCs:** `StartWorkflow`, `SignalWorkflow`, `CancelWorkflow`,
+  `GetWorkflow`, `ListWorkflows` — with compensation on failure.
+- **Scope:** `udb:workflow:*`. **Gotcha:** needs workers to advance; a started
+  workflow with workers off is durable but inert.
+
+### LockService — distributed locks with fencing (5 RPCs)
+- **Key RPCs:** `AcquireLock`, `RenewLock`, `ReleaseLock`, `GetLock`.
+- **Scope:** `udb:lock:*`. **Gotcha:** each acquire returns a **monotonic fencing
+  token**; pass it to fenced writes (`UpsertRequest.lock_name`/`fencing_token`) —
+  a stale token (you outlived your lease) is rejected `FAILED_PRECONDITION` with
+  no side effects. Renew before the TTL.
+
+### LiveQueryService — streaming change subscriptions (1 RPC)
+- **Key RPC:** `Subscribe` (server-stream of live data changes, tenant-scoped).
+- **Scope:** `udb:livequery:*`. **Gotcha:** saturated subscribers are closed with
+  `RESOURCE_EXHAUSTED` — never buffered unboundedly; handle reconnect.
+
+### ConfigService — feature flags (5 RPCs)
+- **Key RPCs:** `PutFlag`, `GetFlag`, `DeleteFlag`, `ListFlags`, `EvaluateFlags`
+  (deterministic percentage rollout by a stable key).
+- **Scope:** `udb:config:*`. **Gotcha:** rollout is deterministic per entity id;
+  the same id always lands the same bucket.
+
+### BackupService — tenant backup/restore (8 RPCs)
+- **Key RPCs:** `StartTenantBackup`, `RestoreTenant`, `GetBackup`, `ListBackups`,
+  job status.
+- **Scope:** `udb:backup:*`. **Gotcha:** `RestoreTenant` only restores into a
+  **fresh** target — it won't overwrite a live tenant.
+
+### EmbeddingService — vectors (19 RPCs)
+- **Key RPCs:** register embedding sources, backfill enumeration,
+  `ReportEmbedding` (write a vector), `Retrieve` (query), delete.
+- **Scope:** `udb:embedding:*`. **Deps:** a vector backend. **Gotcha:** a
+  process-local fresh buffer serves read-your-writes for just-written vectors.
+
+### NotificationService — multi-channel notifications (12 RPCs)
+- **Key RPCs:** `SendNotification`, `GetNotification`, list/query, user
+  preferences (opt-out → status `SUPPRESSED`), tenant templates,
+  `RetryNotification` (re-queues AND re-emits the delivery event).
+- **Scope:** `udb:notification:*`. **Deps:** **Kafka** + delivery config.
+
+### AnalyticsService — pipeline metrics (7 RPCs)
+- **Key RPCs:** throughput/SLA/reconciliation queries.
+- **Scope:** `udb:analytics:*`.
+
+### StorageService — object storage (9 RPCs)
+- **Key RPCs:** `RegisterUpload` (→ file_id + presigned PUT), `FinalizeUpload`,
+  `GetFile`, `DownloadFile`, `UpdateFile` (partial), `DeleteFile`
+  (`SOFT`/`HARD`), quota, orphan GC.
+- **Scope:** `udb:storage:*`. **Deps:** an **object store** (S3/MinIO).
+- **Gotcha:** `is_public`/size are immutable once registered; `project_id` is
+  UUID-only; see the storage flow in the tour.
+
+### AssetService — processing pipelines (8 RPCs)
+- **Key RPCs:** `RegisterAsset`, run/get pipeline, pipeline steps (incl. vector
+  `EMBED` → Qdrant), status.
+- **Scope:** `udb:asset:*`. **Deps:** object store; **kafka + CDC** for the
+  finalize→pipeline auto-trigger.
+
+### CacheService — managed cache (7 RPCs)
+- **Key RPCs:** get/set/delete/scan/increment/TTL.
+- **Scope:** `udb:cache:*`. **Deps:** **Redis** (else degraded/unmounted).
+
+### ControlPlaneService — config/policy distribution (6 RPCs)
+- **Key RPCs:** xDS-style push/watch of config + policy to PEPs.
+- **Scope:** `udb:control:*`. **Gotcha:** for fleet/sidecar distribution, not
+  everyday app use.
+
+### WebRTC (Room/Peer/Track/Turn/Signaling — 20 RPCs, two planes)
+- **Admin RPCs** (control plane `:50061`): `CreateRoom`, `CloseRoom`,
+  room/membership admin.
+- **Peer RPCs** (peer plane `:50071`, peer-token): `JoinRoom`, `Signal`
+  (SDP/ICE), `IssueCredentials` (TURN), track ops, `LeaveRoom`.
+- **Scope:** `udb:webrtc:*`. **Deps:** peer listener enabled; TURN secret for
+  credentials. **Gotcha:** peer calls go to `:50071`, admin to `:50061`.
+
+---
+
+## The data model — defining and evolving entities
+
+### Defining an entity (proto annotations)
 
 ```proto
 syntax = "proto3";
 package shop.v1;
-import "udb/core/common/v1/db.proto";   // UDB annotations (vendor via `udb proto export`)
+import "udb/core/common/v1/db.proto";   // vendor via `udb proto export`
 
 message Customer {
   option (udb.core.common.v1.table) = {
-    table_name: "customers"
-    schema_name: "shop"
-    is_table: true
-    enable_rls: true            // optional: row-level security
+    table_name: "customers" schema_name: "shop" is_table: true
+    migration_order: 10          // lower = created first (FK ordering)
+    enable_rls: true             // optional: row-level security
   };
 
   string customer_id = 1 [(udb.core.common.v1.column) = {
@@ -416,109 +1054,389 @@ message Customer {
   string email = 3 [(udb.core.common.v1.column) = {
     column_name: "email" sql_type: "VARCHAR(320)" not_null: true unique: true
   }];
+  string status = 4 [(udb.core.common.v1.column) = {
+    column_name: "status" sql_type: "VARCHAR(32)" default_value: "'pending'"
+  }];
+  // server-managed timestamp: never sent by the client
+  string created_at = 5 [(udb.core.common.v1.column) = {
+    column_name: "created_at" sql_type: "TIMESTAMPTZ" default_value: "now()"
+    exclude_from_insert: true exclude_from_update: true
+  }];
 }
 ```
 
-- **Tenant isolation:** give every tenant-scoped table a tenant column. The
-  broker recognizes `tenant_id`, `_tenant_id`, or any column flagged
-  `is_tenant_column: true` in the table security annotation — then every read
-  and write is automatically tenant-filtered. No recognizable tenant column on
-  a tenant-scoped query = the broker fails closed, not open.
-- **Use `optional`** on fields that participate in partial updates (see CRUD).
+- **Tenant isolation:** every tenant-scoped table needs a tenant column. The
+  broker recognizes `tenant_id`, `_tenant_id`, or any column with
+  `is_tenant_column: true` — then reads/writes are auto-filtered. No recognizable
+  tenant column on a tenant-scoped query = fail closed.
+- **`optional`** on fields that participate in partial updates (proto3 presence).
+- **`default_value` quoting:** SQL literals are as-written — string defaults need
+  inner quotes (`"'pending'"`), function/keyword defaults do not (`now()`,
+  `gen_random_uuid()`, `0`).
+- **`exclude_from_insert`/`exclude_from_update`** for server-managed columns
+  (timestamps, computed).
 - Advanced annotations: `(…db_column_security)` (PII class / redaction /
-  encryption / storage-only output view per field), `(…db_table_security)`
-  (tenant column, RLS template, audit/retention), `(…endpoint_security)` on
-  RPCs (auth mode + scopes). `udb compat-matrix` prints the authoritative
-  annotation surface (derived from the parser itself — trust it over blogs).
-- **Custom packages:** annotations match bare or `udb.`-qualified names. If
-  your options live under your own package (e.g. `(myapp.v1.table)`), set
-  `UDB_PROTO_NAMESPACE=myapp.v1` (or pass the namespace arg) or the parser
-  silently ignores them and you get zero tables.
+  encryption / storage-only output), `(…db_table_security)` (tenant column, RLS
+  template, audit/retention), `(…endpoint_security)` on RPCs. `udb compat-matrix`
+  prints the authoritative annotation surface (derived from the parser — trust it
+  over blog posts).
+- **Custom packages:** if options live under your own package
+  (`(myapp.v1.table)`), set `UDB_PROTO_NAMESPACE=myapp.v1` or the parser silently
+  ignores them and you get **zero tables**.
+
+### Adding / changing a field (the migration story)
+
+Schema changes flow through a **migration diff** the broker computes at startup
+(prior manifest → current manifest), with review gates for destructive/raw-SQL
+changes. Rules that keep you out of trouble:
+
+- **Add a nullable column** (or one with a `default_value`) → a clean, additive
+  migration. Prefer this. Make it `optional` in the proto if partial updates set
+  it.
+- **Never reuse a field number.** proto3 identity is the field number. Assign the
+  next free one; if you delete a field, `reserved` its number AND name so it can
+  never be reused:
+  ```proto
+  reserved 4; reserved "legacy_status";
+  ```
+- **Avoid incompatible type changes** (e.g. `INT` → `UUID`, widening that
+  rewrites): the diff flags these as destructive and the gate blocks
+  auto-apply.
+- **Dropping a column is destructive** — the migration gate marks `DropColumn`
+  `Blocked`, and `udb plan` computes it from the *ledger* manifest, so even
+  dropping the table won't erase a pending drop; a true reset needs a fresh
+  database. Plan drops deliberately.
+- **A `CREATE INDEX` artefact is idempotent on the index NAME.** If a non-unique
+  index of the same name already exists, the unique one you declared silently
+  isn't created (the plan pairs it with a `DropIndex` marked `RequiresReview`
+  that `admin force-sync` won't run). Give new unique indexes fresh names.
+- **Preview before you ship:** `udb proto fmt --check` (formatting/lint),
+  `udb plan` (the migration diff + gates), `udb drift` (manifest vs live DB),
+  `udb field-mask-preview` (per-column effects), `udb compat-matrix`
+  (annotation surface).
 
 **Pipeline:** annotated protos → catalog manifest (normalized + checksummed) →
-DDL (CREATE TABLE / INDEX / RLS) → runtime routing + redaction + authz. The
-broker applies it at startup; schema changes flow through a migration diff with
-review gates for destructive/raw-SQL changes.
+DDL (CREATE TABLE / INDEX / RLS) → runtime routing + redaction + authz.
 
 ---
 
-## CLI — the `udb` binary
+## SDK cookbook (per language, deeper)
 
-**Discover it:** `udb --help` / `udb help` (grouped command list), `udb <cmd> --help`
-or `udb help <cmd>` (per-command usage + flags + example), `udb --version`. An
-unknown command or sub-action prints a "did you mean …?" suggestion.
+Every SDK exposes the same three things: a **DataBroker** client (data plane), an
+**Auth** client + native clients (control plane), and a **metadata/credentials**
+object with hot-swap. Below: the auth→CRUD→native shape per language. Route
+native clients to `authTarget`; always set `purpose` and the tenant UUID.
 
+### Go
+```go
+// Enterprise (human): one-call login + adopt UUID + background refresh.
+sess, _ := udbclient.ConnectEnterprise(ctx, udbclient.EnterpriseConfig{
+    Target: "localhost:50051", AuthTarget: "localhost:50061",
+    Username: "admin", Password: pass, TenantCode: "acme", ProjectID: "default",
+    Scopes: []string{"udb:read", "udb:write"}})
+defer sess.Close()
+t := sess.CanonicalTenantID                              // the UUID, use in filters
+sess.Data.Broker.Upsert(sess.DataContext(ctx), &entityv1.UpsertRequest{
+    MessageType: "shop.v1.Customer", ConflictFields: []string{"customer_id"},
+    Payload: pb(map[string]any{"customer_id": "c1", "tenant_id": t, "email": "a@x.com"}),
+    IdempotencyKey: "c1-create"})
+// Native: NativeContext + NativeConn.
+tenant := tenantv1.NewTenantServiceClient(sess.NativeConn())
+tenant.EnsureTenant(sess.NativeContext(ctx), &tenantv1.EnsureTenantRequest{Code: "acme"})
+
+// Service (machine): static API key, no refresh token exists for service accounts.
+u, _ := udbclient.NewUdb(ctx, udbclient.Config{Target: "localhost:50051",
+    AuthTarget: "localhost:50061", TenantID: tenantUUID, ProjectID: "default",
+    Scopes: []string{"udb:read","udb:write"},
+    Credentials: udbclient.Credentials{APIKey: "udbk_…"}})
+// on expiry: exchange the key → bearer, then u.SetAuthorization(tok) (hot-swap)
+```
+
+### TypeScript
+```ts
+const udb = await UdbProject.connectEnterprise({
+  target: "localhost:50051", authTarget: "localhost:50061",
+  username: "admin", password, tenantCode: "acme", projectId: "default",
+  scopes: ["udb:read", "udb:write"],
+});
+const t = udb.canonicalTenantId;
+await udb.entity("shop.v1.Customer").upsert(
+  { customer_id: "c1", tenant_id: t, email: "a@x.com" },
+  { conflictFields: ["customer_id"], idempotencyKey: "c1-create" });
+const rs = await udb.entity("shop.v1.Customer").select({ limit: 50 });
+// native: udb.native.TenantService.ensureTenant({ code: "acme" });
+// service: new UdbProject({ credentials: { apiKey: "udbk_…" } })  // or bearerToken
+```
+
+### Python
+```python
+udb = create_udb(target="localhost:50051", auth_target="localhost:50061")
+udb.login_and_adopt_tenant("admin", password)           # adopts canonical UUID
+t = udb.config.tenant_id
+udb.data.upsert(message_type="shop.v1.Customer",
+                record={"customer_id": "c1", "tenant_id": t, "email": "a@x.com"},
+                conflict_fields=("customer_id",), idempotency_key="c1-create")
+rows = udb.data.select(message_type="shop.v1.Customer", limit=50)
+# native: udb.native.TenantService.EnsureTenant(...)
+# service: create_udb(..., api_key="udbk_…")   # static credential, you own lifetime
+```
+
+### Java / C# / PHP
+Same three parts. Java/C#: `UdbProject` with data+auth targets and a
+`Credentials` object (bearer or api-key), `select/upsert` on the data client,
+generated native clients on the auth channel; `MutationOutcome` exposes
+`wasDuplicate`. PHP/Laravel: `UdbClient(['endpoint'=>…])` + `UdbMetadata`; native
+services via the generated clients pointed at the auth endpoint; `wasReplay($r)`
+for idempotent-replay detection.
+
+**Credential hot-swap (all SDKs):** `set_credentials()` / `SetAuthorization` /
+`SetAPIKey` swaps the token without rebuilding the channel — use it on rotation
+and on API-key→bearer re-exchange.
+
+---
+
+## Data plane deep-dive — typed stores, consistency, idempotency, events
+
+### Typed stores (when the backend supports them)
+Advertised in `GetCapabilities.supported_rpcs`; a store an active backend doesn't
+support returns `FAILED_PRECONDITION`.
+- **Cache:** `CacheGet`/`CacheSet`/`CacheDelete`/`CacheScan` (Redis/Memcached).
+- **Document:** `DocumentGet`/`DocumentFind`/`DocumentUpsert`/`DocumentDelete`
+  (Mongo).
+- **Graph:** `GraphQuery`/`GraphMutate` (Neo4j).
+- **Time-series:** `TimeSeriesWrite`/`TimeSeriesQuery`.
+- **Analytical:** `AnalyticalQuery` (ClickHouse).
+- **Vector:** `VectorSearch`/`VectorHybridSearch`/`VectorUpsert` (Qdrant/…).
+
+### Consistency modes (pick per read)
+`strong` (leader), `read_your_writes` (wait for your own write via a fence),
+`bounded_staleness` / `replica_bounded` (a replica within a bound), `eventual`,
+`projection_ok` (a materialized projection is fine), `cache_ok`. Attach with the
+SDK metadata (`withConsistency` / `with_consistency`). After a write, prefer a
+**read fence** built from the write receipt over a proof `Get`:
+```txt
+resp = upsert(...); fence = resp.write_receipt
+select(..., metadata.afterWrite(fence))   # broker waits until the write is visible
+```
+
+### Idempotency & retries (the contract, precisely)
+- Reads: SDKs auto-retry transient errors.
+- Replay-safe mutations (Upsert/Delete/Update): auto-retried **only** with a
+  non-empty `idempotency_key`; keyless → no auto-retry (avoids double-apply).
+- A keyed replay returns the stored first-writer body with `was_duplicate=true`
+  — it does NOT re-run. The key is **input-bound**: replaying it with different
+  inputs is `FAILED_PRECONDITION`, never a bogus success. Never "fix" a keyless
+  double-apply by auto-generating keys — that defeats the dedup; set a stable,
+  meaningful key (e.g. a natural request id).
+
+### Events / CDC
+Every mutation emits `udb.<svc>.<entity>.<verb>.v1` through a durable
+outbox→Kafka pipeline. Consume via Kafka directly, or via the broker's CDC
+subscription stream (`PublishCDC`): **tenant-scoped server-side** (you only ever
+see your tenant), resumable via `since_event_id` from a durable journal (survives
+acked deliveries). Use it for projections, cache invalidation, and integrations.
+
+---
+
+## Production hardening (broker-side quickref)
+
+For a hardened deployment (see `docs/enterprise-deployment.md` for the full
+checklist):
+- `UDB_ENV=production` (fails closed on dev shortcuts), `UDB_TLS_REQUIRED=true`,
+  `UDB_MTLS_REQUIRED=true` (or `UDB_TRUSTED_TRANSPORT=true` behind a terminating
+  proxy/mesh).
+- Real RS256 keys (`UDB_JWT_PRIVATE_KEY`/`UDB_JWT_PUBLIC_KEY` or
+  `UDB_JWT_JWKS_URL`), a strong `UDB_ENCRYPTION_KEY`, and matching
+  `UDB_PASSWORD_HASH_SECRET`/`UDB_SESSION_HASH_SECRET`.
+- **No** `UDB_ABAC_DEFAULT_ALLOW`, **no** `UDB_ALLOW_HEADER_SCOPES` (the latter is
+  a hard production error).
+- Seed real least-privilege `policy_rules` (roles + bindings), not a wildcard.
+- Expose `UDB_AUTH_GRPC_ADDR` only on a trusted interface; keep the WebRTC peer
+  plane scoped.
+- Pooler-safe DSN; watch CRLF in `.env`. If a pooler advisory lock wedges startup,
+  `udb admin release-lock`. Opaque `INTERNAL` on a write → `UDB_VERBOSE_DB_ERRORS`
+  to see the cause. Run `udb doctor --enterprise` + `udb requirements` before
+  every deploy. `udb deploy plan|apply|render` turns a `udb.deploy.yaml` into all
+  of the above idempotently.
+
+---
+
+## CLI — the `udb` binary (reference)
+
+**Discover it:** `udb --help` / `udb help` (grouped list), `udb <cmd> --help` or
+`udb help <cmd>` (usage + flags + example), `udb --version`. Unknown commands get
+a "did you mean …?" suggestion.
+
+**Bring-up & inspection**
 | Command | Purpose |
 |---|---|
 | `udb proto export --out proto` | Vendor UDB's annotation protos so app protos can `import "udb/core/common/v1/db.proto"`. |
-| `udb serve proto "" 0.0.0.0:50051` | Start the broker (syncs schema from protos on boot; control-plane listener comes up on port+10). |
-| `udb sdk generate --lang <lang>` / `udb sdk list-langs` / `udb sdk manifest` | Generate/refresh SDK clients; dump the full RPC manifest (the authoritative service/RPC list). |
-| `udb doctor [--with-probes] [--enterprise]` | Env + backend readiness. `--enterprise` runs the one-shot preflight (encryption/password/session/auth-plane/redis/ABAC) AND is **manifest-aware** — it reports any required backend (Qdrant/object store) your protos declare but you haven't configured, i.e. the same condition that would later stop `udb serve`. |
-| `udb requirements [--json]` | Print the resolved backend contract for the current project's manifest (each required backend, its env vars, configured?, fatal/degraded, suggested fix). Exits non-zero if a fatal backend is unset — run it BEFORE the first startup. |
-| `udb auth bootstrap user …` / `udb auth api-key-create …` | First offline admin / mint API keys. `bootstrap user` prints the canonical tenant UUID — capture it. |
-| `udb native list / manifest / docs / contract-diff` | Inspect the native service contract; diff it between versions. |
-| `udb dev up / down / smoke` | Local sandbox via the bundled compose (run from a repo checkout). |
-| `udb init-project` | Scaffold a project — mind the namespace note above. |
-| `udb policy-lint` | Lint ABAC policy files (non-zero exit on broken files — safe as a CI gate). |
+| `udb serve proto "" 0.0.0.0:50051` | Start the broker (syncs schema from protos on boot; control-plane listener at port+10). Wait for the `… is ready: data=… auth=…` line. |
+| `udb doctor [--with-probes] [--enterprise] [--consumer --key --entity]` | Env + backend readiness. `--enterprise` = one-shot preflight (encryption/password/session/auth-plane/redis/ABAC) AND manifest-aware (reports required backends your protos declare but you haven't configured). `--consumer --key <k> --entity <e>` dials a running broker and probes the authn→authz chain, surfacing the exact PERMISSION_DENIED reason. |
+| `udb requirements [--json]` | The resolved backend contract for the manifest (each required backend, env vars, configured?, fatal/degraded, suggested fix). Non-zero exit if a fatal backend is unset — run BEFORE first startup. |
+| `udb plan` / `udb drift` / `udb lint` | Migration diff + gates / manifest-vs-live drift / annotation lint. |
+| `udb native list / manifest / docs / contract-diff` | Inspect the native service contract; diff between versions. |
+| `udb sdk generate --lang <l>` / `sdk list-langs` / `sdk manifest` | Generate/refresh SDK clients; dump the authoritative RPC manifest. |
+| `udb orm scaffold` | Generate typed repository/entity models from the manifest. |
+| `udb compat-matrix` | The authoritative annotation surface (from the parser). |
+| `udb dev up / down / smoke` | Local sandbox via the bundled compose (from a repo checkout). |
+| `udb init` / `udb init-project` (= `udb scaffold`) | Scaffold a project (proto/config/compose/6 client examples). Mind `UDB_PROTO_NAMESPACE`. |
+
+**Auth & policy**
+| Command | Purpose |
+|---|---|
+| `udb auth bootstrap user --username … --tenant acme …` | First offline admin. Prints the canonical tenant UUID — **capture it**. Seeds only the org-owner wildcard policy; you still seed per-entity rows. |
+| `udb auth api-key-create …` | Mint an API key (owner must be an active service account + grant). |
+| `udb auth policy put --subject role:R --action '*' --resource <fqn> --effect allow --tenant <UUID>` | Write a `policy_rules` Allow via `PutAuthzPolicy` (needs a running broker). |
+| `udb auth role bind --principal <id> --role R --tenant <UUID>` | Bind a principal to a role. |
+| `udb auth relation put …` | Write a ReBAC tuple. |
+| `udb auth grant …` | Service-account grant lifecycle. |
+| `udb authz seed --tenant <UUID> [--role R] [--entity <fqn>…] [--emit <file>]` | THE straightforward offline seeder: role-gated Allow rows (`Select`/`Upsert`/`Delete`/`Update`/`BulkCas` — validated tokens) directly into `udb_authz.policy_rules` (Postgres-direct, idempotent + atomic). Then bind principals with `udb auth role bind`. |
+| `udb policy-seed` (with `UDB_ABAC_POLICY_FILE`) | Print the atomic `policy_rules` INSERT SQL to stdout → pipe to `psql`. Offline. |
+| `udb policy-lint` | Lint an offline policy file (CI-safe, non-zero on breakage). |
+| `udb authz simulate` | "What would change if this policy bundle shipped" (read-only). |
+
+**Enterprise**
+| Command | Purpose |
+|---|---|
+| `udb deploy plan\|apply\|render` | Declarative `udb.deploy.yaml` → full production env (mTLS/JWT/RLS/audit) + idempotent bootstrap of tenants/service-accounts/grants/api-keys/policies. |
+| `udb admin force-sync \| release-lock \| verify-audit \| reset-db` | Operate a running deployment (release a stuck pooler advisory lock, force a migration, etc.). |
+| `udb compliance evidence \| export` | Compliance evidence bundle. |
 
 ---
 
-## Decoding broker errors (read this before debugging)
+## Environment variables (the ones you'll actually set)
+
+**Data / DSN**
+- `UDB_PG_DSN` (or `DATABASE_URL`) — primary Postgres DSN. Pooler-safe: append
+  the right params; watch CRLF in `.env` files (a trailing `\r` breaks values).
+
+**Auth plane**
+- `UDB_AUTH_GRPC_ADDR` — native/control listener (default loopback `:50061`); set
+  `0.0.0.0:50061` to expose to remote services/PEPs.
+- `UDB_JWT_PRIVATE_KEY` / `UDB_JWT_PUBLIC_KEY` (inline PEM or path) — RS256 sign /
+  verify login JWTs. Without the private key, tokens are silently not minted
+  (sessions-only). `UDB_JWT_JWKS_URL` verifies via JWKS instead;
+  `UDB_RS256_KID` stamps the key id.
+- `UDB_SESSION_ENABLED=true` + `UDB_SESSION_HASH_SECRET` — server sessions
+  (browser flows); the hash secret is ALSO used to hash API keys.
+- `UDB_PASSWORD_HASH_SECRET` — keyed HMAC for native passwords; must be the SAME
+  value at bootstrap and at serve, or login can't verify. Falls back to
+  `UDB_SESSION_HASH_SECRET`.
+
+**Authorization**
+- `UDB_ABAC_DEFAULT_ALLOW=true` — dev bypass; **works only while zero policy rows
+  exist**. Production-discouraged (doctor/preflight WARN).
+- `UDB_AUTHZ_CASBIN_MODEL` / `_PATH` — override the Casbin model
+  (`r=sub,dom,obj,act`; `p=sub,dom,obj,act,eft`; `g=_,_`). Startup-validated.
+- `UDB_AUTHZ_SNAPSHOT_TTL_SECS` (alias `UDB_ABAC_REFRESH_SECS`) — policy warm TTL
+  (default 5s).
+- `UDB_ALLOW_HEADER_SCOPES=true` — dev-only header identity (`x-scopes`,
+  `x-tenant-id`, `x-service-identity` from plaintext headers, no JWT).
+  **Production-FORBIDDEN** (hard validation error in production posture).
+
+**Encryption / transport / rate limits**
+- `UDB_ENCRYPTION_KEY` — field encryption master key.
+- `UDB_ENV=production`, `UDB_TLS_REQUIRED`, `UDB_MTLS_REQUIRED`,
+  `UDB_TRUSTED_TRANSPORT=true` (acknowledge externally-terminated TLS).
+- `UDB_RATE_LIMIT_MAX_PER_WINDOW` (alias `UDB_RATE_LIMIT_MAX`) /
+  `UDB_RATE_LIMIT_WINDOW_SECS` (alias `UDB_RATE_LIMIT_WINDOW`) /
+  `UDB_RATE_LIMIT_ENABLED=false` / `UDB_RATE_LIMIT_PER_KEY=true` — DataBroker
+  limiter (see below). `UDB_API_KEY_RATE_LIMIT_*` / `UDB_PUBLIC_BOOTSTRAP_RATE_LIMIT_*`
+  govern the auth/public limiters (NOT the DataBroker budget).
+
+**Native services**
+- `UDB_NATIVE_SERVICES_ENABLED` (master), `UDB_NATIVE_<SERVICE>_ENABLED`,
+  `UDB_WEBRTC_GRPC_ADDR`.
+- `UDB_VERBOSE_DB_ERRORS=true` — turn opaque `INTERNAL` write errors into the
+  underlying DB detail (debugging only).
+
+---
+
+## Decoding broker errors — the PERMISSION_DENIED decision tree
+
+Read the typed `ErrorDetail` (kind/retryable/retry_after_ms) instead of matching
+strings. General map:
 
 | gRPC status | Most likely cause |
 |---|---|
-| `UNIMPLEMENTED` | Native-service call sent to the **data target** — set `authTarget`/control-plane address. |
-| `UNAUTHENTICATED` | Missing/invalid bearer. On the DataBroker data plane, `x-api-key` alone is not accepted; log in for a JWT and send `authorization: Bearer <jwt>` or use mTLS. UDB names this case explicitly. |
-| `PERMISSION_DENIED` | Missing scope, tenant mismatch (metadata/body vs credential), revoked credential, or per-action policy deny. **On a data RPC with otherwise-valid scopes → no policy seeded** (default-deny, mental model #7): seed the `udb_authz.policy_rules` table via `AuthzService.CreatePolicyRule` (or `udb policy-seed`) with the real `Select`/`Upsert`/`Delete` action, or set `UDB_ABAC_DEFAULT_ALLOW=true` for dev. |
-| `INVALID_ARGUMENT` "tenant isolation requires filter on tenant_id" | A tenant-scoped read/delete MUST include `tenant_id` (the canonical UUID, not the code) in the filter. |
-| `FAILED_PRECONDITION` | Service disabled/not mounted, wrong lifecycle state (e.g. apply before approve), feature requires config (TURN secret, media profile). |
-| `RESOURCE_EXHAUSTED` | Rate limit, quota, or per-tenant fairness backpressure. Read the typed detail's `retry_after_ms` and back off. For a **DataBroker** data RPC (`… requests per Ns window`) it's the per-tenant limiter — see the note under this table for the exact knob. |
-| `INVALID_ARGUMENT` | Unknown `message_type` (use the proto FQN; check `udb sdk manifest`), malformed filter, invalid cron/enum/value. |
-| `ABORTED` | Optimistic-concurrency conflict (CAS/version mismatch) — re-read and retry. |
-| `DEADLINE_EXCEEDED` | The op may have committed server-side. SDKs auto-retry only read-only RPCs; retry writes yourself only when idempotent (`conflict_fields`). |
-| `NOT_FOUND` | Row outside your tenant looks identical to a missing row — by design. |
+| `UNIMPLEMENTED` | Native-service call sent to the **data target** — dial `authTarget`/`:50061`. |
+| `UNAUTHENTICATED` | Missing/invalid bearer, or empty tenant. On the data plane an `x-api-key` may be accepted; if not, exchange it for a JWT (`Authenticate{api_key}`) and send `authorization: Bearer <jwt>`. |
+| `PERMISSION_DENIED` | See the decision tree below. |
+| `INVALID_ARGUMENT "tenant isolation requires filter on tenant_id"` | A tenant-scoped read/delete MUST include `tenant_id` (the UUID) in the filter. |
+| `FAILED_PRECONDITION` | Native service disabled/not mounted (backend missing — Vault sealed, no Redis/Kafka/ledger), wrong lifecycle (apply before approve), governed-mode direct policy write, feature needs config (TURN secret). |
+| `RESOURCE_EXHAUSTED` | Rate limit / quota / fairness backpressure. Read `retry_after_ms` and back off. |
+| `INVALID_ARGUMENT` | Unknown `message_type` (use the FQN; check `udb sdk manifest`), malformed filter, non-UUID where UUID required (`project_id` on storage). |
+| `ABORTED` | Optimistic-concurrency (CAS/revision) conflict — re-read and retry. |
+| `DEADLINE_EXCEEDED` | May have committed server-side. Only retry writes that are idempotent (`conflict_fields`/`idempotency_key`). |
+| `NOT_FOUND` | A row outside your tenant looks identical to a missing row — by design. |
+
+### `PERMISSION_DENIED` decision tree
+1. **Message contains "purpose is required"?** → send a non-empty `x-purpose`.
+2. **On a NATIVE call (`:50061`)?** → your token is missing the scope
+   `udb:<service>:<method>` (or an admin scope). For a service account, add the
+   scope to its **grant** first, then re-mint. Check
+   `docs/generated/authn-authz-rpc-inventory.md`.
+3. **On a DATA call (`:50051`)?** → it's Casbin (Surface 1):
+   - Message "no authz policy (default deny)" → **zero policy rows**. Seed them
+     — straightforward: `udb authz seed --tenant <T-UUID> --role app_rw`
+     (Option D; or A/B/C), then `udb auth role bind`; or
+     `UDB_ABAC_DEFAULT_ALLOW=true` for dev.
+   - Message "no applicable allow policy for action '…'" → a row exists but a
+     token is wrong. Check, in order: **`action`** is the method name
+     (`Select`/`Upsert`/…, NOT `data.select`); **`tenant_id`** is the caller's
+     UUID (not the code); **`object`** is the message_type; **subject** matches
+     the principal (user_id / `service:<id>` / a role the principal is bound to);
+     `required_scopes` (if set) are held by the caller.
+4. **"tenant … mismatch"** → the metadata/body tenant disagrees with the
+   credential's tenant claim. Use the credential's UUID everywhere.
+5. **Still stuck?** → `udb doctor --consumer --key <k> --entity <fqn>` runs the
+   whole chain server-side and prints the exact reason.
 
 > **DataBroker rate limiting (`RESOURCE_EXHAUSTED: … requests per Ns window`).**
-> The data plane enforces a fixed window keyed by **`(tenant_id, operation)`** —
-> every principal (API key / service session / user) in a tenant shares **one**
-> budget (default **1000 requests / 60s**), so it is aggregate tenant traffic,
-> not per-credential traffic, that trips it. The operator raises it **on the
-> broker** with **`UDB_RATE_LIMIT_MAX_PER_WINDOW`** (short alias
-> `UDB_RATE_LIMIT_MAX`) and **`UDB_RATE_LIMIT_WINDOW_SECS`** (alias
-> `UDB_RATE_LIMIT_WINDOW`); `UDB_RATE_LIMIT_ENABLED=false` turns it off entirely.
-> The deny message names the governing knob and the offending tenant, so you can
-> attribute pressure without grepping logs. The `UDB_API_KEY_RATE_LIMIT_*` /
-> `UDB_PUBLIC_BOOTSTRAP_RATE_LIMIT_*` env vars govern the **auth control-plane /
-> public-bootstrap** limiters — not the DataBroker budget. Client-side read caches
-> on hot paths reduce pressure but don't raise the ceiling; raise the knob for
-> high-throughput tenants.
->
-> **Per-key budgets (opt-in).** With the default shared per-tenant bucket, one
-> noisy principal exhausts the whole tenant. The operator can set
-> `UDB_RATE_LIMIT_PER_KEY=true` to give **each credential its own window bucket**;
-> then a key's `api_keys.rate_limit_per_minute` (set via `CreateApiKey`'s
-> `rate_limit_per_minute` field or a direct column `UPDATE`) **raises** that key's
-> budget above the tenant default. It is **raise-only** — a low/default column
-> value never throttles a key below `UDB_RATE_LIMIT_MAX_PER_WINDOW` (the column is
-> `NOT NULL DEFAULT 60`). To throttle one key downward, lower the tenant default
-> and raise the others.
+> A fixed window keyed by **`(tenant_id, operation)`** — every principal in a
+> tenant shares **one** budget (default **1000 req / 60s**). Raise it on the
+> broker with `UDB_RATE_LIMIT_MAX_PER_WINDOW` + `UDB_RATE_LIMIT_WINDOW_SECS`;
+> `UDB_RATE_LIMIT_ENABLED=false` disables it. The deny names the knob + tenant.
+> **Per-key budgets (opt-in):** `UDB_RATE_LIMIT_PER_KEY=true` gives each
+> credential its own bucket; a key's `api_keys.rate_limit_per_minute` **raises**
+> (never lowers) its budget above the tenant default (`NOT NULL DEFAULT 60`).
+
+### Troubleshooting appendix (specific symptom → fix)
+
+| Symptom | Fix |
+|---|---|
+| `PERMISSION_DENIED` on `Select` right after bootstrap | Zero policy rows. Seed `policy_rules` (Option A/B/C) or `UDB_ABAC_DEFAULT_ALLOW=true` (dev, empty-table only). |
+| Seeded a policy, still denied | Wrong token: `action` must be `Select`/`Upsert`/… (not `data.select`); `tenant_id` = the caller's UUID; `object` = the message_type; subject must match (user_id / `service:<id>` / a bound role). |
+| Denied only for the SERVICE, works for the user | Service account has no ACTIVE `ServiceAccountGrant`, OR it isn't bound to the data role. Create the grant + `AssignRole`. |
+| `UNIMPLEMENTED` on `Login`/`CreateUser` | Dialed the data port. Use `authTarget`/`:50061`. |
+| `ECONNREFUSED` on the auth port from another host | `:50061` is loopback by default. `UDB_AUTH_GRPC_ADDR=0.0.0.0:50061`. |
+| `FAILED_PRECONDITION "sessions disabled"` at `Authenticate` | Set `UDB_SESSION_ENABLED=true` + `UDB_SESSION_HASH_SECRET`. |
+| `FAILED_PRECONDITION` "native service 'X' is disabled" | Backend missing: Vault unseal / Redis / Kafka / object store / ledger pool. Configure it or the per-service enable flag. |
+| Login succeeds but every read is empty | Filtering by the tenant CODE not the UUID. Adopt `principal.tenant_id` and filter by it. |
+| `INVALID_ARGUMENT` "uuid params must be UUID strings" | A human `project_id` on a storage/asset RPC. Omit it or pass the project UUID. |
+| `PERMISSION_DENIED` "purpose is required" | Set a non-empty `x-purpose`. |
+| Token stops working after N minutes (service) | Service accounts have no refresh token. Re-exchange the API key → bearer and hot-swap. |
+| `INTERNAL` on a write, no detail | `UDB_VERBOSE_DB_ERRORS=true` to surface the DB cause (constraint, type, RLS). |
+| Migration "COMPLETED" but the unique index isn't unique | A non-unique index of the same NAME shadows it. Rename the new unique index. |
+| `identity field is ambiguous` on Upsert | Serial PK + ≥2 `*_id` columns. Set `return_record:true` or name the identity via `conflict_fields`. |
+| Startup wedged on a pooler advisory lock | `udb admin release-lock`. |
+| `RefreshErr()`/poisoned session (Go/TS enterprise) | The bearer expired and couldn't refresh — the session fails closed. Re-connect / re-login. |
 
 ---
 
 ## New-project bootstrap — the runbook (do these in order)
 
-This is the exact path a brand-new project follows to go from "nothing" to a
-first authenticated, authorized CRUD. It is the part agents get wrong most
-often. The friction is real; each step below removes one failure.
+The exact path from "nothing" to a first authenticated, authorized CRUD. Each
+step removes one common failure.
 
-**1. Define** the entity proto(s) with `table`/`column` annotations and a tenant
+**1. Define** the entity proto(s) with `table`/`column` annotations + a tenant
 column; `import "udb/core/common/v1/db.proto"`. (Serving needs no `udb proto
-export` or `buf` — the broker embeds the annotation contract; you only export/gen
-if you want vendored protos or a typed row.)
+export`/`buf` — the broker embeds the annotation contract; export/gen only for
+vendored protos or typed rows.)
 
-**2. Mint the first admin OFFLINE** (the DB has no principal yet). This also binds
-`organization_owner` → `udb:*` at login and **prints the canonical tenant UUID —
-capture it**:
+**2. Mint the first admin OFFLINE** (the DB has no principal yet). Capture the
+printed **canonical tenant UUID**:
 ```bash
 UDB_PG_DSN="postgres://udb:udb@host:5432/udb?sslmode=disable" \
 UDB_PASSWORD_HASH_SECRET="<hmac-secret>" \
@@ -527,77 +1445,442 @@ udb auth bootstrap user --username admin --email admin@x.com \
 # → prints tenant_id, e.g. 00000000-0000-0000-0000-0000000d0001  (the UUID, NOT "acme")
 ```
 
-**3. SEED authorization, or every data RPC is `PERMISSION_DENIED`** (default-deny —
-the org-owner role is NOT enough; see mental model #7). Seed the
-`udb_authz.policy_rules` governance table — the table the data plane enforces from.
-Author a JSON array of Casbin `AuthzPolicy` objects granting this tenant's
-principals data ops (`action` is the REAL operation the broker submits —
-`Select`/`Upsert`/`Delete`; `*`/empty = wildcard; `required_scopes` reflect
-read/write and the org owner's `udb:*` satisfies both):
-```json
-[{"effect":"allow","subject":"*","tenant":"<TENANT_UUID>","resource":"*","action":"Select","required_scopes":["udb:read"]},
- {"effect":"allow","subject":"*","tenant":"<TENANT_UUID>","resource":"*","action":"Upsert","required_scopes":["udb:write"]},
- {"effect":"allow","subject":"*","tenant":"<TENANT_UUID>","resource":"*","action":"Delete","required_scopes":["udb:write"]}]
+**3. SEED authorization, or every data RPC is `PERMISSION_DENIED`** (default-deny;
+the org-owner wildcard covers the admin only). Straightforward path — offline,
+validated action tokens, idempotent + atomic:
+```bash
+UDB_PG_DSN="$DSN" udb authz seed --tenant <TENANT_UUID> --role app_rw
+# → Allow Select/Upsert/Delete/Update/BulkCas on * for role app_rw
+# then bind principals to the role (runtime): udb auth role bind --principal <id> --role app_rw --tenant <UUID>
 ```
-Apply it at runtime via `AuthzService.CreatePolicyRule` (per-tenant, from app code,
-effective immediately), or offline with `UDB_ABAC_POLICY_FILE=<path> udb policy-seed
-| psql <dsn>`. Dev-only shortcut: `UDB_ABAC_DEFAULT_ALLOW=true`.
+Version-controlled alternative (same `policy_rules` table): author the offline
+JSON using the **real action tokens** and the **tenant UUID**, seed atomically:
+```json
+[{"effect":"allow","subject":"role:app_rw","tenant":"<TENANT_UUID>","resource":"*","action":"Select"},
+ {"effect":"allow","subject":"role:app_rw","tenant":"<TENANT_UUID>","resource":"*","action":"Upsert"},
+ {"effect":"allow","subject":"role:app_rw","tenant":"<TENANT_UUID>","resource":"*","action":"Delete"},
+ {"effect":"allow","subject":"role:app_rw","tenant":"<TENANT_UUID>","resource":"*","action":"Update"}]
+```
+```bash
+UDB_ABAC_POLICY_FILE=authz-policies.json udb policy-seed | psql "$UDB_PG_DSN"
+```
+(`udb authz seed --emit authz-policies.json` produces exactly this file.)
+Or from app code: `AuthzService.PutAuthzPolicy` + `AssignRole`. Dev shortcut:
+`UDB_ABAC_DEFAULT_ALLOW=true` (only until row #1 exists).
+
+**3b. (If you have a backend SERVICE)** provision its identity on `:50061`:
+```txt
+CreateUser{ account_kind: ACCOUNT_KIND_SERVICE_ACCOUNT, tenant_id:<UUID>, username:"billing-svc" }
+CreateServiceAccountGrant{ user_id:<svc>, service_identity:"billing.api", tenant_id:<UUID>,
+                           approved_scopes:["udb:read","udb:write"], reason:"billing writes" }
+CreateApiKey{ owner_id:<svc>, owner_type: SERVICE_ACCOUNT, scopes:["udb:read","udb:write"] } → save plain_key
+AssignRole{ principal:<svc>, role:"app_rw", tenant_id:<UUID> }   # so the SAME Casbin policy covers it
+```
 
 **4. Set the enterprise env the broker needs to boot + accept login**, then serve:
 ```bash
-UDB_JWT_PRIVATE_KEY=<pem|path>  UDB_JWT_PUBLIC_KEY=<pem|path>   # RS256, signs/verifies login JWTs
-UDB_SESSION_ENABLED=true  UDB_SESSION_HASH_SECRET=<hmac>        # else Authenticate → FAILED_PRECONDITION "sessions disabled"
-UDB_PASSWORD_HASH_SECRET=<hmac>                                # SAME value used at bootstrap (step 2) so login verifies
-UDB_AUTH_GRPC_ADDR=0.0.0.0:50061                               # expose the auth plane; default is loopback-only
-udb serve proto "" 0.0.0.0:50051     # wait for the "UDB DataBroker is ready: data=… auth=…" line
-# authorization is enforced from the policy_rules you seeded in step 3 (no env override)
+UDB_JWT_PRIVATE_KEY=<pem|path>  UDB_JWT_PUBLIC_KEY=<pem|path>   # RS256
+UDB_SESSION_ENABLED=true  UDB_SESSION_HASH_SECRET=<hmac>        # else Authenticate → FAILED_PRECONDITION
+UDB_PASSWORD_HASH_SECRET=<hmac>                                # SAME as step 2
+UDB_AUTH_GRPC_ADDR=0.0.0.0:50061                               # expose the auth plane (default loopback)
+udb serve proto "" 0.0.0.0:50051     # wait for "… is ready: data=… auth=…"
 ```
-Run **`udb doctor --enterprise`** (manifest-aware) and **`udb requirements`** FIRST
-— they list every unmet prerequisite/backend at once instead of one-restart-at-a-time.
+Run **`udb doctor --enterprise`** and **`udb requirements`** FIRST — they list
+every unmet prerequisite/backend at once, not one restart at a time.
 
-**5. Login → adopt the canonical tenant UUID → CRUD.** Connect the SDK with BOTH
-`target` (data `:50051`) and `authTarget` (control plane `:50061`). `login()` →
-verify the bearer → `setTenant(principal.tenant_id)` (the UUID) →
-`Select`/`Upsert`/`Delete` by `message_type`, **with `tenant_id` (the UUID) in
-every filter**. Use `conflict_fields` on writes for idempotency.
+**5. Login → adopt the canonical tenant UUID → CRUD.** Connect with BOTH `target`
+(`:50051`) and `authTarget` (`:50061`). `login()` → verify bearer →
+`setTenant(principal.tenant_id)` (the UUID) → `Select`/`Upsert`/`Delete` by
+`message_type`, **with `tenant_id` (UUID) in every filter** and a **non-empty
+`purpose`**. Use `conflict_fields`/`idempotency_key` on writes.
 
-> The live, end-to-end-verified version of this exact runbook (RS256 login,
-> default-deny ABAC, tenant-scoped CRUD of a generated `Invoice`, cross-tenant
-> isolation check) is `examples/ts_enterprise/` in the UDB repo — read its
-> `README.md`, `scripts/bootstrap.sh`, and `src/main.ts`. The Go counterpart is
-> `examples/go_enterprise/`. Broker-side hardening (TLS/mTLS, pooler-safe DSN) is
-> in `docs/enterprise-deployment.md`.
+> The live, end-to-end-verified version of this runbook (RS256 login, seeded
+> policy, tenant-scoped CRUD of a generated `Invoice`, cross-tenant isolation
+> check) is `examples/ts_enterprise/` — read its `README.md`,
+> `scripts/bootstrap.sh` (offline admin mint + UUID parse + atomic policy seed +
+> env emission), and `src/main.ts`. The Go/Python counterparts are
+> `examples/go_enterprise/` and `examples/python_enterprise/`. Broker-side
+> hardening (TLS/mTLS, pooler-safe DSN) is in `docs/enterprise-deployment.md`.
 
-**Per-language ergonomics for steps 4–5.** The SDKs package login→verify→adopt so
-you don't stitch it together:
+**Per-language ergonomics for steps 4–5:**
 - **Go:** `udbclient.ConnectEnterprise(ctx, EnterpriseConfig{Target, AuthTarget,
-  Username, Password, TenantCode, …})` returns an `EnterpriseSession` that has
-  logged in, adopted the canonical tenant UUID, and carries the bearer on every
-  call — use `session.DataContext(ctx)` / `session.NativeContext(ctx)` and
-  `session.CanonicalTenantID` in filters; `session.ValidateTenant(id)` fails fast
-  on a tenant-code-vs-UUID mismatch.
-- **TS:** `UdbProject` with `loginAndAdoptTenant()` / `authenticateBearer` +
-  `setTenant(principal.tenant_id)`.
-- All SDKs now **auto-attach `x-request-id`/`x-correlation-id`**, so native RPCs
-  no longer fail `INVALID_ARGUMENT: request context required` when you didn't set
-  a correlation id yourself.
+  Username, Password, TenantCode, …})` → `EnterpriseSession` that logged in,
+  adopted the UUID, and refreshes the bearer; use `session.DataContext(ctx)` /
+  `session.NativeContext(ctx)` and `session.CanonicalTenantID` in filters;
+  `session.ValidateTenant(id)` fails fast on a code-vs-UUID mismatch. (For a pure
+  service account use the static `NewUdb` + `Credentials.APIKey` path — no
+  refresh token exists for service accounts.)
+- **TS:** `UdbProject.connectEnterprise(config)` or the manual
+  `login → authenticateBearer → setTenant(principal.tenant_id)` steps.
+- All SDKs auto-attach `x-request-id`/`x-correlation-id` so native RPCs don't
+  fail `request context required`.
+
+---
+
+## Worked walkthrough — zero to authorized CRUD (a new project)
+
+A concrete end-to-end for `shop.v1.Customer`, one tenant `acme`, a human admin,
+and a `billing.api` service. Commands are illustrative; adapt addresses/secrets.
+
+```bash
+# 0) vendor annotations + write the proto (see "The data model")
+udb proto export --out proto
+# proto/shop/v1/customer.proto  →  message Customer { table{...} column{...} }
+
+# 1) preflight: what does this manifest need?
+udb requirements                       # lists required backends + env, exits nonzero if unmet
+
+# 2) mint the first admin OFFLINE; CAPTURE the tenant UUID it prints
+UDB_PG_DSN="postgres://udb:udb@localhost:5432/udb?sslmode=disable" \
+UDB_PASSWORD_HASH_SECRET="$HASH" \
+udb auth bootstrap user --username admin --email admin@x.com \
+    --password "$ADMIN_PW" --tenant acme --project default
+# → tenant_id = 00000000-0000-0000-0000-0000000d0001   (call it $T)
+
+# 3) seed authorization — straightforward: `udb authz seed` (offline, validated
+#    action tokens, idempotent + atomic); --emit keeps a version-controlled copy
+udb authz seed --tenant "$T" --role app_rw --emit authz.json
+# (version-controlled alternative: UDB_ABAC_POLICY_FILE=authz.json udb policy-seed | psql "$UDB_PG_DSN")
+
+# 4) bring up serve env, then serve (wait for the ready line)
+export UDB_JWT_PRIVATE_KEY=... UDB_JWT_PUBLIC_KEY=... \
+       UDB_SESSION_ENABLED=true UDB_SESSION_HASH_SECRET=$SESS \
+       UDB_PASSWORD_HASH_SECRET=$HASH UDB_AUTH_GRPC_ADDR=0.0.0.0:50061
+udb doctor --enterprise                # confirm every prerequisite at once
+udb serve proto/shop "" 0.0.0.0:50051  # → "... is ready: data=:50051 auth=:50061"
+```
+Then in app code: log in as `admin` (bind the admin's user to `app_rw` too, or use
+the org-owner), `setTenant(principal.tenant_id)` = `$T`, and CRUD `shop.v1.Customer`
+with `tenant_id=$T` in every filter + a `purpose`.
+
+For the **service** `billing.api` (on `:50061`): `CreateUser{account_kind:
+SERVICE_ACCOUNT}` → `CreateServiceAccountGrant{approved_scopes:["udb:read",
+"udb:write"]}` → `CreateApiKey` (save the `udbk_…`) → `AssignRole{role:"app_rw"}`
+so the SAME policy authorizes it. The service connects with `Credentials.APIKey`
+and does the same CRUD. If it's denied: it's the grant (native) or the role
+binding (data) — run the decision tree.
+
+---
+
+## How do I…? (task cookbook)
+
+- **…turn a tenant code into the canonical UUID from code?** Call
+  `TenantService.EnsureTenant{code}` — it returns the UUID (resolve-or-create).
+- **…find every RPC and its required scope?** `docs/generated/authn-authz-rpc-inventory.md`,
+  or `udb sdk manifest` / `udb native docs`.
+- **…know a message_type is spelled right?** `udb sdk manifest` lists every FQN.
+- **…insert a row?** `Upsert` with **no** `conflict_fields` (append on a
+  DB-assigned PK) + `return_record:true` for the assigned id.
+- **…make an idempotent write?** Set a stable `idempotency_key` (and
+  `conflict_fields` for merge). A replay returns `was_duplicate=true`.
+- **…grant a new entity to an existing app?** Add one `policy_rules` row per
+  action (or `action:*`) for your role + object=FQN, tenant=UUID. `udb auth
+  policy put …` / `PutAuthzPolicy` — or `udb authz seed --entity <fqn>` to
+  narrow an existing seeded role.
+- **…grant a service access?** Add the scope to its `ServiceAccountGrant`
+  (native) AND bind it to your data role (`AssignRole`).
+- **…rotate a token/key without downtime?** `set_credentials()` /
+  `SetAuthorization` / `SetAPIKey` — hot-swap, no channel rebuild.
+- **…read my own write immediately?** Attach the write receipt as a fence:
+  `select(..., metadata.afterWrite(resp.write_receipt))`.
+- **…add a column?** Add a nullable/`default_value` field with the next free
+  field number; `udb plan` shows the additive migration; serve applies it.
+- **…delete a field safely?** Remove it and `reserved <number>; reserved "name";`
+  — never reuse a number.
+- **…preview a schema change?** `udb plan` (diff+gates), `udb drift` (vs live DB),
+  `udb proto fmt --check`, `udb compat-matrix`.
+- **…debug "permission denied"?** Run the decision tree; or
+  `udb doctor --consumer --key <k> --entity <fqn>` for the exact reason.
+- **…bypass authz in dev?** `UDB_ABAC_DEFAULT_ALLOW=true` — but only while
+  `policy_rules` is empty.
+- **…raise a rate limit?** `UDB_RATE_LIMIT_MAX_PER_WINDOW` /
+  `UDB_RATE_LIMIT_WINDOW_SECS` on the broker (or `UDB_RATE_LIMIT_PER_KEY=true` +
+  per-key column).
+- **…call a native service the SDK has no facade for?** Generated stub over the
+  auth channel: `<svc>v1.New<Svc>ServiceClient(nativeConn)` +
+  `NativeContext(ctx)`.
+- **…subscribe to changes?** `PublishCDC` stream (tenant-scoped, resumable via
+  `since_event_id`) or Kafka topic `udb.<svc>.<entity>.<verb>.v1`.
+- **…run everything locally?** `udb dev up` (bundled compose) from a repo
+  checkout; `udb dev smoke` to sanity-check.
+
+---
+
+## Scopes & purpose conventions
+
+**Scopes** gate operations. Data-plane conventions: `udb:read`, `udb:write` (and
+your policy's `required_scopes` refine an Allow). Native-plane: one scope per RPC,
+`udb:<service>:<kebab-method>` (e.g. `udb:vault:put-secret`,
+`udb:authn:create-user`, `udb:storage:register-upload`). Broad admin scopes that
+cover any non-public native RPC: `*`, `udb:*`, `udb:admin`, `udb:auth:admin`.
+Grant a service **only** the scopes it needs (its `ServiceAccountGrant` rejects
+admin/owner/wildcard). Look up exact scopes in
+`docs/generated/authn-authz-rpc-inventory.md`.
+
+**Purpose** (`x-purpose`) is the request's declared intent (`web.request`,
+`billing.api`, `analytics.export`, …). It is **required** on tenant-scoped data
+ops (empty → denied before authz). It can be matched by a policy's `purpose`
+attribute (leave empty/`*` in policies unless you're purpose-gating). Use a
+stable, meaningful value per call-site — it appears in audit records.
+
+---
+
+## Annotation option reference (consumer-facing)
+
+Trust `udb compat-matrix` for the authoritative surface. The ones you'll use:
+
+**Table — `(udb.core.common.v1.table)`** (alias `pg_table`):
+- `table_name`, `schema_name`, `is_table:true` — physical mapping.
+- `migration_order` (int) — lower tables created first (FK ordering).
+- `enable_rls:true` — emit row-level-security policies.
+- `comment` — table comment.
+
+**Column — `(udb.core.common.v1.column)`** (alias `pg_column`):
+- `column_name`, `sql_type` (e.g. `UUID`, `VARCHAR(320)`, `BIGINT`,
+  `TIMESTAMPTZ`), `not_null`, `primary_key`, `unique`.
+- `default_value` — SQL literal AS WRITTEN: strings need inner quotes
+  (`"'pending'"`), functions/keywords don't (`now()`, `gen_random_uuid()`, `0`).
+- `exclude_from_insert` / `exclude_from_update` — server-managed columns.
+- `is_tenant_column:true` — mark the tenant boundary (else `tenant_id`/`_tenant_id`
+  are auto-recognized).
+
+**Column security — `(…db_column_security)`:** PII class, redaction,
+field-level encryption, storage-only output (blanked on read).
+**Table security — `(…db_table_security)`:** tenant column, RLS template,
+audit/retention.
+**Endpoint security — `(…endpoint_security)`** (on RPCs, for custom native
+services): auth mode + scopes + tenant_required + assurance level.
+
+**Custom package:** if your options are under your own package, set
+`UDB_PROTO_NAMESPACE=<pkg>` or the parser ignores them (zero tables).
+
+---
+
+## Backends — what a consumer needs to know
+
+You declare `sql_type`s and call the uniform DataBroker; the backend is an
+operator choice. Consumer-visible differences:
+- **SQL family (Postgres, MySQL, SQLite, MSSQL, ClickHouse):** full relational
+  CRUD + RLS + tenant filtering. Postgres is the always-on core (auth/authz/
+  native metadata live there regardless of your data backend). ClickHouse is
+  analytical (append-heavy; use `AnalyticalQuery`).
+- **Document (MongoDB):** relational CRUD works; `Document*` typed store for
+  native document ops.
+- **Wide-column (Cassandra/Scylla):** partition/clustering-key modeling matters;
+  some relational filters are restricted to key predicates.
+- **Graph (Neo4j):** `GraphQuery`/`GraphMutate` typed store.
+- **KV / cache (Redis, Memcached):** the `Cache*` store; also the managed
+  CacheService.
+- **Vector (Qdrant, Weaviate, Pinecone):** `VectorSearch`/`VectorUpsert` +
+  SearchService/EmbeddingService. Qdrant is the full-canonical vector store.
+- **Object (S3/MinIO, Azure Blob, GCS):** via StorageService (presigned flow),
+  not DataBroker CRUD.
+A backend that doesn't support a typed store returns `FAILED_PRECONDITION`; the
+capability list is `GetCapabilities.supported_rpcs`. Tenant isolation, redaction,
+authz, and events apply **uniformly** across all backends.
+
+---
+
+## Gotchas catalog (the ones that cost hours)
+
+- **`data.select` doesn't exist.** Data-plane Casbin actions are the RPC method
+  names (`Select`/`Upsert`/`Delete`/`Update`/`BulkCas`). The `data.*` vocab is
+  dead. → most "policy is there but still denied."
+- **Tenant is the UUID everywhere** — filters, records, and the policy `tenant_id`
+  column. The human code (`acme`) is only a pre-login hint.
+- **`purpose` is mandatory** on tenant-scoped data ops. Empty → denied before
+  authz.
+- **`UDB_ABAC_DEFAULT_ALLOW` self-disables** the moment one policy row exists.
+  Seed atomically.
+- **Two authz surfaces, two cures:** data deny → a Casbin **policy row**; native
+  deny → a token **scope**. Never seed a policy to fix a native scope problem, or
+  vice-versa.
+- **Seeding the wrong table:** `udb_abac_policies` (`DataBroker.PutPolicy`) is
+  DEAD for decisions; seed `udb_authz.policy_rules` (`udb authz seed`/
+  `PutAuthzPolicy`/`CreatePolicyRule`/`policy-seed`).
+- **A service account needs a `ServiceAccountGrant`** or it cannot authenticate.
+  "Works as a user, fails as a service" = missing/inactive grant.
+- **No client-credentials grant.** Machines use API keys or password login. No
+  `client_id`/`client_secret`.
+- **Service accounts get no refresh token** — plan for re-login / API-key
+  re-exchange on expiry.
+- **`account_kind` isn't a data-plane authz input** — you can't write a policy
+  "allow if service account." Gate on subject id / `service_identity` / role /
+  scope.
+- **Native services are loopback by default** (`:50061`). Remote callers get
+  `ECONNREFUSED` until you open the listener; wrong-port callers get
+  `UNIMPLEMENTED`.
+- **A degraded native service returns `FAILED_PRECONDITION "disabled"`** when its
+  backend is missing (Vault unseal, Redis, Kafka, object store, ledger) — a
+  capability gap that looks like an auth failure.
+- **`project_id` on storage/asset RPCs is UUID-only** — a human code →
+  `INVALID_ARGUMENT`.
+- **No `Insert` RPC** — `Upsert` with empty `conflict_fields`; append-only on a
+  DB-assigned PK, merge on a client PK.
+- **`UDB_PROTO_NAMESPACE`** — custom annotation packages silently yield zero
+  tables without it.
+- **CRLF in `.env`** — a trailing `\r` corrupts secret/DSN values on Linux.
+
+---
+
+## Integration recipes (by app shape)
+
+- **Multi-tenant web API backend.** One deployment, many tenants. On each request
+  resolve the caller's tenant (from their session/JWT), set `tenant_id`=UUID +
+  `purpose`="web.request" + `user_id`, and CRUD by `message_type`. Authorize with
+  a per-tenant role bound to the user. Use `read_your_writes` fences after writes
+  that the same request re-reads. Rotate the user bearer with `set_credentials()`.
+- **Background worker / cron consumer.** A service account with an API key and a
+  narrow grant (`udb:read` + the specific writes it does). Static credential;
+  re-exchange the key → bearer on expiry. Idempotent writes with a stable
+  `idempotency_key` (e.g. the source event id) so retries are safe. Subscribe to
+  `PublishCDC` (resumable) rather than polling.
+- **Data pipeline / ETL.** Service account; batch streams (`BatchSelect`/
+  `BatchUpsert`) for volume; `bounded_staleness`/`replica_bounded` reads to spare
+  the leader; `BulkCas` for conditional batch updates. Meter throughput via
+  MeteringService.
+- **Analytics / reporting.** Read replica or ClickHouse backend via
+  `AnalyticalQuery`; `projection_ok`/`cache_ok` consistency; SearchService for
+  full-text/vector.
+- **Realtime app.** LiveQueryService `Subscribe` for change streams; WebRTC for
+  media (peer plane `:50071`); NotificationService for push.
+
+## Multi-tenancy patterns
+
+- **Tenant = the canonical UUID.** Provision with `TenantService.EnsureTenant`;
+  adopt `principal.tenant_id`. Every tenant-scoped table has a tenant column;
+  every read/write is auto-filtered and cross-tenant reads are impossible (a
+  foreign row is indistinguishable from a missing one — `NOT_FOUND`).
+- **Project** (`project_id`) sub-scopes a tenant's catalog; on native storage/
+  asset RPCs it is UUID-only.
+- **Policy per tenant:** seed `policy_rules` with `tenant_id`=each tenant's UUID
+  (or empty/`*` for a platform-wide rule). A platform admin role with empty
+  `tenant_id` spans tenants — use sparingly.
+- **Isolation proof:** the enterprise examples include a cross-tenant read that
+  MUST return empty — keep it as a test.
+
+## Streaming & batch
+
+- **`SelectV2`** streams `RecordBatchV2` frames for large result sets — consume
+  incrementally instead of one huge `RecordSet`.
+- **`BatchSelect` / `BatchUpsert`** are bidirectional streams: one wildcard authz
+  gate up front, then per-item authorization as items flow. Use for bulk load /
+  fan-out.
+- **`BulkCas`** is a single unary bounded batch (not a stream) of conditional
+  single-row updates in one tx.
+- All streams honor tenant isolation and idempotency per item.
+
+## Observability
+
+- Always set `x-correlation-id`/`x-request-id` (SDKs auto-attach) — they thread
+  through logs, audit, and native RPCs (many require request context).
+- Every authorized mutation and native admin action is audited (tenant, subject,
+  purpose, decision id). Denials carry a `policy_decision_id` you can correlate.
+- The typed `ErrorDetail` trailer gives machine-readable failure info
+  (kind/retryable/retry_after_ms/field_violations) — log that, not the string.
+- `GetHealthReport`/`GetCapabilities` expose readiness + the live RPC surface;
+  `udb doctor` (and `--consumer`) probe from outside.
+
+## Glossary
+
+- **message_type** — a proto message's fully-qualified name; the entity handle
+  for every data RPC.
+- **manifest / catalog** — the normalized, checksummed schema UDB derives from
+  your protos; the catalog version travels in metadata.
+- **tenant** — the isolation boundary, a canonical UUID (human code is an alias).
+- **project** — a sub-scope of a tenant's catalog.
+- **purpose** — declared request intent; required on tenant-scoped data ops.
+- **scope** — a capability token string (`udb:read`, `udb:vault:put-secret`).
+- **grant (ServiceAccountGrant)** — the operator-approved scope envelope a
+  service account must have to authenticate.
+- **policy (policy_rules)** — a Casbin rule authorizing data-plane CRUD.
+- **role / role binding** — a named bundle of policies; bind principals to it.
+- **relationship tuple** — a ReBAC edge for relationship-based authorization.
+- **write receipt / read fence** — the token a mutation returns / the read
+  precondition built from it for read-your-writes.
+- **idempotency_key** — a stable key that makes a mutation replay-safe.
+- **revision (ETag)** — an opaque per-row version for optimistic-concurrency CAS.
+- **native plane / data plane** — the control-plane services (`:50061`) vs the
+  DataBroker CRUD (`:50051`).
+
+---
+
+## Declarative deploy (`udb deploy`)
+
+Instead of stringing env vars and bootstrap RPCs by hand, describe the desired
+state in `udb.deploy.yaml` and let UDB converge it idempotently:
+```yaml
+# udb.deploy.yaml (shape — see `udb deploy render` for the full schema)
+env: production
+listeners: { data: 0.0.0.0:50051, auth: 0.0.0.0:50061 }
+security: { tls_required: true, mtls_required: true }
+tenants:
+  - code: acme
+    service_accounts:
+      - username: billing.api
+        grant: { scopes: [udb:read, udb:write], reason: "billing writes" }
+        api_key: true
+    policies:
+      - { role: app_rw, object: "*", actions: ["*"] }
+    role_bindings:
+      - { principal: billing.api, role: app_rw }
+```
+- `udb deploy render` — expand to the concrete env + RPC plan (review it).
+- `udb deploy plan` — diff against the live deployment.
+- `udb deploy apply` — converge (idempotent): tenants, service accounts, grants,
+  API keys, policies, role bindings — all seeded correctly (right tokens, UUIDs)
+  so you don't fight the traps by hand.
+
+## Encryption, PII & redaction (consumer view)
+
+- Columns annotated for **field encryption** are encrypted at rest with
+  `UDB_ENCRYPTION_KEY`; you read/write plaintext, the broker handles it.
+- Columns annotated **storage-only / redacted** (password hashes, secrets, PII)
+  are **blanked on read** — they never come back over the wire, so don't expect
+  to round-trip them.
+- PII class annotations drive redaction + audit; `db_column_security` sets the
+  class. Sensitive values are also kept out of error messages and logs.
+
+## Audit & compliance (consumer view)
+
+- Every authorized mutation and native admin action is **audited** (tenant,
+  subject, purpose, action, resource, decision id) to the configured audit sink.
+- A **zero-row mutation is not audited as a write** (an Update/Delete that matched
+  nothing leaves no phantom audit event).
+- Denials carry a `policy_decision_id` for correlation.
+- `udb compliance evidence|export` produces evidence bundles; retention/audit
+  policy is set via `db_table_security`.
+
+## Inspecting a token / claims
+
+A UDB access token (JWT) carries: `sub` (user_id UUID), `tenant_id` (UUID),
+`project_id`, `scopes[]`, `roles[]`, `service_identity` (services),
+`account_kind` (services), `exp`, `jti`, `auth_method`/`acr`. To inspect one:
+`IntrospectToken` (server-side truth incl. revocation) or verify offline against
+`GetJwks` / `UDB_JWT_JWKS_URL`. If a call is unexpectedly denied, decode the
+token first — a wrong `tenant_id` or missing `scopes` is visible right there.
+Note: `account_kind` is in the token but is **not** an input to data-plane authz.
 
 ---
 
 ## How the agent should behave
 
-- Establish: **language**, **broker data + control-plane addresses**, and
-  whether they hold a **credential** (or need bootstrap) before giving code.
-- Always include **metadata** (tenant/project/scopes) AND a credential in
-  examples; route native-service clients to **authTarget**.
+- Establish **language**, the **data + control-plane addresses**, whether the
+  caller is a **human or a service**, and whether they hold a **credential** (or
+  need bootstrap) before giving code.
+- Always include **metadata** (tenant UUID / project / scopes / **purpose**) AND
+  a credential in examples; route native-service clients to **authTarget**.
 - Use the developer's **`message_type`** (proto FQN), never raw table names.
-- Diagnose by the error table above before guessing; "denied write" → check
-  `udb:write` + tenant match; "UNIMPLEMENTED" → wrong target, not a missing
-  feature.
-- For writes, recommend `conflict_fields` idempotency and explain the
-  no-auto-retry-on-mutations rule.
-- Don't invent RPCs/fields/annotations. The ground truth is
-  `udb sdk manifest`, `udb native list/docs`, `udb compat-matrix`, and the
+- On "permission denied," run the **decision tree** — identify the plane first
+  (data → policy row; native → token scope), then the token trap
+  (`action`/`tenant_id`/`object`/subject). Don't guess.
+- For a service, check the **grant** exists before anything else.
+- For writes, recommend `conflict_fields`/`idempotency_key` and explain the
+  no-auto-retry-on-mutations rule; for inserts, `Upsert` with empty
+  `conflict_fields`.
+- Don't invent RPCs/fields/annotations. Ground truth: `udb sdk manifest`,
+  `udb native list/docs`, `udb compat-matrix`,
+  `docs/generated/authn-authz-rpc-inventory.md`, `docs/bench-bodies/*.md`, and the
   per-language SDK README.
 
 """

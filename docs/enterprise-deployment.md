@@ -181,30 +181,41 @@ sees *"another UDB instance holds the startup advisory lock"* and crash-loops.
 
 ---
 
-## 5. Authorization: one Casbin engine over `udb_authz.policy_rules`
+## 5. Authorization: data-plane Casbin over `udb_authz.policy_rules`
 
-Authorization is **one** Casbin engine, not two surfaces. The data plane's
-`authorize()` gate and the control-plane `AuthzService.Check` both decide from
-the same durable governance table, `udb_authz.policy_rules`. It is
-**default-deny**.
+**Data-plane** authorization is **one** Casbin engine over the durable governance
+table `udb_authz.policy_rules` — there is no separate in-memory ABAC snapshot and
+no env-JSON policy lane (a rule written here **is** the live decision). It is
+**default-deny**. (The legacy `udb_abac_policies` table still exists but is no
+longer consulted — seed `policy_rules`.) **Native-service RPCs** are authorized by
+a *different* surface — the `endpoint_security` token **scopes** on the
+method-security layer (`udb:<service>:<method>`), not a Casbin data policy — so a
+native `PERMISSION_DENIED` is a missing token scope, not a missing policy row.
 
 - **Live enforcement** reads a **shared, PG-warmed snapshot** of `policy_rules`
   (revision-fenced — the cache invalidates on any policy mutation and a warmer
-  reloads it). It evaluates the real RPC action the broker submits —
-  `Select` / `Upsert` / `Delete` — against the rules for the request's tenant.
-  When no rule matches, the decision falls back to `UDB_ABAC_DEFAULT_ALLOW`
-  (default `false` = deny-all), and a denied client sees `7 PERMISSION_DENIED:
-  no authz policy (default deny); configure authorization via the AuthzService
-  (policy_rules) or set UDB_ABAC_DEFAULT_ALLOW=true for dev`.
-- **Seed policy** two ways, both writing `udb_authz.policy_rules`: at runtime
-  from app code via `AuthzService.CreatePolicyRule` (effective immediately, the
-  snapshot reloads), or offline via **`udb policy-seed`** (emits INSERTs into
-  `udb_authz.policy_rules`, piped to psql). There is no separate in-memory ABAC
-  snapshot and no env-JSON policy lane — a rule written here **is** the live
-  decision.
+  reloads it) and evaluates the **real RPC action** the broker submits —
+  `Select` / `Upsert` / `Delete` / `Update` / `BulkCas` (NOT a `data.*` alias) —
+  against the rules for the request's tenant. Three tokens must be exact or a
+  policy silently never matches: the **action** (method name), the **object**
+  (the `message_type` FQN or a glob/`*`), and the **`tenant_id`** (the caller's
+  canonical tenant UUID). Every request must also carry a non-empty **purpose**.
+  With no matching rule the decision falls back to `UDB_ABAC_DEFAULT_ALLOW`
+  (default `false` = deny-all) and the denied client sees a `7 PERMISSION_DENIED`
+  whose message names the seeding command and the token traps.
+- **Seed policy** — the straightforward path is **`udb authz seed --tenant <uuid>
+  --role app_rw`**: it writes role-gated ALLOW rows into `udb_authz.policy_rules`
+  with the correct tokens, **idempotently and atomically** (all rows in one tx, so
+  an open `UDB_ABAC_DEFAULT_ALLOW` window never half-closes). Then bind principals
+  to the role: `udb auth role bind --principal <id> --role app_rw --tenant <uuid>`
+  (works for users AND service accounts). Equivalents: `AuthzService.CreatePolicyRule`/
+  `PutAuthzPolicy` at runtime (effective immediately), or `udb policy-seed` for an
+  offline SQL bundle (`--emit <path>` on `udb authz seed` writes the same
+  version-controllable JSON).
 
-For dev/bootstrap: `UDB_ABAC_DEFAULT_ALLOW=true`. For production: seed real
-`policy_rules` and leave default-deny on.
+For dev/bootstrap: `UDB_ABAC_DEFAULT_ALLOW=true` (only while `policy_rules` is
+empty). For production: seed real least-privilege `policy_rules` and leave
+default-deny on.
 
 ---
 

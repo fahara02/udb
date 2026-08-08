@@ -1,7 +1,7 @@
 {
   "name": "udb",
   "displayName": "UDB Skills",
-  "version": "0.3.0",
+  "version": "0.4.1",
   "description": "Two UDB skills: `using-udb` helps developers use a running UDB broker (connect a language SDK, authenticate with scopes/credentials, CRUD proto-defined entities over gRPC); `udb-coding` is the house doctrine for contributing code TO the UDB repository (no code islands, reuse shared helpers, no hardcodes/stubs, fail closed, proto-first).",
   "author": {
     "name": "fahara02",

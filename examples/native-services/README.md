@@ -106,10 +106,20 @@ Every language reads the same two environment variables:
 | `UDB_API_KEY` | the key the admin flow minted | (consumer flows only) |
 
 The examples send a fixed identity in gRPC metadata: tenant code `acme`, project
-`billing`, purpose `control-plane`, scopes `udb:*`. That broad scope plus the
-`UDB_ABAC_DEFAULT_ALLOW=true` the integration stack sets is what lets the example
-call admin RPCs without first bootstrapping a policy for its own identity. In a
-real deployment you'd grant the caller an explicit control-plane policy instead.
+`billing`, purpose `control-plane`, scopes `udb:*`. That broad scope is what lets
+the example call admin RPCs. In a real deployment you would instead give the
+caller the specific per-RPC scopes (`udb:<service>:<method>`) each native call
+requires — native authorization is by **token scope** (`endpoint_security`), not
+by a Casbin data policy, so `UDB_ABAC_DEFAULT_ALLOW` (a *data-plane* dev switch)
+does not affect these calls.
+
+> **Listener note (important).** Native services listen on a **separate,
+> loopback-by-default** listener — `UDB_AUTH_GRPC_ADDR`, default `127.0.0.1:50061`
+> (the public data port **+10**). This example uses `127.0.0.1:50051` because the
+> bundled integration stack **co-locates** the auth plane on the public port. On a
+> default deployment, dial native services at `:50061`; calling them at `:50051`
+> returns `UNIMPLEMENTED`, and calling a loopback `:50061` from another host
+> returns `ECONNREFUSED` (open it with `UDB_AUTH_GRPC_ADDR=0.0.0.0:50061`).
 
 ## Common mistakes this example prevents
 
@@ -126,3 +136,11 @@ real deployment you'd grant the caller an explicit control-plane policy instead.
 - **Assuming step 5 always mints a grant.** The Stage-2 native-access grant is
   optional server config. "No native grant minted" means the server hasn't
   enabled it, not that anything failed.
+- **Two authorization surfaces.** A `PERMISSION_DENIED` on a native RPC means your
+  token is missing the scope `udb:<service>:<method>` — a different fix than a
+  data-CRUD deny (which needs a `udb_authz.policy_rules` row; see
+  `docs/security.md` and `udb authz seed`).
+- **A service account needs a grant.** To use a `SERVICE_ACCOUNT` identity you
+  must `CreateServiceAccountGrant` for it (approved scopes) *before* it can
+  authenticate or mint an API key — without an active grant it fails closed. Then
+  bind it to your data role (`udb auth role bind`) so it can also do CRUD.

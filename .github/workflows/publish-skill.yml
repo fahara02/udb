@@ -6,7 +6,8 @@ name: Publish UDB skill
 #              at repo root. The `validate` job gates structure; an
 #              advisory `smoke` job (gated on ANTHROPIC_API_KEY) headlessly loads the
 #              plugin and checks the skill answers a UDB question.
-#  - Ollama  : `ollama create` + `ollama push` to the registry (uses OLLAMA_API_KEY).
+#  - Ollama  : direct authenticated API create + push (uses OLLAMA_API_KEY),
+#              followed by public registry-manifest verification.
 #  - OpenAI  : create/update an Assistant from openai/instructions.md (uses OPENAI_API_KEY).
 # Publish steps self-skip when their secret is absent, so the run never fails for a
 # missing optional secret.
@@ -39,6 +40,8 @@ jobs:
           for f in \
             udb-skill/plugins/udb/skills/using-udb/SKILL.md \
             udb-skill/plugins/udb/skills/using-udb/references/using-udb.md \
+            udb-skill/plugins/udb/skills/using-udb/references/rpc-inventory.md \
+            udb-skill/plugins/udb/skills/using-udb/references/sensitive-fields.md \
             udb-skill/shared/using-udb.md \
             udb-skill/openai/instructions.md \
             udb-skill/ollama/Modelfile \
@@ -46,11 +49,19 @@ jobs:
             udb-skill/plugins/udb/skills/udb-coding/references/udb-coding.md \
             udb-skill/plugins/udb/skills/udb-coding/references/rust-stack.md \
             udb-skill/plugins/udb/skills/udb-coding/references/backends.md \
+            udb-skill/plugins/udb/skills/udb-coding/references/subsystem-checklist.md \
+            udb-skill/plugins/udb/skills/udb-coding/references/codebase-map.md \
+            udb-skill/plugins/udb/skills/udb-coding/references/subsystem_map.md \
             udb-skill/shared/udb-coding.md \
             udb-skill/shared/udb-coding-rust-stack.md \
             udb-skill/shared/udb-coding-backends.md \
+            udb-skill/shared/udb-coding-subsystem-map.md \
+            udb-skill/shared/udb-coding-subsystem-checklist.md \
             udb-skill/openai/instructions-udb-coding.md \
             udb-skill/ollama/Modelfile.udb-coding \
+            udb-skill/sync_skills.py \
+            udb-skill/sync_udb_coding.py \
+            udb-skill/sync_references.py \
             udb-skill/LICENSE; do
             test -f "$f" || { echo "::error::missing $f"; exit 1; }
           done
@@ -66,6 +77,9 @@ jobs:
           done
           # Skill-local marketplace plugin source must resolve to a real plugin dir.
           python3 -c "import json,os; root='udb-skill'; m=json.load(open(os.path.join(root,'.claude-plugin','marketplace.json'))); s=m['plugins'][0]['source']; assert os.path.isfile(os.path.join(root,s,'.claude-plugin','plugin.json')), s; print('marketplace source ok:', os.path.join(root,s))"
+          python3 udb-skill/sync_skills.py --check
+          python3 udb-skill/sync_udb_coding.py --check
+          python3 udb-skill/sync_references.py --check
           echo "skill validation passed"
       - name: Wrapper drift check (advisory, CR-tolerant)
         run: |
@@ -80,7 +94,7 @@ jobs:
             fi
           done
           # udb-coding companion references (shared name -> reference name)
-          for pair in "udb-coding-rust-stack:rust-stack" "udb-coding-backends:backends"; do
+          for pair in "udb-coding-rust-stack:rust-stack" "udb-coding-backends:backends" "udb-coding-subsystem-map:subsystem_map" "udb-coding-subsystem-checklist:subsystem-checklist"; do
             a="udb-skill/shared/${pair%%:*}.md"
             b="udb-skill/plugins/udb/skills/udb-coding/references/${pair##*:}.md"
             if ! diff -q <(tr -d '\r' < "$a") <(tr -d '\r' < "$b") >/dev/null; then
@@ -144,19 +158,139 @@ jobs:
             echo "OLLAMA_API_KEY not set — skipping Ollama publish."
             exit 0
           fi
-          ns="${OLLAMA_NAMESPACE:-fahara02}"
-          curl -fsSL https://ollama.com/install.sh | sh
-          ollama serve >/tmp/ollama.log 2>&1 &
-          for _ in $(seq 1 30); do ollama list >/dev/null 2>&1 && break; sleep 1; done
-          cd udb-skill/ollama
-          ollama create "$ns/udb-assistant" -f ./Modelfile
-          ollama create "$ns/udb-coding" -f ./Modelfile.udb-coding
-          # Auth: modern Ollama reads OLLAMA_API_KEY from the environment for
-          # authenticated registry pushes. If your account uses the SSH-key flow
-          # instead, provide the private key and `ollama` will use ~/.ollama/id_ed25519.
-          ollama push "$ns/udb-assistant"
-          ollama push "$ns/udb-coding"
-          echo "pushed $ns/udb-assistant and $ns/udb-coding"
+          if [ -z "${OLLAMA_NAMESPACE:-}" ]; then
+            echo "::error::OLLAMA_NAMESPACE is not configured for the production environment"
+            exit 1
+          fi
+          ns="$OLLAMA_NAMESPACE"
+
+          verify_public() {
+            local model="$1"
+            local url="https://registry.ollama.ai/v2/${model}/manifests/latest"
+            for attempt in $(seq 0 9); do
+              if curl -fsS \
+                -H 'Accept: application/vnd.docker.distribution.manifest.v2+json' \
+                "$url" >/dev/null; then
+                echo "verified public manifest: https://ollama.com/${model}"
+                return 0
+              fi
+              sleep_for=$((2 ** attempt))
+              if [ "$sleep_for" -gt 30 ]; then sleep_for=30; fi
+              sleep "$sleep_for"
+            done
+            echo "::error::public registry manifest did not appear for ${model}"
+            return 1
+          }
+
+          if [[ "$OLLAMA_API_KEY" == "-----BEGIN OPENSSH PRIVATE KEY-----"* ]]; then
+            # Ollama's CLI signs registry requests with ~/.ollama/id_ed25519.
+            # The production secret may contain that private key even though its
+            # legacy name is OLLAMA_API_KEY.
+            curl -fsSL https://ollama.com/install.sh | sh
+            mkdir -p "$HOME/.ollama"
+            printf '%s\n' "$OLLAMA_API_KEY" | tr -d '\r' > "$HOME/.ollama/id_ed25519"
+            chmod 600 "$HOME/.ollama/id_ed25519"
+            ssh-keygen -y -f "$HOME/.ollama/id_ed25519" > "$HOME/.ollama/id_ed25519.pub"
+
+            ollama serve >/tmp/ollama.log 2>&1 &
+            ready=false
+            for _ in $(seq 1 30); do
+              if ollama list >/dev/null 2>&1; then ready=true; break; fi
+              sleep 1
+            done
+            if [ "$ready" != true ]; then
+              echo "::error::Ollama server did not become ready"
+              exit 1
+            fi
+
+            cd udb-skill/ollama
+            ollama create "$ns/udb-assistant" -f ./Modelfile
+            ollama create "$ns/udb-coding" -f ./Modelfile.udb-coding
+            for model in "$ns/udb-assistant" "$ns/udb-coding"; do
+              push_log="$(mktemp)"
+              if ! ollama push "$model" >"$push_log" 2>&1; then
+                echo "::error::Ollama CLI push failed for ${model}"
+                exit 1
+              fi
+              if grep -Eqi 'need to be signed in|unauthorized|access denied|error:' "$push_log" \
+                || ! grep -Fq 'You can find your model at:' "$push_log"; then
+                echo "::error::Ollama CLI did not confirm publication for ${model}"
+                exit 1
+              fi
+              verify_public "$model"
+            done
+          elif [[ "$OLLAMA_API_KEY" == ssh-ed25519\ * ]]; then
+            echo "::error::OLLAMA_API_KEY contains only a public key; CI needs the matching OpenSSH private key or an Ollama API token"
+            exit 1
+          else
+            # API tokens authenticate direct, non-interactive calls to
+            # https://ollama.com/api with a Bearer header.
+            python - <<'PY'
+          import json
+          import os
+          import re
+          import urllib.error
+          import urllib.request
+          from pathlib import Path
+
+          api_key = os.environ["OLLAMA_API_KEY"]
+          namespace = os.environ["OLLAMA_NAMESPACE"]
+
+          def parse_modelfile(path: str) -> tuple[str, dict[str, object], str]:
+              text = Path(path).read_text(encoding="utf-8")
+              base_match = re.search(r"(?m)^FROM\s+(.+?)\s*$", text)
+              system_match = re.search(r'(?ms)^SYSTEM\s+"""\s*\n(.*?)\n"""\s*$', text)
+              if not base_match or not system_match:
+                  raise RuntimeError(f"cannot parse FROM/SYSTEM from {path}")
+
+              parameters: dict[str, object] = {}
+              for name, raw in re.findall(r"(?m)^PARAMETER\s+(\S+)\s+(.+?)\s*$", text):
+                  try:
+                      parameters[name] = json.loads(raw)
+                  except json.JSONDecodeError:
+                      parameters[name] = raw
+              return base_match.group(1), parameters, system_match.group(1)
+
+          def post(endpoint: str, payload: dict[str, object]) -> None:
+              payload = {**payload, "stream": False}
+              request = urllib.request.Request(
+                  f"https://ollama.com/api/{endpoint}",
+                  data=json.dumps(payload).encode(),
+                  headers={
+                      "Authorization": f"Bearer {api_key}",
+                      "Content-Type": "application/json",
+                      "Accept": "application/json",
+                  },
+                  method="POST",
+              )
+              try:
+                  with urllib.request.urlopen(request, timeout=900) as response:
+                      body = response.read().decode()
+              except urllib.error.HTTPError as exc:
+                  detail = exc.read().decode(errors="replace")
+                  raise RuntimeError(f"Ollama {endpoint} failed ({exc.code}): {detail}") from exc
+
+              result = json.loads(body)
+              if result.get("error") or result.get("status") != "success":
+                  raise RuntimeError(f"Ollama {endpoint} did not succeed: {result}")
+
+          def create_and_publish(slug: str, modelfile: str) -> None:
+              model = f"{namespace}/{slug}"
+              base, parameters, system = parse_modelfile(modelfile)
+              post("create", {
+                  "model": model,
+                  "from": base,
+                  "parameters": parameters,
+                  "system": system,
+              })
+              post("push", {"model": model})
+
+          create_and_publish("udb-assistant", "udb-skill/ollama/Modelfile")
+          create_and_publish("udb-coding", "udb-skill/ollama/Modelfile.udb-coding")
+          PY
+            verify_public "$ns/udb-assistant"
+            verify_public "$ns/udb-coding"
+          fi
 
   openai:
     name: Sync OpenAI Assistant

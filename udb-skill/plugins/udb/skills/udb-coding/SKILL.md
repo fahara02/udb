@@ -18,17 +18,28 @@ canonical-store/XA/IR/migration subsystem mechanics with real function names,
 the native-service inventory, test/CI layout, the ten directives, the
 10-question flaw catalog, and the new-service recipe.
 
-**To locate any symbol/file: read `docs/generated/codebase-map.md` first**
+**To locate any symbol/file: read [references/codebase-map.md](references/codebase-map.md)**
 (generated module-dependency graphs + per-file public-symbol index, CI
 freshness-gated — never stale), then grep the canonical name it gives you.
 
 **Companion references (read the relevant one before coding in that area):**
+- [references/subsystem_map.md](references/subsystem_map.md) — curated map of
+  every subsystem (purpose, entry points, relationships, gotchas). Read this
+  FIRST for orientation, then `codebase-map.md` to locate a specific symbol;
+  canonical source: `udb-skill/shared/udb-coding-subsystem-map.md`.
+- [references/codebase-map.md](references/codebase-map.md) — generated
+  module-dependency graph + per-file public-symbol index. Read it first to
+  locate any subsystem/symbol, then grep the name.
 - [references/rust-stack.md](references/rust-stack.md) — how THIS repo uses
   tokio/tonic/tower/prost/sqlx/rdkafka (idioms + traps), not a Rust tutorial.
 - [references/backends.md](references/backends.md) — per-engine quirks for all
   18 backends (RLS/tenant posture, canonical-store tier, the live-DB + audit
   traps). Read the row before touching any `executors/<b>.rs`,
   `ir/compile/<b>.rs`, or `canonical_store/<b>*.rs`.
+- [references/subsystem-checklist.md](references/subsystem-checklist.md) — the
+  historical 0.5.0 edge-to-edge audit tracker: what was swept, adversarially
+  verified, and found. Use it for prior-audit context, not current release or
+  TODO status.
 These carry the **UDB-specific delta** of each technology — rely on your own
 generic Rust/SQL/engine knowledge for everything else.
 

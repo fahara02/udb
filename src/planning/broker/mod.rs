@@ -845,9 +845,13 @@ pub fn build_upsert_plan(
         }
     }
     if !conflict_columns.is_empty() && !conflict_target_is_unique(table, &conflict_columns) {
-        errors.push(
-            "conflict_fields must match the primary key or a declared unique index".to_string(),
-        );
+        errors.push(format!(
+            "conflict_fields ({}) must match the primary key or a declared unique index \
+             (upsert ON CONFLICT needs a unique constraint on exactly those columns); \
+             valid conflict targets: {}",
+            conflict_columns.join(", "),
+            describe_valid_conflict_targets(table),
+        ));
     }
 
     let update_columns = parameter_columns
@@ -989,9 +993,13 @@ pub(crate) fn build_upsert_logical_write(
         }
     }
     if !conflict_columns.is_empty() && !conflict_target_is_unique(table, &conflict_columns) {
-        errors.push(
-            "conflict_fields must match the primary key or a declared unique index".to_string(),
-        );
+        errors.push(format!(
+            "conflict_fields ({}) must match the primary key or a declared unique index \
+             (upsert ON CONFLICT needs a unique constraint on exactly those columns); \
+             valid conflict targets: {}",
+            conflict_columns.join(", "),
+            describe_valid_conflict_targets(table),
+        ));
     }
 
     let update_columns = record_columns

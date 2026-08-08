@@ -218,6 +218,34 @@ pub(crate) fn conflict_target_is_unique(table: &ManifestTable, columns: &[String
     })
 }
 
+/// Human-readable list of the conflict targets an upsert may legally use: the
+/// primary key and every full-column (non-partial, non-expression) unique index.
+/// Mirrors the acceptance rule in [`conflict_target_is_unique`] so a rejected
+/// `conflict_fields` set names exactly what the caller could have matched instead
+/// of the bare "must match the primary key or a declared unique index".
+pub(crate) fn describe_valid_conflict_targets(table: &ManifestTable) -> String {
+    let mut targets = Vec::new();
+    if !table.primary_key.is_empty() {
+        targets.push(format!("primary key ({})", table.primary_key.join(", ")));
+    }
+    for index in &table.indexes {
+        if index.unique
+            && index.where_clause.trim().is_empty()
+            && index
+                .columns
+                .iter()
+                .all(|column| !column.contains('(') && !column.contains('\''))
+        {
+            targets.push(format!("unique index ({})", index.columns.join(", ")));
+        }
+    }
+    if targets.is_empty() {
+        "this entity declares no primary key or full-column unique index".to_string()
+    } else {
+        targets.join("; ")
+    }
+}
+
 pub(crate) fn sorted_columns(columns: &[String]) -> Vec<String> {
     let mut out = columns
         .iter()

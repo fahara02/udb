@@ -1805,9 +1805,15 @@ async fn broker_v2_select_denied_without_policy() {
     assert_eq!(detail.kind, ErrorKind::Policy as i32);
     assert_eq!(detail.operation, "data_plane_authorize");
     assert!(detail.policy_decision_id.starts_with("authz_"));
-    assert_eq!(
-        err.message(),
-        "no authz policy (default deny); configure authorization via the AuthzService (policy_rules) or set UDB_ABAC_DEFAULT_ALLOW=true for dev"
+    assert!(
+        err.message().contains("no authz policy (default deny)"),
+        "deny message must name the default-deny cause: {}",
+        err.message()
+    );
+    assert!(
+        err.message().contains("udb authz seed"),
+        "deny message must point at the standard seeding command: {}",
+        err.message()
     );
 }
 
@@ -1852,9 +1858,15 @@ async fn broker_v2_batch_item_denial_carries_policy_detail() {
     assert_eq!(detail.kind, ErrorKind::Policy as i32);
     assert_eq!(detail.operation, "data_plane_authorize_item");
     assert!(detail.policy_decision_id.starts_with("authz_"));
-    assert_eq!(
-        err.message(),
-        "no authz policy (default deny); configure authorization via the AuthzService (policy_rules) or set UDB_ABAC_DEFAULT_ALLOW=true for dev"
+    assert!(
+        err.message().contains("no authz policy (default deny)"),
+        "deny message must name the default-deny cause: {}",
+        err.message()
+    );
+    assert!(
+        err.message().contains("udb authz seed"),
+        "deny message must point at the standard seeding command: {}",
+        err.message()
     );
 }
 

@@ -869,3 +869,143 @@ pub(crate) async fn seed_system_authz_defaults(pool: &sqlx::PgPool) -> Result<()
 
     Ok(())
 }
+
+/// Canonical action tokens the DataBroker submits to the Casbin engine — the
+/// literal RPC method names, NOT a `data.*` alias. A `udb authz seed` that used
+/// the wrong vocabulary would write policies that never match. `*` grants all.
+pub const DATA_PLANE_ACTION_TOKENS: &[&str] = &[
+    "Select",
+    "SelectV2",
+    "Upsert",
+    "Delete",
+    "Update",
+    "BulkCas",
+    "BatchSelect",
+    "BatchUpsert",
+    "*",
+];
+
+/// Offline (Postgres-direct) seed of the STANDARD data-plane authorization for a
+/// project: one role-gated `ALLOW` policy per (`object`, `action`) into
+/// `udb_authz.policy_rules`, using the REAL Casbin action tokens the DataBroker
+/// submits (`Select`/`Upsert`/… — never a `data.*` alias) and the caller's
+/// canonical tenant UUID. The row shape mirrors [`seed_system_authz_defaults`]:
+/// `subject` empty with the role carried in `attributes_json`, so binding either
+/// a user OR a service account to `role_code` (via `AssignRole`) makes ONE policy
+/// set authorize both. Idempotent (a deterministic per-policy id +
+/// `ON CONFLICT DO NOTHING`) and atomic (a single transaction, so the
+/// `UDB_ABAC_DEFAULT_ALLOW` open-bootstrap window never half-closes). Returns the
+/// number of rows actually inserted. Requires the authz schema to already exist
+/// (run after `udb auth bootstrap user`).
+pub(crate) async fn seed_project_authz_policies(
+    pool: &sqlx::PgPool,
+    tenant_id: &str,
+    project_id: &str,
+    role_code: &str,
+    actions: &[String],
+    objects: &[String],
+) -> Result<usize, sqlx::Error> {
+    use crate::runtime::native_catalog::native_model;
+    use sha2::{Digest, Sha256};
+
+    let policy = native_model(
+        "udb.core.authz.entity.v1.PolicyRule",
+        &[
+            "policy_id",
+            "subject",
+            "domain",
+            "object",
+            "action",
+            "effect",
+            "condition",
+            "description",
+            "is_active",
+            "tenant_id",
+            "project_id",
+            "attributes_json",
+        ],
+    );
+    let sql = format!(
+        "INSERT INTO {rel} \
+           ({policy_id}, {subject}, {domain}, {object}, {action}, {effect}, {condition}, {description}, {is_active}, {tenant_id}, {project_id}, {attributes_json}) \
+         VALUES ($1::UUID, '', '*', $2, $3, 'ALLOW', '', $4, TRUE, $5, $6, $7::JSONB) \
+         ON CONFLICT DO NOTHING",
+        rel = policy.relation,
+        policy_id = policy.q("policy_id"),
+        subject = policy.q("subject"),
+        domain = policy.q("domain"),
+        object = policy.q("object"),
+        action = policy.q("action"),
+        effect = policy.q("effect"),
+        condition = policy.q("condition"),
+        description = policy.q("description"),
+        is_active = policy.q("is_active"),
+        tenant_id = policy.q("tenant_id"),
+        project_id = policy.q("project_id"),
+        attributes_json = policy.q("attributes_json"),
+    );
+    let attributes = serde_json::json!({
+        "role": role_code,
+        "priority": "0",
+        "purpose": "",
+        "relationship": "",
+        "required_scopes": "",
+    })
+    .to_string();
+
+    let mut tx = pool.begin().await?;
+    let mut inserted = 0usize;
+    for object in objects {
+        for action in actions {
+            // Deterministic id so re-running the seed is a no-op (the `uuid` crate
+            // here only carries the `v4` feature, so derive a stable UUID from a
+            // hash of the logical key rather than `new_v5`).
+            let mut hasher = Sha256::new();
+            hasher.update(
+                format!("udb-authz-seed|{tenant_id}|{project_id}|{role_code}|{object}|{action}")
+                    .as_bytes(),
+            );
+            let digest = hasher.finalize();
+            let mut bytes = [0u8; 16];
+            bytes.copy_from_slice(&digest[..16]);
+            let policy_id = uuid::Uuid::from_bytes(bytes);
+            let description = format!("udb authz seed: role '{role_code}' {action} on {object}");
+            let result = sqlx::query(&sql)
+                .bind(policy_id)
+                .bind(object.as_str())
+                .bind(action.as_str())
+                .bind(description)
+                .bind(tenant_id)
+                .bind(project_id)
+                .bind(attributes.as_str())
+                .execute(&mut *tx)
+                .await?;
+            inserted += result.rows_affected() as usize;
+        }
+    }
+    tx.commit().await?;
+    Ok(inserted)
+}
+
+/// DSN-taking wrapper around [`seed_project_authz_policies`] for the offline CLI
+/// (`udb authz seed`): opens its own short-lived pool exactly like
+/// [`bootstrap_admin_user`], so it works before the broker is serving.
+pub async fn seed_project_authz_policies_offline(
+    dsn: &str,
+    tenant_id: &str,
+    project_id: &str,
+    role_code: &str,
+    actions: &[String],
+    objects: &[String],
+) -> Result<usize, sqlx::Error> {
+    let pool = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(2)
+        .acquire_timeout(std::time::Duration::from_secs(10))
+        .connect(dsn)
+        .await?;
+    let result =
+        seed_project_authz_policies(&pool, tenant_id, project_id, role_code, actions, objects)
+            .await;
+    pool.close().await;
+    result
+}

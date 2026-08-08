@@ -13,7 +13,7 @@
 │    UNIVERSAL DATA BROKER                                                   │
 │    gRPC data plane | native control plane | tenant/project scope guard     │
 │                                                                            │
-│    crate v0.5.2 | protocol v1.0.0                                          │
+│    crate v0.5.3 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 This page explains how UDB keeps data safe: who a request is, what it's allowed
@@ -102,6 +102,54 @@ A decision can draw on any of these inputs:
 
 Once a request passes authorization, `GetNativeAccess` can hand back short-lived,
 restricted backend access. Keep this call server-side — never expose it to clients.
+
+### How authorization is enforced (two surfaces)
+
+In practice there are two independent enforcement surfaces, and a `PERMISSION_DENIED`
+is cured differently depending on which one you hit:
+
+- **Data-plane CRUD** (`DataBroker` `Select`/`Upsert`/`Delete`/`Update`/`BulkCas`)
+  is authorized by the **Casbin** engine over the `udb_authz.policy_rules`
+  governance table (default-DENY). To grant access you seed a policy row.
+- **Native-service RPCs** are authorized by **token scopes** declared with the
+  `endpoint_security` annotation (convention `udb:<service>:<method>`, or an admin
+  scope). To grant access you mint a token/API key that carries the scope; a
+  service account can only hold scopes present in its `ServiceAccountGrant`.
+
+Casbin policy rows do nothing for native RPCs, and token scopes do not authorize
+data CRUD — do not confuse them. (A legacy ABAC table, `udb_abac_policies`, still
+exists but is no longer consulted for decisions; seed `policy_rules`, not it.)
+
+### Seeding data-plane authorization (the standard path)
+
+With no policy rows, even the bootstrap admin gets `PERMISSION_DENIED` on CRUD.
+Three tokens must be exact or a policy silently never matches:
+
+1. `action` is the **literal RPC method name** — `Select`, `Upsert`, `Delete`,
+   `Update`, `BulkCas` (case-sensitive), or `*`. The intuitive `data.select` /
+   `read` / `write` vocabulary does **not** match.
+2. `object` is the `message_type` (proto FQN), or a `keyMatch2` glob, or `*`.
+3. `tenant_id` is the caller's canonical **tenant UUID** (not the human code).
+
+Seed the standard set for a project in one idempotent, atomic command:
+
+```bash
+# after `udb auth bootstrap user …` printed the tenant UUID $T
+udb authz seed --tenant $T --role app_rw          # ALLOW Select/Upsert/Delete/Update/BulkCas on * for role app_rw
+udb auth role bind --principal <user-or-service-id> --role app_rw --tenant $T
+```
+
+`udb authz seed` writes role-gated rows with the correct tokens; bind both human
+users and service accounts to the role and one policy set authorizes both.
+`--entity <fqn>` (repeatable) narrows to specific message types; `--action`
+(repeatable) narrows the verbs; `--emit <path>` also writes a version-controllable
+policy JSON. Equivalents: `AuthzService.PutAuthzPolicy`/`CreatePolicyRule` at
+runtime, or `udb policy-seed` for an offline SQL bundle. Dev bypass:
+`UDB_ABAC_DEFAULT_ALLOW=true` — but only while `policy_rules` is empty (the first
+row flips the gate back to deny-by-default, so seed all rows atomically).
+
+Every tenant-scoped data request must also carry a non-empty `purpose` (else it is
+denied before authorization runs) and the tenant UUID.
 
 ## Identity Providers And Provisioning
 

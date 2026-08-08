@@ -647,8 +647,9 @@ PUBLISH_SKILL_REQUIREMENTS = (
     ("ANTHROPIC_API_KEY not set", "Claude smoke optional-secret skip"),
     ("OLLAMA_API_KEY not set", "Ollama optional-secret skip"),
     ("OPENAI_API_KEY not set", "OpenAI optional-secret skip"),
-    ("ollama create \"$ns/udb-assistant\"", "Ollama using-udb model creation"),
-    ("ollama create \"$ns/udb-coding\"", "Ollama coding model creation"),
+    ('create_and_publish("udb-assistant"', "Ollama using-udb model publication"),
+    ('create_and_publish("udb-coding"', "Ollama coding model publication"),
+    ("registry.ollama.ai/v2/${model}/manifests/latest", "Ollama public manifest verification"),
     ("upsert \"UDB Assistant\"    udb-skill/openai/instructions.md", "OpenAI using-udb assistant sync"),
     ("upsert \"UDB Coding Agent\" udb-skill/openai/instructions-udb-coding.md", "OpenAI coding assistant sync"),
 )
@@ -7043,8 +7044,9 @@ jobs:
     steps:
       - run: |
           echo "OLLAMA_API_KEY not set"
-          ollama create "$ns/udb-assistant"
-          ollama create "$ns/udb-coding"
+          create_and_publish("udb-assistant", "udb-skill/ollama/Modelfile")
+          create_and_publish("udb-coding", "udb-skill/ollama/Modelfile.udb-coding")
+          registry.ollama.ai/v2/${model}/manifests/latest
   openai:
     needs: validate
     steps:

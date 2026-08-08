@@ -21,28 +21,45 @@ native-services tour (storage upload flow, notifications, WebRTC, events/CDC),
 proto annotation authoring with tenant columns, the CLI, and the error-decode
 table.
 
+**More references (read on demand, authoritative/generated):**
+- [references/rpc-inventory.md](references/rpc-inventory.md) — every native RPC
+  with its required scope, tenant fields, request/response types, and
+  handler. Ground truth for "which scope does this call need" and
+  `PERMISSION_DENIED` on `:50061`.
+- [references/sensitive-fields.md](references/sensitive-fields.md) — which
+  fields across the API are treated as sensitive (redacted from logs/audit,
+  never echoed). Guard when building requests or reading responses.
+
 ## Mental model (hold this)
 1. **Entities are protos.** Table = annotated `message`; its fully-qualified
    name (e.g. `shop.v1.Customer`) is the `message_type` for every data RPC.
-2. **TWO gRPC targets.** Data target (default `:50051`) serves ONLY
-   health/reflection/DataBroker. ALL native services live on the control-plane
-   target (default port+10) — every SDK has `target` AND `authTarget`.
-   `UNIMPLEMENTED` ≈ you dialed the wrong one.
-3. **Every call carries metadata** (tenant/project/scopes + a credential);
-   tenant isolation is enforced server-side on reads AND writes, and a body
-   tenant can never override the credential's tenant.
-4. **Mutation retry is keyed.** Read-only RPCs auto-retry; a replay-safe
-   mutation (Upsert/Delete) auto-retries ONLY with a non-empty
-   `idempotency_key` (broker dedups durably; a replay returns
-   `was_duplicate=true`). Keyless mutations fail closed — recommend
-   `conflict_fields` + an `idempotency_key` on writes.
-5. **Every mutation emits an event** (`udb.<svc>.<entity>.<verb>.v1`);
-   CDC subscription streams are tenant-scoped with `since_event_id` replay.
-6. **ONE authz engine (Casbin), default-DENY.** Data RPCs and
-   `udb.authz.can/require` both decide via Casbin over roles/`policy_rules`. The
-   data plane reads a PG-warmed snapshot of `policy_rules` — what an operator
-   configures via `AuthzService.CreatePolicyRule` is exactly what protects your
-   data (no separate env-JSON ABAC lane).
+2. **THREE planes on THREE listeners.** Data plane (`DataBroker` CRUD) on the
+   public port (default `:50051`); native/control plane (all 27 services) on a
+   **loopback-by-default** listener (`UDB_AUTH_GRPC_ADDR`, default `:50061`);
+   WebRTC peer plane (`:50071`). Every SDK has `target` AND `authTarget`.
+   `UNIMPLEMENTED` = native call sent to the data port; `ECONNREFUSED` = the
+   loopback auth listener isn't exposed.
+3. **THREE authorization surfaces, cured differently.** Data CRUD → **Casbin
+   policy rows** (`udb_authz.policy_rules`); native RPCs → **token scopes**
+   (`endpoint_security`, `udb:<service>:<method>`); the old ABAC table is dead.
+   A data deny needs a *policy row*; a native deny needs a *scope*. Don't confuse
+   them.
+4. **Two kinds of caller.** A **human** logs in (username/password → JWT). A
+   **service** is a `SERVICE_ACCOUNT` user + a **mandatory `ServiceAccountGrant`**
+   (no grant = can't authenticate — the #1 "works as a user, fails as a service"
+   trap) + an API key or password login (services get NO refresh token; no
+   client-credentials grant exists).
+5. **Every call carries metadata** (tenant UUID / project / scopes / **purpose**
+   + a credential); tenant isolation is enforced on reads AND writes; a
+   tenant-scoped op with no `purpose` is denied before authz.
+6. **Mutation retry is keyed.** Replay-safe mutations auto-retry ONLY with a
+   non-empty `idempotency_key` (durable dedup; replay → `was_duplicate=true`).
+   Keyless fail closed. There is no `Insert` RPC — `Upsert` with empty
+   `conflict_fields` inserts.
+7. **Casbin data-plane action = the RPC method name.** `Select`/`Upsert`/
+   `Delete`/`Update`/`BulkCas` — **NOT** `data.select`. Wrong action / human
+   tenant-code / wrong `object` = silent deny. `UDB_ABAC_DEFAULT_ALLOW=true`
+   bypasses ONLY while zero policy rows exist.
 
 ## Before giving code, establish
 - **Language** (TS / Python / Go / Java / C# / PHP) → that SDK's snippet from
@@ -51,24 +68,21 @@ table.
 - **Credential** — bearer/API key in hand, or bootstrap needed?
 
 ## Quick reference
-**Current baseline:** UDB `0.4.0`, wire protocol `1.0.0` (release tag
-`v0.4.0`). Pin SDKs to the same product version unless intentionally testing a
-mixed-client upgrade: TS `@udb_plus/sdk@0.4.0` · Python `udb-client==0.4.0` · Go
-`github.com/fahara02/udb/sdk/go@v0.4.0` · Java `dev.udb:udb-java-client`
-`0.4.0` · C# `Udb.Client` `0.4.0` · PHP `fahara02/udb-laravel:^0.4.0`.
+**Current baseline:** UDB `0.5.3`, wire protocol `1.0.0`. Pin SDKs to the same
+product version: TS `@udb_plus/sdk@0.5.3` · Python `udb-client==0.5.3` · Go
+`github.com/fahara02/udb/sdk/go@v0.5.3` · Java `dev.udb:udb-java-client`
+`0.5.3` · C# `Udb.Client` `0.5.3` · PHP `fahara02/udb-laravel:^0.5.3`.
 
-**Go SDK 0.3.7+ enterprise path:** for long-running services, use the SDK's
-native session helpers instead of hand-rolled bearer refresh. Dial with
-`udbclient.NewUdb`, then authenticate with
-`u.Auth.LoginSession(store).LoginWithDevice(ctx, loginReq)`; call
-`u.Auth.AuthenticateBearer(ctx, token.AccessToken)` and adopt the verified
-principal's canonical tenant/project before any tenant-scoped CRUD. Keep the
-returned `TokenManager` and call `Token(ctx)` before each DataBroker/native
-operation, appending `authorization: Bearer <access_token>` to the SDK
-metadata context. `LoginAndAdoptTenant` is valid for one-shot login/adopt and
-updates generated-client authorization, but do not freeze its initial access
-token inside a long-running server. If an API key is configured, authenticate it
-once and let the SDK connection carry `x-api-key`.
+**Enterprise session (human):** Go `udbclient.ConnectEnterprise(ctx,
+EnterpriseConfig{Target, AuthTarget, Username, Password, TenantCode})` → an
+`EnterpriseSession` that logged in, adopted the canonical tenant UUID, and
+background-refreshes the bearer; use `session.DataContext(ctx)` /
+`session.NativeContext(ctx)` + `session.CanonicalTenantID` in filters. TS:
+`UdbProject.connectEnterprise(config)`. **Service (machine):** provision
+`CreateUser{account_kind:SERVICE_ACCOUNT}` → `CreateServiceAccountGrant{scopes}`
+→ `CreateApiKey` (save the one-time `udbk_…`) → bind it to your data role
+(`AssignRole`); connect with the STATIC `Credentials.APIKey`/`Bearer` path
+(no auto-refresh — re-exchange the key on expiry).
 
 **CRUD** (by `message_type` = proto FQN): `Select {filter, limit ≤ ~500/page}` ·
 `Upsert {record, conflict_fields, return_record}` · `Delete {filter}` · typed
@@ -101,10 +115,12 @@ canonical UUID, so human project codes like `private` are safe. `is_public` is
    `setTenant(principal.tenant_id)` (or `loginAndAdoptTenant()`).
 3. **SEED authz or every data RPC is `PERMISSION_DENIED`** — the org-owner role +
    `udb:*` scopes are NOT enough; the data plane enforces from `policy_rules`.
-   Seed it via `AuthzService.CreatePolicyRule` (per-tenant, at runtime, from your
-   code) or `udb policy-seed`, with the real `Select`/`Upsert`/`Delete` action:
-   `{effect,subject,tenant,resource,action,required_scopes}` (`*`/empty =
-   wildcard). Dev shortcut: `UDB_ABAC_DEFAULT_ALLOW=true`.
+   Straightforward: `udb authz seed --tenant <T-UUID> --role app_rw` (offline,
+   Postgres-direct, validated action tokens, idempotent + atomic; `--emit <path>`
+   for a version-controlled JSON) — or runtime `AuthzService.CreatePolicyRule`,
+   or offline `udb policy-seed`. Real actions only (`Select`/`Upsert`/`Delete`/
+   `Update`/`BulkCas` — never `data.*`), then bind principals to the role
+   (`udb auth role bind`). Dev shortcut: `UDB_ABAC_DEFAULT_ALLOW=true`.
 4. The broker needs JWT keys (`UDB_JWT_PRIVATE_KEY`/`_PUBLIC_KEY`, RS256), sessions
    (`UDB_SESSION_ENABLED=true` + `UDB_SESSION_HASH_SECRET`), and the auth plane
    exposed (`UDB_AUTH_GRPC_ADDR=0.0.0.0:<port+10>`). `udb doctor --enterprise`
@@ -117,24 +133,32 @@ canonical UUID, so human project codes like `private` are safe. `is_public` is
 `udb sdk generate --lang <l>` · `udb sdk manifest` · `udb requirements` (backend
 contract; run BEFORE first start) · `udb doctor --enterprise` (manifest-aware
 preflight — lists every unmet prereq + missing required backend at once) ·
-`udb native list/docs` · `udb compat-matrix` (authoritative annotations). Since
-0.3.7, `udb --help`, `udb help <cmd>`, command `--help`, `udb --version`, and
-near-miss "did you mean" suggestions are supported.
+`udb authz seed --tenant <UUID> --role app_rw` (offline data-plane policy
+seeding) · `udb native list/docs` · `udb compat-matrix` (authoritative
+annotations). Since 0.3.7, `udb --help`, `udb help <cmd>`, command `--help`,
+`udb --version`, and near-miss "did you mean" suggestions are supported.
 
 ## Error decode (first response to any failure)
-`UNIMPLEMENTED`→wrong target (set authTarget) · `PERMISSION_DENIED`→scope or
-tenant mismatch · `FAILED_PRECONDITION`→service disabled / wrong state /
-missing config · `RESOURCE_EXHAUSTED`→rate limit or backpressure (back off) ·
-`UNAUTHENTICATED` with only `x-api-key`→DataBroker data plane requires Bearer
-JWT or mTLS; log in for an access token and send `authorization: Bearer <jwt>` ·
-`INVALID_ARGUMENT`→unknown message_type (use the FQN; `udb sdk manifest`), OR
-"tenant isolation requires filter on tenant_id" → a tenant-scoped read/delete MUST
-put `tenant_id` IN THE FILTER (`select({where:{…, tenant_id}})`) ·
-`ABORTED`→version/CAS conflict (re-read, retry) · `NOT_FOUND` can mean
-"exists, but not your tenant" — by design ·
-`PERMISSION_DENIED` on a data RPC with valid scopes → no policy seeded
-(default-deny); seed `policy_rules` (`AuthzService.CreatePolicyRule` / `udb
-policy-seed`) or set `UDB_ABAC_DEFAULT_ALLOW=true`.
+`UNIMPLEMENTED`→native call sent to the data port (use authTarget/`:50061`) ·
+`FAILED_PRECONDITION`→native service disabled (backend missing: Vault unseal /
+Redis / Kafka / object store / ledger), wrong lifecycle, or missing config ·
+`RESOURCE_EXHAUSTED`→rate limit/quota (read `retry_after_ms`, back off) ·
+`UNAUTHENTICATED`→missing bearer, or empty tenant; on the data plane exchange an
+API key for a JWT if `x-api-key` isn't accepted · `INVALID_ARGUMENT`→unknown
+message_type (`udb sdk manifest`), or "tenant isolation requires filter on
+tenant_id" (put the tenant UUID in the filter), or non-UUID `project_id` on
+storage · `ABORTED`→CAS/revision conflict (re-read, retry) · `NOT_FOUND`→may be
+"exists but not your tenant" (by design).
+
+**`PERMISSION_DENIED` decision tree:** (1) "purpose is required" → send
+`x-purpose`. (2) NATIVE call → token missing scope `udb:<service>:<method>` (for
+a service, add it to its grant first). (3) DATA call → Casbin: "no authz policy"
+= zero rows → `udb authz seed --tenant <T-UUID> --role app_rw` then bind the
+principal; "no applicable allow policy" = one of the three token traps —
+`action` must be `Select`/`Upsert`/… (not `data.select`), `tenant_id`=caller
+UUID, `object`=message_type, subject matches. (4) "tenant mismatch" → use the
+credential's UUID.
+(5) `udb doctor --consumer --key <k> --entity <fqn>` prints the exact reason.
 
 ## Guardrails
 - Always include metadata (tenant/project/scopes) AND a credential in examples;

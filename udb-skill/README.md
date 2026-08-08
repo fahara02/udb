@@ -17,8 +17,9 @@ runtime can use them:
 
 The **canonical knowledge** lives in `shared/<skill>.md`
 ([`shared/using-udb.md`](shared/using-udb.md),
-[`shared/udb-coding.md`](shared/udb-coding.md)); the wrappers embed/reference it
-verbatim. Publishing is **automated** by `.github/workflows/publish-skill.yml`
+[`shared/udb-coding.md`](shared/udb-coding.md)); `udb-coding` companion sources
+also live under `shared/udb-coding-*.md`. The wrappers embed/reference those
+canonical sources. Publishing is **automated** by `.github/workflows/publish-skill.yml`
 on every push that touches the skill — it validates structure + wrapper sync,
 pushes both Ollama models, and syncs both OpenAI Assistants. The Claude plugin
 metadata lives under `udb-skill/.claude-plugin/` so the repo root stays clean.
@@ -72,9 +73,11 @@ ollama run udb-coding
 - The **shared-machinery map**: which existing helper to use for admission,
   outbox events, pagination, tenant claim-binding, leader-elected workers,
   crypto, leases, metrics label bounding — with file paths
-- Two **companion references** carrying the UDB-specific *delta* of each
+- Curated **companion references** carrying the UDB-specific *delta* of each
   technology (NOT generic tutorials — frontier models already know generic Rust
   and SQL):
+  - **`subsystem_map`** — fast orientation across every UDB subsystem, with
+    entry points and relationships before dropping into the generated symbol map
   - **`rust-stack`** — tokio/tonic/tower/prost/sqlx/rdkafka as used here, with
     the traps (no blocking in async, headers-only tower layer, proto3 presence,
     transactional outbox, gRPC status conventions, redacting Debug)
@@ -82,6 +85,8 @@ ollama run udb-coding
     canonical-store tier, the live-DB + audit traps: MSSQL `@read_only` pooled-
     connection break, Neo4j MERGE lease race, Redis Lua-only lease, ClickHouse/
     Mongo "Enforced"-but-raw cross-tenant lies, MySQL 8.4 syntax, …)
+  - **`subsystem-checklist`** — historical 0.5.0 audit coverage and findings,
+    clearly separated from current release/TODO status
 - The **new-native-service recipe**, after-proto regen protocol, the
   **10-question flaw catalog**, and the honest-`[~]` reporting rules
 
@@ -91,8 +96,10 @@ vendored 300-line skill — and external skills rot and carry license/maintenanc
 baggage. The value is the **UDB-specific delta** (which traps THIS repo hit,
 which idiom THIS repo uses), single-sourced in `shared/` and drift-gated like
 the rest of the skill. Claude loads a companion on demand (progressive
-disclosure, zero cost until needed); the OpenAI/Ollama wrappers bake them inline
-since those runtimes have no file-load step.
+disclosure, zero cost until needed); the OpenAI/Ollama coding wrappers bake the
+curated companions inline since those runtimes have no file-load step. The much
+larger generated codebase/RPC inventories remain packaged references and are
+also available at their canonical `docs/generated/` paths in the repository.
 
 ## Layout
 ```
@@ -103,16 +110,19 @@ udb-skill/
 │   └── skills/
 │       ├── using-udb/
 │       │   ├── SKILL.md                       # skill entry (trigger + quick ref)
-│       │   └── references/using-udb.md        # full guide (progressive disclosure)
+│       │   └── references/                    # full guide + generated RPC/security inventories
 │       └── udb-coding/
 │           ├── SKILL.md
-│           └── references/udb-coding.md
+│           └── references/                    # full guide + stack/backend/map/audit companions
 ├── openai/instructions.md                     # OpenAI wrapper: using-udb
 ├── openai/instructions-udb-coding.md          # OpenAI wrapper: udb-coding
 ├── ollama/Modelfile                           # Ollama wrapper: using-udb
 ├── ollama/Modelfile.udb-coding                # Ollama wrapper: udb-coding
 ├── shared/using-udb.md                        # CANONICAL source (edit here)
 ├── shared/udb-coding.md                       # CANONICAL source (edit here)
+├── sync_skills.py                             # regenerate using-udb wrappers
+├── sync_udb_coding.py                         # regenerate udb-coding wrappers
+├── sync_references.py                         # sync bundled generated/canonical refs
 ├── LICENSE                                    # MIT
 └── README.md
 ```
@@ -127,15 +137,24 @@ the Claude reference is a verbatim copy; Ollama re-closes its `SYSTEM """` block
 ```bash
 python sync_skills.py            # rewrite the using-udb wrappers from shared/using-udb.md
 python sync_skills.py --check    # CI gate: exit 1 if any wrapper drifted
+python sync_udb_coding.py        # rewrite the udb-coding reference + provider wrappers
+python sync_udb_coding.py --check
 ```
-The script is scoped to **`using-udb`**. The `udb-coding` OpenAI/Ollama wrappers
-inline the companion files (`backends`, `rust-stack`), so regenerate those with
-their own flow:
-```powershell
-$body = Get-Content "shared/udb-coding.md" -Raw
-Set-Content "plugins/udb/skills/udb-coding/references/udb-coding.md" $body -Encoding utf8 -NoNewline
-# then re-embed body (+ companions) under the headers in openai/ and ollama/ udb-coding wrappers
+
+Generated/canonical references bundled for progressive disclosure are synced
+separately. This keeps the packaged codebase map, RPC inventory, sensitive-field
+inventory, subsystem map, and subsystem checklist identical to their repository
+sources:
+
+```bash
+python udb-skill/sync_references.py
+python udb-skill/sync_references.py --check
 ```
+
+`sync_skills.py` is scoped to **`using-udb`**. `sync_udb_coding.py` owns the
+`udb-coding` Claude reference and the OpenAI/Ollama wrappers, including the
+curated `subsystem-map`, `rust-stack`, `backends`, and historical audit
+companions.
 
 ## License
 MIT — see [`LICENSE`](LICENSE).

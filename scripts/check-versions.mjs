@@ -222,6 +222,29 @@ processTriple("ops bench label", "docs/operations.md", C.udb.version,
 processAll("versioning release refs", "VERSIONING.md", C.udb.version,
   /(^|[^0-9]v?)(0\.\d+\.\d+)([^0-9]|$)/gm);
 
+// ── Agent-skill product baseline ─────────────────────────────────────────────
+// The provider wrappers are regenerated from these canonical sources by the
+// udb-skill sync scripts. Keeping the baseline under versions.json prevents a
+// product release from republishing stale SDK install commands.
+processTriple("using-udb canonical baseline", "udb-skill/shared/using-udb.md", C.udb.version,
+  /(Current published baseline is \*\*UDB )(\d+\.\d+\.\d+)(\*\*)/);
+processAll("using-udb canonical TS install", "udb-skill/shared/using-udb.md", C["sdk-typescript"].version,
+  /(@udb_plus\/sdk@)(\d+\.\d+\.\d+)(\b)/g);
+processAll("using-udb canonical Python install", "udb-skill/shared/using-udb.md", C["sdk-python"].version,
+  /(udb-client(?:\[pydantic\])?==)(\d+\.\d+\.\d+)(\b)/g);
+processAll("using-udb canonical Go install", "udb-skill/shared/using-udb.md", C["sdk-go"].version,
+  /(github\.com\/fahara02\/udb\/sdk\/go@v)(\d+\.\d+\.\d+)(\b)/g);
+processAll("using-udb canonical C# install", "udb-skill/shared/using-udb.md", C["sdk-csharp"].version,
+  /(Udb\.Client --version )(\d+\.\d+\.\d+)(\b)/g);
+processAll("using-udb canonical PHP install", "udb-skill/shared/using-udb.md", C["sdk-php"].version,
+  /(udb-laravel:\^)(\d+\.\d+\.\d+)(\b)/g);
+processTriple("using-udb skill summary baseline", "udb-skill/plugins/udb/skills/using-udb/SKILL.md", C.udb.version,
+  /(\*\*Current baseline:\*\* UDB `)(\d+\.\d+\.\d+)(`)/);
+processAll("using-udb skill summary SDKs", "udb-skill/plugins/udb/skills/using-udb/SKILL.md", C.udb.version,
+  /((?:@udb_plus\/sdk@|udb-client==|sdk\/go@v|udb-java-client`\s*\n?`?|Udb\.Client` `|udb-laravel:\^))(\d+\.\d+\.\d+)(\b)/g);
+processTriple("udb-coding canonical baseline", "udb-skill/shared/udb-coding.md", C.udb.version,
+  /(Current product\/SDK baseline is \*\*)(\d+\.\d+\.\d+)(\*\*)/);
+
 // ── docs/site (GitHub Pages) version refs ─────────────────────────────────────
 // The published site drifted all the way back to 0.3.6 because it was NOT
 // governed here — every page footer + the index pill track the crate version,

@@ -176,8 +176,11 @@ impl AuthzSnapshot {
                     // governance table, so configure authorization through the
                     // AuthzService (CreatePolicyRule / PutAuthzPolicy) — or flip the
                     // dev escape hatch for local bootstrap.
-                    "no authz policy (default deny); configure authorization via the \
-                     AuthzService (policy_rules) or set UDB_ABAC_DEFAULT_ALLOW=true for dev"
+                    "no authz policy (default deny); seed the standard data-plane policy for \
+                     this tenant with `udb authz seed --tenant <tenant-uuid> --role app_rw` \
+                     (or AuthzService CreatePolicyRule/PutAuthzPolicy), then bind principals to \
+                     the role — or set UDB_ABAC_DEFAULT_ALLOW=true for local bootstrap (works \
+                     only while zero policy rows exist)"
                         .to_string()
                 },
                 policy_version: self.version.clone(),
@@ -352,9 +355,10 @@ impl AuthzSnapshot {
                 // (their action/resource/tenant) plus counts — never another
                 // principal's policies.
                 format!(
-                    "denied by Casbin PERM model: no applicable allow policy for action '{}' on '{}' (tenant '{}') — likely missing an exact-entity ABAC policy for this resource",
+                    "denied by Casbin PERM model: no applicable allow policy for action '{}' on '{}' (tenant '{}'). Check the three token traps: the action must be the RPC method name (Select/Upsert/Delete/Update/BulkCas — NOT a data.* alias), the policy's tenant_id must be this tenant UUID, and its object must match the message type. Seed it with `udb authz seed --tenant {} --role app_rw` (+ bind this principal to the role)",
                     req.action,
                     selectors.join("|"),
+                    principal.tenant_id,
                     principal.tenant_id,
                 )
             } else {

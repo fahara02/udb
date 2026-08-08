@@ -13,10 +13,10 @@
 │    UNIVERSAL DATA BROKER                                                   │
 │    gRPC data plane | native control plane | tenant/project scope guard     │
 │                                                                            │
-│    crate v0.5.2 | protocol v1.0.0                                          │
+│    crate v0.5.3 | protocol v1.0.0                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
-Alongside the data plane that reads and writes your app's tables, UDB 0.5.2 includes a native control plane
+Alongside the data plane that reads and writes your app's tables, UDB 0.5.3 includes a native control plane
 — a set of built-in gRPC services that handle the plumbing
 most applications end up building anyway. If you need login and access control, file
 storage, asset pipelines, realtime coordination, multi-tenancy, notifications,
@@ -34,6 +34,26 @@ docs rather than this page.
 The native control plane runs on its own listener, separate from the public
 `DataBroker` listener your app clients talk to. Treat it as internal: bind it to a
 private network or put it behind a trusted gateway.
+
+**Address:** the control-plane listener is `UDB_AUTH_GRPC_ADDR`, which defaults to
+**loopback `127.0.0.1:50061`** (the public data port **+10**); the WebRTC peer
+plane is `127.0.0.1:50071` (+20). Dial native services at the auth address, not
+the data port — calling a native RPC at `:50051` returns `UNIMPLEMENTED`, and
+reaching a loopback `:50061` from another host returns `ECONNREFUSED` (expose it
+with `UDB_AUTH_GRPC_ADDR=0.0.0.0:50061` on a trusted interface).
+
+**Authorization is by token scope, not by data policy.** Every native RPC declares
+an `endpoint_security` requirement — a bearer (or scoped API key / mTLS where the
+RPC opts in) whose `scopes` contain the method's scope (`udb:<service>:<method>`,
+e.g. `udb:vault:put-secret`) or a broad admin scope (`udb:*`, `udb:admin`). This
+is a **different** gate than the data-plane Casbin `policy_rules` that authorize
+`DataBroker` CRUD: a Casbin policy grants nothing to a native RPC, and a token
+scope authorizes nothing on the data plane. The authoritative per-RPC scope map is
+`docs/generated/authn-authz-rpc-inventory.md`. A `SERVICE_ACCOUNT` caller can only
+hold scopes present in its `ServiceAccountGrant`. Some native services also
+degrade to `FAILED_PRECONDITION "disabled"` when their backend is unconfigured
+(Vault unseal, Redis, Kafka, object store, metering ledger) — a capability gap,
+not an authorization failure.
 
 ## Client layers
 

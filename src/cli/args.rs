@@ -448,6 +448,25 @@ pub(crate) enum AuthzCommand {
         persist: bool,
         policy_version_id: String,
     },
+    /// `udb authz seed --tenant <uuid> [--role <code>] [--project <id>]
+    ///   [--entity <fqn> …] [--action <Select|Upsert|…> …] [--dsn <dsn>]
+    ///   [--emit <path>]`
+    ///
+    /// Offline (Postgres-direct) seed of the STANDARD data-plane authorization
+    /// for a new project: one role-gated `ALLOW` policy per (entity, action) into
+    /// `udb_authz.policy_rules`, using the real Casbin action tokens the broker
+    /// submits (`Select`/`Upsert`/… — never a `data.*` alias) and the caller's
+    /// canonical tenant UUID. Idempotent + atomic. Bind users AND service accounts
+    /// to `--role` (`udb auth role bind`) and one policy set authorizes both.
+    Seed {
+        tenant: String,
+        role: String,
+        project: String,
+        entities: Vec<String>,
+        actions: Vec<String>,
+        dsn: String,
+        emit: String,
+    },
 }
 
 /// `udb compliance …` subcommands. Currently a single verb — `evidence` —
@@ -779,6 +798,13 @@ fn parse_authz_subcommand(args: &[String]) -> Option<(AuthzCommand, usize)> {
     let flag_value = |flag: &str| -> Option<String> {
         args.windows(2).find(|w| w[0] == flag).map(|w| w[1].clone())
     };
+    // Collect EVERY value for a repeated flag (e.g. multiple `--entity`/`--action`).
+    let flag_values = |flag: &str| -> Vec<String> {
+        args.windows(2)
+            .filter(|w| w[0] == flag)
+            .map(|w| w[1].clone())
+            .collect()
+    };
     let command = match args.get(1).map(|value| value.as_str()) {
         Some("simulate") | Some("sim") => AuthzCommand::Simulate {
             bundle: flag_value("--bundle").unwrap_or_default(),
@@ -787,6 +813,15 @@ fn parse_authz_subcommand(args: &[String]) -> Option<(AuthzCommand, usize)> {
             project: flag_value("--project").unwrap_or_default(),
             persist: has_flag("--persist"),
             policy_version_id: flag_value("--policy-version").unwrap_or_default(),
+        },
+        Some("seed") => AuthzCommand::Seed {
+            tenant: flag_value("--tenant").unwrap_or_default(),
+            role: flag_value("--role").unwrap_or_default(),
+            project: flag_value("--project").unwrap_or_default(),
+            entities: flag_values("--entity"),
+            actions: flag_values("--action"),
+            dsn: flag_value("--dsn").unwrap_or_default(),
+            emit: flag_value("--emit").unwrap_or_default(),
         },
         _ => return None,
     };
@@ -878,6 +913,8 @@ const VALUE_FLAGS: &[&str] = &[
     "--bundle",
     "--draft",
     "--policy-version",
+    "--emit",
+    "--dsn",
     "--since",
     "--until",
     "--bucket",

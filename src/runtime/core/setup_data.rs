@@ -1240,13 +1240,21 @@ impl DataBrokerRuntime {
             },
         };
         let write_receipt_json = write_receipt_json_or_status(&receipt)?;
+        // The resource_uri names the row this upsert TOUCHED. A database-assigned
+        // primary key (BIGSERIAL/SERIAL) cannot be carried on the request record —
+        // it exists only after the write — so when the caller asked for the row
+        // back, resolve identity from the RETURNED row; otherwise fall back to the
+        // request record. The caller's conflict_fields declare the identity when
+        // the id/*_id heuristic alone would be ambiguous (≥2 *_id columns).
+        let resource_identity_source = upsert_resource_identity_source(&record, &record_json);
         let resource_uri = mutation_response_resource_uri_or_fallback(
             &context,
             &request.message_type,
             table,
-            &record,
+            &resource_identity_source,
             &plan.resource_uri,
             dedup_ctx.is_some(),
+            &request.conflict_fields,
         )?;
         let response = MutationResponse {
             mutation_id: Uuid::new_v4().to_string(),
@@ -1950,6 +1958,7 @@ impl DataBrokerRuntime {
             &filter,
             &plan.resource_uri,
             dedup_ctx.is_some(),
+            &[],
         )?;
         let response = MutationResponse {
             mutation_id: Uuid::new_v4().to_string(),
@@ -2433,6 +2442,7 @@ impl DataBrokerRuntime {
             &filter,
             &plan_resource_uri,
             dedup_ctx.is_some(),
+            &[],
         )?;
         let response = MutationResponse {
             mutation_id: Uuid::new_v4().to_string(),
@@ -5002,15 +5012,43 @@ fn write_receipt_json_or_status(
     })
 }
 
+/// Choose the identity source for an upsert's response `resource_uri`. Prefer the
+/// row the database returned — its assigned serial/default primary key is present
+/// there — over the request record, which for a database-assigned key cannot name
+/// the row. Falls back to the request record when no row was returned
+/// (`return_record` unset) or the returned bytes are not a JSON object.
+fn upsert_resource_identity_source(
+    request_record: &JsonValue,
+    returned_record_json: &[u8],
+) -> JsonValue {
+    if !returned_record_json.is_empty()
+        && let Ok(returned) = serde_json::from_slice::<JsonValue>(returned_record_json)
+        && returned.is_object()
+    {
+        return returned;
+    }
+    request_record.clone()
+}
+
 fn mutation_response_resource_uri(
     context: &RequestContext,
     message_type: &str,
     table: &ManifestTable,
     identity_source: &JsonValue,
 ) -> Result<String, tonic::Status> {
+    mutation_response_resource_uri_with_conflict(context, message_type, table, identity_source, &[])
+}
+
+fn mutation_response_resource_uri_with_conflict(
+    context: &RequestContext,
+    message_type: &str,
+    table: &ManifestTable,
+    identity_source: &JsonValue,
+    conflict_fields: &[String],
+) -> Result<String, tonic::Status> {
     let tenant = mutation_resource_uri_token("tenant_id", &context.tenant_id)?;
     let message = mutation_resource_uri_token("message_type", message_type)?;
-    let resource_id = mutation_resource_id_from_json(table, identity_source)?;
+    let resource_id = mutation_resource_id_from_json(table, identity_source, conflict_fields)?;
     Ok(format!("udb://{tenant}/{message}/{resource_id}"))
 }
 
@@ -5021,8 +5059,15 @@ fn mutation_response_resource_uri_or_fallback(
     identity_source: &JsonValue,
     fallback_resource_uri: &str,
     require_data_plane_uri: bool,
+    conflict_fields: &[String],
 ) -> Result<String, tonic::Status> {
-    match mutation_response_resource_uri(context, message_type, table, identity_source) {
+    match mutation_response_resource_uri_with_conflict(
+        context,
+        message_type,
+        table,
+        identity_source,
+        conflict_fields,
+    ) {
         Ok(uri) => Ok(uri),
         Err(err) if require_data_plane_uri => Err(err),
         Err(_) => Ok(fallback_resource_uri.to_string()),
@@ -5054,10 +5099,35 @@ fn mutation_resource_uri_token(label: &str, value: &str) -> Result<String, tonic
 fn mutation_resource_id_from_json(
     table: &ManifestTable,
     identity_source: &JsonValue,
+    conflict_fields: &[String],
 ) -> Result<String, tonic::Status> {
+    // 1) The primary key of the identity source. On the upsert response path the
+    //    source is the RETURNED row, so a database-assigned serial/default key is
+    //    present here even though the request record could not carry it.
     for primary_key in &table.primary_key {
         if let Some(value) = manifest_json_value(table, identity_source, primary_key) {
             return mutation_resource_id_value("primary key", value);
+        }
+    }
+
+    // 2) The caller's declared conflict target IS the identity it asserts for the
+    //    row. Prefer it over the id/*_id heuristic: an entity with a serial PK the
+    //    client cannot pre-name AND two or more *_id columns is otherwise
+    //    un-nameable and so unwritable, because the heuristic below fails closed.
+    //    A conflict field that is absent or is not a scalar equality is skipped,
+    //    so resolution falls through instead of failing.
+    for field in conflict_fields {
+        let name = field.to_ascii_lowercase();
+        if name == "tenant_id" || name == "project_id" {
+            continue;
+        }
+        let Some(value) = manifest_json_value(table, identity_source, field) else {
+            continue;
+        };
+        let token = mutation_resource_id_scalar(value)
+            .or_else(|| mutation_resource_id_eq_value(value).and_then(mutation_resource_id_scalar));
+        if let Some(token) = token {
+            return mutation_resource_uri_token(field, &token);
         }
     }
 
@@ -5070,6 +5140,8 @@ fn mutation_resource_id_from_json(
     let mut fields = object.iter().collect::<Vec<_>>();
     fields.sort_by(|left, right| left.0.cmp(right.0));
 
+    // 3) A single id/*_id column names the row. Two or more are ambiguous and are
+    //    named in the error so the un-writable entity is diagnosable.
     if let Some((field, value)) = mutation_identity_field_from_json(identity_source)? {
         return mutation_resource_id_value(field, value);
     }
@@ -5133,30 +5205,42 @@ fn manifest_json_value<'a>(
 fn mutation_identity_field_from_json<'a>(
     identity_source: &'a JsonValue,
 ) -> Result<Option<(&'a str, &'a JsonValue)>, tonic::Status> {
-    let mut found = None;
-    mutation_collect_identity_field(identity_source, &mut found)?;
-    Ok(found)
+    let mut candidates: Vec<(&'a str, &'a JsonValue)> = Vec::new();
+    mutation_collect_identity_field(identity_source, &mut candidates);
+    match candidates.as_slice() {
+        [] => Ok(None),
+        [only] => Ok(Some(*only)),
+        _ => {
+            let mut names: Vec<&str> = candidates.iter().map(|(field, _)| *field).collect();
+            names.sort_unstable();
+            names.dedup();
+            Err(setup_data_internal_status(
+                "mutation_resource_uri_identity_ambiguous",
+                format!(
+                    "mutation response resource_uri identity field is ambiguous: multiple \
+                     id/*_id columns match ({}); declare the identity via conflict_fields, \
+                     set return_record so the written row's primary key names it, or give \
+                     the entity a single-column primary key",
+                    names.join(", ")
+                ),
+            ))
+        }
+    }
 }
 
 fn mutation_collect_identity_field<'a>(
     identity_source: &'a JsonValue,
-    found: &mut Option<(&'a str, &'a JsonValue)>,
-) -> Result<(), tonic::Status> {
+    candidates: &mut Vec<(&'a str, &'a JsonValue)>,
+) {
     let Some(object) = identity_source.as_object() else {
-        return Ok(());
+        return;
     };
     let mut fields = object.iter().collect::<Vec<_>>();
     fields.sort_by(|left, right| left.0.cmp(right.0));
     for (field, value) in fields {
         let name = field.to_ascii_lowercase();
         if (name == "id" || name.ends_with("_id")) && name != "tenant_id" && name != "project_id" {
-            if found.is_some() {
-                return Err(setup_data_internal_status(
-                    "mutation_resource_uri_identity_ambiguous",
-                    "mutation response resource_uri identity field is ambiguous",
-                ));
-            }
-            *found = Some((field.as_str(), value));
+            candidates.push((field.as_str(), value));
         }
     }
     for key in ["$and", "and"] {
@@ -5164,10 +5248,9 @@ fn mutation_collect_identity_field<'a>(
             continue;
         };
         for item in items {
-            mutation_collect_identity_field(item, found)?;
+            mutation_collect_identity_field(item, candidates);
         }
     }
-    Ok(())
 }
 
 fn mutation_resource_id_value(label: &str, value: &JsonValue) -> Result<String, tonic::Status> {
@@ -6660,10 +6743,11 @@ mod setup_data_consistency_tests {
         idempotency_response_persist_sql, merge_runtime_backend_instances,
         mutation_response_from_idempotency_json, mutation_response_from_idempotency_json_for_claim,
         mutation_response_idempotency_json, mutation_response_resource_uri,
-        mutation_response_resource_uri_or_fallback, pg_outbox_receipt_store_mismatch,
-        pk_equality_values_from_filter, pk_tuple_canonical, pk_value_token,
-        projection_system_store_opt_in_value, returned_record_json_or_status, row_key_text,
-        row_revision_key, row_revision_precondition_failed_status, validate_deployment_tier_floor,
+        mutation_response_resource_uri_or_fallback, mutation_response_resource_uri_with_conflict,
+        pg_outbox_receipt_store_mismatch, pk_equality_values_from_filter, pk_tuple_canonical,
+        pk_value_token, projection_system_store_opt_in_value, returned_record_json_or_status,
+        row_key_text, row_revision_key, row_revision_precondition_failed_status,
+        upsert_resource_identity_source, validate_deployment_tier_floor,
         write_receipt_json_or_status,
     };
     use crate::backend::ControlPlaneHaLevel;
@@ -7184,6 +7268,7 @@ mod setup_data_consistency_tests {
             &bulk_filter,
             "sql://billing/invoices",
             false,
+            &[],
         )
         .expect("keyless bulk delete may keep planner resource URI");
         assert_eq!(keyless, "sql://billing/invoices");
@@ -7195,10 +7280,147 @@ mod setup_data_consistency_tests {
             &bulk_filter,
             "sql://billing/invoices",
             true,
+            &[],
         )
         .expect_err("keyed first-writer summary must require data-plane resource URI");
         assert_eq!(keyed.code(), tonic::Code::Internal);
         assert!(keyed.message().contains("mutation response resource_uri"));
+    }
+
+    // A serial-PK entity with two *_id foreign keys: the request record cannot
+    // carry the database-assigned id, and two *_id columns make the id/*_id
+    // heuristic ambiguous. Such a table is otherwise un-writable via a keyed
+    // (idempotent) upsert.
+    fn serial_pk_two_fk_table() -> crate::generation::ManifestTable {
+        crate::generation::ManifestTable {
+            message_name: "TripTrackingSnapshot".to_string(),
+            primary_key: vec!["id".to_string()],
+            columns: vec![
+                crate::generation::ManifestColumn {
+                    field_name: "id".to_string(),
+                    column_name: "id".to_string(),
+                    is_primary: true,
+                    ..crate::generation::ManifestColumn::default()
+                },
+                crate::generation::ManifestColumn {
+                    field_name: "trip_id".to_string(),
+                    column_name: "trip_id".to_string(),
+                    ..crate::generation::ManifestColumn::default()
+                },
+                crate::generation::ManifestColumn {
+                    field_name: "vehicle_id".to_string(),
+                    column_name: "vehicle_id".to_string(),
+                    ..crate::generation::ManifestColumn::default()
+                },
+                crate::generation::ManifestColumn {
+                    field_name: "tenant_id".to_string(),
+                    column_name: "tenant_id".to_string(),
+                    is_tenant_column: true,
+                    ..crate::generation::ManifestColumn::default()
+                },
+            ],
+            ..crate::generation::ManifestTable::default()
+        }
+    }
+
+    #[test]
+    fn mutation_resource_uri_disambiguates_via_conflict_fields() {
+        let table = serial_pk_two_fk_table();
+        let context = RequestContext {
+            tenant_id: "t1".to_string(),
+            ..RequestContext::default()
+        };
+        // The request record: no id (serial), two *_id columns.
+        let source = serde_json::json!({"trip_id": "trip-9", "vehicle_id": "veh-3"});
+
+        // Without a declared identity the two *_id columns are ambiguous, and the
+        // error must NAME both candidates so the un-writable entity is diagnosable.
+        let ambiguous = mutation_response_resource_uri_with_conflict(
+            &context,
+            "TripTrackingSnapshot",
+            &table,
+            &source,
+            &[],
+        )
+        .expect_err("two *_id columns must fail closed without a declared identity");
+        assert_eq!(ambiguous.code(), tonic::Code::Internal);
+        assert!(
+            ambiguous.message().contains("trip_id"),
+            "{}",
+            ambiguous.message()
+        );
+        assert!(
+            ambiguous.message().contains("vehicle_id"),
+            "{}",
+            ambiguous.message()
+        );
+
+        // The caller's conflict target IS the identity it asserts: the row becomes
+        // nameable and the write can proceed.
+        let uri = mutation_response_resource_uri_with_conflict(
+            &context,
+            "TripTrackingSnapshot",
+            &table,
+            &source,
+            &["trip_id".to_string()],
+        )
+        .expect("a declared conflict target resolves the identity");
+        assert_eq!(uri, "udb://t1/TripTrackingSnapshot/trip-9");
+    }
+
+    #[test]
+    fn mutation_resource_uri_prefers_assigned_primary_key_when_returned() {
+        let table = serial_pk_two_fk_table();
+        let context = RequestContext {
+            tenant_id: "t1".to_string(),
+            ..RequestContext::default()
+        };
+        // The request record cannot carry the database-assigned id → ambiguous.
+        let request_record = serde_json::json!({"trip_id": "trip-9", "vehicle_id": "veh-3"});
+        mutation_response_resource_uri_with_conflict(
+            &context,
+            "TripTrackingSnapshot",
+            &table,
+            &request_record,
+            &[],
+        )
+        .expect_err("the request record lacks the assigned id and is ambiguous");
+
+        // The RETURNED row carries the assigned serial primary key, which names the
+        // row unambiguously — this is what the upsert path uses when return_record
+        // produced a row.
+        let returned_row =
+            serde_json::json!({"id": 4242, "trip_id": "trip-9", "vehicle_id": "veh-3"});
+        let uri = mutation_response_resource_uri_with_conflict(
+            &context,
+            "TripTrackingSnapshot",
+            &table,
+            &returned_row,
+            &[],
+        )
+        .expect("the returned row's assigned primary key names the row");
+        assert_eq!(uri, "udb://t1/TripTrackingSnapshot/4242");
+    }
+
+    #[test]
+    fn upsert_resource_identity_source_prefers_returned_row() {
+        let request = serde_json::json!({"trip_id": "trip-9", "vehicle_id": "veh-3"});
+
+        // No returned row (return_record unset) → the request record is the source.
+        assert_eq!(upsert_resource_identity_source(&request, &[]), request);
+        // Non-JSON returned bytes → fall back gracefully to the request record.
+        assert_eq!(
+            upsert_resource_identity_source(&request, b"not json"),
+            request
+        );
+        // A returned row is preferred: it carries the database-assigned id.
+        let returned = serde_json::json!({"id": 4242, "trip_id": "trip-9", "vehicle_id": "veh-3"});
+        let source = upsert_resource_identity_source(&request, returned.to_string().as_bytes());
+        assert_eq!(source, returned);
+        assert_eq!(
+            source.get("id").and_then(|value| value.as_i64()),
+            Some(4242)
+        );
     }
 
     // G-2: conditional delete must refuse to run unless every PK column is pinned

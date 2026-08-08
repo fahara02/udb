@@ -125,6 +125,113 @@ async fn run_authz_command_async(command: AuthzCommand) -> Result<serde_json::Va
 
             Ok(render_simulation(&response))
         }
+        AuthzCommand::Seed {
+            tenant,
+            role,
+            project,
+            entities,
+            actions,
+            dsn,
+            emit,
+        } => {
+            let tenant = first_non_empty(&tenant, "UDB_TENANT_ID");
+            if tenant.trim().is_empty() {
+                return Err(
+                    "provide --tenant <canonical tenant UUID> — the value `udb auth bootstrap \
+                     user` printed (NOT the human code like 'acme'); the data plane matches the \
+                     tenant UUID"
+                        .to_string(),
+                );
+            }
+            let tenant = tenant.trim().to_string();
+            let role = if role.trim().is_empty() {
+                "app_rw".to_string()
+            } else {
+                role.trim().to_string()
+            };
+            let project = first_non_empty(&project, "UDB_PROJECT_ID");
+            let actions: Vec<String> = if actions.is_empty() {
+                // Default: read + the write verbs (append `BatchSelect`/`BatchUpsert`
+                // yourself if you stream). These are the LITERAL RPC method names the
+                // engine matches — a `data.*` alias would never match.
+                ["Select", "Upsert", "Delete", "Update", "BulkCas"]
+                    .iter()
+                    .map(|s| s.to_string())
+                    .collect()
+            } else {
+                actions
+            };
+            for action in &actions {
+                if !udb::runtime::service::DATA_PLANE_ACTION_TOKENS.contains(&action.as_str()) {
+                    return Err(format!(
+                        "invalid --action '{action}': the data plane matches the RPC method name — \
+                         use one of {:?} (NOT a `data.*` alias)",
+                        udb::runtime::service::DATA_PLANE_ACTION_TOKENS
+                    ));
+                }
+            }
+            // No `--entity` → one wildcard-object policy per action (the whole
+            // catalog for this role); `--entity <fqn>` (repeatable) narrows it.
+            let objects: Vec<String> = if entities.is_empty() {
+                vec!["*".to_string()]
+            } else {
+                entities.iter().map(|e| e.trim().to_string()).collect()
+            };
+            let dsn = if dsn.trim().is_empty() {
+                env::var("UDB_PG_DSN")
+                    .or_else(|_| env::var("DATABASE_URL"))
+                    .map_err(|_| {
+                        "set UDB_PG_DSN (or DATABASE_URL), or pass --dsn <postgres-dsn>".to_string()
+                    })?
+            } else {
+                dsn.trim().to_string()
+            };
+
+            let inserted = udb::runtime::service::seed_project_authz_policies_offline(
+                &dsn, &tenant, &project, &role, &actions, &objects,
+            )
+            .await
+            .map_err(|err| {
+                format!("authz seed failed (is the authz schema bootstrapped?): {err}")
+            })?;
+
+            // Optionally emit the equivalent version-controllable offline policy
+            // file (the `udb policy-seed` / lint shape) so the seed is reproducible.
+            if !emit.trim().is_empty() {
+                let mut rows: Vec<serde_json::Value> = Vec::new();
+                for object in &objects {
+                    for action in &actions {
+                        rows.push(serde_json::json!({
+                            "effect": "allow",
+                            "subject": format!("role:{role}"),
+                            "tenant": tenant.as_str(),
+                            "resource": object.as_str(),
+                            "action": action.as_str(),
+                        }));
+                    }
+                }
+                std::fs::write(
+                    emit.trim(),
+                    serde_json::to_string_pretty(&rows).unwrap_or_default(),
+                )
+                .map_err(|err| format!("failed to write --emit file '{}': {err}", emit.trim()))?;
+            }
+
+            let next = format!(
+                "bind principals to this role so the policy applies — \
+                 `udb auth role bind --principal <user-or-service-id> --role {role} --tenant {tenant}` \
+                 (works for users AND service accounts). Callers must also send a non-empty purpose."
+            );
+            Ok(serde_json::json!({
+                "seeded": inserted,
+                "tenant_id": tenant,
+                "role": role,
+                "project_id": project,
+                "actions": actions,
+                "objects": objects,
+                "next": next,
+            }))
+        }
     }
 }
 

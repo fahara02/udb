@@ -5,6 +5,35 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.5.3] - 2026-08-09
+
+Patch release making insert-via-Upsert reliable for database-generated keys and
+making default-deny authorization substantially easier to bootstrap and debug.
+No wire-protocol change; `^0.5.2` consumers should upgrade.
+
+### Fixed
+- **Upsert identity with generated serial primary keys.** When a record omitted
+  its database-assigned primary key and contained two or more `*_id` fields, UDB
+  could not name the returned row reliably. The planner now distinguishes the
+  generated key from usable identity fields, honors explicit `conflict_fields`
+  for disambiguation, and returns a named diagnostic when identity remains
+  ambiguous instead of silently choosing the wrong field.
+- **Conflict-field diagnostics.** Invalid `conflict_fields` errors now identify
+  the accepted fields and the insert-via-Upsert shape needed for a generated
+  primary key.
+
+### Added
+- **`udb authz seed`.** A straightforward offline Casbin policy seeder writes
+  the enforced `udb_authz.policy_rules` rows atomically and idempotently, rejects
+  obsolete `data.*` action aliases, and can emit a reproducible policy seed.
+- **Actionable authorization denials.** Default-deny and no-matching-policy
+  errors now name the three common mismatches—RPC action token, canonical tenant
+  UUID, and proto message type—and point operators to `udb authz seed`.
+- **UDB agent skills and operator guidance.** The Claude/OpenAI/Ollama skill
+  package now covers service authentication, the three authorization surfaces,
+  native-service routing, RPC/security inventories, and the UDB contributor
+  codebase map, with deterministic wrapper/reference drift checks.
+
 ## [0.5.2] - 2026-08-07
 
 Patch release closing a live-reported audit-integrity and write-path correctness

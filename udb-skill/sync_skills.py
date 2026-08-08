@@ -12,9 +12,8 @@
 #     python sync_skills.py            # rewrite the wrappers
 #     python sync_skills.py --check    # exit 1 if any wrapper is out of sync (CI)
 #
-# NOTE: scoped to `using-udb`. The `udb-coding` OpenAI/Ollama wrappers inline
-# extra companion files (backends, rust-stack); regenerate those with their own
-# flow rather than this script.
+# NOTE: scoped to `using-udb`. Regenerate the `udb-coding` wrappers with
+# `sync_udb_coding.py`, which also embeds its curated companion references.
 
 from __future__ import annotations
 
