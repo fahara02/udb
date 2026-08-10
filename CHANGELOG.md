@@ -5,6 +5,37 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.5.4] - 2026-08-11
+
+Patch release fixing four native-service reads that failed against real
+multi-project traffic, all surfaced by the post-release SDK benchmark. No
+wire-protocol change; `^0.5.3` consumers should upgrade.
+
+### Fixed
+- **Native reads no longer inherit the request-context project as a filter.**
+  `AssetService.GetAsset`/`ListAssets` and `NotificationService.GetNotification`
+  built their read context with a helper that falls back to the
+  `x-udb-project-id` header, which then reached the query as an extra predicate.
+  Against a UUID-typed `project_id` a human project code (for example the
+  default project) failed the bind outright with `INVALID_ARGUMENT`
+  ("uuid params must be UUID strings"); where the column is textual it silently
+  filtered out rows the caller owns, returning `NOT_FOUND` for a real record.
+  These reads are now scoped by tenant only, matching `StorageService`. Writes
+  are unaffected — they persist the project supplied on the request.
+- **`AuthnService.FinishWebAuthnAuthentication` no longer fails INTERNAL.** The
+  post-assertion passkey update (sign count, `last_used_at`) went through the
+  generic native-store seam with an empty tenant, which that seam refuses
+  fail-closed, so a successful assertion still surfaced
+  "update WebAuthn passkey failed". The authenticated user's tenant is now
+  threaded into the update.
+
+### Changed
+- The post-release SDK live benchmark harness seeds a disposable tenant for the
+  privileged `AdminPurgeTenant`, a dedicated grantless service account for
+  `TransferServiceAccountGrant`, and register-consistent descriptors for
+  `FinalizeUpload`; the results collector no longer aborts on the Go harness's
+  `NO-BODY` status. These are test-harness and CI changes only.
+
 ## [0.5.3] - 2026-08-09
 
 Patch release making insert-via-Upsert reliable for database-generated keys and
