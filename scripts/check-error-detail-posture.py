@@ -6810,7 +6810,7 @@ TOKEN_CHECKS: tuple[TokenCheck, ...] = (
             '"restore_tenant"',
             '"restore_target_not_fresh"',
             '"backup_run_missing_object_prefix"',
-            "return Err(restore_target_not_fresh_status(existing_rows));",
+            "return Err(restore_target_not_fresh_status_in(existing_rows, occupied));",
             "return Err(backup_run_missing_object_prefix_status());",
             "restore_over_existing_tenant_is_rejected",
             "backup_run_missing_object_prefix_carries_policy_detail",
