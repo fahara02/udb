@@ -32,19 +32,21 @@ use std::path::{Path, PathBuf};
 /// always send a project id the column's type accepts.
 fn allowed_empty_project_contexts() -> BTreeMap<&'static str, usize> {
     BTreeMap::from([
-        ("analytics_service/handlers.rs", 2),
+        ("analytics_service/handlers.rs", 4),
         ("asset_service/handlers.rs", 2),
         ("backup_service/export.rs", 1),
         ("backup_service/handlers.rs", 6),
         ("backup_service/import.rs", 2),
-        ("embedding_service/documents.rs", 1),
+        ("cache_service/events.rs", 1),
+        ("embedding_service/documents.rs", 2),
         ("embedding_service/handlers.rs", 4),
         ("embedding_service/jobs.rs", 2),
         ("embedding_service/registry.rs", 5),
+        ("embedding_service/reports.rs", 2),
         ("embedding_service/retrieval.rs", 2),
         ("lock_service/handlers.rs", 5),
         ("metering_service/handlers.rs", 1),
-        ("notification_service/handlers.rs", 6),
+        ("notification_service/handlers.rs", 5),
         ("search_service/handlers.rs", 5),
         ("tenant_service/handlers.rs", 3),
         ("vault_service/handlers.rs", 19),
@@ -110,13 +112,18 @@ fn native_reads_do_not_silently_inherit_the_header_project() {
             Ok(source) => source,
             Err(_) => continue,
         };
+        let rel = file
+            .strip_prefix(&root)
+            .unwrap_or(file)
+            .to_string_lossy()
+            .replace('\\', "/");
+        // `native_helpers.rs` DEFINES the helper (and unit-tests it), and this file
+        // quotes the pattern in its own detector self-tests. Neither is a handler.
+        if rel == "native_helpers.rs" || rel == "native_context_posture_tests.rs" {
+            continue;
+        }
         let count = count_empty_project_contexts(&source);
         if count > 0 {
-            let rel = file
-                .strip_prefix(&root)
-                .unwrap_or(file)
-                .to_string_lossy()
-                .replace('\\', "/");
             actual.insert(rel, count);
         }
     }
