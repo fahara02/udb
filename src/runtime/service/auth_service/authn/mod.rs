@@ -3142,8 +3142,13 @@ impl AuthnServiceImpl {
     }
 
     #[cfg(feature = "webauthn")]
+    /// `tenant_id` is REQUIRED: this update runs over the generic native-store seam,
+    /// whose fail-closed tenant gate rejects an empty tenant with
+    /// `tenant_scope_required`. Passing an empty context made every
+    /// FinishWebAuthnAuthentication fail INTERNAL once the sign-count write landed.
     async fn update_webauthn_passkey_after_auth(
         &self,
+        tenant_id: &str,
         credential_id: &str,
         passkey_json: String,
     ) -> Result<(), Status> {
@@ -3154,7 +3159,7 @@ impl AuthnServiceImpl {
                     format!("decode WebAuthn passkey JSON failed: {err}"),
                 )
             })?;
-            let context = self.authn_context("", "");
+            let context = self.authn_context(tenant_id, "");
             let mut assignments = std::collections::BTreeMap::new();
             assignments.insert(
                 "passkey_json".to_string(),
@@ -3659,7 +3664,7 @@ impl AuthnServiceImpl {
                 format!("serialize WebAuthn passkey failed: {err}"),
             )
         })?;
-        self.update_webauthn_passkey_after_auth(&credential_id, passkey_json)
+        self.update_webauthn_passkey_after_auth(&user.tenant_id, &credential_id, passkey_json)
             .await?;
         self.consume_webauthn_challenge(&req.challenge_id).await?;
         let now = now_unix();

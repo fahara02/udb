@@ -16,7 +16,7 @@ use crate::runtime::channels::OperationChannel;
 use crate::runtime::service::native_helpers::{
     admit_on as native_admit_on, emit_payload_event, native_next_page_token_for_total,
     native_offset_page_window, native_service_context, non_empty_json, parse_uuid,
-    validate_request_scope, validate_request_tenant,
+    tenant_only_native_service_context, validate_request_scope, validate_request_tenant,
 };
 
 use super::AssetServiceImpl;
@@ -886,7 +886,12 @@ pub(crate) async fn list_assets(
         .map_err(|err| {
             asset_internal_status("list_assets", format!("count assets failed: {err}"))
         })?;
-    let context = native_service_context(&metadata, &req.tenant_id, "");
+    // Assets carry a UUID-typed nullable project_id, and this READ injects the
+    // context project as a predicate. native_service_context falls back to the
+    // x-udb-project-id header, so a human project code ("default") reached a UUID
+    // bind and every read failed INVALID_ARGUMENT "uuid params must be UUID
+    // strings". Scope the read by tenant only, as storage_service already does.
+    let context = tenant_only_native_service_context(&metadata, &req.tenant_id);
     let rows = svc
         .require_runtime()?
         .native_entity_read_for_service(
@@ -931,7 +936,12 @@ pub(crate) async fn get_asset(
     let _admit = svc.admit_read(&req.tenant_id).await?;
     let tenant_id = parse_uuid("tenant_id", &req.tenant_id)?;
     let asset_id = parse_uuid("asset_id", &req.asset_id)?;
-    let context = native_service_context(&metadata, &req.tenant_id, "");
+    // Assets carry a UUID-typed nullable project_id, and this READ injects the
+    // context project as a predicate. native_service_context falls back to the
+    // x-udb-project-id header, so a human project code ("default") reached a UUID
+    // bind and every read failed INVALID_ARGUMENT "uuid params must be UUID
+    // strings". Scope the read by tenant only, as storage_service already does.
+    let context = tenant_only_native_service_context(&metadata, &req.tenant_id);
     let rows = svc
         .require_runtime()?
         .native_entity_read_for_service(
