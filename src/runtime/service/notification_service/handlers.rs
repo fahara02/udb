@@ -16,8 +16,8 @@ use crate::runtime::channels::OperationChannel;
 
 use super::super::native_helpers::{
     admit_on as native_admit_on, metadata_tenant_id, native_page_response, native_page_window,
-    native_service_context, parse_uuid, tenant_only_native_service_context,
-    validate_request_scope, validate_request_tenant,
+    native_service_context, parse_uuid, tenant_only_native_service_context, validate_request_scope,
+    validate_request_tenant,
 };
 use super::NotificationServiceImpl;
 use super::config::{
