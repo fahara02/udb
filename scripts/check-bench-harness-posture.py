@@ -460,7 +460,7 @@ CHECKS: tuple[SourceCheck, ...] = (
             '| [ ] | CreateTransitKey | MUTATION | CreateTransitKeyRequest | `{ "tenant_id": "<seed:tenant_id>", "key_name": "<seed:vault_create_key_name>", "algorithm": "aes256-gcm-siv" }` |',
             '| [ ] | Decrypt | READ_ONLY | DecryptRequest | `{ "tenant_id": "<seed:tenant_id>", "key_name": "<seed:vault_key_name>", "ciphertext": "<seed:vault_ciphertext>" }` |',
             '| [ ] | DeleteSecret | MUTATION | DeleteSecretRequest | `{ "tenant_id": "<seed:tenant_id>", "secret_path": "<seed:vault_delete_secret_path>" }` |',
-            '| [ ] | DestroySecret | DESTRUCTIVE | DestroySecretRequest | `{ "tenant_id": "<seed:tenant_id>", "secret_path": "<seed:vault_destroy_secret_path>", "confirmation_token": "destroy" }` |',
+            '| [ ] | DestroySecret | DESTRUCTIVE | DestroySecretRequest | `{ "tenant_id": "<seed:tenant_id>", "secret_path": "<seed:vault_destroy_secret_path>", "confirmation_token": "<seed:vault_destroy_secret_path>" }` |',
             '| [ ] | Encrypt | MUTATION | EncryptRequest | `{ "tenant_id": "<seed:tenant_id>", "key_name": "<seed:vault_key_name>", "plaintext": "perf" }` |',
             '| [ ] | GenerateDatabaseCredentials | MUTATION | GenerateDatabaseCredentialsRequest | `{ "tenant_id": "<seed:tenant_id>", "role_name": "<seed:vault_db_role>", "ttl_seconds": 900 }` |',
             '| [ ] | GetSecret | READ_ONLY | GetSecretRequest | `{ "tenant_id": "<seed:tenant_id>", "secret_path": "<seed:vault_secret_path>", "version": 0 }` |',

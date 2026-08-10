@@ -565,6 +565,11 @@ function fullSurfaceManifestFixtures(): PerfFixtures {
     device_id: "device-1", dismiss_dlq_id: "dismiss-dlq-1", dlq_id: "dlq-1",
     ds_policy_id: "2", egress_id: "eg-tenant-1-00000000-0000-4000-8000-000000000001", endpoint_id: "endpoint-1", external_identity_id: "external-1",
     fencing_token: "1", finalize_file_id: "finalize-file-1", gov_exp: "1900000000", job_id: "job-1",
+    // Separate disposable targets: AdminPurgeTenant must not point at the caller's
+    // tenant, the grant transfer needs its own source account, and FinalizeUpload must
+    // resend the reference_id established at register_upload.
+    admin_purge_tenant_id: "tenant-admin-purge-1", grant_transfer_from_user_id: "user-grant-from-1",
+    finalize_reference_id: "finalize-ref-1",
     embedding_job_id: "11111111-1111-4111-8111-000000000101",
     embedding_work_item_id: "11111111-1111-4111-8111-000000000102",
     embedding_document_id: "11111111-1111-4111-8111-000000000103",
@@ -1635,7 +1640,9 @@ test("manifest JSON body hydrates VaultService rows with seed refs", () => {
   assert.equal(created?.algorithm, "aes256-gcm-siv");
   assert.equal(decrypt?.ciphertext, "udb-vault:v1:seed");
   assert.equal(deleted?.secret_path, "app/delete");
-  assert.equal(destroyed?.confirmation_token, "destroy");
+  // The irreversible crypto-shred is authorized only when confirmation_token EQUALS
+  // secret_path; a fixed "destroy" literal is rejected INVALID_ARGUMENT.
+  assert.equal(destroyed?.confirmation_token, destroyed?.secret_path);
   assert.equal(encrypted?.plaintext, "perf");
   assert.equal(dbCreds?.role_name, "sdk-readonly");
   assert.equal(dbCreds?.ttl_seconds, 900);

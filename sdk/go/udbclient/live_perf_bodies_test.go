@@ -56,7 +56,13 @@ func TestLivePerfExplicitBodyCoverage(t *testing.T) {
 	for k, v := range map[string]string{
 		"tenant_id": "tenant-1", "tenant": "tenant-1", "project": "project-1", "project_id": "project-1",
 		"tenant_code": "tenant-code-1", "purge_tenant_id": "tenant-purge-1",
-		"message_type": liveMessageType, "record_id": "record-1", "bucket": "bucket-1", "object_key": "object-1",
+		// Separate disposable targets: the privileged AdminPurgeTenant must not point at
+		// the caller's tenant, the grant transfer needs its own source/target service
+		// accounts, and FinalizeUpload must resend the reference_id set at register.
+		"admin_purge_tenant_id":       "tenant-admin-purge-1",
+		"grant_transfer_from_user_id": "user-grant-from-1",
+		"finalize_reference_id":       "finalize-ref-1",
+		"message_type":                liveMessageType, "record_id": "record-1", "bucket": "bucket-1", "object_key": "object-1",
 		"document_id": "document-1", "mongo_collection": "collection_1", "node_id": "node-1",
 		"user_id": "user-1", "subject": "user:user-1", "session_id": "session-1", "token": "token-1",
 		"refresh_token": "refresh-1", "csrf_token": "csrf-1", "code": "123456", "role_id": "role-1",
@@ -324,6 +330,7 @@ func TestBuildManifestJSONBodyUsesSharedManifest(t *testing.T) {
 	}
 	fix.set("tenant_code", "tenant-code-1")
 	fix.set("purge_tenant_id", "tenant-purge-1")
+	fix.set("admin_purge_tenant_id", "tenant-admin-purge-1")
 	createTenantIn, _, ok := buildManifestJSONBody("/udb.core.tenant.services.v1.TenantService/CreateTenant", fix)
 	if !ok {
 		t.Fatalf("TenantService CreateTenant manifest JSON body was not hydrated")
@@ -381,12 +388,19 @@ func TestBuildManifestJSONBodyUsesSharedManifest(t *testing.T) {
 	}
 	adminPurgeTenantMsg := adminPurgeTenantIn.ProtoReflect()
 	adminPurgeTenantFields := adminPurgeTenantMsg.Descriptor().Fields()
-	if got := adminPurgeTenantMsg.Get(adminPurgeTenantFields.ByName("target_tenant_id")).String(); got != "tenant-purge-1" {
-		t.Fatalf("tenant admin purge target_tenant_id = %q, want tenant-purge-1", got)
+	// The PRIVILEGED cross-tenant purge must target its OWN disposable tenant, never
+	// `purge_tenant_id` (the caller's own tenant, which the terminal self-PurgeTenant
+	// uses). Since 0.4.32 the tenant-status gate suspends the purged tenant, so
+	// pointing this at the caller kills every later RPC in the run.
+	if got := adminPurgeTenantMsg.Get(adminPurgeTenantFields.ByName("target_tenant_id")).String(); got != "tenant-admin-purge-1" {
+		t.Fatalf("tenant admin purge target_tenant_id = %q, want tenant-admin-purge-1", got)
+	}
+	if got := adminPurgeTenantMsg.Get(adminPurgeTenantFields.ByName("target_tenant_id")).String(); got == "tenant-purge-1" {
+		t.Fatalf("admin purge must NOT target the caller's own purge tenant")
 	}
 	// confirmation_token MUST equal target_tenant_id (fail-closed cross-tenant guard).
-	if got := adminPurgeTenantMsg.Get(adminPurgeTenantFields.ByName("confirmation_token")).String(); got != "tenant-purge-1" {
-		t.Fatalf("tenant admin purge confirmation_token = %q, want tenant-purge-1", got)
+	if got := adminPurgeTenantMsg.Get(adminPurgeTenantFields.ByName("confirmation_token")).String(); got != "tenant-admin-purge-1" {
+		t.Fatalf("tenant admin purge confirmation_token = %q, want tenant-admin-purge-1", got)
 	}
 	// mode must be an explicit non-UNSPECIFIED enum (ADMIN_PURGE_MODE_UNSPECIFIED is rejected).
 	if got := adminPurgeTenantMsg.Get(adminPurgeTenantFields.ByName("mode")).Enum(); got == 0 {
@@ -551,6 +565,9 @@ func TestBuildManifestJSONBodyUsesSharedManifest(t *testing.T) {
 	fix.set("grant_binding_id", "11111111-1111-4111-8111-000000000201")
 	fix.set("grant_create_user_id", "11111111-1111-4111-8111-000000000202")
 	fix.set("grant_transfer_to_user_id", "11111111-1111-4111-8111-000000000203")
+	// The transfer SOURCE is its own service account: the api-key owner's grant
+	// revision moves under the measured api-key RPCs and breaks the expected_revision CAS.
+	fix.set("grant_transfer_from_user_id", "11111111-1111-4111-8111-000000000204")
 	for _, rpc := range []string{
 		"AuthnService/CreateServiceAccountGrant",
 		"AuthnService/GetServiceAccountGrant",
@@ -1796,8 +1813,11 @@ func TestBuildManifestJSONBodyUsesSharedManifest(t *testing.T) {
 	}
 	destroySecretMsg := destroySecretIn.ProtoReflect()
 	destroySecretFields := destroySecretMsg.Descriptor().Fields()
-	if got := destroySecretMsg.Get(destroySecretFields.ByName("confirmation_token")).String(); got != "destroy" {
-		t.Fatalf("vault DestroySecret confirmation_token = %q, want destroy", got)
+	// The irreversible crypto-shred is authorized only when confirmation_token EQUALS
+	// secret_path; a fixed "destroy" literal is rejected INVALID_ARGUMENT.
+	destroySecretPath := destroySecretMsg.Get(destroySecretFields.ByName("secret_path")).String()
+	if got := destroySecretMsg.Get(destroySecretFields.ByName("confirmation_token")).String(); got != destroySecretPath {
+		t.Fatalf("vault DestroySecret confirmation_token = %q, want it to equal secret_path %q", got, destroySecretPath)
 	}
 	createTransitIn, _, ok := buildManifestJSONBody("/udb.core.vault.services.v1.VaultService/CreateTransitKey", fix)
 	if !ok {
