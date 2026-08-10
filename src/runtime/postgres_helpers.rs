@@ -48,14 +48,29 @@ fn postgres_internal_status(
     crate::runtime::executor_utils::internal_status("postgres", operation, message)
 }
 
+/// Bind a JSON value to a SQL integer column.
+///
+/// Accepts a JSON integer, a decimal string, and — critically — a LOSSLESSLY integral
+/// double. protobuf `Struct` has a single numeric kind (double), so a client that sends
+/// a native integer (Go `25`, JS `25`) arrives here as `25.0`. Rejecting that made the
+/// two mutation verbs disagree on the same column: Upsert accepted the native integer
+/// while Update failed `expected integer, got 25.0`, so callers had to remember which
+/// verb needed a decimal string. Strictness is still preserved where it matters — a
+/// fractional or out-of-range double is refused rather than silently truncated, matching
+/// the rule UDB's own generated SDK helpers already apply.
 fn postgres_json_i64(field: &str, value: &JsonValue) -> Result<i64, tonic::Status> {
     value
         .as_i64()
         .or_else(|| value.as_str()?.parse().ok())
+        .or_else(|| {
+            let number = value.as_f64()?;
+            let truncated = number as i64;
+            (truncated as f64 == number).then_some(truncated)
+        })
         .ok_or_else(|| {
             postgres_invalid_field(
                 field,
-                "must be an integer or integer string",
+                "must be an integer, an integer string, or a whole number",
                 format!("expected integer, got {value}"),
             )
         })
@@ -1208,5 +1223,34 @@ mod tests {
             .expect("non-object record must fail");
 
         assert_single_field_violation(&err, "record", "must be a JSON object");
+    }
+
+    /// Regression: Upsert and Update must agree on the SAME column. protobuf `Struct`
+    /// carries every number as a double, so a native client integer reaches the binder
+    /// as `25.0`; Update used to refuse it ("expected integer, got 25.0") while Upsert
+    /// accepted it, which made the correct encoding depend on which verb you called.
+    #[test]
+    fn integer_binding_accepts_a_native_client_integer_from_protobuf_struct() {
+        for value in [json!(25), json!(25.0), json!("25")] {
+            assert_eq!(
+                postgres_json_i64("bed_count", &value).expect("integral value must bind"),
+                25,
+                "value {value} must bind as 25 on every mutation verb"
+            );
+        }
+        assert_eq!(
+            postgres_json_i64("zero", &json!(0.0)).expect("0.0 binds"),
+            0
+        );
+        assert_eq!(
+            postgres_json_i64("negative", &json!(-7.0)).expect("-7.0 binds"),
+            -7
+        );
+
+        // Still strict where it matters: a FRACTIONAL double is a real precision loss
+        // and must be refused, never silently truncated to 25.
+        let err = postgres_json_i64("bed_count", &json!(25.5))
+            .expect_err("a fractional double must not bind to an integer column");
+        assert_eq!(err.code(), tonic::Code::InvalidArgument);
     }
 }
