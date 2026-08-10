@@ -944,7 +944,7 @@
     "operation_id": "transferServiceAccountGrant",
     "op_kind": "DESTRUCTIVE",
     "request_msg": "TransferServiceAccountGrantRequest",
-    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"from_user_id\": \"<seed:owner_id>\", \"to_user_id\": \"<seed:grant_transfer_to_user_id>\", \"expected_revision\": 1, \"reason\": \"bench transfer grant\" }`",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"from_user_id\": \"<seed:grant_transfer_from_user_id>\", \"to_user_id\": \"<seed:grant_transfer_to_user_id>\", \"expected_revision\": 1, \"reason\": \"bench transfer grant\" }`",
     "notes": "Revision CAS: moves the ACTIVE grant from `from_user_id` to a grantless ACTIVE service account (`to_user_id`) in the same tenant/project; the grant's revision bumps on success while its service_identity/scopes are unchanged. Terminal grant row — run after the other grant measurements."
   },
   {
@@ -3764,7 +3764,7 @@
     "operation_id": "finalizeUpload",
     "op_kind": "MUTATION",
     "request_msg": "FinalizeUploadRequest",
-    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"file_id\": \"<seed:finalize_file_id>\", \"content_type\": \"application/pdf\", \"file_type\": \"document\", \"reference_id\": \"<seed:finalize_file_id>\", \"reference_type\": \"document\", \"is_public\": false, \"size_bytes\": 1024 }`",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"file_id\": \"<seed:finalize_file_id>\", \"content_type\": \"application/pdf\", \"file_type\": \"document\", \"reference_id\": \"<seed:finalize_reference_id>\", \"reference_type\": \"document\", \"is_public\": false, \"size_bytes\": 1024 }`",
     "notes": "fields: tenant_id(str), file_id(str), content_type(str), file_type(str), reference_id(str), reference_type(str), is_public(optional bool), size_bytes(int64). file_id MUST be a registered-but-NOT-yet-finalized upload (seed: `finalize_file_id`) — finalizing the primary `file_id` twice fails \"already finalized\". size_bytes = actual uploaded size, persisted on finalize."
   },
   {

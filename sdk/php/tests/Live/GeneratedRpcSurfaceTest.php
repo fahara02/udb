@@ -3551,6 +3551,27 @@ function perfSeedPhp(array $s): array
             ->setContext((new \Udb\Core\Common\V1\RequestContext())->setTenant((new \Udb\Core\Common\V1\TenantContext())->setTenantId($tenant)->setProjectId($project))), $meta));
         $fix->set('grant_transfer_to_user_id', $cid);
     }
+    // A FOURTH service account that OWNS a fresh grant, used only as the transfer's
+    // SOURCE. The api-key owner cannot serve: its grant backs the measured api-key RPCs
+    // and its revision moves, so the transfer's `expected_revision: 1` CAS fails
+    // "source grant is inactive, missing, or its revision changed".
+    $svcDName = "sdk-perf-svc-d-$suffix";
+    $svcD = $try('SeedServiceAccountD', fn () => $authGen->create_user((new \Udb\Core\Authn\Services\V1\CreateUserRequest())
+        ->setUsername($svcDName)->setEmail("$svcDName@example.com")->setPassword('CorrectHorse1!')
+        ->setTenantId($tenant)->setProjectId($project)->setFullName('SDK Perf Service Account D')
+        ->setAccountKind(\Udb\Core\Authn\Entity\V1\AccountKind::ACCOUNT_KIND_SERVICE_ACCOUNT), $meta));
+    if ($svcD) {
+        $did = $svcD->getUser()->getUserId();
+        $try('SeedServiceAccountDActivate', fn () => $authGen->change_user_status((new \Udb\Core\Authn\Services\V1\ChangeUserStatusRequest())
+            ->setUserId($did)->setNewStatus(\Udb\Core\Authn\Entity\V1\UserStatus::USER_STATUS_ACTIVE)->setReason('perf seed activate')
+            ->setContext((new \Udb\Core\Common\V1\RequestContext())->setTenant((new \Udb\Core\Common\V1\TenantContext())->setTenantId($tenant)->setProjectId($project))), $meta));
+        $grantD = $try('SeedTransferSourceGrant', fn () => $authGen->create_service_account_grant((new \Udb\Core\Authn\Services\V1\CreateServiceAccountGrantRequest())
+            ->setTenantId($tenant)->setUserId($did)->setServiceIdentity($svcDName)
+            ->setProjectId($project)->setApprovedScopes(['data:read'])->setReason('sdk perf transfer source'), $meta));
+        if ($grantD) {
+            $fix->set('grant_transfer_from_user_id', $did);
+        }
+    }
     $key = $try('CreateApiKey', fn () => $authGen->create_api_key((new \Udb\Core\Apikey\Services\V1\CreateApiKeyRequest())
         ->setName("sdk-perf-key-$suffix")->setOwnerId($principal)->setScopes(['data:read'])->setContext($keyCtx), $meta));
     if ($key) {
@@ -3949,9 +3970,13 @@ function perfSeedPhp(array $s): array
         // DECLARED at RegisterUpload, so declare exactly what we upload — a fixed
         // literal fails "uploaded object size N does not match declared M".
         $finPayloadLen = strlen("sdk-perf-finalize-$suffix");
+        // FinalizeUpload refuses to CHANGE reference_id from the value established at
+        // RegisterUpload, so the measured body must resend that exact value — seed it.
+        $finRefId = liveUuidV4();
+        $fix->set('finalize_reference_id', $finRefId);
         $finReg = $try('RegisterFinalizeFile', fn () => $authGen->register_upload((new \Udb\Core\Storage\Services\V1\RegisterUploadRequest())
             ->setTenantId($tenant)->setProjectId('')->setFilename("perf-fin-$suffix.txt")->setContentType('text/plain')
-            ->setFileType('DOCUMENT')->setReferenceId(liveUuidV4())->setReferenceType('sdk.perf')->setSizeBytes($finPayloadLen)->setExpiresInMinutes(30), $meta));
+            ->setFileType('DOCUMENT')->setReferenceId($finRefId)->setReferenceType('sdk.perf')->setSizeBytes($finPayloadLen)->setExpiresInMinutes(30), $meta));
         if ($finReg) {
             $ffid = $finReg->getFileId();
             $fix->set('finalize_file_id', $ffid);

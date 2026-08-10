@@ -1540,7 +1540,8 @@ def postprocess_perf_body(client_cls, method, request, meta: Metadata, fix: "Per
         # finalized", so the measured FinalizeUpload targets a SEPARATE registered+
         # uploaded-but-NOT-finalized file seeded as finalize_file_id.
         request.file_id = _fixture(fix, "finalize_file_id", request.file_id)
-        request.reference_id = _fixture(fix, "finalize_file_id", request.reference_id)
+        # FinalizeUpload refuses to CHANGE reference_id from what RegisterUpload set.
+        request.reference_id = _fixture(fix, "finalize_reference_id", request.reference_id)
         if hasattr(request, "size_bytes"):
             request.size_bytes = int(_fixture(fix, "file_size_bytes", "17"))
         request.content_type = "text/plain"
@@ -3072,6 +3073,37 @@ def perf_seed(clients: dict, meta: Metadata):
         fix.set("grant_transfer_to_user_id", svc_c.user.user_id)
     except grpc.RpcError:
         pass
+    # A FOURTH service account that OWNS a fresh grant, used only as the transfer's
+    # SOURCE. svc_owner cannot serve: its grant backs the measured api-key RPCs and its
+    # revision moves, so the transfer's `expected_revision: 1` CAS fails "source grant
+    # is inactive, missing, or its revision changed". Nothing else touches this grant.
+    try:
+        svc_d_name = f"sdk-perf-svc-d-{suffix}"
+        svc_d = authn.CreateUser(
+            authn_pb2.CreateUserRequest(
+                username=svc_d_name, email=f"{svc_d_name}@example.com", password=pw,
+                tenant_id=tenant, project_id=project, full_name="SDK Perf Service Account D",
+                account_kind=2,  # ACCOUNT_KIND_SERVICE_ACCOUNT
+            ),
+            metadata=md, timeout=8.0,
+        )
+        authn.ChangeUserStatus(
+            authn_pb2.ChangeUserStatusRequest(
+                user_id=svc_d.user.user_id, new_status=2, reason="perf seed activate",
+                context=common_pb.RequestContext(tenant=common_pb.TenantContext(tenant_id=tenant, project_id=project)),
+            ),
+            metadata=md, timeout=8.0,
+        )
+        authn.CreateServiceAccountGrant(
+            authn_pb2.CreateServiceAccountGrantRequest(
+                tenant_id=tenant, user_id=svc_d.user.user_id, service_identity=svc_d_name,
+                project_id=project, approved_scopes=["data:read"], reason="sdk perf transfer source",
+            ),
+            metadata=md, timeout=8.0,
+        )
+        fix.set("grant_transfer_from_user_id", svc_d.user.user_id)
+    except grpc.RpcError:
+        pass
     key_ctx = common_pb.RequestContext(user_id=svc_owner, tenant=common_pb.TenantContext(tenant_id=tenant, project_id=project))
     try:
         key = apikey.CreateApiKey(
@@ -3212,8 +3244,10 @@ def perf_seed(clients: dict, meta: Metadata):
             # DECLARED at RegisterUpload, so declare exactly what we upload — a fixed
             # literal fails "uploaded object size N does not match declared M".
             fin_body = f"sdk-perf-finalize-{suffix}".encode()
+            fin_ref_id = str(uuid.uuid4())
+            fix.set("finalize_reference_id", fin_ref_id)
             fin_reg = storage.RegisterUpload(
-                storage_pb.RegisterUploadRequest(tenant_id=tenant, project_id="", filename=f"perf-fin-{suffix}.txt", content_type="text/plain", file_type=STORAGE_FILE_TYPE, reference_id=str(uuid.uuid4()), reference_type="sdk.perf", size_bytes=len(fin_body), expires_in_minutes=30),
+                storage_pb.RegisterUploadRequest(tenant_id=tenant, project_id="", filename=f"perf-fin-{suffix}.txt", content_type="text/plain", file_type=STORAGE_FILE_TYPE, reference_id=fin_ref_id, reference_type="sdk.perf", size_bytes=len(fin_body), expires_in_minutes=30),
                 metadata=md, timeout=8.0,
             )
             fin_file_id = fin_reg.file_id

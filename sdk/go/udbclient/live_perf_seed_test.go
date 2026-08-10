@@ -791,6 +791,33 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 		})
 		fix.set("grant_transfer_to_user_id", cid)
 	}
+	// A FOURTH service account that OWNS a fresh grant, used only as the transfer's
+	// SOURCE. svcOwner cannot serve: its grant backs the measured api-key RPCs and
+	// its revision moves, so the transfer's `expected_revision: 1` CAS fails
+	// "source grant is inactive, missing, or its revision changed". This grant is
+	// created at revision 1 and nothing else touches it.
+	svcDName := "sdk-perf-svc-d-" + suffix
+	if svcD, err := authn.CreateUser(base, &authnpb.CreateUserRequest{
+		Username: svcDName, Email: svcDName + "@example.com", Password: pw,
+		TenantId: tenant, ProjectId: project, FullName: "SDK Perf Service Account D",
+		AccountKind: authnentpb.AccountKind_ACCOUNT_KIND_SERVICE_ACCOUNT,
+	}); err != nil {
+		t.Logf("perf seed: service-account-D CreateUser failed (TransferServiceAccountGrant falls back): %v", err)
+	} else {
+		did := svcD.GetUser().GetUserId()
+		_, _ = authn.ChangeUserStatus(base, &authnpb.ChangeUserStatusRequest{
+			UserId: did, NewStatus: authnentpb.UserStatus_USER_STATUS_ACTIVE, Reason: "perf seed activate",
+			Context: &commonpb.RequestContext{Tenant: &commonpb.TenantContext{TenantId: tenant, ProjectId: project}},
+		})
+		if _, err := authn.CreateServiceAccountGrant(base, &authnpb.CreateServiceAccountGrantRequest{
+			TenantId: tenant, UserId: did, ServiceIdentity: svcDName,
+			ProjectId: project, ApprovedScopes: []string{"data:read"}, Reason: "sdk perf transfer source",
+		}); err != nil {
+			t.Logf("perf seed: transfer-source CreateServiceAccountGrant failed: %v", err)
+		} else {
+			fix.set("grant_transfer_from_user_id", did)
+		}
+	}
 	keyCtx := &commonpb.RequestContext{UserId: svcOwner, Tenant: &commonpb.TenantContext{TenantId: tenant, ProjectId: project}}
 	if key, err := apikey.CreateApiKey(base, &apikeypb.CreateApiKeyRequest{
 		Name: "sdk-perf-key-" + suffix, OwnerId: svcOwner, Scopes: []string{"data:read"}, Context: keyCtx,
@@ -1133,9 +1160,13 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 		// actually upload — a fixed literal fails "uploaded object size N does not
 		// match declared M" once the suffix length changes.
 		fpayload := []byte("sdk-perf-finalize-" + suffix)
+		// FinalizeUpload refuses to CHANGE reference_id from the value established at
+		// RegisterUpload, so the measured body must resend that exact value — seed it.
+		finRefID := uuid4()
+		fix.set("finalize_reference_id", finRefID)
 		if freg, err := storage.RegisterUpload(nctx, &storagepb.RegisterUploadRequest{
 			TenantId: uuidTenant, ProjectId: "", Filename: "perf-fin-" + suffix + ".txt", ContentType: "text/plain",
-			FileType: "DOCUMENT", ReferenceId: uuid4(), ReferenceType: "sdk.perf",
+			FileType: "DOCUMENT", ReferenceId: finRefID, ReferenceType: "sdk.perf",
 			SizeBytes: int64(len(fpayload)), ExpiresInMinutes: 30,
 		}); err == nil {
 			ffid := freg.GetFileId()

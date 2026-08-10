@@ -2212,6 +2212,27 @@ async function seedPerfFixtures(
     }, opts);
     fix.set("grant_transfer_to_user_id", svcC.user_id);
   });
+  // A FOURTH service account that OWNS a fresh grant, used only as the transfer's
+  // SOURCE. svcOwner cannot serve: its grant backs the measured api-key RPCs and its
+  // revision moves, so the transfer's `expected_revision: 1` CAS fails "source grant is
+  // inactive, missing, or its revision changed". Nothing else touches this grant.
+  await tryRun("CreateServiceAccountD", async () => {
+    const svcDName = `sdk-perf-svc-d-${suffix}`;
+    const svcD = (await gen.AuthnService.create_user({
+      username: svcDName, email: `${svcDName}@example.com`, password: pw,
+      tenant_id: tenantId, project_id: projectId, full_name: "SDK Perf Service Account D",
+      account_kind: "ACCOUNT_KIND_SERVICE_ACCOUNT",
+    }, opts)).user;
+    await gen.AuthnService.change_user_status({
+      user_id: svcD.user_id, new_status: "USER_STATUS_ACTIVE", reason: "perf seed activate",
+      context: { tenant: { tenant_id: tenantId, project_id: projectId } },
+    }, opts);
+    await gen.AuthnService.create_service_account_grant({
+      tenant_id: tenantId, user_id: svcD.user_id, service_identity: svcDName,
+      project_id: projectId, approved_scopes: ["data:read"], reason: "sdk perf transfer source",
+    }, opts);
+    fix.set("grant_transfer_from_user_id", svcD.user_id);
+  });
   await tryRun("CreateApiKey", async () => {
     const key = await gen.ApiKeyService.create_api_key({ name: `sdk-perf-key-${suffix}`, owner_id: svcOwner, scopes: ["data:read"], context: { user_id: svcOwner, tenant: { tenant_id: tenantId, project_id: projectId } } }, opts);
     fix.set("key_id", key.key.key_id);
@@ -2672,7 +2693,11 @@ async function seedPerfFixtures(
     // literal fails "uploaded object size N does not match declared M".
     const fpayload = `sdk-perf-finalize-${suffix}`;
     const fpayloadLen = Buffer.byteLength(fpayload, "utf8");
-    const freg = await gen.StorageService.register_upload({ tenant_id: uuidTenant, project_id: "", filename: `perf-fin-${suffix}.txt`, content_type: "text/plain", file_type: "DOCUMENT", reference_id: liveUuid(), reference_type: "sdk.perf", size_bytes: fpayloadLen, expires_in_minutes: 30 }, opts);
+    // FinalizeUpload refuses to CHANGE reference_id from the value established at
+    // RegisterUpload, so the measured body must resend that exact value — seed it.
+    const finRefId = liveUuid();
+    fix.set("finalize_reference_id", finRefId);
+    const freg = await gen.StorageService.register_upload({ tenant_id: uuidTenant, project_id: "", filename: `perf-fin-${suffix}.txt`, content_type: "text/plain", file_type: "DOCUMENT", reference_id: finRefId, reference_type: "sdk.perf", size_bytes: fpayloadLen, expires_in_minutes: 30 }, opts);
     const ffid = freg.file_id;
     fix.set("finalize_file_id", ffid);
     fix.set("file_size_bytes", String(fpayloadLen));
