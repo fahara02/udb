@@ -146,6 +146,13 @@ jobs:
     needs: validate
     runs-on: ubuntu-latest
     environment: production
+    # ADVISORY, like the Claude smoke job. Publishing to Ollama means publishing a
+    # MODEL: `ollama push` uploads every layer, including the multi-GB `FROM` base
+    # weights. That is model distribution, not skill distribution — the skill's real
+    # channels are the Claude plugin (this repo) and the OpenAI Assistant, both of
+    # which are hard-gated above. A failure of this optional mirror must not redden
+    # the whole skill publish.
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - name: Publish to Ollama registry
@@ -214,6 +221,12 @@ jobs:
               fi
               if grep -Eqi 'need to be signed in|unauthorized|access denied|error:' "$push_log" \
                 || ! grep -Fq 'You can find your model at:' "$push_log"; then
+                # Surface WHY. Without this the push log died in a temp file and the
+                # only signal was "did not confirm publication", which hides both a
+                # real auth failure and a merely-reworded success line.
+                echo "::group::ollama push output for ${model}"
+                tail -40 "$push_log" || true
+                echo "::endgroup::"
                 echo "::error::Ollama CLI did not confirm publication for ${model}"
                 exit 1
               fi
