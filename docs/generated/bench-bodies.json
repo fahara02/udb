@@ -3764,7 +3764,7 @@
     "operation_id": "finalizeUpload",
     "op_kind": "MUTATION",
     "request_msg": "FinalizeUploadRequest",
-    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"file_id\": \"<seed:finalize_file_id>\", \"content_type\": \"application/pdf\", \"file_type\": \"document\", \"reference_id\": \"<seed:finalize_reference_id>\", \"reference_type\": \"document\", \"is_public\": false, \"size_bytes\": 1024 }`",
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"file_id\": \"<seed:finalize_file_id>\", \"content_type\": \"text/plain\", \"file_type\": \"DOCUMENT\", \"reference_id\": \"<seed:finalize_reference_id>\", \"reference_type\": \"sdk.perf\", \"is_public\": false, \"size_bytes\": 1024 }`",
     "notes": "fields: tenant_id(str), file_id(str), content_type(str), file_type(str), reference_id(str), reference_type(str), is_public(optional bool), size_bytes(int64). file_id MUST be a registered-but-NOT-yet-finalized upload (seed: `finalize_file_id`) — finalizing the primary `file_id` twice fails \"already finalized\". size_bytes = actual uploaded size, persisted on finalize."
   },
   {
