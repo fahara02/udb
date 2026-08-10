@@ -1159,7 +1159,10 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 		// DECLARED at RegisterUpload, so the declaration must equal the payload we
 		// actually upload — a fixed literal fails "uploaded object size N does not
 		// match declared M" once the suffix length changes.
-		fpayload := []byte("sdk-perf-finalize-" + suffix)
+		// The shared bench body declares size_bytes: 1024 and FinalizeUpload verifies
+		// the stored object against THAT, so the seeded object must be exactly 1024 B.
+		fpayloadBase := "sdk-perf-finalize-" + suffix
+		fpayload := []byte(fpayloadBase + strings.Repeat("x", 1024-len(fpayloadBase)))
 		// FinalizeUpload refuses to CHANGE reference_id from the value established at
 		// RegisterUpload, so the measured body must resend that exact value — seed it.
 		finRefID := uuid4()

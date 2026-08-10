@@ -3969,7 +3969,9 @@ function perfSeedPhp(array $s): array
         // FinalizeUpload verifies the stored object's byte length against the size
         // DECLARED at RegisterUpload, so declare exactly what we upload — a fixed
         // literal fails "uploaded object size N does not match declared M".
-        $finPayloadLen = strlen("sdk-perf-finalize-$suffix");
+        // The shared bench body declares size_bytes: 1024 and FinalizeUpload verifies
+        // the stored object against THAT, so the seeded object must be exactly 1024 B.
+        $finPayloadLen = 1024;
         // FinalizeUpload refuses to CHANGE reference_id from the value established at
         // RegisterUpload, so the measured body must resend that exact value — seed it.
         $finRefId = liveUuidV4();
@@ -3988,7 +3990,8 @@ function perfSeedPhp(array $s): array
             // Upload bytes (presigned first, DataBroker PutObject fallback) but DO NOT
             // finalize — the measured FinalizeUpload finalizes it.
             $try('SeedFinalizeFilePut', function () use ($data, $finReg, $suffix, $tenant, $project, $meta) {
-                $payload = "sdk-perf-finalize-$suffix";
+                $payloadBase = "sdk-perf-finalize-$suffix";
+                $payload = $payloadBase.str_repeat('x', 1024 - strlen($payloadBase));
                 $url = method_exists($finReg, 'getUploadUrl') ? $finReg->getUploadUrl() : '';
                 if ($url !== '') {
                     if (str_contains(liveEnv('UDB_GRPC_TARGET', ''), 'host.docker.internal')) {

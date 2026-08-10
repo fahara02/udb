@@ -3095,7 +3095,7 @@ def perf_seed(clients: dict, meta: Metadata):
             metadata=md, timeout=8.0,
         )
         authn.CreateServiceAccountGrant(
-            authn_pb2.CreateServiceAccountGrantRequest(
+            authn_svc_pb2.CreateServiceAccountGrantRequest(
                 tenant_id=tenant, user_id=svc_d.user.user_id, service_identity=svc_d_name,
                 project_id=project, approved_scopes=["data:read"], reason="sdk perf transfer source",
             ),
@@ -3243,7 +3243,10 @@ def perf_seed(clients: dict, meta: Metadata):
             # FinalizeUpload verifies the stored object's byte length against the size
             # DECLARED at RegisterUpload, so declare exactly what we upload — a fixed
             # literal fails "uploaded object size N does not match declared M".
-            fin_body = f"sdk-perf-finalize-{suffix}".encode()
+            # The shared bench body declares size_bytes: 1024 and FinalizeUpload verifies
+            # the stored object against THAT, so the seeded object must be exactly 1024 B.
+            _fin_base = f"sdk-perf-finalize-{suffix}"
+            fin_body = (_fin_base + "x" * (1024 - len(_fin_base))).encode()
             fin_ref_id = str(uuid.uuid4())
             fix.set("finalize_reference_id", fin_ref_id)
             fin_reg = storage.RegisterUpload(

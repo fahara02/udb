@@ -2691,7 +2691,10 @@ async function seedPerfFixtures(
     // FinalizeUpload verifies the stored object's byte length against the size
     // DECLARED at RegisterUpload, so declare exactly what we upload — a fixed
     // literal fails "uploaded object size N does not match declared M".
-    const fpayload = `sdk-perf-finalize-${suffix}`;
+    // The shared bench body declares size_bytes: 1024 and FinalizeUpload verifies the
+    // stored object against THAT, so the seeded object must be exactly 1024 B.
+    const fpayloadBase = `sdk-perf-finalize-${suffix}`;
+    const fpayload = fpayloadBase + "x".repeat(1024 - fpayloadBase.length);
     const fpayloadLen = Buffer.byteLength(fpayload, "utf8");
     // FinalizeUpload refuses to CHANGE reference_id from the value established at
     // RegisterUpload, so the measured body must resend that exact value — seed it.
