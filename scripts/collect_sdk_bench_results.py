@@ -64,6 +64,15 @@ NON_FATAL_HARNESS_STATUS_CODES = {
     "CAPABILITY_SKIPPED",
 }
 
+# Language harnesses spell the "no manifest body could be hydrated" status
+# differently — the Go harness emits `NO-BODY` (→ `NO_BODY` after normalization),
+# the shared collector schema names it `SKIP_NO_BODY`. Alias the variants onto the
+# canonical token so a missing body is a countable, fatal failure (never a crash).
+HARNESS_STATUS_ALIASES = {
+    "NO_BODY": "SKIP_NO_BODY",
+    "NOBODY": "SKIP_NO_BODY",
+}
+
 
 def _cmd(args: list[str]) -> str | None:
     try:
@@ -127,6 +136,7 @@ def _canonical_grpc_status(raw: str) -> str:
     value = value.split("::")[-1].split(".")[-1]
     value = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", value)
     token = re.sub(r"[\s-]+", "_", value).upper()
+    token = HARNESS_STATUS_ALIASES.get(token, token)
     if token in HARNESS_STATUS_CODES:
         return token
     if token not in GRPC_STATUS_CODES:
@@ -451,6 +461,28 @@ RPCs measured: 2
         parsed = _parse_report(path)
         assert parsed["summary"]["failed_rpc_count"] == 1, parsed
         assert {row["err_code"] for row in parsed["failed_rpcs"]} == {"SKIP_NO_BODY"}, parsed
+
+        # The Go harness spells the missing-body status `NO-BODY`; it must alias
+        # onto the canonical `SKIP_NO_BODY` (a countable failure) rather than
+        # crashing the whole per-SDK parse (which silently marked the SDK failed
+        # with a null rpc_count).
+        path.write_text(
+            """# UDB SDK Live Perf
+
+RPCs measured: 2
+
+## Full per-RPC table (sorted by service, then RPC)
+
+| Service | RPC | kind | err | p50 ms | p99 ms | mean ms | iters |
+|---|---|---|---|--:|--:|--:|--:|
+| DataBroker | Select | read_only | OK | 0.20 | 0.30 | 0.22 | 25 |
+| AuthnService | TransferServiceAccountGrant | destructive | NO-BODY | 0.06 | 0.06 | 0.06 | 1 |
+""",
+            encoding="utf-8",
+        )
+        parsed = _parse_report(path)
+        assert parsed["summary"]["failed_rpc_count"] == 1, parsed
+        assert parsed["failed_rpcs"][0]["err_code"] == "SKIP_NO_BODY", parsed
 
         path.write_text(
             """# UDB SDK Live Perf

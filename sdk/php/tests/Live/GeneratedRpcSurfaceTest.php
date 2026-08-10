@@ -3301,6 +3301,22 @@ function perfSeedPhp(array $s): array
         }
     };
 
+    // AdminPurgeTenant is a PRIVILEGED cross-tenant purge; the tenant-status gate
+    // (live since 0.4.32) suspends the PURGED tenant, so pointing it at the caller's
+    // own tenant self-suspends the benchmark tenant mid-run and denies every later
+    // RPC. Target a SEPARATE disposable tenant so only the terminal self-PurgeTenant
+    // suspends the caller, at the very end. The explicit set is REQUIRED: without it
+    // the fixture suffix-match resolves admin_purge_tenant_id back to tenant_id (the
+    // caller). Fall back to a non-existent UUID (isolated NotFound, never a cascade).
+    $fix->set('admin_purge_tenant_id', liveUuidV4());
+    $dispTenant = $try('disposable admin-purge tenant', fn () => $authGen->create_tenant(
+        (new \Udb\Core\Tenant\Services\V1\CreateTenantRequest())
+            ->setCode("sdkperfadminpurge$suffix")->setName('SDK Perf Admin-Purge Disposable')
+            ->setType('organization')->setConfig('{}')->setBranding('{}'), $meta));
+    if ($dispTenant !== null && $dispTenant->getTenantId() !== '') {
+        $fix->set('admin_purge_tenant_id', $dispTenant->getTenantId());
+    }
+
     // DataBroker: a real SdkLiveRecord row (Select/Delete success path).
     $recordId = "php-perf-$suffix";
     $rc = (new \Udb\Entity\V1\RequestContext())->setTenantId($tenant)->setProjectId($project)->setPurpose('php.live.perf.seed');

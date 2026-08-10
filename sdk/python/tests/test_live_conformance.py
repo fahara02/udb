@@ -2243,6 +2243,25 @@ def perf_seed(clients: dict, meta: Metadata):
     fix.set("migration_id", str(uuid.uuid4()))
     fix.set("egress_id", f"eg-{tenant}-{suffix}")
     fix.set("purge_tenant_id", tenant)
+    # AdminPurgeTenant is a PRIVILEGED cross-tenant purge; the tenant-status gate
+    # (live since 0.4.32) suspends the PURGED tenant, so pointing it at the caller's
+    # own tenant self-suspends the benchmark tenant mid-run and denies every later
+    # RPC. Target a SEPARATE disposable tenant so only the terminal self-PurgeTenant
+    # suspends the caller, at the very end. Fall back to a non-existent UUID
+    # (isolated NotFound, never a cascade) if creation fails.
+    fix.set("admin_purge_tenant_id", str(uuid.uuid4()))
+    try:
+        disp_tenant = clients[TenantServiceClient].stub.CreateTenant(
+            tenant_pb.CreateTenantRequest(
+                code=f"sdkperfadminpurge{suffix}", name="SDK Perf Admin-Purge Disposable",
+                type="organization", config="{}", branding="{}",
+            ),
+            metadata=md, timeout=8.0,
+        )
+        if disp_tenant.tenant_id:
+            fix.set("admin_purge_tenant_id", disp_tenant.tenant_id)
+    except Exception as exc:  # noqa: BLE001 — a seed miss degrades to an isolated NotFound, not a cascade
+        print(f"perf seed: disposable admin-purge tenant CreateTenant failed (AdminPurgeTenant will NotFound, no cascade): {exc}")
 
     # Recovery fixtures come from the served, admin-gated DataBroker path, not
     # raw udb_system inserts. Each mutating RPC gets a disposable row.

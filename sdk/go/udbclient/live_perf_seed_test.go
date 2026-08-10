@@ -49,6 +49,7 @@ import (
 	notifpb "github.com/fahara02/udb/sdk/go/gen/udb/core/notification/services/v1"
 	schedulerpb "github.com/fahara02/udb/sdk/go/gen/udb/core/scheduler/services/v1"
 	storagepb "github.com/fahara02/udb/sdk/go/gen/udb/core/storage/services/v1"
+	tenantpb "github.com/fahara02/udb/sdk/go/gen/udb/core/tenant/services/v1"
 	vaultpb "github.com/fahara02/udb/sdk/go/gen/udb/core/vault/services/v1"
 	webhookpb "github.com/fahara02/udb/sdk/go/gen/udb/core/webhook/services/v1"
 	webrtcpb "github.com/fahara02/udb/sdk/go/gen/udb/core/webrtc/services/v1"
@@ -178,6 +179,21 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 	// PurgeTenant is measured last against the ephemeral benchmark tenant. It
 	// cannot target an arbitrary fresh tenant without matching tenant credentials.
 	fix.set("purge_tenant_id", tenant)
+	// AdminPurgeTenant is a PRIVILEGED cross-tenant purge. The tenant-status gate
+	// (live since 0.4.32) suspends the PURGED tenant, so pointing it at the caller's
+	// own tenant self-suspends the benchmark tenant mid-run — every later RPC then
+	// fails "tenant is not active". Create a SEPARATE disposable tenant as its
+	// target so only the terminal self-PurgeTenant suspends the caller, at the very
+	// end. Fall back to a non-existent UUID (isolated NotFound, never a cascade).
+	fix.set("admin_purge_tenant_id", uuid4())
+	if disp, err := tenantpb.NewTenantServiceClient(authConn).CreateTenant(base, &tenantpb.CreateTenantRequest{
+		Code: "sdk-perf-adminpurge-" + suffix, Name: "SDK Perf Admin-Purge Disposable",
+		Type: "organization", Config: "{}", Branding: "{}",
+	}); err != nil {
+		t.Logf("perf seed: disposable admin-purge tenant CreateTenant failed (AdminPurgeTenant will NotFound, no cascade): %v", err)
+	} else if id := disp.GetTenantId(); id != "" {
+		fix.set("admin_purge_tenant_id", id)
+	}
 	fix.set("resource_name", "postgres:default")
 	fix.set("vault_db_role", "readonly")
 	fix.set("egress_id", "eg-"+tenant+"-"+uuid4())

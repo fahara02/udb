@@ -3848,8 +3848,8 @@
     "operation_id": "adminPurgeTenant",
     "op_kind": "DESTRUCTIVE",
     "request_msg": "AdminPurgeTenantRequest",
-    "body": "`{ \"delegated_actor\": \"\", \"target_tenant_id\": \"<seed:purge_tenant_id>\", \"mode\": \"ADMIN_PURGE_MODE_SOFT\", \"reason\": \"bench admin purge\", \"expected_version\": 0, \"confirmation_token\": \"<seed:purge_tenant_id>\", \"idempotency_key\": \"sdk-perf-admin-purge\" }`",
-    "notes": "Privileged cross-tenant purge. `mode` MUST be set (ADMIN_PURGE_MODE_UNSPECIFIED is rejected); SOFT (reversible) is used for bench so entity rows are retained. `confirmation_token` MUST equal `target_tenant_id`; `expected_version` 0 disables the version CAS; empty `delegated_actor` inherits the caller. Terminal — runs last against the disposable bench tenant."
+    "body": "`{ \"delegated_actor\": \"\", \"target_tenant_id\": \"<seed:admin_purge_tenant_id>\", \"mode\": \"ADMIN_PURGE_MODE_SOFT\", \"reason\": \"bench admin purge\", \"expected_version\": 0, \"confirmation_token\": \"<seed:admin_purge_tenant_id>\", \"idempotency_key\": \"sdk-perf-admin-purge\" }`",
+    "notes": "Privileged cross-tenant purge. `mode` MUST be set (ADMIN_PURGE_MODE_UNSPECIFIED is rejected); SOFT (reversible) is used for bench so entity rows are retained. `confirmation_token` MUST equal `target_tenant_id`. Targets `<seed:admin_purge_tenant_id>` — a SEPARATE disposable tenant the seed creates, NOT the caller's own tenant: the 0.4.32 tenant-status gate suspends the target tenant on purge, and purging the caller mid-run would deny every subsequent RPC. `expected_version` 0 disables the version CAS; empty `delegated_actor` inherits the caller."
   },
   {
     "file": "tenant.md",
@@ -4004,8 +4004,8 @@
     "operation_id": "destroySecret",
     "op_kind": "DESTRUCTIVE",
     "request_msg": "DestroySecretRequest",
-    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"secret_path\": \"<seed:vault_destroy_secret_path>\", \"confirmation_token\": \"destroy\" }`",
-    "notes": "destructive crypto-shred for the seeded disposable secret path."
+    "body": "`{ \"tenant_id\": \"<seed:tenant_id>\", \"secret_path\": \"<seed:vault_destroy_secret_path>\", \"confirmation_token\": \"<seed:vault_destroy_secret_path>\" }`",
+    "notes": "destructive crypto-shred for the seeded disposable secret path. `confirmation_token` MUST equal `secret_path` to authorize the irreversible shred."
   },
   {
     "file": "vault.md",

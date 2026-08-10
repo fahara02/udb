@@ -1857,6 +1857,19 @@ async function seedPerfFixtures(
   fix.set("message_type", LIVE_MESSAGE_TYPE);
   fix.set("tenant_code", `sdk-perf-tenant-${suffix}`);
   fix.set("purge_tenant_id", tenantId);
+  // AdminPurgeTenant is a PRIVILEGED cross-tenant purge; the tenant-status gate
+  // (live since 0.4.32) suspends the PURGED tenant, so pointing it at the caller's
+  // own tenant self-suspends the benchmark tenant mid-run and denies every later
+  // RPC. Target a SEPARATE disposable tenant so only the terminal self-PurgeTenant
+  // suspends the caller, at the very end. Fall back to a non-existent UUID
+  // (isolated NotFound, never a cascade) if creation fails.
+  fix.set("admin_purge_tenant_id", liveUuid());
+  await tryRun("disposable admin-purge tenant", async () => {
+    const dispTenant = await gen.TenantService.create_tenant(
+      { code: `sdkperfadminpurge${suffix}`, name: "SDK Perf Admin-Purge Disposable", type: "organization", config: "{}", branding: "{}" },
+      opts);
+    if (dispTenant.tenant_id) fix.set("admin_purge_tenant_id", dispTenant.tenant_id);
+  });
 
   // ── DataBroker: a real SdkLiveRecord row (drives Upsert/Select/Delete + CDC) ──
   const recordId = `ts-perf-${suffix}`;
