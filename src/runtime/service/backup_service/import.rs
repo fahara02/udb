@@ -29,7 +29,7 @@ use super::BackupServiceImpl;
 use super::config::{KIND_RESTORE, MANIFEST_SUFFIX, TOPIC_BACKUP_RESTORED};
 use super::errors::{
     backup_internal_status, backup_not_found_status, backup_run_missing_object_prefix_status,
-    ensure_target_is_fresh, restore_cross_tenant_admin_required_status,
+    ensure_target_is_fresh_in, restore_cross_tenant_admin_required_status,
     restore_manifest_integrity_status,
 };
 use super::events::emit_event;
@@ -469,6 +469,7 @@ pub(crate) async fn restore_tenant(
     // row aborts the tx (rolled back on the early return). Same tenant-owned table
     // set as the backup, now transactional.
     let mut existing_rows: u64 = 0;
+    let mut occupied_relations: Vec<String> = Vec::new();
     for target in &plan.targets {
         let rel = qualified_relation(&target.schema, &target.table);
         let probe_sql = format!(
@@ -490,9 +491,10 @@ pub(crate) async fn restore_tenant(
             })?;
         if present.is_some() {
             existing_rows += 1;
+            occupied_relations.push(rel.clone());
         }
     }
-    ensure_target_is_fresh(existing_rows)?;
+    ensure_target_is_fresh_in(existing_rows, &occupied_relations)?;
 
     for entry in &ordered_tables {
         let schema = entry.get("schema").and_then(|v| v.as_str()).unwrap_or("");

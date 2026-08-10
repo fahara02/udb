@@ -67,18 +67,42 @@ pub(crate) fn backup_internal_status(
 /// fails closed. Pure — unit-tested without Postgres (the handler supplies the
 /// probed row count).
 pub(crate) fn ensure_target_is_fresh(existing_rows: u64) -> Result<(), Status> {
+    ensure_target_is_fresh_in(existing_rows, &[])
+}
+
+/// Same gate, but naming the tables that still hold rows. "already holds N row(s)"
+/// alone is undiagnosable: the operator cannot tell WHICH tenant-scoped table blocked
+/// the restore, and a stray row in one bookkeeping table looks identical to a live
+/// tenant. `occupied` is the qualified relation list, empty when the caller has none.
+pub(crate) fn ensure_target_is_fresh_in(
+    existing_rows: u64,
+    occupied: &[String],
+) -> Result<(), Status> {
     if existing_rows > 0 {
-        return Err(restore_target_not_fresh_status(existing_rows));
+        return Err(restore_target_not_fresh_status_in(existing_rows, occupied));
     }
     Ok(())
 }
 
 pub(crate) fn restore_target_not_fresh_status(existing_rows: u64) -> Status {
+    restore_target_not_fresh_status_in(existing_rows, &[])
+}
+
+pub(crate) fn restore_target_not_fresh_status_in(
+    existing_rows: u64,
+    occupied: &[String],
+) -> Status {
+    let where_ = if occupied.is_empty() {
+        String::new()
+    } else {
+        format!(" (in {})", occupied.join(", "))
+    };
+    let _ = &where_;
     backup_policy_status(
         "restore_tenant",
         "restore_target_not_fresh",
         format!(
-            "restore target tenant already holds {existing_rows} row(s); restoring over a live tenant is refused — use a fresh tenant id"
+            "restore target tenant already holds {existing_rows} row(s){where_}; restoring over a live tenant is refused — use a fresh tenant id"
         ),
     )
 }
