@@ -471,6 +471,16 @@ pub(crate) async fn restore_tenant(
     let mut existing_rows: u64 = 0;
     let mut occupied_relations: Vec<String> = Vec::new();
     for target in &plan.targets {
+        // The freshness guard exists to refuse restoring OVER a live tenant's DATA.
+        // Platform bookkeeping that the broker writes as a SIDE EFFECT of serving the
+        // restore call itself is not tenant data: metering records a usage event for
+        // the target tenant the moment the RPC is admitted, so an otherwise pristine
+        // target always looked "live" and every cross-tenant restore was refused.
+        // These relations are also not restored from the backup, so skipping them
+        // cannot mask real data loss.
+        if is_platform_bookkeeping_relation(&target.schema, &target.table) {
+            continue;
+        }
         let rel = qualified_relation(&target.schema, &target.table);
         let probe_sql = format!(
             "SELECT 1 FROM {rel} WHERE {col}::text = $1 LIMIT 1",
@@ -671,4 +681,16 @@ pub(crate) async fn restore_tenant(
         message: "tenant restored".to_string(),
         error: None,
     }))
+}
+
+/// Relations the broker writes as a side effect of serving a request, rather than
+/// tenant-authored data. The restore freshness probe must ignore them: they are
+/// populated by the restore call itself (metering admits and records usage before the
+/// probe runs), and none of them is restored from a backup, so skipping them cannot
+/// hide a live tenant's real rows.
+fn is_platform_bookkeeping_relation(schema: &str, table: &str) -> bool {
+    matches!(
+        (schema.trim(), table.trim()),
+        ("udb_metering", "usage_events")
+    )
 }

@@ -2967,9 +2967,17 @@ impl AuthnServiceImpl {
     }
 
     #[cfg(feature = "webauthn")]
-    async fn consume_webauthn_challenge(&self, challenge_id: &str) -> Result<(), Status> {
+    /// `tenant_id` is REQUIRED: the challenge row is a tenant-scoped message, and the
+    /// IR compiler refuses to compile a query for one without a concrete tenant
+    /// ("tenant_scope_required"). Passing an empty context made every WebAuthn finish
+    /// fail INTERNAL at challenge consumption.
+    async fn consume_webauthn_challenge(
+        &self,
+        tenant_id: &str,
+        challenge_id: &str,
+    ) -> Result<(), Status> {
         if let Ok(runtime) = self.authn_runtime() {
-            let context = self.authn_context("", "");
+            let context = self.authn_context(tenant_id, "");
             let mut assignments = std::collections::BTreeMap::new();
             assignments.insert("consumed_at".to_string(), LogicalAssignment::ServerNow);
             let op = LogicalUpdate {
@@ -3399,7 +3407,7 @@ impl AuthnServiceImpl {
                 match existing {
                     Some(passkey) => {
                         let credential_id = Self::webauthn_credential_id_text(passkey.cred_id())?;
-                        self.consume_webauthn_challenge(&req.challenge_id)
+                        self.consume_webauthn_challenge(&user.tenant_id, &req.challenge_id)
                             .await
                             .ok();
                         return Ok(authn_pb::FinishWebAuthnRegistrationResponse {
@@ -3434,7 +3442,8 @@ impl AuthnServiceImpl {
         };
         self.insert_webauthn_passkey(&user, &credential_id, passkey_json, label)
             .await?;
-        self.consume_webauthn_challenge(&req.challenge_id).await?;
+        self.consume_webauthn_challenge(&user.tenant_id, &req.challenge_id)
+            .await?;
         user.mfa_enabled = true;
         user.updated_at_unix = now_unix();
         self.users.put_user(user.clone()).await.map_err(|err| {
@@ -3666,7 +3675,8 @@ impl AuthnServiceImpl {
         })?;
         self.update_webauthn_passkey_after_auth(&user.tenant_id, &credential_id, passkey_json)
             .await?;
-        self.consume_webauthn_challenge(&req.challenge_id).await?;
+        self.consume_webauthn_challenge(&user.tenant_id, &req.challenge_id)
+            .await?;
         let now = now_unix();
         // Block 1 (auth_fix.md, Decision E): resolve role-derived grants once,
         // thread into the session record and the JWT.
