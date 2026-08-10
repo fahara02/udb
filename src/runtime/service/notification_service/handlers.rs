@@ -16,7 +16,8 @@ use crate::runtime::channels::OperationChannel;
 
 use super::super::native_helpers::{
     admit_on as native_admit_on, metadata_tenant_id, native_page_response, native_page_window,
-    native_service_context, parse_uuid, validate_request_scope, validate_request_tenant,
+    native_service_context, parse_uuid, tenant_only_native_service_context,
+    validate_request_scope, validate_request_tenant,
 };
 use super::NotificationServiceImpl;
 use super::config::{
@@ -231,7 +232,10 @@ pub(crate) async fn get_notification(
     let req = request.into_inner();
     let log_id = parse_uuid("log_id", &req.log_id)?.to_string();
     let runtime = svc.require_runtime()?;
-    let context = native_service_context(&metadata, &scoped_tenant, "");
+    // The log read already pins log_id + tenant. native_service_context would add
+    // the x-udb-project-id header as a further predicate, so a caller whose header
+    // project differs from the row's stored project got NOT_FOUND for a row it owns.
+    let context = tenant_only_native_service_context(&metadata, &scoped_tenant);
     let rows = runtime
         .native_entity_read_for_service(
             "notification",
