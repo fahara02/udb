@@ -902,11 +902,16 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 	}); err != nil {
 		t.Logf("perf seed: PutBackupPolicy failed: %v", err)
 	}
+	// Seed the restore target UNCONDITIONALLY. It must be a FRESH tenant id: the
+	// restore refuses a target that already holds rows. When this lived only in the
+	// StartTenantBackup success branch, a failed backup left the key unset and the
+	// fixture suffix-match resolved `restore_tenant_id` -> `tenant_id`, pointing the
+	// restore at the caller's own live tenant ("already holds N row(s)").
+	fix.set("restore_tenant_id", uuid4())
 	if b, err := backup.StartTenantBackup(nctx, &backuppb.StartTenantBackupRequest{
 		TenantId: tenant, MetadataJson: `{"source":"sdk-perf-seed"}`,
 	}); err == nil {
 		fix.set("backup_id", b.GetBackupId())
-		fix.set("restore_tenant_id", uuid4())
 	} else {
 		t.Logf("perf seed: StartTenantBackup failed: %v", err)
 	}

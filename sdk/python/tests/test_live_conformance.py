@@ -3497,10 +3497,15 @@ def perf_seed(clients: dict, meta: Metadata):
         backup.PutBackupPolicy(backup_pb.PutBackupPolicyRequest(tenant_id=tenant, policy_name="sdk-perf-default", schedule_cron="0 3 * * *", retention_days=7, max_retained_backups=3, enabled=True, metadata_json="{}"), metadata=md, timeout=8.0)
     except grpc.RpcError:
         pass
+    # Seed the restore target UNCONDITIONALLY. It must be a FRESH tenant id: the
+    # restore refuses a target that already holds rows. When this lived only in the
+    # StartTenantBackup success branch, a failed backup left the key unset and the
+    # fixture suffix-match resolved `restore_tenant_id` -> `tenant_id`, pointing the
+    # restore at the caller's own live tenant ("already holds N row(s)").
+    fix.set("restore_tenant_id", str(uuid.uuid4()))
     try:
         b = backup.StartTenantBackup(backup_pb.StartTenantBackupRequest(tenant_id=tenant, metadata_json='{"source":"sdk-perf-seed"}'), metadata=md, timeout=8.0)
         fix.set("backup_id", b.backup_id)
-        fix.set("restore_tenant_id", str(uuid.uuid4()))
     except grpc.RpcError:
         pass
 
