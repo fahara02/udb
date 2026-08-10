@@ -2193,6 +2193,25 @@ async function seedPerfFixtures(
     }, opts);
     fix.set("grant_create_user_id", svcB.user_id);
   });
+  // A THIRD ACTIVE service account, also grantless, reserved for the measured
+  // TransferServiceAccountGrant: the transfer moves svcOwner's ACTIVE grant onto a
+  // grantless ACTIVE SERVICE ACCOUNT. Service-account-B cannot serve here — the
+  // measured CreateServiceAccountGrant gives B a grant, and the handler refuses a
+  // target that already holds one. Without its own fixture the key suffix-matches a
+  // HUMAN user_id and the transfer is rejected "grants may only target service accounts".
+  await tryRun("CreateServiceAccountC", async () => {
+    const svcCName = `sdk-perf-svc-c-${suffix}`;
+    const svcC = (await gen.AuthnService.create_user({
+      username: svcCName, email: `${svcCName}@example.com`, password: pw,
+      tenant_id: tenantId, project_id: projectId, full_name: "SDK Perf Service Account C",
+      account_kind: "ACCOUNT_KIND_SERVICE_ACCOUNT",
+    }, opts)).user;
+    await gen.AuthnService.change_user_status({
+      user_id: svcC.user_id, new_status: "USER_STATUS_ACTIVE", reason: "perf seed activate",
+      context: { tenant: { tenant_id: tenantId, project_id: projectId } },
+    }, opts);
+    fix.set("grant_transfer_to_user_id", svcC.user_id);
+  });
   await tryRun("CreateApiKey", async () => {
     const key = await gen.ApiKeyService.create_api_key({ name: `sdk-perf-key-${suffix}`, owner_id: svcOwner, scopes: ["data:read"], context: { user_id: svcOwner, tenant: { tenant_id: tenantId, project_id: projectId } } }, opts);
     fix.set("key_id", key.key.key_id);

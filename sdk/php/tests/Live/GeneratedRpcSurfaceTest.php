@@ -3533,6 +3533,24 @@ function perfSeedPhp(array $s): array
             ->setContext((new \Udb\Core\Common\V1\RequestContext())->setTenant((new \Udb\Core\Common\V1\TenantContext())->setTenantId($tenant)->setProjectId($project))), $meta));
         $fix->set('grant_create_user_id', $bid);
     }
+    // A THIRD ACTIVE service account, also grantless, reserved for the measured
+    // TransferServiceAccountGrant: the transfer moves the owner's ACTIVE grant onto a
+    // grantless ACTIVE SERVICE ACCOUNT. Service-account-B cannot serve here — the
+    // measured CreateServiceAccountGrant gives B a grant, and the handler refuses a
+    // target that already holds one. Without its own fixture the key suffix-matches a
+    // HUMAN user_id and the transfer is rejected "grants may only target service accounts".
+    $svcCName = "sdk-perf-svc-c-$suffix";
+    $svcC = $try('SeedServiceAccountC', fn () => $authGen->create_user((new \Udb\Core\Authn\Services\V1\CreateUserRequest())
+        ->setUsername($svcCName)->setEmail("$svcCName@example.com")->setPassword('CorrectHorse1!')
+        ->setTenantId($tenant)->setProjectId($project)->setFullName('SDK Perf Service Account C')
+        ->setAccountKind(\Udb\Core\Authn\Entity\V1\AccountKind::ACCOUNT_KIND_SERVICE_ACCOUNT), $meta));
+    if ($svcC) {
+        $cid = $svcC->getUser()->getUserId();
+        $try('SeedServiceAccountCActivate', fn () => $authGen->change_user_status((new \Udb\Core\Authn\Services\V1\ChangeUserStatusRequest())
+            ->setUserId($cid)->setNewStatus(\Udb\Core\Authn\Entity\V1\UserStatus::USER_STATUS_ACTIVE)->setReason('perf seed activate')
+            ->setContext((new \Udb\Core\Common\V1\RequestContext())->setTenant((new \Udb\Core\Common\V1\TenantContext())->setTenantId($tenant)->setProjectId($project))), $meta));
+        $fix->set('grant_transfer_to_user_id', $cid);
+    }
     $key = $try('CreateApiKey', fn () => $authGen->create_api_key((new \Udb\Core\Apikey\Services\V1\CreateApiKeyRequest())
         ->setName("sdk-perf-key-$suffix")->setOwnerId($principal)->setScopes(['data:read'])->setContext($keyCtx), $meta));
     if ($key) {

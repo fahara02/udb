@@ -769,6 +769,28 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 		})
 		fix.set("grant_create_user_id", bid)
 	}
+	// A THIRD ACTIVE service account, also grantless, reserved for the measured
+	// TransferServiceAccountGrant: the transfer moves svcOwner's ACTIVE grant onto a
+	// grantless ACTIVE SERVICE ACCOUNT in the same tenant. Service-account-B cannot
+	// serve here — the measured CreateServiceAccountGrant gives B a grant, and the
+	// handler refuses a target that already holds one. Without its own fixture the
+	// key suffix-matches a HUMAN user_id and the transfer is rejected
+	// "grants may only target service accounts".
+	svcCName := "sdk-perf-svc-c-" + suffix
+	if svcC, err := authn.CreateUser(base, &authnpb.CreateUserRequest{
+		Username: svcCName, Email: svcCName + "@example.com", Password: pw,
+		TenantId: tenant, ProjectId: project, FullName: "SDK Perf Service Account C",
+		AccountKind: authnentpb.AccountKind_ACCOUNT_KIND_SERVICE_ACCOUNT,
+	}); err != nil {
+		t.Logf("perf seed: service-account-C CreateUser failed (TransferServiceAccountGrant falls back): %v", err)
+	} else {
+		cid := svcC.GetUser().GetUserId()
+		_, _ = authn.ChangeUserStatus(base, &authnpb.ChangeUserStatusRequest{
+			UserId: cid, NewStatus: authnentpb.UserStatus_USER_STATUS_ACTIVE, Reason: "perf seed activate",
+			Context: &commonpb.RequestContext{Tenant: &commonpb.TenantContext{TenantId: tenant, ProjectId: project}},
+		})
+		fix.set("grant_transfer_to_user_id", cid)
+	}
 	keyCtx := &commonpb.RequestContext{UserId: svcOwner, Tenant: &commonpb.TenantContext{TenantId: tenant, ProjectId: project}}
 	if key, err := apikey.CreateApiKey(base, &apikeypb.CreateApiKeyRequest{
 		Name: "sdk-perf-key-" + suffix, OwnerId: svcOwner, Scopes: []string{"data:read"}, Context: keyCtx,

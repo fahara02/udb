@@ -3047,6 +3047,31 @@ def perf_seed(clients: dict, meta: Metadata):
         fix.set("grant_create_user_id", svc_b.user.user_id)
     except grpc.RpcError:
         pass
+    # A THIRD ACTIVE service account, also grantless, reserved for the measured
+    # TransferServiceAccountGrant: the transfer moves svc_owner's ACTIVE grant onto a
+    # grantless ACTIVE SERVICE ACCOUNT. Service-account-B cannot serve here — the
+    # measured CreateServiceAccountGrant gives B a grant, and the handler refuses a
+    # target that already holds one. Without its own fixture the key suffix-matches a
+    # HUMAN user_id and the transfer is rejected "grants may only target service accounts".
+    try:
+        svc_c = authn.CreateUser(
+            authn_pb2.CreateUserRequest(
+                username=f"sdk-perf-svc-c-{suffix}", email=f"sdk-perf-svc-c-{suffix}@example.com", password=pw,
+                tenant_id=tenant, project_id=project, full_name="SDK Perf Service Account C",
+                account_kind=2,  # ACCOUNT_KIND_SERVICE_ACCOUNT
+            ),
+            metadata=md, timeout=8.0,
+        )
+        authn.ChangeUserStatus(
+            authn_pb2.ChangeUserStatusRequest(
+                user_id=svc_c.user.user_id, new_status=2, reason="perf seed activate",
+                context=common_pb.RequestContext(tenant=common_pb.TenantContext(tenant_id=tenant, project_id=project)),
+            ),
+            metadata=md, timeout=8.0,
+        )
+        fix.set("grant_transfer_to_user_id", svc_c.user.user_id)
+    except grpc.RpcError:
+        pass
     key_ctx = common_pb.RequestContext(user_id=svc_owner, tenant=common_pb.TenantContext(tenant_id=tenant, project_id=project))
     try:
         key = apikey.CreateApiKey(
