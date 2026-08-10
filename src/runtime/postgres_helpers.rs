@@ -822,6 +822,7 @@ mod tests {
     use crate::generation::{CatalogManifest, ManifestForeignKey, ManifestTableSecurity};
     use crate::proto::{ErrorDetail, ErrorKind};
     use crate::runtime::executor_utils::ERROR_DETAIL_METADATA_KEY;
+    use serde_json::json;
 
     fn decode_detail(status: &tonic::Status) -> ErrorDetail {
         let raw = status
