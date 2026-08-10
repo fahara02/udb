@@ -1106,16 +1106,21 @@ func perfSeed(t *testing.T, ctx context.Context, broker servicesv1.DataBrokerCli
 		// A SEPARATE registered+uploaded but NOT finalized file for the measured
 		// FinalizeUpload — finalizing the primary file_id again fails "already
 		// finalized", so the measured Finalize needs its own un-finalized target.
+		// FinalizeUpload verifies the stored object's byte length against the size
+		// DECLARED at RegisterUpload, so the declaration must equal the payload we
+		// actually upload — a fixed literal fails "uploaded object size N does not
+		// match declared M" once the suffix length changes.
+		fpayload := []byte("sdk-perf-finalize-" + suffix)
 		if freg, err := storage.RegisterUpload(nctx, &storagepb.RegisterUploadRequest{
 			TenantId: uuidTenant, ProjectId: "", Filename: "perf-fin-" + suffix + ".txt", ContentType: "text/plain",
-			FileType: "DOCUMENT", ReferenceId: uuid4(), ReferenceType: "sdk.perf", SizeBytes: 64, ExpiresInMinutes: 30,
+			FileType: "DOCUMENT", ReferenceId: uuid4(), ReferenceType: "sdk.perf",
+			SizeBytes: int64(len(fpayload)), ExpiresInMinutes: 30,
 		}); err == nil {
 			ffid := freg.GetFileId()
 			fix.set("finalize_file_id", ffid)
 			addCleanup(func() {
 				_, _ = storage.DeleteFile(nativeCtxFn(), &storagepb.DeleteFileRequest{TenantId: uuidTenant, FileId: ffid})
 			})
-			fpayload := []byte("sdk-perf-finalize-" + suffix)
 			fuploaded := false
 			if freg.GetUploadUrl() != "" {
 				putCtx, cancel := context.WithTimeout(ctx, 30*time.Second)

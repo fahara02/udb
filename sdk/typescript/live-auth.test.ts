@@ -2648,13 +2648,18 @@ async function seedPerfFixtures(
   // the bytes (so Finalize's object HEAD succeeds) but intentionally do NOT call
   // FinalizeUpload — the measured RPC finalizes it.
   await tryRun("RegisterFinalizeFile", async () => {
-    const freg = await gen.StorageService.register_upload({ tenant_id: uuidTenant, project_id: "", filename: `perf-fin-${suffix}.txt`, content_type: "text/plain", file_type: "DOCUMENT", reference_id: liveUuid(), reference_type: "sdk.perf", size_bytes: 64, expires_in_minutes: 30 }, opts);
+    // FinalizeUpload verifies the stored object's byte length against the size
+    // DECLARED at RegisterUpload, so declare exactly what we upload — a fixed
+    // literal fails "uploaded object size N does not match declared M".
+    const fpayload = `sdk-perf-finalize-${suffix}`;
+    const fpayloadLen = Buffer.byteLength(fpayload, "utf8");
+    const freg = await gen.StorageService.register_upload({ tenant_id: uuidTenant, project_id: "", filename: `perf-fin-${suffix}.txt`, content_type: "text/plain", file_type: "DOCUMENT", reference_id: liveUuid(), reference_type: "sdk.perf", size_bytes: fpayloadLen, expires_in_minutes: 30 }, opts);
     const ffid = freg.file_id;
     fix.set("finalize_file_id", ffid);
+    fix.set("file_size_bytes", String(fpayloadLen));
     addCleanup(async () => {
       try { await gen.StorageService.delete_file({ tenant_id: uuidTenant, file_id: ffid }, opts); } catch { /* best-effort */ }
     });
-    const fpayload = `sdk-perf-finalize-${suffix}`;
     const fUploadUrl: string = (freg as any).upload_url || "";
     let fput200 = false;
     if (fUploadUrl) {

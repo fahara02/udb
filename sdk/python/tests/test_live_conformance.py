@@ -3183,13 +3183,17 @@ def perf_seed(clients: dict, meta: Metadata):
         # FinalizeUpload — finalizing the primary file_id again fails "already
         # finalized", so the measured Finalize needs its own un-finalized target.
         try:
+            # FinalizeUpload verifies the stored object's byte length against the size
+            # DECLARED at RegisterUpload, so declare exactly what we upload — a fixed
+            # literal fails "uploaded object size N does not match declared M".
+            fin_body = f"sdk-perf-finalize-{suffix}".encode()
             fin_reg = storage.RegisterUpload(
-                storage_pb.RegisterUploadRequest(tenant_id=tenant, project_id="", filename=f"perf-fin-{suffix}.txt", content_type="text/plain", file_type=STORAGE_FILE_TYPE, reference_id=str(uuid.uuid4()), reference_type="sdk.perf", size_bytes=64, expires_in_minutes=30),
+                storage_pb.RegisterUploadRequest(tenant_id=tenant, project_id="", filename=f"perf-fin-{suffix}.txt", content_type="text/plain", file_type=STORAGE_FILE_TYPE, reference_id=str(uuid.uuid4()), reference_type="sdk.perf", size_bytes=len(fin_body), expires_in_minutes=30),
                 metadata=md, timeout=8.0,
             )
             fin_file_id = fin_reg.file_id
             fix.set("finalize_file_id", fin_file_id)
-            fin_body = f"sdk-perf-finalize-{suffix}".encode()
+            fix.set("file_size_bytes", str(len(fin_body)))
             fin_uploaded = False
             if fin_reg.upload_url:
                 try:

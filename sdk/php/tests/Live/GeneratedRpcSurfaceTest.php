@@ -3927,12 +3927,17 @@ function perfSeedPhp(array $s): array
         // A SEPARATE registered+uploaded but NOT finalized file for the measured
         // FinalizeUpload — finalizing the primary file_id again fails "already
         // finalized", so the measured Finalize needs its own un-finalized target.
+        // FinalizeUpload verifies the stored object's byte length against the size
+        // DECLARED at RegisterUpload, so declare exactly what we upload — a fixed
+        // literal fails "uploaded object size N does not match declared M".
+        $finPayloadLen = strlen("sdk-perf-finalize-$suffix");
         $finReg = $try('RegisterFinalizeFile', fn () => $authGen->register_upload((new \Udb\Core\Storage\Services\V1\RegisterUploadRequest())
             ->setTenantId($tenant)->setProjectId('')->setFilename("perf-fin-$suffix.txt")->setContentType('text/plain')
-            ->setFileType('DOCUMENT')->setReferenceId(liveUuidV4())->setReferenceType('sdk.perf')->setSizeBytes(64)->setExpiresInMinutes(30), $meta));
+            ->setFileType('DOCUMENT')->setReferenceId(liveUuidV4())->setReferenceType('sdk.perf')->setSizeBytes($finPayloadLen)->setExpiresInMinutes(30), $meta));
         if ($finReg) {
             $ffid = $finReg->getFileId();
             $fix->set('finalize_file_id', $ffid);
+            $fix->set('file_size_bytes', (string) $finPayloadLen);
             if ($ffid !== '') {
                 $cleanups[] = fn () => $try('DeleteFinalizeFile', fn () => $authGen->delete_file((new \Udb\Core\Storage\Services\V1\DeleteFileRequest())
                     ->setTenantId($tenant)->setFileId($ffid), $meta));
