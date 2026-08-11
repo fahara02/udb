@@ -1197,7 +1197,15 @@ mod tests {
             &serde_json::json!("not-an-int"),
         ));
 
-        assert_single_field_violation(&err, "value", "must be an integer or integer string");
+        // The constraint now also admits a whole number: protobuf Struct delivers a
+        // client's native integer as a double, so 25.0 must bind like 25 (see
+        // integer_binding_accepts_a_native_client_integer_from_protobuf_struct). A
+        // non-numeric string is still refused.
+        assert_single_field_violation(
+            &err,
+            "value",
+            "must be an integer, an integer string, or a whole number",
+        );
     }
 
     #[test]
