@@ -542,6 +542,7 @@ function fullSurfaceManifestFixtures() {
         message_type: LIVE_MESSAGE_TYPE, record_id: "record-1", bucket: "bucket-1", object_key: "object-1",
         document_id: "document-1", mongo_collection: "collection_1", node_id: "node-1",
         user_id: "user-1", subject: "user:user-1", session_id: "session-1", token: "token-1",
+        grant_binding_id: "grant-binding-1", grant_create_user_id: "grant-create-user-1",
         refresh_token: "refresh-1", csrf_token: "csrf-1", code: "123456", role_id: "role-1",
         admin_reset_mfa_user_id: "admin-reset-mfa-user-1",
         admin_reset_password_user_id: "admin-reset-password-user-1",
@@ -564,6 +565,11 @@ function fullSurfaceManifestFixtures() {
         device_id: "device-1", dismiss_dlq_id: "dismiss-dlq-1", dlq_id: "dlq-1",
         ds_policy_id: "2", egress_id: "eg-tenant-1-00000000-0000-4000-8000-000000000001", endpoint_id: "endpoint-1", external_identity_id: "external-1",
         fencing_token: "1", finalize_file_id: "finalize-file-1", gov_exp: "1900000000", job_id: "job-1",
+        // Separate disposable targets: AdminPurgeTenant must not point at the caller's
+        // tenant, the grant transfer needs its own source account, and FinalizeUpload must
+        // resend the reference_id established at register_upload.
+        admin_purge_tenant_id: "tenant-admin-purge-1", grant_transfer_from_user_id: "user-grant-from-1",
+        finalize_reference_id: "finalize-ref-1",
         embedding_job_id: "11111111-1111-4111-8111-000000000101",
         embedding_work_item_id: "11111111-1111-4111-8111-000000000102",
         embedding_document_id: "11111111-1111-4111-8111-000000000103",
@@ -1591,7 +1597,9 @@ function fullSurfaceManifestFixtures() {
     node_assert_1.strict.equal(created?.algorithm, "aes256-gcm-siv");
     node_assert_1.strict.equal(decrypt?.ciphertext, "udb-vault:v1:seed");
     node_assert_1.strict.equal(deleted?.secret_path, "app/delete");
-    node_assert_1.strict.equal(destroyed?.confirmation_token, "destroy");
+    // The irreversible crypto-shred is authorized only when confirmation_token EQUALS
+    // secret_path; a fixed "destroy" literal is rejected INVALID_ARGUMENT.
+    node_assert_1.strict.equal(destroyed?.confirmation_token, destroyed?.secret_path);
     node_assert_1.strict.equal(encrypted?.plaintext, "perf");
     node_assert_1.strict.equal(dbCreds?.role_name, "sdk-readonly");
     node_assert_1.strict.equal(dbCreds?.ttl_seconds, 900);
@@ -1792,6 +1800,18 @@ async function seedPerfFixtures(gen, data, tenantId, projectId, uuidTenant) {
     fix.set("message_type", LIVE_MESSAGE_TYPE);
     fix.set("tenant_code", `sdk-perf-tenant-${suffix}`);
     fix.set("purge_tenant_id", tenantId);
+    // AdminPurgeTenant is a PRIVILEGED cross-tenant purge; the tenant-status gate
+    // (live since 0.4.32) suspends the PURGED tenant, so pointing it at the caller's
+    // own tenant self-suspends the benchmark tenant mid-run and denies every later
+    // RPC. Target a SEPARATE disposable tenant so only the terminal self-PurgeTenant
+    // suspends the caller, at the very end. Fall back to a non-existent UUID
+    // (isolated NotFound, never a cascade) if creation fails.
+    fix.set("admin_purge_tenant_id", liveUuid());
+    await tryRun("disposable admin-purge tenant", async () => {
+        const dispTenant = await gen.TenantService.create_tenant({ code: `sdkperfadminpurge${suffix}`, name: "SDK Perf Admin-Purge Disposable", type: "organization", config: "{}", branding: "{}" }, opts);
+        if (dispTenant.tenant_id)
+            fix.set("admin_purge_tenant_id", dispTenant.tenant_id);
+    });
     // ── DataBroker: a real SdkLiveRecord row (drives Upsert/Select/Delete + CDC) ──
     const recordId = `ts-perf-${suffix}`;
     await tryRun("SdkLiveRecord upsert", async () => {
@@ -2080,27 +2100,114 @@ async function seedPerfFixtures(gen, data, tenantId, projectId, uuidTenant) {
     fix.set("resource", "invoice");
     fix.set("action", "data.select");
     // ── ApiKeyService: a real key → key_id + plain_key ─────────────────────────────
-    const principal = `sdk-perf-svc-${suffix}`;
+    // Canonical-identity model: the key owner must be an EXISTING ACTIVE
+    // SERVICE_ACCOUNT with an active typed grant, addressed by its UUID — a
+    // bare service NAME is not a user_id and never was one.
+    const svcName = `sdk-perf-svc-${suffix}`;
+    let svcOwner = "";
+    await tryRun("SeedServiceAccount", async () => {
+        const svcUser = (await gen.AuthnService.create_user({
+            username: svcName, email: `${svcName}@example.com`, password: pw,
+            tenant_id: tenantId, project_id: projectId, full_name: "SDK Perf Service Account",
+            account_kind: "ACCOUNT_KIND_SERVICE_ACCOUNT",
+        }, opts)).user;
+        svcOwner = svcUser.user_id;
+        // CreateUser persists PENDING_VERIFICATION; the typed grant and
+        // CreateApiKey both require an ACTIVE service account.
+        await gen.AuthnService.change_user_status({
+            user_id: svcOwner, new_status: "USER_STATUS_ACTIVE", reason: "perf seed activate",
+            context: { tenant: { tenant_id: tenantId, project_id: projectId } },
+        }, opts);
+        await gen.AuthnService.create_service_account_grant({
+            tenant_id: tenantId, user_id: svcOwner, service_identity: svcName,
+            project_id: projectId, approved_scopes: ["data:read", "resource:read"], reason: "sdk perf seed",
+        }, opts);
+        // The measured RevokeCertificateBinding revokes THIS seeded binding.
+        const binding = await gen.AuthnService.create_certificate_binding({
+            tenant_id: tenantId, user_id: svcOwner, selector_kind: "SPIFFE_URI",
+            selector_value: `spiffe://bench/seed-binding-${suffix}`, reason: "perf seed binding",
+        }, opts);
+        if (binding?.binding?.binding_id)
+            fix.set("grant_binding_id", binding.binding.binding_id);
+    });
+    if (!svcOwner)
+        svcOwner = svcName; // fall back; CreateApiKey fails typed, not INTERNAL
+    // A SECOND ACTIVE service account WITHOUT a grant: the measured
+    // CreateServiceAccountGrant makes its revision-1 grant here, and the
+    // destructive-phase RotateServiceAccountIdentity rotates that same grant.
+    const svcBName = `sdk-perf-svc-b-${suffix}`;
+    await tryRun("SeedServiceAccountB", async () => {
+        const svcB = (await gen.AuthnService.create_user({
+            username: svcBName, email: `${svcBName}@example.com`, password: pw,
+            tenant_id: tenantId, project_id: projectId, full_name: "SDK Perf Service Account B",
+            account_kind: "ACCOUNT_KIND_SERVICE_ACCOUNT",
+        }, opts)).user;
+        await gen.AuthnService.change_user_status({
+            user_id: svcB.user_id, new_status: "USER_STATUS_ACTIVE", reason: "perf seed activate",
+            context: { tenant: { tenant_id: tenantId, project_id: projectId } },
+        }, opts);
+        fix.set("grant_create_user_id", svcB.user_id);
+    });
+    // A THIRD ACTIVE service account, also grantless, reserved for the measured
+    // TransferServiceAccountGrant: the transfer moves svcOwner's ACTIVE grant onto a
+    // grantless ACTIVE SERVICE ACCOUNT. Service-account-B cannot serve here — the
+    // measured CreateServiceAccountGrant gives B a grant, and the handler refuses a
+    // target that already holds one. Without its own fixture the key suffix-matches a
+    // HUMAN user_id and the transfer is rejected "grants may only target service accounts".
+    await tryRun("CreateServiceAccountC", async () => {
+        const svcCName = `sdk-perf-svc-c-${suffix}`;
+        const svcC = (await gen.AuthnService.create_user({
+            username: svcCName, email: `${svcCName}@example.com`, password: pw,
+            tenant_id: tenantId, project_id: projectId, full_name: "SDK Perf Service Account C",
+            account_kind: "ACCOUNT_KIND_SERVICE_ACCOUNT",
+        }, opts)).user;
+        await gen.AuthnService.change_user_status({
+            user_id: svcC.user_id, new_status: "USER_STATUS_ACTIVE", reason: "perf seed activate",
+            context: { tenant: { tenant_id: tenantId, project_id: projectId } },
+        }, opts);
+        fix.set("grant_transfer_to_user_id", svcC.user_id);
+    });
+    // A FOURTH service account that OWNS a fresh grant, used only as the transfer's
+    // SOURCE. svcOwner cannot serve: its grant backs the measured api-key RPCs and its
+    // revision moves, so the transfer's `expected_revision: 1` CAS fails "source grant is
+    // inactive, missing, or its revision changed". Nothing else touches this grant.
+    await tryRun("CreateServiceAccountD", async () => {
+        const svcDName = `sdk-perf-svc-d-${suffix}`;
+        const svcD = (await gen.AuthnService.create_user({
+            username: svcDName, email: `${svcDName}@example.com`, password: pw,
+            tenant_id: tenantId, project_id: projectId, full_name: "SDK Perf Service Account D",
+            account_kind: "ACCOUNT_KIND_SERVICE_ACCOUNT",
+        }, opts)).user;
+        await gen.AuthnService.change_user_status({
+            user_id: svcD.user_id, new_status: "USER_STATUS_ACTIVE", reason: "perf seed activate",
+            context: { tenant: { tenant_id: tenantId, project_id: projectId } },
+        }, opts);
+        await gen.AuthnService.create_service_account_grant({
+            tenant_id: tenantId, user_id: svcD.user_id, service_identity: svcDName,
+            project_id: projectId, approved_scopes: ["data:read"], reason: "sdk perf transfer source",
+        }, opts);
+        fix.set("grant_transfer_from_user_id", svcD.user_id);
+    });
     await tryRun("CreateApiKey", async () => {
-        const key = await gen.ApiKeyService.create_api_key({ name: `sdk-perf-key-${suffix}`, owner_id: principal, scopes: ["data:read"], context: { user_id: principal, tenant: { tenant_id: tenantId, project_id: projectId } } }, opts);
+        const key = await gen.ApiKeyService.create_api_key({ name: `sdk-perf-key-${suffix}`, owner_id: svcOwner, scopes: ["data:read"], context: { user_id: svcOwner, tenant: { tenant_id: tenantId, project_id: projectId } } }, opts);
         fix.set("key_id", key.key.key_id);
         // revoke/rotate/update look up by key_PREFIX (get_by_prefix), not the key_id UUID.
         // Derive it from plain_key ("udbk_xxxx.yyyy" → "udbk_xxxx") — robust vs an unset field.
         fix.set("key_prefix", (key.key.key_prefix || String(key.plain_key).split(".")[0]));
         fix.set("plain_key", key.plain_key);
-        fix.set("owner_id", principal);
+        fix.set("owner_id", svcOwner);
     });
     // A SEPARATE disposable key for the destructive RevokeApiKey → real 200, so the
     // primary key_id survives for RotateApiKey/UpdateApiKey/GetApiKey/ValidateApiKey.
     await tryRun("CreateRevokeKey", async () => {
-        const rk = await gen.ApiKeyService.create_api_key({ name: `sdk-perf-revoke-${suffix}`, owner_id: principal, scopes: ["data:read"], context: { user_id: principal, tenant: { tenant_id: tenantId, project_id: projectId } } }, opts);
+        const rk = await gen.ApiKeyService.create_api_key({ name: `sdk-perf-revoke-${suffix}`, owner_id: svcOwner, scopes: ["data:read"], context: { user_id: svcOwner, tenant: { tenant_id: tenantId, project_id: projectId } } }, opts);
         fix.set("revoke_key_id", rk.key.key_id);
         fix.set("revoke_key_prefix", (rk.key.key_prefix || String(rk.plain_key).split(".")[0]));
     });
     // A SEPARATE disposable key for UpdateApiKey, so the measured RotateApiKey (which
     // rotates the primary key_id) can't invalidate the key UpdateApiKey targets.
     await tryRun("CreateUpdateKey", async () => {
-        const uk = await gen.ApiKeyService.create_api_key({ name: `sdk-perf-update-${suffix}`, owner_id: principal, scopes: ["data:read"], context: { user_id: principal, tenant: { tenant_id: tenantId, project_id: projectId } } }, opts);
+        const uk = await gen.ApiKeyService.create_api_key({ name: `sdk-perf-update-${suffix}`, owner_id: svcOwner, scopes: ["data:read"], context: { user_id: svcOwner, tenant: { tenant_id: tenantId, project_id: projectId } } }, opts);
         fix.set("update_key_id", uk.key.key_id);
         fix.set("update_key_prefix", (uk.key.key_prefix || String(uk.plain_key).split(".")[0]));
     });
@@ -2425,7 +2532,7 @@ async function seedPerfFixtures(gen, data, tenantId, projectId, uuidTenant) {
         }, opts);
         if (document.job_id) {
             fix.set("embedding_job_id", document.job_id);
-            const work = await gen.EmbeddingService.list_embedding_work_items({ tenant_id: tenantId, job_id: document.job_id, page_size: 50 }, opts);
+            const work = await gen.EmbeddingService.list_work_items({ tenant_id: tenantId, job_id: document.job_id, page_size: 50 }, opts);
             if ((work.work_items ?? []).length > 0)
                 fix.set("embedding_work_item_id", work.work_items[0].work_item_id);
         }
@@ -2564,16 +2671,28 @@ async function seedPerfFixtures(gen, data, tenantId, projectId, uuidTenant) {
     // the bytes (so Finalize's object HEAD succeeds) but intentionally do NOT call
     // FinalizeUpload — the measured RPC finalizes it.
     await tryRun("RegisterFinalizeFile", async () => {
-        const freg = await gen.StorageService.register_upload({ tenant_id: uuidTenant, project_id: "", filename: `perf-fin-${suffix}.txt`, content_type: "text/plain", file_type: "DOCUMENT", reference_id: liveUuid(), reference_type: "sdk.perf", size_bytes: 64, expires_in_minutes: 30 }, opts);
+        // FinalizeUpload verifies the stored object's byte length against the size
+        // DECLARED at RegisterUpload, so declare exactly what we upload — a fixed
+        // literal fails "uploaded object size N does not match declared M".
+        // The shared bench body declares size_bytes: 1024 and FinalizeUpload verifies the
+        // stored object against THAT, so the seeded object must be exactly 1024 B.
+        const fpayloadBase = `sdk-perf-finalize-${suffix}`;
+        const fpayload = fpayloadBase + "x".repeat(1024 - fpayloadBase.length);
+        const fpayloadLen = Buffer.byteLength(fpayload, "utf8");
+        // FinalizeUpload refuses to CHANGE reference_id from the value established at
+        // RegisterUpload, so the measured body must resend that exact value — seed it.
+        const finRefId = liveUuid();
+        fix.set("finalize_reference_id", finRefId);
+        const freg = await gen.StorageService.register_upload({ tenant_id: uuidTenant, project_id: "", filename: `perf-fin-${suffix}.txt`, content_type: "text/plain", file_type: "DOCUMENT", reference_id: finRefId, reference_type: "sdk.perf", size_bytes: fpayloadLen, expires_in_minutes: 30 }, opts);
         const ffid = freg.file_id;
         fix.set("finalize_file_id", ffid);
+        fix.set("file_size_bytes", String(fpayloadLen));
         addCleanup(async () => {
             try {
                 await gen.StorageService.delete_file({ tenant_id: uuidTenant, file_id: ffid }, opts);
             }
             catch { /* best-effort */ }
         });
-        const fpayload = `sdk-perf-finalize-${suffix}`;
         const fUploadUrl = freg.upload_url || "";
         let fput200 = false;
         if (fUploadUrl) {

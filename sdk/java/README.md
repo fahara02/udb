@@ -7,7 +7,7 @@
 
 <p align="center">
   <strong>UDB :: Universal Data Broker</strong><br>
-  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.5.4 | protocol v1.0.0</sub>
+  <sub>gRPC data plane | native control plane | tenant/project scope guard<br>crate v0.5.5 | protocol v1.0.0</sub>
 </p>
 <!-- UDB_BRAND_HEADER_END -->
 
@@ -15,9 +15,9 @@
 gRPC client, attaches UDB metadata, and includes generated request/response
 types for the broker and native control-plane services.
 
-Current manifest version: `0.5.4-SNAPSHOT`
+Current manifest version: `0.5.5-SNAPSHOT`
 
-Release target: `0.5.4`
+Release target: `0.5.5`
 
 Runtime: Java 17+
 

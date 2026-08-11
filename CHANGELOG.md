@@ -5,6 +5,42 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.5.5] - 2026-08-11
+
+Patch release fixing a mutation-verb inconsistency reported from production, a
+WebAuthn assertion failure, and a restore path that could never succeed. No
+wire-protocol change; `^0.5.4` consumers should upgrade.
+
+### Fixed
+- **`Update` now accepts a native client integer, exactly as `Upsert` does.**
+  protobuf `Struct` carries every number as a double, so a client sending a
+  native integer (Go `25`, JS `25`) reached the binder as `25.0`. `Update`
+  refused it with `expected integer, got 25.0` while `Upsert` accepted the same
+  value on the same column, so the correct encoding depended on which verb you
+  called and a mistake surfaced as a server error rather than a constraint at
+  the call site. Integral doubles now bind; a fractional or out-of-range double
+  is still refused rather than silently truncated.
+- **`AuthnService.FinishWebAuthnAuthentication` completes.** Consuming the
+  WebAuthn challenge read a tenant-scoped message with an empty tenant, which
+  the IR compiler refuses (`tenant_scope_required`), so a valid assertion still
+  returned INTERNAL. The authenticated user's tenant is now threaded through.
+- **`BackupService.RestoreTenant` can restore onto a fresh tenant again.** The
+  fresh-target guard probed every tenant-scoped table, including
+  `udb_metering.usage_events` — which metering populates for the target tenant
+  when the restore RPC is admitted, before the probe runs. The guard therefore
+  detected the broker's own bookkeeping and refused every cross-tenant restore.
+  Platform-bookkeeping relations are now excluded from the probe; they are not
+  restored from a backup either, so no tenant data can be masked.
+- **Restore refusals name the blocking relations**, instead of only reporting a
+  row count that gave an operator nothing to act on.
+
+### Added
+- A build-time ratchet (`cargo test`) over every
+  `native_service_context(.., "")` call site. That helper falls back to the
+  `x-udb-project-id` header, which the entity layer then applies as a query
+  predicate — the defect behind three broken reads in 0.5.4. New occurrences now
+  fail the build.
+
 ## [0.5.4] - 2026-08-11
 
 Patch release fixing four native-service reads that failed against real
