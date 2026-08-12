@@ -299,7 +299,26 @@ fn native_schema_migration_enabled(
     schema: &ProtoSchema,
     enabled_ids: &std::collections::BTreeSet<String>,
 ) -> bool {
-    enabled_ids.contains(native_service_id_for_proto_schema(schema))
+    let direct_owner = native_service_id_for_proto_schema(schema);
+    if !direct_owner.is_empty() {
+        return enabled_ids.contains(direct_owner);
+    }
+
+    // Most native services own a unique `udb_<service>` schema. Resolve those
+    // owners from the descriptor-derived registry rather than extending the
+    // compatibility switch in `native_service_id_for_parts` every time a
+    // service is added. Without this fallback, newly added services were
+    // mounted and required by the system-catalog health gate while all of their
+    // entity schemas were silently filtered out of the migration manifest.
+    crate::runtime::service::native_registry::native_service_registry()
+        .into_iter()
+        .any(|entry| {
+            enabled_ids.contains(&entry.service_id)
+                && entry
+                    .db_schema_prefixes
+                    .iter()
+                    .any(|prefix| prefix == &schema.schema_name)
+        })
 }
 
 fn native_service_id_for_proto_schema(schema: &ProtoSchema) -> &str {
@@ -639,6 +658,55 @@ mod tests {
             has_policy_rules,
             "expected the proto-annotated policy_rules table in the native manifest; got: {:?}",
             manifest.tables.iter().map(|t| &t.table).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn native_merge_migrates_every_enabled_registry_owned_schema() {
+        let settings = NativeServicesSettings::default();
+        let config = crate::runtime::config::UdbConfig {
+            native_services: settings.clone(),
+            ..crate::runtime::config::UdbConfig::default()
+        };
+        let enabled_ids =
+            crate::runtime::service::native_registry::migration_enabled_service_ids(&config);
+        let registry = crate::runtime::service::native_registry::native_service_registry();
+
+        let expected: Vec<_> = native_manifest()
+            .tables
+            .iter()
+            .filter(|table| {
+                registry.iter().any(|entry| {
+                    enabled_ids.contains(&entry.service_id)
+                        && entry
+                            .db_schema_prefixes
+                            .iter()
+                            .any(|prefix| prefix == &table.schema)
+                })
+            })
+            .map(|table| (table.schema.clone(), table.table.clone()))
+            .collect();
+        assert!(
+            !expected.is_empty(),
+            "descriptor registry must own at least one native table"
+        );
+
+        let user_schemas: Vec<ProtoSchema> = Vec::new();
+        let user_manifest =
+            CatalogManifest::from_schemas(&user_schemas).expect("empty user manifest must build");
+        let (merged, _) = merge_native_with_settings(&user_manifest, &user_schemas, &settings);
+        let missing: Vec<_> = expected
+            .into_iter()
+            .filter(|(schema, table)| {
+                !merged
+                    .tables
+                    .iter()
+                    .any(|candidate| &candidate.schema == schema && &candidate.table == table)
+            })
+            .collect();
+        assert!(
+            missing.is_empty(),
+            "enabled native-service tables were filtered out of the migration manifest: {missing:?}"
         );
     }
 
