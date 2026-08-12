@@ -1043,6 +1043,21 @@ pub(crate) fn struct_to_json(value: &Struct) -> JsonValue {
 pub(crate) fn prost_value_to_json(value: &ProstValue) -> JsonValue {
     match &value.kind {
         Some(Kind::NullValue(_)) | None => JsonValue::Null,
+        // google.protobuf.Value has only one numeric wire kind (f64). Recover
+        // integer semantics when the value is exactly representable in JSON's
+        // interoperable safe-integer range. Without this boundary repair an
+        // SDK Update of an INTEGER column sends `0`, prost carries `0.0`, and
+        // the relational binder correctly rejects it as a floating-point
+        // value. Values outside the safe range remain floats and therefore
+        // fail closed for integer columns; callers can use the documented
+        // decimal-string form when they need the full i64 range.
+        Some(Kind::NumberValue(value))
+            if value.is_finite()
+                && value.fract() == 0.0
+                && value.abs() <= 9_007_199_254_740_991.0 =>
+        {
+            JsonValue::from(*value as i64)
+        }
         Some(Kind::NumberValue(value)) => JsonValue::from(*value),
         Some(Kind::StringValue(value)) => JsonValue::String(value.clone()),
         Some(Kind::BoolValue(value)) => JsonValue::Bool(*value),
@@ -2224,12 +2239,13 @@ mod error_detail_tests {
         deadline_exceeded_status, failed_precondition_fields, internal_status,
         invalid_argument_fields, json_f64, json_i64, json_required_f32_vec, json_required_str,
         object_bytes_from_json, parse_sql_dispatch, policy_status, policy_status_with_code,
-        prefix_status, quota_refusal_status, quota_status, referential_constraint_status,
-        reject_oversized_object, reject_plan, retryable_aborted_status, retryable_status,
-        schema_status, sqlx_error_to_status, status_from_store_string, status_with_error_detail,
-        validate_identifier,
+        prefix_status, prost_value_to_json, quota_refusal_status, quota_status,
+        referential_constraint_status, reject_oversized_object, reject_plan,
+        retryable_aborted_status, retryable_status, schema_status, sqlx_error_to_status,
+        status_from_store_string, status_with_error_detail, validate_identifier,
     };
     use crate::proto::{ErrorDetail, ErrorKind};
+    use prost_types::Value as ProstValue;
     use serde_json::json;
 
     /// Decode the prost `ErrorDetail` from the binary trailer the way an SDK
@@ -3074,6 +3090,28 @@ mod error_detail_tests {
                 .expect_err("non-numeric vector"),
             "vector",
             "must contain only numbers",
+        );
+    }
+
+    #[test]
+    fn protobuf_numbers_recover_only_safe_integer_semantics() {
+        use prost_types::value::Kind;
+
+        let value = |number| ProstValue {
+            kind: Some(Kind::NumberValue(number)),
+        };
+
+        assert_eq!(prost_value_to_json(&value(0.0)), json!(0));
+        assert_eq!(
+            prost_value_to_json(&value(9_007_199_254_740_991.0)),
+            json!(9_007_199_254_740_991_i64)
+        );
+        assert_eq!(prost_value_to_json(&value(1.5)), json!(1.5));
+        assert!(
+            prost_value_to_json(&value(9_007_199_254_740_992.0))
+                .as_i64()
+                .is_none(),
+            "an unsafe f64 must not be reinterpreted as an exact integer"
         );
     }
 
