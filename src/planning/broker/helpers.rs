@@ -246,6 +246,53 @@ pub(crate) fn describe_valid_conflict_targets(table: &ManifestTable) -> String {
     }
 }
 
+/// Refuse an upsert whose `ON CONFLICT` arbiter PostgreSQL will silently never
+/// match.
+///
+/// A partitioned table cannot carry a unique index that omits its partition
+/// key, so the generated primary key is widened with the partition column and
+/// the emitted arbiter is widened to match. When that partition column is
+/// SERVER-owned — `exclude_from_insert`, `generated`, identity, auto-increment —
+/// the caller structurally cannot supply it, every INSERT receives a fresh
+/// server value, and the arbiter therefore matches no existing row. PostgreSQL
+/// reports no error: the upsert quietly degenerates into a plain INSERT and
+/// writes a duplicate for a key the entity declares unique.
+///
+/// Silently violating a declared key is a data-integrity failure, so refuse the
+/// write and name the two ways out. A caller-supplied partition column is left
+/// alone — there the widened arbiter is real and does match.
+pub(crate) fn unmatchable_partitioned_conflict_target_error(
+    table: &ManifestTable,
+    conflict_columns: &[String],
+) -> Option<String> {
+    let partition_column = table.partition_column.trim();
+    if partition_column.is_empty() || table.partition_strategy.trim().is_empty() {
+        return None;
+    }
+    // Already part of the arbiter: the caller supplies it, so it can match.
+    if conflict_columns
+        .iter()
+        .any(|column| column.eq_ignore_ascii_case(partition_column))
+    {
+        return None;
+    }
+    if !is_server_owned_column(table, partition_column) {
+        return None;
+    }
+    Some(format!(
+        "upsert cannot target ({conflict}) on partitioned table {schema}.{table_name}: \
+         PostgreSQL widens the unique constraint with the partition column \
+         '{partition_column}', which this entity marks server-owned, so the caller cannot \
+         supply it and ON CONFLICT would never match — the write would silently INSERT a \
+         duplicate for a declared-unique key. Either include '{partition_column}' in \
+         conflict_fields and supply it in the record, or use Update (which targets rows \
+         by filter and cannot insert)",
+        conflict = conflict_columns.join(", "),
+        schema = table.schema,
+        table_name = table.table,
+    ))
+}
+
 pub(crate) fn sorted_columns(columns: &[String]) -> Vec<String> {
     let mut out = columns
         .iter()

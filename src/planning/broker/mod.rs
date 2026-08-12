@@ -853,6 +853,10 @@ pub fn build_upsert_plan(
             describe_valid_conflict_targets(table),
         ));
     }
+    errors.extend(unmatchable_partitioned_conflict_target_error(
+        table,
+        &conflict_columns,
+    ));
 
     let update_columns = parameter_columns
         .iter()
@@ -1001,6 +1005,10 @@ pub(crate) fn build_upsert_logical_write(
             describe_valid_conflict_targets(table),
         ));
     }
+    errors.extend(unmatchable_partitioned_conflict_target_error(
+        table,
+        &conflict_columns,
+    ));
 
     let update_columns = record_columns
         .iter()
@@ -2800,6 +2808,80 @@ mod tests {
             !allowed.errors.iter().any(|e| e.contains("hr:write")),
             "carrying the table scope must clear the error: {:?}",
             allowed.errors
+        );
+    }
+
+    /// A RANGE-partitioned table cannot carry a unique index that omits its
+    /// partition key, so the arbiter is widened with it. When that column is
+    /// server-owned the caller cannot supply it, every INSERT gets a fresh
+    /// value, ON CONFLICT never matches, and the upsert silently writes a
+    /// duplicate for a declared-unique key. Refuse instead.
+    #[test]
+    fn upsert_refuses_a_partitioned_conflict_target_the_caller_cannot_supply() {
+        let mut created_at = test_column("created_at");
+        created_at.sql_type = "TIMESTAMPTZ".to_string();
+        created_at.exclude_from_insert = true;
+
+        let mut manifest = update_test_manifest();
+        manifest.tables[0].columns.push(created_at);
+        manifest.tables[0].primary_key = vec!["id".to_string(), "tenant_id".to_string()];
+        manifest.tables[0].partition_strategy = "RANGE".to_string();
+        manifest.tables[0].partition_column = "created_at".to_string();
+
+        let plan_for = |m: &CatalogManifest| {
+            build_upsert_plan(
+                m,
+                &UpsertPlanRequest {
+                    context: RequestContext {
+                        tenant_id: "t1".to_string(),
+                        purpose: "unit-test".to_string(),
+                        scopes: vec!["udb:write".to_string()],
+                        ..RequestContext::default()
+                    },
+                    message_type: "acme.test.v1.Widget".to_string(),
+                    record: json!({"id": "w1", "tenant_id": "t1", "status": "open"}),
+                    ..UpsertPlanRequest::default()
+                },
+            )
+        };
+
+        let refused = plan_for(&manifest);
+        assert!(
+            refused
+                .errors
+                .iter()
+                .any(|e| e.contains("would never match") && e.contains("created_at")),
+            "a server-owned partition column must refuse the upsert: {:?}",
+            refused.errors
+        );
+
+        // Caller-supplied partition column: the widened arbiter is real and does
+        // match, so this must still be allowed.
+        let mut supplied = manifest.clone();
+        supplied.tables[0]
+            .columns
+            .iter_mut()
+            .find(|c| c.column_name == "created_at")
+            .expect("created_at column")
+            .exclude_from_insert = false;
+        assert!(
+            !plan_for(&supplied)
+                .errors
+                .iter()
+                .any(|e| e.contains("would never match")),
+            "a caller-supplied partition column must remain allowed"
+        );
+
+        // Unpartitioned tables are untouched.
+        let mut plain = manifest.clone();
+        plain.tables[0].partition_strategy = String::new();
+        plain.tables[0].partition_column = String::new();
+        assert!(
+            !plan_for(&plain)
+                .errors
+                .iter()
+                .any(|e| e.contains("would never match")),
+            "an unpartitioned table must be unaffected"
         );
     }
 

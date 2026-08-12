@@ -1483,6 +1483,62 @@ mod generic_dispatch_validation_tests {
     }
 
     #[test]
+    fn empty_array_and_null_take_their_type_from_the_column_cast() {
+        use crate::ir::value::LogicalValue;
+
+        // An EMPTY array must not be guessed as jsonb — that bound jsonb into a
+        // TEXT[] column and made an empty TEXT[] unexpressible.
+        assert_eq!(logical_value_param_type(&LogicalValue::Array(vec![])), "");
+        // A populated array still types from its elements.
+        assert_eq!(
+            logical_value_param_type(&LogicalValue::Array(vec![LogicalValue::String(
+                "a".to_string()
+            )])),
+            "array_string"
+        );
+
+        // The rendered cast is what tells the binder which element type to
+        // produce for that otherwise-untyped empty array.
+        for (statement, expected) in [
+            ("INSERT INTO t (tags) VALUES ($1::TEXT[])", "array_string"),
+            (
+                "INSERT INTO t (tags) VALUES ($1::VARCHAR[])",
+                "array_string",
+            ),
+            ("INSERT INTO t (n) VALUES ($1::INTEGER[])", "array_int"),
+            ("INSERT INTO t (n) VALUES ($1::BIGINT[])", "array_int"),
+            ("INSERT INTO t (f) VALUES ($1::NUMERIC[])", "array_float"),
+            ("INSERT INTO t (b) VALUES ($1::BOOLEAN[])", "array_bool"),
+        ] {
+            assert_eq!(
+                postgres_param_types(statement, &[LogicalValue::Array(vec![])]),
+                vec![expected],
+                "{statement}"
+            );
+        }
+
+        // A scalar column needs no bind change: the SQL cast alone lets a text
+        // NULL land in an integer column, which is what `nil` needed.
+        assert_eq!(
+            postgres_param_types("UPDATE t SET n = $1::INTEGER", &[LogicalValue::Null]),
+            vec![""]
+        );
+        // A jsonb column keeps the jsonb bind for an empty array.
+        assert_eq!(
+            postgres_param_types(
+                "INSERT INTO t (d) VALUES ($1::JSONB)",
+                &[LogicalValue::Array(vec![])]
+            ),
+            vec![""]
+        );
+        // `$1::` must not be matched by `$10::`.
+        assert_eq!(
+            postgres_array_cast_param_type("jsonb) values ($10::text[]"),
+            None
+        );
+    }
+
+    #[test]
     fn typed_generic_pg_param_validation_carries_field_violations() {
         let array_shape = json_array_values(&json!("not-array"), "array_string").unwrap_err();
         assert_eq!(array_shape.message(), "array_string params must be arrays");
@@ -1615,6 +1671,14 @@ fn logical_value_param_type(value: &crate::ir::value::LogicalValue) -> &'static 
         // with time zone but expression is of type text"). Type it so the bind
         // path parses it back to a real `DateTime<Utc>`.
         LogicalValue::Timestamp(_) => "timestamptz",
+        // An EMPTY array carries no element to infer from. Guessing `json` here
+        // bound jsonb into a `TEXT[]` column and failed with SQLSTATE 42804
+        // ("value type does not match column"), which made an empty TEXT[]
+        // unexpressible — `[]` mismatched and omitting the key hit NOT NULL.
+        // Defer to the column: the compiler casts the placeholder to the
+        // declared type and `postgres_placeholder_cast_type` reads the element
+        // type back out of that cast.
+        LogicalValue::Array(values) if values.is_empty() => "",
         LogicalValue::Array(values) => match values
             .iter()
             .find(|value| !matches!(value, LogicalValue::Null))
@@ -1656,8 +1720,36 @@ fn postgres_placeholder_cast_type(statement: &str, position: usize) -> Option<&'
     } else if lower.starts_with("uuid") {
         Some("uuid")
     } else {
-        None
+        // An array cast names the element type the bind must produce. Without
+        // this an EMPTY array reaches a `TEXT[]` column as jsonb (42804) — a
+        // jsonb parameter has no cast to `text[]`, so the SQL cast alone cannot
+        // rescue it the way it can for a scalar NULL.
+        postgres_array_cast_param_type(&lower)
     }
+}
+
+/// Element-typed bind for a `$n::<type>[]` cast, read off the rendered cast.
+fn postgres_array_cast_param_type(lowercase_tail: &str) -> Option<&'static str> {
+    let element = lowercase_tail
+        .split("[]")
+        .next()
+        .filter(|_| lowercase_tail.contains("[]"))?
+        .trim();
+    // Only a bare element name — never an expression tail that merely contains
+    // `[]` further along the statement.
+    if element.is_empty()
+        || !element
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == ' ')
+    {
+        return None;
+    }
+    Some(match element {
+        "smallint" | "int2" | "integer" | "int" | "int4" | "bigint" | "int8" => "array_int",
+        "real" | "float4" | "double precision" | "float8" | "numeric" | "decimal" => "array_float",
+        "boolean" | "bool" => "array_bool",
+        _ => "array_string",
+    })
 }
 
 // ── 2.4 merge seam: bridged neutral-IR emitter for the Postgres data plane ────

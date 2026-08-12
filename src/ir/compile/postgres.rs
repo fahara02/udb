@@ -32,6 +32,58 @@ use super::{CompileContext, CompileError, CompiledRendering, Compiler};
 /// LIKE-concat idiom.
 struct Postgres;
 
+/// Cast a WRITE placeholder whose bound value carries no type of its own.
+///
+/// `bind_generic_pg_param` types a parameter from the VALUE, never the column:
+/// a `Null` binds as a TEXT null, and an EMPTY array has no element to infer
+/// from so it binds as jsonb. Assigning either into a typed column fails with
+/// SQLSTATE 42804, surfaced as "value type does not match column" — which is
+/// why `nil` was accepted by a varchar column but refused by an integer one,
+/// and why an empty `TEXT[]` was unexpressible (an empty `[]` mismatched, and
+/// omitting the key hit NOT NULL instead). Casting to the declared column type
+/// makes the column the authority again. A value that already carries its own
+/// type keeps the existing comparison-cast behaviour.
+fn cast_write_placeholder(
+    column_sql_type: &str,
+    value: &LogicalValue,
+    placeholder: &str,
+) -> String {
+    let untyped_bind = match value {
+        LogicalValue::Null => true,
+        LogicalValue::Array(items) => items.is_empty(),
+        _ => false,
+    };
+    if untyped_bind && let Some(cast) = castable_column_type(column_sql_type) {
+        return format!("{placeholder}::{cast}");
+    }
+    <Postgres as SqlDialect>::cast_compare_placeholder(column_sql_type, placeholder)
+}
+
+/// The declared column type as a spelling usable on the right of `::`.
+///
+/// `SERIAL`/`BIGSERIAL`/`SMALLSERIAL` are column *declarations*, not real types
+/// — `$1::SERIAL` is a syntax error — so they map to the integer type they
+/// actually create. Everything else (including typmods like `VARCHAR(255)` and
+/// array suffixes like `TEXT[]`) casts as declared.
+fn castable_column_type(column_sql_type: &str) -> Option<String> {
+    let declared = column_sql_type.trim();
+    if declared.is_empty() {
+        return None;
+    }
+    let upper = declared.to_ascii_uppercase();
+    let (base, suffix) = match upper.strip_suffix("[]") {
+        Some(base) => (base, "[]"),
+        None => (upper.as_str(), ""),
+    };
+    let mapped = match base {
+        "SERIAL" | "SERIAL4" => "INTEGER",
+        "BIGSERIAL" | "SERIAL8" => "BIGINT",
+        "SMALLSERIAL" | "SERIAL2" => "SMALLINT",
+        _ => return Some(upper.clone()),
+    };
+    Some(format!("{mapped}{suffix}"))
+}
+
 /// Cast a Postgres placeholder to its target column type, for callers outside
 /// the IR compiler.
 ///
@@ -440,9 +492,11 @@ impl Compiler for PostgresCompiler {
                 if col_idx > 0 {
                     value_rows.push_str(", ");
                 }
-                let placeholder = Pg::push_param(&mut params, record[k].clone());
-                value_rows.push_str(&<Postgres as SqlDialect>::cast_compare_placeholder(
+                let value = record[k].clone();
+                let placeholder = Pg::push_param(&mut params, value.clone());
+                value_rows.push_str(&cast_write_placeholder(
                     col_sql_types[col_idx],
+                    &value,
                     &placeholder,
                 ));
             }
@@ -556,11 +610,9 @@ impl Compiler for PostgresCompiler {
                     let placeholder = Pg::push_param(&mut params, value.clone());
                     // B8: cast the bound param to the target column type so a
                     // text-bound UUID/timestamp value lands in a uuid/timestamptz
-                    // column (`SET "config_id" = $1::UUID`).
-                    let placeholder = <Postgres as SqlDialect>::cast_compare_placeholder(
-                        &column.sql_type,
-                        &placeholder,
-                    );
+                    // column (`SET "config_id" = $1::UUID`), and so a NULL or an
+                    // empty array is typed by the column rather than by the bind.
+                    let placeholder = cast_write_placeholder(&column.sql_type, value, &placeholder);
                     format!("{quoted} = {placeholder}")
                 }
                 LogicalAssignment::ServerNow => format!("{quoted} = CURRENT_TIMESTAMP"),
@@ -577,10 +629,7 @@ impl Compiler for PostgresCompiler {
                 }
                 LogicalAssignment::Coalesce { value } => {
                     let placeholder = Pg::push_param(&mut params, value.clone());
-                    let placeholder = <Postgres as SqlDialect>::cast_compare_placeholder(
-                        &column.sql_type,
-                        &placeholder,
-                    );
+                    let placeholder = cast_write_placeholder(&column.sql_type, value, &placeholder);
                     format!("{quoted} = COALESCE({placeholder}, {quoted})")
                 }
             };
