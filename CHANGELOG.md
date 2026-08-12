@@ -5,6 +5,51 @@ the package version in `Cargo.toml`; historical v0.3.2 audit material is folded
 into the v0.3.x entries because the codebase advanced to v0.3.7 before that
 release line was tagged.
 
+## [0.5.6] - 2026-08-13
+
+Patch release fixing three PostgreSQL data-plane defects reported from
+production, one of which silently violated a declared unique key. No
+wire-protocol change; `^0.5.5` consumers should upgrade — and any consumer
+upserting a partitioned entity should read the first entry closely, because the
+fix converts a silent data-integrity failure into a refusal.
+
+### Fixed
+- **A PostGIS point can be written through `Update`.** The binder classified
+  integer columns by substring, and `GEOGRAPHY(POINT,4326)` contains `INT`
+  inside `POINT`, so a valid EWKB value was routed through the integer parser
+  and refused with `expected integer, got "0101000020…"`. Type dispatch now
+  matches the base type token, so `INTERVAL` and `MULTIPOINT` are covered too.
+  Fixing the classifier alone was not enough: these columns have no assignment
+  cast from a bound `text` parameter, so the statement then failed with SQLSTATE
+  42804. `Select`/`Upsert`/`Delete` never hit this because they lower to neutral
+  IR and get the compiler's `$n::TYPE` cast — `Update` alone is served from
+  planner SQL and had no bridged emitter. It now casts through that same shared
+  classifier, so the two write verbs cannot drift apart. `INET`, `CIDR`,
+  `MACADDR` and `MACADDR8` shared the identical `Update`-only defect and are
+  fixed by the same change.
+- **`Upsert` on a partitioned table no longer silently writes a duplicate.**
+  PostgreSQL cannot carry a unique index that omits the partition key, so UDB
+  widens the generated primary key — and the emitted `ON CONFLICT` arbiter —
+  with the partition column. When that column is server-owned
+  (`exclude_from_insert`, generated, identity, auto-increment) the caller
+  structurally cannot supply it, every insert receives a fresh server value, and
+  the arbiter matches no existing row. PostgreSQL reported nothing: the upsert
+  degenerated into a plain `INSERT` and wrote a second row for a key the entity
+  declares unique. Such an upsert is now refused, naming both ways forward —
+  include the partition column in `conflict_fields` and supply it, or use
+  `Update`, which targets rows by filter and cannot insert. A caller-supplied
+  partition column keeps working.
+- **`null` and an empty array are typed by the column, not by the value.** The
+  bridged emitter derived each parameter's type from the value it carried: a
+  `null` bound as a `text` null, which a `VARCHAR` column accepted and an
+  `INTEGER` column refused, and an empty array had no element to infer from so
+  it bound as `jsonb`, which a `TEXT[]` column refused. Both surfaced as
+  SQLSTATE 42804 (`value type does not match column`), while omitting the field
+  instead tripped `NOT NULL` — so a nullable integer and an empty `TEXT[]` were
+  unsaveable either way. A write placeholder is now cast to its declared column
+  type whenever the bound value carries no type of its own, and an empty array
+  takes its element type from that cast.
+
 ## [0.5.5] - 2026-08-11
 
 Patch release fixing a mutation-verb inconsistency reported from production, a
